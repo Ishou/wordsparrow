@@ -12,7 +12,7 @@ val_ratio = 0.12
 
 # Held-out set: lemmas in this file MUST NOT appear in train.jsonl
 # or val.jsonl. The builder enforces this as an assertion.
-exclude_lemmas_from = "data/eval/eval_human.jsonl"
+exclude_lemmas_from = "data/lora_filter/eval_human.jsonl"
 
 # Chat-Mistral template (assistant prompt is the clue, no metadata leakage).
 user_prompt_template = "Donne une définition de mot fléché pour {mot}."

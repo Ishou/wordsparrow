@@ -58,6 +58,17 @@ class TestRowFilterParser:
         assert bc._apply_row_filter({}, "rating == ''") is True
 
 
+def test_prod_manifest_exclude_path_exists():
+    """Regression guard: exclude_lemmas_from must resolve to an existing file."""
+    import tomllib
+    repo_root = Path(__file__).resolve().parents[3]
+    manifest = tomllib.loads(
+        (repo_root / "data" / "lora" / "modal_corpus_v1" / "manifest.toml").read_text(encoding="utf-8")
+    )
+    rel = manifest["exclude_lemmas_from"]
+    assert (repo_root / rel).exists(), f"exclude_lemmas_from points at a missing file: {rel}"
+
+
 # Builder integration tests.
 @pytest.fixture
 def tmp_corpus_dir(tmp_path: Path) -> Path:
@@ -65,7 +76,7 @@ def tmp_corpus_dir(tmp_path: Path) -> Path:
     root = tmp_path
     (root / "data" / "curated").mkdir(parents=True)
     (root / "data" / "lora" / "modal_corpus_v1").mkdir(parents=True)
-    (root / "data" / "eval").mkdir(parents=True)
+    (root / "data" / "lora_filter").mkdir(parents=True, exist_ok=True)
 
     # Gold source: 3 rows with force tag.
     (root / "data" / "curated" / "gold.csv").write_text(
@@ -85,7 +96,7 @@ def tmp_corpus_dir(tmp_path: Path) -> Path:
     )
 
     # Held-out set: 1 lemma to exclude.
-    (root / "data" / "eval" / "eval_human.jsonl").write_text(
+    (root / "data" / "lora_filter" / "eval_human.jsonl").write_text(
         '{"lemma": "POMME"}\n',
         encoding="utf-8",
     )
@@ -96,7 +107,7 @@ def tmp_corpus_dir(tmp_path: Path) -> Path:
 version = "test"
 seed = 42
 val_ratio = 0.0
-exclude_lemmas_from = "data/eval/eval_human.jsonl"
+exclude_lemmas_from = "data/lora_filter/eval_human.jsonl"
 user_prompt_template = "Donne une définition de mot fléché pour {mot}."
 
 [[sources]]
