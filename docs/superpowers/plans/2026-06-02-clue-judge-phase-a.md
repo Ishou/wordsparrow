@@ -16,7 +16,7 @@
 
 | File | Responsibility | Task |
 |---|---|---|
-| `docs/adr/00NN-clue-judge.md` | Record judge design decisions + ADR-0058 matrix entry | 1 |
+| `docs/adr/0063-clue-judge.md` | Record judge design decisions + ADR-0058 matrix entry | 1 |
 | `docs/adr/INDEX.md` | Register the new ADR (path → ADR map) | 1 |
 | `data/lora/modal_corpus_v1/manifest.toml` | Fix `exclude_lemmas_from` path | 2 |
 | `scripts/clue_generation/modal/test_build_modal_corpus.py` | Fix fixture path to mirror prod | 2 |
@@ -101,17 +101,17 @@ There is no code or commit for Task 0 — it is a gate. Record the three printed
 ## Task 1: ADR + INDEX registration (A0)
 
 **Files:**
-- Create: `docs/adr/0062-clue-judge.md`
+- Create: `docs/adr/0063-clue-judge.md`
 - Modify: `docs/adr/INDEX.md` (add the path → ADR row)
 
 No tests — this is a docs/registry task. CI's `registry-coherence.yml` gates ADR ↔ INDEX coherence, so both files must land together.
 
 - [ ] **Step 1: Write the ADR**
 
-Create `docs/adr/0062-clue-judge.md`:
+Create `docs/adr/0063-clue-judge.md`:
 
 ```markdown
-# ADR-0062: Learned clue quality judge (shadow pre-filter)
+# ADR-0063: Learned clue quality judge (shadow pre-filter)
 
 ## Status
 Accepted
@@ -159,18 +159,18 @@ existing filter lane. No DBnary definitions enter the judge artifact.
 
 - [ ] **Step 2: Register in INDEX.md**
 
-Open `docs/adr/INDEX.md`, find the ordered ADR list, and add a row mirroring the existing format (path glob → ADR). The judge code lives under `scripts/clue_generation/`, so add `scripts/clue_generation/judge_*` / `scripts/clue_generation/*judge*` and `scripts/clue_generation/pipeline_v2/judge.py` to the path map pointing at ADR-0062. Match the exact column/format of the surrounding rows — read three neighbours first.
+Open `docs/adr/INDEX.md`, find the ordered ADR list, and add a row mirroring the existing format (path glob → ADR). The judge code lives under `scripts/clue_generation/`, so add `scripts/clue_generation/judge_*` / `scripts/clue_generation/*judge*` and `scripts/clue_generation/pipeline_v2/judge.py` to the path map pointing at ADR-0063. Match the exact column/format of the surrounding rows — read three neighbours first.
 
 - [ ] **Step 3: Verify registry coherence locally**
 
 Run: `scripts/adr-context.sh scripts/clue_generation/pipeline_v2/judge.py`
-Expected: emits the ADR-0062 body (proves the path → ADR mapping resolves).
+Expected: emits the ADR-0063 body (proves the path → ADR mapping resolves).
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/adr/0062-clue-judge.md docs/adr/INDEX.md
-git commit -s -m "docs(adr): record clue-judge shadow pre-filter (ADR-0062)"
+git add docs/adr/0063-clue-judge.md docs/adr/INDEX.md
+git commit -s -m "docs(adr): record clue-judge shadow pre-filter (ADR-0063)"
 ```
 
 ---
@@ -189,11 +189,7 @@ Add to `scripts/clue_generation/modal/test_build_modal_corpus.py`:
 
 ```python
 def test_prod_manifest_exclude_path_exists():
-    """The real manifest's exclude_lemmas_from must point at a file on disk.
-
-    A missing path makes held-out exclusion a silent no-op (held-out lemmas
-    leak into the generator corpus). This guards the 2026-06-02 path bug.
-    """
+    """exclude_lemmas_from must resolve to an existing file — a missing path silently skips held-out exclusion."""
     import tomllib
     repo_root = Path(__file__).resolve().parents[3]
     manifest = tomllib.loads(
