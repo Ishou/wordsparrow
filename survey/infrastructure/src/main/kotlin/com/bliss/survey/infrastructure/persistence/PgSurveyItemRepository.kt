@@ -94,8 +94,8 @@ class PgSurveyItemRepository(
                 if (userId != null) {
                     pickAnchorPair(conn, userId, exclude)?.let { return@withContext it }
                 }
-                val mot = pickEligibleMot(conn, userId, exclude) ?: return@withContext null
-                pickTwoItemsForMot(conn, mot, userId, exclude)
+                val group = pickEligibleGroup(conn, userId, exclude) ?: return@withContext null
+                pickTwoItemsForGroup(conn, group, userId, exclude)
             }
         }
 
@@ -141,6 +141,7 @@ class PgSurveyItemRepository(
               FROM survey_items a
               JOIN ratings ar ON ar.item_id = a.item_id AND ar.user_id = ? AND ar.qualite = 5 AND ar.flag IS NULL
               JOIN survey_items s ON s.mot = a.mot AND s.item_id <> a.item_id AND s.retired_at IS NULL
+                AND s.style = a.style AND s.categorie = a.categorie
              WHERE a.retired_at IS NULL
                $anchorExclude
                $siblingExclude
@@ -176,12 +177,20 @@ class PgSurveyItemRepository(
             createdAt = getTimestamp("${prefix}created_at").toInstant(),
         )
 
-    private fun pickEligibleMot(
+    // A same-(mot, style, categorie) cohort: the unit a fallback pair is drawn from so both
+    // clues target the same word, sense, and style — cross-style/sense pairs poison judge training.
+    private data class EligibleGroup(
+        val mot: String,
+        val style: String,
+        val categorie: String,
+    )
+
+    private fun pickEligibleGroup(
         conn: java.sql.Connection,
         userId: UserId?,
         exclude: Set<ItemId>,
-    ): String? {
-        val sql = buildEligibleMotQuery(userId != null, exclude.size)
+    ): EligibleGroup? {
+        val sql = buildEligibleGroupQuery(userId != null, exclude.size)
         conn.prepareStatement(sql).use { stmt ->
             var idx = 1
             for (id in exclude) stmt.setObject(idx++, id.value)
@@ -190,21 +199,27 @@ class PgSurveyItemRepository(
                 stmt.setObject(idx, userId.value)
             }
             stmt.executeQuery().use { rs ->
-                return if (rs.next()) rs.getString(1) else null
+                return if (rs.next()) {
+                    EligibleGroup(rs.getString("mot"), rs.getString("style"), rs.getString("categorie"))
+                } else {
+                    null
+                }
             }
         }
     }
 
-    private fun pickTwoItemsForMot(
+    private fun pickTwoItemsForGroup(
         conn: java.sql.Connection,
-        mot: String,
+        group: EligibleGroup,
         userId: UserId?,
         exclude: Set<ItemId>,
     ): ItemPair? {
-        val sql = buildTwoItemsForMotQuery(userId != null, exclude.size)
+        val sql = buildTwoItemsForGroupQuery(userId != null, exclude.size)
         conn.prepareStatement(sql).use { stmt ->
             var idx = 1
-            stmt.setString(idx++, mot)
+            stmt.setString(idx++, group.mot)
+            stmt.setString(idx++, group.style)
+            stmt.setString(idx++, group.categorie)
             for (id in exclude) stmt.setObject(idx++, id.value)
             if (userId != null) {
                 stmt.setObject(idx++, userId.value)
@@ -214,12 +229,12 @@ class PgSurveyItemRepository(
                 val picks = mutableListOf<SurveyItem>()
                 while (rs.next() && picks.size < 2) picks += rs.toSurveyItem()
                 if (picks.size < 2) return null
-                return ItemPair(mot = mot, left = picks[0], right = picks[1])
+                return ItemPair(mot = group.mot, left = picks[0], right = picks[1])
             }
         }
     }
 
-    private fun buildEligibleMotQuery(
+    private fun buildEligibleGroupQuery(
         hasUserId: Boolean,
         excludeSize: Int,
     ): String {
@@ -241,17 +256,17 @@ class PgSurveyItemRepository(
                 ""
             }
         return """
-            SELECT si.mot FROM survey_items si
+            SELECT si.mot, si.style, si.categorie FROM survey_items si
              WHERE si.retired_at IS NULL
                $excludeClause
                $antiRated
-             GROUP BY si.mot
+             GROUP BY si.mot, si.style, si.categorie
             HAVING count(*) >= 2
              ORDER BY random() LIMIT 1
             """.trimIndent()
     }
 
-    private fun buildTwoItemsForMotQuery(
+    private fun buildTwoItemsForGroupQuery(
         hasUserId: Boolean,
         excludeSize: Int,
     ): String {
@@ -274,7 +289,7 @@ class PgSurveyItemRepository(
             }
         return """
             SELECT si.* FROM survey_items si
-             WHERE si.retired_at IS NULL AND si.mot = ?
+             WHERE si.retired_at IS NULL AND si.mot = ? AND si.style = ? AND si.categorie = ?
                $excludeClause
                $antiRated
              ORDER BY random() LIMIT 2

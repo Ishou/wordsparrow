@@ -21,6 +21,7 @@ SELECT li.mot, li.style, li.definition,
  WHERE pr.user_id IN (SELECT user_id FROM maintainer_roles WHERE role = 'maintainer')
    AND pr.verdict IN ('left_wins', 'right_wins', 'both_good', 'both_bad')
    AND li.retired_at IS NULL AND ri.retired_at IS NULL
+   AND li.style = ri.style AND li.categorie = ri.categorie
 """
 
 
