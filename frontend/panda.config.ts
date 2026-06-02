@@ -113,7 +113,7 @@ export default defineConfig({
         },
         // Terra ramp — terracotta (error). Kept separate from secondary (honey)
         // — error must not share a hue with cursor/focus signals (ADR-0043).
-        // Sparse stops only — error has narrower usage than brand ramps.
+        // Sparse stops — .200 added for the pale tinted-button hover (BAD verdict).
         // Anchors:
         //   .100 = #f5dccc (terracotta pâle — errorBg)
         //   .500 = #b85540 (terracotta main — error icon, accent)
@@ -122,6 +122,7 @@ export default defineConfig({
         //                   errorText-on-errorBg clears AA small text)
         terra: {
           100: { value: '#f5dccc' },
+          200: { value: '#eec3ad' },
           300: { value: '#e2967c' },
           500: { value: '#b85540' },
           700: { value: '#9b3f2a' },

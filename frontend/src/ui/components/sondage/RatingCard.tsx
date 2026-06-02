@@ -162,10 +162,10 @@ const verdictButtonBase = css({
 });
 
 const verdictBadStyles = css({
-  bg: 'terra.50',
+  bg: 'terra.100',
   color: 'fg',
-  border: '1px solid token(colors.terra.200)',
-  _hover: { bg: 'terra.100' },
+  border: '1px solid token(colors.terra.300)',
+  _hover: { bg: 'terra.200' },
 });
 
 const verdictSkipStyles = css({

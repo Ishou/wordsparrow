@@ -17,6 +17,8 @@ test.describe('/contribuer', () => {
     await page.locator('[data-verdict="GOOD"]').click();
 
     await expect(page.locator('h2', { hasText: 'SOURIS' })).toBeVisible();
+    await expect(page.getByTestId('stat-rated')).toHaveText('1');
+    await expect(page.getByTestId('stat-streak')).toHaveText('1');
   });
 
   test('renders the sign-in banner for anon visitors and hides the meta band', async ({ page }) => {
