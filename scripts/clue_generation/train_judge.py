@@ -64,7 +64,7 @@ def _build_matrix(model: Any, records: list[dict],
 
 
 def _load_records(path: Path) -> list[dict]:
-    """Read the extractor JSONL."""
+    """Read a JSONL file, one record per non-blank line."""
     out = []
     with path.open(encoding="utf-8") as f:
         for line in f:
