@@ -367,18 +367,76 @@ class PgSurveyItemRepositoryTest {
             assertThat(pair).isNull()
         }
 
+    @Test
+    fun `pickPairForUser anchor sibling must share the anchor's style and categorie`() =
+        runTest {
+            if (!::dataSource.isInitialized) return@runTest
+            val user = UserId(UUID.randomUUID())
+            val anchor =
+                sampleItem(mot = "POMME", style = Style.PERIPHRASE, categorie = Categorie.FAUNE_FLORE)
+                    .copy(definition = "anchor def")
+            val wrongStyle =
+                sampleItem(mot = "POMME", style = Style.CRYPTIQUE, categorie = Categorie.FAUNE_FLORE)
+                    .copy(definition = "wrong style def")
+            val wrongCategorie =
+                sampleItem(mot = "POMME", style = Style.PERIPHRASE, categorie = Categorie.OBJET)
+                    .copy(definition = "wrong cat def")
+            val aligned =
+                sampleItem(mot = "POMME", style = Style.PERIPHRASE, categorie = Categorie.FAUNE_FLORE)
+                    .copy(definition = "aligned def")
+            items.insert(anchor)
+            items.insert(wrongStyle)
+            items.insert(wrongCategorie)
+            items.insert(aligned)
+            ratings.insert(authRating(anchor.id, user, qualite = 5))
+            val pair = items.pickPairForUser(user, exclude = emptySet())
+            assertThat(pair).isNotNull()
+            assertThat(pair!!.left.id).isEqualTo(anchor.id)
+            assertThat(pair.right.id).isEqualTo(aligned.id)
+        }
+
+    @Test
+    fun `pickPairForUser returns null when the only same-mot items differ in style`() =
+        runTest {
+            if (!::dataSource.isInitialized) return@runTest
+            val user = UserId(UUID.randomUUID())
+            items.insert(sampleItem(mot = "POMME", style = Style.PERIPHRASE).copy(definition = "a def"))
+            items.insert(sampleItem(mot = "POMME", style = Style.CRYPTIQUE).copy(definition = "b def"))
+            // No (style, categorie) group of >= 2 -> no valid pair.
+            val pair = items.pickPairForUser(user, exclude = emptySet())
+            assertThat(pair).isNull()
+        }
+
+    @Test
+    fun `pickPairForUser fallback pair shares style and categorie`() =
+        runTest {
+            if (!::dataSource.isInitialized) return@runTest
+            val user = UserId(UUID.randomUUID())
+            items.insert(
+                sampleItem(mot = "POMME", style = Style.CRYPTIQUE, categorie = Categorie.FAUNE_FLORE).copy(definition = "noise def"),
+            )
+            items.insert(sampleItem(mot = "POMME", style = Style.PERIPHRASE, categorie = Categorie.FAUNE_FLORE).copy(definition = "x def"))
+            items.insert(sampleItem(mot = "POMME", style = Style.PERIPHRASE, categorie = Categorie.FAUNE_FLORE).copy(definition = "y def"))
+            val pair = items.pickPairForUser(user, exclude = emptySet())
+            assertThat(pair).isNotNull()
+            assertThat(pair!!.left.style).isEqualTo(pair.right.style)
+            assertThat(pair.left.categorie).isEqualTo(pair.right.categorie)
+        }
+
     private fun sampleItem(
         mot: String = "POULE",
         tier: Tier = Tier.MID,
         source: Source = Source.SYNTHETIC_V1,
+        style: Style = Style.PERIPHRASE,
+        categorie: Categorie = Categorie.FAUNE_FLORE,
     ): SurveyItem =
         SurveyItem(
             id = ItemId(UUID.randomUUID()),
             mot = mot,
             definition = "Definition for $mot",
             pos = Pos.NOM_COMMUN,
-            categorie = Categorie.FAUNE_FLORE,
-            style = Style.PERIPHRASE,
+            categorie = categorie,
+            style = style,
             forceClaimed = 2,
             longueur = mot.length,
             source = source,
