@@ -15,6 +15,7 @@ class FilterResult:
     """Résultat d'un filtre : action + raison."""
     action: str           # "accept" | "reject" | "warning"
     reason: str = ""
+    score: float | None = None
 
     @property
     def is_accept(self) -> bool:
@@ -310,6 +311,18 @@ def filter_8_llm_juge_mock(row: dict, valid_pos: set[str],
     mot_nfd = _strip_accents(mot).lower()
 
     return FilterResult("accept")
+
+
+def filter_8_judge_shadow(row: dict, valid_pos: set[str],
+                          valid_categories: set[str],
+                          valid_styles: set[str],
+                          judge=None) -> FilterResult:
+    """Filtre 8 : juge appris en MODE SHADOW — score loggé, jamais de rejet sur le score."""
+    enum_check = filter_8_llm_juge_mock(row, valid_pos, valid_categories, valid_styles)
+    if enum_check.is_reject:
+        return enum_check
+    score = judge.score(row["mot"], row.get("style", ""), row["definition"]) if judge is not None else None
+    return FilterResult("accept", score=score)
 
 
 # seuil 5 chars : ne pas abaisser sans rejouer la variance check (docs/eval/clue-gen-v0.md iter7)

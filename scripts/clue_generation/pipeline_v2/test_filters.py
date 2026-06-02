@@ -66,3 +66,43 @@ def test_filter_10_pleonasm_accepts_clean_definition():
     r = _row("CHIEN", "Animal fidèle au gardien")
     out = F.filter_10_pleonasm(r)
     assert out.action == "accept", out.reason
+
+
+class _FakeJudge:
+    def score(self, lemma, style, clue):
+        return 0.05  # low score — would be rejected under enforcement, accepted in shadow
+
+
+def test_filter_8_shadow_attaches_score_and_still_accepts():
+    r = _row("POMME", "Tentation d’Ève")
+    out = F.filter_8_judge_shadow(
+        r,
+        valid_pos={"nom_commun"}, valid_categories={"autre"},
+        valid_styles={"definition_directe"},
+        judge=_FakeJudge(),
+    )
+    assert out.action == "accept", out.reason
+    assert out.score == 0.05
+
+
+def test_filter_8_shadow_without_judge_accepts_and_sets_no_score():
+    r = _row("POMME", "Tentation d’Ève")
+    out = F.filter_8_judge_shadow(
+        r,
+        valid_pos={"nom_commun"}, valid_categories={"autre"},
+        valid_styles={"definition_directe"},
+        judge=None,
+    )
+    assert out.action == "accept", out.reason
+    assert out.score is None
+
+
+def test_filter_8_shadow_still_rejects_invalid_enum():
+    r = _row("POMME", "Tentation d’Ève", style="inconnu")
+    out = F.filter_8_judge_shadow(
+        r,
+        valid_pos={"nom_commun"}, valid_categories={"autre"},
+        valid_styles={"definition_directe"},
+        judge=_FakeJudge(),
+    )
+    assert out.action == "reject"

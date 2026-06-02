@@ -5,10 +5,14 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
+import logging
 import sys
 from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
+
+_log = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
@@ -55,7 +59,7 @@ PIPELINE_FILTERS = [
     ("filter_6_langue_fr", F.filter_6_langue_fr, False),
     ("filter_7_tautologie", F.filter_7_tautologie, False),
     # filter_8 a besoin des enums valides, traité spécialement
-    ("filter_8_llm_juge_mock", F.filter_8_llm_juge_mock, True),
+    ("filter_8_judge_shadow", F.filter_8_judge_shadow, True),
     ("filter_9_stem_leak", F.filter_9_stem_leak, False),
     ("filter_10_pleonasm", F.filter_10_pleonasm, False),
 ]
@@ -75,10 +79,15 @@ def traiter_ligne(row: dict) -> dict:
         else:
             result = fn(row)
 
-        filter_traces[name] = {
-            "action": result.action,
-            "reason": result.reason,
-        }
+        trace: dict = {"action": result.action, "reason": result.reason}
+        if result.score is not None:
+            trace["judge_score"] = result.score
+            _log.info(json.dumps({
+                "event": "judge_shadow_score",
+                "mot": row.get("mot"),
+                "judge_score": result.score,
+            }))
+        filter_traces[name] = trace
 
         if result.is_reject:
             rejected = True
