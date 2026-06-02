@@ -19,5 +19,5 @@ def style_onehot(style: str, styles: list[str]) -> np.ndarray:
 
 
 def feature_vector(emb_clue: np.ndarray, emb_lemma: np.ndarray, style_vec: np.ndarray) -> np.ndarray:
-    """Spike recipe + style: [emb(clue), emb(clue) − emb(lemma), style_onehot]."""
+    """[emb(clue), emb(clue) − emb(lemma), style_onehot(style)]."""
     return np.concatenate([emb_clue, emb_clue - emb_lemma, style_vec])
