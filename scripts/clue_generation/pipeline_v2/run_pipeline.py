@@ -5,10 +5,14 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
+import logging
 import sys
 from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
+
+_log = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
@@ -75,10 +79,15 @@ def traiter_ligne(row: dict) -> dict:
         else:
             result = fn(row)
 
-        filter_traces[name] = {
-            "action": result.action,
-            "reason": result.reason,
-        }
+        trace: dict = {"action": result.action, "reason": result.reason}
+        if result.score is not None:
+            trace["judge_score"] = result.score
+            _log.info(json.dumps({
+                "event": "judge_shadow_score",
+                "mot": row.get("mot"),
+                "judge_score": result.score,
+            }))
+        filter_traces[name] = trace
 
         if result.is_reject:
             rejected = True

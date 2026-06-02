@@ -82,7 +82,7 @@ def test_filter_8_shadow_attaches_score_and_still_accepts():
         judge=_FakeJudge(),
     )
     assert out.action == "accept", out.reason
-    assert r["judge_score"] == 0.05
+    assert out.score == 0.05
 
 
 def test_filter_8_shadow_without_judge_accepts_and_sets_no_score():
@@ -94,7 +94,7 @@ def test_filter_8_shadow_without_judge_accepts_and_sets_no_score():
         judge=None,
     )
     assert out.action == "accept", out.reason
-    assert "judge_score" not in r
+    assert out.score is None
 
 
 def test_filter_8_shadow_still_rejects_invalid_enum():
