@@ -17,7 +17,6 @@ test.describe('/contribuer', () => {
     await page.locator('[data-verdict="GOOD"]').click();
 
     await expect(page.locator('h2', { hasText: 'SOURIS' })).toBeVisible();
-    // The session counters surface after the first rating.
     await expect(page.getByTestId('stat-rated')).toHaveText('1');
     await expect(page.getByTestId('stat-streak')).toHaveText('1');
   });

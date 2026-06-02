@@ -389,6 +389,57 @@ describe('Contribuer route', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'NEXT' })).toBeInTheDocument());
   });
 
+  it('CORRIGER shows the toast and increments the enriched counter on success', async () => {
+    const authClient: AuthClient = {
+      ...stubAuth(),
+      whoami: vi.fn().mockResolvedValue({
+        userId: '0190e3a4-7a2c-7c9e-8f1a-1234567890ab',
+        displayName: 'Lapin 472',
+      }),
+    };
+    const surveyClient = stubSurveyClient();
+    renderContribuer({ authClient, surveyClient });
+    await waitFor(() => expect(screen.getByTestId('rating-card')).toBeInTheDocument());
+
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>('[data-testid="corriger-trigger"]')!.click();
+    });
+    const textarea = document.querySelector<HTMLTextAreaElement>('textarea#correctif-text')!;
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: 'Correction test' } });
+    });
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>('[data-testid="correctif-submit"]')!.click();
+    });
+
+    await waitFor(() => expect(surveyClient.submitRating).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByTestId('toast')).toHaveTextContent('Correction proposée — merci !'),
+    );
+    expect(screen.getByTestId('stat-enriched')).toHaveTextContent('1');
+  });
+
+  it('SIGNALER shows the toast and resets streak to 0', async () => {
+    const second: SurveyItem = { ...sampleItem, itemId: '0190e3a4-7a2c-7c9e-8f1a-cafecafecafe', mot: 'NEXT' };
+    const getNextItem = vi.fn().mockResolvedValueOnce(sampleItem).mockResolvedValue(second);
+    const surveyClient = stubSurveyClient({ getNextItem });
+    renderContribuer({ surveyClient });
+    await waitFor(() => expect(screen.getByTestId('rating-card')).toBeInTheDocument());
+
+    await act(async () => { clickVerdict('GOOD'); });
+    await waitFor(() => expect(screen.getByTestId('stat-streak')).toHaveTextContent('1'));
+
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>('[data-testid="signaler"]')!.click();
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('toast')).toHaveTextContent('Indice signalé'),
+    );
+    expect(screen.getByTestId('stat-streak')).toHaveTextContent('0');
+    localStorage.clear();
+  });
+
   it('CORRIGER on anon user sets the sign-in error message without calling submitRating', async () => {
     const surveyClient = stubSurveyClient();
     renderContribuer({ surveyClient });
