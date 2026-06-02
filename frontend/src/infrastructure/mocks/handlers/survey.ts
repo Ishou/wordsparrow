@@ -1,9 +1,4 @@
-// MSW handlers for the survey-api (ADR-0056), preview-mode only. The
-// survey/api spec ships no `examples/`, so these payloads mirror the
-// generated TS types and the SurveyClient adapter's expectations. A
-// host-agnostic `*` glob matches whatever VITE_SURVEY_API_BASE_URL /
-// VITE_IDENTITY_API_BASE_URL resolves to in the bundle. Tree-shaken out
-// of production builds alongside the rest of the MSW deck.
+// MSW survey-api handlers (ADR-0056), preview-mode only; host-agnostic glob, tree-shaken from prod.
 
 import { http, HttpResponse } from 'msw';
 
@@ -80,8 +75,7 @@ export const surveyApiHandlers = [
   http.get('*/v1/items/pairs/next', () => new HttpResponse(null, { status: 204 })),
   http.get('*/v1/items/next', ({ request }) => {
     const excluded = new URL(request.url).searchParams.get('excluded')?.split(',') ?? [];
-    // Authed callers don't re-send rated ids; the real server dedups them
-    // server-side, so the mock tracks them too.
+    // authed callers omit rated ids from query params; server (and mock) deduplicate
     const next = items.find((it) => !excluded.includes(it.itemId) && !ratedIds.has(it.itemId));
     if (!next) return new HttpResponse(null, { status: 204 });
     return HttpResponse.json(next);

@@ -1,5 +1,4 @@
-// Local tri-state metadata machine for the /contribuer card (ADR-0061 meta is auth-only).
-// Baseline = the item's AI-suggested categorie; "enriched" means the human touched/verified it.
+// Tri-state metadata for /contribuer (ADR-0061, auth-only); "enriched" = human touched/verified.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LikertScore, SurveyCategorie, SurveyItem } from '@/application/survey';

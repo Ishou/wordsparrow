@@ -1,5 +1,4 @@
-// Collapsible metadata band for the /contribuer card. Tri-state (pristine/modified/saved)
-// is owned by useMetadataBand; this component is presentation + the category two-zone picker.
+// Collapsible metadata band: tri-state (pristine/modified/saved) owned by useMetadataBand.
 
 import { useState } from 'react';
 import { css } from 'styled-system/css';
@@ -36,6 +35,23 @@ const headerRowStyles = css({
   gap: 'sm',
 });
 
+const toggleHitAreaStyles = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '44px',
+  height: '44px',
+  border: 'none',
+  bg: 'transparent',
+  cursor: 'pointer',
+  flexShrink: 0,
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+    borderRadius: '999px',
+  },
+});
+
 const toggleCircleStyles = css({
   display: 'inline-flex',
   alignItems: 'center',
@@ -48,12 +64,7 @@ const toggleCircleStyles = css({
   color: 'metaSuggestedText',
   fontSize: 'body',
   lineHeight: 1,
-  cursor: 'pointer',
-  flexShrink: 0,
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-  },
+  pointerEvents: 'none',
 });
 
 const overlineStyles = css({
@@ -352,12 +363,12 @@ export function MetadataBand({
       <div className={headerRowStyles}>
         <button
           type="button"
-          className={toggleCircleStyles}
+          className={toggleHitAreaStyles}
           aria-label={band.expanded ? 'Réduire les métadonnées' : 'Développer les métadonnées'}
           aria-expanded={band.expanded}
           onClick={band.toggleExpanded}
         >
-          +
+          <span className={toggleCircleStyles} aria-hidden="true">+</span>
         </button>
         <span className={overlineStyles}>
           Métadonnées{' '}

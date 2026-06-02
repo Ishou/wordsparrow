@@ -328,8 +328,16 @@ export function RatingCard({
     if (disabled) setCorrectifText(null);
   }, [disabled]);
 
+  const currentMetaRef = useRef(currentMeta);
+  currentMetaRef.current = currentMeta;
+
   useEffect(() => {
     startedAtRef.current = performance.now();
+  }, [item.itemId]);
+
+  const { toggleExpanded, primaryAction, difficulteForSubmit } = band;
+
+  useEffect(() => {
     function handler(event: KeyboardEvent): void {
       if (disabled) return;
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
@@ -351,23 +359,22 @@ export function RatingCard({
       }
       if (key === 'a' && enrichable) {
         event.preventDefault();
-        band.toggleExpanded();
+        toggleExpanded();
         return;
       }
       if (key === ' ' && enrichable) {
         event.preventDefault();
-        band.primaryAction();
+        primaryAction();
         return;
       }
       const verdict: Verdict | null = key === 'j' ? 'BAD' : key === 'k' ? 'SKIP' : key === 'l' ? 'GOOD' : null;
       if (verdict === null) return;
       event.preventDefault();
-      void onVerdict(verdict, latency(), currentMeta(), band.difficulteForSubmit);
+      void onVerdict(verdict, latency(), currentMetaRef.current(), difficulteForSubmit);
     }
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-    // currentMeta/latency read live refs; band fields cover meta + difficulte deps.
-  }, [item.itemId, item.definition, onVerdict, onSignaler, disabled, enrichable, band]);
+  }, [item.itemId, item.definition, onVerdict, onSignaler, disabled, enrichable, toggleExpanded, primaryAction, difficulteForSubmit]);
 
   function submit(verdict: Verdict): void {
     if (disabled) return;

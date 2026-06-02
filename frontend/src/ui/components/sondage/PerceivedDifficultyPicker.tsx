@@ -1,5 +1,4 @@
-// Dot-based 1–5 perceived-difficulty picker (radiogroup, AZERTY-safe arrows).
-// "Annoncée" reference is the generator's forceClaimed; the human picks what they felt.
+// 1–5 difficulty picker (radiogroup, AZERTY-safe); "Annoncée" maps to forceClaimed.
 
 import { useId, useRef } from 'react';
 import { css, cx } from 'styled-system/css';
@@ -38,8 +37,8 @@ const dotsStyles = css({
 });
 
 const dotStyles = css({
-  width: '28px',
-  height: '28px',
+  width: '44px',
+  height: '44px',
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -81,8 +80,7 @@ export interface PerceivedDifficultyPickerProps {
 export function PerceivedDifficultyPicker({ value, onChange, announced }: PerceivedDifficultyPickerProps) {
   const groupId = useId();
   const buttonsRef = useRef<Array<HTMLButtonElement | null>>([]);
-  // Display falls back to the announced value so pristine cards show the generator's guess,
-  // but the radio stays unchecked until the human actually picks (keeps "enriched" honest).
+  // display falls back to announced; radio stays unchecked until the human actually picks
   const display = value ?? announced;
   const activeIndex = value === null ? Math.max(0, SCORES.indexOf(display as LikertScore)) : SCORES.indexOf(value);
 
