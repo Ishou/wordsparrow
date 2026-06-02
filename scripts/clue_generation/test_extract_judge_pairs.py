@@ -21,6 +21,18 @@ def test_pair_verdict_left_wins_labels_left_one_right_zero():
     assert all(r["lemma"] == "couper" and r["source"] == "pair_ratings" for r in rows)
 
 
+def test_pair_verdict_right_wins_labels_left_zero_right_one():
+    rows = list(ej.expand_pair_rows(
+        [("couper", "definition_directe", "Action de couper",
+          "couper", "definition_directe", "Trancher net",
+          "right_wins", "camp-1")],
+        held_out=set(),
+    ))
+    assert {(r["clue"], r["label"]) for r in rows} == {
+        ("Action de couper", 0), ("Trancher net", 1),
+    }
+
+
 def test_pair_verdict_both_good_labels_both_one():
     rows = list(ej.expand_pair_rows(
         [("nez", "metaphore", "Organe de l'odorat",
@@ -67,5 +79,14 @@ def test_correctif_trivial_edit_dropped():
         [("couper", "definition_directe", "Trancher net",
           "Trancher net.", "definition_directe", "camp-2")],
         held_out=set(),
+    ))
+    assert rows == []
+
+
+def test_correctif_held_out_lemma_excluded():
+    rows = list(ej.expand_correctif_rows(
+        [("gamma", "definition_directe", "Quelque chose",
+          "Autre chose", "definition_directe", "camp-2")],
+        held_out={"gamma"},
     ))
     assert rows == []
