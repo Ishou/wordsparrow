@@ -1,8 +1,4 @@
-// /contribuer smoke test. The survey-api surface is served by the MSW
-// preview deck (handlers/survey.ts) — page.route cannot intercept it
-// because MSW's service worker controls the page. Anon overrides go
-// through the `__mswReady__` seam that main.tsx awaits before its first
-// loader fetch (see enableMocks), so the override lands pre-render.
+// /contribuer smoke test — MSW service worker controls the page; page.route cannot intercept it.
 
 import { expect, test } from '@playwright/test';
 
@@ -26,8 +22,7 @@ test.describe('/contribuer', () => {
   test('renders the sign-in banner for anon visitors and hides the meta band', async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem('wordsparrow.tour.seen', 'true');
-      // Seed a deferred gate main.tsx awaits; resolve it once the MSW seam
-      // is live and the whoami handler is overridden to 401 (anonymous).
+      // Seed the __mswReady__ gate main.tsx awaits; resolves once MSW is live and whoami returns 401.
       const w = window as unknown as {
         __msw__?: { worker: { use: (...h: unknown[]) => void }; http: any; HttpResponse: any };
         __mswReady__?: Promise<void>;

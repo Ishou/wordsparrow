@@ -1,5 +1,3 @@
-// Per-style tooltip definitions for the rating card. Source: docs/clue-style-guide-v2.md §4.
-// The worked example is the live clue (definition → mot), so no static example is stored here.
 // Unknown styles fall back to the label alone (no tooltip body).
 
 export interface StyleCopy {

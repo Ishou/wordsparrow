@@ -40,8 +40,7 @@ async function clickEl(el: Element | null): Promise<void> {
   await act(async () => { fireEvent.click(el as HTMLButtonElement); });
 }
 
-// Meta lives in the collapsible band; surfacing the inputs needs the band expanded
-// and (for adding categories) the full-taxonomy picker open.
+// Band must be expanded before querying inputs; category picker also needs explicit open.
 async function expandBand(container: HTMLElement): Promise<void> {
   await clickEl(container.querySelector('[data-testid="band-adjust"]'));
 }

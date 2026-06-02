@@ -280,9 +280,7 @@ export default defineConfig({
         focusBg:        { value: '{colors.secondary.100}' },
         focusRing:      { value: '{colors.secondary.500}' },
 
-        // ── Métadonnées band tri-state (/contribuer) ────────────────
-        // pristine "suggéré par l'IA" → honey pale; modified "non
-        // enregistré" → deeper honey; saved "enregistré" → mousse green.
+        // Band tri-state tokens: pristine → honey pale; modified → deeper honey; saved → mousse green.
         metaSuggestedBg:   { value: '{colors.secondary.50}' },
         metaSuggestedLine: { value: '{colors.secondary.300}' },
         metaSuggestedText: { value: '{colors.secondary.700}' },
