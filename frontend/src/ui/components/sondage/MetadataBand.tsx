@@ -103,7 +103,8 @@ const badgeStyles = css({
 const summaryStyles = css({
   display: 'grid',
   gridTemplateColumns: 'auto 1fr',
-  gap: '4px sm',
+  rowGap: '4px',
+  columnGap: 'sm',
   alignItems: 'baseline',
   margin: 0,
 });
