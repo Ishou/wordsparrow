@@ -228,7 +228,12 @@ A3a/A3b) · A4 shadow-wire `filter_8`.
 B1 persist `judge_score` (schema-first) · B2 informed pair selection ·
 B3 online drift metric.
 
-Parallel starts: A0, A1, A2 (no inter-dependencies). Chain converges at A3.
+Parallel starts (development): A0, A1, A2 have no code inter-dependencies
+and can be developed in separate worktrees simultaneously.
+Merge ordering (process): A0 must merge before A2, A3, and A4 —
+ADR-0001 §7 requires the ADR to land before code that introduces new
+dependencies (A3: sentence-transformers/scikit-learn) or modifies the
+production pipeline (A4). A1 is a bug fix and may merge independently.
 Each PR: own worktree, `scripts/adr-context.sh` pre-read (ADR-0057/0058/0059),
 DCO sign-off, one-line-comment discipline, ≤400-line cap (prefer A3a/A3b
 split over cap-override).
