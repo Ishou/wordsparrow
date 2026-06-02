@@ -46,6 +46,20 @@ scale.
 
 ## 3. Training data
 
+> **Amendment 2026-06-02 (supersedes the two-source design below).** The
+> judge trains on **`pair_ratings` only**. Correctifs are excluded: the
+> human-rewritten side is off the generator's distribution and is often a
+> *style* fix, and an off-style-but-good clue is a generator-teaching
+> signal (RAFT, via `extract_winners.py`), not a judge label. Measured
+> basis: a combined run (126 pair + 220 correctif) scored held-out AUROC
+> 0.554; dropping correctifs raised it to 0.575 despite halving the data
+> — a human-vs-model surface confound that does not transfer to the
+> all-model held-out set. The "Extractor overlap" dual-use note below no
+> longer applies. See logbook `docs/eval/clue-judge-v0.md` (judge-v1).
+> The campaign-scoping paragraph is also moot in practice: the current
+> `pair_ratings` carry no `campaign_id`, so recency-weighting has no
+> basis yet (Phase B must stamp pairs with a campaign first).
+
 The judge trains on **same-word preference pairs** authored by the
 maintainer. Two sources, both already in the survey DB:
 
