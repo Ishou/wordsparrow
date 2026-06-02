@@ -26,8 +26,9 @@ measured held-out false-negative rate.
 
 Held-out hygiene: `data/lora_filter/eval_human.jsonl` lemmas are excluded
 from judge training exactly as the corpus builder excludes them from
-generator training (this PR also fixes a silent path bug that defeated
-that exclusion — see ADR-0058 data matrix).
+generator training (a companion fix in the judge-code PR corrects a
+silent path bug that had defeated this exclusion — see ADR-0058 data
+matrix).
 
 ## Consequences
 - Easier: human rating load drops once enforcement flips; the reject pile
@@ -35,8 +36,6 @@ that exclusion — see ADR-0058 data matrix).
 - Harder: a stale judge can exert "conservative drag" (prune novel-but-
   good clues). Mitigated by a deliberately loose threshold and a reject-
   pile audit, not by closing the loop.
-- Companion spec: `docs/superpowers/specs/2026-06-02-clue-judge-design.md`.
-  Phase B (flywheel) is a separate plan.
 
 ## Data licence (ADR-0058 matrix)
 No new external data source. Training pairs come from the survey DB
