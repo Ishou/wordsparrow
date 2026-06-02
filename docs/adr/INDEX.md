@@ -93,6 +93,8 @@ ADR-0062  modal_jobs/04_generate_command_r.py      POS phrasing map drops verbe_
 ADR-0062  frontend/src/infrastructure/api/survey/types.ts    Pos enum regenerated without verbe_conjugue / VERBE_CONJUGUE
 ADR-0062  frontend/src/application/survey/types.ts           Hand-maintained Pos type drops verbe_conjugue
 ADR-0062  frontend/src/ui/components/sondage/labels.ts       POS label map drops verbe_conjugue entry
+ADR-0063  scripts/clue_generation/*judge*          Learned clue-quality judge: CamemBERT-probe shadow pre-filter at filter_8 ahead of human rating; human stays reward signal
+ADR-0063  scripts/clue_generation/pipeline_v2/judge.py  Judge pre-filter insertion point; shadow mode (score + log, accept all) until enforcement flip
 ```
 
 ## Adding entries
