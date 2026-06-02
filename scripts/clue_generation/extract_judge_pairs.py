@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 
-# Cumulative across all campaigns; carries campaign_id for recency-weighting (spec §3).
+# Cumulative across all campaigns; carries campaign_id for recency-weighting.
 PAIRS_SQL = """
 SELECT li.mot, li.style, li.definition,
        ri.mot, ri.style, ri.definition,
