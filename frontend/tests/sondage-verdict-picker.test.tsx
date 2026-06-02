@@ -16,30 +16,28 @@ const sampleItem: SurveyItem = {
   isCalibration: false,
 };
 
+// Pristine band seeds difficulte from the announced force (no human pick yet → fallback 3).
+const SEEDED_META = { targetCategories: ['faune_flore'], targetSense: '', isMultisense: false, subTags: [] };
+const PRISTINE_DIFFICULTE = 3;
+
 describe('RatingCard verdict picker', () => {
-  it('renders mot, definition, pos chip, and four verdict buttons', () => {
+  it('renders mot, definition, the POS pill, three verdict buttons, and an inline Corriger trigger', () => {
     const { container } = render(<RatingCard item={sampleItem} onVerdict={() => Promise.resolve()} onCorriger={async () => {}} />);
     expect(screen.getByRole('heading', { name: 'CHAT' })).toBeInTheDocument();
-    expect(screen.getByText(/Animal domestique à moustaches/i)).toBeInTheDocument();
-    expect(container.querySelector('[data-chip="pos"]')?.textContent).toBe('Nom commun');
+    expect(container.querySelector('blockquote')?.textContent).toContain('Animal domestique à moustaches');
+    const pos = container.querySelector<HTMLSelectElement>('[data-testid="pos-pill"]');
+    expect(pos?.value).toBe('nom_commun');
     expect(container.querySelector('[data-verdict="BAD"]')).not.toBeNull();
     expect(container.querySelector('[data-verdict="SKIP"]')).not.toBeNull();
     expect(container.querySelector('[data-verdict="GOOD"]')).not.toBeNull();
-    expect(container.querySelector('[data-verdict="CORRIGER"]')).not.toBeNull();
-  });
-
-  it('seeds the category multi-select from the item machine prior', () => {
-    const { container } = render(<RatingCard item={sampleItem} onVerdict={() => Promise.resolve()} onCorriger={async () => {}} />);
-    const seeded = container.querySelector<HTMLInputElement>('[data-categorie="faune_flore"] input');
-    expect(seeded?.checked).toBe(true);
-    const unselected = container.querySelector<HTMLInputElement>('[data-categorie="objet"] input');
-    expect(unselected?.checked).toBe(false);
+    expect(container.querySelector('[data-verdict="CORRIGER"]')).toBeNull();
+    expect(container.querySelector('[data-testid="corriger-trigger"]')).not.toBeNull();
   });
 
   it('exposes the Verdict role=group with aria-keyshortcuts j k l', () => {
     render(<RatingCard item={sampleItem} onVerdict={() => Promise.resolve()} onCorriger={async () => {}} />);
     const group = screen.getByRole('group', { name: 'Verdict' });
-    expect(group.getAttribute('aria-keyshortcuts')).toBe('j k l c');
+    expect(group.getAttribute('aria-keyshortcuts')).toBe('j k l');
   });
 
   it('each verdict button has an aria-label citing the definition and meets the 56px touch target', () => {
@@ -53,13 +51,9 @@ describe('RatingCard verdict picker', () => {
       // jsdom doesn't compute layout; assert the css contract is wired via class names rather than getBoundingClientRect.
       expect(btn!.className).toMatch(/min/i);
     }
-    const corrigerBtn = container.querySelector<HTMLButtonElement>('[data-verdict="CORRIGER"]');
-    expect(corrigerBtn).not.toBeNull();
-    expect(corrigerBtn!.getAttribute('aria-label')).toContain('Animal domestique à moustaches');
-    expect(corrigerBtn!.className).toMatch(/min/i);
   });
 
-  it('clicking GOOD invokes onVerdict("GOOD", latencyMs >= 0)', async () => {
+  it('clicking GOOD invokes onVerdict("GOOD", latencyMs >= 0, meta, difficulte)', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(<RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />);
     await act(async () => {
@@ -68,7 +62,8 @@ describe('RatingCard verdict picker', () => {
     expect(onVerdict).toHaveBeenCalledTimes(1);
     expect(onVerdict.mock.calls[0][0]).toBe('GOOD');
     expect(onVerdict.mock.calls[0][1]).toBeGreaterThanOrEqual(0);
-    expect(onVerdict.mock.calls[0][2]).toEqual({ targetCategories: ['faune_flore'], targetSense: '', isMultisense: false, subTags: [] });
+    expect(onVerdict.mock.calls[0][2]).toEqual(SEEDED_META);
+    expect(onVerdict.mock.calls[0][3]).toBe(PRISTINE_DIFFICULTE);
   });
 
   it('clicking BAD invokes onVerdict("BAD")', async () => {
@@ -77,7 +72,7 @@ describe('RatingCard verdict picker', () => {
     await act(async () => {
       fireEvent.click(container.querySelector('[data-verdict="BAD"]')!);
     });
-    expect(onVerdict).toHaveBeenCalledWith('BAD', expect.any(Number), { targetCategories: ['faune_flore'], targetSense: '', isMultisense: false, subTags: [] });
+    expect(onVerdict).toHaveBeenCalledWith('BAD', expect.any(Number), SEEDED_META, PRISTINE_DIFFICULTE);
   });
 
   it('clicking SKIP invokes onVerdict("SKIP")', async () => {
@@ -86,7 +81,7 @@ describe('RatingCard verdict picker', () => {
     await act(async () => {
       fireEvent.click(container.querySelector('[data-verdict="SKIP"]')!);
     });
-    expect(onVerdict).toHaveBeenCalledWith('SKIP', expect.any(Number), { targetCategories: ['faune_flore'], targetSense: '', isMultisense: false, subTags: [] });
+    expect(onVerdict).toHaveBeenCalledWith('SKIP', expect.any(Number), SEEDED_META, PRISTINE_DIFFICULTE);
   });
 
   it('pressing j/k/l triggers BAD/SKIP/GOOD via the document-level keydown handler', async () => {
@@ -95,15 +90,15 @@ describe('RatingCard verdict picker', () => {
     await act(async () => {
       fireEvent.keyDown(window, { key: 'j' });
     });
-    expect(onVerdict).toHaveBeenLastCalledWith('BAD', expect.any(Number), { targetCategories: ['faune_flore'], targetSense: '', isMultisense: false, subTags: [] });
+    expect(onVerdict).toHaveBeenLastCalledWith('BAD', expect.any(Number), SEEDED_META, PRISTINE_DIFFICULTE);
     await act(async () => {
       fireEvent.keyDown(window, { key: 'k' });
     });
-    expect(onVerdict).toHaveBeenLastCalledWith('SKIP', expect.any(Number), { targetCategories: ['faune_flore'], targetSense: '', isMultisense: false, subTags: [] });
+    expect(onVerdict).toHaveBeenLastCalledWith('SKIP', expect.any(Number), SEEDED_META, PRISTINE_DIFFICULTE);
     await act(async () => {
       fireEvent.keyDown(window, { key: 'l' });
     });
-    expect(onVerdict).toHaveBeenLastCalledWith('GOOD', expect.any(Number), { targetCategories: ['faune_flore'], targetSense: '', isMultisense: false, subTags: [] });
+    expect(onVerdict).toHaveBeenLastCalledWith('GOOD', expect.any(Number), SEEDED_META, PRISTINE_DIFFICULTE);
   });
 
   it('ignores modifier-key chords (Cmd/Ctrl/Alt + j)', async () => {
@@ -116,30 +111,26 @@ describe('RatingCard verdict picker', () => {
     expect(onVerdict).not.toHaveBeenCalled();
   });
 
-  it('does not fire a verdict when j/k/l is pressed on the Ark POS combobox', async () => {
+  it('does not fire a verdict when j/k/l is pressed on the POS pill select', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
-    const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
-    );
+    render(<RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />);
+    const select = screen.getByRole('combobox', { name: 'Nature grammaticale' });
     await act(async () => {
-      fireEvent.click(container.querySelector('button[data-verdict="CORRIGER"]') as HTMLButtonElement);
-    });
-    const combobox = screen.getByRole('combobox', { name: 'Nature grammaticale' });
-    await act(async () => {
-      fireEvent.keyDown(combobox, { key: 'l' });
-      fireEvent.keyDown(combobox, { key: 'j' });
+      fireEvent.keyDown(select, { key: 'l' });
+      fireEvent.keyDown(select, { key: 'j' });
     });
     expect(onVerdict).not.toHaveBeenCalled();
   });
 
-  it('Corriger button opens textarea pre-filled with definition; submit invokes onCorriger', async () => {
+  it('Corriger trigger opens textarea pre-filled with definition; submit invokes onCorriger', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const onCorriger = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={onCorriger} />,
     );
-    const corrigerButton = container.querySelector('button[data-verdict="CORRIGER"]') as HTMLButtonElement;
-    await act(async () => { fireEvent.click(corrigerButton); });
+    await act(async () => {
+      fireEvent.click(container.querySelector('[data-testid="corriger-trigger"]') as HTMLButtonElement);
+    });
 
     const textarea = container.querySelector('textarea#correctif-text') as HTMLTextAreaElement;
     expect(textarea).not.toBeNull();
@@ -155,21 +146,16 @@ describe('RatingCard verdict picker', () => {
       'Une définition corrigée plus précise',
       sampleItem.pos,
       expect.any(Number),
-      { targetCategories: ['faune_flore'], targetSense: '', isMultisense: false, subTags: [] },
+      SEEDED_META,
+      PRISTINE_DIFFICULTE,
     );
     expect(onVerdict).not.toHaveBeenCalled();
   });
 
-  it('correction panel exposes a labelled POS select pre-set to the item POS', async () => {
-    const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} />,
-    );
-    await act(async () => {
-      fireEvent.click(container.querySelector('button[data-verdict="CORRIGER"]') as HTMLButtonElement);
-    });
-    const trigger = screen.getByRole('combobox', { name: 'Nature grammaticale' });
-    expect(trigger).not.toBeNull();
-    expect(trigger.textContent).toContain('Nom commun');
+  it('the POS pill is a labelled select pre-set to the item POS', () => {
+    render(<RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} />);
+    const select = screen.getByRole('combobox', { name: 'Nature grammaticale' }) as HTMLSelectElement;
+    expect(select.value).toBe('nom_commun');
   });
 
   it('changing only the POS submits the original text with the new POS', async () => {
@@ -177,18 +163,15 @@ describe('RatingCard verdict picker', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={onCorriger} />,
     );
+    const select = screen.getByRole('combobox', { name: 'Nature grammaticale' }) as HTMLSelectElement;
+    await act(async () => { fireEvent.change(select, { target: { value: 'polyvalent' } }); });
     await act(async () => {
-      fireEvent.click(container.querySelector('button[data-verdict="CORRIGER"]') as HTMLButtonElement);
+      fireEvent.click(container.querySelector('[data-testid="corriger-trigger"]') as HTMLButtonElement);
     });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('combobox', { name: 'Nature grammaticale' }));
-    });
-    const option = await screen.findByRole('option', { name: 'Polyvalent' });
-    await act(async () => { fireEvent.click(option); });
     await act(async () => {
       fireEvent.click(container.querySelector('[data-testid="correctif-submit"]') as HTMLButtonElement);
     });
-    expect(onCorriger).toHaveBeenCalledWith(sampleItem.definition, 'polyvalent', expect.any(Number), { targetCategories: ['faune_flore'], targetSense: '', isMultisense: false, subTags: [] });
+    expect(onCorriger).toHaveBeenCalledWith(sampleItem.definition, 'polyvalent', expect.any(Number), SEEDED_META, PRISTINE_DIFFICULTE);
   });
 
   it('Corriger submit is a no-op when text equals the original definition', async () => {
@@ -197,7 +180,7 @@ describe('RatingCard verdict picker', () => {
       <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={onCorriger} />,
     );
     await act(async () => {
-      fireEvent.click(container.querySelector('button[data-verdict="CORRIGER"]') as HTMLButtonElement);
+      fireEvent.click(container.querySelector('[data-testid="corriger-trigger"]') as HTMLButtonElement);
     });
     await act(async () => {
       fireEvent.click(container.querySelector('[data-testid="correctif-submit"]') as HTMLButtonElement);
@@ -216,5 +199,31 @@ describe('RatingCard verdict picker', () => {
     await act(async () => { fireEvent.keyDown(textarea, { key: 'Escape' }); });
     expect(container.querySelector('textarea#correctif-text')).toBeNull();
     expect(onCorriger).not.toHaveBeenCalled();
+  });
+
+  it('renders the Signaler action only when onSignaler is provided', async () => {
+    const onSignaler = vi.fn().mockResolvedValue(undefined);
+    const { container, rerender } = render(
+      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} />,
+    );
+    expect(container.querySelector('[data-testid="signaler"]')).toBeNull();
+    rerender(
+      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} onSignaler={onSignaler} />,
+    );
+    await act(async () => {
+      fireEvent.click(container.querySelector('[data-testid="signaler"]') as HTMLButtonElement);
+    });
+    expect(onSignaler).toHaveBeenCalledWith(expect.any(Number));
+  });
+
+  it('renders the metadata band only when enrichable', () => {
+    const { container, rerender } = render(
+      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} />,
+    );
+    expect(container.querySelector('[data-testid="metadata-band"]')).toBeNull();
+    rerender(
+      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} enrichable />,
+    );
+    expect(container.querySelector('[data-testid="metadata-band"]')).not.toBeNull();
   });
 });

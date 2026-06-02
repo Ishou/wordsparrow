@@ -279,6 +279,23 @@ export default defineConfig({
         // ADR-0043's semantic intent ("miel — calme action, en cours").
         focusBg:        { value: '{colors.secondary.100}' },
         focusRing:      { value: '{colors.secondary.500}' },
+
+        // Band tri-state tokens: pristine → honey pale; modified → deeper honey; saved → mousse green.
+        metaSuggestedBg:   { value: '{colors.secondary.50}' },
+        metaSuggestedLine: { value: '{colors.secondary.300}' },
+        metaSuggestedText: { value: '{colors.secondary.700}' },
+        metaModifiedBg:    { value: '{colors.secondary.100}' },
+        metaModifiedLine:  { value: '{colors.secondary.500}' },
+        metaModifiedText:  { value: '{colors.secondary.800}' },
+        metaSavedBg:       { value: '{colors.primary.100}' },
+        metaSavedLine:     { value: '{colors.primary.300}' },
+        metaSavedText:     { value: '{colors.primary.700}' },
+      },
+    },
+    keyframes: {
+      cardRise: {
+        from: { opacity: '0', transform: 'translateY(8px)' },
+        to: { opacity: '1', transform: 'translateY(0)' },
       },
     },
   },

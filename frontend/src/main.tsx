@@ -95,12 +95,14 @@ import '@/ui/styles/index.css';
 async function enableMocks(): Promise<void> {
   const mockGrid = import.meta.env.VITE_MOCK_GRID_API === 'true';
   const mockGame = import.meta.env.VITE_MOCK_GAME_API === 'true';
-  if (!mockGrid && !mockGame) return;
+  const mockSurvey = import.meta.env.VITE_MOCK_SURVEY_API === 'true';
+  if (!mockGrid && !mockGame && !mockSurvey) return;
   const mod = await import('@/infrastructure/mocks/browser');
   const handlersMod = await import('@/infrastructure/mocks/handlers');
   const handlers = [
     ...(mockGrid ? handlersMod.gridApiHandlers : []),
     ...(mockGame ? handlersMod.gameApiHandlers : []),
+    ...(mockSurvey ? handlersMod.surveyApiHandlers : []),
   ];
   const worker = mod.createWorker(handlers);
   await worker.start({

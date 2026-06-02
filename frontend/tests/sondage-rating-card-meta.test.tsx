@@ -36,96 +36,118 @@ function lastMeta(fn: ReturnType<typeof vi.fn>) {
   return call[2];
 }
 
+async function clickEl(el: Element | null): Promise<void> {
+  await act(async () => { fireEvent.click(el as HTMLButtonElement); });
+}
+
+// Band must be expanded before querying inputs; category picker also needs explicit open.
+async function expandBand(container: HTMLElement): Promise<void> {
+  await clickEl(container.querySelector('[data-testid="band-adjust"]'));
+}
+async function openCategoryPicker(): Promise<void> {
+  await clickEl(screen.getByRole('button', { name: /Toutes les catégories/ }));
+}
+async function clickCategory(container: HTMLElement, cat: string): Promise<void> {
+  await clickEl(container.querySelector(`[data-categorie="${cat}"]`));
+}
+async function clickGood(container: HTMLElement): Promise<void> {
+  await clickEl(container.querySelector('[data-verdict="GOOD"]'));
+}
+
 describe('RatingCard meta inputs', () => {
   beforeEach(() => { clearLemmaMetaCache(); });
 
   it('toggling a category adds it; verdict carries the new selection', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    const objet = container.querySelector<HTMLInputElement>('[data-categorie="objet"] input')!;
-    await act(async () => { fireEvent.click(objet); });
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
+    await expandBand(container);
+    await openCategoryPicker();
+    await clickCategory(container, 'objet');
+    await clickGood(container);
     expect(lastMeta(onVerdict).targetCategories).toEqual(['faune_flore', 'objet']);
   });
 
   it('cannot drop below the seed (min 1) but can remove an added category', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    const seed = container.querySelector<HTMLInputElement>('[data-categorie="faune_flore"] input')!;
-    await act(async () => { fireEvent.click(seed); });
-    const objet = container.querySelector<HTMLInputElement>('[data-categorie="objet"] input')!;
-    await act(async () => { fireEvent.click(objet); });
-    await act(async () => { fireEvent.click(objet); });
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
-    // Removal of the lone seed was blocked; the added category was removed.
+    await expandBand(container);
+    // Clicking the lone seed chip is blocked (keeps at least the AI suggestion).
+    await clickCategory(container, 'faune_flore');
+    await openCategoryPicker();
+    await clickCategory(container, 'objet');
+    // objet is now a selected chip; clicking removes it.
+    await clickCategory(container, 'objet');
+    await clickGood(container);
     expect(lastMeta(onVerdict).targetCategories).toEqual(['faune_flore']);
   });
 
   it('caps category selection at 6', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    const cats = ['objet', 'corps', 'culture', 'histoire', 'jeu', 'sport', 'religion'];
-    for (const c of cats) {
-      const input = container.querySelector<HTMLInputElement>(`[data-categorie="${c}"] input`)!;
-      await act(async () => { fireEvent.click(input); });
+    await expandBand(container);
+    await openCategoryPicker();
+    for (const c of ['objet', 'corps', 'culture', 'histoire', 'jeu']) {
+      await clickCategory(container, c);
     }
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
+    // Seventh is disabled at the cap; the click is a no-op.
+    await clickCategory(container, 'sport');
+    await clickGood(container);
     expect(lastMeta(onVerdict).targetCategories).toHaveLength(6);
   });
 
   it('checking "autre" clears every other category', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    const objet = container.querySelector<HTMLInputElement>('[data-categorie="objet"] input')!;
-    await act(async () => { fireEvent.click(objet); });
-    const autre = container.querySelector<HTMLInputElement>('[data-categorie="autre"] input')!;
-    await act(async () => { fireEvent.click(autre); });
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
+    await expandBand(container);
+    await openCategoryPicker();
+    await clickCategory(container, 'objet');
+    await clickCategory(container, 'autre');
+    await clickGood(container);
     expect(lastMeta(onVerdict).targetCategories).toEqual(['autre']);
   });
 
   it('checking another category clears a previously selected "autre"', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    const autre = container.querySelector<HTMLInputElement>('[data-categorie="autre"] input')!;
-    await act(async () => { fireEvent.click(autre); });
-    const objet = container.querySelector<HTMLInputElement>('[data-categorie="objet"] input')!;
-    await act(async () => { fireEvent.click(objet); });
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
+    await expandBand(container);
+    await openCategoryPicker();
+    await clickCategory(container, 'autre');
+    await clickCategory(container, 'objet');
+    await clickGood(container);
     expect(lastMeta(onVerdict).targetCategories).toEqual(['objet']);
   });
 
   it('announces all cleared when "autre" replaces other selections', async () => {
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} enrichable />,
     );
-    const objet = container.querySelector<HTMLInputElement>('[data-categorie="objet"] input')!;
-    await act(async () => { fireEvent.click(objet); });
-    const autre = container.querySelector<HTMLInputElement>('[data-categorie="autre"] input')!;
-    await act(async () => { fireEvent.click(autre); });
-    const liveRegion = container.querySelector('[data-testid="categorie-multiselect"] [role="status"]')!;
+    await expandBand(container);
+    await openCategoryPicker();
+    await clickCategory(container, 'objet');
+    await clickCategory(container, 'autre');
+    const liveRegion = container.querySelector('[data-testid="band-categories"] [role="status"]')!;
     expect(liveRegion.textContent).toContain('retirées');
   });
 
   it('announces "autre" removed when a non-exclusive category is selected', async () => {
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} enrichable />,
     );
-    const autre = container.querySelector<HTMLInputElement>('[data-categorie="autre"] input')!;
-    await act(async () => { fireEvent.click(autre); });
-    const objet = container.querySelector<HTMLInputElement>('[data-categorie="objet"] input')!;
-    await act(async () => { fireEvent.click(objet); });
-    const liveRegion = container.querySelector('[data-testid="categorie-multiselect"] [role="status"]')!;
+    await expandBand(container);
+    await openCategoryPicker();
+    await clickCategory(container, 'autre');
+    await clickCategory(container, 'objet');
+    const liveRegion = container.querySelector('[data-testid="band-categories"] [role="status"]')!;
     expect(liveRegion.textContent).toContain('Autre');
     expect(liveRegion.textContent).toContain('retirée');
   });
@@ -133,63 +155,51 @@ describe('RatingCard meta inputs', () => {
   it('autre is still clickable when 6 categories are already selected', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    const caps = ['objet', 'corps', 'culture', 'histoire', 'jeu', 'sport'];
-    for (const c of caps) {
-      await act(async () => {
-        fireEvent.click(container.querySelector<HTMLInputElement>(`[data-categorie="${c}"] input`)!);
-      });
+    await expandBand(container);
+    await openCategoryPicker();
+    // Seed is faune_flore; add five more to reach the cap of 6.
+    for (const c of ['objet', 'corps', 'culture', 'histoire', 'jeu']) {
+      await clickCategory(container, c);
     }
-    const autreInput = container.querySelector<HTMLInputElement>('[data-categorie="autre"] input')!;
-    expect(autreInput.disabled).toBe(false);
-    await act(async () => { fireEvent.click(autreInput); });
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
+    const autreOption = container.querySelector<HTMLButtonElement>('[data-categorie="autre"]')!;
+    expect(autreOption.disabled).toBe(false);
+    await clickCategory(container, 'autre');
+    await clickGood(container);
     expect(lastMeta(onVerdict).targetCategories).toEqual(['autre']);
   });
 
   it('typing a single sense threads it into the verdict meta', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    const sense = screen.getByRole('combobox', { name: 'Sens cible' }) as HTMLInputElement;
+    await expandBand(container);
+    const sense = screen.getByRole('combobox', { name: 'Sens visé par cette définition' }) as HTMLInputElement;
     await act(async () => { fireEvent.change(sense, { target: { value: 'animal félin' } }); });
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
+    await clickGood(container);
     expect(lastMeta(onVerdict).targetSense).toBe('animal félin');
     expect(lastMeta(onVerdict).isMultisense).toBe(false);
   });
 
   it('the lemma cannot be entered as a sense (ADR-0061 repetition rule)', async () => {
-    render(<RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} />);
-    const sense = screen.getByRole('combobox', { name: 'Sens cible' }) as HTMLInputElement;
+    const { container } = render(
+      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} enrichable />,
+    );
+    await expandBand(container);
+    const sense = screen.getByRole('combobox', { name: 'Sens visé par cette définition' }) as HTMLInputElement;
     await act(async () => { fireEvent.change(sense, { target: { value: 'le chat' } }); });
     expect(sense.getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByRole('alert')).toHaveTextContent(/ne doit pas répéter/i);
   });
 
-  it('checking calembour disables the single-sense input and keeps the flag in meta', async () => {
-    const onVerdict = vi.fn().mockResolvedValue(undefined);
-    const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
-    );
-    const sense = screen.getByRole('combobox', { name: 'Sens cible' }) as HTMLInputElement;
-    await act(async () => { fireEvent.change(sense, { target: { value: 'animal félin' } }); });
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('multisense-checkbox'));
-    });
-    expect(sense.disabled).toBe(true);
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
-    expect(lastMeta(onVerdict).isMultisense).toBe(true);
-    // When multisense, the single sense is dropped by the route, but the card still reports the flag.
-    expect(lastMeta(onVerdict).targetSense).toBe('animal félin');
-  });
-
   it('adds and removes sub-tags; verdict carries them', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
+    await expandBand(container);
     const subInput = screen.getByRole('combobox', { name: 'Mots-clés' }) as HTMLInputElement;
     await act(async () => {
       fireEvent.change(subInput, { target: { value: 'félin' } });
@@ -199,7 +209,7 @@ describe('RatingCard meta inputs', () => {
       fireEvent.change(subInput, { target: { value: 'domestique' } });
       fireEvent.keyDown(subInput, { key: 'Enter' });
     });
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
+    await clickGood(container);
     expect(lastMeta(onVerdict).subTags).toEqual(['félin', 'domestique']);
   });
 
@@ -207,35 +217,39 @@ describe('RatingCard meta inputs', () => {
     const client = stubClient({ priorSenses: [], priorSubTags: ['ancien-tag'] });
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} surveyClient={client} />,
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable surveyClient={client} />,
     );
     await waitFor(() => expect(client.getLemmaMeta).toHaveBeenCalled());
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
+    await clickGood(container);
     expect(lastMeta(onVerdict).subTags).toEqual([]);
   });
 
   it('autocompletes sub-tags and senses from lemma-meta priors', async () => {
     const client = stubClient({ priorSenses: ['conversation digitale'], priorSubTags: ['capitale'] });
-    render(<RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} surveyClient={client} />);
+    const { container } = render(
+      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} enrichable surveyClient={client} />,
+    );
     await waitFor(() => expect(client.getLemmaMeta).toHaveBeenCalled());
-    const sense = screen.getByRole('combobox', { name: 'Sens cible' }) as HTMLInputElement;
+    await expandBand(container);
+    const sense = screen.getByRole('combobox', { name: 'Sens visé par cette définition' }) as HTMLInputElement;
     await act(async () => {
       fireEvent.focus(sense);
       fireEvent.change(sense, { target: { value: 'conv' } });
     });
-    expect(screen.getByRole('listbox', { name: 'Sens cible' }).textContent).toContain('conversation digitale');
+    expect(screen.getByRole('listbox', { name: 'Sens visé par cette définition' }).textContent).toContain('conversation digitale');
   });
 
   it('resets meta to the item prior when the item changes', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container, rerender } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} />,
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    const objet = container.querySelector<HTMLInputElement>('[data-categorie="objet"] input')!;
-    await act(async () => { fireEvent.click(objet); });
+    await expandBand(container);
+    await openCategoryPicker();
+    await clickCategory(container, 'objet');
     const next: SurveyItem = { ...sampleItem, itemId: 'next-id', mot: 'BANQUE', categorie: 'societe' };
-    rerender(<RatingCard item={next} onVerdict={onVerdict} onCorriger={async () => {}} />);
-    await act(async () => { fireEvent.click(container.querySelector('[data-verdict="GOOD"]')!); });
+    rerender(<RatingCard item={next} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />);
+    await clickGood(container);
     expect(lastMeta(onVerdict).targetCategories).toEqual(['societe']);
   });
 });
