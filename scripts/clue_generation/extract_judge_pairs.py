@@ -1,4 +1,4 @@
-"""Survey DB → judge training pairs JSONL (read-only, cumulative, held-out-excluded)."""
+"""Survey DB → judge training pairs JSONL (read-only, pair_ratings only, held-out-excluded)."""
 
 from __future__ import annotations
 
@@ -6,12 +6,14 @@ import argparse
 import json
 import os
 import sys
-import unicodedata
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 
 # Cumulative across all campaigns; carries campaign_id for recency-weighting.
+# Correctifs are excluded by design: the human-rewritten side is off the
+# generator's distribution and often a style fix — that belongs to RAFT
+# (extract_winners.py), not the judge. See clue-judge design spec §3.
 PAIRS_SQL = """
 SELECT li.mot, li.style, li.definition,
        ri.mot, ri.style, ri.definition,
@@ -23,23 +25,6 @@ SELECT li.mot, li.style, li.definition,
    AND pr.verdict IN ('left_wins', 'right_wins', 'both_good', 'both_bad')
    AND li.retired_at IS NULL AND ri.retired_at IS NULL
 """
-
-CORRECTIFS_SQL = """
-SELECT orig.mot, orig.style, orig.definition,
-       prop.definition, prop.style, r.campaign_id
-  FROM ratings r
-  JOIN survey_items orig ON orig.item_id = r.item_id
-  JOIN survey_items prop ON prop.item_id = r.proposed_item_id
- WHERE r.proposed_item_id IS NOT NULL
-   AND r.user_id IN (SELECT user_id FROM maintainer_roles WHERE role = 'maintainer')
-   AND orig.retired_at IS NULL AND prop.retired_at IS NULL
-"""
-
-
-def _norm(s: str) -> str:
-    """Lower, strip accents + non-alphanumerics — for trivial-edit detection only."""
-    nfd = unicodedata.normalize("NFD", s.lower())
-    return "".join(c for c in nfd if c.isalnum())
 
 
 def expand_pair_rows(rows: Iterable[tuple], held_out: set[str]) -> Iterator[dict]:
@@ -59,17 +44,6 @@ def expand_pair_rows(rows: Iterable[tuple], held_out: set[str]) -> Iterator[dict
             continue
         yield _row(left_mot, left_style, left_def, labels[0], "pair_ratings", verdict, camp)
         yield _row(right_mot, right_style, right_def, labels[1], "pair_ratings", verdict, camp)
-
-
-def expand_correctif_rows(rows: Iterable[tuple], held_out: set[str]) -> Iterator[dict]:
-    """Proposed (human) = chosen, original (model) = rejected. Drops trivial + held-out."""
-    for orig_mot, orig_style, orig_def, prop_def, prop_style, camp in rows:
-        if orig_mot.lower() in held_out:
-            continue
-        if _norm(orig_def) == _norm(prop_def):
-            continue
-        yield _row(orig_mot, prop_style or orig_style, prop_def, 1, "correctif", "correctif", camp)
-        yield _row(orig_mot, orig_style, orig_def, 0, "correctif", "correctif", camp)
 
 
 def _row(lemma: str, style: str, clue: str, label: int, source: str, verdict: str, camp: Any) -> dict:
@@ -122,17 +96,15 @@ def fetch(conn: Any, sql: str) -> list[tuple]:
 
 
 def run(conn: Any, held_out: set[str], out_path: Path) -> dict:
-    """Extract both sources, exclude held-out, write JSONL. Returns counts."""
+    """Extract pair_ratings, exclude held-out, write JSONL. Returns counts."""
     records = list(expand_pair_rows(fetch(conn, PAIRS_SQL), held_out))
-    records += list(expand_correctif_rows(fetch(conn, CORRECTIFS_SQL), held_out))
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as f:
         for r in records:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     lemmas = {r["lemma"].lower() for r in records}
     counts = {"records": len(records), "lemmas": len(lemmas),
-              "pair_ratings": sum(r["source"] == "pair_ratings" for r in records),
-              "correctif": sum(r["source"] == "correctif" for r in records)}
+              "pair_ratings": sum(r["source"] == "pair_ratings" for r in records)}
     print(f"wrote {out_path}: {counts}", file=sys.stderr)
     return counts
 

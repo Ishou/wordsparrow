@@ -59,34 +59,3 @@ def test_pair_held_out_lemma_excluded():
         held_out=HELD_OUT,
     ))
     assert rows == []
-
-
-def test_correctif_proposed_is_chosen_original_is_rejected():
-    rows = list(ej.expand_correctif_rows(
-        [("couper", "definition_directe", "Action de couper",
-          "Trancher net", "definition_directe", "camp-2")],
-        held_out=set(),
-    ))
-    assert {(r["clue"], r["label"]) for r in rows} == {
-        ("Trancher net", 1), ("Action de couper", 0),
-    }
-    assert all(r["source"] == "correctif" for r in rows)
-
-
-def test_correctif_trivial_edit_dropped():
-    # Only punctuation/case differs → not a real preference signal.
-    rows = list(ej.expand_correctif_rows(
-        [("couper", "definition_directe", "Trancher net",
-          "Trancher net.", "definition_directe", "camp-2")],
-        held_out=set(),
-    ))
-    assert rows == []
-
-
-def test_correctif_held_out_lemma_excluded():
-    rows = list(ej.expand_correctif_rows(
-        [("gamma", "definition_directe", "Quelque chose",
-          "Autre chose", "definition_directe", "camp-2")],
-        held_out={"gamma"},
-    ))
-    assert rows == []
