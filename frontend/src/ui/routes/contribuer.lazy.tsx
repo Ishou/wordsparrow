@@ -9,6 +9,7 @@ import { campaignDisplayName, normalizeForMatch } from '@/application/survey';
 import type { LikertScore, RatingSubmission, SurveyItem, SurveyPos } from '@/application/survey';
 import { useAuth } from '@/ui/components/auth';
 import { ContentPage } from '@/ui/components/layout';
+import { useToast } from '@/ui/components/primitives';
 import type { RatingMeta, Verdict } from '@/ui/components/sondage';
 import { LockBanner, RatingCard, SignInBanner, UndoBar, useCampaignStatus } from '@/ui/components/sondage';
 import { Route as ParentRoute } from './contribuer';
@@ -82,6 +83,24 @@ const statusStyles = css({
   margin: 0,
 });
 
+const statsRowStyles = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 'md',
+  margin: 0,
+  padding: 0,
+  fontSize: 'sm',
+  color: 'fgMuted',
+});
+
+const statStyles = css({
+  display: 'inline-flex',
+  alignItems: 'baseline',
+  gap: '4px',
+  '& dt': { fontWeight: 'normal' },
+  '& dd': { margin: 0, fontWeight: 'semibold', color: 'fg', fontVariantNumeric: 'tabular-nums' },
+});
+
 const cardEnterStyles = css({
   '@media (prefers-reduced-motion: no-preference)': {
     animation: 'cardRise 220ms ease-out',
@@ -102,6 +121,7 @@ function ContribuerPage() {
   const surveyAnonStore = ctx.surveyAnonStore;
   const analytics = ctx.analytics ?? NOOP_ANALYTICS;
   const authClient = ctx.authClient;
+  const { show: showToast } = useToast();
 
   const campaignStatus = useCampaignStatus(surveyClient);
   const isLocked =
@@ -110,8 +130,12 @@ function ContribuerPage() {
   const [item, setItem] = useState<SurveyItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastAction, setLastAction] = useState<{ token: string; item: SurveyItem } | null>(null);
+  const [lastAction, setLastAction] = useState<
+    { token: string; item: SurveyItem; kind: 'rating' | 'correctif' } | null
+  >(null);
   const [undoBusy, setUndoBusy] = useState(false);
+  // Ratings feed ambient counters; rarer correctif/signal/undo events toast instead.
+  const [stats, setStats] = useState({ rated: 0, enriched: 0, streak: 0 });
   const sessionStartedRef = useRef(false);
   const authSkippedIdsRef = useRef<Set<string>>(new Set());
 
@@ -183,6 +207,7 @@ function ContribuerPage() {
       } else {
         surveyAnonStore?.add(currentItem.itemId);
       }
+      setStats((s) => ({ ...s, streak: 0 }));
       setLastAction(null);
       await loadNext();
       return;
@@ -201,7 +226,8 @@ function ContribuerPage() {
         `tier=${currentItem.tier};verdict=${verdict}`,
       );
       if (!isAuth) surveyAnonStore?.add(currentItem.itemId);
-      if (result.undoToken) setLastAction({ token: result.undoToken, item: currentItem });
+      setStats((s) => ({ ...s, rated: s.rated + 1, streak: s.streak + 1 }));
+      if (result.undoToken) setLastAction({ token: result.undoToken, item: currentItem, kind: 'rating' });
       await loadNext();
     } catch (cause) {
       const name = (cause as Error | undefined)?.name ?? '';
@@ -242,7 +268,9 @@ function ContribuerPage() {
     try {
       const result = await surveyClient.submitRating(currentItem.itemId, payload);
       analytics.trackEvent('survey', 'correctif_proposed', `tier=${currentItem.tier}`);
-      if (result.undoToken) setLastAction({ token: result.undoToken, item: currentItem });
+      setStats((s) => ({ ...s, enriched: s.enriched + 1, streak: s.streak + 1 }));
+      showToast({ text: 'Correction proposée — merci !', tone: 'info' });
+      if (result.undoToken) setLastAction({ token: result.undoToken, item: currentItem, kind: 'correctif' });
       await loadNext();
     } catch (cause) {
       const name = (cause as Error | undefined)?.name ?? '';
@@ -271,19 +299,27 @@ function ContribuerPage() {
     } else {
       surveyAnonStore?.add(currentItem.itemId);
     }
+    setStats((s) => ({ ...s, streak: 0 }));
+    showToast({ text: 'Indice signalé. Merci de nous aider à corriger le tir.', tone: 'info' });
     setLastAction(null);
     await loadNext();
   }
 
   async function onUndo(): Promise<void> {
     if (!surveyClient || !lastAction) return;
-    const { token, item: stashedItem } = lastAction;
+    const { token, item: stashedItem, kind } = lastAction;
     setUndoBusy(true);
     try {
       await surveyClient.undoAction(token);
       analytics.trackEvent('survey', 'verdict_undone', undefined);
       if (!isAuth) surveyAnonStore?.remove(stashedItem.itemId);
       authSkippedIdsRef.current.delete(stashedItem.itemId);
+      setStats((s) => ({
+        rated: kind === 'rating' ? Math.max(0, s.rated - 1) : s.rated,
+        enriched: kind === 'correctif' ? Math.max(0, s.enriched - 1) : s.enriched,
+        streak: Math.max(0, s.streak - 1),
+      }));
+      showToast({ text: 'Action annulée.', tone: 'info' });
       setLastAction(null);
       setError(null);
       setItem(stashedItem);
@@ -322,6 +358,24 @@ function ContribuerPage() {
               Mode paires →
             </Link>
           </p>
+          {stats.rated + stats.enriched > 0 ? (
+            <dl className={statsRowStyles} aria-label="Statistiques de la session" data-testid="session-stats">
+              <div className={statStyles}>
+                <dt>Notées</dt>
+                <dd data-testid="stat-rated">{stats.rated}</dd>
+              </div>
+              {isAuth ? (
+                <div className={statStyles}>
+                  <dt>Enrichies</dt>
+                  <dd data-testid="stat-enriched">{stats.enriched}</dd>
+                </div>
+              ) : null}
+              <div className={statStyles}>
+                <dt>Série</dt>
+                <dd data-testid="stat-streak">{stats.streak}</dd>
+              </div>
+            </dl>
+          ) : null}
         </header>
         {campaignStatus.status.kind === 'closed' ? (
           <LockBanner campaign={campaignStatus.status.campaign} />
