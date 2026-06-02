@@ -9,6 +9,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+import math
+
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
@@ -73,7 +75,7 @@ def _load_records(path: Path) -> list[dict]:
 
 
 def _held_out_lemmas(path: Path) -> set[str]:
-    """Lemmas reserved for held-out eval; must never enter training (spec §4 Fix 2)."""
+    """Lemmas reserved for held-out eval; must never enter training."""
     if not path.exists():
         return set()
     return {r["lemma"] for r in _load_records(path) if r.get("lemma")}
@@ -110,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
         X, y, groups = _build_matrix(model, records, styles)
         clf, auroc = train_probe(X, y, groups, C=args.C)
         print(f"backbone {name}: CV AUROC {auroc:.3f}", file=sys.stderr)
-        if best is None or auroc > best[1]:
+        if best is None or math.isnan(best[1]) or auroc > best[1]:
             best = (name, auroc, clf)
 
     if best is None:
