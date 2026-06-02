@@ -10,10 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 
-# Cumulative across all campaigns; carries campaign_id for recency-weighting.
-# Correctifs are excluded by design: the human-rewritten side is off the
-# generator's distribution and often a style fix — that belongs to RAFT
-# (extract_winners.py), not the judge. See clue-judge design spec §3.
+# Cumulative across campaigns (campaign_id for recency-weighting); correctifs excluded — see clue-judge design spec §3.
 PAIRS_SQL = """
 SELECT li.mot, li.style, li.definition,
        ri.mot, ri.style, ri.definition,
