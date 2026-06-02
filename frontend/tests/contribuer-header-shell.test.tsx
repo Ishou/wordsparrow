@@ -111,12 +111,14 @@ describe('Contribuer header shell', () => {
     expect(screen.getByTestId('campaign-subtitle')).toHaveTextContent('Moineau 7');
   });
 
-  it('renders the session stats strip with zeroed placeholders', async () => {
+  it('renders the keyboard legend at the foot of the loop', async () => {
     renderContribuer();
     await waitFor(() => expect(screen.getByTestId('rating-card')).toBeInTheDocument());
-    expect(screen.getByTestId('stats-notees')).toHaveTextContent('Notées 0');
-    expect(screen.getByTestId('stats-enrichies')).toHaveTextContent('Enrichies 0');
-    expect(screen.getByTestId('stats-serie')).toHaveTextContent('série 0');
+    const legend = screen.getByLabelText('Raccourcis clavier');
+    expect(legend).toHaveTextContent('noter');
+    expect(legend).toHaveTextContent('corriger');
+    expect(legend).toHaveTextContent('ajuster les métadonnées');
+    expect(legend).toHaveTextContent('confirmer / enregistrer');
   });
 
   it('keeps the Mode paires link pointing at /contribuer/pairs', async () => {

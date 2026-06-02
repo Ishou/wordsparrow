@@ -1,80 +1,53 @@
-// /contribuer smoke test — Playwright-level stubs replace missing MSW handlers in preview.
+// /contribuer smoke test. The survey-api surface is served by the MSW
+// preview deck (handlers/survey.ts) — page.route cannot intercept it
+// because MSW's service worker controls the page. Anon overrides go
+// through the `__mswReady__` seam that main.tsx awaits before its first
+// loader fetch (see enableMocks), so the override lands pre-render.
 
 import { expect, test } from '@playwright/test';
 
-const sampleItem = {
-  itemId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
-  mot: 'CHAT',
-  definition: 'Animal domestique à moustaches',
-  pos: 'nom_commun',
-  categorie: 'faune_flore',
-  style: 'definition_directe',
-  forceClaimed: 2,
-  longueur: 4,
-  tier: 'mid',
-  isCalibration: false,
-};
-
-const nextItem = {
-  ...sampleItem,
-  itemId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c',
-  mot: 'CHIEN',
-  definition: 'Meilleur ami de l\'homme',
-};
-
-const lemmaMeta = { priorSenses: [], priorSubTags: [] };
-
 test.describe('/contribuer', () => {
-  test('loads the rating card, submits a verdict, and advances to the next card', async ({ page }) => {
+  test('loads the authed rating card, submits a verdict, and advances', async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem('wordsparrow.tour.seen', 'true');
-    });
-    let nextCalls = 0;
-    await page.route(/\/v1\/items\/next/, async (route) => {
-      nextCalls += 1;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(nextCalls === 1 ? sampleItem : nextItem),
-      });
-    });
-    await page.route(/\/v1\/lemma-meta\//, async (route) => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(lemmaMeta) });
-    });
-    await page.route(/\/v1\/items\/.+\/rating/, async (route) => {
-      await route.fulfill({
-        status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          ratingId: '0190e3a4-7a2c-7c9e-8f1a-aaaaaaaaaaaa',
-          itemId: sampleItem.itemId,
-          submittedAs: 'anon',
-          proposedItemId: null,
-        }),
-      });
     });
 
     await page.goto('/contribuer');
     await page.waitForSelector('[data-testid="rating-card"]', { state: 'visible' });
-    await expect(page.getByRole('heading', { name: 'CHAT' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'AUTOMNE' })).toBeVisible();
+    // Authed contributors get the enrichable metadata band.
+    await expect(page.getByTestId('metadata-band')).toBeVisible();
 
     await page.locator('[data-verdict="GOOD"]').click();
 
-    await expect(page.getByRole('heading', { name: 'CHIEN' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'SOURIS' })).toBeVisible();
   });
 
-  test('renders the sign-in banner for anon visitors and hides the meta inputs', async ({ page }) => {
+  test('renders the sign-in banner for anon visitors and hides the meta band', async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem('wordsparrow.tour.seen', 'true');
+      // Seed a deferred gate main.tsx awaits; resolve it once the MSW seam
+      // is live and the whoami handler is overridden to 401 (anonymous).
+      const w = window as unknown as {
+        __msw__?: { worker: { use: (...h: unknown[]) => void }; http: any; HttpResponse: any };
+        __mswReady__?: Promise<void>;
+      };
+      w.__mswReady__ = new Promise<void>((resolve) => {
+        const timer = setInterval(() => {
+          if (!w.__msw__) return;
+          clearInterval(timer);
+          w.__msw__.worker.use(
+            w.__msw__.http.get('*/v1/auth/whoami', () => new w.__msw__!.HttpResponse(null, { status: 401 })),
+          );
+          resolve();
+        }, 5);
+      });
     });
-    await page.route(/\/v1\/items\/next/, async (route) => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sampleItem) });
-    });
-    await page.route(/\/v1\/lemma-meta\//, async (route) => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(lemmaMeta) });
-    });
+
     await page.goto('/contribuer');
     await page.waitForSelector('[data-testid="rating-card"]', { state: 'visible' });
+
     await expect(page.getByRole('note', { name: /Invitation à se connecter/i })).toBeVisible();
+    await expect(page.getByTestId('metadata-band')).toHaveCount(0);
   });
 });

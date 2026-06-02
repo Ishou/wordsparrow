@@ -95,7 +95,7 @@ describe('RatingCard disabled', () => {
         disabled={false}
       />,
     );
-    const corriger = container.querySelector<HTMLButtonElement>('[data-verdict="CORRIGER"]')!;
+    const corriger = container.querySelector<HTMLButtonElement>('[data-testid="corriger-trigger"]')!;
     fireEvent.click(corriger);
     expect(container.querySelector('[data-testid="correctif-box"]')).not.toBeNull();
     rerender(

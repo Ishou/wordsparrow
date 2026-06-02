@@ -41,6 +41,7 @@ import type { components } from '@/infrastructure/api/grid/types';
 import puzzleFixtureJson from './fixtures/puzzle.json';
 
 import { gameHandlers, gameWsHandler } from './handlers/game';
+import { surveyApiHandlers } from './handlers/survey';
 
 type Puzzle = components['schemas']['Puzzle'];
 type Position = components['schemas']['Position'];
@@ -228,4 +229,5 @@ const gridHandlers = [
 // the game set only; preview wants both; production installs neither.
 export const gridApiHandlers = gridHandlers;
 export const gameApiHandlers = [...gameHandlers, gameWsHandler];
-export const handlers = [...gridApiHandlers, ...gameApiHandlers];
+export { surveyApiHandlers };
+export const handlers = [...gridApiHandlers, ...gameApiHandlers, ...surveyApiHandlers];

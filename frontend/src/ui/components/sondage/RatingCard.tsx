@@ -1,14 +1,13 @@
-// ADR-0050 §6 a11y: 56 px touch-target minimum.
+// ADR-0050 §6 a11y: 56 px touch-target minimum. ADR-0061: metadata is auth-only.
 
 import { useEffect, useRef, useState } from 'react';
 import { css, cx } from 'styled-system/css';
-import type { SurveyCategorie, SurveyClient, SurveyItem, SurveyPos } from '@/application/survey';
-import { Select } from '@/ui/components/primitives';
-import { CategorieMultiSelect } from './CategorieMultiSelect';
-import { GlossChipInput } from './GlossChipInput';
-import { POS_OPTIONS, posLabel, styleLabel } from './labels';
-import { SenseInput } from './SenseInput';
+import type { LikertScore, SurveyCategorie, SurveyClient, SurveyItem, SurveyPos } from '@/application/survey';
+import { POS_OPTIONS, posLabel } from './labels';
+import { MetadataBand } from './MetadataBand';
+import { StyleTooltip } from './StyleTooltip';
 import { useLemmaMeta } from './useLemmaMeta';
+import { useMetadataBand } from './useMetadataBand';
 
 const EMPTY_LIST: ReadonlyArray<string> = Object.freeze([]);
 
@@ -24,59 +23,183 @@ export interface RatingMeta {
 const cardStyles = css({
   bg: 'surface',
   border: '1px solid token(colors.border)',
-  borderRadius: 'md',
+  borderRadius: 'lg',
   padding: 'lg',
   display: 'flex',
   flexDirection: 'column',
   gap: 'md',
+  boxShadow: '0 1px 2px rgba(31, 46, 37, 0.04)',
 });
 
+const topRowStyles = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  gap: 'sm',
+  fontSize: 'sm',
+  color: 'fgMuted',
+});
+
+const posSelectStyles = css({
+  appearance: 'none',
+  fontFamily: 'body',
+  fontSize: 'xs',
+  fontWeight: 'semibold',
+  color: 'fg',
+  bg: 'surface',
+  border: '1px solid token(colors.border)',
+  borderRadius: '999px',
+  paddingInline: 'sm',
+  paddingBlock: '4px',
+  paddingInlineEnd: '22px',
+  cursor: 'pointer',
+  backgroundImage:
+    'linear-gradient(45deg, transparent 50%, token(colors.fgMuted) 50%), linear-gradient(135deg, token(colors.fgMuted) 50%, transparent 50%)',
+  backgroundPosition: 'calc(100% - 12px) 53%, calc(100% - 7px) 53%',
+  backgroundSize: '5px 5px, 5px 5px',
+  backgroundRepeat: 'no-repeat',
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+  },
+});
+
+const announcedWrapStyles = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+});
+
+const announcedDotsStyles = css({ display: 'inline-flex', gap: '4px', alignItems: 'center' });
+
+const announcedDotStyles = css({
+  width: '9px',
+  height: '9px',
+  borderRadius: '999px',
+  border: '1px solid token(colors.secondary.300)',
+  bg: 'transparent',
+});
+
+const announcedDotFilledStyles = css({ bg: 'secondary.500', borderColor: 'secondary.500' });
+
 const titleStyles = css({
-  fontSize: { base: 'xl', md: 'display' },
+  fontFamily: 'heading',
+  fontSize: { base: '2xl', md: 'display' },
+  fontWeight: 'bold',
   letterSpacing: '-0.02em',
   margin: 0,
   color: 'fg',
 });
 
-const chipRowStyles = css({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 'xs',
-  margin: 0,
-});
-
-const chipStyles = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  paddingInline: 'sm',
-  paddingBlock: '4px',
-  fontSize: 'xs',
-  fontWeight: 'semibold',
-  color: 'fgMuted',
-  border: '1px solid token(colors.border)',
-  borderRadius: 'sm',
-});
-
 const definitionStyles = css({
-  fontSize: 'body',
+  fontFamily: 'heading',
+  fontSize: { base: 'lg', md: 'xl' },
   fontStyle: 'italic',
   color: 'fg',
   margin: 0,
-  paddingBlock: 'sm',
+  paddingBlock: 'xs',
   paddingInline: 'md',
   borderLeft: '3px solid token(colors.accent)',
 });
 
-const metaStyles = css({
+const corrigerTriggerStyles = css({
+  alignSelf: 'flex-start',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  fontFamily: 'body',
   fontSize: 'sm',
   color: 'fgMuted',
-  margin: 0,
+  cursor: 'pointer',
+  _hover: { color: 'accent' },
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+    borderRadius: 'sm',
+  },
+});
+
+const kbdStyles = css({
+  fontFamily: 'mono',
+  fontSize: 'xs',
+  paddingInline: '5px',
+  paddingBlock: '1px',
+  borderRadius: 'sm',
+  bg: 'surfaceElevated',
+  border: '1px solid token(colors.border)',
+  color: 'fgMuted',
 });
 
 const verdictRowStyles = css({
   display: 'grid',
-  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
   gap: 'sm',
+});
+
+const verdictButtonBase = css({
+  minHeight: '64px',
+  display: 'inline-flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '4px',
+  paddingInline: 'md',
+  paddingBlock: 'sm',
+  fontFamily: 'body',
+  fontSize: 'body',
+  fontWeight: 'semibold',
+  borderRadius: '10px',
+  cursor: 'pointer',
+  transition: 'background-color 120ms ease-out, border-color 120ms ease-out, opacity 120ms ease-out',
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+  },
+  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
+});
+
+const verdictBadStyles = css({
+  bg: 'terra.50',
+  color: 'fg',
+  border: '1px solid token(colors.terra.200)',
+  _hover: { bg: 'terra.100' },
+});
+
+const verdictSkipStyles = css({
+  bg: 'surfaceMuted',
+  color: 'fg',
+  border: '1px solid token(colors.border)',
+  _hover: { bg: 'neutral.300' },
+});
+
+const verdictGoodStyles = css({
+  bg: 'primary.100',
+  color: 'fg',
+  border: '1px solid token(colors.primary.300)',
+  _hover: { bg: 'primary.200' },
+});
+
+const signalerStyles = css({
+  alignSelf: 'flex-start',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  fontFamily: 'body',
+  fontSize: 'sm',
+  color: 'fgMuted',
+  cursor: 'pointer',
+  _hover: { color: 'error' },
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+    borderRadius: 'sm',
+  },
 });
 
 const correctifBoxStyles = css({
@@ -101,6 +224,8 @@ const correctifTextareaStyles = css({
   resize: 'vertical',
 });
 
+const correctifHintStyles = css({ fontSize: 'sm', color: 'fgMuted', margin: 0 });
+
 const correctifActionsStyles = css({
   display: 'flex',
   gap: 'sm',
@@ -116,87 +241,34 @@ const correctifButtonStyles = css({
   cursor: 'pointer',
 });
 
-const verdictButtonBase = css({
-  minHeight: '56px',
-  minWidth: '56px',
-  display: 'inline-flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingInline: 'md',
-  paddingBlock: 'sm',
-  fontFamily: 'body',
-  fontSize: 'body',
-  fontWeight: 'bold',
-  borderRadius: '6px',
-  cursor: 'pointer',
-  transition: 'background-color 120ms ease-out, border-color 120ms ease-out, opacity 120ms ease-out',
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-  },
-  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
-});
-
-const verdictBadStyles = css({
-  bg: 'errorBg',
-  color: 'errorText',
-  border: '1px solid token(colors.error)',
-  _hover: { bg: 'terra.200' },
-});
-
-const verdictSkipStyles = css({
-  bg: 'surface',
-  color: 'fgMuted',
+const cancelButtonStyles = css({
+  bg: 'surfaceMuted',
+  color: 'fg',
   border: '1px solid token(colors.border)',
-  _hover: { bg: 'surfaceMuted' },
 });
 
-const verdictGoodStyles = css({
+const submitButtonStyles = css({
   bg: 'accent',
   color: 'onAccent',
   border: '1px solid token(colors.accent)',
   _hover: { bg: 'primary.400' },
 });
 
-const verdictCorrigerStyles = css({
-  bg: 'surface',
-  color: 'accent',
-  border: '1px solid token(colors.accent)',
-  _hover: { bg: 'surfaceMuted' },
-});
-
-const shortcutStyles = css({
-  fontSize: 'xs',
-  fontWeight: 'normal',
-  opacity: 0.75,
-});
-
-const metaInputsStyles = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'sm',
-});
-
-const multisenseRowStyles = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '8px',
-  fontSize: 'body',
-  color: 'fg',
-  cursor: 'pointer',
-});
-
-const multisenseCheckboxStyles = css({
-  width: '18px',
-  height: '18px',
-  margin: 0,
-  accentColor: 'token(colors.accent)',
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-  },
-});
+function AnnouncedDifficulty({ value }: { value: number }) {
+  return (
+    <span className={announcedWrapStyles}>
+      Difficulté annoncée
+      <span className={announcedDotsStyles} role="img" aria-label={`${value} sur 5`}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <span
+            key={n}
+            className={n <= value ? cx(announcedDotStyles, announcedDotFilledStyles) : announcedDotStyles}
+          />
+        ))}
+      </span>
+    </span>
+  );
+}
 
 export interface RatingCardProps {
   readonly item: SurveyItem;
@@ -204,42 +276,54 @@ export interface RatingCardProps {
     verdict: Verdict,
     latencyMs: number,
     meta: RatingMeta,
+    difficulte: LikertScore,
   ) => Promise<void> | void;
   readonly onCorriger: (
     correctedText: string,
     pos: SurveyPos,
     latencyMs: number,
     meta: RatingMeta,
+    difficulte: LikertScore,
   ) => Promise<void> | void;
+  readonly onSignaler?: (latencyMs: number) => Promise<void> | void;
   readonly disabled?: boolean;
+  readonly enrichable?: boolean;
   readonly surveyClient?: SurveyClient | null;
 }
 
-export function RatingCard({ item, onVerdict, onCorriger, disabled = false, surveyClient }: RatingCardProps) {
+export function RatingCard({
+  item,
+  onVerdict,
+  onCorriger,
+  onSignaler,
+  disabled = false,
+  enrichable = false,
+  surveyClient,
+}: RatingCardProps) {
   const startedAtRef = useRef<number>(0);
   const [correctifText, setCorrectifText] = useState<string | null>(null);
   const [correctifPos, setCorrectifPos] = useState<SurveyPos>(item.pos);
-  const [targetCategories, setTargetCategories] = useState<ReadonlyArray<SurveyCategorie>>([item.categorie]);
-  const [targetSense, setTargetSense] = useState('');
-  const [isMultisense, setIsMultisense] = useState(false);
-  const [subTags, setSubTags] = useState<ReadonlyArray<string>>([]);
 
+  const band = useMetadataBand(item);
   const lemmaMeta = useLemmaMeta(surveyClient ?? null, item.mot);
   const priorSenses = lemmaMeta.data?.priorSenses ?? EMPTY_LIST;
   const priorSubTags = lemmaMeta.data?.priorSubTags ?? EMPTY_LIST;
 
-  const meta: RatingMeta = { targetCategories, targetSense, isMultisense, subTags };
+  function currentMeta(): RatingMeta {
+    return {
+      targetCategories: band.values.targetCategories,
+      targetSense: band.values.targetSense,
+      isMultisense: band.values.isMultisense,
+      subTags: band.values.subTags,
+    };
+  }
 
   useEffect(() => {
     setCorrectifText(null);
     setCorrectifPos(item.pos);
-    setTargetCategories([item.categorie]);
-    setTargetSense('');
-    setIsMultisense(false);
-    setSubTags([]);
-  }, [item.itemId, item.pos, item.categorie]);
+  }, [item.itemId, item.pos]);
 
-  // Lock arriving mid-correction collapses any open panel so the disabled state stays internally consistent.
+  // Lock arriving mid-correction collapses any open panel so the disabled state stays consistent.
   useEffect(() => {
     if (disabled) setCorrectifText(null);
   }, [disabled]);
@@ -251,29 +335,44 @@ export function RatingCard({ item, onVerdict, onCorriger, disabled = false, surv
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
-      // Ark Select renders a `<button role="combobox">`; focus stays on it while the listbox is open.
       if (target instanceof Element && target.closest('[role="combobox"], [role="listbox"]')) return;
       if (target?.isContentEditable) return;
       const key = event.key.toLowerCase();
+      const latency = () => Math.max(0, Math.round(performance.now() - startedAtRef.current));
       if (key === 'c') {
         event.preventDefault();
         setCorrectifText(item.definition);
         return;
       }
+      if (key === 's' && onSignaler) {
+        event.preventDefault();
+        void onSignaler(latency());
+        return;
+      }
+      if (key === 'a' && enrichable) {
+        event.preventDefault();
+        band.toggleExpanded();
+        return;
+      }
+      if (key === ' ' && enrichable) {
+        event.preventDefault();
+        band.primaryAction();
+        return;
+      }
       const verdict: Verdict | null = key === 'j' ? 'BAD' : key === 'k' ? 'SKIP' : key === 'l' ? 'GOOD' : null;
       if (verdict === null) return;
       event.preventDefault();
-      const latencyMs = Math.max(0, Math.round(performance.now() - startedAtRef.current));
-      void onVerdict(verdict, latencyMs, { targetCategories, targetSense, isMultisense, subTags });
+      void onVerdict(verdict, latency(), currentMeta(), band.difficulteForSubmit);
     }
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [item.itemId, item.definition, onVerdict, disabled, targetCategories, targetSense, isMultisense, subTags]);
+    // currentMeta/latency read live refs; band fields cover meta + difficulte deps.
+  }, [item.itemId, item.definition, onVerdict, onSignaler, disabled, enrichable, band]);
 
   function submit(verdict: Verdict): void {
     if (disabled) return;
     const latencyMs = Math.max(0, Math.round(performance.now() - startedAtRef.current));
-    void onVerdict(verdict, latencyMs, meta);
+    void onVerdict(verdict, latencyMs, currentMeta(), band.difficulteForSubmit);
   }
 
   function submitCorrectif(): void {
@@ -281,7 +380,6 @@ export function RatingCard({ item, onVerdict, onCorriger, disabled = false, surv
     const trimmed = correctifText.trim();
     const textChanged = trimmed.length > 0 && trimmed !== item.definition.trim();
     const posChanged = correctifPos !== item.pos;
-    // Nothing to correct: empty text with no POS change is a no-op. POS-only fixes keep the original text.
     if (!textChanged && !posChanged) {
       setCorrectifText(null);
       return;
@@ -289,26 +387,46 @@ export function RatingCard({ item, onVerdict, onCorriger, disabled = false, surv
     const latencyMs = Math.max(0, Math.round(performance.now() - startedAtRef.current));
     const text = textChanged ? trimmed : item.definition;
     setCorrectifText(null);
-    void onCorriger(text, correctifPos, latencyMs, meta);
+    void onCorriger(text, correctifPos, latencyMs, currentMeta(), band.difficulteForSubmit);
   }
 
   return (
     <article className={cardStyles} aria-live="polite" data-testid="rating-card">
-      <h2 className={titleStyles}>{item.mot}</h2>
-      <p className={chipRowStyles}>
-        <span className={chipStyles} data-chip="pos">{posLabel(item.pos)}</span>
-      </p>
-      <blockquote className={definitionStyles}>« {item.definition} »</blockquote>
-      <p className={metaStyles}>
-        Style : {styleLabel(item.style)} · Difficulté annoncée : {item.forceClaimed}
-      </p>
+      <div className={topRowStyles}>
+        <label className={css({ srOnly: true })} htmlFor="pos-pill">Nature grammaticale</label>
+        <select
+          id="pos-pill"
+          className={posSelectStyles}
+          data-testid="pos-pill"
+          value={correctifPos}
+          disabled={disabled}
+          onChange={(e) => setCorrectifPos(e.target.value as SurveyPos)}
+        >
+          {POS_OPTIONS.map((pos) => (
+            <option key={pos} value={pos}>{posLabel(pos)}</option>
+          ))}
+        </select>
+        <StyleTooltip style={item.style} definition={item.definition} mot={item.mot} />
+        <AnnouncedDifficulty value={item.forceClaimed} />
+      </div>
 
-      <div
-        className={verdictRowStyles}
-        role="group"
-        aria-label="Verdict"
-        aria-keyshortcuts="j k l c"
-      >
+      <h2 className={titleStyles}>{item.mot}</h2>
+      <blockquote className={definitionStyles}>« {item.definition} »</blockquote>
+
+      {correctifText === null ? (
+        disabled ? null : (
+          <button
+            type="button"
+            className={corrigerTriggerStyles}
+            data-testid="corriger-trigger"
+            onClick={() => setCorrectifText(item.definition)}
+          >
+            <span aria-hidden="true">✎</span> Corriger la définition <kbd className={kbdStyles}>C</kbd>
+          </button>
+        )
+      ) : null}
+
+      <div className={verdictRowStyles} role="group" aria-label="Verdict" aria-keyshortcuts="j k l">
         <button
           type="button"
           className={cx(verdictButtonBase, verdictBadStyles)}
@@ -318,7 +436,7 @@ export function RatingCard({ item, onVerdict, onCorriger, disabled = false, surv
           onClick={() => submit('BAD')}
         >
           <span>Mauvaise</span>
-          <span className={shortcutStyles}>J</span>
+          <kbd className={kbdStyles}>J</kbd>
         </button>
         <button
           type="button"
@@ -329,7 +447,7 @@ export function RatingCard({ item, onVerdict, onCorriger, disabled = false, surv
           onClick={() => submit('SKIP')}
         >
           <span>Passer</span>
-          <span className={shortcutStyles}>K</span>
+          <kbd className={kbdStyles}>K</kbd>
         </button>
         <button
           type="button"
@@ -340,73 +458,24 @@ export function RatingCard({ item, onVerdict, onCorriger, disabled = false, surv
           onClick={() => submit('GOOD')}
         >
           <span>Bonne</span>
-          <span className={shortcutStyles}>L</span>
+          <kbd className={kbdStyles}>L</kbd>
         </button>
-        {disabled ? null : (
-          <button
-            type="button"
-            className={cx(verdictButtonBase, verdictCorrigerStyles)}
-            aria-label={`Corriger l'indice « ${item.definition} »`}
-            data-verdict="CORRIGER"
-            onClick={() => setCorrectifText(item.definition)}
-          >
-            <span>Corriger</span>
-            <span className={shortcutStyles}>C</span>
-          </button>
-        )}
       </div>
 
-      {disabled ? null : (
-        <div className={metaInputsStyles} data-testid="rating-meta-inputs">
-          <CategorieMultiSelect
-            value={targetCategories}
-            onChange={(next) => setTargetCategories(next)}
-            legend="Catégories"
-            minItems={1}
-            maxItems={6}
-            exclusiveValue="autre"
-          />
-          <label className={multisenseRowStyles}>
-            <input
-              type="checkbox"
-              className={multisenseCheckboxStyles}
-              data-testid="multisense-checkbox"
-              checked={isMultisense}
-              onChange={(e) => setIsMultisense(e.target.checked)}
-            />
-            <span>Plusieurs sens</span>
-          </label>
-          <SenseInput
-            value={targetSense}
-            onChange={(next) => setTargetSense(next)}
-            suggestions={priorSenses}
-            label="Sens cible"
-            placeholder="ex. animal félin, conversation digitale…"
-            disabled={isMultisense}
-            bannedTerm={item.mot}
-          />
-          <GlossChipInput
-            value={[...subTags]}
-            onChange={(next) => setSubTags(next)}
-            suggestions={priorSubTags}
-            label="Mots-clés"
-            ariaLabel="Mots-clés"
-            placeholder="ex. félin, mammifère, domestique…"
-            maxItems={12}
-            maxLength={40}
-          />
-        </div>
-      )}
+      {onSignaler && !disabled ? (
+        <button
+          type="button"
+          className={signalerStyles}
+          data-testid="signaler"
+          onClick={() => onSignaler(Math.max(0, Math.round(performance.now() - startedAtRef.current)))}
+        >
+          <span aria-hidden="true">⚐</span> Signaler <kbd className={kbdStyles}>S</kbd>
+        </button>
+      ) : null}
 
       {correctifText !== null ? (
         <div className={correctifBoxStyles} data-testid="correctif-box">
-          <Select<SurveyPos>
-            label="Nature grammaticale"
-            value={correctifPos}
-            onValueChange={(pos) => pos && setCorrectifPos(pos)}
-            options={POS_OPTIONS.map((pos) => ({ value: pos as SurveyPos, label: posLabel(pos) }))}
-          />
-          <label htmlFor="correctif-text" className={metaStyles}>
+          <label htmlFor="correctif-text" className={correctifHintStyles}>
             Proposez une définition corrigée. Soumise comme nouvelle entrée notée « bonne » automatiquement.
           </label>
           <textarea
@@ -428,14 +497,14 @@ export function RatingCard({ item, onVerdict, onCorriger, disabled = false, surv
           <div className={correctifActionsStyles}>
             <button
               type="button"
-              className={cx(correctifButtonStyles, verdictSkipStyles)}
+              className={cx(correctifButtonStyles, cancelButtonStyles)}
               onClick={() => setCorrectifText(null)}
             >
               Annuler
             </button>
             <button
               type="button"
-              className={cx(correctifButtonStyles, verdictGoodStyles)}
+              className={cx(correctifButtonStyles, submitButtonStyles)}
               data-testid="correctif-submit"
               onClick={submitCorrectif}
             >
@@ -443,6 +512,15 @@ export function RatingCard({ item, onVerdict, onCorriger, disabled = false, surv
             </button>
           </div>
         </div>
+      ) : null}
+
+      {enrichable && !disabled ? (
+        <MetadataBand
+          band={band}
+          item={item}
+          senseSuggestions={priorSenses}
+          subTagSuggestions={priorSubTags}
+        />
       ) : null}
     </article>
   );

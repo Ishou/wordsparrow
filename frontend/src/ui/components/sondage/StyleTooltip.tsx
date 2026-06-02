@@ -6,53 +6,59 @@ import { STYLE_COPY } from './styleCopy';
 
 const wrapStyles = css({
   display: 'inline-flex',
-  alignItems: 'center',
-  gap: '6px',
+  alignItems: 'baseline',
+  gap: '4px',
   fontSize: 'sm',
   color: 'fgMuted',
 });
 
-const labelTextStyles = css({ color: 'fg', fontWeight: 'semibold' });
-
 const triggerStyles = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '18px',
-  height: '18px',
-  borderRadius: '50%',
-  border: '1px solid token(colors.border)',
-  bg: 'surfaceElevated',
-  color: 'fgMuted',
-  fontSize: 'xs',
-  fontWeight: 'bold',
+  font: 'inherit',
+  color: 'fg',
+  fontWeight: 'semibold',
+  background: 'none',
+  border: 'none',
+  padding: 0,
   cursor: 'help',
-  lineHeight: 1,
+  textDecoration: 'underline',
+  textDecorationStyle: 'dotted',
+  textUnderlineOffset: '3px',
   _focusVisible: {
     outline: '2px solid token(colors.focusRing)',
     outlineOffset: '2px',
+    borderRadius: 'sm',
   },
 });
 
 const contentStyles = css({
-  maxWidth: '280px',
+  maxWidth: '320px',
   bg: 'neutral.900',
   color: 'neutral.50',
   borderRadius: 'md',
-  padding: 'sm',
+  padding: 'md',
   fontSize: 'sm',
-  lineHeight: 1.4,
+  lineHeight: 1.5,
   boxShadow: 'floating',
   zIndex: 60,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'sm',
   '&[hidden]': { display: 'none' },
 });
 
-const exampleStyles = css({
-  display: 'block',
-  marginTop: 'xs',
-  fontFamily: 'mono',
+const headerStyles = css({ fontWeight: 'bold', color: 'neutral.50' });
+
+const exampleLabelStyles = css({
   fontSize: 'xs',
+  fontWeight: 'bold',
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
   color: 'secondary.300',
+});
+
+const exampleStyles = css({
+  fontStyle: 'italic',
+  color: 'neutral.50',
 });
 
 const arrowStyles = css({
@@ -62,37 +68,44 @@ const arrowStyles = css({
 
 export interface StyleTooltipProps {
   readonly style: string;
+  readonly definition: string;
+  readonly mot: string;
 }
 
-export function StyleTooltip({ style }: StyleTooltipProps) {
+export function StyleTooltip({ style, definition, mot }: StyleTooltipProps) {
   const label = styleLabel(style);
   const copy = STYLE_COPY[style];
-  return (
-    <span className={wrapStyles}>
-      <span>
-        Style : <span className={labelTextStyles}>{label}</span>
+  if (!copy) {
+    return (
+      <span className={wrapStyles}>
+        Style : <span className={css({ color: 'fg', fontWeight: 'semibold' })}>{label}</span>
       </span>
-      {copy ? (
-        <Tooltip.Root openDelay={150} closeDelay={100}>
-          <Tooltip.Trigger
-            className={triggerStyles}
-            aria-label={`En savoir plus sur le style ${label}`}
-          >
-            ?
-          </Tooltip.Trigger>
-          <Portal>
-            <Tooltip.Positioner>
-              <Tooltip.Content className={contentStyles}>
-                <Tooltip.Arrow className={arrowStyles}>
-                  <Tooltip.ArrowTip />
-                </Tooltip.Arrow>
-                <span>{copy.definition}</span>
-                <span className={exampleStyles}>Exemple : {copy.example}</span>
-              </Tooltip.Content>
-            </Tooltip.Positioner>
-          </Portal>
-        </Tooltip.Root>
-      ) : null}
-    </span>
+    );
+  }
+  return (
+    <Tooltip.Root openDelay={150} closeDelay={100}>
+      <span className={wrapStyles}>
+        Style :{' '}
+        <Tooltip.Trigger
+          className={triggerStyles}
+          aria-label={`En savoir plus sur le style ${label}`}
+        >
+          {label}
+        </Tooltip.Trigger>
+      </span>
+      <Portal>
+        <Tooltip.Positioner>
+          <Tooltip.Content className={contentStyles}>
+            <Tooltip.Arrow className={arrowStyles}>
+              <Tooltip.ArrowTip />
+            </Tooltip.Arrow>
+            <span className={headerStyles}>Style : {label}</span>
+            <span>{copy.definition}</span>
+            <span className={exampleLabelStyles}>Exemple</span>
+            <span className={exampleStyles}>« {definition} » → {mot}</span>
+          </Tooltip.Content>
+        </Tooltip.Positioner>
+      </Portal>
+    </Tooltip.Root>
   );
 }

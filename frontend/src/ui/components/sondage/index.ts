@@ -2,6 +2,8 @@ export { Likert, type LikertProps } from './Likert';
 export { CorrectifField, type CorrectifFieldProps } from './CorrectifField';
 export { SignInBanner, type SignInBannerProps } from './SignInBanner';
 export { RatingCard, type RatingCardProps, type RatingMeta, type Verdict } from './RatingCard';
+export { MetadataBand, type MetadataBandProps } from './MetadataBand';
+export { PerceivedDifficultyPicker, type PerceivedDifficultyPickerProps } from './PerceivedDifficultyPicker';
 export { CategorieMultiSelect, type CategorieMultiSelectProps } from './CategorieMultiSelect';
 export { SenseInput, type SenseInputProps } from './SenseInput';
 export { PairCard, type PairCardProps } from './PairCard';

@@ -360,7 +360,7 @@ describe('Contribuer route', () => {
     await waitFor(() => expect(screen.getByTestId('rating-card')).toBeInTheDocument());
 
     await act(async () => {
-      document.querySelector<HTMLButtonElement>('[data-verdict="CORRIGER"]')!.click();
+      document.querySelector<HTMLButtonElement>('[data-testid="corriger-trigger"]')!.click();
     });
 
     const textarea = document.querySelector<HTMLTextAreaElement>('textarea#correctif-text')!;
@@ -395,7 +395,7 @@ describe('Contribuer route', () => {
     await waitFor(() => expect(screen.getByTestId('rating-card')).toBeInTheDocument());
 
     await act(async () => {
-      document.querySelector<HTMLButtonElement>('[data-verdict="CORRIGER"]')!.click();
+      document.querySelector<HTMLButtonElement>('[data-testid="corriger-trigger"]')!.click();
     });
 
     const textarea = document.querySelector<HTMLTextAreaElement>('textarea#correctif-text')!;
@@ -433,7 +433,7 @@ describe('Contribuer route', () => {
     await waitFor(() => expect(screen.getByTestId('rating-card')).toBeInTheDocument());
 
     await act(async () => {
-      document.querySelector<HTMLButtonElement>('[data-verdict="CORRIGER"]')!.click();
+      document.querySelector<HTMLButtonElement>('[data-testid="corriger-trigger"]')!.click();
     });
 
     const textarea = document.querySelector<HTMLTextAreaElement>('textarea#correctif-text')!;
@@ -463,7 +463,12 @@ describe('Contribuer route', () => {
     renderContribuer({ authClient, surveyClient });
     await waitFor(() => expect(screen.getByTestId('rating-card')).toBeInTheDocument());
 
-    const sense = screen.getByRole('combobox', { name: 'Sens cible' }) as HTMLInputElement;
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>('[data-testid="band-adjust"]')!.click();
+    });
+    const sense = screen.getByRole('combobox', {
+      name: 'Sens visé par cette définition',
+    }) as HTMLInputElement;
     await act(async () => { fireEvent.change(sense, { target: { value: 'le chat' } }); });
     await act(async () => { clickVerdict('GOOD'); });
 

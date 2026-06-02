@@ -21,34 +21,26 @@ const articleStyles = css({
   maxWidth: '720px',
 });
 
-const headerRowStyles = css({
+const headerStyles = css({
   display: 'flex',
-  flexWrap: 'wrap',
-  gap: 'sm',
-  alignItems: 'baseline',
-  justifyContent: 'space-between',
+  flexDirection: 'column',
+  gap: '4px',
 });
 
-const statsStripStyles = css({
+const subtitleRowStyles = css({
   display: 'flex',
   flexWrap: 'wrap',
   alignItems: 'baseline',
-  gap: 'sm',
+  gap: '6px',
   fontSize: 'sm',
   color: 'fgMuted',
-});
-
-const statStyles = css({
-  display: 'inline-flex',
-  alignItems: 'baseline',
-  gap: '4px',
-  '& b': { color: 'fg', fontWeight: 'semibold', fontVariantNumeric: 'tabular-nums' },
 });
 
 const legendStyles = css({
   display: 'flex',
   flexWrap: 'wrap',
-  gap: 'sm',
+  alignItems: 'baseline',
+  gap: '6px',
   fontSize: 'xs',
   color: 'fgMuted',
   '& kbd': {
@@ -84,18 +76,6 @@ const modeLinkStyles = css({
   },
 });
 
-const subtitleStyles = css({
-  fontSize: 'sm',
-  color: 'fgMuted',
-  margin: 0,
-});
-
-const introStyles = css({
-  fontSize: 'body',
-  color: 'fgMuted',
-  margin: 0,
-});
-
 const statusStyles = css({
   fontSize: 'body',
   color: 'fgMuted',
@@ -113,9 +93,6 @@ const alertStyles = css({
   color: 'errorText',
   margin: 0,
 });
-
-// difficulte=3 placeholder pending schema nullable migration; qualite=5 drives RAFT winners so no algorithmic impact.
-const DIFFICULTE_PLACEHOLDER: LikertScore = 3;
 
 function ContribuerPage() {
   const ctx = ParentRoute.useRouteContext();
@@ -135,8 +112,6 @@ function ContribuerPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<{ token: string; item: SurveyItem } | null>(null);
   const [undoBusy, setUndoBusy] = useState(false);
-  // Session counters; WS-E wires the increments. Notées = GOOD/BAD count, Enrichies = touched-meta count, série = streak.
-  const [counters] = useState({ notees: 0, enrichies: 0, serie: 0 });
   const sessionStartedRef = useRef(false);
   const authSkippedIdsRef = useRef<Set<string>>(new Set());
 
@@ -197,6 +172,7 @@ function ContribuerPage() {
     verdict: Verdict,
     latencyMs: number,
     meta: RatingMeta,
+    difficulte: LikertScore,
   ): Promise<void> {
     if (!surveyClient || !item) return;
     const currentItem = item;
@@ -213,7 +189,7 @@ function ContribuerPage() {
     }
     const payload: RatingSubmission = {
       qualite: verdict === 'GOOD' ? 5 : 1,
-      difficulte: DIFFICULTE_PLACEHOLDER,
+      difficulte,
       latencyMs,
       ...metaFields(meta),
     };
@@ -247,6 +223,7 @@ function ContribuerPage() {
     pos: SurveyPos,
     latencyMs: number,
     meta: RatingMeta,
+    difficulte: LikertScore,
   ): Promise<void> {
     if (!surveyClient || !item) return;
     if (!isAuth) {
@@ -257,7 +234,7 @@ function ContribuerPage() {
     // qualite=3 stays neutral on the original; the server patches POS in place or creates an auto-GOOD rater_proposed item per ADR-0056.
     const payload: RatingSubmission = {
       qualite: 3,
-      difficulte: DIFFICULTE_PLACEHOLDER,
+      difficulte,
       latencyMs,
       correctif: { text: correctedText, style: currentItem.style, pos },
       ...metaFields(meta),
@@ -282,6 +259,20 @@ function ContribuerPage() {
       }
       setError(messageForApiError(cause));
     }
+  }
+
+  // No report endpoint yet (ADR-0056): treat a flag as a local skip so the item drops out of rotation.
+  async function onSignaler(latencyMs: number): Promise<void> {
+    if (!surveyClient || !item) return;
+    const currentItem = item;
+    analytics.trackEvent('survey', 'item_signaled', `tier=${currentItem.tier};latency=${latencyMs}`);
+    if (isAuth) {
+      authSkippedIdsRef.current.add(currentItem.itemId);
+    } else {
+      surveyAnonStore?.add(currentItem.itemId);
+    }
+    setLastAction(null);
+    await loadNext();
   }
 
   async function onUndo(): Promise<void> {
@@ -318,49 +309,26 @@ function ContribuerPage() {
   return (
     <ContentPage>
       <article className={articleStyles}>
-        <div className={headerRowStyles}>
+        <header className={headerStyles}>
           <h1 className={headingStyles}>Campagne de qualité des indices</h1>
-          <Link to="/contribuer/pairs" className={modeLinkStyles} data-testid="mode-switch-pairs">
-            Mode paires →
-          </Link>
-        </div>
-        {campaignStatus.status.kind === 'open' ? (
-          <p className={subtitleStyles} data-testid="campaign-subtitle">
-            {campaignDisplayName(campaignStatus.status.campaign)}
+          <p className={subtitleRowStyles}>
+            {campaignStatus.status.kind === 'open' ? (
+              <span data-testid="campaign-subtitle">
+                {campaignDisplayName(campaignStatus.status.campaign)}
+              </span>
+            ) : null}
+            <span aria-hidden="true">·</span>
+            <Link to="/contribuer/pairs" className={modeLinkStyles} data-testid="mode-switch-pairs">
+              Mode paires →
+            </Link>
           </p>
-        ) : null}
-        <div className={statsStripStyles} aria-label="Statistiques de session">
-          <span className={statStyles} data-testid="stats-notees">
-            Notées <b>{counters.notees}</b>
-          </span>
-          <span aria-hidden="true">·</span>
-          <span className={statStyles} data-testid="stats-enrichies">
-            Enrichies <b>{counters.enrichies}</b>
-          </span>
-          <span aria-hidden="true">·</span>
-          <span className={statStyles} data-testid="stats-serie">
-            série <b>{counters.serie}</b>
-          </span>
-        </div>
+        </header>
         {campaignStatus.status.kind === 'closed' ? (
           <LockBanner campaign={campaignStatus.status.campaign} />
         ) : null}
         {campaignStatus.status.kind === 'unavailable' ? (
           <LockBanner campaign={null} />
         ) : null}
-        <p className={introStyles}>
-          Notez la qualité des définitions en un clic : mauvaise, à passer, ou bonne.
-          Vos retours alimentent la sélection des indices.
-        </p>
-
-        <p className={legendStyles} aria-label="Raccourcis clavier">
-          <span><kbd>J</kbd> mauvaise</span>
-          <span><kbd>K</kbd> passer</span>
-          <span><kbd>L</kbd> bonne</span>
-          <span><kbd>C</kbd> corriger</span>
-          <span><kbd>A</kbd> métadonnées</span>
-          <span><kbd>Espace</kbd> confirmer</span>
-        </p>
 
         {state.status === 'anon' && authClient ? (
           <SignInBanner authClient={authClient} onClick={onSignInClick} />
@@ -386,12 +354,24 @@ function ContribuerPage() {
               item={item}
               onVerdict={onVerdict}
               onCorriger={onCorriger}
+              onSignaler={onSignaler}
+              enrichable={isAuth}
               surveyClient={surveyClient}
             />
           </div>
         ) : null}
 
         {lastAction !== null ? <UndoBar onUndo={onUndo} busy={undoBusy} /> : null}
+
+        <p className={legendStyles} aria-label="Raccourcis clavier">
+          <span><kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> noter</span>
+          <span aria-hidden="true">·</span>
+          <span><kbd>C</kbd> corriger</span>
+          <span aria-hidden="true">·</span>
+          <span><kbd>A</kbd> ajuster les métadonnées</span>
+          <span aria-hidden="true">·</span>
+          <span><kbd>Espace</kbd> confirmer / enregistrer</span>
+        </p>
       </article>
     </ContentPage>
   );
