@@ -29,7 +29,41 @@ const headerRowStyles = css({
   justifyContent: 'space-between',
 });
 
+const statsStripStyles = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'baseline',
+  gap: 'sm',
+  fontSize: 'sm',
+  color: 'fgMuted',
+});
+
+const statStyles = css({
+  display: 'inline-flex',
+  alignItems: 'baseline',
+  gap: '4px',
+  '& b': { color: 'fg', fontWeight: 'semibold', fontVariantNumeric: 'tabular-nums' },
+});
+
+const legendStyles = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 'sm',
+  fontSize: 'xs',
+  color: 'fgMuted',
+  '& kbd': {
+    fontFamily: 'mono',
+    fontSize: 'xs',
+    bg: 'surfaceElevated',
+    border: '1px solid token(colors.border)',
+    borderRadius: 'sm',
+    paddingInline: '4px',
+    color: 'fg',
+  },
+});
+
 const headingStyles = css({
+  fontFamily: 'heading',
   fontSize: { base: 'xl', md: 'display' },
   fontWeight: 'bold',
   letterSpacing: '-0.02em',
@@ -68,6 +102,12 @@ const statusStyles = css({
   margin: 0,
 });
 
+const cardEnterStyles = css({
+  '@media (prefers-reduced-motion: no-preference)': {
+    animation: 'cardRise 220ms ease-out',
+  },
+});
+
 const alertStyles = css({
   fontSize: 'body',
   color: 'errorText',
@@ -95,6 +135,8 @@ function ContribuerPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<{ token: string; item: SurveyItem } | null>(null);
   const [undoBusy, setUndoBusy] = useState(false);
+  // Session counters; WS-E wires the increments. Notées = GOOD/BAD count, Enrichies = touched-meta count, série = streak.
+  const [counters] = useState({ notees: 0, enrichies: 0, serie: 0 });
   const sessionStartedRef = useRef(false);
   const authSkippedIdsRef = useRef<Set<string>>(new Set());
 
@@ -287,6 +329,19 @@ function ContribuerPage() {
             {campaignDisplayName(campaignStatus.status.campaign)}
           </p>
         ) : null}
+        <div className={statsStripStyles} aria-label="Statistiques de session">
+          <span className={statStyles} data-testid="stats-notees">
+            Notées <b>{counters.notees}</b>
+          </span>
+          <span aria-hidden="true">·</span>
+          <span className={statStyles} data-testid="stats-enrichies">
+            Enrichies <b>{counters.enrichies}</b>
+          </span>
+          <span aria-hidden="true">·</span>
+          <span className={statStyles} data-testid="stats-serie">
+            série <b>{counters.serie}</b>
+          </span>
+        </div>
         {campaignStatus.status.kind === 'closed' ? (
           <LockBanner campaign={campaignStatus.status.campaign} />
         ) : null}
@@ -296,6 +351,15 @@ function ContribuerPage() {
         <p className={introStyles}>
           Notez la qualité des définitions en un clic : mauvaise, à passer, ou bonne.
           Vos retours alimentent la sélection des indices.
+        </p>
+
+        <p className={legendStyles} aria-label="Raccourcis clavier">
+          <span><kbd>J</kbd> mauvaise</span>
+          <span><kbd>K</kbd> passer</span>
+          <span><kbd>L</kbd> bonne</span>
+          <span><kbd>C</kbd> corriger</span>
+          <span><kbd>A</kbd> métadonnées</span>
+          <span><kbd>Espace</kbd> confirmer</span>
         </p>
 
         {state.status === 'anon' && authClient ? (
@@ -317,13 +381,14 @@ function ContribuerPage() {
         ) : null}
 
         {item !== null && !isLocked ? (
-          <RatingCard
-            key={item.itemId}
-            item={item}
-            onVerdict={onVerdict}
-            onCorriger={onCorriger}
-            surveyClient={surveyClient}
-          />
+          <div key={item.itemId} className={cardEnterStyles}>
+            <RatingCard
+              item={item}
+              onVerdict={onVerdict}
+              onCorriger={onCorriger}
+              surveyClient={surveyClient}
+            />
+          </div>
         ) : null}
 
         {lastAction !== null ? <UndoBar onUndo={onUndo} busy={undoBusy} /> : null}
