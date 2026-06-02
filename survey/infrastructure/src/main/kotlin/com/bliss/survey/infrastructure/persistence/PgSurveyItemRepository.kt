@@ -177,8 +177,7 @@ class PgSurveyItemRepository(
             createdAt = getTimestamp("${prefix}created_at").toInstant(),
         )
 
-    // A same-(mot, style, categorie) cohort: the unit a fallback pair is drawn from so both
-    // clues target the same word, sense, and style — cross-style/sense pairs poison judge training.
+    // Same-(mot, style, categorie) cohort — cross-style/sense pairs poison judge training.
     private data class EligibleGroup(
         val mot: String,
         val style: String,
