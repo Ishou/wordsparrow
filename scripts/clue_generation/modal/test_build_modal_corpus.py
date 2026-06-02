@@ -59,11 +59,7 @@ class TestRowFilterParser:
 
 
 def test_prod_manifest_exclude_path_exists():
-    """The real manifest's exclude_lemmas_from must point at a file on disk.
-
-    A missing path makes held-out exclusion a silent no-op (held-out lemmas
-    leak into the generator corpus). This guards the 2026-06-02 path bug.
-    """
+    """Regression guard: exclude_lemmas_from must resolve to an existing file."""
     import tomllib
     repo_root = Path(__file__).resolve().parents[3]
     manifest = tomllib.loads(
