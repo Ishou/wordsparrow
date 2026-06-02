@@ -312,6 +312,19 @@ def filter_8_llm_juge_mock(row: dict, valid_pos: set[str],
     return FilterResult("accept")
 
 
+def filter_8_judge_shadow(row: dict, valid_pos: set[str],
+                          valid_categories: set[str],
+                          valid_styles: set[str],
+                          judge=None) -> FilterResult:
+    """Filtre 8 : juge appris en MODE SHADOW — score loggé, jamais de rejet sur le score."""
+    enum_check = filter_8_llm_juge_mock(row, valid_pos, valid_categories, valid_styles)
+    if enum_check.is_reject:
+        return enum_check
+    if judge is not None:
+        row["judge_score"] = judge.score(row["mot"], row.get("style", ""), row["definition"])
+    return FilterResult("accept")
+
+
 # seuil 5 chars : ne pas abaisser sans rejouer la variance check (docs/eval/clue-gen-v0.md iter7)
 
 _STEM_LEAK_MIN = 5

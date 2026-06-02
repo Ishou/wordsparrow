@@ -55,7 +55,7 @@ PIPELINE_FILTERS = [
     ("filter_6_langue_fr", F.filter_6_langue_fr, False),
     ("filter_7_tautologie", F.filter_7_tautologie, False),
     # filter_8 a besoin des enums valides, traité spécialement
-    ("filter_8_llm_juge_mock", F.filter_8_llm_juge_mock, True),
+    ("filter_8_judge_shadow", F.filter_8_judge_shadow, True),
     ("filter_9_stem_leak", F.filter_9_stem_leak, False),
     ("filter_10_pleonasm", F.filter_10_pleonasm, False),
 ]
