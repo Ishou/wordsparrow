@@ -1,12 +1,13 @@
 // Collapsible metadata band: tri-state (pristine/modified/saved) owned by useMetadataBand.
 
-import { useState } from 'react';
-import { css } from 'styled-system/css';
-import type { SurveyCategorie, SurveyItem } from '@/application/survey';
-import { CATEGORIE_OPTIONS, categorieLabel } from './labels';
+import { useId, useState } from 'react';
+import { css, cx } from 'styled-system/css';
+import type { SurveyCategorie, SurveyItem, SurveyPos } from '@/application/survey';
+import { CATEGORIE_OPTIONS, POS_OPTIONS, categorieLabel, posLabel } from './labels';
 import { SenseInput } from './SenseInput';
 import { GlossChipInput } from './GlossChipInput';
 import { PerceivedDifficultyPicker } from './PerceivedDifficultyPicker';
+import { StyleTooltip } from './StyleTooltip';
 import type { MetadataBand as Band } from './useMetadataBand';
 
 const bandStyles = css({
@@ -35,36 +36,20 @@ const headerRowStyles = css({
   gap: 'sm',
 });
 
-const toggleHitAreaStyles = css({
+// Decorative "pré-rempli" marker mirroring the ✦ badge — not an expand control.
+const markerCircleStyles = css({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: '44px',
-  height: '44px',
-  border: 'none',
-  bg: 'transparent',
-  cursor: 'pointer',
-  flexShrink: 0,
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-    borderRadius: '999px',
-  },
-});
-
-const toggleCircleStyles = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '24px',
-  height: '24px',
+  width: '26px',
+  height: '26px',
   borderRadius: '999px',
   border: '1px solid token(colors.metaSuggestedLine)',
   bg: 'surface',
   color: 'metaSuggestedText',
-  fontSize: 'body',
+  fontSize: 'sm',
   lineHeight: 1,
-  pointerEvents: 'none',
+  flexShrink: 0,
 });
 
 const overlineStyles = css({
@@ -100,6 +85,16 @@ const badgeStyles = css({
   '&[data-state="saved"]': { borderColor: 'metaSavedLine', color: 'metaSavedText' },
 });
 
+// Indent past the ✦ marker so the body aligns with the "Métadonnées" title, not the icon.
+const CONTENT_INDENT = 'calc(26px + token(spacing.sm))';
+
+const bodyStyles = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'sm',
+  paddingInlineStart: CONTENT_INDENT,
+});
+
 const summaryStyles = css({
   display: 'grid',
   gridTemplateColumns: 'auto 1fr',
@@ -118,6 +113,32 @@ const summaryKeyStyles = css({
 });
 
 const summaryValStyles = css({ fontSize: 'sm', color: 'fg' });
+
+const posSelectStyles = css({
+  appearance: 'none',
+  fontFamily: 'body',
+  fontSize: 'sm',
+  fontWeight: 'semibold',
+  color: 'fg',
+  bg: 'surface',
+  border: '1px solid token(colors.border)',
+  borderRadius: 'sm',
+  paddingInline: 'sm',
+  paddingBlock: '6px',
+  paddingInlineEnd: '26px',
+  cursor: 'pointer',
+  alignSelf: 'flex-start',
+  backgroundImage:
+    'linear-gradient(45deg, transparent 50%, token(colors.fgMuted) 50%), linear-gradient(135deg, token(colors.fgMuted) 50%, transparent 50%)',
+  backgroundPosition: 'calc(100% - 14px) 53%, calc(100% - 9px) 53%',
+  backgroundSize: '5px 5px, 5px 5px',
+  backgroundRepeat: 'no-repeat',
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+  },
+  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
+});
 
 const actionsRowStyles = css({
   display: 'flex',
@@ -181,6 +202,30 @@ const adjustButtonStyles = css({
   },
 });
 
+const resetButtonStyles = css({
+  marginInlineStart: 'auto',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  paddingInline: 'sm',
+  paddingBlock: 'sm',
+  borderRadius: '6px',
+  fontFamily: 'body',
+  fontSize: 'sm',
+  fontWeight: 'semibold',
+  bg: 'transparent',
+  color: 'fgMuted',
+  border: 'none',
+  cursor: 'pointer',
+  _hover: { color: 'error' },
+  _disabled: { opacity: 0.4, cursor: 'default', _hover: { color: 'fgMuted' } },
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+    borderRadius: 'sm',
+  },
+});
+
 const adjustKbdStyles = css({
   fontFamily: 'mono',
   fontSize: 'xs',
@@ -196,7 +241,10 @@ const adjustKbdStyles = css({
 const dividerStyles = css({
   border: 'none',
   borderTop: '1px solid token(colors.metaSuggestedLine)',
-  margin: '2px 0',
+  // Bleed back past the body indent so the rule spans the full band width.
+  marginBlock: '2px',
+  marginInlineStart: 'calc(-1 * (26px + token(spacing.sm)))',
+  marginInlineEnd: 0,
   '[data-state="modified"] &': { borderColor: 'metaModifiedLine' },
   '[data-state="saved"] &': { borderColor: 'metaSavedLine' },
 });
@@ -220,6 +268,18 @@ const sectionNoteStyles = css({
 
 const chipRowStyles = css({ display: 'flex', flexWrap: 'wrap', gap: 'xs', margin: 0 });
 
+const announcedDotsStyles = css({ display: 'inline-flex', gap: '5px', alignItems: 'center' });
+
+const announcedDotStyles = css({
+  width: '11px',
+  height: '11px',
+  borderRadius: '999px',
+  border: '1px solid token(colors.secondary.300)',
+  bg: 'transparent',
+});
+
+const announcedDotFilledStyles = css({ bg: 'secondary.500', borderColor: 'secondary.500' });
+
 const suggestedChipStyles = css({
   display: 'inline-flex',
   alignItems: 'center',
@@ -234,6 +294,27 @@ const suggestedChipStyles = css({
   border: '1px solid token(colors.accent)',
   cursor: 'pointer',
   _hover: { bg: 'primary.400' },
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+  },
+});
+
+// User-added categories: outline-green pill, distinct from the solid-green pre-filled chips.
+const addedChipStyles = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '5px',
+  paddingInline: 'sm',
+  paddingBlock: '6px',
+  borderRadius: '999px',
+  fontSize: 'sm',
+  fontWeight: 'semibold',
+  bg: 'surface',
+  color: 'accent',
+  border: '1px solid token(colors.accent)',
+  cursor: 'pointer',
+  _hover: { bg: 'primary.100' },
   _focusVisible: {
     outline: '2px solid token(colors.focusRing)',
     outlineOffset: '2px',
@@ -299,6 +380,9 @@ const liveRegionStyles = css({
 export interface MetadataBandProps {
   readonly band: Band;
   readonly item: SurveyItem;
+  readonly pos: SurveyPos;
+  readonly onPosChange: (next: SurveyPos) => void;
+  readonly posDisabled?: boolean;
   readonly senseSuggestions: ReadonlyArray<string>;
   readonly subTagSuggestions: ReadonlyArray<string>;
 }
@@ -315,12 +399,34 @@ function primaryLabel(state: Band['state']): string {
   return 'Confirmer';
 }
 
+function AnnouncedDots({ value }: { value: number }) {
+  return (
+    <span
+      className={announcedDotsStyles}
+      role="img"
+      aria-label={`${value} sur 5`}
+      data-testid="band-announced-difficulty"
+    >
+      {[1, 2, 3, 4, 5].map((n) => (
+        <span
+          key={n}
+          className={n <= value ? cx(announcedDotStyles, announcedDotFilledStyles) : announcedDotStyles}
+        />
+      ))}
+    </span>
+  );
+}
+
 export function MetadataBand({
   band,
   item,
+  pos,
+  onPosChange,
+  posDisabled = false,
   senseSuggestions,
   subTagSuggestions,
 }: MetadataBandProps) {
+  const posSelectId = useId();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [announce, setAnnounce] = useState('');
   const selected = band.values.targetCategories;
@@ -362,15 +468,7 @@ export function MetadataBand({
   return (
     <section className={bandStyles} data-state={band.state} data-testid="metadata-band">
       <div className={headerRowStyles}>
-        <button
-          type="button"
-          className={toggleHitAreaStyles}
-          aria-label={band.expanded ? 'Réduire les métadonnées' : 'Développer les métadonnées'}
-          aria-expanded={band.expanded}
-          onClick={band.toggleExpanded}
-        >
-          <span className={toggleCircleStyles} aria-hidden="true">+</span>
-        </button>
+        <span className={markerCircleStyles} aria-hidden="true">✦</span>
         <span className={overlineStyles}>
           Métadonnées{' '}
           <span className={overlineNoteStyles}>· optionnel, aide l’entraînement</span>
@@ -380,13 +478,22 @@ export function MetadataBand({
         </span>
       </div>
 
+      <div className={bodyStyles}>
       <dl className={summaryStyles} data-testid="band-summary">
+        <dt className={summaryKeyStyles}>Nature</dt>
+        <dd className={summaryValStyles}>{posLabel(pos)}</dd>
+        <dt className={summaryKeyStyles}>Style</dt>
+        <dd className={summaryValStyles}>
+          <StyleTooltip style={item.style} definition={item.definition} mot={item.mot} labelHidden />
+        </dd>
         <dt className={summaryKeyStyles}>Catégories</dt>
         <dd className={summaryValStyles}>{categoriesSummary}</dd>
         <dt className={summaryKeyStyles}>Sens</dt>
         <dd className={summaryValStyles}>{senseSummary}</dd>
         <dt className={summaryKeyStyles}>Mots-clés</dt>
         <dd className={summaryValStyles}>{subTagsSummary}</dd>
+        <dt className={summaryKeyStyles}>Difficulté</dt>
+        <dd className={summaryValStyles}><AnnouncedDots value={item.forceClaimed} /></dd>
       </dl>
 
       <div className={actionsRowStyles}>
@@ -410,11 +517,49 @@ export function MetadataBand({
           {band.expanded ? 'Réduire ▴' : 'Ajuster ▾'}
           <kbd className={adjustKbdStyles}>A</kbd>
         </button>
+        <button
+          type="button"
+          className={resetButtonStyles}
+          data-testid="band-reset"
+          disabled={band.state === 'pristine'}
+          onClick={band.reset}
+        >
+          <span aria-hidden="true">↺</span> Réinitialiser
+        </button>
       </div>
 
       {band.expanded ? (
         <>
           <hr className={dividerStyles} />
+
+          <div className={sectionStyles} data-testid="band-pos">
+            <label htmlFor={posSelectId} className={sectionLabelStyles}>
+              Nature grammaticale{' '}
+              <span className={sectionNoteStyles}>— catégorie grammaticale du mot</span>
+            </label>
+            <select
+              id={posSelectId}
+              className={posSelectStyles}
+              data-testid="band-pos-select"
+              value={pos}
+              disabled={posDisabled}
+              onChange={(e) => onPosChange(e.target.value as SurveyPos)}
+            >
+              {POS_OPTIONS.map((p) => (
+                <option key={p} value={p}>{posLabel(p)}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className={sectionStyles} data-testid="band-style">
+            <span className={sectionLabelStyles}>
+              Style{' '}
+              <span className={sectionNoteStyles}>— registre rhétorique de l’indice</span>
+            </span>
+            <span>
+              <StyleTooltip style={item.style} definition={item.definition} mot={item.mot} labelHidden />
+            </span>
+          </div>
 
           <div className={sectionStyles} data-testid="band-categories">
             <span className={sectionLabelStyles}>
@@ -422,18 +567,22 @@ export function MetadataBand({
               <span className={sectionNoteStyles}>— pré-remplies depuis l’indice</span>
             </span>
             <p className={chipRowStyles}>
-              {selected.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  className={suggestedChipStyles}
-                  data-categorie={cat}
-                  aria-label={`Retirer ${categorieLabel(cat)}`}
-                  onClick={() => toggleCategory(cat)}
-                >
-                  ✦ {categorieLabel(cat)}
-                </button>
-              ))}
+              {selected.map((cat) => {
+                const prefilled = cat === item.categorie;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={prefilled ? suggestedChipStyles : addedChipStyles}
+                    data-categorie={cat}
+                    data-prefilled={prefilled}
+                    aria-label={`Retirer ${categorieLabel(cat)}${prefilled ? ' (pré-remplie)' : ' (ajoutée)'}`}
+                    onClick={() => toggleCategory(cat)}
+                  >
+                    <span aria-hidden="true">{prefilled ? '✦' : '✓'}</span> {categorieLabel(cat)}
+                  </button>
+                );
+              })}
             </p>
             <button
               type="button"
@@ -478,6 +627,7 @@ export function MetadataBand({
               onChange={band.setSense}
               suggestions={senseSuggestions}
               label="Sens visé par cette définition"
+              labelHidden
               placeholder="ex. saison entre l’été et l’hiver…"
               bannedTerm={item.mot}
             />
@@ -494,7 +644,6 @@ export function MetadataBand({
               value={[...band.values.subTags]}
               onChange={band.setSubTags}
               suggestions={subTagSuggestions}
-              label="Mots-clés"
               ariaLabel="Mots-clés"
               placeholder="+ ajouter…"
               maxItems={12}
@@ -510,6 +659,7 @@ export function MetadataBand({
           />
         </>
       ) : null}
+      </div>
     </section>
   );
 }

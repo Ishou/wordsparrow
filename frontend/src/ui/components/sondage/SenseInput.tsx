@@ -77,6 +77,8 @@ export interface SenseInputProps {
   readonly onChange: (next: string) => void;
   readonly suggestions: ReadonlyArray<string>;
   readonly label: string;
+  // The section header already labels this field visibly; the input keeps `label` as its aria-label.
+  readonly labelHidden?: boolean;
   readonly placeholder?: string;
   readonly maxLength?: number;
   readonly disabled?: boolean;
@@ -89,6 +91,7 @@ export function SenseInput({
   onChange,
   suggestions,
   label,
+  labelHidden = false,
   placeholder,
   maxLength = 80,
   disabled = false,
@@ -147,7 +150,9 @@ export function SenseInput({
 
   return (
     <div className={fieldStyles} data-testid="sense-input">
-      <label htmlFor={inputId} className={labelStyles}>{label}</label>
+      {labelHidden ? null : (
+        <label htmlFor={inputId} className={labelStyles}>{label}</label>
+      )}
       <div className={comboStyles}>
         <input
           id={inputId}

@@ -198,7 +198,7 @@ export default defineConfig({
         bold: { value: '700' },
         black: { value: '800' },
       },
-      radii: { sm: { value: '4px' }, md: { value: '8px' } },
+      radii: { sm: { value: '4px' }, md: { value: '8px' }, lg: { value: '16px' } },
       // Panda can't resolve cross-file import constants; token required (ADR-0036).
       sizes: {
         pageMaxWidth: { value: '720px' },

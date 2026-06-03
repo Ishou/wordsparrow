@@ -64,24 +64,6 @@ const posSelectStyles = css({
   },
 });
 
-const announcedWrapStyles = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '6px',
-});
-
-const announcedDotsStyles = css({ display: 'inline-flex', gap: '4px', alignItems: 'center' });
-
-const announcedDotStyles = css({
-  width: '9px',
-  height: '9px',
-  borderRadius: '999px',
-  border: '1px solid token(colors.secondary.300)',
-  bg: 'transparent',
-});
-
-const announcedDotFilledStyles = css({ bg: 'secondary.500', borderColor: 'secondary.500' });
-
 const titleStyles = css({
   fontFamily: 'heading',
   fontSize: { base: '2xl', md: 'display' },
@@ -202,26 +184,34 @@ const signalerStyles = css({
   },
 });
 
+// In-place editor: accent left-border lives on the textarea, so the wrapper stays chrome-free.
 const correctifBoxStyles = css({
   display: 'flex',
   flexDirection: 'column',
   gap: 'sm',
-  border: '1px solid token(colors.accent)',
-  borderRadius: 'md',
-  padding: 'md',
-  bg: 'surface',
 });
 
-const correctifTextareaStyles = css({
-  fontSize: 'body',
-  fontFamily: 'body',
+const definitionEditStyles = css({
+  fontFamily: 'heading',
+  fontSize: { base: 'lg', md: 'xl' },
+  fontStyle: 'italic',
   color: 'fg',
-  bg: 'transparent',
+  margin: 0,
+  width: '100%',
+  display: 'block',
+  paddingBlock: 'xs',
+  paddingInline: 'md',
+  bg: 'surface',
   border: '1px solid token(colors.border)',
+  borderInlineStart: '3px solid token(colors.accent)',
   borderRadius: 'sm',
-  padding: 'sm',
-  minHeight: '64px',
-  resize: 'vertical',
+  // Auto-grown to content height (see effect), so manual resize/scroll are off.
+  resize: 'none',
+  overflow: 'hidden',
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+  },
 });
 
 const correctifHintStyles = css({ fontSize: 'sm', color: 'fgMuted', margin: 0 });
@@ -254,22 +244,6 @@ const submitButtonStyles = css({
   _hover: { bg: 'primary.400' },
 });
 
-function AnnouncedDifficulty({ value }: { value: number }) {
-  return (
-    <span className={announcedWrapStyles}>
-      Difficulté annoncée
-      <span className={announcedDotsStyles} role="img" aria-label={`${value} sur 5`}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <span
-            key={n}
-            className={n <= value ? cx(announcedDotStyles, announcedDotFilledStyles) : announcedDotStyles}
-          />
-        ))}
-      </span>
-    </span>
-  );
-}
-
 export interface RatingCardProps {
   readonly item: SurveyItem;
   readonly onVerdict: (
@@ -301,6 +275,7 @@ export function RatingCard({
   surveyClient,
 }: RatingCardProps) {
   const startedAtRef = useRef<number>(0);
+  const correctifRef = useRef<HTMLTextAreaElement | null>(null);
   const [correctifText, setCorrectifText] = useState<string | null>(null);
   const [correctifPos, setCorrectifPos] = useState<SurveyPos>(item.pos);
 
@@ -327,6 +302,25 @@ export function RatingCard({
   useEffect(() => {
     if (disabled) setCorrectifText(null);
   }, [disabled]);
+
+  // Grow the in-place editor to its content so it opens at the definition's height.
+  useEffect(() => {
+    const el = correctifRef.current;
+    if (el === null) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [correctifText]);
+
+  // On open, focus the editor with the caret at the end rather than selecting all.
+  const editing = correctifText !== null;
+  useEffect(() => {
+    if (!editing) return;
+    const el = correctifRef.current;
+    if (el === null) return;
+    el.focus();
+    const end = el.value.length;
+    el.setSelectionRange(end, end);
+  }, [editing]);
 
   const currentMetaRef = useRef(currentMeta);
   currentMetaRef.current = currentMeta;
@@ -399,39 +393,86 @@ export function RatingCard({
 
   return (
     <article className={cardStyles} aria-live="polite" data-testid="rating-card">
-      <div className={topRowStyles}>
-        <label className={css({ srOnly: true })} htmlFor="pos-pill">Nature grammaticale</label>
-        <select
-          id="pos-pill"
-          className={posSelectStyles}
-          data-testid="pos-pill"
-          value={correctifPos}
-          disabled={disabled}
-          onChange={(e) => setCorrectifPos(e.target.value as SurveyPos)}
-        >
-          {POS_OPTIONS.map((pos) => (
-            <option key={pos} value={pos}>{posLabel(pos)}</option>
-          ))}
-        </select>
-        <StyleTooltip style={item.style} definition={item.definition} mot={item.mot} />
-        <AnnouncedDifficulty value={item.forceClaimed} />
-      </div>
+      {/* Authed contributors edit POS + see Style inside the metadata band; anon keeps them here. */}
+      {!enrichable ? (
+        <div className={topRowStyles}>
+          <label className={css({ srOnly: true })} htmlFor="pos-pill">Nature grammaticale</label>
+          <select
+            id="pos-pill"
+            className={posSelectStyles}
+            data-testid="pos-pill"
+            value={correctifPos}
+            disabled={disabled}
+            onChange={(e) => setCorrectifPos(e.target.value as SurveyPos)}
+          >
+            {POS_OPTIONS.map((pos) => (
+              <option key={pos} value={pos}>{posLabel(pos)}</option>
+            ))}
+          </select>
+          <StyleTooltip style={item.style} definition={item.definition} mot={item.mot} />
+        </div>
+      ) : null}
 
       <h2 className={titleStyles}>{item.mot}</h2>
-      <blockquote className={definitionStyles}>« {item.definition} »</blockquote>
 
       {correctifText === null ? (
-        disabled ? null : (
-          <button
-            type="button"
-            className={corrigerTriggerStyles}
-            data-testid="corriger-trigger"
-            onClick={() => setCorrectifText(item.definition)}
-          >
-            <span aria-hidden="true">✎</span> Corriger la définition <kbd className={kbdStyles}>C</kbd>
-          </button>
-        )
-      ) : null}
+        <>
+          <blockquote className={definitionStyles}>{item.definition}</blockquote>
+          {disabled ? null : (
+            <button
+              type="button"
+              className={corrigerTriggerStyles}
+              data-testid="corriger-trigger"
+              onClick={() => setCorrectifText(item.definition)}
+            >
+              <span aria-hidden="true">✎</span> Corriger la définition <kbd className={kbdStyles}>C</kbd>
+            </button>
+          )}
+        </>
+      ) : (
+        <div className={correctifBoxStyles} data-testid="correctif-box">
+          <label htmlFor="correctif-text" className={css({ srOnly: true })}>
+            Définition corrigée
+          </label>
+          <textarea
+            id="correctif-text"
+            ref={correctifRef}
+            rows={1}
+            className={definitionEditStyles}
+            value={correctifText}
+            onChange={(e) => setCorrectifText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitCorrectif();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setCorrectifText(null);
+              }
+            }}
+          />
+          <p className={correctifHintStyles}>
+            Soumise comme nouvelle entrée notée « bonne » automatiquement.
+          </p>
+          <div className={correctifActionsStyles}>
+            <button
+              type="button"
+              className={cx(correctifButtonStyles, cancelButtonStyles)}
+              onClick={() => setCorrectifText(null)}
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              className={cx(correctifButtonStyles, submitButtonStyles)}
+              data-testid="correctif-submit"
+              onClick={submitCorrectif}
+            >
+              Soumettre la correction
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className={verdictRowStyles} role="group" aria-label="Verdict" aria-keyshortcuts="j k l">
         <button
@@ -480,51 +521,13 @@ export function RatingCard({
         </button>
       ) : null}
 
-      {correctifText !== null ? (
-        <div className={correctifBoxStyles} data-testid="correctif-box">
-          <label htmlFor="correctif-text" className={correctifHintStyles}>
-            Proposez une définition corrigée. Soumise comme nouvelle entrée notée « bonne » automatiquement.
-          </label>
-          <textarea
-            id="correctif-text"
-            className={correctifTextareaStyles}
-            value={correctifText}
-            onChange={(e) => setCorrectifText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                submitCorrectif();
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                setCorrectifText(null);
-              }
-            }}
-            autoFocus
-          />
-          <div className={correctifActionsStyles}>
-            <button
-              type="button"
-              className={cx(correctifButtonStyles, cancelButtonStyles)}
-              onClick={() => setCorrectifText(null)}
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              className={cx(correctifButtonStyles, submitButtonStyles)}
-              data-testid="correctif-submit"
-              onClick={submitCorrectif}
-            >
-              Soumettre la correction
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       {enrichable && !disabled ? (
         <MetadataBand
           band={band}
           item={item}
+          pos={correctifPos}
+          onPosChange={setCorrectifPos}
+          posDisabled={disabled}
           senseSuggestions={priorSenses}
           subTagSuggestions={priorSubTags}
         />
