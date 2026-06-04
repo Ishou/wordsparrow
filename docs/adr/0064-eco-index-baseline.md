@@ -2,7 +2,12 @@
 
 ## Status
 
-Proposed
+Accepted
+
+> **ADR-0001 §7 deviation note:** This ADR is merged in the same PR as
+> the implementation. The design direction (tooling choices, threshold
+> table, workflow trigger model) was settled before code was written; the
+> ADR and the implementation are a single coherent unit.
 
 ## Context
 
