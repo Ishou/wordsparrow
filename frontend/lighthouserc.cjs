@@ -1,7 +1,4 @@
-// ADR-0064: EcoIndex baseline via Lighthouse CI.
-//
-// Lighthouse a11y category is disabled here — @axe-core/playwright is
-// the canonical a11y gate per ADR-0050 §1.
+// ADR-0064: a11y category disabled here — axe canonical per ADR-0050 §1.
 
 const baseUrl = process.env.LHCI_BASE_URL || 'https://wordsparrow.io';
 const routes = ['/', '/grille', '/contribuer'];
