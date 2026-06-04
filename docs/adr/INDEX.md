@@ -95,6 +95,10 @@ ADR-0062  frontend/src/application/survey/types.ts           Hand-maintained Pos
 ADR-0062  frontend/src/ui/components/sondage/labels.ts       POS label map drops verbe_conjugue entry
 ADR-0063  scripts/clue_generation/*judge*          Learned clue-quality judge: CamemBERT-probe shadow pre-filter at filter_8 ahead of human rating; human stays reward signal
 ADR-0063  scripts/clue_generation/pipeline_v2/judge.py  Judge pre-filter insertion point; shadow mode (score + log, accept all) until enforcement flip
+ADR-0065  .github/workflows/build-and-push-image.yml  Trivy image-CVE scan (CRITICAL-only, SARIF)
+ADR-0065  .github/workflows/trivy-config.yml       Trivy IaC misconfig scan (infra/, terraform/, Dockerfiles)
+ADR-0065  .github/workflows/codeql.yml             SAST coverage extends to javascript-typescript
+ADR-0065  .github/workflows/dependency-review.yml  License deny-list (GPL/AGPL) extending ADR-0058 to deps
 ```
 
 ## Adding entries
