@@ -122,9 +122,7 @@ jobs:
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Emit Lighthouse handoff artifact
-        # Hand the deployed URL to lighthouse.yml (workflow_run trigger).
-        # ADR-0064: PR previews audit the Pages URL; push to main audits
-        # wordsparrow.io regardless of the Pages alias.
+        # ADR-0064: emit deployed URL for lighthouse.yml (Pages alias on PR, wordsparrow.io on main).
         env:
           PAGES_URL: ${{ steps.publish.outputs.url }}
           EVENT: ${{ github.event_name }}

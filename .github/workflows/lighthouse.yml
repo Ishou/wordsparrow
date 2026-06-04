@@ -1,23 +1,6 @@
 name: Lighthouse
 
-# Implements ADR-0064 (EcoIndex baseline).
-#
-# Runs Lighthouse + the lighthouse-plugin-ecoindex plugin against the URL
-# the Deploy Frontend workflow just published:
-#   - PR previews  -> <branch>.bliss.pages.dev (preview build, MSW-mocked)
-#   - main pushes  -> https://wordsparrow.io (prod)
-#
-# Triggered by workflow_run on Deploy Frontend success, plus manual
-# dispatch and a nightly schedule against prod.
-#
-# Initial assertions are warn-level (ADR-0064 §3) so a regression posts
-# results but does not fail the workflow. The 60-day ratchet to error
-# is a follow-up PR amending ADR-0064.
-#
-# Security note: this workflow uses `workflow_run`, which runs in the
-# context of the default branch (main). Never check out a PR-supplied
-# ref by branch name — always by immutable `head_sha`. Never interpolate
-# attacker-controllable strings into shell; use env: with quoting.
+# ADR-0064: EcoIndex CI baseline; workflow_run on Deploy Frontend, warn-only for the 60-day ratchet.
 
 on:
   workflow_run:
@@ -30,15 +13,12 @@ on:
         required: false
         default: 'https://wordsparrow.io'
   schedule:
-    # Nightly prod audit at 04:00 UTC. Catches API-driven payload
-    # regressions that PR previews can't see (preview uses MSW mocks).
+    # Nightly prod audit catches regressions MSW-mocked previews can't see (ADR-0064 §4).
     - cron: '0 4 * * *'
 
 permissions:
   contents: read
-  # workflow_run runs on main; we need to post the LHCI summary back to
-  # the PR that triggered Deploy Frontend.
-  pull-requests: write
+  pull-requests: write  # post LHCI summary back to the triggering PR
   actions: read
 
 concurrency:
@@ -53,13 +33,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        # Always check out the default branch, NEVER the PR's head_sha,
-        # even though this workflow has pull-requests: write. Checking
-        # out PR code under a write-permissioned workflow is the classic
-        # "pwn request" pattern: a malicious lighthouserc.cjs / postinstall
-        # in the PR would run with comment-writing access. We only need
-        # the PR's deployed URL (validated via allowlist below), not its
-        # code. The audit config and lockfile must come from main.
+        # ADR-0064 §5: check out main (never the PR's head_sha) to avoid the pwn-request pattern.
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
@@ -82,9 +56,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$EVENT" = "workflow_run" ]; then
-            # Parse handoff.txt (key=value lines written by deploy-frontend.yml).
-            # Validate the URL against an allowlist of expected hosts before
-            # passing it to lhci to defend against a tampered artifact.
+            # ADR-0064 §5: validate handoff URL against an allowlist before passing to lhci.
             HANDOFF_URL="$(grep -E '^url=' lighthouse-handoff/handoff.txt | cut -d= -f2- || true)"
             HANDOFF_PR="$(grep -E '^pr=' lighthouse-handoff/handoff.txt | cut -d= -f2- || true)"
             HANDOFF_SHA="$(grep -E '^sha=' lighthouse-handoff/handoff.txt | cut -d= -f2- || true)"
