@@ -253,3 +253,79 @@ jobs:
           path: artifact/digest.txt
           if-no-files-found: error
           retention-days: 7
+
+  trivy-image-scan:
+    name: trivy-image (${{ matrix.context }})
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - context: grid
+            image-name: wordsparrow-api
+            digest-artifact: image-digest-grid
+          - context: game
+            image-name: wordsparrow-game-api
+            digest-artifact: image-digest-game
+          - context: identity
+            image-name: wordsparrow-identity-api
+            digest-artifact: image-digest-identity
+          - context: survey
+            image-name: wordsparrow-survey-api
+            digest-artifact: image-digest-survey
+          - context: grid-worker
+            image-name: wordsparrow-worker
+            digest-artifact: image-digest-grid-worker
+    steps:
+      - name: Log in to GHCR
+        # Defensive: required if the GHCR package visibility is still private.
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download image digest artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.digest-artifact }}
+          path: digest
+
+      - name: Compute image reference
+        id: ref
+        run: echo "image=ghcr.io/${{ github.repository_owner }}/bliss/${{ matrix.image-name }}@$(cat digest/digest.txt)" >> "$GITHUB_OUTPUT"
+
+      # Two-step pattern: SARIF dump covers all severities for the Security
+      # tab backlog; the gate step then fails only on CRITICAL per ADR-0065 §2.
+      # trivy-action's `format: sarif` mode internally unsets `severity`, so a
+      # single-step `severity: CRITICAL` + `exit-code: 1` would fire on HIGH too.
+      - name: Trivy SARIF dump (all severities)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.ref.outputs.image }}
+          format: sarif
+          output: trivy-image.sarif
+          exit-code: '0'
+
+      - name: Upload SARIF to Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image-${{ matrix.context }}
+
+      - name: Trivy gate (CRITICAL only)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.ref.outputs.image }}
+          format: table
+          severity: CRITICAL
+          exit-code: '1'
+          skip-setup-trivy: true
