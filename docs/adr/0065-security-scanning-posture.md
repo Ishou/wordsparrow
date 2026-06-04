@@ -108,12 +108,15 @@ since the codebase began; this is the cheapest possible gap closure
 
 ### 6. License gating on runtime dependencies (extends ADR-0058)
 
-`dependency-review-action` gets `deny-licenses: GPL-3.0,
-GPL-3.0-or-later, AGPL-3.0, AGPL-3.0-or-later`. ADR-0058 codified
-the commercial-intent posture for **data sources**; the same logic
-applies to runtime code dependencies — a GPL-3.0 npm or Maven
-dependency bundled into our shipped Docker image carries the same
-commercial-incompatibility risk as a CC BY-NC training source.
+`dependency-review-action` gets `deny-licenses: GPL-2.0,
+GPL-2.0-or-later, GPL-3.0, GPL-3.0-or-later, AGPL-3.0,
+AGPL-3.0-or-later`. ADR-0058 codified the commercial-intent posture
+for **data sources**; the same logic applies to runtime code
+dependencies — a GPL-2.0/GPL-3.0 npm or Maven dependency bundled into
+our shipped Docker image carries the same commercial-incompatibility
+risk as a CC BY-NC training source. GPL-2.0 carries the same copyleft
+contamination risk as GPL-3.0 for bundled runtime deps under commercial
+intent; both versions are denied.
 
 This is narrower than ADR-0058's data matrix on purpose: build-time
 tooling (test runners, formatters) is not the target. The gate only
@@ -130,14 +133,14 @@ the dep and rationale, not in PR overrides.
 - A new CRITICAL CVE in the JDK base image fails CI before publish.
 - A Helm chart that mounts a hostPath, runs privileged, or skips
   `runAsNonRoot` fails CI before deploy.
-- A new npm dep brought in under AGPL-3.0 fails CI before merge.
+- A new npm dep brought in under GPL-2.0, GPL-3.0, or AGPL-3.0 fails CI before merge.
 - Frontend code-injection / prototype-pollution patterns get a SAST
   pass.
 
 **Harder:**
 - First Trivy run will populate the Security tab with dozens of
   HIGH/MEDIUM findings; the maintainer absorbs a triage backlog.
-- A genuinely-needed GPL-3.0 dep requires an allowlist entry, not
+- A genuinely-needed GPL-2.0 or GPL-3.0 dep requires an allowlist entry, not
   a silent merge.
 - One more CI job per matrix row on `build-and-push-image.yml` —
   expect ~30–60s of added wall time per row.

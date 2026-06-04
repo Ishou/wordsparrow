@@ -21,3 +21,5 @@ jobs:
         with:
           fail-on-severity: critical
           comment-summary-in-pr: on-failure
+          # ADR-0065 extends ADR-0058's commercial-intent posture to runtime deps.
+          deny-licenses: GPL-2.0, GPL-2.0-or-later, GPL-3.0, GPL-3.0-or-later, AGPL-3.0, AGPL-3.0-or-later
