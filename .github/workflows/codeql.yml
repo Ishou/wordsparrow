@@ -18,8 +18,19 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze (java-kotlin)
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            needs-jdk: true
+            build-mode: autobuild
+          - language: javascript-typescript
+            needs-jdk: false
+            # JS/TS extractor does not support autobuild; sources are indexed directly.
+            build-mode: none
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,6 +38,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up JDK 21
+        if: matrix.needs-jdk
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -41,10 +53,10 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
-          languages: java-kotlin
-          build-mode: autobuild
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: /language:java-kotlin
+          category: /language:${{ matrix.language }}
