@@ -521,8 +521,8 @@ export function MetadataBand({
           type="button"
           className={resetButtonStyles}
           data-testid="band-reset"
-          disabled={band.state === 'pristine'}
-          onClick={band.reset}
+          disabled={band.state === 'pristine' && pos === item.pos}
+          onClick={() => { band.reset(); onPosChange(item.pos); }}
         >
           <span aria-hidden="true">↺</span> Réinitialiser
         </button>

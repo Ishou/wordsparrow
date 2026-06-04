@@ -252,4 +252,17 @@ describe('RatingCard meta inputs', () => {
     await clickGood(container);
     expect(lastMeta(onVerdict).targetCategories).toEqual(['societe']);
   });
+
+  it('Réinitialiser restores the nature grammaticale to the item prior', async () => {
+    const onVerdict = vi.fn().mockResolvedValue(undefined);
+    const { container } = render(
+      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
+    );
+    await expandBand(container);
+    const select = container.querySelector('[data-testid="band-pos-select"]') as HTMLSelectElement;
+    await act(async () => { fireEvent.change(select, { target: { value: 'verbe_infinitif' } }); });
+    expect(select.value).toBe('verbe_infinitif');
+    await clickEl(container.querySelector('[data-testid="band-reset"]'));
+    expect(select.value).toBe('nom_commun');
+  });
 });
