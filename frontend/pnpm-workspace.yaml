@@ -29,6 +29,13 @@ overrides:
 # module resolver under eslint-import-resolver-typescript).
 allowBuilds:
   esbuild: true
+  # puppeteer is pulled in transitively by @lhci/cli → lighthouse — it
+  # downloads a pinned Chromium during postinstall. Required for the
+  # ADR-0064 EcoIndex audit harness.
+  puppeteer: true
+  # The -courses subpackage of lighthouse-plugin-ecoindex ships HTML
+  # tutorial content via a postinstall fetch. Not needed for CI scoring.
+  lighthouse-plugin-ecoindex-courses: false
   msw: true
   protobufjs: true
   unrs-resolver: true
