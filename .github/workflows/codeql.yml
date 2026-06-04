@@ -18,8 +18,16 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze (java-kotlin)
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            needs-jdk: true
+          - language: javascript-typescript
+            needs-jdk: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,6 +35,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up JDK 21
+        if: matrix.needs-jdk
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -37,14 +46,16 @@ jobs:
       # a no-op (which is what defeated the previous manual-mode attempt:
       # cached classes meant zero compiler invocations for the tracer to
       # capture). Autobuild is GitHub's recommended path for Java/Kotlin
-      # and runs the build under CodeQL's tracer end-to-end.
+      # and runs the build under CodeQL's tracer end-to-end. JS/TS
+      # autobuild traverses the repo and indexes sources directly with
+      # no build step needed.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
-          languages: java-kotlin
+          languages: ${{ matrix.language }}
           build-mode: autobuild
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: /language:java-kotlin
+          category: /language:${{ matrix.language }}
