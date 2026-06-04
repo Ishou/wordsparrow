@@ -271,7 +271,7 @@ Full rationale is in MANIFESTO.md.
   Recent landmarks: 0001 (workflow), 0003 (cross-language API), 0009
   (k3s deploy), 0018 (game context), 0050 (a11y), 0039 (bitmask-CSP
   grid generator), 0042 (daily pre-gen worker), 0034/0048 (CORS wildcard
-  predicate), 0056 (survey context).
+  predicate), 0056 (survey context), 0065 (security scanning posture).
 
 ## ADR template
 
