@@ -1,0 +1,52 @@
+name: Trivy Config Scan
+
+# IaC misconfig scan (Helm, K8s, Terraform, Dockerfiles) per ADR-0065.
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - 'terraform/**'
+      - '**/Dockerfile'
+      - '.github/workflows/trivy-config.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - 'terraform/**'
+      - '**/Dockerfile'
+      - '.github/workflows/trivy-config.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  trivy-config:
+    name: trivy-config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: sarif
+          output: trivy-config.sarif
+          severity: CRITICAL
+          exit-code: '1'
+
+      - name: Upload SARIF to Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-config.sarif
+          category: trivy-config

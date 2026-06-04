@@ -253,3 +253,59 @@ jobs:
           path: artifact/digest.txt
           if-no-files-found: error
           retention-days: 7
+
+  trivy-image-scan:
+    name: trivy-image (${{ matrix.context }})
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - context: grid
+            image-name: wordsparrow-api
+            digest-artifact: image-digest-grid
+          - context: game
+            image-name: wordsparrow-game-api
+            digest-artifact: image-digest-game
+          - context: identity
+            image-name: wordsparrow-identity-api
+            digest-artifact: image-digest-identity
+          - context: survey
+            image-name: wordsparrow-survey-api
+            digest-artifact: image-digest-survey
+          - context: grid-worker
+            image-name: wordsparrow-worker
+            digest-artifact: image-digest-grid-worker
+    steps:
+      - name: Download image digest artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.digest-artifact }}
+          path: digest
+
+      - name: Compute image reference
+        id: ref
+        run: echo "image=ghcr.io/${{ github.repository_owner }}/bliss/${{ matrix.image-name }}@$(cat digest/digest.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Run Trivy image scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.ref.outputs.image }}
+          format: sarif
+          output: trivy-image.sarif
+          severity: CRITICAL
+          exit-code: '1'
+
+      - name: Upload SARIF to Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image-${{ matrix.context }}
