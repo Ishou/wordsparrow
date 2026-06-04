@@ -63,10 +63,10 @@ PR-B and PR-C don't need to wait on ADR-0065: PR-B expands the scope of an alrea
 - [ ] **Step 1: Confirm ADR number is free**
 
 ```bash
-ls docs/adr/0064*.md 2>/dev/null
+ls docs/adr/0065*.md 2>/dev/null
 ```
 
-Expected: no output. If `0064*.md` exists (another ADR landed since), use the next free number and update all references in this plan accordingly.
+Expected: no output. If `0065*.md` exists (another ADR landed since), use the next free number and update all references in this plan accordingly.
 
 - [ ] **Step 2: Write the ADR**
 
@@ -257,13 +257,13 @@ Find the line:
 > predicate), 0056 (survey context).
 ```
 
-Add `0064 (security scanning posture)` at the end:
+Add `0065 (security scanning posture)` at the end:
 
 ```
 > Recent landmarks: 0001 (workflow), 0003 (cross-language API), 0009
 > (k3s deploy), 0018 (game context), 0050 (a11y), 0039 (bitmask-CSP
 > grid generator), 0042 (daily pre-gen worker), 0034/0048 (CORS wildcard
-> predicate), 0056 (survey context), 0064 (security scanning posture).
+> predicate), 0056 (survey context), 0065 (security scanning posture).
 ```
 
 - [ ] **Step 5: Verify `registry-coherence.yml` passes locally**
