@@ -26,8 +26,11 @@ jobs:
         include:
           - language: java-kotlin
             needs-jdk: true
+            build-mode: autobuild
           - language: javascript-typescript
             needs-jdk: false
+            # JS/TS extractor does not support autobuild; sources are indexed directly.
+            build-mode: none
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,14 +49,12 @@ jobs:
       # a no-op (which is what defeated the previous manual-mode attempt:
       # cached classes meant zero compiler invocations for the tracer to
       # capture). Autobuild is GitHub's recommended path for Java/Kotlin
-      # and runs the build under CodeQL's tracer end-to-end. JS/TS
-      # autobuild traverses the repo and indexes sources directly with
-      # no build step needed.
+      # and runs the build under CodeQL's tracer end-to-end.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          build-mode: autobuild
+          build-mode: ${{ matrix.build-mode }}
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
