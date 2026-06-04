@@ -1,7 +1,7 @@
 // 1–5 difficulty picker (radiogroup, AZERTY-safe); "Annoncée" maps to forceClaimed.
 
 import { useId, useRef } from 'react';
-import { css, cx } from 'styled-system/css';
+import { css } from 'styled-system/css';
 import type { LikertScore } from '@/application/survey';
 
 const fieldStyles = css({
@@ -25,19 +25,15 @@ const labelStyles = css({
   color: 'fgMuted',
 });
 
-const announceStyles = css({
-  fontSize: 'xs',
-  color: 'fgMuted',
-});
-
 const dotsStyles = css({
   display: 'flex',
-  gap: '8px',
+  gap: '2px',
   alignItems: 'center',
 });
 
 const dotStyles = css({
-  width: '44px',
+  // 36×44 keeps the WCAG AA 24×24 target while the visible 24px dot sits tighter than the old 44px button.
+  width: '36px',
   height: '44px',
   display: 'inline-flex',
   alignItems: 'center',
@@ -53,19 +49,15 @@ const dotStyles = css({
   },
   '&::before': {
     content: '""',
-    width: '14px',
-    height: '14px',
+    width: '24px',
+    height: '24px',
     borderRadius: '999px',
-    border: '2px solid token(colors.border)',
-    bg: 'transparent',
-    transition: 'background-color 120ms ease-out, border-color 120ms ease-out',
+    bg: 'neutral.300',
+    transition: 'background-color 120ms ease-out',
   },
-});
-
-const dotFilledStyles = css({
-  '&::before': {
+  // Attribute-scoped selector outranks the base `::before` regardless of atomic-class source order.
+  '&[data-filled="true"]::before': {
     bg: 'accent',
-    borderColor: 'accent',
   },
 });
 
@@ -114,7 +106,6 @@ export function PerceivedDifficultyPicker({ value, onChange, announced }: Percei
     <div className={fieldStyles} data-testid="perceived-difficulty">
       <div className={labelRowStyles}>
         <span id={`${groupId}-label`} className={labelStyles}>Difficulté ressentie</span>
-        <span className={announceStyles}>— annoncée : {announced}/5</span>
       </div>
       <div className={dotsStyles} role="radiogroup" aria-labelledby={`${groupId}-label`}>
         {SCORES.map((score, index) => {
@@ -129,7 +120,8 @@ export function PerceivedDifficultyPicker({ value, onChange, announced }: Percei
               aria-checked={isSelected}
               aria-label={`${score} sur 5`}
               tabIndex={index === activeIndex ? 0 : -1}
-              className={filled ? cx(dotStyles, dotFilledStyles) : dotStyles}
+              className={dotStyles}
+              data-filled={filled}
               onClick={() => onChange(score)}
               onKeyDown={(event) => onKeyDown(event, index)}
             />

@@ -41,7 +41,9 @@ const legendStyles = css({
   display: 'flex',
   flexWrap: 'wrap',
   alignItems: 'baseline',
-  gap: '6px',
+  justifyContent: 'center',
+  columnGap: 'lg',
+  rowGap: 'xs',
   fontSize: 'xs',
   color: 'fgMuted',
   '& kbd': {
@@ -419,11 +421,8 @@ function ContribuerPage() {
 
         <p className={legendStyles} aria-label="Raccourcis clavier">
           <span><kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> noter</span>
-          <span aria-hidden="true">·</span>
           <span><kbd>C</kbd> corriger</span>
-          <span aria-hidden="true">·</span>
           <span><kbd>A</kbd> ajuster les métadonnées</span>
-          <span aria-hidden="true">·</span>
           <span><kbd>Espace</kbd> confirmer / enregistrer</span>
         </p>
       </article>

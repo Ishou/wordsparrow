@@ -22,11 +22,6 @@ const comboStyles = css({
   flexWrap: 'wrap',
   alignItems: 'center',
   gap: 'xs',
-  border: '1px solid token(colors.border)',
-  borderRadius: 'sm',
-  padding: 'sm',
-  bg: 'surface',
-  _focusWithin: { borderColor: 'accent' },
 });
 
 const chipStyles = css({
@@ -38,9 +33,9 @@ const chipStyles = css({
   fontSize: 'sm',
   fontWeight: 'semibold',
   color: 'fg',
-  bg: 'surfaceMuted',
+  bg: 'surface',
   border: '1px solid token(colors.border)',
-  borderRadius: 'sm',
+  borderRadius: '999px',
 });
 
 const chipRemoveStyles = css({
@@ -63,15 +58,19 @@ const chipRemoveStyles = css({
 });
 
 const inputStyles = css({
-  flex: '1 1 auto',
-  minWidth: '8ch',
-  border: 'none',
+  flex: '0 0 auto',
+  minWidth: '12ch',
+  border: '1px dashed token(colors.border)',
+  borderRadius: '999px',
   outline: 'none',
   bg: 'transparent',
   color: 'fg',
   fontFamily: 'body',
-  fontSize: 'body',
+  fontSize: 'sm',
+  paddingInline: 'sm',
   paddingBlock: '4px',
+  _focusVisible: { borderStyle: 'solid', borderColor: 'accent' },
+  '&::placeholder': { color: 'fgMuted' },
 });
 
 const listboxStyles = css({
@@ -268,7 +267,7 @@ export function GlossChipInput({
           aria-activedescendant={showList ? `${listboxId}-opt-${activeIndex}` : undefined}
           className={inputStyles}
           value={typed}
-          placeholder={value.length === 0 ? placeholder : undefined}
+          placeholder={placeholder}
           maxLength={maxLength}
           disabled={disabled || value.length >= maxItems}
           onChange={(e) => {

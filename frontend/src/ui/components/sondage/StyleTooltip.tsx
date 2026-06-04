@@ -70,22 +70,25 @@ export interface StyleTooltipProps {
   readonly style: string;
   readonly definition: string;
   readonly mot: string;
+  // Drop the leading "Style :" text when an external label already names the field.
+  readonly labelHidden?: boolean;
 }
 
-export function StyleTooltip({ style, definition, mot }: StyleTooltipProps) {
+export function StyleTooltip({ style, definition, mot, labelHidden = false }: StyleTooltipProps) {
   const label = styleLabel(style);
   const copy = STYLE_COPY[style];
   if (!copy) {
     return (
       <span className={wrapStyles}>
-        Style : <span className={css({ color: 'fg', fontWeight: 'semibold' })}>{label}</span>
+        {labelHidden ? null : 'Style : '}
+        <span className={css({ color: 'fg', fontWeight: 'semibold' })}>{label}</span>
       </span>
     );
   }
   return (
     <Tooltip.Root openDelay={150} closeDelay={100}>
       <span className={wrapStyles}>
-        Style :{' '}
+        {labelHidden ? null : 'Style : '}
         <Tooltip.Trigger
           className={triggerStyles}
           aria-label={`En savoir plus sur le style ${label}`}
