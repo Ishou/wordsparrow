@@ -34,15 +34,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Trivy config scan
+      # SARIF dump covers all severities (Security-tab backlog); gate step
+      # below fails only on CRITICAL per ADR-0065 §2. See build-and-push-image.yml
+      # trivy-image-scan job comment for the underlying action quirk.
+      - name: Trivy SARIF dump (all severities)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: config
           scan-ref: .
           format: sarif
           output: trivy-config.sarif
-          severity: CRITICAL
-          exit-code: '1'
+          exit-code: '0'
 
       - name: Upload SARIF to Security tab
         if: always()
@@ -50,3 +52,13 @@ jobs:
         with:
           sarif_file: trivy-config.sarif
           category: trivy-config
+
+      - name: Trivy gate (CRITICAL only)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: table
+          severity: CRITICAL
+          exit-code: '1'
+          skip-setup-trivy: true
