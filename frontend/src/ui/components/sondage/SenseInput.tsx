@@ -1,6 +1,6 @@
-// ADR-0050: single-value combobox + listbox; ADR-0061: gloss must not repeat the lemma.
+// ADR-0050: single-value combobox + listbox. Sens is metadata, not a clue — no lemma constraint.
 
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { css, cx } from 'styled-system/css';
 import { normalizeForMatch } from '@/application/survey';
 
@@ -66,12 +66,6 @@ const optionStyles = css({
 
 const optionActiveStyles = css({ bg: 'surfaceMuted' });
 
-const hintStyles = css({
-  fontSize: 'xs',
-  color: 'errorText',
-  margin: 0,
-});
-
 export interface SenseInputProps {
   readonly value: string;
   readonly onChange: (next: string) => void;
@@ -82,8 +76,8 @@ export interface SenseInputProps {
   readonly placeholder?: string;
   readonly maxLength?: number;
   readonly disabled?: boolean;
-  // ADR-0061: a sense gloss must not repeat the lemma — the row already carries it.
-  readonly bannedTerm?: string;
+  // When opened inline, the field self-focuses with the caret at the end of existing content.
+  readonly autoFocus?: boolean;
 }
 
 export function SenseInput({
@@ -95,12 +89,22 @@ export function SenseInput({
   placeholder,
   maxLength = 80,
   disabled = false,
-  bannedTerm,
+  autoFocus = false,
 }: SenseInputProps) {
   const inputId = useId();
   const listboxId = `${inputId}-listbox`;
   const [activeIndex, setActiveIndex] = useState(0);
   const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    const el = inputRef.current;
+    if (el === null) return;
+    el.focus();
+    const end = el.value.length;
+    el.setSelectionRange(end, end);
+  }, [autoFocus]);
 
   const filtered = useMemo(() => {
     const needle = normalizeForMatch(value);
@@ -111,11 +115,6 @@ export function SenseInput({
       return n.includes(needle);
     });
   }, [suggestions, value]);
-
-  const repeatsLemma =
-    !!bannedTerm &&
-    value.trim() !== '' &&
-    normalizeForMatch(value).includes(normalizeForMatch(bannedTerm));
 
   const showList = open && filtered.length > 0 && !disabled;
 
@@ -155,6 +154,7 @@ export function SenseInput({
       )}
       <div className={comboStyles}>
         <input
+          ref={inputRef}
           id={inputId}
           type="text"
           role="combobox"
@@ -162,7 +162,6 @@ export function SenseInput({
           aria-autocomplete="list"
           aria-expanded={showList}
           aria-controls={listboxId}
-          aria-invalid={repeatsLemma || undefined}
           aria-activedescendant={showList ? `${listboxId}-opt-${activeIndex}` : undefined}
           className={inputStyles}
           value={value}
@@ -202,9 +201,6 @@ export function SenseInput({
           </ul>
         ) : null}
       </div>
-      {repeatsLemma ? (
-        <p className={hintStyles} role="alert">Le sens ne doit pas répéter le mot.</p>
-      ) : null}
     </div>
   );
 }
