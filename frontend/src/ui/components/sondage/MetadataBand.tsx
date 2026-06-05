@@ -327,7 +327,7 @@ export function MetadataBand({
     };
     setOpenField(field);
   }
-  function commitField(): void { setOpenField(null); }
+  function commitField(): void { setOpenField(null); setPickerOpen(false); }
   function cancelField(): void {
     const snap = snapshotRef.current;
     if (snap) {
@@ -337,6 +337,7 @@ export function MetadataBand({
       else if (openField === 'motscles') band.setSubTags(snap.subTags);
     }
     setOpenField(null);
+    setPickerOpen(false);
   }
 
   function toggleCategory(cat: SurveyCategorie): void {
