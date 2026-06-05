@@ -5,8 +5,8 @@
 # game/api Dockerfiles so the three services have the same build / runtime shape.
 
 # ---- Stage 1: build ------------------------------------------------------
-# eclipse-temurin:21.0.10_7-jdk-alpine-3.22
-FROM eclipse-temurin:21.0.10_7-jdk-alpine-3.22@sha256:45df4ae087e53ba551d35d5142a2ba6837eaa52592882745ee4377b12c1655f2 AS build
+# eclipse-temurin:21.0.11_10-jdk-alpine-3.23
+FROM eclipse-temurin:21.0.11_10-jdk-alpine-3.23@sha256:4fb80de7aeb277ad949cfbe89b4f504e50bb34c57fd908c5825236473d71e986 AS build
 
 WORKDIR /workspace
 
@@ -52,8 +52,8 @@ COPY identity/api/src identity/api/src
 RUN chmod +x gradlew && ./gradlew :identity:api:shadowJar --no-daemon --stacktrace
 
 # ---- Stage 2: runtime ----------------------------------------------------
-# eclipse-temurin:21.0.10_7-jre-alpine-3.22
-FROM eclipse-temurin:21.0.10_7-jre-alpine-3.22@sha256:b08e4d2ef04cda3786f38cc92f96005c0e32361c353d109a6be0f03c3e9a157f
+# eclipse-temurin:21.0.11_10-jre-alpine-3.23
+FROM eclipse-temurin:21.0.11_10-jre-alpine-3.23@sha256:704db3c40204a44f471191446ddd9cda5d60dab40f0e15c6507b815ed897238b
 
 # wget is needed by HEALTHCHECK; declare explicitly to survive base-image swaps.
 RUN apk add --no-cache wget
