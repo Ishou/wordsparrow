@@ -76,10 +76,9 @@ function startStaticServer(
       res.end(originalShell);
       return;
     }
-    // Reject any path that escapes rootDir after normalization.
     const rootWithSep = rootDir.endsWith(sep) ? rootDir : rootDir + sep;
-    let filePath = resolve(rootDir, '.' + urlPath);
-    if (filePath !== rootDir && !filePath.startsWith(rootWithSep)) {
+    const candidate = resolve(rootDir, '.' + urlPath);
+    if (!candidate.startsWith(rootWithSep)) {
       res.writeHead(200, { 'Content-Type': MIME['.html']! });
       res.end(originalShell);
       return;
@@ -87,7 +86,7 @@ function startStaticServer(
     let isDir = false;
     let notFound = false;
     try {
-      isDir = statSync(filePath).isDirectory();
+      isDir = statSync(candidate).isDirectory();
     } catch {
       notFound = true;
     }
@@ -98,14 +97,7 @@ function startStaticServer(
       res.end(originalShell);
       return;
     }
-    if (isDir) {
-      filePath = resolve(filePath, 'index.html');
-      if (!filePath.startsWith(rootWithSep)) {
-        res.writeHead(200, { 'Content-Type': MIME['.html']! });
-        res.end(originalShell);
-        return;
-      }
-    }
+    const filePath = isDir ? resolve(candidate, 'index.html') : candidate;
     try {
       const body = readFileSync(filePath);
       const ext = extname(filePath);
