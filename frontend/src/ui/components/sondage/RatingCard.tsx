@@ -329,7 +329,7 @@ export function RatingCard({
     startedAtRef.current = performance.now();
   }, [item.itemId]);
 
-  const { toggleExpanded, primaryAction, difficulteForSubmit } = band;
+  const { primaryAction, difficulteForSubmit } = band;
 
   useEffect(() => {
     function handler(event: KeyboardEvent): void {
@@ -351,11 +351,6 @@ export function RatingCard({
         void onSignaler(latency());
         return;
       }
-      if (key === 'a' && enrichable) {
-        event.preventDefault();
-        toggleExpanded();
-        return;
-      }
       if (key === ' ' && enrichable) {
         event.preventDefault();
         primaryAction();
@@ -368,7 +363,7 @@ export function RatingCard({
     }
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [item.itemId, item.definition, onVerdict, onSignaler, disabled, enrichable, toggleExpanded, primaryAction, difficulteForSubmit]);
+  }, [item.itemId, item.definition, onVerdict, onSignaler, disabled, enrichable, primaryAction, difficulteForSubmit]);
 
   function submit(verdict: Verdict): void {
     if (disabled) return;
