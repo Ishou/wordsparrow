@@ -168,6 +168,20 @@ describe('RatingCard meta inputs', () => {
     expect(lastMeta(onVerdict).targetCategories).toEqual(['autre']);
   });
 
+  it('Space inside the open Catégories editor does not confirm the band', async () => {
+    const { container } = render(
+      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} enrichable />,
+    );
+    await openField(container, 'categories');
+    const picker = screen.getByRole('button', { name: /Toutes les catégories/ });
+    await act(async () => {
+      picker.focus();
+      fireEvent.keyDown(picker, { key: ' ', code: 'Space' });
+    });
+    const badge = container.querySelector('[data-testid="band-status-badge"]')!;
+    expect(badge.textContent).not.toContain('Enregistré');
+  });
+
   it('typing a single sense threads it into the verdict meta', async () => {
     const onVerdict = vi.fn().mockResolvedValue(undefined);
     const { container } = render(

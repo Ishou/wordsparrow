@@ -337,7 +337,7 @@ export function RatingCard({
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
-      if (target instanceof Element && target.closest('[role="combobox"], [role="listbox"]')) return;
+      if (target instanceof Element && target.closest('[role="combobox"], [role="listbox"], [data-editor-region]')) return;
       if (target?.isContentEditable) return;
       const key = event.key.toLowerCase();
       const latency = () => Math.max(0, Math.round(performance.now() - startedAtRef.current));
