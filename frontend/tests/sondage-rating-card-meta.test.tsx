@@ -40,9 +40,11 @@ async function clickEl(el: Element | null): Promise<void> {
   await act(async () => { fireEvent.click(el as HTMLButtonElement); });
 }
 
-// Band must be expanded before querying inputs; category picker also needs explicit open.
-async function expandBand(container: HTMLElement): Promise<void> {
-  await clickEl(container.querySelector('[data-testid="band-adjust"]'));
+type FieldKey = 'nature' | 'categories' | 'sens' | 'motscles';
+
+// Each editable field is opened by clicking its read-only trigger; no global Ajuster anymore.
+async function openField(container: HTMLElement, field: FieldKey): Promise<void> {
+  await clickEl(container.querySelector(`[data-testid="band-edit-${field}"]`));
 }
 async function openCategoryPicker(): Promise<void> {
   await clickEl(screen.getByRole('button', { name: /Toutes les catégories/ }));
@@ -62,7 +64,7 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'categories');
     await openCategoryPicker();
     await clickCategory(container, 'objet');
     await clickGood(container);
@@ -74,12 +76,10 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
-    // Clicking the lone seed chip is blocked (keeps at least the AI suggestion).
+    await openField(container, 'categories');
     await clickCategory(container, 'faune_flore');
     await openCategoryPicker();
     await clickCategory(container, 'objet');
-    // objet is now a selected chip; clicking removes it.
     await clickCategory(container, 'objet');
     await clickGood(container);
     expect(lastMeta(onVerdict).targetCategories).toEqual(['faune_flore']);
@@ -90,12 +90,11 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'categories');
     await openCategoryPicker();
     for (const c of ['objet', 'corps', 'culture', 'histoire', 'jeu']) {
       await clickCategory(container, c);
     }
-    // Seventh is disabled at the cap; the click is a no-op.
     await clickCategory(container, 'sport');
     await clickGood(container);
     expect(lastMeta(onVerdict).targetCategories).toHaveLength(6);
@@ -106,7 +105,7 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'categories');
     await openCategoryPicker();
     await clickCategory(container, 'objet');
     await clickCategory(container, 'autre');
@@ -119,7 +118,7 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'categories');
     await openCategoryPicker();
     await clickCategory(container, 'autre');
     await clickCategory(container, 'objet');
@@ -131,7 +130,7 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'categories');
     await openCategoryPicker();
     await clickCategory(container, 'objet');
     await clickCategory(container, 'autre');
@@ -143,7 +142,7 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'categories');
     await openCategoryPicker();
     await clickCategory(container, 'autre');
     await clickCategory(container, 'objet');
@@ -157,9 +156,8 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'categories');
     await openCategoryPicker();
-    // Seed is faune_flore; add five more to reach the cap of 6.
     for (const c of ['objet', 'corps', 'culture', 'histoire', 'jeu']) {
       await clickCategory(container, c);
     }
@@ -175,7 +173,7 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'sens');
     const sense = screen.getByRole('combobox', { name: 'Sens visé par cette définition' }) as HTMLInputElement;
     await act(async () => { fireEvent.change(sense, { target: { value: 'animal félin' } }); });
     await clickGood(container);
@@ -188,7 +186,7 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'sens');
     const sense = screen.getByRole('combobox', { name: 'Sens visé par cette définition' }) as HTMLInputElement;
     await act(async () => { fireEvent.change(sense, { target: { value: 'le chat' } }); });
     expect(sense.getAttribute('aria-invalid')).toBeNull();
@@ -202,7 +200,7 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'motscles');
     const subInput = screen.getByRole('combobox', { name: 'Mots-clés' }) as HTMLInputElement;
     await act(async () => {
       fireEvent.change(subInput, { target: { value: 'félin' } });
@@ -233,7 +231,7 @@ describe('RatingCard meta inputs', () => {
       <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} enrichable surveyClient={client} />,
     );
     await waitFor(() => expect(client.getLemmaMeta).toHaveBeenCalled());
-    await expandBand(container);
+    await openField(container, 'sens');
     const sense = screen.getByRole('combobox', { name: 'Sens visé par cette définition' }) as HTMLInputElement;
     await act(async () => {
       fireEvent.focus(sense);
@@ -247,7 +245,7 @@ describe('RatingCard meta inputs', () => {
     const { container, rerender } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'categories');
     await openCategoryPicker();
     await clickCategory(container, 'objet');
     const next: SurveyItem = { ...sampleItem, itemId: 'next-id', mot: 'BANQUE', categorie: 'societe' };
@@ -261,11 +259,12 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await expandBand(container);
+    await openField(container, 'nature');
     const select = container.querySelector('[data-testid="band-pos-select"]') as HTMLSelectElement;
     await act(async () => { fireEvent.change(select, { target: { value: 'verbe_infinitif' } }); });
-    expect(select.value).toBe('verbe_infinitif');
+    // Picking auto-closes the editor; the trigger now shows the new label.
+    expect(container.querySelector('[data-testid="band-edit-nature"]')!.textContent).toContain('Verbe (infinitif)');
     await clickEl(container.querySelector('[data-testid="band-reset"]'));
-    expect(select.value).toBe('nom_commun');
+    expect(container.querySelector('[data-testid="band-edit-nature"]')!.textContent).toContain('Nom commun');
   });
 });

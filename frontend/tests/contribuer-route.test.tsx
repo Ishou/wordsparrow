@@ -515,7 +515,7 @@ describe('Contribuer route', () => {
     await waitFor(() => expect(screen.getByTestId('rating-card')).toBeInTheDocument());
 
     await act(async () => {
-      document.querySelector<HTMLButtonElement>('[data-testid="band-adjust"]')!.click();
+      document.querySelector<HTMLButtonElement>('[data-testid="band-edit-sens"]')!.click();
     });
     const sense = screen.getByRole('combobox', {
       name: 'Sens visé par cette définition',

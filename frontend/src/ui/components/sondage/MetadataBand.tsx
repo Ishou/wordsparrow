@@ -1,14 +1,17 @@
-// Collapsible metadata band: tri-state (pristine/modified/saved) owned by useMetadataBand.
+// Inline-editable metadata band: one compact grid; each field edits in place (ADR-0061, auth-only).
 
-import { useId, useState } from 'react';
-import { css, cx } from 'styled-system/css';
+import { useEffect, useId, useRef, useState } from 'react';
+import { css } from 'styled-system/css';
 import type { SurveyCategorie, SurveyItem, SurveyPos } from '@/application/survey';
 import { CATEGORIE_OPTIONS, POS_OPTIONS, categorieLabel, posLabel } from './labels';
+import { InlineEditableRow } from './InlineEditableRow';
 import { SenseInput } from './SenseInput';
 import { GlossChipInput } from './GlossChipInput';
 import { PerceivedDifficultyPicker } from './PerceivedDifficultyPicker';
 import { StyleTooltip } from './StyleTooltip';
 import type { MetadataBand as Band } from './useMetadataBand';
+
+type FieldKey = 'nature' | 'categories' | 'sens' | 'motscles';
 
 const bandStyles = css({
   display: 'flex',
@@ -19,24 +22,12 @@ const bandStyles = css({
   bg: 'metaSuggestedBg',
   padding: 'md',
   transition: 'background-color 160ms ease-out, border-color 160ms ease-out',
-  '&[data-state="modified"]': {
-    bg: 'metaModifiedBg',
-    borderColor: 'metaModifiedLine',
-  },
-  '&[data-state="saved"]': {
-    bg: 'metaSavedBg',
-    borderColor: 'metaSavedLine',
-  },
+  '&[data-state="modified"]': { bg: 'metaModifiedBg', borderColor: 'metaModifiedLine' },
+  '&[data-state="saved"]': { bg: 'metaSavedBg', borderColor: 'metaSavedLine' },
 });
 
-const headerRowStyles = css({
-  display: 'flex',
-  alignItems: 'center',
-  flexWrap: 'wrap',
-  gap: 'sm',
-});
+const headerRowStyles = css({ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'sm' });
 
-// Decorative "pré-rempli" marker mirroring the ✦ badge — not an expand control.
 const markerCircleStyles = css({
   display: 'inline-flex',
   alignItems: 'center',
@@ -85,7 +76,6 @@ const badgeStyles = css({
   '&[data-state="saved"]': { borderColor: 'metaSavedLine', color: 'metaSavedText' },
 });
 
-// Indent past the ✦ marker so the body aligns with the "Métadonnées" title, not the icon.
 const CONTENT_INDENT = 'calc(26px + token(spacing.sm))';
 
 const bodyStyles = css({
@@ -95,24 +85,27 @@ const bodyStyles = css({
   paddingInlineStart: CONTENT_INDENT,
 });
 
-const summaryStyles = css({
+const gridStyles = css({
   display: 'grid',
   gridTemplateColumns: 'auto 1fr',
-  rowGap: '4px',
+  rowGap: '6px',
   columnGap: 'sm',
-  alignItems: 'baseline',
+  alignItems: 'start',
   margin: 0,
 });
 
-const summaryKeyStyles = css({
+const keyStyles = css({
   fontSize: 'xs',
   fontWeight: 'bold',
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
   color: 'metaSuggestedText',
+  paddingBlock: '5px',
 });
 
-const summaryValStyles = css({ fontSize: 'sm', color: 'fg' });
+const valStyles = css({ fontSize: 'sm', color: 'fg', minWidth: 0, paddingBlock: '5px' });
+
+const difficultyRowStyles = css({ gridColumn: '1 / -1', marginBlockStart: '2px' });
 
 const posSelectStyles = css({
   appearance: 'none',
@@ -127,24 +120,16 @@ const posSelectStyles = css({
   paddingBlock: '6px',
   paddingInlineEnd: '26px',
   cursor: 'pointer',
-  alignSelf: 'flex-start',
   backgroundImage:
     'linear-gradient(45deg, transparent 50%, token(colors.fgMuted) 50%), linear-gradient(135deg, token(colors.fgMuted) 50%, transparent 50%)',
   backgroundPosition: 'calc(100% - 14px) 53%, calc(100% - 9px) 53%',
   backgroundSize: '5px 5px, 5px 5px',
   backgroundRepeat: 'no-repeat',
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-  },
+  _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px' },
   _disabled: { opacity: 0.5, cursor: 'not-allowed' },
 });
 
-const actionsRowStyles = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'sm',
-});
+const actionsRowStyles = css({ display: 'flex', alignItems: 'center', gap: 'sm', marginBlockStart: '2px' });
 
 const primaryButtonStyles = css({
   display: 'inline-flex',
@@ -163,10 +148,7 @@ const primaryButtonStyles = css({
   transition: 'background-color 120ms ease-out, opacity 120ms ease-out',
   _hover: { bg: 'primary.400' },
   _disabled: { opacity: 0.55, cursor: 'default' },
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-  },
+  _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px' },
 });
 
 const kbdStyles = css({
@@ -178,28 +160,6 @@ const kbdStyles = css({
   borderRadius: 'sm',
   bg: 'rgba(255,255,255,0.25)',
   color: 'inherit',
-});
-
-const adjustButtonStyles = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '6px',
-  paddingInline: 'sm',
-  paddingBlock: 'sm',
-  borderRadius: '6px',
-  fontFamily: 'body',
-  fontSize: 'sm',
-  fontWeight: 'semibold',
-  bg: 'transparent',
-  color: 'fg',
-  border: 'none',
-  cursor: 'pointer',
-  _hover: { color: 'accent' },
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-    borderRadius: 'sm',
-  },
 });
 
 const resetButtonStyles = css({
@@ -219,66 +179,10 @@ const resetButtonStyles = css({
   cursor: 'pointer',
   _hover: { color: 'error' },
   _disabled: { opacity: 0.4, cursor: 'default', _hover: { color: 'fgMuted' } },
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-    borderRadius: 'sm',
-  },
-});
-
-const adjustKbdStyles = css({
-  fontFamily: 'mono',
-  fontSize: 'xs',
-  fontWeight: 'normal',
-  paddingInline: '5px',
-  paddingBlock: '1px',
-  borderRadius: 'sm',
-  bg: 'surfaceElevated',
-  border: '1px solid token(colors.border)',
-  color: 'fgMuted',
-});
-
-const dividerStyles = css({
-  border: 'none',
-  borderTop: '1px solid token(colors.metaSuggestedLine)',
-  // Bleed back past the body indent so the rule spans the full band width.
-  marginBlock: '2px',
-  marginInlineStart: 'calc(-1 * (26px + token(spacing.sm)))',
-  marginInlineEnd: 0,
-  '[data-state="modified"] &': { borderColor: 'metaModifiedLine' },
-  '[data-state="saved"] &': { borderColor: 'metaSavedLine' },
-});
-
-const sectionStyles = css({ display: 'flex', flexDirection: 'column', gap: '6px' });
-
-const sectionLabelStyles = css({
-  fontSize: 'xs',
-  fontWeight: 'bold',
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  color: 'metaSuggestedText',
-});
-
-const sectionNoteStyles = css({
-  fontWeight: 'normal',
-  textTransform: 'none',
-  letterSpacing: 0,
-  color: 'fgMuted',
+  _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px', borderRadius: 'sm' },
 });
 
 const chipRowStyles = css({ display: 'flex', flexWrap: 'wrap', gap: 'xs', margin: 0 });
-
-const announcedDotsStyles = css({ display: 'inline-flex', gap: '5px', alignItems: 'center' });
-
-const announcedDotStyles = css({
-  width: '11px',
-  height: '11px',
-  borderRadius: '999px',
-  border: '1px solid token(colors.secondary.300)',
-  bg: 'transparent',
-});
-
-const announcedDotFilledStyles = css({ bg: 'secondary.500', borderColor: 'secondary.500' });
 
 const suggestedChipStyles = css({
   display: 'inline-flex',
@@ -294,13 +198,9 @@ const suggestedChipStyles = css({
   border: '1px solid token(colors.accent)',
   cursor: 'pointer',
   _hover: { bg: 'primary.400' },
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-  },
+  _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px' },
 });
 
-// User-added categories: outline-green pill, distinct from the solid-green pre-filled chips.
 const addedChipStyles = css({
   display: 'inline-flex',
   alignItems: 'center',
@@ -315,10 +215,7 @@ const addedChipStyles = css({
   border: '1px solid token(colors.accent)',
   cursor: 'pointer',
   _hover: { bg: 'primary.100' },
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-  },
+  _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px' },
 });
 
 const optionChipStyles = css({
@@ -335,10 +232,7 @@ const optionChipStyles = css({
   cursor: 'pointer',
   _hover: { borderColor: 'accent', color: 'accent' },
   _disabled: { opacity: 0.5, cursor: 'not-allowed' },
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-  },
+  _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px' },
 });
 
 const expanderStyles = css({
@@ -353,17 +247,12 @@ const expanderStyles = css({
   fontWeight: 'semibold',
   color: 'accent',
   cursor: 'pointer',
-  _focusVisible: {
-    outline: '2px solid token(colors.focusRing)',
-    outlineOffset: '2px',
-    borderRadius: 'sm',
-  },
+  _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px', borderRadius: 'sm' },
 });
 
-const MAX_CATEGORIES = 6;
-const EM_DASH = '—';
-// "Autre" is mutually exclusive: it clears every other category and is exempt from the cap.
-const EXCLUSIVE_CATEGORIE: SurveyCategorie = 'autre';
+const categoriesEditorStyles = css({ display: 'flex', flexDirection: 'column', gap: '6px' });
+
+const tagListStyles = css({ display: 'inline-flex', flexWrap: 'wrap', gap: '4px', alignItems: 'baseline' });
 
 const liveRegionStyles = css({
   position: 'absolute',
@@ -376,6 +265,9 @@ const liveRegionStyles = css({
   whiteSpace: 'nowrap',
   border: 0,
 });
+
+const MAX_CATEGORIES = 6;
+const EXCLUSIVE_CATEGORIE: SurveyCategorie = 'autre';
 
 export interface MetadataBandProps {
   readonly band: Band;
@@ -399,24 +291,6 @@ function primaryLabel(state: Band['state']): string {
   return 'Confirmer';
 }
 
-function AnnouncedDots({ value }: { value: number }) {
-  return (
-    <span
-      className={announcedDotsStyles}
-      role="img"
-      aria-label={`${value} sur 5`}
-      data-testid="band-announced-difficulty"
-    >
-      {[1, 2, 3, 4, 5].map((n) => (
-        <span
-          key={n}
-          className={n <= value ? cx(announcedDotStyles, announcedDotFilledStyles) : announcedDotStyles}
-        />
-      ))}
-    </span>
-  );
-}
-
 export function MetadataBand({
   band,
   item,
@@ -427,15 +301,47 @@ export function MetadataBand({
   subTagSuggestions,
 }: MetadataBandProps) {
   const posSelectId = useId();
+  const [openField, setOpenField] = useState<FieldKey | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [announce, setAnnounce] = useState('');
+  const snapshotRef = useRef<{
+    pos: SurveyPos;
+    categories: ReadonlyArray<SurveyCategorie>;
+    sense: string;
+    subTags: ReadonlyArray<string>;
+  } | null>(null);
+
+  // A stale editor from the previous card must not linger after re-seed.
+  useEffect(() => { setOpenField(null); setPickerOpen(false); }, [item.itemId]);
+
   const selected = band.values.targetCategories;
   const selectedSet = new Set(selected);
   const unselected = CATEGORIE_OPTIONS.filter((c) => !selectedSet.has(c as SurveyCategorie));
 
+  function open(field: FieldKey): void {
+    snapshotRef.current = {
+      pos,
+      categories: band.values.targetCategories,
+      sense: band.values.targetSense,
+      subTags: band.values.subTags,
+    };
+    setOpenField(field);
+  }
+  function commitField(): void { setOpenField(null); }
+  function cancelField(): void {
+    const snap = snapshotRef.current;
+    if (snap) {
+      if (openField === 'nature') onPosChange(snap.pos);
+      else if (openField === 'categories') band.setCategories(snap.categories);
+      else if (openField === 'sens') band.setSense(snap.sense);
+      else if (openField === 'motscles') band.setSubTags(snap.subTags);
+    }
+    setOpenField(null);
+  }
+
   function toggleCategory(cat: SurveyCategorie): void {
     if (selectedSet.has(cat)) {
-      if (selected.length <= 1) return; // keep at least one category
+      if (selected.length <= 1) return;
       band.setCategories(selected.filter((c) => c !== cat));
       setAnnounce(`${categorieLabel(cat)} retirée`);
       return;
@@ -462,8 +368,8 @@ export function MetadataBand({
   }
 
   const categoriesSummary = selected.map((c) => categorieLabel(c)).join(', ');
-  const senseSummary = band.values.targetSense.trim() || EM_DASH;
-  const subTagsSummary = band.values.subTags.length > 0 ? band.values.subTags.join(', ') : EM_DASH;
+  const sense = band.values.targetSense.trim();
+  const subTags = band.values.subTags;
 
   return (
     <section className={bandStyles} data-state={band.state} data-testid="metadata-band">
@@ -479,184 +385,191 @@ export function MetadataBand({
       </div>
 
       <div className={bodyStyles}>
-      <dl className={summaryStyles} data-testid="band-summary">
-        <dt className={summaryKeyStyles}>Nature</dt>
-        <dd className={summaryValStyles}>{posLabel(pos)}</dd>
-        <dt className={summaryKeyStyles}>Style</dt>
-        <dd className={summaryValStyles}>
-          <StyleTooltip style={item.style} definition={item.definition} mot={item.mot} labelHidden />
-        </dd>
-        <dt className={summaryKeyStyles}>Catégories</dt>
-        <dd className={summaryValStyles}>{categoriesSummary}</dd>
-        <dt className={summaryKeyStyles}>Sens</dt>
-        <dd className={summaryValStyles}>{senseSummary}</dd>
-        <dt className={summaryKeyStyles}>Mots-clés</dt>
-        <dd className={summaryValStyles}>{subTagsSummary}</dd>
-        <dt className={summaryKeyStyles}>Difficulté</dt>
-        <dd className={summaryValStyles}><AnnouncedDots value={item.forceClaimed} /></dd>
-      </dl>
+        <dl className={gridStyles}>
+          <dt className={keyStyles}>Nature</dt>
+          <dd className={valStyles}>
+            <InlineEditableRow
+              label="Nature grammaticale"
+              isOpen={openField === 'nature'}
+              onOpen={() => open('nature')}
+              onCommit={commitField}
+              onCancel={cancelField}
+              triggerAriaLabel={`Modifier la nature grammaticale — ${posLabel(pos)}`}
+              testId="band-edit-nature"
+              renderDisplay={() => posLabel(pos)}
+              renderEditor={() => (
+                <select
+                  id={posSelectId}
+                  className={posSelectStyles}
+                  data-testid="band-pos-select"
+                  value={pos}
+                  disabled={posDisabled}
+                  autoFocus
+                  onChange={(e) => { onPosChange(e.target.value as SurveyPos); commitField(); }}
+                >
+                  {POS_OPTIONS.map((p) => (
+                    <option key={p} value={p}>{posLabel(p)}</option>
+                  ))}
+                </select>
+              )}
+            />
+          </dd>
 
-      <div className={actionsRowStyles}>
-        <button
-          type="button"
-          className={primaryButtonStyles}
-          data-testid="band-primary"
-          disabled={band.state === 'saved'}
-          onClick={band.primaryAction}
-        >
-          {primaryLabel(band.state)}
-          <kbd className={kbdStyles}>Espace</kbd>
-        </button>
-        <button
-          type="button"
-          className={adjustButtonStyles}
-          data-testid="band-adjust"
-          aria-expanded={band.expanded}
-          onClick={band.toggleExpanded}
-        >
-          {band.expanded ? 'Réduire ▴' : 'Ajuster ▾'}
-          <kbd className={adjustKbdStyles}>A</kbd>
-        </button>
-        <button
-          type="button"
-          className={resetButtonStyles}
-          data-testid="band-reset"
-          disabled={band.state === 'pristine' && pos === item.pos}
-          onClick={() => { band.reset(); onPosChange(item.pos); }}
-        >
-          <span aria-hidden="true">↺</span> Réinitialiser
-        </button>
-      </div>
+          <dt className={keyStyles}>Style</dt>
+          <dd className={valStyles}>
+            <StyleTooltip style={item.style} definition={item.definition} mot={item.mot} labelHidden />
+          </dd>
 
-      {band.expanded ? (
-        <>
-          <hr className={dividerStyles} />
-
-          <div className={sectionStyles} data-testid="band-pos">
-            <label htmlFor={posSelectId} className={sectionLabelStyles}>
-              Nature grammaticale{' '}
-              <span className={sectionNoteStyles}>— catégorie grammaticale du mot</span>
-            </label>
-            <select
-              id={posSelectId}
-              className={posSelectStyles}
-              data-testid="band-pos-select"
-              value={pos}
-              disabled={posDisabled}
-              onChange={(e) => onPosChange(e.target.value as SurveyPos)}
-            >
-              {POS_OPTIONS.map((p) => (
-                <option key={p} value={p}>{posLabel(p)}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className={sectionStyles} data-testid="band-style">
-            <span className={sectionLabelStyles}>
-              Style{' '}
-              <span className={sectionNoteStyles}>— registre rhétorique de l’indice</span>
-            </span>
-            <span>
-              <StyleTooltip style={item.style} definition={item.definition} mot={item.mot} labelHidden />
-            </span>
-          </div>
-
-          <div className={sectionStyles} data-testid="band-categories">
-            <span className={sectionLabelStyles}>
-              Catégories{' '}
-              <span className={sectionNoteStyles}>— pré-remplies depuis l’indice</span>
-            </span>
-            <p className={chipRowStyles}>
-              {selected.map((cat) => {
-                const prefilled = cat === item.categorie;
-                return (
+          <dt className={keyStyles}>Catégories</dt>
+          <dd className={valStyles}>
+            <InlineEditableRow
+              label="Catégories"
+              isOpen={openField === 'categories'}
+              onOpen={() => open('categories')}
+              onCommit={commitField}
+              onCancel={cancelField}
+              triggerAriaLabel={`Modifier les catégories — ${categoriesSummary}`}
+              testId="band-edit-categories"
+              renderDisplay={() => categoriesSummary}
+              renderEditor={() => (
+                <div className={categoriesEditorStyles} data-testid="band-categories">
+                  <p className={chipRowStyles}>
+                    {selected.map((cat) => {
+                      const prefilled = cat === item.categorie;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          className={prefilled ? suggestedChipStyles : addedChipStyles}
+                          data-categorie={cat}
+                          data-prefilled={prefilled}
+                          aria-label={`Retirer ${categorieLabel(cat)}${prefilled ? ' (pré-remplie)' : ' (ajoutée)'}`}
+                          onClick={() => toggleCategory(cat)}
+                        >
+                          <span aria-hidden="true">{prefilled ? '✦' : '✓'}</span> {categorieLabel(cat)}
+                        </button>
+                      );
+                    })}
+                  </p>
                   <button
-                    key={cat}
                     type="button"
-                    className={prefilled ? suggestedChipStyles : addedChipStyles}
-                    data-categorie={cat}
-                    data-prefilled={prefilled}
-                    aria-label={`Retirer ${categorieLabel(cat)}${prefilled ? ' (pré-remplie)' : ' (ajoutée)'}`}
-                    onClick={() => toggleCategory(cat)}
+                    className={expanderStyles}
+                    aria-expanded={pickerOpen}
+                    onClick={() => setPickerOpen((o) => !o)}
                   >
-                    <span aria-hidden="true">{prefilled ? '✦' : '✓'}</span> {categorieLabel(cat)}
+                    {pickerOpen ? '– Réduire les catégories ▴' : '+ Toutes les catégories ▾'}
                   </button>
-                );
-              })}
-            </p>
-            <button
-              type="button"
-              className={expanderStyles}
-              aria-expanded={pickerOpen}
-              onClick={() => setPickerOpen((o) => !o)}
-            >
-              {pickerOpen ? '– Réduire les catégories ▴' : '+ Toutes les catégories ▾'}
-            </button>
-            {pickerOpen ? (
-              <p className={chipRowStyles}>
-                {unselected.map((opt) => {
-                  const cat = opt as SurveyCategorie;
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      className={optionChipStyles}
-                      data-categorie={cat}
-                      disabled={cat !== EXCLUSIVE_CATEGORIE && selected.length >= MAX_CATEGORIES}
-                      aria-label={`Ajouter ${categorieLabel(cat)}`}
-                      onClick={() => toggleCategory(cat)}
-                    >
-                      {categorieLabel(cat)}
-                    </button>
-                  );
-                })}
-              </p>
-            ) : null}
-            <span role="status" aria-live="polite" aria-atomic="true" className={liveRegionStyles}>
-              {announce}
-            </span>
-          </div>
+                  {pickerOpen ? (
+                    <p className={chipRowStyles}>
+                      {unselected.map((opt) => {
+                        const cat = opt as SurveyCategorie;
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            className={optionChipStyles}
+                            data-categorie={cat}
+                            disabled={cat !== EXCLUSIVE_CATEGORIE && selected.length >= MAX_CATEGORIES}
+                            aria-label={`Ajouter ${categorieLabel(cat)}`}
+                            onClick={() => toggleCategory(cat)}
+                          >
+                            {categorieLabel(cat)}
+                          </button>
+                        );
+                      })}
+                    </p>
+                  ) : null}
+                  <span role="status" aria-live="polite" aria-atomic="true" className={liveRegionStyles}>
+                    {announce}
+                  </span>
+                </div>
+              )}
+            />
+          </dd>
 
-          <div className={sectionStyles}>
-            <span className={sectionLabelStyles}>
-              Sens visé par cette définition{' '}
-              <span className={sectionNoteStyles}>— le sens exact que l’indice cible</span>
-            </span>
-            <SenseInput
-              value={band.values.targetSense}
-              onChange={band.setSense}
-              suggestions={senseSuggestions}
+          <dt className={keyStyles}>Sens</dt>
+          <dd className={valStyles}>
+            <InlineEditableRow
               label="Sens visé par cette définition"
-              labelHidden
-              placeholder="ex. saison entre l’été et l’hiver…"
+              isOpen={openField === 'sens'}
+              onOpen={() => open('sens')}
+              onCommit={commitField}
+              onCancel={cancelField}
+              triggerAriaLabel={sense ? `Modifier le sens — ${sense}` : 'Ajouter le sens — vide'}
+              empty={sense === ''}
+              testId="band-edit-sens"
+              renderDisplay={() => (sense ? sense : '+ préciser le sens…')}
+              renderEditor={() => (
+                <SenseInput
+                  value={band.values.targetSense}
+                  onChange={band.setSense}
+                  suggestions={senseSuggestions}
+                  label="Sens visé par cette définition"
+                  labelHidden
+                  placeholder="ex. saison entre l’été et l’hiver…"
+                  autoFocus
+                />
+              )}
+            />
+          </dd>
+
+          <dt className={keyStyles}>Mots-clés</dt>
+          <dd className={valStyles}>
+            <InlineEditableRow
+              label="Mots-clés"
+              isOpen={openField === 'motscles'}
+              onOpen={() => open('motscles')}
+              onCommit={commitField}
+              onCancel={cancelField}
+              triggerAriaLabel={subTags.length > 0 ? `Modifier les mots-clés — ${subTags.join(', ')}` : 'Ajouter des mots-clés — vide'}
+              empty={subTags.length === 0}
+              testId="band-edit-motscles"
+              renderDisplay={() => (subTags.length > 0 ? <span className={tagListStyles}>{subTags.join(', ')}</span> : '+ ajouter…')}
+              renderEditor={() => (
+                <GlossChipInput
+                  value={[...subTags]}
+                  onChange={band.setSubTags}
+                  suggestions={subTagSuggestions}
+                  ariaLabel="Mots-clés"
+                  placeholder="+ ajouter…"
+                  maxItems={12}
+                  maxLength={40}
+                  autoFocus
+                />
+              )}
+            />
+          </dd>
+
+          <div className={difficultyRowStyles}>
+            <PerceivedDifficultyPicker
+              value={band.values.perceivedDifficulty}
+              onChange={band.setPerceivedDifficulty}
+              announced={item.forceClaimed}
             />
           </div>
+        </dl>
 
-          <div className={sectionStyles}>
-            <span className={sectionLabelStyles}>
-              Mots-clés{' '}
-              <span className={sectionNoteStyles}>
-                — concepts associés, pour la recherche &amp; l’entraînement
-              </span>
-            </span>
-            <GlossChipInput
-              value={[...band.values.subTags]}
-              onChange={band.setSubTags}
-              suggestions={subTagSuggestions}
-              ariaLabel="Mots-clés"
-              placeholder="+ ajouter…"
-              maxItems={12}
-              maxLength={40}
-            />
-          </div>
-
-          <PerceivedDifficultyPicker
-            value={band.values.perceivedDifficulty}
-            onChange={band.setPerceivedDifficulty}
-            announced={item.forceClaimed}
-          />
-        </>
-      ) : null}
+        <div className={actionsRowStyles}>
+          <button
+            type="button"
+            className={primaryButtonStyles}
+            data-testid="band-primary"
+            disabled={band.state === 'saved'}
+            onClick={band.primaryAction}
+          >
+            {primaryLabel(band.state)}
+            <kbd className={kbdStyles}>Espace</kbd>
+          </button>
+          <button
+            type="button"
+            className={resetButtonStyles}
+            data-testid="band-reset"
+            disabled={band.state === 'pristine' && pos === item.pos}
+            onClick={() => { setOpenField(null); band.reset(); onPosChange(item.pos); }}
+          >
+            <span aria-hidden="true">↺</span> Réinitialiser
+          </button>
+        </div>
       </div>
     </section>
   );
