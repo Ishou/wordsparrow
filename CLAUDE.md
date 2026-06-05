@@ -148,6 +148,20 @@ Full rationale is in MANIFESTO.md.
   — use the real instance or an in-memory implementation.
 - **Property-based tests** for serialization, parsing, validation.
 - **Small PRs, one workstream.** See the 400-line cap above.
+- **Cross-cutting infra hotfix is one workstream.** An identical-shape
+  diff applied to every bounded context (e.g., a JDK base-image digest
+  bump in every `<ctx>/api/Dockerfile`, a Gradle classpath constraint
+  added in the root `build.gradle.kts`'s `subprojects {}` block, a
+  workflow YAML fix that affects all matrix rows) is **one** workstream
+  under ADR-0001 §1, not N cross-context workstreams. The justification
+  is that the change is N copies of the same line, not N independent
+  decisions; splitting forces N round-trips through §6a for zero added
+  review signal. Bundle only when the diff is **literally** identical
+  per context — the moment one context's edit diverges from the others,
+  split. The commit scope for the bundled PR is the cross-cutting
+  surface being patched (`fix(infra):` for Dockerfiles, `fix(build):`
+  for `build.gradle.kts`, `fix(ci):` for workflows) — not a bounded-
+  context scope, since none owns the change.
 - **ADR before non-trivial change.** A new dependency, a new bounded
   context, a contract change spanning contexts, a build-system or
   deploy-target change — ADR merges first (ADR-0001 §7).
