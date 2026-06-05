@@ -1,5 +1,12 @@
 # WordSparrow
 
+[![CI](https://github.com/Ishou/wordsparrow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Ishou/wordsparrow/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Ishou/wordsparrow/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Ishou/wordsparrow/actions/workflows/codeql.yml)
+[![Deploy Frontend](https://github.com/Ishou/wordsparrow/actions/workflows/deploy-frontend.yml/badge.svg?branch=main)](https://github.com/Ishou/wordsparrow/actions/workflows/deploy-frontend.yml)
+[![Deploy API](https://github.com/Ishou/wordsparrow/actions/workflows/deploy-api-k8s.yml/badge.svg?branch=main)](https://github.com/Ishou/wordsparrow/actions/workflows/deploy-api-k8s.yml)
+[![Lighthouse](https://github.com/Ishou/wordsparrow/actions/workflows/lighthouse.yml/badge.svg?branch=main)](https://github.com/Ishou/wordsparrow/actions/workflows/lighthouse.yml)
+[![License: FSL-1.1-MIT](https://img.shields.io/badge/license-FSL--1.1--MIT-blue)](./LICENSE)
+
 A *mots fléchés* (French crossword variant) puzzle game for web, tablet,
 and mobile, with future Discord-Activity support. Brand identity is
 recorded in [ADR-0005](./docs/adr/0005-brand-identity.md); "Bliss" is
