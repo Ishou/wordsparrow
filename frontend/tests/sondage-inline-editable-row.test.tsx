@@ -7,6 +7,7 @@ function Harness(props: {
   readonly onCommit?: () => void;
   readonly onCancel?: () => void;
   readonly empty?: boolean;
+  readonly editorHandlesEnter?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -20,7 +21,13 @@ function Harness(props: {
       empty={props.empty}
       testId="row-trigger"
       renderDisplay={() => <span>valeur</span>}
-      renderEditor={() => <input aria-label="éditeur du sens" defaultValue="x" />}
+      renderEditor={() => (
+        <input
+          aria-label="éditeur du sens"
+          defaultValue="x"
+          onKeyDown={props.editorHandlesEnter ? (e) => { if (e.key === 'Enter') e.preventDefault(); } : undefined}
+        />
+      )}
     />
   );
 }
@@ -58,5 +65,23 @@ describe('InlineEditableRow', () => {
   it('renders the empty trigger styling when empty', () => {
     render(<Harness empty />);
     expect(screen.getByTestId('row-trigger')).toBeInTheDocument();
+  });
+
+  it('commits when focus leaves the editor region (blur to body)', async () => {
+    const onCommit = vi.fn();
+    render(<Harness onCommit={onCommit} />);
+    await act(async () => { fireEvent.click(screen.getByTestId('row-trigger')); });
+    const editor = screen.getByLabelText('éditeur du sens');
+    await act(async () => { fireEvent.blur(editor, { relatedTarget: null }); });
+    expect(onCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not commit on Enter the editor already handled (preventDefault)', async () => {
+    const onCommit = vi.fn();
+    render(<Harness onCommit={onCommit} editorHandlesEnter />);
+    await act(async () => { fireEvent.click(screen.getByTestId('row-trigger')); });
+    const editor = screen.getByLabelText('éditeur du sens');
+    await act(async () => { fireEvent.keyDown(editor, { key: 'Enter' }); });
+    expect(onCommit).not.toHaveBeenCalled();
   });
 });

@@ -91,6 +91,7 @@ export function InlineEditableRow({
             onCommit();
           }
         }}
+        // Focus-out commits; relies on onCommit being idempotent (Enter may also have committed).
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onCommit();
         }}
