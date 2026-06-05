@@ -422,7 +422,6 @@ function ContribuerPage() {
         <p className={legendStyles} aria-label="Raccourcis clavier">
           <span><kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> noter</span>
           <span><kbd>C</kbd> corriger</span>
-          <span><kbd>A</kbd> ajuster les métadonnées</span>
           <span><kbd>Espace</kbd> confirmer / enregistrer</span>
         </p>
       </article>
