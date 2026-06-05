@@ -300,7 +300,13 @@ jobs:
 
       - name: Compute image reference
         id: ref
-        run: echo "image=ghcr.io/${{ github.repository_owner }}/bliss/${{ matrix.image-name }}@$(cat digest/digest.txt)" >> "$GITHUB_OUTPUT"
+        # Trivy rejects OCI refs with mixed-case path elements; lowercase the owner.
+        env:
+          OWNER_RAW: ${{ github.repository_owner }}
+          IMAGE_NAME: ${{ matrix.image-name }}
+        run: |
+          OWNER=$(printf '%s' "$OWNER_RAW" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/$OWNER/bliss/$IMAGE_NAME@$(cat digest/digest.txt)" >> "$GITHUB_OUTPUT"
 
       # Two-step pattern: SARIF dump covers all severities for the Security
       # tab backlog; the gate step then fails only on CRITICAL per ADR-0065 §2.
