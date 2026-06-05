@@ -647,7 +647,6 @@ export function MetadataBand({
               placeholder="+ ajouter…"
               maxItems={12}
               maxLength={40}
-              bannedTerm={item.mot}
             />
           </div>
 
