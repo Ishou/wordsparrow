@@ -30,6 +30,10 @@ subprojects {
                     useVersion("1.26.0")
                     because("Testcontainers 1.21.4 still ships 1.24.0")
                 }
+                "org.apache.commons:commons-lang3" -> {
+                    useVersion("3.18.0")
+                    because("commons-compress 1.26.0 pulls 3.14.0 — uncontrolled recursion CVE")
+                }
                 "org.apache.logging.log4j:log4j-core" -> {
                     useVersion("2.25.4")
                     because("Shadow plugin 9.4.1 still ships 2.25.3")
