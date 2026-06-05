@@ -29,10 +29,7 @@ overrides:
 # module resolver under eslint-import-resolver-typescript).
 allowBuilds:
   esbuild: true
-  # @lhci/cli pulls puppeteer transitively; postinstall downloads Chromium (ADR-0064).
-  puppeteer: true
-  # -courses postinstall fetches HTML tutorial content; not needed for CI scoring.
-  lighthouse-plugin-ecoindex-courses: false
+  puppeteer: true  # ADR-0064: lhci → lighthouse → puppeteer downloads pinned Chromium for audits
   msw: true
   protobufjs: true
   unrs-resolver: true

@@ -11,7 +11,6 @@ module.exports = {
       settings: {
         preset: 'desktop',
         onlyCategories: ['performance', 'best-practices', 'seo'],
-        plugins: ['lighthouse-plugin-ecoindex'],
         chromeFlags: '--no-sandbox --headless=new',
       },
     },
@@ -20,7 +19,6 @@ module.exports = {
         'categories:performance': ['warn', { minScore: 0.85 }],
         'categories:best-practices': ['warn', { minScore: 0.9 }],
         'categories:seo': ['warn', { minScore: 0.9 }],
-        'plugins:lighthouse-plugin-ecoindex': ['warn', { minScore: 0.7 }],
         'categories:accessibility': 'off',
       },
     },

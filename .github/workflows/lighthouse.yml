@@ -1,6 +1,6 @@
 name: Lighthouse
 
-# ADR-0064: EcoIndex CI baseline; workflow_run on Deploy Frontend, warn-only for the 60-day ratchet.
+# ADR-0064: Lighthouse perf baseline; workflow_run on Deploy Frontend, warn-only for the 60-day ratchet.
 
 on:
   workflow_run:
@@ -124,7 +124,7 @@ jobs:
             const pr = Number(process.env.PR_NUMBER);
             if (!Number.isInteger(pr) || pr <= 0) return;
             const body = [
-              '### :bar_chart: Lighthouse + EcoIndex audit',
+              '### :bar_chart: Lighthouse audit',
               '',
               `Audited: \`${process.env.AUDIT_URL}\``,
               `Full report: ${process.env.RUN_URL}`,
