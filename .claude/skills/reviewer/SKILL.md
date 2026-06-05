@@ -90,6 +90,7 @@ New domain logic has tests for behavior including failure modes. New application
 - **`helm upgrade` from a dev workstation in a PR-body runbook**: CLAUDE.md "CI is the only path to production." Replace with `workflow_dispatch` at the merge SHA. PRs #350, #352.
 - **Mutable image tag without digest** in `values.yaml`, or Helm subchart deps without a committed `Chart.lock`. CLAUDE.md "Container images pinned to digest." PRs #349, #361.
 - **Cross-bounded-context bundling** even for "trivial" diffs (a dep bump or identical Dockerfile patch across `game/` + `grid/` is still cross-context). ADR-0001 §1 does not yield to ADR-0001 §4. PRs #330, #331, #334, #356, #366, #379.
+  Exception: CLAUDE.md "Cross-cutting infra hotfix is one workstream" — an identical-shape diff (same lines, same digests) applied to every bounded context is one workstream; commit scope `fix(infra):` / `fix(build):` / `fix(ci):` applies. Do not flag when CLAUDE.md’s condition is met.
 - **Test-pad over the 400-line cap**: when the right fix for "missing tests" would breach §4, the answer is split per §6a rule 6, not pad. PR #381.
 - **kotlinx-serialization `Json {}` builder without `encodeDefaults = true`** on a wire DTO: required fields with defaulted values (e.g. empty collections) silently drop from the wire, violating ADR-0003 §6. PR #401 cycled four times on this. Check every `Json` builder under `infrastructure/`, `api/`, and route DSLs.
 - **Absolute local filesystem path** (`/Users/…`, `/home/…`) committed in an ADR or doc: rots immediately. PR #369.
