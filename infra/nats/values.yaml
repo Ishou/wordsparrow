@@ -76,6 +76,9 @@ podSecurityContext:
   runAsUser: 1000
   runAsGroup: 1000
   fsGroup: 1000
+  # Restricted PodSecurity baseline (Trivy KSV-0030 / KSV-0104, ADR-0065).
+  seccompProfile:
+    type: RuntimeDefault
 containerSecurityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
