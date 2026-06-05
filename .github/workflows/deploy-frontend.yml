@@ -104,6 +104,7 @@ jobs:
         run: pnpm test:post-build
 
       - name: Publish to Cloudflare Pages
+        id: publish
         # cloudflare/pages-action v1.5.0 (deprecated upstream in favor of
         # wrangler-action, but still functional; migration tracked as a
         # follow-up workstream once wrangler-action exposes equivalent
@@ -119,3 +120,31 @@ jobs:
           # branch (main); any other branch becomes a preview.
           branch: ${{ github.head_ref || github.ref_name }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Emit Lighthouse handoff artifact
+        # ADR-0064: emit deployed URL for lighthouse.yml (Pages alias on PR, wordsparrow.io on main).
+        env:
+          PAGES_URL: ${{ steps.publish.outputs.url }}
+          EVENT: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p lighthouse-handoff
+          if [ "$EVENT" = "push" ]; then
+            URL="https://wordsparrow.io"
+          else
+            URL="$PAGES_URL"
+          fi
+          {
+            echo "url=$URL"
+            echo "event=$EVENT"
+            echo "pr=$PR_NUMBER"
+            echo "sha=$COMMIT_SHA"
+          } > lighthouse-handoff/handoff.txt
+
+      - name: Upload Lighthouse handoff artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-handoff
+          path: lighthouse-handoff/handoff.txt
+          retention-days: 1

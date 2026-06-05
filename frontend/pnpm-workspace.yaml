@@ -29,6 +29,7 @@ overrides:
 # module resolver under eslint-import-resolver-typescript).
 allowBuilds:
   esbuild: true
+  puppeteer: true  # ADR-0064: lhci → lighthouse → puppeteer downloads pinned Chromium for audits
   msw: true
   protobufjs: true
   unrs-resolver: true

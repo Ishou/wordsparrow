@@ -1,0 +1,139 @@
+name: Lighthouse
+
+# ADR-0064: Lighthouse perf baseline; workflow_run on Deploy Frontend, warn-only for the 60-day ratchet.
+
+on:
+  workflow_run:
+    workflows: ['Deploy Frontend']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to audit (defaults to production)'
+        required: false
+        default: 'https://wordsparrow.io'
+  schedule:
+    # Nightly prod audit catches regressions MSW-mocked previews can't see (ADR-0064 §4).
+    - cron: '0 4 * * *'
+
+permissions:
+  contents: read
+  pull-requests: write  # post LHCI summary back to the triggering PR
+  actions: read
+
+concurrency:
+  group: lighthouse-${{ github.event.workflow_run.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        # ADR-0064 §5: check out main (never the PR's head_sha) to avoid the pwn-request pattern.
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+
+      - name: Download Lighthouse handoff artifact
+        if: ${{ github.event_name == 'workflow_run' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-handoff
+          path: lighthouse-handoff
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Resolve audit URL
+        id: resolve
+        env:
+          EVENT: ${{ github.event_name }}
+          DISPATCH_URL: ${{ github.event.inputs.url }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "workflow_run" ]; then
+            # ADR-0064 §5: validate handoff URL against an allowlist before passing to lhci.
+            HANDOFF_URL="$(grep -E '^url=' lighthouse-handoff/handoff.txt | cut -d= -f2- || true)"
+            HANDOFF_PR="$(grep -E '^pr=' lighthouse-handoff/handoff.txt | cut -d= -f2- || true)"
+            HANDOFF_SHA="$(grep -E '^sha=' lighthouse-handoff/handoff.txt | cut -d= -f2- || true)"
+            case "$HANDOFF_URL" in
+              https://wordsparrow.io|https://wordsparrow.io/)
+                ;;
+              https://*.bliss.pages.dev|https://*.bliss.pages.dev/)
+                ;;
+              *)
+                echo "::error::Refusing to audit unexpected URL: $HANDOFF_URL"
+                exit 1
+                ;;
+            esac
+            echo "url=$HANDOFF_URL" >> "$GITHUB_OUTPUT"
+            echo "pr=$HANDOFF_PR" >> "$GITHUB_OUTPUT"
+            echo "sha=$HANDOFF_SHA" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT" = "workflow_dispatch" ]; then
+            case "$DISPATCH_URL" in
+              https://wordsparrow.io|https://wordsparrow.io/)
+                ;;
+              https://*.bliss.pages.dev|https://*.bliss.pages.dev/)
+                ;;
+              *)
+                echo "::error::Refusing to audit unexpected URL: $DISPATCH_URL"
+                exit 1
+                ;;
+            esac
+            echo "url=$DISPATCH_URL" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=https://wordsparrow.io" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
+        with:
+          version: '11.0.9'
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Lighthouse CI
+        working-directory: frontend
+        env:
+          LHCI_BASE_URL: ${{ steps.resolve.outputs.url }}
+        run: pnpm lhci
+
+      - name: Comment Lighthouse summary on PR
+        if: ${{ github.event_name == 'workflow_run' && steps.resolve.outputs.pr != '' }}
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
+          AUDIT_URL: ${{ steps.resolve.outputs.url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const pr = Number(process.env.PR_NUMBER);
+            if (!Number.isInteger(pr) || pr <= 0) return;
+            const body = [
+              '### :bar_chart: Lighthouse audit',
+              '',
+              `Audited: \`${process.env.AUDIT_URL}\``,
+              `Full report: ${process.env.RUN_URL}`,
+              '',
+              'Assertions are warn-level for the 60-day baseline (ADR-0064 §3).',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+              body,
+            });
