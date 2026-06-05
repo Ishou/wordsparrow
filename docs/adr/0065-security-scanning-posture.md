@@ -77,6 +77,17 @@ quiet-week cadence.
 findings or after the first observed CVE incident attributable to a
 HIGH finding we ignored — whichever comes first.
 
+**Ordering caveat:** `trivy-image-scan` runs as a separate job with
+`needs: build`, and on main `build` pushes to GHCR before Trivy starts.
+The image is therefore *materially published* to GHCR before the gate
+fires; a red CI does not unpublish. The protection works because
+`deploy-api-k8s.yml` gates on the upstream workflow's overall status —
+a failed Trivy turns the build workflow red, which blocks the deploy
+job from picking up the digest. True before-publish semantics would
+require splitting `build` from a separate `publish` job and gating
+the publish on Trivy success; deferred as heavier workflow surgery
+for marginal gain at v1.
+
 ### 3. SARIF uploads, not PR-wall comments
 
 All scanner outputs upload SARIF via `github/codeql-action/upload-sarif@v3`.
@@ -130,7 +141,9 @@ the dep and rationale, not in PR overrides.
 ## Consequences
 
 **Easier:**
-- A new CRITICAL CVE in the JDK base image fails CI before publish.
+- A new CRITICAL CVE in the JDK base image fails CI before downstream
+  deploy picks up the digest (the image is briefly present on GHCR
+  per §2's ordering caveat, but a red workflow blocks deploy).
 - A Helm chart that mounts a hostPath, runs privileged, or skips
   `runAsNonRoot` fails CI before deploy.
 - A new npm dep brought in under GPL-2.0, GPL-3.0, or AGPL-3.0 fails CI before merge.
