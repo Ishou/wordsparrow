@@ -24,7 +24,7 @@
 import { chromium, type BrowserContext } from '@playwright/test';
 import { createServer, type Server } from 'node:http';
 import { readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
-import { extname, join, dirname, resolve } from 'node:path';
+import { extname, join, dirname, resolve, sep } from 'node:path';
 import { INDEXABLE_ROUTES, NOINDEX_PRERENDER_ROUTES } from '../src/ui/seo/routeManifest.ts';
 
 const DIST = resolve(import.meta.dirname, '../dist');
@@ -76,7 +76,14 @@ function startStaticServer(
       res.end(originalShell);
       return;
     }
-    let filePath = join(rootDir, urlPath);
+    // Reject any path that escapes rootDir after normalization.
+    const rootWithSep = rootDir.endsWith(sep) ? rootDir : rootDir + sep;
+    let filePath = resolve(rootDir, '.' + urlPath);
+    if (filePath !== rootDir && !filePath.startsWith(rootWithSep)) {
+      res.writeHead(200, { 'Content-Type': MIME['.html']! });
+      res.end(originalShell);
+      return;
+    }
     let isDir = false;
     let notFound = false;
     try {
@@ -91,7 +98,14 @@ function startStaticServer(
       res.end(originalShell);
       return;
     }
-    if (isDir) filePath = join(filePath, 'index.html');
+    if (isDir) {
+      filePath = resolve(filePath, 'index.html');
+      if (!filePath.startsWith(rootWithSep)) {
+        res.writeHead(200, { 'Content-Type': MIME['.html']! });
+        res.end(originalShell);
+        return;
+      }
+    }
     try {
       const body = readFileSync(filePath);
       const ext = extname(filePath);

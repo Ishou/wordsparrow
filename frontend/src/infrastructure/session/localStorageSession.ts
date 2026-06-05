@@ -79,13 +79,25 @@ const ANIMAL_NAMES = [
   'Guépard', 'Panda', 'Koala', 'Tigre', 'Phoque', 'Otarie',
 ] as const;
 
+// crypto.getRandomValues is universally available in browsers, Workers,
+// and modern Node; the in-memory fallback covers exotic sandboxes.
+function randomInt(boundExclusive: number): number {
+  const cryptoApi = globalThis.crypto;
+  if (cryptoApi?.getRandomValues) {
+    const buf = new Uint32Array(1);
+    cryptoApi.getRandomValues(buf);
+    return buf[0]! % boundExclusive;
+  }
+  return Math.floor(Math.random() * boundExclusive);
+}
+
 function generateDefaultPseudonym(): string {
-  const animal = ANIMAL_NAMES[Math.floor(Math.random() * ANIMAL_NAMES.length)];
+  const animal = ANIMAL_NAMES[randomInt(ANIMAL_NAMES.length)];
   // 100–999 keeps total length comfortably under the 32-char Pseudonym
   // ceiling for every entry in ANIMAL_NAMES while giving enough spread
   // (≈900 × 24 = ~21k combinations) that two anonymous players in the
   // same lobby almost never collide on the default.
-  const suffix = 100 + Math.floor(Math.random() * 900);
+  const suffix = 100 + randomInt(900);
   return `${animal} ${suffix}`;
 }
 
