@@ -79,8 +79,7 @@ const ANIMAL_NAMES = [
   'Guépard', 'Panda', 'Koala', 'Tigre', 'Phoque', 'Otarie',
 ] as const;
 
-// crypto.getRandomValues is universally available in browsers, Workers,
-// and modern Node; the in-memory fallback covers exotic sandboxes.
+// Falls back to Math.random() only in sandboxes without Web Crypto.
 function randomInt(boundExclusive: number): number {
   const cryptoApi = globalThis.crypto;
   if (cryptoApi?.getRandomValues) {
