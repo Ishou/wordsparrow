@@ -42,6 +42,10 @@ subprojects {
                     useVersion("4.0.3")
                     because("Shadow plugin 9.4.1 ships 4.0.2 — path traversal in extractFile")
                 }
+                "com.squareup.okio:okio" -> {
+                    useVersion("3.4.0")
+                    because("moshi 1.13.0 (via lingua 1.2.2 → survey:infrastructure) pulls okio 2.10.0 — GHSA-jq43-q8mx-r7mq")
+                }
             }
         }
     }
