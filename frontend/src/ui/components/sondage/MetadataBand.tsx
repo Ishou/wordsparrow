@@ -1,6 +1,6 @@
 // Inline-editable metadata band: one compact grid; each field edits in place (ADR-0061, auth-only).
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
 import type { SurveyCategorie, SurveyItem, SurveyPos } from '@/application/survey';
 import { CATEGORIE_OPTIONS, POS_OPTIONS, categorieLabel, posLabel } from './labels';
@@ -11,7 +11,7 @@ import { PerceivedDifficultyPicker } from './PerceivedDifficultyPicker';
 import { StyleTooltip } from './StyleTooltip';
 import type { MetadataBand as Band } from './useMetadataBand';
 
-type FieldKey = 'nature' | 'categories' | 'sens' | 'motscles';
+type FieldKey = 'nature' | 'sens' | 'motscles';
 
 const bandStyles = css({
   display: 'flex',
@@ -94,40 +94,29 @@ const gridStyles = css({
   margin: 0,
 });
 
+// Both cells share a 28px centered line so the uppercase key sits on the value's baseline,
+// regardless of whether the value is plain text, a trigger button, or a taller editor.
 const keyStyles = css({
   fontSize: 'xs',
   fontWeight: 'bold',
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
   color: 'metaSuggestedText',
-  paddingBlock: '5px',
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: '28px',
 });
 
-const valStyles = css({ fontSize: 'sm', color: 'fg', minWidth: 0, paddingBlock: '5px' });
+const valStyles = css({
+  fontSize: 'sm',
+  color: 'fg',
+  minWidth: 0,
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: '28px',
+});
 
 const difficultyRowStyles = css({ marginBlockStart: '2px' });
-
-const posSelectStyles = css({
-  appearance: 'none',
-  fontFamily: 'body',
-  fontSize: 'sm',
-  fontWeight: 'semibold',
-  color: 'fg',
-  bg: 'surface',
-  border: '1px solid token(colors.border)',
-  borderRadius: 'sm',
-  paddingInline: 'sm',
-  paddingBlock: '6px',
-  paddingInlineEnd: '26px',
-  cursor: 'pointer',
-  backgroundImage:
-    'linear-gradient(45deg, transparent 50%, token(colors.fgMuted) 50%), linear-gradient(135deg, token(colors.fgMuted) 50%, transparent 50%)',
-  backgroundPosition: 'calc(100% - 14px) 53%, calc(100% - 9px) 53%',
-  backgroundSize: '5px 5px, 5px 5px',
-  backgroundRepeat: 'no-repeat',
-  _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px' },
-  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
-});
 
 const actionsRowStyles = css({ display: 'flex', alignItems: 'center', gap: 'sm', marginBlockStart: '2px' });
 
@@ -250,7 +239,16 @@ const expanderStyles = css({
   _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px', borderRadius: 'sm' },
 });
 
-const categoriesEditorStyles = css({ display: 'flex', flexDirection: 'column', gap: '6px' });
+const categoriesEditorStyles = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px',
+  flex: '1 1 auto',
+  minWidth: 0,
+});
+
+// Nature single-select: the full list of POS chips, shown at once when the row opens.
+const posListStyles = css({ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: 0, flex: '1 1 auto', minWidth: 0 });
 
 const tagListStyles = css({ display: 'inline-flex', flexWrap: 'wrap', gap: '4px', alignItems: 'baseline' });
 
@@ -300,13 +298,11 @@ export function MetadataBand({
   senseSuggestions,
   subTagSuggestions,
 }: MetadataBandProps) {
-  const posSelectId = useId();
   const [openField, setOpenField] = useState<FieldKey | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [announce, setAnnounce] = useState('');
   const snapshotRef = useRef<{
     pos: SurveyPos;
-    categories: ReadonlyArray<SurveyCategorie>;
     sense: string;
     subTags: ReadonlyArray<string>;
   } | null>(null);
@@ -321,23 +317,21 @@ export function MetadataBand({
   function open(field: FieldKey): void {
     snapshotRef.current = {
       pos,
-      categories: band.values.targetCategories,
       sense: band.values.targetSense,
       subTags: band.values.subTags,
     };
     setOpenField(field);
   }
-  function commitField(): void { setOpenField(null); setPickerOpen(false); }
+  // The categories picker is always-edit and independent of openField, so leave it untouched here.
+  function commitField(): void { setOpenField(null); }
   function cancelField(): void {
     const snap = snapshotRef.current;
     if (snap) {
       if (openField === 'nature') onPosChange(snap.pos);
-      else if (openField === 'categories') band.setCategories(snap.categories);
       else if (openField === 'sens') band.setSense(snap.sense);
       else if (openField === 'motscles') band.setSubTags(snap.subTags);
     }
     setOpenField(null);
-    setPickerOpen(false);
   }
 
   function toggleCategory(cat: SurveyCategorie): void {
@@ -368,7 +362,6 @@ export function MetadataBand({
     );
   }
 
-  const categoriesSummary = selected.map((c) => categorieLabel(c)).join(', ');
   const sense = band.values.targetSense.trim();
   const subTags = band.values.subTags;
 
@@ -399,20 +392,31 @@ export function MetadataBand({
               testId="band-edit-nature"
               renderDisplay={() => posLabel(pos)}
               renderEditor={() => (
-                <select
-                  id={posSelectId}
+                <div
+                  className={posListStyles}
+                  role="group"
                   aria-label="Nature grammaticale"
-                  className={posSelectStyles}
-                  data-testid="band-pos-select"
-                  value={pos}
-                  disabled={posDisabled}
-                  autoFocus
-                  onChange={(e) => { onPosChange(e.target.value as SurveyPos); commitField(); }}
+                  data-testid="band-pos-list"
                 >
-                  {POS_OPTIONS.map((p) => (
-                    <option key={p} value={p}>{posLabel(p)}</option>
-                  ))}
-                </select>
+                  {POS_OPTIONS.map((p) => {
+                    const isSel = p === pos;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        className={isSel ? suggestedChipStyles : optionChipStyles}
+                        data-pos={p}
+                        aria-pressed={isSel}
+                        disabled={posDisabled}
+                        autoFocus={isSel}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
+                        onClick={() => { onPosChange(p as SurveyPos); commitField(); }}
+                      >
+                        {posLabel(p)}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             />
           </dd>
@@ -424,72 +428,62 @@ export function MetadataBand({
 
           <dt className={keyStyles}>Catégories</dt>
           <dd className={valStyles}>
-            <InlineEditableRow
-              label="Catégories"
-              isOpen={openField === 'categories'}
-              onOpen={() => open('categories')}
-              onCommit={commitField}
-              onCancel={cancelField}
-              triggerAriaLabel={`Modifier les catégories — ${categoriesSummary}`}
-              testId="band-edit-categories"
-              renderDisplay={() => categoriesSummary}
-              renderEditor={() => (
-                <div className={categoriesEditorStyles} data-testid="band-categories">
-                  <p className={chipRowStyles}>
-                    {selected.map((cat) => {
-                      const prefilled = cat === item.categorie;
-                      return (
-                        <button
-                          key={cat}
-                          type="button"
-                          className={prefilled ? suggestedChipStyles : addedChipStyles}
-                          data-categorie={cat}
-                          data-prefilled={prefilled}
-                          aria-label={`Retirer ${categorieLabel(cat)}${prefilled ? ' (pré-remplie)' : ' (ajoutée)'}`}
-                          onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
-                          onClick={() => toggleCategory(cat)}
-                        >
-                          <span aria-hidden="true">{prefilled ? '✦' : '✓'}</span> {categorieLabel(cat)}
-                        </button>
-                      );
-                    })}
-                  </p>
-                  <button
-                    type="button"
-                    className={expanderStyles}
-                    aria-expanded={pickerOpen}
-                    onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
-                    onClick={() => setPickerOpen((o) => !o)}
-                  >
-                    {pickerOpen ? '– Réduire les catégories ▴' : '+ Toutes les catégories ▾'}
-                  </button>
-                  {pickerOpen ? (
-                    <p className={chipRowStyles}>
-                      {unselected.map((opt) => {
-                        const cat = opt as SurveyCategorie;
-                        return (
-                          <button
-                            key={cat}
-                            type="button"
-                            className={optionChipStyles}
-                            data-categorie={cat}
-                            disabled={cat !== EXCLUSIVE_CATEGORIE && selected.length >= MAX_CATEGORIES}
-                            aria-label={`Ajouter ${categorieLabel(cat)}`}
-                            onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
-                            onClick={() => toggleCategory(cat)}
-                          >
-                            {categorieLabel(cat)}
-                          </button>
-                        );
-                      })}
-                    </p>
-                  ) : null}
-                  <span role="status" aria-live="polite" aria-atomic="true" className={liveRegionStyles}>
-                    {announce}
-                  </span>
-                </div>
-              )}
-            />
+            {/* Always-edit (like difficulty): chips stay live; data-editor-region keeps Space from confirming the band. */}
+            <div
+              className={categoriesEditorStyles}
+              data-editor-region="Catégories"
+              data-testid="band-categories"
+            >
+              <p className={chipRowStyles}>
+                {selected.map((cat) => {
+                  const prefilled = cat === item.categorie;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      className={prefilled ? suggestedChipStyles : addedChipStyles}
+                      data-categorie={cat}
+                      data-prefilled={prefilled}
+                      aria-label={`Retirer ${categorieLabel(cat)}${prefilled ? ' (pré-remplie)' : ' (ajoutée)'}`}
+                      onClick={() => toggleCategory(cat)}
+                    >
+                      <span aria-hidden="true">{prefilled ? '✦' : '✓'}</span> {categorieLabel(cat)}
+                    </button>
+                  );
+                })}
+              </p>
+              <button
+                type="button"
+                className={expanderStyles}
+                aria-expanded={pickerOpen}
+                onClick={() => setPickerOpen((o) => !o)}
+              >
+                {pickerOpen ? '– Réduire les catégories ▴' : '+ Toutes les catégories ▾'}
+              </button>
+              {pickerOpen ? (
+                <p className={chipRowStyles}>
+                  {unselected.map((opt) => {
+                    const cat = opt as SurveyCategorie;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        className={optionChipStyles}
+                        data-categorie={cat}
+                        disabled={cat !== EXCLUSIVE_CATEGORIE && selected.length >= MAX_CATEGORIES}
+                        aria-label={`Ajouter ${categorieLabel(cat)}`}
+                        onClick={() => toggleCategory(cat)}
+                      >
+                        {categorieLabel(cat)}
+                      </button>
+                    );
+                  })}
+                </p>
+              ) : null}
+              <span role="status" aria-live="polite" aria-atomic="true" className={liveRegionStyles}>
+                {announce}
+              </span>
+            </div>
           </dd>
 
           <dt className={keyStyles}>Sens</dt>

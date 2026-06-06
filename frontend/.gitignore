@@ -25,6 +25,9 @@ pnpm-debug.log*
 # Vite
 .vite/
 
+# Local env overrides (per-machine; never committed)
+*.local
+
 # Test coverage
 coverage/
 

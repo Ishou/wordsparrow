@@ -42,7 +42,9 @@ const emptyTriggerStyles = css({
 
 const pencilStyles = css({ fontSize: 'xs', flexShrink: 0 });
 
-const editorCellStyles = css({ display: 'block', minWidth: 0 });
+// marginInlineStart mirrors the trigger's negative inline margin so the editor's
+// left edge lands where the read-only value sat — no horizontal jump on open.
+const editorCellStyles = css({ display: 'block', minWidth: 0, flex: '1 1 auto', marginInlineStart: '-6px' });
 
 export interface InlineEditableRowProps {
   readonly label: string;
