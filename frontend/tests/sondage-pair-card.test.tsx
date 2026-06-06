@@ -103,11 +103,6 @@ describe('PairCard', () => {
     render(<PairCard pair={samplePair} onVerdict={onVerdict} />);
     await act(async () => { fireEvent.keyDown(window, { key: 'k' }); });
     expect(onVerdict).toHaveBeenLastCalledWith('SKIP', expect.any(Number));
-  });
-
-  it('space and Escape both map to SKIP', async () => {
-    const onVerdict = vi.fn().mockResolvedValue(undefined);
-    render(<PairCard pair={samplePair} onVerdict={onVerdict} />);
     await act(async () => { fireEvent.keyDown(window, { key: ' ' }); });
     expect(onVerdict).toHaveBeenLastCalledWith('SKIP', expect.any(Number));
     await act(async () => { fireEvent.keyDown(window, { key: 'Escape' }); });
