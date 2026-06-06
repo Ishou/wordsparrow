@@ -34,11 +34,38 @@ const headerRowStyles = css({
 });
 
 const headingStyles = css({
+  fontFamily: 'heading',
   fontSize: { base: 'xl', md: 'display' },
   fontWeight: 'bold',
   letterSpacing: '-0.02em',
   margin: 0,
   color: 'fg',
+});
+
+const cardEnterStyles = css({
+  '@media (prefers-reduced-motion: no-preference)': {
+    animation: 'cardRise 220ms ease-out',
+  },
+});
+
+const legendStyles = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'baseline',
+  justifyContent: 'center',
+  columnGap: 'lg',
+  rowGap: 'xs',
+  fontSize: 'xs',
+  color: 'fgMuted',
+  '& kbd': {
+    fontFamily: 'mono',
+    fontSize: 'xs',
+    bg: 'surfaceElevated',
+    border: '1px solid token(colors.border)',
+    borderRadius: 'sm',
+    paddingInline: '4px',
+    color: 'fg',
+  },
 });
 
 const subtitleStyles = css({
@@ -272,14 +299,19 @@ function ContribuerPairsPage() {
         ) : null}
 
         {pair !== null && !isLocked ? (
-          <PairCard
-            key={`${pair.left.itemId}|${pair.right.itemId}`}
-            pair={pair}
-            onVerdict={onVerdict}
-          />
+          <div key={`${pair.left.itemId}|${pair.right.itemId}`} className={cardEnterStyles}>
+            <PairCard pair={pair} onVerdict={onVerdict} />
+          </div>
         ) : null}
 
         {lastAction !== null ? <UndoBar onUndo={onUndo} busy={undoBusy} /> : null}
+
+        <p className={legendStyles} aria-label="Raccourcis clavier">
+          <span><kbd>A</kbd> <kbd>D</kbd> préférer</span>
+          <span><kbd>S</kbd> les deux bonnes</span>
+          <span><kbd>X</kbd> les deux mauvaises</span>
+          <span><kbd>Espace</kbd> passer</span>
+        </p>
       </article>
     </ContentPage>
   );

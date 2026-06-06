@@ -8,15 +8,18 @@ import { categorieLabel, posLabel, styleLabel } from './labels';
 const cardStyles = css({
   bg: 'surface',
   border: '1px solid token(colors.border)',
-  borderRadius: 'md',
+  borderRadius: 'lg',
   padding: 'lg',
   display: 'flex',
   flexDirection: 'column',
   gap: 'md',
+  boxShadow: '0 1px 2px rgba(31, 46, 37, 0.04)',
 });
 
 const titleStyles = css({
-  fontSize: { base: 'xl', md: 'display' },
+  fontFamily: 'heading',
+  fontSize: { base: '2xl', md: 'display' },
+  fontWeight: 'bold',
   letterSpacing: '-0.02em',
   margin: 0,
   color: 'fg',
@@ -72,11 +75,12 @@ const chipCategorieStyles = css({
 });
 
 const definitionStyles = css({
-  fontSize: 'body',
+  fontFamily: 'heading',
+  fontSize: { base: 'md', md: 'lg' },
   fontStyle: 'italic',
   color: 'fg',
   margin: 0,
-  paddingBlock: 'sm',
+  paddingBlock: 'xs',
   paddingInline: 'md',
   borderLeft: '3px solid token(colors.accent)',
 });
@@ -94,18 +98,19 @@ const verdictRowStyles = css({
 });
 
 const verdictButtonBase = css({
-  minHeight: '56px',
+  minHeight: '64px',
   minWidth: '56px',
   display: 'inline-flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
+  gap: '4px',
   paddingInline: 'md',
   paddingBlock: 'sm',
   fontFamily: 'body',
   fontSize: 'body',
-  fontWeight: 'bold',
-  borderRadius: '6px',
+  fontWeight: 'semibold',
+  borderRadius: '10px',
   cursor: 'pointer',
   transition: 'background-color 120ms ease-out, border-color 120ms ease-out, opacity 120ms ease-out',
   _focusVisible: {
@@ -115,6 +120,7 @@ const verdictButtonBase = css({
   _disabled: { opacity: 0.5, cursor: 'not-allowed' },
 });
 
+// The two directional picks share the accent fill — the arrow + label disambiguate them.
 const verdictLeftStyles = css({
   bg: 'accent',
   color: 'onAccent',
@@ -122,44 +128,39 @@ const verdictLeftStyles = css({
   _hover: { bg: 'primary.400' },
 });
 
-const verdictRightStyles = css({
-  bg: 'accent',
-  color: 'onAccent',
-  border: '1px solid token(colors.accent)',
-  _hover: { bg: 'primary.400' },
-});
+const verdictRightStyles = verdictLeftStyles;
 
 const verdictBothGoodStyles = css({
-  bg: 'surface',
-  color: 'accent',
-  border: '1px solid token(colors.accent)',
-  _hover: { bg: 'surfaceMuted' },
+  bg: 'primary.100',
+  color: 'fg',
+  border: '1px solid token(colors.primary.300)',
+  _hover: { bg: 'primary.200' },
 });
 
 const verdictBothBadStyles = css({
-  bg: 'errorBg',
-  color: 'errorText',
-  border: '1px solid token(colors.error)',
+  bg: 'terra.100',
+  color: 'fg',
+  border: '1px solid token(colors.terra.300)',
   _hover: { bg: 'terra.200' },
 });
 
 const verdictSkipStyles = css({
-  bg: 'surface',
-  color: 'fgMuted',
+  bg: 'surfaceMuted',
+  color: 'fg',
   border: '1px solid token(colors.border)',
-  _hover: { bg: 'surfaceMuted' },
+  _hover: { bg: 'neutral.300' },
 });
 
-const shortcutStyles = css({
+const kbdStyles = css({
+  fontFamily: 'mono',
   fontSize: 'xs',
   fontWeight: 'normal',
-  opacity: 0.75,
-});
-
-const legendStyles = css({
-  fontSize: 'xs',
+  paddingInline: '5px',
+  paddingBlock: '1px',
+  borderRadius: 'sm',
+  bg: 'surfaceElevated',
+  border: '1px solid token(colors.border)',
   color: 'fgMuted',
-  margin: 0,
 });
 
 export interface PairCardProps {
@@ -214,7 +215,7 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
               {categorieLabel(pair.left.categorie)}
             </span>
           </p>
-          <blockquote className={definitionStyles}>« {pair.left.definition} »</blockquote>
+          <blockquote className={definitionStyles}>{pair.left.definition}</blockquote>
           <p className={metaStyles}>
             Style : {styleLabel(pair.left.style)} · Difficulté annoncée : {pair.left.forceClaimed}
           </p>
@@ -227,7 +228,7 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
               {categorieLabel(pair.right.categorie)}
             </span>
           </p>
-          <blockquote className={definitionStyles}>« {pair.right.definition} »</blockquote>
+          <blockquote className={definitionStyles}>{pair.right.definition}</blockquote>
           <p className={metaStyles}>
             Style : {styleLabel(pair.right.style)} · Difficulté annoncée : {pair.right.forceClaimed}
           </p>
@@ -249,7 +250,7 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           onClick={() => submit('LEFT_WINS')}
         >
           <span>← Préférer celle-ci</span>
-          <span className={shortcutStyles}>A</span>
+          <kbd className={kbdStyles}>A</kbd>
         </button>
         <button
           type="button"
@@ -260,7 +261,7 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           onClick={() => submit('RIGHT_WINS')}
         >
           <span>Préférer celle-ci →</span>
-          <span className={shortcutStyles}>D</span>
+          <kbd className={kbdStyles}>D</kbd>
         </button>
         <button
           type="button"
@@ -271,7 +272,7 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           onClick={() => submit('BOTH_GOOD')}
         >
           <span>Les deux bonnes</span>
-          <span className={shortcutStyles}>S</span>
+          <kbd className={kbdStyles}>S</kbd>
         </button>
         <button
           type="button"
@@ -282,7 +283,7 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           onClick={() => submit('BOTH_BAD')}
         >
           <span>Les deux mauvaises</span>
-          <span className={shortcutStyles}>X</span>
+          <kbd className={kbdStyles}>X</kbd>
         </button>
         <button
           type="button"
@@ -293,12 +294,9 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           onClick={() => submit('SKIP')}
         >
           <span>Passer</span>
-          <span className={shortcutStyles}>Espace</span>
+          <kbd className={kbdStyles}>Espace</kbd>
         </button>
       </div>
-      <p className={legendStyles}>
-        Raccourcis : A préférer gauche · D préférer droite · S les deux bonnes · X les deux mauvaises · Espace passer.
-      </p>
     </article>
   );
 }
