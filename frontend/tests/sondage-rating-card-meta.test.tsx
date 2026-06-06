@@ -43,9 +43,9 @@ async function clickEl(el: Element | null): Promise<void> {
 type FieldKey = 'nature' | 'categories' | 'sens' | 'motscles';
 
 // Each editable field is opened by clicking its read-only trigger; no global Ajuster anymore.
-// Catégories is always-edit (no trigger), so opening it is a no-op.
+// Catégories and Nature are always-edit (no trigger), so opening them is a no-op.
 async function openField(container: HTMLElement, field: FieldKey): Promise<void> {
-  if (field === 'categories') return;
+  if (field === 'categories' || field === 'nature') return;
   await clickEl(container.querySelector(`[data-testid="band-edit-${field}"]`));
 }
 async function openCategoryPicker(): Promise<void> {
@@ -272,11 +272,10 @@ describe('RatingCard meta inputs', () => {
     const { container } = render(
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
-    await openField(container, 'nature');
-    await clickEl(container.querySelector('[data-pos="verbe_infinitif"]'));
-    // Picking auto-closes the editor; the trigger now shows the new label.
-    expect(container.querySelector('[data-testid="band-edit-nature"]')!.textContent).toContain('Verbe (infinitif)');
+    const select = container.querySelector('[data-testid="band-pos-select"]') as HTMLSelectElement;
+    await act(async () => { fireEvent.change(select, { target: { value: 'verbe_infinitif' } }); });
+    expect(select.value).toBe('verbe_infinitif');
     await clickEl(container.querySelector('[data-testid="band-reset"]'));
-    expect(container.querySelector('[data-testid="band-edit-nature"]')!.textContent).toContain('Nom commun');
+    expect(select.value).toBe('nom_commun');
   });
 });

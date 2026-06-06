@@ -11,7 +11,7 @@ import { PerceivedDifficultyPicker } from './PerceivedDifficultyPicker';
 import { StyleTooltip } from './StyleTooltip';
 import type { MetadataBand as Band } from './useMetadataBand';
 
-type FieldKey = 'nature' | 'sens' | 'motscles';
+type FieldKey = 'sens' | 'motscles';
 
 const bandStyles = css({
   display: 'flex',
@@ -170,16 +170,19 @@ const resetButtonStyles = css({
   _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px', borderRadius: 'sm' },
 });
 
-const chipRowStyles = css({ display: 'flex', flexWrap: 'wrap', gap: 'xs', margin: 0 });
+const chipRowStyles = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px', margin: 0 });
+
+// The selected-chips row matches the 28px key line so the first chips align with the Catégories label.
+const selectedChipRowStyles = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px', margin: 0, minHeight: '28px' });
 
 const suggestedChipStyles = css({
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '5px',
-  paddingInline: 'sm',
-  paddingBlock: '6px',
+  gap: '4px',
+  paddingInline: '8px',
+  paddingBlock: '3px',
   borderRadius: '999px',
-  fontSize: 'sm',
+  fontSize: 'xs',
   fontWeight: 'semibold',
   bg: 'accent',
   color: 'onAccent',
@@ -192,11 +195,11 @@ const suggestedChipStyles = css({
 const addedChipStyles = css({
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '5px',
-  paddingInline: 'sm',
-  paddingBlock: '6px',
+  gap: '4px',
+  paddingInline: '8px',
+  paddingBlock: '3px',
   borderRadius: '999px',
-  fontSize: 'sm',
+  fontSize: 'xs',
   fontWeight: 'semibold',
   bg: 'surface',
   color: 'accent',
@@ -209,10 +212,10 @@ const addedChipStyles = css({
 const optionChipStyles = css({
   display: 'inline-flex',
   alignItems: 'center',
-  paddingInline: 'sm',
-  paddingBlock: '6px',
+  paddingInline: '8px',
+  paddingBlock: '3px',
   borderRadius: '999px',
-  fontSize: 'sm',
+  fontSize: 'xs',
   fontWeight: 'medium',
   bg: 'surface',
   color: 'fg',
@@ -246,8 +249,29 @@ const categoriesEditorStyles = css({
   minWidth: 0,
 });
 
-// Nature single-select: the full list of POS chips, shown at once when the row opens.
-const posListStyles = css({ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: 0, flex: '1 1 auto', minWidth: 0 });
+// Nature is a native single-select so one click opens the option list (no two-click trigger indirection).
+const posSelectStyles = css({
+  appearance: 'none',
+  fontFamily: 'body',
+  fontSize: 'sm',
+  fontWeight: 'semibold',
+  color: 'fg',
+  bg: 'surface',
+  border: '1px solid token(colors.border)',
+  borderRadius: 'sm',
+  paddingInline: 'sm',
+  paddingBlock: '3px',
+  paddingInlineEnd: '26px',
+  minHeight: '28px',
+  cursor: 'pointer',
+  backgroundImage:
+    'linear-gradient(45deg, transparent 50%, token(colors.fgMuted) 50%), linear-gradient(135deg, token(colors.fgMuted) 50%, transparent 50%)',
+  backgroundPosition: 'calc(100% - 14px) 53%, calc(100% - 9px) 53%',
+  backgroundSize: '5px 5px, 5px 5px',
+  backgroundRepeat: 'no-repeat',
+  _focusVisible: { outline: '2px solid token(colors.focusRing)', outlineOffset: '2px' },
+  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
+});
 
 const tagListStyles = css({ display: 'inline-flex', flexWrap: 'wrap', gap: '4px', alignItems: 'baseline' });
 
@@ -301,11 +325,9 @@ export function MetadataBand({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [announce, setAnnounce] = useState('');
   const snapshotRef = useRef<{
-    pos: SurveyPos;
     sense: string;
     subTags: ReadonlyArray<string>;
   } | null>(null);
-  const posButtonsRef = useRef<Array<HTMLButtonElement | null>>([]);
 
   // A stale editor from the previous card must not linger after re-seed.
   useEffect(() => { setOpenField(null); setPickerOpen(false); }, [item.itemId]);
@@ -316,19 +338,17 @@ export function MetadataBand({
 
   function open(field: FieldKey): void {
     snapshotRef.current = {
-      pos,
       sense: band.values.targetSense,
       subTags: band.values.subTags,
     };
     setOpenField(field);
   }
-  // The categories picker is always-edit and independent of openField, so leave it untouched here.
+  // Categories and Nature are always-edit and independent of openField, so leave them untouched here.
   function commitField(): void { setOpenField(null); }
   function cancelField(): void {
     const snap = snapshotRef.current;
     if (snap) {
-      if (openField === 'nature') onPosChange(snap.pos);
-      else if (openField === 'sens') band.setSense(snap.sense);
+      if (openField === 'sens') band.setSense(snap.sense);
       else if (openField === 'motscles') band.setSubTags(snap.subTags);
     }
     setOpenField(null);
@@ -362,23 +382,6 @@ export function MetadataBand({
     );
   }
 
-  function posKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, index: number): void {
-    if (e.key === 'Enter') { e.stopPropagation(); return; }
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const nextIdx = index === 0 ? POS_OPTIONS.length - 1 : index - 1;
-      onPosChange(POS_OPTIONS[nextIdx] as SurveyPos);
-      posButtonsRef.current[nextIdx]?.focus();
-      return;
-    }
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      const nextIdx = index === POS_OPTIONS.length - 1 ? 0 : index + 1;
-      onPosChange(POS_OPTIONS[nextIdx] as SurveyPos);
-      posButtonsRef.current[nextIdx]?.focus();
-    }
-  }
-
   const sense = band.values.targetSense.trim();
   const subTags = band.values.subTags;
 
@@ -399,46 +402,21 @@ export function MetadataBand({
         <dl className={gridStyles}>
           <dt className={keyStyles}>Nature</dt>
           <dd className={valStyles}>
-            <InlineEditableRow
-              label="Nature grammaticale"
-              isOpen={openField === 'nature'}
-              onOpen={() => open('nature')}
-              onCommit={commitField}
-              onCancel={cancelField}
-              triggerAriaLabel={`Modifier la nature grammaticale — ${posLabel(pos)}`}
-              testId="band-edit-nature"
-              renderDisplay={() => posLabel(pos)}
-              renderEditor={() => (
-                <div
-                  className={posListStyles}
-                  role="radiogroup"
-                  aria-label="Nature grammaticale"
-                  data-testid="band-pos-list"
-                >
-                  {POS_OPTIONS.map((p, index) => {
-                    const isSel = p === pos;
-                    return (
-                      <button
-                        key={p}
-                        ref={(el) => { posButtonsRef.current[index] = el; }}
-                        type="button"
-                        role="radio"
-                        aria-checked={isSel}
-                        className={isSel ? suggestedChipStyles : optionChipStyles}
-                        data-pos={p}
-                        tabIndex={isSel ? 0 : -1}
-                        disabled={posDisabled}
-                        autoFocus={isSel}
-                        onKeyDown={(e) => posKeyDown(e, index)}
-                        onClick={() => { onPosChange(p as SurveyPos); commitField(); }}
-                      >
-                        {posLabel(p)}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            />
+            {/* data-editor-region exempts the native select from the band's Space-to-confirm key handler. */}
+            <div data-editor-region="Nature">
+              <select
+                aria-label="Nature grammaticale"
+                className={posSelectStyles}
+                data-testid="band-pos-select"
+                value={pos}
+                disabled={posDisabled}
+                onChange={(e) => onPosChange(e.target.value as SurveyPos)}
+              >
+                {POS_OPTIONS.map((p) => (
+                  <option key={p} value={p}>{posLabel(p)}</option>
+                ))}
+              </select>
+            </div>
           </dd>
 
           <dt className={keyStyles}>Style</dt>
@@ -454,7 +432,7 @@ export function MetadataBand({
               data-editor-region="Catégories"
               data-testid="band-categories"
             >
-              <p className={chipRowStyles}>
+              <p className={selectedChipRowStyles}>
                 {selected.map((cat) => {
                   const prefilled = cat === item.categorie;
                   return (
