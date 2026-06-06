@@ -31,8 +31,7 @@ const dotsStyles = css({
   alignItems: 'center',
 });
 
-// Label-hidden mode aligns the first visible 24px dot flush with the container's
-// left edge (each 36px button insets its dot by 6px).
+// label-hidden: 36px button insets its 24px dot by 6px; pull left to flush with container edge.
 const dotsFlushStyles = css({ marginInlineStart: '-6px' });
 
 const dotStyles = css({
