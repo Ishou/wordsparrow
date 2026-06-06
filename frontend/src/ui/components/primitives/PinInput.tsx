@@ -146,7 +146,8 @@ export const PinInput = forwardRef<HTMLDivElement, PinInputProps>(function PinIn
     disabled,
     invalid,
     errorText,
-    placeholder = '•',
+    // Underscore default — `•` collides visually with the `text-security: disc` mask glyph.
+    placeholder = '_',
     readOnly,
   },
   ref,
