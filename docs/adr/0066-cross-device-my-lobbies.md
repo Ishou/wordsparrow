@@ -101,8 +101,7 @@ their current shape.
   every session ever rebound under the same user when the request is
   cookie-authed. **Rejected**: the route name lies about its scope;
   the semantics change based on whether a cookie is attached; tests
-  must cover two shapes on one path. ADR-0003 §6 "routes mean what
-  their path says" applies — pathful intent is part of the contract.
+  must cover two shapes on one path.
 - **Sync sessionId on sign-in.** Overwrite `localStorage`
   `bliss.session.id` with a canonical user-scoped UUID inside
   `AuthProvider.onAuthed`. **Rejected**: breaks in-flight WS
@@ -139,5 +138,3 @@ PRs land in parallel.
 - **ADR-0060** — identity user roles; clarifies the cookie-authed
   principal shape consumed by `sessionCookie`.
 - **ADR-0001 §3** — schemas-first parallel-PR workflow.
-- **ADR-0003 §6** — wire conventions: pathful intent and identifier
-  format.
