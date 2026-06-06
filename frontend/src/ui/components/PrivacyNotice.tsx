@@ -201,7 +201,10 @@ function FrenchContent() {
             <td>
               Identifiant de session (UUID v7) dans <code>localStorage</code>
             </td>
-            <td>Identifier votre session, compter vos demandes d’indices</td>
+            <td>
+              Identifier votre session, compter vos demandes d’indices et
+              varier les libellés affichés d’une grille à la suivante
+            </td>
             <td>Jusqu’à effacement</td>
           </tr>
           <tr>
@@ -227,12 +230,38 @@ function FrenchContent() {
           </tr>
           <tr>
             <td>
-              Tour d’accueil vu (booléen) dans <code>localStorage</code>
+              Tour d’accueil vu (oui / non) dans <code>localStorage</code>
             </td>
             <td>
               Ne pas relancer la visite guidée à chaque ouverture du jeu
             </td>
             <td>Jusqu’à effacement</td>
+          </tr>
+          <tr>
+            <td>
+              Mémoire courte des libellés déjà affichés (mot et libellé
+              proposé)
+            </td>
+            <td>
+              Éviter de reproposer le même libellé pour le même mot d’une
+              grille à la suivante
+            </td>
+            <td>Jusqu’à effacement</td>
+          </tr>
+          <tr>
+            <td>
+              État de salon multijoueur (salons, joueurs, lettres saisies),
+              stocké côté serveur
+            </td>
+            <td>
+              Synchroniser la grille en temps réel et reprendre après
+              rechargement
+            </td>
+            <td>
+              Salons en attente supprimés après 30 min d’inactivité ; salons
+              terminés conservés 7 jours ; salons en cours conservés jusqu’au
+              départ de tous les joueurs
+            </td>
           </tr>
           <tr>
             <td>Mesures d’audience anonymisées (Matomo auto-hébergé)</td>
@@ -253,8 +282,9 @@ function FrenchContent() {
         </p>
         <p>
           <strong>Sessions.</strong> Un cookie <code>__Secure-ws_session</code> (HttpOnly, Secure,
-          durée 7 jours) contient un identifiant de session opaque (UUID, pas un JWT). Il est
-          révoqué à la déconnexion et supprimé lors de la suppression du compte.
+          durée 7 jours) contient un identifiant de session opaque (un jeton aléatoire, sans donnée
+          personnelle à l’intérieur). Il est révoqué à la déconnexion et supprimé lors de la
+          suppression du compte.
         </p>
         <p>
           <strong>Sous-traitants.</strong> Lors de la connexion, Google reçoit votre choix
@@ -263,7 +293,7 @@ function FrenchContent() {
         <p>
           <strong>Droit à l’effacement.</strong> Le bouton « Supprimer mon compte » accessible
           depuis le menu « Mon compte » (icône en haut à droite) supprime immédiatement vos
-          données identité — pas de période de rétention, pas de soft-delete.
+          données identité — sans période de rétention ni conservation différée.
         </p>
       </section>
       <h2>Ce que nous ne collectons pas</h2>
@@ -305,9 +335,14 @@ function FrenchContent() {
           d’indices, écrivez à l’adresse ci-dessus.
         </li>
         <li>
-          <strong>Effacement</strong> (article 17) : utilisez le bouton ci-dessous. Les visites
-          Matomo ne sont pas activement supprimées car déjà non-attribuables (hachage rotatif
-          quotidien).
+          <strong>Effacement</strong> (article 17) : utilisez le bouton ci-dessous. Pour les
+          salons multijoueurs, une cascade en trois règles s’applique : un salon dont vous étiez
+          seul propriétaire est supprimé ; un salon que vous partagiez continue pour les autres
+          joueurs (le plus ancien joueur restant en devient propriétaire, votre pseudonyme
+          disparaît, et les lettres que vous aviez saisies restent sur la grille mais ne vous sont
+          plus attribuées) ; un salon où vous n’étiez qu’invité perd votre pseudonyme et vos
+          lettres deviennent non-attribuées. Les visites Matomo ne sont pas activement supprimées
+          car déjà non-attribuables (hachage rotatif quotidien).
         </li>
         <li>
           <strong>Opposition</strong> : activez <code>Do Not Track</code> dans votre navigateur ;
@@ -344,8 +379,8 @@ function FrenchContent() {
         <p>
           Lorsque vous supprimez votre compte joueur (RGPD article 17), vos notes sont{' '}
           <strong>conservées mais anonymisées</strong> — elles ne sont pas effacées. Le lien avec
-          votre identité est rompu (identifiant remis à NULL, latence et métadonnées techniques
-          effacées, horodatage réduit au mois) selon les critères du WP216 sur l’anonymisation. Les
+          votre identité est rompu : l’identifiant qui les reliait à votre compte est retiré, les
+          informations techniques associées sont effacées et la date est réduite au mois. Les
           notes restent utilisables pour entraîner le modèle sans qu’il soit possible de les
           rattacher à vous.
         </p>
@@ -353,7 +388,8 @@ function FrenchContent() {
         <p>
           Les corrections de définition que vous proposez (texte libre) sont, par défaut,{' '}
           <strong>également conservées</strong> à la suppression de votre compte, sous une forme
-          détachée de votre identité (la table d’authorship est supprimée intégralement). Si vous
+          détachée de votre identité (le lien indiquant que vous en êtes l’auteur·e est entièrement
+          supprimé). Si vous
           préférez que vos corrections soient effacées en même temps que votre compte, activez la
           préférence « <em>Supprimer aussi mes corrections proposées en cas de suppression de mon
           compte</em> » dans votre espace <Link to="/compte">Mon compte</Link>.
@@ -396,7 +432,10 @@ function EnglishContent() {
             <td>
               Session id (UUID v7) in <code>localStorage</code>
             </td>
-            <td>Identify your session, count your hint requests</td>
+            <td>
+              Identify your session, count your hint requests, and vary the
+              clue text shown across consecutive grids
+            </td>
             <td>Until erased</td>
           </tr>
           <tr>
@@ -422,12 +461,35 @@ function EnglishContent() {
           </tr>
           <tr>
             <td>
-              Onboarding tour seen (boolean) in <code>localStorage</code>
+              Onboarding tour seen (yes / no) in <code>localStorage</code>
             </td>
             <td>
               Avoid replaying the guided tour every time you open the game
             </td>
             <td>Until erased</td>
+          </tr>
+          <tr>
+            <td>
+              Short-term memory of clue labels already shown (word and clue
+              text)
+            </td>
+            <td>
+              Avoid repeating the same clue for the same word across
+              consecutive grids
+            </td>
+            <td>Until erased</td>
+          </tr>
+          <tr>
+            <td>
+              Multiplayer lobby state (lobbies, players, placed letters),
+              stored server-side
+            </td>
+            <td>Real-time grid sync and resume after reload</td>
+            <td>
+              Lobbies still waiting for players are dropped after 30 min of
+              inactivity; finished lobbies are kept 7 days; in-progress
+              lobbies are kept until everyone leaves
+            </td>
           </tr>
           <tr>
             <td>Anonymized audience metrics (self-hosted Matomo)</td>
@@ -448,8 +510,8 @@ function EnglishContent() {
         </p>
         <p>
           <strong>Sessions.</strong> A <code>__Secure-ws_session</code> cookie (HttpOnly, Secure,
-          7-day lifetime) holds an opaque session ID (UUID, not a JWT). It is revoked on sign-out
-          and deleted when the account is deleted.
+          7-day lifetime) holds an opaque session ID (a random token with no personal data inside).
+          It is revoked on sign-out and deleted when the account is deleted.
         </p>
         <p>
           <strong>Sub-processors.</strong> During sign-in Google receives your authorisation
@@ -458,7 +520,7 @@ function EnglishContent() {
         <p>
           <strong>Right to erasure.</strong> The &ldquo;Delete my account&rdquo; button in the
           &ldquo;Mon compte&rdquo; menu (top-right avatar) immediately deletes your identity data
-          — no retention period, no soft-delete.
+          — with no retention period and no delayed deletion.
         </p>
       </section>
       <h2>What we do not collect</h2>
@@ -499,9 +561,13 @@ function EnglishContent() {
           visible in game settings. For the hint history, contact the address above.
         </li>
         <li>
-          <strong>Erasure</strong> (Article 17): use the button below. Matomo visits are not
-          actively deleted because they are already non-attributable by design (daily-rotated
-          hash).
+          <strong>Erasure</strong> (Article 17): use the button below. For multiplayer lobbies we
+          apply a three-rule cascade: a lobby you owned alone is deleted; a lobby you owned with
+          others continues for the remaining players (the earliest-joined remaining player becomes
+          the owner, your name is removed, and any letters you typed stay on the grid but are no
+          longer attributed to you); a lobby you only joined loses your name and your letters
+          become unattributed. Matomo visits are not actively deleted because they are already
+          non-attributable by design (daily-rotated hash).
         </li>
         <li>
           <strong>Opt-out</strong>: enable <code>Do Not Track</code> in your browser; Matomo
@@ -525,6 +591,32 @@ function EnglishContent() {
           choice at sign-in; processed under its own GDPR DPA.
         </li>
       </ul>
+      <section aria-labelledby="en-survey-heading">
+        <h2 id="en-survey-heading">Definition quality survey</h2>
+        <p>
+          WordSparrow offers a survey to rate candidate definitions, in order to improve the quality
+          of the crossword corpus. Your ratings (quality and difficulty, from 1 to 5) and any
+          suggested corrections (free text) are collected anonymously by default. If you are signed
+          in, the survey is linked to your player account to avoid duplicates.
+        </p>
+        <h3>Anonymisation when you delete your account</h3>
+        <p>
+          When you delete your player account (GDPR Article 17), your ratings are{' '}
+          <strong>kept but anonymised</strong> — they are not erased. The link to your identity is
+          broken: the identifier that tied them to your account is removed, the associated technical
+          information is cleared, and the date is reduced to the month. The ratings remain usable to
+          train the model without any way to trace them back to you.
+        </p>
+        <h3>Suggested corrections</h3>
+        <p>
+          The definition corrections you suggest (free text) are, by default,{' '}
+          <strong>also kept</strong> when you delete your account, in a form detached from your
+          identity (the record showing that you are the author is entirely removed). If you would
+          prefer your corrections to be erased along with your account, enable the “
+          <em>Also delete my suggested corrections when I delete my account</em>” preference in your{' '}
+          <Link to="/compte">Mon compte</Link> area.
+        </p>
+      </section>
       <p>
         <Link to="/confidentialite" hrefLang="fr">
           Version française
