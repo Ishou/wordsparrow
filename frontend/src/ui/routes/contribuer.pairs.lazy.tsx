@@ -25,12 +25,19 @@ const articleStyles = css({
   maxWidth: '720px',
 });
 
-const headerRowStyles = css({
+const headerStyles = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+});
+
+const subtitleRowStyles = css({
   display: 'flex',
   flexWrap: 'wrap',
-  gap: 'sm',
   alignItems: 'baseline',
-  justifyContent: 'space-between',
+  gap: '6px',
+  fontSize: 'sm',
+  color: 'fgMuted',
 });
 
 const headingStyles = css({
@@ -64,14 +71,9 @@ const legendStyles = css({
     border: '1px solid token(colors.border)',
     borderRadius: 'sm',
     paddingInline: '4px',
+    marginInlineEnd: '4px',
     color: 'fg',
   },
-});
-
-const subtitleStyles = css({
-  fontSize: 'sm',
-  color: 'fgMuted',
-  margin: 0,
 });
 
 const introStyles = css({
@@ -256,29 +258,32 @@ function ContribuerPairsPage() {
   }
 
   return (
-    <ContentPage>
+    <ContentPage headerActiveNavId="contribuer">
       <article className={articleStyles}>
-        <div className={headerRowStyles}>
-          <h1 className={headingStyles}>Campagne par paires</h1>
-          <Link to="/contribuer" className={modeLinkStyles} data-testid="mode-switch-binary">
-            Mode binaire →
-          </Link>
-        </div>
-        {campaignStatus.status.kind === 'open' ? (
-          <p className={subtitleStyles} data-testid="campaign-subtitle">
-            {campaignDisplayName(campaignStatus.status.campaign)}
+        <header className={headerStyles}>
+          <h1 className={headingStyles}>Campagne de qualité des indices</h1>
+          <p className={subtitleRowStyles}>
+            {campaignStatus.status.kind === 'open' ? (
+              <span data-testid="campaign-subtitle">
+                {campaignDisplayName(campaignStatus.status.campaign)}
+              </span>
+            ) : null}
+            <span aria-hidden="true">·</span>
+            <Link to="/contribuer" className={modeLinkStyles} data-testid="mode-switch-binary">
+              Mode binaire →
+            </Link>
           </p>
-        ) : null}
+        </header>
+        <p className={introStyles}>
+          Comparez deux définitions du même mot. Choisissez votre préférée, marquez-les comme
+          toutes deux bonnes ou mauvaises, ou passez si vous ne pouvez pas trancher.
+        </p>
         {campaignStatus.status.kind === 'closed' ? (
           <LockBanner campaign={campaignStatus.status.campaign} />
         ) : null}
         {campaignStatus.status.kind === 'unavailable' ? (
           <LockBanner campaign={null} />
         ) : null}
-        <p className={introStyles}>
-          Comparez deux définitions du même mot. Choisissez votre préférée, marquez-les comme
-          toutes deux bonnes ou mauvaises, ou passez si vous ne pouvez pas trancher.
-        </p>
 
         {state.status === 'anon' && authClient ? (
           <SignInBanner authClient={authClient} onClick={onSignInClick} />
@@ -307,10 +312,10 @@ function ContribuerPairsPage() {
         {lastAction !== null ? <UndoBar onUndo={onUndo} busy={undoBusy} /> : null}
 
         <p className={legendStyles} aria-label="Raccourcis clavier">
-          <span><kbd>A</kbd> <kbd>D</kbd> préférer</span>
-          <span><kbd>S</kbd> les deux bonnes</span>
-          <span><kbd>X</kbd> les deux mauvaises</span>
-          <span><kbd>Espace</kbd> passer</span>
+          <span><kbd>G</kbd> <kbd>D</kbd> préférer</span>
+          <span><kbd>J</kbd> les deux mauvaises</span>
+          <span><kbd>K</kbd> passer</span>
+          <span><kbd>L</kbd> les deux bonnes</span>
         </p>
       </article>
     </ContentPage>

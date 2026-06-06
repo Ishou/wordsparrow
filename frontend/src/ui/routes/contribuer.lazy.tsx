@@ -53,6 +53,7 @@ const legendStyles = css({
     border: '1px solid token(colors.border)',
     borderRadius: 'sm',
     paddingInline: '4px',
+    marginInlineEnd: '4px',
     color: 'fg',
   },
 });
@@ -77,6 +78,12 @@ const modeLinkStyles = css({
     outlineOffset: '2px',
     borderRadius: 'sm',
   },
+});
+
+const introStyles = css({
+  fontSize: 'body',
+  color: 'fgMuted',
+  margin: 0,
 });
 
 const statusStyles = css({
@@ -379,6 +386,10 @@ function ContribuerPage() {
             </dl>
           ) : null}
         </header>
+        <p className={introStyles}>
+          Lisez chaque définition et jugez si elle décrit bien le mot : notez-la bonne ou
+          mauvaise, corrigez-la, ou passez si vous ne pouvez pas trancher.
+        </p>
         {campaignStatus.status.kind === 'closed' ? (
           <LockBanner campaign={campaignStatus.status.campaign} />
         ) : null}
