@@ -401,6 +401,7 @@ export function MetadataBand({
               renderEditor={() => (
                 <select
                   id={posSelectId}
+                  aria-label="Nature grammaticale"
                   className={posSelectStyles}
                   data-testid="band-pos-select"
                   value={pos}
