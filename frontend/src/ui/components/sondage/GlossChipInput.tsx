@@ -249,6 +249,7 @@ export function GlossChipInput({
                 className={chipRemoveStyles}
                 aria-label={`Retirer ${chip}`}
                 onClick={() => removeAt(index)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
               >
                 ×
               </button>
