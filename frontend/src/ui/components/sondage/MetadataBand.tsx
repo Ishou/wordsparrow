@@ -305,6 +305,7 @@ export function MetadataBand({
     sense: string;
     subTags: ReadonlyArray<string>;
   } | null>(null);
+  const posButtonsRef = useRef<Array<HTMLButtonElement | null>>([]);
 
   // A stale editor from the previous card must not linger after re-seed.
   useEffect(() => { setOpenField(null); setPickerOpen(false); }, [item.itemId]);
@@ -361,6 +362,23 @@ export function MetadataBand({
     );
   }
 
+  function posKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, index: number): void {
+    if (e.key === 'Enter') { e.stopPropagation(); return; }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const nextIdx = index === 0 ? POS_OPTIONS.length - 1 : index - 1;
+      onPosChange(POS_OPTIONS[nextIdx] as SurveyPos);
+      posButtonsRef.current[nextIdx]?.focus();
+      return;
+    }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextIdx = index === POS_OPTIONS.length - 1 ? 0 : index + 1;
+      onPosChange(POS_OPTIONS[nextIdx] as SurveyPos);
+      posButtonsRef.current[nextIdx]?.focus();
+    }
+  }
+
   const sense = band.values.targetSense.trim();
   const subTags = band.values.subTags;
 
@@ -393,22 +411,25 @@ export function MetadataBand({
               renderEditor={() => (
                 <div
                   className={posListStyles}
-                  role="group"
+                  role="radiogroup"
                   aria-label="Nature grammaticale"
                   data-testid="band-pos-list"
                 >
-                  {POS_OPTIONS.map((p) => {
+                  {POS_OPTIONS.map((p, index) => {
                     const isSel = p === pos;
                     return (
                       <button
                         key={p}
+                        ref={(el) => { posButtonsRef.current[index] = el; }}
                         type="button"
+                        role="radio"
+                        aria-checked={isSel}
                         className={isSel ? suggestedChipStyles : optionChipStyles}
                         data-pos={p}
-                        aria-pressed={isSel}
+                        tabIndex={isSel ? 0 : -1}
                         disabled={posDisabled}
                         autoFocus={isSel}
-                        onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
+                        onKeyDown={(e) => posKeyDown(e, index)}
                         onClick={() => { onPosChange(p as SurveyPos); commitField(); }}
                       >
                         {posLabel(p)}
