@@ -3,20 +3,24 @@
 import { useEffect, useRef } from 'react';
 import { css, cx } from 'styled-system/css';
 import type { ItemPair, PairVerdict } from '@/application/survey';
-import { categorieLabel, posLabel, styleLabel } from './labels';
+import { categorieLabel, posLabel } from './labels';
+import { StyleTooltip } from './StyleTooltip';
 
 const cardStyles = css({
   bg: 'surface',
   border: '1px solid token(colors.border)',
-  borderRadius: 'md',
+  borderRadius: 'lg',
   padding: 'lg',
   display: 'flex',
   flexDirection: 'column',
   gap: 'md',
+  boxShadow: '0 1px 2px rgba(31, 46, 37, 0.04)',
 });
 
 const titleStyles = css({
-  fontSize: { base: 'xl', md: 'display' },
+  fontFamily: 'heading',
+  fontSize: { base: '2xl', md: 'display' },
+  fontWeight: 'bold',
   letterSpacing: '-0.02em',
   margin: 0,
   color: 'fg',
@@ -57,34 +61,62 @@ const chipRowStyles = css({
 const chipStyles = css({
   display: 'inline-flex',
   alignItems: 'center',
-  paddingInline: 'sm',
-  paddingBlock: '4px',
+  paddingInline: '8px',
+  paddingBlock: '3px',
   fontSize: 'xs',
   fontWeight: 'semibold',
   color: 'fgMuted',
   border: '1px solid token(colors.border)',
-  borderRadius: 'sm',
+  borderRadius: '999px',
 });
 
-const chipCategorieStyles = css({
-  color: 'accent',
-  borderColor: 'accent',
+// Read-only mirror of the binary band's filled "suggested" pill (accent fill, no interactivity).
+const categoriePillStyles = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
+  paddingInline: '8px',
+  paddingBlock: '3px',
+  borderRadius: '999px',
+  fontSize: 'xs',
+  fontWeight: 'semibold',
+  bg: 'accent',
+  color: 'onAccent',
+  border: '1px solid token(colors.accent)',
 });
 
-const definitionStyles = css({
-  fontSize: 'body',
-  fontStyle: 'italic',
-  color: 'fg',
-  margin: 0,
-  paddingBlock: 'sm',
-  paddingInline: 'md',
-  borderLeft: '3px solid token(colors.accent)',
-});
-
-const metaStyles = css({
+const difficultyRowStyles = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'xs',
   fontSize: 'sm',
   color: 'fgMuted',
   margin: 0,
+});
+
+const difficultyDotsStyles = css({
+  display: 'inline-flex',
+  gap: '2px',
+  alignItems: 'center',
+});
+
+const difficultyDotStyles = css({
+  width: '14px',
+  height: '14px',
+  borderRadius: '999px',
+  bg: 'neutral.300',
+  '&[data-filled="true"]': { bg: 'accent' },
+});
+
+const definitionStyles = css({
+  fontFamily: 'heading',
+  fontSize: { base: 'md', md: 'lg' },
+  fontStyle: 'italic',
+  color: 'fg',
+  margin: 0,
+  paddingBlock: 'xs',
+  paddingInline: 'md',
+  borderLeft: '3px solid token(colors.accent)',
 });
 
 const verdictRowStyles = css({
@@ -94,20 +126,23 @@ const verdictRowStyles = css({
 });
 
 const verdictButtonBase = css({
-  minHeight: '56px',
+  minHeight: '64px',
   minWidth: '56px',
   display: 'inline-flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
+  gap: '4px',
   paddingInline: 'md',
   paddingBlock: 'sm',
   fontFamily: 'body',
   fontSize: 'body',
-  fontWeight: 'bold',
-  borderRadius: '6px',
+  fontWeight: 'semibold',
+  borderRadius: '10px',
   cursor: 'pointer',
   transition: 'background-color 120ms ease-out, border-color 120ms ease-out, opacity 120ms ease-out',
+  // Label grows to fill so every kbd anchors to the same baseline, despite 1- vs 2-line labels.
+  '& > span': { flex: 1, display: 'flex', alignItems: 'center', textAlign: 'center' },
   _focusVisible: {
     outline: '2px solid token(colors.focusRing)',
     outlineOffset: '2px',
@@ -115,6 +150,7 @@ const verdictButtonBase = css({
   _disabled: { opacity: 0.5, cursor: 'not-allowed' },
 });
 
+// The two directional picks share the accent fill — the arrow + label disambiguate them.
 const verdictLeftStyles = css({
   bg: 'accent',
   color: 'onAccent',
@@ -122,45 +158,54 @@ const verdictLeftStyles = css({
   _hover: { bg: 'primary.400' },
 });
 
-const verdictRightStyles = css({
-  bg: 'accent',
-  color: 'onAccent',
-  border: '1px solid token(colors.accent)',
-  _hover: { bg: 'primary.400' },
-});
+const verdictRightStyles = verdictLeftStyles;
 
 const verdictBothGoodStyles = css({
-  bg: 'surface',
-  color: 'accent',
-  border: '1px solid token(colors.accent)',
-  _hover: { bg: 'surfaceMuted' },
+  bg: 'primary.100',
+  color: 'fg',
+  border: '1px solid token(colors.primary.300)',
+  _hover: { bg: 'primary.200' },
 });
 
 const verdictBothBadStyles = css({
-  bg: 'errorBg',
-  color: 'errorText',
-  border: '1px solid token(colors.error)',
+  bg: 'terra.100',
+  color: 'fg',
+  border: '1px solid token(colors.terra.300)',
   _hover: { bg: 'terra.200' },
 });
 
 const verdictSkipStyles = css({
-  bg: 'surface',
-  color: 'fgMuted',
+  bg: 'surfaceMuted',
+  color: 'fg',
   border: '1px solid token(colors.border)',
-  _hover: { bg: 'surfaceMuted' },
+  _hover: { bg: 'neutral.300' },
 });
 
-const shortcutStyles = css({
+const kbdStyles = css({
+  fontFamily: 'mono',
   fontSize: 'xs',
   fontWeight: 'normal',
-  opacity: 0.75,
+  paddingInline: '5px',
+  paddingBlock: '1px',
+  borderRadius: 'sm',
+  bg: 'surfaceElevated',
+  border: '1px solid token(colors.border)',
+  color: 'fgMuted',
 });
 
-const legendStyles = css({
-  fontSize: 'xs',
-  color: 'fgMuted',
-  margin: 0,
-});
+// Read-only mirror of the binary band's difficulty dots — forceClaimed is announced, not editable here.
+function AnnouncedDifficulty({ value }: { readonly value: number }) {
+  return (
+    <p className={difficultyRowStyles}>
+      Difficulté annoncée
+      <span className={difficultyDotsStyles} aria-label={`${value} sur 5`} role="img">
+        {[1, 2, 3, 4, 5].map((score) => (
+          <span key={score} className={difficultyDotStyles} data-filled={score <= value} aria-hidden="true" />
+        ))}
+      </span>
+    </p>
+  );
+}
 
 export interface PairCardProps {
   readonly pair: ItemPair;
@@ -180,12 +225,13 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
       if (target?.isContentEditable) return;
       const key = event.key === ' ' ? 'space' : event.key === 'Escape' ? 'escape' : event.key.toLowerCase();
+      // G/D = gauche/droite; J/K/L mirror binary mode's mauvaise/passer/bonne.
       const verdict: PairVerdict | null =
-        key === 'a' ? 'LEFT_WINS'
+        key === 'g' ? 'LEFT_WINS'
         : key === 'd' ? 'RIGHT_WINS'
-        : key === 's' ? 'BOTH_GOOD'
-        : key === 'x' ? 'BOTH_BAD'
-        : key === 'space' || key === 'escape' ? 'SKIP'
+        : key === 'j' ? 'BOTH_BAD'
+        : key === 'l' ? 'BOTH_GOOD'
+        : key === 'k' || key === 'space' || key === 'escape' ? 'SKIP'
         : null;
       if (verdict === null) return;
       event.preventDefault();
@@ -210,27 +256,25 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           <h3 className={sideHeadingStyles}>Gauche</h3>
           <p className={chipRowStyles}>
             <span className={chipStyles} data-chip="pos">{posLabel(pair.left.pos)}</span>
-            <span className={`${chipStyles} ${chipCategorieStyles}`} data-chip="categorie">
+            <span className={categoriePillStyles} data-chip="categorie">
               {categorieLabel(pair.left.categorie)}
             </span>
           </p>
-          <blockquote className={definitionStyles}>« {pair.left.definition} »</blockquote>
-          <p className={metaStyles}>
-            Style : {styleLabel(pair.left.style)} · Difficulté annoncée : {pair.left.forceClaimed}
-          </p>
+          <blockquote className={definitionStyles}>{pair.left.definition}</blockquote>
+          <StyleTooltip style={pair.left.style} definition={pair.left.definition} mot={pair.mot} />
+          <AnnouncedDifficulty value={pair.left.forceClaimed} />
         </section>
         <section className={sideStyles} aria-label="Définition de droite" data-side="right">
           <h3 className={sideHeadingStyles}>Droite</h3>
           <p className={chipRowStyles}>
             <span className={chipStyles} data-chip="pos">{posLabel(pair.right.pos)}</span>
-            <span className={`${chipStyles} ${chipCategorieStyles}`} data-chip="categorie">
+            <span className={categoriePillStyles} data-chip="categorie">
               {categorieLabel(pair.right.categorie)}
             </span>
           </p>
-          <blockquote className={definitionStyles}>« {pair.right.definition} »</blockquote>
-          <p className={metaStyles}>
-            Style : {styleLabel(pair.right.style)} · Difficulté annoncée : {pair.right.forceClaimed}
-          </p>
+          <blockquote className={definitionStyles}>{pair.right.definition}</blockquote>
+          <StyleTooltip style={pair.right.style} definition={pair.right.definition} mot={pair.mot} />
+          <AnnouncedDifficulty value={pair.right.forceClaimed} />
         </section>
       </div>
 
@@ -238,7 +282,7 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
         className={verdictRowStyles}
         role="group"
         aria-label="Comparaison des deux définitions"
-        aria-keyshortcuts="a d s x space escape"
+        aria-keyshortcuts="g d j k l space escape"
       >
         <button
           type="button"
@@ -249,7 +293,7 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           onClick={() => submit('LEFT_WINS')}
         >
           <span>← Préférer celle-ci</span>
-          <span className={shortcutStyles}>A</span>
+          <kbd className={kbdStyles}>G</kbd>
         </button>
         <button
           type="button"
@@ -260,18 +304,7 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           onClick={() => submit('RIGHT_WINS')}
         >
           <span>Préférer celle-ci →</span>
-          <span className={shortcutStyles}>D</span>
-        </button>
-        <button
-          type="button"
-          className={cx(verdictButtonBase, verdictBothGoodStyles)}
-          aria-label="Les deux définitions sont bonnes"
-          aria-disabled={disabled || undefined}
-          data-verdict="BOTH_GOOD"
-          onClick={() => submit('BOTH_GOOD')}
-        >
-          <span>Les deux bonnes</span>
-          <span className={shortcutStyles}>S</span>
+          <kbd className={kbdStyles}>D</kbd>
         </button>
         <button
           type="button"
@@ -282,7 +315,7 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           onClick={() => submit('BOTH_BAD')}
         >
           <span>Les deux mauvaises</span>
-          <span className={shortcutStyles}>X</span>
+          <kbd className={kbdStyles}>J</kbd>
         </button>
         <button
           type="button"
@@ -293,12 +326,20 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           onClick={() => submit('SKIP')}
         >
           <span>Passer</span>
-          <span className={shortcutStyles}>Espace</span>
+          <kbd className={kbdStyles}>K</kbd>
+        </button>
+        <button
+          type="button"
+          className={cx(verdictButtonBase, verdictBothGoodStyles)}
+          aria-label="Les deux définitions sont bonnes"
+          aria-disabled={disabled || undefined}
+          data-verdict="BOTH_GOOD"
+          onClick={() => submit('BOTH_GOOD')}
+        >
+          <span>Les deux bonnes</span>
+          <kbd className={kbdStyles}>L</kbd>
         </button>
       </div>
-      <p className={legendStyles}>
-        Raccourcis : A préférer gauche · D préférer droite · S les deux bonnes · X les deux mauvaises · Espace passer.
-      </p>
     </article>
   );
 }
