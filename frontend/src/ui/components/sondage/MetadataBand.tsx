@@ -94,8 +94,7 @@ const gridStyles = css({
   margin: 0,
 });
 
-// Both cells share a 28px centered line so the uppercase key sits on the value's baseline,
-// regardless of whether the value is plain text, a trigger button, or a taller editor.
+// 28px min-height centers key and value on the same baseline regardless of editor height.
 const keyStyles = css({
   fontSize: 'xs',
   fontWeight: 'bold',
