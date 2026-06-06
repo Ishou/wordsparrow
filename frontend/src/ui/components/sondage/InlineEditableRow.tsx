@@ -42,7 +42,8 @@ const emptyTriggerStyles = css({
 
 const pencilStyles = css({ fontSize: 'xs', flexShrink: 0 });
 
-const editorCellStyles = css({ display: 'block', minWidth: 0 });
+// mirrors trigger's -6px inline margin so the editor left-edge doesn't jump on open.
+const editorCellStyles = css({ display: 'block', minWidth: 0, flex: '1 1 auto', marginInlineStart: '-6px' });
 
 export interface InlineEditableRowProps {
   readonly label: string;

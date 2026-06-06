@@ -43,7 +43,9 @@ async function clickEl(el: Element | null): Promise<void> {
 type FieldKey = 'nature' | 'categories' | 'sens' | 'motscles';
 
 // Each editable field is opened by clicking its read-only trigger; no global Ajuster anymore.
+// Catégories is always-edit (no trigger), so opening it is a no-op.
 async function openField(container: HTMLElement, field: FieldKey): Promise<void> {
+  if (field === 'categories') return;
   await clickEl(container.querySelector(`[data-testid="band-edit-${field}"]`));
 }
 async function openCategoryPicker(): Promise<void> {
@@ -271,8 +273,7 @@ describe('RatingCard meta inputs', () => {
       <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
     );
     await openField(container, 'nature');
-    const select = container.querySelector('[data-testid="band-pos-select"]') as HTMLSelectElement;
-    await act(async () => { fireEvent.change(select, { target: { value: 'verbe_infinitif' } }); });
+    await clickEl(container.querySelector('[data-pos="verbe_infinitif"]'));
     // Picking auto-closes the editor; the trigger now shows the new label.
     expect(container.querySelector('[data-testid="band-edit-nature"]')!.textContent).toContain('Verbe (infinitif)');
     await clickEl(container.querySelector('[data-testid="band-reset"]'));
