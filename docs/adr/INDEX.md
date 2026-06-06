@@ -102,6 +102,9 @@ ADR-0065  .github/workflows/build-and-push-image.yml  Trivy image-CVE scan (CRIT
 ADR-0065  .github/workflows/trivy-config.yml       Trivy IaC misconfig scan (infra/, terraform/, Dockerfiles)
 ADR-0065  .github/workflows/codeql.yml             SAST coverage extends to javascript-typescript
 ADR-0065  .github/workflows/dependency-review.yml  License deny-list (GPL-2.0/GPL-3.0/AGPL-3.0 all variants) extending ADR-0058 to deps
+ADR-0066  game/api/openapi.yaml                    Cross-device "Mes parties": new GET /v1/users/me/lobbies (cookie-authed, user-scoped); /v1/sessions/{sessionId}/lobbies retained for anon
+ADR-0066  frontend/src/ui/routes/accueil.tsx       Accueil loader picks listLobbiesForUser when auth.status === 'authed'; falls back to session-scoped listMyLobbies otherwise
+ADR-0066  frontend/src/application/game/LobbyClient.ts   LobbyClient port gains listMyLobbiesForUser() alongside listMyLobbies(sessionId)
 ```
 
 ## Adding entries
