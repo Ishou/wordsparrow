@@ -115,7 +115,13 @@ const valStyles = css({
   minHeight: '28px',
 });
 
-const difficultyRowStyles = css({ marginBlockStart: '2px' });
+const difficultyRowStyles = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 'sm',
+  marginBlockStart: '2px',
+});
 
 const actionsRowStyles = css({ display: 'flex', alignItems: 'center', gap: 'sm', marginBlockStart: '2px' });
 
@@ -541,10 +547,12 @@ export function MetadataBand({
         </dl>
 
         <div className={difficultyRowStyles}>
+          <span className={keyStyles}>Difficulté</span>
           <PerceivedDifficultyPicker
             value={band.values.perceivedDifficulty}
             onChange={band.setPerceivedDifficulty}
             announced={item.forceClaimed}
+            labelHidden
           />
         </div>
 
