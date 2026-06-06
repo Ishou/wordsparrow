@@ -105,7 +105,7 @@ const keyStyles = css({
 
 const valStyles = css({ fontSize: 'sm', color: 'fg', minWidth: 0, paddingBlock: '5px' });
 
-const difficultyRowStyles = css({ gridColumn: '1 / -1', marginBlockStart: '2px' });
+const difficultyRowStyles = css({ marginBlockStart: '2px' });
 
 const posSelectStyles = css({
   appearance: 'none',
@@ -445,6 +445,7 @@ export function MetadataBand({
                           data-categorie={cat}
                           data-prefilled={prefilled}
                           aria-label={`Retirer ${categorieLabel(cat)}${prefilled ? ' (pré-remplie)' : ' (ajoutée)'}`}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
                           onClick={() => toggleCategory(cat)}
                         >
                           <span aria-hidden="true">{prefilled ? '✦' : '✓'}</span> {categorieLabel(cat)}
@@ -456,6 +457,7 @@ export function MetadataBand({
                     type="button"
                     className={expanderStyles}
                     aria-expanded={pickerOpen}
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
                     onClick={() => setPickerOpen((o) => !o)}
                   >
                     {pickerOpen ? '– Réduire les catégories ▴' : '+ Toutes les catégories ▾'}
@@ -472,6 +474,7 @@ export function MetadataBand({
                             data-categorie={cat}
                             disabled={cat !== EXCLUSIVE_CATEGORIE && selected.length >= MAX_CATEGORIES}
                             aria-label={`Ajouter ${categorieLabel(cat)}`}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
                             onClick={() => toggleCategory(cat)}
                           >
                             {categorieLabel(cat)}
@@ -542,14 +545,15 @@ export function MetadataBand({
             />
           </dd>
 
-          <div className={difficultyRowStyles}>
-            <PerceivedDifficultyPicker
-              value={band.values.perceivedDifficulty}
-              onChange={band.setPerceivedDifficulty}
-              announced={item.forceClaimed}
-            />
-          </div>
         </dl>
+
+        <div className={difficultyRowStyles}>
+          <PerceivedDifficultyPicker
+            value={band.values.perceivedDifficulty}
+            onChange={band.setPerceivedDifficulty}
+            announced={item.forceClaimed}
+          />
+        </div>
 
         <div className={actionsRowStyles}>
           <button
