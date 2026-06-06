@@ -17,7 +17,6 @@ export interface MetadataBand {
   readonly state: BandState;
   readonly enriched: boolean;
   readonly values: BandValues;
-  readonly expanded: boolean;
   readonly difficulteForSubmit: LikertScore;
   setCategories(next: ReadonlyArray<SurveyCategorie>): void;
   setSense(next: string): void;
@@ -27,7 +26,6 @@ export interface MetadataBand {
   confirm(): void;
   undoSave(): void;
   reset(): void;
-  toggleExpanded(): void;
   primaryAction(): void;
 }
 
@@ -63,7 +61,6 @@ export function useMetadataBand(item: SurveyItem): MetadataBand {
   const baselineRef = useRef<BandValues>(baselineFor(item.categorie));
   const [values, setValues] = useState<BandValues>(baselineRef.current);
   const [saved, setSaved] = useState(false);
-  const [expanded, setExpanded] = useState(false);
 
   // Re-seed on card change — mirrors the RatingCard reset effect keyed on itemId.
   useEffect(() => {
@@ -71,7 +68,6 @@ export function useMetadataBand(item: SurveyItem): MetadataBand {
     baselineRef.current = next;
     setValues(next);
     setSaved(false);
-    setExpanded(false);
   }, [item.itemId, item.categorie]);
 
   const mutate = useCallback((patch: Partial<BandValues>) => {
@@ -100,7 +96,6 @@ export function useMetadataBand(item: SurveyItem): MetadataBand {
     setSaved(false);
     setValues(baselineRef.current);
   }, []);
-  const toggleExpanded = useCallback(() => setExpanded((e) => !e), []);
 
   const modified = differsFromBaseline(values, baselineRef.current);
   const state: BandState = saved ? 'saved' : modified ? 'modified' : 'pristine';
@@ -114,7 +109,6 @@ export function useMetadataBand(item: SurveyItem): MetadataBand {
       state,
       enriched: state !== 'pristine',
       values,
-      expanded,
       difficulteForSubmit: values.perceivedDifficulty ?? DEFAULT_DIFFICULTE,
       setCategories,
       setSense,
@@ -124,13 +118,11 @@ export function useMetadataBand(item: SurveyItem): MetadataBand {
       confirm,
       undoSave,
       reset,
-      toggleExpanded,
       primaryAction,
     }),
     [
       state,
       values,
-      expanded,
       setCategories,
       setSense,
       setMultisense,
@@ -139,7 +131,6 @@ export function useMetadataBand(item: SurveyItem): MetadataBand {
       confirm,
       undoSave,
       reset,
-      toggleExpanded,
       primaryAction,
     ],
   );

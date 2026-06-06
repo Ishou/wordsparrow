@@ -1,6 +1,6 @@
-// ADR-0050: combobox + listbox semantics, polite live region on chip changes.
+// ADR-0050: combobox + listbox semantics, polite live region. Mots-clés are metadata — no lemma ban.
 
-import { useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { css, cx } from 'styled-system/css';
 import { normalizeForMatch } from '@/application/survey';
 
@@ -125,8 +125,8 @@ export interface GlossChipInputProps {
   readonly maxItems?: number;
   readonly maxLength?: number;
   readonly disabled?: boolean;
-  // ADR-0061 binding rule: a gloss must not repeat the lemma — the trained model already sees it in the row.
-  readonly bannedTerm?: string;
+  // When opened inline, the field self-focuses on mount.
+  readonly autoFocus?: boolean;
 }
 
 export function GlossChipInput({
@@ -139,7 +139,7 @@ export function GlossChipInput({
   maxItems = 8,
   maxLength = 80,
   disabled = false,
-  bannedTerm,
+  autoFocus = false,
 }: GlossChipInputProps) {
   const inputId = useId();
   const listboxId = `${inputId}-listbox`;
@@ -149,6 +149,10 @@ export function GlossChipInput({
   const [open, setOpen] = useState(false);
   const [announce, setAnnounce] = useState('');
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (autoFocus) inputRef.current?.focus();
+  }, [autoFocus]);
 
   const normalizedExisting = useMemo(
     () => new Set(value.map(normalizeForMatch)),
@@ -170,10 +174,6 @@ export function GlossChipInput({
     if (trimmed === '') return;
     if (trimmed.length > maxLength) return;
     if (value.length >= maxItems) return;
-    if (bannedTerm && normalizeForMatch(trimmed).includes(normalizeForMatch(bannedTerm))) {
-      setTyped('');
-      return;
-    }
     if (normalizedExisting.has(normalizeForMatch(trimmed))) {
       setTyped('');
       return;
@@ -249,6 +249,7 @@ export function GlossChipInput({
                 className={chipRemoveStyles}
                 aria-label={`Retirer ${chip}`}
                 onClick={() => removeAt(index)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
               >
                 ×
               </button>

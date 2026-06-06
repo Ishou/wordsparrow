@@ -329,7 +329,7 @@ export function RatingCard({
     startedAtRef.current = performance.now();
   }, [item.itemId]);
 
-  const { toggleExpanded, primaryAction, difficulteForSubmit } = band;
+  const { primaryAction, difficulteForSubmit } = band;
 
   useEffect(() => {
     function handler(event: KeyboardEvent): void {
@@ -337,7 +337,7 @@ export function RatingCard({
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
-      if (target instanceof Element && target.closest('[role="combobox"], [role="listbox"]')) return;
+      if (target instanceof Element && target.closest('[role="combobox"], [role="listbox"], [data-editor-region]')) return;
       if (target?.isContentEditable) return;
       const key = event.key.toLowerCase();
       const latency = () => Math.max(0, Math.round(performance.now() - startedAtRef.current));
@@ -349,11 +349,6 @@ export function RatingCard({
       if (key === 's' && onSignaler) {
         event.preventDefault();
         void onSignaler(latency());
-        return;
-      }
-      if (key === 'a' && enrichable) {
-        event.preventDefault();
-        toggleExpanded();
         return;
       }
       if (key === ' ' && enrichable) {
@@ -368,7 +363,7 @@ export function RatingCard({
     }
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [item.itemId, item.definition, onVerdict, onSignaler, disabled, enrichable, toggleExpanded, primaryAction, difficulteForSubmit]);
+  }, [item.itemId, item.definition, onVerdict, onSignaler, disabled, enrichable, primaryAction, difficulteForSubmit]);
 
   function submit(verdict: Verdict): void {
     if (disabled) return;

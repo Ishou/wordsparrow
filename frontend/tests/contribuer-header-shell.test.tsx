@@ -117,7 +117,6 @@ describe('Contribuer header shell', () => {
     const legend = screen.getByLabelText('Raccourcis clavier');
     expect(legend).toHaveTextContent('noter');
     expect(legend).toHaveTextContent('corriger');
-    expect(legend).toHaveTextContent('ajuster les métadonnées');
     expect(legend).toHaveTextContent('confirmer / enregistrer');
   });
 

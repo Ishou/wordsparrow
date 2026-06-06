@@ -3,6 +3,7 @@ export { CorrectifField, type CorrectifFieldProps } from './CorrectifField';
 export { SignInBanner, type SignInBannerProps } from './SignInBanner';
 export { RatingCard, type RatingCardProps, type RatingMeta, type Verdict } from './RatingCard';
 export { MetadataBand, type MetadataBandProps } from './MetadataBand';
+export { InlineEditableRow, type InlineEditableRowProps } from './InlineEditableRow';
 export { PerceivedDifficultyPicker, type PerceivedDifficultyPickerProps } from './PerceivedDifficultyPicker';
 export { CategorieMultiSelect, type CategorieMultiSelectProps } from './CategorieMultiSelect';
 export { SenseInput, type SenseInputProps } from './SenseInput';

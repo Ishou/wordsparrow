@@ -1,6 +1,6 @@
 // ADR-0050: single-value combobox + listbox; ADR-0061: gloss must not repeat the lemma.
 
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { css, cx } from 'styled-system/css';
 import { normalizeForMatch } from '@/application/survey';
 
@@ -84,6 +84,8 @@ export interface SenseInputProps {
   readonly disabled?: boolean;
   // ADR-0061: a sense gloss must not repeat the lemma — the row already carries it.
   readonly bannedTerm?: string;
+  // When opened inline, the field self-focuses with the caret at the end of existing content.
+  readonly autoFocus?: boolean;
 }
 
 export function SenseInput({
@@ -96,11 +98,22 @@ export function SenseInput({
   maxLength = 80,
   disabled = false,
   bannedTerm,
+  autoFocus = false,
 }: SenseInputProps) {
   const inputId = useId();
   const listboxId = `${inputId}-listbox`;
   const [activeIndex, setActiveIndex] = useState(0);
   const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    const el = inputRef.current;
+    if (el === null) return;
+    el.focus();
+    const end = el.value.length;
+    el.setSelectionRange(end, end);
+  }, [autoFocus]);
 
   const filtered = useMemo(() => {
     const needle = normalizeForMatch(value);
@@ -155,6 +168,7 @@ export function SenseInput({
       )}
       <div className={comboStyles}>
         <input
+          ref={inputRef}
           id={inputId}
           type="text"
           role="combobox"

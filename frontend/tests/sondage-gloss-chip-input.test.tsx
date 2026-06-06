@@ -9,9 +9,8 @@ function ControlledHarness(props: {
   readonly onChange?: (next: ReadonlyArray<string>) => void;
   readonly maxItems?: number;
   readonly maxLength?: number;
-  readonly bannedTerm?: string;
 }) {
-  const { initial = [], suggestions = [], onChange, maxItems, maxLength, bannedTerm } = props;
+  const { initial = [], suggestions = [], onChange, maxItems, maxLength } = props;
   const [value, setValue] = useState<ReadonlyArray<string>>(initial);
   return (
     <GlossChipInput
@@ -23,7 +22,6 @@ function ControlledHarness(props: {
       placeholder="…"
       maxItems={maxItems}
       maxLength={maxLength}
-      bannedTerm={bannedTerm}
     />
   );
 }
@@ -126,15 +124,15 @@ describe('GlossChipInput', () => {
     expect(input.disabled).toBe(true);
   });
 
-  it('rejects a gloss that contains the bannedTerm (ADR-0061 lemma-repetition rule)', async () => {
+  it('accepts a keyword that contains the lemma — metadata, not a clue', async () => {
     const onChange = vi.fn();
-    render(<ControlledHarness onChange={onChange} bannedTerm="chat" />);
+    render(<ControlledHarness onChange={onChange} />);
     const input = screen.getByRole('combobox', { name: 'Sens cibles' }) as HTMLInputElement;
     await act(async () => {
       fireEvent.change(input, { target: { value: 'chat animal félin' } });
       fireEvent.keyDown(input, { key: 'Enter' });
     });
-    expect(onChange).not.toHaveBeenCalled();
-    expect(screen.queryByText(/chat animal/)).not.toBeInTheDocument();
+    expect(onChange).toHaveBeenCalledWith(['chat animal félin']);
+    expect(screen.getByText('chat animal félin')).toBeInTheDocument();
   });
 });
