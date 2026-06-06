@@ -1,7 +1,7 @@
 // Inline-editable metadata band: one compact grid; each field edits in place (ADR-0061, auth-only).
 
 import { useEffect, useRef, useState } from 'react';
-import { css } from 'styled-system/css';
+import { css, cx } from 'styled-system/css';
 import type { SurveyCategorie, SurveyItem, SurveyPos } from '@/application/survey';
 import { CATEGORIE_OPTIONS, POS_OPTIONS, categorieLabel, posLabel } from './labels';
 import { InlineEditableRow } from './InlineEditableRow';
@@ -115,13 +115,9 @@ const valStyles = css({
   minHeight: '28px',
 });
 
-const difficultyRowStyles = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 'sm',
-  marginBlockStart: '2px',
-});
+// Difficulty shares the field grid; center the label against the taller dot row.
+const difficultyKeyStyles = cx(keyStyles, css({ alignSelf: 'center' }));
+const difficultyValStyles = cx(valStyles, css({ alignSelf: 'center' }));
 
 const actionsRowStyles = css({ display: 'flex', alignItems: 'center', gap: 'sm', marginBlockStart: '2px' });
 
@@ -544,17 +540,17 @@ export function MetadataBand({
             />
           </dd>
 
-        </dl>
+          <dt className={difficultyKeyStyles}>Difficulté</dt>
+          <dd className={difficultyValStyles}>
+            <PerceivedDifficultyPicker
+              value={band.values.perceivedDifficulty}
+              onChange={band.setPerceivedDifficulty}
+              announced={item.forceClaimed}
+              labelHidden
+            />
+          </dd>
 
-        <div className={difficultyRowStyles}>
-          <span className={keyStyles}>Difficulté</span>
-          <PerceivedDifficultyPicker
-            value={band.values.perceivedDifficulty}
-            onChange={band.setPerceivedDifficulty}
-            announced={item.forceClaimed}
-            labelHidden
-          />
-        </div>
+        </dl>
 
         <div className={actionsRowStyles}>
           <button

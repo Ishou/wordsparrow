@@ -1,7 +1,7 @@
 // 1–5 difficulty picker (radiogroup, AZERTY-safe); "Annoncée" maps to forceClaimed.
 
 import { useId, useRef } from 'react';
-import { css } from 'styled-system/css';
+import { css, cx } from 'styled-system/css';
 import type { LikertScore } from '@/application/survey';
 
 const fieldStyles = css({
@@ -30,6 +30,10 @@ const dotsStyles = css({
   gap: '2px',
   alignItems: 'center',
 });
+
+// Label-hidden mode aligns the first visible 24px dot flush with the container's
+// left edge (each 36px button insets its dot by 6px).
+const dotsFlushStyles = css({ marginInlineStart: '-6px' });
 
 const dotStyles = css({
   // 36×44 keeps the WCAG AA 24×24 target while the visible 24px dot sits tighter than the old 44px button.
@@ -111,7 +115,7 @@ export function PerceivedDifficultyPicker({ value, onChange, announced, labelHid
         </div>
       )}
       <div
-        className={dotsStyles}
+        className={labelHidden ? cx(dotsStyles, dotsFlushStyles) : dotsStyles}
         role="radiogroup"
         aria-label={labelHidden ? 'Difficulté' : undefined}
         aria-labelledby={labelHidden ? undefined : `${groupId}-label`}
