@@ -67,9 +67,10 @@ export interface PerceivedDifficultyPickerProps {
   readonly value: LikertScore | null;
   readonly onChange: (value: LikertScore) => void;
   readonly announced: number;
+  readonly labelHidden?: boolean;
 }
 
-export function PerceivedDifficultyPicker({ value, onChange, announced }: PerceivedDifficultyPickerProps) {
+export function PerceivedDifficultyPicker({ value, onChange, announced, labelHidden = false }: PerceivedDifficultyPickerProps) {
   const groupId = useId();
   const buttonsRef = useRef<Array<HTMLButtonElement | null>>([]);
   // display falls back to announced; radio stays unchecked until the human actually picks
@@ -104,10 +105,17 @@ export function PerceivedDifficultyPicker({ value, onChange, announced }: Percei
 
   return (
     <div className={fieldStyles} data-testid="perceived-difficulty">
-      <div className={labelRowStyles}>
-        <span id={`${groupId}-label`} className={labelStyles}>Difficulté ressentie</span>
-      </div>
-      <div className={dotsStyles} role="radiogroup" aria-labelledby={`${groupId}-label`}>
+      {labelHidden ? null : (
+        <div className={labelRowStyles}>
+          <span id={`${groupId}-label`} className={labelStyles}>Difficulté</span>
+        </div>
+      )}
+      <div
+        className={dotsStyles}
+        role="radiogroup"
+        aria-label={labelHidden ? 'Difficulté' : undefined}
+        aria-labelledby={labelHidden ? undefined : `${groupId}-label`}
+      >
         {SCORES.map((score, index) => {
           const isSelected = value === score;
           const filled = score <= display;
