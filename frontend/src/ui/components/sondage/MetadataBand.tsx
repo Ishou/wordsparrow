@@ -508,6 +508,7 @@ export function MetadataBand({
                   label="Sens visé par cette définition"
                   labelHidden
                   placeholder="ex. saison entre l’été et l’hiver…"
+                  bannedTerm={item.mot}
                   autoFocus
                 />
               )}

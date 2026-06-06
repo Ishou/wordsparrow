@@ -195,18 +195,15 @@ describe('RatingCard meta inputs', () => {
     expect(lastMeta(onVerdict).isMultisense).toBe(false);
   });
 
-  it('accepts the lemma as a sense — metadata is not the clue, no repetition warning', async () => {
-    const onVerdict = vi.fn().mockResolvedValue(undefined);
+  it('the lemma cannot be entered as a sense (ADR-0061 repetition rule)', async () => {
     const { container } = render(
-      <RatingCard item={sampleItem} onVerdict={onVerdict} onCorriger={async () => {}} enrichable />,
+      <RatingCard item={sampleItem} onVerdict={async () => {}} onCorriger={async () => {}} enrichable />,
     );
     await openField(container, 'sens');
     const sense = screen.getByRole('combobox', { name: 'Sens visé par cette définition' }) as HTMLInputElement;
     await act(async () => { fireEvent.change(sense, { target: { value: 'le chat' } }); });
-    expect(sense.getAttribute('aria-invalid')).toBeNull();
-    expect(screen.queryByRole('alert')).toBeNull();
-    await clickGood(container);
-    expect(lastMeta(onVerdict).targetSense).toBe('le chat');
+    expect(sense.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByRole('alert')).toHaveTextContent(/ne doit pas répéter/i);
   });
 
   it('adds and removes sub-tags; verdict carries them', async () => {
