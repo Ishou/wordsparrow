@@ -18,3 +18,10 @@ spec:
         - podSelector: { matchLabels: { app.kubernetes.io/name: bliss-nats } }  # stream-init Job
       ports:
         - { protocol: TCP, port: {{ .Values.config.port }} }
+{{- if .Values.metricsExporter.enabled }}
+    # SigNoz collector (observability ns) → metrics port only (ADR-0027); client ingress rule above is unchanged.
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: observability } }
+      ports:
+        - { protocol: TCP, port: {{ .Values.metricsExporter.port }} }
+{{- end }}

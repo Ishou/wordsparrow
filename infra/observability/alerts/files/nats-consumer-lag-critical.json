@@ -14,7 +14,7 @@
           "type": "promql",
           "spec": {
             "name": "A",
-            "query": "max by (consumer_name, stream_name) (nats_consumer_num_pending)",
+            "query": "max by (consumer_name, stream_name) (jetstream_consumer_num_pending)",
             "legend": "{{consumer_name}} / {{stream_name}}"
           }
         }
