@@ -278,9 +278,9 @@ missing/weak) and the final merge. Everything between is automated.
    - **Identical-finding terminator:** if round N's findings == round N-1's, B
      is genuinely stuck → stop early + escalate (a safety net, not a
      token-saver).
-   - **Escalation (cap hit or stuck):** label `bump-needs-human` (reuse Gate
-     A's label) + comment summarizing unresolved findings → STOP. Never
-     auto-proceed to D.
+   - **Escalation (cap hit or stuck):** open/update the durable
+     `bump-needs-human` GH issue (see #6) with the unresolved findings → STOP.
+     Never auto-proceed to D.
    - **On approval:** the run dispatches D (fork `claude/<dep>-vN`, close the
      Renovate PR, implement, open the claude PR → real §6a on the code).
 5. ✅ **RESOLVED — ratings are ascending (consumer rates producer), never
@@ -290,7 +290,8 @@ missing/weak) and the final merge. Everything between is automated.
    - **B rates A** (sufficiency-to-plan). B is the right judge because B has to
      *plan from* A's context — thin enrichment is felt directly. This **is
      Gate A**, now consumer-judged: B's first act is to rate A's output; `low`
-     or `none` → `bump-needs-human` + STOP (B doesn't waste effort planning).
+     or `none` → open/update the `bump-needs-human` issue (see #6) + STOP (B
+     doesn't waste effort planning).
      Rubric (evidence-based, a classification of facts — not a feeling):
      - **`high`** — dedicated migration/upgrade guide for this exact transition
        (title/URL matches migration/upgrade/breaking), fetched 200, breaking
@@ -320,10 +321,39 @@ missing/weak) and the final merge. Everything between is automated.
      justify the loop. The *uniform* "consumer-rates-producer review/fix"
      principle is a nice pattern to generalize in a future session, but here it
      collapses to one doc-bound loop and isn't worth it.
-6. **Fork + close + the "ignored update" fallback.** Exact mechanics of D's
-   fork/close; and since closing a Renovate PR makes Renovate stop proposing
-   that update, how do we keep the claude PR as the durable tracker (note on
-   the dashboard? a `recreateWhen`?).
+6. ✅ **RESOLVED — D's fork/close + a GH issue as the durable escalation
+   artifact.**
+   - **Fork from Renovate's branch tip, not main.** Preserves the exact bump
+     commit Renovate computed (version string + lockfile), so D only *adds*
+     migration commits — D never re-does the version bump (no fat-fingering).
+     Resulting branch = 1 renovate-authored commit + D's claude commits; fine
+     for DCO (bot commits exempt) and commitlint (Renovate's message already
+     passes). **Bidirectional breadcrumb:** claude PR body links the Renovate
+     PR; D's closing comment on the Renovate PR links the claude PR.
+   - **Failure-safe ordering:** open the claude PR **first**, confirm it's real,
+     **then** close Renovate's. Never close-first — if D dies mid-way,
+     Renovate's PR stays open and nothing is lost.
+   - **Durability via a dedicated GH issue, not the dashboard.** Closing a
+     Renovate PR makes Renovate treat that version as *ignored* (won't
+     re-propose it; will still propose a *newer* version later). A dashboard
+     checkbox carries no context and a PR comment dies with the PR. So a
+     **GH issue is the single durable escalation artifact for *every*
+     human-needed outcome** — Gate A (no docs), plan-loop non-convergence, D
+     failure, *and* claude-PR-closed-unmerged. It's persistent (outlives any
+     PR), actionable/assignable, and carries the *why*: which gate failed,
+     links to the dead claude PR + original Renovate PR, dep + version. The
+     `bump-needs-human` label moves onto the **issue**; this **supersedes the
+     "label + PR comment" escalation wording in #4 and #5** (the label/why now
+     land on the issue, which survives PR closure).
+     - **Lazy:** created only when a human is genuinely needed. Happy path
+       (bump merges) makes **no** issue — no noise for success.
+     - **Deduped:** one issue per dep-major-transition; *find-or-update* (search
+       open issues by `bump-supervisor` label + dep name before creating), not
+       a fresh issue per retry.
+     - **Auto-close:** closed when a later attempt for that dep actually merges,
+       so stale failures don't accumulate.
+     - **No `recreateWhen: always`** — it would fight us by reopening the PR we
+       just closed. The dashboard is demoted to an incidental ledger.
 7. **§6a-on-Renovate behavior, final answer.** Today §6a runs on Renovate PRs
    and clobbers (PR #816, which would have disabled it, was closed as the wrong
    fix). With this pipeline, A/B/C run on the Renovate PR instead — so does §6a
