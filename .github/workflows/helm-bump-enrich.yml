@@ -136,6 +136,8 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Allow the bots that open/dispatch these PRs (renovate opens them; github-actions runs the cron sweep).
+          allowed_bots: 'renovate[bot],github-actions[bot]'
           claude_args: '--allowed-tools "Read,WebFetch,Bash(gh pr view:*),Bash(gh pr edit:*),Bash(cat:*),Bash(python:*)"'
           prompt: |
             You are enriching a Renovate dependency-bump PR. The deterministic
@@ -149,9 +151,14 @@ jobs:
             2. If releaseNotesUrl is set, WebFetch it (and extraDocs if present)
                and extract the migration-relevant changes between version `old`
                and `new`: breaking changes, required config/CRD/DB actions,
-               deprecations. Do NOT invent notes — only report what the fetched
-               pages state. If sourceMissing is true or the fetch fails, write
-               "Release notes unavailable — review manually" and continue.
+               deprecations. releaseNotesUrl points at the `new` release only;
+               when `old` and `new` span multiple versions, the intermediate
+               releases may carry their own breaking changes — also fetch the
+               releases listing (strip the `/tag/...` suffix from releaseNotesUrl)
+               or the intermediate tags so the range is covered, not just `new`.
+               Do NOT invent notes — only report what the fetched pages state. If
+               sourceMissing is true or the fetch fails, write "Release notes
+               unavailable — review manually" and continue.
             3. Render ONE Markdown block, exactly between these markers:
                  <!-- helm-enrich:start -->
                  ## Upgrade context (automated, advisory)

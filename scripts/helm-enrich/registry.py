@@ -41,4 +41,6 @@ def lookup(reg: dict[str, dict[str, Source]], mode: str, name: str) -> Source | 
 
 
 def render_url(pattern: str, version: str) -> str:
-    return pattern.replace("{version}", version)
+    # {series} = major.minor prefix for MariaDB's series-nested doc URLs.
+    series = ".".join(version.split(".")[:2])
+    return pattern.replace("{series}", series).replace("{version}", version)
