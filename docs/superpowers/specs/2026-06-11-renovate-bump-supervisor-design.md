@@ -171,6 +171,49 @@ missing/weak) and the final merge. Everything between is automated.
 
 ---
 
+## Revised arrangement (2026-06-12): the GH issue is the pipeline spine
+
+A fresh mental model that reorganizes the pipeline around a durable issue
+rather than a transient PR. **Captured to lock it in; supersedes the
+PR-centric framing above where they conflict** (the architecture diagram +
+agent contracts get reconciled to this in the self-review pass — task #23).
+
+**Maintainer's model (raw):**
+- A Renovate PR triggers the pipeline either **deterministically** (Step 0:
+  major / 0.x-major) or via the **AI gate** (minor/patch smell test says
+  breaking/ambiguous).
+- **"Triggering the pipeline" = creating a dedicated GH issue.**
+- That **issue is now the pipeline's starting point and home**: first
+  enrichment (Agent A) lands on it, then the B↔C cycle runs *through the
+  issue*, then an implementer **D** is dispatched and opens the PR that will
+  (or not) **close the issue**.
+- Feasibility confirmed: GH Actions fires on `issues` / `issue_comment`
+  events, and `claude-code-action` runs on them (its canonical tag mode). So
+  an issue-hosted pipeline is fully supported.
+
+**Why this is better:** decouples the pipeline from transient PRs. Renovate PR
+= *trigger*; claude PR = *output*; the **issue = persistent spine** holding the
+whole history (enrichment, plan, reviews), surviving both PRs closing. Unifies
+success + failure tracking: created at pipeline start, auto-closed when the
+claude PR merges, left open as `bump-needs-human` on failure.
+
+**Amends #6:** the issue is no longer created lazily-only-on-failure — it's
+created when the pipeline *triggers* (non-trivial bumps) and auto-closes on
+success. Trivial bumps (AI-gate green) still make **no** issue, so "no noise
+for trivial" holds; majors are rare enough that a per-migration tracking issue
+is a feature.
+
+**Claude's refinement (flagged — NOT part of the raw model, pending decision):**
+run B↔C as **#4's bounded single workflow run**, and use the issue as the
+visibility/durability *medium* (post enrichment, per-round summaries, final
+plan, escalations as comments) — **not** as the control-flow *trigger*. A
+literal comment-re-trigger loop reintroduces exactly the cap-inflation /
+self-trigger-ping-pong footguns #4 was built to avoid. The distinction:
+comments as a *log* (good) vs comments as the *trigger mechanism* (footgun).
+**[Decision pending: comment-loop vs bounded-run-posting-to-issue.]**
+
+---
+
 ## OPEN QUESTIONS (for tomorrow)
 
 1. ✅ **RESOLVED — Scope / trigger.**
