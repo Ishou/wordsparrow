@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from parse import AppNode
 from descriptor import Topology
+import style
 
 
 def _safe(node_id: str) -> str:
@@ -50,6 +51,37 @@ def render_cluster(topo: Topology, apps: list[AppNode]) -> str:
         lines.append(f'  {_safe(ext["id"])}["{_label(ext["label"])}"]')
     for e in topo.cluster_edges:
         lines.append(f"  {_edge(e)}")
+
+    roles: set[str] = set()
+    assigns: list[str] = []
+    db_ids = [
+        f"{_safe(s['id'])}DB"
+        for s in topo.services
+        if s["id"] in contexts and db.get(s["id"])
+    ]
+    if db_ids:
+        roles.add("data")
+        assigns.append(style.assign(db_ids, "data"))
+    ext_ids = [_safe(x["id"]) for x in topo.cluster_external]
+    if ext_ids:
+        roles.add("external")
+        assigns.append(style.assign(ext_ids, "external"))
+
+    zones = [
+        style.zone(group, style.GROUP_ROLE[group])
+        for group in shared
+        if group in style.GROUP_ROLE
+    ]
+    zones += [
+        style.zone(f"ctx_{_safe(s['id'])}", "context")
+        for s in topo.services
+        if s["id"] in contexts
+    ]
+
+    lines.extend(style.node_classdefs(roles))
+    lines.extend(assigns)
+    lines.extend(zones)
+    lines.append(style.node_default_border())
     return "\n".join(lines)
 
 
@@ -78,7 +110,14 @@ def render_cloud(topo: Topology) -> str:
     lines.append("  end")
     for e in topo.deploy_edges:
         lines.append(f"  {_edge(e)}")
+    if workflows:
+        lines.append(style.zone("CI", "infra"))
+    lines.append(style.zone("Cloud", "external"))
+    lines.append(style.node_default_border())
     return "\n".join(lines)
+
+
+_FLOW_ROLE = {"grid": "context", "game": "context", "nats": "messaging"}
 
 
 def render_flow(topo: Topology) -> str:
@@ -97,7 +136,14 @@ def render_flow(topo: Topology) -> str:
         lines.append(f'  {_safe(n)}["{_label(labels.get(n, n))}"]')
     for e in topo.flow_edges:
         lines.append(f"  {_edge(e)}")
+    ordered = [_safe(n) for n in nodes]
+    role_by_id = {_safe(n): _FLOW_ROLE[n] for n in nodes if n in _FLOW_ROLE}
+    lines.extend(style.flat_node_styles(ordered, role_by_id))
+    lines.append(style.node_default_border())
     return "\n".join(lines)
+
+
+_OBS_DATA_NODES = {"clickhouse"}
 
 
 def render_observability(topo: Topology) -> str:
@@ -114,7 +160,18 @@ def render_observability(topo: Topology) -> str:
         lines.append("  end")
     for e in edges:
         lines.append(f"  {_edge(e)}")
+    data_ids = [_safe(n["id"]) for n in nodes if n["id"] in _OBS_DATA_NODES]
+    if data_ids:
+        lines.extend(style.node_classdefs({"data"}))
+        lines.append(style.assign(data_ids, "data"))
+    for group in groups:
+        if group in style.GROUP_ROLE:
+            lines.append(style.zone(group, style.GROUP_ROLE[group]))
+    lines.append(style.node_default_border())
     return "\n".join(lines)
+
+
+_CLUE_ROLE = {"gen": "context", "sft": "context", "human": "messaging", "grid": "data"}
 
 
 def render_clue(topo: Topology) -> str:
@@ -125,4 +182,10 @@ def render_clue(topo: Topology) -> str:
         lines.append(f'  {_safe(n["id"])}["{_label(n["label"])}"]')
     for e in edges:
         lines.append(f"  {_edge(e)}")
+    ordered = [_safe(n["id"]) for n in nodes]
+    role_by_id = {
+        _safe(n["id"]): _CLUE_ROLE[n["id"]] for n in nodes if n["id"] in _CLUE_ROLE
+    }
+    lines.extend(style.flat_node_styles(ordered, role_by_id))
+    lines.append(style.node_default_border())
     return "\n".join(lines)
