@@ -1,8 +1,6 @@
 name: helm-bump-enrich
 
-# Enriches Renovate's internal-tool bump PRs (advisory; never a required
-# check). Mode A: subchart deps in infra/**/Chart.yaml. Mode B (PR 2) adds
-# image tags in values.yaml. Deploy stays manual (ADR-0067).
+# Advisory enrichment for Renovate infra bump PRs (Mode A: Chart.yaml; Mode B: values.yaml). Deploy stays manual (ADR-0067).
 
 on:
   pull_request:

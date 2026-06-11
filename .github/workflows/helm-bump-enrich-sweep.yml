@@ -1,7 +1,6 @@
 name: helm-bump-enrich-sweep
 
-# Daily safety net: dispatch helm-bump-enrich for any open Renovate infra
-# PR that has no enrichment marker yet (e.g. its opened-event was missed).
+# Daily safety net: dispatch helm-bump-enrich for open Renovate infra PRs without an enrichment marker.
 
 on:
   schedule:
