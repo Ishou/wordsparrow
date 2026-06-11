@@ -12,6 +12,7 @@ push-from-CI; ADR-0027).
 | File | Title | Source metrics |
 | ---- | ----- | -------------- |
 | [`files/nats-jetstream.json`](./files/nats-jetstream.json) | `NATS / JetStream` | `jetstream_*`, `gnatsd_*` (prometheus-nats-exporter, scraped per ADR-0049 / ADR-0027) |
+| [`files/api-services-red.json`](./files/api-services-red.json) | `API Services — RED` | server spans (traces datasource): `serviceName`, `httpRoute`, `responseStatusCode`, `durationNano`, `hasError` |
 
 ## How it reconciles
 
@@ -38,5 +39,8 @@ never from CI.
 2. Drop the JSON under `files/`, ensuring a unique `.title`.
 3. Open a PR; merge auto-applies it.
 
-> Note: dashboard JSON follows SigNoz's `version: v5` schema. Widget queries
-> here use `queryType: "promql"` against the scraped exporter metrics.
+> Note: dashboard JSON follows SigNoz's `version: v5` schema. Query type
+> depends on the source: `promql` for underscore-named scraped metrics
+> (e.g. NATS exporter), `builder` over the `traces` datasource for OTel
+> span data (e.g. the RED dashboard, whose dotted metric names PromQL
+> can't reference).
