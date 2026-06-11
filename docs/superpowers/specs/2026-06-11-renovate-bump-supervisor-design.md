@@ -215,6 +215,31 @@ self-trigger-ping-pong footguns #4 was built to avoid. Comments as a *log*
 (good); comments as the *trigger mechanism* (footgun, rejected). With a bounded
 run, "6 rounds" is literally "6 jobs" and nothing external can re-fire it.
 
+**B's output is CATEGORIZED, not binary (2026-06-12).** B↔C doesn't just answer
+"are we impacted?" — it produces findings in three categories, each with a
+different *destination*:
+
+| Category | What | Destination |
+|---|---|---|
+| **(a) Mandatory migration** | breaking changes touching code/config we actually use | **In D's PR.** The pipeline *attempts* the fix → ready-for-human-review claude PR. **"Blocks merge" = must be in D's PR to merge, NOT "halts the pipeline."** A solvable migration is never punted to the human — the pipeline tries hardest; the human only does it themselves on *pipeline failure* (Gate A / no convergence / §6a cap). |
+| **(b) Doc/ADR coherence** | stale docs/ADRs/comments referencing the old version or old behavior | **Also in D's PR** — "registries cannot lag" (CLAUDE.md), a bump isn't *done* if docs point at the old version. **Bounded** to *this dep*, not open-ended doc-gardening. |
+| **(c) Opportunistic refactor** | new-version features enable a high-reward improvement we're *not forced* to make | **NOT in the bump PR** — it's a second workstream (one-workstream-per-PR + 400-line cap). **Surfaced as a separate `bump-enhancement` GH issue** (created + labeled, **no automated workflow for now**); the human decides if/when/who. |
+
+The "let Renovate's PR merge" early-exit fires **only when all in-scope
+categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
+(docs-only) PR.
+
+**Issue label taxonomy (chosen 2026-06-12):**
+- **`bump-supervisor`** — umbrella on *every* issue the pipeline creates
+  (provenance + the #6 dedup key is label+dep).
+- **`bump-needs-human`** — the spine/tracking issue when a bump *fails*
+  (must-fix). Two issue *kinds* exist: the **spine issue** (one per non-trivial
+  bump, its operational home; gets `bump-needs-human` only on failure) and the
+  **enhancement issue** below.
+- **`bump-enhancement`** — a category-(c) optional improvement (no urgency,
+  separate PR later). The must-do vs optional split = `bump-needs-human` vs
+  `bump-enhancement`.
+
 ---
 
 ## OPEN QUESTIONS (for tomorrow)
@@ -470,10 +495,45 @@ run, "6 rounds" is literally "6 jobs" and nothing external can re-fire it.
      (Concurrency-*key* mechanics → #11; this is just the don't-double-act guard.)
    - **No auto-resume machinery** — a human picking up the issue takes over the
      claude PR manually (YAGNI; it's a normal PR).
-10. **Testing** — deterministic parts (schema validation, the trivial/impacted
-    classify wiring, fork/close shell) get unit tests; LLM parts validated on a
-    real major bump. What's the first real test case (helm v4 #814 is a
-    candidate)?
+10. ✅ **RESOLVED — testing + first real case.** Key framing: **separate "does
+    the orchestration plumbing work" (testable) from "do the agents reason
+    well" (live-only).**
+    - **Deterministic logic → real unit tests (CI, no LLM).** Enabler: push all
+      deterministic logic into **tested scripts** (Python, mirroring
+      `scripts/helm-enrich/*.py` + tests); keep workflow YAML thin (YAML isn't
+      testable). Covered: Step 0 routing (table-driven `(updateType,
+      currentMajor)→route`); A→B schema validation (**property-based** per
+      CLAUDE.md — the #3 "every item cites a `sourceUrl`" invariant); the #7
+      no-doc severity rule; AI-gate *verdict→route* wiring (verdict is LLM,
+      routing on it is deterministic); issue dedup/lifecycle (gh mocked at the
+      boundary); D's fork/close branch-naming + open-before-close ordering +
+      idempotency guard (git/gh = external boundaries → mock or scratch repo).
+    - **Orchestration plumbing tests with *stub agents*.** Replace each
+      `claude-code-action` job with a stub emitting a *canned* schema / plan /
+      verdict fixture, then assert the whole chain runs end-to-end **without
+      real LLMs**: Step 0 → issue created → A comment → B↔C jobs (artifact
+      passing) → D forks → PR `Closes #issue` → issue auto-closes on merge.
+      Catches the bulk of bugs (chaining, artifacts, lifecycle, ordering)
+      cheaply; the LLM is the *only* thing we can't fixture.
+    - **LLM capability → live, on real bumps:**
+      1. **First live test = signoz `0.122.0 → 0.128.0`** (`helmv3` major on
+         `infra/observability/Chart.yaml`). Chosen because: a real **0.x-major**
+         (x: 122→128 → exercises the deterministic route + the 0.x semver
+         handling from #1); **low blast radius** (observability backend, not the
+         product); helm-managed so it *also* exercises the helm values-diff
+         carryover (#2); and it **won't early-exit** — `Chart.yaml:19` ("0.122.0
+         ships SigNoz app v0.122.0 — initial pin") is stale on bump → a concrete
+         category-(b) doc-coherence fix, so it drives a real (docs-ish) D path.
+         *Caveat:* it bundles general-pipeline + helm-carryover coverage (fine,
+         just don't assume which on failure).
+      2. **Full-path guarantee = helm v4 / #814.** A known real mandatory
+         migration that won't downgrade → guarantees exercising
+         D/fork/close/§6a-on-the-claude-PR. Run *after* signoz + plumbing green.
+    - **Order:** deterministic + stub-agent plumbing → signoz (live #1) → #814
+      (live #2, full path).
+    - **Optional/deferred:** a small **eval fixture set** (known past bumps +
+      expected breaking-change findings) to regression-test A's enrichment.
+      Defer unless A's quality proves wobbly.
 11. **Trigger + concurrency** — `pull_request` event types, the major-label
     filter, concurrency keys, and how A/B/C/D chain (separate workflows vs jobs
     vs self-re-trigger).
