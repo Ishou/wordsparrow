@@ -32,8 +32,7 @@ modeB:
   - image: mariadb
     releaseNotes: "https://mariadb.com/docs/release-notes/community-server/{series}/{version}"
     priority: high
-  # nats image is pinned to a floating minor (2.10-alpine), so there is no
-  # per-patch tag to link; point at the releases listing + the upgrade guide.
+  # floating minor pin (2.10-alpine): no per-patch tag, link to releases listing.
   - image: nats
     releaseNotes: "https://github.com/nats-io/nats-server/releases"
     extraDocs: "https://docs.nats.io/release-notes/whats_new"
