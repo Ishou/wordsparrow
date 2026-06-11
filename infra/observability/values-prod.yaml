@@ -47,9 +47,9 @@ signoz:
       bliss.io/role: observability
     persistence:
       # Hetzner Cloud Volume — same StorageClass the platform chart
-      # registers (ADR-0009 §3, hcloud-csi). 20 GiB at ADR-0027's
-      # default retention (7 d traces, 30 d metrics) leaves ample
-      # headroom for the launch traffic profile; revisit on growth.
+      # registers (ADR-0009 §3, hcloud-csi). Size (50Gi) lives in the
+      # base values.yaml; these SSD-backed volumes expand online via
+      # the CSI driver (allowVolumeExpansion=true).
       storageClass: hcloud-volumes
     clickhouseOperator:
       tolerations:

@@ -25,17 +25,19 @@ signoz:
   clickhouse:
     replicaCount: 1
     persistence:
-      size: 20Gi
+      # Headroom over telemetry's tiny footprint (<300 MiB): a full disk turns CH read-only and silently kills ingestion, so size for CH's own system.*_log churn (disabled below) plus retention growth.
+      size: 50Gi
     resources:
       requests:
         cpu: 200m
         memory: 1Gi
       limits:
         cpu: 2000m
-        memory: 3Gi
+        # 5Gi => 3.5 GiB server budget at the 0.7 ratio below; 2.1 GiB (the old 3Gi) was overrun by live ingestion + materialized-view aggregation (code 241).
+        memory: 5Gi
 
     # Low-RAM tuning per ClickHouse docs (operations/tips):
-    # required for stable operation under 16 GB RAM. Our 3Gi limit
+    # required for stable operation under 16 GB RAM. Our 5Gi limit
     # is well into that range. Renders into the CHI's
     # `spec.configuration.settings` block (server-level XML), as
     # the SigNoz subchart's `clickhouse.settings` is wired straight
@@ -85,11 +87,13 @@ signoz:
 
     # Disable verbose ClickHouse-internal log tables (sub-16 GB
     # tuning per the ClickHouse tips doc). These are CH's OWN
-    # monitoring tables (system.asynchronous_metric_log,
-    # system.metric_log, system.query_thread_log,
-    # system.query_views_log) — NOT the SigNoz user-facing
-    # telemetry storage. Disabling just stops CH from writing its
-    # own monitoring rows; we never query them. The subchart
+    # diagnostic tables — NOT the SigNoz user-facing telemetry
+    # storage. Disabling just stops CH from writing its own
+    # monitoring rows; we never query them. The trace_log /
+    # zookeeper_log / text_log / query_log / processors_profile_log
+    # group is what filled the disk to 100% and froze ingestion —
+    # together ~18 GiB vs <300 MiB of actual telemetry — so they are
+    # the load-bearing entries, not just tidiness. The subchart
     # always ships the operator ConfigMap with `replace="1"`
     # entries that turn these on; we layer a higher-priority
     # config.d file via `files:` that sets `remove="1"` to drop
@@ -102,6 +106,11 @@ signoz:
           <metric_log remove="1"/>
           <query_thread_log remove="1"/>
           <query_views_log remove="1"/>
+          <trace_log remove="1"/>
+          <zookeeper_log remove="1"/>
+          <text_log remove="1"/>
+          <query_log remove="1"/>
+          <processors_profile_log remove="1"/>
         </clickhouse>
 
     zookeeper:
