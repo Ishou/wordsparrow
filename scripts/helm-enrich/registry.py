@@ -41,4 +41,7 @@ def lookup(reg: dict[str, dict[str, Source]], mode: str, name: str) -> Source | 
 
 
 def render_url(pattern: str, version: str) -> str:
-    return pattern.replace("{version}", version)
+    # {series} is the major.minor prefix (e.g. 11.4.5 -> 11.4), for docs sites
+    # that nest release notes under a series directory (MariaDB).
+    series = ".".join(version.split(".")[:2])
+    return pattern.replace("{series}", series).replace("{version}", version)

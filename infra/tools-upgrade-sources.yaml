@@ -2,11 +2,11 @@
 modeA:
   - name: signoz
     repo: "https://charts.signoz.io"
-    releaseNotes: "https://github.com/SigNoz/charts/releases/tag/v{version}"
+    releaseNotes: "https://github.com/SigNoz/charts/releases/tag/signoz-{version}"
     extraDocs: "https://signoz.io/docs/operate/migration/"
   - name: k8s-infra
     repo: "https://charts.signoz.io"
-    releaseNotes: "https://github.com/SigNoz/charts/releases"
+    releaseNotes: "https://github.com/SigNoz/charts/releases/tag/k8s-infra-{version}"
   - name: cert-manager
     repo: "https://charts.jetstack.io"
     releaseNotes: "https://github.com/cert-manager/cert-manager/releases/tag/v{version}"
@@ -19,21 +19,23 @@ modeA:
     releaseNotes: "https://github.com/kubernetes-sigs/external-dns/releases/tag/external-dns-helm-chart-{version}"
   - name: cloudnative-pg
     repo: "https://cloudnative-pg.github.io/charts"
-    releaseNotes: "https://github.com/cloudnative-pg/charts/releases"
+    releaseNotes: "https://github.com/cloudnative-pg/charts/releases/tag/cloudnative-pg-v{version}"
     extraDocs: "https://github.com/cloudnative-pg/cloudnative-pg/releases"
   - name: hcloud-csi
     repo: "https://charts.hetzner.cloud"
-    releaseNotes: "https://github.com/hetznercloud/csi-driver/blob/main/CHANGELOG.md"
+    releaseNotes: "https://github.com/hetznercloud/csi-driver/releases/tag/v{version}"
 modeB:
   - image: matomo
     releaseNotes: "https://matomo.org/changelog/"
     extraDocs: "https://github.com/matomo-org/matomo/releases"
     priority: high
   - image: mariadb
-    releaseNotes: "https://mariadb.com/docs/release-notes/community-server/{version}"
+    releaseNotes: "https://mariadb.com/docs/release-notes/community-server/{series}/{version}"
     priority: high
+  # nats image is pinned to a floating minor (2.10-alpine), so there is no
+  # per-patch tag to link; point at the releases listing + the upgrade guide.
   - image: nats
-    releaseNotes: "https://github.com/nats-io/nats-server/releases/tag/v{version}"
+    releaseNotes: "https://github.com/nats-io/nats-server/releases"
     extraDocs: "https://docs.nats.io/release-notes/whats_new"
     priority: high
   - image: natsio/nats-box

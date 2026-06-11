@@ -44,3 +44,8 @@ def test_lookup_missing_returns_none(tmp_path):
 def test_render_url_substitutes_version():
     pattern = "https://github.com/SigNoz/charts/releases/tag/v{version}"
     assert registry.render_url(pattern, "0.128.0") == "https://github.com/SigNoz/charts/releases/tag/v0.128.0"
+
+
+def test_render_url_substitutes_series_major_minor():
+    pattern = "https://mariadb.com/docs/release-notes/community-server/{series}/{version}"
+    assert registry.render_url(pattern, "11.4.5") == "https://mariadb.com/docs/release-notes/community-server/11.4/11.4.5"
