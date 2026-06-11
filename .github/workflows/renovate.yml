@@ -1,6 +1,6 @@
 name: renovate
 
-# Self-hosted Renovate runner (replaces the Mend hosted app). Runs the OSS Renovate engine in CI; reads this repo's renovate.json. Security PRs come promptly (vulnerabilityAlerts: at any time); routine bumps follow the renovate.json schedule.
+# Replaces the Mend hosted app; OSS engine, runs on our schedule, no external account required.
 
 on:
   schedule:
