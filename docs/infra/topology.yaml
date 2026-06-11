@@ -29,7 +29,7 @@ cluster_edges:
   - { from: ingress,  to: survey }
   - { from: grid,     to: nats, label: publishes }
   - { from: identity, to: nats, label: publishes }
-  - { from: nats,     to: game, label: consumes }
+  - { from: nats,     to: game, label: consumed by }
   - { from: survey,   to: cluepipeline, label: manual export, style: dashed }
 
 # Request/event flow diagram: ordered runtime hops. `browser` is a literal.
@@ -39,7 +39,7 @@ flow_edges:
   - { from: ingress, to: grid }
   - { from: ingress, to: game }
   - { from: grid,    to: nats,    label: PuzzleReady event }
-  - { from: nats,    to: game,    label: consumes }
+  - { from: nats,    to: game,    label: consumed by }
 
 # `from` may be a deploy-*.yml workflow stem (gated against real workflows) or a cloud/service id.
 deploy_edges:

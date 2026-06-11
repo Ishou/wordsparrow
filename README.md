@@ -93,7 +93,7 @@ flowchart LR
   ingress --> survey
   grid -->|publishes| nats
   identity -->|publishes| nats
-  nats -->|consumes| game
+  nats -->|consumed by| game
   survey -. manual export .-> cluepipeline
 ```
 <p align="center"><sub><b>Figure 1.</b> In-cluster topology grouped by bounded context — each box is one context's API and database. Dashed edges are manual or leave the cluster.</sub></p>
@@ -132,7 +132,7 @@ flowchart LR
   ingress --> grid
   ingress --> game
   grid -->|PuzzleReady event| nats
-  nats -->|consumes| game
+  nats -->|consumed by| game
 ```
 <p align="center"><sub><b>Figure 3.</b> How a request and the daily-puzzle event move through the system at runtime.</sub></p>
 <!-- INFRA-DIAGRAM:flow END -->
