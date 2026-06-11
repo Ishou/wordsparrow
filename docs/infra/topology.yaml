@@ -19,9 +19,7 @@ cloud:
   - { id: dns,         label: Cloudflare DNS,      tf_resource: cloudflare_dns_record }
   - { id: k3s,         label: Hetzner k3s,         tf_resource: null }
 
-# Cluster-topology edges. ingress routes to each context; request protocols
-# live in the flow diagram. Event edges follow data-flow direction.
-# Non-cluster nodes referenced by cluster edges (the local clue pipeline).
+# Cluster-topology edges (request-protocol detail lives in flow_edges); cluster_external lists non-cluster nodes.
 cluster_external:
   - { id: cluepipeline, label: clue AI pipeline (local) }
 cluster_edges:
