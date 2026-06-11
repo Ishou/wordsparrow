@@ -63,24 +63,28 @@ flowchart LR
     ingress["ingress-nginx"]
     certmanager["cert-manager"]
   end
-  subgraph APIs
-    grid["grid-api"]
-    game["game-api"]
-    identity["identity-api"]
-    survey["survey-api"]
-  end
   subgraph Messaging
     nats["NATS JetStream"]
   end
-  subgraph Observability
-    signoz["SigNoz"]
-    matomo["Matomo"]
-  end
-  subgraph Data
+  subgraph ctx_grid["grid"]
+    grid["grid-api"]
     gridDB[("grid pg")]
+    grid --> gridDB
+  end
+  subgraph ctx_game["game"]
+    game["game-api"]
     gameDB[("game pg")]
+    game --> gameDB
+  end
+  subgraph ctx_identity["identity"]
+    identity["identity-api"]
     identityDB[("identity pg")]
+    identity --> identityDB
+  end
+  subgraph ctx_survey["survey"]
+    survey["survey-api"]
     surveyDB[("survey pg")]
+    survey --> surveyDB
   end
   ingress -->|HTTP| grid
   ingress -->|HTTP/WS| game
@@ -89,10 +93,6 @@ flowchart LR
   grid -->|publishes| nats
   identity -->|publishes| nats
   game -->|subscribes| nats
-  grid --> gridDB
-  game --> gameDB
-  identity --> identityDB
-  survey --> surveyDB
 ```
 <!-- INFRA-DIAGRAM:cluster END -->
 

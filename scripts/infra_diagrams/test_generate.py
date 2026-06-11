@@ -179,14 +179,13 @@ def _apps() -> list[parse.AppNode]:
     ]
 
 
-def test_render_cluster_has_subgraphs_and_db_cylinder() -> None:
+def test_render_cluster_groups_each_context_with_its_db() -> None:
     out = render.render_cluster(_topo(), _apps())
     assert out.startswith("flowchart LR")
-    assert "subgraph Edge" in out
-    assert "subgraph APIs" in out
-    assert "subgraph Data" in out
-    assert 'gridDB[("grid pg")]' in out      # cylinder shape for postgres
-    assert "grid --> gridDB" in out
+    assert "subgraph Edge" in out                 # shared infra kept
+    assert 'subgraph ctx_grid["grid"]' in out     # one box per bounded context
+    assert 'gridDB[("grid pg")]' in out           # cylinder shape for postgres
+    assert "grid --> gridDB" in out               # api -> pg, inside the context box
     assert "ingress -->|HTTP| grid" in out
 
 

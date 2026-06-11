@@ -14,28 +14,36 @@ def _db_by_context(apps: list[AppNode]) -> dict[str, bool]:
 
 def render_cluster(topo: Topology, apps: list[AppNode]) -> str:
     db = _db_by_context(apps)
+    contexts = {a.context for a in apps if a.kind == "api"}
     lines = ["flowchart LR"]
 
-    groups: dict[str, list[dict]] = {}
+    # Shared infra (non-context), grouped by `group`. The observability
+    # backend is owned by the dedicated observability diagram, so skip it.
+    shared: dict[str, list[dict]] = {}
     for s in topo.services:
-        groups.setdefault(s["group"], []).append(s)
-    for group, svcs in groups.items():
+        if s["id"] in contexts or s["group"] == "Observability":
+            continue
+        shared.setdefault(s["group"], []).append(s)
+    for group, svcs in shared.items():
         lines.append(f"  subgraph {group}")
         for s in svcs:
             lines.append(f'    {_safe(s["id"])}["{s["label"]}"]')
         lines.append("  end")
 
-    lines.append("  subgraph Data")
+    # One subgraph per bounded context, holding its api + its Postgres.
     for s in topo.services:
+        if s["id"] not in contexts:
+            continue
+        ctx = _safe(s["id"])
+        lines.append(f'  subgraph ctx_{ctx}["{s["id"]}"]')
+        lines.append(f'    {ctx}["{s["label"]}"]')
         if db.get(s["id"]):
-            lines.append(f'    {_safe(s["id"])}DB[("{s["id"]} pg")]')
-    lines.append("  end")
+            lines.append(f'    {ctx}DB[("{s["id"]} pg")]')
+            lines.append(f"    {ctx} --> {ctx}DB")
+        lines.append("  end")
 
     for e in topo.cluster_edges:
         lines.append(f'  {_safe(e["from"])} -->|{e["label"]}| {_safe(e["to"])}')
-    for s in topo.services:
-        if db.get(s["id"]):
-            lines.append(f'  {_safe(s["id"])} --> {_safe(s["id"])}DB')
     return "\n".join(lines)
 
 
