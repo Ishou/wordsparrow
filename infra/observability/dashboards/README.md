@@ -13,6 +13,7 @@ push-from-CI; ADR-0027).
 | ---- | ----- | -------------- |
 | [`files/nats-jetstream.json`](./files/nats-jetstream.json) | `NATS / JetStream` | `jetstream_*`, `gnatsd_*` (prometheus-nats-exporter, scraped per ADR-0049 / ADR-0027) |
 | [`files/api-services-red.json`](./files/api-services-red.json) | `API Services — RED` | server spans (traces datasource): `serviceName`, `httpRoute`, `responseStatusCode`, `durationNano`, `hasError` |
+| [`files/cluster-host-health.json`](./files/cluster-host-health.json) | `Cluster / Host Health` | k8s-infra metrics: `k8s.volume.*` (PVC disk), `k8s.node.cpu/memory/filesystem.*`, `k8s.container.restarts/ready`, `k8s.node.condition_*` |
 
 ## How it reconciles
 
