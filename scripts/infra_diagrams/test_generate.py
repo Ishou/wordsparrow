@@ -41,6 +41,7 @@ def test_load_charts_discovers_names_and_kinds(tmp_path: Path) -> None:
     assert charts["wordsparrow-api"].kind == "api"
     assert charts["bliss-game-api-db"].kind == "db"
     assert charts["platform"].kind == "infra"
+    assert charts["bliss-nats"].kind == "infra"
 
 
 def test_cnpg_detection_excludes_clusterissuer(tmp_path: Path) -> None:
@@ -56,3 +57,5 @@ def test_derive_apps_attaches_db_from_sibling_db_chart(tmp_path: Path) -> None:
     assert apps["grid"].has_db is True   # inline cnpg
     assert apps["game"].has_db is True   # cnpg in sibling db-chart
     assert apps["game"].kind == "api"
+    assert apps["bliss-nats"].kind == "infra"
+    assert apps["bliss-nats"].has_db is False
