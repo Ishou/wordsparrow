@@ -56,6 +56,87 @@ Generated TypeScript types are checked in and gated by drift CI.
 All infrastructure is declarative and version-controlled. Nothing is
 clicked in a console.
 
+<!-- INFRA-DIAGRAM:cluster START -->
+```mermaid
+flowchart LR
+  subgraph Edge
+    ingress["ingress-nginx"]
+    certmanager["cert-manager"]
+  end
+  subgraph APIs
+    grid["grid-api"]
+    game["game-api"]
+    identity["identity-api"]
+    survey["survey-api"]
+  end
+  subgraph Messaging
+    nats["NATS JetStream"]
+  end
+  subgraph Observability
+    signoz["SigNoz"]
+    matomo["Matomo"]
+  end
+  subgraph Data
+    gridDB[("grid pg")]
+    gameDB[("game pg")]
+    identityDB[("identity pg")]
+    surveyDB[("survey pg")]
+  end
+  ingress -->|HTTP| grid
+  ingress -->|HTTP/WS| game
+  ingress -->|HTTP| identity
+  ingress -->|HTTP| survey
+  grid -->|publishes| nats
+  identity -->|publishes| nats
+  game -->|subscribes| nats
+  grid -->|otel| signoz
+  game -->|otel| signoz
+  identity -->|otel| signoz
+  survey -->|otel| signoz
+  grid --> gridDB
+  game --> gameDB
+  identity --> identityDB
+  survey --> surveyDB
+```
+<!-- INFRA-DIAGRAM:cluster END -->
+
+<!-- INFRA-DIAGRAM:cloud START -->
+```mermaid
+flowchart LR
+  subgraph CI
+    deploy_api_k8s["deploy-api-k8s.yml"]
+    deploy_frontend["deploy-frontend.yml"]
+  end
+  subgraph Cloud
+    pages["Cloudflare Pages"]
+    pagesdomain["Pages custom domain"]
+    dns["Cloudflare DNS"]
+    k3s["Hetzner k3s"]
+  end
+  deploy_frontend -->|wrangler| pages
+  deploy_api_k8s -->|helm upgrade| k3s
+  pages -->|served via| dns
+```
+<!-- INFRA-DIAGRAM:cloud END -->
+
+<!-- INFRA-DIAGRAM:flow START -->
+```mermaid
+flowchart LR
+  browser["Browser"]
+  ingress["ingress-nginx"]
+  grid["grid-api"]
+  game["game-api"]
+  nats["NATS JetStream"]
+  signoz["SigNoz"]
+  browser -->|HTTPS| ingress
+  ingress -->|REST| grid
+  ingress -->|WSS| game
+  grid -->|PuzzleReady event| nats
+  nats -->|consumes| game
+  game -->|traces| signoz
+```
+<!-- INFRA-DIAGRAM:flow END -->
+
 - **Cloud + DNS** — OpenTofu manages a self-hosted Hetzner k3s cluster
   ([ADR-0009](./docs/adr/0009-self-managed-k8s-deployment.md),
   [ADR-0011](./docs/adr/0011-opentofu-for-k8s-subtree.md)), Cloudflare
@@ -120,6 +201,25 @@ Off-the-shelf APIs don't clear that bar reliably; the project ships a
 fully-local pipeline that runs on the maintainer's Mac and produces a
 versioned CSV the JVM worker consumes. Pipeline lives in
 [`scripts/clue_generation/`](./scripts/clue_generation/).
+
+<!-- INFRA-DIAGRAM:clue-pipeline START -->
+```mermaid
+flowchart LR
+  s0["Curated FR corpus"]
+  s1["mlx-lm LoRA / DPO generator"]
+  s2["CamemBERT cross-encoder filter"]
+  s3["validate_clue gates"]
+  s4["versioned CSV"]
+  s5["words-clues-worker"]
+  s6["grid corpus"]
+  s0 --> s1
+  s1 --> s2
+  s2 --> s3
+  s3 --> s4
+  s4 --> s5
+  s5 --> s6
+```
+<!-- INFRA-DIAGRAM:clue-pipeline END -->
 
 - **Generator** — mlx-lm LoRA / DPO fine-tunes of
   `c4ai-command-r-08-2024-4bit` on a curated French clue corpus.
