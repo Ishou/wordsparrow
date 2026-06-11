@@ -71,13 +71,15 @@ and approved):
 
 - **Portable (ships unconditionally):** all zone and node tints. These use
   Mermaid `classDef` / `class` / `style` directives, which GitHub renders.
-- **Conditional (verify first):** the rounded label boxes. Padding and
-  border-radius require injected CSS (`themeCSS`), and GitHub renders Mermaid
-  at a stricter `securityLevel` that likely strips it. **Before committing
-  the label rounding, push a one-diagram test (gist or throwaway PR) and
-  confirm it renders on GitHub in both modes.** If stripped, drop the
-  rounding and keep Mermaid's default square label boxes — everything else
-  is unaffected.
+- **Not shipped — rounded label boxes (probe failed 2026-06-11).** Padding and
+  border-radius on label boxes require injected CSS (`themeCSS`). A throwaway
+  probe diagram pushed to GitHub confirmed GitHub strips `themeCSS` (its
+  stricter `securityLevel`), so the rounding does not render. No portable
+  alternative exists: `edgeLabelBackground` (the one honored label theme
+  variable) sets only color, not padding/radius; `linkStyle` styles the arrow
+  line, not the label; modeling labels as rounded intermediate nodes is a
+  structural rewrite, not cosmetic. Decision: label boxes stay Mermaid's
+  default; only the zone/node tints ship.
 
 ### Implementation surface
 
