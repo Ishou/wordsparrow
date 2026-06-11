@@ -1,0 +1,194 @@
+{
+  "title": "Cluster / Host Health",
+  "description": "Node + PVC + pod health for the k3s cluster (ADR-0009/0038). PVC disk usage is the headline — the ClickHouse volume filling to 100% caused a 27-day telemetry outage on 2026-05-15. First draft — refine through usage.",
+  "tags": ["k8s", "infra", "host"],
+  "version": "v5",
+  "uploadedGrafana": false,
+  "variables": {},
+  "panelMap": {},
+  "layout": [
+    {"i": "0a751a03-0000-4000-8000-000000000001", "x": 0, "y": 0, "w": 12, "h": 7, "moved": false, "static": false},
+    {"i": "0a751a03-0000-4000-8000-000000000002", "x": 0, "y": 7, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a03-0000-4000-8000-000000000003", "x": 6, "y": 7, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a03-0000-4000-8000-000000000004", "x": 0, "y": 13, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a03-0000-4000-8000-000000000005", "x": 6, "y": 13, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a03-0000-4000-8000-000000000006", "x": 0, "y": 19, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a03-0000-4000-8000-000000000007", "x": 6, "y": 19, "w": 6, "h": 6, "moved": false, "static": false}
+  ],
+  "widgets": [
+    {
+      "id": "0a751a03-0000-4000-8000-000000000001",
+      "title": "PVC disk usage %",
+      "description": "Per-PVC used percentage (capacity - available)/capacity. The ClickHouse PVC filling to 100% caused the 2026-05-15 outage; watch this.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 100,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [{"expression": "(B-A)*100/B", "legend": "{{k8s.persistentvolumeclaim.name}}", "queryName": "F1", "disabled": false}],
+          "queryData": [
+            {"dataSource": "metrics", "queryName": "A", "expression": "A", "disabled": true, "stepInterval": 60, "aggregations": [{"metricName": "k8s.volume.available", "temporality": "", "timeAggregation": "avg", "spaceAggregation": "avg", "reduceTo": "avg"}], "groupBy": [{"dataType": "string", "id": "k8s.persistentvolumeclaim.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.persistentvolumeclaim.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "", "limit": null, "orderBy": [], "functions": []},
+            {"dataSource": "metrics", "queryName": "B", "expression": "B", "disabled": true, "stepInterval": 60, "aggregations": [{"metricName": "k8s.volume.capacity", "temporality": "", "timeAggregation": "avg", "spaceAggregation": "avg", "reduceTo": "avg"}], "groupBy": [{"dataType": "string", "id": "k8s.persistentvolumeclaim.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.persistentvolumeclaim.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "", "limit": null, "orderBy": [], "functions": []}
+          ]
+        },
+        "id": "0a751a03-0000-4000-8000-0000000000a1"
+      }
+    },
+    {
+      "id": "0a751a03-0000-4000-8000-000000000002",
+      "title": "Node CPU utilization %",
+      "description": "k8s.node.cpu.usage / allocatable_cpu per node.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 100,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [{"expression": "A*100/B", "legend": "{{k8s.node.name}}", "queryName": "F1", "disabled": false}],
+          "queryData": [
+            {"dataSource": "metrics", "queryName": "A", "expression": "A", "disabled": true, "stepInterval": 60, "aggregations": [{"metricName": "k8s.node.cpu.usage", "temporality": "", "timeAggregation": "avg", "spaceAggregation": "avg", "reduceTo": "avg"}], "groupBy": [{"dataType": "string", "id": "k8s.node.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.node.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "", "limit": null, "orderBy": [], "functions": []},
+            {"dataSource": "metrics", "queryName": "B", "expression": "B", "disabled": true, "stepInterval": 60, "aggregations": [{"metricName": "k8s.node.allocatable_cpu", "temporality": "", "timeAggregation": "avg", "spaceAggregation": "avg", "reduceTo": "avg"}], "groupBy": [{"dataType": "string", "id": "k8s.node.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.node.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "", "limit": null, "orderBy": [], "functions": []}
+          ]
+        },
+        "id": "0a751a03-0000-4000-8000-0000000000a2"
+      }
+    },
+    {
+      "id": "0a751a03-0000-4000-8000-000000000003",
+      "title": "Node memory utilization %",
+      "description": "k8s.node.memory.usage / allocatable_memory per node.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 100,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [{"expression": "A*100/B", "legend": "{{k8s.node.name}}", "queryName": "F1", "disabled": false}],
+          "queryData": [
+            {"dataSource": "metrics", "queryName": "A", "expression": "A", "disabled": true, "stepInterval": 60, "aggregations": [{"metricName": "k8s.node.memory.usage", "temporality": "", "timeAggregation": "avg", "spaceAggregation": "avg", "reduceTo": "avg"}], "groupBy": [{"dataType": "string", "id": "k8s.node.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.node.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "", "limit": null, "orderBy": [], "functions": []},
+            {"dataSource": "metrics", "queryName": "B", "expression": "B", "disabled": true, "stepInterval": 60, "aggregations": [{"metricName": "k8s.node.allocatable_memory", "temporality": "", "timeAggregation": "avg", "spaceAggregation": "avg", "reduceTo": "avg"}], "groupBy": [{"dataType": "string", "id": "k8s.node.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.node.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "", "limit": null, "orderBy": [], "functions": []}
+          ]
+        },
+        "id": "0a751a03-0000-4000-8000-0000000000a3"
+      }
+    },
+    {
+      "id": "0a751a03-0000-4000-8000-000000000004",
+      "title": "Node filesystem usage %",
+      "description": "Root filesystem used percentage per node (k8s.node.filesystem.usage / capacity).",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 100,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [{"expression": "A*100/B", "legend": "{{k8s.node.name}}", "queryName": "F1", "disabled": false}],
+          "queryData": [
+            {"dataSource": "metrics", "queryName": "A", "expression": "A", "disabled": true, "stepInterval": 60, "aggregations": [{"metricName": "k8s.node.filesystem.usage", "temporality": "", "timeAggregation": "avg", "spaceAggregation": "avg", "reduceTo": "avg"}], "groupBy": [{"dataType": "string", "id": "k8s.node.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.node.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "", "limit": null, "orderBy": [], "functions": []},
+            {"dataSource": "metrics", "queryName": "B", "expression": "B", "disabled": true, "stepInterval": 60, "aggregations": [{"metricName": "k8s.node.filesystem.capacity", "temporality": "", "timeAggregation": "avg", "spaceAggregation": "avg", "reduceTo": "avg"}], "groupBy": [{"dataType": "string", "id": "k8s.node.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.node.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "", "limit": null, "orderBy": [], "functions": []}
+          ]
+        },
+        "id": "0a751a03-0000-4000-8000-0000000000a4"
+      }
+    },
+    {
+      "id": "0a751a03-0000-4000-8000-000000000005",
+      "title": "Container restarts (new, per interval)",
+      "description": "Increase in the cumulative restart counter per step — reads 0 at steady state; a crashloop shows as a repeated staircase. Lifetime totals are intentionally NOT shown (a flat plateau of old restarts reads as a false alarm).",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [],
+          "queryData": [
+            {"dataSource": "metrics", "queryName": "A", "expression": "A", "disabled": false, "stepInterval": 60, "aggregations": [{"metricName": "k8s.container.restarts", "temporality": "", "timeAggregation": "increase", "spaceAggregation": "sum", "reduceTo": "sum"}], "groupBy": [{"dataType": "string", "id": "k8s.pod.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.pod.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "{{k8s.pod.name}}", "limit": null, "orderBy": [], "functions": []}
+          ]
+        },
+        "id": "0a751a03-0000-4000-8000-0000000000a5"
+      }
+    },
+    {
+      "id": "0a751a03-0000-4000-8000-000000000006",
+      "title": "Container readiness by pod",
+      "description": "k8s.container.ready (1 = ready, 0 = not ready). Dips below 1 indicate unhealthy containers.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 1,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [],
+          "queryData": [
+            {"dataSource": "metrics", "queryName": "A", "expression": "A", "disabled": false, "stepInterval": 60, "aggregations": [{"metricName": "k8s.container.ready", "temporality": "", "timeAggregation": "min", "spaceAggregation": "min", "reduceTo": "min"}], "groupBy": [{"dataType": "string", "id": "k8s.pod.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.pod.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "{{k8s.pod.name}}", "limit": null, "orderBy": [], "functions": []}
+          ]
+        },
+        "id": "0a751a03-0000-4000-8000-0000000000a6"
+      }
+    },
+    {
+      "id": "0a751a03-0000-4000-8000-000000000007",
+      "title": "Node conditions",
+      "description": "Node ready (1 = healthy) and pressure signals (1 = under pressure) per node.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [],
+          "queryData": [
+            {"dataSource": "metrics", "queryName": "A", "expression": "A", "disabled": false, "stepInterval": 60, "aggregations": [{"metricName": "k8s.node.condition_ready", "temporality": "", "timeAggregation": "min", "spaceAggregation": "min", "reduceTo": "min"}], "groupBy": [{"dataType": "string", "id": "k8s.node.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.node.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "{{k8s.node.name}} ready", "limit": null, "orderBy": [], "functions": []},
+            {"dataSource": "metrics", "queryName": "B", "expression": "B", "disabled": false, "stepInterval": 60, "aggregations": [{"metricName": "k8s.node.condition_disk_pressure", "temporality": "", "timeAggregation": "max", "spaceAggregation": "max", "reduceTo": "max"}], "groupBy": [{"dataType": "string", "id": "k8s.node.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.node.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "{{k8s.node.name}} disk-pressure", "limit": null, "orderBy": [], "functions": []},
+            {"dataSource": "metrics", "queryName": "C", "expression": "C", "disabled": false, "stepInterval": 60, "aggregations": [{"metricName": "k8s.node.condition_memory_pressure", "temporality": "", "timeAggregation": "max", "spaceAggregation": "max", "reduceTo": "max"}], "groupBy": [{"dataType": "string", "id": "k8s.node.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.node.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "{{k8s.node.name}} mem-pressure", "limit": null, "orderBy": [], "functions": []}
+          ]
+        },
+        "id": "0a751a03-0000-4000-8000-0000000000a7"
+      }
+    }
+  ]
+}
