@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14.6'
       - name: Install deps
         run: pip install -r scripts/helm-enrich/requirements.txt
       - name: Run tests
