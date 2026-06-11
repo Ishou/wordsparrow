@@ -1,7 +1,4 @@
-"""Key-path-aware diff of two Helm default-values trees, with override flags.
-
-Leaves are non-dict values (lists compared whole). Paths are dotted.
-"""
+"""Key-path diff of two Helm default-values trees; lists are treated as leaves."""
 from __future__ import annotations
 
 from dataclasses import dataclass

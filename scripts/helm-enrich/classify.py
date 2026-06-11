@@ -1,11 +1,4 @@
-"""Classify a Renovate PR's bump and parse the single (name, old, new).
-
-Mode A = a subchart dependency version changed in a Chart.yaml.
-Mode B = a container image tag changed in a values.yaml (added in PR 2).
-
-Pure functions over file text; no git/helm/network here so they stay
-unit-testable against fixtures.
-"""
+"""Classify a Renovate PR bump (Mode A: Chart.yaml dep; Mode B: image tag)."""
 from __future__ import annotations
 
 import os

@@ -1,12 +1,4 @@
-"""CLI glue: classify a bump and assemble the JSON context bundle for the agent.
-
-Subcommands:
-  classify  --path --old --new            -> {"mode","name","old","new"}
-  bundle    --bump --registry [--values-old --values-new --overrides ...]
-                                           -> full context bundle JSON
-
-helm/git stay in the workflow shell; this module only transforms text/JSON.
-"""
+"""CLI: classify subcommand emits bump JSON; bundle subcommand emits full context bundle."""
 from __future__ import annotations
 
 import argparse
