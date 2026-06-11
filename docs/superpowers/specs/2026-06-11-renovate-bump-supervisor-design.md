@@ -354,11 +354,48 @@ missing/weak) and the final merge. Everything between is automated.
        so stale failures don't accumulate.
      - **No `recreateWhen: always`** — it would fight us by reopening the PR we
        just closed. The dashboard is demoted to an incidental ledger.
-7. **§6a-on-Renovate behavior, final answer.** Today §6a runs on Renovate PRs
-   and clobbers (PR #816, which would have disabled it, was closed as the wrong
-   fix). With this pipeline, A/B/C run on the Renovate PR instead — so does §6a
-   still run on Renovate PRs at all, or is it suppressed there in favor of the
-   supervisor (and only runs on the claude PR)?
+7. ✅ **RESOLVED — Step 0 dispatcher + AI gate replace §6a on Renovate PRs.**
+   - **Root-cause invariant: no automated job ever pushes to a `renovate/*`
+     branch.** A/B/C read+comment, D forks. §6a's *fixer* obeys this too. This
+     is the universal fix for the #814 clobber — stated once, covers every case.
+   - **§6a is suppressed entirely on `renovate/*` branches** (one `if`
+     excluding `startsWith(head_ref, 'renovate/')`). The real §6a still runs on
+     D's `claude/<dep>-vN` PR and every other PR. #816 was right in instinct
+     (don't let §6a clobber Renovate) but premature — it removed §6a with
+     *nothing to replace it*. Now the pipeline replaces it, so suppression is
+     safe.
+   - **Step 0 — the deterministic dispatcher (no AI).** Runs on *every*
+     `renovate/*` PR; reads Renovate's update metadata via the `packageRules`
+     label from #1 (Step 0 is that label's consumer). It *routes*; the
+     trivial-bump majority costs **zero tokens** (AI only ignites at Agent A).
+     This is what "replaces §6a on Renovate PRs."
+   - **The AI gate (A-lite) for non-major bumps.** Premise correction from #1:
+     with `automerge:false` a human still *clicks* merge on minor/patch, but
+     that's a **rubber-stamp, not a review** — so "the human gate catches it"
+     was overclaimed. The else-branch therefore gets a *gating* (not advisory)
+     cheap **breaking-change smell test**: read the *changelog only* (no
+     codebase), one call. A **green verdict is a silent stamp** (a passing
+     check, no comment) → broad coverage adds cost but **no noise**.
+   - **Control flow:**
+     ```
+     if   [deterministic: major / 0.x-major(x position)]  → pipeline (A→B→C→D)
+     elif [AI gate: breaking, or changelog-exists-but-ambiguous] → pipeline (loop-back)
+     else [minor/patch + AI gate green]                   → stamp mergeable
+     ```
+   - **No-doc response scales with severity** (resolves the no-changelog trap):
+     - **minor/patch + no doc → stamp mergeable.** Lowest risk; semver says no
+       breaking, CI tests are the backstop. Escalating these would flood issues.
+     - **major + no doc → "error" = Gate A escalation → `bump-needs-human`
+       issue** (the actionable path from #5/#6), **not** a bare red-X dead-end.
+       Highest risk + no guidance → a human must look.
+   - **Scope:** the AI gate runs on **minor AND patch** (incl. 0.x's y
+     position). Chosen for blind-spot closure over token cost (tokens are a
+     bonus; green = silent so no noise). Simpler one-bucket rule beats a
+     minor-only tiered split.
+   - **Irreducible residual blind spot:** undocumented **AND** semver-violating
+     **AND** untested. No cheap gate catches that, and escalating every
+     undocumented patch is too costly a "fix." Accepted — far smaller than #1's
+     original hole. See deferred per-dep semver-trust registry (Deferred ideas).
 8. ✅ **RESOLVED — Agent A subsumes `helm-bump-enrich`.** The general supervisor
    absorbs the helm-specific pipeline (it becomes a special case of A), not run
    alongside. See #2.
@@ -378,3 +415,19 @@ missing/weak) and the final merge. Everything between is automated.
 13. **Cost guardrails** — A runs on every major Renovate PR; B/C/D per impacted
     major. Any rate/scope limits to avoid surprise token spend during the lab
     phase?
+
+---
+
+## Deferred ideas (explicitly out of scope now — don't forget)
+
+- **Per-dependency semver-trust registry.** For each direct dep/tool: *is it
+  semver? how well is semver respected/trusted?* Would live alongside today's
+  `infra/tools-upgrade-sources.yaml` registry. **Deferred** (2026-06-12): real
+  curation work for a marginal *core*-pipeline gain — the pipeline works without
+  it. Its actual payoff is **cost-tuning the AI gate** later: a highly-trusted
+  dep + patch → skip the smell test entirely; a known semver-violator →
+  escalate harder. An optimization, not a capability. Priority is a working
+  pipeline first.
+- **Generalize "consumer-rates-producer review/fix" as a reusable pattern.**
+  Here it collapses to one doc-bound loop (#5) so it isn't worth building, but
+  the uniform principle may be valuable in a future session / other repos.
