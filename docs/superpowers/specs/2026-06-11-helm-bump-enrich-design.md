@@ -40,19 +40,36 @@ manual (the operator runs `helm upgrade` after merge, exactly as today).
 
 1. **PR-only.** No prod access, no deploy. Lowest blast radius.
 2. **Augment Renovate, don't replace it.** Renovate is battle-tested at the
-   mechanical bump + lockfile digest + grouping. The agent enriches its open
-   PRs; no duplicate PRs.
-3. **All helm subcharts** in scope from day one. Enrichment quality varies by
+   mechanical bump + lockfile digest. The agent enriches its open PRs; no
+   duplicate PRs.
+3. **One PR per tool.** Un-group Renovate's "helm subcharts" group so each
+   subchart dependency gets its own bump PR. A grouped PR that bumps several
+   tools at once is too complicated for the operator to review, for the values
+   differ to render coherently, and for the override cross-reference to attribute
+   per tool. One bump per PR keeps the detect job, the diff, and the operator's
+   decision each scoped to a single tool. (`signoz` and `k8s-infra` version
+   independently, so they remain separate PRs — that is the desired behavior.)
+4. **All helm subcharts** in scope from day one. Enrichment quality varies by
    how good each upstream's release docs are; the design degrades gracefully
    when docs are missing (see Error handling).
 4. **Event-driven + cron safety net.** Enrich on `pull_request: opened` within
    minutes; a daily cron sweeps open renovate helm PRs missing the enrichment
    marker so nothing is dropped.
 5. **Split engine: deterministic core + scoped agent.** The mechanical parts
-   (version delta, upstream values diff) are testable shell; the LLM is confined
-   to prose synthesis from a fetched source-of-truth URL — honoring CLAUDE.md's
-   "fetch a known-working example, don't synthesize from memory" rule.
-6. **Short ADR.** This is a standing automation whose output the maintainer
+   (version delta, upstream values diff, override cross-reference) are testable
+   shell; the LLM is confined to prose synthesis from a fetched source-of-truth
+   URL — honoring CLAUDE.md's "fetch a known-working example, don't synthesize
+   from memory" rule.
+6. **Key-path-aware values diff.** The differ reports added / removed / changed
+   default keys between the old and new upstream `values.yaml` (not a raw text
+   diff), so the operator sees a structured list of what moved.
+7. **Override cross-reference.** For each changed/removed upstream default key,
+   flag whether the repo pins that key in the chart's `values-prod.yaml` (and
+   `values.yaml` / `values-local.yaml` where present). An upstream default change
+   on a key the repo overrides is the highest-signal item — it may be a no-op
+   (repo already pins it) or a required reconciliation. This couples the detect
+   job to the override files by design.
+8. **Short ADR.** This is a standing automation whose output the maintainer
    trusts when deciding to merge infra upgrades — judgment-bearing, not just
    plumbing. An ADR records the advise-not-decide posture and the source-registry
    grounding rule.
@@ -73,16 +90,18 @@ Renovate opens renovate/* PR bumping infra/**/Chart.yaml
         └───────────────┬────────────────┘
                         ▼
         Job: detect  (deterministic shell — scripts/helm-enrich/)
-          • diff main:Chart.yaml vs PR-head per dependency → (name, old, new)
-          • helm repo add; helm show values --version OLD / NEW → values diff
+          • diff PR-base Chart.yaml vs PR-head → the single (name, old, new)
+          • helm repo add; helm show values --version OLD / NEW
+          • key-path-aware diff → added/removed/changed default keys
+          • cross-ref changed keys against the chart's values-prod.yaml overrides
           • look up upstream release-notes URL in source registry
           • emit context bundle (JSON)
                         ▼
         Job: enrich  (claude-code-action, scoped allowlist)
-          • WebFetch the registry URL(s) for releases between OLD..NEW
+          • WebFetch the registry URL for releases between OLD..NEW
           • synthesize migration notes (breaking changes, required actions)
-          • render block: version delta + migration notes + values diff
-          • gh pr edit --body: replace content between idempotent markers
+          • render block: version delta + migration notes + keyed values diff
+            (overridden keys flagged) → gh pr edit --body between markers
 ```
 
 The enrich workflow is **advisory, never a required check** — a failure never
@@ -103,15 +122,23 @@ blocks the maintainer from merging the Renovate PR.
 
 ### 2. `detect` job — deterministic core (`scripts/helm-enrich/`)
 The reproducible part, extracted into scripts so it runs identically in CI and
-locally and is unit-testable:
-- Compute bumped `(dependency, old, new)` tuples by comparing
-  `git show <base>:<Chart.yaml>` against the PR head per dependency entry.
-- For each bump: `helm repo add` the dependency's repo, then
-  `helm show values <repo>/<chart> --version OLD` and `--version NEW`, and diff
-  the two upstream default value trees.
+locally and is unit-testable. With one PR per tool the job handles exactly one
+bumped dependency:
+- Identify the single bumped `(dependency, old, new)` by comparing
+  `git show <pr-base-sha>:<Chart.yaml>` against the PR head. If the PR somehow
+  carries more than one bumped dependency (grouping misconfig), process each and
+  render one block per dependency, but the expected case is one.
+- `helm repo add` the dependency's repo, then
+  `helm show values <repo>/<chart> --version OLD` and `--version NEW`.
+- **Key-path-aware diff**: walk both default value trees and emit added /
+  removed / changed leaf keys (dotted path + old/new value), not a raw text diff.
+- **Override cross-reference**: for each changed/removed default key, check
+  whether the chart's `values-prod.yaml` (and `values.yaml` / `values-local.yaml`
+  where present) sets that key; mark it `overridden: true|false` so the operator
+  immediately sees whether the upstream change is a no-op or a reconciliation.
 - Look up the dependency in the source registry to attach a release-notes URL.
-- Emit a JSON context bundle (dependency, old, new, values-diff, source URL,
-  plus a "source missing" flag where applicable).
+- Emit a JSON context bundle (dependency, old, new, keyed values diff with
+  override flags, source URL, plus a "source missing" flag where applicable).
 
 ### 3. Source registry — `infra/tools-upgrade-sources.yaml`
 Maps each subchart dependency to its release-notes location, grounding the LLM
@@ -150,12 +177,18 @@ block, and edits the PR body between idempotent markers:
 Re-runs replace the block, never stack it. Marker presence is what the cron
 sweep checks to decide "already enriched."
 
+### 5. Renovate config edit — `renovate.json`
+Remove the `groupName: "helm subcharts"` rule so each subchart dependency gets
+its own bump PR (one PR per tool). Keep the Monday `schedule` for the helm
+manager. This is what makes the detect job, the values diff, and the operator's
+review each scoped to a single tool.
+
 ## Data flow
 
-`Chart.yaml` version delta + upstream `values.yaml` delta (both deterministic)
-→ bundled with registry release-notes URLs → agent fetches release notes →
-renders one Markdown block → spliced into the existing Renovate PR body between
-markers.
+`Chart.yaml` version delta + key-path-aware upstream `values.yaml` diff with
+override flags (all deterministic) → bundled with the registry release-notes URL
+→ agent fetches release notes → renders one Markdown block → spliced into the
+existing Renovate PR body between markers. One bumped dependency per PR.
 
 ## Error handling
 
@@ -178,7 +211,10 @@ markers.
 - **`scripts/helm-enrich/` deterministic core** gets real unit tests, no mocking
   of `helm`:
   - version-delta parsing from a `Chart.yaml` diff (fixtures),
-  - values-diff rendering from two captured `values.yaml` files,
+  - key-path-aware diff from two captured `values.yaml` files (added / removed /
+    changed leaf keys),
+  - override cross-reference against a fixture `values-prod.yaml` (overridden vs
+    not-overridden key),
   - registry lookup including the missing-entry path.
 - **The LLM enrich step** is not unit-tested (non-deterministic). Validated via
   `workflow_dispatch` against a real open Renovate PR during rollout, and by
@@ -199,15 +235,18 @@ A short ADR records:
 
 Add the ADR to `docs/adr/INDEX.md` in the same PR (per CLAUDE.md).
 
+## Resolved design choices
+
+- **One PR per tool** (Decision 3). The detect job diffs against the PR base SHA
+  and expects a single bumped dependency. Renovate's "helm subcharts" group is
+  removed.
+- **Key-path-aware values diff** (Decision 6), not raw text — needs a small
+  YAML-aware leaf differ in `scripts/helm-enrich/`.
+- **Override cross-reference** (Decision 7): the diff flags each changed/removed
+  upstream default key as overridden-by-repo or not, by reading the chart's
+  `values-prod.yaml` (and sibling values files where present).
+
 ## Open questions for the plan
 
-- Exact `base` ref the detect job diffs against (`origin/main` vs PR base SHA)
-  for robustly identifying the bumped versions across Renovate's grouped PRs
-  (a grouped PR may bump several deps at once — the detect job must handle N
-  bumps per PR, not just one).
-- Whether the values diff should be raw (`diff` of two YAMLs) or key-path-aware
-  (added/removed/changed default keys) — the latter reads better but needs a
-  small YAML-aware differ.
-- Whether to also surface, alongside the upstream-default diff, a note when a
-  changed default key is one the repo overrides in `values-prod.yaml`
-  (highest-signal for the operator, but couples detect to the override files).
+- Confirm the source-registry release-notes URLs are the ones to fetch — matomo
+  (bitnami chart CHANGELOG) and nats (`nats-io/k8s`) are the least certain.
