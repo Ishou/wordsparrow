@@ -38,6 +38,27 @@ result is a **reusable, fully-CI-native pipeline** other (larger) repos can
 adopt by dropping in workflow files. Optimize for reusability + isolation,
 not for minimal machinery here.
 
+## Rollout strategy: incremental, one dep at a time
+
+The pipeline is **adopted incrementally, dependency by dependency** — not
+switched on for the whole tree at once. This is the overarching strategy, of
+which the "signoz-only" cost guardrail (#13) is just the first step:
+
+1. **Start with `signoz` ONLY.** Scope the pipeline (a `packageRules`/path
+   allowlist) to exactly one dep. Run the real bumps, watch how every stage
+   behaves, refine.
+2. **Expand one dep at a time.** Add the next dep to the allowlist only once the
+   previous one behaves well. Each addition is a deliberate, observed step —
+   we're iterating on the *pipeline's behaviour*, using real deps as the test
+   bed.
+3. **Promote to the whole tree** only once we're satisfied the pipeline works
+   across the variety of deps we've tried. The allowlist is removed (or
+   inverted to a denylist) at that point.
+
+This makes the allowlist a **confidence ratchet**, not just a cost cap: breadth
+grows exactly as fast as trust does. It also means early deps double as the
+live test cases from #10 (signoz first, then helm v4 / #814, …).
+
 ## Converged decisions
 
 1. **A new pipeline of agents — not the existing §6a reviewer.** §6a stays for
@@ -620,10 +641,12 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
     Cost profile: Step 0 = **zero tokens** (deterministic); AI gate = high-
     frequency / low-cost (one changelog-only call per minor/patch); full
     pipeline = low-frequency / high-per-bump (impacted majors only).
-    - **#1 lever — ship on a restricted subset; `signoz` ONLY first.** The
-      pipeline ships scoped to exactly that one dep (`packageRules`/path
-      filter), proves itself end-to-end (the #10 first live test), then expands
-      dep-by-dep once trusted. This is the headline lab-phase guardrail.
+    - **#1 lever — ship on a restricted subset; `signoz` ONLY first.** This is
+      the first step of the **Rollout strategy** section (the allowlist as a
+      *confidence ratchet*): the pipeline ships scoped to exactly one dep
+      (`packageRules`/path filter), proves itself end-to-end (the #10 first live
+      test), then expands **one dep at a time** until promoted to the whole
+      tree. Not just a cost cap — it's how the pipeline is adopted at all.
     - **Throttle at the source.** The pipeline only fires on Renovate PRs, so
       `prConcurrentLimit` *is* the rate limiter — lower it for the lab phase
       (5 → 2–3); reversible one-liner in `renovate.json`.
