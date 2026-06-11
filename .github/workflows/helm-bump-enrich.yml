@@ -9,6 +9,7 @@ on:
     types: [opened, reopened]
     paths:
       - 'infra/**/Chart.yaml'
+      - 'infra/**/values*.yaml'
   workflow_dispatch:
     inputs:
       pr:
@@ -58,16 +59,16 @@ jobs:
           echo "base=$BASE_SHA" >> "$GITHUB_OUTPUT"
           echo "head=$HEAD_SHA" >> "$GITHUB_OUTPUT"
 
-      - name: Find bumped Chart.yaml + build bundle
+      - name: Find bumped file + build bundle
         id: bundle
         run: |
           set -euo pipefail
           BASE=${{ steps.refs.outputs.base }}
           HEAD=${{ steps.refs.outputs.head }}
           REG=infra/tools-upgrade-sources.yaml
-          FILE=$(git diff --name-only "$BASE" "$HEAD" -- 'infra/**/Chart.yaml' | head -n1)
+          FILE=$(git diff --name-only "$BASE" "$HEAD" -- 'infra/**/Chart.yaml' 'infra/**/values*.yaml' | head -n1)
           if [ -z "${FILE:-}" ]; then
-            echo "::notice::no Chart.yaml change; nothing to enrich"
+            echo "::notice::no chart/values change; nothing to enrich"
             echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           git show "$BASE:$FILE" > /tmp/old.yaml
@@ -80,21 +81,28 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           jq -c '.[0]' /tmp/bumps.json > /tmp/bump.json
-          NAME=$(jq -r '.name' /tmp/bump.json)
-          OLD=$(jq -r '.old' /tmp/bump.json)
-          NEW=$(jq -r '.new' /tmp/bump.json)
-          CHART_DIR=$(dirname "$FILE")
-          # Values passed as argv (never interpolated into the code string) to avoid injection.
-          REPO=$(python -c 'import sys,yaml; d=yaml.safe_load(open(sys.argv[1])); print(next(x["repository"] for x in d["dependencies"] if x["name"]==sys.argv[2]))' "$FILE" "$NAME")
-          helm repo add up "$REPO" >/dev/null 2>&1 || helm repo add up "$REPO"
-          helm repo update up >/dev/null
-          helm show values "up/$NAME" --version "$OLD" > /tmp/vold.yaml || : > /tmp/vold.yaml
-          helm show values "up/$NAME" --version "$NEW" > /tmp/vnew.yaml || : > /tmp/vnew.yaml
-          OVERRIDES=$(ls "$CHART_DIR"/values*.yaml 2>/dev/null | tr '\n' ' ')
-          python scripts/helm-enrich/detect.py bundle \
-            --bump /tmp/bump.json --registry "$REG" \
-            --values-old /tmp/vold.yaml --values-new /tmp/vnew.yaml \
-            --overrides $OVERRIDES > bundle.json
+          MODE=$(jq -r '.mode' /tmp/bump.json)
+          if [ "$MODE" = "A" ]; then
+            NAME=$(jq -r '.name' /tmp/bump.json)
+            OLD=$(jq -r '.old' /tmp/bump.json)
+            NEW=$(jq -r '.new' /tmp/bump.json)
+            CHART_DIR=$(dirname "$FILE")
+            # Values passed as argv (never interpolated into the code string) to avoid injection.
+            REPO=$(python -c 'import sys,yaml; d=yaml.safe_load(open(sys.argv[1])); print(next(x["repository"] for x in d["dependencies"] if x["name"]==sys.argv[2]))' "$FILE" "$NAME")
+            helm repo add up "$REPO" >/dev/null 2>&1 || helm repo add up "$REPO"
+            helm repo update up >/dev/null
+            helm show values "up/$NAME" --version "$OLD" > /tmp/vold.yaml || : > /tmp/vold.yaml
+            helm show values "up/$NAME" --version "$NEW" > /tmp/vnew.yaml || : > /tmp/vnew.yaml
+            OVERRIDES=$(ls "$CHART_DIR"/values*.yaml 2>/dev/null | tr '\n' ' ')
+            python scripts/helm-enrich/detect.py bundle \
+              --bump /tmp/bump.json --registry "$REG" \
+              --values-old /tmp/vold.yaml --values-new /tmp/vnew.yaml \
+              --overrides $OVERRIDES > bundle.json
+          else
+            # Mode B: no upstream chart -> no values diff.
+            python scripts/helm-enrich/detect.py bundle \
+              --bump /tmp/bump.json --registry "$REG" > bundle.json
+          fi
           echo "skip=false" >> "$GITHUB_OUTPUT"
           cat bundle.json
 
