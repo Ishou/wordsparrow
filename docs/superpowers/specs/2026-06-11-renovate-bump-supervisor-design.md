@@ -399,9 +399,31 @@ missing/weak) and the final merge. Everything between is automated.
 8. ✅ **RESOLVED — Agent A subsumes `helm-bump-enrich`.** The general supervisor
    absorbs the helm-specific pipeline (it becomes a special case of A), not run
    alongside. See #2.
-9. **Error handling** — A fetch failures; B can't plan; B↔C deadlock; D's
-   implementation fails CI; §6a cap on the claude PR; partial/abandoned claude
-   PRs (and the dropped Renovate update).
+9. ✅ **RESOLVED — error handling funnels to the `bump-needs-human` issue.**
+   **Principle:** every failure funnels to the deduped issue (#6); the Renovate
+   PR stays open until D succeeds, so any failure *before* D loses nothing.
+   | Failure | Handling |
+   |---|---|
+   | **A fetch fails** | Bounded retry on *transient* (timeout/5xx) before concluding "no doc" — a flaky fetch must not trigger Gate A. Total no-doc → severity rule from #7 (major → issue; minor/patch → mergeable). |
+   | **B can't plan (BLOCKED)** | → issue. **B `impacted=false` is NOT an error** — it's the trivial-for-us early-exit → stamp mergeable; must not be read as failure. |
+   | **B↔C deadlock** | Already #4 — cap hit / identical-finding → issue. |
+   | **D's CI fails** | *Not a new path.* The claude PR is a normal PR → the existing §6a fixer cycle repairs it. Escalates only if §6a *also* fails (next row). |
+   | **§6a cap on claude PR** | → issue + leave the PR open for human takeover (a normal PR they can push to). **Never auto-merge a cap-locked PR.** |
+   | **Abandoned claude PR** | Already #6 — the issue is the durable tracker (deduped, auto-closes on eventual merge). |
+   Two cross-cutting additions (not just "→ issue"):
+   - **Infra/job crash catch.** Distinct from "agent concluded it can't
+     proceed": a runner OOM, a `claude-code-action` 5xx, or a GH outage crashes
+     the *job*. Without handling, a crash *after* D closes the Renovate PR =
+     silently-dropped bump (the exact "vanish" we guard against). Every pipeline
+     workflow gets a top-level `if: failure()` step that opens/updates the issue
+     ("infra failed at stage X"). Pre-D crash → Renovate PR intact; post-D crash
+     → abandoned-claude-PR case.
+   - **Idempotency on re-trigger.** Renovate rebases re-fire `pull_request`
+     (synchronize) on the same bump. Guard against duplicate work — D checks for
+     an existing `claude/<dep>-vN` PR before forking; issue dedup is #6.
+     (Concurrency-*key* mechanics → #11; this is just the don't-double-act guard.)
+   - **No auto-resume machinery** — a human picking up the issue takes over the
+     claude PR manually (YAGNI; it's a normal PR).
 10. **Testing** — deterministic parts (schema validation, the trivial/impacted
     classify wiring, fork/close shell) get unit tests; LLM parts validated on a
     real major bump. What's the first real test case (helm v4 #814 is a
