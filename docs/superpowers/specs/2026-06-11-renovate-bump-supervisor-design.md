@@ -534,9 +534,36 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
     - **Optional/deferred:** a small **eval fixture set** (known past bumps +
       expected breaking-change findings) to regression-test A's enrichment.
       Defer unless A's quality proves wobbly.
-11. **Trigger + concurrency** — `pull_request` event types, the major-label
-    filter, concurrency keys, and how A/B/C/D chain (separate workflows vs jobs
-    vs self-re-trigger).
+11. ✅ **RESOLVED — trigger + concurrency. The issue-creation event *is* the
+    dispatch** (no separate `repository_dispatch` needed — the issue-as-spine
+    model already gives decoupling + dispatch-once + rebase-immunity).
+    - **Step 0** (`on: pull_request: [opened, synchronize, reopened]`,
+      job-gated to `startsWith(head_ref, 'renovate/')`): lightweight, runs on
+      *every* renovate PR (the AI gate lives here). **Idempotent** — first
+      checks "does a spine issue already exist for this dep+version?" → if yes,
+      skip (the #9 guard; so `synchronize`/rebases re-hit Step 0 but do nothing).
+      Routes via Renovate's update-type label (#1) + AI gate for minor/patch.
+      - pipeline-eligible → **create the spine issue** (`bump-supervisor` label
+        + a **structured context block in the body**: dep/from/to/PR#).
+      - green minor/patch → stamp mergeable, no issue.
+    - **Pipeline** (`on: issues: [opened, labeled]`, guarded to the
+      `bump-supervisor` label): one run, jobs `A → B1 → C1 → … → D` chained by
+      `needs:` + artifacts (#4/#7). Triggered **exactly once** because Step 0
+      creates the issue once → structurally immune to Renovate rebases
+      ("nothing external re-fires it" becomes a fact, not a hope).
+    - **Context source:** the pipeline reads its context from the **issue body**
+      (the fenced block Step 0 wrote), not a typed payload — fine, since the
+      issue is the spine and must carry that context anyway. **Guard:** a stray
+      `bump-supervisor` label on an unrelated issue with no context block →
+      pipeline no-ops (stops a manual mislabel misfiring).
+    - **Concurrency:** `group: bump-<dep>-<major>`, **`cancel-in-progress:
+      false`** — never kill an in-flight migration (and once D forks, the
+      pipeline is on the `claude/*` branch, decoupled from Renovate's anyway).
+    - **D's claude PR:** a normal PR → existing CI + §6a fire on `claude/*` as
+      usual; §6a stays suppressed on `renovate/*` (#7).
+    - **Chaining:** jobs-in-one-run — *not* a workflow-per-agent, *not*
+      self-re-trigger (confirms #4/#7). The "major-label filter" is Step 0's
+      routing *input*, not a workflow-level gate.
 12. **Naming + layout + ADR** — workflow file names, agent-prompt locations,
     registry location; this standing automation likely warrants its own ADR
     (sibling to 0067).
