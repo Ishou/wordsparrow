@@ -601,9 +601,19 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
         one-view worklist filter ("everything that needs me") across all kinds,
         and is reusable by any future escalating automation. The base label
         supplies the "needs-human *for what*" context.
-      - **No separate provenance umbrella** — OR the two kind-labels for an "all
-        pipeline issues" view (keeps the lean 3-label scheme). **Dedup key (#6)
-        is now `breaking-bump` + dep.**
+      - *Origin* (umbrella): **`ai-driven`** — marks the issue as
+        machine-generated. Gives the "all pipeline issues" view the kind-labels
+        alone couldn't, *and* is a **repo-wide origin convention** (intended to
+        be retrofitted to other AI automations — §6a, future ones — so "show me
+        everything a machine touched" becomes a portfolio-wide transparency
+        filter, fitting the AI-fleet repo, ADR-0001). **Caveat:** it only earns
+        its keep if adopted repo-wide; if *only* this pipeline sets it, it's
+        redundant with OR-ing the kind-labels. It is **not** the dedup key.
+      - **Dedup key (#6) stays `breaking-bump` + dep** (kind + dep), not the
+        `ai-driven` umbrella.
+      - **Final label set (4 labels, 3 axes):** `ai-driven` (origin) ·
+        `breaking-bump` / `post-bump-enhancement` (kind) · `needs-human`
+        (cumulative status).
 13. **Cost guardrails** — A runs on every major Renovate PR; B/C/D per impacted
     major. Any rate/scope limits to avoid surprise token spend during the lab
     phase?
