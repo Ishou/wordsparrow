@@ -250,8 +250,38 @@ missing/weak) and the final merge. Everything between is automated.
    }
    ```
    (Exact field names finalize in the plan; the *shape* above is the decision.)
-4. **B↔C loop mechanics** — exact cap value, convergence/terminator criteria,
-   and what "escalate to human" looks like concretely (label? issue? comment?).
+4. ✅ **RESOLVED — B↔C plan-loop mechanics.**
+   **Framing:** the plan is the **backbone** of the whole pipeline — the loop's
+   job is a *neat, complete, grounded plan*, not minimal rounds. Token/time
+   savings are a **bonus, not a priority**; the priority is a **working
+   major-bump pipeline**. (This lens governs the remaining questions too.)
+   - **Inspire from §6a, don't inherit it.** B↔C reviews a **plan document**,
+     not a code diff — so none of §6a's `synchronize` comment-re-trigger
+     machinery (and its cap-inflation / self-trigger footguns) is reused. We
+     borrow only the *shape*: cycle-until-approved + identical-finding stop.
+   - **Self-contained bounded loop, one workflow run.** B and C run as
+     alternating **jobs within a single run** (fresh context each → isolation
+     preserved), passing `plan.json` / `findings.json` between them via
+     artifacts. No per-push re-trigger exists → **cap-inflation is structurally
+     impossible**. That's the payoff of not inheriting §6a.
+   - **Cap = 3 rounds** (B→C up to ×3), unrolled as conditional jobs. Enough
+     iteration for C to drive the plan to complete-and-grounded; the cap exists
+     to avoid *excess* refinement, not to save tokens.
+   - **C's output:** `{ approved: bool, findings: [...] }`. First
+     `approved:true` short-circuits remaining rounds → dispatch D.
+   - **C's mandate is NARROW — completeness + grounding vs A's schema only.**
+     "Does the plan cover every breaking-change / migration step from A, and
+     does each plan step reference a real file?" **Not** "is this good code?" —
+     code correctness is §6a's job on D's diff. If C drifts into code-quality
+     it just re-litigates §6a downstream and becomes ceremony.
+   - **Identical-finding terminator:** if round N's findings == round N-1's, B
+     is genuinely stuck → stop early + escalate (a safety net, not a
+     token-saver).
+   - **Escalation (cap hit or stuck):** label `bump-needs-human` (reuse Gate
+     A's label) + comment summarizing unresolved findings → STOP. Never
+     auto-proceed to D.
+   - **On approval:** the run dispatches D (fork `claude/<dep>-vN`, close the
+     Renovate PR, implement, open the claude PR → real §6a on the code).
 5. **Confidence definitions** — what counts as `low`/`thin` source confidence
    (Gate A)? Is `planConfidence` purely advisory (per decision 6) or does it
    gate anything?
