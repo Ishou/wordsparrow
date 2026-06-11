@@ -10,7 +10,13 @@ from parse import (
     terraform_resource_types,
 )
 from descriptor import CoherenceError, check_coherence, load_topology
-from render import render_cloud, render_cluster, render_clue, render_flow
+from render import (
+    render_cloud,
+    render_cluster,
+    render_clue,
+    render_flow,
+    render_observability,
+)
 from readme import README_PATH, inject
 
 
@@ -24,6 +30,7 @@ def build_readme(text: str) -> str:
     text = inject(text, "cluster", render_cluster(topo, apps))
     text = inject(text, "cloud", render_cloud(topo))
     text = inject(text, "flow", render_flow(topo))
+    text = inject(text, "observability", render_observability(topo))
     text = inject(text, "clue-pipeline", render_clue(topo))
     return text
 

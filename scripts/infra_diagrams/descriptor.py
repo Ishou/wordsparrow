@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -22,12 +22,16 @@ class Topology:
     flow_edges: list[dict]
     deploy_edges: list[dict]
     clue_pipeline: list[str]
+    observability: dict = field(default_factory=dict)
 
     def service_ids(self) -> set[str]:
         return {s["id"] for s in self.services}
 
     def cloud_ids(self) -> set[str]:
         return {c["id"] for c in self.cloud}
+
+    def observability_node_ids(self) -> set[str]:
+        return {n["id"] for n in self.observability.get("nodes") or []}
 
 
 def load_topology(path: Path = DESCRIPTOR_PATH) -> Topology:
@@ -39,6 +43,7 @@ def load_topology(path: Path = DESCRIPTOR_PATH) -> Topology:
         flow_edges=raw.get("flow_edges") or [],
         deploy_edges=raw.get("deploy_edges") or [],
         clue_pipeline=raw.get("clue_pipeline") or [],
+        observability=raw.get("observability") or {},
     )
 
 
@@ -52,6 +57,7 @@ def check_coherence(
     _check_service_ids(topo, charts)
     _check_tf_coverage(topo, tf_types)
     _check_edge_endpoints(topo, workflow_ids)
+    _check_observability_endpoints(topo)
 
 
 def _check_chart_coverage(topo: Topology, charts: list[Chart]) -> None:
@@ -107,3 +113,11 @@ def _check_edge_endpoints(topo: Topology, workflow_ids: set[str]) -> None:
             raise CoherenceError(f"deploy edge 'from' unknown: {edge['from']!r}")
         if edge["to"] not in valid:
             raise CoherenceError(f"deploy edge 'to' unknown: {edge['to']!r}")
+
+
+def _check_observability_endpoints(topo: Topology) -> None:
+    valid = topo.observability_node_ids()
+    for edge in topo.observability.get("edges") or []:
+        for end in (edge["from"], edge["to"]):
+            if end not in valid:
+                raise CoherenceError(f"observability edge endpoint not a known node: {end!r}")

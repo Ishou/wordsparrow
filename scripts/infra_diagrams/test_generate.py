@@ -268,3 +268,37 @@ def test_build_readme_fills_all_markers_and_is_idempotent() -> None:
     assert once == twice                      # idempotent
     assert "flowchart LR" in once
     assert once.count("```mermaid") == len(readme_mod.MARKER_IDS)
+
+
+_OBS = {
+    "nodes": [
+        {"id": "grid", "label": "grid-api", "group": "Sources"},
+        {"id": "collector", "label": "OTel collector", "group": "Ingest"},
+        {"id": "signoz", "label": "SigNoz", "group": "Backend"},
+    ],
+    "edges": [
+        {"from": "grid", "to": "collector", "label": "otel"},
+        {"from": "collector", "to": "signoz", "label": "ingest"},
+    ],
+}
+
+
+def test_render_observability_groups_sources_and_edges() -> None:
+    out = render.render_observability(_topo(observability=_OBS))
+    assert out.startswith("flowchart LR")
+    assert "subgraph Sources" in out and "subgraph Backend" in out
+    assert 'grid["grid-api"]' in out
+    assert "grid -->|otel| collector" in out
+
+
+def test_observability_coherence_fails_on_dangling_endpoint() -> None:
+    bad = {"nodes": _OBS["nodes"], "edges": [{"from": "grid", "to": "ghost", "label": "x"}]}
+    try:
+        descriptor.check_coherence(
+            _topo(observability=bad), _charts(),
+            {"cloudflare_pages_project"}, {"deploy-frontend"},
+        )
+    except descriptor.CoherenceError as exc:
+        assert "ghost" in str(exc)
+    else:
+        raise AssertionError("expected CoherenceError")

@@ -6,7 +6,7 @@ from parse import REPO_ROOT
 
 README_PATH = REPO_ROOT / "README.md"
 
-MARKER_IDS = ("cluster", "cloud", "flow", "clue-pipeline")
+MARKER_IDS = ("cluster", "cloud", "flow", "observability", "clue-pipeline")
 
 
 def _block(marker: str, mermaid: str) -> str:

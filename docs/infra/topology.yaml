@@ -28,10 +28,6 @@ cluster_edges:
   - { from: grid,     to: nats,     label: publishes }
   - { from: identity, to: nats,     label: publishes }
   - { from: game,     to: nats,     label: subscribes }
-  - { from: grid,     to: signoz,   label: otel }
-  - { from: game,     to: signoz,   label: otel }
-  - { from: identity, to: signoz,   label: otel }
-  - { from: survey,   to: signoz,   label: otel }
 
 # Request/event flow diagram: ordered runtime hops. `browser` is a literal.
 flow_edges:
@@ -40,13 +36,45 @@ flow_edges:
   - { from: ingress, to: game,    label: WSS }
   - { from: grid,    to: nats,    label: PuzzleReady event }
   - { from: nats,    to: game,    label: consumes }
-  - { from: game,    to: signoz,  label: traces }
 
 # `from` may be a deploy-*.yml workflow stem (gated against real workflows) or a cloud/service id.
 deploy_edges:
   - { from: deploy-frontend, to: pages, label: wrangler }
   - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
   - { from: pages,           to: dns,   label: served via }
+
+# Observability TARGET chart (ADR-0027/0033/0038/0040/0041/0032/0030): telemetry + alerts on every module.
+# Hand-maintained, NOT chart-gated — a module missing a source edge here is a gap to address, not an exception.
+observability:
+  nodes:
+    - { id: frontend,    label: frontend (browser SDK), group: Sources }
+    - { id: grid,        label: grid-api,               group: Sources }
+    - { id: game,        label: game-api,               group: Sources }
+    - { id: identity,    label: identity-api,           group: Sources }
+    - { id: survey,      label: survey-api,             group: Sources }
+    - { id: nats,        label: NATS JetStream,         group: Sources }
+    - { id: k8smetrics,  label: k8s pod / node metrics, group: Sources }
+    - { id: otlpingress, label: otlp.wordsparrow.io,    group: Ingest }
+    - { id: collector,   label: OTel collector,         group: Ingest }
+    - { id: signoz,      label: SigNoz,                 group: Backend }
+    - { id: clickhouse,  label: ClickHouse,             group: Backend }
+    - { id: alerts,      label: symptom alert rules,    group: Alerting }
+    - { id: gmail,       label: Gmail SMTP,             group: Alerting }
+    - { id: oauth2,      label: oauth2-proxy,           group: Alerting }
+  edges:
+    - { from: frontend,    to: otlpingress, label: OTLP traces }
+    - { from: otlpingress, to: collector,   label: forward }
+    - { from: grid,        to: collector,   label: otel }
+    - { from: game,        to: collector,   label: otel }
+    - { from: identity,    to: collector,   label: otel }
+    - { from: survey,      to: collector,   label: otel }
+    - { from: nats,        to: collector,   label: metrics }
+    - { from: k8smetrics,  to: collector,   label: metrics }
+    - { from: collector,   to: signoz,      label: ingest }
+    - { from: signoz,      to: clickhouse,  label: store }
+    - { from: signoz,      to: alerts,      label: evaluate }
+    - { from: alerts,      to: gmail,       label: 5xx / errors / staleness }
+    - { from: oauth2,      to: signoz,      label: gates admin UI }
 
 # Hand-maintained pipeline stages NOT coherence-gated against scripts/clue_generation/.
 clue_pipeline:

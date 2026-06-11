@@ -89,10 +89,6 @@ flowchart LR
   grid -->|publishes| nats
   identity -->|publishes| nats
   game -->|subscribes| nats
-  grid -->|otel| signoz
-  game -->|otel| signoz
-  identity -->|otel| signoz
-  survey -->|otel| signoz
   grid --> gridDB
   game --> gameDB
   identity --> identityDB
@@ -127,13 +123,11 @@ flowchart LR
   grid["grid-api"]
   game["game-api"]
   nats["NATS JetStream"]
-  signoz["SigNoz"]
   browser -->|HTTPS| ingress
   ingress -->|REST| grid
   ingress -->|WSS| game
   grid -->|PuzzleReady event| nats
   nats -->|consumes| game
-  game -->|traces| signoz
 ```
 <!-- INFRA-DIAGRAM:flow END -->
 
@@ -172,7 +166,51 @@ Operational guides: [`docs/local-development.md`](./docs/local-development.md),
 
 ## Observability & alerting
 
-OpenTelemetry from day 1, both ends of the stack:
+OpenTelemetry from day 1, both ends of the stack. The diagram below is the
+**target** topology — telemetry and symptom alerts on *every* module. A
+module without a source edge here is a gap to address, not a documented
+exception.
+
+<!-- INFRA-DIAGRAM:observability START -->
+```mermaid
+flowchart LR
+  subgraph Sources
+    frontend["frontend (browser SDK)"]
+    grid["grid-api"]
+    game["game-api"]
+    identity["identity-api"]
+    survey["survey-api"]
+    nats["NATS JetStream"]
+    k8smetrics["k8s pod / node metrics"]
+  end
+  subgraph Ingest
+    otlpingress["otlp.wordsparrow.io"]
+    collector["OTel collector"]
+  end
+  subgraph Backend
+    signoz["SigNoz"]
+    clickhouse["ClickHouse"]
+  end
+  subgraph Alerting
+    alerts["symptom alert rules"]
+    gmail["Gmail SMTP"]
+    oauth2["oauth2-proxy"]
+  end
+  frontend -->|OTLP traces| otlpingress
+  otlpingress -->|forward| collector
+  grid -->|otel| collector
+  game -->|otel| collector
+  identity -->|otel| collector
+  survey -->|otel| collector
+  nats -->|metrics| collector
+  k8smetrics -->|metrics| collector
+  collector -->|ingest| signoz
+  signoz -->|store| clickhouse
+  signoz -->|evaluate| alerts
+  alerts -->|5xx / errors / staleness| gmail
+  oauth2 -->|gates admin UI| signoz
+```
+<!-- INFRA-DIAGRAM:observability END -->
 
 - **Frontend traces** ship to a public OTLP ingest fronted by ingress
   ([ADR-0033](./docs/adr/0033-frontend-otel-public-ingest.md)).

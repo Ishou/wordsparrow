@@ -77,6 +77,23 @@ def render_flow(topo: Topology) -> str:
     return "\n".join(lines)
 
 
+def render_observability(topo: Topology) -> str:
+    nodes = topo.observability.get("nodes") or []
+    edges = topo.observability.get("edges") or []
+    lines = ["flowchart LR"]
+    groups: dict[str, list[dict]] = {}
+    for n in nodes:
+        groups.setdefault(n["group"], []).append(n)
+    for group, ns in groups.items():
+        lines.append(f"  subgraph {group}")
+        for n in ns:
+            lines.append(f'    {_safe(n["id"])}["{n["label"]}"]')
+        lines.append("  end")
+    for e in edges:
+        lines.append(f'  {_safe(e["from"])} -->|{e["label"]}| {_safe(e["to"])}')
+    return "\n".join(lines)
+
+
 def render_clue(topo: Topology) -> str:
     stages = topo.clue_pipeline
     lines = ["flowchart LR"]
