@@ -240,3 +240,18 @@ def test_inject_is_idempotent() -> None:
     once = readme_mod.inject(text, "cluster", "flowchart LR\n  a --> b")
     twice = readme_mod.inject(once, "cluster", "flowchart LR\n  a --> b")
     assert once == twice
+
+
+import generate
+
+
+def test_build_readme_fills_all_markers_and_is_idempotent() -> None:
+    skeleton = "\n".join(
+        f"<!-- INFRA-DIAGRAM:{m} START -->\n<!-- INFRA-DIAGRAM:{m} END -->"
+        for m in readme_mod.MARKER_IDS
+    ) + "\n"
+    once = generate.build_readme(skeleton)
+    twice = generate.build_readme(once)
+    assert once == twice                      # idempotent
+    assert "flowchart LR" in once
+    assert once.count("```mermaid") == len(readme_mod.MARKER_IDS)

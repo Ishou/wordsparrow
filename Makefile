@@ -42,6 +42,9 @@ dev: hooks         ## Start full-stack dev (API hot reload + Vite HMR). FORCE=1 
 cluster-status:    ## kubectl get nodes,pods -A against the local context
 	./scripts/local-cluster.sh status
 
+diagrams:          ## Regenerate README infra diagrams from charts + topology.yaml
+	python3 scripts/infra_diagrams/generate.py
+
 help:              ## Show this help
 	@awk 'BEGIN { FS = ":.*?## "; printf "Targets:\n" } \
 	  /^[a-zA-Z_-]+:.*?## / { printf "  %-20s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
