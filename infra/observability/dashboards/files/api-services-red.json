@@ -1,0 +1,312 @@
+{
+  "title": "API Services — RED",
+  "description": "Rate / Errors / Duration across the four bounded-context APIs (grid, game, identity, survey), computed from 100%-sampled server spans (ADR-0002/0027). First draft — refine through usage.",
+  "tags": ["APM", "RED", "traces"],
+  "version": "v5",
+  "uploadedGrafana": false,
+  "variables": {},
+  "panelMap": {},
+  "layout": [
+    {"i": "0a751a02-0000-4000-8000-000000000001", "x": 0, "y": 0, "w": 4, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a02-0000-4000-8000-000000000002", "x": 4, "y": 0, "w": 4, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a02-0000-4000-8000-000000000003", "x": 8, "y": 0, "w": 4, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a02-0000-4000-8000-000000000004", "x": 0, "y": 6, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a02-0000-4000-8000-000000000005", "x": 6, "y": 6, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a02-0000-4000-8000-000000000006", "x": 0, "y": 12, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a02-0000-4000-8000-000000000007", "x": 6, "y": 12, "w": 6, "h": 6, "moved": false, "static": false}
+  ],
+  "widgets": [
+    {
+      "id": "0a751a02-0000-4000-8000-000000000001",
+      "title": "Request rate by service",
+      "description": "Server-span throughput per service (req/s).",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [],
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "stepInterval": 60,
+              "aggregations": [{"expression": "rate()"}],
+              "groupBy": [{"dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag"}],
+              "filter": {"expression": "spanKind = 'Server'"},
+              "having": {"expression": ""},
+              "legend": "{{serviceName}}",
+              "limit": null,
+              "orderBy": [],
+              "functions": []
+            }
+          ]
+        },
+        "id": "0a751a02-0000-4000-8000-0000000000a1"
+      }
+    },
+    {
+      "id": "0a751a02-0000-4000-8000-000000000002",
+      "title": "Error % by service",
+      "description": "Share of server spans flagged as errors (5xx / span error) per service.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [{"expression": "A*100/B", "legend": "{{serviceName}} error %", "queryName": "F1", "disabled": false}],
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "queryName": "A",
+              "expression": "A",
+              "disabled": true,
+              "stepInterval": 60,
+              "aggregations": [{"expression": "count()"}],
+              "groupBy": [{"dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag"}],
+              "filter": {"expression": "spanKind = 'Server' AND hasError = true"},
+              "having": {"expression": ""},
+              "legend": "errors",
+              "limit": null,
+              "orderBy": [],
+              "functions": []
+            },
+            {
+              "dataSource": "traces",
+              "queryName": "B",
+              "expression": "B",
+              "disabled": true,
+              "stepInterval": 60,
+              "aggregations": [{"expression": "count()"}],
+              "groupBy": [{"dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag"}],
+              "filter": {"expression": "spanKind = 'Server'"},
+              "having": {"expression": ""},
+              "legend": "total",
+              "limit": null,
+              "orderBy": [],
+              "functions": []
+            }
+          ]
+        },
+        "id": "0a751a02-0000-4000-8000-0000000000a2"
+      }
+    },
+    {
+      "id": "0a751a02-0000-4000-8000-000000000003",
+      "title": "p95 latency by service",
+      "description": "95th-percentile server-span duration per service (nanoseconds).",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [],
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "stepInterval": 60,
+              "aggregations": [{"expression": "p95(durationNano)"}],
+              "groupBy": [{"dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag"}],
+              "filter": {"expression": "spanKind = 'Server'"},
+              "having": {"expression": ""},
+              "legend": "{{serviceName}}",
+              "limit": null,
+              "orderBy": [],
+              "functions": []
+            }
+          ]
+        },
+        "id": "0a751a02-0000-4000-8000-0000000000a3"
+      }
+    },
+    {
+      "id": "0a751a02-0000-4000-8000-000000000004",
+      "title": "Top 10 slowest routes (p95)",
+      "description": "Highest p95 duration by service + HTTP route.",
+      "panelTypes": "table",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [],
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "stepInterval": 60,
+              "aggregations": [{"expression": "p95(durationNano)"}],
+              "groupBy": [
+                {"dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag"},
+                {"dataType": "string", "id": "httpRoute--string--tag--true", "isColumn": true, "isJSON": false, "key": "httpRoute", "type": "tag"}
+              ],
+              "filter": {"expression": "spanKind = 'Server' AND httpRoute EXISTS"},
+              "having": {"expression": ""},
+              "legend": "",
+              "limit": 10,
+              "pageSize": 10,
+              "orderBy": [{"columnName": "p95(durationNano)", "order": "desc"}],
+              "functions": []
+            }
+          ]
+        },
+        "id": "0a751a02-0000-4000-8000-0000000000a4"
+      }
+    },
+    {
+      "id": "0a751a02-0000-4000-8000-000000000005",
+      "title": "Top routes by traffic",
+      "description": "Highest-volume service + HTTP route by span count.",
+      "panelTypes": "table",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [],
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "stepInterval": 60,
+              "aggregations": [{"expression": "count()"}],
+              "groupBy": [
+                {"dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag"},
+                {"dataType": "string", "id": "httpRoute--string--tag--true", "isColumn": true, "isJSON": false, "key": "httpRoute", "type": "tag"}
+              ],
+              "filter": {"expression": "spanKind = 'Server' AND httpRoute EXISTS"},
+              "having": {"expression": ""},
+              "legend": "",
+              "limit": 10,
+              "pageSize": 10,
+              "orderBy": [{"columnName": "count()", "order": "desc"}],
+              "functions": []
+            }
+          ]
+        },
+        "id": "0a751a02-0000-4000-8000-0000000000a5"
+      }
+    },
+    {
+      "id": "0a751a02-0000-4000-8000-000000000006",
+      "title": "Error spans by service + route",
+      "description": "Rate of error-flagged server spans, by service + HTTP route.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [],
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "stepInterval": 60,
+              "aggregations": [{"expression": "rate()"}],
+              "groupBy": [
+                {"dataType": "string", "id": "serviceName--string--tag--true", "isColumn": true, "isJSON": false, "key": "serviceName", "type": "tag"},
+                {"dataType": "string", "id": "httpRoute--string--tag--true", "isColumn": true, "isJSON": false, "key": "httpRoute", "type": "tag"}
+              ],
+              "filter": {"expression": "spanKind = 'Server' AND hasError = true"},
+              "having": {"expression": ""},
+              "legend": "{{serviceName}} {{httpRoute}}",
+              "limit": null,
+              "orderBy": [],
+              "functions": []
+            }
+          ]
+        },
+        "id": "0a751a02-0000-4000-8000-0000000000a6"
+      }
+    },
+    {
+      "id": "0a751a02-0000-4000-8000-000000000007",
+      "title": "Requests by status code",
+      "description": "Server-span rate grouped by HTTP response status code.",
+      "panelTypes": "graph",
+      "isStacked": true,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "builder",
+        "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "builder": {
+          "queryFormulas": [],
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "queryName": "A",
+              "expression": "A",
+              "disabled": false,
+              "stepInterval": 60,
+              "aggregations": [{"expression": "rate()"}],
+              "groupBy": [{"dataType": "string", "id": "responseStatusCode--string--tag--true", "isColumn": true, "isJSON": false, "key": "responseStatusCode", "type": "tag"}],
+              "filter": {"expression": "spanKind = 'Server' AND responseStatusCode EXISTS"},
+              "having": {"expression": ""},
+              "legend": "{{responseStatusCode}}",
+              "limit": null,
+              "orderBy": [],
+              "functions": []
+            }
+          ]
+        },
+        "id": "0a751a02-0000-4000-8000-0000000000a7"
+      }
+    }
+  ]
+}
