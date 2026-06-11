@@ -116,7 +116,7 @@ flowchart LR
   deploy_frontend -->|wrangler| pages
   deploy_api_k8s -->|helm upgrade| k3s
   pages -->|custom domain| pagesdomain
-  pages -->|served via| dns
+  dns -->|service subdomains via external-dns| k3s
 ```
 <p align="center"><sub><b>Figure 2.</b> Where the frontend and cluster are hosted, and the CI workflows that deploy them.</sub></p>
 <!-- INFRA-DIAGRAM:cloud END -->
