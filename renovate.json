@@ -106,7 +106,7 @@
       "groupName": "testcontainers"
     },
     {
-      "description": "Helm subcharts under infra/ — one PR per tool (no grouping) so each bump is reviewed and enriched on its own (ADR-0066).",
+      "description": "Helm subcharts under infra/ — one PR per tool (no grouping) so each bump is reviewed and enriched on its own (ADR-0067).",
       "matchManagers": ["helmv3"],
       "schedule": ["before 6am on monday"]
     },

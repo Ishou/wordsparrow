@@ -642,7 +642,7 @@ Create `infra/tools-upgrade-sources.yaml`:
 # Upstream release-notes sources for the helm-bump enrichment workflow
 # (.github/workflows/helm-bump-enrich.yml). {version} = the new chart or
 # image version. Registry coherence: adding a subchart dependency or a
-# pinned image means adding its entry here in the same PR (ADR-0066).
+# pinned image means adding its entry here in the same PR (ADR-0067).
 modeA:
   - name: signoz
     repo: "https://charts.signoz.io"
@@ -747,7 +747,7 @@ name: helm-bump-enrich
 
 # Enriches Renovate's internal-tool bump PRs (advisory; never a required
 # check). Mode A: subchart deps in infra/**/Chart.yaml. Mode B (PR 2) adds
-# image tags in values.yaml. Deploy stays manual (ADR-0066).
+# image tags in values.yaml. Deploy stays manual (ADR-0067).
 
 on:
   pull_request:
@@ -1008,7 +1008,7 @@ Replace with (drop `groupName` so each dependency opens its own PR; keep the Mon
 
 ```json
     {
-      "description": "Helm subcharts under infra/ — one PR per tool (no grouping) so each bump is reviewed and enriched on its own (ADR-0066).",
+      "description": "Helm subcharts under infra/ — one PR per tool (no grouping) so each bump is reviewed and enriched on its own (ADR-0067).",
       "matchManagers": ["helmv3"],
       "schedule": ["before 6am on monday"]
     },
@@ -1026,7 +1026,7 @@ git add renovate.json
 git commit -s -m "chore(infra): one PR per helm subchart (drop grouping)"
 ```
 
-### Task 10: ADR-0066 + registry index
+### Task 10: ADR-0067 + registry index
 
 **Files:**
 - Create: `docs/adr/0066-internal-tool-upgrade-enrichment.md`
@@ -1037,7 +1037,7 @@ git commit -s -m "chore(infra): one PR per helm subchart (drop grouping)"
 Create `docs/adr/0066-internal-tool-upgrade-enrichment.md`:
 
 ```markdown
-# ADR-0066: Internal-tool upgrade-PR enrichment
+# ADR-0067: Internal-tool upgrade-PR enrichment
 
 ## Status
 Accepted
@@ -1080,21 +1080,21 @@ failure never blocks a merge.
 In `docs/adr/INDEX.md`, inside the `## Registry` code block (keep the glob column aligned), add:
 
 ```
-ADR-0066  .github/workflows/helm-bump-enrich*.yml   Enrichment workflow: advisory, ground notes in source registry
-ADR-0066  scripts/helm-enrich/**                     Deterministic enrichment core; pure functions, pytest
-ADR-0066  infra/tools-upgrade-sources.yaml           Source registry; add an entry when adding a subchart/image
+ADR-0067  .github/workflows/helm-bump-enrich*.yml   Enrichment workflow: advisory, ground notes in source registry
+ADR-0067  scripts/helm-enrich/**                     Deterministic enrichment core; pure functions, pytest
+ADR-0067  infra/tools-upgrade-sources.yaml           Source registry; add an entry when adding a subchart/image
 ```
 
 - [ ] **Step 3: Verify the helper resolves the new ADR**
 
-Run: `scripts/adr-context.sh scripts/helm-enrich/detect.py | grep -q 'ADR-0066' && echo ok`
+Run: `scripts/adr-context.sh scripts/helm-enrich/detect.py | grep -q 'ADR-0067' && echo ok`
 Expected: `ok`
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add docs/adr/0066-internal-tool-upgrade-enrichment.md docs/adr/INDEX.md
-git commit -s -m "docs(adr): ADR-0066 internal-tool upgrade enrichment"
+git commit -s -m "docs(adr): ADR-0067 internal-tool upgrade enrichment"
 ```
 
 - [ ] **Step 5: Open PR 1**
@@ -1102,7 +1102,7 @@ git commit -s -m "docs(adr): ADR-0066 internal-tool upgrade enrichment"
 ```bash
 git push -u origin HEAD
 gh pr create --title "feat(infra): helm-bump enrichment (Mode A — subcharts)" \
-  --body "Implements Mode A of the helm-bump enrichment design (docs/superpowers/specs/2026-06-11-helm-bump-enrich-design.md). Enriches Renovate subchart-bump PRs with migration notes + upstream values diff. Advisory, non-blocking. ADR-0066."
+  --body "Implements Mode A of the helm-bump enrichment design (docs/superpowers/specs/2026-06-11-helm-bump-enrich-design.md). Enriches Renovate subchart-bump PRs with migration notes + upstream values diff. Advisory, non-blocking. ADR-0067."
 ```
 
 ---
@@ -1397,7 +1397,7 @@ git commit -s -m "feat(infra): handle image-tag bumps in enrichment workflow (Mo
 
 - [ ] **Step 1: Note Mode B live**
 
-In ADR-0066's `## Consequences`, append:
+In ADR-0067's `## Consequences`, append:
 
 ```markdown
 

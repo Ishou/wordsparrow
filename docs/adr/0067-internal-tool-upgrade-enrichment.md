@@ -1,4 +1,4 @@
-# ADR-0066: Internal-tool upgrade-PR enrichment
+# ADR-0067: Internal-tool upgrade-PR enrichment
 
 ## Status
 Accepted
