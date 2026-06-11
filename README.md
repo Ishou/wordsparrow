@@ -56,6 +56,87 @@ Generated TypeScript types are checked in and gated by drift CI.
 All infrastructure is declarative and version-controlled. Nothing is
 clicked in a console.
 
+<!-- INFRA-DIAGRAM:cluster START -->
+```mermaid
+flowchart LR
+  subgraph Edge
+    ingress["ingress-nginx"]
+    certmanager["cert-manager"]
+  end
+  subgraph Messaging
+    nats["NATS JetStream"]
+  end
+  subgraph ctx_grid["grid"]
+    grid["grid-api"]
+    gridDB[("grid pg")]
+    grid --> gridDB
+  end
+  subgraph ctx_game["game"]
+    game["game-api"]
+    gameDB[("game pg")]
+    game --> gameDB
+  end
+  subgraph ctx_identity["identity"]
+    identity["identity-api"]
+    identityDB[("identity pg")]
+    identity --> identityDB
+  end
+  subgraph ctx_survey["survey"]
+    survey["survey-api"]
+    surveyDB[("survey pg")]
+    survey --> surveyDB
+  end
+  cluepipeline["clue AI pipeline (Modal)"]
+  ingress --> grid
+  ingress --> game
+  ingress --> identity
+  ingress --> survey
+  grid -->|publishes| nats
+  identity -->|publishes| nats
+  nats -->|consumed by| game
+  survey -. manual export .-> cluepipeline
+```
+<p align="center"><sub><b>Figure 1.</b> In-cluster topology grouped by bounded context — each box is one context's API and database. Dashed edges are manual or leave the cluster.</sub></p>
+<!-- INFRA-DIAGRAM:cluster END -->
+
+<!-- INFRA-DIAGRAM:cloud START -->
+```mermaid
+flowchart LR
+  subgraph CI
+    deploy_api_k8s["deploy-api-k8s.yml"]
+    deploy_frontend["deploy-frontend.yml"]
+  end
+  subgraph Cloud
+    pages["Cloudflare Pages"]
+    pagesdomain["Pages custom domain"]
+    dns["Cloudflare DNS"]
+    k3s["Hetzner k3s"]
+  end
+  deploy_frontend -->|wrangler| pages
+  deploy_api_k8s -->|helm upgrade| k3s
+  pages -->|served via| dns
+```
+<p align="center"><sub><b>Figure 2.</b> Where the frontend and cluster are hosted, and the CI workflows that deploy them.</sub></p>
+<!-- INFRA-DIAGRAM:cloud END -->
+
+<!-- INFRA-DIAGRAM:flow START -->
+```mermaid
+flowchart LR
+  browser["Browser"]
+  ingress["ingress-nginx"]
+  grid["grid-api"]
+  game["game-api"]
+  nats["NATS JetStream"]
+  browser -->|HTTPS| ingress
+  browser -->|WSS| ingress
+  ingress --> grid
+  ingress --> game
+  grid -->|PuzzleReady event| nats
+  nats -->|consumed by| game
+```
+<p align="center"><sub><b>Figure 3.</b> How a request and the daily-puzzle event move through the system at runtime.</sub></p>
+<!-- INFRA-DIAGRAM:flow END -->
+
 - **Cloud + DNS** — OpenTofu manages a self-hosted Hetzner k3s cluster
   ([ADR-0009](./docs/adr/0009-self-managed-k8s-deployment.md),
   [ADR-0011](./docs/adr/0011-opentofu-for-k8s-subtree.md)), Cloudflare
@@ -89,9 +170,58 @@ clicked in a console.
 Operational guides: [`docs/local-development.md`](./docs/local-development.md),
 [`docs/deploy.md`](./docs/deploy.md), [`docs/secrets.md`](./docs/secrets.md).
 
-## Observability & alerting
+## Observability, alerting & analytics
 
-OpenTelemetry from day 1, both ends of the stack:
+OpenTelemetry from day 1, both ends of the stack. The diagram below is the
+**target** topology — telemetry and symptom alerts on *every* module (plus the
+RGPD-compliant Matomo analytics path). A module without a source edge here is a
+gap to address, not a documented exception.
+
+<!-- INFRA-DIAGRAM:observability START -->
+```mermaid
+flowchart LR
+  subgraph Sources
+    frontend["frontend (browser SDK)"]
+    grid["grid-api"]
+    game["game-api"]
+    identity["identity-api"]
+    survey["survey-api"]
+    nats["NATS JetStream"]
+    k8smetrics["k8s pod / node metrics"]
+  end
+  subgraph Ingest
+    otlpingress["otlp.wordsparrow.io"]
+    collector["OTel collector"]
+  end
+  subgraph Backend
+    signoz["SigNoz"]
+    clickhouse["ClickHouse"]
+  end
+  subgraph Analytics
+    matomo["Matomo"]
+  end
+  subgraph Alerting
+    alerts["symptom alert rules"]
+    gmail["Gmail SMTP"]
+    oauth2["oauth2-proxy"]
+  end
+  frontend -->|analytics| matomo
+  frontend -->|OTLP traces| otlpingress
+  otlpingress -->|forward| collector
+  grid -->|otel| collector
+  game -->|otel| collector
+  identity -->|otel| collector
+  survey -->|otel| collector
+  nats -->|metrics| collector
+  k8smetrics -->|metrics| collector
+  collector -->|ingest| signoz
+  signoz -->|store| clickhouse
+  signoz -->|evaluate| alerts
+  alerts -->|5xx / errors / staleness| gmail
+  oauth2 -->|gates admin UI| signoz
+```
+<p align="center"><sub><b>Figure 4.</b> Target telemetry, alerting and analytics topology — a module without a source edge here is a gap to address, not an exception.</sub></p>
+<!-- INFRA-DIAGRAM:observability END -->
 
 - **Frontend traces** ship to a public OTLP ingest fronted by ingress
   ([ADR-0033](./docs/adr/0033-frontend-otel-public-ingest.md)).
@@ -112,37 +242,56 @@ OpenTelemetry from day 1, both ends of the stack:
   The admin UI is gated by oauth2-proxy
   ([ADR-0030](./docs/adr/0030-oauth2-proxy-session-cookie.md)).
 
-## Local AI pipeline (clue generation)
+## Clue generation pipeline
 
 French crossword clues need a French model that respects domain rules
 (no stem leak, right register, exact length, valid morphology).
-Off-the-shelf APIs don't clear that bar reliably; the project ships a
-fully-local pipeline that runs on the maintainer's Mac and produces a
-versioned CSV the JVM worker consumes. Pipeline lives in
-[`scripts/clue_generation/`](./scripts/clue_generation/).
+Off-the-shelf APIs don't clear that bar, so the project trains its own
+French clue model on Modal GPU
+([ADR-0057](./docs/adr/0057-cloud-gpu-modal-finetune-lane.md)) through
+human-in-the-loop rounds. The lane lives in
+[`scripts/clue_generation/pipeline_v2/`](./scripts/clue_generation/pipeline_v2/).
 
-- **Generator** — mlx-lm LoRA / DPO fine-tunes of
-  `c4ai-command-r-08-2024-4bit` on a curated French clue corpus.
-  Iterations are config files (`lora_iter*.yaml`) and the most recent
-  shipped weights are stitched at run time.
-- **Filter** — a CamemBERT cross-encoder trained on accept/reject
-  pairs scores candidates; the production pipeline ships the best
-  candidate above threshold and drops the rest.
-- **Lexical layer** — grammalecte for French morphology and POS
-  disambiguation; DBnary as a CC BY-SA lexical data source for
-  synonyms used as direct clue candidates
-  ([ADR-0023](./docs/adr/0023-dbnary-lexical-data-source.md),
-  [ADR-0024](./docs/adr/0024-dbnary-synonym-lemma-as-direct-clue-candidate.md)).
-- **Validation** — Python `validate_clue` enforces the structural gates
-  before scoring (length, no stem leak, lemma vs surface).
-- **Ingestion** — the JVM `words-clues-worker`
-  ([ADR-0013](./docs/adr/0013-words-clues-worker.md)) consumes the
-  shipped CSV and propagates clues into the grid corpus.
+<!-- INFRA-DIAGRAM:clue-pipeline START -->
+```mermaid
+flowchart LR
+  gen["Modal GPU generate (model n-1)"]
+  judge["learned judge — pre-filter"]
+  human["human rates · /contribuer"]
+  winners["winners (qualité=5)"]
+  sft["SFT → model n"]
+  grid["grid corpus"]
+  gen --> judge
+  judge --> human
+  human --> winners
+  winners --> sft
+  sft -. next round .-> gen
+  human -. not yet wired .-> grid
+```
+<p align="center"><sub><b>Figure 5.</b> The Modal clue-generation training loop. Dashed edges are the round restart and the not-yet-wired grid corpus.</sub></p>
+<!-- INFRA-DIAGRAM:clue-pipeline END -->
 
-The pipeline stays local on purpose: licence hygiene (DBnary CC BY-SA),
-zero per-call cost, and tight iteration loops where the maintainer can
-re-train, re-score, and re-ship between commits. Evaluation logbooks
-live in [`docs/eval/`](./docs/eval/).
+- **Generator** — successive fine-tuned model iterations on Modal GPU;
+  each round's model generates candidate clues for the sampled lemmas.
+- **Structural filters** — a deterministic chain in `pipeline_v2` gates
+  candidates before human review: typography, length, French-language
+  detection (lingua), self-reference, tautology, stem-leak, and pleonasm.
+- **Judge** — a learned judge (`filter_8`) scores semantic quality as a
+  pre-filter ahead of human rating (currently shadow-scored). The human
+  rater on `/contribuer` is the reward signal — never the judge — so the
+  generator cannot reward-hack it.
+- **Rounds** — maintainer-rated winners (`qualité=5`) become the SFT
+  training set for the next model iteration; the loop stays human-anchored.
+- **Grid corpus** — not yet fed from this lane. The in-cluster
+  `words-clues-worker` ingestion
+  ([ADR-0013](./docs/adr/0013-words-clues-worker.md)) hasn't been rewired
+  from the old CSV path to the Modal pipeline.
+
+The human stays the reward by design: the judge only triages obvious-bad
+to cut rating load, never grading the data that becomes training winners.
+Data-licence posture (e.g. DBnary CC BY-SA) is governed by
+[ADR-0058](./docs/adr/0058-commercial-data-license-posture.md); evaluation
+logbooks live in [`docs/eval/`](./docs/eval/).
 
 ## Claude Code agent orchestration
 

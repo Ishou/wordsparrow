@@ -94,6 +94,11 @@ The agent has zero conversation history. Every prompt MUST include:
 10. **CI auto-fix loop** (paste-ready snippet — see below).
 11. **Report-back contract**: max ~250 words, branch + PR URL, line counts, test/lint/build outputs, decisions beyond the prompt, blockers.
 
+Additionally, if the PR touches `infra/**`, `terraform/**`, a `*/api/deploy/**`
+chart, or adds a bounded context, instruct the implementer to update
+`docs/infra/topology.yaml` and run `make diagrams`, committing the regenerated
+`README.md` in the same PR — the `readme-diagrams-drift` gate fails otherwise.
+
 #### How to inline ADR context (step 3)
 
 ```sh

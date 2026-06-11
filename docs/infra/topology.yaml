@@ -1,0 +1,107 @@
+# Edges the Helm charts don't encode; nodes parsed from charts. See docs/superpowers/specs/2026-06-11-readme-infra-diagrams-design.md.
+
+# `chart` must match a real Chart.yaml `name:`; `id` must equal the bounded-context dir (enforced by coherence check).
+services:
+  - { id: ingress,     label: ingress-nginx,  chart: platform,            group: Edge }
+  - { id: certmanager, label: cert-manager,   chart: platform,            group: Edge }
+  - { id: grid,        label: grid-api,       chart: wordsparrow-api,     group: APIs }
+  - { id: game,        label: game-api,       chart: bliss-game-api,      group: APIs }
+  - { id: identity,    label: identity-api,   chart: bliss-identity-api,  group: APIs }
+  - { id: survey,      label: survey-api,     chart: bliss-survey-api,    group: APIs }
+  - { id: nats,        label: NATS JetStream, chart: bliss-nats,          group: Messaging }
+  - { id: signoz,      label: SigNoz,         chart: observability,       group: Observability }
+  - { id: matomo,      label: Matomo,         chart: matomo,              group: Observability }
+
+# Grep-gated against terraform/*.tf; use null for nodes with no TF resource (e.g. the k3s node concept).
+cloud:
+  - { id: pages,       label: Cloudflare Pages,    tf_resource: cloudflare_pages_project }
+  - { id: pagesdomain, label: Pages custom domain, tf_resource: cloudflare_pages_domain }
+  - { id: dns,         label: Cloudflare DNS,      tf_resource: cloudflare_dns_record }
+  - { id: k3s,         label: Hetzner k3s,         tf_resource: null }
+
+# Cluster-topology edges (request-protocol detail lives in flow_edges); cluster_external lists non-cluster nodes.
+cluster_external:
+  - { id: cluepipeline, label: clue AI pipeline (Modal) }
+cluster_edges:
+  - { from: ingress,  to: grid }
+  - { from: ingress,  to: game }
+  - { from: ingress,  to: identity }
+  - { from: ingress,  to: survey }
+  - { from: grid,     to: nats, label: publishes }
+  - { from: identity, to: nats, label: publishes }
+  - { from: nats,     to: game, label: consumed by }
+  - { from: survey,   to: cluepipeline, label: manual export, style: dashed }
+
+# Request/event flow diagram: ordered runtime hops. `browser` is a literal.
+flow_edges:
+  - { from: browser, to: ingress, label: HTTPS }
+  - { from: browser, to: ingress, label: WSS }
+  - { from: ingress, to: grid }
+  - { from: ingress, to: game }
+  - { from: grid,    to: nats,    label: PuzzleReady event }
+  - { from: nats,    to: game,    label: consumed by }
+
+# `from` may be a deploy-*.yml workflow stem (gated against real workflows) or a cloud/service id.
+deploy_edges:
+  - { from: deploy-frontend, to: pages, label: wrangler }
+  - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
+  - { from: pages,           to: dns,   label: served via }
+
+# Observability TARGET (ADR-0027/0033/0040): hand-maintained, not chart-gated — missing source edge = gap to fix.
+observability:
+  nodes:
+    - { id: frontend,    label: frontend (browser SDK), group: Sources }
+    - { id: grid,        label: grid-api,               group: Sources }
+    - { id: game,        label: game-api,               group: Sources }
+    - { id: identity,    label: identity-api,           group: Sources }
+    - { id: survey,      label: survey-api,             group: Sources }
+    - { id: nats,        label: NATS JetStream,         group: Sources }
+    - { id: k8smetrics,  label: k8s pod / node metrics, group: Sources }
+    - { id: otlpingress, label: otlp.wordsparrow.io,    group: Ingest }
+    - { id: collector,   label: OTel collector,         group: Ingest }
+    - { id: signoz,      label: SigNoz,                 group: Backend }
+    - { id: clickhouse,  label: ClickHouse,             group: Backend }
+    - { id: matomo,      label: Matomo,                 group: Analytics }
+    - { id: alerts,      label: symptom alert rules,    group: Alerting }
+    - { id: gmail,       label: Gmail SMTP,             group: Alerting }
+    - { id: oauth2,      label: oauth2-proxy,           group: Alerting }
+  edges:
+    - { from: frontend,    to: matomo,      label: analytics }
+    - { from: frontend,    to: otlpingress, label: OTLP traces }
+    - { from: otlpingress, to: collector,   label: forward }
+    - { from: grid,        to: collector,   label: otel }
+    - { from: game,        to: collector,   label: otel }
+    - { from: identity,    to: collector,   label: otel }
+    - { from: survey,      to: collector,   label: otel }
+    - { from: nats,        to: collector,   label: metrics }
+    - { from: k8smetrics,  to: collector,   label: metrics }
+    - { from: collector,   to: signoz,      label: ingest }
+    - { from: signoz,      to: clickhouse,  label: store }
+    - { from: signoz,      to: alerts,      label: evaluate }
+    - { from: alerts,      to: gmail,       label: 5xx / errors / staleness }
+    - { from: oauth2,      to: signoz,      label: gates admin UI }
+
+# One caption per diagram (marker id -> text). Every diagram must have one (enforced in generate.py).
+captions:
+  cluster: "In-cluster topology grouped by bounded context — each box is one context's API and database. Dashed edges are manual or leave the cluster."
+  cloud: "Where the frontend and cluster are hosted, and the CI workflows that deploy them."
+  flow: "How a request and the daily-puzzle event move through the system at runtime."
+  observability: "Target telemetry, alerting and analytics topology — a module without a source edge here is a gap to address, not an exception."
+  clue-pipeline: "The Modal clue-generation training loop. Dashed edges are the round restart and the not-yet-wired grid corpus."
+
+# Round-based training loop (ADR-0057 Modal lane + clue-judge spec). Hand-maintained, not gated.
+clue_pipeline:
+  nodes:
+    - { id: gen,     label: "Modal GPU generate (model n-1)" }
+    - { id: judge,   label: "learned judge — pre-filter" }
+    - { id: human,   label: "human rates · /contribuer" }
+    - { id: winners, label: "winners (qualité=5)" }
+    - { id: sft,     label: "SFT → model n" }
+    - { id: grid,    label: "grid corpus" }
+  edges:
+    - { from: gen,     to: judge }
+    - { from: judge,   to: human }
+    - { from: human,   to: winners }
+    - { from: winners, to: sft }
+    - { from: sft,     to: gen,  label: next round,   style: dashed }
+    - { from: human,   to: grid, label: not yet wired, style: dashed }

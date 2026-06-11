@@ -83,7 +83,8 @@ Workflows in [`.github/workflows/`](./.github/workflows/):
 
 - `ci` — Gradle build, tests, Spotless, Konsist arch tests.
 - `commitlint`, `dco`, `branch-name`, `secret-scan` (gitleaks).
-- `openapi-lint`, `openapi-typescript-drift`, `helm-lint`, `api-chart-lint`.
+- `openapi-lint`, `openapi-typescript-drift`, `helm-lint`, `api-chart-lint`,
+  `readme-diagrams-drift`.
 - `codeql`, `dependency-review`.
 - `claude-code-review` — automated §6a review/fix cycle on PRs.
 
@@ -187,6 +188,12 @@ Full rationale is in MANIFESTO.md.
   `registry-coherence.yml` enforces the load-bearing cases (ADR ↔ INDEX.md,
   new module ↔ this file); the rule is broader than what CI checks, so
   apply it as a habit, not just where the gate forces it.
+  The README infra diagrams are a registry too: `docs/infra/topology.yaml`
+  declares the diagram edges and cloud nodes, and `scripts/infra_diagrams/`
+  regenerates the Mermaid into `README.md`. The `readme-diagrams-drift.yml`
+  gate fails if a new Helm chart or terraform cloud resource is added
+  without updating the descriptor, or if `README.md` is stale. Regenerate
+  with `make diagrams`.
 - **Comments document non-obvious WHY, in one line.** Default to no
   comment. If you write one, it's a single line on a non-obvious
   *why* — a hidden constraint, a subtle invariant, a workaround for a
