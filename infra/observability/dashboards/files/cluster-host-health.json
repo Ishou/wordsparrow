@@ -118,8 +118,8 @@
     },
     {
       "id": "0a751a03-0000-4000-8000-000000000005",
-      "title": "Crashloop (back-off) events by pod",
-      "description": "Count of Kubernetes BackOff events (\"Back-off restarting failed container\") per pod, from the real event stream — not derived from the cumulative restart counter, so it has no scrape-gap artifacts. Lights up only for genuine crash-looping containers; benign graceful restarts produce no BackOff.",
+      "title": "Crashloop (back-off) events",
+      "description": "Kubernetes BackOff events (\"Back-off restarting failed container\") per 5-min interval, from the real event stream. A flat 0 line means no crashloops (healthy); a bump means a container is crash-looping — check the logs for the pod. Uses ORDER BY ... WITH FILL so the baseline is an explicit 0, never \"No Data\".",
       "panelTypes": "graph",
       "isStacked": false,
       "opacity": "1",
@@ -128,15 +128,10 @@
       "softMax": 0,
       "softMin": 0,
       "query": {
-        "queryType": "builder",
+        "queryType": "clickhouse_sql",
         "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
-        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
-        "builder": {
-          "queryFormulas": [],
-          "queryData": [
-            {"dataSource": "logs", "queryName": "A", "expression": "A", "disabled": false, "stepInterval": 60, "aggregations": [{"expression": "count()"}], "groupBy": [{"dataType": "string", "id": "k8s.object.name--string--resource--false", "isColumn": false, "isJSON": false, "key": "k8s.object.name", "type": "resource"}], "filter": {"expression": "k8s.event.reason = 'BackOff'"}, "having": {"expression": ""}, "legend": "{{k8s.object.name}}", "limit": null, "orderBy": [], "functions": []}
-          ]
-        },
+        "builder": {"queryFormulas": [], "queryData": []},
+        "clickhouse_sql": [{"name": "A", "legend": "back-off events", "disabled": false, "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), INTERVAL 300 SECOND) AS ts, count() AS value FROM signoz_logs.logs_v2 WHERE timestamp >= $start_timestamp_ms*1000000 AND timestamp < $end_timestamp_ms*1000000 AND attributes_string['k8s.event.reason'] = 'BackOff' GROUP BY ts ORDER BY ts WITH FILL FROM toStartOfInterval(fromUnixTimestamp64Milli($start_timestamp_ms), INTERVAL 300 SECOND) TO toStartOfInterval(fromUnixTimestamp64Milli($end_timestamp_ms), INTERVAL 300 SECOND) STEP INTERVAL 300 SECOND"}],
         "id": "0a751a03-0000-4000-8000-0000000000a5"
       }
     },
