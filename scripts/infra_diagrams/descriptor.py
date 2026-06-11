@@ -24,6 +24,7 @@ class Topology:
     clue_pipeline: dict
     observability: dict = field(default_factory=dict)
     cluster_external: list[dict] = field(default_factory=list)
+    captions: dict = field(default_factory=dict)
 
     def service_ids(self) -> set[str]:
         return {s["id"] for s in self.services}
@@ -49,6 +50,7 @@ def load_topology(path: Path = DESCRIPTOR_PATH) -> Topology:
         clue_pipeline=raw.get("clue_pipeline") or {},
         observability=raw.get("observability") or {},
         cluster_external=raw.get("cluster_external") or [],
+        captions=raw.get("captions") or {},
     )
 
 

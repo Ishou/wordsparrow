@@ -81,6 +81,14 @@ observability:
     - { from: alerts,      to: gmail,       label: 5xx / errors / staleness }
     - { from: oauth2,      to: signoz,      label: gates admin UI }
 
+# One caption per diagram (marker id -> text). Every diagram must have one (enforced in generate.py).
+captions:
+  cluster: "The k3s cluster by bounded context — each context's API and Postgres, the shared NATS bus and edge infra. Dashed edges leave the cluster or are manual."
+  cloud: "Cloud and deploy topology — Cloudflare Pages and DNS, the Hetzner k3s cluster, and the CI workflows that ship to each."
+  flow: "Runtime request and event flow — the browser's HTTPS/WSS connections through ingress to the APIs, and the PuzzleReady event over NATS JetStream."
+  observability: "Target observability and analytics topology — every module's telemetry into SigNoz on ClickHouse, the symptom-alerting limb, and the Matomo analytics path. A module without a source edge is a gap to address."
+  clue-pipeline: "The Modal clue-generation round loop — generate, judge pre-filter, human rating, winners, and SFT into the next model. Dashed edges are the round restart and the not-yet-wired grid corpus."
+
 # Round-based training loop (ADR-0057 Modal lane + clue-judge spec). Hand-maintained, not gated.
 clue_pipeline:
   nodes:

@@ -27,11 +27,18 @@ def build_readme(text: str) -> str:
     check_coherence(
         topo, charts, terraform_resource_types(), deploy_workflows()
     )
-    text = inject(text, "cluster", render_cluster(topo, apps))
-    text = inject(text, "cloud", render_cloud(topo))
-    text = inject(text, "flow", render_flow(topo))
-    text = inject(text, "observability", render_observability(topo))
-    text = inject(text, "clue-pipeline", render_clue(topo))
+    diagrams = [
+        ("cluster", render_cluster(topo, apps)),
+        ("cloud", render_cloud(topo)),
+        ("flow", render_flow(topo)),
+        ("observability", render_observability(topo)),
+        ("clue-pipeline", render_clue(topo)),
+    ]
+    for number, (marker, mermaid) in enumerate(diagrams, start=1):
+        caption = topo.captions.get(marker)
+        if not caption:
+            raise CoherenceError(f"diagram {marker!r} has no caption in topology.yaml")
+        text = inject(text, marker, mermaid, f"<b>Figure {number}.</b> {caption}")
     return text
 
 

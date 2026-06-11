@@ -264,6 +264,16 @@ def test_inject_replaces_only_between_markers() -> None:
     assert out.endswith("Outro prose.\n")
 
 
+def test_inject_emits_centered_caption() -> None:
+    text = (
+        "<!-- INFRA-DIAGRAM:cluster START -->\n"
+        "<!-- INFRA-DIAGRAM:cluster END -->\n"
+    )
+    out = readme_mod.inject(text, "cluster", "flowchart LR", "<b>Figure 1.</b> A caption")
+    assert '<p align="center"><sub><b>Figure 1.</b> A caption</sub></p>' in out
+    assert out.index("```") < out.index("<p align")  # caption sits below the diagram
+
+
 def test_inject_raises_when_marker_absent() -> None:
     try:
         readme_mod.inject("no markers here", "cluster", "x")
