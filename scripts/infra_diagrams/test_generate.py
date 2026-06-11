@@ -465,3 +465,16 @@ def test_render_observability_zones_and_clickhouse_data() -> None:
     assert "  style Backend fill:#5a655a1f,stroke:#8b9488;" in out
     assert "  classDef data fill:#c8945633,stroke:#a87538;" in out
     assert "  class clickhouse data;" in out
+
+
+def test_render_clue_role_tints() -> None:
+    out = render.render_clue(_topo(clue_pipeline={
+        "nodes": [
+            {"id": "gen", "label": "G"}, {"id": "sft", "label": "S"},
+            {"id": "human", "label": "H"}, {"id": "grid", "label": "C"},
+        ],
+        "edges": [],
+    }))
+    assert "  class gen,sft context;" in out
+    assert "  class human messaging;" in out
+    assert "  class grid data;" in out

@@ -167,6 +167,9 @@ def render_observability(topo: Topology) -> str:
     return "\n".join(lines)
 
 
+_CLUE_ROLE = {"gen": "context", "sft": "context", "human": "messaging", "grid": "data"}
+
+
 def render_clue(topo: Topology) -> str:
     nodes = topo.clue_pipeline.get("nodes") or []
     edges = topo.clue_pipeline.get("edges") or []
@@ -175,4 +178,9 @@ def render_clue(topo: Topology) -> str:
         lines.append(f'  {_safe(n["id"])}["{_label(n["label"])}"]')
     for e in edges:
         lines.append(f"  {_edge(e)}")
+    ordered = [_safe(n["id"]) for n in nodes]
+    role_by_id = {
+        _safe(n["id"]): _CLUE_ROLE[n["id"]] for n in nodes if n["id"] in _CLUE_ROLE
+    }
+    lines.extend(style.flat_node_styles(ordered, role_by_id))
     return "\n".join(lines)
