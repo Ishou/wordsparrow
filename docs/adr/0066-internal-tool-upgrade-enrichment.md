@@ -34,3 +34,6 @@ Easier: upgrades arrive review-ready; image-pinned tools finally get PRs.
 Harder/different: the source registry must be maintained alongside new tools;
 the workflow consumes tokens per bump PR. The enrichment is non-blocking — a
 failure never blocks a merge.
+
+Mode B (image-tag enrichment for matomo + nats) went live in the follow-up PR;
+those tools now receive Renovate bump PRs (previously none) and enrichment.
