@@ -1,0 +1,69 @@
+# Source of truth for infra-diagram EDGES and display grouping.
+# NODES (apps, DBs) are parsed from Helm charts; this file declares the
+# semantic edges and cloud nodes that no chart contains. Coherence-gated
+# by scripts/infra_diagrams (every chart must be referenced here; every
+# chart / tf-resource / workflow referenced here must exist). See
+# docs/superpowers/specs/2026-06-11-readme-infra-diagrams-design.md.
+
+# Display services. `chart` must match a real Chart.yaml `name:`. One
+# chart may expand into several display nodes (platform bundles
+# ingress-nginx + cert-manager). `id` is the Mermaid node id.
+services:
+  - { id: ingress,     label: ingress-nginx,  chart: platform,            group: Edge }
+  - { id: certmanager, label: cert-manager,   chart: platform,            group: Edge }
+  - { id: grid,        label: grid-api,       chart: wordsparrow-api,     group: APIs }
+  - { id: game,        label: game-api,       chart: bliss-game-api,      group: APIs }
+  - { id: identity,    label: identity-api,   chart: bliss-identity-api,  group: APIs }
+  - { id: survey,      label: survey-api,     chart: bliss-survey-api,    group: APIs }
+  - { id: nats,        label: NATS JetStream, chart: bliss-nats,          group: Messaging }
+  - { id: signoz,      label: SigNoz,         chart: observability,       group: Observability }
+  - { id: matomo,      label: Matomo,         chart: matomo,              group: Observability }
+
+# Cloud nodes for the cloud/deploy diagram. `tf_resource` must match a
+# resource type present in terraform/*.tf (grep-gated). Use null for
+# nodes with no terraform resource (e.g. the k3s node concept).
+cloud:
+  - { id: pages,       label: Cloudflare Pages,    tf_resource: cloudflare_pages_project }
+  - { id: pagesdomain, label: Pages custom domain, tf_resource: cloudflare_pages_domain }
+  - { id: dns,         label: Cloudflare DNS,      tf_resource: cloudflare_dns_record }
+  - { id: k3s,         label: Hetzner k3s,         tf_resource: null }
+
+# Cluster-topology edges (event + telemetry edges no chart encodes).
+cluster_edges:
+  - { from: ingress,  to: grid,     label: HTTP }
+  - { from: ingress,  to: game,     label: HTTP/WS }
+  - { from: ingress,  to: identity, label: HTTP }
+  - { from: ingress,  to: survey,   label: HTTP }
+  - { from: grid,     to: nats,     label: publishes }
+  - { from: identity, to: nats,     label: publishes }
+  - { from: game,     to: nats,     label: subscribes }
+  - { from: grid,     to: signoz,   label: otel }
+  - { from: game,     to: signoz,   label: otel }
+  - { from: identity, to: signoz,   label: otel }
+  - { from: survey,   to: signoz,   label: otel }
+
+# Request/event flow diagram: ordered runtime hops. `browser` is a literal.
+flow_edges:
+  - { from: browser, to: ingress, label: HTTPS }
+  - { from: ingress, to: grid,    label: REST }
+  - { from: ingress, to: game,    label: WSS }
+  - { from: grid,    to: nats,    label: PuzzleReady event }
+  - { from: nats,    to: game,    label: consumes }
+  - { from: game,    to: signoz,  label: traces }
+
+# Cloud/deploy diagram edges. `from` may be a deploy-*.yml workflow stem
+# (gated against real workflows) or a cloud/service id.
+deploy_edges:
+  - { from: deploy-frontend, to: pages, label: wrangler }
+  - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
+  - { from: pages,           to: dns,   label: served via }
+
+# Clue AI pipeline stages, rendered as a linear chain.
+clue_pipeline:
+  - Curated FR corpus
+  - mlx-lm LoRA / DPO generator
+  - CamemBERT cross-encoder filter
+  - validate_clue gates
+  - versioned CSV
+  - words-clues-worker
+  - grid corpus

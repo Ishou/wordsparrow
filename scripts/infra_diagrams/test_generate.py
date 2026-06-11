@@ -76,3 +76,80 @@ def test_deploy_workflows(tmp_path: Path) -> None:
     _write(tmp_path / ".github/workflows/deploy-api-k8s.yml", "name: y\n")
     _write(tmp_path / ".github/workflows/ci.yml", "name: z\n")
     assert parse.deploy_workflows(tmp_path) == {"deploy-frontend", "deploy-api-k8s"}
+
+
+import descriptor
+
+
+def _topo(**overrides) -> descriptor.Topology:
+    base = dict(
+        services=[
+            {"id": "grid", "label": "grid-api", "chart": "wordsparrow-api", "group": "APIs"},
+            {"id": "ingress", "label": "ingress-nginx", "chart": "platform", "group": "Edge"},
+        ],
+        cloud=[{"id": "pages", "label": "Pages", "tf_resource": "cloudflare_pages_project"}],
+        cluster_edges=[{"from": "ingress", "to": "grid", "label": "HTTP"}],
+        flow_edges=[{"from": "browser", "to": "ingress", "label": "HTTPS"}],
+        deploy_edges=[{"from": "deploy-frontend", "to": "pages", "label": "wrangler"}],
+        clue_pipeline=["a", "b"],
+    )
+    base.update(overrides)
+    return descriptor.Topology(**base)
+
+
+def _charts() -> list[parse.Chart]:
+    return [
+        parse.Chart("wordsparrow-api", Path("grid/api/deploy/chart"), "api", True),
+        parse.Chart("platform", Path("infra/platform"), "infra", False),
+    ]
+
+
+def test_coherence_passes_on_matching_sets() -> None:
+    descriptor.check_coherence(
+        _topo(), _charts(), {"cloudflare_pages_project"}, {"deploy-frontend"}
+    )  # must not raise
+
+
+def test_coherence_fails_on_chart_missing_from_descriptor() -> None:
+    charts = _charts() + [parse.Chart("bliss-nats", Path("infra/nats"), "infra", False)]
+    try:
+        descriptor.check_coherence(_topo(), charts, {"cloudflare_pages_project"}, {"deploy-frontend"})
+    except descriptor.CoherenceError as exc:
+        assert "bliss-nats" in str(exc)
+    else:
+        raise AssertionError("expected CoherenceError")
+
+
+def test_coherence_fails_on_descriptor_referencing_unknown_chart() -> None:
+    topo = _topo(services=_topo().services + [
+        {"id": "ghost", "label": "Ghost", "chart": "does-not-exist", "group": "APIs"}
+    ])
+    try:
+        descriptor.check_coherence(topo, _charts(), {"cloudflare_pages_project"}, {"deploy-frontend"})
+    except descriptor.CoherenceError as exc:
+        assert "does-not-exist" in str(exc)
+    else:
+        raise AssertionError("expected CoherenceError")
+
+
+def test_coherence_fails_on_undeclared_tf_resource() -> None:
+    try:
+        descriptor.check_coherence(
+            _topo(), _charts(),
+            {"cloudflare_pages_project", "cloudflare_dns_record"},  # dns not declared
+            {"deploy-frontend"},
+        )
+    except descriptor.CoherenceError as exc:
+        assert "cloudflare_dns_record" in str(exc)
+    else:
+        raise AssertionError("expected CoherenceError")
+
+
+def test_coherence_fails_on_unknown_edge_endpoint() -> None:
+    topo = _topo(cluster_edges=[{"from": "ingress", "to": "nope", "label": "x"}])
+    try:
+        descriptor.check_coherence(topo, _charts(), {"cloudflare_pages_project"}, {"deploy-frontend"})
+    except descriptor.CoherenceError as exc:
+        assert "nope" in str(exc)
+    else:
+        raise AssertionError("expected CoherenceError")
