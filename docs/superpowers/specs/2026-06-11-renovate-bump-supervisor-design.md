@@ -499,3 +499,15 @@ run, "6 rounds" is literally "6 jobs" and nothing external can re-fire it.
 - **Generalize "consumer-rates-producer review/fix" as a reusable pattern.**
   Here it collapses to one doc-bound loop (#5) so it isn't worth building, but
   the uniform principle may be valuable in a future session / other repos.
+- **Human-guided B mode (human as unconstrained director).** On failure, let a
+  *maintainer-authored* comment on the issue trigger a B-revision in-thread,
+  instead of the v1 manual-takeover path (#9). The human isn't bound to C's
+  narrow mandate — they redirect freely (add context, change direction,
+  override A). This does **not** reopen the autonomous-ping-pong footgun: the
+  trigger is gated on `comment.author == maintainer` (bots ignored), so the
+  rule stays "no *autonomous* re-fire," with deliberate human guidance as the
+  exception. **Deferred** (2026-06-12): a UX upgrade on takeover, not a missing
+  capability — build/prove the autonomous pipeline first. **Cheap constraint to
+  honor now so we don't block it:** when the autonomous loop gives up, leave the
+  issue + claude PR in a clean, resumable state (plan/artifacts posted to the
+  issue) so a later human-triggered B-revision can attach without rework.
