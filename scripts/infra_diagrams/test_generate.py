@@ -91,7 +91,7 @@ def _topo(**overrides) -> descriptor.Topology:
         cluster_edges=[{"from": "ingress", "to": "grid", "label": "HTTP"}],
         flow_edges=[{"from": "browser", "to": "ingress", "label": "HTTPS"}],
         deploy_edges=[{"from": "deploy-frontend", "to": "pages", "label": "wrangler"}],
-        clue_pipeline=["a", "b"],
+        clue_pipeline={},
     )
     base.update(overrides)
     return descriptor.Topology(**base)
@@ -226,11 +226,18 @@ def test_render_flow_declares_browser_and_edges() -> None:
     assert "browser -->|HTTPS| ingress" in out
 
 
-def test_render_clue_is_linear_chain() -> None:
-    out = render.render_clue(_topo(clue_pipeline=["x", "y", "z"]))
+def test_render_clue_renders_nodes_and_loop_edge() -> None:
+    out = render.render_clue(_topo(clue_pipeline={
+        "nodes": [{"id": "gen", "label": "Generate"}, {"id": "sft", "label": "SFT"}],
+        "edges": [
+            {"from": "gen", "to": "sft"},
+            {"from": "sft", "to": "gen", "label": "next round", "style": "dashed"},
+        ],
+    }))
     assert out.startswith("flowchart LR")
-    assert 's0["x"]' in out and 's2["z"]' in out
-    assert "s0 --> s1" in out and "s1 --> s2" in out
+    assert 'gen["Generate"]' in out
+    assert "gen --> sft" in out
+    assert "sft -. next round .-> gen" in out
 
 
 def test_render_is_deterministic() -> None:

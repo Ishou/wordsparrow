@@ -86,7 +86,7 @@ flowchart LR
     surveyDB[("survey pg")]
     survey --> surveyDB
   end
-  cluepipeline["clue AI pipeline (local)"]
+  cluepipeline["clue AI pipeline (Modal)"]
   ingress --> grid
   ingress --> game
   ingress --> identity
@@ -250,19 +250,18 @@ versioned CSV the JVM worker consumes. Pipeline lives in
 <!-- INFRA-DIAGRAM:clue-pipeline START -->
 ```mermaid
 flowchart LR
-  s0["Curated FR corpus"]
-  s1["mlx-lm LoRA / DPO generator"]
-  s2["CamemBERT cross-encoder filter"]
-  s3["validate_clue gates"]
-  s4["versioned CSV"]
-  s5["words-clues-worker"]
-  s6["grid corpus"]
-  s0 --> s1
-  s1 --> s2
-  s2 --> s3
-  s3 --> s4
-  s4 --> s5
-  s5 --> s6
+  gen["Modal GPU generate (model n-1)"]
+  judge["learned judge — pre-filter"]
+  human["human rates · /contribuer"]
+  winners["winners (qualité=5)"]
+  sft["SFT → model n"]
+  grid["grid corpus"]
+  gen --> judge
+  judge --> human
+  human --> winners
+  winners --> sft
+  sft -. next round .-> gen
+  human -. not yet wired .-> grid
 ```
 <!-- INFRA-DIAGRAM:clue-pipeline END -->
 

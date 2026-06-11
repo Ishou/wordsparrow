@@ -21,7 +21,7 @@ class Topology:
     cluster_edges: list[dict]
     flow_edges: list[dict]
     deploy_edges: list[dict]
-    clue_pipeline: list[str]
+    clue_pipeline: dict
     observability: dict = field(default_factory=dict)
     cluster_external: list[dict] = field(default_factory=list)
 
@@ -46,7 +46,7 @@ def load_topology(path: Path = DESCRIPTOR_PATH) -> Topology:
         cluster_edges=raw.get("cluster_edges") or [],
         flow_edges=raw.get("flow_edges") or [],
         deploy_edges=raw.get("deploy_edges") or [],
-        clue_pipeline=raw.get("clue_pipeline") or [],
+        clue_pipeline=raw.get("clue_pipeline") or {},
         observability=raw.get("observability") or {},
         cluster_external=raw.get("cluster_external") or [],
     )

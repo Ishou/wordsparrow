@@ -113,10 +113,11 @@ def render_observability(topo: Topology) -> str:
 
 
 def render_clue(topo: Topology) -> str:
-    stages = topo.clue_pipeline
+    nodes = topo.clue_pipeline.get("nodes") or []
+    edges = topo.clue_pipeline.get("edges") or []
     lines = ["flowchart LR"]
-    for i, stage in enumerate(stages):
-        lines.append(f'  s{i}["{stage}"]')
-    for i in range(len(stages) - 1):
-        lines.append(f"  s{i} --> s{i + 1}")
+    for n in nodes:
+        lines.append(f'  {_safe(n["id"])}["{n["label"]}"]')
+    for e in edges:
+        lines.append(f"  {_edge(e)}")
     return "\n".join(lines)

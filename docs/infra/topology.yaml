@@ -21,7 +21,7 @@ cloud:
 
 # Cluster-topology edges (request-protocol detail lives in flow_edges); cluster_external lists non-cluster nodes.
 cluster_external:
-  - { id: cluepipeline, label: clue AI pipeline (local) }
+  - { id: cluepipeline, label: clue AI pipeline (Modal) }
 cluster_edges:
   - { from: ingress,  to: grid }
   - { from: ingress,  to: game }
@@ -81,12 +81,19 @@ observability:
     - { from: alerts,      to: gmail,       label: 5xx / errors / staleness }
     - { from: oauth2,      to: signoz,      label: gates admin UI }
 
-# Hand-maintained pipeline stages NOT coherence-gated against scripts/clue_generation/.
+# Round-based training loop (ADR-0057 Modal lane + clue-judge spec). Hand-maintained, not gated.
 clue_pipeline:
-  - Curated FR corpus
-  - mlx-lm LoRA / DPO generator
-  - CamemBERT cross-encoder filter
-  - validate_clue gates
-  - versioned CSV
-  - words-clues-worker
-  - grid corpus
+  nodes:
+    - { id: gen,     label: "Modal GPU generate (model n-1)" }
+    - { id: judge,   label: "learned judge — pre-filter" }
+    - { id: human,   label: "human rates · /contribuer" }
+    - { id: winners, label: "winners (qualité=5)" }
+    - { id: sft,     label: "SFT → model n" }
+    - { id: grid,    label: "grid corpus" }
+  edges:
+    - { from: gen,     to: judge }
+    - { from: judge,   to: human }
+    - { from: human,   to: winners }
+    - { from: winners, to: sft }
+    - { from: sft,     to: gen,  label: next round,   style: dashed }
+    - { from: human,   to: grid, label: not yet wired, style: dashed }
