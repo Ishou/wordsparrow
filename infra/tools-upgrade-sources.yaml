@@ -27,4 +27,21 @@ modeA:
   - name: hcloud-csi
     repo: "https://charts.hetzner.cloud"
     releaseNotes: "https://github.com/hetznercloud/csi-driver/blob/main/CHANGELOG.md"
-modeB: []
+modeB:
+  - image: matomo
+    releaseNotes: "https://matomo.org/changelog/"
+    extraDocs: "https://github.com/matomo-org/matomo/releases"
+    priority: high
+  - image: mariadb
+    releaseNotes: "https://mariadb.com/docs/release-notes/community-server/{version}"
+    priority: high
+  - image: nats
+    releaseNotes: "https://github.com/nats-io/nats-server/releases/tag/v{version}"
+    extraDocs: "https://docs.nats.io/release-notes/whats_new"
+    priority: high
+  - image: natsio/nats-box
+    releaseNotes: "https://github.com/nats-io/nats-box/releases"
+    priority: low
+  - image: natsio/prometheus-nats-exporter
+    releaseNotes: "https://github.com/nats-io/prometheus-nats-exporter/releases"
+    priority: low
