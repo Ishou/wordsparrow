@@ -37,3 +37,34 @@ def test_mode_for_path():
     assert classify.mode_for_path("infra/platform/Chart.yaml") == "A"
     assert classify.mode_for_path("infra/matomo/values.yaml") == "B"
     assert classify.mode_for_path("infra/nats/values-prod.yaml") == "B"
+
+
+VALUES_OLD = """\
+matomo:
+  image:
+    repository: matomo
+    pullPolicy: IfNotPresent
+    tag: "5.2.1-apache"
+mariadb:
+  image:
+    repository: mariadb
+    tag: "11.4.4-noble"
+"""
+
+VALUES_NEW = VALUES_OLD.replace('5.2.1-apache', '5.3.0-apache')
+
+
+def test_parse_image_bump_finds_changed_tag():
+    bumps = classify.classify("infra/matomo/values.yaml", VALUES_OLD, VALUES_NEW)
+    assert bumps == [classify.Bump(mode="B", name="matomo", old="5.2.1", new="5.3.0")]
+
+
+def test_parse_image_bump_no_change_returns_empty():
+    bumps = classify.classify("infra/matomo/values.yaml", VALUES_OLD, VALUES_OLD)
+    assert bumps == []
+
+
+def test_strip_suffix_variants():
+    assert classify.strip_suffix("11.4.4-noble") == "11.4.4"
+    assert classify.strip_suffix("2.10-alpine") == "2.10"
+    assert classify.strip_suffix('"v0.128.0"') == "0.128.0"

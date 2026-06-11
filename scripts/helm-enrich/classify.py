@@ -50,9 +50,33 @@ def parse_chart_bump(old: dict, new: dict) -> list[Bump]:
     return bumps
 
 
+def _walk_image_blocks(tree, acc: dict[str, str]) -> None:
+    """Collect {repository: tag} for every dict carrying both keys."""
+    if not isinstance(tree, dict):
+        return
+    if "repository" in tree and "tag" in tree:
+        acc[str(tree["repository"])] = str(tree["tag"])
+    for value in tree.values():
+        _walk_image_blocks(value, acc)
+
+
+def parse_image_bump(old: dict, new: dict) -> list[Bump]:
+    """Compare two parsed values docs; emit a Bump per changed image tag."""
+    old_imgs: dict[str, str] = {}
+    new_imgs: dict[str, str] = {}
+    _walk_image_blocks(old or {}, old_imgs)
+    _walk_image_blocks(new or {}, new_imgs)
+    bumps: list[Bump] = []
+    for repo, new_tag in new_imgs.items():
+        old_tag = old_imgs.get(repo)
+        if old_tag is not None and old_tag != new_tag:
+            bumps.append(Bump(mode="B", name=repo, old=strip_suffix(old_tag), new=strip_suffix(new_tag)))
+    return bumps
+
+
 def classify(path: str, old_text: str, new_text: str) -> list[Bump]:
     """Dispatch on path; return the bumped units (expected: exactly one)."""
     mode = mode_for_path(path)
     if mode == "A":
         return parse_chart_bump(yaml.safe_load(old_text), yaml.safe_load(new_text))
-    raise NotImplementedError("Mode B (image bump) is added in PR 2")
+    return parse_image_bump(yaml.safe_load(old_text), yaml.safe_load(new_text))
