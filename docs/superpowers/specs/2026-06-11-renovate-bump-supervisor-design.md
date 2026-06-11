@@ -173,13 +173,43 @@ missing/weak) and the final merge. Everything between is automated.
 
 ## OPEN QUESTIONS (for tomorrow)
 
-1. **Scope of bumps.** Major-only? major+minor? How is "major" detected — a
-   Renovate label (`packageRules matchUpdateTypes:["major"] → addLabels`), or
-   branch/title parsing? (Lean: major-only, via a Renovate-applied label.)
-2. **A's doc-finding generality.** How does A reliably locate official docs for
-   *any* ecosystem (gradle/npm/docker/helm/actions)? Renovate changelog links +
-   web search + registry — and what's the fallback when a dep isn't registered
-   and search finds nothing (→ Gate A)?
+1. ✅ **RESOLVED — Scope / trigger.**
+   - **Pre-filter (whether to run Agent A):** `updateType == major` **OR**
+     (`currentMajor == 0` AND `updateType == minor`). Under semver, `0.x` is
+     unstable and a minor bump there is breaking-equivalent, so 0.x-minor is
+     treated as major. Renovate exposes update type + version components (apply
+     via a `packageRules` label so the workflow can filter on it).
+   - **Real gate:** version-type is only a cheap proxy. **A's "are there
+     breaking changes?" finding is the true gate** — a "major" whose docs show
+     no breaking changes early-exits and Renovate's PR merges normally. This
+     gives breaking-change-based correctness without paying to run A on every
+     patch.
+   - **Accepted blind spot:** a patch/minor that *secretly* ships breaking
+     changes (a dep violating semver) won't trip the pre-filter, so A never
+     runs on it. Accepted as-is: it's rare, and the breakage is caught
+     downstream anyway by the code test suite + manual tests + the human merge
+     gate (defense in depth). Revisit with a changelog-keyword escalation only
+     if it bites in practice.
+2. ✅ **RESOLVED — A's doc-finding + A *is* the evolved enrichment pipeline.**
+   - **Agent A = generalize + restructure + gate the existing `helm-bump-enrich`
+     work** (the CI → `claude-code-action` → WebFetch official docs → synthesize
+     → post-to-PR mechanic is already built and proven on `main`). Four deltas
+     to build:
+     1. **Scope:** drop the helm-only trigger (`infra/**/Chart.yaml`); generalize
+        to all ecosystems.
+     2. **Output:** emit the structured A→B schema (see #3) as *data*, not just
+        prose (prose stays as a human-readable rendering).
+     3. **Sourcing:** lead with **Renovate's own changelog/release links** (in
+        the PR, covers the long tail for free) → **web search** for a dedicated
+        migration/upgrade guide + an `llms.txt`-style AI-migration-doc probe →
+        the `tools-upgrade-sources.yaml` registry only as a **reactive override,
+        starting EMPTY** (we learned hand-authored URLs rot/404 — don't
+        pre-populate).
+     4. **Confidence gate:** A self-rates `sourceConfidence`; no/thin docs →
+        **Gate A** escalation.
+   - **Carryover:** the helm-specific **values-diff** (upstream defaults
+     changed, overridden-keys flagged) stays as a helm-only *extra* A attaches
+     for helm bumps — it doesn't generalize but isn't wasted.
 3. **The standardized A→B schema** — finalize the exact fields + format
    (JSON artifact? markdown?). This is the reusable contract.
 4. **B↔C loop mechanics** — exact cap value, convergence/terminator criteria,
@@ -196,8 +226,9 @@ missing/weak) and the final merge. Everything between is automated.
    fix). With this pipeline, A/B/C run on the Renovate PR instead — so does §6a
    still run on Renovate PRs at all, or is it suppressed there in favor of the
    supervisor (and only runs on the claude PR)?
-8. **Relationship to `helm-bump-enrich`.** Does the general supervisor subsume
-   and replace the helm-specific enrichment pipeline, or run alongside it?
+8. ✅ **RESOLVED — Agent A subsumes `helm-bump-enrich`.** The general supervisor
+   absorbs the helm-specific pipeline (it becomes a special case of A), not run
+   alongside. See #2.
 9. **Error handling** — A fetch failures; B can't plan; B↔C deadlock; D's
    implementation fails CI; §6a cap on the claude PR; partial/abandoned claude
    PRs (and the dropped Renovate update).
