@@ -41,6 +41,8 @@ def render_cluster(topo: Topology, apps: list[AppNode]) -> str:
             lines.append(f"    {ctx} --> {ctx}DB")
         lines.append("  end")
 
+    for ext in topo.cluster_external:
+        lines.append(f'  {_safe(ext["id"])}["{ext["label"]}"]')
     for e in topo.cluster_edges:
         lines.append(f"  {_edge(e)}")
     return "\n".join(lines)
@@ -48,7 +50,10 @@ def render_cluster(topo: Topology, apps: list[AppNode]) -> str:
 
 def _edge(e: dict) -> str:
     label = e.get("label")
-    arrow = f"-->|{label}|" if label else "-->"
+    if e.get("style") == "dashed":
+        arrow = f"-. {label} .->" if label else "-.->"
+    else:
+        arrow = f"-->|{label}|" if label else "-->"
     return f'{_safe(e["from"])} {arrow} {_safe(e["to"])}'
 
 
@@ -86,7 +91,7 @@ def render_flow(topo: Topology) -> str:
     for n in nodes:
         lines.append(f'  {_safe(n)}["{labels.get(n, n)}"]')
     for e in topo.flow_edges:
-        lines.append(f'  {_safe(e["from"])} -->|{e["label"]}| {_safe(e["to"])}')
+        lines.append(f"  {_edge(e)}")
     return "\n".join(lines)
 
 

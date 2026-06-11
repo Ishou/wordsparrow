@@ -21,6 +21,9 @@ cloud:
 
 # Cluster-topology edges. ingress routes to each context; request protocols
 # live in the flow diagram. Event edges follow data-flow direction.
+# Non-cluster nodes referenced by cluster edges (the local clue pipeline).
+cluster_external:
+  - { id: cluepipeline, label: clue AI pipeline (local) }
 cluster_edges:
   - { from: ingress,  to: grid }
   - { from: ingress,  to: game }
@@ -29,13 +32,14 @@ cluster_edges:
   - { from: grid,     to: nats, label: publishes }
   - { from: identity, to: nats, label: publishes }
   - { from: nats,     to: game, label: consumes }
+  - { from: survey,   to: cluepipeline, label: manual export, style: dashed }
 
 # Request/event flow diagram: ordered runtime hops. `browser` is a literal.
 flow_edges:
   - { from: browser, to: ingress, label: HTTPS }
   - { from: browser, to: ingress, label: WSS }
-  - { from: ingress, to: grid,    label: REST }
-  - { from: ingress, to: game,    label: WS }
+  - { from: ingress, to: grid }
+  - { from: ingress, to: game }
   - { from: grid,    to: nats,    label: PuzzleReady event }
   - { from: nats,    to: game,    label: consumes }
 

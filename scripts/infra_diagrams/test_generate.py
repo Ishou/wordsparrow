@@ -197,6 +197,20 @@ def test_render_cluster_unlabeled_edge_is_plain_arrow() -> None:
     assert "ingress -->|" not in out
 
 
+def test_render_cluster_dashed_external_edge() -> None:
+    out = render.render_cluster(
+        _topo(
+            cluster_external=[{"id": "cluepipeline", "label": "clue AI pipeline (local)"}],
+            cluster_edges=[
+                {"from": "grid", "to": "cluepipeline", "label": "manual export", "style": "dashed"}
+            ],
+        ),
+        _apps(),
+    )
+    assert 'cluepipeline["clue AI pipeline (local)"]' in out
+    assert "grid -. manual export .-> cluepipeline" in out
+
+
 def test_render_cloud_sanitizes_hyphenated_workflow_ids() -> None:
     out = render.render_cloud(_topo())
     assert out.startswith("flowchart LR")

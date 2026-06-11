@@ -23,12 +23,16 @@ class Topology:
     deploy_edges: list[dict]
     clue_pipeline: list[str]
     observability: dict = field(default_factory=dict)
+    cluster_external: list[dict] = field(default_factory=list)
 
     def service_ids(self) -> set[str]:
         return {s["id"] for s in self.services}
 
     def cloud_ids(self) -> set[str]:
         return {c["id"] for c in self.cloud}
+
+    def cluster_external_ids(self) -> set[str]:
+        return {n["id"] for n in self.cluster_external}
 
     def observability_node_ids(self) -> set[str]:
         return {n["id"] for n in self.observability.get("nodes") or []}
@@ -44,6 +48,7 @@ def load_topology(path: Path = DESCRIPTOR_PATH) -> Topology:
         deploy_edges=raw.get("deploy_edges") or [],
         clue_pipeline=raw.get("clue_pipeline") or [],
         observability=raw.get("observability") or {},
+        cluster_external=raw.get("cluster_external") or [],
     )
 
 
@@ -103,7 +108,12 @@ def _check_tf_coverage(topo: Topology, tf_types: set[str]) -> None:
 
 
 def _check_edge_endpoints(topo: Topology, workflow_ids: set[str]) -> None:
-    valid = topo.service_ids() | topo.cloud_ids() | {"browser"}
+    valid = (
+        topo.service_ids()
+        | topo.cloud_ids()
+        | topo.cluster_external_ids()
+        | {"browser"}
+    )
     for edge in topo.cluster_edges + topo.flow_edges:
         for end in (edge["from"], edge["to"]):
             if end not in valid:

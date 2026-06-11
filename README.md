@@ -86,6 +86,7 @@ flowchart LR
     surveyDB[("survey pg")]
     survey --> surveyDB
   end
+  cluepipeline["clue AI pipeline (local)"]
   ingress --> grid
   ingress --> game
   ingress --> identity
@@ -93,6 +94,7 @@ flowchart LR
   grid -->|publishes| nats
   identity -->|publishes| nats
   nats -->|consumes| game
+  survey -. manual export .-> cluepipeline
 ```
 <!-- INFRA-DIAGRAM:cluster END -->
 
@@ -125,8 +127,8 @@ flowchart LR
   nats["NATS JetStream"]
   browser -->|HTTPS| ingress
   browser -->|WSS| ingress
-  ingress -->|REST| grid
-  ingress -->|WS| game
+  ingress --> grid
+  ingress --> game
   grid -->|PuzzleReady event| nats
   nats -->|consumes| game
 ```
