@@ -614,9 +614,29 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
       - **Final label set (4 labels, 3 axes):** `ai-driven` (origin) ·
         `breaking-bump` / `post-bump-enhancement` (kind) · `needs-human`
         (cumulative status).
-13. **Cost guardrails** — A runs on every major Renovate PR; B/C/D per impacted
-    major. Any rate/scope limits to avoid surprise token spend during the lab
-    phase?
+13. ✅ **RESOLVED — cost guardrails throttle *breadth*, not *depth*.** Depth is
+    the value (the 6-round B↔C loop on a hard migration is what we pay for), so
+    every lever targets frequency/scope; per-bump caps stay generous.
+    Cost profile: Step 0 = **zero tokens** (deterministic); AI gate = high-
+    frequency / low-cost (one changelog-only call per minor/patch); full
+    pipeline = low-frequency / high-per-bump (impacted majors only).
+    - **#1 lever — ship on a restricted subset; `signoz` ONLY first.** The
+      pipeline ships scoped to exactly that one dep (`packageRules`/path
+      filter), proves itself end-to-end (the #10 first live test), then expands
+      dep-by-dep once trusted. This is the headline lab-phase guardrail.
+    - **Throttle at the source.** The pipeline only fires on Renovate PRs, so
+      `prConcurrentLimit` *is* the rate limiter — lower it for the lab phase
+      (5 → 2–3); reversible one-liner in `renovate.json`.
+    - **Per-bump caps already exist** — B↔C = 6 (#4), §6a = 5 — kept **generous**
+      (depth = value). No new work.
+    - **Dark feature flag** (`breaking-bump` enabled, with an expiry date per
+      CLAUDE.md flag discipline) = instant kill switch.
+    - **Spend observability, not a hard budget.** `claude-code-action` reports
+      usage; log per-stage + surface per-bump cost as a comment on the spine
+      issue. Watch with eyes open rather than pre-capping.
+    - **Deferred:** a hard token-budget accountant (cumulative-spend halt) is
+      real machinery the four levers above make unnecessary for the lab. YAGNI;
+      revisit only if the numbers surprise us.
 
 ---
 
