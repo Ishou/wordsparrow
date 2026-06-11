@@ -203,14 +203,17 @@ success. Trivial bumps (AI-gate green) still make **no** issue, so "no noise
 for trivial" holds; majors are rare enough that a per-migration tracking issue
 is a feature.
 
-**Claude's refinement (flagged — NOT part of the raw model, pending decision):**
-run B↔C as **#4's bounded single workflow run**, and use the issue as the
-visibility/durability *medium* (post enrichment, per-round summaries, final
-plan, escalations as comments) — **not** as the control-flow *trigger*. A
-literal comment-re-trigger loop reintroduces exactly the cap-inflation /
-self-trigger-ping-pong footguns #4 was built to avoid. The distinction:
-comments as a *log* (good) vs comments as the *trigger mechanism* (footgun).
-**[Decision pending: comment-loop vs bounded-run-posting-to-issue.]**
+**Loop mechanics — SETTLED (2026-06-12):** B↔C runs as **#4's bounded single
+workflow run** (one run, jobs `A → B1 → C1 → … → D` chained by `needs:`, state
+via artifacts, each job a fresh `claude-code-action`). The issue is the
+visibility/durability *medium* — each job posts its result there as a comment
+(enrichment, per-round summaries, final plan, escalations) — but the issue is
+**not** the control-flow *trigger*. ("Comment loop" was loose wording; the run
+drives the loop, the issue merely *records* it.) This is deliberate: a literal
+comment-re-trigger loop would reintroduce the cap-inflation /
+self-trigger-ping-pong footguns #4 was built to avoid. Comments as a *log*
+(good); comments as the *trigger mechanism* (footgun, rejected). With a bounded
+run, "6 rounds" is literally "6 jobs" and nothing external can re-fire it.
 
 ---
 
