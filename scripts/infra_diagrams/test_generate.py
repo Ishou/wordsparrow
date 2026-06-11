@@ -308,6 +308,17 @@ def test_build_readme_fills_all_markers_and_is_idempotent() -> None:
     assert once.count("```mermaid") == len(readme_mod.MARKER_IDS)
 
 
+def test_build_readme_emits_styling() -> None:
+    skeleton = "\n".join(
+        f"<!-- INFRA-DIAGRAM:{m} START -->\n<!-- INFRA-DIAGRAM:{m} END -->"
+        for m in readme_mod.MARKER_IDS
+    ) + "\n"
+    out = generate.build_readme(skeleton)
+    assert "classDef data fill:#c8945633,stroke:#a87538;" in out
+    assert "style ctx_grid fill:#6a93581f,stroke:#6a9358;" in out
+    assert "style Cloud fill:#b8554020,stroke:#b85540;" in out
+
+
 _OBS = {
     "nodes": [
         {"id": "grid", "label": "grid-api", "group": "Sources"},

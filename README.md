@@ -96,6 +96,16 @@ flowchart LR
   identity -->|publishes| nats
   nats -->|consumed by| game
   survey -. manual export .-> cluepipeline
+  classDef data fill:#c8945633,stroke:#a87538;
+  classDef external fill:#b8554022,stroke:#b85540;
+  class gridDB,gameDB,identityDB,surveyDB data;
+  class cluepipeline external;
+  style Edge fill:#5a655a1f,stroke:#8b9488;
+  style Messaging fill:#a875381f,stroke:#c89456;
+  style ctx_grid fill:#6a93581f,stroke:#6a9358;
+  style ctx_game fill:#6a93581f,stroke:#6a9358;
+  style ctx_identity fill:#6a93581f,stroke:#6a9358;
+  style ctx_survey fill:#6a93581f,stroke:#6a9358;
 ```
 <p align="center"><sub><b>Figure 1.</b> In-cluster topology grouped by bounded context — each box is one context's API and database. Dashed edges are manual or leave the cluster.</sub></p>
 <!-- INFRA-DIAGRAM:cluster END -->
@@ -117,6 +127,8 @@ flowchart LR
   deploy_api_k8s -->|helm upgrade| k3s
   pages -->|custom domain| pagesdomain
   dns -->|service subdomains via external-dns| k3s
+  style CI fill:#5a655a1f,stroke:#8b9488;
+  style Cloud fill:#b8554020,stroke:#b85540;
 ```
 <p align="center"><sub><b>Figure 2.</b> Where the frontend and cluster are hosted, and the CI workflows that deploy them.</sub></p>
 <!-- INFRA-DIAGRAM:cloud END -->
@@ -135,6 +147,10 @@ flowchart LR
   ingress --> game
   grid -->|PuzzleReady event| nats
   nats -->|consumed by| game
+  classDef context fill:#6a935826,stroke:#6a9358;
+  classDef messaging fill:#a8753826,stroke:#c89456;
+  class grid,game context;
+  class nats messaging;
 ```
 <p align="center"><sub><b>Figure 3.</b> How a request and the daily-puzzle event move through the system at runtime.</sub></p>
 <!-- INFRA-DIAGRAM:flow END -->
@@ -221,6 +237,13 @@ flowchart LR
   signoz -->|evaluate| alerts
   alerts -->|5xx / errors / staleness| gmail
   oauth2 -->|gates admin UI| signoz
+  classDef data fill:#c8945633,stroke:#a87538;
+  class clickhouse data;
+  style Sources fill:#6a93581f,stroke:#6a9358;
+  style Ingest fill:#5a655a1f,stroke:#8b9488;
+  style Backend fill:#5a655a1f,stroke:#8b9488;
+  style Analytics fill:#a875381f,stroke:#c89456;
+  style Alerting fill:#b8554020,stroke:#b85540;
 ```
 <p align="center"><sub><b>Figure 4.</b> Target telemetry, alerting and analytics topology — a module without a source edge here is a gap to address, not an exception.</sub></p>
 <!-- INFRA-DIAGRAM:observability END -->
@@ -269,6 +292,12 @@ flowchart LR
   winners --> sft
   sft -. next round .-> gen
   human -. not yet wired .-> grid
+  classDef context fill:#6a935826,stroke:#6a9358;
+  classDef data fill:#c8945633,stroke:#a87538;
+  classDef messaging fill:#a8753826,stroke:#c89456;
+  class gen,sft context;
+  class grid data;
+  class human messaging;
 ```
 <p align="center"><sub><b>Figure 5.</b> The Modal clue-generation training loop. Dashed edges are the round restart and the not-yet-wired grid corpus.</sub></p>
 <!-- INFRA-DIAGRAM:clue-pipeline END -->
