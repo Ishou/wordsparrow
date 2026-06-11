@@ -19,7 +19,7 @@
     {
       "id": "0a751a03-0000-4000-8000-000000000001",
       "title": "PVC disk usage %",
-      "description": "Per-PVC used percentage (capacity - available)/capacity. The ClickHouse PVC filling to 100% caused the 2026-05-15 outage; watch this.",
+      "description": "Per-PVC used percentage, 100*(1 - available/capacity). The ClickHouse PVC filling to 100% caused the 2026-05-15 outage; watch this. Queries the 30-min rollup (samples_v4_agg_30m) and collapses per-pod series to one line per PVC, so it stays cheap at wide windows instead of OOMing ClickHouse.",
       "panelTypes": "graph",
       "isStacked": false,
       "opacity": "1",
@@ -28,16 +28,10 @@
       "softMax": 100,
       "softMin": 0,
       "query": {
-        "queryType": "builder",
+        "queryType": "clickhouse_sql",
         "promql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
-        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
-        "builder": {
-          "queryFormulas": [{"expression": "(B-A)*100/B", "legend": "{{k8s.persistentvolumeclaim.name}}", "queryName": "F1", "disabled": false}],
-          "queryData": [
-            {"dataSource": "metrics", "queryName": "A", "expression": "A", "disabled": true, "stepInterval": 60, "aggregations": [{"metricName": "k8s.volume.available", "temporality": "", "timeAggregation": "avg", "spaceAggregation": "avg", "reduceTo": "avg"}], "groupBy": [{"dataType": "string", "id": "k8s.persistentvolumeclaim.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.persistentvolumeclaim.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "", "limit": null, "orderBy": [], "functions": []},
-            {"dataSource": "metrics", "queryName": "B", "expression": "B", "disabled": true, "stepInterval": 60, "aggregations": [{"metricName": "k8s.volume.capacity", "temporality": "", "timeAggregation": "avg", "spaceAggregation": "avg", "reduceTo": "avg"}], "groupBy": [{"dataType": "string", "id": "k8s.persistentvolumeclaim.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.persistentvolumeclaim.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "", "limit": null, "orderBy": [], "functions": []}
-          ]
-        },
+        "builder": {"queryFormulas": [], "queryData": []},
+        "clickhouse_sql": [{"name": "A", "legend": "{{pvc}}", "disabled": false, "query": "SELECT toDateTime(intDiv(s.unix_milli, 1000)) AS ts, m.pvc AS pvc, 100*(1 - maxIf(s.last, m.metric='avail') / maxIf(s.last, m.metric='cap')) AS value FROM signoz_metrics.samples_v4_agg_30m s INNER JOIN (SELECT fingerprint, JSONExtractString(labels,'k8s.persistentvolumeclaim.name') AS pvc, multiIf(metric_name='k8s.volume.available','avail','cap') AS metric FROM signoz_metrics.time_series_v4 WHERE metric_name IN ('k8s.volume.available','k8s.volume.capacity') AND JSONExtractString(labels,'k8s.persistentvolumeclaim.name') != '') m ON s.fingerprint = m.fingerprint WHERE s.metric_name IN ('k8s.volume.available','k8s.volume.capacity') AND s.unix_milli >= $start_timestamp_ms AND s.unix_milli < $end_timestamp_ms GROUP BY ts, pvc HAVING maxIf(s.last, m.metric='cap') > 0 ORDER BY ts"}],
         "id": "0a751a03-0000-4000-8000-0000000000a1"
       }
     },
