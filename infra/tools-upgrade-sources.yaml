@@ -1,0 +1,44 @@
+# Source registry for helm-bump enrichment (ADR-0067). Add an entry here when adding a subchart dep or pinned image.
+modeA:
+  - name: signoz
+    repo: "https://charts.signoz.io"
+    releaseNotes: "https://github.com/SigNoz/charts/releases/tag/v{version}"
+    extraDocs: "https://signoz.io/docs/operate/migration/"
+  - name: k8s-infra
+    repo: "https://charts.signoz.io"
+    releaseNotes: "https://github.com/SigNoz/charts/releases"
+  - name: cert-manager
+    repo: "https://charts.jetstack.io"
+    releaseNotes: "https://github.com/cert-manager/cert-manager/releases/tag/v{version}"
+    extraDocs: "https://cert-manager.io/docs/installation/upgrade/"
+  - name: ingress-nginx
+    repo: "https://kubernetes.github.io/ingress-nginx"
+    releaseNotes: "https://github.com/kubernetes/ingress-nginx/releases/tag/helm-chart-{version}"
+  - name: external-dns
+    repo: "https://kubernetes-sigs.github.io/external-dns/"
+    releaseNotes: "https://github.com/kubernetes-sigs/external-dns/releases/tag/external-dns-helm-chart-{version}"
+  - name: cloudnative-pg
+    repo: "https://cloudnative-pg.github.io/charts"
+    releaseNotes: "https://github.com/cloudnative-pg/charts/releases"
+    extraDocs: "https://github.com/cloudnative-pg/cloudnative-pg/releases"
+  - name: hcloud-csi
+    repo: "https://charts.hetzner.cloud"
+    releaseNotes: "https://github.com/hetznercloud/csi-driver/blob/main/CHANGELOG.md"
+modeB:
+  - image: matomo
+    releaseNotes: "https://matomo.org/changelog/"
+    extraDocs: "https://github.com/matomo-org/matomo/releases"
+    priority: high
+  - image: mariadb
+    releaseNotes: "https://mariadb.com/docs/release-notes/community-server/{version}"
+    priority: high
+  - image: nats
+    releaseNotes: "https://github.com/nats-io/nats-server/releases/tag/v{version}"
+    extraDocs: "https://docs.nats.io/release-notes/whats_new"
+    priority: high
+  - image: natsio/nats-box
+    releaseNotes: "https://github.com/nats-io/nats-box/releases"
+    priority: low
+  - image: natsio/prometheus-nats-exporter
+    releaseNotes: "https://github.com/nats-io/prometheus-nats-exporter/releases"
+    priority: low

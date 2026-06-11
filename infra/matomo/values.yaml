@@ -7,6 +7,7 @@ matomo:
     repository: matomo
     # Manifesto (digest pinning): empty -> tag fallback. Prod sets digest.
     digest: ""
+    # renovate: datasource=docker depName=matomo
     tag: "5.2.1-apache"
     pullPolicy: IfNotPresent
     # When true, helm install/upgrade fails fast if digest is empty.
@@ -40,6 +41,7 @@ mariadb:
   image:
     repository: mariadb
     digest: ""
+    # renovate: datasource=docker depName=mariadb
     tag: "11.4.4-noble"
     pullPolicy: IfNotPresent
     requireDigest: false

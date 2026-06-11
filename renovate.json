@@ -106,9 +106,8 @@
       "groupName": "testcontainers"
     },
     {
-      "description": "Helm subcharts under infra/ — dependency map but unconditional review.",
+      "description": "Helm subcharts under infra/ — one PR per tool (no grouping) so each bump is reviewed and enriched on its own (ADR-0067).",
       "matchManagers": ["helmv3"],
-      "groupName": "helm subcharts",
       "schedule": ["before 6am on monday"]
     },
     {
@@ -165,6 +164,16 @@
   "github-actions": {
     "fileMatch": ["^\\.github/workflows/[^/]+\\.ya?ml$"]
   },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/infra/(matomo|nats)/values\\.yaml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+tag:\\s*[\"'](?<currentValue>.*?)[\"']"
+      ],
+      "versioningTemplate": "docker"
+    }
+  ],
   "ignorePaths": [
     "**/node_modules/**",
     "**/build/**",
