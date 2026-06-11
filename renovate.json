@@ -106,9 +106,8 @@
       "groupName": "testcontainers"
     },
     {
-      "description": "Helm subcharts under infra/ — dependency map but unconditional review.",
+      "description": "Helm subcharts under infra/ — one PR per tool (no grouping) so each bump is reviewed and enriched on its own (ADR-0066).",
       "matchManagers": ["helmv3"],
-      "groupName": "helm subcharts",
       "schedule": ["before 6am on monday"]
     },
     {
