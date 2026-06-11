@@ -3,8 +3,7 @@ signoz:
   url: "http://observability-signoz:8080"
 
 apiKey:
-  # Reuses the sibling alerts chart's admin key Secret; the same key
-  # authorizes the dashboards API. data key must be 'apiKey'.
+  # Shared with sibling alerts chart; Secret data key must be 'apiKey'.
   secretName: signoz-alerts-apply-key
 
 image:
