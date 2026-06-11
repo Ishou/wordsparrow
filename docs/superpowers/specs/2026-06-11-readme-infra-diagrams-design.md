@@ -159,21 +159,41 @@ idempotent (running twice produces no diff).
 `make diagrams` target + CLAUDE.md / dispatch-skill notes. Well under the
 400-line cap.
 
+## Mermaid conventions (resolved)
+
+- **Syntax:** `flowchart` (the current canonical form, not the older
+  `graph` alias).
+- **Orientation:** `flowchart LR` (left-to-right) for **all four**
+  diagrams — three are naturally horizontal flows (deploy pipeline,
+  request flow, clue pipeline), so the cluster diagram matches for a
+  single consistent reading direction.
+- **Grouping:** the dense cluster-topology diagram groups nodes into
+  `subgraph`s — `Edge` (ingress-nginx, cert-manager), `APIs`
+  (grid/game/identity/survey), `Data` (CNPG Postgres per context),
+  `Messaging` (`bliss-nats`), `Observability` (SigNoz), plus Matomo —
+  so 12+ nodes don't sprawl.
+- Postgres nodes use the cylinder shape `[(name)]`; apps use plain
+  rectangles.
+
+## Dependency (resolved)
+
+PyYAML **6.0.3 is already vendored** in the repo's `.venv` and used by
+`modal_jobs/style_allocation.py` (`yaml.safe_load`) — **no new
+dependency**. The generator pins it in
+`scripts/infra_diagrams/requirements.txt` (mirrors the existing
+`scripts/clue_generation/pipeline_v2/requirements.txt` convention). The
+drift workflow installs it via `actions/setup-python` (SHA-pinned) +
+`pip install -r scripts/infra_diagrams/requirements.txt`, since no CI job
+currently runs Python.
+
 ## Non-goals / explicit exclusions
 
 - **No HCL parser** — cloud nodes are descriptor-declared with a grep
   gate, not parsed from HCL.
 - **No new ADR** — this adds tooling, not a bounded context, dependency
-  contract, or deploy-target change. (One Python YAML lib needed; confirm
-  it's already in the env before adding.)
+  contract, or deploy-target change. (PyYAML already present — see
+  Dependency above.)
 - **No rendered image build** — Mermaid renders natively on GitHub; no
   SVG/PNG generation step, keeping diagrams diffable.
 - **No new "Architecture diagrams" section** — diagrams embed into
   existing sections.
-
-## Open items to resolve during planning
-
-- Confirm a YAML library is already available in the repo's Python env
-  (`scripts/`); if not, the plan must justify the single dependency.
-- Decide exact Mermaid diagram type per chart (`flowchart` vs `graph`)
-  and a consistent left-to-right vs top-down orientation.
