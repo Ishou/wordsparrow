@@ -136,9 +136,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Renovate opens the PRs this enriches; without this the action
-          # refuses to run on a bot-initiated event. github-actions covers the
-          # cron-sweep dispatch path.
+          # Allow the bots that open/dispatch these PRs (renovate opens them; github-actions runs the cron sweep).
           allowed_bots: 'renovate[bot],github-actions[bot]'
           claude_args: '--allowed-tools "Read,WebFetch,Bash(gh pr view:*),Bash(gh pr edit:*),Bash(cat:*),Bash(python:*)"'
           prompt: |
