@@ -59,3 +59,20 @@ def test_derive_apps_attaches_db_from_sibling_db_chart(tmp_path: Path) -> None:
     assert apps["game"].kind == "api"
     assert apps["bliss-nats"].kind == "infra"
     assert apps["bliss-nats"].has_db is False
+
+
+def test_terraform_resource_types(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "terraform/cf.tf",
+        'resource "cloudflare_pages_project" "frontend" {}\n'
+        'resource "cloudflare_dns_record" "v" {}\n',
+    )
+    types = parse.terraform_resource_types(tmp_path)
+    assert types == {"cloudflare_pages_project", "cloudflare_dns_record"}
+
+
+def test_deploy_workflows(tmp_path: Path) -> None:
+    _write(tmp_path / ".github/workflows/deploy-frontend.yml", "name: x\n")
+    _write(tmp_path / ".github/workflows/deploy-api-k8s.yml", "name: y\n")
+    _write(tmp_path / ".github/workflows/ci.yml", "name: z\n")
+    assert parse.deploy_workflows(tmp_path) == {"deploy-frontend", "deploy-api-k8s"}

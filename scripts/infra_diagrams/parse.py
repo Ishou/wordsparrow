@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -92,3 +93,30 @@ def derive_apps(charts: list[Chart]) -> list[AppNode]:
                 AppNode(name=c.name, context=c.name, has_db=c.has_cnpg, kind="infra")
             )
     return apps
+
+
+TF_RESOURCE_TYPES = (
+    "cloudflare_pages_project",
+    "cloudflare_pages_domain",
+    "cloudflare_dns_record",
+)
+
+
+def terraform_resource_types(root: Path = REPO_ROOT) -> set[str]:
+    found: set[str] = set()
+    tf_dir = root / "terraform"
+    if not tf_dir.is_dir():
+        return found
+    for tf in sorted(tf_dir.glob("*.tf")):
+        text = tf.read_text(encoding="utf-8")
+        for rtype in TF_RESOURCE_TYPES:
+            if re.search(rf'resource\s+"{re.escape(rtype)}"', text):
+                found.add(rtype)
+    return found
+
+
+def deploy_workflows(root: Path = REPO_ROOT) -> set[str]:
+    wf_dir = root / ".github/workflows"
+    if not wf_dir.is_dir():
+        return set()
+    return {p.stem for p in wf_dir.glob("deploy-*.yml")}
