@@ -105,6 +105,9 @@ ADR-0065  .github/workflows/dependency-review.yml  License deny-list (GPL-2.0/GP
 ADR-0066  game/api/openapi.yaml                    Cross-device "Mes parties": new GET /v1/users/me/lobbies (cookie-authed, user-scoped); /v1/sessions/{sessionId}/lobbies retained for anon
 ADR-0066  frontend/src/ui/routes/accueil.tsx       Accueil loader picks listLobbiesForUser when auth.status === 'authed'; falls back to session-scoped listMyLobbies otherwise
 ADR-0066  frontend/src/application/game/LobbyClient.ts   LobbyClient port gains listMyLobbiesForUser() alongside listMyLobbies(sessionId)
+ADR-0067  .github/workflows/helm-bump-enrich*.yml   Enrichment workflow: advisory, ground notes in source registry
+ADR-0067  scripts/helm-enrich/**                     Deterministic enrichment core; pure functions, pytest
+ADR-0067  infra/tools-upgrade-sources.yaml           Source registry; add an entry when adding a subchart/image
 ```
 
 ## Adding entries
