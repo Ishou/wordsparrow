@@ -145,6 +145,19 @@ def test_coherence_fails_on_undeclared_tf_resource() -> None:
         raise AssertionError("expected CoherenceError")
 
 
+def test_coherence_fails_when_api_service_id_mismatches_context() -> None:
+    topo = _topo(services=[
+        {"id": "grid-svc", "label": "grid-api", "chart": "wordsparrow-api", "group": "APIs"},
+        {"id": "ingress", "label": "ingress-nginx", "chart": "platform", "group": "Edge"},
+    ])
+    try:
+        descriptor.check_coherence(topo, _charts(), {"cloudflare_pages_project"}, {"deploy-frontend"})
+    except descriptor.CoherenceError as exc:
+        assert "grid-svc" in str(exc) and "grid" in str(exc)
+    else:
+        raise AssertionError("expected CoherenceError")
+
+
 def test_coherence_fails_on_unknown_edge_endpoint() -> None:
     topo = _topo(cluster_edges=[{"from": "ingress", "to": "nope", "label": "x"}])
     try:

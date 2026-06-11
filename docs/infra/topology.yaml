@@ -1,16 +1,6 @@
-# Source of truth for infra-diagram EDGES and display grouping.
-# NODES (apps, DBs) are parsed from Helm charts; this file declares the
-# semantic edges and cloud nodes that no chart contains. Coherence-gated
-# by scripts/infra_diagrams (every chart must be referenced here; every
-# chart / tf-resource / workflow referenced here must exist). See
-# docs/superpowers/specs/2026-06-11-readme-infra-diagrams-design.md.
+# Edges the Helm charts don't encode; nodes parsed from charts. See docs/superpowers/specs/2026-06-11-readme-infra-diagrams-design.md.
 
-# Display services. `chart` must match a real Chart.yaml `name:`. One
-# chart may expand into several display nodes (platform bundles
-# ingress-nginx + cert-manager). `id` is the Mermaid node id. For API
-# services the `id` MUST equal the bounded-context directory name
-# (grid/game/identity/survey): the cluster diagram's Postgres cylinder is
-# keyed off it, so a mismatched id would silently drop the DB node.
+# `chart` must match a real Chart.yaml `name:`; `id` must equal the bounded-context dir (enforced by coherence check).
 services:
   - { id: ingress,     label: ingress-nginx,  chart: platform,            group: Edge }
   - { id: certmanager, label: cert-manager,   chart: platform,            group: Edge }
@@ -22,9 +12,7 @@ services:
   - { id: signoz,      label: SigNoz,         chart: observability,       group: Observability }
   - { id: matomo,      label: Matomo,         chart: matomo,              group: Observability }
 
-# Cloud nodes for the cloud/deploy diagram. `tf_resource` must match a
-# resource type present in terraform/*.tf (grep-gated). Use null for
-# nodes with no terraform resource (e.g. the k3s node concept).
+# Grep-gated against terraform/*.tf; use null for nodes with no TF resource (e.g. the k3s node concept).
 cloud:
   - { id: pages,       label: Cloudflare Pages,    tf_resource: cloudflare_pages_project }
   - { id: pagesdomain, label: Pages custom domain, tf_resource: cloudflare_pages_domain }
@@ -54,16 +42,13 @@ flow_edges:
   - { from: nats,    to: game,    label: consumes }
   - { from: game,    to: signoz,  label: traces }
 
-# Cloud/deploy diagram edges. `from` may be a deploy-*.yml workflow stem
-# (gated against real workflows) or a cloud/service id.
+# `from` may be a deploy-*.yml workflow stem (gated against real workflows) or a cloud/service id.
 deploy_edges:
   - { from: deploy-frontend, to: pages, label: wrangler }
   - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
   - { from: pages,           to: dns,   label: served via }
 
-# Clue AI pipeline stages, rendered as a linear chain. Unlike the rest of
-# this descriptor, these stages are hand-maintained and NOT coherence-gated
-# against scripts/clue_generation/ — keep them in sync by hand.
+# Hand-maintained pipeline stages NOT coherence-gated against scripts/clue_generation/.
 clue_pipeline:
   - Curated FR corpus
   - mlx-lm LoRA / DPO generator

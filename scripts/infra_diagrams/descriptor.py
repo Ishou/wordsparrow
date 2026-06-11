@@ -49,6 +49,7 @@ def check_coherence(
     workflow_ids: set[str],
 ) -> None:
     _check_chart_coverage(topo, charts)
+    _check_service_ids(topo, charts)
     _check_tf_coverage(topo, tf_types)
     _check_edge_endpoints(topo, workflow_ids)
 
@@ -66,6 +67,19 @@ def _check_chart_coverage(topo: Topology, charts: list[Chart]) -> None:
         raise CoherenceError(
             f"topology.yaml services reference non-existent charts: {sorted(extra)}"
         )
+
+
+def _check_service_ids(topo: Topology, charts: list[Chart]) -> None:
+    context_by_chart = {c.name: c.path.parts[0] for c in charts if c.kind == "api"}
+    for svc in topo.services:
+        chart_name = svc["chart"]
+        if chart_name in context_by_chart:
+            expected_id = context_by_chart[chart_name]
+            if svc["id"] != expected_id:
+                raise CoherenceError(
+                    f"service id {svc['id']!r} must equal bounded-context name"
+                    f" {expected_id!r} (chart {chart_name!r})"
+                )
 
 
 def _check_tf_coverage(topo: Topology, tf_types: set[str]) -> None:
