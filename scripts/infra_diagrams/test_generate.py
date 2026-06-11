@@ -435,3 +435,9 @@ def test_render_cluster_external_node_gets_terracotta() -> None:
     )
     assert "  classDef external fill:#b8554022,stroke:#b85540;" in out
     assert "  class cluepipeline external;" in out
+
+
+def test_render_cloud_zones_ci_and_cloud() -> None:
+    out = render.render_cloud(_topo())
+    assert "  style Cloud fill:#b8554020,stroke:#b85540;" in out
+    assert "  style CI fill:#5a655a1f,stroke:#8b9488;" in out

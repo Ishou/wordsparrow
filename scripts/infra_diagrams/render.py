@@ -109,6 +109,9 @@ def render_cloud(topo: Topology) -> str:
     lines.append("  end")
     for e in topo.deploy_edges:
         lines.append(f"  {_edge(e)}")
+    if workflows:
+        lines.append(style.zone("CI", "infra"))
+    lines.append(style.zone("Cloud", "external"))
     return "\n".join(lines)
 
 
