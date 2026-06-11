@@ -96,7 +96,7 @@ flowchart LR
   nats -->|consumes| game
   survey -. manual export .-> cluepipeline
 ```
-<p align="center"><sub><b>Figure 1.</b> The k3s cluster by bounded context — each context's API and Postgres, the shared NATS bus and edge infra. Dashed edges leave the cluster or are manual.</sub></p>
+<p align="center"><sub><b>Figure 1.</b> In-cluster topology grouped by bounded context — each box is one context's API and database. Dashed edges are manual or leave the cluster.</sub></p>
 <!-- INFRA-DIAGRAM:cluster END -->
 
 <!-- INFRA-DIAGRAM:cloud START -->
@@ -116,7 +116,7 @@ flowchart LR
   deploy_api_k8s -->|helm upgrade| k3s
   pages -->|served via| dns
 ```
-<p align="center"><sub><b>Figure 2.</b> Cloud and deploy topology — Cloudflare Pages and DNS, the Hetzner k3s cluster, and the CI workflows that ship to each.</sub></p>
+<p align="center"><sub><b>Figure 2.</b> Where the frontend and cluster are hosted, and the CI workflows that deploy them.</sub></p>
 <!-- INFRA-DIAGRAM:cloud END -->
 
 <!-- INFRA-DIAGRAM:flow START -->
@@ -134,7 +134,7 @@ flowchart LR
   grid -->|PuzzleReady event| nats
   nats -->|consumes| game
 ```
-<p align="center"><sub><b>Figure 3.</b> Runtime request and event flow — the browser's HTTPS/WSS connections through ingress to the APIs, and the PuzzleReady event over NATS JetStream.</sub></p>
+<p align="center"><sub><b>Figure 3.</b> How a request and the daily-puzzle event move through the system at runtime.</sub></p>
 <!-- INFRA-DIAGRAM:flow END -->
 
 - **Cloud + DNS** — OpenTofu manages a self-hosted Hetzner k3s cluster
@@ -220,7 +220,7 @@ flowchart LR
   alerts -->|5xx / errors / staleness| gmail
   oauth2 -->|gates admin UI| signoz
 ```
-<p align="center"><sub><b>Figure 4.</b> Target observability and analytics topology — every module's telemetry into SigNoz on ClickHouse, the symptom-alerting limb, and the Matomo analytics path. A module without a source edge is a gap to address.</sub></p>
+<p align="center"><sub><b>Figure 4.</b> Target telemetry, alerting and analytics topology — a module without a source edge here is a gap to address, not an exception.</sub></p>
 <!-- INFRA-DIAGRAM:observability END -->
 
 - **Frontend traces** ship to a public OTLP ingest fronted by ingress
@@ -268,7 +268,7 @@ flowchart LR
   sft -. next round .-> gen
   human -. not yet wired .-> grid
 ```
-<p align="center"><sub><b>Figure 5.</b> The Modal clue-generation round loop — generate, judge pre-filter, human rating, winners, and SFT into the next model. Dashed edges are the round restart and the not-yet-wired grid corpus.</sub></p>
+<p align="center"><sub><b>Figure 5.</b> The Modal clue-generation training loop. Dashed edges are the round restart and the not-yet-wired grid corpus.</sub></p>
 <!-- INFRA-DIAGRAM:clue-pipeline END -->
 
 - **Generator** — successive fine-tuned model iterations on Modal GPU;
