@@ -47,7 +47,7 @@ deploy_edges:
   - { from: deploy-frontend, to: pages, label: wrangler }
   - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
   - { from: pages,           to: pagesdomain, label: custom domain }
-  - { from: pages,           to: dns,   label: served via }
+  - { from: dns,             to: k3s,   label: service subdomains via external-dns }
 
 # Observability TARGET (ADR-0027/0033/0040): hand-maintained, not chart-gated — missing source edge = gap to fix.
 observability:
