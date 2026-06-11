@@ -372,3 +372,44 @@ def test_safe_is_injective_over_real_descriptor() -> None:
     ids |= {n["id"] for n in topo.observability.get("nodes") or []}
     ids |= {n["id"] for n in topo.clue_pipeline.get("nodes") or []}
     assert len({render._safe(i) for i in ids}) == len(ids)
+
+
+import style
+
+
+def test_node_classdefs_emit_in_fixed_order() -> None:
+    assert style.node_classdefs({"data", "context"}) == [
+        "  classDef context fill:#6a935826,stroke:#6a9358;",
+        "  classDef data fill:#c8945633,stroke:#a87538;",
+    ]
+
+
+def test_node_classdefs_skips_roles_without_node_fill() -> None:
+    assert style.node_classdefs({"infra"}) == []  # infra has zone fill only
+
+
+def test_zone_uses_translucent_fill_and_stroke() -> None:
+    assert style.zone("Edge", "infra") == "  style Edge fill:#5a655a1f,stroke:#8b9488;"
+
+
+def test_assign_joins_ids() -> None:
+    assert style.assign(["a", "b"], "data") == "  class a,b data;"
+
+
+def test_flat_node_styles_groups_by_role_deterministically() -> None:
+    out = style.flat_node_styles(
+        ["grid", "game", "nats"],
+        {"grid": "context", "game": "context", "nats": "messaging"},
+    )
+    assert out == [
+        "  classDef context fill:#6a935826,stroke:#6a9358;",
+        "  classDef messaging fill:#a8753826,stroke:#c89456;",
+        "  class grid,game context;",
+        "  class nats messaging;",
+    ]
+
+
+def test_group_role_covers_known_groups() -> None:
+    assert style.GROUP_ROLE["Sources"] == "context"
+    assert style.GROUP_ROLE["Cloud"] == "external"
+    assert style.GROUP_ROLE["Edge"] == "infra"
