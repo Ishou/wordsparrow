@@ -1,0 +1,166 @@
+name: helm-bump-enrich
+
+# Enriches Renovate's internal-tool bump PRs (advisory; never a required
+# check). Mode A: subchart deps in infra/**/Chart.yaml. Mode B (PR 2) adds
+# image tags in values.yaml. Deploy stays manual (ADR-0066).
+
+on:
+  pull_request:
+    types: [opened, reopened]
+    paths:
+      - 'infra/**/Chart.yaml'
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'PR number to enrich'
+        required: true
+
+concurrency:
+  group: helm-bump-enrich-pr-${{ github.event.pull_request.number || github.event.inputs.pr }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  detect:
+    # Only Renovate-authored PRs (head ref starts with renovate/).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.pull_request.head.ref, 'renovate/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number || github.event.inputs.pr }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r scripts/helm-enrich/requirements.txt
+
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v3.16.3
+
+      - name: Resolve PR refs
+        id: refs
+        run: |
+          set -euo pipefail
+          BASE_SHA=$(gh pr view "$PR" --json baseRefOid --jq .baseRefOid)
+          HEAD_SHA=$(gh pr view "$PR" --json headRefOid --jq .headRefOid)
+          echo "base=$BASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "head=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Find bumped Chart.yaml + build bundle
+        id: bundle
+        run: |
+          set -euo pipefail
+          BASE=${{ steps.refs.outputs.base }}
+          HEAD=${{ steps.refs.outputs.head }}
+          REG=infra/tools-upgrade-sources.yaml
+          FILE=$(git diff --name-only "$BASE" "$HEAD" -- 'infra/**/Chart.yaml' | head -n1)
+          if [ -z "${FILE:-}" ]; then
+            echo "::notice::no Chart.yaml change; nothing to enrich"
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          git show "$BASE:$FILE" > /tmp/old.yaml
+          git show "$HEAD:$FILE" > /tmp/new.yaml
+          python scripts/helm-enrich/detect.py classify \
+            --path "$FILE" --old /tmp/old.yaml --new /tmp/new.yaml > /tmp/bumps.json
+          COUNT=$(python -c "import json;print(len(json.load(open('/tmp/bumps.json'))))")
+          if [ "$COUNT" != "1" ]; then
+            echo "::warning::expected 1 bump, got $COUNT; skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          python -c "import json;print(json.dumps(json.load(open('/tmp/bumps.json'))[0]))" > /tmp/bump.json
+          NAME=$(python -c "import json;print(json.load(open('/tmp/bump.json'))['name'])")
+          OLD=$(python -c "import json;print(json.load(open('/tmp/bump.json'))['old'])")
+          NEW=$(python -c "import json;print(json.load(open('/tmp/bump.json'))['new'])")
+          CHART_DIR=$(dirname "$FILE")
+          REPO=$(python -c "import yaml,sys;d=yaml.safe_load(open('$FILE'));print(next(x['repository'] for x in d['dependencies'] if x['name']=='$NAME'))")
+          helm repo add up "$REPO" >/dev/null 2>&1 || helm repo add up "$REPO"
+          helm repo update up >/dev/null
+          helm show values "up/$NAME" --version "$OLD" > /tmp/vold.yaml || : > /tmp/vold.yaml
+          helm show values "up/$NAME" --version "$NEW" > /tmp/vnew.yaml || : > /tmp/vnew.yaml
+          OVERRIDES=$(ls "$CHART_DIR"/values*.yaml 2>/dev/null | tr '\n' ' ')
+          python scripts/helm-enrich/detect.py bundle \
+            --bump /tmp/bump.json --registry "$REG" \
+            --values-old /tmp/vold.yaml --values-new /tmp/vnew.yaml \
+            --overrides $OVERRIDES > bundle.json
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          cat bundle.json
+
+      - name: Upload bundle
+        if: steps.bundle.outputs.skip == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: enrich-bundle
+          path: bundle.json
+          retention-days: 1
+
+    outputs:
+      skip: ${{ steps.bundle.outputs.skip }}
+      pr: ${{ env.PR }}
+
+  enrich:
+    needs: detect
+    if: needs.detect.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_NUMBER: ${{ needs.detect.outputs.pr }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+      - uses: actions/download-artifact@v4
+        with:
+          name: enrich-bundle
+
+      - name: Enrich the PR body
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowed-tools "Read,WebFetch,Bash(gh pr view:*),Bash(gh pr edit:*),Bash(cat:*),Bash(python:*)"'
+          prompt: |
+            You are enriching a Renovate dependency-bump PR. The deterministic
+            context bundle is in ./bundle.json (read it first). The target PR
+            number is in env var PR_NUMBER.
+
+            Steps:
+            1. Read ./bundle.json. Fields: mode, name, old, new,
+               releaseNotesUrl, extraDocs, sourceMissing, valuesDiff (a list
+               of {path,kind,old,new,overridden}).
+            2. If releaseNotesUrl is set, WebFetch it (and extraDocs if present)
+               and extract the migration-relevant changes between version `old`
+               and `new`: breaking changes, required config/CRD/DB actions,
+               deprecations. Do NOT invent notes — only report what the fetched
+               pages state. If sourceMissing is true or the fetch fails, write
+               "Release notes unavailable — review manually" and continue.
+            3. Render ONE Markdown block, exactly between these markers:
+                 <!-- helm-enrich:start -->
+                 ## Upgrade context (automated, advisory)
+                 **<name>: <old> -> <new>**
+                 ### Migration notes
+                 ...(bulleted; cite the source URL)...
+                 ### Upstream default values changed
+                 ...(a table from valuesDiff: path | kind | old -> new |
+                    overridden. Put OVERRIDDEN rows first and bold them — these
+                    are the keys the repo pins in values-prod.yaml and may need
+                    reconciliation. Omit this section entirely if valuesDiff is
+                    empty.)...
+                 <!-- helm-enrich:end -->
+            4. Get the current PR body: `gh pr view "$PR_NUMBER" --json body --jq .body > /tmp/body.md`
+            5. Remove any existing block between the markers (idempotent), then
+               append the fresh block. Write the result to /tmp/newbody.md.
+            6. `gh pr edit "$PR_NUMBER" --body-file /tmp/newbody.md`
+
+            Keep it concise. This is advisory context for a human reviewer.
