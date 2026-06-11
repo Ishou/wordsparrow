@@ -210,8 +210,46 @@ missing/weak) and the final merge. Everything between is automated.
    - **Carryover:** the helm-specific **values-diff** (upstream defaults
      changed, overridden-keys flagged) stays as a helm-only *extra* A attaches
      for helm bumps — it doesn't generalize but isn't wasted.
-3. **The standardized A→B schema** — finalize the exact fields + format
-   (JSON artifact? markdown?). This is the reusable contract.
+3. ✅ **RESOLVED — the standardized A→B schema.**
+   - **JSON artifact = the contract.** B consumes the JSON as *data*; the
+     human-readable migration notes A posts to the PR are a side rendering of
+     the same content. (Today's enrichment only produces prose — adding the
+     JSON is delta #2 from #2.)
+   - **Strictly project-agnostic.** A never reads our code, so the schema
+     describes *only the upstream change*, with **zero references to our
+     files**. Any project mapping is B's job; A attempting it would be
+     hallucination. This is what makes the isolation real.
+   - **Every claim cites a `sourceUrl`.** A breaking-change / deprecation /
+     removal / migration-step with no `sourceUrl` is **invalid output** — the
+     no-hallucination posture made structural.
+   - **`detail` = verbatim quote; `summary` = A's one-line handle.** Demoting
+     A from *interpret* to *locate + quote* shrinks A's interpretive surface:
+     B is anchored to real upstream text next to every claim, not a paraphrase
+     it could inherit errors from. URLs are retained so B can **re-fetch the
+     full guide** when an excerpt isn't enough; we **do not** dump whole docs
+     inline (huge migration guides are noise — the URL covers "go deeper").
+   - **Two grounding axes — the schema only fixes one.**
+     - *Upstream (A→B):* fixed by verbatim `detail` + `sourceUrl` above.
+     - *Downstream (B→our repo):* the schema does **not** touch this — it's
+       where B is most likely to hallucinate (claiming *our* code uses the
+       changed API when it doesn't). Fixed by B **reading the actual files**
+       before asserting, and by **Agent C verifying B's diff** against both
+       the excerpts and the real code. Net: the schema makes A honest; C makes
+       B honest.
+
+   Shape:
+   ```jsonc
+   {
+     "dep": "...", "from": "...", "to": "...",
+     "sourceConfidence": "high|medium|low|none",
+     "sources": [{ "url": "...", "type": "changelog|migration-guide|llms-txt|release", "fetchedOk": true }],
+     "breakingChanges": [{ "summary": "...", "detail": "<verbatim quote>", "sourceUrl": "..." }],
+     "deprecations":    [{ "summary": "...", "detail": "<verbatim quote>", "sourceUrl": "..." }],
+     "removals":        [{ "summary": "...", "detail": "<verbatim quote>", "sourceUrl": "..." }],
+     "migrationSteps":  [{ "instruction": "<verbatim quote>", "sourceUrl": "..." }]
+   }
+   ```
+   (Exact field names finalize in the plan; the *shape* above is the decision.)
 4. **B↔C loop mechanics** — exact cap value, convergence/terminator criteria,
    and what "escalate to human" looks like concretely (label? issue? comment?).
 5. **Confidence definitions** — what counts as `low`/`thin` source confidence
