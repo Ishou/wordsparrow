@@ -87,6 +87,7 @@ flowchart LR
     survey --> surveyDB
   end
   cluepipeline["clue AI pipeline (Modal)"]
+  certmanager -->|TLS certs| ingress
   ingress --> grid
   ingress --> game
   ingress --> identity
@@ -114,6 +115,7 @@ flowchart LR
   end
   deploy_frontend -->|wrangler| pages
   deploy_api_k8s -->|helm upgrade| k3s
+  pages -->|custom domain| pagesdomain
   pages -->|served via| dns
 ```
 <p align="center"><sub><b>Figure 2.</b> Where the frontend and cluster are hosted, and the CI workflows that deploy them.</sub></p>

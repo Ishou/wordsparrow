@@ -17,7 +17,7 @@ from render import (
     render_flow,
     render_observability,
 )
-from readme import README_PATH, inject
+from readme import MARKER_IDS, README_PATH, inject
 
 
 def build_readme(text: str) -> str:
@@ -34,6 +34,8 @@ def build_readme(text: str) -> str:
         ("observability", render_observability(topo)),
         ("clue-pipeline", render_clue(topo)),
     ]
+    if tuple(marker for marker, _ in diagrams) != MARKER_IDS:
+        raise CoherenceError("build_readme diagrams do not match readme.MARKER_IDS")
     for number, (marker, mermaid) in enumerate(diagrams, start=1):
         caption = topo.captions.get(marker)
         if not caption:

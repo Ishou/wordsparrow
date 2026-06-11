@@ -65,6 +65,7 @@ def check_coherence(
     _check_tf_coverage(topo, tf_types)
     _check_edge_endpoints(topo, workflow_ids)
     _check_observability_endpoints(topo)
+    _check_clue_endpoints(topo)
 
 
 def _check_chart_coverage(topo: Topology, charts: list[Chart]) -> None:
@@ -133,3 +134,11 @@ def _check_observability_endpoints(topo: Topology) -> None:
         for end in (edge["from"], edge["to"]):
             if end not in valid:
                 raise CoherenceError(f"observability edge endpoint not a known node: {end!r}")
+
+
+def _check_clue_endpoints(topo: Topology) -> None:
+    valid = {n["id"] for n in topo.clue_pipeline.get("nodes") or []}
+    for edge in topo.clue_pipeline.get("edges") or []:
+        for end in (edge["from"], edge["to"]):
+            if end not in valid:
+                raise CoherenceError(f"clue pipeline edge endpoint not a known node: {end!r}")

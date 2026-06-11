@@ -8,6 +8,11 @@ def _safe(node_id: str) -> str:
     return node_id.replace("-", "_").replace(".", "_")
 
 
+def _label(text: str) -> str:
+    # `"` would close the Mermaid node-label quote; #quot; is its entity escape.
+    return text.replace('"', "#quot;")
+
+
 def _db_by_context(apps: list[AppNode]) -> dict[str, bool]:
     return {a.context: a.has_db for a in apps if a.kind == "api"}
 
@@ -26,7 +31,7 @@ def render_cluster(topo: Topology, apps: list[AppNode]) -> str:
     for group, svcs in shared.items():
         lines.append(f"  subgraph {group}")
         for s in svcs:
-            lines.append(f'    {_safe(s["id"])}["{s["label"]}"]')
+            lines.append(f'    {_safe(s["id"])}["{_label(s["label"])}"]')
         lines.append("  end")
 
     # One subgraph per bounded context, holding its api + its Postgres.
@@ -34,15 +39,15 @@ def render_cluster(topo: Topology, apps: list[AppNode]) -> str:
         if s["id"] not in contexts:
             continue
         ctx = _safe(s["id"])
-        lines.append(f'  subgraph ctx_{ctx}["{s["id"]}"]')
-        lines.append(f'    {ctx}["{s["label"]}"]')
+        lines.append(f'  subgraph ctx_{ctx}["{_label(s["id"])}"]')
+        lines.append(f'    {ctx}["{_label(s["label"])}"]')
         if db.get(s["id"]):
-            lines.append(f'    {ctx}DB[("{s["id"]} pg")]')
+            lines.append(f'    {ctx}DB[("{_label(s["id"])} pg")]')
             lines.append(f"    {ctx} --> {ctx}DB")
         lines.append("  end")
 
     for ext in topo.cluster_external:
-        lines.append(f'  {_safe(ext["id"])}["{ext["label"]}"]')
+        lines.append(f'  {_safe(ext["id"])}["{_label(ext["label"])}"]')
     for e in topo.cluster_edges:
         lines.append(f"  {_edge(e)}")
     return "\n".join(lines)
@@ -65,14 +70,14 @@ def render_cloud(topo: Topology) -> str:
     if workflows:
         lines.append("  subgraph CI")
         for w in workflows:
-            lines.append(f'    {_safe(w)}["{w}.yml"]')
+            lines.append(f'    {_safe(w)}["{_label(w)}.yml"]')
         lines.append("  end")
     lines.append("  subgraph Cloud")
     for c in topo.cloud:
-        lines.append(f'    {_safe(c["id"])}["{c["label"]}"]')
+        lines.append(f'    {_safe(c["id"])}["{_label(c["label"])}"]')
     lines.append("  end")
     for e in topo.deploy_edges:
-        lines.append(f'  {_safe(e["from"])} -->|{e["label"]}| {_safe(e["to"])}')
+        lines.append(f"  {_edge(e)}")
     return "\n".join(lines)
 
 
@@ -89,7 +94,7 @@ def render_flow(topo: Topology) -> str:
 
     lines = ["flowchart LR"]
     for n in nodes:
-        lines.append(f'  {_safe(n)}["{labels.get(n, n)}"]')
+        lines.append(f'  {_safe(n)}["{_label(labels.get(n, n))}"]')
     for e in topo.flow_edges:
         lines.append(f"  {_edge(e)}")
     return "\n".join(lines)
@@ -105,10 +110,10 @@ def render_observability(topo: Topology) -> str:
     for group, ns in groups.items():
         lines.append(f"  subgraph {group}")
         for n in ns:
-            lines.append(f'    {_safe(n["id"])}["{n["label"]}"]')
+            lines.append(f'    {_safe(n["id"])}["{_label(n["label"])}"]')
         lines.append("  end")
     for e in edges:
-        lines.append(f'  {_safe(e["from"])} -->|{e["label"]}| {_safe(e["to"])}')
+        lines.append(f"  {_edge(e)}")
     return "\n".join(lines)
 
 
@@ -117,7 +122,7 @@ def render_clue(topo: Topology) -> str:
     edges = topo.clue_pipeline.get("edges") or []
     lines = ["flowchart LR"]
     for n in nodes:
-        lines.append(f'  {_safe(n["id"])}["{n["label"]}"]')
+        lines.append(f'  {_safe(n["id"])}["{_label(n["label"])}"]')
     for e in edges:
         lines.append(f"  {_edge(e)}")
     return "\n".join(lines)

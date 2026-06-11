@@ -23,6 +23,7 @@ cloud:
 cluster_external:
   - { id: cluepipeline, label: clue AI pipeline (Modal) }
 cluster_edges:
+  - { from: certmanager, to: ingress, label: TLS certs }
   - { from: ingress,  to: grid }
   - { from: ingress,  to: game }
   - { from: ingress,  to: identity }
@@ -45,6 +46,7 @@ flow_edges:
 deploy_edges:
   - { from: deploy-frontend, to: pages, label: wrangler }
   - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
+  - { from: pages,           to: pagesdomain, label: custom domain }
   - { from: pages,           to: dns,   label: served via }
 
 # Observability TARGET (ADR-0027/0033/0040): hand-maintained, not chart-gated — missing source edge = gap to fix.
