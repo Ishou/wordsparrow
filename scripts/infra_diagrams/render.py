@@ -140,6 +140,9 @@ def render_flow(topo: Topology) -> str:
     return "\n".join(lines)
 
 
+_OBS_DATA_NODES = {"clickhouse"}
+
+
 def render_observability(topo: Topology) -> str:
     nodes = topo.observability.get("nodes") or []
     edges = topo.observability.get("edges") or []
@@ -154,6 +157,13 @@ def render_observability(topo: Topology) -> str:
         lines.append("  end")
     for e in edges:
         lines.append(f"  {_edge(e)}")
+    data_ids = [_safe(n["id"]) for n in nodes if n["id"] in _OBS_DATA_NODES]
+    if data_ids:
+        lines.extend(style.node_classdefs({"data"}))
+        lines.append(style.assign(data_ids, "data"))
+    for group in groups:
+        if group in style.GROUP_ROLE:
+            lines.append(style.zone(group, style.GROUP_ROLE[group]))
     return "\n".join(lines)
 
 

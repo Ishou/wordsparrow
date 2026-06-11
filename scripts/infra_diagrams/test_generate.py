@@ -452,3 +452,16 @@ def test_render_flow_role_tints() -> None:
     assert "  classDef context fill:#6a935826,stroke:#6a9358;" in out
     assert "  class grid,game context;" in out
     assert "  class nats messaging;" in out
+
+
+def test_render_observability_zones_and_clickhouse_data() -> None:
+    obs = {
+        "nodes": _OBS["nodes"]
+        + [{"id": "clickhouse", "label": "ClickHouse", "group": "Backend"}],
+        "edges": _OBS["edges"],
+    }
+    out = render.render_observability(_topo(observability=obs))
+    assert "  style Sources fill:#6a93581f,stroke:#6a9358;" in out
+    assert "  style Backend fill:#5a655a1f,stroke:#8b9488;" in out
+    assert "  classDef data fill:#c8945633,stroke:#a87538;" in out
+    assert "  class clickhouse data;" in out
