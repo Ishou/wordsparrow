@@ -441,3 +441,14 @@ def test_render_cloud_zones_ci_and_cloud() -> None:
     out = render.render_cloud(_topo())
     assert "  style Cloud fill:#b8554020,stroke:#b85540;" in out
     assert "  style CI fill:#5a655a1f,stroke:#8b9488;" in out
+
+
+def test_render_flow_role_tints() -> None:
+    out = render.render_flow(_topo(flow_edges=[
+        {"from": "ingress", "to": "grid"},
+        {"from": "grid", "to": "nats", "label": "PuzzleReady event"},
+        {"from": "nats", "to": "game", "label": "consumed by"},
+    ]))
+    assert "  classDef context fill:#6a935826,stroke:#6a9358;" in out
+    assert "  class grid,game context;" in out
+    assert "  class nats messaging;" in out

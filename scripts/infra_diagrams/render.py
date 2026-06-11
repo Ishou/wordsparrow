@@ -115,6 +115,9 @@ def render_cloud(topo: Topology) -> str:
     return "\n".join(lines)
 
 
+_FLOW_ROLE = {"grid": "context", "game": "context", "nats": "messaging"}
+
+
 def render_flow(topo: Topology) -> str:
     labels = {s["id"]: s["label"] for s in topo.services}
     labels["browser"] = "Browser"
@@ -131,6 +134,9 @@ def render_flow(topo: Topology) -> str:
         lines.append(f'  {_safe(n)}["{_label(labels.get(n, n))}"]')
     for e in topo.flow_edges:
         lines.append(f"  {_edge(e)}")
+    ordered = [_safe(n) for n in nodes]
+    role_by_id = {_safe(n): _FLOW_ROLE[n] for n in nodes if n in _FLOW_ROLE}
+    lines.extend(style.flat_node_styles(ordered, role_by_id))
     return "\n".join(lines)
 
 
