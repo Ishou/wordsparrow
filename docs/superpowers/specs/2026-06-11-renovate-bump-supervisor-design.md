@@ -308,10 +308,18 @@ missing/weak) and the final merge. Everything between is automated.
      in the plan loop (#4). This replaces the old self-rated `planConfidence`,
      which is **dropped**.
    - **§6a rates D** (code correctness) — the existing terminal link.
-   - **Optional non-loop signal — D rates C:** "was the approved plan actually
-     implementable when D hit the code?" Surfaced in the PR as a quality
-     signal, **not** a feedback loop (keeps the pipeline linear). [Keep vs skip:
-     pending — see note.]
+   - **No "D rates C."** C produces no artifact D consumes — C's sole purpose
+     is to rate/gate B. The plan flows A → B → [C gates] → D, so the only
+     coherent "was the plan implementable?" rating would be D rating *B's
+     plan*, which C (a fresh-context rater) already did. Redundant → dropped.
+   - **Rejected — a generalized review/fix loop at every seam** (B rates A → A
+     fixes → re-rate, etc.). A is **doc-bound**: if B asks A to supply a
+     migration step that no doc contains, A re-fetches forever against a wall.
+     The zero-doc case is already handled by A's deterministic tripwire, and the
+     only residual win (A under-extracted an *existing* doc) is too narrow to
+     justify the loop. The *uniform* "consumer-rates-producer review/fix"
+     principle is a nice pattern to generalize in a future session, but here it
+     collapses to one doc-bound loop and isn't worth it.
 6. **Fork + close + the "ignored update" fallback.** Exact mechanics of D's
    fork/close; and since closing a Renovate PR makes Renovate stop proposing
    that update, how do we keep the claude PR as the durable tracker (note on
