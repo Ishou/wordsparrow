@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from parse import AppNode
 from descriptor import Topology
+import style
 
 
 def _safe(node_id: str) -> str:
@@ -50,6 +51,36 @@ def render_cluster(topo: Topology, apps: list[AppNode]) -> str:
         lines.append(f'  {_safe(ext["id"])}["{_label(ext["label"])}"]')
     for e in topo.cluster_edges:
         lines.append(f"  {_edge(e)}")
+
+    roles: set[str] = set()
+    assigns: list[str] = []
+    db_ids = [
+        f"{_safe(s['id'])}DB"
+        for s in topo.services
+        if s["id"] in contexts and db.get(s["id"])
+    ]
+    if db_ids:
+        roles.add("data")
+        assigns.append(style.assign(db_ids, "data"))
+    ext_ids = [_safe(x["id"]) for x in topo.cluster_external]
+    if ext_ids:
+        roles.add("external")
+        assigns.append(style.assign(ext_ids, "external"))
+
+    zones = [
+        style.zone(group, style.GROUP_ROLE[group])
+        for group in shared
+        if group in style.GROUP_ROLE
+    ]
+    zones += [
+        style.zone(f"ctx_{_safe(s['id'])}", "context")
+        for s in topo.services
+        if s["id"] in contexts
+    ]
+
+    lines.extend(style.node_classdefs(roles))
+    lines.extend(assigns)
+    lines.extend(zones)
     return "\n".join(lines)
 
 

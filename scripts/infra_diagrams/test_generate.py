@@ -413,3 +413,25 @@ def test_group_role_covers_known_groups() -> None:
     assert style.GROUP_ROLE["Sources"] == "context"
     assert style.GROUP_ROLE["Cloud"] == "external"
     assert style.GROUP_ROLE["Edge"] == "infra"
+
+
+def test_render_cluster_styles_db_and_context_zone() -> None:
+    out = render.render_cluster(_topo(), _apps())
+    assert "  classDef data fill:#c8945633,stroke:#a87538;" in out
+    assert "  class gridDB data;" in out
+    assert "  style ctx_grid fill:#6a93581f,stroke:#6a9358;" in out
+    assert "  style Edge fill:#5a655a1f,stroke:#8b9488;" in out
+
+
+def test_render_cluster_external_node_gets_terracotta() -> None:
+    out = render.render_cluster(
+        _topo(
+            cluster_external=[{"id": "cluepipeline", "label": "clue AI (local)"}],
+            cluster_edges=[
+                {"from": "grid", "to": "cluepipeline", "label": "x", "style": "dashed"}
+            ],
+        ),
+        _apps(),
+    )
+    assert "  classDef external fill:#b8554022,stroke:#b85540;" in out
+    assert "  class cluepipeline external;" in out
