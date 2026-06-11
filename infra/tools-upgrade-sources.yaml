@@ -1,7 +1,4 @@
-# Upstream release-notes sources for the helm-bump enrichment workflow
-# (.github/workflows/helm-bump-enrich.yml). {version} = the new chart or
-# image version. Registry coherence: adding a subchart dependency or a
-# pinned image means adding its entry here in the same PR (ADR-0067).
+# Source registry for helm-bump enrichment (ADR-0067). Add an entry here when adding a subchart dep or pinned image.
 modeA:
   - name: signoz
     repo: "https://charts.signoz.io"
