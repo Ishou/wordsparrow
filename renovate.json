@@ -2,7 +2,6 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", ":disableDependencyDashboard"],
   "timezone": "Europe/Paris",
-  "schedule": ["before 6am on monday"],
   "prHourlyLimit": 1,
   "prConcurrentLimit": 5,
   "rangeStrategy": "bump",
@@ -107,8 +106,7 @@
     },
     {
       "description": "Helm subcharts under infra/ — one PR per tool (no grouping) so each bump is reviewed and enriched on its own (ADR-0067).",
-      "matchManagers": ["helmv3"],
-      "schedule": ["before 6am on monday"]
+      "matchManagers": ["helmv3"]
     },
     {
       "description": "Kotlin pre-releases — Kotlin 2.4 Beta etc. — never auto-PR.",
