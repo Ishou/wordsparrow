@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3 (stdlib + PyYAML), pytest, Mermaid flowchart `classDef`/`class`/`style` directives, GNU make.
 
-**Workspace:** worktree `/Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling` on branch `chore/readme-diagram-styling`. All commands below run from that directory. The shell cwd may reset between tool calls — prefix commands with `cd <worktree> &&` as needed.
+**Workspace:** repo root. All commands below run from the repo root.
 
 **Spec:** `docs/superpowers/specs/2026-06-11-readme-diagram-styling-design.md`.
 
@@ -89,7 +89,7 @@ def test_group_role_covers_known_groups() -> None:
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k "style or classdefs or zone or assign or flat or group_role" -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k "style or classdefs or zone or assign or flat or group_role" -q`
 Expected: FAIL with `ModuleNotFoundError: No module named 'style'`.
 
 - [ ] **Step 3: Write the module**
@@ -163,13 +163,12 @@ def flat_node_styles(node_ids: list[str], role_by_id: dict[str, str]) -> list[st
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k "style or classdefs or zone or assign or flat or group_role" -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k "style or classdefs or zone or assign or flat or group_role" -q`
 Expected: PASS (6 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git add scripts/infra_diagrams/style.py scripts/infra_diagrams/test_generate.py
 git commit -s -m "feat(infra-diagrams): add diagram style palette module"
 ```
@@ -211,7 +210,7 @@ def test_render_cluster_external_node_gets_terracotta() -> None:
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k "cluster_styles or cluster_external_node" -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k "cluster_styles or cluster_external_node" -q`
 Expected: FAIL (assertions on missing `classDef`/`style` lines).
 
 - [ ] **Step 3: Implement**
@@ -274,13 +273,12 @@ with:
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k cluster -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k cluster -q`
 Expected: PASS (existing cluster tests + the 2 new ones).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git add scripts/infra_diagrams/render.py scripts/infra_diagrams/test_generate.py
 git commit -s -m "feat(infra-diagrams): style cluster diagram by role"
 ```
@@ -304,7 +302,7 @@ def test_render_cloud_zones_ci_and_cloud() -> None:
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k cloud_zones -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k cloud_zones -q`
 Expected: FAIL.
 
 - [ ] **Step 3: Implement**
@@ -330,13 +328,12 @@ with:
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k cloud -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k cloud -q`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git add scripts/infra_diagrams/render.py scripts/infra_diagrams/test_generate.py
 git commit -s -m "feat(infra-diagrams): tint cloud diagram zones"
 ```
@@ -365,7 +362,7 @@ def test_render_flow_role_tints() -> None:
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k flow_role -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k flow_role -q`
 Expected: FAIL.
 
 - [ ] **Step 3: Implement**
@@ -398,13 +395,12 @@ with:
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k flow -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k flow -q`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git add scripts/infra_diagrams/render.py scripts/infra_diagrams/test_generate.py
 git commit -s -m "feat(infra-diagrams): role-tint flow diagram nodes"
 ```
@@ -435,7 +431,7 @@ def test_render_observability_zones_and_clickhouse_data() -> None:
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k observability_zones -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k observability_zones -q`
 Expected: FAIL.
 
 - [ ] **Step 3: Implement**
@@ -472,13 +468,12 @@ with:
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k observability -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k observability -q`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git add scripts/infra_diagrams/render.py scripts/infra_diagrams/test_generate.py
 git commit -s -m "feat(infra-diagrams): style observability zones and datastore"
 ```
@@ -509,7 +504,7 @@ def test_render_clue_role_tints() -> None:
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k clue_role -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k clue_role -q`
 Expected: FAIL.
 
 - [ ] **Step 3: Implement**
@@ -544,13 +539,12 @@ with:
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/test_generate.py -k clue -q`
+Run: `python3 -m pytest scripts/infra_diagrams/test_generate.py -k clue -q`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git add scripts/infra_diagrams/render.py scripts/infra_diagrams/test_generate.py
 git commit -s -m "feat(infra-diagrams): role-tint clue pipeline nodes"
 ```
@@ -579,28 +573,27 @@ def test_build_readme_emits_styling() -> None:
 
 - [ ] **Step 2: Run the full suite (this test passes; it guards real topology output)**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 -m pytest scripts/infra_diagrams/ -q`
+Run: `python3 -m pytest scripts/infra_diagrams/ -q`
 Expected: PASS (all tests, including the new regression test — the real `topology.yaml` has `grid`, `Cloud`, etc., so the styling is present).
 
 - [ ] **Step 3: Regenerate the README diagrams**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && make diagrams`
+Run: `make diagrams`
 Expected: `README infra diagrams regenerated.`
 
 - [ ] **Step 4: Verify the drift gate is green**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && python3 scripts/infra_diagrams/generate.py --check`
+Run: `python3 scripts/infra_diagrams/generate.py --check`
 Expected: `README infra diagrams up to date.`
 
 - [ ] **Step 5: Eyeball the diff**
 
-Run: `cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling && git --no-pager diff --stat README.md`
+Run: `git --no-pager diff --stat README.md`
 Expected: only `README.md` changed; the diff is added `classDef`/`class`/`style` lines inside the five `INFRA-DIAGRAM` blocks, no edge or node-label changes.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git add scripts/infra_diagrams/test_generate.py README.md
 git commit -s -m "chore(infra-diagrams): regenerate styled README diagrams"
 ```
@@ -627,7 +620,6 @@ flowchart LR
 - [ ] **Step 2: Push the probe and open it on GitHub**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git add docs/infra/_label-probe.md
 git commit -s -m "chore(infra-diagrams): temp label-rounding probe"
 git push -u origin chore/readme-diagram-styling
@@ -662,7 +654,6 @@ Change each `render_*` first line from `lines = ["flowchart LR"]` (and `render_c
 Update the per-renderer tests that assert `out.startswith("flowchart LR")` to assert `out.startswith(_INIT)` and `"flowchart LR" in out` instead. Remove the probe file, regenerate, verify drift, commit:
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git rm docs/infra/_label-probe.md
 make diagrams
 python3 scripts/infra_diagrams/generate.py --check
@@ -674,7 +665,6 @@ git commit -s -m "feat(infra-diagrams): round diagram edge-label boxes"
 - [ ] **Step 4b (expected — rounding stripped): abandon and clean up**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git rm docs/infra/_label-probe.md
 git commit -s -m "chore(infra-diagrams): drop label-rounding probe (themeCSS stripped by GitHub)"
 ```
@@ -682,7 +672,6 @@ git commit -s -m "chore(infra-diagrams): drop label-rounding probe (themeCSS str
 Then edit `docs/superpowers/specs/2026-06-11-readme-diagram-styling-design.md`: change the "Conditional (verify first)" bullet to record that the GitHub probe confirmed `themeCSS` is stripped, so label rounding is **not shipped** and default boxes stand. Commit:
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/chore+readme-diagram-styling
 git add docs/superpowers/specs/2026-06-11-readme-diagram-styling-design.md
 git commit -s -m "docs(infra-diagrams): record label-rounding probe result"
 ```
