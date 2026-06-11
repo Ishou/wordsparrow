@@ -201,3 +201,42 @@ def test_render_clue_is_linear_chain() -> None:
 
 def test_render_is_deterministic() -> None:
     assert render.render_cluster(_topo(), _apps()) == render.render_cluster(_topo(), _apps())
+
+
+import readme as readme_mod
+
+
+def test_inject_replaces_only_between_markers() -> None:
+    text = (
+        "Intro prose.\n"
+        "<!-- INFRA-DIAGRAM:cluster START -->\n"
+        "old\n"
+        "<!-- INFRA-DIAGRAM:cluster END -->\n"
+        "Outro prose.\n"
+    )
+    out = readme_mod.inject(text, "cluster", "flowchart LR\n  a --> b")
+    assert "Intro prose." in out and "Outro prose." in out
+    assert "old" not in out
+    assert "```mermaid\nflowchart LR\n  a --> b\n```" in out
+    # prose bytes around the block are untouched
+    assert out.startswith("Intro prose.\n")
+    assert out.endswith("Outro prose.\n")
+
+
+def test_inject_raises_when_marker_absent() -> None:
+    try:
+        readme_mod.inject("no markers here", "cluster", "x")
+    except ValueError as exc:
+        assert "cluster" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+
+def test_inject_is_idempotent() -> None:
+    text = (
+        "<!-- INFRA-DIAGRAM:cluster START -->\n"
+        "<!-- INFRA-DIAGRAM:cluster END -->\n"
+    )
+    once = readme_mod.inject(text, "cluster", "flowchart LR\n  a --> b")
+    twice = readme_mod.inject(once, "cluster", "flowchart LR\n  a --> b")
+    assert once == twice
