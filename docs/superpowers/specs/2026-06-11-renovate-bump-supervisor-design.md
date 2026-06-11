@@ -1,13 +1,17 @@
-# Renovate bump supervisor — design (DRAFT)
+# Breaking-bump migration pipeline — design (DRAFT)
 
-**Date:** 2026-06-11
-**Status:** DRAFT — brainstorm converged on the shape; open questions remain (see end). Not yet approved.
+> Working name was "Renovate bump supervisor"; renamed to **`breaking-bump`**
+> (#12) for explicitness. ADR-0068. The branch
+> `docs/renovate-bump-supervisor-spec` keeps its original name for continuity.
+
+**Date:** 2026-06-11 (open questions resolved 2026-06-12)
+**Status:** DRAFT — **all 13 open questions resolved**; architecture + contracts
+reconciled to match. Pending maintainer review before the implementation plan.
 **Branch:** `docs/renovate-bump-supervisor-spec`
 
-> This is a partial spec captured at the end of a long brainstorm. The
-> architecture and agent breakdown are settled; the bracketed **OPEN
-> QUESTIONS** at the end are the decisions to finish before writing the
-> implementation plan.
+> The architecture, agent contracts, rollout strategy, and the 13 resolved
+> **OPEN QUESTIONS** at the end are now mutually consistent. Next step after
+> maintainer review: the writing-plans skill (then ADR-0068 merges first).
 
 ## Problem
 
@@ -66,126 +70,159 @@ live test cases from #10 (signoz first, then helm v4 / #814, …).
 2. **Fully CI-native.** Every agent is a `claude-code-action` job in GitHub
    Actions. No local orchestrator / `Workflow` tool — that runs only in a local
    Claude session, can't run in CI, and isn't portable. The plan-refinement
-   loop reuses the **§6a self-re-triggering cycle pattern** (`claude-code-review.yml`)
-   which already proves loop-in-CI works in this repo. Bonus: separate
-   `claude-code-action` jobs give **hard context isolation** — each agent gets
-   a fresh scoped context and can't inherit another agent's bias or
-   reasoning chain.
+   loop is a **bounded single workflow run** (jobs chained by `needs:` +
+   artifacts) — *inspired by* §6a's cycle-until-approved shape but deliberately
+   **not** built on its comment-re-trigger machinery (#4), so it's immune to the
+   cap-inflation / self-trigger footguns. Separate `claude-code-action` jobs
+   give **hard context isolation** — each agent gets a fresh scoped context and
+   can't inherit another agent's bias or reasoning chain.
 3. **Grounded, never from memory.** Migration steps must come from fetched
    official sources (release notes, breaking-changes, migration guides,
    `llms.txt`-style AI-migration logs), each citing a URL. Fetch and reason are
    *separate* agents so reasoning can't drift ungrounded.
-4. **One dependency at a time.** Do not generalize across all ecosystems at
-   once; prove the loop on one (likely major version bumps, infra/JVM first,
-   reusing the helm-enrich plumbing), then expand.
+4. **One dependency at a time.** Do not generalize across the whole tree at
+   once; prove the loop on **`signoz` first**, then expand one dep at a time
+   (see Rollout strategy). The allowlist is a *confidence ratchet*.
 5. **Renovate's branch is only ever READ.** A/B/C read it + comment; nothing
    commits to it. The fork + close happens at D-time, once we commit to
    migrating — so the clobber can't happen.
-6. **Gates are time/token savers + one real safety net.** A's source gate and
-   B's verdict are advisory efficiency gates (false positives/negatives are
-   fine); the **human merge** of the claude PR is the actual safety guarantee.
+6. **The plan is the backbone; the human merge is the safety net.** The B↔C
+   loop's job is a *neat, complete, grounded plan* (the priority is a **working
+   pipeline**; token/time savings are a **bonus**, not the goal — #4). The
+   ratings (B→A, C→B, §6a→D) catch problems early, but the **human merge** of
+   the claude PR is the actual safety guarantee, so false positives/negatives in
+   the automated gates are acceptable.
 
 ## Architecture (fully CI-native)
 
+> The diagram below is the reconciled view (2026-06-12) folding in every
+> resolved question: Step 0 dispatcher + AI gate (#7/#11), the GH issue as the
+> pipeline spine (#11), ascending ratings (#5), categorized B output (#10), and
+> the `breaking-bump` naming (#12).
+
 ```
-Renovate opens a MAJOR bump PR (renovate/*)
+Renovate opens ANY bump PR (renovate/*)
         │
-   ┌────┴─────────────────────────────────────────────────────┐
-   │ Agent A — Doc gatherer (claude-code-action)               │
-   │   reads bump + Renovate changelog links + source registry │
-   │   + WebFetch/WebSearch. NEVER reads the codebase.         │
-   │   → standardized, grounded migration-context doc          │
-   │   → posts comment + uploads artifact; self-rates source   │
-   │   GATE A: sourceConfidence low/none → label + comment     │
-   │           "can't ground this major", STOP (human).        │
-   └────┬─────────────────────────────────────────────────────┘
-        │ (groundable)
-   ┌────┴─────────────────────────────────────────────────────┐
-   │ Agent B — Planner (claude-code-action)                    │
-   │   reads A's doc (as data) + the CODEBASE                  │
-   │   → { impacted, plan[file-refs], planConfidence }         │
-   │   impacted=false → "no surface we use changed" →          │
-   │       let Renovate's PR merge normally. STOP.             │
-   │   impacted=true → plan → C                                │
-   └────┬─────────────────────────────────────────────────────┘
+   ┌────┴── STEP 0 — dispatcher (deterministic, NO AI, on: pull_request) ──┐
+   │   reads Renovate update-type label; idempotent (skip if a spine        │
+   │   issue already exists for this dep+version).                          │
+   │     • major / 0.x-major ───────────────► pipeline                      │
+   │     • minor / patch ──► AI GATE (A-lite changelog smell test):         │
+   │           breaking / ambiguous ────────► pipeline                      │
+   │           green (or no-doc) ───────────► stamp mergeable, STOP         │
+   └────┬──────────────────────────────────────────────────────────────────┘
+        │ pipeline-eligible → CREATE THE SPINE ISSUE
+        │   (labels: ai-driven + breaking-bump; context block in body)
+        │   on: issues → one workflow run, jobs chained by needs: + artifacts
+        ▼
+   ┌─────────────────────────────────────────────────────────────────────┐
+   │ Agent A — Doc gatherer (NEVER reads the codebase)                    │
+   │   Renovate changelog links → web search + llms.txt → registry        │
+   │   (reactive, empty). Emits the grounded A→B schema (verbatim quotes  │
+   │   + sourceUrl each). Self-check: zero usable docs → GATE A.          │
+   └────┬────────────────────────────────────────────────────────────────┘
+        │ B RATES A (sufficiency-to-plan). low/none → +needs-human, STOP.
+        ▼
+   ┌─────────────────────────────────────────────────────────────────────┐
+   │ Agent B — Planner (reads A's schema as data + the CODEBASE)          │
+   │   Categorized findings:                                              │
+   │     (a) mandatory migration  ─┐                                      │
+   │     (b) doc/ADR coherence    ─┴─► in D's PR                          │
+   │     (c) opportunistic refactor ─► separate post-bump-enhancement issue│
+   │   (a)+(b) both empty → "let Renovate's PR merge", STOP.              │
+   └────┬────────────────────────────────────────────────────────────────┘
+        │ plan → C
+   ┌────┴── Agent C ⇄ B — bounded plan loop (≤6 rounds, one run) ─────────┐
+   │   C RATES B: completeness + grounding vs A's schema ONLY (not code   │
+   │   quality). B revises; identical-finding terminator. Each round      │
+   │   posts to the spine issue. Can't converge → +needs-human, STOP.     │
+   └────┬────────────────────────────────────────────────────────────────┘
+        │ plan approved
+   ┌────┴── Agent D — Implementer ───────────────────────────────────────┐
+   │   open claude PR FIRST (fork claude/<dep>-vN from Renovate's tip),   │
+   │   verify real, THEN close the Renovate PR. Implements (a)+(b).       │
+   └────┬────────────────────────────────────────────────────────────────┘
         │
-   ┌────┴── Agent C ⇄ B — plan refinement loop ────────────────┐
-   │   C (fresh context) critiques the plan vs grounded docs;  │
-   │   B revises; capped + identical-finding terminator;       │
-   │   can't converge → escalate to human.                     │
-   │   → finalized plan POSTED to the PR (visible, NON-block)  │
-   └────┬─────────────────────────────────────────────────────┘
-        │ (plan converged)
-   ┌────┴─────────────────────────────────────────────────────┐
-   │ Agent D — Implementer (claude-code-action)                │
-   │   FORK claude/<dep>-vN from the bump; CLOSE Renovate PR.  │
-   │   implement the plan on the claude branch; open claude PR │
-   └────┬─────────────────────────────────────────────────────┘
+   §6a reviewer/fixer cycle on the claude PR (code — unchanged; §6a RATES D)
         │
-   §6a reviewer/fixer cycle on the claude PR (code — unchanged)
-        │
-   GATE (final): human reviews + merges.
+   GATE (final): human reviews + merges → auto-closes the spine issue.
 ```
 
-**Human touchpoints: exactly two** — Gate A escalation (only when grounding is
-missing/weak) and the final merge. Everything between is automated.
+**Failure → the spine issue** (gains `+needs-human`); the Renovate PR stays open
+until D succeeds, so any failure before D loses nothing (#9). **Human
+touchpoints: two** — escalation (only on failure) and the final merge.
 
 ## Agent contracts
 
-### Agent A — Doc gatherer
-- **Runs on:** a Renovate `major` bump PR.
-- **Reads:** dep + old→new version; Renovate's changelog/release links from the
-  PR body; a generalized source registry (extends `infra/tools-upgrade-sources.yaml`);
-  WebFetch/WebSearch. **Never the codebase** (isolation → can't hallucinate
-  project specifics).
-- **Emits** the A→B contract (standardized migration-context doc), roughly:
-  ```
-  { dep, from, to,
-    sourceConfidence: high|medium|low|none,
-    sources: [{ url, type, fetchedOk }],
-    breakingChanges|deprecations|removals: [{ summary, detail, sourceUrl }],
-    migrationSteps: [{ instruction, sourceUrl }] }   // each cites a source
-  ```
-- **Output goes to:** a PR comment (human-readable) + an uploaded artifact (for B).
-- **Gate A:** `sourceConfidence ∈ {low, none}` (no docs, or thin/ambiguous) →
-  label `bump-needs-human` + comment → STOP.
+> Reconciled 2026-06-12. The full per-stage rationale lives in the resolved
+> OPEN QUESTIONS below; this is the contract summary.
 
-### Agent B — Planner
-- **Runs only if** A passed.
-- **Reads:** A's doc (as *data*) + the codebase.
-- **Emits:** `{ impacted: bool, plan: [steps with file refs], planConfidence }`.
-  - `impacted=false` → trivial-for-us → signal "let Renovate's PR merge", STOP.
-    (This is the only reliable "trivial" verdict — only B compares to our code.)
-  - `impacted=true` → plan → C.
+### Step 0 — dispatcher (deterministic, NO AI)
+- **Runs on:** every `renovate/*` PR (`on: pull_request`). Idempotent — skips if
+  a spine issue already exists for this dep+version (#9, #11).
+- **Reads:** Renovate's update-type label (#1). No codebase, no LLM.
+- **Routes:** major / 0.x-major → pipeline; minor/patch → AI gate.
+- **On pipeline-eligible:** creates the **spine issue** (`ai-driven` +
+  `breaking-bump`, context block in body) → the `on: issues` event starts the
+  pipeline run.
+
+### AI gate — A-lite smell test (minor/patch only)
+- **Input:** the changelog **only** (no codebase). One cheap call.
+- **Verdict → route:** breaking / ambiguous → pipeline (create spine issue);
+  green **or no changelog** → stamp mergeable, STOP. Green = silent stamp (no
+  comment). Major + no-doc is *not* here — that's Gate A (#7).
+
+### Agent A — Doc gatherer (NEVER reads the codebase)
+- **Reads:** Renovate changelog/release links → web search + `llms.txt` probe →
+  `infra/tools-upgrade-sources.yaml` (reactive override, starts **empty**).
+- **Emits** the A→B schema (verbatim `detail` quotes; every breaking-change /
+  migration-step cites a `sourceUrl` — see #3 for the shape).
+- **Self-check (only deterministic one):** zero usable docs fetched → **Gate A**.
+- **Posts** its enrichment to the spine issue (human-readable + the schema data).
+
+### Agent B — Planner (reads A's schema as *data* + the codebase)
+- **Rates A first** (sufficiency-to-plan, the consumer-rates-producer model #5):
+  `low`/`none` → `+needs-human` on the spine issue, STOP (this *is* Gate A,
+  consumer-judged).
+- **Emits categorized findings (#10):**
+  - **(a) mandatory migration** + **(b) doc/ADR coherence** → into D's PR.
+  - **(c) opportunistic refactor** → a separate **`post-bump-enhancement`**
+    issue (no automated workflow; human decides).
+  - **(a)+(b) both empty** → "let Renovate's PR merge", STOP. ("Blocks merge"
+    means *must be in D's PR*, never "halts the pipeline" — the pipeline always
+    attempts a solvable migration.)
 
 ### Agent C — Plan reviewer (fresh context) ⇄ B
-- **Reads:** A's doc + the plan + the codebase, independently.
-- **Job:** corrective for B's self-confidence — critique the plan for
-  completeness/correctness against the grounded breaking-changes.
-- **Loop:** C findings → B revises → re-review. Capped + identical-finding
-  terminator (the §6a scars). Can't converge → escalate to human.
-- **Output:** finalized plan, posted to the PR (visible, non-blocking).
+- **Rates B:** completeness + grounding **vs A's schema only** — *not* code
+  quality (that's §6a on D's diff). Narrow mandate, or it becomes ceremony.
+- **Loop:** bounded single run, **≤6 rounds**, identical-finding terminator;
+  each round posts to the spine issue. Can't converge → `+needs-human`, STOP.
 
 ### Agent D — Implementer
-- **First:** fork `claude/<dep>-vN` from the bump; **close the Renovate PR**.
-- **Then:** implement the plan on the claude branch; open the claude PR → hands
-  to the existing §6a code cycle → human merges.
+- **Order (failure-safe):** open the claude PR **first** (fork
+  `claude/<dep>-vN` from **Renovate's branch tip**), confirm real, **then**
+  close the Renovate PR (#6).
+- Implements (a)+(b) → the claude PR hands to the existing **§6a cycle** (which
+  **rates D**) → human merges → spine issue auto-closes.
 
 ## Reuse of existing pieces
 
-- **Enrichment pipeline** (`helm-bump-enrich.yml`, ADR-0067): A generalizes it
-  — same "fetch release notes, cite sources" idea, broadened beyond helm.
-- **§6a cycle** (`claude-code-review.yml`): the B↔C loop is modeled on it; the
-  code review of the claude PR *is* it, unchanged.
-- **Source registry** (`infra/tools-upgrade-sources.yaml`): A's registry of
-  per-dep doc locations extends this.
+- **Enrichment pipeline** (`helm-bump-enrich.yml`, ADR-0067): Agent A is its
+  generalization — `helm-bump-enrich` becomes a *special case* of A, absorbed
+  under ADR-0068 (#2, #8, #12). The helm values-diff stays as a helm-only extra.
+- **§6a cycle** (`claude-code-review.yml`): the B↔C loop is *inspired by* it
+  (cycle-until-approved + identical-finding stop) but **not** built on its
+  comment-re-trigger machinery (#4); the code review of the claude PR *is* §6a,
+  unchanged. §6a is **suppressed on `renovate/*`** (#7).
+- **Source registry** (`infra/tools-upgrade-sources.yaml`): A's reactive
+  override, starting empty.
 
 ## Lessons to bake in (from this session)
 
 - §6a cap-inflation: every push re-triggers a cycle; don't burn the cap.
 - Cap-lock → a fresh-context reviewer breaks it.
 - A PR that edits a workflow file fails `claude-code-action`'s App-token check
-  (so the supervisor's own workflow edits need manual merge).
+  (so the pipeline's own workflow edits need manual merge).
 - `gh` GraphQL returns the §6a review author as `github-actions` (no `[bot]`).
 - Renovate authors PRs as the PAT owner; closing a Renovate PR makes Renovate
   *not* re-propose that update (treats it as ignored).
@@ -216,7 +253,7 @@ agent contracts get reconciled to this in the self-review pass — task #23).
 = *trigger*; claude PR = *output*; the **issue = persistent spine** holding the
 whole history (enrichment, plan, reviews), surviving both PRs closing. Unifies
 success + failure tracking: created at pipeline start, auto-closed when the
-claude PR merges, left open as `bump-needs-human` on failure.
+claude PR merges, left open with `+needs-human` on failure.
 
 **Amends #6:** the issue is no longer created lazily-only-on-failure — it's
 created when the pipeline *triggers* (non-trivial bumps) and auto-closes on
@@ -244,22 +281,21 @@ different *destination*:
 |---|---|---|
 | **(a) Mandatory migration** | breaking changes touching code/config we actually use | **In D's PR.** The pipeline *attempts* the fix → ready-for-human-review claude PR. **"Blocks merge" = must be in D's PR to merge, NOT "halts the pipeline."** A solvable migration is never punted to the human — the pipeline tries hardest; the human only does it themselves on *pipeline failure* (Gate A / no convergence / §6a cap). |
 | **(b) Doc/ADR coherence** | stale docs/ADRs/comments referencing the old version or old behavior | **Also in D's PR** — "registries cannot lag" (CLAUDE.md), a bump isn't *done* if docs point at the old version. **Bounded** to *this dep*, not open-ended doc-gardening. |
-| **(c) Opportunistic refactor** | new-version features enable a high-reward improvement we're *not forced* to make | **NOT in the bump PR** — it's a second workstream (one-workstream-per-PR + 400-line cap). **Surfaced as a separate `bump-enhancement` GH issue** (created + labeled, **no automated workflow for now**); the human decides if/when/who. |
+| **(c) Opportunistic refactor** | new-version features enable a high-reward improvement we're *not forced* to make | **NOT in the bump PR** — it's a second workstream (one-workstream-per-PR + 400-line cap). **Surfaced as a separate `post-bump-enhancement` GH issue** (created + labeled, **no automated workflow for now**); the human decides if/when/who. |
 
 The "let Renovate's PR merge" early-exit fires **only when all in-scope
 categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
 (docs-only) PR.
 
-**Issue label taxonomy (chosen 2026-06-12):**
-- **`bump-supervisor`** — umbrella on *every* issue the pipeline creates
-  (provenance + the #6 dedup key is label+dep).
-- **`bump-needs-human`** — the spine/tracking issue when a bump *fails*
-  (must-fix). Two issue *kinds* exist: the **spine issue** (one per non-trivial
-  bump, its operational home; gets `bump-needs-human` only on failure) and the
-  **enhancement issue** below.
-- **`bump-enhancement`** — a category-(c) optional improvement (no urgency,
-  separate PR later). The must-do vs optional split = `bump-needs-human` vs
-  `bump-enhancement`.
+**Issue label taxonomy — 4 labels across 3 orthogonal axes (see #12 for the
+authoritative definition):**
+- *Origin:* **`ai-driven`** — umbrella on every issue the pipeline creates
+  (repo-wide machine-generated marker; not the dedup key).
+- *Kind:* **`breaking-bump`** (the spine/tracking issue; `breaking-bump` + dep
+  is the #6 dedup key) · **`post-bump-enhancement`** (category-(c) optional).
+- *Status:* **`needs-human`** — cumulative, stacks on any base label; added on
+  escalation/failure, removed on resolution. The must-do vs optional split is
+  `needs-human` on `breaking-bump` vs a plain `post-bump-enhancement`.
 
 ---
 
@@ -371,7 +407,7 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
      is genuinely stuck → stop early + escalate (a safety net, not a
      token-saver).
    - **Escalation (cap hit or stuck):** open/update the durable
-     `bump-needs-human` GH issue (see #6) with the unresolved findings → STOP.
+     spine issue (gains `needs-human`, see #6) with the unresolved findings → STOP.
      Never auto-proceed to D.
    - **On approval:** the run dispatches D (fork `claude/<dep>-vN`, close the
      Renovate PR, implement, open the claude PR → real §6a on the code).
@@ -382,7 +418,7 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
    - **B rates A** (sufficiency-to-plan). B is the right judge because B has to
      *plan from* A's context — thin enrichment is felt directly. This **is
      Gate A**, now consumer-judged: B's first act is to rate A's output; `low`
-     or `none` → open/update the `bump-needs-human` issue (see #6) + STOP (B
+     or `none` → open/update the spine issue (+`needs-human`, see #6) + STOP (B
      doesn't waste effort planning).
      Rubric (evidence-based, a classification of facts — not a feeling):
      - **`high`** — dedicated migration/upgrade guide for this exact transition
@@ -434,13 +470,15 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
      failure, *and* claude-PR-closed-unmerged. It's persistent (outlives any
      PR), actionable/assignable, and carries the *why*: which gate failed,
      links to the dead claude PR + original Renovate PR, dep + version. The
-     `bump-needs-human` label moves onto the **issue**; this **supersedes the
-     "label + PR comment" escalation wording in #4 and #5** (the label/why now
-     land on the issue, which survives PR closure).
-     - **Lazy:** created only when a human is genuinely needed. Happy path
-       (bump merges) makes **no** issue — no noise for success.
+     `needs-human` label is applied to the spine **issue** on failure; this
+     **supersedes the "label + PR comment" escalation wording in #4 and #5**
+     (the status/why now land on the issue, which survives PR closure).
+     - **Created at pipeline trigger** (per the issue-as-spine model #11, which
+       amends #6's original "lazy-only-on-failure"): the spine issue is the
+       pipeline's home, created for every non-trivial bump and auto-closed on
+       success. Trivial bumps (AI-gate green) make **no** issue — no noise.
      - **Deduped:** one issue per dep-major-transition; *find-or-update* (search
-       open issues by `bump-supervisor` label + dep name before creating), not
+       open issues by `breaking-bump` label + dep name before creating), not
        a fresh issue per retry.
      - **Auto-close:** closed when a later attempt for that dep actually merges,
        so stale failures don't accumulate.
@@ -477,8 +515,9 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
    - **No-doc response scales with severity** (resolves the no-changelog trap):
      - **minor/patch + no doc → stamp mergeable.** Lowest risk; semver says no
        breaking, CI tests are the backstop. Escalating these would flood issues.
-     - **major + no doc → "error" = Gate A escalation → `bump-needs-human`
-       issue** (the actionable path from #5/#6), **not** a bare red-X dead-end.
+     - **major + no doc → "error" = Gate A escalation → spine issue
+       (+`needs-human`)** (the actionable path from #5/#6), **not** a bare red-X
+       dead-end.
        Highest risk + no guidance → a human must look.
    - **Scope:** the AI gate runs on **minor AND patch** (incl. 0.x's y
      position). Chosen for blind-spot closure over token cost (tokens are a
@@ -488,10 +527,10 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
      **AND** untested. No cheap gate catches that, and escalating every
      undocumented patch is too costly a "fix." Accepted — far smaller than #1's
      original hole. See deferred per-dep semver-trust registry (Deferred ideas).
-8. ✅ **RESOLVED — Agent A subsumes `helm-bump-enrich`.** The general supervisor
-   absorbs the helm-specific pipeline (it becomes a special case of A), not run
+8. ✅ **RESOLVED — Agent A subsumes `helm-bump-enrich`.** The general pipeline
+   absorbs the helm-specific one (it becomes a special case of A), not run
    alongside. See #2.
-9. ✅ **RESOLVED — error handling funnels to the `bump-needs-human` issue.**
+9. ✅ **RESOLVED — error handling funnels to the spine issue (`+needs-human`).**
    **Principle:** every failure funnels to the deduped issue (#6); the Renovate
    PR stays open until D succeeds, so any failure *before* D loses nothing.
    | Failure | Handling |
@@ -564,18 +603,19 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
       checks "does a spine issue already exist for this dep+version?" → if yes,
       skip (the #9 guard; so `synchronize`/rebases re-hit Step 0 but do nothing).
       Routes via Renovate's update-type label (#1) + AI gate for minor/patch.
-      - pipeline-eligible → **create the spine issue** (`bump-supervisor` label
-        + a **structured context block in the body**: dep/from/to/PR#).
+      - pipeline-eligible → **create the spine issue** (`ai-driven` +
+        `breaking-bump` labels + a **structured context block in the body**:
+        dep/from/to/PR#).
       - green minor/patch → stamp mergeable, no issue.
     - **Pipeline** (`on: issues: [opened, labeled]`, guarded to the
-      `bump-supervisor` label): one run, jobs `A → B1 → C1 → … → D` chained by
+      `breaking-bump` label): one run, jobs `A → B1 → C1 → … → D` chained by
       `needs:` + artifacts (#4/#7). Triggered **exactly once** because Step 0
       creates the issue once → structurally immune to Renovate rebases
       ("nothing external re-fires it" becomes a fact, not a hope).
     - **Context source:** the pipeline reads its context from the **issue body**
       (the fenced block Step 0 wrote), not a typed payload — fine, since the
       issue is the spine and must carry that context anyway. **Guard:** a stray
-      `bump-supervisor` label on an unrelated issue with no context block →
+      `breaking-bump` label on an unrelated issue with no context block →
       pipeline no-ops (stops a manual mislabel misfiring).
     - **Concurrency:** `group: bump-<dep>-<major>`, **`cancel-in-progress:
       false`** — never kill an in-flight migration (and once D forks, the
