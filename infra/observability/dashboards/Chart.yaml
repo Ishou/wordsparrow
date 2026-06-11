@@ -1,0 +1,12 @@
+apiVersion: v2
+name: bliss-signoz-dashboards
+description: |
+  Applies SigNoz dashboard definitions to the in-cluster SigNoz API via a
+  post-install,post-upgrade Helm hook Job. Each dashboard body lives as a
+  JSON file under files/ and is reconciled idempotently by title
+  (PUT existing /api/v1/dashboards/<id> / POST new). Mirrors the sibling
+  bliss-signoz-alerts chart and the chart-Job pattern from
+  infra/nats/templates/stream-bootstrap-job.yaml.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,179 @@
+{
+  "title": "NATS / JetStream",
+  "description": "NATS JetStream health for WordSparrow cross-context eventing (ADR-0049). Sourced from the prometheus-nats-exporter (jetstream_*, gnatsd_*) scraped into SigNoz. Consumer pending is the lag signal; DLQ depth flags poison messages.",
+  "tags": ["NATS", "JetStream", "Prometheus"],
+  "version": "v5",
+  "uploadedGrafana": false,
+  "variables": {},
+  "panelMap": {},
+  "layout": [
+    {"i": "0a751a01-0000-4000-8000-000000000001", "x": 0, "y": 0, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a01-0000-4000-8000-000000000002", "x": 6, "y": 0, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a01-0000-4000-8000-000000000003", "x": 0, "y": 6, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a01-0000-4000-8000-000000000004", "x": 6, "y": 6, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a01-0000-4000-8000-000000000005", "x": 0, "y": 12, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a01-0000-4000-8000-000000000006", "x": 6, "y": 12, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a01-0000-4000-8000-000000000007", "x": 0, "y": 18, "w": 6, "h": 6, "moved": false, "static": false},
+    {"i": "0a751a01-0000-4000-8000-000000000008", "x": 6, "y": 18, "w": 6, "h": 6, "moved": false, "static": false}
+  ],
+  "widgets": [
+    {
+      "id": "0a751a01-0000-4000-8000-000000000001",
+      "title": "Consumer pending (lag)",
+      "description": "Undelivered messages per durable consumer. The primary lag signal; matches the BlissNatsConsumerLag alerts.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "promql",
+        "promql": [{"name": "A", "query": "max by (consumer_name, stream_name) (jetstream_consumer_num_pending)", "legend": "{{consumer_name}} / {{stream_name}}", "disabled": false}],
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "id": "0a751a01-0000-4000-8000-0000000000a1"
+      }
+    },
+    {
+      "id": "0a751a01-0000-4000-8000-000000000002",
+      "title": "Redelivered messages",
+      "description": "Messages redelivered per consumer (delivery retries). Sustained growth signals consumers failing to ack.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "promql",
+        "promql": [{"name": "A", "query": "max by (consumer_name, stream_name) (jetstream_consumer_num_redelivered)", "legend": "{{consumer_name}} / {{stream_name}}", "disabled": false}],
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "id": "0a751a01-0000-4000-8000-0000000000a2"
+      }
+    },
+    {
+      "id": "0a751a01-0000-4000-8000-000000000003",
+      "title": "Ack pending",
+      "description": "Messages delivered but not yet acked per consumer (in-flight).",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "promql",
+        "promql": [{"name": "A", "query": "max by (consumer_name, stream_name) (jetstream_consumer_num_ack_pending)", "legend": "{{consumer_name}} / {{stream_name}}", "disabled": false}],
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "id": "0a751a01-0000-4000-8000-0000000000a3"
+      }
+    },
+    {
+      "id": "0a751a01-0000-4000-8000-000000000004",
+      "title": "Stream depth (messages)",
+      "description": "Total messages currently stored per stream.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "promql",
+        "promql": [{"name": "A", "query": "max by (stream_name) (jetstream_stream_total_messages)", "legend": "{{stream_name}}", "disabled": false}],
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "id": "0a751a01-0000-4000-8000-0000000000a4"
+      }
+    },
+    {
+      "id": "0a751a01-0000-4000-8000-000000000005",
+      "title": "DLQ depth",
+      "description": "Messages in the dead-letter stream. Any value > 0 means consumers exhausted max-delivery; matches the BlissNatsDlqNonEmpty alert.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "promql",
+        "promql": [{"name": "A", "query": "max (jetstream_stream_total_messages{stream_name=\"WORDSPARROW_USER_EVENTS_DLQ\"})", "legend": "DLQ depth", "disabled": false}],
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "id": "0a751a01-0000-4000-8000-0000000000a5"
+      }
+    },
+    {
+      "id": "0a751a01-0000-4000-8000-000000000006",
+      "title": "Server message throughput",
+      "description": "Server-wide message rate in/out (msgs/s).",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {"name": "A", "query": "rate(gnatsd_varz_in_msgs[5m])", "legend": "in msgs/s", "disabled": false},
+          {"name": "B", "query": "rate(gnatsd_varz_out_msgs[5m])", "legend": "out msgs/s", "disabled": false}
+        ],
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "id": "0a751a01-0000-4000-8000-0000000000a6"
+      }
+    },
+    {
+      "id": "0a751a01-0000-4000-8000-000000000007",
+      "title": "Client connections",
+      "description": "Active client connections to the NATS server.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "promql",
+        "promql": [{"name": "A", "query": "gnatsd_varz_connections", "legend": "connections", "disabled": false}],
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "id": "0a751a01-0000-4000-8000-0000000000a7"
+      }
+    },
+    {
+      "id": "0a751a01-0000-4000-8000-000000000008",
+      "title": "JetStream storage used",
+      "description": "Bytes of JetStream file storage in use vs the configured max.",
+      "panelTypes": "graph",
+      "isStacked": false,
+      "opacity": "1",
+      "nullZeroValues": "zero",
+      "timePreferance": "GLOBAL_TIME",
+      "softMax": 0,
+      "softMin": 0,
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {"name": "A", "query": "gnatsd_varz_jetstream_stats_storage", "legend": "used (bytes)", "disabled": false},
+          {"name": "B", "query": "gnatsd_varz_jetstream_config_max_storage", "legend": "max (bytes)", "disabled": false}
+        ],
+        "builder": {"queryData": [], "queryFormulas": []},
+        "clickhouse_sql": [{"name": "A", "query": "", "legend": "", "disabled": false}],
+        "id": "0a751a01-0000-4000-8000-0000000000a8"
+      }
+    }
+  ]
+}

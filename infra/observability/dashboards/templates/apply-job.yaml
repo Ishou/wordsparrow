@@ -1,0 +1,75 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "bliss-signoz-dashboards.fullname" . }}-apply
+  labels: {{- include "bliss-signoz-dashboards.labels" . | nindent 4 }}
+  annotations:
+    # post-install,post-upgrade; idempotent (PUT existing by id / POST new).
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 3
+  template:
+    metadata:
+      labels: {{- include "bliss-signoz-dashboards.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      restartPolicy: Never
+      volumes:
+        - name: files
+          configMap:
+            name: {{ include "bliss-signoz-dashboards.fullname" . }}-files
+        - name: work
+          emptyDir: {}
+      containers:
+        - name: apply
+          image: {{ include "bliss-signoz-dashboards.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: SIGNOZ_URL
+              value: {{ .Values.signoz.url | quote }}
+            - name: HOME
+              value: /work
+          envFrom:
+            # Secret data key MUST be `apiKey`; envFrom maps it to $apiKey.
+            - secretRef:
+                name: {{ .Values.apiKey.secretName }}
+          volumeMounts:
+            - name: files
+              mountPath: /dashboards
+              readOnly: true
+            - name: work
+              mountPath: /work
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              AUTH="SIGNOZ-API-KEY: ${apiKey}"
+              CT="Content-Type: application/json"
+              BASE="${SIGNOZ_URL%/}"
+              # Fetch the current dashboard list once; match by data.title.
+              list=$(curl -fsS -H "$AUTH" "${BASE}/api/v1/dashboards")
+              applied=0
+              for f in /dashboards/*.json; do
+                title=$(jq -r .title "$f")
+                id=$(printf '%s' "$list" | jq -r --arg t "$title" '.data[]? | select(.data.title==$t) | .id' | head -n1)
+                if [ -n "$id" ] && [ "$id" != "null" ]; then
+                  code=$(curl -sS -o /work/resp -w '%{http_code}' -X PUT \
+                    -H "$AUTH" -H "$CT" --data-binary "@$f" \
+                    "${BASE}/api/v1/dashboards/${id}")
+                  op="PUT id=$id"
+                else
+                  code=$(curl -sS -o /work/resp -w '%{http_code}' -X POST \
+                    -H "$AUTH" -H "$CT" --data-binary "@$f" \
+                    "${BASE}/api/v1/dashboards")
+                  op="POST"
+                fi
+                case "$code" in
+                  2*) echo "ok  ${title}  (${op} -> ${code})"; applied=$((applied+1)) ;;
+                  *)  echo "FAIL ${title}  (${op} -> ${code}): $(cat /work/resp)" >&2; exit 1 ;;
+                esac
+              done
+              echo "applied ${applied} dashboard(s)"
