@@ -19,15 +19,16 @@ cloud:
   - { id: dns,         label: Cloudflare DNS,      tf_resource: cloudflare_dns_record }
   - { id: k3s,         label: Hetzner k3s,         tf_resource: null }
 
-# Cluster-topology edges (event + telemetry edges no chart encodes).
+# Cluster-topology edges. ingress routes to each context; request protocols
+# live in the flow diagram. Event edges follow data-flow direction.
 cluster_edges:
-  - { from: ingress,  to: grid,     label: HTTP }
-  - { from: ingress,  to: game,     label: HTTP/WS }
-  - { from: ingress,  to: identity, label: HTTP }
-  - { from: ingress,  to: survey,   label: HTTP }
-  - { from: grid,     to: nats,     label: publishes }
-  - { from: identity, to: nats,     label: publishes }
-  - { from: game,     to: nats,     label: subscribes }
+  - { from: ingress,  to: grid }
+  - { from: ingress,  to: game }
+  - { from: ingress,  to: identity }
+  - { from: ingress,  to: survey }
+  - { from: grid,     to: nats, label: publishes }
+  - { from: identity, to: nats, label: publishes }
+  - { from: nats,     to: game, label: consumes }
 
 # Request/event flow diagram: ordered runtime hops. `browser` is a literal.
 flow_edges:
@@ -58,10 +59,12 @@ observability:
     - { id: collector,   label: OTel collector,         group: Ingest }
     - { id: signoz,      label: SigNoz,                 group: Backend }
     - { id: clickhouse,  label: ClickHouse,             group: Backend }
+    - { id: matomo,      label: Matomo,                 group: Analytics }
     - { id: alerts,      label: symptom alert rules,    group: Alerting }
     - { id: gmail,       label: Gmail SMTP,             group: Alerting }
     - { id: oauth2,      label: oauth2-proxy,           group: Alerting }
   edges:
+    - { from: frontend,    to: matomo,      label: analytics }
     - { from: frontend,    to: otlpingress, label: OTLP traces }
     - { from: otlpingress, to: collector,   label: forward }
     - { from: grid,        to: collector,   label: otel }

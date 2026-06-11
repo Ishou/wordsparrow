@@ -86,13 +86,13 @@ flowchart LR
     surveyDB[("survey pg")]
     survey --> surveyDB
   end
-  ingress -->|HTTP| grid
-  ingress -->|HTTP/WS| game
-  ingress -->|HTTP| identity
-  ingress -->|HTTP| survey
+  ingress --> grid
+  ingress --> game
+  ingress --> identity
+  ingress --> survey
   grid -->|publishes| nats
   identity -->|publishes| nats
-  game -->|subscribes| nats
+  nats -->|consumes| game
 ```
 <!-- INFRA-DIAGRAM:cluster END -->
 
@@ -165,12 +165,12 @@ flowchart LR
 Operational guides: [`docs/local-development.md`](./docs/local-development.md),
 [`docs/deploy.md`](./docs/deploy.md), [`docs/secrets.md`](./docs/secrets.md).
 
-## Observability & alerting
+## Observability, alerting & analytics
 
 OpenTelemetry from day 1, both ends of the stack. The diagram below is the
-**target** topology — telemetry and symptom alerts on *every* module. A
-module without a source edge here is a gap to address, not a documented
-exception.
+**target** topology — telemetry and symptom alerts on *every* module (plus the
+RGPD-compliant Matomo analytics path). A module without a source edge here is a
+gap to address, not a documented exception.
 
 <!-- INFRA-DIAGRAM:observability START -->
 ```mermaid
@@ -192,11 +192,15 @@ flowchart LR
     signoz["SigNoz"]
     clickhouse["ClickHouse"]
   end
+  subgraph Analytics
+    matomo["Matomo"]
+  end
   subgraph Alerting
     alerts["symptom alert rules"]
     gmail["Gmail SMTP"]
     oauth2["oauth2-proxy"]
   end
+  frontend -->|analytics| matomo
   frontend -->|OTLP traces| otlpingress
   otlpingress -->|forward| collector
   grid -->|otel| collector

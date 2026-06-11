@@ -189,6 +189,14 @@ def test_render_cluster_groups_each_context_with_its_db() -> None:
     assert "ingress -->|HTTP| grid" in out
 
 
+def test_render_cluster_unlabeled_edge_is_plain_arrow() -> None:
+    out = render.render_cluster(
+        _topo(cluster_edges=[{"from": "ingress", "to": "grid"}]), _apps()
+    )
+    assert "ingress --> grid" in out
+    assert "ingress -->|" not in out
+
+
 def test_render_cloud_sanitizes_hyphenated_workflow_ids() -> None:
     out = render.render_cloud(_topo())
     assert out.startswith("flowchart LR")

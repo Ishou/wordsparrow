@@ -42,8 +42,14 @@ def render_cluster(topo: Topology, apps: list[AppNode]) -> str:
         lines.append("  end")
 
     for e in topo.cluster_edges:
-        lines.append(f'  {_safe(e["from"])} -->|{e["label"]}| {_safe(e["to"])}')
+        lines.append(f"  {_edge(e)}")
     return "\n".join(lines)
+
+
+def _edge(e: dict) -> str:
+    label = e.get("label")
+    arrow = f"-->|{label}|" if label else "-->"
+    return f'{_safe(e["from"])} {arrow} {_safe(e["to"])}'
 
 
 def render_cloud(topo: Topology) -> str:
