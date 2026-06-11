@@ -118,8 +118,8 @@
     },
     {
       "id": "0a751a03-0000-4000-8000-000000000005",
-      "title": "Container restarts by pod",
-      "description": "Cumulative container restarts per pod — sustained growth flags crashloops.",
+      "title": "Container restarts (new, per interval)",
+      "description": "Increase in the cumulative restart counter per step — reads 0 at steady state; a crashloop shows as a repeated staircase. Lifetime totals are intentionally NOT shown (a flat plateau of old restarts reads as a false alarm).",
       "panelTypes": "graph",
       "isStacked": false,
       "opacity": "1",
@@ -134,7 +134,7 @@
         "builder": {
           "queryFormulas": [],
           "queryData": [
-            {"dataSource": "metrics", "queryName": "A", "expression": "A", "disabled": false, "stepInterval": 60, "aggregations": [{"metricName": "k8s.container.restarts", "temporality": "", "timeAggregation": "max", "spaceAggregation": "max", "reduceTo": "max"}], "groupBy": [{"dataType": "string", "id": "k8s.pod.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.pod.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "{{k8s.pod.name}}", "limit": null, "orderBy": [], "functions": []}
+            {"dataSource": "metrics", "queryName": "A", "expression": "A", "disabled": false, "stepInterval": 60, "aggregations": [{"metricName": "k8s.container.restarts", "temporality": "", "timeAggregation": "increase", "spaceAggregation": "sum", "reduceTo": "sum"}], "groupBy": [{"dataType": "string", "id": "k8s.pod.name--string--tag--false", "isColumn": false, "isJSON": false, "key": "k8s.pod.name", "type": "tag"}], "filter": {"expression": ""}, "having": {"expression": ""}, "legend": "{{k8s.pod.name}}", "limit": null, "orderBy": [], "functions": []}
           ]
         },
         "id": "0a751a03-0000-4000-8000-0000000000a5"
