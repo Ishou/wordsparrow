@@ -49,7 +49,10 @@ concurrency:
 
 jobs:
   claude-review:
-    if: ${{ !github.event.pull_request.draft }}
+    # Skip Renovate PRs: §6a's auto-fixer pushes commits, which pollutes the
+    # dependency-bump PR and fights Renovate's branch ownership (it clobbers
+    # the fix on the next rebase). Renovate PRs are reviewed/merged by hand.
+    if: ${{ !github.event.pull_request.draft && !startsWith(github.event.pull_request.head.ref, 'renovate/') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
