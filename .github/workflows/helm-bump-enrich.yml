@@ -74,17 +74,18 @@ jobs:
           git show "$HEAD:$FILE" > /tmp/new.yaml
           python scripts/helm-enrich/detect.py classify \
             --path "$FILE" --old /tmp/old.yaml --new /tmp/new.yaml > /tmp/bumps.json
-          COUNT=$(python -c "import json;print(len(json.load(open('/tmp/bumps.json'))))")
+          COUNT=$(jq 'length' /tmp/bumps.json)
           if [ "$COUNT" != "1" ]; then
             echo "::warning::expected 1 bump, got $COUNT; skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          python -c "import json;print(json.dumps(json.load(open('/tmp/bumps.json'))[0]))" > /tmp/bump.json
-          NAME=$(python -c "import json;print(json.load(open('/tmp/bump.json'))['name'])")
-          OLD=$(python -c "import json;print(json.load(open('/tmp/bump.json'))['old'])")
-          NEW=$(python -c "import json;print(json.load(open('/tmp/bump.json'))['new'])")
+          jq -c '.[0]' /tmp/bumps.json > /tmp/bump.json
+          NAME=$(jq -r '.name' /tmp/bump.json)
+          OLD=$(jq -r '.old' /tmp/bump.json)
+          NEW=$(jq -r '.new' /tmp/bump.json)
           CHART_DIR=$(dirname "$FILE")
-          REPO=$(python -c "import yaml,sys;d=yaml.safe_load(open('$FILE'));print(next(x['repository'] for x in d['dependencies'] if x['name']=='$NAME'))")
+          # Values passed as argv (never interpolated into the code string) to avoid injection.
+          REPO=$(python -c 'import sys,yaml; d=yaml.safe_load(open(sys.argv[1])); print(next(x["repository"] for x in d["dependencies"] if x["name"]==sys.argv[2]))' "$FILE" "$NAME")
           helm repo add up "$REPO" >/dev/null 2>&1 || helm repo add up "$REPO"
           helm repo update up >/dev/null
           helm show values "up/$NAME" --version "$OLD" > /tmp/vold.yaml || : > /tmp/vold.yaml
