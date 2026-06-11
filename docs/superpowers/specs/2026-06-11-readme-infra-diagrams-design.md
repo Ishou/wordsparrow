@@ -103,13 +103,13 @@ All four contexts have a CNPG Postgres (`apiVersion: postgresql.cnpg.io`).
 Each diagram is wrapped in HTML comment markers; the generator replaces
 **only** the content between markers, never touching surrounding prose:
 
-```
+````
 <!-- INFRA-DIAGRAM:cluster START -->
 ```mermaid
 ...generated...
 ```
 <!-- INFRA-DIAGRAM:cluster END -->
-```
+````
 
 Marker IDs: `cluster`, `cloud`, `flow`, `clue-pipeline`. The generator
 errors if a declared marker pair is missing or malformed.
