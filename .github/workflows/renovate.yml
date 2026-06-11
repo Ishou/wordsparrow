@@ -1,0 +1,33 @@
+name: renovate
+
+# Replaces the Mend hosted app; OSS engine, runs on our schedule, no external account required.
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Renovate log level (info|debug)'
+        required: false
+        default: 'info'
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: renovatebot/github-action@8217b3fc286df088d7c27f3255fe8414463bc0fd # v46.1.15
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_PLATFORM: github
+          LOG_LEVEL: ${{ github.event.inputs.logLevel || 'info' }}
