@@ -49,6 +49,12 @@ Colors are drawn from the product's "forest/honey" palette (ADR-0043,
   ClickHouse, the clue-pipeline grid corpus).
 - **Role node-tints** only where a diagram has no subgraphs (flow,
   clue-pipeline), so the language still carries.
+- **Blue node border on plain nodes** (added 2026-06-11). GitHub's dark
+  theme gives unstyled nodes only a faint grey border, so every node without
+  a semantic class (datastore/external/role-tint) gets a crisp `#6b7fd7`
+  1.5px border via Mermaid's reserved `classDef default`. One line per
+  diagram; auto-covers future nodes. Off the forest/honey palette by intent —
+  the maintainer wanted the bordered look of the early stock-theme mockup.
 - **Rounded label boxes** — padding `3px 8px`, `border-radius: 6px`, keeping
   Mermaid's own opaque, theme-adaptive label background untouched (no fill
   override). See portability note below.

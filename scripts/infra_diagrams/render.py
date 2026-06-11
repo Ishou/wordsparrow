@@ -81,6 +81,7 @@ def render_cluster(topo: Topology, apps: list[AppNode]) -> str:
     lines.extend(style.node_classdefs(roles))
     lines.extend(assigns)
     lines.extend(zones)
+    lines.append(style.node_default_border())
     return "\n".join(lines)
 
 
@@ -112,6 +113,7 @@ def render_cloud(topo: Topology) -> str:
     if workflows:
         lines.append(style.zone("CI", "infra"))
     lines.append(style.zone("Cloud", "external"))
+    lines.append(style.node_default_border())
     return "\n".join(lines)
 
 
@@ -137,6 +139,7 @@ def render_flow(topo: Topology) -> str:
     ordered = [_safe(n) for n in nodes]
     role_by_id = {_safe(n): _FLOW_ROLE[n] for n in nodes if n in _FLOW_ROLE}
     lines.extend(style.flat_node_styles(ordered, role_by_id))
+    lines.append(style.node_default_border())
     return "\n".join(lines)
 
 
@@ -164,6 +167,7 @@ def render_observability(topo: Topology) -> str:
     for group in groups:
         if group in style.GROUP_ROLE:
             lines.append(style.zone(group, style.GROUP_ROLE[group]))
+    lines.append(style.node_default_border())
     return "\n".join(lines)
 
 
@@ -183,4 +187,5 @@ def render_clue(topo: Topology) -> str:
         _safe(n["id"]): _CLUE_ROLE[n["id"]] for n in nodes if n["id"] in _CLUE_ROLE
     }
     lines.extend(style.flat_node_styles(ordered, role_by_id))
+    lines.append(style.node_default_border())
     return "\n".join(lines)

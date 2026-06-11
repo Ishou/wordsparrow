@@ -106,6 +106,7 @@ flowchart LR
   style ctx_game fill:#6a93581f,stroke:#6a9358;
   style ctx_identity fill:#6a93581f,stroke:#6a9358;
   style ctx_survey fill:#6a93581f,stroke:#6a9358;
+  classDef default stroke:#6b7fd7,stroke-width:1.5px;
 ```
 <p align="center"><sub><b>Figure 1.</b> In-cluster topology grouped by bounded context — each box is one context's API and database. Dashed edges are manual or leave the cluster.</sub></p>
 <!-- INFRA-DIAGRAM:cluster END -->
@@ -129,6 +130,7 @@ flowchart LR
   dns -->|service subdomains via external-dns| k3s
   style CI fill:#5a655a1f,stroke:#8b9488;
   style Cloud fill:#b8554020,stroke:#b85540;
+  classDef default stroke:#6b7fd7,stroke-width:1.5px;
 ```
 <p align="center"><sub><b>Figure 2.</b> Where the frontend and cluster are hosted, and the CI workflows that deploy them.</sub></p>
 <!-- INFRA-DIAGRAM:cloud END -->
@@ -151,6 +153,7 @@ flowchart LR
   classDef messaging fill:#a8753826,stroke:#c89456;
   class grid,game context;
   class nats messaging;
+  classDef default stroke:#6b7fd7,stroke-width:1.5px;
 ```
 <p align="center"><sub><b>Figure 3.</b> How a request and the daily-puzzle event move through the system at runtime.</sub></p>
 <!-- INFRA-DIAGRAM:flow END -->
@@ -244,6 +247,7 @@ flowchart LR
   style Backend fill:#5a655a1f,stroke:#8b9488;
   style Analytics fill:#a875381f,stroke:#c89456;
   style Alerting fill:#b8554020,stroke:#b85540;
+  classDef default stroke:#6b7fd7,stroke-width:1.5px;
 ```
 <p align="center"><sub><b>Figure 4.</b> Target telemetry, alerting and analytics topology — a module without a source edge here is a gap to address, not an exception.</sub></p>
 <!-- INFRA-DIAGRAM:observability END -->
@@ -298,6 +302,7 @@ flowchart LR
   class gen,sft context;
   class grid data;
   class human messaging;
+  classDef default stroke:#6b7fd7,stroke-width:1.5px;
 ```
 <p align="center"><sub><b>Figure 5.</b> The Modal clue-generation training loop. Dashed edges are the round restart and the not-yet-wired grid corpus.</sub></p>
 <!-- INFRA-DIAGRAM:clue-pipeline END -->

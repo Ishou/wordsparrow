@@ -489,3 +489,20 @@ def test_render_clue_role_tints() -> None:
     assert "  class gen,sft context;" in out
     assert "  class human messaging;" in out
     assert "  class grid data;" in out
+
+
+def test_node_default_border() -> None:
+    assert style.node_default_border() == (
+        "  classDef default stroke:#6b7fd7,stroke-width:1.5px;"
+    )
+
+
+def test_all_renderers_emit_default_node_border() -> None:
+    line = "  classDef default stroke:#6b7fd7,stroke-width:1.5px;"
+    assert line in render.render_cluster(_topo(), _apps())
+    assert line in render.render_cloud(_topo())
+    assert line in render.render_flow(_topo())
+    assert line in render.render_observability(_topo(observability=_OBS))
+    assert line in render.render_clue(
+        _topo(clue_pipeline={"nodes": [{"id": "gen", "label": "G"}], "edges": []})
+    )

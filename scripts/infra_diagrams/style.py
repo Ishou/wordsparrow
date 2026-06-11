@@ -43,6 +43,12 @@ def zone(subgraph_id: str, role: str) -> str:
     return f"  style {subgraph_id} fill:{spec['zone']},stroke:{spec['stroke']};"
 
 
+# Mermaid's reserved `default` class outlines every node without an explicit
+# class — gives the plain nodes a crisp border GitHub's theme omits.
+def node_default_border() -> str:
+    return "  classDef default stroke:#6b7fd7,stroke-width:1.5px;"
+
+
 def flat_node_styles(node_ids: list[str], role_by_id: dict[str, str]) -> list[str]:
     """classDef + class lines for a subgraph-less diagram, deterministically."""
     present = [
