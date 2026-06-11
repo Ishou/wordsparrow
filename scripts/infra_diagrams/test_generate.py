@@ -340,3 +340,35 @@ def test_observability_coherence_fails_on_dangling_endpoint() -> None:
         assert "ghost" in str(exc)
     else:
         raise AssertionError("expected CoherenceError")
+
+
+def test_clue_coherence_fails_on_dangling_endpoint() -> None:
+    bad = {"nodes": [{"id": "gen", "label": "G"}], "edges": [{"from": "gen", "to": "ghost"}]}
+    try:
+        descriptor.check_coherence(
+            _topo(clue_pipeline=bad), _charts(),
+            {"cloudflare_pages_project"}, {"deploy-frontend"},
+        )
+    except descriptor.CoherenceError as exc:
+        assert "ghost" in str(exc)
+    else:
+        raise AssertionError("expected CoherenceError")
+
+
+def test_render_escapes_quote_in_label() -> None:
+    out = render.render_clue(_topo(clue_pipeline={
+        "nodes": [{"id": "x", "label": 'a "quoted" label'}],
+        "edges": [],
+    }))
+    assert "#quot;quoted#quot;" in out
+    assert '"quoted"' not in out  # raw quote did not leak into the fence
+
+
+def test_safe_is_injective_over_real_descriptor() -> None:
+    topo = descriptor.load_topology()
+    ids = {s["id"] for s in topo.services}
+    ids |= {c["id"] for c in topo.cloud}
+    ids |= {n["id"] for n in topo.cluster_external}
+    ids |= {n["id"] for n in topo.observability.get("nodes") or []}
+    ids |= {n["id"] for n in topo.clue_pipeline.get("nodes") or []}
+    assert len({render._safe(i) for i in ids}) == len(ids)
