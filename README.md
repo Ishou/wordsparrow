@@ -238,14 +238,15 @@ flowchart LR
   The admin UI is gated by oauth2-proxy
   ([ADR-0030](./docs/adr/0030-oauth2-proxy-session-cookie.md)).
 
-## Local AI pipeline (clue generation)
+## Clue generation pipeline
 
 French crossword clues need a French model that respects domain rules
 (no stem leak, right register, exact length, valid morphology).
-Off-the-shelf APIs don't clear that bar reliably; the project ships a
-fully-local pipeline that runs on the maintainer's Mac and produces a
-versioned CSV the JVM worker consumes. Pipeline lives in
-[`scripts/clue_generation/`](./scripts/clue_generation/).
+Off-the-shelf APIs don't clear that bar, so the project trains its own
+French clue model on Modal GPU
+([ADR-0057](./docs/adr/0057-cloud-gpu-modal-finetune-lane.md)) through
+human-in-the-loop rounds. The lane lives in
+[`scripts/clue_generation/pipeline_v2/`](./scripts/clue_generation/pipeline_v2/).
 
 <!-- INFRA-DIAGRAM:clue-pipeline START -->
 ```mermaid
@@ -265,28 +266,27 @@ flowchart LR
 ```
 <!-- INFRA-DIAGRAM:clue-pipeline END -->
 
-- **Generator** — mlx-lm LoRA / DPO fine-tunes of
-  `c4ai-command-r-08-2024-4bit` on a curated French clue corpus.
-  Iterations are config files (`lora_iter*.yaml`) and the most recent
-  shipped weights are stitched at run time.
-- **Filter** — a CamemBERT cross-encoder trained on accept/reject
-  pairs scores candidates; the production pipeline ships the best
-  candidate above threshold and drops the rest.
-- **Lexical layer** — grammalecte for French morphology and POS
-  disambiguation; DBnary as a CC BY-SA lexical data source for
-  synonyms used as direct clue candidates
-  ([ADR-0023](./docs/adr/0023-dbnary-lexical-data-source.md),
-  [ADR-0024](./docs/adr/0024-dbnary-synonym-lemma-as-direct-clue-candidate.md)).
-- **Validation** — Python `validate_clue` enforces the structural gates
-  before scoring (length, no stem leak, lemma vs surface).
-- **Ingestion** — the JVM `words-clues-worker`
-  ([ADR-0013](./docs/adr/0013-words-clues-worker.md)) consumes the
-  shipped CSV and propagates clues into the grid corpus.
+- **Generator** — successive fine-tuned model iterations on Modal GPU;
+  each round's model generates candidate clues for the sampled lemmas.
+- **Structural filters** — a deterministic chain in `pipeline_v2` gates
+  candidates before human review: typography, length, French-language
+  detection (lingua), self-reference, tautology, stem-leak, and pleonasm.
+- **Judge** — a learned judge (`filter_8`) scores semantic quality as a
+  pre-filter ahead of human rating (currently shadow-scored). The human
+  rater on `/contribuer` is the reward signal — never the judge — so the
+  generator cannot reward-hack it.
+- **Rounds** — maintainer-rated winners (`qualité=5`) become the SFT
+  training set for the next model iteration; the loop stays human-anchored.
+- **Grid corpus** — not yet fed from this lane. The in-cluster
+  `words-clues-worker` ingestion
+  ([ADR-0013](./docs/adr/0013-words-clues-worker.md)) hasn't been rewired
+  from the old CSV path to the Modal pipeline.
 
-The pipeline stays local on purpose: licence hygiene (DBnary CC BY-SA),
-zero per-call cost, and tight iteration loops where the maintainer can
-re-train, re-score, and re-ship between commits. Evaluation logbooks
-live in [`docs/eval/`](./docs/eval/).
+The human stays the reward by design: the judge only triages obvious-bad
+to cut rating load, never grading the data that becomes training winners.
+Data-licence posture (e.g. DBnary CC BY-SA) is governed by
+[ADR-0058](./docs/adr/0058-commercial-data-license-posture.md); evaluation
+logbooks live in [`docs/eval/`](./docs/eval/).
 
 ## Claude Code agent orchestration
 
