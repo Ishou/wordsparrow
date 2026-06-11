@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-# WordSparrow forest/honey palette (ADR-0043, frontend/panda.config.ts).
-# Zone/node fills are translucent 8-digit hex so the wash adapts to GitHub
-# light and dark; strokes are opaque mid-tones legible on both. rgba() is
-# avoided — its commas break Mermaid's style-property parser.
+# Forest/honey palette (ADR-0043); translucent 8-digit hex — no rgba(), its commas break Mermaid's parser.
 _ROLES: dict[str, dict[str, str | None]] = {
     "context":   {"zone": "#6a93581f", "node": "#6a935826", "stroke": "#6a9358"},
     "data":      {"zone": None,        "node": "#c8945633", "stroke": "#a87538"},
@@ -15,8 +12,7 @@ _ROLES: dict[str, dict[str, str | None]] = {
 # Fixed emission order keeps render output deterministic regardless of input.
 _ROLE_ORDER = ("context", "data", "messaging", "external", "infra")
 
-# Subgraph group name -> role (zone tint). Context subgraphs (ctx_*) are
-# styled green directly by the cluster renderer, not via this map.
+# Subgraph group -> zone role; context subgraphs (ctx_*) are styled green by the cluster renderer.
 GROUP_ROLE: dict[str, str] = {
     "Edge": "infra",
     "Messaging": "messaging",
