@@ -17,8 +17,7 @@ def render_cluster(topo: Topology, apps: list[AppNode]) -> str:
     contexts = {a.context for a in apps if a.kind == "api"}
     lines = ["flowchart LR"]
 
-    # Shared infra (non-context), grouped by `group`. The observability
-    # backend is owned by the dedicated observability diagram, so skip it.
+    # Shared infra only; observability group is owned by the dedicated observability diagram.
     shared: dict[str, list[dict]] = {}
     for s in topo.services:
         if s["id"] in contexts or s["group"] == "Observability":
