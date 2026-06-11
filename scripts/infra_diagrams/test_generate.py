@@ -153,3 +153,51 @@ def test_coherence_fails_on_unknown_edge_endpoint() -> None:
         assert "nope" in str(exc)
     else:
         raise AssertionError("expected CoherenceError")
+
+
+import render
+
+
+def _apps() -> list[parse.AppNode]:
+    return [
+        parse.AppNode("wordsparrow-api", "grid", True, "api"),
+        parse.AppNode("bliss-game-api", "game", True, "api"),
+        parse.AppNode("platform", "platform", False, "infra"),
+    ]
+
+
+def test_render_cluster_has_subgraphs_and_db_cylinder() -> None:
+    out = render.render_cluster(_topo(), _apps())
+    assert out.startswith("flowchart LR")
+    assert "subgraph Edge" in out
+    assert "subgraph APIs" in out
+    assert "subgraph Data" in out
+    assert 'gridDB[("grid pg")]' in out      # cylinder shape for postgres
+    assert "grid --> gridDB" in out
+    assert "ingress -->|HTTP| grid" in out
+
+
+def test_render_cloud_sanitizes_hyphenated_workflow_ids() -> None:
+    out = render.render_cloud(_topo())
+    assert out.startswith("flowchart LR")
+    # deploy-frontend -> deploy_frontend as a node id, label keeps the .yml
+    assert 'deploy_frontend["deploy-frontend.yml"]' in out
+    assert "deploy_frontend -->|wrangler| pages" in out
+
+
+def test_render_flow_declares_browser_and_edges() -> None:
+    out = render.render_flow(_topo())
+    assert out.startswith("flowchart LR")
+    assert 'browser["Browser"]' in out
+    assert "browser -->|HTTPS| ingress" in out
+
+
+def test_render_clue_is_linear_chain() -> None:
+    out = render.render_clue(_topo(clue_pipeline=["x", "y", "z"]))
+    assert out.startswith("flowchart LR")
+    assert 's0["x"]' in out and 's2["z"]' in out
+    assert "s0 --> s1" in out and "s1 --> s2" in out
+
+
+def test_render_is_deterministic() -> None:
+    assert render.render_cluster(_topo(), _apps()) == render.render_cluster(_topo(), _apps())
