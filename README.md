@@ -124,8 +124,9 @@ flowchart LR
   game["game-api"]
   nats["NATS JetStream"]
   browser -->|HTTPS| ingress
+  browser -->|WSS| ingress
   ingress -->|REST| grid
-  ingress -->|WSS| game
+  ingress -->|WS| game
   grid -->|PuzzleReady event| nats
   nats -->|consumes| game
 ```

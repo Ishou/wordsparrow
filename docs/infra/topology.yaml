@@ -32,8 +32,9 @@ cluster_edges:
 # Request/event flow diagram: ordered runtime hops. `browser` is a literal.
 flow_edges:
   - { from: browser, to: ingress, label: HTTPS }
+  - { from: browser, to: ingress, label: WSS }
   - { from: ingress, to: grid,    label: REST }
-  - { from: ingress, to: game,    label: WSS }
+  - { from: ingress, to: game,    label: WS }
   - { from: grid,    to: nats,    label: PuzzleReady event }
   - { from: nats,    to: game,    label: consumes }
 
