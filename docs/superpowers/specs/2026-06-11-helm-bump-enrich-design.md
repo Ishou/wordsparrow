@@ -6,10 +6,12 @@
 
 ## Problem
 
-In-cluster internal tools (SigNoz + `k8s-infra`, the five platform operators,
-matomo, nats) are pinned as Helm subchart dependencies in `infra/**/Chart.yaml`.
-Renovate already opens mechanical bump PRs for these on its Monday "helm
-subcharts" schedule, but a bare bump PR forces the maintainer to do the upgrade
+Several in-cluster internal tools (SigNoz + `k8s-infra`, the five platform
+operators) are pinned as Helm subchart dependencies in `infra/**/Chart.yaml`.
+(matomo and nats are first-party template charts with no subchart deps — out of
+scope; see Scope.) Renovate already opens mechanical bump PRs for the subcharts
+on its Monday "helm subcharts" schedule, but a bare bump PR forces the maintainer
+to do the upgrade
 homework by hand: read the upstream release notes, find the breaking changes,
 and diff the chart's default `values.yaml` to see what config the override files
 (`values-prod.yaml`) must reconcile.
@@ -20,15 +22,24 @@ manual (the operator runs `helm upgrade` after merge, exactly as today).
 
 ## Scope
 
-**In scope (v1):**
-- All `renovate/` PRs that bump a subchart version in any `infra/**/Chart.yaml`:
-  SigNoz (`signoz`, `k8s-infra`), platform operators (`cert-manager`,
-  `ingress-nginx`, `external-dns`, `cloudnative-pg`, `hcloud-csi`), matomo, nats.
-- Append to the existing Renovate PR body: the version delta, synthesized
-  migration notes from official release docs, and the upstream default
-  `values.yaml` diff between old and new versions.
+**In scope (v1):** the **7 Helm subchart dependencies** Renovate's `helmv3`
+manager actually bumps — i.e. real `dependencies:` entries in an
+`infra/**/Chart.yaml`:
+- `infra/observability`: `signoz`, `k8s-infra`.
+- `infra/platform`: `cert-manager`, `ingress-nginx`, `external-dns`,
+  `cloudnative-pg`, `hcloud-csi`.
+
+For each `renovate/` PR bumping one of these, append to the PR body: the version
+delta, synthesized migration notes from official release docs, and the
+key-path-aware upstream default `values.yaml` diff (overridden keys flagged).
 
 **Out of scope (v1):**
+- **matomo and nats** — both are first-party template charts with
+  `dependencies: []` (matomo deliberately avoids Bitnami per ADR-0025; nats
+  enables JetStream via its own config). Renovate's `helmv3` manager has nothing
+  to bump in them, so no subchart PR is ever opened. Their *app* versions move
+  via container-image tags (`appVersion` / image pins in values), which is a
+  different manager and a possible later project — not this one.
 - Deploy automation. `helm upgrade` for these charts remains a manual operator
   step (`docs/deploy.md`). A deploy-on-merge workflow is a possible later
   project; this design does not build it.
@@ -49,9 +60,10 @@ manual (the operator runs `helm upgrade` after merge, exactly as today).
    per tool. One bump per PR keeps the detect job, the diff, and the operator's
    decision each scoped to a single tool. (`signoz` and `k8s-infra` version
    independently, so they remain separate PRs — that is the desired behavior.)
-4. **All helm subcharts** in scope from day one. Enrichment quality varies by
-   how good each upstream's release docs are; the design degrades gracefully
-   when docs are missing (see Error handling).
+4. **All 7 real subchart deps** in scope from day one (observability + platform;
+   not matomo/nats, which have none). Enrichment quality varies by how good each
+   upstream's release docs are; the design degrades gracefully when docs are
+   missing (see Error handling).
 4. **Event-driven + cron safety net.** Enrich on `pull_request: opened` within
    minutes; a daily cron sweeps open renovate helm PRs missing the enrichment
    marker so nothing is dropped.
@@ -142,20 +154,33 @@ bumped dependency:
 
 ### 3. Source registry — `infra/tools-upgrade-sources.yaml`
 Maps each subchart dependency to its release-notes location, grounding the LLM
-in a source-of-truth URL instead of synthesized memory. Each entry: `name`,
-`repo` (helm repo URL, mirrors Chart.yaml), `releaseNotes` (GitHub repo / docs
-URL to fetch). Initial entries:
+in a source-of-truth URL instead of synthesized memory. Each project tags chart
+releases under its own convention, so the registry stores a **URL pattern** with
+a `{version}` placeholder (the new chart version) — the agent fetches the exact
+release page, not a generic listing. Each entry: `name`, `repo` (helm repo URL,
+mirrors Chart.yaml), `releaseNotes` (templated URL), and optional `extraDocs`
+(curated upgrade guide). Verified 2026-06-11:
 
-| dependency        | releaseNotes source                                            |
-|-------------------|----------------------------------------------------------------|
-| signoz, k8s-infra | `SigNoz/charts` releases + signoz.io upgrade docs              |
-| cert-manager      | `cert-manager/cert-manager` releases (explicit upgrade guides) |
-| ingress-nginx     | `kubernetes/ingress-nginx` releases                            |
-| external-dns      | `kubernetes-sigs/external-dns` releases                        |
-| cloudnative-pg    | `cloudnative-pg/charts` + `cloudnative-pg/cloudnative-pg`      |
-| hcloud-csi        | `hetznercloud/csi-driver` releases                             |
-| matomo            | bitnami chart CHANGELOG + matomo release notes                 |
-| nats              | `nats-io/k8s` (helm) releases                                  |
+| dependency      | releaseNotes (`{version}` = new chart version) | extraDocs |
+|-----------------|------------------------------------------------|-----------|
+| `signoz`        | `github.com/SigNoz/charts/releases/tag/v{version}` | signoz.io upgrade docs |
+| `k8s-infra`     | `github.com/SigNoz/charts/releases` (same repo, independent tag line) | — |
+| `cert-manager`  | `github.com/cert-manager/cert-manager/releases/tag/v{version}` (chart+app versions coupled) | `cert-manager.io/docs/releases/release-notes/` + `/docs/installation/upgrade/` |
+| `ingress-nginx` | `github.com/kubernetes/ingress-nginx/releases/tag/helm-chart-{version}` | `Changelog.md` |
+| `external-dns`  | `github.com/kubernetes-sigs/external-dns/releases/tag/external-dns-helm-chart-{version}` | chart `CHANGELOG` on the docs site |
+| `cloudnative-pg`| `github.com/cloudnative-pg/charts/releases` (chart) | `github.com/cloudnative-pg/cloudnative-pg/releases` (operator app) |
+| `hcloud-csi`    | `github.com/hetznercloud/csi-driver` `CHANGELOG.md` / releases (chart lives under `/chart`) | — |
+
+Notes from verification:
+- `signoz` and `k8s-infra` share the `SigNoz/charts` repo but version on
+  independent tag lines — keep them as two registry entries (matches the
+  one-PR-per-tool model).
+- `ingress-nginx` and `external-dns` tag chart releases distinctly from the app
+  (`helm-chart-*` / `external-dns-helm-chart-*`) — the templated pattern is what
+  makes the fetch land on the chart release, not the app release.
+- `cloudnative-pg` does not expose a stable per-version chart-release tag URL in
+  the same way; fetch the releases listing and let the agent locate the matching
+  chart entry, cross-checking the operator-app release notes.
 
 Per CLAUDE.md "registries cannot lag the things they register": adding a
 subchart dependency means adding its source entry in the same PR. v1 documents
@@ -248,5 +273,5 @@ Add the ADR to `docs/adr/INDEX.md` in the same PR (per CLAUDE.md).
 
 ## Open questions for the plan
 
-- Confirm the source-registry release-notes URLs are the ones to fetch — matomo
-  (bitnami chart CHANGELOG) and nats (`nats-io/k8s`) are the least certain.
+None blocking. Release sources verified on the web 2026-06-11 (see registry
+table). matomo/nats confirmed out of scope (no subchart dependencies).
