@@ -164,6 +164,16 @@
   "github-actions": {
     "fileMatch": ["^\\.github/workflows/[^/]+\\.ya?ml$"]
   },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/infra/(matomo|nats)/values\\.yaml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+tag:\\s*[\"'](?<currentValue>.*?)[\"']"
+      ],
+      "versioningTemplate": "docker"
+    }
+  ],
   "ignorePaths": [
     "**/node_modules/**",
     "**/build/**",

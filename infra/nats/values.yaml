@@ -1,6 +1,7 @@
 image:
   # nats:2.10-alpine. Pinned by digest in values-prod.yaml.
   repository: nats
+  # renovate: datasource=docker depName=nats
   tag: "2.10-alpine"
   digest: ""
   pullPolicy: IfNotPresent
@@ -9,6 +10,7 @@ streamInit:
   image:
     # natsio/nats-box bundles the nats CLI used to bootstrap the stream.
     repository: natsio/nats-box
+    # renovate: datasource=docker depName=natsio/nats-box
     tag: "0.19.5"
     digest: ""
 
@@ -20,6 +22,7 @@ metricsExporter:
   enabled: false
   image:
     repository: natsio/prometheus-nats-exporter
+    # renovate: datasource=docker depName=natsio/prometheus-nats-exporter
     tag: "0.15.0"
     digest: ""
   port: 7777
