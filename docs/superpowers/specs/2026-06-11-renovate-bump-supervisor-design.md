@@ -264,9 +264,10 @@ missing/weak) and the final merge. Everything between is automated.
      preserved), passing `plan.json` / `findings.json` between them via
      artifacts. No per-push re-trigger exists → **cap-inflation is structurally
      impossible**. That's the payoff of not inheriting §6a.
-   - **Cap = 3 rounds** (B→C up to ×3), unrolled as conditional jobs. Enough
-     iteration for C to drive the plan to complete-and-grounded; the cap exists
-     to avoid *excess* refinement, not to save tokens.
+   - **Cap = 6 rounds** (B→C up to ×6), unrolled as conditional jobs. It's a
+     *max* — lived experience with the §6a reviewer/fixer cycle shows 3 is too
+     short and it usually converges earlier than 6. Enough room to drive the
+     backbone plan to complete-and-grounded without the loop spinning forever.
    - **C's output:** `{ approved: bool, findings: [...] }`. First
      `approved:true` short-circuits remaining rounds → dispatch D.
    - **C's mandate is NARROW — completeness + grounding vs A's schema only.**
@@ -282,9 +283,35 @@ missing/weak) and the final merge. Everything between is automated.
      auto-proceed to D.
    - **On approval:** the run dispatches D (fork `claude/<dep>-vN`, close the
      Renovate PR, implement, open the claude PR → real §6a on the code).
-5. **Confidence definitions** — what counts as `low`/`thin` source confidence
-   (Gate A)? Is `planConfidence` purely advisory (per decision 6) or does it
-   gate anything?
+5. ✅ **RESOLVED — ratings are ascending (consumer rates producer), never
+   self-rated.** Self-rated confidence is an unreliable vibe; instead every
+   output is judged by its **independent downstream consumer**:
+   **B→rates→A, C→rates→B, §6a→rates→D.** No agent grades its own homework.
+   - **B rates A** (sufficiency-to-plan). B is the right judge because B has to
+     *plan from* A's context — thin enrichment is felt directly. This **is
+     Gate A**, now consumer-judged: B's first act is to rate A's output; `low`
+     or `none` → `bump-needs-human` + STOP (B doesn't waste effort planning).
+     Rubric (evidence-based, a classification of facts — not a feeling):
+     - **`high`** — dedicated migration/upgrade guide for this exact transition
+       (title/URL matches migration/upgrade/breaking), fetched 200, breaking
+       changes spelled out.
+     - **`medium`** — changelog/release notes *enumerate* changes but no
+       dedicated guide; breaking changes inferable, not spelled out as steps.
+     - **`low`** — only thin/ambiguous sources (release page with no detail,
+       partial 404s, changes named but unexplained).
+     - **`none`** — no usable source fetched.
+   - **One cheap self-check survives on A** — a pure objective tripwire: *A
+     fetched zero usable sources → stop before even running B.* That's a fact
+     ("nothing to plan from"), not a confidence vibe. Everything substantive is
+     consumer-judged.
+   - **C rates B** (completeness + grounding vs A's schema) — already C's job
+     in the plan loop (#4). This replaces the old self-rated `planConfidence`,
+     which is **dropped**.
+   - **§6a rates D** (code correctness) — the existing terminal link.
+   - **Optional non-loop signal — D rates C:** "was the approved plan actually
+     implementable when D hit the code?" Surfaced in the PR as a quality
+     signal, **not** a feedback loop (keeps the pipeline linear). [Keep vs skip:
+     pending — see note.]
 6. **Fork + close + the "ignored update" fallback.** Exact mechanics of D's
    fork/close; and since closing a Renovate PR makes Renovate stop proposing
    that update, how do we keep the claude PR as the durable tracker (note on
