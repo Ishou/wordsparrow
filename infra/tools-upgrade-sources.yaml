@@ -1,0 +1,30 @@
+# Upstream release-notes sources for the helm-bump enrichment workflow
+# (.github/workflows/helm-bump-enrich.yml). {version} = the new chart or
+# image version. Registry coherence: adding a subchart dependency or a
+# pinned image means adding its entry here in the same PR (ADR-0066).
+modeA:
+  - name: signoz
+    repo: "https://charts.signoz.io"
+    releaseNotes: "https://github.com/SigNoz/charts/releases/tag/v{version}"
+    extraDocs: "https://signoz.io/docs/operate/migration/"
+  - name: k8s-infra
+    repo: "https://charts.signoz.io"
+    releaseNotes: "https://github.com/SigNoz/charts/releases"
+  - name: cert-manager
+    repo: "https://charts.jetstack.io"
+    releaseNotes: "https://github.com/cert-manager/cert-manager/releases/tag/v{version}"
+    extraDocs: "https://cert-manager.io/docs/installation/upgrade/"
+  - name: ingress-nginx
+    repo: "https://kubernetes.github.io/ingress-nginx"
+    releaseNotes: "https://github.com/kubernetes/ingress-nginx/releases/tag/helm-chart-{version}"
+  - name: external-dns
+    repo: "https://kubernetes-sigs.github.io/external-dns/"
+    releaseNotes: "https://github.com/kubernetes-sigs/external-dns/releases/tag/external-dns-helm-chart-{version}"
+  - name: cloudnative-pg
+    repo: "https://cloudnative-pg.github.io/charts"
+    releaseNotes: "https://github.com/cloudnative-pg/charts/releases"
+    extraDocs: "https://github.com/cloudnative-pg/cloudnative-pg/releases"
+  - name: hcloud-csi
+    repo: "https://charts.hetzner.cloud"
+    releaseNotes: "https://github.com/hetznercloud/csi-driver/blob/main/CHANGELOG.md"
+modeB: []
