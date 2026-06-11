@@ -49,7 +49,6 @@ def node_default_border() -> str:
 
 
 def flat_node_styles(node_ids: list[str], role_by_id: dict[str, str]) -> list[str]:
-    """classDef + class lines for a subgraph-less diagram, deterministically."""
     present = [
         r for r in _ROLE_ORDER if any(role_by_id.get(n) == r for n in node_ids)
     ]
