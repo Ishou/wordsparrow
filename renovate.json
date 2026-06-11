@@ -154,16 +154,24 @@
     }
   ],
   "gradle": {
-    "fileMatch": ["(^|/)(.+\\.gradle\\.kts|.+\\.gradle)$"]
+    "managerFilePatterns": [
+      "/(^|/)(.+\\.gradle\\.kts|.+\\.gradle)$/"
+    ]
   },
   "helmv3": {
-    "fileMatch": ["(^|/)Chart\\.yaml$"]
+    "managerFilePatterns": [
+      "/(^|/)Chart\\.yaml$/"
+    ]
   },
   "dockerfile": {
-    "fileMatch": ["(^|/)Dockerfile[^/]*$"]
+    "managerFilePatterns": [
+      "/(^|/)Dockerfile[^/]*$/"
+    ]
   },
   "github-actions": {
-    "fileMatch": ["^\\.github/workflows/[^/]+\\.ya?ml$"]
+    "managerFilePatterns": [
+      "/^\\.github/workflows/[^/]+\\.ya?ml$/"
+    ]
   },
   "customManagers": [
     {
