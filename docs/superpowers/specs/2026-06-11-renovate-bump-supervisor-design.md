@@ -564,9 +564,46 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
     - **Chaining:** jobs-in-one-run — *not* a workflow-per-agent, *not*
       self-re-trigger (confirms #4/#7). The "major-label filter" is Step 0's
       routing *input*, not a workflow-level gate.
-12. **Naming + layout + ADR** — workflow file names, agent-prompt locations,
-    registry location; this standing automation likely warrants its own ADR
-    (sibling to 0067).
+12. ✅ **RESOLVED — naming + layout + ADR. Stem = `breaking-bump`** (explicit to
+    an outsider; "breaking dependency bump"). **Renames the whole system from the
+    abstract "bump supervisor" — these names supersede every `bump-supervisor` /
+    `bump-needs-human` / `bump-enhancement` reference earlier in this doc** (the
+    doc-wide rename sweep happens in the self-review pass — task #23).
+    - **ADR-0068 "AI-driven breaking-bump migration pipeline"** (highest existing
+      is 0067). **Supersedes/absorbs ADR-0067** (internal-tool upgrade-PR
+      enrichment): the helm-enrich pipeline becomes a *special case* of Agent A;
+      the values-diff carryover survives, so 0067's logic is re-homed, not lost.
+      0067 status → "Superseded by ADR-0068." Per ADR-0001 §7 it **merges first**,
+      before any workflow code, updating `docs/adr/INDEX.md` in the same PR
+      (`registry-coherence` gate).
+    - **Workflows** (`.github/workflows/`): `breaking-bump-dispatch.yml` (Step 0
+      router, `on: pull_request`), `breaking-bump.yml` (the pipeline,
+      `on: issues`), `breaking-bump-tests.yml` (script CI). The
+      `helm-bump-enrich*.yml` trio is migrated/absorbed during implementation
+      (plan details; not necessarily deleted day one).
+    - **Scripts:** `scripts/helm-enrich/` → generalized to
+      **`scripts/breaking-bump/`** (Step 0 routing, schema validation, issue
+      lifecycle, fork/close, ai-gate wiring); `test_*.py` alongside per repo
+      convention; helm `valuesdiff.py` kept as the helm special-case module.
+    - **Agent prompts:** `.github/breaking-bump/prompts/{agent-a,agent-b,agent-c,
+      agent-d,ai-gate}.md` — versioned/reviewable, not inline in YAML.
+    - **A→B schema:** `scripts/breaking-bump/schema/ab_contract.schema.json`.
+    - **Registry:** keep `infra/tools-upgrade-sources.yaml` in place (renaming
+      churns refs); starts **empty** as the reactive override (#2).
+    - **Labels — two orthogonal axes** (supersedes the welded `bump-needs-human`):
+      - *Kind* (base label): **`breaking-bump`** — the spine/tracking issue
+        (means "*potential* breaking bump under supervision"; applied at creation
+        before A confirms — non-breaking ones close fast). **`post-bump-
+        enhancement`** — the category-(c) optional follow-up (the `post-` makes
+        the "do later, separately" deferral explicit).
+      - *Status* (cumulative): **`needs-human`** — stacks *on top* of any base
+        label; added on escalation/failure, removed on resolution. Enables a
+        one-view worklist filter ("everything that needs me") across all kinds,
+        and is reusable by any future escalating automation. The base label
+        supplies the "needs-human *for what*" context.
+      - **No separate provenance umbrella** — OR the two kind-labels for an "all
+        pipeline issues" view (keeps the lean 3-label scheme). **Dedup key (#6)
+        is now `breaking-bump` + dep.**
 13. **Cost guardrails** — A runs on every major Renovate PR; B/C/D per impacted
     major. Any rate/scope limits to avoid surprise token spend during the lab
     phase?
