@@ -239,7 +239,7 @@ jobs:
         # azure/setup-helm v4.3.1 — same SHA as helm-lint.yml.
         uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
         with:
-          version: v3.16.3
+          version: v3.21.0
 
       - name: Download digest artifact (workflow_run)
         # Cross-workflow artifact download: the build workflow uploaded
