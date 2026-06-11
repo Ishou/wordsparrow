@@ -10,6 +10,7 @@
   "semanticCommits": "enabled",
   "semanticCommitType": "chore",
   "semanticCommitScope": "deps",
+  "platformCommit": "enabled",
   "commitBody": "Signed-off-by: Renovate Bot <bot@wordsparrow.io>",
   "branchPrefix": "renovate/",
   "automerge": false,
