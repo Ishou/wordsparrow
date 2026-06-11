@@ -14,7 +14,7 @@
           "type": "promql",
           "spec": {
             "name": "A",
-            "query": "nats_stream_messages{stream_name=\"WORDSPARROW_USER_EVENTS_DLQ\"}",
+            "query": "jetstream_stream_total_messages{stream_name=\"WORDSPARROW_USER_EVENTS_DLQ\"}",
             "legend": "{{stream_name}}"
           }
         }

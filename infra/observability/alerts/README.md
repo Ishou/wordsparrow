@@ -14,9 +14,9 @@ The external workflow (`apply-signoz-alerts.yml`) and `apply.sh` have been remov
 
 | File                                                                       | Metric                                                                   | Threshold | Window | Severity |
 | -------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------- | ------ | -------- |
-| [`files/nats-consumer-lag-warning.json`](./files/nats-consumer-lag-warning.json)   | `nats_consumer_num_pending` (max by consumer + stream)                   | `> 100`   | 5m     | warning  |
-| [`files/nats-consumer-lag-critical.json`](./files/nats-consumer-lag-critical.json) | `nats_consumer_num_pending` (max by consumer + stream)                   | `> 1000`  | 1m     | critical |
-| [`files/nats-dlq-non-empty.json`](./files/nats-dlq-non-empty.json)                 | `nats_stream_messages{stream_name="WORDSPARROW_USER_EVENTS_DLQ"}`        | `> 0`     | 1m     | warning  |
+| [`files/nats-consumer-lag-warning.json`](./files/nats-consumer-lag-warning.json)   | `jetstream_consumer_num_pending` (max by consumer + stream)              | `> 100`   | 5m     | warning  |
+| [`files/nats-consumer-lag-critical.json`](./files/nats-consumer-lag-critical.json) | `jetstream_consumer_num_pending` (max by consumer + stream)              | `> 1000`  | 1m     | critical |
+| [`files/nats-dlq-non-empty.json`](./files/nats-dlq-non-empty.json)                 | `jetstream_stream_total_messages{stream_name="WORDSPARROW_USER_EVENTS_DLQ"}` | `> 0`     | 1m     | warning  |
 
 All three are `threshold_rule` with `compositeQuery.queryType=promql`,
 `op="1"` (greater-than), and `matchType="1"` (at-least-once during the
