@@ -191,9 +191,9 @@ Full rationale is in MANIFESTO.md.
   The README infra diagrams are a registry too: `docs/infra/topology.yaml`
   declares the diagram edges and cloud nodes, and `scripts/infra_diagrams/`
   regenerates the Mermaid into `README.md`. The `readme-diagrams-drift.yml`
-  gate fails if a new Helm chart, terraform cloud resource, or deploy
-  workflow is added without updating the descriptor, or if `README.md` is
-  stale. Regenerate with `make diagrams`.
+  gate fails if a new Helm chart or terraform cloud resource is added
+  without updating the descriptor, or if `README.md` is stale. Regenerate
+  with `make diagrams`.
 - **Comments document non-obvious WHY, in one line.** Default to no
   comment. If you write one, it's a single line on a non-obvious
   *why* — a hidden constraint, a subtle invariant, a workaround for a

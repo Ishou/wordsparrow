@@ -7,7 +7,10 @@
 
 # Display services. `chart` must match a real Chart.yaml `name:`. One
 # chart may expand into several display nodes (platform bundles
-# ingress-nginx + cert-manager). `id` is the Mermaid node id.
+# ingress-nginx + cert-manager). `id` is the Mermaid node id. For API
+# services the `id` MUST equal the bounded-context directory name
+# (grid/game/identity/survey): the cluster diagram's Postgres cylinder is
+# keyed off it, so a mismatched id would silently drop the DB node.
 services:
   - { id: ingress,     label: ingress-nginx,  chart: platform,            group: Edge }
   - { id: certmanager, label: cert-manager,   chart: platform,            group: Edge }
@@ -58,7 +61,9 @@ deploy_edges:
   - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
   - { from: pages,           to: dns,   label: served via }
 
-# Clue AI pipeline stages, rendered as a linear chain.
+# Clue AI pipeline stages, rendered as a linear chain. Unlike the rest of
+# this descriptor, these stages are hand-maintained and NOT coherence-gated
+# against scripts/clue_generation/ — keep them in sync by hand.
 clue_pipeline:
   - Curated FR corpus
   - mlx-lm LoRA / DPO generator
