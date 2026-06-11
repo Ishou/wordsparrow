@@ -43,8 +43,7 @@ deploy_edges:
   - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
   - { from: pages,           to: dns,   label: served via }
 
-# Observability TARGET chart (ADR-0027/0033/0038/0040/0041/0032/0030): telemetry + alerts on every module.
-# Hand-maintained, NOT chart-gated — a module missing a source edge here is a gap to address, not an exception.
+# Observability TARGET (ADR-0027/0033/0040): hand-maintained, not chart-gated — missing source edge = gap to fix.
 observability:
   nodes:
     - { id: frontend,    label: frontend (browser SDK), group: Sources }
