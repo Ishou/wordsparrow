@@ -6,40 +6,58 @@
 
 ## Problem
 
-Several in-cluster internal tools (SigNoz + `k8s-infra`, the five platform
-operators) are pinned as Helm subchart dependencies in `infra/**/Chart.yaml`.
-(matomo and nats are first-party template charts with no subchart deps — out of
-scope; see Scope.) Renovate already opens mechanical bump PRs for the subcharts
-on its Monday "helm subcharts" schedule, but a bare bump PR forces the maintainer
-to do the upgrade
-homework by hand: read the upstream release notes, find the breaking changes,
-and diff the chart's default `values.yaml` to see what config the override files
-(`values-prod.yaml`) must reconcile.
+The in-cluster internal tools are versioned two different ways, and a bare bump
+PR for either forces the maintainer to do the upgrade homework by hand: read the
+upstream release notes, find the breaking changes, and work out what config must
+change.
 
-We want each helm-bump PR to arrive **enriched** with that homework already
-done, so the maintainer reviews and merges with full context. Deploy stays
-manual (the operator runs `helm upgrade` after merge, exactly as today).
+- **Subchart tools** (SigNoz + `k8s-infra`, the five platform operators) are
+  pinned as Helm subchart `dependencies:` in `infra/**/Chart.yaml`. Renovate
+  already opens mechanical bump PRs for these on its Monday "helm subcharts"
+  schedule.
+- **Image-pinned tools** (matomo + its MariaDB, nats + its sidecars) are
+  first-party template charts with `dependencies: []`; their version lives in a
+  container-image `tag:` in the chart's own `values.yaml`. Renovate has **no
+  configured manager** that touches those tags today — so these tools currently
+  get **no update PR at all**.
+
+We want each bump PR — for either kind — to arrive **enriched** with that
+homework already done (version delta, migration notes synthesized from official
+release docs, and — for subcharts — the upstream default `values.yaml` diff
+against the repo's overrides), so the maintainer reviews and merges with full
+context. Deploy stays manual (the operator runs `helm upgrade` after merge,
+exactly as today).
 
 ## Scope
 
-**In scope (v1):** the **7 Helm subchart dependencies** Renovate's `helmv3`
-manager actually bumps — i.e. real `dependencies:` entries in an
-`infra/**/Chart.yaml`:
+This design covers **all** in-cluster internal tools, via **two enrichment
+modes** sharing one workflow, registry, and agent. It ships as **two PRs** (see
+Rollout):
+
+**Mode A — subchart bumps (7 deps, PR 1):** the Helm subchart `dependencies:`
+Renovate's `helmv3` manager already bumps:
 - `infra/observability`: `signoz`, `k8s-infra`.
 - `infra/platform`: `cert-manager`, `ingress-nginx`, `external-dns`,
   `cloudnative-pg`, `hcloud-csi`.
 
-For each `renovate/` PR bumping one of these, append to the PR body: the version
-delta, synthesized migration notes from official release docs, and the
-key-path-aware upstream default `values.yaml` diff (overridden keys flagged).
+Enrichment = version delta + migration notes + **key-path-aware upstream default
+`values.yaml` diff** (overridden keys flagged).
 
-**Out of scope (v1):**
-- **matomo and nats** — both are first-party template charts with
-  `dependencies: []` (matomo deliberately avoids Bitnami per ADR-0025; nats
-  enables JetStream via its own config). Renovate's `helmv3` manager has nothing
-  to bump in them, so no subchart PR is ever opened. Their *app* versions move
-  via container-image tags (`appVersion` / image pins in values), which is a
-  different manager and a possible later project — not this one.
+**Mode B — image-tag bumps (matomo, nats, PR 2):** the container images pinned
+in `infra/matomo/values.yaml` and `infra/nats/values.yaml`. Requires **adding
+Renovate image-tag coverage** (a `customManagers`/regex manager over those
+`tag:` fields) so a bump PR exists at all — independently valuable, since these
+tools get no update PR today. Images in scope:
+- matomo: `matomo`, `mariadb`
+- nats: `nats` (server), `natsio/nats-box`, `natsio/prometheus-nats-exporter`
+  (the last two are low-risk sidecars).
+
+Enrichment = image-version delta + migration notes from the **app's** release
+docs. There is **no upstream-chart `values.yaml` diff** in Mode B — the chart is
+our own templates, so nothing upstream changes; the migration notes carry the
+whole signal (e.g. Matomo major DB migrations, NATS JetStream upgrade notes).
+
+**Out of scope (both modes):**
 - Deploy automation. `helm upgrade` for these charts remains a manual operator
   step (`docs/deploy.md`). A deploy-on-merge workflow is a possible later
   project; this design does not build it.
@@ -60,31 +78,33 @@ key-path-aware upstream default `values.yaml` diff (overridden keys flagged).
    per tool. One bump per PR keeps the detect job, the diff, and the operator's
    decision each scoped to a single tool. (`signoz` and `k8s-infra` version
    independently, so they remain separate PRs — that is the desired behavior.)
-4. **All 7 real subchart deps** in scope from day one (observability + platform;
-   not matomo/nats, which have none). Enrichment quality varies by how good each
-   upstream's release docs are; the design degrades gracefully when docs are
-   missing (see Error handling).
-4. **Event-driven + cron safety net.** Enrich on `pull_request: opened` within
-   minutes; a daily cron sweeps open renovate helm PRs missing the enrichment
-   marker so nothing is dropped.
-5. **Split engine: deterministic core + scoped agent.** The mechanical parts
+4. **Two modes, one engine, two PRs.** Mode A (subcharts) and Mode B (image
+   tags) share the workflow, registry, and agent; the detect job branches on
+   which kind of bump the PR carries. Mode A ships first (PR 1), Mode B second
+   (PR 2) — same end state, respects the 400-line cap. Mode B additionally adds
+   Renovate image-tag coverage so a bump PR exists.
+5. **Event-driven + cron safety net.** Enrich on `pull_request: opened` within
+   minutes; a daily cron sweeps open renovate PRs missing the enrichment marker
+   so nothing is dropped.
+6. **Split engine: deterministic core + scoped agent.** The mechanical parts
    (version delta, upstream values diff, override cross-reference) are testable
    shell; the LLM is confined to prose synthesis from a fetched source-of-truth
    URL — honoring CLAUDE.md's "fetch a known-working example, don't synthesize
    from memory" rule.
-6. **Key-path-aware values diff.** The differ reports added / removed / changed
-   default keys between the old and new upstream `values.yaml` (not a raw text
-   diff), so the operator sees a structured list of what moved.
-7. **Override cross-reference.** For each changed/removed upstream default key,
-   flag whether the repo pins that key in the chart's `values-prod.yaml` (and
-   `values.yaml` / `values-local.yaml` where present). An upstream default change
-   on a key the repo overrides is the highest-signal item — it may be a no-op
-   (repo already pins it) or a required reconciliation. This couples the detect
-   job to the override files by design.
-8. **Short ADR.** This is a standing automation whose output the maintainer
+7. **Key-path-aware values diff (Mode A only).** The differ reports added /
+   removed / changed default keys between the old and new upstream `values.yaml`
+   (not a raw text diff), so the operator sees a structured list of what moved.
+   Mode B has no upstream values to diff.
+8. **Override cross-reference (Mode A only).** For each changed/removed upstream
+   default key, flag whether the repo pins that key in the chart's
+   `values-prod.yaml` (and `values.yaml` / `values-local.yaml` where present). An
+   upstream default change on a key the repo overrides is the highest-signal
+   item — it may be a no-op (repo already pins it) or a required reconciliation.
+   This couples the detect job to the override files by design.
+9. **Short ADR.** This is a standing automation whose output the maintainer
    trusts when deciding to merge infra upgrades — judgment-bearing, not just
-   plumbing. An ADR records the advise-not-decide posture and the source-registry
-   grounding rule.
+   plumbing. An ADR records the advise-not-decide posture, the two-mode model,
+   and the source-registry grounding rule.
 
 ## Architecture
 
@@ -93,27 +113,32 @@ One new workflow plus one committed registry file. No new secrets — reuses
 already wired in `claude.yml` / `claude-code-review.yml`.
 
 ```
-Renovate opens renovate/* PR bumping infra/**/Chart.yaml
+Renovate opens renovate/* PR bumping
+  Mode A: infra/**/Chart.yaml dependency version
+  Mode B: infra/{matomo,nats}/values.yaml image tag
                         │
         ┌───────────────┴────────────────┐
    pull_request:opened/reopened    schedule: daily cron sweep
-   (head_ref renovate/*,           (open renovate helm PRs
-    infra/**/Chart.yaml changed)    missing enrichment marker)
+   (head_ref renovate/*, changed     (open renovate PRs under
+    paths infra/**/Chart.yaml OR      infra/** missing the
+    infra/**/values*.yaml)            enrichment marker)
         └───────────────┬────────────────┘
                         ▼
         Job: detect  (deterministic shell — scripts/helm-enrich/)
-          • diff PR-base Chart.yaml vs PR-head → the single (name, old, new)
-          • helm repo add; helm show values --version OLD / NEW
-          • key-path-aware diff → added/removed/changed default keys
-          • cross-ref changed keys against the chart's values-prod.yaml overrides
-          • look up upstream release-notes URL in source registry
-          • emit context bundle (JSON)
+          • classify PR: Mode A (Chart.yaml dep) or Mode B (image tag)
+          • parse the single (name, old, new) from PR-base vs PR-head
+          • Mode A only: helm show values --version OLD/NEW
+              → key-path-aware diff (added/removed/changed keys)
+              → cross-ref changed keys against values-prod.yaml overrides
+          • look up release-notes URL in source registry (by chart or image)
+          • emit context bundle (JSON, with `mode`)
                         ▼
         Job: enrich  (claude-code-action, scoped allowlist)
           • WebFetch the registry URL for releases between OLD..NEW
           • synthesize migration notes (breaking changes, required actions)
-          • render block: version delta + migration notes + keyed values diff
-            (overridden keys flagged) → gh pr edit --body between markers
+          • render block: version delta + migration notes
+              + (Mode A) keyed values diff with overridden keys flagged
+          • gh pr edit --body between idempotent markers
 ```
 
 The enrich workflow is **advisory, never a required check** — a failure never
@@ -124,8 +149,9 @@ blocks the maintainer from merging the Renovate PR.
 ### 1. `.github/workflows/helm-bump-enrich.yml`
 - Triggers:
   - `pull_request: [opened, reopened]`, filtered to `head_ref` starting
-    `renovate/` and changed paths matching `infra/**/Chart.yaml`.
-  - `schedule:` daily cron sweep.
+    `renovate/` and changed paths matching `infra/**/Chart.yaml` (Mode A) or
+    `infra/**/values*.yaml` (Mode B).
+  - `schedule:` daily cron sweep over open `renovate/` PRs under `infra/**`.
   - `workflow_dispatch:` (manual, takes a PR number) for rollout + re-runs.
 - Two jobs: `detect` (shell) → `enrich` (agent).
 - Concurrency keyed on PR number, `cancel-in-progress: false`.
@@ -134,32 +160,35 @@ blocks the maintainer from merging the Renovate PR.
 
 ### 2. `detect` job — deterministic core (`scripts/helm-enrich/`)
 The reproducible part, extracted into scripts so it runs identically in CI and
-locally and is unit-testable. With one PR per tool the job handles exactly one
-bumped dependency:
-- Identify the single bumped `(dependency, old, new)` by comparing
-  `git show <pr-base-sha>:<Chart.yaml>` against the PR head. If the PR somehow
-  carries more than one bumped dependency (grouping misconfig), process each and
-  render one block per dependency, but the expected case is one.
-- `helm repo add` the dependency's repo, then
-  `helm show values <repo>/<chart> --version OLD` and `--version NEW`.
-- **Key-path-aware diff**: walk both default value trees and emit added /
-  removed / changed leaf keys (dotted path + old/new value), not a raw text diff.
-- **Override cross-reference**: for each changed/removed default key, check
-  whether the chart's `values-prod.yaml` (and `values.yaml` / `values-local.yaml`
-  where present) sets that key; mark it `overridden: true|false` so the operator
-  immediately sees whether the upstream change is a no-op or a reconciliation.
-- Look up the dependency in the source registry to attach a release-notes URL.
-- Emit a JSON context bundle (dependency, old, new, keyed values diff with
-  override flags, source URL, plus a "source missing" flag where applicable).
+locally and is unit-testable. One PR per tool → exactly one bumped unit:
+- **Classify the PR** as Mode A (a `dependencies:` version changed in a
+  `Chart.yaml`) or Mode B (an image `tag:` changed in a `values.yaml`) by
+  diffing `git show <pr-base-sha>:<file>` against the PR head.
+- Parse the single `(name, old, new)`. If a PR somehow carries more than one
+  bumped unit (grouping misconfig), process each and render one block apiece;
+  the expected case is one.
+- **Mode A only** — `helm repo add` the dependency's repo, then
+  `helm show values <repo>/<chart> --version OLD` and `--version NEW`:
+  - **Key-path-aware diff**: walk both default value trees and emit added /
+    removed / changed leaf keys (dotted path + old/new value), not raw text.
+  - **Override cross-reference**: for each changed/removed default key, check
+    whether the chart's `values-prod.yaml` (+ `values.yaml` / `values-local.yaml`
+    where present) sets it; mark `overridden: true|false`.
+- Look up the unit (chart name or image repository) in the source registry to
+  attach a release-notes URL.
+- Emit a JSON context bundle: `mode`, name, old, new, source URL, "source
+  missing" flag, and — Mode A — the keyed values diff with override flags.
 
 ### 3. Source registry — `infra/tools-upgrade-sources.yaml`
-Maps each subchart dependency to its release-notes location, grounding the LLM
-in a source-of-truth URL instead of synthesized memory. Each project tags chart
-releases under its own convention, so the registry stores a **URL pattern** with
-a `{version}` placeholder (the new chart version) — the agent fetches the exact
-release page, not a generic listing. Each entry: `name`, `repo` (helm repo URL,
-mirrors Chart.yaml), `releaseNotes` (templated URL), and optional `extraDocs`
-(curated upgrade guide). Verified 2026-06-11:
+Maps each unit (subchart dependency **or** container image) to its release-notes
+location, grounding the LLM in a source-of-truth URL instead of synthesized
+memory. Each project tags releases under its own convention, so the registry
+stores a **URL pattern** with a `{version}` placeholder — the agent fetches the
+exact release page, not a generic listing. Two sub-sections keyed by `mode`.
+
+**Mode A — subchart deps.** Each entry: `name`, `repo` (helm repo URL, mirrors
+Chart.yaml), `releaseNotes` (templated URL), optional `extraDocs`. Verified
+2026-06-11:
 
 | dependency      | releaseNotes (`{version}` = new chart version) | extraDocs |
 |-----------------|------------------------------------------------|-----------|
@@ -182,9 +211,31 @@ Notes from verification:
   the same way; fetch the releases listing and let the agent locate the matching
   chart entry, cross-checking the operator-app release notes.
 
-Per CLAUDE.md "registries cannot lag the things they register": adding a
-subchart dependency means adding its source entry in the same PR. v1 documents
-this rule; gating it in `registry-coherence.yml` is a possible later addition.
+**Mode B — container images.** Keyed by image `repository`. Each entry: `image`,
+`releaseNotes` (templated URL), optional `extraDocs`, `priority`. Verified
+2026-06-11:
+
+| image                              | releaseNotes (`{version}` = new image version) | priority |
+|------------------------------------|------------------------------------------------|----------|
+| `matomo`                           | `matomo.org/changelog/` (curated, per-version) + `github.com/matomo-org/matomo/releases` | high (major = DB migrations) |
+| `mariadb`                          | `mariadb.com/docs/release-notes/community-server/{series}/{version}` | high (major upgrades) |
+| `nats`                             | `github.com/nats-io/nats-server/releases/tag/v{version}` + `docs.nats.io` upgrade guides | high (JetStream) |
+| `natsio/nats-box`                  | `github.com/nats-io/nats-box/releases` | low (debug sidecar) |
+| `natsio/prometheus-nats-exporter`  | `github.com/nats-io/prometheus-nats-exporter/releases` | low (metrics sidecar) |
+
+Notes from verification:
+- Image tags carry flavour suffixes (`matomo:5.2.1-apache`, `mariadb:11.4.4-noble`,
+  `nats:2.10-alpine`). The Renovate image-tag manager (component 5) needs
+  `extractVersion` / a versioning strategy to bump the numeric part while
+  preserving the suffix; the detect parser strips the suffix to derive
+  `{version}` for the registry URL.
+- `nats` is pinned to a floating minor line (`2.10`), so Mode B fetches the
+  target minor's upgrade guide, not a single patch release.
+
+Per CLAUDE.md "registries cannot lag the things they register": adding a subchart
+dependency or a pinned image means adding its source entry in the same PR. v1
+documents this rule; gating it in `registry-coherence.yml` is a possible later
+addition.
 
 ### 4. `enrich` job — scoped agent
 `anthropics/claude-code-action@v1` with a confined allowlist: `WebFetch`,
@@ -203,25 +254,33 @@ Re-runs replace the block, never stack it. Marker presence is what the cron
 sweep checks to decide "already enriched."
 
 ### 5. Renovate config edit — `renovate.json`
-Remove the `groupName: "helm subcharts"` rule so each subchart dependency gets
-its own bump PR (one PR per tool). Keep the Monday `schedule` for the helm
-manager. This is what makes the detect job, the values diff, and the operator's
-review each scoped to a single tool.
+- **Mode A (PR 1):** remove the `groupName: "helm subcharts"` rule so each
+  subchart dependency gets its own bump PR (one PR per tool). Keep the Monday
+  `schedule` for the helm manager.
+- **Mode B (PR 2):** add a `customManagers` (regex) entry matching the image
+  `repository:`/`tag:` pairs in `infra/matomo/values.yaml` and
+  `infra/nats/values.yaml`, with `extractVersion` to handle the flavour suffixes
+  (`-apache`, `-noble`, `-alpine`). One PR per image. This is what creates the
+  bump PRs Mode B enriches — without it these tools get no update PR at all.
 
 ## Data flow
 
-`Chart.yaml` version delta + key-path-aware upstream `values.yaml` diff with
-override flags (all deterministic) → bundled with the registry release-notes URL
-→ agent fetches release notes → renders one Markdown block → spliced into the
-existing Renovate PR body between markers. One bumped dependency per PR.
+Version delta (Mode A: Chart.yaml dep; Mode B: image tag) + — Mode A only —
+key-path-aware upstream `values.yaml` diff with override flags (all
+deterministic) → bundled with the registry release-notes URL → agent fetches
+release notes → renders one Markdown block → spliced into the existing Renovate
+PR body between markers. One bumped unit per PR.
 
 ## Error handling
 
-- **No registry entry for a bumped dependency** → post a values-diff-only block
-  and explicitly flag the missing source. Never fabricate a URL.
-- **`helm show values` fails** (repo down, version yanked) → skip the values
-  diff, still attempt migration notes, annotate which part failed. Partial
+- **No registry entry for a bumped unit** → Mode A posts a values-diff-only
+  block; Mode B posts a version-delta-only block. Both explicitly flag the
+  missing source. Never fabricate a URL.
+- **`helm show values` fails** (Mode A; repo down, version yanked) → skip the
+  values diff, still attempt migration notes, annotate which part failed. Partial
   enrichment beats none.
+- **Mode B has no values diff** by design — the block carries version delta +
+  app migration notes only; this is expected, not an error.
 - **WebFetch fails / release notes 404** → emit version delta + values diff with
   a "release notes unavailable, review manually" note.
 - **Non-helm or non-infra Renovate PR slips past the path filter** → detect job
@@ -235,12 +294,16 @@ existing Renovate PR body between markers. One bumped dependency per PR.
 
 - **`scripts/helm-enrich/` deterministic core** gets real unit tests, no mocking
   of `helm`:
-  - version-delta parsing from a `Chart.yaml` diff (fixtures),
+  - **PR classification** — Mode A (Chart.yaml dep) vs Mode B (values.yaml image
+    tag) from fixture diffs,
+  - version-delta parsing for both a `Chart.yaml` dep and a suffixed image tag
+    (`5.2.1-apache` → `5.2.1`),
   - key-path-aware diff from two captured `values.yaml` files (added / removed /
-    changed leaf keys),
+    changed leaf keys) — Mode A,
   - override cross-reference against a fixture `values-prod.yaml` (overridden vs
-    not-overridden key),
-  - registry lookup including the missing-entry path.
+    not-overridden key) — Mode A,
+  - registry lookup for both a chart name and an image repository, including the
+    missing-entry path.
 - **The LLM enrich step** is not unit-tested (non-deterministic). Validated via
   `workflow_dispatch` against a real open Renovate PR during rollout, and by
   eyeballing the first live enrichments.
@@ -253,25 +316,32 @@ A short ADR records:
 - the **advise-not-decide** posture (the agent enriches; the human merges;
   deploy stays manual),
 - the **PR-only / no-prod-access** boundary,
+- the **two-mode model** (subchart values-diff enrichment vs image-tag app-notes
+  enrichment) and why image-pinned tools need their own Renovate manager,
 - the **source-registry grounding** rule (fetch a source-of-truth URL, never
   synthesize release notes from LLM memory),
-- the **registry-coherence** obligation (new subchart ⇒ new source entry, same
-  PR).
+- the **registry-coherence** obligation (new subchart or pinned image ⇒ new
+  source entry, same PR).
 
 Add the ADR to `docs/adr/INDEX.md` in the same PR (per CLAUDE.md).
 
-## Resolved design choices
+## Rollout — two PRs
 
-- **One PR per tool** (Decision 3). The detect job diffs against the PR base SHA
-  and expects a single bumped dependency. Renovate's "helm subcharts" group is
-  removed.
-- **Key-path-aware values diff** (Decision 6), not raw text — needs a small
-  YAML-aware leaf differ in `scripts/helm-enrich/`.
-- **Override cross-reference** (Decision 7): the diff flags each changed/removed
-  upstream default key as overridden-by-repo or not, by reading the chart's
-  `values-prod.yaml` (and sibling values files where present).
+Both modes share the workflow, registry, and `scripts/helm-enrich/` core, so the
+split keeps each PR under the 400-line cap rather than separating concerns
+artificially.
+
+- **PR 1 — Mode A (subcharts).** Workflow + detect core (classification + Mode-A
+  values diff/override) + registry Mode-A section + Renovate "helm subcharts"
+  un-grouping + ADR. End state: the 7 subchart deps enrich on bump.
+- **PR 2 — Mode B (images).** Renovate image-tag `customManagers` + detect Mode-B
+  branch (no values diff) + registry Mode-B section + tests for classification
+  and suffix parsing. End state: matomo/nats images get bump PRs *and* enrich.
 
 ## Open questions for the plan
 
-None blocking. Release sources verified on the web 2026-06-11 (see registry
-table). matomo/nats confirmed out of scope (no subchart dependencies).
+None blocking. All release sources verified on the web 2026-06-11 (see registry
+tables). Confirm during implementation: the exact `customManagers` regex +
+`extractVersion` for the suffixed image tags, and whether the two low-priority
+nats sidecars (`nats-box`, `prometheus-nats-exporter`) are worth enriching or
+just bumped silently.
