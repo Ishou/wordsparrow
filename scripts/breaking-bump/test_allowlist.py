@@ -15,9 +15,15 @@ def test_load_allowlist_reads_deps_list(tmp_path):
     assert allowlist.load_allowlist(f) == ["signoz", "cert-manager"]
 
 
-def test_load_allowlist_empty_when_no_deps_key(tmp_path):
+def test_load_allowlist_empty_deps_list(tmp_path):
     f = tmp_path / "allowlist.yaml"
     f.write_text("deps: []\n")
+    assert allowlist.load_allowlist(f) == []
+
+
+def test_load_allowlist_empty_when_no_deps_key(tmp_path):
+    f = tmp_path / "allowlist.yaml"
+    f.write_text("other: value\n")
     assert allowlist.load_allowlist(f) == []
 
 
