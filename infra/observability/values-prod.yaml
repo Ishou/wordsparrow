@@ -180,6 +180,8 @@ k8s-infra:
     kubernetesAttributes: {enabled: true}
     resourceDetection:  {enabled: true}
     otlpExporter:       {enabled: true}
+    # Forward-compat for k8s-infra v0.16+ (our subchart is 0.15.1; see ADR-0038). Prevents dual-export on bump.
+    otlphttpExporter:   {enabled: false}
     # selfTelemetry disabled 2026-05-12: ~5 MB/day per collector wasn't
     # worth the queue-depth/batch metrics for our scale. Re-enable if
     # silent OTLP export drops become a concern.

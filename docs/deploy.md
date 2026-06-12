@@ -643,6 +643,37 @@ manual pass-2 swap. Tracked as a follow-up PR against
 `grid/api/deploy/chart/`.
 
 
+# Observability chart (`infra/observability/`) — upgrades
+
+The `deploy-observability-alerts.yml` and `deploy-observability-dashboards.yml` workflows
+cover alert rules and dashboards respectively, but the umbrella Helm chart itself
+(`infra/observability/`) has no CI-triggered deploy workflow yet.
+
+**TODO:** add a `workflow_dispatch` / `push` trigger for `infra/observability/**` changes on
+`main` to automate chart upgrades from CI. This is accepted debt; the manual path below is
+the stopgap.
+
+## Upgrading the chart
+
+```sh
+export KUBECONFIG=~/.kube/wordsparrow-prod
+helm dep build infra/observability/
+helm upgrade observability infra/observability/ \
+  -n observability \
+  -f infra/observability/values.yaml \
+  -f infra/observability/values-prod.yaml
+```
+
+Wait for pods to stabilise:
+
+```sh
+kubectl -n observability get pods   # all Running / Completed
+```
+
+After a k8s-infra sub-chart bump, confirm no duplicate metrics appear in SigNoz
+**Infrastructure → Kubernetes** tab (check the per-pod CPU/memory graphs for the
+`wordsparrow` namespace).
+
 # NATS JetStream chart (`infra/nats/`) — bootstrap and upgrades
 
 The `deploy-api-k8s.yml` matrix covers `{grid, game, identity}` but not

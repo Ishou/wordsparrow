@@ -48,6 +48,7 @@ ADR-0019  */api/asyncapi.yaml                      AsyncAPI 2.6, not 3.x
 ADR-0025  frontend/src/**/analytics/**             Matomo + RGPD posture
 ADR-0026  frontend/**/sw.*                         PWA offline cache via Workbox
 ADR-0027  infra/observability/**                   SigNoz on ClickHouse
+ADR-0038  infra/observability/**                   k8s-infra subchart for per-pod/node metrics; OTLP exporter preset pins
 ADR-0033  frontend/src/**/otel/**                  Frontend OTel public ingest; emits traceparent/tracestate
 ADR-0033  frontend/src/infrastructure/api/**       Browser SDK adds traceparent to every cross-origin fetch
 ADR-0034  */api/src/**/Module.kt                   CORS: allowHeaders { true } (wildcard predicate)

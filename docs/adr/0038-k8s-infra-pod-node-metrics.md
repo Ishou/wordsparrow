@@ -67,13 +67,39 @@ subchart of the `infra/observability` umbrella chart (alongside the existing `si
 subchart). Enable it in `values-prod.yaml` with:
 
 - `clusterName: wordsparrow-prod` (standard `k8s.cluster.name` OTel attribute)
-- `otelCollectorEndpoint` pointing to the in-cluster SigNoz collector Service
+- `otelCollectorEndpoint` pointing to the in-cluster SigNoz collector Service on port 4317
 - `otelInsecure: true` (cluster-internal, no TLS needed)
 - Resource requests 50m / 128Mi, limits 200m / 256Mi per agent pod (otel-agent DaemonSet
   and otel-deployment Deployment), sized for the cx33 worker pool
 
 Disable it by default in `values.yaml` so `make dev` does not spin a DaemonSet on local
 nodes.
+
+### OTLP exporter selection (updated signoz 0.128.0 / k8s-infra v0.16+)
+
+k8s-infra v0.16 (upstream; our standalone subchart remains pinned at 0.15.1 in
+`Chart.lock` — it is independent of the signoz chart version) changed the default OTLP
+exporter from gRPC (port 4317) to HTTP (port 4318):
+`presets.otlphttpExporter.enabled` now defaults to `true` and
+`presets.otlpExporter.enabled` now defaults to `false`.
+
+The values below are set as a forward-compatibility precaution coinciding with the
+signoz 0.128.0 bump; they are a no-op on k8s-infra 0.15.1 and become load-bearing on
+the next k8s-infra bump to v0.16+.
+
+We explicitly retain the gRPC path by setting both in `values-prod.yaml`:
+
+```yaml
+presets:
+  otlpExporter:     {enabled: true}   # gRPC, port 4317
+  otlphttpExporter: {enabled: false}  # suppress the new HTTP default
+```
+
+Without `otlphttpExporter: false`, bumping to k8s-infra v0.16+ would activate both
+exporters simultaneously, producing duplicate cluster/node/pod metrics in SigNoz. The gRPC path
+is retained rather than adopting the new HTTP default because `otelCollectorEndpoint`
+already points to port 4317 and both the OTel collector Service and app pods are
+configured for that port; migration to port 4318 is tracked as a future enhancement.
 
 ## Consequences
 

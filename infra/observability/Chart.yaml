@@ -29,7 +29,7 @@ appVersion: "0.1.0"
 # CNPG cluster.instances=1 in `local`).
 dependencies:
   - name: signoz
-    version: "0.122.0"
+    version: "0.128.0"
     repository: "https://charts.signoz.io"
     condition: signoz.enabled
   # SigNoz k8s-infra: separate Helm chart that deploys the per-node
