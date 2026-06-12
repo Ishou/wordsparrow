@@ -42,7 +42,7 @@ def _confidence_rank(level: str) -> int:
 def registry_confidence(doc: dict, *, breaking_eligible: bool) -> str:
     """Max confidence the contract may claim, from machine-stamped provenance + fetchedOk."""
     reg_ok = any(s.get("provenance") == "registry" and s.get("fetchedOk")
-                 for s in doc.get("sources", []))
+                 for s in (doc.get("sources") or []) if isinstance(s, dict))
     no_breaks = not (doc.get("breakingChanges") or doc.get("removals"))
     if breaking_eligible and no_breaks and not reg_ok:
         return "low"

@@ -131,6 +131,13 @@ def test_registry_confidence_tolerates_sources_missing_keys():
     assert abparse.registry_confidence(doc, breaking_eligible=True) == "low"
 
 
+def test_confidence_gate_tolerates_malformed_sources():
+    for bad in ("oops", None, ["str", 5, {"provenance": "registry", "fetchedOk": True}]):
+        doc = dict(_CLEAN_NO_REGISTRY)
+        doc["sources"] = bad
+        assert abparse.confidence_gate_failed(doc, breaking_eligible=True) in (True, False)
+
+
 def test_early_exit_true_when_a_and_b_empty():
     assert abparse.early_exit({"a": [], "b": [], "c": ["nice refactor"]}) is True
 
