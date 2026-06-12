@@ -5,9 +5,9 @@ import re
 
 # Renovate PR-body table row: | [dep](url) | type | update | `from` -> `to` |
 _TABLE_ROW = re.compile(
-    r"\|\s*\[?(?P<dep>[^\]\|]+?)\]?(?:\([^)]*\))?\s*\|"   # dep cell (optional [..](..))
-    r"[^|]*\|[^|]*\|"                                       # type + update cells
-    r"\s*`(?P<from>[^`]+)`\s*->\s*`(?P<to>[^`]+)`\s*\|"     # change cell: `from` -> `to`
+    r"\|\s*\[?(?P<dep>[^\]\|\n]+?)\]?(?:\([^)\n]*\))?\s*\|"   # dep cell (optional [..](..))
+    r"[^|\n]*\|[^|\n]*\|"                                      # type + update cells
+    r"\s*`(?P<from>[^`\n]+)`\s*->\s*`(?P<to>[^`\n]+)`\s*\|"    # change cell: `from` -> `to`
 )
 _UPDATE_LABEL = re.compile(r"^update:(?P<type>major|minor|patch)$")
 
