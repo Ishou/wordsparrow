@@ -167,8 +167,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -258,8 +258,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -367,8 +367,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -433,8 +433,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -526,8 +526,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -592,8 +592,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -685,8 +685,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -751,8 +751,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -844,8 +844,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -910,8 +910,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -1003,8 +1003,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -1069,8 +1069,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -1162,8 +1162,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
@@ -1357,8 +1357,8 @@ jobs:
           MARKER='<!-- breaking-bump-spend-ledger -->'
           # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
           {
-            CID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
             if [ -z "$CID" ]; then
               printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
                 | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
