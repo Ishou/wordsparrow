@@ -15,6 +15,7 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
+  id-token: write
 
 jobs:
   dispatch:
@@ -155,7 +156,112 @@ jobs:
           FROM: ${{ steps.parse.outputs.from }}
           TO: ${{ steps.parse.outputs.to }}
 
-      - name: AI gate (>=1.x minor/patch) — PLACEHOLDER (replaced in Wave 4)
-        if: steps.route.outputs.route == 'ai-gate'
+  ai-gate:
+    needs: dispatch
+    if: needs.dispatch.outputs.route == 'ai-gate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      DEP: ${{ needs.dispatch.outputs.dep }}
+      FROM: ${{ needs.dispatch.outputs.from }}
+      TO: ${{ needs.dispatch.outputs.to }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14.6'
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+
+      - name: Run the AI gate (changelog-only smell test)
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Renovate opens these PRs; allow it so the action doesn't refuse a bot-authored event.
+          allowed_bots: 'renovate[bot],github-actions[bot]'
+          # Changelog-only: no gh issue/PR mutation — the workflow does routing side-effects.
+          claude_args: '--allowed-tools "Read,Write,WebFetch,WebSearch,Bash(gh pr view:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/ai-gate.md and follow it exactly.
+            Substitute: DEP=${{ needs.dispatch.outputs.dep }},
+            FROM=${{ needs.dispatch.outputs.from }},
+            TO=${{ needs.dispatch.outputs.to }},
+            PR_NUMBER=${{ github.event.pull_request.number }}.
+            Write your one-word verdict to /tmp/gate-verdict.txt and nothing else.
+
+      - name: Route on the verdict
+        id: verdict
         run: |
-          echo "::notice::route=ai-gate; the AI-gate job lands in Wave 4."
+          set -euo pipefail
+          VERDICT="$(head -n1 /tmp/gate-verdict.txt 2>/dev/null | tr -d '[:space:]' || true)"
+          echo "AI-gate verdict: '${VERDICT:-<none>}'"
+          # Export into the heredoc's env; do NOT use a step-level env: (evaluates empty at template time).
+          export VERDICT
+          python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import routing
+          verdict = os.environ.get("VERDICT", "").strip()
+          # Empty/missing -> fail-safe: treat as breaking (gate_route else-branch).
+          route = routing.gate_route(verdict) if verdict else routing.PIPELINE
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"route={route}\n")
+          PY
+
+      - name: Stamp mergeable (green) — idempotent PR comment, no issue
+        if: steps.verdict.outputs.route == 'mergeable'
+        run: |
+          set -euo pipefail
+          MARKER="<!-- breaking-bump:cleared -->"
+          # Skip if we already stamped (synchronize re-fires Step 0).
+          if gh pr view "$PR_NUMBER" --json comments \
+               --jq '.comments[].body' | grep -qF "$MARKER"; then
+            echo "::notice::already stamped; no-op."
+            exit 0
+          fi
+          gh pr comment "$PR_NUMBER" --body "$MARKER
+          breaking-bump AI gate: no breaking changes found in the changelog for \`$DEP\` \`$FROM\` -> \`$TO\`. Safe to merge (human still clicks merge)."
+
+      - name: Create spine issue (breaking / ambiguous)
+        if: steps.verdict.outputs.route == 'pipeline'
+        run: |
+          set -euo pipefail
+          gh issue list --label breaking-bump --state open --limit 200 \
+            --json number,title,body > /tmp/issues.json
+          python - <<'PY'
+          import json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import issue
+          dep, frm, to = os.environ["DEP"], os.environ["FROM"], os.environ["TO"]
+          pr = int(os.environ["PR_NUMBER"])
+          issues = json.load(open("/tmp/issues.json"))
+          if issue.find_existing(issues, dep, frm, to):
+              open("/tmp/skip", "w").write("1")  # dedup guard (synchronize re-fire)
+          else:
+              title = issue.issue_title(dep, frm, to)
+              body = (
+                  f"Spine issue for the breaking-bump pipeline (ADR-0068).\n\n"
+                  f"Tracking **{dep}** `{frm}` -> `{to}` (Renovate PR #{pr}); "
+                  f"routed to pipeline by the AI gate (breaking/ambiguous).\n\n"
+                  + issue.render_context_block(dep, frm, to, pr)
+              )
+              open("/tmp/issue-title.txt", "w").write(title)
+              open("/tmp/issue-body.md", "w").write(body)
+          PY
+          if [ ! -f /tmp/skip ]; then
+            gh issue create \
+              --title "$(cat /tmp/issue-title.txt)" \
+              --body-file /tmp/issue-body.md \
+              --label ai-driven --label breaking-bump
+          else
+            echo "::notice::spine issue already exists; no-op."
+          fi
+
