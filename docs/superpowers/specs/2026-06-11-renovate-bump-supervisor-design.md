@@ -106,8 +106,8 @@ Renovate opens ANY bump PR (renovate/*)
    ┌────┴── STEP 0 — dispatcher (deterministic, NO AI, on: pull_request) ──┐
    │   reads Renovate update-type label; idempotent (skip if a spine        │
    │   issue already exists for this dep@from→to).                          │
-   │     • major / 0.x-minor ───────────────► pipeline                      │
-   │     • minor / patch ──► AI GATE (A-lite changelog smell test):         │
+   │     • major, or ANY 0.x bump ──────────► pipeline                      │
+   │     • >=1.x minor/patch ──► AI GATE (A-lite changelog smell test):     │
    │           breaking / ambiguous ────────► pipeline                      │
    │           green (or no-doc) ───────────► stamp mergeable, STOP         │
    └────┬──────────────────────────────────────────────────────────────────┘
@@ -180,8 +180,8 @@ merging the claude PR. (The trivial/cleared paths — AI-gate green, or B's
 - **Reads:** Renovate's update-type label (#1; the label is **created by a
   `packageRules` `addLabels` rule we must add** — it doesn't exist yet). No
   codebase, no LLM.
-- **Routes (allowlisted deps only):** major / 0.x-minor → pipeline; other
-  minor/patch → AI gate.
+- **Routes (allowlisted deps only):** major, or ANY 0.x bump → pipeline; a
+  `>=1.x` minor/patch → AI gate.
 - **On pipeline-eligible:** creates the **spine issue** (`ai-driven` +
   `breaking-bump`, context block in body) → the `on: issues` event starts the
   pipeline run.
@@ -303,8 +303,8 @@ reflect this reconciled view.
 
 **Maintainer's model (raw):**
 - A Renovate PR triggers the pipeline either **deterministically** (Step 0:
-  major / 0.x-minor) or via the **AI gate** (minor/patch smell test says
-  breaking/ambiguous).
+  major, or any 0.x bump) or via the **AI gate** (>=1.x minor/patch smell test
+  says breaking/ambiguous).
 - **"Triggering the pipeline" = creating a dedicated GH issue.**
 - That **issue is now the pipeline's starting point and home**: first
   enrichment (Agent A) lands on it, then the B↔C cycle runs *through the
@@ -402,14 +402,17 @@ authoritative definition):**
      `updateType` because Step 0 matches on that literal value. Per semver §4,
      when `major == 0` *both* minor and patch may be breaking — handled below.
    - **Pre-filter (deterministic → run the pipeline):** `updateType == major`
-     **OR** (`currentMajor == 0` AND `updateType == minor`). The 0.x-minor leg
-     is the breaking-equivalent case (e.g. signoz `0.122.0 → 0.128.0`,
-     `updateType == minor`, `major == 0`). Step 0 reads the update type from a
-     Renovate label — **which does not exist yet**: a `packageRules` `addLabels`
-     rule keyed on `matchUpdateTypes` must be added (Prerequisites #1).
-   - **0.x-patch** is *not* deterministic — it flows to the **AI gate** (which
-     catches a breaking 0.x patch from the changelog). So "even z may break" is
-     covered without escalating every 0.x patch to the full pipeline.
+     **OR** `currentMajor == 0` (maintainer decision 2026-06-12: on a 0.x dep,
+     **both** minor and patch are treated *exactly* like a major — semver §4 says
+     anything may break at `0.x`). E.g. signoz `0.122.0 → 0.128.0` (`minor`,
+     `major == 0`) → pipeline; signoz `0.128.0 → 0.128.1` (`patch`, `major == 0`)
+     → pipeline too. Step 0 reads the update type from a Renovate label —
+     **which does not exist yet**: a `packageRules` `addLabels` rule keyed on
+     `matchUpdateTypes` must be added (Prerequisites #1).
+   - **No 0.x carve-out.** A 0.x bump never goes to the AI gate; the AI gate is
+     for `>=1.x` minor/patch only. (Supersedes the earlier "0.x-patch → AI gate"
+     design.) Cost note: every 0.x-patch is a full pipeline run — accepted; the
+     allowlist (signoz-only at first) bounds it, and depth is the value (#13).
    - **Real gate:** version-type is only a cheap proxy. **A's "are there
      breaking changes?" finding is the true gate** — a "major" whose docs show
      no breaking changes early-exits and Renovate's PR merges normally. This
@@ -629,21 +632,18 @@ authoritative definition):**
      check, no comment) → broad coverage adds cost but **no noise**.
    - **Control flow:**
      ```
-     if   [deterministic: updateType==major OR (major==0 && updateType==minor)] → pipeline (A→B→C→D)
+     if   [deterministic: updateType==major OR major==0]  → pipeline (A→B→C→D)
      elif [AI gate: breaking, or changelog-exists-but-ambiguous] → pipeline (loop-back)
-     else [minor/patch + AI gate green]                   → stamp mergeable
+     else [>=1.x minor/patch + AI gate green]             → stamp mergeable
      ```
    - **No-doc response scales with severity** (resolves the no-changelog trap):
-     - **minor/patch + no doc → stamp mergeable.** Lowest risk; semver says no
-       breaking, CI tests are the backstop. Escalating these would flood issues.
-     - **major + no doc → "error" = Gate A escalation → spine issue
-       (+`needs-human`)** (the actionable path from #5/#6), **not** a bare red-X
-       dead-end.
-       Highest risk + no guidance → a human must look.
-   - **Scope:** the AI gate runs on **every minor/patch that the deterministic
-     pre-filter (#1) did *not* already claim** — i.e. all `minor`/`patch` except
-     `0.x-minor` (which is deterministic). So for a `0.x` dep the gate sees its
-     `patch` (`z`) bumps; for a `≥1.x` dep it sees both `minor` and `patch`.
+     - **`>=1.x` minor/patch + no doc → stamp mergeable.** Lowest risk; semver
+       says no breaking, CI tests are the backstop. Escalating these floods issues.
+     - **major OR any 0.x bump + no doc → "error" = Gate A escalation → spine
+       issue (+`needs-human`)** (the actionable path from #5/#6), **not** a bare
+       red-X dead-end. Highest risk + no guidance → a human must look.
+   - **Scope:** the AI gate runs on **`>=1.x` minor/patch only** — a 0.x dep's
+     minor *and* patch bumps are pipeline-eligible (#1) and never reach the gate.
      Chosen for blind-spot closure over token cost (tokens are a bonus; green =
      silent so no noise). Simpler one-bucket rule beats a minor-only tiered split.
    - **Irreducible residual blind spot:** undocumented **AND** semver-violating

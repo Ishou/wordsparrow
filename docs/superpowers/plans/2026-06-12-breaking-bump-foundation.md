@@ -248,13 +248,12 @@ def test_dispatch_route_allowlist_gates_everything():
 
 def test_dispatch_route_pipeline_vs_ai_gate():
     assert routing.dispatch_route("major", 1, on_allowlist=True) == routing.PIPELINE
-    # 0.x-minor is breaking-equivalent -> pipeline (signoz 0.122->0.128).
+    # On a 0.x dep ANY bump is breaking-equivalent -> pipeline (semver §4).
     assert routing.dispatch_route("minor", 0, on_allowlist=True) == routing.PIPELINE
-    # >=1.x minor/patch -> AI gate.
+    assert routing.dispatch_route("patch", 0, on_allowlist=True) == routing.PIPELINE
+    # On a >=1.x dep, minor/patch -> the cheap AI gate.
     assert routing.dispatch_route("minor", 1, on_allowlist=True) == routing.AI_GATE
     assert routing.dispatch_route("patch", 1, on_allowlist=True) == routing.AI_GATE
-    # 0.x-patch is NOT deterministic -> AI gate.
-    assert routing.dispatch_route("patch", 0, on_allowlist=True) == routing.AI_GATE
 
 
 def test_gate_route():
@@ -264,12 +263,13 @@ def test_gate_route():
 
 
 def test_nodoc_route_scales_with_pipeline_eligibility():
-    # Pipeline-eligible (major, or 0.x-minor) + no doc -> escalate (Gate A).
+    # Pipeline-eligible (a major, or ANY 0.x bump) + no doc -> escalate (Gate A).
     assert routing.nodoc_route("major", 1) == routing.ESCALATE
     assert routing.nodoc_route("minor", 0) == routing.ESCALATE
-    # AI-gate minor/patch + no doc -> mergeable (semver says low-risk).
+    assert routing.nodoc_route("patch", 0) == routing.ESCALATE
+    # >=1.x minor/patch + no doc -> mergeable (semver says low-risk).
     assert routing.nodoc_route("minor", 1) == routing.MERGEABLE
-    assert routing.nodoc_route("patch", 0) == routing.MERGEABLE
+    assert routing.nodoc_route("patch", 1) == routing.MERGEABLE
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -326,14 +326,16 @@ def update_type(frm: str, to: str) -> str:
 
 
 def _pipeline_eligible(update_type: str, current_major: int) -> bool:
-    """Deterministic 'breaking-equivalent' predicate: a major, or a 0.x-minor."""
-    return update_type == "major" or (current_major == 0 and update_type == "minor")
+    """Deterministic 'breaking-equivalent' predicate: a major bump, OR ANY bump on a
+    0.x dep. Per semver §4, when major == 0 anything may break, so a 0.x minor *or*
+    patch is treated exactly like a major."""
+    return update_type == "major" or current_major == 0
 
 
 def dispatch_route(update_type: str, current_major: int, on_allowlist: bool) -> str:
     """Step 0's deterministic routing. The allowlist gates EVERYTHING (incl. the AI
-    gate), so a non-allowlisted dep costs zero. Otherwise: pipeline-eligible ->
-    PIPELINE; any other minor/patch -> AI_GATE."""
+    gate), so a non-allowlisted dep costs zero. Otherwise: pipeline-eligible (a
+    major, or any 0.x bump) -> PIPELINE; a >=1.x minor/patch -> AI_GATE."""
     if not on_allowlist:
         return SKIP
     return PIPELINE if _pipeline_eligible(update_type, current_major) else AI_GATE
@@ -347,15 +349,16 @@ def gate_route(verdict: str) -> str:
 
 def nodoc_route(update_type: str, current_major: int) -> str:
     """When zero usable docs were fetched, decide by severity: a pipeline-eligible
-    bump (major or 0.x-minor) -> ESCALATE (Gate A, a human must look); an AI-gate
-    minor/patch -> MERGEABLE (semver says low-risk, CI tests are the backstop)."""
+    bump (a major, or any 0.x bump) -> ESCALATE (Gate A, a human must look); a
+    >=1.x minor/patch -> MERGEABLE (semver says low-risk, CI tests are the
+    backstop)."""
     return ESCALATE if _pipeline_eligible(update_type, current_major) else MERGEABLE
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `cd scripts/breaking-bump && python -m pytest test_routing.py -v`
-Expected: PASS (8 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -840,7 +843,9 @@ git commit -s -m "feat(breaking-bump): spine-issue context block + dedup"
 
 **Placeholder scan:** none — every code/test block is complete and runnable.
 
-**Type/name consistency:** route constants (`SKIP`/`PIPELINE`/`AI_GATE`/`MERGEABLE`/`ESCALATE`) defined in `routing.py` and used consistently; `identity()` is the single source of the dedup string, imported by `issue.py`; `parse_semver`/`update_type` signatures match their callers; the schema's `required` lists match the keys the tests build. The no-doc rule uses the *same* `_pipeline_eligible` predicate as dispatch, so the 0.x-minor case is handled identically in both (a precise encoding of spec #7's "major + no doc → escalate", correctly extended to 0.x-minor).
+**Type/name consistency:** route constants (`SKIP`/`PIPELINE`/`AI_GATE`/`MERGEABLE`/`ESCALATE`) defined in `routing.py` and used consistently; `identity()` is the single source of the dedup string, imported by `issue.py`; `parse_semver`/`update_type` signatures match their callers; the schema's `required` lists match the keys the tests build. Dispatch and no-doc share the *same* `_pipeline_eligible` predicate (`updateType == major OR currentMajor == 0`), so a 0.x dep's minor *and* patch bumps are treated identically to a major in both routing and no-doc gating.
+
+**Spec-update note (maintainer decision 2026-06-12):** a 0.x dep's minor **and** patch bumps are now treated *exactly* like a major (route to the pipeline; escalate on no-doc). This supersedes spec #1's earlier "0.x-patch → AI gate" carve-out and #7's literal "major + no doc → escalate". The spec (#1, #7, #13, AI-gate scope) is updated to match so plan and spec stay coherent.
 
 ---
 
