@@ -6,7 +6,7 @@
 
 **Architecture:** The spine issue is the pipeline's durable home and the source of context (Plan 1's `render_context_block`/`parse_context_block`; the body carries `dep`/`from`/`to`/`pr`). The run reads that context once into job outputs, then each agent is a fresh, hard-context-isolated `claude-code-action` job. State threads between jobs as `actions/upload-artifact`/`download-artifact` (`abschema.json`, `plan.json`, `findings.json`). GitHub Actions has **no native loop**, so the B↔C cycle is **statically unrolled** into 6 `(B_n, C_n)` pairs (12 jobs) chained by `needs:`, each guarded by an `if:` that short-circuits once a prior C approved or the loop terminated. All deterministic decisions (does C approve? are findings identical to last round? is `(a)+(b)` empty? did A fetch zero docs?) live in tested Python under `scripts/breaking-bump/` (Plan 1 bedrock + new `loop.py`, `abparse.py` helpers); the YAML stays thin and shells to them, mirroring `helm-bump-enrich.yml` and `claude-code-review.yml`. The stub-agent harness swaps each `claude-code-action` step for a fixture-emitting bash step behind a `BREAKING_BUMP_STUB` switch, so the orchestration is testable without tokens (spec #10).
 
-**Tech Stack:** Python 3.14 + pytest + jsonschema + hypothesis + pyyaml (matches `scripts/breaking-bump/` + `breaking-bump-tests.yml`); GitHub Actions + `anthropics/claude-code-action@v1` (SHA-pinned), `actions/{checkout,setup-python,upload-artifact,download-artifact}` (SHA-pinned); `gh` CLI; `CLAUDE_CODE_OAUTH_TOKEN` + `CLAUDE_BOT_PAT` (workflow-scope, for Agent D's fork/PR + possible `.github/workflows/**` edits).
+**Tech Stack:** Python 3.14 + pytest + jsonschema + hypothesis + pyyaml (matches `scripts/breaking-bump/` + `breaking-bump-tests.yml`); GitHub Actions + `anthropics/claude-code-action@v1` (tag, matching repo convention), `actions/{checkout,setup-python,upload-artifact,download-artifact}` (SHA-pinned); `gh` CLI; `CLAUDE_CODE_OAUTH_TOKEN` + `CLAUDE_BOT_PAT` (workflow-scope, for Agent D's fork/PR + possible `.github/workflows/**` edits).
 
 **Source spec:** `docs/superpowers/specs/2026-06-11-renovate-bump-supervisor-design.md`. Read it before starting — this plan implements its **Architecture** diagram (Agents A/B/C/D), the **Agent contracts** (A/B/C/D), the **Revised arrangement: the GH issue is the pipeline spine**, **Per-job invocation**, **Loop mechanics — SETTLED**, **B's output is CATEGORIZED**, and resolved OPEN QUESTIONS #3 (A→B schema), #4 (B↔C loop), #5 (ascending ratings), #6 (D fork/close + escalation), #9 (error handling / `if: failure()`), #10 (stub-agent testing), #11 (issue-event trigger + concurrency).
 
@@ -1107,13 +1107,14 @@ Expected: `all 12 round jobs present`.
             "Cleared by the breaking-bump pipeline: no mandatory migration or doc-coherence changes. Renovate PR #$PR_NUMBER is safe to merge."
 ```
 
-> **`dispatch_d` / `cleared` propagation:** the `pick` step exports `dispatch_d`
-> and `cleared` defaults (the `0`/no-converge branch sets both `false` then
-> `exit 1`); the `classify` step overwrites them on the converged path. Because a
-> later step in the same job re-writing the same output key wins, D reads
-> `needs.plan-approved.outputs.dispatch_d`. (Step-level `id` is `pick` for the
-> job-output references; `classify` writes to the same `$GITHUB_OUTPUT`, and
-> GitHub takes the last write per key within the job.)
+> **`dispatch_d` / `cleared` propagation:** the **`classify`** step writes
+> `dispatch_d` and `cleared` to `$GITHUB_OUTPUT` on the converged path, so the
+> job declares those two outputs against `steps.classify.outputs.*` (step outputs
+> are namespaced per step `id` — there is no "last write across steps wins").
+> `winning_round` comes from the `pick` step. On the no-converge path `pick`
+> `exit 1`s before `classify` runs → the job fails, `classify` is skipped, the
+> `dispatch_d` output resolves empty (≠ `'true'`) so D is skipped, and `escalate`
+> fires via `contains(needs.*.result, 'failure')`.
 
 ## Task 3.5 — D stub + the `escalate` failure-catch
 
