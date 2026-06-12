@@ -64,6 +64,79 @@ def test_zero_docs_false_when_a_source_fetched():
     assert abparse.zero_docs(_VALID_SCHEMA) is False
 
 
+# 2026-06-12 regression: clean verdict, breaking-eligible, no registry source.
+_CLEAN_NO_REGISTRY = {
+    "dep": "signoz", "from": "0.122.0", "to": "0.128.0",
+    "sourceConfidence": "high",
+    "sources": [{"url": "https://x/guess", "type": "changelog", "fetchedOk": True,
+                 "provenance": "constructed"},
+                {"url": "https://x/404", "type": "changelog", "fetchedOk": False,
+                 "provenance": "websearch"}],
+    "breakingChanges": [], "deprecations": [], "removals": [], "migrationSteps": [],
+}
+
+
+def test_regression_2026_06_12_clean_no_registry_source():
+    # zero_docs is False here (a source fetchedOk) — the PRE-FIX gate let the miss through.
+    assert abparse.zero_docs(_CLEAN_NO_REGISTRY) is False
+    # The NEW gate catches it: clean verdict on a breaking-eligible bump, no clean registry source.
+    assert abparse.confidence_gate_failed(_CLEAN_NO_REGISTRY, breaking_eligible=True) is True
+
+
+def test_confidence_gate_passes_with_clean_registry_source():
+    doc = dict(_CLEAN_NO_REGISTRY)
+    doc["sources"] = [{"url": "https://x/notes", "type": "changelog", "fetchedOk": True,
+                       "provenance": "registry"}]
+    assert abparse.confidence_gate_failed(doc, breaking_eligible=True) is False
+
+
+def test_confidence_gate_passes_when_breaks_reported():
+    doc = dict(_CLEAN_NO_REGISTRY)
+    doc["breakingChanges"] = [{"summary": "removed flag", "detail": "the --foo flag was removed",
+                               "sourceUrl": "https://x/guess"}]
+    assert abparse.confidence_gate_failed(doc, breaking_eligible=True) is False
+
+
+def test_confidence_gate_passes_when_not_breaking_eligible():
+    assert abparse.confidence_gate_failed(_CLEAN_NO_REGISTRY, breaking_eligible=False) is False
+
+
+def test_registry_confidence_three_levels():
+    reg_doc = dict(_CLEAN_NO_REGISTRY)
+    reg_doc["sources"] = [{"url": "https://x/notes", "type": "changelog", "fetchedOk": True,
+                           "provenance": "registry"}]
+    assert abparse.registry_confidence(reg_doc, breaking_eligible=True) == "high"
+    assert abparse.registry_confidence(_CLEAN_NO_REGISTRY, breaking_eligible=True) == "low"
+    assert abparse.registry_confidence(_CLEAN_NO_REGISTRY, breaking_eligible=False) == "medium"
+
+
+def test_confidence_gate_takes_min_self_high_floor_low():
+    # self=high but floor=low → effective low → fails.
+    assert abparse.confidence_gate_failed(_CLEAN_NO_REGISTRY, breaking_eligible=True) is True
+
+
+def test_confidence_gate_takes_min_self_low_floor_high():
+    # self=low but floor=high → effective low → fails on a breaking-eligible bump.
+    doc = dict(_CLEAN_NO_REGISTRY)
+    doc["sourceConfidence"] = "low"
+    doc["sources"] = [{"url": "https://x/notes", "type": "changelog", "fetchedOk": True,
+                       "provenance": "registry"}]
+    assert abparse.confidence_gate_failed(doc, breaking_eligible=True) is True
+
+
+def test_registry_confidence_tolerates_sources_missing_keys():
+    doc = dict(_CLEAN_NO_REGISTRY)
+    doc["sources"] = [{}, {"provenance": "registry"}, {"fetchedOk": True}]
+    assert abparse.registry_confidence(doc, breaking_eligible=True) == "low"
+
+
+def test_confidence_gate_tolerates_malformed_sources():
+    for bad in ("oops", None, ["str", 5, {"provenance": "registry", "fetchedOk": True}]):
+        doc = dict(_CLEAN_NO_REGISTRY)
+        doc["sources"] = bad
+        assert abparse.confidence_gate_failed(doc, breaking_eligible=True) in (True, False)
+
+
 def test_early_exit_true_when_a_and_b_empty():
     assert abparse.early_exit({"a": [], "b": [], "c": ["nice refactor"]}) is True
 

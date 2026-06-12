@@ -243,13 +243,20 @@ jobs:
           python - <<'PY'
           import os, sys
           sys.path.insert(0, "scripts/breaking-bump")
-          import abparse
+          import abparse, routing
+          frm, to = os.environ.get("FROM", ""), os.environ.get("TO", "")
+          breaking_eligible = routing._pipeline_eligible(
+              routing.update_type(frm, to), routing.parse_semver(frm)[0])
           doc, errors = abparse.load_schema("./abschema.json")
-          gate_a = bool(errors) or abparse.zero_docs(doc)
+          floor_failed = abparse.confidence_gate_failed(doc, breaking_eligible=breaking_eligible)
+          gate_a = bool(errors) or abparse.zero_docs(doc) or floor_failed
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"gate_a_failed={'true' if gate_a else 'false'}\n")
           if errors:
               print("::warning::A->B schema invalid: " + "; ".join(errors))
+          if floor_failed and not errors and not abparse.zero_docs(doc):
+              print("::warning::Gate A: clean verdict on a breaking-eligible bump with no "
+                    "cleanly-fetched registry source — forcing human pre-flight")
           PY
       - name: Upload A's schema
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
