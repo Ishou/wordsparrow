@@ -1,9 +1,4 @@
-"""Dedup identity + naming for a bump.
-
-The canonical identity is the full version transition `<dep>@<from>→<to>` (NEVER
-dep or dep+major — that would merge two different 0.x bumps, spec #6). The slug is
-its ASCII-safe form, used for concurrency-group names and branches.
-"""
+"""Canonical bump identity, dedup slug, and Agent D branch name."""
 from __future__ import annotations
 
 import re
@@ -27,6 +22,5 @@ def slug(dep: str, frm: str, to: str) -> str:
 
 
 def claude_branch(dep: str, to: str) -> str:
-    """D's fork branch name: `claude/<dep>-v<to>` (dep sanitised, version kept whole
-    for uniqueness — a 0.x major would make a bare `vN` useless)."""
-    return f"claude/{_safe(dep)}-v{to}"
+    """Agent D's fork branch; chore/claude- prefix passes branch-name.yml."""
+    return f"chore/claude-{_safe(dep)}-v{to}"

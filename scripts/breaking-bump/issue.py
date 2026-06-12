@@ -1,9 +1,4 @@
-"""Spine-issue context block (machine-readable, hidden in the body) + dedup.
-
-Pure functions over already-fetched issue dicts; the actual `gh issue` calls live
-in the workflow. Dedup is on the FULL transition `<dep>@<from>→<to>` (spec #6) so
-two different 0.x bumps of the same dep never collide.
-"""
+"""Spine-issue context block (machine-readable, hidden in the body) + dedup."""
 from __future__ import annotations
 
 import json
@@ -38,8 +33,7 @@ def issue_title(dep: str, frm: str, to: str) -> str:
 
 
 def find_existing(issues: list[dict], dep: str, frm: str, to: str) -> dict | None:
-    """Return the open `breaking-bump` issue matching this exact transition, else
-    None. Matches on the parsed context block first, then the title as a fallback."""
+    """Return open breaking-bump issue matching this exact transition, or None."""
     want = identity(dep, frm, to)
     for item in issues:
         ctx = parse_context_block(item.get("body", ""))

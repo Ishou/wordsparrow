@@ -1,9 +1,4 @@
-"""Validate Agent A's output against the A->B contract schema.
-
-The load-bearing invariant (spec #3) — every breaking-change / deprecation /
-removal / migration-step cites a `sourceUrl` — is enforced by `required` in the
-schema file, so a doc missing any sourceUrl fails validation.
-"""
+"""Validate Agent A's output against the A→B contract schema."""
 from __future__ import annotations
 
 import json

@@ -32,5 +32,5 @@ def test_two_different_0x_bumps_have_distinct_identity():
 
 
 def test_claude_branch_name():
-    assert identity.claude_branch("signoz", "0.128.0") == "claude/signoz-v0.128.0"
-    assert identity.claude_branch("@scope/pkg", "2.0.0") == "claude/scope-pkg-v2.0.0"
+    assert identity.claude_branch("signoz", "0.128.0") == "chore/claude-signoz-v0.128.0"
+    assert identity.claude_branch("@scope/pkg", "2.0.0") == "chore/claude-scope-pkg-v2.0.0"
