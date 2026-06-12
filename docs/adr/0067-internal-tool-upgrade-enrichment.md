@@ -1,7 +1,8 @@
 # ADR-0067: Internal-tool upgrade-PR enrichment
 
 ## Status
-Accepted
+Superseded by ADR-0068 (generalised into the breaking-bump pipeline; helm-enrich
+becomes a special case of Agent A)
 
 ## Context
 In-cluster internal tools (SigNoz + k8s-infra, the platform operators;

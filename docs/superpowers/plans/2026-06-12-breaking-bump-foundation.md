@@ -14,6 +14,27 @@
 
 ---
 
+## Execution model: waves of PRs
+
+This plan ships as **two PR waves**; each PR goes through its full review cycle
+(§6a + maintainer) and **merges before the next wave starts**, so review feedback
+can reshape what follows.
+
+- **Wave 1 / PR 1 — Design + ADR (merges FIRST).** The session's design **spec**,
+  the **plan** doc(s), **ADR-0068**, the `docs/adr/INDEX.md` rows, and ADR-0067 →
+  "Superseded". These live together on the `docs/renovate-bump-supervisor-spec`
+  branch so the ADR↔spec links are valid in one PR. Authored directly (docs), not
+  dispatched. → see **Task 1**.
+- **Wave 2 / PR 2 — Deterministic core (after PR 1 merges).** The pure-logic
+  `scripts/breaking-bump/` package + tests + the test-CI workflow, on a fresh
+  `feat/breaking-bump-foundation` branch off the post-PR-1 `main`. Implemented via
+  subagent-driven TDD. → see **Tasks 2–6**.
+
+Waves 3+ (the GitHub Actions workflows, agent prompts, live signoz run) are
+Plans 2–4 — not yet written.
+
+---
+
 ## File Structure
 
 | File | Responsibility |
@@ -37,7 +58,14 @@ Module style mirrors `scripts/helm-enrich/`: `from __future__ import annotations
 
 ---
 
-### Task 1: ADR-0068 (merges first, own PR)
+## Wave 1 / PR 1 — Design + ADR (merges first)
+
+> PR 1 bundles the session's **spec + plan + ADR** on the
+> `docs/renovate-bump-supervisor-spec` branch (the spec and plan are already
+> committed there; Task 1 adds the ADR). Authored directly — no subagent. It
+> must merge before Wave 2 begins.
+
+### Task 1: ADR-0068 + INDEX + 0067 supersession
 
 **Files:**
 - Create: `docs/adr/0068-ai-driven-breaking-bump-migration-pipeline.md`
@@ -138,6 +166,12 @@ git commit -s -m "docs(adr): add ADR-0068 breaking-bump pipeline, supersede 0067
 ```
 
 ---
+
+## Wave 2 / PR 2 — Deterministic core (after PR 1 merges)
+
+> Tasks 2–6 ship as one PR on a fresh `feat/breaking-bump-foundation` branch off
+> the post-PR-1 `main`. Implemented via subagent-driven TDD (one implementer +
+> two-stage review per task), then opened as PR 2.
 
 ### Task 2: Package scaffold + test CI
 
@@ -851,11 +885,14 @@ git commit -s -m "feat(breaking-bump): spine-issue context block + dedup"
 
 ## Execution Handoff
 
-Plan 1 (Foundation) saved to `docs/superpowers/plans/2026-06-12-breaking-bump-foundation.md`. **Reminder:** Task 1 (ADR-0068) must merge as its own PR *before* the script PRs, per ADR-0001 §7.
+Two PR waves, strictly ordered (see "Execution model" above):
 
-Two execution options:
+- **Wave 1 / PR 1 — Design + ADR.** Author the ADR (Task 1) onto the
+  `docs/renovate-bump-supervisor-spec` branch alongside the already-committed
+  spec + plan. Open PR 1 → full review cycle → **merge**. Nothing else starts
+  until PR 1 merges (review may reshape Wave 2).
+- **Wave 2 / PR 2 — Deterministic core.** Off the post-PR-1 `main`, implement
+  Tasks 2–6 **subagent-driven** (fresh implementer per task + two-stage review:
+  spec-compliance then code-quality). Open PR 2 → review → merge.
 
-1. **Subagent-Driven (recommended)** — I dispatch a fresh subagent per task, review (spec-compliance then code-quality) between tasks, fast iteration.
-2. **Inline Execution** — execute tasks in this session via executing-plans, batch with checkpoints.
-
-Which approach? (And: write Plans 2–4 now, or implement Plan 1 first then plan the next phase?)
+Then write Plans 2–4 as later waves.
