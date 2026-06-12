@@ -10,9 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import spend  # noqa: E402
 
-# Mirror of claude-code-action@v1's execution_file: a JSON array whose
-# type=="result" entry carries total_cost_usd (verified against the action's
-# test/fixtures/sample-turns.json — total_cost_usd: 0.0347, no usage field).
+# execution_file fixture: type=="result" entry carries total_cost_usd (per action's sample-turns.json).
 RESULT_LOG = [
     {"type": "assistant", "message": {"usage": {"input_tokens": 1200, "output_tokens": 340}}},
     {"type": "result", "total_cost_usd": 0.0347, "duration_ms": 4210},

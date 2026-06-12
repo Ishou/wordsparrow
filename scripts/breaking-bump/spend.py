@@ -1,26 +1,9 @@
-"""Render a per-stage cost (USD) line and maintain a running spend-ledger body.
-
-Spec #13: spend observability, not a hard budget — log per-stage, surface
-per-bump cost on the spine issue. The pipeline keeps ONE marker-tagged ledger
-comment and each stage appends its line to it (the jobs run sequentially, so the
-in-place edit has no lost-update race). claude-code-action@v1 exposes no direct
-token/cost step output; instead it writes an execution_file (a JSON array
-execution log) whose single type=="result" entry carries total_cost_usd (a USD
-float). A STUB run produces no execution_file, so a missing/unparseable path must
-degrade to 'cost unavailable' rather than crash the workflow step.
-
-This module is pure (no gh/network I/O): format_spend renders one line,
-upsert_body builds the ledger body, and the CLI is a thin shell entrypoint so the
-workflow does only the gh I/O — all content flows via stdin/argv, never shell
-interpolation.
-"""
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-# Hidden HTML marker on the ledger comment's first line; used to find the single
-# running spend-ledger comment on the spine issue (so each stage edits it in place).
+# HTML marker on the ledger comment's first line; identifies the single running spend-ledger comment.
 MARKER = "<!-- breaking-bump-spend-ledger -->"
 
 
@@ -51,23 +34,14 @@ def format_spend(stage: str, execution_file: str | None) -> str:
 
 
 def upsert_body(existing: str | None, line: str) -> str:
-    """Build the running ledger body: seed it under MARKER, or append `line`.
-
-    Pure string function — no I/O. If `existing` is empty/None there is no ledger
-    yet, so seed `MARKER` + the first line; otherwise append `line` under the
-    existing ledger (the marker stays exactly once at the top).
-    """
+    """Seed the ledger under MARKER when empty, or append `line` to existing."""
     if not existing:
         return f"{MARKER}\n{line}"
     return existing.rstrip() + "\n" + line
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Thin CLI the workflow shells to (so the workflow does only gh I/O).
-
-    `spend.py line <stage> [execution_file]` -> print format_spend(stage, execution_file).
-    `spend.py body <line>`                   -> print upsert_body(<existing from stdin>, line).
-    """
+    """Thin CLI: `line <stage> [exec_file]` or `body <line>` (existing ledger via stdin)."""
     import sys
 
     args = list(sys.argv[1:] if argv is None else argv)
