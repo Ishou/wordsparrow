@@ -26,7 +26,7 @@ A fully CI-native pipeline, **`breaking-bump`**, triggered from Renovate PRs:
 - **The pipeline is a single GH issue-triggered workflow run** (the issue is the
   durable "spine"), with agents as `needs:`-chained `claude-code-action` jobs:
   **A** (doc gatherer, never reads code) → **B** (planner) ⇄ **C** (plan reviewer,
-  bounded 6-round loop) → **D** (implementer: forks `claude/<dep>-v<to>`, then
+  bounded 6-round loop) → **D** (implementer: forks `chore/claude-<dep>-v<to>`, then
   closes the Renovate PR, opens a claude PR that hits the existing §6a cycle).
 - **Ascending ratings** (B rates A, C rates B, §6a rates D); failures funnel to the
   spine issue (`needs-human`). The human merge of the claude PR is the safety net.

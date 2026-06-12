@@ -109,7 +109,7 @@ ADR-0067  .github/workflows/helm-bump-enrich*.yml   Enrichment workflow: advisor
 ADR-0067  scripts/helm-enrich/**                     Deterministic enrichment core; pure functions, pytest
 ADR-0067  infra/tools-upgrade-sources.yaml           Superseded by ADR-0068; see ADR-0068 row
 ADR-0068  scripts/breaking-bump/**                   Deterministic core of the breaking-bump pipeline (routing, schema, identity)
-ADR-0068  .github/workflows/breaking-bump-*.yml      Breaking-bump dispatcher + pipeline + tests workflows
+ADR-0068  .github/workflows/breaking-bump-*.yml      Breaking-bump dispatcher + pipeline + tests workflows; implementer forks `chore/claude-<dep>-v<to>`
 ADR-0068  .github/breaking-bump/prompts/**           Per-agent prompts (A/B/C/D + ai-gate); versioned, not inline in YAML
 ADR-0068  infra/tools-upgrade-sources.yaml           Source registry now governed by 0068 (reactive override; keep verified entries)
 ```
