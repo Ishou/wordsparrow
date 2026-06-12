@@ -49,7 +49,8 @@ concurrency:
 
 jobs:
   claude-review:
-    if: ${{ !github.event.pull_request.draft }}
+    # §6a suppressed on renovate/*: ADR-0068 owns those branches; §6a must not push to a Renovate-owned branch.
+    if: ${{ !github.event.pull_request.draft && !startsWith(github.head_ref, 'renovate/') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
