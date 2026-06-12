@@ -416,8 +416,7 @@ from __future__ import annotations
 
 import re
 
-# Renovate's PR-body version table row, e.g.:
-#   | [signoz](https://...) | helm | minor | `0.122.0` -> `0.128.0` |
+# Renovate PR-body table row: | [dep](url) | type | update | `from` -> `to` |
 _TABLE_ROW = re.compile(
     r"\|\s*\[?(?P<dep>[^\]\|]+?)\]?(?:\([^)]*\))?\s*\|"   # dep cell (optional [..](..))
     r"[^|]*\|[^|]*\|"                                       # type + update cells
@@ -529,8 +528,7 @@ jobs:
           parsed = prmeta.parse_versions(pr["title"], pr["body"] or "")
           out = open(os.environ["GITHUB_OUTPUT"], "a")
           if parsed is None:
-              # No version table -> not a parseable single bump; no-op (e.g. a
-              # lockfile-maintenance or grouped PR). Step 0 does nothing.
+              # No version table (lockfile/grouped PR) — Step 0 no-ops.
               out.write("parsed=false\n")
               sys.exit(0)
           dep, frm, to = parsed
@@ -760,11 +758,9 @@ git commit -s -m "feat(breaking-bump): add ai-gate changelog smell-test prompt"
         uses: anthropics/claude-code-action@ebcdfe6dc6bb7511eb63e59e07df256dbcf59a2e # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Renovate opens these PRs; allow it so the action doesn't refuse a
-          # bot-authored event (mirrors helm-bump-enrich.yml).
+          # Renovate opens these PRs; allow it so the action doesn't refuse a bot-authored event.
           allowed_bots: 'renovate[bot],github-actions[bot]'
-          # Changelog-only: WebFetch + read the PR body. No repo write, no gh
-          # issue/PR mutation — the workflow does the routing side-effects.
+          # Changelog-only: no gh issue/PR mutation — the workflow does routing side-effects.
           claude_args: '--allowed-tools "Read,Write,WebFetch,WebSearch,Bash(gh pr view:*)"'
           prompt: |
             Read .github/breaking-bump/prompts/ai-gate.md and follow it exactly.
