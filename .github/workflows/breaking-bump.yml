@@ -6,6 +6,12 @@ on:
   issues:
     # labeled-only: both opened+labeled would double-fire; labeled is sufficient and carries the label name.
     types: [labeled]
+  workflow_dispatch:
+    # Hand-drive the pipeline (stub or live) against a scratch spine issue, no Renovate PR needed.
+    inputs:
+      issue_number:
+        description: 'Spine issue number to run the pipeline against (stub or live)'
+        required: true
 
 concurrency:
   # Issue-number keying serialises reopened-label refires; cancel-in-progress:false so migrations always complete.
@@ -20,10 +26,16 @@ permissions:
 
 jobs:
   read-context:
-    # Gate the whole run to spine issues carrying the breaking-bump label.
-    if: contains(github.event.issue.labels.*.name, 'breaking-bump')
+    # Gate to breaking-bump-labelled issues, or any workflow_dispatch (hand-driven test).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.issue.labels.*.name, 'breaking-bump')
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Single source of truth for the issue number across both triggers.
+      ISSUE_NUMBER: ${{ github.event.issue.number || github.event.inputs.issue_number }}
     outputs:
       valid: ${{ steps.ctx.outputs.valid }}
       dep: ${{ steps.ctx.outputs.dep }}
@@ -31,6 +43,7 @@ jobs:
       to: ${{ steps.ctx.outputs.to }}
       pr: ${{ steps.ctx.outputs.pr }}
       claude_branch: ${{ steps.ctx.outputs.claude_branch }}
+      issue_number: ${{ env.ISSUE_NUMBER }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -39,17 +52,21 @@ jobs:
         with:
           python-version: '3.14.6'
       - run: pip install -r scripts/breaking-bump/requirements.txt
+      - name: Resolve the issue body
+        id: body
+        run: |
+          set -euo pipefail
+          gh issue view "$ISSUE_NUMBER" --json body --jq .body > /tmp/issue-body.md
       - name: Parse the context block from the issue body
         id: ctx
-        env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           set -euo pipefail
           python - <<'PY'
           import os, sys
           sys.path.insert(0, "scripts/breaking-bump")
           import issue, identity
-          ctx = issue.parse_context_block(os.environ.get("ISSUE_BODY", ""))
+          body = open("/tmp/issue-body.md").read()
+          ctx = issue.parse_context_block(body)
           out = open(os.environ["GITHUB_OUTPUT"], "a")
           if not ctx:
               # Stray breaking-bump label on a hand-made issue -> no-op the run.
@@ -72,7 +89,7 @@ jobs:
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
       PR_NUMBER: ${{ needs.read-context.outputs.pr }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
     outputs:
       gate_a_failed: ${{ steps.tripwire.outputs.gate_a_failed }}
     steps:
@@ -84,6 +101,7 @@ jobs:
           python-version: '3.14.6'
       - run: pip install -r scripts/breaking-bump/requirements.txt
       - name: Run Agent A (doc gatherer)
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -96,6 +114,9 @@ jobs:
             PR_NUMBER=${{ env.PR_NUMBER }}, ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}.
             Write the A->B schema to ./abschema.json and post a human-readable
             enrichment comment to the spine issue.
+      - name: STUB Agent A
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/abschema.json ./abschema.json
       - name: Validate schema + zero-doc tripwire
         id: tripwire
         run: |
@@ -134,7 +155,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
     outputs:
       gate_a_failed: ${{ steps.rate.outputs.gate_a_failed }}
     steps:
@@ -146,6 +167,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: abschema, path: . }
       - name: Run Agent B (planner) — round 1
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -158,6 +180,11 @@ jobs:
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             (no ./prev-findings.json this round). First write /tmp/abrating.txt
             (rate A), then ./plan.json (the categorized plan).
+      - name: STUB Agent B (round 1)
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: |
+          cp scripts/breaking-bump/stub_fixtures/abrating.txt /tmp/abrating.txt
+          cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
       - name: Consumer-rated Gate A (B rates A)
         id: rate
         run: |
@@ -188,7 +215,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
       ROUND_NO: '1'
     outputs:
       approved: ${{ steps.decide.outputs.approved }}
@@ -205,6 +232,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round1, path: . }
       - name: Run Agent C (plan reviewer) — round 1
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -216,6 +244,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
             ./plan.json. Write the verdict to ./prev-findings.json.
+      - name: STUB Agent C
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/findings.round1.json ./prev-findings.json
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
@@ -254,7 +285,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with: { fetch-depth: 1 }
@@ -266,6 +297,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round1, path: . }
       - name: Run Agent B (planner) — round 2
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -279,6 +311,9 @@ jobs:
             and Agent C's prior findings are ./prev-findings.json — address each.
             First write /tmp/abrating.txt (rate A), then ./plan.json (the
             categorized plan).
+      - name: STUB Agent B (later round)
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
       - name: Upload plan (round 2)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round2, path: ./plan.json, retention-days: 3 }
@@ -293,7 +328,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
       ROUND_NO: '2'
     outputs:
       approved: ${{ steps.decide.outputs.approved }}
@@ -310,6 +345,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round2, path: . }
       - name: Run Agent C (plan reviewer) — round 2
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -321,6 +357,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
             ./plan.json. Write the verdict to ./prev-findings.json.
+      - name: STUB Agent C
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/findings.round1.json ./prev-findings.json
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
@@ -359,7 +398,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with: { fetch-depth: 1 }
@@ -371,6 +410,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round2, path: . }
       - name: Run Agent B (planner) — round 3
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -384,6 +424,9 @@ jobs:
             and Agent C's prior findings are ./prev-findings.json — address each.
             First write /tmp/abrating.txt (rate A), then ./plan.json (the
             categorized plan).
+      - name: STUB Agent B (later round)
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
       - name: Upload plan (round 3)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round3, path: ./plan.json, retention-days: 3 }
@@ -398,7 +441,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
       ROUND_NO: '3'
     outputs:
       approved: ${{ steps.decide.outputs.approved }}
@@ -415,6 +458,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round3, path: . }
       - name: Run Agent C (plan reviewer) — round 3
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -426,6 +470,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
             ./plan.json. Write the verdict to ./prev-findings.json.
+      - name: STUB Agent C
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/findings.round1.json ./prev-findings.json
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
@@ -464,7 +511,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with: { fetch-depth: 1 }
@@ -476,6 +523,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round3, path: . }
       - name: Run Agent B (planner) — round 4
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -489,6 +537,9 @@ jobs:
             and Agent C's prior findings are ./prev-findings.json — address each.
             First write /tmp/abrating.txt (rate A), then ./plan.json (the
             categorized plan).
+      - name: STUB Agent B (later round)
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
       - name: Upload plan (round 4)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round4, path: ./plan.json, retention-days: 3 }
@@ -503,7 +554,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
       ROUND_NO: '4'
     outputs:
       approved: ${{ steps.decide.outputs.approved }}
@@ -520,6 +571,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round4, path: . }
       - name: Run Agent C (plan reviewer) — round 4
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -531,6 +583,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
             ./plan.json. Write the verdict to ./prev-findings.json.
+      - name: STUB Agent C
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/findings.round1.json ./prev-findings.json
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
@@ -569,7 +624,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with: { fetch-depth: 1 }
@@ -581,6 +636,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round4, path: . }
       - name: Run Agent B (planner) — round 5
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -594,6 +650,9 @@ jobs:
             and Agent C's prior findings are ./prev-findings.json — address each.
             First write /tmp/abrating.txt (rate A), then ./plan.json (the
             categorized plan).
+      - name: STUB Agent B (later round)
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
       - name: Upload plan (round 5)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round5, path: ./plan.json, retention-days: 3 }
@@ -608,7 +667,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
       ROUND_NO: '5'
     outputs:
       approved: ${{ steps.decide.outputs.approved }}
@@ -625,6 +684,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round5, path: . }
       - name: Run Agent C (plan reviewer) — round 5
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -636,6 +696,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
             ./plan.json. Write the verdict to ./prev-findings.json.
+      - name: STUB Agent C
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/findings.round1.json ./prev-findings.json
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
@@ -674,7 +737,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with: { fetch-depth: 1 }
@@ -686,6 +749,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round5, path: . }
       - name: Run Agent B (planner) — round 6
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -699,6 +763,9 @@ jobs:
             and Agent C's prior findings are ./prev-findings.json — address each.
             First write /tmp/abrating.txt (rate A), then ./plan.json (the
             categorized plan).
+      - name: STUB Agent B (later round)
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
       - name: Upload plan (round 6)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round6, path: ./plan.json, retention-days: 3 }
@@ -713,7 +780,7 @@ jobs:
       DEP: ${{ needs.read-context.outputs.dep }}
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
       ROUND_NO: '6'
     outputs:
       approved: ${{ steps.decide.outputs.approved }}
@@ -730,6 +797,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round6, path: . }
       - name: Run Agent C (plan reviewer) — round 6
+        if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -741,6 +809,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
             ./plan.json. Write the verdict to ./prev-findings.json.
+      - name: STUB Agent C
+        if: vars.BREAKING_BUMP_STUB == 'true'
+        run: cp scripts/breaking-bump/stub_fixtures/findings.round1.json ./prev-findings.json
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
@@ -781,7 +852,7 @@ jobs:
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
       PR_NUMBER: ${{ needs.read-context.outputs.pr }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
       # The per-round approval flags, threaded in so a single step picks the winner.
       APPROVED_1: ${{ needs.c_round1.outputs.approved }}
       APPROVED_2: ${{ needs.c_round2.outputs.approved }}
@@ -861,7 +932,7 @@ jobs:
       FROM: ${{ needs.read-context.outputs.from }}
       TO: ${{ needs.read-context.outputs.to }}
       PR_NUMBER: ${{ needs.read-context.outputs.pr }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
       CLAUDE_BRANCH: ${{ needs.read-context.outputs.claude_branch }}
     steps:
       # CLAUDE_BOT_PAT carries the workflows scope GITHUB_TOKEN lacks (D may edit .github/workflows/** on an actions/* bump); fetch-depth:0 to fork from Renovate's tip SHA.
@@ -899,7 +970,7 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "ren_ref=$REN_REF" >> "$GITHUB_OUTPUT"
       - name: Run Agent D (implementer)
-        if: steps.rev.outputs.skip == 'false'
+        if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         env:
           GH_TOKEN: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
@@ -922,6 +993,21 @@ jobs:
             open the claude PR FIRST (body: "Migrates #${{ env.PR_NUMBER }}" and
             "Closes #${{ env.ISSUE_NUMBER }}"), confirm it exists, THEN close the
             Renovate PR. File a post-bump-enhancement issue per (c) item.
+      - name: STUB Agent D (deterministic fork/close)
+        if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "stub migration for $DEP $FROM -> $TO" > .breaking-bump-stub-migration.txt
+          git add .breaking-bump-stub-migration.txt
+          git commit -s -m "chore(breaking-bump): stub migration for $DEP"
+          git push -u origin "$CLAUDE_BRANCH"
+          CLAUDE_URL=$(gh pr create --base main --head "$CLAUDE_BRANCH" \
+            --title "chore(breaking-bump): migrate $DEP to $TO (stub)" \
+            --body "Migrates #$PR_NUMBER. Closes #$ISSUE_NUMBER." --json url --jq .url)
+          gh pr view "$CLAUDE_BRANCH" >/dev/null
+          gh pr close "$PR_NUMBER" --comment "Superseded by $CLAUDE_URL (stub run)."
 
   escalate:
     # Any failed job (Gate A, no-convergence, infra crash) -> label needs-human on the spine issue.
@@ -933,7 +1019,7 @@ jobs:
     timeout-minutes: 5
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Escalate to the spine issue
