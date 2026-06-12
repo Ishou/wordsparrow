@@ -38,3 +38,10 @@ failure never blocks a merge.
 
 Mode B (image-tag enrichment for matomo + nats) went live in the follow-up PR;
 those tools now receive Renovate bump PRs (previously none) and enrichment.
+
+Retired 2026-06-12 (breaking-bump Plan 4): `helm-bump-enrich.yml`,
+`helm-bump-enrich-sweep.yml`, `helm-enrich-tests.yml`, and `scripts/helm-enrich/**`
+are removed now that Agent A (ADR-0068) carries the enrichment, with the helm
+values-diff ported verbatim into `scripts/breaking-bump/valuesdiff.py`. This ADR
+remains as the superseded record; the source registry `infra/tools-upgrade-sources.yaml`
+(SigNoz, cert-manager, …) is kept and now governed by ADR-0068.
