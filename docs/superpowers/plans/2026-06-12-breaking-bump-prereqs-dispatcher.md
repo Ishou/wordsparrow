@@ -304,9 +304,7 @@ Replace with (exclude Renovate branches — the pipeline replaces §6a on those,
 
 ```yaml
   claude-review:
-    # §6a is suppressed on renovate/* branches: ADR-0068 owns renovate/* PRs;
-    # §6a must never push to a Renovate-owned branch. The real §6a still runs
-    # on the claude/<dep>-vN PR and every other branch.
+    # §6a suppressed on renovate/*: ADR-0068 owns those branches; §6a must not push to a Renovate-owned branch.
     if: ${{ !github.event.pull_request.draft && !startsWith(github.head_ref, 'renovate/') }}
 ```
 
@@ -484,9 +482,7 @@ on:
     types: [opened, synchronize, reopened]
 
 concurrency:
-  # Serialises near-simultaneous opened+synchronize events to close the
-  # find-or-create TOCTOU window (Step 0 contract). cancel-in-progress:false
-  # so a slug-collision queues rather than kills an in-flight create.
+  # Serialises opened+synchronize events to close the find-or-create TOCTOU window. cancel-in-progress:false queues rather than kills.
   group: step0-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
@@ -761,7 +757,7 @@ git commit -s -m "feat(breaking-bump): add ai-gate changelog smell-test prompt"
       - run: pip install -r scripts/breaking-bump/requirements.txt
 
       - name: Run the AI gate (changelog-only smell test)
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@ebcdfe6dc6bb7511eb63e59e07df256dbcf59a2e # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Renovate opens these PRs; allow it so the action doesn't refuse a
