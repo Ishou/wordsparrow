@@ -138,6 +138,30 @@ jobs:
             "${OVERRIDE_ARGS[@]+"${OVERRIDE_ARGS[@]}"}" > /tmp/valuesdiff.json
           echo "helm=true" >> "$GITHUB_OUTPUT"
           echo "::notice::values-diff written for $CHART"
+      - name: Registry pre-step (deterministic, no AI) — resolve + fetch authoritative docs
+        id: presource
+        if: vars.BREAKING_BUMP_STUB != 'true'
+        run: |
+          set -euo pipefail
+          # Discover the bumped chart's Chart.yaml from the Renovate PR (mirrors the values-diff discovery).
+          REN_REF=$(gh pr view "$PR_NUMBER" --json headRefName --jq .headRefName)
+          git fetch origin "$REN_REF" main
+          CHART=$(git diff --name-only "origin/main...origin/$REN_REF" \
+                  | grep -E 'infra/.*/Chart\.yaml$' | head -n1 || true)
+          CHART_ARG=()
+          if [ -n "$CHART" ]; then
+            git show "origin/$REN_REF:$CHART" > /tmp/chart.yaml 2>/dev/null || true
+            [ -s /tmp/chart.yaml ] && CHART_ARG=(--chart /tmp/chart.yaml)
+          fi
+          mkdir -p /tmp/registry-docs
+          # dep/from/to flow via job env into Python args; never interpolated into the shell body.
+          python scripts/breaking-bump/sources.py \
+            --registry infra/tools-upgrade-sources.yaml \
+            --dep "$DEP" --from "$FROM" --to "$TO" \
+            "${CHART_ARG[@]+"${CHART_ARG[@]}"}" \
+            --docs-dir /tmp/registry-docs \
+            --manifest /tmp/registry-sources.json
+          echo "::notice::registry pre-step wrote /tmp/registry-sources.json + /tmp/registry-docs/"
       - name: Run Agent A (doc gatherer)
         id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
@@ -145,17 +169,50 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: 'renovate[bot],github-actions[bot]'
-          # A NEVER reads our code: WebFetch/WebSearch + read the registry + post to the issue. No repo write.
+          # A reads the workflow-fetched registry docs first; WebFetch/WebSearch only fill gaps. No repo write.
           claude_args: '--allowed-tools "Read,Write,WebFetch,WebSearch,Bash(gh pr view:*),Bash(gh issue comment:*)"'
           prompt: |
             Read .github/breaking-bump/prompts/agent-a.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             PR_NUMBER=${{ env.PR_NUMBER }}, ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}.
-            Write the A->B schema to ./abschema.json and post a human-readable
+            The workflow has already fetched the registered authoritative docs into
+            /tmp/registry-docs/ (manifest at /tmp/registry-sources.json) — read those
+            first. Write the A->B schema to ./abschema.json and post a human-readable
             enrichment comment to the spine issue.
       - name: STUB Agent A
         if: vars.BREAKING_BUMP_STUB == 'true'
-        run: cp scripts/breaking-bump/stub_fixtures/abschema.json ./abschema.json
+        run: |
+          cp scripts/breaking-bump/stub_fixtures/abschema.json ./abschema.json
+          # Stub mode: a fixture manifest stands in for the live pre-step's output.
+          printf '{"sources": []}' > /tmp/registry-sources.json
+      - name: Merge registry manifest into abschema.sources[] (machine-stamped provenance)
+        run: |
+          set -euo pipefail
+          test -f ./abschema.json || : > ./abschema.json
+          # The agent never authors provenance=registry; the workflow injects the manifest's entries here.
+          python - <<'PY'
+          import json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          ab_path = "./abschema.json"
+          try:
+              doc = json.loads(open(ab_path).read())
+          except (OSError, json.JSONDecodeError):
+              doc = {}
+          try:
+              manifest = json.loads(open("/tmp/registry-sources.json").read())
+          except (OSError, json.JSONDecodeError):
+              manifest = {"sources": []}
+          agent_sources = [s for s in (doc.get("sources") or [])
+                           if s.get("provenance") != "registry"]
+          reg_sources = [{"url": s["url"], "type": s["type"],
+                          "fetchedOk": s["fetchedOk"], "provenance": "registry"}
+                         for s in (manifest.get("sources") or [])]
+          reg_urls = {s["url"] for s in reg_sources}
+          merged = reg_sources + [s for s in agent_sources if s.get("url") not in reg_urls]
+          doc["sources"] = merged
+          open(ab_path, "w").write(json.dumps(doc, indent=2))
+          print(f"::notice::merged {len(reg_sources)} registry source(s) into abschema.sources[]")
+          PY
       - name: Update spend ledger (agent-a)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
