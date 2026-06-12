@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-# Renovate PR-body table row; real Renovate emits a unicode arrow (→) and the dep cell can carry extra links, with 3 or 4 columns — see the verbatim PR-#841 fixture in test_prmeta.py.
+# Renovate PR-body table row; dep cell may carry extra links, 3 or 4 columns, unicode or ASCII arrow.
 _TABLE_ROW = re.compile(
     r"\|\s*\[(?P<dep>[^\]\n]+?)\][^|\n]*\|"                         # dep cell: [name] then rest to |
     r"(?:[^|\n]*\|)+?"                                              # 1+ middle cells (Update[/Type])

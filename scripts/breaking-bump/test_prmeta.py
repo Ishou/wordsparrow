@@ -8,8 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import prmeta  # noqa: E402
 
-# Verbatim shape of a real Renovate PR body (signoz PR #841): a 3-column table,
-# a unicode arrow (→), and a dep cell carrying a second ([source](url)) link.
+# Real Renovate shape: 3-column table, unicode arrow, dep cell with a second ([source](url)) link.
 _BODY = """\
 This PR contains the following updates:
 
