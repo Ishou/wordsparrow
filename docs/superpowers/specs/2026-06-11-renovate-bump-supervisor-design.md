@@ -105,8 +105,8 @@ Renovate opens ANY bump PR (renovate/*)
         │
    ┌────┴── STEP 0 — dispatcher (deterministic, NO AI, on: pull_request) ──┐
    │   reads Renovate update-type label; idempotent (skip if a spine        │
-   │   issue already exists for this dep+version).                          │
-   │     • major / 0.x-major ───────────────► pipeline                      │
+   │   issue already exists for this dep@from→to).                          │
+   │     • major / 0.x-minor ───────────────► pipeline                      │
    │     • minor / patch ──► AI GATE (A-lite changelog smell test):         │
    │           breaking / ambiguous ────────► pipeline                      │
    │           green (or no-doc) ───────────► stamp mergeable, STOP         │
@@ -159,9 +159,9 @@ touchpoints: two** — escalation (only on failure) and the final merge.
 
 ### Step 0 — dispatcher (deterministic, NO AI)
 - **Runs on:** every `renovate/*` PR (`on: pull_request`). Idempotent — skips if
-  a spine issue already exists for this dep+version (#9, #11).
+  a spine issue already exists for this dep@from→to (#9, #11).
 - **Reads:** Renovate's update-type label (#1). No codebase, no LLM.
-- **Routes:** major / 0.x-major → pipeline; minor/patch → AI gate.
+- **Routes:** major / 0.x-minor → pipeline; minor/patch → AI gate.
 - **On pipeline-eligible:** creates the **spine issue** (`ai-driven` +
   `breaking-bump`, context block in body) → the `on: issues` event starts the
   pipeline run.
@@ -171,6 +171,15 @@ touchpoints: two** — escalation (only on failure) and the final merge.
 - **Verdict → route:** breaking / ambiguous → pipeline (create spine issue);
   green **or no changelog** → stamp mergeable, STOP. Green = silent stamp (no
   comment). Major + no-doc is *not* here — that's Gate A (#7).
+
+**"Stamp mergeable" — concrete mechanism.** It posts a **passing commit
+status / check-run** named `breaking-bump` = `success` on the Renovate PR
+(the "the pipeline looked and it's safe" signal). It does **not** auto-merge —
+`renovate.json` has `automerge: false`, so a human still clicks merge; the
+stamp just unblocks/greenlights. The same check is set `success` on every
+STOP-as-mergeable path (AI-gate green, and B's `(a)+(b)-empty` early-exit). A
+bump routed *into* the pipeline leaves this check pending until D closes the
+Renovate PR.
 
 ### Agent A — Doc gatherer (NEVER reads the codebase)
 - **Reads:** Renovate changelog/release links → web search + `llms.txt` probe →
@@ -221,8 +230,11 @@ touchpoints: two** — escalation (only on failure) and the final merge.
 
 - §6a cap-inflation: every push re-triggers a cycle; don't burn the cap.
 - Cap-lock → a fresh-context reviewer breaks it.
-- A PR that edits a workflow file fails `claude-code-action`'s App-token check
-  (so the pipeline's own workflow edits need manual merge).
+- Editing a workflow file requires a token with `workflows` scope: the default
+  `GITHUB_TOKEN` can't push workflow edits, but the repo already threads
+  `CLAUDE_BOT_PAT` (a fine-grained PAT with `workflows` scope — see
+  `claude-code-review.yml`) for exactly this. So D editing its own YAML uses
+  that PAT, **not** a manual-merge carve-out.
 - `gh` GraphQL returns the §6a review author as `github-actions` (no `[bot]`).
 - Renovate authors PRs as the PAT owner; closing a Renovate PR makes Renovate
   *not* re-propose that update (treats it as ignored).
@@ -232,22 +244,27 @@ touchpoints: two** — escalation (only on failure) and the final merge.
 ## Revised arrangement (2026-06-12): the GH issue is the pipeline spine
 
 A fresh mental model that reorganizes the pipeline around a durable issue
-rather than a transient PR. **Captured to lock it in; supersedes the
-PR-centric framing above where they conflict** (the architecture diagram +
-agent contracts get reconciled to this in the self-review pass — task #23).
+rather than a transient PR. The architecture diagram and agent contracts above
+reflect this reconciled view.
 
 **Maintainer's model (raw):**
 - A Renovate PR triggers the pipeline either **deterministically** (Step 0:
-  major / 0.x-major) or via the **AI gate** (minor/patch smell test says
+  major / 0.x-minor) or via the **AI gate** (minor/patch smell test says
   breaking/ambiguous).
 - **"Triggering the pipeline" = creating a dedicated GH issue.**
 - That **issue is now the pipeline's starting point and home**: first
   enrichment (Agent A) lands on it, then the B↔C cycle runs *through the
   issue*, then an implementer **D** is dispatched and opens the PR that will
   (or not) **close the issue**.
-- Feasibility confirmed: GH Actions fires on `issues` / `issue_comment`
-  events, and `claude-code-action` runs on them (its canonical tag mode). So
-  an issue-hosted pipeline is fully supported.
+- Feasibility confirmed, **but note the invocation mode.** GH Actions fires on
+  `issues` events, and `claude-code-action` can run from an issue-triggered
+  workflow (the repo's `claude.yml` proves the action runs `on: issues`). We do
+  **not** use its `@claude`-mention "tag mode" (which `claude.yml` gates on
+  `contains(issue.body, '@claude')`). Instead each agent is a **job that invokes
+  `claude-code-action` with an explicit `prompt:`** (from
+  `.github/breaking-bump/prompts/<agent>.md`) + scoped `claude_args`/tools — see
+  "Per-job invocation" below. The `on: issues` event starts the *run*; the job
+  graph (`needs:`) drives the agents, not mention-detection.
 
 **Why this is better:** decouples the pipeline from transient PRs. Renovate PR
 = *trigger*; claude PR = *output*; the **issue = persistent spine** holding the
@@ -273,6 +290,23 @@ self-trigger-ping-pong footguns #4 was built to avoid. Comments as a *log*
 (good); comments as the *trigger mechanism* (footgun, rejected). With a bounded
 run, "6 rounds" is literally "6 jobs" and nothing external can re-fire it.
 
+**Per-job invocation (2026-06-12) — how an agent actually runs.** Each agent is
+a GH Actions job that calls `claude-code-action` (label-gated, *not* mention
+tag mode):
+- **Prompt:** the job passes `prompt:` (or `--prompt`) sourced from a versioned
+  file `.github/breaking-bump/prompts/<agent>.md`, plus the bump context (read
+  from the spine-issue body) and the upstream artifact (A's schema for B; the
+  plan for C/D).
+- **Scoped tools:** `claude_args`/`allowed_tools` restrict each agent to what it
+  needs — A: WebFetch/WebSearch, **no repo write**; B: repo read; C: repo read;
+  D: repo write + `gh`. Hard context isolation = a fresh job per agent.
+- **State hand-off:** `actions/upload-artifact` → `download-artifact` between
+  `needs:`-chained jobs (`plan.json`, `findings.json`, the A→B schema).
+- **Outputs to the spine issue** via `gh issue comment` for the human log.
+- **Token/auth:** repo-write + workflow-file edits use the existing
+  `CLAUDE_BOT_PAT` (fine-grained PAT w/ `workflows` scope) — *not* the default
+  `GITHUB_TOKEN`, which can't carry workflow permissions (see Lessons).
+
 **B's output is CATEGORIZED, not binary (2026-06-12).** B↔C doesn't just answer
 "are we impacted?" — it produces findings in three categories, each with a
 different *destination*:
@@ -291,8 +325,9 @@ categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
 authoritative definition):**
 - *Origin:* **`ai-driven`** — umbrella on every issue the pipeline creates
   (repo-wide machine-generated marker; not the dedup key).
-- *Kind:* **`breaking-bump`** (the spine/tracking issue; `breaking-bump` + dep
-  is the #6 dedup key) · **`post-bump-enhancement`** (category-(c) optional).
+- *Kind:* **`breaking-bump`** (the spine/tracking issue; dedup identity is
+  `<dep>@<from>→<to>`, see #6) · **`post-bump-enhancement`** (category-(c)
+  optional).
 - *Status:* **`needs-human`** — cumulative, stacks on any base label; added on
   escalation/failure, removed on resolution. The must-do vs optional split is
   `needs-human` on `breaking-bump` vs a plain `post-bump-enhancement`.
@@ -302,11 +337,20 @@ authoritative definition):**
 ## OPEN QUESTIONS (for tomorrow)
 
 1. ✅ **RESOLVED — Scope / trigger.**
-   - **Pre-filter (whether to run Agent A):** `updateType == major` **OR**
-     (`currentMajor == 0` AND `updateType == minor`). Under semver, `0.x` is
-     unstable and a minor bump there is breaking-equivalent, so 0.x-minor is
-     treated as major. Renovate exposes update type + version components (apply
-     via a `packageRules` label so the workflow can filter on it).
+   - **Canonical vocabulary (resolves the doc-wide naming):** semver `x.y.z` =
+     **major.minor.patch** = Renovate's `updateType` values exactly. There is no
+     "0.x-major" — for a `0.x.y` dep the `x` (middle) bump is **`updateType ==
+     minor`** and the `z` bump is `patch`. The doc always uses Renovate's
+     `updateType` because Step 0 matches on that literal value. Per semver §4,
+     when `major == 0` *both* minor and patch may be breaking — handled below.
+   - **Pre-filter (deterministic → run the pipeline):** `updateType == major`
+     **OR** (`currentMajor == 0` AND `updateType == minor`). The 0.x-minor leg
+     is the breaking-equivalent case (e.g. signoz `0.122.0 → 0.128.0`,
+     `updateType == minor`, `major == 0`). Renovate exposes the update type via
+     a `packageRules` label so Step 0 can filter on it.
+   - **0.x-patch** is *not* deterministic — it flows to the **AI gate** (which
+     catches a breaking 0.x patch from the changelog). So "even z may break" is
+     covered without escalating every 0.x patch to the full pipeline.
    - **Real gate:** version-type is only a cheap proxy. **A's "are there
      breaking changes?" finding is the true gate** — a "major" whose docs show
      no breaking changes early-exits and Renovate's PR merges normally. This
@@ -477,9 +521,12 @@ authoritative definition):**
        amends #6's original "lazy-only-on-failure"): the spine issue is the
        pipeline's home, created for every non-trivial bump and auto-closed on
        success. Trivial bumps (AI-gate green) make **no** issue — no noise.
-     - **Deduped:** one issue per dep-major-transition; *find-or-update* (search
-       open issues by `breaking-bump` label + dep name before creating), not
-       a fresh issue per retry.
+     - **Deduped — canonical identity = `<dep>@<from>→<to>`** (the exact version
+       transition, recorded in the issue title + context block). One issue per
+       identity; *find-or-update* (search open `breaking-bump` issues for that
+       identity before creating), not a fresh issue per retry. NB: keying on dep
+       *or* dep+major would wrongly merge two different 0.x bumps of the same
+       dep — it MUST be the full transition.
      - **Auto-close:** closed when a later attempt for that dep actually merges,
        so stale failures don't accumulate.
      - **No `recreateWhen: always`** — it would fight us by reopening the PR we
@@ -508,7 +555,7 @@ authoritative definition):**
      check, no comment) → broad coverage adds cost but **no noise**.
    - **Control flow:**
      ```
-     if   [deterministic: major / 0.x-major(x position)]  → pipeline (A→B→C→D)
+     if   [deterministic: updateType==major OR (major==0 && updateType==minor)] → pipeline (A→B→C→D)
      elif [AI gate: breaking, or changelog-exists-but-ambiguous] → pipeline (loop-back)
      else [minor/patch + AI gate green]                   → stamp mergeable
      ```
@@ -519,10 +566,12 @@ authoritative definition):**
        (+`needs-human`)** (the actionable path from #5/#6), **not** a bare red-X
        dead-end.
        Highest risk + no guidance → a human must look.
-   - **Scope:** the AI gate runs on **minor AND patch** (incl. 0.x's y
-     position). Chosen for blind-spot closure over token cost (tokens are a
-     bonus; green = silent so no noise). Simpler one-bucket rule beats a
-     minor-only tiered split.
+   - **Scope:** the AI gate runs on **every minor/patch that the deterministic
+     pre-filter (#1) did *not* already claim** — i.e. all `minor`/`patch` except
+     `0.x-minor` (which is deterministic). So for a `0.x` dep the gate sees its
+     `patch` (`z`) bumps; for a `≥1.x` dep it sees both `minor` and `patch`.
+     Chosen for blind-spot closure over token cost (tokens are a bonus; green =
+     silent so no noise). Simpler one-bucket rule beats a minor-only tiered split.
    - **Irreducible residual blind spot:** undocumented **AND** semver-violating
      **AND** untested. No cheap gate catches that, and escalating every
      undocumented patch is too costly a "fix." Accepted — far smaller than #1's
@@ -577,7 +626,7 @@ authoritative definition):**
       cheaply; the LLM is the *only* thing we can't fixture.
     - **LLM capability → live, on real bumps:**
       1. **First live test = signoz `0.122.0 → 0.128.0`** (`helmv3` major on
-         `infra/observability/Chart.yaml`). Chosen because: a real **0.x-major**
+         `infra/observability/Chart.yaml`). Chosen because: a real **0.x-minor**
          (x: 122→128 → exercises the deterministic route + the 0.x semver
          handling from #1); **low blast radius** (observability backend, not the
          product); helm-managed so it *also* exercises the helm values-diff
@@ -600,7 +649,7 @@ authoritative definition):**
     - **Step 0** (`on: pull_request: [opened, synchronize, reopened]`,
       job-gated to `startsWith(head_ref, 'renovate/')`): lightweight, runs on
       *every* renovate PR (the AI gate lives here). **Idempotent** — first
-      checks "does a spine issue already exist for this dep+version?" → if yes,
+      checks "does a spine issue already exist for this dep@from→to?" → if yes,
       skip (the #9 guard; so `synchronize`/rebases re-hit Step 0 but do nothing).
       Routes via Renovate's update-type label (#1) + AI gate for minor/patch.
       - pipeline-eligible → **create the spine issue** (`ai-driven` +
@@ -617,7 +666,8 @@ authoritative definition):**
       issue is the spine and must carry that context anyway. **Guard:** a stray
       `breaking-bump` label on an unrelated issue with no context block →
       pipeline no-ops (stops a manual mislabel misfiring).
-    - **Concurrency:** `group: bump-<dep>-<major>`, **`cancel-in-progress:
+    - **Concurrency:** `group: breaking-bump-<dep>-<from>-<to>` (same identity as
+      the dedup key, #6), **`cancel-in-progress:
       false`** — never kill an in-flight migration (and once D forks, the
       pipeline is on the `claude/*` branch, decoupled from Renovate's anyway).
     - **D's claude PR:** a normal PR → existing CI + §6a fire on `claude/*` as
@@ -626,10 +676,9 @@ authoritative definition):**
       self-re-trigger (confirms #4/#7). The "major-label filter" is Step 0's
       routing *input*, not a workflow-level gate.
 12. ✅ **RESOLVED — naming + layout + ADR. Stem = `breaking-bump`** (explicit to
-    an outsider; "breaking dependency bump"). **Renames the whole system from the
-    abstract "bump supervisor" — these names supersede every `bump-supervisor` /
-    `bump-needs-human` / `bump-enhancement` reference earlier in this doc** (the
-    doc-wide rename sweep happens in the self-review pass — task #23).
+    an outsider; "breaking dependency bump"). Renames the whole system from the
+    earlier working name "bump supervisor"; the rest of the doc uses the
+    `breaking-bump` names throughout.
     - **ADR-0068 "AI-driven breaking-bump migration pipeline"** (highest existing
       is 0067). **Supersedes/absorbs ADR-0067** (internal-tool upgrade-PR
       enrichment): the helm-enrich pipeline becomes a *special case* of Agent A;
@@ -670,8 +719,8 @@ authoritative definition):**
         filter, fitting the AI-fleet repo, ADR-0001). **Caveat:** it only earns
         its keep if adopted repo-wide; if *only* this pipeline sets it, it's
         redundant with OR-ing the kind-labels. It is **not** the dedup key.
-      - **Dedup key (#6) stays `breaking-bump` + dep** (kind + dep), not the
-        `ai-driven` umbrella.
+      - **Dedup identity (#6) is `<dep>@<from>→<to>`** (searched among
+        `breaking-bump` issues), not the `ai-driven` umbrella.
       - **Final label set (4 labels, 3 axes):** `ai-driven` (origin) ·
         `breaking-bump` / `post-bump-enhancement` (kind) · `needs-human`
         (cumulative status).
@@ -688,8 +737,10 @@ authoritative definition):**
       test), then expands **one dep at a time** until promoted to the whole
       tree. Not just a cost cap — it's how the pipeline is adopted at all.
     - **Throttle at the source.** The pipeline only fires on Renovate PRs, so
-      `prConcurrentLimit` *is* the rate limiter — lower it for the lab phase
-      (5 → 2–3); reversible one-liner in `renovate.json`.
+      `prConcurrentLimit` bounds the inflow — lower it for the lab phase
+      (5 → 2–3); reversible one-liner in `renovate.json`. (Caveat: it throttles
+      *all* Renovate PRs repo-wide, including trivial bumps that never enter the
+      pipeline — a blunt but effective lab-phase lever.)
     - **Per-bump caps already exist** — B↔C = 6 (#4), §6a = 5 — kept **generous**
       (depth = value). No new work.
     - **Dark feature flag** (`breaking-bump` enabled, with an expiry date per
