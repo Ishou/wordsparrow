@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent A to Agent B migration-context contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["dep", "from", "to", "sourceConfidence", "sources",
+               "breakingChanges", "deprecations", "removals", "migrationSteps"],
+  "properties": {
+    "dep": { "type": "string", "minLength": 1 },
+    "from": { "type": "string", "minLength": 1 },
+    "to": { "type": "string", "minLength": 1 },
+    "sourceConfidence": { "enum": ["high", "medium", "low", "none"] },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url", "type", "fetchedOk"],
+        "properties": {
+          "url": { "type": "string", "minLength": 1 },
+          "type": { "enum": ["changelog", "migration-guide", "llms-txt", "release"] },
+          "fetchedOk": { "type": "boolean" }
+        }
+      }
+    },
+    "breakingChanges": { "$ref": "#/$defs/findingList" },
+    "deprecations": { "$ref": "#/$defs/findingList" },
+    "removals": { "$ref": "#/$defs/findingList" },
+    "migrationSteps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["instruction", "sourceUrl"],
+        "properties": {
+          "instruction": { "type": "string", "minLength": 1 },
+          "sourceUrl": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "findingList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["summary", "detail", "sourceUrl"],
+        "properties": {
+          "summary": { "type": "string", "minLength": 1 },
+          "detail": { "type": "string", "minLength": 1 },
+          "sourceUrl": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
