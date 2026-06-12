@@ -95,11 +95,49 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          fetch-depth: 1
+          fetch-depth: 0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.14.6'
       - run: pip install -r scripts/breaking-bump/requirements.txt
+      - name: Helm values-diff (helm bumps only)
+        id: vdiff
+        if: vars.BREAKING_BUMP_STUB != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEP: ${{ needs.read-context.outputs.dep }}
+          PR_NUMBER: ${{ needs.read-context.outputs.pr }}
+        run: |
+          set -euo pipefail
+          # Find the chart this dep is bumped in from the Renovate PR's changed files.
+          REN_REF=$(gh pr view "$PR_NUMBER" --json headRefName --jq .headRefName)
+          git fetch origin "$REN_REF" main
+          CHART=$(git diff --name-only "origin/main...origin/$REN_REF" \
+                  | grep -E 'infra/.*/Chart\.yaml$' | head -n1 || true)
+          if [ -z "$CHART" ]; then
+            echo "::notice::no helm chart changed for $DEP — skipping values-diff."
+            echo "helm=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          DIR=$(dirname "$CHART")
+          VALUES=$(ls "$DIR"/values.yaml 2>/dev/null || true)
+          if [ -z "$VALUES" ]; then
+            echo "::notice::chart $CHART has no values.yaml — no values-diff."
+            echo "helm=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # --overrides is repeatable (argparse action="append"); one flag per file.
+          OVERRIDE_ARGS=()
+          for ov in "$DIR"/values-prod.yaml "$DIR"/values-*.yaml; do
+            [ -f "$ov" ] && OVERRIDE_ARGS+=(--overrides "$ov")
+          done
+          git show "origin/main:$VALUES" > /tmp/values.old.yaml 2>/dev/null || echo '{}' > /tmp/values.old.yaml
+          git show "origin/$REN_REF:$VALUES" > /tmp/values.new.yaml 2>/dev/null || cp "$VALUES" /tmp/values.new.yaml
+          python scripts/breaking-bump/valuesdiff.py \
+            --old /tmp/values.old.yaml --new /tmp/values.new.yaml \
+            "${OVERRIDE_ARGS[@]+"${OVERRIDE_ARGS[@]}"}" > /tmp/valuesdiff.json
+          echo "helm=true" >> "$GITHUB_OUTPUT"
+          echo "::notice::values-diff written for $CHART"
       - name: Run Agent A (doc gatherer)
         id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'

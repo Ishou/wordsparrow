@@ -62,3 +62,15 @@ and empty change lists. Do not invent content. The workflow reads this as Gate A
 `gh issue comment "$ISSUE_NUMBER"` with a concise Markdown summary of the
 migration-relevant changes (cite each source URL). This is the durable log;
 the JSON file is the machine contract.
+
+## Helm bumps only — attach the values-diff (carryover from ADR-0067)
+If the file `/tmp/valuesdiff.json` exists, this is a helm chart bump and the
+workflow has already computed the upstream default-values diff for you (you do
+NOT compute it — you never read our code). Read it and append a **"Chart values
+diff"** section to your spine-issue enrichment comment: list each changed
+key-path, its old -> new default, and whether we override it (`overridden:
+true`). Call out any **overridden** key whose upstream default moved — that is
+where a silent behaviour change hides. This is a helm-only extra; if the file is
+absent, skip this section entirely. It does NOT belong in the A->B JSON schema
+(the schema stays strictly upstream + project-agnostic) — it is a human-readable
+attachment on the issue only.
