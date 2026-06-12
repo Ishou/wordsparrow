@@ -64,8 +64,7 @@ def test_zero_docs_false_when_a_source_fetched():
     assert abparse.zero_docs(_VALID_SCHEMA) is False
 
 
-# The 2026-06-12 miss: clean verdict on a breaking-eligible bump backed only by
-# constructed/404 sources, with no cleanly-fetched registry source.
+# 2026-06-12 regression: clean verdict, breaking-eligible, no registry source.
 _CLEAN_NO_REGISTRY = {
     "dep": "signoz", "from": "0.122.0", "to": "0.128.0",
     "sourceConfidence": "high",
