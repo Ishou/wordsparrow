@@ -27,6 +27,11 @@
   },
   "packageRules": [
     {
+      "description": "Stamp the semver update-type as a label so the breaking-bump dispatcher (ADR-0068, Step 0) can route on it deterministically.",
+      "matchUpdateTypes": ["major", "minor", "patch"],
+      "addLabels": ["update:{{updateType}}"]
+    },
+    {
       "description": "Vite + Vitest + plugin-react + jsdom move together (peer-dep matrix).",
       "matchPackageNames": [
         "vite",
