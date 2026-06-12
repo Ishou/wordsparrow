@@ -1,21 +1,14 @@
 name: breaking-bump
 
-# The breaking-bump migration pipeline (ADR-0068). Triggered by the spine issue
-# Step 0 creates. One run; agents A/B/C/D are needs:-chained jobs. The B<->C
-# plan-refinement loop is statically unrolled to <=6 rounds (no native loop in
-# GH Actions). Deterministic decisions live in tested scripts/breaking-bump/*.py.
+# breaking-bump pipeline (ADR-0068): B<->C plan loop, statically unrolled to <=6 rounds.
 
 on:
   issues:
-    # labeled-only: the dispatcher creates the issue WITH labels already applied,
-    # so both opened+labeled would fire and run A/B/C agents twice (duplicate tokens
-    # + comments). labeled is guaranteed to fire and carries the label name.
+    # labeled-only: both opened+labeled would double-fire; labeled is sufficient and carries the label name.
     types: [labeled]
 
 concurrency:
-  # Identity slug is not known until the body is parsed; issue-number keying
-  # serialises this issue's opened+labeled events (the only re-fire source).
-  # cancel-in-progress:false: never kill an in-flight migration.
+  # Issue-number keying serialises reopened-label refires; cancel-in-progress:false so migrations always complete.
   group: breaking-bump-issue-${{ github.event.issue.number }}
   cancel-in-progress: false
 
@@ -778,7 +771,7 @@ jobs:
 
   plan-approved:
     needs: [read-context, c_round1, c_round2, c_round3, c_round4, c_round5, c_round6]
-    # Run whenever the loop produced any C result (success OR skipped rounds); never on Gate-A failure.
+    # always() required: runs even when all c_rounds skipped; exits 1 if no round approved, triggering escalate.
     if: always() && needs.read-context.outputs.valid == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -868,8 +861,7 @@ jobs:
         run: echo "::notice::plan approved; Agent D (fork/close/implement) lands in Wave 4."
 
   escalate:
-    # Top-level failure-catch (spec #9): any failed job -> label the spine issue
-    # needs-human and comment. Catches Gate A, no-convergence, AND infra crashes.
+    # Any failed job (Gate A, no-convergence, infra crash) -> label needs-human on the spine issue.
     needs: [read-context, agent-a, b_round1, c_round1, b_round2, c_round2,
             b_round3, c_round3, b_round4, c_round4, b_round5, c_round5,
             b_round6, c_round6, plan-approved, agent-d]
