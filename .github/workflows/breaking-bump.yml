@@ -165,17 +165,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Validate schema + zero-doc tripwire
         id: tripwire
         run: |
@@ -254,17 +256,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Consumer-rated Gate A (B rates A)
         id: rate
         run: |
@@ -361,17 +365,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload findings (round 1)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round1, path: ./prev-findings.json, retention-days: 3 }
@@ -425,17 +431,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload plan (round 2)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round2, path: ./plan.json, retention-days: 3 }
@@ -516,17 +524,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload findings (round 2)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round2, path: ./prev-findings.json, retention-days: 3 }
@@ -580,17 +590,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload plan (round 3)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round3, path: ./plan.json, retention-days: 3 }
@@ -671,17 +683,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload findings (round 3)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round3, path: ./prev-findings.json, retention-days: 3 }
@@ -735,17 +749,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload plan (round 4)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round4, path: ./plan.json, retention-days: 3 }
@@ -826,17 +842,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload findings (round 4)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round4, path: ./prev-findings.json, retention-days: 3 }
@@ -890,17 +908,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload plan (round 5)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round5, path: ./plan.json, retention-days: 3 }
@@ -981,17 +1001,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload findings (round 5)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round5, path: ./prev-findings.json, retention-days: 3 }
@@ -1045,17 +1067,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload plan (round 6)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round6, path: ./plan.json, retention-days: 3 }
@@ -1136,17 +1160,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
       - name: Upload findings (round 6)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round6, path: ./prev-findings.json, retention-days: 3 }
@@ -1329,17 +1355,19 @@ jobs:
           set -euo pipefail
           LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
           MARKER='<!-- breaking-bump-spend-ledger -->'
-          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-                  --json comments \
-                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
-          if [ -z "$CID" ]; then
-            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
-              | python scripts/breaking-bump/spend.py body "$LINE" \
-              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
-          fi
+          # Observability must never fail the migration; resolve the NUMERIC comment id via REST (gh issue view's .id is a GraphQL node id that 404s the REST PATCH).
+          {
+            CID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+                    --jq "[.[] | select(.body | contains(\"$MARKER\"))][0].id // empty" | head -1)
+            if [ -z "$CID" ]; then
+              printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+            else
+              gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+                | python scripts/breaking-bump/spend.py body "$LINE" \
+                | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+            fi
+          } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
 
   escalate:
     # Any failed job (Gate A, no-convergence, infra crash) -> label needs-human on the spine issue.
@@ -1357,8 +1385,8 @@ jobs:
       - name: Escalate to the spine issue
         run: |
           set -euo pipefail
-          gh issue edit "$ISSUE_NUMBER" --add-label needs-human
-          gh issue comment "$ISSUE_NUMBER" --body \
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label needs-human
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body \
             "The breaking-bump pipeline failed and needs a human. Run: $RUN_URL
 
           A pre-D failure leaves the Renovate PR open (nothing lost). A post-D
