@@ -118,7 +118,7 @@ Renovate opens ANY bump PR (renovate/*)
    ┌─────────────────────────────────────────────────────────────────────┐
    │ Agent A — Doc gatherer (NEVER reads the codebase)                    │
    │   Renovate changelog links → web search + llms.txt → registry        │
-   │   (reactive, empty). Emits the grounded A→B schema (verbatim quotes  │
+   │   (reactive; keep verified). Emits grounded A→B schema (quotes      │
    │   + sourceUrl each). Self-check: zero usable docs → GATE A.          │
    └────┬────────────────────────────────────────────────────────────────┘
         │ B RATES A (sufficiency-to-plan). low/none → +needs-human, STOP.
@@ -159,9 +159,20 @@ touchpoints: two** — escalation (only on failure) and the final merge.
 
 ### Step 0 — dispatcher (deterministic, NO AI)
 - **Runs on:** every `renovate/*` PR (`on: pull_request`). Idempotent — skips if
-  a spine issue already exists for this dep@from→to (#9, #11).
-- **Reads:** Renovate's update-type label (#1). No codebase, no LLM.
-- **Routes:** major / 0.x-minor → pipeline; minor/patch → AI gate.
+  a spine issue already exists for this dep@from→to (#9, #11). Its own
+  concurrency group (`step0-<dep>@<from>→<to>`, `cancel-in-progress: false`)
+  serialises near-simultaneous opened+synchronize events to close the
+  find-or-create TOCTOU window.
+- **FIRST — allowlist gate.** If the dep is not on the rollout allowlist (signoz
+  only, at first), **short-circuit immediately — no AI gate, no pipeline, no
+  cost.** This makes "signoz ONLY" mean *zero* Claude calls on any other dep
+  (#13 / Rollout strategy). The allowlist gates the **whole** dispatcher, the AI
+  gate included.
+- **Reads:** Renovate's update-type label (#1; the label is **created by a
+  `packageRules` `addLabels` rule we must add** — it doesn't exist yet). No
+  codebase, no LLM.
+- **Routes (allowlisted deps only):** major / 0.x-minor → pipeline; other
+  minor/patch → AI gate.
 - **On pipeline-eligible:** creates the **spine issue** (`ai-driven` +
   `breaking-bump`, context block in body) → the `on: issues` event starts the
   pipeline run.
@@ -172,18 +183,25 @@ touchpoints: two** — escalation (only on failure) and the final merge.
   green **or no changelog** → stamp mergeable, STOP. Green = silent stamp (no
   comment). Major + no-doc is *not* here — that's Gate A (#7).
 
-**"Stamp mergeable" — concrete mechanism.** It posts a **passing commit
-status / check-run** named `breaking-bump` = `success` on the Renovate PR
-(the "the pipeline looked and it's safe" signal). It does **not** auto-merge —
-`renovate.json` has `automerge: false`, so a human still clicks merge; the
-stamp just unblocks/greenlights. The same check is set `success` on every
-STOP-as-mergeable path (AI-gate green, and B's `(a)+(b)-empty` early-exit). A
-bump routed *into* the pipeline leaves this check pending until D closes the
-Renovate PR.
+**"Stamp mergeable" — concrete mechanism.** A **signal, not a hard gate** —
+`renovate.json` has `automerge: false`, so a human still clicks merge (the
+human merge *is* the safety net, decision #6). The stamp is whatever the
+green-conditioned workflow job writes (its existence ⇔ the job ran and cleared
+it; absence is silent, which is acceptable under the human-merge model). By
+path:
+- **AI-gate green** (no spine issue is created — trivial, silent #7): at most a
+  one-line comment on the Renovate PR, or nothing. No issue → no label.
+- **B `(a)+(b)-empty` early-exit** (a spine issue exists): label the spine issue
+  **`ai-cleared`** *and* post a comment on the Renovate PR ("breaking-bump
+  reviewed — no migration needed, safe to merge"), then auto-close the issue.
+Both the comment and the label are written from the job, so they only appear on
+success. We deliberately do **not** wire a required status check + branch
+protection (that would be a hard gate; the model is human-merge-as-safety-net).
 
 ### Agent A — Doc gatherer (NEVER reads the codebase)
 - **Reads:** Renovate changelog/release links → web search + `llms.txt` probe →
-  `infra/tools-upgrade-sources.yaml` (reactive override, starts **empty**).
+  `infra/tools-upgrade-sources.yaml` (reactive override — **keep the existing
+  verified entries**, don't *speculatively* pre-populate new ones).
 - **Emits** the A→B schema (verbatim `detail` quotes; every breaking-change /
   migration-step cites a `sourceUrl` — see #3 for the shape).
 - **Self-check (only deterministic one):** zero usable docs fetched → **Gate A**.
@@ -214,6 +232,30 @@ Renovate PR.
 - Implements (a)+(b) → the claude PR hands to the existing **§6a cycle** (which
   **rates D**) → human merges → spine issue auto-closes.
 
+## Prerequisites (build items — NOT yet in the repo)
+
+These are inputs the design assumes; they must be created/edited by the plan
+**before** the pipeline can run. They are *not* existing facts:
+
+1. **Renovate update-type label** (Step 0's only routing input). Add a
+   `packageRules` `addLabels` rule keyed on `matchUpdateTypes` so Renovate
+   stamps `update:major` / `update:minor` / `update:patch` on each PR. Today
+   `renovate.json` has no such rule.
+2. **§6a suppression on `renovate/*`.** Edit `claude-code-review.yml` to add a
+   job-level `if` excluding `startsWith(head_ref, 'renovate/')`. Today it has no
+   branch filter and *does* run on Renovate PRs (the clobber source). This edit
+   touches a workflow file → needs the `workflows`-scope PAT (item 3).
+3. **`CLAUDE_BOT_PAT` provisioned with `workflows` scope.** The repo's workflows
+   reference it but fall back to `secrets.GITHUB_TOKEN` (which **cannot** push
+   workflow-file edits). Any agent that edits `.github/workflows/**` (D, when the
+   bumped dep is `claude-code-action`/`actions/*`; the §6a-suppression edit)
+   requires the PAT to actually be set — make this an explicit deploy precondition.
+4. **The five labels** (`ai-driven`, `breaking-bump`, `post-bump-enhancement`,
+   `needs-human`, `ai-cleared`) — created via a bootstrap `gh label create` step
+   or a labels-sync config; `gh issue create --label` fails on a missing label.
+5. **The rollout allowlist** (signoz only at first) — the `packageRules`/path
+   filter Step 0 checks first (#13).
+
 ## Reuse of existing pieces
 
 - **Enrichment pipeline** (`helm-bump-enrich.yml`, ADR-0067): Agent A is its
@@ -222,9 +264,12 @@ Renovate PR.
 - **§6a cycle** (`claude-code-review.yml`): the B↔C loop is *inspired by* it
   (cycle-until-approved + identical-finding stop) but **not** built on its
   comment-re-trigger machinery (#4); the code review of the claude PR *is* §6a,
-  unchanged. §6a is **suppressed on `renovate/*`** (#7).
-- **Source registry** (`infra/tools-upgrade-sources.yaml`): A's reactive
-  override, starting empty.
+  unchanged. §6a must be **suppressed on `renovate/*`** — a **prerequisite edit**
+  to `claude-code-review.yml` (which today has no branch filter), not an existing
+  fact (#7).
+- **Source registry** (`infra/tools-upgrade-sources.yaml`): **already populated**
+  for ADR-0067 (signoz, cert-manager, ingress-nginx, …); A keeps those verified
+  entries and only adds new ones *reactively* (don't speculatively pre-populate).
 
 ## Lessons to bake in (from this session)
 
@@ -321,16 +366,16 @@ The "let Renovate's PR merge" early-exit fires **only when all in-scope
 categories (a)+(b) are empty**. Doc drift but no code impact → D still opens a
 (docs-only) PR.
 
-**Issue label taxonomy — 4 labels across 3 orthogonal axes (see #12 for the
+**Issue label taxonomy — 5 labels across 3 orthogonal axes (see #12 for the
 authoritative definition):**
 - *Origin:* **`ai-driven`** — umbrella on every issue the pipeline creates
   (repo-wide machine-generated marker; not the dedup key).
 - *Kind:* **`breaking-bump`** (the spine/tracking issue; dedup identity is
   `<dep>@<from>→<to>`, see #6) · **`post-bump-enhancement`** (category-(c)
   optional).
-- *Status:* **`needs-human`** — cumulative, stacks on any base label; added on
-  escalation/failure, removed on resolution. The must-do vs optional split is
-  `needs-human` on `breaking-bump` vs a plain `post-bump-enhancement`.
+- *Status:* **`needs-human`** (added on failure/escalation) · **`ai-cleared`**
+  (the green "stamp" on a cleared bump, just before auto-close) — both cumulative,
+  stack on a base label.
 
 ---
 
@@ -346,8 +391,9 @@ authoritative definition):**
    - **Pre-filter (deterministic → run the pipeline):** `updateType == major`
      **OR** (`currentMajor == 0` AND `updateType == minor`). The 0.x-minor leg
      is the breaking-equivalent case (e.g. signoz `0.122.0 → 0.128.0`,
-     `updateType == minor`, `major == 0`). Renovate exposes the update type via
-     a `packageRules` label so Step 0 can filter on it.
+     `updateType == minor`, `major == 0`). Step 0 reads the update type from a
+     Renovate label — **which does not exist yet**: a `packageRules` `addLabels`
+     rule keyed on `matchUpdateTypes` must be added (Prerequisites #1).
    - **0.x-patch** is *not* deterministic — it flows to the **AI gate** (which
      catches a breaking 0.x patch from the changelog). So "even z may break" is
      covered without escalating every 0.x patch to the full pipeline.
@@ -374,9 +420,11 @@ authoritative definition):**
      3. **Sourcing:** lead with **Renovate's own changelog/release links** (in
         the PR, covers the long tail for free) → **web search** for a dedicated
         migration/upgrade guide + an `llms.txt`-style AI-migration-doc probe →
-        the `tools-upgrade-sources.yaml` registry only as a **reactive override,
-        starting EMPTY** (we learned hand-authored URLs rot/404 — don't
-        pre-populate).
+        the `tools-upgrade-sources.yaml` registry as a **reactive override**.
+        It is **already populated** for ADR-0067 (signoz, cert-manager, …) —
+        **keep those verified entries**; the rule is don't *speculatively*
+        pre-populate *new* ones (we learned hand-authored URLs rot/404), add a
+        new entry only after a fetch actually fails.
      4. **Confidence gate:** A self-rates `sourceConfidence`; no/thin docs →
         **Gate A** escalation.
    - **Carryover:** the helm-specific **values-diff** (upstream defaults
@@ -531,6 +579,14 @@ authoritative definition):**
        so stale failures don't accumulate.
      - **No `recreateWhen: always`** — it would fight us by reopening the PR we
        just closed. The dashboard is demoted to an incidental ledger.
+     - **Resurrection (the doubly-orphaned case):** if D's claude PR closes
+       *unmerged* AND the human abandons the spine issue, the bump is stuck —
+       Renovate won't re-propose that version and the claude PR is dead. The
+       spine issue (`needs-human`, never auto-closed in this state) is the
+       durable record; to un-stick, a human reopens/re-runs by **re-ticking the
+       update on Renovate's Dependency Dashboard** (forces Renovate to recreate
+       the PR → Step 0 fires again). The `needs-human` worklist filter surfaces
+       these so they don't silently rot.
 7. ✅ **RESOLVED — Step 0 dispatcher + AI gate replace §6a on Renovate PRs.**
    - **Root-cause invariant: no automated job ever pushes to a `renovate/*`
      branch.** A/B/C read+comment, D forks. §6a's *fixer* obeys this too. This
@@ -699,7 +755,8 @@ authoritative definition):**
       agent-d,ai-gate}.md` — versioned/reviewable, not inline in YAML.
     - **A→B schema:** `scripts/breaking-bump/schema/ab_contract.schema.json`.
     - **Registry:** keep `infra/tools-upgrade-sources.yaml` in place (renaming
-      churns refs); starts **empty** as the reactive override (#2).
+      churns refs); **keep its existing verified entries**, add new ones only
+      reactively (#2).
     - **Labels — two orthogonal axes** (supersedes the welded `bump-needs-human`):
       - *Kind* (base label): **`breaking-bump`** — the spine/tracking issue
         (means "*potential* breaking bump under supervision"; applied at creation
@@ -710,7 +767,10 @@ authoritative definition):**
         label; added on escalation/failure, removed on resolution. Enables a
         one-view worklist filter ("everything that needs me") across all kinds,
         and is reusable by any future escalating automation. The base label
-        supplies the "needs-human *for what*" context.
+        supplies the "needs-human *for what*" context. **`ai-cleared`** — the
+        other status label: applied to a `breaking-bump` spine issue when the
+        pipeline clears the bump (B's `(a)+(b)-empty` early-exit) right before
+        auto-close; the green-conditioned "stamp" (see the AI-gate contract).
       - *Origin* (umbrella): **`ai-driven`** — marks the issue as
         machine-generated. Gives the "all pipeline issues" view the kind-labels
         alone couldn't, *and* is a **repo-wide origin convention** (intended to
@@ -721,9 +781,9 @@ authoritative definition):**
         redundant with OR-ing the kind-labels. It is **not** the dedup key.
       - **Dedup identity (#6) is `<dep>@<from>→<to>`** (searched among
         `breaking-bump` issues), not the `ai-driven` umbrella.
-      - **Final label set (4 labels, 3 axes):** `ai-driven` (origin) ·
-        `breaking-bump` / `post-bump-enhancement` (kind) · `needs-human`
-        (cumulative status).
+      - **Final label set (5 labels, 3 axes):** `ai-driven` (origin) ·
+        `breaking-bump` / `post-bump-enhancement` (kind) · `needs-human` /
+        `ai-cleared` (cumulative status).
 13. ✅ **RESOLVED — cost guardrails throttle *breadth*, not *depth*.** Depth is
     the value (the 6-round B↔C loop on a hard migration is what we pay for), so
     every lever targets frequency/scope; per-bump caps stay generous.
@@ -736,6 +796,10 @@ authoritative definition):**
       (`packageRules`/path filter), proves itself end-to-end (the #10 first live
       test), then expands **one dep at a time** until promoted to the whole
       tree. Not just a cost cap — it's how the pipeline is adopted at all.
+      **Critically, the allowlist gates the *whole* dispatcher (Step 0), the AI
+      gate included** — a non-allowlisted dep short-circuits before any Claude
+      call. So "signoz ONLY" means **zero** LLM cost on every other dep; the AI
+      gate does *not* run tree-wide.
     - **Throttle at the source.** The pipeline only fires on Renovate PRs, so
       `prConcurrentLimit` bounds the inflow — lower it for the lab phase
       (5 → 2–3); reversible one-liner in `renovate.json`. (Caveat: it throttles
