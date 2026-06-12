@@ -39,7 +39,7 @@ def test_load_schema_reports_validation_errors(tmp_path):
     del bad["sources"]
     p = _write(tmp_path, "abschema.json", bad)
     _, errors = abparse.load_schema(p)
-    assert errors  # missing required key surfaces an error
+    assert errors
 
 
 def test_load_schema_missing_file_is_error(tmp_path):
