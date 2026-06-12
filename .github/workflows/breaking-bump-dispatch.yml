@@ -174,7 +174,6 @@ jobs:
       DEP: ${{ needs.dispatch.outputs.dep }}
       FROM: ${{ needs.dispatch.outputs.from }}
       TO: ${{ needs.dispatch.outputs.to }}
-      CLAUDE_BOT_PAT: ${{ secrets.CLAUDE_BOT_PAT }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -235,6 +234,8 @@ jobs:
 
       - name: Create spine issue (breaking / ambiguous)
         if: steps.verdict.outputs.route == 'pipeline'
+        env:
+          CLAUDE_BOT_PAT: ${{ secrets.CLAUDE_BOT_PAT }}
         run: |
           set -euo pipefail
           gh issue list --label breaking-bump --state open --limit 200 \
