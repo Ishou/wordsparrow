@@ -628,19 +628,11 @@ the claude PR FIRST, confirm it is real, ONLY THEN close the Renovate PR.**
 - Context: `$DEP` `$FROM` -> `$TO`, Renovate PR #$PR_NUMBER, spine issue
   #$ISSUE_NUMBER, target branch `$CLAUDE_BRANCH` (`chore/claude-<dep>-v<to>`).
 
-## Step 0 — idempotency guard
-`gh pr list --head "$CLAUDE_BRANCH" --state open --json number`. If a claude PR
-already exists for this branch, STOP (a prior run already forked). Do not
-double-act.
-
-## Step 1 — fork from Renovate's branch tip (NOT main)
-Look up Renovate's branch + tip:
-`gh pr view "$PR_NUMBER" --json headRefName,headRefOid`. Fork `$CLAUDE_BRANCH`
-from that tip SHA so the exact bump commit (version string + lockfile) is
-preserved — you only ADD migration commits, never redo the bump:
-
-    git fetch origin "$RENOVATE_HEAD_REF"
-    git checkout -b "$CLAUDE_BRANCH" "$RENOVATE_HEAD_OID"
+## Branch already ready — do NOT re-fork
+The workflow's `rev` step has already performed the idempotency check, fetched
+Renovate's branch, and run `git checkout -b "$CLAUDE_BRANCH" "$REN_OID"`. You are
+ALREADY on `$CLAUDE_BRANCH` at Renovate's tip. Do NOT run `git checkout -b` or
+re-examine `gh pr list --head` — the branch exists and is checked out.
 
 ## Step 2 — implement (a) + (b) from plan.json
 Apply every `(a)` mandatory-migration and `(b)` doc/ADR-coherence item. Do NOT
@@ -724,7 +716,10 @@ name: breaking-bump
 
 on:
   issues:
-    types: [opened, labeled]
+    # labeled-only: the dispatcher creates the issue WITH labels already applied,
+    # so both opened+labeled would fire and run A/B/C agents twice (duplicate tokens
+    # + comments). labeled is guaranteed to fire and carries the label name.
+    types: [labeled]
 
 concurrency:
   # Identity slug is not known until the body is parsed; issue-number keying
@@ -805,7 +800,7 @@ jobs:
           python-version: '3.14.6'
       - run: pip install -r scripts/breaking-bump/requirements.txt
       - name: Run Agent A (doc gatherer)
-        uses: anthropics/claude-code-action@ebcdfe6dc6bb7511eb63e59e07df256dbcf59a2e # v1
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: 'renovate[bot],github-actions[bot]'
@@ -883,7 +878,7 @@ python -c "import yaml; yaml.safe_load(open('.github/workflows/breaking-bump.yml
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: abschema, path: . }
       - name: Run Agent B (planner) — round 1
-        uses: anthropics/claude-code-action@ebcdfe6dc6bb7511eb63e59e07df256dbcf59a2e # v1
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: 'github-actions[bot]'
@@ -942,7 +937,7 @@ python -c "import yaml; yaml.safe_load(open('.github/workflows/breaking-bump.yml
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round1, path: . }
       - name: Run Agent C (plan reviewer) — round 1
-        uses: anthropics/claude-code-action@ebcdfe6dc6bb7511eb63e59e07df256dbcf59a2e # v1
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: 'github-actions[bot]'
@@ -1051,8 +1046,8 @@ Expected: `all 12 round jobs present`.
       APPROVED_6: ${{ needs.c_round6.outputs.approved }}
     outputs:
       winning_round: ${{ steps.pick.outputs.winning_round }}
-      dispatch_d: ${{ steps.pick.outputs.dispatch_d }}
-      cleared: ${{ steps.pick.outputs.cleared }}
+      dispatch_d: ${{ steps.classify.outputs.dispatch_d }}
+      cleared: ${{ steps.classify.outputs.cleared }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with: { fetch-depth: 1 }
@@ -1245,8 +1240,6 @@ git commit -s -m "feat(ci): add breaking-bump pipeline run with unrolled b-c loo
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-final, path: . }
-      - name: Rename plan-final for Agent D
-        run: mv plan.json ./plan.json 2>/dev/null || true   # plan-final's file is plan.json already
       - name: Configure git identity
         run: |
           git config user.name "github-actions[bot]"
@@ -1271,7 +1264,7 @@ git commit -s -m "feat(ci): add breaking-bump pipeline run with unrolled b-c loo
           echo "ren_ref=$REN_REF" >> "$GITHUB_OUTPUT"
       - name: Run Agent D (implementer)
         if: steps.rev.outputs.skip == 'false'
-        uses: anthropics/claude-code-action@ebcdfe6dc6bb7511eb63e59e07df256dbcf59a2e # v1
+        uses: anthropics/claude-code-action@v1
         env:
           GH_TOKEN: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
         with:
@@ -1299,8 +1292,7 @@ git commit -s -m "feat(ci): add breaking-bump pipeline run with unrolled b-c loo
 > approved plan under the artifact name `plan-final` from a file literally named
 > `plan.json` (it downloaded `plan-round<n>` whose file is `plan.json`, then
 > uploaded that same file as `plan-final`). So `download-artifact name: plan-final`
-> lands `./plan.json`. The `Rename plan-final` step is a defensive no-op kept for
-> legibility; D reads `./plan.json`.
+> lands `./plan.json`; D reads it directly as `./plan.json`.
 
 - [ ] Validate the YAML:
 
@@ -1479,7 +1471,7 @@ hand on a scratch issue without a real Renovate PR). Extend the `on:` block:
 ```yaml
 on:
   issues:
-    types: [opened, labeled]
+    types: [labeled]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -1706,24 +1698,11 @@ python -c "import yaml; j=yaml.safe_load(open('.github/workflows/breaking-bump.y
    requires a workflow-level redesign (the slug isn't knowable pre-step); not worth
    it for an impossible race. Mirrors the same decision Plan 2 made for `step0-<slug>`.
 
-2. **`plan-approved` relies on "last write wins" for a job output key
-   (`dispatch_d`/`cleared`).** The `pick` step writes default `dispatch_d=false`/
-   `cleared=false` only on the no-converge branch (then `exit 1`); on the converged
-   branch `pick` writes neither, and `classify` writes both. GitHub Actions takes
-   the last write to `$GITHUB_OUTPUT` per key within a job, and the job output
-   `${{ steps.pick.outputs.* }}` references resolve to the merged step-output map.
-   **Caveat:** the job-output declarations reference `steps.pick.outputs.*`, but the
-   `classify` step has its own `id: classify`. **Decision:** declare the job outputs
-   against `classify` for `dispatch_d`/`cleared` and against `pick` only for
-   `winning_round`, OR have `classify` be skipped-safe by giving both keys defaults
-   in `pick`. The plan's current text references `steps.pick.outputs` for the
-   no-converge defaults and `steps.classify.outputs` for the converged values —
-   **the implementer must declare `dispatch_d`/`cleared` job outputs against
-   `classify`** (which runs on the converged path) and ensure the no-converge path
-   `exit 1`s before any consumer reads them (it does: `exit 1` → `escalate`). Flag
-   for the maintainer: confirm this output-wiring at implementation; it is the one
-   genuinely fiddly GitHub-Actions-semantics spot. If in doubt, split `pick` and
-   `classify` into two jobs so each output has an unambiguous source job.
+2. **RESOLVED.** `dispatch_d` and `cleared` are now declared against `steps.classify.outputs.*`
+   (the step that writes them on the converged path); `winning_round` stays against
+   `steps.pick.outputs.winning_round` (the step that writes it). The no-converge path
+   `exit 1`s inside `pick` before any consumer reads `dispatch_d`/`cleared`, so those
+   outputs being absent on that branch is safe — the run fails and `escalate` runs.
 
 3. **`vars.BREAKING_BUMP_STUB` is a repo/environment variable, not a secret.**
    The harness reads `vars.*` (Actions repo variables). The maintainer must create
