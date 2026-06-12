@@ -803,6 +803,7 @@ git commit -s -m "feat(breaking-bump): add ai-gate changelog smell-test prompt"
           set -euo pipefail
           VERDICT="$(head -n1 /tmp/gate-verdict.txt 2>/dev/null | tr -d '[:space:]' || true)"
           echo "AI-gate verdict: '${VERDICT:-<none>}'"
+          export VERDICT   # export into the heredoc's env; do NOT use a step-level `env: VERDICT: ${{ env.VERDICT }}` (that evaluates empty at template time)
           python - <<'PY'
           import os, sys
           sys.path.insert(0, "scripts/breaking-bump")
@@ -813,8 +814,6 @@ git commit -s -m "feat(breaking-bump): add ai-gate changelog smell-test prompt"
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"route={route}\n")
           PY
-        env:
-          VERDICT: ${{ env.VERDICT }}
 
       - name: Stamp mergeable (green) — idempotent PR comment, no issue
         if: steps.verdict.outputs.route == 'mergeable'
@@ -867,7 +866,7 @@ git commit -s -m "feat(breaking-bump): add ai-gate changelog smell-test prompt"
           fi
 ```
 
-> **Note on `env.VERDICT`:** the `Route on the verdict` step reads `VERDICT` from the file into a shell variable, then re-exports it for the embedded Python via `env:`. GitHub Actions does not propagate a shell-assigned variable into a step-level `env:` automatically. **Correct this at implementation time** by writing the verdict to `$GITHUB_ENV` in the same step that reads the file, *before* the Python heredoc, OR (simpler) inline the verdict directly into the heredoc's environment by exporting it within the `run:` block: `export VERDICT; python - <<'PY' ...`. Use the `export VERDICT` form — it keeps the read-and-route atomic in one step. (Flagged so the executor doesn't ship the subtly-broken `env: VERDICT: ${{ env.VERDICT }}` line verbatim.)
+> **Note on the verdict hand-off (resolved 2026-06-12):** the `Route on the verdict` step uses **`export VERDICT`** inside the `run:` block so the heredoc's Python reads it from `os.environ`. Do **not** use a step-level `env: VERDICT: ${{ env.VERDICT }}` — a shell-assigned variable is not visible to GitHub Actions template expansion, so that form evaluates empty and the gate would never route green. The code block above already uses the correct `export` form; this note records *why*.
 
 - [ ] Validate the YAML parses:
 
@@ -973,12 +972,9 @@ Expected: `renovate rule OK`.
    step0-${{ needs.parse.outputs.slug }}`) — a real cost for a case that can't
    occur. Decision deferred to maintainer; default is PR-number keying.
 
-2. **The `env.VERDICT` shell→Python hand-off in Wave-4's `Route on the verdict`
-   step is subtly wrong as written** (GitHub Actions doesn't auto-propagate a
-   shell-assigned var into the step's own `env:`). The plan flags the fix inline
-   (use `export VERDICT` before the Python heredoc, keeping read+route atomic in
-   one step). Called out so the executor applies the fix rather than shipping
-   the illustrative-but-broken line.
+2. ✅ **RESOLVED (2026-06-12).** The Wave-4 verdict hand-off now uses
+   `export VERDICT` inside the `run:` block (the step-level `env:` form is gone),
+   so the heredoc's Python reads it correctly. Verified by the cold review.
 
 3. **`prmeta.parse_versions` regex is fitted to Renovate's *current* PR-body
    table shape.** If Renovate's body template changes (or a grouped/lockfile PR
