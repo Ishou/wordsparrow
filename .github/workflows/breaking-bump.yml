@@ -855,10 +855,73 @@ jobs:
     needs: [read-context, plan-approved]
     if: needs.plan-approved.outputs.dispatch_d == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
+    env:
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      PR_NUMBER: ${{ needs.read-context.outputs.pr }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      CLAUDE_BRANCH: ${{ needs.read-context.outputs.claude_branch }}
     steps:
-      - name: Agent D — PLACEHOLDER (real implementer lands in Wave 4)
-        run: echo "::notice::plan approved; Agent D (fork/close/implement) lands in Wave 4."
+      # CLAUDE_BOT_PAT carries the workflows scope GITHUB_TOKEN lacks (D may edit .github/workflows/** on an actions/* bump); fetch-depth:0 to fork from Renovate's tip SHA.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-final, path: . }
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Resolve Renovate branch tip + idempotency guard
+        id: rev
+        env:
+          GH_TOKEN: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Idempotency: a prior run may already have forked.
+          EXISTING=$(gh pr list --head "$CLAUDE_BRANCH" --state open --json number --jq 'length')
+          if [ "${EXISTING:-0}" != "0" ]; then
+            echo "::notice::claude PR already exists for $CLAUDE_BRANCH; no-op."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          REN_REF=$(gh pr view "$PR_NUMBER" --json headRefName --jq .headRefName)
+          REN_OID=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)
+          git fetch origin "$REN_REF"
+          git checkout -b "$CLAUDE_BRANCH" "$REN_OID"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "ren_ref=$REN_REF" >> "$GITHUB_OUTPUT"
+      - name: Run Agent D (implementer)
+        if: steps.rev.outputs.skip == 'false'
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot],renovate[bot]'
+          additional_permissions: |
+            actions: read
+          # D writes code, runs builds, git push, opens the claude PR, closes the Renovate PR, files (c) issues.
+          claude_args: >-
+            --allowed-tools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr close:*),Bash(gh pr comment:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(pnpm:*),Bash(npm:*),Bash(npx:*),Bash(node:*),Bash(./gradlew:*),Bash(gradle:*),Bash(cat:*),Bash(ls:*),Bash(test:*)"
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-d.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            PR_NUMBER=${{ env.PR_NUMBER }}, ISSUE_NUMBER=${{ env.ISSUE_NUMBER }},
+            CLAUDE_BRANCH=${{ env.CLAUDE_BRANCH }}.
+            The approved plan is ./plan.json and A's schema is ./abschema.json.
+            The branch ${{ env.CLAUDE_BRANCH }} is ALREADY checked out at
+            Renovate's tip — implement (a)+(b), commit (git commit -s), push,
+            open the claude PR FIRST (body: "Migrates #${{ env.PR_NUMBER }}" and
+            "Closes #${{ env.ISSUE_NUMBER }}"), confirm it exists, THEN close the
+            Renovate PR. File a post-bump-enhancement issue per (c) item.
 
   escalate:
     # Any failed job (Gate A, no-convergence, infra crash) -> label needs-human on the spine issue.
