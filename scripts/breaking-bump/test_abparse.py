@@ -12,7 +12,8 @@ import abparse  # noqa: E402
 _VALID_SCHEMA = {
     "dep": "signoz", "from": "0.122.0", "to": "0.128.0",
     "sourceConfidence": "high",
-    "sources": [{"url": "https://x/notes", "type": "changelog", "fetchedOk": True}],
+    "sources": [{"url": "https://x/notes", "type": "changelog", "fetchedOk": True,
+                 "provenance": "registry"}],
     "breakingChanges": [
         {"summary": "removed flag", "detail": "the --foo flag was removed",
          "sourceUrl": "https://x/notes"}

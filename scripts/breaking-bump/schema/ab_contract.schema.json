@@ -15,11 +15,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["url", "type", "fetchedOk"],
+        "required": ["url", "type", "fetchedOk", "provenance"],
         "properties": {
           "url": { "type": "string", "minLength": 1 },
           "type": { "enum": ["changelog", "migration-guide", "llms-txt", "release"] },
-          "fetchedOk": { "type": "boolean" }
+          "fetchedOk": { "type": "boolean" },
+          "provenance": { "enum": ["registry", "pr-body", "websearch", "constructed"] }
         }
       }
     },
