@@ -1,3 +1,4 @@
 # Rollout allowlist (ADR-0068). Expand one dep at a time; remove on promotion to full tree.
 deps:
   - signoz
+  - helm
