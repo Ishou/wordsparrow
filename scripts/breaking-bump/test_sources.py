@@ -28,6 +28,12 @@ REGISTRY = {
             "releaseNotes": "https://github.com/nats-io/nats-server/releases",
             "extraDocs": "https://docs.nats.io/release-notes/whats_new",
         },
+        {
+            "name": "cert-manager",
+            "repo": "https://charts.jetstack.io",
+            "releaseNotes": "https://github.com/cert-manager/cert-manager/releases/tag/v{version}",
+            "extraDocs": "https://cert-manager.io/docs/installation/upgrade/",
+        },
     ]
 }
 
@@ -61,6 +67,12 @@ SIGNOZ_LISTING = """\
 K8S_INFRA_LISTING = """\
 <a href="/SigNoz/charts/releases/tag/k8s-infra-0.14.0">k8s-infra-0.14.0</a>
 <a href="/SigNoz/charts/releases/tag/k8s-infra-0.16.0">k8s-infra-0.16.0</a>
+"""
+
+CERT_MANAGER_LISTING = """\
+<a href="/cert-manager/cert-manager/releases/tag/v1.14.0">v1.14.0</a>
+<a href="/cert-manager/cert-manager/releases/tag/v1.15.0">v1.15.0</a>
+<a href="/cert-manager/cert-manager/releases/tag/v1.16.0">v1.16.0</a>
 """
 
 
@@ -250,3 +262,24 @@ def test_build_manifest_empty_when_dep_unregistered():
     manifest = sources.build_manifest(REGISTRY, "ghost-dep", "1.0.0", "2.0.0", make_fetch({}))
     assert manifest["sources"] == []
     assert manifest["fetched"] == []
+
+
+# --- v{version} prefix (cert-manager / hcloud-csi pattern) ------------------
+
+def test_enumerate_tags_v_prefix():
+    tags = sources.enumerate_tags_in_range(CERT_MANAGER_LISTING, "v", "1.14.0", "1.15.0")
+    assert tags == ["1.15.0"]
+
+
+def test_build_manifest_resolves_v_prefix_template():
+    listing = "https://github.com/cert-manager/cert-manager/releases"
+    responses = {
+        listing: (200, CERT_MANAGER_LISTING),
+        "https://github.com/cert-manager/cert-manager/releases/tag/v1.15.0": (200, "1.15 notes"),
+        "https://cert-manager.io/docs/installation/upgrade/": (200, "upgrade guide"),
+    }
+    manifest = sources.build_manifest(
+        REGISTRY, "cert-manager", "1.14.0", "1.15.0", make_fetch(responses)
+    )
+    urls = {s["url"] for s in manifest["sources"] if s["type"] == "release"}
+    assert "https://github.com/cert-manager/cert-manager/releases/tag/v1.15.0" in urls

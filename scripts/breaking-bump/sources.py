@@ -112,7 +112,9 @@ def _resolve_dep(registry: dict, dep: str, from_v: str, to_v: str, fetch: Fetche
     if release_tmpl and "{version}" in release_tmpl:
         listing = _listing_url(release_tmpl)
         listing_res = fetch(listing)
-        for tag in enumerate_tags_in_range(listing_res.body, f"{dep}-", from_v, to_v):
+        tag_suffix = release_tmpl.split("/tag/", 1)[1] if "/tag/" in release_tmpl else f"{dep}-"
+        prefix = tag_suffix.split("{version}")[0]
+        for tag in enumerate_tags_in_range(listing_res.body, prefix, from_v, to_v):
             _fetch_and_record(release_tmpl.format(version=tag), "release", fetch,
                               sources, fetched, seen)
     elif release_tmpl:
