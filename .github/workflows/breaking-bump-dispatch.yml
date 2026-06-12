@@ -146,14 +146,17 @@ jobs:
           open("/tmp/issue-title.txt", "w").write(title)
           open("/tmp/issue-body.md", "w").write(body)
           PY
-          gh issue create \
+          # Add breaking-bump via CLAUDE_BOT_PAT in a separate step: GITHUB_TOKEN events never trigger workflows, and labels set at creation fire `opened` not `labeled` — so the pipeline's `on: issues: [labeled]` only fires from a PAT-driven add.
+          ISSUE_URL=$(gh issue create \
             --title "$(cat /tmp/issue-title.txt)" \
             --body-file /tmp/issue-body.md \
-            --label ai-driven --label breaking-bump
+            --label ai-driven)
+          GH_TOKEN="$CLAUDE_BOT_PAT" gh issue edit "${ISSUE_URL##*/}" --add-label breaking-bump
         env:
           DEP: ${{ steps.parse.outputs.dep }}
           FROM: ${{ steps.parse.outputs.from }}
           TO: ${{ steps.parse.outputs.to }}
+          CLAUDE_BOT_PAT: ${{ secrets.CLAUDE_BOT_PAT }}
 
   ai-gate:
     needs: dispatch
@@ -171,6 +174,7 @@ jobs:
       DEP: ${{ needs.dispatch.outputs.dep }}
       FROM: ${{ needs.dispatch.outputs.from }}
       TO: ${{ needs.dispatch.outputs.to }}
+      CLAUDE_BOT_PAT: ${{ secrets.CLAUDE_BOT_PAT }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -256,10 +260,12 @@ jobs:
               open("/tmp/issue-body.md", "w").write(body)
           PY
           if [ ! -f /tmp/skip ]; then
-            gh issue create \
+            # ai-driven at creation (fires `opened`); breaking-bump via CLAUDE_BOT_PAT so the `labeled` event actually triggers breaking-bump.yml (GITHUB_TOKEN events don't trigger workflows).
+            ISSUE_URL=$(gh issue create \
               --title "$(cat /tmp/issue-title.txt)" \
               --body-file /tmp/issue-body.md \
-              --label ai-driven --label breaking-bump
+              --label ai-driven)
+            GH_TOKEN="$CLAUDE_BOT_PAT" gh issue edit "${ISSUE_URL##*/}" --add-label breaking-bump
           else
             echo "::notice::spine issue already exists; no-op."
           fi
