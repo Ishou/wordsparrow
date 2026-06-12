@@ -77,9 +77,15 @@ nodes.
 
 ### OTLP exporter selection (updated signoz 0.128.0 / k8s-infra v0.16+)
 
-k8s-infra v0.16 (bundled in signoz 0.128.0) changed the default OTLP exporter from
-gRPC (port 4317) to HTTP (port 4318): `presets.otlphttpExporter.enabled` now defaults
-to `true` and `presets.otlpExporter.enabled` now defaults to `false`.
+k8s-infra v0.16 (upstream; our standalone subchart remains pinned at 0.15.1 in
+`Chart.lock` — it is independent of the signoz chart version) changed the default OTLP
+exporter from gRPC (port 4317) to HTTP (port 4318):
+`presets.otlphttpExporter.enabled` now defaults to `true` and
+`presets.otlpExporter.enabled` now defaults to `false`.
+
+The values below are set as a forward-compatibility precaution coinciding with the
+signoz 0.128.0 bump; they are a no-op on k8s-infra 0.15.1 and become load-bearing on
+the next k8s-infra bump to v0.16+.
 
 We explicitly retain the gRPC path by setting both in `values-prod.yaml`:
 
