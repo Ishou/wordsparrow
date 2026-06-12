@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import re
 
-# Renovate PR-body table row: | [dep](url) | type | update | `from` -> `to` |
+# Renovate PR-body table row; real Renovate emits a unicode arrow (→) and the dep cell can carry extra links, with 3 or 4 columns — see the verbatim PR-#841 fixture in test_prmeta.py.
 _TABLE_ROW = re.compile(
-    r"\|\s*\[?(?P<dep>[^\]\|\n]+?)\]?(?:\([^)\n]*\))?\s*\|"   # dep cell (optional [..](..))
-    r"[^|\n]*\|[^|\n]*\|"                                      # type + update cells
-    r"\s*`(?P<from>[^`\n]+)`\s*->\s*`(?P<to>[^`\n]+)`\s*\|"    # change cell: `from` -> `to`
+    r"\|\s*\[(?P<dep>[^\]\n]+?)\][^|\n]*\|"                         # dep cell: [name] then rest to |
+    r"(?:[^|\n]*\|)+?"                                              # 1+ middle cells (Update[/Type])
+    r"\s*`(?P<from>[^`\n]+?)`\s*(?:->|→)\s*`(?P<to>[^`\n]+?)`\s*\|"  # change cell: `from` (-> or →) `to`
 )
 _UPDATE_LABEL = re.compile(r"^update:(?P<type>major|minor|patch)$")
 
