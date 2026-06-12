@@ -101,18 +101,18 @@ jobs:
             Read .github/breaking-bump/prompts/agent-a.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             PR_NUMBER=${{ env.PR_NUMBER }}, ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}.
-            Write the A->B schema to /tmp/abschema.json and post a human-readable
+            Write the A->B schema to ./abschema.json and post a human-readable
             enrichment comment to the spine issue.
       - name: Validate schema + zero-doc tripwire
         id: tripwire
         run: |
           set -euo pipefail
-          test -f /tmp/abschema.json || : > /tmp/abschema.json
+          test -f ./abschema.json || : > ./abschema.json
           python - <<'PY'
           import os, sys
           sys.path.insert(0, "scripts/breaking-bump")
           import abparse
-          doc, errors = abparse.load_schema("/tmp/abschema.json")
+          doc, errors = abparse.load_schema("./abschema.json")
           gate_a = bool(errors) or abparse.zero_docs(doc)
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"gate_a_failed={'true' if gate_a else 'false'}\n")
@@ -123,7 +123,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: abschema
-          path: /tmp/abschema.json
+          path: ./abschema.json
           retention-days: 3
       - name: Gate A — fail the run when A produced no usable contract
         if: steps.tripwire.outputs.gate_a_failed == 'true'
@@ -164,7 +164,7 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             (no ./prev-findings.json this round). First write /tmp/abrating.txt
-            (rate A), then /tmp/plan.json (the categorized plan).
+            (rate A), then ./plan.json (the categorized plan).
       - name: Consumer-rated Gate A (B rates A)
         id: rate
         run: |
@@ -178,7 +178,7 @@ jobs:
       - name: Upload plan (round 1)
         if: steps.rate.outputs.gate_a_failed == 'false'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: plan-round1, path: /tmp/plan.json, retention-days: 3 }
+        with: { name: plan-round1, path: ./plan.json, retention-days: 3 }
       - name: Gate A — B judged A insufficient
         if: steps.rate.outputs.gate_a_failed == 'true'
         run: |
@@ -222,19 +222,19 @@ jobs:
             Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
-            ./plan.json. Write the verdict to /tmp/findings.json.
+            ./plan.json. Write the verdict to ./prev-findings.json.
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
           PREV_HASH: ''   # round 1 has no prior findings
         run: |
           set -euo pipefail
-          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          test -f ./prev-findings.json || echo '{"approved":false,"findings":[]}' > ./prev-findings.json
           python - <<'PY'
           import hashlib, json, os, sys
           sys.path.insert(0, "scripts/breaking-bump")
           import abparse, loop
-          verdict = abparse.load_verdict("/tmp/findings.json")
+          verdict = abparse.load_verdict("./prev-findings.json")
           keys = abparse.finding_keys(verdict)
           curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
           prev_hash = os.environ.get("PREV_HASH", "")
@@ -249,7 +249,7 @@ jobs:
           PY
       - name: Upload findings (round 1)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: findings-round1, path: /tmp/findings.json, retention-days: 3 }
+        with: { name: findings-round1, path: ./prev-findings.json, retention-days: 3 }
 
   b_round2:
     needs: [read-context, b_round1, c_round1]
@@ -271,9 +271,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with: { name: findings-round1, path: /tmp/prevfindings }
-      - name: Stage prior findings for Agent B
-        run: cp /tmp/prevfindings/findings.json ./prev-findings.json
+        with: { name: findings-round1, path: . }
       - name: Run Agent B (planner) — round 2
         uses: anthropics/claude-code-action@v1
         with:
@@ -286,11 +284,11 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             and Agent C's prior findings are ./prev-findings.json — address each.
-            First write /tmp/abrating.txt (rate A), then /tmp/plan.json (the
+            First write /tmp/abrating.txt (rate A), then ./plan.json (the
             categorized plan).
       - name: Upload plan (round 2)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: plan-round2, path: /tmp/plan.json, retention-days: 3 }
+        with: { name: plan-round2, path: ./plan.json, retention-days: 3 }
 
   c_round2:
     needs: [read-context, b_round2, c_round1]
@@ -329,19 +327,19 @@ jobs:
             Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
-            ./plan.json. Write the verdict to /tmp/findings.json.
+            ./plan.json. Write the verdict to ./prev-findings.json.
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
           PREV_HASH: ${{ needs.c_round1.outputs.findings_hash }}
         run: |
           set -euo pipefail
-          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          test -f ./prev-findings.json || echo '{"approved":false,"findings":[]}' > ./prev-findings.json
           python - <<'PY'
           import hashlib, json, os, sys
           sys.path.insert(0, "scripts/breaking-bump")
           import abparse, loop
-          verdict = abparse.load_verdict("/tmp/findings.json")
+          verdict = abparse.load_verdict("./prev-findings.json")
           keys = abparse.finding_keys(verdict)
           curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
           prev_hash = os.environ.get("PREV_HASH", "")
@@ -356,7 +354,7 @@ jobs:
           PY
       - name: Upload findings (round 2)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: findings-round2, path: /tmp/findings.json, retention-days: 3 }
+        with: { name: findings-round2, path: ./prev-findings.json, retention-days: 3 }
 
   b_round3:
     needs: [read-context, b_round1, c_round2]
@@ -378,9 +376,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with: { name: findings-round2, path: /tmp/prevfindings }
-      - name: Stage prior findings for Agent B
-        run: cp /tmp/prevfindings/findings.json ./prev-findings.json
+        with: { name: findings-round2, path: . }
       - name: Run Agent B (planner) — round 3
         uses: anthropics/claude-code-action@v1
         with:
@@ -393,11 +389,11 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             and Agent C's prior findings are ./prev-findings.json — address each.
-            First write /tmp/abrating.txt (rate A), then /tmp/plan.json (the
+            First write /tmp/abrating.txt (rate A), then ./plan.json (the
             categorized plan).
       - name: Upload plan (round 3)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: plan-round3, path: /tmp/plan.json, retention-days: 3 }
+        with: { name: plan-round3, path: ./plan.json, retention-days: 3 }
 
   c_round3:
     needs: [read-context, b_round3, c_round2]
@@ -436,19 +432,19 @@ jobs:
             Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
-            ./plan.json. Write the verdict to /tmp/findings.json.
+            ./plan.json. Write the verdict to ./prev-findings.json.
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
           PREV_HASH: ${{ needs.c_round2.outputs.findings_hash }}
         run: |
           set -euo pipefail
-          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          test -f ./prev-findings.json || echo '{"approved":false,"findings":[]}' > ./prev-findings.json
           python - <<'PY'
           import hashlib, json, os, sys
           sys.path.insert(0, "scripts/breaking-bump")
           import abparse, loop
-          verdict = abparse.load_verdict("/tmp/findings.json")
+          verdict = abparse.load_verdict("./prev-findings.json")
           keys = abparse.finding_keys(verdict)
           curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
           prev_hash = os.environ.get("PREV_HASH", "")
@@ -463,7 +459,7 @@ jobs:
           PY
       - name: Upload findings (round 3)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: findings-round3, path: /tmp/findings.json, retention-days: 3 }
+        with: { name: findings-round3, path: ./prev-findings.json, retention-days: 3 }
 
   b_round4:
     needs: [read-context, b_round1, c_round3]
@@ -485,9 +481,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with: { name: findings-round3, path: /tmp/prevfindings }
-      - name: Stage prior findings for Agent B
-        run: cp /tmp/prevfindings/findings.json ./prev-findings.json
+        with: { name: findings-round3, path: . }
       - name: Run Agent B (planner) — round 4
         uses: anthropics/claude-code-action@v1
         with:
@@ -500,11 +494,11 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             and Agent C's prior findings are ./prev-findings.json — address each.
-            First write /tmp/abrating.txt (rate A), then /tmp/plan.json (the
+            First write /tmp/abrating.txt (rate A), then ./plan.json (the
             categorized plan).
       - name: Upload plan (round 4)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: plan-round4, path: /tmp/plan.json, retention-days: 3 }
+        with: { name: plan-round4, path: ./plan.json, retention-days: 3 }
 
   c_round4:
     needs: [read-context, b_round4, c_round3]
@@ -543,19 +537,19 @@ jobs:
             Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
-            ./plan.json. Write the verdict to /tmp/findings.json.
+            ./plan.json. Write the verdict to ./prev-findings.json.
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
           PREV_HASH: ${{ needs.c_round3.outputs.findings_hash }}
         run: |
           set -euo pipefail
-          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          test -f ./prev-findings.json || echo '{"approved":false,"findings":[]}' > ./prev-findings.json
           python - <<'PY'
           import hashlib, json, os, sys
           sys.path.insert(0, "scripts/breaking-bump")
           import abparse, loop
-          verdict = abparse.load_verdict("/tmp/findings.json")
+          verdict = abparse.load_verdict("./prev-findings.json")
           keys = abparse.finding_keys(verdict)
           curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
           prev_hash = os.environ.get("PREV_HASH", "")
@@ -570,7 +564,7 @@ jobs:
           PY
       - name: Upload findings (round 4)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: findings-round4, path: /tmp/findings.json, retention-days: 3 }
+        with: { name: findings-round4, path: ./prev-findings.json, retention-days: 3 }
 
   b_round5:
     needs: [read-context, b_round1, c_round4]
@@ -592,9 +586,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with: { name: findings-round4, path: /tmp/prevfindings }
-      - name: Stage prior findings for Agent B
-        run: cp /tmp/prevfindings/findings.json ./prev-findings.json
+        with: { name: findings-round4, path: . }
       - name: Run Agent B (planner) — round 5
         uses: anthropics/claude-code-action@v1
         with:
@@ -607,11 +599,11 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             and Agent C's prior findings are ./prev-findings.json — address each.
-            First write /tmp/abrating.txt (rate A), then /tmp/plan.json (the
+            First write /tmp/abrating.txt (rate A), then ./plan.json (the
             categorized plan).
       - name: Upload plan (round 5)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: plan-round5, path: /tmp/plan.json, retention-days: 3 }
+        with: { name: plan-round5, path: ./plan.json, retention-days: 3 }
 
   c_round5:
     needs: [read-context, b_round5, c_round4]
@@ -650,19 +642,19 @@ jobs:
             Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
-            ./plan.json. Write the verdict to /tmp/findings.json.
+            ./plan.json. Write the verdict to ./prev-findings.json.
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
           PREV_HASH: ${{ needs.c_round4.outputs.findings_hash }}
         run: |
           set -euo pipefail
-          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          test -f ./prev-findings.json || echo '{"approved":false,"findings":[]}' > ./prev-findings.json
           python - <<'PY'
           import hashlib, json, os, sys
           sys.path.insert(0, "scripts/breaking-bump")
           import abparse, loop
-          verdict = abparse.load_verdict("/tmp/findings.json")
+          verdict = abparse.load_verdict("./prev-findings.json")
           keys = abparse.finding_keys(verdict)
           curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
           prev_hash = os.environ.get("PREV_HASH", "")
@@ -677,7 +669,7 @@ jobs:
           PY
       - name: Upload findings (round 5)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: findings-round5, path: /tmp/findings.json, retention-days: 3 }
+        with: { name: findings-round5, path: ./prev-findings.json, retention-days: 3 }
 
   b_round6:
     needs: [read-context, b_round1, c_round5]
@@ -699,9 +691,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with: { name: findings-round5, path: /tmp/prevfindings }
-      - name: Stage prior findings for Agent B
-        run: cp /tmp/prevfindings/findings.json ./prev-findings.json
+        with: { name: findings-round5, path: . }
       - name: Run Agent B (planner) — round 6
         uses: anthropics/claude-code-action@v1
         with:
@@ -714,11 +704,11 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             and Agent C's prior findings are ./prev-findings.json — address each.
-            First write /tmp/abrating.txt (rate A), then /tmp/plan.json (the
+            First write /tmp/abrating.txt (rate A), then ./plan.json (the
             categorized plan).
       - name: Upload plan (round 6)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: plan-round6, path: /tmp/plan.json, retention-days: 3 }
+        with: { name: plan-round6, path: ./plan.json, retention-days: 3 }
 
   c_round6:
     needs: [read-context, b_round6, c_round5]
@@ -757,19 +747,19 @@ jobs:
             Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
-            ./plan.json. Write the verdict to /tmp/findings.json.
+            ./plan.json. Write the verdict to ./prev-findings.json.
       - name: Decide loop state (approved / terminated / hash)
         id: decide
         env:
           PREV_HASH: ${{ needs.c_round5.outputs.findings_hash }}
         run: |
           set -euo pipefail
-          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          test -f ./prev-findings.json || echo '{"approved":false,"findings":[]}' > ./prev-findings.json
           python - <<'PY'
           import hashlib, json, os, sys
           sys.path.insert(0, "scripts/breaking-bump")
           import abparse, loop
-          verdict = abparse.load_verdict("/tmp/findings.json")
+          verdict = abparse.load_verdict("./prev-findings.json")
           keys = abparse.finding_keys(verdict)
           curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
           prev_hash = os.environ.get("PREV_HASH", "")
@@ -784,7 +774,7 @@ jobs:
           PY
       - name: Upload findings (round 6)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: { name: findings-round6, path: /tmp/findings.json, retention-days: 3 }
+        with: { name: findings-round6, path: ./prev-findings.json, retention-days: 3 }
 
   plan-approved:
     needs: [read-context, c_round1, c_round2, c_round3, c_round4, c_round5, c_round6]
