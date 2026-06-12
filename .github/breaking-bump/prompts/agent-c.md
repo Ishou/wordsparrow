@@ -23,7 +23,7 @@ Do **NOT** flag: code style, naming, whether the migration is "elegant", or
 anything about how D will implement it. An empty `(a)+(b)` plan is VALID if
 `abschema.json` shows nothing affects us — approve it (the cleared path).
 
-## Output — write the verdict to /tmp/findings.json (Write tool)
+## Output — write the verdict to ./prev-findings.json (Write tool)
     { "approved": true|false, "findings": ["<one finding string>", ...] }
 - `approved: true` with `findings: []` when the plan is complete + grounded
   (including the legitimately-empty plan).

@@ -24,7 +24,7 @@ changed API without reading the file.** This is the downstream grounding axis �
 where planners hallucinate most. If nothing in our repo uses the changed
 surface, that change is out of scope for us.
 
-## Step 3 — emit the categorized plan to /tmp/plan.json (Write tool)
+## Step 3 — emit the categorized plan to ./plan.json (Write tool)
     {
       "a": ["<mandatory migration step grounded in a real file path>", ...],
       "b": ["<doc/ADR/comment that references the old version/behaviour>", ...],
@@ -43,7 +43,7 @@ early-exit — emit the empty arrays honestly; do not manufacture work.
 
 ## Address C's findings (round 2+)
 If `./prev-findings.json` exists, revise your plan to resolve every finding, then
-re-emit `/tmp/plan.json`. If you genuinely disagree with a finding, keep your
+re-emit `./plan.json`. If you genuinely disagree with a finding, keep your
 position but say why in your issue comment.
 
 ## Post to the spine issue

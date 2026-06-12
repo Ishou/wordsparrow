@@ -33,7 +33,7 @@ project-agnostic, grounded contract for Agent B.
 - **`detail` is a VERBATIM quote** from the fetched page; `summary` is your
   one-line handle. You locate + quote; you do not paraphrase or interpret.
 
-## Output — write the A->B schema to /tmp/abschema.json (Write tool)
+## Output — write the A->B schema to ./abschema.json (Write tool)
 Emit JSON conforming to `scripts/breaking-bump/schema/ab_contract.schema.json`:
 
     {
