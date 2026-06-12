@@ -150,7 +150,11 @@ Renovate opens ANY bump PR (renovate/*)
 
 **Failure → the spine issue** (gains `+needs-human`); the Renovate PR stays open
 until D succeeds, so any failure before D loses nothing (#9). **Human
-touchpoints: two** — escalation (only on failure) and the final merge.
+touchpoints on the full-pipeline path: two** — escalation (only on failure) and
+merging the claude PR. (The trivial/cleared paths — AI-gate green, or B's
+`(a)+(b)-empty` early-exit — still end in a human clicking merge on the
+*Renovate* PR, as today; that's the rubber-stamp #7 discusses, not a new gate.)
+"Stamp mergeable" is defined concretely in the **AI gate** contract below.
 
 ## Agent contracts
 
@@ -158,11 +162,16 @@ touchpoints: two** — escalation (only on failure) and the final merge.
 > OPEN QUESTIONS below; this is the contract summary.
 
 ### Step 0 — dispatcher (deterministic, NO AI)
-- **Runs on:** every `renovate/*` PR (`on: pull_request`). Idempotent — skips if
+- **Runs on:** every `renovate/*` PR — `on: pull_request: [opened, synchronize,
+  reopened]` (the `synchronize` re-fire is what the idempotency guard below
+  absorbs). Idempotent — skips if
   a spine issue already exists for this dep@from→to (#9, #11). Its own
-  concurrency group (`step0-<dep>@<from>→<to>`, `cancel-in-progress: false`)
-  serialises near-simultaneous opened+synchronize events to close the
-  find-or-create TOCTOU window.
+  concurrency group (`step0-<slug>`, `cancel-in-progress: false`) serialises
+  near-simultaneous opened+synchronize events to close the find-or-create TOCTOU
+  window. **Canonical identity slug** (used by *both* concurrency groups, ASCII-
+  safe): `<slug> = <dep>-<from>-<to>` — the sanitised form of the human-readable
+  dedup identity `<dep>@<from>→<to>` (which appears in the issue title). Step 0's
+  group is `step0-<slug>`; the pipeline's is `breaking-bump-<slug>`.
 - **FIRST — allowlist gate.** If the dep is not on the rollout allowlist (signoz
   only, at first), **short-circuit immediately — no AI gate, no pipeline, no
   cost.** This makes "signoz ONLY" mean *zero* Claude calls on any other dep
@@ -333,7 +342,9 @@ drives the loop, the issue merely *records* it.) This is deliberate: a literal
 comment-re-trigger loop would reintroduce the cap-inflation /
 self-trigger-ping-pong footguns #4 was built to avoid. Comments as a *log*
 (good); comments as the *trigger mechanism* (footgun, rejected). With a bounded
-run, "6 rounds" is literally "6 jobs" and nothing external can re-fire it.
+run, the cap is literal: 6 rounds = up to **12 jobs** (a B and a C per round),
+statically declared and chained by `needs:` with `if:` skip-on-approval guards.
+Nothing external can re-fire it.
 
 **Per-job invocation (2026-06-12) — how an agent actually runs.** Each agent is
 a GH Actions job that calls `claude-code-action` (label-gated, *not* mention
@@ -374,8 +385,10 @@ authoritative definition):**
   `<dep>@<from>→<to>`, see #6) · **`post-bump-enhancement`** (category-(c)
   optional).
 - *Status:* **`needs-human`** (added on failure/escalation) · **`ai-cleared`**
-  (the green "stamp" on a cleared bump, just before auto-close) — both cumulative,
-  stack on a base label.
+  (the green "stamp", applied **only on B's `(a)+(b)-empty` early-exit** — the
+  one cleared path where a spine issue exists — just before auto-close; the
+  AI-gate-green path makes no issue, so nothing to label there) — both
+  cumulative, stack on a base label.
 
 ---
 
@@ -484,7 +497,8 @@ authoritative definition):**
      preserved), passing `plan.json` / `findings.json` between them via
      artifacts. No per-push re-trigger exists → **cap-inflation is structurally
      impossible**. That's the payoff of not inheriting §6a.
-   - **Cap = 6 rounds** (B→C up to ×6), unrolled as conditional jobs. It's a
+   - **Cap = 6 rounds** (a round = one B job + one C job, so up to 12 jobs),
+     unrolled as conditional jobs. It's a
      *max* — lived experience with the §6a reviewer/fixer cycle shows 3 is too
      short and it usually converges earlier than 6. Enough room to drive the
      backbone plan to complete-and-grounded without the loop spinning forever.
@@ -577,16 +591,20 @@ authoritative definition):**
        dep — it MUST be the full transition.
      - **Auto-close:** closed when a later attempt for that dep actually merges,
        so stale failures don't accumulate.
-     - **No `recreateWhen: always`** — it would fight us by reopening the PR we
-       just closed. The dashboard is demoted to an incidental ledger.
+     - **Keep `recreateWhen` at its default `auto`** (do *not* set `always`).
+       **Grounded in Renovate docs** (`configuration-options` → `recreateWhen`):
+       default `auto` "recreates only immortal PRs", so a normally-closed PR is
+       **not** auto-recreated — exactly the "treat as ignored" behavior we rely
+       on. `always` would reopen the PR we just closed and fight us.
      - **Resurrection (the doubly-orphaned case):** if D's claude PR closes
        *unmerged* AND the human abandons the spine issue, the bump is stuck —
-       Renovate won't re-propose that version and the claude PR is dead. The
-       spine issue (`needs-human`, never auto-closed in this state) is the
-       durable record; to un-stick, a human reopens/re-runs by **re-ticking the
-       update on Renovate's Dependency Dashboard** (forces Renovate to recreate
-       the PR → Step 0 fires again). The `needs-human` worklist filter surfaces
-       these so they don't silently rot.
+       under `auto`, Renovate won't re-propose that version and the claude PR is
+       dead. The escape hatch is **documented**: the Dependency Dashboard
+       explicitly supports "Recreate an unmerged PR (e.g. for a major update you
+       postponed by closing the original PR)" — a human re-ticks it on the
+       dashboard → Renovate recreates the PR → Step 0 fires again. The spine
+       issue stays open with `needs-human` (never auto-closed in this state) and
+       the `needs-human` worklist filter surfaces these so they don't rot.
 7. ✅ **RESOLVED — Step 0 dispatcher + AI gate replace §6a on Renovate PRs.**
    - **Root-cause invariant: no automated job ever pushes to a `renovate/*`
      branch.** A/B/C read+comment, D forks. §6a's *fixer* obeys this too. This
@@ -722,8 +740,8 @@ authoritative definition):**
       issue is the spine and must carry that context anyway. **Guard:** a stray
       `breaking-bump` label on an unrelated issue with no context block →
       pipeline no-ops (stops a manual mislabel misfiring).
-    - **Concurrency:** `group: breaking-bump-<dep>-<from>-<to>` (same identity as
-      the dedup key, #6), **`cancel-in-progress:
+    - **Concurrency:** `group: breaking-bump-<slug>` (the canonical identity slug
+      `<dep>-<from>-<to>`, see Step 0 contract), **`cancel-in-progress:
       false`** — never kill an in-flight migration (and once D forks, the
       pipeline is on the `claude/*` branch, decoupled from Renovate's anyway).
     - **D's claude PR:** a normal PR → existing CI + §6a fire on `claude/*` as
@@ -741,7 +759,9 @@ authoritative definition):**
       the values-diff carryover survives, so 0067's logic is re-homed, not lost.
       0067 status → "Superseded by ADR-0068." Per ADR-0001 §7 it **merges first**,
       before any workflow code, updating `docs/adr/INDEX.md` in the same PR
-      (`registry-coherence` gate).
+      (`registry-coherence` gate). New path→ADR rows to add to INDEX.md:
+      `.github/workflows/breaking-bump-*.yml`, `scripts/breaking-bump/**`,
+      `.github/breaking-bump/prompts/**` → ADR-0068.
     - **Workflows** (`.github/workflows/`): `breaking-bump-dispatch.yml` (Step 0
       router, `on: pull_request`), `breaking-bump.yml` (the pipeline,
       `on: issues`), `breaking-bump-tests.yml` (script CI). The
@@ -804,7 +824,9 @@ authoritative definition):**
       `prConcurrentLimit` bounds the inflow — lower it for the lab phase
       (5 → 2–3); reversible one-liner in `renovate.json`. (Caveat: it throttles
       *all* Renovate PRs repo-wide, including trivial bumps that never enter the
-      pipeline — a blunt but effective lab-phase lever.)
+      pipeline — a blunt but effective lab-phase lever.) `renovate.json` also
+      already has `prHourlyLimit: 1` — a tighter inflow bound that further caps
+      how fast new bumps (and thus pipelines) can appear.
     - **Per-bump caps already exist** — B↔C = 6 (#4), §6a = 5 — kept **generous**
       (depth = value). No new work.
     - **Dark feature flag** (`breaking-bump` enabled, with an expiry date per
