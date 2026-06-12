@@ -29,7 +29,7 @@ There is **no dark-launch flag** to flip. The dispatcher is `on: pull_request`, 
 2. **`BREAKING_BUMP_STUB` repo variable.** When `vars.BREAKING_BUMP_STUB == 'true'`, every agent step is bypassed by a fixture-copy stub (`breaking-bump.yml` lines 104/118/170/184/235…). A live run requires it **unset / `false`**. This is a repo-state toggle (Plan 3 OPEN QUESTION 3), not code — documented + verified in Wave 5's go/no-go, not edited here.
 3. **`CLAUDE_BOT_PAT` secret (workflows scope).** Agent D's checkout uses `secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN`; the fallback `GITHUB_TOKEN` **cannot** push `.github/workflows/**` edits. signoz's migration is helm/docs only (no workflow edit), so the fallback technically suffices for *this* dep — but the PAT is a hard precondition for the pipeline's general correctness and the next deps. Documented as a Wave-5 precondition.
 4. **Unbounded lab inflow.** `prConcurrentLimit: 5` lets up to 5 Renovate PRs (hence up to 5 pipelines) exist at once. Lower it for the bounded lab (Wave 4).
-5. **No cost visibility.** The pipeline spawns up to 14 `claude-code-action` jobs per bump (A + 6×{B,C} + D); nothing surfaces the per-bump cost (USD) (Wave 1).
+5. **No cost visibility.** The pipeline spawns up to 14 `claude-code-action` jobs per bump (A + 6×{B,C} + D); nothing surfaces the per-bump cost (USD). Wave 1 adds one running "spend ledger" comment per spine issue (each stage appends its line, edited in place).
 
 Concern → wave map: **#5 cost → Wave 1** · **helm-enrich→Agent A absorption → Wave 2** · **#4 retire helm-enrich + ADR-0067/INDEX coherence → Wave 3** · **#2 lower prConcurrentLimit → Wave 4** · **#1 flip live (go/no-go + first run + rollback) → Wave 5**.
 
@@ -64,7 +64,7 @@ Five PR waves; each goes through its full review cycle (§6a + maintainer) and *
 
 | Wave / PR | Title (one line) | Files | Why this order | ~Diff |
 |---|---|---|---|---|
-| **Wave 1** | per-bump cost (USD) observability on the spine issue | `scripts/breaking-bump/spend.py` (+test), `.github/workflows/breaking-bump.yml` (incl. 1-line concurrency-group fix) | Pure tested helper + one comment-step per agent job. No live behaviour change; lands first so the *very first* live run already reports cost. Independent of the others. | ~185 |
+| **Wave 1** | per-bump cost (USD) observability — one running spend-ledger comment on the spine issue | `scripts/breaking-bump/spend.py` (+test), `.github/workflows/breaking-bump.yml` (incl. 1-line concurrency-group fix) | Pure tested helper (`format_spend` + `upsert_body`) + one "update spend ledger" step per agent job that edits a single marker-tagged comment in place. No live behaviour change; lands first so the *very first* live run already reports cost. Independent of the others. | ~225 |
 | **Wave 2** | Agent A absorbs the helm values-diff (enrich carryover) | `scripts/breaking-bump/valuesdiff.py` (+test, ported), `.github/breaking-bump/prompts/agent-a.md`, `.github/workflows/breaking-bump.yml` | The one capability helm-enrich had that Agent A lacked. Must land **before** retiring enrich (Wave 3) so nothing is lost — the spec's "values-diff survives as a helm-only extra". | ~260 |
 | **Wave 3** | retire helm-bump-enrich into ADR-0068 (governance + de-wire) | delete `.github/workflows/helm-bump-enrich*.yml`, `scripts/helm-enrich/**`; `docs/adr/0067-*.md`, `docs/adr/INDEX.md`, `renovate.json` (helmv3 comment) | Removes the double-fire (blocker #1). ADR/governance + registry-coherence land here. After Wave 2 the carryover is safe; after this, a signoz bump fires the pipeline ONLY. | ~150 |
 | **Wave 4** | bound the lab — lower `prConcurrentLimit` | `renovate.json` | One-line reversible inflow cap for the controlled rollout (spec #13). Trivial, isolated, lands right before go-live. | ~10 |
@@ -78,9 +78,9 @@ Five PR waves; each goes through its full review cycle (§6a + maintainer) and *
 
 | File | Wave | New/Mod | Responsibility |
 |---|---|---|---|
-| `scripts/breaking-bump/spend.py` | 1 | New | `format_spend(stage, execution_file)` — render a one-line per-stage cost (USD) comment by reading the `claude-code-action` `execution_file` (the `type=="result"` entry's `total_cost_usd`); tolerant of missing/None/unparseable paths ("cost unavailable"). |
+| `scripts/breaking-bump/spend.py` | 1 | New | `format_spend(stage, execution_file)` — render a one-line per-stage cost (USD) by reading the `claude-code-action` `execution_file` (the `type=="result"` entry's `total_cost_usd`); tolerant of missing/None/unparseable paths ("cost unavailable"). Also exports `MARKER` (the hidden ledger-comment marker) and `upsert_body(existing, line)` — a pure string function that creates or appends-to the running ledger body — plus a `line`/`body` CLI the workflow shells to. |
 | `scripts/breaking-bump/test_spend.py` | 1 | New | Unit tests for `spend.py`. |
-| `.github/workflows/breaking-bump.yml` | 1 | Mod | Add a "report spend" step to each agent job (A, every `b_round<n>`, every `c_round<n>`, D) that posts the formatted line to the spine issue. |
+| `.github/workflows/breaking-bump.yml` | 1 | Mod | Add an "update spend ledger" step to each agent job (A, every `b_round<n>`, every `c_round<n>`, D) that finds the marker-tagged ledger comment, appends its stage's line via `spend.py upsert_body`, and creates-or-PATCHes the single comment in place. |
 | `scripts/breaking-bump/valuesdiff.py` | 2 | New (ported) | Helm chart `values*.yaml` key-path diff + override-flagging, ported from `scripts/helm-enrich/valuesdiff.py` so it survives enrich's removal. |
 | `scripts/breaking-bump/test_valuesdiff.py` | 2 | New (ported) | Unit tests for the ported `valuesdiff.py`. |
 | `.github/breaking-bump/prompts/agent-a.md` | 2 | Mod | Add the helm-only values-diff extra (run the diff on a `helmv3` bump, attach to the enrichment). |
@@ -101,7 +101,7 @@ Five PR waves; each goes through its full review cycle (§6a + maintainer) and *
 
 ## Locked implementation decisions (where the spec left a choice)
 
-1. **Cost is reported per stage as a spine-issue comment, never a hard budget (spec #13: "spend observability, not a hard budget").** Each agent job appends one line — `breaking-bump spend · <stage>: $<cost>` — to the spine issue after the agent runs. `claude-code-action@v1` writes an `execution_file` (a path to a JSON array execution log); its single `type=="result"` entry carries `total_cost_usd` (a USD float) — verified against the action's `action.yml` + `test/fixtures/sample-turns.json` (`total_cost_usd: 0.0347`). `spend.py` reads that and renders `$0.0347`; when the path is None/missing/unparseable or no result entry is found (e.g. a STUB run produces no `execution_file`), it renders "cost unavailable" rather than crashing the step. The action exposes **no** direct token/cost step output, so the `execution_file` is the source of truth (per-turn token usage, never needed here, lives on `type=="assistant"` entries under `message.usage`). **No ClickHouse/SigNoz wiring in v1** — the spine issue is the durable per-bump ledger and matches the spec's "log per-stage + surface per-bump cost as a comment on the spine issue". A SigNoz dashboard aggregating cost across bumps is explicitly deferred (it needs an exporter the action doesn't provide; YAGNI until the numbers surprise us, per spec #13's deferred hard-budget note). Flagged below.
+1. **Cost is reported per stage as ONE running "spend ledger" comment on the spine issue, edited in place — never a hard budget (spec #13: "spend observability, not a hard budget").** Instead of each agent job posting a *separate* cost comment, the pipeline maintains a **single marker-tagged ledger comment** and each stage appends its line to it. The ledger's first line is a hidden HTML marker (`<!-- breaking-bump-spend-ledger -->`) used to find the comment; each stage renders one line — `breaking-bump spend · <stage>: $<cost:.4f>` (USD) — and appends it under the marker. The first stage to run creates the comment (`gh issue comment`); every later stage finds it by marker, reads its body, appends its line, and edits the comment in place (`gh api --method PATCH .../issues/comments/<id>`). Because the pipeline jobs are `needs:`-chained (A → B1 → C1 → … → D run **sequentially**), two ledger-edit steps never run concurrently, so the in-place edit has **no lost-update race**. `claude-code-action@v1` writes an `execution_file` (a path to a JSON array execution log); its single `type=="result"` entry carries `total_cost_usd` (a USD float) — verified against the action's `action.yml` + `test/fixtures/sample-turns.json` (`total_cost_usd: 0.0347`). `spend.py` reads that and renders `$0.0347`; when the path is None/missing/unparseable or no result entry is found (e.g. a STUB run produces no `execution_file`), the line is "cost unavailable" (the stage still upserts it) rather than crashing the step. The action exposes **no** direct token/cost step output, so the `execution_file` is the source of truth (per-turn token usage, never needed here, lives on `type=="assistant"` entries under `message.usage`). The body-assembly logic (`MARKER` + `upsert_body`) is a pure, unit-tested string function in `spend.py`; the workflow does only the `gh` I/O, and ALL content (stage, line, body) flows via env vars / stdin / `--body-file`, never interpolated into a `run:` shell. **No ClickHouse/SigNoz wiring in v1** — the spine-issue ledger comment is the durable per-bump record and matches the spec's "log per-stage + surface per-bump cost as a comment on the spine issue". A SigNoz dashboard aggregating cost across bumps is explicitly deferred (it needs an exporter the action doesn't provide; YAGNI until the numbers surprise us, per spec #13's deferred hard-budget note). Flagged below.
 
 2. **The values-diff is ported into `scripts/breaking-bump/`, not imported cross-directory.** Wave 3 deletes `scripts/helm-enrich/`, so Agent A cannot depend on it. The spec says the values-diff "stays as a helm-only extra A attaches" — so the pure diff functions move into the breaking-bump core. The port is a **literal `cp`** of the source (`KeyChange`/`flatten`/`diff_values`/`mark_overrides`, lists-as-leaves), re-running the source's own copied tests; only an appended `main()` CLI is new, so the carryover is literal, not a rewrite.
 
@@ -117,7 +117,7 @@ Five PR waves; each goes through its full review cycle (§6a + maintainer) and *
 
 # Wave 1 — per-bump cost (USD) observability
 
-> **Goal:** every agent job posts its cost (USD) to the spine issue, so the first live signoz run already shows what it cost. Pure tested helper + a thin comment step per job. No behavioural change to routing or agents. (Also folds in a 1-line concurrency-group fix — see Task 1.0.)
+> **Goal:** every agent job appends its cost (USD) to ONE running "spend ledger" comment on the spine issue (a single marker-tagged comment, edited in place — not a new comment per job), so the first live signoz run already shows what it cost as a single tidy ledger. Pure tested helper (`format_spend` renders a line; `upsert_body` builds the ledger body) + a thin "update spend ledger" step per job that does only the `gh` I/O. The jobs run sequentially (`needs:`-chained), so the in-place edit has no lost-update race. No behavioural change to routing or agents. (Also folds in a 1-line concurrency-group fix — see Task 1.0.)
 
 ## Task 1.0 — fix the pre-existing concurrency-group quirk (1 line)
 
@@ -154,6 +154,7 @@ Expected: one match on the `concurrency.group` line.
 """Unit tests for spend — rendering per-stage cost (USD) lines for the spine issue."""
 from __future__ import annotations
 
+import io
 import json
 import sys
 from pathlib import Path
@@ -201,6 +202,79 @@ def test_format_spend_no_result_entry_is_unavailable(tmp_path):
     f.write_text(json.dumps([{"type": "assistant", "message": {}}]), encoding="utf-8")
     line = spend.format_spend("agent-a", str(f))
     assert line == "breaking-bump spend · agent-a: cost unavailable"
+
+
+# --- upsert_body: the running marker-tagged ledger body builder ---
+
+
+def test_upsert_body_first_call_seeds_marker():
+    # No ledger yet (existing is None) → marker + the first line.
+    body = spend.upsert_body(None, "breaking-bump spend · agent-a: $0.0347")
+    assert body == f"{spend.MARKER}\nbreaking-bump spend · agent-a: $0.0347"
+
+
+def test_upsert_body_appends_under_existing_ledger():
+    existing = f"{spend.MARKER}\nbreaking-bump spend · agent-a: $0.0347"
+    body = spend.upsert_body(existing, "breaking-bump spend · b_round1: $0.0102")
+    assert body == (
+        f"{spend.MARKER}\n"
+        "breaking-bump spend · agent-a: $0.0347\n"
+        "breaking-bump spend · b_round1: $0.0102"
+    )
+
+
+def test_upsert_body_marker_appears_exactly_once_after_several_appends():
+    body = None
+    for stage in ("agent-a", "b_round1", "c_round1", "agent-d"):
+        body = spend.upsert_body(body, f"breaking-bump spend · {stage}: $0.0100")
+    assert body.count(spend.MARKER) == 1
+    assert body.startswith(spend.MARKER + "\n")
+    assert body.count("breaking-bump spend ·") == 4
+
+
+def test_upsert_body_empty_string_treated_as_no_ledger():
+    body = spend.upsert_body("", "breaking-bump spend · agent-a: $0.0347")
+    assert body == f"{spend.MARKER}\nbreaking-bump spend · agent-a: $0.0347"
+
+
+# --- CLI: `spend.py line <stage> <execution_file>` and `spend.py body <line>` ---
+
+
+def test_cli_line_prints_format_spend(tmp_path, capsys):
+    f = tmp_path / "execution.json"
+    f.write_text(json.dumps(RESULT_LOG), encoding="utf-8")
+    rc = spend.main(["line", "agent-a", str(f)])
+    assert rc == 0
+    assert capsys.readouterr().out.strip() == "breaking-bump spend · agent-a: $0.0347"
+
+
+def test_cli_line_missing_exec_is_unavailable(capsys):
+    rc = spend.main(["line", "agent-d"])
+    assert rc == 0
+    assert capsys.readouterr().out.strip() == "breaking-bump spend · agent-d: cost unavailable"
+
+
+def test_cli_body_seeds_marker_when_stdin_empty(monkeypatch, capsys):
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    rc = spend.main(["body", "breaking-bump spend · agent-a: $0.0347"])
+    assert rc == 0
+    assert capsys.readouterr().out.rstrip("\n") == (
+        f"{spend.MARKER}\nbreaking-bump spend · agent-a: $0.0347"
+    )
+
+
+def test_cli_body_appends_to_stdin_ledger(monkeypatch, capsys):
+    existing = f"{spend.MARKER}\nbreaking-bump spend · agent-a: $0.0347"
+    monkeypatch.setattr("sys.stdin", io.StringIO(existing))
+    rc = spend.main(["body", "breaking-bump spend · b_round1: $0.0102"])
+    assert rc == 0
+    out = capsys.readouterr().out.rstrip("\n")
+    assert out == (
+        f"{spend.MARKER}\n"
+        "breaking-bump spend · agent-a: $0.0347\n"
+        "breaking-bump spend · b_round1: $0.0102"
+    )
+    assert out.count(spend.MARKER) == 1
 ```
 
 - [ ] Run, see it fail (`ModuleNotFoundError: No module named 'spend'`):
@@ -216,19 +290,30 @@ Expected: collection error / `ModuleNotFoundError`.
 - [ ] Create `scripts/breaking-bump/spend.py`:
 
 ```python
-"""Render a one-line per-stage cost (USD) summary for the spine issue.
+"""Render a per-stage cost (USD) line and maintain a running spend-ledger body.
 
 Spec #13: spend observability, not a hard budget — log per-stage, surface
-per-bump cost as a comment on the spine issue. claude-code-action@v1 exposes no
-direct token/cost step output; instead it writes an execution_file (a JSON array
+per-bump cost on the spine issue. The pipeline keeps ONE marker-tagged ledger
+comment and each stage appends its line to it (the jobs run sequentially, so the
+in-place edit has no lost-update race). claude-code-action@v1 exposes no direct
+token/cost step output; instead it writes an execution_file (a JSON array
 execution log) whose single type=="result" entry carries total_cost_usd (a USD
 float). A STUB run produces no execution_file, so a missing/unparseable path must
 degrade to 'cost unavailable' rather than crash the workflow step.
+
+This module is pure (no gh/network I/O): format_spend renders one line,
+upsert_body builds the ledger body, and the CLI is a thin shell entrypoint so the
+workflow does only the gh I/O — all content flows via stdin/argv, never shell
+interpolation.
 """
 from __future__ import annotations
 
 import json
 from pathlib import Path
+
+# Hidden HTML marker on the ledger comment's first line; used to find the single
+# running spend-ledger comment on the spine issue (so each stage edits it in place).
+MARKER = "<!-- breaking-bump-spend-ledger -->"
 
 
 def _result_cost_usd(execution_file: str | None) -> float | None:
@@ -255,49 +340,99 @@ def format_spend(stage: str, execution_file: str | None) -> str:
     if cost is None:
         return f"breaking-bump spend · {stage}: cost unavailable"
     return f"breaking-bump spend · {stage}: ${cost:.4f}"
+
+
+def upsert_body(existing: str | None, line: str) -> str:
+    """Build the running ledger body: seed it under MARKER, or append `line`.
+
+    Pure string function — no I/O. If `existing` is empty/None there is no ledger
+    yet, so seed `MARKER` + the first line; otherwise append `line` under the
+    existing ledger (the marker stays exactly once at the top).
+    """
+    if not existing:
+        return f"{MARKER}\n{line}"
+    return existing.rstrip() + "\n" + line
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Thin CLI the workflow shells to (so the workflow does only gh I/O).
+
+    `spend.py line <stage> [execution_file]` -> print format_spend(stage, execution_file).
+    `spend.py body <line>`                   -> print upsert_body(<existing from stdin>, line).
+    """
+    import sys
+
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args:
+        print("usage: spend.py {line <stage> [execution_file] | body <line>}", file=sys.stderr)
+        return 2
+    cmd, rest = args[0], args[1:]
+    if cmd == "line":
+        stage = rest[0] if rest else "unknown"
+        execution_file = rest[1] if len(rest) > 1 and rest[1] else None
+        print(format_spend(stage, execution_file))
+        return 0
+    if cmd == "body":
+        line = rest[0] if rest else ""
+        existing = sys.stdin.read()
+        print(upsert_body(existing if existing.strip() else None, line))
+        return 0
+    print(f"unknown command: {cmd}", file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 ```
 
-- [ ] Run, see it pass (`5 passed`), then the whole package:
+- [ ] Run, see it pass (`13 passed`), then the whole package:
 
 ```bash
 cd scripts/breaking-bump && python -m pytest test_spend.py -v && python -m pytest -v
 ```
 
-Expected: `5 passed` then all package tests green.
+Expected: `13 passed` then all package tests green.
 
-## Task 1.3 — add a spend-report step to each agent job
+## Task 1.3 — add an "update spend ledger" step to each agent job
 
-> **Mechanism:** `claude-code-action@v1` exposes no direct token/cost output — it writes an `execution_file` (a path to a JSON-array execution log) surfaced as `steps.<id>.outputs.execution_file`. Give each agent's `claude-code-action` step an `id` (A's may already have one — if not, add `id: agent`), then add a step after it that runs `spend.py <stage> "<execution_file>"` and posts the line with `gh issue comment`. The line content flows via an env var (`$LINE`), **not** `${{ }}` interpolation inside `run:`. Each step is guarded `if: vars.BREAKING_BUMP_STUB != 'true'` so stub runs stay cost-free and silent; even if reached, an absent `execution_file` renders "cost unavailable" and never breaks the run.
+> **Mechanism:** the pipeline maintains ONE running "spend ledger" comment on the spine issue (a single marker-tagged comment, edited in place — **not** a new comment per job). `claude-code-action@v1` exposes no direct token/cost output — it writes an `execution_file` (a path to a JSON-array execution log) surfaced as `steps.<id>.outputs.execution_file`. Give each agent's `claude-code-action` step `id: agent` (A's may already have one — if not, add it), then add a single step after it that: (1) renders this stage's line via `spend.py line "$STAGE" "$EXECUTION_FILE"`; (2) finds the existing ledger comment (its id + body) by the `MARKER` via `gh issue view --json comments --jq`; (3) builds the new body with `spend.py body "$LINE"` (the existing body piped in on stdin — `upsert_body` seeds the marker on the first stage, appends on later ones); (4) **creates** the comment with `gh issue comment --body-file -` when none exists, else **PATCHes** it in place with `gh api --method PATCH .../issues/comments/<id> -f body=@-`. **All content (stage, line, body) flows via env vars / stdin / `--body-file`, NEVER `${{ }}` interpolation inside `run:` nor `${{ github.event.* }}`** — injection-safe. The step is **not** stub-guarded away: a STUB run has no `execution_file`, so the line is "cost unavailable" and still upserts harmlessly (we want cost visibility on real runs). **Why editing in place is race-free:** the pipeline jobs are `needs:`-chained (A → B1 → C1 → … → D run **sequentially**), so two ledger-edit steps never run concurrently — no lost-update race on the read-modify-write.
 
 - [ ] For the `agent-a` job in `.github/workflows/breaking-bump.yml`: ensure the `claude-code-action` step has `id: agent`, then add immediately after it (before the tripwire step):
 
 ```yaml
-      - name: Report spend (agent-a)
-        if: vars.BREAKING_BUMP_STUB != 'true'
+      - name: Update spend ledger (agent-a)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           STAGE: agent-a
           EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
         run: |
           set -euo pipefail
-          LINE=$(python scripts/breaking-bump/spend.py "$STAGE" "$EXECUTION_FILE")
-          gh issue comment "$ISSUE_NUMBER" --body "$LINE"
+          # Render this stage's line (no shell interpolation of untrusted content).
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          # Find the single running ledger comment by its hidden marker.
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            # No ledger yet — seed it (empty stdin → upsert_body adds the marker).
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            # Append under the existing ledger and PATCH the comment in place.
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
 ```
 
-- [ ] For **each** `b_round<n>` (n in 1..6): give the B `claude-code-action` step `id: agent` and append the same step with `STAGE: b_round<n>`. For **each** `c_round<n>`: `id: agent`, `STAGE: c_round<n>`. For `agent-d`: `id: agent` on its `claude-code-action` step, `STAGE: agent-d`. Every spend step's `EXECUTION_FILE` reads its own job's `steps.agent.outputs.execution_file`. (13 near-identical steps — "N copies of the same line".) The `ISSUE_NUMBER` env var already exists on every one of these jobs (used by the agent prompts).
+> `GITHUB_REPOSITORY` is a default GitHub Actions env var (`owner/repo`), present on every job — no extra wiring. `LINE` and the ledger body are passed only via argv/stdin/`--body-file`, never `${{ }}`-interpolated into the shell. The `gh api ... -F body=@-` form reads the file/`-` (stdin) as the field value, so the body is never word-split or shell-evaluated.
 
-- [ ] `spend.py` must accept the stage + execution-file path as CLI args. Add a `__main__` block to `scripts/breaking-bump/spend.py` (the workflow shells to it):
+- [ ] For **each** `b_round<n>` (n in 1..6): give the B `claude-code-action` step `id: agent` and append the same step with `name: Update spend ledger (b_round<n>)` and `STAGE: b_round<n>`. For **each** `c_round<n>`: `id: agent`, `name: Update spend ledger (c_round<n>)`, `STAGE: c_round<n>`. For `agent-d`: `id: agent` on its `claude-code-action` step, `name: Update spend ledger (agent-d)`, `STAGE: agent-d`. Every step's `EXECUTION_FILE` reads its own job's `steps.agent.outputs.execution_file`; the rest of the step body is identical. (13 near-identical steps — "N copies of the same line".) The `ISSUE_NUMBER` env var already exists on every one of these jobs (used by the agent prompts).
 
-```python
-if __name__ == "__main__":
-    import sys
+> The `spend.py line`/`body` CLI the step shells to is already defined in Task 1.2's `main()` (tested by `test_cli_*` in Task 1.1) — no further `spend.py` edit is needed here.
 
-    _stage = sys.argv[1] if len(sys.argv) > 1 else "unknown"
-    _exec = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else None
-    print(format_spend(_stage, _exec))
-```
-
-- [ ] Validate the YAML parses and every agent job has a spend step:
+- [ ] Validate the YAML parses and every agent job has the ledger step:
 
 ```bash
 python - <<'PY'
@@ -307,26 +442,26 @@ agent_jobs = ['agent-a', 'agent-d'] + [f'{p}_round{n}' for p in ('b', 'c') for n
 missing = []
 for jn in agent_jobs:
     names = [s.get('name', '') for s in d['jobs'][jn]['steps']]
-    if not any(n.startswith('Report spend') for n in names):
+    if not any(n.startswith('Update spend ledger') for n in names):
         missing.append(jn)
-assert not missing, f"jobs missing a spend step: {missing}"
-print("all 14 agent jobs report spend")
+assert not missing, f"jobs missing a ledger step: {missing}"
+print("all 14 agent jobs update the spend ledger")
 PY
 ```
 
-Expected: `all 14 agent jobs report spend`.
+Expected: `all 14 agent jobs update the spend ledger`.
 
 ## Task 1.4 — commit Wave 1
 
 ```bash
 git add scripts/breaking-bump/spend.py scripts/breaking-bump/test_spend.py \
         .github/workflows/breaking-bump.yml
-git commit -s -m "feat(breaking-bump): report per-stage cost (usd) on the spine issue"
+git commit -s -m "feat(breaking-bump): post a running per-bump cost ledger on the spine issue"
 ```
 
-(Subject 62 chars, lowercase-led, type `feat`, ASCII OK.)
+(Subject 75 chars, lowercase-led, type `feat`, ASCII OK.)
 
-> **Wave-1 PR body must:** note this is observability-only (no routing/agent behaviour change — the concurrency-group fix is a no-op for real `on: issues` runs, affecting only the `workflow_dispatch` smoke path); the cost line degrades to "cost unavailable" if `claude-code-action`'s `execution_file` is absent/unparseable (e.g. a STUB run), so it can never break a live run; a cross-bump SigNoz dashboard is deferred (spec #13 — the spine-issue comment is the v1 ledger).
+> **Wave-1 PR body must:** note this is observability-only (no routing/agent behaviour change — the concurrency-group fix is a no-op for real `on: issues` runs, affecting only the `workflow_dispatch` smoke path); each stage appends to ONE running marker-tagged "spend ledger" comment edited in place (not a comment per job), and because the jobs run sequentially (`needs:`-chained) the in-place edit has no lost-update race; all content flows via env/stdin/`--body-file` (injection-safe, no `${{ }}` shell interpolation); the cost line degrades to "cost unavailable" if `claude-code-action`'s `execution_file` is absent/unparseable (e.g. a STUB run) and still upserts harmlessly, so it can never break a live run; a cross-bump SigNoz dashboard is deferred (spec #13 — the spine-issue ledger comment is the v1 record).
 
 ---
 
@@ -728,13 +863,13 @@ the natural path is the live test of record.
 | Stage | Success looks like | Where to watch |
 |---|---|---|
 | Step 0 dispatch | spine issue created, labels `ai-driven`+`breaking-bump`, context block in body | the new issue + `breaking-bump-dispatch` run |
-| Agent A | enrichment comment cites real signoz release URLs; A->B schema valid; "Chart values diff" section present (helm carryover) | spine issue comment + `agent-a` job log + spend line |
+| Agent A | enrichment comment cites real signoz release URLs; A->B schema valid; "Chart values diff" section present (helm carryover) | spine issue comment + `agent-a` job log + spend-ledger line |
 | B rates A | not escalated to `needs-human` at Gate A (rating high/medium) | spine issue; `b_round1` log |
 | B<->C loop | converges (C `approved: true`) within ≤6 rounds; each round comments | spine issue round comments |
 | plan-approved | non-empty plan -> `dispatch_d=true`; OR `(a)+(b)` empty -> `ai-cleared` + issue closed (signoz `Chart.yaml:19` stale pin is a real category-(b) doc fix, so expect dispatch_d) | `plan-approved` job |
 | Agent D | claude PR `chore/claude-signoz-v<to>` opened FIRST; Renovate PR then closed with a link; `(c)` issue filed if any | the claude PR + the closed Renovate PR |
 | §6a | runs on the claude PR (suppressed on `renovate/*`), not on the Renovate branch | the claude PR checks |
-| spend | per-stage spend lines accumulate on the spine issue (Wave 1) | spine issue |
+| spend | per-stage spend lines accumulate in ONE running "spend ledger" comment on the spine issue, edited in place (Wave 1) | spine issue |
 
 **Expected for signoz `0.122.0 -> 0.128.0`** (spec #10): a real `0.x`-minor that
 exercises the deterministic route + `0.x` semver handling + the helm values-diff;
@@ -810,7 +945,7 @@ git commit -s -m "docs(breaking-bump): add signoz go-live runbook + go/no-go gat
 cd scripts/breaking-bump && python -m pytest -v
 ```
 
-- [ ] The pipeline workflow parses and (post-Wave-1) every agent job reports spend:
+- [ ] The pipeline workflow parses and (post-Wave-1) every agent job updates the spend ledger:
 
 ```bash
 python -c "import yaml; yaml.safe_load(open('.github/workflows/breaking-bump.yml')); print('pipeline yaml OK')"
@@ -844,7 +979,7 @@ grep -E "ADR-0067.*helm-enrich|ADR-0067.*helm-bump-enrich" docs/adr/INDEX.md && 
 | Absorb/retire helm-bump-enrich into Agent A (#2/#8/#12; ADR-0067 superseded) | Wave 2 (values-diff carryover) + Wave 3 (delete workflows/scripts) |
 | Helm values-diff survives as a helm-only extra (#2) | Wave 2 `valuesdiff.py` port + `agent-a` step + prompt |
 | ADR-0067 superseded; INDEX.md / registry coherence (#12) | Wave 3 (0067 retirement note + INDEX.md row removal) |
-| Spend observability (token/cost), not a hard budget (#13) | Wave 1 `spend.py` + per-stage spine-issue comments |
+| Spend observability (token/cost), not a hard budget (#13) | Wave 1 `spend.py` (`format_spend` + `upsert_body`) + one running per-stage spend-ledger comment, edited in place |
 | §6a suppressed on `renovate/*` | already on `main` (verified — `claude-code-review.yml:53`); no Plan-4 work |
 | First live test = signoz `0.122.0 -> 0.128.0`, won't early-exit (stale pin) (#10) | Wave 5 runbook §4 expected-behaviour note |
 
@@ -868,7 +1003,12 @@ grep -E "ADR-0067.*helm-enrich|ADR-0067.*helm-bump-enrich" docs/adr/INDEX.md && 
    token-count field on the result entry). `spend.py` reads that and renders
    `$0.0347`; a None/missing/unparseable path or absent result entry (e.g. a STUB
    run with no `execution_file`) renders "cost unavailable" and never breaks the
-   run. No runtime guessing remains.
+   run. Each stage **appends** its line to ONE running marker-tagged "spend ledger"
+   comment edited in place (find-by-marker → `upsert_body` → create-or-PATCH), not a
+   new comment per job; the pure `upsert_body` is unit-tested, and because the
+   pipeline jobs are `needs:`-chained (sequential), the read-modify-write edit has
+   no lost-update race. All gh I/O passes content via env/stdin/`--body-file`
+   (injection-safe). No runtime guessing remains.
 
 3. **The `valuesdiff.py` port is a literal `cp` of the SOURCE (Wave 2).** The plan
    no longer embeds a re-typed listing — Task 2.2 instructs `cp`-ing
@@ -893,7 +1033,8 @@ grep -E "ADR-0067.*helm-enrich|ADR-0067.*helm-bump-enrich" docs/adr/INDEX.md && 
 
 6. **Cross-bump spend dashboard is deferred (not in scope).** The spec says
    "spend observability, not a hard budget" and "surface per-bump cost as a comment
-   on the spine issue" — Wave 1 does exactly that. A SigNoz/ClickHouse aggregation
+   on the spine issue" — Wave 1 does exactly that (one running ledger comment per
+   bump, each stage's line appended in place). A SigNoz/ClickHouse aggregation
    across bumps would need an exporter `claude-code-action` does not provide; per
    spec #13 (deferred hard-budget) it is YAGNI until the per-bump numbers surprise
    us. Stated rather than silently built.
