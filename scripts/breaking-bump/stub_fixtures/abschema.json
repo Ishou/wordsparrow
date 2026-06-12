@@ -4,7 +4,7 @@
   "to": "2.0.0",
   "sourceConfidence": "high",
   "sources": [
-    { "url": "https://example.test/stub/CHANGELOG.md", "type": "changelog", "fetchedOk": true, "provenance": "registry" }
+    { "url": "https://example.test/stub/CHANGELOG.md", "type": "changelog", "fetchedOk": true, "provenance": "pr-body" }
   ],
   "breakingChanges": [
     {

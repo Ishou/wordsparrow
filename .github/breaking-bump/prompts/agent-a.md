@@ -12,17 +12,32 @@ project-agnostic, grounded contract for Agent B.
   gathered).
 - Spine issue: #$ISSUE_NUMBER (post your human-readable enrichment here).
 
-## Sourcing order (reactive, grounded — never from memory)
-1. Read the Renovate PR body: `gh pr view "$PR_NUMBER" --json body --jq .body`.
-   It usually links the release notes / changelog for the range.
-2. WebFetch those links. When `$FROM` -> `$TO` spans multiple releases, also
-   fetch the intermediate releases (strip any `/tag/<v>` suffix to get the
-   releases listing) so the whole range is covered, not just `$TO`.
-3. WebSearch for a dedicated migration / upgrade / breaking-changes guide for
-   this exact transition, and probe for an `llms.txt`-style AI-migration doc.
-4. Consult `infra/tools-upgrade-sources.yaml` for a verified override entry for
-   `$DEP`. Use it if present. Do **NOT** speculatively invent URLs — hand-authored
-   URLs rot/404. If every fetch fails, that is a real signal (see the tripwire).
+## Sourcing order (registry-first — the workflow fetched the authoritative docs for you)
+1. **Read the registry-fetched docs the workflow already handed you.** Before you
+   ran, a deterministic pre-step resolved + fetched the *registered* authoritative
+   URLs for `$DEP` **and its bundled sub-charts**, across the whole `$FROM` -> `$TO`
+   range, into `/tmp/registry-docs/`. The manifest is at `/tmp/registry-sources.json`
+   (each entry's `url`, `type`, `fetchedOk`, and the on-disk `slug`). These are your
+   **primary** sources — read them first and extract verbatim findings from them.
+2. **Fill gaps only.** For a transition or sub-chart the registry did NOT cover:
+   read the Renovate PR body (`gh pr view "$PR_NUMBER" --json body --jq .body`) and
+   WebFetch its links (`provenance: pr-body`), then WebSearch for a dedicated
+   migration/upgrade guide or `llms.txt` (`provenance: websearch`).
+3. **Never invent URLs.** Do **NOT** speculatively construct release URLs — the
+   pre-step already enumerated the real tags that exist. If you do build a URL
+   yourself, label it `provenance: constructed` and expect the gate to discount it.
+4. **Sub-charts are first-class.** A breaking change in a bundled sub-chart (e.g.
+   `k8s-infra` under the `signoz` umbrella) is in scope; the workflow has already
+   fetched its registered docs into `/tmp/registry-docs/` — treat them like any
+   other primary source.
+
+**Provenance — you stamp DISCOVERED sources only.** For every source YOU
+discovered (steps 2-3), set `provenance` to `pr-body | websearch | constructed`.
+You **MUST NOT** emit `provenance: registry` on any source — that label is the
+workflow's alone. The workflow merges the registry-fetched entries (already
+machine-stamped `registry` with their true `fetchedOk`) into `sources[]` after you
+write `./abschema.json`; do not author them yourself. If every gap-fill fetch fails
+and the registry covered nothing, that is a real signal (see the tripwire).
 
 ## Hard rules
 - **Strictly project-agnostic.** Describe ONLY the upstream change. Zero
@@ -39,14 +54,17 @@ Emit JSON conforming to `scripts/breaking-bump/schema/ab_contract.schema.json`:
     {
       "dep": "$DEP", "from": "$FROM", "to": "$TO",
       "sourceConfidence": "high|medium|low|none",
-      "sources": [{"url": "...", "type": "changelog|migration-guide|llms-txt|release", "fetchedOk": true}],
+      "sources": [{"url": "...", "type": "changelog|migration-guide|llms-txt|release", "fetchedOk": true, "provenance": "pr-body|websearch|constructed"}],
       "breakingChanges": [{"summary": "...", "detail": "<verbatim quote>", "sourceUrl": "..."}],
       "deprecations":    [{"summary": "...", "detail": "<verbatim quote>", "sourceUrl": "..."}],
       "removals":        [{"summary": "...", "detail": "<verbatim quote>", "sourceUrl": "..."}],
       "migrationSteps":  [{"instruction": "<verbatim quote>", "sourceUrl": "..."}]
     }
 
-Rate `sourceConfidence` by evidence (not feeling):
+Rate `sourceConfidence` by evidence (not feeling). The workflow applies a
+deterministic provenance-derived floor over your rating (a clean verdict on a
+breaking-eligible bump with no cleanly-fetched `registry` source is capped), so
+rate honestly — the floor only tightens, never inflates:
 - `high` — a dedicated migration/upgrade guide for this exact transition fetched
   200, breaking changes spelled out.
 - `medium` — changelog/release notes enumerate changes, no dedicated guide.
