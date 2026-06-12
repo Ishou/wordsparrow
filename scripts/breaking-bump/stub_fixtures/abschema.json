@@ -1,0 +1,24 @@
+{
+  "dep": "stub-dep",
+  "from": "1.0.0",
+  "to": "2.0.0",
+  "sourceConfidence": "high",
+  "sources": [
+    { "url": "https://example.test/stub/CHANGELOG.md", "type": "changelog", "fetchedOk": true }
+  ],
+  "breakingChanges": [
+    {
+      "summary": "renamed config key foo to bar",
+      "detail": "The `foo` option has been renamed to `bar`; update your config.",
+      "sourceUrl": "https://example.test/stub/CHANGELOG.md"
+    }
+  ],
+  "deprecations": [],
+  "removals": [],
+  "migrationSteps": [
+    {
+      "instruction": "Rename `foo:` to `bar:` in all config files.",
+      "sourceUrl": "https://example.test/stub/CHANGELOG.md"
+    }
+  ]
+}

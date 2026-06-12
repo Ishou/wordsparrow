@@ -1,0 +1,5 @@
+{
+  "a": ["Rename the `foo` key to `bar` in stub-config.yaml (migrationSteps[0])."],
+  "b": ["Update the version reference in docs/stub.md from 1.0.0 to 2.0.0."],
+  "c": ["Adopt the new bar-batching API for throughput (optional)."]
+}
