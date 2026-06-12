@@ -89,7 +89,7 @@ Four PR waves; each goes through its full review cycle (§6a + maintainer) and *
 - [ ] Create `scripts/breaking-bump/test_allowlist.py`:
 
 ```python
-"""Unit tests for allowlist — the signoz-only rollout gate (#13)."""
+"""Unit tests for allowlist — the signoz-only rollout gate."""
 from __future__ import annotations
 
 import sys
@@ -142,7 +142,7 @@ Expected: `ModuleNotFoundError: No module named 'allowlist'` (collection error).
 - [ ] Create `scripts/breaking-bump/allowlist.py`:
 
 ```python
-"""The rollout allowlist — gates the WHOLE dispatcher (#13, signoz-only first)."""
+"""The rollout allowlist — gates the WHOLE dispatcher (signoz-only first)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -175,11 +175,7 @@ Expected: `6 passed`.
 - [ ] Create `scripts/breaking-bump/allowlist.yaml`:
 
 ```yaml
-# Rollout allowlist for the breaking-bump pipeline (ADR-0068, #13).
-# The dispatcher gates on this FIRST — a dep not listed here short-circuits
-# Step 0 with zero Claude cost. Expand one dep at a time as the pipeline
-# earns trust (the confidence ratchet); remove/invert to a denylist on
-# promotion to the whole tree.
+# Rollout allowlist (ADR-0068). Expand one dep at a time; remove on promotion to full tree.
 deps:
   - signoz
 ```
@@ -237,10 +233,7 @@ git commit -s -m "feat(infra): stamp renovate update-type labels for breaking-bu
 ```yaml
 name: breaking-bump-labels
 
-# One-shot bootstrap of the five breaking-bump labels (ADR-0068, #12).
-# Run manually once per repo: Actions -> breaking-bump-labels -> Run workflow.
-# Idempotent: `gh label create --force` updates an existing label in place,
-# so re-running is safe.
+# One-shot: run via workflow_dispatch once per repo. Idempotent (--force).
 
 on:
   workflow_dispatch:
@@ -311,10 +304,9 @@ Replace with (exclude Renovate branches — the pipeline replaces §6a on those,
 
 ```yaml
   claude-review:
-    # §6a is suppressed on renovate/* branches: the breaking-bump pipeline
-    # (ADR-0068) owns those PRs, and §6a's fixer must never push to a
-    # Renovate branch (the #814 clobber). The real §6a still runs on the
-    # claude/<dep>-vN PR and every other branch.
+    # §6a is suppressed on renovate/* branches: ADR-0068 owns renovate/* PRs;
+    # §6a must never push to a Renovate-owned branch. The real §6a still runs
+    # on the claude/<dep>-vN PR and every other branch.
     if: ${{ !github.event.pull_request.draft && !startsWith(github.head_ref, 'renovate/') }}
 ```
 
@@ -437,13 +429,7 @@ _UPDATE_LABEL = re.compile(r"^update:(?P<type>major|minor|patch)$")
 
 
 def parse_versions(title: str, body: str) -> tuple[str, str, str] | None:
-    """Return (dep, from, to) from the Renovate PR body table, or None if absent.
-
-    The body table is authoritative for the version pair; the dep name comes
-    from the same row (the title's dep rendering is inconsistent across
-    managers). Strips a leading `@scope/` nothing — the raw dep token is kept
-    so the allowlist match (case-insensitive) stays predictable.
-    """
+    """Return (dep, from_ver, to_ver) from the Renovate PR body table, or None if absent."""
     match = _TABLE_ROW.search(body or "")
     if not match:
         return None
@@ -491,12 +477,7 @@ git commit -s -m "feat(breaking-bump): parse dep/from/to + update-type from reno
 ```yaml
 name: breaking-bump-dispatch
 
-# Step 0 — the deterministic dispatcher (ADR-0068, OPEN QUESTIONS #1/#7/#11).
-# Runs on every renovate/* PR. Gates on the rollout allowlist FIRST (zero
-# Claude cost off-allowlist), reads the update-type label, routes via the
-# tested scripts/breaking-bump/ core, and either creates the spine issue
-# (pipeline-eligible) or hands off to the AI gate (>=1.x minor/patch).
-# Idempotent: skips if a spine issue already exists for this dep@from->to.
+# Step 0 dispatcher (ADR-0068). Allowlist gate runs first — zero Claude cost off-allowlist.
 
 on:
   pull_request:
@@ -881,7 +862,7 @@ Expected: `dispatch yaml OK`.
   - [ ] Edit `.github/breaking-bump/prompts/ai-gate.md`, append under the Output section:
 
 ```markdown
-## No-changelog rule (severity-scaled, #7)
+## No-changelog rule
 This gate only runs for `>=1.x` minor/patch bumps (majors and 0.x bumps go
 straight to the pipeline and never reach you). For *this* scope, if you could
 not fetch **any** changelog at all, write `green` — semver says minor/patch is
