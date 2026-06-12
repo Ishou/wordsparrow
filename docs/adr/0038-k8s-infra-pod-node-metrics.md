@@ -95,8 +95,8 @@ presets:
   otlphttpExporter: {enabled: false}  # suppress the new HTTP default
 ```
 
-Without `otlphttpExporter: false`, upgrading to 0.128.0 would activate both exporters
-simultaneously, producing duplicate cluster/node/pod metrics in SigNoz. The gRPC path
+Without `otlphttpExporter: false`, bumping to k8s-infra v0.16+ would activate both
+exporters simultaneously, producing duplicate cluster/node/pod metrics in SigNoz. The gRPC path
 is retained rather than adopting the new HTTP default because `otelCollectorEndpoint`
 already points to port 4317 and both the OTel collector Service and app pods are
 configured for that port; migration to port 4318 is tracked as a future enhancement.
