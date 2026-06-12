@@ -1,7 +1,4 @@
-"""Unit tests for sources — deterministic registry resolution + sub-chart discovery + fetch-and-enumerate.
-
-No network: fetch is injected as a fake returning canned (status, body) pairs.
-"""
+"""Unit tests for sources.py: registry resolution, sub-chart discovery, range enumeration. No network."""
 from __future__ import annotations
 
 import sys
@@ -26,7 +23,7 @@ REGISTRY = {
             "releaseNotes": "https://github.com/SigNoz/charts/releases/tag/k8s-infra-{version}",
         },
         {
-            # Floating-pin entry: releaseNotes has no {version} placeholder (OQ-2).
+            # Floating-pin entry: releaseNotes has no {version} placeholder — fetch verbatim once, no range-walk.
             "name": "nats",
             "releaseNotes": "https://github.com/nats-io/nats-server/releases",
             "extraDocs": "https://docs.nats.io/release-notes/whats_new",
@@ -34,7 +31,7 @@ REGISTRY = {
     ]
 }
 
-# A fixture Chart.yaml: the signoz umbrella bundles k8s-infra as a dependency (OQ-3).
+# A fixture Chart.yaml: the signoz umbrella bundles k8s-infra as a dependency.
 CHART_YAML = """\
 apiVersion: v2
 name: signoz
@@ -92,7 +89,7 @@ def test_resolve_entry_missing_dep_is_none():
     assert sources.resolve_entry(REGISTRY, "no-such-dep") is None
 
 
-# --- sub-chart discovery (OQ-3) ---------------------------------------------
+# --- sub-chart discovery ----------------------------------------------------
 
 def test_discover_subcharts_reads_chart_yaml_dependencies():
     subs = sources.discover_subcharts(CHART_YAML)
@@ -112,7 +109,7 @@ def test_discover_subcharts_empty_when_no_dependencies():
     assert sources.discover_subcharts("apiVersion: v2\nname: solo\n") == []
 
 
-# --- fetch-and-enumerate (OQ-2) — never arithmetic --------------------------
+# --- fetch-and-enumerate — never arithmetic ---------------------------------
 
 def test_enumerate_tags_parses_real_tags_in_range_with_gap():
     # 0.122 -> 0.128: the REAL sequence skips 0.123 and includes patches.
@@ -130,7 +127,7 @@ def test_enumerate_tags_excludes_out_of_range():
 # --- manifest assembly: every entry provenance=registry ---------------------
 
 def test_build_manifest_stamps_every_entry_registry():
-    listing = "https://github.com/SigNoz/charts/releases/tag/signoz"
+    listing = "https://github.com/SigNoz/charts/releases"
     responses = {
         listing: (200, SIGNOZ_LISTING),
         "https://github.com/SigNoz/charts/releases/tag/signoz-0.124.0": (200, "v124"),
@@ -149,7 +146,7 @@ def test_build_manifest_stamps_every_entry_registry():
 
 
 def test_build_manifest_enumerated_release_urls_match_real_tags():
-    listing = "https://github.com/SigNoz/charts/releases/tag/signoz"
+    listing = "https://github.com/SigNoz/charts/releases"
     responses = {
         listing: (200, SIGNOZ_LISTING),
         "https://github.com/SigNoz/charts/releases/tag/signoz-0.124.0": (200, "v124"),
@@ -171,11 +168,9 @@ def test_build_manifest_enumerated_release_urls_match_real_tags():
 
 
 def test_build_manifest_discovers_subchart_via_chart_yaml():
-    listing = "https://github.com/SigNoz/charts/releases/tag/signoz"
-    k8s_listing = "https://github.com/SigNoz/charts/releases/tag/k8s-infra"
+    listing = "https://github.com/SigNoz/charts/releases"
     responses = {
         listing: (200, SIGNOZ_LISTING),
-        k8s_listing: (200, K8S_INFRA_LISTING),
         "https://github.com/SigNoz/charts/releases/tag/signoz-0.124.0": (200, "v"),
         "https://github.com/SigNoz/charts/releases/tag/signoz-0.126.0": (200, "v"),
         "https://github.com/SigNoz/charts/releases/tag/signoz-0.126.1": (200, "v"),
@@ -196,7 +191,7 @@ def test_build_manifest_discovers_subchart_via_chart_yaml():
 
 
 def test_build_manifest_no_version_template_fetched_verbatim_once():
-    # nats: releaseNotes has no {version} -> fetch the listing once (OQ-2), do not range-walk.
+    # nats: releaseNotes has no {version} -> fetch verbatim once, do not range-walk.
     nats_releases = "https://github.com/nats-io/nats-server/releases"
     responses = {
         nats_releases: (200, "nats releases listing"),
@@ -210,10 +205,10 @@ def test_build_manifest_no_version_template_fetched_verbatim_once():
     assert fetch.calls.count(nats_releases) == 1
 
 
-# --- 404 vs 502 handled distinctly (OQ-6) -----------------------------------
+# --- 404 vs 502 handled distinctly -----------------------------------------
 
 def test_build_manifest_404_is_not_found_502_is_fetch_fail():
-    listing = "https://github.com/SigNoz/charts/releases/tag/signoz"
+    listing = "https://github.com/SigNoz/charts/releases"
     responses = {
         listing: (200, SIGNOZ_LISTING),
         "https://github.com/SigNoz/charts/releases/tag/signoz-0.124.0": (404, ""),

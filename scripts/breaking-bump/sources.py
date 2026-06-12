@@ -1,10 +1,4 @@
-"""Deterministic registry resolution + sub-chart discovery + fetch-and-enumerate (ADR-0068 W2).
-
-The breaking-bump pre-step resolves the registered authoritative docs for a dep
-(and its bundled sub-charts), fetches the REAL release tags that exist across the
-$FROM->$TO range, and emits a manifest stamping every entry provenance=registry.
-Network is INJECTED (a `fetch` callable) so the whole module is unit-testable.
-"""
+"""Deterministic registry resolution + sub-chart discovery + fetch-and-enumerate (ADR-0068 W2)."""
 from __future__ import annotations
 
 import json
@@ -44,11 +38,7 @@ def resolve_entry(registry: dict, dep: str) -> dict | None:
 
 
 def discover_subcharts(chart_yaml_text: str) -> list[dict]:
-    """Enumerate bundled sub-charts from a Chart.yaml `dependencies:` block (OQ-3).
-
-    Returns `{name, version}` per dependency; the bundled version is the chart's
-    declared pin, which is what the umbrella ships (not the umbrella's own range).
-    """
+    """Return [{name, version}] from Chart.yaml dependencies; version is the chart's declared pin."""
     chart = yaml.safe_load(chart_yaml_text or "") or {}
     deps = chart.get("dependencies") or []
     return [{"name": d["name"], "version": d.get("version")}
@@ -64,11 +54,7 @@ def _parse_version(tag: str) -> tuple[int, ...]:
 
 
 def enumerate_tags_in_range(listing_body: str, prefix: str, from_v: str, to_v: str) -> list[str]:
-    """Parse REAL tags from a fetched releases listing; keep those in (from_v, to_v].
-
-    Fetch-and-enumerate, never arithmetic: gaps (missing 0.123) and patches
-    (0.126.1) are honoured because we read the tags that actually exist.
-    """
+    """Return tags from the releases listing that fall in (from_v, to_v]; never arithmetic."""
     found: set[str] = set()
     for raw in _TAG_HREF.findall(listing_body):
         if raw.startswith(prefix):
@@ -79,12 +65,13 @@ def enumerate_tags_in_range(listing_body: str, prefix: str, from_v: str, to_v: s
 
 
 def _listing_url(template: str) -> str:
-    """Strip the `{version}` suffix to get the releases-listing URL for range enumeration."""
-    return template.split("{version}")[0].rstrip("-/")
+    """Strip the tag path from a GitHub per-tag URL to reach the /releases listing."""
+    base = template.split("{version}")[0].rstrip("-/")
+    return re.sub(r"/tag/[^/]+$", "", base).rstrip("/") or base
 
 
 def _status_label(status: int) -> str:
-    """Map an HTTP status to a provenance-friendly outcome (OQ-6: notFound != fetchFail)."""
+    """Map an HTTP status to a provenance-friendly outcome (notFound != fetchFail)."""
     if status == 200:
         return "ok"
     if status == 404:
@@ -152,12 +139,7 @@ def _resolve_subchart(registry: dict, name: str, version: str | None, fetch: Fet
 
 def build_manifest(registry: dict, dep: str, from_v: str, to_v: str, fetch: Fetcher,
                    chart_yaml_text: str | None = None) -> dict:
-    """Assemble the registry manifest: registry-stamped sources + fetched-body pointers.
-
-    For a helm umbrella chart, sub-charts named in Chart.yaml `dependencies:` that
-    also have a registry entry contribute their docs too (OQ-3). The agent never
-    sees this assembly — the workflow merges it into abschema.sources[].
-    """
+    """Assemble the registry manifest: registry-stamped sources + fetched-body pointers."""
     sources: list = []
     fetched: list = []
     seen: set = set()
