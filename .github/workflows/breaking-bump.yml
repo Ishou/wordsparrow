@@ -1,0 +1,903 @@
+name: breaking-bump
+
+# The breaking-bump migration pipeline (ADR-0068). Triggered by the spine issue
+# Step 0 creates. One run; agents A/B/C/D are needs:-chained jobs. The B<->C
+# plan-refinement loop is statically unrolled to <=6 rounds (no native loop in
+# GH Actions). Deterministic decisions live in tested scripts/breaking-bump/*.py.
+
+on:
+  issues:
+    # labeled-only: the dispatcher creates the issue WITH labels already applied,
+    # so both opened+labeled would fire and run A/B/C agents twice (duplicate tokens
+    # + comments). labeled is guaranteed to fire and carries the label name.
+    types: [labeled]
+
+concurrency:
+  # Identity slug is not known until the body is parsed; issue-number keying
+  # serialises this issue's opened+labeled events (the only re-fire source).
+  # cancel-in-progress:false: never kill an in-flight migration.
+  group: breaking-bump-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write        # Agent D forks + pushes the claude branch
+  pull-requests: write   # open the claude PR, close the Renovate PR
+  issues: write          # post to + label the spine issue
+  id-token: write
+
+jobs:
+  read-context:
+    # Gate the whole run to spine issues carrying the breaking-bump label.
+    if: contains(github.event.issue.labels.*.name, 'breaking-bump')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      valid: ${{ steps.ctx.outputs.valid }}
+      dep: ${{ steps.ctx.outputs.dep }}
+      from: ${{ steps.ctx.outputs.from }}
+      to: ${{ steps.ctx.outputs.to }}
+      pr: ${{ steps.ctx.outputs.pr }}
+      claude_branch: ${{ steps.ctx.outputs.claude_branch }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14.6'
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - name: Parse the context block from the issue body
+        id: ctx
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import issue, identity
+          ctx = issue.parse_context_block(os.environ.get("ISSUE_BODY", ""))
+          out = open(os.environ["GITHUB_OUTPUT"], "a")
+          if not ctx:
+              # Stray breaking-bump label on a hand-made issue -> no-op the run.
+              out.write("valid=false\n")
+              sys.exit(0)
+          dep, frm, to, pr = ctx["dep"], ctx["from"], ctx["to"], ctx["pr"]
+          out.write("valid=true\n")
+          out.write(f"dep={dep}\nfrom={frm}\nto={to}\npr={pr}\n")
+          out.write(f"claude_branch={identity.claude_branch(dep, to)}\n")
+          PY
+
+  agent-a:
+    needs: read-context
+    if: needs.read-context.outputs.valid == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      PR_NUMBER: ${{ needs.read-context.outputs.pr }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    outputs:
+      gate_a_failed: ${{ steps.tripwire.outputs.gate_a_failed }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14.6'
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - name: Run Agent A (doc gatherer)
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'renovate[bot],github-actions[bot]'
+          # A NEVER reads our code: WebFetch/WebSearch + read the registry + post to the issue. No repo write.
+          claude_args: '--allowed-tools "Read,Write,WebFetch,WebSearch,Bash(gh pr view:*),Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-a.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            PR_NUMBER=${{ env.PR_NUMBER }}, ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}.
+            Write the A->B schema to /tmp/abschema.json and post a human-readable
+            enrichment comment to the spine issue.
+      - name: Validate schema + zero-doc tripwire
+        id: tripwire
+        run: |
+          set -euo pipefail
+          test -f /tmp/abschema.json || : > /tmp/abschema.json
+          python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import abparse
+          doc, errors = abparse.load_schema("/tmp/abschema.json")
+          gate_a = bool(errors) or abparse.zero_docs(doc)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"gate_a_failed={'true' if gate_a else 'false'}\n")
+          if errors:
+              print("::warning::A->B schema invalid: " + "; ".join(errors))
+          PY
+      - name: Upload A's schema
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: abschema
+          path: /tmp/abschema.json
+          retention-days: 3
+      - name: Gate A — fail the run when A produced no usable contract
+        if: steps.tripwire.outputs.gate_a_failed == 'true'
+        run: |
+          echo "::error::Gate A: Agent A fetched no usable docs (or emitted an invalid schema)."
+          exit 1
+
+  b_round1:
+    needs: [read-context, agent-a]
+    if: needs.read-context.outputs.valid == 'true' && needs.agent-a.outputs.gate_a_failed == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    outputs:
+      gate_a_failed: ${{ steps.rate.outputs.gate_a_failed }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - name: Run Agent B (planner) — round 1
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # B reads our code + A's schema + posts to the issue. No repo write, no PR/branch ops.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-b.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
+            (no ./prev-findings.json this round). First write /tmp/abrating.txt
+            (rate A), then /tmp/plan.json (the categorized plan).
+      - name: Consumer-rated Gate A (B rates A)
+        id: rate
+        run: |
+          set -euo pipefail
+          RATING="$(head -n1 /tmp/abrating.txt 2>/dev/null | tr -d '[:space:]' || true)"
+          echo "B's rating of A: '${RATING:-<none>}'"
+          case "$RATING" in
+            high|medium) echo "gate_a_failed=false" >> "$GITHUB_OUTPUT" ;;
+            *)           echo "gate_a_failed=true"  >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Upload plan (round 1)
+        if: steps.rate.outputs.gate_a_failed == 'false'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: plan-round1, path: /tmp/plan.json, retention-days: 3 }
+      - name: Gate A — B judged A insufficient
+        if: steps.rate.outputs.gate_a_failed == 'true'
+        run: |
+          echo "::error::Gate A (consumer-judged): B rated A's context insufficient to plan."
+          exit 1
+
+  c_round1:
+    needs: [read-context, b_round1]
+    if: needs.read-context.outputs.valid == 'true' && needs.b_round1.outputs.gate_a_failed == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ROUND_NO: '1'
+    outputs:
+      approved: ${{ steps.decide.outputs.approved }}
+      terminated: ${{ steps.decide.outputs.terminated }}
+      findings_hash: ${{ steps.decide.outputs.findings_hash }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round1, path: . }
+      - name: Run Agent C (plan reviewer) — round 1
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # C reads the plan + A's schema + the repo (to verify grounding), posts the verdict. No write.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
+            ./plan.json. Write the verdict to /tmp/findings.json.
+      - name: Decide loop state (approved / terminated / hash)
+        id: decide
+        env:
+          PREV_HASH: ''   # round 1 has no prior findings
+        run: |
+          set -euo pipefail
+          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          python - <<'PY'
+          import hashlib, json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import abparse, loop
+          verdict = abparse.load_verdict("/tmp/findings.json")
+          keys = abparse.finding_keys(verdict)
+          curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
+          prev_hash = os.environ.get("PREV_HASH", "")
+          identical = bool(prev_hash) and prev_hash == curr_hash
+          approved = loop.c_approved(verdict)
+          done, _ = loop.loop_done(approved, identical, int(os.environ["ROUND_NO"]), 6)
+          terminated = done and not approved
+          out = open(os.environ["GITHUB_OUTPUT"], "a")
+          out.write(f"approved={'true' if approved else 'false'}\n")
+          out.write(f"terminated={'true' if terminated else 'false'}\n")
+          out.write(f"findings_hash={curr_hash}\n")
+          PY
+      - name: Upload findings (round 1)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: findings-round1, path: /tmp/findings.json, retention-days: 3 }
+
+  b_round2:
+    needs: [read-context, b_round1, c_round1]
+    if: needs.read-context.outputs.valid == 'true' && needs.c_round1.outputs.approved == 'false' && needs.c_round1.outputs.terminated == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: findings-round1, path: /tmp/prevfindings }
+      - name: Stage prior findings for Agent B
+        run: cp /tmp/prevfindings/findings.json ./prev-findings.json
+      - name: Run Agent B (planner) — round 2
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # B reads our code + A's schema + posts to the issue. No repo write, no PR/branch ops.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-b.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
+            and Agent C's prior findings are ./prev-findings.json — address each.
+            First write /tmp/abrating.txt (rate A), then /tmp/plan.json (the
+            categorized plan).
+      - name: Upload plan (round 2)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: plan-round2, path: /tmp/plan.json, retention-days: 3 }
+
+  c_round2:
+    needs: [read-context, b_round2, c_round1]
+    if: needs.read-context.outputs.valid == 'true' && needs.b_round2.result == 'success' && needs.c_round1.outputs.approved == 'false' && needs.c_round1.outputs.terminated == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ROUND_NO: '2'
+    outputs:
+      approved: ${{ steps.decide.outputs.approved }}
+      terminated: ${{ steps.decide.outputs.terminated }}
+      findings_hash: ${{ steps.decide.outputs.findings_hash }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round2, path: . }
+      - name: Run Agent C (plan reviewer) — round 2
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # C reads the plan + A's schema + the repo (to verify grounding), posts the verdict. No write.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
+            ./plan.json. Write the verdict to /tmp/findings.json.
+      - name: Decide loop state (approved / terminated / hash)
+        id: decide
+        env:
+          PREV_HASH: ${{ needs.c_round1.outputs.findings_hash }}
+        run: |
+          set -euo pipefail
+          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          python - <<'PY'
+          import hashlib, json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import abparse, loop
+          verdict = abparse.load_verdict("/tmp/findings.json")
+          keys = abparse.finding_keys(verdict)
+          curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
+          prev_hash = os.environ.get("PREV_HASH", "")
+          identical = bool(prev_hash) and prev_hash == curr_hash
+          approved = loop.c_approved(verdict)
+          done, _ = loop.loop_done(approved, identical, int(os.environ["ROUND_NO"]), 6)
+          terminated = done and not approved
+          out = open(os.environ["GITHUB_OUTPUT"], "a")
+          out.write(f"approved={'true' if approved else 'false'}\n")
+          out.write(f"terminated={'true' if terminated else 'false'}\n")
+          out.write(f"findings_hash={curr_hash}\n")
+          PY
+      - name: Upload findings (round 2)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: findings-round2, path: /tmp/findings.json, retention-days: 3 }
+
+  b_round3:
+    needs: [read-context, b_round1, c_round2]
+    if: needs.read-context.outputs.valid == 'true' && needs.c_round2.outputs.approved == 'false' && needs.c_round2.outputs.terminated == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: findings-round2, path: /tmp/prevfindings }
+      - name: Stage prior findings for Agent B
+        run: cp /tmp/prevfindings/findings.json ./prev-findings.json
+      - name: Run Agent B (planner) — round 3
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # B reads our code + A's schema + posts to the issue. No repo write, no PR/branch ops.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-b.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
+            and Agent C's prior findings are ./prev-findings.json — address each.
+            First write /tmp/abrating.txt (rate A), then /tmp/plan.json (the
+            categorized plan).
+      - name: Upload plan (round 3)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: plan-round3, path: /tmp/plan.json, retention-days: 3 }
+
+  c_round3:
+    needs: [read-context, b_round3, c_round2]
+    if: needs.read-context.outputs.valid == 'true' && needs.b_round3.result == 'success' && needs.c_round2.outputs.approved == 'false' && needs.c_round2.outputs.terminated == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ROUND_NO: '3'
+    outputs:
+      approved: ${{ steps.decide.outputs.approved }}
+      terminated: ${{ steps.decide.outputs.terminated }}
+      findings_hash: ${{ steps.decide.outputs.findings_hash }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round3, path: . }
+      - name: Run Agent C (plan reviewer) — round 3
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # C reads the plan + A's schema + the repo (to verify grounding), posts the verdict. No write.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
+            ./plan.json. Write the verdict to /tmp/findings.json.
+      - name: Decide loop state (approved / terminated / hash)
+        id: decide
+        env:
+          PREV_HASH: ${{ needs.c_round2.outputs.findings_hash }}
+        run: |
+          set -euo pipefail
+          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          python - <<'PY'
+          import hashlib, json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import abparse, loop
+          verdict = abparse.load_verdict("/tmp/findings.json")
+          keys = abparse.finding_keys(verdict)
+          curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
+          prev_hash = os.environ.get("PREV_HASH", "")
+          identical = bool(prev_hash) and prev_hash == curr_hash
+          approved = loop.c_approved(verdict)
+          done, _ = loop.loop_done(approved, identical, int(os.environ["ROUND_NO"]), 6)
+          terminated = done and not approved
+          out = open(os.environ["GITHUB_OUTPUT"], "a")
+          out.write(f"approved={'true' if approved else 'false'}\n")
+          out.write(f"terminated={'true' if terminated else 'false'}\n")
+          out.write(f"findings_hash={curr_hash}\n")
+          PY
+      - name: Upload findings (round 3)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: findings-round3, path: /tmp/findings.json, retention-days: 3 }
+
+  b_round4:
+    needs: [read-context, b_round1, c_round3]
+    if: needs.read-context.outputs.valid == 'true' && needs.c_round3.outputs.approved == 'false' && needs.c_round3.outputs.terminated == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: findings-round3, path: /tmp/prevfindings }
+      - name: Stage prior findings for Agent B
+        run: cp /tmp/prevfindings/findings.json ./prev-findings.json
+      - name: Run Agent B (planner) — round 4
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # B reads our code + A's schema + posts to the issue. No repo write, no PR/branch ops.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-b.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
+            and Agent C's prior findings are ./prev-findings.json — address each.
+            First write /tmp/abrating.txt (rate A), then /tmp/plan.json (the
+            categorized plan).
+      - name: Upload plan (round 4)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: plan-round4, path: /tmp/plan.json, retention-days: 3 }
+
+  c_round4:
+    needs: [read-context, b_round4, c_round3]
+    if: needs.read-context.outputs.valid == 'true' && needs.b_round4.result == 'success' && needs.c_round3.outputs.approved == 'false' && needs.c_round3.outputs.terminated == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ROUND_NO: '4'
+    outputs:
+      approved: ${{ steps.decide.outputs.approved }}
+      terminated: ${{ steps.decide.outputs.terminated }}
+      findings_hash: ${{ steps.decide.outputs.findings_hash }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round4, path: . }
+      - name: Run Agent C (plan reviewer) — round 4
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # C reads the plan + A's schema + the repo (to verify grounding), posts the verdict. No write.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
+            ./plan.json. Write the verdict to /tmp/findings.json.
+      - name: Decide loop state (approved / terminated / hash)
+        id: decide
+        env:
+          PREV_HASH: ${{ needs.c_round3.outputs.findings_hash }}
+        run: |
+          set -euo pipefail
+          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          python - <<'PY'
+          import hashlib, json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import abparse, loop
+          verdict = abparse.load_verdict("/tmp/findings.json")
+          keys = abparse.finding_keys(verdict)
+          curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
+          prev_hash = os.environ.get("PREV_HASH", "")
+          identical = bool(prev_hash) and prev_hash == curr_hash
+          approved = loop.c_approved(verdict)
+          done, _ = loop.loop_done(approved, identical, int(os.environ["ROUND_NO"]), 6)
+          terminated = done and not approved
+          out = open(os.environ["GITHUB_OUTPUT"], "a")
+          out.write(f"approved={'true' if approved else 'false'}\n")
+          out.write(f"terminated={'true' if terminated else 'false'}\n")
+          out.write(f"findings_hash={curr_hash}\n")
+          PY
+      - name: Upload findings (round 4)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: findings-round4, path: /tmp/findings.json, retention-days: 3 }
+
+  b_round5:
+    needs: [read-context, b_round1, c_round4]
+    if: needs.read-context.outputs.valid == 'true' && needs.c_round4.outputs.approved == 'false' && needs.c_round4.outputs.terminated == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: findings-round4, path: /tmp/prevfindings }
+      - name: Stage prior findings for Agent B
+        run: cp /tmp/prevfindings/findings.json ./prev-findings.json
+      - name: Run Agent B (planner) — round 5
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # B reads our code + A's schema + posts to the issue. No repo write, no PR/branch ops.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-b.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
+            and Agent C's prior findings are ./prev-findings.json — address each.
+            First write /tmp/abrating.txt (rate A), then /tmp/plan.json (the
+            categorized plan).
+      - name: Upload plan (round 5)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: plan-round5, path: /tmp/plan.json, retention-days: 3 }
+
+  c_round5:
+    needs: [read-context, b_round5, c_round4]
+    if: needs.read-context.outputs.valid == 'true' && needs.b_round5.result == 'success' && needs.c_round4.outputs.approved == 'false' && needs.c_round4.outputs.terminated == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ROUND_NO: '5'
+    outputs:
+      approved: ${{ steps.decide.outputs.approved }}
+      terminated: ${{ steps.decide.outputs.terminated }}
+      findings_hash: ${{ steps.decide.outputs.findings_hash }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round5, path: . }
+      - name: Run Agent C (plan reviewer) — round 5
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # C reads the plan + A's schema + the repo (to verify grounding), posts the verdict. No write.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
+            ./plan.json. Write the verdict to /tmp/findings.json.
+      - name: Decide loop state (approved / terminated / hash)
+        id: decide
+        env:
+          PREV_HASH: ${{ needs.c_round4.outputs.findings_hash }}
+        run: |
+          set -euo pipefail
+          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          python - <<'PY'
+          import hashlib, json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import abparse, loop
+          verdict = abparse.load_verdict("/tmp/findings.json")
+          keys = abparse.finding_keys(verdict)
+          curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
+          prev_hash = os.environ.get("PREV_HASH", "")
+          identical = bool(prev_hash) and prev_hash == curr_hash
+          approved = loop.c_approved(verdict)
+          done, _ = loop.loop_done(approved, identical, int(os.environ["ROUND_NO"]), 6)
+          terminated = done and not approved
+          out = open(os.environ["GITHUB_OUTPUT"], "a")
+          out.write(f"approved={'true' if approved else 'false'}\n")
+          out.write(f"terminated={'true' if terminated else 'false'}\n")
+          out.write(f"findings_hash={curr_hash}\n")
+          PY
+      - name: Upload findings (round 5)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: findings-round5, path: /tmp/findings.json, retention-days: 3 }
+
+  b_round6:
+    needs: [read-context, b_round1, c_round5]
+    if: needs.read-context.outputs.valid == 'true' && needs.c_round5.outputs.approved == 'false' && needs.c_round5.outputs.terminated == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: findings-round5, path: /tmp/prevfindings }
+      - name: Stage prior findings for Agent B
+        run: cp /tmp/prevfindings/findings.json ./prev-findings.json
+      - name: Run Agent B (planner) — round 6
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # B reads our code + A's schema + posts to the issue. No repo write, no PR/branch ops.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-b.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
+            and Agent C's prior findings are ./prev-findings.json — address each.
+            First write /tmp/abrating.txt (rate A), then /tmp/plan.json (the
+            categorized plan).
+      - name: Upload plan (round 6)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: plan-round6, path: /tmp/plan.json, retention-days: 3 }
+
+  c_round6:
+    needs: [read-context, b_round6, c_round5]
+    if: needs.read-context.outputs.valid == 'true' && needs.b_round6.result == 'success' && needs.c_round5.outputs.approved == 'false' && needs.c_round5.outputs.terminated == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ROUND_NO: '6'
+    outputs:
+      approved: ${{ steps.decide.outputs.approved }}
+      terminated: ${{ steps.decide.outputs.terminated }}
+      findings_hash: ${{ steps.decide.outputs.findings_hash }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: abschema, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round6, path: . }
+      - name: Run Agent C (plan reviewer) — round 6
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: 'github-actions[bot]'
+          # C reads the plan + A's schema + the repo (to verify grounding), posts the verdict. No write.
+          claude_args: '--allowed-tools "Read,Glob,Grep,Write,Bash(gh issue comment:*)"'
+          prompt: |
+            Read .github/breaking-bump/prompts/agent-c.md and follow it exactly.
+            Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
+            ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. Inputs: ./abschema.json,
+            ./plan.json. Write the verdict to /tmp/findings.json.
+      - name: Decide loop state (approved / terminated / hash)
+        id: decide
+        env:
+          PREV_HASH: ${{ needs.c_round5.outputs.findings_hash }}
+        run: |
+          set -euo pipefail
+          test -f /tmp/findings.json || echo '{"approved":false,"findings":[]}' > /tmp/findings.json
+          python - <<'PY'
+          import hashlib, json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import abparse, loop
+          verdict = abparse.load_verdict("/tmp/findings.json")
+          keys = abparse.finding_keys(verdict)
+          curr_hash = hashlib.sha256("\n".join(keys).encode()).hexdigest()
+          prev_hash = os.environ.get("PREV_HASH", "")
+          identical = bool(prev_hash) and prev_hash == curr_hash
+          approved = loop.c_approved(verdict)
+          done, _ = loop.loop_done(approved, identical, int(os.environ["ROUND_NO"]), 6)
+          terminated = done and not approved
+          out = open(os.environ["GITHUB_OUTPUT"], "a")
+          out.write(f"approved={'true' if approved else 'false'}\n")
+          out.write(f"terminated={'true' if terminated else 'false'}\n")
+          out.write(f"findings_hash={curr_hash}\n")
+          PY
+      - name: Upload findings (round 6)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: findings-round6, path: /tmp/findings.json, retention-days: 3 }
+
+  plan-approved:
+    needs: [read-context, c_round1, c_round2, c_round3, c_round4, c_round5, c_round6]
+    # Run whenever the loop produced any C result (success OR skipped rounds); never on Gate-A failure.
+    if: always() && needs.read-context.outputs.valid == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DEP: ${{ needs.read-context.outputs.dep }}
+      FROM: ${{ needs.read-context.outputs.from }}
+      TO: ${{ needs.read-context.outputs.to }}
+      PR_NUMBER: ${{ needs.read-context.outputs.pr }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      # The per-round approval flags, threaded in so a single step picks the winner.
+      APPROVED_1: ${{ needs.c_round1.outputs.approved }}
+      APPROVED_2: ${{ needs.c_round2.outputs.approved }}
+      APPROVED_3: ${{ needs.c_round3.outputs.approved }}
+      APPROVED_4: ${{ needs.c_round4.outputs.approved }}
+      APPROVED_5: ${{ needs.c_round5.outputs.approved }}
+      APPROVED_6: ${{ needs.c_round6.outputs.approved }}
+    outputs:
+      winning_round: ${{ steps.pick.outputs.winning_round }}
+      dispatch_d: ${{ steps.classify.outputs.dispatch_d }}
+      cleared: ${{ steps.classify.outputs.cleared }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: { python-version: '3.14.6' }
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+      - name: Pick the winning (approved) round
+        id: pick
+        run: |
+          set -euo pipefail
+          WIN=0
+          for n in 1 2 3 4 5 6; do
+            eval "v=\${APPROVED_$n:-}"
+            if [ "$v" = "true" ]; then WIN=$n; break; fi
+          done
+          echo "winning_round=$WIN" >> "$GITHUB_OUTPUT"
+          if [ "$WIN" = "0" ]; then
+            # No round approved -> loop failed to converge. Fail so escalate runs.
+            echo "::error::B<->C loop did not converge in 6 rounds."
+            echo "dispatch_d=false" >> "$GITHUB_OUTPUT"
+            echo "cleared=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+      - name: Download the approved plan
+        if: steps.pick.outputs.winning_round != '0'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: plan-round${{ steps.pick.outputs.winning_round }}
+          path: .
+      - name: Classify approved plan (cleared early-exit vs dispatch D)
+        if: steps.pick.outputs.winning_round != '0'
+        id: classify
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import abparse
+          plan = json.load(open("plan.json"))
+          cleared = abparse.early_exit(plan)
+          out = open(os.environ["GITHUB_OUTPUT"], "a")
+          out.write(f"cleared={'true' if cleared else 'false'}\n")
+          out.write(f"dispatch_d={'false' if cleared else 'true'}\n")
+          PY
+      - name: Re-publish the approved plan as plan-final (for Agent D)
+        if: steps.classify.outputs.dispatch_d == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: { name: plan-final, path: plan.json, retention-days: 3 }
+      - name: Cleared path — stamp ai-cleared + comment Renovate PR + close issue
+        if: steps.classify.outputs.cleared == 'true'
+        run: |
+          set -euo pipefail
+          gh issue edit "$ISSUE_NUMBER" --add-label ai-cleared
+          gh pr comment "$PR_NUMBER" --body \
+            "breaking-bump reviewed \`$DEP\` \`$FROM\` -> \`$TO\` — no migration needed, safe to merge."
+          gh issue close "$ISSUE_NUMBER" --comment \
+            "Cleared by the breaking-bump pipeline: no mandatory migration or doc-coherence changes. Renovate PR #$PR_NUMBER is safe to merge."
+
+  agent-d:
+    needs: [read-context, plan-approved]
+    if: needs.plan-approved.outputs.dispatch_d == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Agent D — PLACEHOLDER (real implementer lands in Wave 4)
+        run: echo "::notice::plan approved; Agent D (fork/close/implement) lands in Wave 4."
+
+  escalate:
+    # Top-level failure-catch (spec #9): any failed job -> label the spine issue
+    # needs-human and comment. Catches Gate A, no-convergence, AND infra crashes.
+    needs: [read-context, agent-a, b_round1, c_round1, b_round2, c_round2,
+            b_round3, c_round3, b_round4, c_round4, b_round5, c_round5,
+            b_round6, c_round6, plan-approved, agent-d]
+    if: always() && needs.read-context.outputs.valid == 'true' && contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Escalate to the spine issue
+        run: |
+          set -euo pipefail
+          gh issue edit "$ISSUE_NUMBER" --add-label needs-human
+          gh issue comment "$ISSUE_NUMBER" --body \
+            "The breaking-bump pipeline failed and needs a human. Run: $RUN_URL
+
+          A pre-D failure leaves the Renovate PR open (nothing lost). A post-D
+          failure leaves the claude PR open for manual takeover. See the run log
+          for the failed stage."
