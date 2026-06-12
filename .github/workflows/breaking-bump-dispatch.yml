@@ -1,0 +1,161 @@
+name: breaking-bump-dispatch
+
+# Step 0 dispatcher (ADR-0068). Allowlist gate runs first — zero Claude cost off-allowlist.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  # Serialises opened+synchronize events to close the find-or-create TOCTOU window. cancel-in-progress:false queues rather than kills.
+  group: step0-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  dispatch:
+    # Renovate branches only.
+    if: ${{ startsWith(github.head_ref, 'renovate/') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    outputs:
+      route: ${{ steps.route.outputs.route }}
+      dep: ${{ steps.parse.outputs.dep }}
+      from: ${{ steps.parse.outputs.from }}
+      to: ${{ steps.parse.outputs.to }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14.6'
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+
+      - name: Parse bump metadata
+        id: parse
+        run: |
+          set -euo pipefail
+          gh pr view "$PR_NUMBER" --json title,body,labels \
+            --jq '{title, body, labels: [.labels[].name]}' > /tmp/pr.json
+          python - <<'PY'
+          import json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import prmeta
+          pr = json.load(open("/tmp/pr.json"))
+          parsed = prmeta.parse_versions(pr["title"], pr["body"] or "")
+          out = open(os.environ["GITHUB_OUTPUT"], "a")
+          if parsed is None:
+              # No version table (lockfile/grouped PR) — Step 0 no-ops.
+              out.write("parsed=false\n")
+              sys.exit(0)
+          dep, frm, to = parsed
+          ut_label = prmeta.update_type_label(pr["labels"])
+          out.write("parsed=true\n")
+          out.write(f"dep={dep}\nfrom={frm}\nto={to}\n")
+          out.write(f"label_update_type={ut_label or ''}\n")
+          PY
+
+      - name: Allowlist gate (FIRST — zero cost off-allowlist)
+        id: gate
+        if: steps.parse.outputs.parsed == 'true'
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import allowlist
+          deps = allowlist.load_allowlist("scripts/breaking-bump/allowlist.yaml")
+          ok = allowlist.is_allowlisted(os.environ["DEP"], deps)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"allowlisted={'true' if ok else 'false'}\n")
+          PY
+        env:
+          DEP: ${{ steps.parse.outputs.dep }}
+
+      - name: Idempotency — skip if a spine issue already exists
+        id: dedup
+        if: steps.gate.outputs.allowlisted == 'true'
+        run: |
+          set -euo pipefail
+          gh issue list --label breaking-bump --state open --limit 200 \
+            --json number,title,body > /tmp/issues.json
+          python - <<'PY'
+          import json, os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import issue
+          issues = json.load(open("/tmp/issues.json"))
+          existing = issue.find_existing(
+              issues, os.environ["DEP"], os.environ["FROM"], os.environ["TO"])
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"exists={'true' if existing else 'false'}\n")
+          PY
+        env:
+          DEP: ${{ steps.parse.outputs.dep }}
+          FROM: ${{ steps.parse.outputs.from }}
+          TO: ${{ steps.parse.outputs.to }}
+
+      - name: Route
+        id: route
+        if: steps.gate.outputs.allowlisted == 'true' && steps.dedup.outputs.exists == 'false'
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import routing
+          frm, to = os.environ["FROM"], os.environ["TO"]
+          # Prefer the authoritative Renovate label; fall back to deriving it.
+          ut = os.environ.get("LABEL_UPDATE_TYPE") or routing.update_type(frm, to)
+          current_major, _, _ = routing.parse_semver(frm)
+          route = routing.dispatch_route(ut, current_major, on_allowlist=True)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"route={route}\n")
+          print(f"::notice::breaking-bump route for {os.environ['DEP']} "
+                f"{frm}->{to} ({ut}): {route}")
+          PY
+        env:
+          DEP: ${{ steps.parse.outputs.dep }}
+          FROM: ${{ steps.parse.outputs.from }}
+          TO: ${{ steps.parse.outputs.to }}
+          LABEL_UPDATE_TYPE: ${{ steps.parse.outputs.label_update_type }}
+
+      - name: Create spine issue (pipeline-eligible)
+        if: steps.route.outputs.route == 'pipeline'
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "scripts/breaking-bump")
+          import issue
+          dep, frm, to = os.environ["DEP"], os.environ["FROM"], os.environ["TO"]
+          pr = int(os.environ["PR_NUMBER"])
+          title = issue.issue_title(dep, frm, to)
+          body = (
+              f"Spine issue for the breaking-bump pipeline (ADR-0068).\n\n"
+              f"Tracking **{dep}** `{frm}` -> `{to}` (Renovate PR #{pr}).\n\n"
+              + issue.render_context_block(dep, frm, to, pr)
+          )
+          open("/tmp/issue-title.txt", "w").write(title)
+          open("/tmp/issue-body.md", "w").write(body)
+          PY
+          gh issue create \
+            --title "$(cat /tmp/issue-title.txt)" \
+            --body-file /tmp/issue-body.md \
+            --label ai-driven --label breaking-bump
+        env:
+          DEP: ${{ steps.parse.outputs.dep }}
+          FROM: ${{ steps.parse.outputs.from }}
+          TO: ${{ steps.parse.outputs.to }}
+
+      - name: AI gate (>=1.x minor/patch) — PLACEHOLDER (replaced in Wave 4)
+        if: steps.route.outputs.route == 'ai-gate'
+        run: |
+          echo "::notice::route=ai-gate; the AI-gate job lands in Wave 4."
