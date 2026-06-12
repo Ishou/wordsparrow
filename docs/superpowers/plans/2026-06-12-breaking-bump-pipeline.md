@@ -628,7 +628,7 @@ the claude PR FIRST, confirm it is real, ONLY THEN close the Renovate PR.**
 - Context: `$DEP` `$FROM` -> `$TO`, Renovate PR #$PR_NUMBER, spine issue
   #$ISSUE_NUMBER, target branch `$CLAUDE_BRANCH` (`chore/claude-<dep>-v<to>`).
 
-## Branch already ready — do NOT re-fork
+## Step 1 — branch is already checked out; do NOT re-fork
 The workflow's `rev` step has already performed the idempotency check, fetched
 Renovate's branch, and run `git checkout -b "$CLAUDE_BRANCH" "$REN_OID"`. You are
 ALREADY on `$CLAUDE_BRANCH` at Renovate's tip. Do NOT run `git checkout -b` or
