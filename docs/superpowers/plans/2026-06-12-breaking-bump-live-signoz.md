@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn the now-fully-built breaking-bump pipeline (Plans 1–3, all merged on `main`) LIVE on real `signoz` Renovate bump PRs — retiring its predecessor `helm-bump-enrich` (ADR-0067) into Agent A so the two don't double-fire, bounding the lab blast radius, and surfacing per-bump token spend — gated on an explicit maintainer go/no-go before the first live run.
+**Goal:** Turn the now-fully-built breaking-bump pipeline (Plans 1–3, all merged on `main`) LIVE on real `signoz` Renovate bump PRs — retiring its predecessor `helm-bump-enrich` (ADR-0067) into Agent A so the two don't double-fire, bounding the lab blast radius, and surfacing per-bump cost (USD) — gated on an explicit maintainer go/no-go before the first live run.
 
 **Architecture:** The pipeline is already wired end-to-end and exercisable with stub fixtures; nothing is "dark-launched" behind a feature flag. The blockers to a real run are operational, not code: `helm-bump-enrich.yml` still fires on `infra/observability/Chart.yaml` Renovate PRs (the same signoz bump the dispatcher routes), Agent A does not yet carry the helm values-diff that enrich provided, the lab inflow is unbounded (`prConcurrentLimit: 5`), spend is invisible, and the `BREAKING_BUMP_STUB` repo variable + `CLAUDE_BOT_PAT` secret must be in the right state. Plan 4 lands these as five ordered, independently-mergeable PR waves, each leaving the system working, with a hard maintainer checkpoint immediately before the first live signoz run.
 
@@ -29,9 +29,9 @@ There is **no dark-launch flag** to flip. The dispatcher is `on: pull_request`, 
 2. **`BREAKING_BUMP_STUB` repo variable.** When `vars.BREAKING_BUMP_STUB == 'true'`, every agent step is bypassed by a fixture-copy stub (`breaking-bump.yml` lines 104/118/170/184/235…). A live run requires it **unset / `false`**. This is a repo-state toggle (Plan 3 OPEN QUESTION 3), not code — documented + verified in Wave 5's go/no-go, not edited here.
 3. **`CLAUDE_BOT_PAT` secret (workflows scope).** Agent D's checkout uses `secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN`; the fallback `GITHUB_TOKEN` **cannot** push `.github/workflows/**` edits. signoz's migration is helm/docs only (no workflow edit), so the fallback technically suffices for *this* dep — but the PAT is a hard precondition for the pipeline's general correctness and the next deps. Documented as a Wave-5 precondition.
 4. **Unbounded lab inflow.** `prConcurrentLimit: 5` lets up to 5 Renovate PRs (hence up to 5 pipelines) exist at once. Lower it for the bounded lab (Wave 4).
-5. **No spend visibility.** The pipeline spawns up to 14 `claude-code-action` jobs per bump (A + 6×{B,C} + D); nothing surfaces what that costs (Wave 1).
+5. **No cost visibility.** The pipeline spawns up to 14 `claude-code-action` jobs per bump (A + 6×{B,C} + D); nothing surfaces the per-bump cost (USD) (Wave 1).
 
-Concern → wave map: **#5 spend → Wave 1** · **helm-enrich→Agent A absorption → Wave 2** · **#4 retire helm-enrich + ADR-0067/INDEX coherence → Wave 3** · **#2 lower prConcurrentLimit → Wave 4** · **#1 flip live (go/no-go + first run + rollback) → Wave 5**.
+Concern → wave map: **#5 cost → Wave 1** · **helm-enrich→Agent A absorption → Wave 2** · **#4 retire helm-enrich + ADR-0067/INDEX coherence → Wave 3** · **#2 lower prConcurrentLimit → Wave 4** · **#1 flip live (go/no-go + first run + rollback) → Wave 5**.
 
 ---
 
@@ -64,7 +64,7 @@ Five PR waves; each goes through its full review cycle (§6a + maintainer) and *
 
 | Wave / PR | Title (one line) | Files | Why this order | ~Diff |
 |---|---|---|---|---|
-| **Wave 1** | per-bump spend observability on the spine issue | `scripts/breaking-bump/spend.py` (+test), `.github/workflows/breaking-bump.yml` | Pure tested helper + one comment-step per agent job. No live behaviour change; lands first so the *very first* live run already reports cost. Independent of the others. | ~180 |
+| **Wave 1** | per-bump cost (USD) observability on the spine issue | `scripts/breaking-bump/spend.py` (+test), `.github/workflows/breaking-bump.yml` (incl. 1-line concurrency-group fix) | Pure tested helper + one comment-step per agent job. No live behaviour change; lands first so the *very first* live run already reports cost. Independent of the others. | ~185 |
 | **Wave 2** | Agent A absorbs the helm values-diff (enrich carryover) | `scripts/breaking-bump/valuesdiff.py` (+test, ported), `.github/breaking-bump/prompts/agent-a.md`, `.github/workflows/breaking-bump.yml` | The one capability helm-enrich had that Agent A lacked. Must land **before** retiring enrich (Wave 3) so nothing is lost — the spec's "values-diff survives as a helm-only extra". | ~260 |
 | **Wave 3** | retire helm-bump-enrich into ADR-0068 (governance + de-wire) | delete `.github/workflows/helm-bump-enrich*.yml`, `scripts/helm-enrich/**`; `docs/adr/0067-*.md`, `docs/adr/INDEX.md`, `renovate.json` (helmv3 comment) | Removes the double-fire (blocker #1). ADR/governance + registry-coherence land here. After Wave 2 the carryover is safe; after this, a signoz bump fires the pipeline ONLY. | ~150 |
 | **Wave 4** | bound the lab — lower `prConcurrentLimit` | `renovate.json` | One-line reversible inflow cap for the controlled rollout (spec #13). Trivial, isolated, lands right before go-live. | ~10 |
@@ -78,7 +78,7 @@ Five PR waves; each goes through its full review cycle (§6a + maintainer) and *
 
 | File | Wave | New/Mod | Responsibility |
 |---|---|---|---|
-| `scripts/breaking-bump/spend.py` | 1 | New | `format_spend(stage, usage)` — render a one-line per-stage spend comment from a `claude-code-action` usage blob; tolerant of missing/None fields. |
+| `scripts/breaking-bump/spend.py` | 1 | New | `format_spend(stage, execution_file)` — render a one-line per-stage cost (USD) comment by reading the `claude-code-action` `execution_file` (the `type=="result"` entry's `total_cost_usd`); tolerant of missing/None/unparseable paths ("cost unavailable"). |
 | `scripts/breaking-bump/test_spend.py` | 1 | New | Unit tests for `spend.py`. |
 | `.github/workflows/breaking-bump.yml` | 1 | Mod | Add a "report spend" step to each agent job (A, every `b_round<n>`, every `c_round<n>`, D) that posts the formatted line to the spine issue. |
 | `scripts/breaking-bump/valuesdiff.py` | 2 | New (ported) | Helm chart `values*.yaml` key-path diff + override-flagging, ported from `scripts/helm-enrich/valuesdiff.py` so it survives enrich's removal. |
@@ -101,9 +101,9 @@ Five PR waves; each goes through its full review cycle (§6a + maintainer) and *
 
 ## Locked implementation decisions (where the spec left a choice)
 
-1. **Spend is reported per stage as a spine-issue comment, never a hard budget (spec #13: "spend observability, not a hard budget").** Each agent job appends one line — `breaking-bump spend · <stage>: <tokens> tokens (in <x> / out <y>)` — to the spine issue after the agent runs. `claude-code-action` surfaces usage in its step outputs/`$GITHUB_STEP_SUMMARY`; we read what it gives and degrade gracefully when a field is absent (the action's output shape is not contractually stable, so `spend.py` must tolerate `None`/missing). **No ClickHouse/SigNoz wiring in v1** — the spine issue is the durable per-bump ledger and matches the spec's "log per-stage + surface per-bump cost as a comment on the spine issue". A SigNoz dashboard aggregating spend across bumps is explicitly deferred (it needs an exporter the action doesn't provide; YAGNI until the numbers surprise us, per spec #13's deferred hard-budget note). Flagged below.
+1. **Cost is reported per stage as a spine-issue comment, never a hard budget (spec #13: "spend observability, not a hard budget").** Each agent job appends one line — `breaking-bump spend · <stage>: $<cost>` — to the spine issue after the agent runs. `claude-code-action@v1` writes an `execution_file` (a path to a JSON array execution log); its single `type=="result"` entry carries `total_cost_usd` (a USD float) — verified against the action's `action.yml` + `test/fixtures/sample-turns.json` (`total_cost_usd: 0.0347`). `spend.py` reads that and renders `$0.0347`; when the path is None/missing/unparseable or no result entry is found (e.g. a STUB run produces no `execution_file`), it renders "cost unavailable" rather than crashing the step. The action exposes **no** direct token/cost step output, so the `execution_file` is the source of truth (per-turn token usage, never needed here, lives on `type=="assistant"` entries under `message.usage`). **No ClickHouse/SigNoz wiring in v1** — the spine issue is the durable per-bump ledger and matches the spec's "log per-stage + surface per-bump cost as a comment on the spine issue". A SigNoz dashboard aggregating cost across bumps is explicitly deferred (it needs an exporter the action doesn't provide; YAGNI until the numbers surprise us, per spec #13's deferred hard-budget note). Flagged below.
 
-2. **The values-diff is ported into `scripts/breaking-bump/`, not imported cross-directory.** Wave 3 deletes `scripts/helm-enrich/`, so Agent A cannot depend on it. The spec says the values-diff "stays as a helm-only extra A attaches" — so the pure diff functions move into the breaking-bump core. The port is verbatim logic (a copy of `diff_values` + `mark_overrides` + their dataclass), re-tested, so the carryover is literal, not a rewrite.
+2. **The values-diff is ported into `scripts/breaking-bump/`, not imported cross-directory.** Wave 3 deletes `scripts/helm-enrich/`, so Agent A cannot depend on it. The spec says the values-diff "stays as a helm-only extra A attaches" — so the pure diff functions move into the breaking-bump core. The port is a **literal `cp`** of the source (`KeyChange`/`flatten`/`diff_values`/`mark_overrides`, lists-as-leaves), re-running the source's own copied tests; only an appended `main()` CLI is new, so the carryover is literal, not a rewrite.
 
 3. **The values-diff runs as a deterministic workflow step, fed to Agent A as data — Agent A does not compute it.** A "never reads our code" (it is doc-bound); reading our `values*.yaml` is a repo read, which would muddy A's mandate. So the workflow computes `/tmp/valuesdiff.json` (helm bumps only) and the prompt tells A to *attach* it verbatim to the enrichment. This keeps A's hard-context isolation while preserving the carryover.
 
@@ -115,18 +115,46 @@ Five PR waves; each goes through its full review cycle (§6a + maintainer) and *
 
 ---
 
-# Wave 1 — per-bump spend observability
+# Wave 1 — per-bump cost (USD) observability
 
-> **Goal:** every agent job posts its token spend to the spine issue, so the first live signoz run already shows what it cost. Pure tested helper + a thin comment step per job. No behavioural change to routing or agents.
+> **Goal:** every agent job posts its cost (USD) to the spine issue, so the first live signoz run already shows what it cost. Pure tested helper + a thin comment step per job. No behavioural change to routing or agents. (Also folds in a 1-line concurrency-group fix — see Task 1.0.)
+
+## Task 1.0 — fix the pre-existing concurrency-group quirk (1 line)
+
+> The pipeline's `concurrency.group` is `breaking-bump-issue-${{ github.event.issue.number }}`, which is **empty under `workflow_dispatch`** (the dispatch smoke path, runbook §3 path B). For real `on: issues` runs `github.event.issue.number` is set, so adding a `workflow_dispatch` fallback leaves the group **UNCHANGED** for live runs — no behaviour change to the path of record, preserving Wave 1's "no behaviour change to real runs" property. It only gives dispatch smoke-tests a proper per-issue slot.
+
+- [ ] In `.github/workflows/breaking-bump.yml`, change the top-level `concurrency.group`:
+
+Replace:
+```yaml
+concurrency:
+  group: breaking-bump-issue-${{ github.event.issue.number }}
+```
+with:
+```yaml
+concurrency:
+  group: breaking-bump-issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
+```
+
+(`workflow_dispatch` is already wired with an `issue_number` input — see runbook §3 path B `gh workflow run breaking-bump.yml -f issue_number=<N>`.)
+
+- [ ] Confirm the fallback is present:
+
+```bash
+grep -n 'github.event.inputs.issue_number' .github/workflows/breaking-bump.yml
+```
+
+Expected: one match on the `concurrency.group` line.
 
 ## Task 1.1 — write `spend.py` tests (RED)
 
 - [ ] Create `scripts/breaking-bump/test_spend.py`:
 
 ```python
-"""Unit tests for spend — rendering per-stage token-spend lines for the spine issue."""
+"""Unit tests for spend — rendering per-stage cost (USD) lines for the spine issue."""
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -134,37 +162,45 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import spend  # noqa: E402
 
-
-def test_format_spend_full_usage():
-    line = spend.format_spend("agent-a", {"input_tokens": 1200, "output_tokens": 340})
-    assert line == "breaking-bump spend · agent-a: 1540 tokens (in 1200 / out 340)"
-
-
-def test_format_spend_handles_missing_fields():
-    # The action's usage shape is not stable; missing fields must not crash.
-    line = spend.format_spend("c_round2", {"input_tokens": 50})
-    assert line == "breaking-bump spend · c_round2: 50 tokens (in 50 / out 0)"
+# Mirror of claude-code-action@v1's execution_file: a JSON array whose
+# type=="result" entry carries total_cost_usd (verified against the action's
+# test/fixtures/sample-turns.json — total_cost_usd: 0.0347, no usage field).
+RESULT_LOG = [
+    {"type": "assistant", "message": {"usage": {"input_tokens": 1200, "output_tokens": 340}}},
+    {"type": "result", "total_cost_usd": 0.0347, "duration_ms": 4210},
+]
 
 
-def test_format_spend_handles_none_usage():
+def test_format_spend_reports_cost(tmp_path):
+    f = tmp_path / "execution.json"
+    f.write_text(json.dumps(RESULT_LOG), encoding="utf-8")
+    line = spend.format_spend("agent-a", str(f))
+    assert line == "breaking-bump spend · agent-a: $0.0347"
+
+
+def test_format_spend_none_path_is_unavailable():
+    # STUB runs produce no execution_file → must degrade, not crash.
     line = spend.format_spend("agent-d", None)
-    assert line == "breaking-bump spend · agent-d: usage unavailable"
+    assert line == "breaking-bump spend · agent-d: cost unavailable"
 
 
-def test_format_spend_handles_empty_usage():
-    line = spend.format_spend("agent-d", {})
-    assert line == "breaking-bump spend · agent-d: usage unavailable"
+def test_format_spend_missing_file_is_unavailable(tmp_path):
+    line = spend.format_spend("c_round2", str(tmp_path / "nope.json"))
+    assert line == "breaking-bump spend · c_round2: cost unavailable"
 
 
-def test_format_spend_coerces_string_numbers():
-    # GITHUB_OUTPUT / action outputs arrive as strings.
-    line = spend.format_spend("b_round1", {"input_tokens": "800", "output_tokens": "200"})
-    assert line == "breaking-bump spend · b_round1: 1000 tokens (in 800 / out 200)"
+def test_format_spend_garbage_json_is_unavailable(tmp_path):
+    f = tmp_path / "garbage.json"
+    f.write_text("{ this is not json", encoding="utf-8")
+    line = spend.format_spend("b_round1", str(f))
+    assert line == "breaking-bump spend · b_round1: cost unavailable"
 
 
-def test_format_spend_non_numeric_is_unavailable():
-    line = spend.format_spend("agent-a", {"input_tokens": "n/a", "output_tokens": ""})
-    assert line == "breaking-bump spend · agent-a: usage unavailable"
+def test_format_spend_no_result_entry_is_unavailable(tmp_path):
+    f = tmp_path / "no_result.json"
+    f.write_text(json.dumps([{"type": "assistant", "message": {}}]), encoding="utf-8")
+    line = spend.format_spend("agent-a", str(f))
+    assert line == "breaking-bump spend · agent-a: cost unavailable"
 ```
 
 - [ ] Run, see it fail (`ModuleNotFoundError: No module named 'spend'`):
@@ -180,50 +216,58 @@ Expected: collection error / `ModuleNotFoundError`.
 - [ ] Create `scripts/breaking-bump/spend.py`:
 
 ```python
-"""Render a one-line per-stage token-spend summary for the spine issue.
+"""Render a one-line per-stage cost (USD) summary for the spine issue.
 
 Spec #13: spend observability, not a hard budget — log per-stage, surface
-per-bump cost as a comment on the spine issue. The claude-code-action usage
-shape is not contractually stable, so every field access degrades gracefully.
+per-bump cost as a comment on the spine issue. claude-code-action@v1 exposes no
+direct token/cost step output; instead it writes an execution_file (a JSON array
+execution log) whose single type=="result" entry carries total_cost_usd (a USD
+float). A STUB run produces no execution_file, so a missing/unparseable path must
+degrade to 'cost unavailable' rather than crash the workflow step.
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
 
-def _as_int(value) -> int | None:
-    """Coerce an action-output value to int; None when absent or non-numeric."""
-    if value is None or value == "":
+
+def _result_cost_usd(execution_file: str | None) -> float | None:
+    """Read total_cost_usd from the execution log's type=='result' entry; None if absent."""
+    if not execution_file:
         return None
     try:
-        return int(value)
-    except (TypeError, ValueError):
+        entries = json.loads(Path(execution_file).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
         return None
+    if not isinstance(entries, list):
+        return None
+    for entry in entries:
+        if isinstance(entry, dict) and entry.get("type") == "result":
+            cost = entry.get("total_cost_usd")
+            if isinstance(cost, (int, float)):
+                return float(cost)
+    return None
 
 
-def format_spend(stage: str, usage: dict | None) -> str:
-    """One-line spend summary for `stage`; 'usage unavailable' when unparseable."""
-    if not usage:
-        return f"breaking-bump spend · {stage}: usage unavailable"
-    tin = _as_int(usage.get("input_tokens"))
-    tout = _as_int(usage.get("output_tokens"))
-    if tin is None and tout is None:
-        return f"breaking-bump spend · {stage}: usage unavailable"
-    tin = tin or 0
-    tout = tout or 0
-    return (f"breaking-bump spend · {stage}: {tin + tout} tokens "
-            f"(in {tin} / out {tout})")
+def format_spend(stage: str, execution_file: str | None) -> str:
+    """One-line cost summary for `stage`; 'cost unavailable' when no cost can be read."""
+    cost = _result_cost_usd(execution_file)
+    if cost is None:
+        return f"breaking-bump spend · {stage}: cost unavailable"
+    return f"breaking-bump spend · {stage}: ${cost:.4f}"
 ```
 
-- [ ] Run, see it pass (`6 passed`), then the whole package:
+- [ ] Run, see it pass (`5 passed`), then the whole package:
 
 ```bash
 cd scripts/breaking-bump && python -m pytest test_spend.py -v && python -m pytest -v
 ```
 
-Expected: `6 passed` then all package tests green.
+Expected: `5 passed` then all package tests green.
 
 ## Task 1.3 — add a spend-report step to each agent job
 
-> **Mechanism:** `claude-code-action@v1` exposes usage via its step outputs. Give each agent's `claude-code-action` step an `id` (A's may already have one — if not, add `id: agent`), then add a step after it that builds the line via `spend.py` and posts it with `gh issue comment`. The usage fields are read from the action's `steps.<id>.outputs.*` (the action publishes `execution_file`/usage; if a field name differs at runtime, `spend.py`'s graceful-degrade path keeps it from breaking the run — that is the whole point of the tolerant helper). Each step is guarded `if: vars.BREAKING_BUMP_STUB != 'true'` so stub runs stay token-free and silent.
+> **Mechanism:** `claude-code-action@v1` exposes no direct token/cost output — it writes an `execution_file` (a path to a JSON-array execution log) surfaced as `steps.<id>.outputs.execution_file`. Give each agent's `claude-code-action` step an `id` (A's may already have one — if not, add `id: agent`), then add a step after it that runs `spend.py <stage> "<execution_file>"` and posts the line with `gh issue comment`. The line content flows via an env var (`$LINE`), **not** `${{ }}` interpolation inside `run:`. Each step is guarded `if: vars.BREAKING_BUMP_STUB != 'true'` so stub runs stay cost-free and silent; even if reached, an absent `execution_file` renders "cost unavailable" and never breaks the run.
 
 - [ ] For the `agent-a` job in `.github/workflows/breaking-bump.yml`: ensure the `claude-code-action` step has `id: agent`, then add immediately after it (before the tripwire step):
 
@@ -233,23 +277,25 @@ Expected: `6 passed` then all package tests green.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           STAGE: agent-a
-          IN_TOKENS: ${{ steps.agent.outputs.input_tokens }}
-          OUT_TOKENS: ${{ steps.agent.outputs.output_tokens }}
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
         run: |
           set -euo pipefail
-          LINE=$(python - <<'PY'
-          import os, sys
-          sys.path.insert(0, "scripts/breaking-bump")
-          import spend
-          print(spend.format_spend(os.environ["STAGE"],
-                {"input_tokens": os.environ.get("IN_TOKENS"),
-                 "output_tokens": os.environ.get("OUT_TOKENS")}))
-          PY
-          )
+          LINE=$(python scripts/breaking-bump/spend.py "$STAGE" "$EXECUTION_FILE")
           gh issue comment "$ISSUE_NUMBER" --body "$LINE"
 ```
 
-- [ ] For **each** `b_round<n>` (n in 1..6): give the B `claude-code-action` step `id: agent` and append the same step with `STAGE: b_round<n>`. For **each** `c_round<n>`: `id: agent`, `STAGE: c_round<n>`. For `agent-d`: `id: agent` on its `claude-code-action` step, `STAGE: agent-d`. (13 near-identical steps — "N copies of the same line".) The `ISSUE_NUMBER` env var already exists on every one of these jobs (used by the agent prompts).
+- [ ] For **each** `b_round<n>` (n in 1..6): give the B `claude-code-action` step `id: agent` and append the same step with `STAGE: b_round<n>`. For **each** `c_round<n>`: `id: agent`, `STAGE: c_round<n>`. For `agent-d`: `id: agent` on its `claude-code-action` step, `STAGE: agent-d`. Every spend step's `EXECUTION_FILE` reads its own job's `steps.agent.outputs.execution_file`. (13 near-identical steps — "N copies of the same line".) The `ISSUE_NUMBER` env var already exists on every one of these jobs (used by the agent prompts).
+
+- [ ] `spend.py` must accept the stage + execution-file path as CLI args. Add a `__main__` block to `scripts/breaking-bump/spend.py` (the workflow shells to it):
+
+```python
+if __name__ == "__main__":
+    import sys
+
+    _stage = sys.argv[1] if len(sys.argv) > 1 else "unknown"
+    _exec = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else None
+    print(format_spend(_stage, _exec))
+```
 
 - [ ] Validate the YAML parses and every agent job has a spend step:
 
@@ -275,12 +321,12 @@ Expected: `all 14 agent jobs report spend`.
 ```bash
 git add scripts/breaking-bump/spend.py scripts/breaking-bump/test_spend.py \
         .github/workflows/breaking-bump.yml
-git commit -s -m "feat(breaking-bump): report per-stage token spend on the spine issue"
+git commit -s -m "feat(breaking-bump): report per-stage cost (usd) on the spine issue"
 ```
 
-(Subject 65 chars, lowercase-led, type `feat`, ASCII OK.)
+(Subject 62 chars, lowercase-led, type `feat`, ASCII OK.)
 
-> **Wave-1 PR body must:** note this is observability-only (no routing/agent behaviour change); the spend line degrades to "usage unavailable" if `claude-code-action`'s output names drift, so it can never break a live run; a cross-bump SigNoz dashboard is deferred (spec #13 — the spine-issue comment is the v1 ledger).
+> **Wave-1 PR body must:** note this is observability-only (no routing/agent behaviour change — the concurrency-group fix is a no-op for real `on: issues` runs, affecting only the `workflow_dispatch` smoke path); the cost line degrades to "cost unavailable" if `claude-code-action`'s `execution_file` is absent/unparseable (e.g. a STUB run), so it can never break a live run; a cross-bump SigNoz dashboard is deferred (spec #13 — the spine-issue comment is the v1 ledger).
 
 ---
 
@@ -290,86 +336,39 @@ git commit -s -m "feat(breaking-bump): report per-stage token spend on the spine
 
 ## Task 2.1 — read the source to port
 
-- [ ] Read `scripts/helm-enrich/valuesdiff.py` and `scripts/helm-enrich/test_valuesdiff.py` in full. The port is **verbatim logic** — same function names (`diff_values`, `mark_overrides`), same `Change` dataclass, same behaviour. Only the module location changes (`scripts/helm-enrich/` → `scripts/breaking-bump/`). Do not "improve" it; a literal carryover keeps the change reviewable and the tests reusable.
+- [ ] Read `scripts/helm-enrich/valuesdiff.py` and `scripts/helm-enrich/test_valuesdiff.py` in full. The port is a **literal copy** — same `KeyChange` dataclass (`@dataclass(frozen=True)`, fields `path, kind, old, new, overridden=False`) + `flatten`/`diff_values`/`mark_overrides` (lists-as-leaves; `mark_overrides(changes, override_docs)` returns a *new* list of frozen `KeyChange`s). Only the module location changes (`scripts/helm-enrich/` → `scripts/breaking-bump/`) and a `__main__` CLI is appended. Do not retype or "improve" it; `cp`/`git show` the real file so the carryover is literal and the tests reusable.
 
 ## Task 2.2 — port `valuesdiff.py` + its tests into the breaking-bump core
 
-- [ ] Create `scripts/breaking-bump/valuesdiff.py` as a copy of `scripts/helm-enrich/valuesdiff.py` (same `Change` dataclass + `diff_values` + `mark_overrides`). Add a `__main__` CLI so the workflow can shell to it (the helm-enrich version was driven via `detect.py bundle`; the breaking-bump version is standalone):
+- [ ] **Copy `scripts/helm-enrich/valuesdiff.py` to `scripts/breaking-bump/valuesdiff.py` UNCHANGED** — do not retype it. `cp`/`git show` the real file (it is `KeyChange`/`flatten`/`diff_values`/`mark_overrides`, `@dataclass(frozen=True)`, lists-as-leaves). The port is a literal copy; only the appended CLI is new.
+
+```bash
+cp scripts/helm-enrich/valuesdiff.py scripts/breaking-bump/valuesdiff.py
+```
+
+- [ ] **Append only** a `__main__` CLI block (and its imports) so the workflow can shell to it (the helm-enrich version was driven via `detect.py bundle`; the breaking-bump version is standalone). Add to the end of `scripts/breaking-bump/valuesdiff.py`:
 
 ```python
-"""Helm chart values*.yaml key-path diff with overridden-key flagging.
-
-Ported verbatim from scripts/helm-enrich/valuesdiff.py (ADR-0067) so the
-helm-only values-diff survives helm-bump-enrich's retirement (ADR-0068, spec #2).
-Run as: python valuesdiff.py --old OLD.yaml --new NEW.yaml [--overrides O.yaml ...]
-emitting the diff as JSON for Agent A to attach to its enrichment.
-"""
-from __future__ import annotations
-
-import argparse
-import json
-import sys
-from dataclasses import asdict, dataclass
-from pathlib import Path
-
-import yaml
-
-
-@dataclass
-class Change:
-    path: str
-    kind: str           # "added" | "removed" | "changed"
-    old: object
-    new: object
-    overridden: bool = False
-
-
-def _flatten(obj, prefix="") -> dict[str, object]:
-    """Flatten a nested mapping to dotted key-paths (leaves only)."""
-    out: dict[str, object] = {}
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            out.update(_flatten(v, f"{prefix}{k}."))
-    else:
-        out[prefix.rstrip(".")] = obj
-    return out
-
-
-def diff_values(old: dict | None, new: dict | None) -> list[Change]:
-    """Key-path diff of two values trees (added / removed / changed leaves)."""
-    fo, fn = _flatten(old or {}), _flatten(new or {})
-    changes: list[Change] = []
-    for key in sorted(set(fo) | set(fn)):
-        if key not in fo:
-            changes.append(Change(key, "added", None, fn[key]))
-        elif key not in fn:
-            changes.append(Change(key, "removed", fo[key], None))
-        elif fo[key] != fn[key]:
-            changes.append(Change(key, "changed", fo[key], fn[key]))
-    return changes
-
-
-def mark_overrides(changes: list[Change], overrides: list[dict | None]) -> list[Change]:
-    """Flag each change whose key-path appears in any of our override files."""
-    override_keys: set[str] = set()
-    for ov in overrides:
-        override_keys |= set(_flatten(ov or {}))
-    for c in changes:
-        c.overridden = c.path in override_keys
-    return changes
 
 
 def main(argv: list[str] | None = None) -> int:
+    import argparse
+    import json
+    import yaml
+
     p = argparse.ArgumentParser(prog="valuesdiff")
     p.add_argument("--old", required=True)
     p.add_argument("--new", required=True)
-    p.add_argument("--overrides", nargs="*", default=[])
+    p.add_argument("--overrides", action="append", default=[])
     args = p.parse_args(argv)
     old = yaml.safe_load(Path(args.old).read_text(encoding="utf-8"))
     new = yaml.safe_load(Path(args.new).read_text(encoding="utf-8"))
     overrides = [yaml.safe_load(Path(o).read_text(encoding="utf-8")) for o in args.overrides]
     changes = mark_overrides(diff_values(old, new), overrides)
-    print(json.dumps([asdict(c) for c in changes]))
+    print(json.dumps([
+        {"path": c.path, "kind": c.kind, "old": c.old, "new": c.new, "overridden": c.overridden}
+        for c in changes
+    ]))
     return 0
 
 
@@ -377,62 +376,36 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-> **Verify the ported logic matches the source.** If `scripts/helm-enrich/valuesdiff.py` differs from the above (e.g. different flattening of lists, a different `kind` vocabulary), make the port match the *source*, not this listing — the source is the proven behaviour. Re-read it (Task 2.1) and reconcile.
+(The CLI uses the real API verbatim — `mark_overrides(diff_values(...), [...])`, with `Path` already imported by the copied source. If the copied source did not import `Path`, add `from pathlib import Path` at the top of the file.)
 
-- [ ] Create `scripts/breaking-bump/test_valuesdiff.py` — copy `scripts/helm-enrich/test_valuesdiff.py`, change the import to `import valuesdiff`, and add a CLI test:
+- [ ] **Copy `scripts/helm-enrich/test_valuesdiff.py` to `scripts/breaking-bump/test_valuesdiff.py` verbatim** (it already does `import valuesdiff as vd` and exercises `vd.flatten`/`vd.diff_values`/`vd.mark_overrides` against `KeyChange` tuples — no edit needed since the module is on the same `sys.path`). Then **add one CLI test** at the end:
+
+```bash
+cp scripts/helm-enrich/test_valuesdiff.py scripts/breaking-bump/test_valuesdiff.py
+```
 
 ```python
-"""Unit tests for the ported helm values-diff (carryover from ADR-0067)."""
-from __future__ import annotations
-
-import json
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent))
-
-import valuesdiff  # noqa: E402
-
-
-def test_diff_detects_changed_leaf():
-    changes = valuesdiff.diff_values({"a": {"b": 1}}, {"a": {"b": 2}})
-    assert [(c.path, c.kind, c.old, c.new) for c in changes] == [("a.b", "changed", 1, 2)]
-
-
-def test_diff_detects_added_and_removed():
-    changes = valuesdiff.diff_values({"x": 1}, {"y": 2})
-    kinds = {(c.path, c.kind) for c in changes}
-    assert kinds == {("x", "removed"), ("y", "added")}
-
-
-def test_mark_overrides_flags_overridden_keys():
-    changes = valuesdiff.diff_values({"a": 1}, {"a": 2})
-    valuesdiff.mark_overrides(changes, [{"a": 9}])
-    assert changes[0].overridden is True
-
-
-def test_mark_overrides_leaves_non_overridden_false():
-    changes = valuesdiff.diff_values({"a": 1}, {"a": 2})
-    valuesdiff.mark_overrides(changes, [{"b": 9}])
-    assert changes[0].overridden is False
 
 
 def test_cli_emits_json(tmp_path, capsys):
-    old = tmp_path / "old.yaml"; old.write_text("a:\n  b: 1\n")
-    new = tmp_path / "new.yaml"; new.write_text("a:\n  b: 2\n")
-    rc = valuesdiff.main(["--old", str(old), "--new", str(new)])
+    old = tmp_path / "old.yaml"
+    old.write_text("a:\n  b: 1\n")
+    new = tmp_path / "new.yaml"
+    new.write_text("a:\n  b: 2\n")
+    rc = vd.main(["--old", str(old), "--new", str(new)])
     assert rc == 0
+    import json
     out = json.loads(capsys.readouterr().out)
     assert out == [{"path": "a.b", "kind": "changed", "old": 1, "new": 2, "overridden": False}]
 ```
 
-- [ ] Run both new test files + the whole package:
+- [ ] Run both test files + the whole package:
 
 ```bash
 cd scripts/breaking-bump && python -m pytest test_valuesdiff.py -v && python -m pytest -v
 ```
 
-Expected: the values-diff tests pass; whole package green. (Port any test the source had that fails here by reconciling `valuesdiff.py` to the source behaviour.)
+Expected: the copied source tests + the new `test_cli_emits_json` pass; whole package green.
 
 ## Task 2.3 — wire a guarded helm values-diff step into `agent-a`
 
@@ -462,17 +435,21 @@ Expected: the values-diff tests pass; whole package green. (Port any test the so
           fi
           DIR=$(dirname "$CHART")
           VALUES=$(ls "$DIR"/values.yaml 2>/dev/null || true)
-          OVERRIDES=$(ls "$DIR"/values-prod.yaml "$DIR"/values-*.yaml 2>/dev/null || true)
           if [ -z "$VALUES" ]; then
             echo "::notice::chart $CHART has no values.yaml — no values-diff."
             echo "helm=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # --overrides is repeatable (argparse action="append"); one flag per file.
+          OVERRIDE_ARGS=()
+          for ov in "$DIR"/values-prod.yaml "$DIR"/values-*.yaml; do
+            [ -f "$ov" ] && OVERRIDE_ARGS+=(--overrides "$ov")
+          done
           git show "origin/main:$VALUES" > /tmp/values.old.yaml 2>/dev/null || echo '{}' > /tmp/values.old.yaml
           git show "origin/$REN_REF:$VALUES" > /tmp/values.new.yaml 2>/dev/null || cp "$VALUES" /tmp/values.new.yaml
           python scripts/breaking-bump/valuesdiff.py \
             --old /tmp/values.old.yaml --new /tmp/values.new.yaml \
-            ${OVERRIDES:+--overrides $OVERRIDES} > /tmp/valuesdiff.json
+            "${OVERRIDE_ARGS[@]+"${OVERRIDE_ARGS[@]}"}" > /tmp/valuesdiff.json
           echo "helm=true" >> "$GITHUB_OUTPUT"
           echo "::notice::values-diff written for $CHART"
 ```
@@ -882,22 +859,24 @@ grep -E "ADR-0067.*helm-enrich|ADR-0067.*helm-bump-enrich" docs/adr/INDEX.md && 
    must not merge-and-run without explicit maintainer approval** (runbook §2). The
    whole plan is itself gated on maintainer approval before execution per the task.
 
-2. **`claude-code-action` usage output shape is not contractually stable
-   (Wave 1).** I could not verify from the artifacts the exact output field names
-   the action publishes for token usage (`input_tokens`/`output_tokens` are
-   assumed). `spend.py` is deliberately tolerant — unknown/missing fields render
-   "usage unavailable" and never break a run. If the action exposes usage under
-   different names (or only in `$GITHUB_STEP_SUMMARY` / an `execution_file`
-   artifact), the Wave-1 implementer must adjust the `env:` wiring of the spend
-   step to the real output names; the helper needs no change. **Verify against a
-   real `claude-code-action@v1` run's outputs during Wave 1.**
+2. **`claude-code-action@v1` cost source — verified (Wave 1).** The action exposes
+   **no** direct token/cost step output; its outputs are `execution_file`,
+   `branch_name`, `github_token`, `structured_output`, `session_id` (verified
+   against the action's `action.yml`). `execution_file` is a path to a JSON-array
+   execution log whose single `type=="result"` entry carries `total_cost_usd` (a
+   USD float — `0.0347` in the action's `test/fixtures/sample-turns.json`, with no
+   token-count field on the result entry). `spend.py` reads that and renders
+   `$0.0347`; a None/missing/unparseable path or absent result entry (e.g. a STUB
+   run with no `execution_file`) renders "cost unavailable" and never breaks the
+   run. No runtime guessing remains.
 
-3. **The `valuesdiff.py` port must match the SOURCE, not this plan's listing
-   (Wave 2).** I reproduced a faithful-looking `diff_values`/`mark_overrides` +
-   `Change` dataclass, but did not read the live `scripts/helm-enrich/valuesdiff.py`
-   line-by-line. Task 2.1 mandates reading the source first; if its flattening
-   (e.g. list handling) or `kind` vocabulary differs, reconcile the port + tests
-   to the source behaviour. The carryover must be literal.
+3. **The `valuesdiff.py` port is a literal `cp` of the SOURCE (Wave 2).** The plan
+   no longer embeds a re-typed listing — Task 2.2 instructs `cp`-ing
+   `scripts/helm-enrich/valuesdiff.py` (verified `KeyChange`/`flatten`/`diff_values`/
+   `mark_overrides`, `@dataclass(frozen=True)`, lists-as-leaves) and `cp`-ing its
+   test file verbatim, then appending **only** a `main()` CLI + one CLI test. There
+   is no divergence risk because nothing is retyped; the source is the proven
+   behaviour and it is copied byte-for-byte.
 
 4. **The values-diff workflow step assumes signoz's chart layout
    (`infra/observability/{Chart.yaml,values.yaml,values-prod.yaml}`).** The step
@@ -919,10 +898,12 @@ grep -E "ADR-0067.*helm-enrich|ADR-0067.*helm-bump-enrich" docs/adr/INDEX.md && 
    spec #13 (deferred hard-budget) it is YAGNI until the per-bump numbers surprise
    us. Stated rather than silently built.
 
-7. **Pre-existing (out-of-scope) concurrency-group quirk in `breaking-bump.yml`.**
-   The pipeline's `concurrency.group` is `breaking-bump-issue-${{ github.event.issue.number }}`,
+7. **Concurrency-group quirk in `breaking-bump.yml` — Fixed in Wave 1.**
+   The pipeline's `concurrency.group` was `breaking-bump-issue-${{ github.event.issue.number }}`,
    which is empty under `workflow_dispatch` (Plan 3 OPEN QUESTION 1 accepted this
-   for `on: issues`). Not a Plan-4 concern (no live `workflow_dispatch` run is the
-   path of record), but flagged so a hand-driven smoke test (runbook §3 path B) is
-   known to share one concurrency slot across dispatch runs. No fix here.
+   for `on: issues`). Wave 1 (Task 1.0) adds a 1-line `|| github.event.inputs.issue_number`
+   fallback so a hand-driven smoke test (runbook §3 path B) gets a proper per-issue
+   slot. For real `on: issues` runs `github.event.issue.number` is set, so the group
+   is UNCHANGED — no live-behaviour change; the fix only affects the
+   `workflow_dispatch` smoke path.
 ```
