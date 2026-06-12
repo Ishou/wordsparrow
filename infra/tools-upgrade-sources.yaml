@@ -7,6 +7,8 @@ modeA:
   - name: k8s-infra
     repo: "https://charts.signoz.io"
     releaseNotes: "https://github.com/SigNoz/charts/releases/tag/k8s-infra-{version}"
+    # version-specific; update to the matching guide when k8s-infra publishes one for the target release
+    extraDocs: "https://signoz.io/docs/opentelemetry-collection-agents/k8s/k8s-infra/user-guides/upgrade-k8s-infra-v0-16/"
   - name: cert-manager
     repo: "https://charts.jetstack.io"
     releaseNotes: "https://github.com/cert-manager/cert-manager/releases/tag/v{version}"
@@ -24,6 +26,11 @@ modeA:
   - name: hcloud-csi
     repo: "https://charts.hetzner.cloud"
     releaseNotes: "https://github.com/hetznercloud/csi-driver/releases/tag/v{version}"
+  # helm CLI (uses-with bump in CI), not a chart; modeA is where sources.py resolves it by name.
+  - name: helm
+    repo: "https://github.com/helm/helm"
+    releaseNotes: "https://github.com/helm/helm/releases/tag/v{version}"
+    extraDocs: "https://helm.sh/docs/changelog/"
 modeB:
   - image: matomo
     releaseNotes: "https://matomo.org/changelog/"
