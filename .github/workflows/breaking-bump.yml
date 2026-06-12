@@ -15,7 +15,7 @@ on:
 
 concurrency:
   # Issue-number keying serialises reopened-label refires; cancel-in-progress:false so migrations always complete.
-  group: breaking-bump-issue-${{ github.event.issue.number }}
+  group: breaking-bump-issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
   cancel-in-progress: false
 
 permissions:
@@ -101,6 +101,7 @@ jobs:
           python-version: '3.14.6'
       - run: pip install -r scripts/breaking-bump/requirements.txt
       - name: Run Agent A (doc gatherer)
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -117,6 +118,26 @@ jobs:
       - name: STUB Agent A
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/abschema.json ./abschema.json
+      - name: Update spend ledger (agent-a)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: agent-a
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Validate schema + zero-doc tripwire
         id: tripwire
         run: |
@@ -167,6 +188,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: abschema, path: . }
       - name: Run Agent B (planner) — round 1
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -185,6 +207,26 @@ jobs:
         run: |
           cp scripts/breaking-bump/stub_fixtures/abrating.txt /tmp/abrating.txt
           cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
+      - name: Update spend ledger (b_round1)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: b_round1
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Consumer-rated Gate A (B rates A)
         id: rate
         run: |
@@ -232,6 +274,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round1, path: . }
       - name: Run Agent C (plan reviewer) — round 1
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -271,6 +314,26 @@ jobs:
           out.write(f"terminated={'true' if terminated else 'false'}\n")
           out.write(f"findings_hash={curr_hash}\n")
           PY
+      - name: Update spend ledger (c_round1)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: c_round1
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload findings (round 1)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round1, path: ./prev-findings.json, retention-days: 3 }
@@ -297,6 +360,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round1, path: . }
       - name: Run Agent B (planner) — round 2
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -314,6 +378,26 @@ jobs:
       - name: STUB Agent B (later round)
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
+      - name: Update spend ledger (b_round2)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: b_round2
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload plan (round 2)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round2, path: ./plan.json, retention-days: 3 }
@@ -345,6 +429,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round2, path: . }
       - name: Run Agent C (plan reviewer) — round 2
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -384,6 +469,26 @@ jobs:
           out.write(f"terminated={'true' if terminated else 'false'}\n")
           out.write(f"findings_hash={curr_hash}\n")
           PY
+      - name: Update spend ledger (c_round2)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: c_round2
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload findings (round 2)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round2, path: ./prev-findings.json, retention-days: 3 }
@@ -410,6 +515,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round2, path: . }
       - name: Run Agent B (planner) — round 3
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -427,6 +533,26 @@ jobs:
       - name: STUB Agent B (later round)
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
+      - name: Update spend ledger (b_round3)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: b_round3
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload plan (round 3)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round3, path: ./plan.json, retention-days: 3 }
@@ -458,6 +584,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round3, path: . }
       - name: Run Agent C (plan reviewer) — round 3
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -497,6 +624,26 @@ jobs:
           out.write(f"terminated={'true' if terminated else 'false'}\n")
           out.write(f"findings_hash={curr_hash}\n")
           PY
+      - name: Update spend ledger (c_round3)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: c_round3
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload findings (round 3)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round3, path: ./prev-findings.json, retention-days: 3 }
@@ -523,6 +670,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round3, path: . }
       - name: Run Agent B (planner) — round 4
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -540,6 +688,26 @@ jobs:
       - name: STUB Agent B (later round)
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
+      - name: Update spend ledger (b_round4)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: b_round4
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload plan (round 4)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round4, path: ./plan.json, retention-days: 3 }
@@ -571,6 +739,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round4, path: . }
       - name: Run Agent C (plan reviewer) — round 4
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -610,6 +779,26 @@ jobs:
           out.write(f"terminated={'true' if terminated else 'false'}\n")
           out.write(f"findings_hash={curr_hash}\n")
           PY
+      - name: Update spend ledger (c_round4)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: c_round4
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload findings (round 4)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round4, path: ./prev-findings.json, retention-days: 3 }
@@ -636,6 +825,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round4, path: . }
       - name: Run Agent B (planner) — round 5
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -653,6 +843,26 @@ jobs:
       - name: STUB Agent B (later round)
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
+      - name: Update spend ledger (b_round5)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: b_round5
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload plan (round 5)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round5, path: ./plan.json, retention-days: 3 }
@@ -684,6 +894,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round5, path: . }
       - name: Run Agent C (plan reviewer) — round 5
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -723,6 +934,26 @@ jobs:
           out.write(f"terminated={'true' if terminated else 'false'}\n")
           out.write(f"findings_hash={curr_hash}\n")
           PY
+      - name: Update spend ledger (c_round5)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: c_round5
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload findings (round 5)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round5, path: ./prev-findings.json, retention-days: 3 }
@@ -749,6 +980,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round5, path: . }
       - name: Run Agent B (planner) — round 6
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -766,6 +998,26 @@ jobs:
       - name: STUB Agent B (later round)
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
+      - name: Update spend ledger (b_round6)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: b_round6
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload plan (round 6)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round6, path: ./plan.json, retention-days: 3 }
@@ -797,6 +1049,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: plan-round6, path: . }
       - name: Run Agent C (plan reviewer) — round 6
+        id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -836,6 +1089,26 @@ jobs:
           out.write(f"terminated={'true' if terminated else 'false'}\n")
           out.write(f"findings_hash={curr_hash}\n")
           PY
+      - name: Update spend ledger (c_round6)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: c_round6
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
       - name: Upload findings (round 6)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: findings-round6, path: ./prev-findings.json, retention-days: 3 }
@@ -970,6 +1243,7 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "ren_ref=$REN_REF" >> "$GITHUB_OUTPUT"
       - name: Run Agent D (implementer)
+        id: agent
         if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         env:
@@ -1008,6 +1282,26 @@ jobs:
             --body "Migrates #$PR_NUMBER. Closes #$ISSUE_NUMBER." --json url --jq .url)
           gh pr view "$CLAUDE_BRANCH" >/dev/null
           gh pr close "$PR_NUMBER" --comment "Superseded by $CLAUDE_URL (stub run)."
+      - name: Update spend ledger (agent-d)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STAGE: agent-d
+          EXECUTION_FILE: ${{ steps.agent.outputs.execution_file }}
+        run: |
+          set -euo pipefail
+          LINE=$(python scripts/breaking-bump/spend.py line "$STAGE" "$EXECUTION_FILE")
+          MARKER='<!-- breaking-bump-spend-ledger -->'
+          CID=$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+                  --json comments \
+                  --jq "[.comments[] | select(.body | contains(\"$MARKER\"))][0].id // empty")
+          if [ -z "$CID" ]; then
+            printf '' | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file -
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$CID" --jq .body \
+              | python scripts/breaking-bump/spend.py body "$LINE" \
+              | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
+          fi
 
   escalate:
     # Any failed job (Gate A, no-convergence, infra crash) -> label needs-human on the spine issue.
