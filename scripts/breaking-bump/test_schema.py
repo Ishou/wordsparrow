@@ -15,7 +15,8 @@ def _valid_doc() -> dict:
     return {
         "dep": "signoz", "from": "0.122.0", "to": "0.128.0",
         "sourceConfidence": "high",
-        "sources": [{"url": "https://example/changelog", "type": "changelog", "fetchedOk": True}],
+        "sources": [{"url": "https://example/changelog", "type": "changelog",
+                     "fetchedOk": True, "provenance": "registry"}],
         "breakingChanges": [
             {"summary": "removed flag", "detail": "the --foo flag was removed",
              "sourceUrl": "https://example/changelog#foo"}
@@ -42,6 +43,26 @@ def test_missing_top_level_field_fails():
 def test_bad_confidence_enum_fails():
     doc = _valid_doc()
     doc["sourceConfidence"] = "definitely"
+    assert not schema.is_valid(doc)
+
+
+def test_source_without_provenance_is_invalid():
+    doc = _valid_doc()
+    del doc["sources"][0]["provenance"]
+    errors = schema.validate(doc)
+    assert errors  # provenance is the trust boundary: no source without it
+
+
+def test_source_with_valid_provenance_passes():
+    doc = _valid_doc()
+    for prov in ("registry", "pr-body", "websearch", "constructed"):
+        doc["sources"][0]["provenance"] = prov
+        assert schema.is_valid(doc), prov
+
+
+def test_source_with_bad_provenance_enum_fails():
+    doc = _valid_doc()
+    doc["sources"][0]["provenance"] = "self-reported"
     assert not schema.is_valid(doc)
 
 
