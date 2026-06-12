@@ -1261,7 +1261,8 @@ jobs:
 
   agent-d:
     needs: [read-context, plan-approved]
-    if: needs.plan-approved.outputs.dispatch_d == 'true'
+    # !cancelled()+result check so the gate evaluates despite plan-approved running via always() with skipped upstream rounds.
+    if: ${{ !cancelled() && needs.plan-approved.result == 'success' && needs.plan-approved.outputs.dispatch_d == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
