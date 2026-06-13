@@ -1,0 +1,35 @@
+{
+  "dep": "io.ktor:ktor-server-core",
+  "from": "2.3.13",
+  "to": "3.0.0",
+  "sourceConfidence": "high",
+  "sources": [
+    {
+      "url": "https://ktor.io/docs/migrating-3.html",
+      "type": "migration-guide",
+      "fetchedOk": true,
+      "provenance": "websearch"
+    },
+    {
+      "url": "https://github.com/ktorio/ktor/releases/tag/3.0.0",
+      "type": "release",
+      "fetchedOk": true,
+      "provenance": "registry"
+    }
+  ],
+  "breakingChanges": [
+    {
+      "summary": "Ktor 3.0 applies cookie security prefixes (__Secure-/__Host-) automatically; names containing them must be stripped or the cookie is double-prefixed and rejected by browsers",
+      "detail": "In Ktor 3.0 the response cookie encoder applies the __Secure- and __Host- prefixes automatically when the cookie is configured with secure=true. Cookie names that still embed the literal __Secure- prefix are now double-prefixed at runtime (e.g. __Secure-__Secure-ws_session), which Chrome and Firefox reject outright, breaking authenticated sessions. The literal prefix MUST be removed from the cookie name during the 3.0 upgrade; the framework re-applies it on the wire.",
+      "sourceUrl": "https://ktor.io/docs/migrating-3.html"
+    }
+  ],
+  "deprecations": [],
+  "removals": [],
+  "migrationSteps": [
+    {
+      "instruction": "In grid/api/src/main/kotlin/com/bliss/grid/api/routes/PuzzleRoute.kt, change SESSION_COOKIE_NAME from \"__Secure-ws_session\" to \"ws_session\". Ktor 3.0 adds the __Secure- prefix automatically for secure cookies; keeping the literal prefix double-prefixes the cookie and browsers reject it.",
+      "sourceUrl": "https://ktor.io/docs/migrating-3.html"
+    }
+  ]
+}

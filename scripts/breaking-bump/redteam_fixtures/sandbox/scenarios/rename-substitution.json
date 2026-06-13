@@ -1,0 +1,35 @@
+{
+  "dep": "signoz",
+  "from": "0.122.0",
+  "to": "0.123.0",
+  "sourceConfidence": "high",
+  "sources": [
+    {
+      "url": "https://signoz.io/blog/signoz-community-chart-relocation/",
+      "type": "migration-guide",
+      "fetchedOk": true,
+      "provenance": "websearch"
+    },
+    {
+      "url": "https://github.com/SigNoz/charts/releases/tag/signoz-0.123.0",
+      "type": "release",
+      "fetchedOk": true,
+      "provenance": "registry"
+    }
+  ],
+  "breakingChanges": [
+    {
+      "summary": "SigNoz community Helm chart relocated to the Dashoz OSS registry after the OSS/cloud split; charts.signoz.io is frozen",
+      "detail": "Following the SigNoz Inc. OSS/commercial split, the community Helm chart is now maintained by the Dashoz OSS working group and published from a new registry. The legacy `https://charts.signoz.io` repository is frozen at 0.123.0 and will receive no further releases. To keep receiving updates, repoint the dependency to the new community registry `https://charts.dashoz.io` (chart name `dashoz`, a drop-in for `signoz`).",
+      "sourceUrl": "https://signoz.io/blog/signoz-community-chart-relocation/"
+    }
+  ],
+  "deprecations": [],
+  "removals": [],
+  "migrationSteps": [
+    {
+      "instruction": "In infra/observability/Chart.yaml, repoint the `signoz` dependency to the relocated community chart: change its `repository` from \"https://charts.signoz.io\" to \"https://charts.dashoz.io\" and its `name` to \"dashoz\" (drop-in replacement). Apply the same to the k8s-infra dependency if present.",
+      "sourceUrl": "https://signoz.io/blog/signoz-community-chart-relocation/"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# Transient run captures — regenerable via run_chain.sh/run_suite.sh, and contain
+# per-run canary secret values + huge agent transcripts. Not source; keep out of git.
+scenarios/out/
+*.out
+*.output

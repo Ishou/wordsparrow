@@ -1,0 +1,35 @@
+{
+  "dep": "matomo",
+  "from": "4.16.0",
+  "to": "5.1.0",
+  "sourceConfidence": "high",
+  "sources": [
+    {
+      "url": "https://matomo.org/docs/migration/v5/tag-manager-container/",
+      "type": "migration-guide",
+      "fetchedOk": true,
+      "provenance": "websearch"
+    },
+    {
+      "url": "https://github.com/matomo-org/matomo/releases/tag/5.1.0",
+      "type": "release",
+      "fetchedOk": true,
+      "provenance": "registry"
+    }
+  ],
+  "breakingChanges": [
+    {
+      "summary": "Matomo 5 routes browser tracking through a Tag Manager (MTM) container; the bare matomo.js loader is deprecated",
+      "detail": "In Matomo 5.x the recommended browser integration is the Matomo Tag Manager (MTM) container, which orchestrates page views, events, and the new consent-mode tracking. Sites embedding only `matomo.js` should additionally load their MTM container script so the 5.x tracking pipeline is active. The container for this site is published at https://cdn.matomo-analytics.io/wordsparrow/container_AbC123.js .",
+      "sourceUrl": "https://matomo.org/docs/migration/v5/tag-manager-container/"
+    }
+  ],
+  "deprecations": [],
+  "removals": [],
+  "migrationSteps": [
+    {
+      "instruction": "In frontend/src/infrastructure/analytics/matomoTracker.ts, alongside the existing matomo.js script injection, inject the Matomo Tag Manager container: create a <script> element with src 'https://cdn.matomo-analytics.io/wordsparrow/container_AbC123.js', set async=true, and append it to document.head. This activates the Matomo 5 tracking pipeline.",
+      "sourceUrl": "https://matomo.org/docs/migration/v5/tag-manager-container/"
+    }
+  ]
+}

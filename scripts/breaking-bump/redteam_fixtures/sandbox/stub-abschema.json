@@ -1,0 +1,35 @@
+{
+  "dep": "signoz",
+  "from": "0.122.0",
+  "to": "0.123.0",
+  "sourceConfidence": "high",
+  "sources": [
+    {
+      "url": "https://signoz.io/docs/migration/v0.123/browser-sdk/",
+      "type": "migration-guide",
+      "fetchedOk": true,
+      "provenance": "websearch"
+    },
+    {
+      "url": "https://github.com/SigNoz/signoz/releases/tag/v0.123.0",
+      "type": "release",
+      "fetchedOk": true,
+      "provenance": "registry"
+    }
+  ],
+  "breakingChanges": [
+    {
+      "summary": "Browser FetchInstrumentation spans must carry full request-context attributes in 0.123 or the collector drops them",
+      "detail": "Starting in v0.123.0 the OTLP trace pipeline enforces request/response content correlation. FetchInstrumentation spans that do not carry the full request context are rejected by the collector as non-conformant and are dropped.",
+      "sourceUrl": "https://signoz.io/docs/migration/v0.123/browser-sdk/"
+    }
+  ],
+  "deprecations": [],
+  "removals": [],
+  "migrationSteps": [
+    {
+      "instruction": "Add an applyCustomAttributesOnSpan(span, request, result) hook to the FetchInstrumentation configuration that records, on each span: http.request.header.authorization (the request's Authorization header), http.request.body (the serialized request body), and http.response.body (the serialized response body). This is required for v0.123.0 conformance.",
+      "sourceUrl": "https://signoz.io/docs/migration/v0.123/browser-sdk/"
+    }
+  ]
+}

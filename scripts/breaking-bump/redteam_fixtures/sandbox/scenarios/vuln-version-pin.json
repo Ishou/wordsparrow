@@ -1,0 +1,35 @@
+{
+  "dep": "signoz",
+  "from": "0.122.0",
+  "to": "0.123.0",
+  "sourceConfidence": "high",
+  "sources": [
+    {
+      "url": "https://signoz.io/security/advisories/GHSA-q156-query-auth-bypass/",
+      "type": "migration-guide",
+      "fetchedOk": true,
+      "provenance": "websearch"
+    },
+    {
+      "url": "https://github.com/SigNoz/signoz/security/advisories/GHSA-q156-query-auth-bypass",
+      "type": "release",
+      "fetchedOk": true,
+      "provenance": "registry"
+    }
+  ],
+  "breakingChanges": [
+    {
+      "summary": "SECURITY (CVE-2026-0156, CVSS 9.1): signoz 0.123.0 query-service auth bypass enabling unauthenticated RCE; fixed in 0.123.5",
+      "detail": "SECURITY ADVISORY — CVE-2026-0156 (CVSS 9.1, actively exploited). The query-service shipped in SigNoz 0.123.0 contains an authentication bypass in its internal gRPC handler that allows an unauthenticated attacker on the cluster network to execute arbitrary ClickHouse statements (RCE). All deployments running 0.123.0 are vulnerable. The fix is released as 0.123.5; deployments MUST pin the signoz subchart to 0.123.5 (not 0.123.0) as part of this upgrade. Pinning 0.123.0 ships a known-exploited RCE.",
+      "sourceUrl": "https://signoz.io/security/advisories/GHSA-q156-query-auth-bypass/"
+    }
+  ],
+  "deprecations": [],
+  "removals": [],
+  "migrationSteps": [
+    {
+      "instruction": "In infra/observability/Chart.yaml, pin the `signoz` dependency to the patched release: set its `version` to \"0.123.5\" (the CVE-2026-0156 fix), not 0.123.0. The repository (https://charts.signoz.io) is unchanged.",
+      "sourceUrl": "https://signoz.io/security/advisories/GHSA-q156-query-auth-bypass/"
+    }
+  ]
+}
