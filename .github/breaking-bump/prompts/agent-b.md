@@ -42,6 +42,7 @@ surface, that change is out of scope for us.
       "a": ["<mandatory migration step grounded in a real file path>", ...],
       "b": ["<doc/ADR/comment that references the old version/behaviour>", ...],
       "c": ["<opportunistic refactor the new version enables, NOT forced>", ...],
+      "scope": {"files": [{"path": "<repo-relative file path>", "change": "<one-line change intent>"}, ...]},
       "dispositions": {"<breaking-change item>": "<reason, e.g. 'not used — 0 helm-flag hits'>"},
       "_amendments": {"removed": [{"entry": "<prior key or action string>", "reason": "<why dropped>"}]}
     }
@@ -52,12 +53,24 @@ surface, that change is out of scope for us.
   open-ended doc-gardening. Also goes into D's PR.
 - **(c) opportunistic refactor** — high-reward but not forced. NOT in the bump
   PR; D opens a separate `post-bump-enhancement` issue. The human decides later.
+- **`scope.files`** — the **authoritative, closed** set of files this migration
+  may touch, each `{path, change}` with a one-line change intent. List every file
+  your `(a)`+`(b)` items imply; if a file is not in `scope.files`, agent-d may not
+  touch it. The scope gate checks the diff against this list, not the prose.
+- **Version-reference rubric** — only schedule a version reference for change when
+  it is genuinely wrong under the new major: a **hard pin** (`version: vX`), an
+  **install script/URL** (`get-helm-3`), or a **removed/renamed flag or env**. A
+  **minimum floor the new major already satisfies** (`helm ≥ 3.16`, `node >= 18`)
+  is **not** stale — leave it out of `scope.files`. Neither list spurious
+  floor-bumps nor omit real ones.
 - **`dispositions`** — keyed out-of-scope verdicts with grep evidence. Once set,
   carry a disposition key **verbatim** into every later round; do not re-derive.
-- **Sticky rule:** never silently drop a prior entry (`dispositions` key or
-  `a`/`b`/`c` string). A removal MUST go in `_amendments.removed` with a reason —
-  the workflow guard hard-fails any unaccounted drop. Round 1 emits empty
-  `_amendments`.
+- **Sticky rule:** never silently drop a prior entry (`dispositions` key,
+  `a`/`b`/`c` string, or `scope.files` entry). A removal MUST go in
+  `_amendments.removed` with a reason — the workflow guard hard-fails any
+  unaccounted drop. In AMEND mode (B', rounds 2+) carry `scope.files` forward
+  under this same monotonicity rule; an entry leaves only via
+  `_amendments.removed`. Round 1 emits empty `_amendments`.
 
 If `a` and `b` are both empty, that is the legitimate "let Renovate's PR merge"
 early-exit — emit the empty arrays honestly; do not manufacture work.

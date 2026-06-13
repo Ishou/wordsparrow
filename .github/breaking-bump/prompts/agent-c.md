@@ -15,7 +15,7 @@ become ceremony.
 - `./plan.json` — Agent B's plan this round.
 - Context: `$DEP` `$FROM` -> `$TO`, spine issue #$ISSUE_NUMBER.
 
-## Your two questions ONLY
+## Your three questions ONLY
 1. **Completeness:** does B's plan cover every breaking change / removal /
    migration step in `abschema.json` that plausibly affects a consumer? Flag any
    A-item with no corresponding plan entry and no explicit "not used here"
@@ -23,6 +23,14 @@ become ceremony.
 2. **Grounding:** does each plan step in `(a)`/`(b)` reference a real file/path?
    Flag steps that assert impact without naming a concrete target (B was told to
    read the file first; an ungrounded step is a likely hallucination).
+3. **Contract (`scope.files`):** certify the manifest is the right closed set.
+   (a) **Covers** every file the `(a)`/`(b)` items imply — flag any implied file
+   missing from `scope.files` (a gap would force agent-d out of scope). (b) **No
+   spurious entry** — flag any `scope.files` entry that bumps a version reference
+   the new major already satisfies (a `≥` minimum floor like `helm ≥ 3.16` /
+   `node >= 18` is NOT stale; only a hard pin `version: vX`, an install URL
+   `get-helm-3`, or a removed/renamed flag/env belongs). You certify the contract,
+   not just the prose.
 
 Do **NOT** flag: code style, naming, whether the migration is "elegant", or
 anything about how D will implement it. An empty `(a)+(b)` plan is VALID if

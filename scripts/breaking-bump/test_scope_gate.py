@@ -1,4 +1,4 @@
-"""Tests for the post-D diff scope gate (ADR-0068 hardening, Wave B)."""
+"""Tests for the post-D diff scope gate (ADR-0068 hardening, Wave B + plan-contract W2)."""
 from __future__ import annotations
 
 import sys
@@ -10,12 +10,11 @@ import scope_gate  # noqa: E402
 
 _OTEL = "frontend/src/infrastructure/observability/otelTracer.ts"
 _PLAN = {"a": [f"In {_OTEL}, update the OTLPTraceExporter url."], "b": [], "c": []}
+_WORKFLOW = ".github/workflows/deploy-api-k8s.yml"
 
 
-def test_sensitive_blocks_workflow_edits():
-    v = scope_gate.evaluate([".github/workflows/deploy-api-k8s.yml"], _PLAN)
-    assert ".github/workflows/deploy-api-k8s.yml" in v["sensitive"]
-    assert not v["ok"]
+def _manifest(*paths: str) -> dict:
+    return {"scope": {"files": [{"path": p, "change": "edit"} for p in paths]}}
 
 
 def test_sensitive_blocks_secrets_and_env():
@@ -67,3 +66,64 @@ def test_partial_path_suffix_of_plan_token_is_not_in_scope():
 def test_clean_in_scope_change_passes():
     v = scope_gate.evaluate([_OTEL], _PLAN)
     assert v == {"sensitive": [], "out_of_scope": [], "ok": True}
+
+
+# --- W2: authoritative scope.files manifest ---
+
+
+def test_manifest_path_in_scope_passes():
+    plan = _manifest("docs/local-development.md")
+    v = scope_gate.evaluate(["docs/local-development.md"], plan)
+    assert v == {"sensitive": [], "out_of_scope": [], "ok": True}
+
+
+def test_manifest_path_not_in_scope_fails():
+    plan = _manifest("docs/local-development.md")
+    v = scope_gate.evaluate(["docs/other.md"], plan)
+    assert "docs/other.md" in v["out_of_scope"]
+    assert not v["ok"]
+
+
+def test_manifest_secret_path_blocked_even_if_in_scope():
+    plan = _manifest(".env", "infra/secrets.yaml")
+    v = scope_gate.evaluate([".env", "infra/secrets.yaml"], plan)
+    assert set(v["sensitive"]) == {".env", "infra/secrets.yaml"}
+    assert not v["ok"]
+
+
+def test_manifest_workflow_in_scope_passes():
+    # Key behavior change: a declared in-scope workflow edit is allowed.
+    plan = _manifest(_WORKFLOW)
+    v = scope_gate.evaluate([_WORKFLOW], plan)
+    assert v["sensitive"] == []
+    assert v["out_of_scope"] == []
+    assert v["ok"]
+
+
+def test_manifest_workflow_not_in_scope_fails():
+    # Off-plan workflow touch is blocked as out-of-scope (not as sensitive).
+    plan = _manifest("docs/local-development.md")
+    v = scope_gate.evaluate([_WORKFLOW], plan)
+    assert _WORKFLOW in v["out_of_scope"]
+    assert _WORKFLOW not in v["sensitive"]
+    assert not v["ok"]
+
+
+def test_workflow_not_blanket_sensitive_without_manifest():
+    # No manifest: prose-grep fallback governs; an unreferenced workflow is out-of-scope, not sensitive.
+    v = scope_gate.evaluate([_WORKFLOW], _PLAN)
+    assert _WORKFLOW not in v["sensitive"]
+    assert _WORKFLOW in v["out_of_scope"]
+    assert not v["ok"]
+
+
+def test_manifest_absent_falls_back_to_prose_grep():
+    # An old-style plan with no scope.files still works via the (a)/(b) prose grep.
+    v = scope_gate.evaluate([_OTEL], _PLAN)
+    assert v["ok"]
+
+
+def test_empty_manifest_falls_back_to_prose_grep():
+    plan = {"a": [f"In {_OTEL}, update url."], "b": [], "scope": {"files": []}}
+    v = scope_gate.evaluate([_OTEL], plan)
+    assert v["ok"]

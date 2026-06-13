@@ -6,9 +6,8 @@ import os
 import re
 import sys
 
-# Structural backstop: paths a dependency migration must never touch, regardless of agent judgment.
+# Always-blocked: leak-on-commit paths (committing a secret value exposes it the moment the branch is pushed).
 _SENSITIVE = [
-    re.compile(r"(^|/)\.github/workflows/"),
     re.compile(r"(^|/)\.env(\.|$)"),
     re.compile(r"secret", re.IGNORECASE),
     re.compile(r"credential", re.IGNORECASE),
@@ -19,6 +18,12 @@ _PATH_TOKEN = re.compile(r"[A-Za-z0-9_./-]+\.[A-Za-z0-9]+")
 
 def is_sensitive(path: str) -> bool:
     return any(p.search(path) for p in _SENSITIVE)
+
+
+def manifest_paths(plan: dict) -> set[str]:
+    """Authoritative closed file set from plan.scope.files[].path; empty when absent."""
+    files = (plan.get("scope") or {}).get("files") or []
+    return {f["path"] for f in files if isinstance(f, dict) and f.get("path")}
 
 
 def referenced_paths(plan: dict) -> set[str]:
@@ -40,9 +45,15 @@ def _in_scope(path: str, tokens: set[str]) -> bool:
 
 def evaluate(changed: list[str], plan: dict) -> dict:
     """Classify each changed file; gate fails on any sensitive or out-of-plan path."""
-    tokens = referenced_paths(plan)
+    manifest = manifest_paths(plan)
+    # Authoritative manifest is the contract; prose-grep is a backward-compat fallback when scope.files is absent.
+    if manifest:
+        in_scope = lambda f: f in manifest  # noqa: E731
+    else:
+        tokens = referenced_paths(plan)
+        in_scope = lambda f: _in_scope(f, tokens)  # noqa: E731
     sensitive = [f for f in changed if is_sensitive(f)]
-    out_of_scope = [f for f in changed if f not in sensitive and not _in_scope(f, tokens)]
+    out_of_scope = [f for f in changed if f not in sensitive and not in_scope(f)]
     return {"sensitive": sensitive, "out_of_scope": out_of_scope, "ok": not sensitive and not out_of_scope}
 
 
