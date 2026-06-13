@@ -34,3 +34,8 @@ def test_two_different_0x_bumps_have_distinct_identity():
 def test_claude_branch_name():
     assert identity.claude_branch("signoz", "0.128.0") == "chore/claude-signoz-v0.128.0"
     assert identity.claude_branch("@scope/pkg", "2.0.0") == "chore/claude-scope-pkg-v2.0.0"
+
+
+def test_claude_branch_strips_leading_v():
+    # `to` already carries a `v` for some deps; the branch must not double it.
+    assert identity.claude_branch("helm", "v4.2.1") == "chore/claude-helm-v4.2.1"
