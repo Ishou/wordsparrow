@@ -1457,15 +1457,16 @@ jobs:
         if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB != 'true'
         uses: anthropics/claude-code-action@v1
         env:
-          GH_TOKEN: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN (not CLAUDE_BOT_PAT): the agent only commits + comments; push/PR is the deterministic finalize step. Keep the workflows-scope PAT out of the attacker-content-handling agent.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: 'github-actions[bot],renovate[bot]'
           additional_permissions: |
             actions: read
-          # D writes code, runs builds, git commit, and files (c) issues; the workflow's finalize step owns push/PR/close.
+          # D writes code, runs builds, git commit, and files (c) issues; the workflow's finalize step owns push/PR/close. node/npx dropped — arbitrary-exec primitives the migration doesn't need (pnpm/gradle cover builds).
           claude_args: >-
-            --allowed-tools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(pnpm:*),Bash(npm:*),Bash(npx:*),Bash(node:*),Bash(./gradlew:*),Bash(gradle:*),Bash(cat:*),Bash(ls:*),Bash(test:*)"
+            --allowed-tools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(pnpm:*),Bash(npm:*),Bash(./gradlew:*),Bash(gradle:*),Bash(cat:*),Bash(ls:*),Bash(test:*)"
           prompt: |
             Read .github/breaking-bump/prompts/agent-d.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
