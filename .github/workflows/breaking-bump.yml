@@ -1451,6 +1451,7 @@ jobs:
           git checkout -b "$CLAUDE_BRANCH" "$REN_OID"
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "ren_ref=$REN_REF" >> "$GITHUB_OUTPUT"
+          echo "ren_oid=$REN_OID" >> "$GITHUB_OUTPUT"
       - name: Run Agent D (implementer)
         id: agent
         if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB != 'true'
@@ -1476,6 +1477,16 @@ jobs:
             open the claude PR FIRST (body: "Migrates #${{ env.PR_NUMBER }}" and
             "Closes #${{ env.ISSUE_NUMBER }}"), confirm it exists, THEN close the
             Renovate PR. File a post-bump-enhancement issue per (c) item.
+      - name: Post-D diff scope gate (ADR-0068 hardening)
+        # Structural backstop (ADR-0068): fail if D's diff escapes the plan's files or touches a sensitive path.
+        if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB != 'true'
+        env:
+          REN_OID: ${{ steps.rev.outputs.ren_oid }}
+        run: |
+          set -euo pipefail
+          git diff --name-only "$REN_OID" HEAD > /tmp/d-changed.txt
+          echo "Agent D changed files:"; cat /tmp/d-changed.txt
+          python scripts/breaking-bump/scope_gate.py --plan ./plan.json < /tmp/d-changed.txt
       - name: STUB Agent D (deterministic fork/close)
         if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB == 'true'
         env:
