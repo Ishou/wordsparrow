@@ -6,8 +6,7 @@ import os
 import re
 import sys
 
-# Paths an automated dependency migration must never touch — a structural backstop
-# independent of whether any agent recognised the change as malicious.
+# Structural backstop: paths a dependency migration must never touch, regardless of agent judgment.
 _SENSITIVE = [
     re.compile(r"(^|/)\.github/workflows/"),
     re.compile(r"(^|/)\.env(\.|$)"),
