@@ -24,11 +24,21 @@ changed API without reading the file.** This is the downstream grounding axis �
 where planners hallucinate most. If nothing in our repo uses the changed
 surface, that change is out of scope for us.
 
-## Step 3 — emit the categorized plan to ./plan.json (Write tool)
+## Step 3 — CREATE or AMEND, keyed on `./plan.json` presence
+- **AMEND (`./plan.json` present, rounds 2+):** load it — it is your prior plan
+  and the source of truth for everything already decided. Resolve every item in
+  `./prev-findings.json` by **adding or correcting** entries. Preserve every
+  existing entry and disposition; re-emit the **complete** plan.
+- **CREATE (`./plan.json` absent, round 1):** build the plan from
+  `abschema.json`, with an empty `_amendments` (`{"removed": []}`).
+
+## Step 4 — emit the full plan to ./plan.json (Write tool)
     {
       "a": ["<mandatory migration step grounded in a real file path>", ...],
       "b": ["<doc/ADR/comment that references the old version/behaviour>", ...],
-      "c": ["<opportunistic refactor the new version enables, NOT forced>", ...]
+      "c": ["<opportunistic refactor the new version enables, NOT forced>", ...],
+      "dispositions": {"<breaking-change item>": "<reason, e.g. 'not used — 0 helm-flag hits'>"},
+      "_amendments": {"removed": [{"entry": "<prior key or action string>", "reason": "<why dropped>"}]}
     }
 - **(a) mandatory migration** — breaking changes touching code/config we
   actually use. Each item names the real file(s). Goes into D's PR.
@@ -37,14 +47,15 @@ surface, that change is out of scope for us.
   open-ended doc-gardening. Also goes into D's PR.
 - **(c) opportunistic refactor** — high-reward but not forced. NOT in the bump
   PR; D opens a separate `post-bump-enhancement` issue. The human decides later.
+- **`dispositions`** — keyed out-of-scope verdicts with grep evidence. Once set,
+  carry a disposition key **verbatim** into every later round; do not re-derive.
+- **Sticky rule:** never silently drop a prior entry (`dispositions` key or
+  `a`/`b`/`c` string). A removal MUST go in `_amendments.removed` with a reason —
+  the workflow guard hard-fails any unaccounted drop. Round 1 emits empty
+  `_amendments`.
 
 If `a` and `b` are both empty, that is the legitimate "let Renovate's PR merge"
 early-exit — emit the empty arrays honestly; do not manufacture work.
-
-## Address C's findings (round 2+)
-If `./prev-findings.json` exists, revise your plan to resolve every finding, then
-re-emit `./plan.json`. If you genuinely disagree with a finding, keep your
-position but say why in your issue comment.
 
 ## Post to the spine issue
 `gh issue comment "$ISSUE_NUMBER"` with this round's plan summary (human log).
