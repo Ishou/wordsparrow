@@ -8,7 +8,7 @@
 
 **Reference spec:** `docs/superpowers/specs/2026-05-18-phase6c-lobby-identity-design.md`. Read it before starting any sub-PR.
 
-**Tech stack:** Kotlin 2.3.21 + Ktor 3.4.3 (JVM contexts), `io.nats:jnats:2.20.x` (Kotlin/Java NATS client), NATS Server 2.10 + JetStream, Helm 3, k3s, Vite + React 19 + TanStack Router (frontend).
+**Tech stack:** Kotlin 2.3.21 + Ktor 3.4.3 (JVM contexts), `io.nats:jnats:2.20.x` (Kotlin/Java NATS client), NATS Server 2.10 + JetStream, Helm 4, k3s, Vite + React 19 + TanStack Router (frontend).
 
 ---
 
