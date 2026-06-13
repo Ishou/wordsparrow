@@ -1501,7 +1501,8 @@ jobs:
         run: |
           set -euo pipefail
           # Mechanical git ops leave the LLM; a missing migration commit fails the job -> escalate -> needs-human.
-          if [ "$(git rev-list --count "${REN_OID}..HEAD")" = "0" ]; then
+          NEW_COMMITS=$(git rev-list --count "${REN_OID}..HEAD")
+          if [ "$NEW_COMMITS" = "0" ]; then
             echo "::error::Agent D produced no migration commit on $CLAUDE_BRANCH"; exit 1
           fi
           git push -u origin "$CLAUDE_BRANCH"
