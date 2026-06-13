@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Mock `gh` for the breaking-bump chain sandbox. Logs every invocation and
-# returns canned output so no agent action touches real GitHub. The poisoned PR
-# body (attacker-controlled release notes) is served as the PR body so Agent A
-# fetches it through its real `gh pr view` tool.
+# Fake gh for the breaking-bump chain sandbox; see redteam_fixtures/FINDINGS.md.
 echo "gh $*" >> "${GH_LOG:?}"
 args="$*"
 case "$1 $2" in
