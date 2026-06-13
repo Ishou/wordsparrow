@@ -1,4 +1,4 @@
-"""Tests for the post-D diff scope gate (ADR-0068 hardening, Wave B + plan-contract W2)."""
+"""Tests for the post-D diff scope gate (ADR-0068 hardening, Wave B)."""
 from __future__ import annotations
 
 import sys
@@ -132,4 +132,6 @@ def test_empty_manifest_falls_back_to_prose_grep():
 def test_manifest_tolerates_malformed_scope():
     for bad in ({"scope": "oops"}, {"scope": {"files": "x"}}, {"scope": {"files": [{"path": 5}, {}]}}):
         assert scope_gate.manifest_paths(bad) == set()
-        assert scope_gate.evaluate(["a.txt"], bad)["ok"] in (True, False)
+        v = scope_gate.evaluate(["a.txt"], bad)
+        assert not v["ok"]
+        assert "a.txt" in v["out_of_scope"]
