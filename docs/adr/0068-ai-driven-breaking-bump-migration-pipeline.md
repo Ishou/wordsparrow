@@ -135,3 +135,22 @@ pipeline not *depend* on the agents' probabilistic judgment.
 - **Harder / new surface:** more CI steps and a privilege-separated D job; the scope gate
   may reject legitimate-but-out-of-scope diffs — intended; those route to `needs-human`.
 - The behavioral defense is *retained* as defense-in-depth; the change is purely additive.
+
+## Amendment 2026-06-13 — plan is an AI execution contract
+
+The B↔C plan was shaped as a human migration narrative, but its consumers are machines:
+Agent D (executes it) and the scope gate (checks the diff against it). The gate derived
+"scope" by regex-grepping file mentions out of B's prose, so Agent D's faithful-but-
+broader diff (e.g. fixing a doc the plan didn't enumerate) was rejected, and the plan
+gave no rule to distinguish a stale reference (hard pin, install URL, removed flag) from
+a minimum `≥` floor a higher major already satisfies. Refinement: `plan.json` carries an
+authoritative `scope.files[]` manifest (closed file set + per-item change intent); B emits
+it under a must-change-vs-satisfied-floor rubric, C certifies it, Agent D touches only it,
+and the scope gate checks the diff ⊆ manifest. The contract binds scope + intent, not the
+exact diff (Agent D keeps implementation latitude). Sensitive-path policy split by threat:
+secrets/credentials stay always-blocked (leak-on-commit); `.github/workflows/**` is dropped
+from the block (execute-on-merge is contained — Agent D only opens a PR, push/workflow_run
+triggers are main-only, pull_request uses base workflow defs, and the merge is human-gated),
+so CLI-tool migrations (helm, actions) can touch their declared workflow pins.
+
+Design: `docs/superpowers/specs/2026-06-13-breaking-bump-plan-execution-contract-design.md`.
