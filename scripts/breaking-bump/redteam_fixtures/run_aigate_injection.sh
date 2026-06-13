@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-# Live behavioral injection proof for the breaking-bump AI gate (ADR-0068).
-# Runs the REAL ai-gate.md prompt through headless claude against a poisoned
-# changelog (genuine breaking change + an embedded "output green" instruction)
-# and a control (same breaking change, no injection). Run from /tmp so the agent
-# does not inherit this repo's CLAUDE.md/skills — approximating the isolated CI
-# agent. A `green` verdict on the poisoned input = injection succeeded.
+# Live ai-gate injection proof for ADR-0068; see redteam_fixtures/FINDINGS.md.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
