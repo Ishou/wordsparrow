@@ -1488,7 +1488,9 @@ jobs:
           set -euo pipefail
           git diff --name-only "$REN_OID" HEAD > /tmp/d-changed.txt
           echo "Agent D changed files:"; cat /tmp/d-changed.txt
-          python scripts/breaking-bump/scope_gate.py --plan ./plan.json < /tmp/d-changed.txt
+          # Run the gate from the trusted run SHA, not D's (possibly stale/adversarial) working tree.
+          git show "$GITHUB_SHA:scripts/breaking-bump/scope_gate.py" > /tmp/scope_gate.py
+          python /tmp/scope_gate.py --plan ./plan.json < /tmp/d-changed.txt
       - name: STUB Agent D (deterministic fork/close)
         if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB == 'true'
         env:
