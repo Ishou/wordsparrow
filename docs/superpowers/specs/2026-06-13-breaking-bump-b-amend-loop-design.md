@@ -52,9 +52,9 @@ Agent B becomes two prompt modes, gated on round number — the workflow is alre
 
 The shared `.github/breaking-bump/prompts/agent-b.md` (50 lines today) gains a mode branch keyed on file presence:
 
-- **If `./plan.json` is present (AMEND / B'):** load it. It is your prior plan and the source of truth for everything already decided. Address each item in `./prev-findings.json` by **adding or correcting** entries. **Preserve every existing entry and disposition** unless a C finding explicitly says one is wrong (then correct it in place). Re-emit the **complete** plan.
-- **If `./plan.json` is absent (CREATE / B):** build the plan from `abschema.json` as today.
-- **Sticky dispositions:** once an item is marked out-of-scope with grep evidence (e.g. `"--force": "not used — 0 helm-flag hits"`), carry that disposition **verbatim** into every later round. Do not re-derive it. This is what stops the whack-a-mole and makes late rounds cheap.
+- **If `./plan.json` is present (AMEND / B'):** load it. It is your prior plan and the source of truth for everything already decided. Address each item in `./prev-findings.json` by **adding or correcting** entries. **Preserve every existing entry and disposition.** If a C finding shows a prior entry is wrong, either correct it in place (same `dispositions` key) or remove it — but a removal **must** be recorded in `_amendments.removed` with a reason (the guard hard-fails any unaccounted drop). Re-emit the **complete** plan.
+- **If `./plan.json` is absent (CREATE / B):** build the plan from `abschema.json` as today, with an empty `_amendments`.
+- **Sticky dispositions:** once an item is marked out-of-scope with grep evidence (e.g. `"--force": "not used — 0 helm-flag hits"` under `dispositions`), carry that key **verbatim** into every later round. Do not re-derive it. This is what stops the whack-a-mole and makes late rounds cheap.
 
 The inline `b_round` prompt steps already differ by round (round 1 says "no prev-findings"; rounds 2+ say "address C's findings"); update the rounds-2+ wording to "**amend the existing `./plan.json`** — preserve all entries, only add/correct for C's findings."
 
@@ -62,12 +62,32 @@ The inline `b_round` prompt steps already differ by round (round 1 says "no prev
 
 The LLM B↔C loop can't be unit-tested, but the **"never drop a prior entry" invariant can.** Add a pure helper + a workflow gate so a regression in B' fails loudly instead of silently oscillating:
 
+The guard is **maximally strict** (maintainer decision): it covers **every** prior entry — both the keyed `dispositions` and every `a`/`b`/`c` action-list entry — not just dispositions. A prior entry may legitimately disappear from the new plan **only** if B' records its removal in `_amendments.removed` with a reason; an unaccounted disappearance hard-fails the round.
+
+- Formalized `plan.json` schema (see §3a) carries `dispositions: {item: reason}` and `_amendments: {removed: [{entry, reason}]}`.
 - `scripts/breaking-bump/plan.py`:
   - `load_plan(path) -> dict`
-  - `dispositions(plan) -> dict[str,str]` — the keyed out-of-scope/disposition map (the *sticky* part; keyed by the breaking-change item, so rewording the reason is allowed but dropping a key is not).
-  - `assert_monotonic(prev, new) -> list[str]` — returns the list of disposition **keys present in `prev` but missing from `new`** (empty list = OK). Action-list entries (`a`/`b`/`c`) are checked advisorily (a warning, since B' may legitimately consolidate wording); dispositions are checked strictly.
-- In each `b_round(N≥2)` job, after B' writes `plan.json` and before upload, run a guard step: if `assert_monotonic(prev_plan, new_plan)` is non-empty, emit `::error::` listing the dropped keys and `exit 1` (→ escalate, which is strictly better than a silent late-round drop). The prior plan is already on disk from §1's download (copy it aside before B' overwrites it).
-- `scripts/breaking-bump/test_plan.py`: unit-cover `assert_monotonic` (identical plans → OK; added disposition → OK; reworded reason same key → OK; dropped disposition key → flagged; missing/empty plan handled).
+  - `entries(plan) -> set[str]` — the union of every accountable unit: each `dispositions` key, plus each `a`/`b`/`c` action-list string.
+  - `accounted_removals(plan) -> set[str]` — the entries listed under `_amendments.removed` (each with a reason).
+  - `assert_monotonic(prev, new) -> list[str]` — returns `entries(prev) − entries(new) − accounted_removals(new)`: prior entries that vanished **without** a recorded removal reason. Empty list = OK. Rewording a `dispositions` *reason* under the same key is fine (the key persists); rewording an action-list *string* counts as drop+add, so a genuine reword must either keep the string or be logged in `_amendments.removed` — the strict default the maintainer chose.
+- In each `b_round(N≥2)` job, after B' writes `plan.json` and before upload, run a guard step: if `assert_monotonic(prev_plan, new_plan)` is non-empty, emit `::error::` listing the unaccounted dropped entries and `exit 1` (→ escalate, strictly better than a silent late-round drop). The prior plan is already on disk from §1's download (copy it aside before B' overwrites it).
+- `scripts/breaking-bump/test_plan.py`: unit-cover `assert_monotonic` — identical plans → OK; added disposition/action → OK; reworded disposition reason (same key) → OK; **dropped disposition key with no removal record → flagged**; **dropped action-list entry with no removal record → flagged**; dropped entry **listed in `_amendments.removed` → OK**; missing/empty/malformed plan handled without raising.
+
+### §3a. Formalized `plan.json` schema
+
+Today the plan is `{"a":[...], "b":[...], "c":[...]}` with dispositions as free text under `_notes`. Formalize two fields so the guard is mechanical and the sticky-disposition contract is explicit:
+
+```json
+{
+  "a": ["mandatory step strings…"],
+  "b": ["doc-coherence step strings…"],
+  "c": ["opportunistic step strings…"],
+  "dispositions": { "<breaking-change item>": "<reason, e.g. 'not used — 0 helm-flag hits'>" },
+  "_amendments": { "removed": [ { "entry": "<the prior key or action string>", "reason": "<why dropped>" } ] }
+}
+```
+
+`dispositions` is the keyed sticky map (carried verbatim across rounds); `_amendments.removed` is the escape hatch that makes an intentional drop auditable instead of silent. B (round 1) emits empty `_amendments`.
 
 ### §4. Acceptance test — live convergence re-run
 
@@ -82,8 +102,10 @@ This changes the B↔C loop contract (B' amends rather than re-plans; a new dete
 - **W1** — ADR-0068 amendment (B'/amend-loop + monotonicity gate) + this spec doc. Governance only.
 - **W2** — Implementation: `plan.py` + `test_plan.py` (TDD), the `download-artifact: plan-round(N-1)` step on `b_round2…6`, the guard step on `b_round2…6`, the `agent-b.md` create/amend mode branch, and the rounds-2+ inline-prompt wording. Then the live helm re-run as acceptance.
 
-## Open questions for the maintainer
+## Resolved decisions (maintainer, 2026-06-13)
 
-1. **Guard strictness** (§3): strict on keyed *dispositions*, advisory (warn-only) on *action-list* entries — or should action-list shrinkage also hard-fail? Advisory keeps B' free to consolidate wording; strict is safer but risks false-fail on legitimate rewording.
-2. **Drop accounting:** instead of forbidding drops outright, should B' be allowed to drop an entry if it records the removal + reason in a `_amendments.removed` field (which the guard then accepts)? More flexible, slightly more prompt surface.
-3. **Plan schema for dispositions:** today dispositions appear as free-text under `_notes`/`c_findings_disposition`. The guard needs them keyed by breaking-change item. Do we formalize a `dispositions: {item: reason}` field in the plan schema (cleaner guard, small prompt change), or have the guard parse the existing `_notes` shape?
+1. **Guard strictness:** maximally strict — the monotonicity guard covers **every** prior entry (`dispositions` keys **and** every `a`/`b`/`c` action-list string), not just dispositions. (§3)
+2. **Drop accounting:** drops are permitted **only** when recorded in `_amendments.removed` with a reason; any unaccounted disappearance hard-fails the round. (§2, §3)
+3. **Disposition schema:** formalized — `plan.json` gains a keyed `dispositions: {item: reason}` field plus `_amendments.removed`, rather than parsing free-text `_notes`. (§3a)
+
+Architecture also confirmed: keep **B'/amend with C as an independent reviewer** (no role merge — a reviewer that also amends and self-approves would lose the adversarial check).
