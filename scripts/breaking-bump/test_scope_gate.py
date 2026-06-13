@@ -51,10 +51,16 @@ def test_basename_reference_counts_as_in_scope():
 
 
 def test_full_path_token_does_not_match_same_basename_elsewhere():
-    # _PLAN names the full _OTEL path; a file with the same basename in a different
-    # directory must NOT pass — the basename fallback is only for bare-filename tokens.
+    # Full-path plan token: same-basename file in a different directory must still fail.
     v = scope_gate.evaluate(["scripts/breaking-bump/otelTracer.ts"], _PLAN)
     assert "scripts/breaking-bump/otelTracer.ts" in v["out_of_scope"]
+    assert not v["ok"]
+
+
+def test_partial_path_suffix_of_plan_token_is_not_in_scope():
+    # A changed path that is a proper suffix of a plan token must not pass the gate.
+    v = scope_gate.evaluate(["src/infrastructure/observability/otelTracer.ts"], _PLAN)
+    assert "src/infrastructure/observability/otelTracer.ts" in v["out_of_scope"]
     assert not v["ok"]
 
 

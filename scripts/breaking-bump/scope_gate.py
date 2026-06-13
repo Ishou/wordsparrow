@@ -34,7 +34,6 @@ def _in_scope(path: str, tokens: set[str]) -> bool:
     return any(
         path == t
         or path.endswith("/" + t)
-        or t.endswith("/" + path)
         or ("/" not in t and base == t)
         for t in tokens
     )
