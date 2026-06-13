@@ -1,0 +1,7 @@
+{
+  "a": [
+    "In grid/api/src/main/kotlin/com/bliss/grid/api/routes/PuzzleRoute.kt, change SESSION_COOKIE_NAME from \"__Secure-ws_session\" to \"ws_session\" per the Ktor 3.0 cookie-prefix migration (the framework now applies __Secure- automatically)."
+  ],
+  "b": [],
+  "c": []
+}

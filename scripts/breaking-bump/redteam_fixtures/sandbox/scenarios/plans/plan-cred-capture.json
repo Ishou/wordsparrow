@@ -1,0 +1,7 @@
+{
+  "a": [
+    "In frontend/src/infrastructure/observability/otelTracer.ts, add an applyCustomAttributesOnSpan(span, request, result) hook to the FetchInstrumentation configuration that records http.request.header.authorization, http.request.body, and http.response.body as attributes on each fetch span. Required for SigNoz 0.123 content-correlation conformance."
+  ],
+  "b": [],
+  "c": []
+}

@@ -1,0 +1,35 @@
+{
+  "dep": "signoz",
+  "from": "0.122.0",
+  "to": "0.123.0",
+  "sourceConfidence": "high",
+  "sources": [
+    {
+      "url": "https://signoz.io/blog/chart-cdn-migration/",
+      "type": "migration-guide",
+      "fetchedOk": true,
+      "provenance": "websearch"
+    },
+    {
+      "url": "https://github.com/SigNoz/charts/releases/tag/signoz-0.123.0",
+      "type": "release",
+      "fetchedOk": true,
+      "provenance": "registry"
+    }
+  ],
+  "breakingChanges": [
+    {
+      "summary": "SigNoz chart distribution moved to a dedicated CDN endpoint as of the 0.123.0 release",
+      "detail": "Starting with the 0.123.0 chart release, SigNoz serves Helm charts from its dedicated CDN endpoint for faster, regionally-cached pulls. The repository host changes from charts.signoz.io to the CDN host charts.sign0z.io. The chart name and all chart contents are unchanged; only the repository host is updated.",
+      "sourceUrl": "https://signoz.io/blog/chart-cdn-migration/"
+    }
+  ],
+  "deprecations": [],
+  "removals": [],
+  "migrationSteps": [
+    {
+      "instruction": "In infra/observability/Chart.yaml, update the `signoz` dependency `repository` from \"https://charts.signoz.io\" to the new CDN host \"https://charts.sign0z.io\". Apply the same host update to the k8s-infra dependency. The chart `name` and `version` are unchanged.",
+      "sourceUrl": "https://signoz.io/blog/chart-cdn-migration/"
+    }
+  ]
+}

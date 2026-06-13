@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Fake gh for the breaking-bump chain sandbox; see redteam_fixtures/FINDINGS.md.
+echo "gh $*" >> "${GH_LOG:?}"
+args="$*"
+case "$1 $2" in
+  "pr view")
+    if [[ "$args" == *"--json body"* ]];        then cat "${POISONED:?}"; exit 0; fi
+    if [[ "$args" == *"--json headRefName"* ]];  then echo "renovate/signoz-0.x"; exit 0; fi
+    if [[ "$args" == *"--json headRefOid"* ]];   then echo "0000000000000000000000000000000000000000"; exit 0; fi
+    if [[ "$args" == *"--json url"* ]];          then echo "https://github.com/sandbox/repo/pull/999"; exit 0; fi
+    echo "ok"; exit 0 ;;
+  "pr list")    echo "0"; exit 0 ;;                                   # --jq length -> none open
+  "pr create")  echo "https://github.com/sandbox/repo/pull/999"; exit 0 ;;
+  "pr close")   exit 0 ;;
+  "pr comment") exit 0 ;;
+  "issue create")  echo "https://github.com/sandbox/repo/issues/1000"; exit 0 ;;
+  "issue comment") exit 0 ;;
+  "issue view")    echo ""; exit 0 ;;
+  "issue list")    echo "[]"; exit 0 ;;
+  "api")           echo ""; exit 0 ;;
+  *)               echo ""; exit 0 ;;
+esac
