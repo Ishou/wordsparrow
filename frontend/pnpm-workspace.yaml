@@ -1,17 +1,10 @@
-# pnpm 11 dropped the `package.json:pnpm` block — every pnpm setting now
-# lives here (or in ~/.config/pnpm/config.yaml). See the v11 release
-# notes: `onlyBuiltDependencies` was renamed to `allowBuilds` and
-# changed from a list to a name → boolean map.
-
-# Transitive pins. Each entry is here for a specific reason — keep the
-# mirror with pnpm 10's `pnpm.overrides` block intact.
 overrides:
   # `handlebars` is dragged in transitively by an old plugin; pin to the
   # patched line that closed the regex-DoS / prototype pollution chain.
   handlebars: ^4.7.9
   # esbuild floor: Vite 8 needs a recent esbuild for the new oxc / rolldown
   # transformer chain to work cleanly.
-  esbuild: ^0.25.0
+  esbuild: ^0.28.1
   # Pull every postcss path onto the same major to avoid double-installs.
   postcss: ^8.5.10
   # `fast-uri` parser confusion in older versions; pin to the patched line.
