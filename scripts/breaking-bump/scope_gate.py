@@ -22,8 +22,10 @@ def is_sensitive(path: str) -> bool:
 
 def manifest_paths(plan: dict) -> set[str]:
     """Authoritative closed file set from plan.scope.files[].path; empty when absent."""
-    files = (plan.get("scope") or {}).get("files") or []
-    return {f["path"] for f in files if isinstance(f, dict) and f.get("path")}
+    scope = plan.get("scope")
+    files = scope.get("files") if isinstance(scope, dict) else None
+    files = files if isinstance(files, list) else []
+    return {f["path"] for f in files if isinstance(f, dict) and isinstance(f.get("path"), str)}
 
 
 def referenced_paths(plan: dict) -> set[str]:
