@@ -93,6 +93,13 @@ Today the plan is `{"a":[...], "b":[...], "c":[...]}` with dispositions as free 
 
 The loop is LLM-driven, so the real acceptance criterion is a **live re-run of helm v3.21.0→v4.2.1** after the change: it must **converge (C approves) and open a migration PR**, instead of burning 6 rounds to `needs-human`. State plainly in the PR: the unit test covers the monotonicity guard only; convergence itself is verified by the live re-run, not by CI. (Per CLAUDE.md: type/unit checks verify code correctness, not feature correctness — if it can't be unit-tested, say so.)
 
+### §5. Implementation notes (pinned in cold review)
+
+- **Guard step ordering, per B' round (N≥2):** (1) `download-artifact: plan-round(N-1)` → `./plan.json`; (2) `cp ./plan.json ./prev-plan.json` **before** the "Run Agent B" step; (3) the agent (or stub) overwrites `./plan.json`; (4) a guard step runs `assert_monotonic(load_plan('./prev-plan.json'), load_plan('./plan.json'))`, emitting `::error::` + `exit 1` on any unaccounted drop — placed **before** the existing `Upload plan (round N)` step. Name the aside copy `prev-plan.json` (distinct from C's `prev-findings.json`).
+- **Stub path is left passing-trivially:** the `BREAKING_BUMP_STUB` "later round" step keeps `cp plan.round1.json ./plan.json`; since `prev-plan.json` is also `plan.round1.json`, the guard passes trivially. That is intended — the real guard logic is exercised by `test_plan.py`, not the stub chain. The `download-artifact plan-round(N-1)` step runs unconditionally (b_round1's stub also uploads `plan-round1`, so the artifact exists in stub runs).
+- **Nothing to migrate from `_notes`:** the committed `agent-b.md` emits only `{a,b,c}`; the free-text `_notes`/`c_findings_disposition` seen on the live helm run were that run's ad-hoc LLM output, not an in-repo shape. W2 simply **adds** `dispositions` + `_amendments` to `agent-b.md`'s emit schema and to `stub_fixtures/plan.round1.json` (empty `_amendments`, one sample `dispositions` entry). No conversion step.
+- **`needs:` is transitive-only:** `b_round(N≥3)` does not list `b_round(N-1)` in `needs:`, yet `plan-round(N-1)` is downloadable — artifacts are run-scoped, not `needs`-scoped, and ordering holds transitively (`b_round(N-1) → c_round(N-1) → b_round(N)`). Optionally add `b_round(N-1)` to each `needs:` for clarity; not required for correctness — do not "fix" it as if it were a bug.
+
 ## ADR impact
 
 This changes the B↔C loop contract (B' amends rather than re-plans; a new deterministic plan-monotonicity gate). Amend **ADR-0068** with the B'/amend-loop refinement in the same wave as the spec — registries cannot lag the things they register.
