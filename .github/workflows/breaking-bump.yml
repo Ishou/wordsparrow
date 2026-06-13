@@ -1503,7 +1503,7 @@ jobs:
           git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:$CLAUDE_BRANCH"
           CLAUDE_URL=$(gh pr create --base main --head "$CLAUDE_BRANCH" \
             --title "chore(breaking-bump): migrate $DEP to $TO (stub)" \
-            --body "Migrates #$PR_NUMBER. Closes #$ISSUE_NUMBER." --json url --jq .url)
+            --body "Migrates #$PR_NUMBER. Closes #$ISSUE_NUMBER.")
           gh pr view "$CLAUDE_BRANCH" >/dev/null
           gh pr close "$PR_NUMBER" --comment "Superseded by $CLAUDE_URL (stub run)."
       - name: Finalize Agent D (deterministic push/PR/verify/close)
@@ -1522,7 +1522,7 @@ jobs:
           TITLE="$(git log -1 --format=%s)"
           CLAUDE_URL=$(gh pr create --base main --head "$CLAUDE_BRANCH" \
             --title "$TITLE" \
-            --body "Migrates #${PR_NUMBER}. Closes #${ISSUE_NUMBER}." --json url --jq .url)
+            --body "Migrates #${PR_NUMBER}. Closes #${ISSUE_NUMBER}.")
           gh pr view "$CLAUDE_BRANCH" >/dev/null
           gh pr close "$PR_NUMBER" --comment "Superseded by ${CLAUDE_URL}."
       - name: Update spend ledger (agent-d)
