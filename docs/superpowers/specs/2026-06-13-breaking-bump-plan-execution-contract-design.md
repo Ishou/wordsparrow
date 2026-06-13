@@ -55,7 +55,7 @@ Add two machine-consumable fields alongside the existing `a`/`b`/`c`/`dispositio
 - **The version-reference rule (the ≥-floor distinction):** only schedule a version reference for change when it is genuinely wrong under the new major — a **hard pin** (`version: vX`), an **install script/URL** (`get-helm-3`), or a **removed/renamed flag or env**. A **minimum floor that the new major already satisfies** (`helm ≥ 3.16`, `node >= 18`) is **not** stale — leave it. State this as an explicit checklist item so B neither lists spurious floor-bumps nor omits real ones.
 - AMEND mode (B') carries `scope.files` forward under the same monotonicity rule as dispositions (an entry leaves only via `_amendments.removed`).
 
-### §3. Scope gate — check against the manifest; reconcile sensitive paths (NEEDS HARDENING-OWNER SIGN-OFF)
+### §3. Scope gate — check against the manifest; reconcile sensitive paths
 
 `scope_gate.py`:
 - **Authoritative scope:** replace `referenced_paths()` (prose grep) with reading `plan["scope"]["files"][].path`. `evaluate()` fails any changed file not in that exact set. (Keep a fallback to the prose-grep only if `scope.files` is absent, for backward-compat during rollout.)
@@ -76,7 +76,7 @@ Add two machine-consumable fields alongside the existing `a`/`b`/`c`/`dispositio
 
 ## ADR impact
 
-Amend ADR-0068: the B↔C output is an execution contract (authoritative `scope.files`), the scope gate checks the manifest, and the workflow-sensitive-path policy is scope-gated (pending §3 sign-off). Touch `docs/adr/INDEX.md` in the same PR (coherence gate).
+Amend ADR-0068: the B↔C output is an execution contract (authoritative `scope.files`), the scope gate checks the manifest, and the workflow-sensitive-path policy is scope-gated (resolved 2026-06-13). Touch `docs/adr/INDEX.md` in the same PR (coherence gate).
 
 ## Wave decomposition
 
