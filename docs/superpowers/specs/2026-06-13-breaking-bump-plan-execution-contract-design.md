@@ -1,7 +1,7 @@
 # Breaking-bump plan → AI execution contract — design
 
 ## Status
-Draft for maintainer review. Intersects the active ADR-0068 prompt-injection hardening waves (A #865, B #866 scope gate, C #871) — §3 needs the hardening owner's sign-off.
+Draft for maintainer review. §3 (workflow sensitivity) resolved with the maintainer + a trigger audit. Intersects the active ADR-0068 prompt-injection hardening waves (A #865, B #866 scope gate, C #871) — W2 edits `scope_gate.py` + agent prompts those waves also touch, so expect rebases.
 
 ## Problem
 
@@ -59,8 +59,7 @@ Add two machine-consumable fields alongside the existing `a`/`b`/`c`/`dispositio
 
 `scope_gate.py`:
 - **Authoritative scope:** replace `referenced_paths()` (prose grep) with reading `plan["scope"]["files"][].path`. `evaluate()` fails any changed file not in that exact set. (Keep a fallback to the prose-grep only if `scope.files` is absent, for backward-compat during rollout.)
-- **Sensitive-path reconciliation (the decision):** today `.github/workflows/**` is unconditionally sensitive → blocks all workflow edits. Proposed: keep `.env`, `secret`, `credential`, `htpasswd` **always-blocked regardless of scope** (no legitimate dep migration touches those), but allow a `.github/workflows/**` file **iff it is explicitly listed in the approved `scope.files`** (B declared it + C reviewed it + it's a bounded version/flag edit). Off-scope workflow edits stay blocked. This preserves the injection defense (an injected payload still can't touch an undeclared workflow or any secret path) while unblocking declared, reviewed CLI-tool migrations.
-  - **This loosens a guard the active hardening waves (#866) deliberately set — it must be confirmed by the hardening owner. Alternatives:** (a) keep workflows hard-blocked and require CLI-tool migrations to route version pins through a non-workflow indirection (heavy); (b) a separate `vars.BREAKING_BUMP_ALLOW_WORKFLOW_SCOPE` opt-in. Recommend the scope-gated allowance above; flag for decision.
+- **Sensitive-path reconciliation (resolved 2026-06-13, verified):** split `_SENSITIVE` by threat profile. **Keep always-blocked regardless of scope:** `.env`, `secret`, `credential`, `htpasswd` — the harm is *leak-on-commit* (committing a secret value exposes it the moment the branch is pushed, merged or not). **Remove `.github/workflows/**` from the sensitive set** — the harm there is *execute-on-merge*, which is fully contained for a PR-opening agent: (1) `scope.files` already blocks off-plan workflow touches; (2) the claude PR is reviewed by §6a + a human before merge; (3) GitHub uses the **base branch's** workflow definitions for `pull_request` events, so a workflow modified in the PR cannot self-execute via the PR's own CI; (4) **verified** — every `push:`/`workflow_run` trigger in this repo is `branches: [main]`, so agent-d's branch push executes nothing. A modified workflow only runs after a human merges it. So a declared, in-scope workflow edit is just normal reviewed code; only off-plan or secret-path touches are blocked. (This reverses part of #866's workflow block — coordinate with the hardening waves, but the threat analysis + trigger audit support it.)
 
 ### §4. Agent D — obey the manifest
 
@@ -86,5 +85,8 @@ Amend ADR-0068: the B↔C output is an execution contract (authoritative `scope.
 
 ## Open questions
 
-1. **§3 sensitive-path policy** — scope-gated workflow allowance (recommended) vs. hard-block + opt-in var vs. keep-blocked. Owner of #866's threat model decides.
-2. **Backward-compat window** — keep the prose-grep fallback when `scope.files` is absent, or hard-require the manifest once agent-b.md emits it? Recommend fallback for one rollout, then require.
+1. **Backward-compat window** — keep the prose-grep fallback when `scope.files` is absent, or hard-require the manifest once agent-b.md emits it? Recommend fallback for one rollout, then require.
+
+## Resolved decisions
+
+- **§3 sensitive-path policy (2026-06-13, verified):** `.github/workflows/**` removed from `_SENSITIVE` (execute-on-merge harm is contained by scope.files + review-before-merge + main-only triggers — verified no branch-arbitrary `push`/`workflow_run` exists); `.env`/secrets/credentials/htpasswd stay always-blocked (leak-on-commit). Coordinate the change with the active injection-hardening waves since it edits their `scope_gate._SENSITIVE`.
