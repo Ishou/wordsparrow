@@ -1451,6 +1451,7 @@ jobs:
           git checkout -b "$CLAUDE_BRANCH" "$REN_OID"
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "ren_ref=$REN_REF" >> "$GITHUB_OUTPUT"
+          echo "ren_oid=$REN_OID" >> "$GITHUB_OUTPUT"
       - name: Run Agent D (implementer)
         id: agent
         if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB != 'true'
@@ -1462,9 +1463,9 @@ jobs:
           allowed_bots: 'github-actions[bot],renovate[bot]'
           additional_permissions: |
             actions: read
-          # D writes code, runs builds, git push, opens the claude PR, closes the Renovate PR, files (c) issues.
+          # D writes code, runs builds, git commit, and files (c) issues; the workflow's finalize step owns push/PR/close.
           claude_args: >-
-            --allowed-tools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr close:*),Bash(gh pr comment:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(pnpm:*),Bash(npm:*),Bash(npx:*),Bash(node:*),Bash(./gradlew:*),Bash(gradle:*),Bash(cat:*),Bash(ls:*),Bash(test:*)"
+            --allowed-tools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(pnpm:*),Bash(npm:*),Bash(npx:*),Bash(node:*),Bash(./gradlew:*),Bash(gradle:*),Bash(cat:*),Bash(ls:*),Bash(test:*)"
           prompt: |
             Read .github/breaking-bump/prompts/agent-d.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
@@ -1472,10 +1473,11 @@ jobs:
             CLAUDE_BRANCH=${{ env.CLAUDE_BRANCH }}.
             The approved plan is ./plan.json and A's schema is ./abschema.json.
             The branch ${{ env.CLAUDE_BRANCH }} is ALREADY checked out at
-            Renovate's tip — implement (a)+(b), commit (git commit -s), push,
-            open the claude PR FIRST (body: "Migrates #${{ env.PR_NUMBER }}" and
-            "Closes #${{ env.ISSUE_NUMBER }}"), confirm it exists, THEN close the
-            Renovate PR. File a post-bump-enhancement issue per (c) item.
+            Renovate's tip — implement (a)+(b) from ./plan.json, run the relevant
+            build/lint for what you touched, then commit (git commit -s). File a
+            post-bump-enhancement issue per (c) item. STOP there: do NOT push, do
+            NOT open the claude PR, do NOT close the Renovate PR — the workflow's
+            deterministic finalize step does all of that.
       - name: STUB Agent D (deterministic fork/close)
         if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB == 'true'
         env:
@@ -1491,6 +1493,24 @@ jobs:
             --body "Migrates #$PR_NUMBER. Closes #$ISSUE_NUMBER." --json url --jq .url)
           gh pr view "$CLAUDE_BRANCH" >/dev/null
           gh pr close "$PR_NUMBER" --comment "Superseded by $CLAUDE_URL (stub run)."
+      - name: Finalize Agent D (deterministic push/PR/verify/close)
+        if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
+          REN_OID: ${{ steps.rev.outputs.ren_oid }}
+        run: |
+          set -euo pipefail
+          # Mechanical git ops leave the LLM; a missing migration commit fails the job -> escalate -> needs-human.
+          if [ "$(git rev-list --count "${REN_OID}..HEAD")" = "0" ]; then
+            echo "::error::Agent D produced no migration commit on $CLAUDE_BRANCH"; exit 1
+          fi
+          git push -u origin "$CLAUDE_BRANCH"
+          TITLE="$(git log -1 --format=%s)"
+          CLAUDE_URL=$(gh pr create --base main --head "$CLAUDE_BRANCH" \
+            --title "$TITLE" \
+            --body "Migrates #${PR_NUMBER}. Closes #${ISSUE_NUMBER}." --json url --jq .url)
+          gh pr view "$CLAUDE_BRANCH" >/dev/null
+          gh pr close "$PR_NUMBER" --comment "Superseded by ${CLAUDE_URL}."
       - name: Update spend ledger (agent-d)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
