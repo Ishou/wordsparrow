@@ -1464,9 +1464,9 @@ jobs:
           allowed_bots: 'github-actions[bot],renovate[bot]'
           additional_permissions: |
             actions: read
-          # D writes code, runs builds, git commit, and files (c) issues; the workflow's finalize step owns push/PR/close. node/npx dropped — arbitrary-exec primitives the migration doesn't need (pnpm/gradle cover builds).
+          # D writes code, runs builds, git commit, files (c) issues; finalize step owns push/PR/close. git scoped (no push/remote/config/-c exec), node/npx dropped — arbitrary-exec primitives the migration doesn't need (pnpm/gradle cover builds).
           claude_args: >-
-            --allowed-tools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(pnpm:*),Bash(npm:*),Bash(./gradlew:*),Bash(gradle:*),Bash(cat:*),Bash(ls:*),Bash(test:*)"
+            --allowed-tools "Read,Glob,Grep,Edit,Write,Bash(git add:*),Bash(git rm:*),Bash(git mv:*),Bash(git restore:*),Bash(git commit:*),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git rev-parse:*),Bash(git show:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(pnpm:*),Bash(npm:*),Bash(./gradlew:*),Bash(gradle:*),Bash(cat:*),Bash(ls:*),Bash(test:*)"
           prompt: |
             Read .github/breaking-bump/prompts/agent-d.md and follow it exactly.
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
