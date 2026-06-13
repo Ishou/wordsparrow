@@ -20,7 +20,7 @@ test against.
 | Docker    | engine 24+ | macOS: Docker Desktop. Linux: distro package or <https://docs.docker.com/engine/install/> |
 | `k3d`     | v5.6+      | `brew install k3d` or `curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh \| bash` |
 | `kubectl` | v1.30+     | `brew install kubectl` or <https://kubernetes.io/docs/tasks/tools/>                   |
-| `helm`    | v3.14+     | `brew install helm` or `curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 \| bash` |
+| `helm`    | v4.2+      | `brew install helm` or `curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 \| bash` |
 
 `scripts/local-cluster.sh` will tell you (with the install URL) which
 one is missing if you skip a step. It will not install anything for
