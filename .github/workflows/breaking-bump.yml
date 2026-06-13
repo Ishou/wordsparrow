@@ -1497,7 +1497,7 @@ jobs:
           echo "stub migration for $DEP $FROM -> $TO" > .breaking-bump-stub-migration.txt
           git add .breaking-bump-stub-migration.txt
           git commit -s -m "chore(breaking-bump): stub migration for $DEP"
-          git push -u origin "$CLAUDE_BRANCH"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:$CLAUDE_BRANCH"
           CLAUDE_URL=$(gh pr create --base main --head "$CLAUDE_BRANCH" \
             --title "chore(breaking-bump): migrate $DEP to $TO (stub)" \
             --body "Migrates #$PR_NUMBER. Closes #$ISSUE_NUMBER." --json url --jq .url)
@@ -1515,7 +1515,7 @@ jobs:
           if [ "$NEW_COMMITS" = "0" ]; then
             echo "::error::Agent D produced no migration commit on $CLAUDE_BRANCH"; exit 1
           fi
-          git push -u origin "$CLAUDE_BRANCH"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:$CLAUDE_BRANCH"
           TITLE="$(git log -1 --format=%s)"
           CLAUDE_URL=$(gh pr create --base main --head "$CLAUDE_BRANCH" \
             --title "$TITLE" \
