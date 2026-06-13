@@ -467,6 +467,10 @@ jobs:
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round1, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round1, path: . }
+      - name: Preserve prior plan (round 2)
+        run: cp ./plan.json ./prev-plan.json 2>/dev/null || true
       - name: Run Agent B (planner) — round 2
         id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
@@ -481,8 +485,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             and Agent C's prior findings are ./prev-findings.json — address each.
-            First write /tmp/abrating.txt (rate A), then ./plan.json (the
-            categorized plan).
+            First write /tmp/abrating.txt (rate A), then amend the existing
+            ./plan.json (your prior plan) — preserve all entries, only add/correct
+            for C's findings, and record any removal in `_amendments.removed`.
       - name: STUB Agent B (later round)
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
@@ -508,6 +513,17 @@ jobs:
                 | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
             fi
           } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
+      - name: Plan monotonicity guard (round 2)
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import sys; sys.path.insert(0,"scripts/breaking-bump")
+          import plan
+          dropped = plan.assert_monotonic(plan.load_plan("./prev-plan.json"), plan.load_plan("./plan.json"))
+          if dropped:
+              print("::error::Plan monotonicity: B' dropped prior entries without recording them in _amendments.removed: " + "; ".join(dropped))
+              raise SystemExit(1)
+          PY
       - name: Upload plan (round 2)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round2, path: ./plan.json, retention-days: 3 }
@@ -626,6 +642,10 @@ jobs:
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round2, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round2, path: . }
+      - name: Preserve prior plan (round 3)
+        run: cp ./plan.json ./prev-plan.json 2>/dev/null || true
       - name: Run Agent B (planner) — round 3
         id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
@@ -640,8 +660,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             and Agent C's prior findings are ./prev-findings.json — address each.
-            First write /tmp/abrating.txt (rate A), then ./plan.json (the
-            categorized plan).
+            First write /tmp/abrating.txt (rate A), then amend the existing
+            ./plan.json (your prior plan) — preserve all entries, only add/correct
+            for C's findings, and record any removal in `_amendments.removed`.
       - name: STUB Agent B (later round)
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
@@ -667,6 +688,17 @@ jobs:
                 | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
             fi
           } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
+      - name: Plan monotonicity guard (round 3)
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import sys; sys.path.insert(0,"scripts/breaking-bump")
+          import plan
+          dropped = plan.assert_monotonic(plan.load_plan("./prev-plan.json"), plan.load_plan("./plan.json"))
+          if dropped:
+              print("::error::Plan monotonicity: B' dropped prior entries without recording them in _amendments.removed: " + "; ".join(dropped))
+              raise SystemExit(1)
+          PY
       - name: Upload plan (round 3)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round3, path: ./plan.json, retention-days: 3 }
@@ -785,6 +817,10 @@ jobs:
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round3, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round3, path: . }
+      - name: Preserve prior plan (round 4)
+        run: cp ./plan.json ./prev-plan.json 2>/dev/null || true
       - name: Run Agent B (planner) — round 4
         id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
@@ -799,8 +835,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             and Agent C's prior findings are ./prev-findings.json — address each.
-            First write /tmp/abrating.txt (rate A), then ./plan.json (the
-            categorized plan).
+            First write /tmp/abrating.txt (rate A), then amend the existing
+            ./plan.json (your prior plan) — preserve all entries, only add/correct
+            for C's findings, and record any removal in `_amendments.removed`.
       - name: STUB Agent B (later round)
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
@@ -826,6 +863,17 @@ jobs:
                 | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
             fi
           } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
+      - name: Plan monotonicity guard (round 4)
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import sys; sys.path.insert(0,"scripts/breaking-bump")
+          import plan
+          dropped = plan.assert_monotonic(plan.load_plan("./prev-plan.json"), plan.load_plan("./plan.json"))
+          if dropped:
+              print("::error::Plan monotonicity: B' dropped prior entries without recording them in _amendments.removed: " + "; ".join(dropped))
+              raise SystemExit(1)
+          PY
       - name: Upload plan (round 4)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round4, path: ./plan.json, retention-days: 3 }
@@ -944,6 +992,10 @@ jobs:
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round4, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round4, path: . }
+      - name: Preserve prior plan (round 5)
+        run: cp ./plan.json ./prev-plan.json 2>/dev/null || true
       - name: Run Agent B (planner) — round 5
         id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
@@ -958,8 +1010,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             and Agent C's prior findings are ./prev-findings.json — address each.
-            First write /tmp/abrating.txt (rate A), then ./plan.json (the
-            categorized plan).
+            First write /tmp/abrating.txt (rate A), then amend the existing
+            ./plan.json (your prior plan) — preserve all entries, only add/correct
+            for C's findings, and record any removal in `_amendments.removed`.
       - name: STUB Agent B (later round)
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
@@ -985,6 +1038,17 @@ jobs:
                 | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
             fi
           } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
+      - name: Plan monotonicity guard (round 5)
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import sys; sys.path.insert(0,"scripts/breaking-bump")
+          import plan
+          dropped = plan.assert_monotonic(plan.load_plan("./prev-plan.json"), plan.load_plan("./plan.json"))
+          if dropped:
+              print("::error::Plan monotonicity: B' dropped prior entries without recording them in _amendments.removed: " + "; ".join(dropped))
+              raise SystemExit(1)
+          PY
       - name: Upload plan (round 5)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round5, path: ./plan.json, retention-days: 3 }
@@ -1103,6 +1167,10 @@ jobs:
         with: { name: abschema, path: . }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: findings-round5, path: . }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: plan-round5, path: . }
+      - name: Preserve prior plan (round 6)
+        run: cp ./plan.json ./prev-plan.json 2>/dev/null || true
       - name: Run Agent B (planner) — round 6
         id: agent
         if: vars.BREAKING_BUMP_STUB != 'true'
@@ -1117,8 +1185,9 @@ jobs:
             Substitute DEP=${{ env.DEP }}, FROM=${{ env.FROM }}, TO=${{ env.TO }},
             ISSUE_NUMBER=${{ env.ISSUE_NUMBER }}. A's schema is ./abschema.json
             and Agent C's prior findings are ./prev-findings.json — address each.
-            First write /tmp/abrating.txt (rate A), then ./plan.json (the
-            categorized plan).
+            First write /tmp/abrating.txt (rate A), then amend the existing
+            ./plan.json (your prior plan) — preserve all entries, only add/correct
+            for C's findings, and record any removal in `_amendments.removed`.
       - name: STUB Agent B (later round)
         if: vars.BREAKING_BUMP_STUB == 'true'
         run: cp scripts/breaking-bump/stub_fixtures/plan.round1.json ./plan.json
@@ -1144,6 +1213,17 @@ jobs:
                 | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$CID" -F body=@-
             fi
           } || echo "::warning::spend ledger update failed (non-fatal) for $STAGE"
+      - name: Plan monotonicity guard (round 6)
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import sys; sys.path.insert(0,"scripts/breaking-bump")
+          import plan
+          dropped = plan.assert_monotonic(plan.load_plan("./prev-plan.json"), plan.load_plan("./plan.json"))
+          if dropped:
+              print("::error::Plan monotonicity: B' dropped prior entries without recording them in _amendments.removed: " + "; ".join(dropped))
+              raise SystemExit(1)
+          PY
       - name: Upload plan (round 6)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: { name: plan-round6, path: ./plan.json, retention-days: 3 }
