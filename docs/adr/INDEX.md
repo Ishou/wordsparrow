@@ -113,6 +113,7 @@ ADR-0068  .github/breaking-bump/prompts/**           Per-agent prompts (A/B/C/D 
 ADR-0068  infra/tools-upgrade-sources.yaml           Source registry now governed by 0068 (reactive override; keep verified entries)
 # ADR-0068: amendment 2026-06-13 (B'/amend-loop + monotonicity guard); no new binding paths — existing entries above cover all W2 implementation paths
 # ADR-0068: amendment 2026-06-13 (prompt-injection threat model + structural hardening); no new binding paths — guards land under scripts/breaking-bump/**, prompts/**, workflows above
+# ADR-0068: amendment 2026-06-13 (deterministic agent-d finalize + PR-exists gate); no new binding paths — finalize step lands in the breaking-bump workflow + agent-d prompt above
 ```
 
 ## Adding entries

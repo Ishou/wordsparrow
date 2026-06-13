@@ -6,18 +6,19 @@
   "required": ["dep", "from", "to", "sourceConfidence", "sources",
                "breakingChanges", "deprecations", "removals", "migrationSteps"],
   "properties": {
-    "dep": { "type": "string", "minLength": 1 },
-    "from": { "type": "string", "minLength": 1 },
-    "to": { "type": "string", "minLength": 1 },
+    "dep": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "from": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "to": { "type": "string", "minLength": 1, "maxLength": 100 },
     "sourceConfidence": { "enum": ["high", "medium", "low", "none"] },
     "sources": {
       "type": "array",
+      "maxItems": 50,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["url", "type", "fetchedOk", "provenance"],
         "properties": {
-          "url": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "minLength": 1, "maxLength": 2048 },
           "type": { "enum": ["changelog", "migration-guide", "llms-txt", "release"] },
           "fetchedOk": { "type": "boolean" },
           "provenance": { "enum": ["registry", "pr-body", "websearch", "constructed"] }
@@ -29,13 +30,14 @@
     "removals": { "$ref": "#/$defs/findingList" },
     "migrationSteps": {
       "type": "array",
+      "maxItems": 100,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["instruction", "sourceUrl"],
         "properties": {
-          "instruction": { "type": "string", "minLength": 1 },
-          "sourceUrl": { "type": "string", "minLength": 1 }
+          "instruction": { "type": "string", "minLength": 1, "maxLength": 4000 },
+          "sourceUrl": { "type": "string", "minLength": 1, "maxLength": 2048 }
         }
       }
     }
@@ -43,14 +45,15 @@
   "$defs": {
     "findingList": {
       "type": "array",
+      "maxItems": 100,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["summary", "detail", "sourceUrl"],
         "properties": {
-          "summary": { "type": "string", "minLength": 1 },
-          "detail": { "type": "string", "minLength": 1 },
-          "sourceUrl": { "type": "string", "minLength": 1 }
+          "summary": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "detail": { "type": "string", "minLength": 1, "maxLength": 4000 },
+          "sourceUrl": { "type": "string", "minLength": 1, "maxLength": 2048 }
         }
       }
     }

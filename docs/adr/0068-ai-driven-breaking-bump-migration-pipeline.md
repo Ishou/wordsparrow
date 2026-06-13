@@ -69,6 +69,12 @@ gains formalized `dispositions` + `_amendments` fields.
 
 Design: `docs/superpowers/specs/2026-06-13-breaking-bump-b-amend-loop-design.md`.
 
+Follow-up: Agent D's push → PR-open → verify → close is now a deterministic,
+gated workflow step — live mode no longer trusts the LLM for mechanical git ops,
+and a run that produces no migration commit fails the job and escalates to
+`needs-human`. Design:
+`docs/superpowers/specs/2026-06-13-breaking-bump-agentd-finalize-design.md`.
+
 ## Amendment 2026-06-13 — prompt-injection threat model + structural hardening
 
 ### Context
