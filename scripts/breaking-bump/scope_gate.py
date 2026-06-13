@@ -32,7 +32,10 @@ def referenced_paths(plan: dict) -> set[str]:
 def _in_scope(path: str, tokens: set[str]) -> bool:
     base = os.path.basename(path)
     return any(
-        path == t or path.endswith("/" + t) or t.endswith("/" + path) or base == os.path.basename(t)
+        path == t
+        or path.endswith("/" + t)
+        or t.endswith("/" + path)
+        or ("/" not in t and base == t)
         for t in tokens
     )
 
