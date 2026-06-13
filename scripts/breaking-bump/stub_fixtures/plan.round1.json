@@ -2,6 +2,12 @@
   "a": ["Rename the `foo` key to `bar` in stub-config.yaml (migrationSteps[0])."],
   "b": ["Update the version reference in docs/stub.md from 1.0.0 to 2.0.0."],
   "c": ["Adopt the new bar-batching API for throughput (optional)."],
+  "scope": {
+    "files": [
+      {"path": "stub-config.yaml", "change": "rename foo key to bar (migrationSteps[0])"},
+      {"path": "docs/stub.md", "change": "bump version reference 1.0.0 -> 2.0.0"}
+    ]
+  },
   "dispositions": {"--legacy-flag": "not used — 0 stub-flag hits"},
   "_amendments": {"removed": []}
 }

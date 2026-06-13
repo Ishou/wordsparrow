@@ -31,6 +31,14 @@ Run the relevant verification for what you touched (`./gradlew build`, or
 `cd frontend && pnpm typecheck && pnpm test && pnpm build`, or doc-only = read
 the diff). Fix causes, never work around.
 
+**Stay inside the contract.** You may touch ONLY files listed in
+`plan.scope.files`. Do not "improve" docs or bump version references outside the
+declared set, even if they look stale — the planner already applied the
+≥-floor rule (a satisfied minimum floor is not stale). If you believe a needed
+file is missing from `scope.files`, STOP and surface it (do not touch it); the
+run escalates and a human or a re-plan adds it. The post-D scope gate hard-fails
+any diff that strays outside the manifest.
+
 ## Step 3 — commit
 Commit with conventional messages, `git commit -s` (DCO), bounded-context scope.
 STOP after committing — do NOT push and do NOT open the claude PR.
