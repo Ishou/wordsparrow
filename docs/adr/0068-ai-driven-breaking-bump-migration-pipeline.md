@@ -72,9 +72,9 @@ Design: `docs/superpowers/specs/2026-06-13-breaking-bump-b-amend-loop-design.md`
 ## Amendment 2026-06-13 — prompt-injection threat model + structural hardening
 
 ### Context
-A focused red-team of this pipeline (suite + log under
-`scripts/breaking-bump/redteam_fixtures/`, `FINDINGS.md`) established its
-prompt-injection posture. The attack surface is intrinsic: the pipeline ingests
+A focused red-team of this pipeline established its prompt-injection posture.
+(The suite + log will land under `scripts/breaking-bump/redteam_fixtures/`,
+`FINDINGS.md` as part of the Wave A implementation PR.) The attack surface is intrinsic: the pipeline ingests
 attacker-influenceable upstream content (a dependency's changelog / release notes via
 the Renovate PR body) and runs four chained agents over it, the last of which — Agent
 D — holds `contents: write` + a `workflows`-scope PAT and edits code, opens/closes PRs.
@@ -100,7 +100,7 @@ Given D's blast radius, relying solely on agent judgment is the wrong risk postu
 
 ### Decision
 Add **structural** guards that do not depend on agent judgment, shipped in waves (each
-its own PR; the red-team battery in `redteam_fixtures/` is the regression proof):
+its own PR; the red-team battery in `redteam_fixtures/` (landing with the Wave A PR) will be the regression proof):
 
 - **Wave A — defense-in-depth guards (test-defined).** Bound the length of
   attacker-controlled free-text fields in `ab_contract.schema.json`
