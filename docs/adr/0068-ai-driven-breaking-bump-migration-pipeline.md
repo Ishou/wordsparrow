@@ -49,3 +49,22 @@ five labels (`ai-driven`, `breaking-bump`, `post-bump-enhancement`, `needs-human
 - **Migration:** ADR-0067's helm-enrich pipeline is re-homed under Agent A, not
   deleted day one; `infra/tools-upgrade-sources.yaml` is kept (verified entries).
 - This is a lab artifact intended to be reusable in other repos.
+
+## Amendment 2026-06-13 — B'/amend convergence loop
+
+The first dense major-bump live test (helm v3.21.0→v4.2.1) exposed a B↔C
+non-convergence bug: each `b_round(N+1)` job downloaded only C's findings, **not
+its own prior plan**, so Agent B regenerated the plan from scratch every round,
+silently dropping coverage it had produced earlier. The loop burned all 6 rounds
+and escalated to `needs-human` despite a correct plan existing by round 2.
+
+Refinement: Agent B splits into **B (create, round 1)** and **B' (amend, rounds
+2–6)**. B' downloads its prior `plan-round(N-1)`, amends it in place, and re-emits
+the complete plan. C remains an **independent reviewer** (it amends nothing —
+collapsing review and authorship would forfeit the adversarial check). A
+deterministic plan-monotonicity guard runs after each B' round: every prior entry
+(keyed `dispositions` and `a`/`b`/`c` action items) must persist or be recorded in
+`_amendments.removed` with a reason; an unaccounted drop fails the round. `plan.json`
+gains formalized `dispositions` + `_amendments` fields.
+
+Design: `docs/superpowers/specs/2026-06-13-breaking-bump-b-amend-loop-design.md`.
