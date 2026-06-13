@@ -114,6 +114,7 @@ ADR-0068  infra/tools-upgrade-sources.yaml           Source registry now governe
 # ADR-0068: amendment 2026-06-13 (B'/amend-loop + monotonicity guard); no new binding paths — existing entries above cover all W2 implementation paths
 # ADR-0068: amendment 2026-06-13 (prompt-injection threat model + structural hardening); no new binding paths — guards land under scripts/breaking-bump/**, prompts/**, workflows above
 # ADR-0068: amendment 2026-06-13 (deterministic agent-d finalize + PR-exists gate); no new binding paths — finalize step lands in the breaking-bump workflow + agent-d prompt above
+# ADR-0068: amendment 2026-06-13 (plan = AI execution contract; scope.files manifest + workflow-sensitivity split); no new binding paths — plan/gate/prompt changes land under scripts/breaking-bump/** + prompts/** above
 ```
 
 ## Adding entries
