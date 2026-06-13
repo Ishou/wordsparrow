@@ -68,7 +68,7 @@ def test_clean_in_scope_change_passes():
     assert v == {"sensitive": [], "out_of_scope": [], "ok": True}
 
 
-# --- W2: authoritative scope.files manifest ---
+# --- authoritative scope.files manifest ---
 
 
 def test_manifest_path_in_scope_passes():
