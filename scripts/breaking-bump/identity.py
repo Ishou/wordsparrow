@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 
 _UNSAFE = re.compile(r"[^a-zA-Z0-9._-]+")
+_DOTDOT = re.compile(r"\.{2,}")
 
 
 def _safe(text: str) -> str:
@@ -23,5 +24,6 @@ def slug(dep: str, frm: str, to: str) -> str:
 
 def claude_branch(dep: str, to: str) -> str:
     """Agent D's fork branch; chore/claude- prefix passes branch-name.yml."""
-    # `to` is attacker-influenced (parsed from the Renovate PR body) — sanitise like `dep`.
-    return f"chore/claude-{_safe(dep)}-v{_safe(to)}"
+    # `to` is attacker-influenced; git also forbids `..` in ref names.
+    safe_to = _DOTDOT.sub(".", _safe(to)).strip(".")
+    return f"chore/claude-{_safe(dep)}-v{safe_to}"
