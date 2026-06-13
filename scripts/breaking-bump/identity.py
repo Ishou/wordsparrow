@@ -23,4 +23,5 @@ def slug(dep: str, frm: str, to: str) -> str:
 
 def claude_branch(dep: str, to: str) -> str:
     """Agent D's fork branch; chore/claude- prefix passes branch-name.yml."""
-    return f"chore/claude-{_safe(dep)}-v{to}"
+    # `to` is attacker-influenced (parsed from the Renovate PR body) — sanitise like `dep`.
+    return f"chore/claude-{_safe(dep)}-v{_safe(to)}"
