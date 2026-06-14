@@ -60,8 +60,7 @@ jobs:
       - name: Evaluate the gate and merge
         if: steps.pr.outputs.pr != ''
         env:
-          # CLAUDE_BOT_PAT so the merge's push to main triggers deploy workflows
-          # (a GITHUB_TOKEN-driven merge would not). No untrusted code runs here.
+          # CLAUDE_BOT_PAT: its push to main triggers deploy workflows (GITHUB_TOKEN would not); no untrusted code runs here.
           GH_TOKEN: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
           PR: ${{ steps.pr.outputs.pr }}
         run: |
