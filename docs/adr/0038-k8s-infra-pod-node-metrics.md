@@ -62,7 +62,7 @@ own supported topology, and keeps the DaemonSet off local development environmen
 
 ## Decision
 
-Add `k8s-infra` version `0.15.1` from `https://charts.signoz.io` as a conditional
+Add `k8s-infra` version `0.16.0` from `https://charts.signoz.io` as a conditional
 subchart of the `infra/observability` umbrella chart (alongside the existing `signoz`
 subchart). Enable it in `values-prod.yaml` with:
 
@@ -75,17 +75,15 @@ subchart). Enable it in `values-prod.yaml` with:
 Disable it by default in `values.yaml` so `make dev` does not spin a DaemonSet on local
 nodes.
 
-### OTLP exporter selection (updated signoz 0.128.0 / k8s-infra v0.16+)
+### OTLP exporter selection (signoz 0.128.0 / k8s-infra 0.16.0)
 
-k8s-infra v0.16 (upstream; our standalone subchart remains pinned at 0.15.1 in
-`Chart.lock` — it is independent of the signoz chart version) changed the default OTLP
+k8s-infra v0.16 (now live at 0.16.0 in `Chart.lock`) changed the default OTLP
 exporter from gRPC (port 4317) to HTTP (port 4318):
 `presets.otlphttpExporter.enabled` now defaults to `true` and
 `presets.otlpExporter.enabled` now defaults to `false`.
 
-The values below are set as a forward-compatibility precaution coinciding with the
-signoz 0.128.0 bump; they are a no-op on k8s-infra 0.15.1 and become load-bearing on
-the next k8s-infra bump to v0.16+.
+The values below were set as a forward-compatibility precaution coinciding with the
+signoz 0.128.0 bump; they are now load-bearing on the live 0.16.0 pin.
 
 We explicitly retain the gRPC path by setting both in `values-prod.yaml`:
 
