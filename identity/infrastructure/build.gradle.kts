@@ -42,7 +42,7 @@ dependencies {
     testFixturesImplementation(project(":identity:domain"))
     testFixturesImplementation(project(":identity:application"))
 
-    testImplementation(platform("org.junit:junit-bom:5.11.4"))
+    testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.28.1")
