@@ -286,8 +286,7 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'tracker'`.
 All invariants live here, in concrete methods built on abstract primitives, so every adapter inherits them and the contract test covers them once.
 
 ```python
-"""IssueTracker port. Invariants live in concrete methods; adapters implement
-only the primitives. No vendor SDK imports here."""
+"""IssueTracker port — invariants in concrete methods; no vendor SDK imports."""
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -675,7 +674,7 @@ from tracker import IssueTracker
 
 class AuditingTracker(IssueTracker):
     def __init__(self, inner: IssueTracker, actor: str,
-                 now: Callable[[], str] = None) -> None:
+                 now: Callable[[], str] | None = None) -> None:
         from datetime import datetime, timezone
         self._inner = inner
         self._actor = actor
@@ -685,7 +684,6 @@ class AuditingTracker(IssueTracker):
         sep = " · " if detail else ""
         self._inner.comment(id, f"🤖 {action}{sep}{detail} · actor: {self._actor} · {self._now()}")
 
-    # reads — pass through
     def get(self, id: int) -> Issue: return self._inner.get(id)
     def list(self, labels=(), state="open") -> list[Issue]: return self._inner.list(labels, state)
     def comments(self, id: int) -> list[Comment]: return self._inner.comments(id)
@@ -693,7 +691,6 @@ class AuditingTracker(IssueTracker):
     # comment is the audit channel — not itself audited
     def comment(self, id: int, body: str) -> None: self._inner.comment(id, body)
 
-    # mutations — delegate then audit exactly once
     def create(self, title, body, labels=()) -> IssueRef:
         ref = self._inner.create(title, body, labels)
         self._audit(ref.id, "create", f"labels: {','.join(labels) or '-'}")
