@@ -4,7 +4,8 @@ name: breaking-bump-automerge
 
 on:
   workflow_run:
-    workflows: ["CI", "Claude Code Review"]
+    # breaking-bump-dispatch posts the cleared stamp; re-evaluating on its completion closes the stamp-vs-checks ordering gap.
+    workflows: ["CI", "Claude Code Review", "breaking-bump-dispatch"]
     types: [completed]
   pull_request_review:
     types: [submitted]
