@@ -20,6 +20,16 @@ def test_set_status_emits_one_audit_comment_with_transition():
     assert sum("set_status" in a for a in audits) == 2
 
 
+def test_set_status_noop_when_unchanged_emits_no_audit():
+    inner = InMemoryTracker()
+    audited = AuditingTracker(inner, actor="run-1", now=lambda: "t")
+    ref = audited.create("t", "b")
+    audited.set_status(ref.id, Status.IDEA)   # real transition: - → idea
+    audited.set_status(ref.id, Status.IDEA)   # no-op: idea → idea, must not audit
+    audits = _audit_comments(inner, ref.id)
+    assert sum("set_status" in a for a in audits) == 1
+
+
 def test_create_emits_audit_and_comment_is_not_audited():
     inner = InMemoryTracker()
     audited = AuditingTracker(inner, actor="run-1", now=lambda: "t")
