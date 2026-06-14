@@ -53,6 +53,9 @@ RUN chmod +x gradlew && ./gradlew :grid:worker:installDist --no-daemon --stacktr
 # eclipse-temurin:21.0.11_10-jre-alpine-3.23
 FROM eclipse-temurin:21.0.11_10-jre-alpine-3.23@sha256:704db3c40204a44f471191446ddd9cda5d60dab40f0e15c6507b815ed897238b
 
+# upgrade openssl past the pinned base digest for current Alpine security patches; drop after a base-image bump
+RUN apk add --no-cache --upgrade openssl libssl3 libcrypto3
+
 WORKDIR /app
 
 # Copy the install layout into /app, preserving bin/ + lib/. applicationName
