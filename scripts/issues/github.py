@@ -20,11 +20,14 @@ _VIEW_FIELDS = "number,title,body,labels,state,url"
 
 # abstract Status ↔ native Projects single-select option name (Done has no enum)
 _STATUS_TO_OPTION = {Status.IDEA: "Idea", Status.NEEDS_INPUT: "Needs Input",
-                     Status.READY: "Ready", Status.BUILDING: "Building"}
+                     Status.READY: "Ready", Status.PLAN_REVIEW: "Plan Review",
+                     Status.PLANNED: "Planned", Status.BUILDING: "Building"}
 _OPTION_TO_STATUS = {v: k for k, v in _STATUS_TO_OPTION.items()}
 _DONE_OPTION = "Done"
-_FIELD_OPTIONS = ("Idea", "Needs Input", "Ready", "Building", "Done")
+_FIELD_OPTIONS = ("Idea", "Needs Input", "Ready", "Plan Review", "Planned",
+                  "Building", "Done")
 _OPTION_COLORS = {"Idea": "GRAY", "Needs Input": "ORANGE", "Ready": "GREEN",
+                  "Plan Review": "YELLOW", "Planned": "PINK",
                   "Building": "BLUE", "Done": "PURPLE"}
 
 

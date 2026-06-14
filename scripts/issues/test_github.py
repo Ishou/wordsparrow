@@ -59,12 +59,13 @@ def test_ensure_status_field_creates_when_absent():
     create = runner.calls[1]
     assert create[:3] == ["gh", "project", "field-create"]
     assert "--data-type" in create and "SINGLE_SELECT" in create
-    assert "Idea,Needs Input,Ready,Building,Done" in create
+    assert "Idea,Needs Input,Ready,Plan Review,Planned,Building,Done" in create
 
 
 def test_ensure_status_field_is_noop_when_options_match():
     runner = FakeRunner([json.dumps({"fields": [{"name": "Status", "id": "FID", "options": [
         {"name": "Idea"}, {"name": "Needs Input"}, {"name": "Ready"},
+        {"name": "Plan Review"}, {"name": "Planned"},
         {"name": "Building"}, {"name": "Done"}]}]})])
     GitHubTracker(runner=runner).ensure_status_field()
     assert [c[:3] for c in runner.calls] == [["gh", "project", "field-list"]]

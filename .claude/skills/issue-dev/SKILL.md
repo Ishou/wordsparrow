@@ -30,15 +30,21 @@ scripts/issues/issues comment <id> --body "…"      # human-facing note
 Set `ISSUE_ACTOR` so audit comments attribute correctly:
 `ISSUE_ACTOR="launch:<session-or-run-id>" scripts/issues/issues set-status …`.
 
-Lifecycle is **adapter-native** (ADR-0069 amended): the abstract status
-`idea` → `needs_input` → `ready` → `building` → **Done** maps to the platform's
-real board column — the built-in `Status` single-select field on GitHub (NOT a
-`status:*` label). `needs_input` is the **human-decision gate**: when you can't
-finish a spec without the maintainer, park the issue there with a comment; the
-maintainer moves it back to `idea` (rework) or on to `ready` (approved).
-`set-status` moves the card; `list --status <s>` filters by it. **Priority stays
-a label** (`priority:*`) and ranks within a column; `needs-human` (a label) flags
-a *launched* issue that hit a wall — distinct from the `needs_input` status.
+Lifecycle is **adapter-native** (ADR-0069 amended) with **two human gates** —
+one for the spec, one for the plan:
+`idea` → `needs_input` → `ready` → `plan_review` → `planned` → `building` →
+**Done**. It maps to the platform's real board column — the built-in `Status`
+single-select field on GitHub (NOT a `status:*` label).
+- `needs_input` — **spec gate**: agent drafts the spec, parks here with a comment;
+  maintainer approves (→ `ready`) or `/rework` (→ `idea`).
+- `ready` — spec approved; agent **writes the implementation plan** (parking).
+- `plan_review` — **plan gate**: plan awaits the maintainer; approve (→ `planned`)
+  or `/rework` (redo the plan; back to `needs_input` only if the spec is wrong).
+- `planned` — plan approved, queued for `/launch`.
+The agent never auto-advances past a gate. `set-status` moves the card;
+`list --status <s>` filters by it. **Priority stays a label** (`priority:*`) and
+ranks within a column; `needs-human` (a label) flags a *launched* issue that hit a
+wall — distinct from the `needs_input` status.
 
 ## /capture "<idea>" — the procedure
 

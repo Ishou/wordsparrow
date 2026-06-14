@@ -10,6 +10,8 @@ class Status(str, Enum):
     IDEA = "idea"
     NEEDS_INPUT = "needs_input"
     READY = "ready"
+    PLAN_REVIEW = "plan_review"
+    PLANNED = "planned"
     BUILDING = "building"
 
 
