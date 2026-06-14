@@ -10,9 +10,9 @@ dependencies:
   version: 1.21.1
 - name: cloudnative-pg
   repository: https://cloudnative-pg.github.io/charts
-  version: 0.28.0
+  version: 0.28.3
 - name: hcloud-csi
   repository: https://charts.hetzner.cloud
   version: 2.21.2
-digest: sha256:003ff208c2ef92174bdf4d9fdd30fb9f1fb7b703fb5687746c8e914e023aae2b
-generated: "2026-06-14T12:54:04.311463693Z"
+digest: sha256:f842fc55b56ba49dd2ce014418827c9c5ac02544aa59f3206bef12c528c73279
+generated: "2026-06-14T19:32:28.46423+02:00"
