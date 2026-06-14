@@ -49,6 +49,8 @@ ADR-0025  frontend/src/**/analytics/**             Matomo + RGPD posture
 ADR-0026  frontend/**/sw.*                         PWA offline cache via Workbox
 ADR-0027  infra/observability/**                   SigNoz on ClickHouse
 ADR-0038  infra/observability/**                   k8s-infra subchart for per-pod/node metrics; OTLP exporter preset pins
+ADR-0030  infra/observability/templates/oauth2-proxy.yaml   oauth2-proxy htpasswd-only; session cookie for SigNoz SPA; no OIDC
+ADR-0030  infra/observability/values.yaml                   oauth2Proxy.image.tag pin (v7.15.3); Renovate keeps current
 ADR-0033  frontend/src/**/otel/**                  Frontend OTel public ingest; emits traceparent/tracestate
 ADR-0033  frontend/src/infrastructure/api/**       Browser SDK adds traceparent to every cross-origin fetch
 ADR-0034  */api/src/**/Module.kt                   CORS: allowHeaders { true } (wildcard predicate)

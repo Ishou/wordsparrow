@@ -113,7 +113,7 @@ because session-cookie theft requires TLS interception or browser compromise
 | Item | Cost |
 |---|---|
 | Deployment: 1 replica, 20 m CPU / 32 Mi RAM (requests) | Negligible on existing node |
-| Image: `quay.io/oauth2-proxy/oauth2-proxy:v7.6.0` | Pin in `values.yaml`; renovate/dependabot picks up new tags |
+| Image: `quay.io/oauth2-proxy/oauth2-proxy:v7.15.3` | Pin in `values.yaml`; renovate/dependabot picks up new tags |
 | `oauth2-proxy-cookie` Secret | Chart-managed; no manual bootstrap step |
 | Session invalidation on password rotation | Already handled: existing `bootstrap-admin-htpasswd.sh` rotates the htpasswd Secret; next cookie refresh forces re-login |
 
