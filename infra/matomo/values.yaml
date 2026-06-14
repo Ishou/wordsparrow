@@ -42,7 +42,7 @@ mariadb:
     repository: mariadb
     digest: ""
     # renovate: datasource=docker depName=mariadb
-    tag: "11.4.4-noble"
+    tag: "11.8.8-noble"
     pullPolicy: IfNotPresent
     requireDigest: false
   resources: {}
