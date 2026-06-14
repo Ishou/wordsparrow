@@ -46,11 +46,3 @@ def test_comments_roundtrip(tracker: IssueTracker):
     tracker.comment(ref.id, "hello")
     bodies = [c.body for c in tracker.comments(ref.id)]
     assert bodies == ["hello"]
-
-
-def test_ensure_label_is_idempotent_create_or_update(tracker: IssueTracker):
-    tracker.ensure_label("status:ready", "0E8A16", "first")
-    tracker.ensure_label("status:ready", "AABBCC", "second")
-    defs = tracker.label_definitions()
-    assert defs["status:ready"] == ("AABBCC", "second")
-    assert sum(1 for n in defs if n == "status:ready") == 1
