@@ -49,8 +49,8 @@ concurrency:
 
 jobs:
   claude-review:
-    # §6a suppressed on renovate/*: ADR-0068 owns those branches; §6a must not push to a Renovate-owned branch.
-    if: ${{ !github.event.pull_request.draft && !startsWith(github.head_ref, 'renovate/') }}
+    # On renovate/* §6a runs review-only (the fixer steps are gated off below): it posts an LGTM/Findings review the auto-merge gate reads, but never pushes to a Renovate-owned branch (ADR-0068 — pushing is what causes Renovate's Edited/Blocked deadlock).
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -394,7 +394,7 @@ jobs:
           fi
 
       - name: Run fixer agent
-        if: steps.cap.outputs.skip != 'true' && (steps.detect.outputs.has_findings == 'true' || steps.detect-ci.outputs.ci_red == 'true')
+        if: steps.cap.outputs.skip != 'true' && !startsWith(github.head_ref, 'renovate/') && (steps.detect.outputs.has_findings == 'true' || steps.detect-ci.outputs.ci_red == 'true')
         uses: anthropics/claude-code-action@v1
         env:
           # Surfaced into the agent's environment so the prompt below can
@@ -650,7 +650,7 @@ jobs:
         # as the "Submit review" step: bash-side post, called exactly once,
         # immune to in-prompt iteration loops. Skipped if the agent
         # didn't produce a file (e.g. no findings, or agent crashed).
-        if: steps.cap.outputs.skip != 'true' && (steps.detect.outputs.has_findings == 'true' || steps.detect-ci.outputs.ci_red == 'true')
+        if: steps.cap.outputs.skip != 'true' && !startsWith(github.head_ref, 'renovate/') && (steps.detect.outputs.has_findings == 'true' || steps.detect-ci.outputs.ci_red == 'true')
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
