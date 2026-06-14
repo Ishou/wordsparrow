@@ -32,7 +32,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     // Commons CSV — RFC 4180 reader for the words-<lang>.csv corpus (ADR-0013 §8).
-    implementation("org.apache.commons:commons-csv:1.12.0")
+    implementation("org.apache.commons:commons-csv:1.14.1")
 
     // NATS JetStream client — cross-context event subscribers (ADR-0049).
     implementation("io.nats:jnats:2.20.6")
