@@ -1,6 +1,6 @@
 ---
 name: issue-dev
-description: Issue-driven development for Bliss — treat a GitHub issue as the living spec and launch an implementer from it. Use when the user says "launch issue #N", "implement issue #N", "start work on #N", "pick up the top of the backlog", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read the issue (body + comments) via the portable IssueTracker CLI (never gh directly), move it across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /launch.
+description: Issue-driven development for Bliss — treat a GitHub issue as the living spec, capture ideas, view the prioritized backlog, and launch an implementer from a ready issue. Use when the user says "capture this idea", "add it to the backlog", "show the backlog", "what's next to work on", "launch issue #N", "implement issue #N", "start work on #N", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read/write issues via the portable IssueTracker CLI (never gh directly), move them across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /capture, /backlog, /launch.
 ---
 
 # Issue-driven development playbook
@@ -33,6 +33,31 @@ Set `ISSUE_ACTOR` so audit comments attribute correctly:
 Lifecycle (board columns = labels): `status:idea` → `status:ready` →
 `status:building` → **closed = Done**. `priority:*` ranks within a column.
 `needs-human` flags escalation.
+
+## /capture "<idea>" — the procedure
+
+The low-friction inbox. Derive a concise title from the idea and create a
+`status:idea` issue:
+
+```sh
+ISSUE_ACTOR=capture scripts/issues/issues create \
+  --title "<concise title>" --body "<idea>" --label status:idea
+```
+
+Do NOT add `ai-driven` — that label is for pipeline-synthesized issues, not human
+captures. No-arg invocation: ask the user for the idea first. The issue lands in
+Inbox; `/spec <id>` later turns it into an implementable spec.
+
+## /backlog — the procedure
+
+```sh
+scripts/issues/issues list --label status:ready
+```
+
+Group the results by `priority:high` → `medium` → `low` (oldest-first within each)
+and present a compact table: issue #, title, priority. `--all` also lists
+`status:idea` and `status:building`. This is the terminal view of the same backlog
+the board renders visually; the launcher picks the highest-priority ready issue.
 
 ## /launch <issue#> — the procedure
 
