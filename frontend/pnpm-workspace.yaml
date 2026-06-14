@@ -6,7 +6,7 @@ overrides:
   # transformer chain to work cleanly.
   esbuild: ^0.28.1
   # Pull every postcss path onto the same major to avoid double-installs.
-  postcss: ^8.5.10
+  postcss: ^8.5.15
   # `fast-uri` parser confusion in older versions; pin to the patched line.
   fast-uri: ^3.1.2
   # Vitest 3 bundles its own internal Vite; force it to share Vite 8 with
