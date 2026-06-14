@@ -68,3 +68,32 @@ as a comment. The maintainer moves it back to `idea` (rework) or forward
 to `ready` (approved). `needs-human` (a label) remains distinct — it flags
 a *launched* issue that hit an implementation wall, not a spec gate.
 GitLab forward-look: `status::idea|needs_input|ready|building`.
+
+## Amendment 2026-06-14 (two-gate lifecycle) — plan gate
+
+The spec is not the only agent-produced artifact that warrants a human gate;
+the *implementation plan* does too. The lifecycle becomes two symmetric
+draft → review → approve cycles — one for the **what** (spec), one for the
+**how** (plan):
+
+```
+Idea → Needs Input → Ready → Plan Review → Planned → Building → Done(closed)
+```
+
+- **Idea** — captured; the agent drafts the spec.
+- **Needs Input** — spec awaiting the maintainer; back-and-forth via comments
+  (`/refine`). Approve → Ready; `/rework` → Idea.
+- **Ready** — spec approved; this transition **triggers the agent to write the
+  implementation plan** (Ready is the "plan being written" parking slot).
+- **Plan Review** — the plan awaits the maintainer; same back-and-forth.
+  Approve → Planned; `/rework` redoes the plan (and bounces to Needs Input only
+  if the *spec* itself needs rewriting).
+- **Planned** — plan approved, queued. `/launch` → Building.
+- **Building → Done** — implementer in flight; the merge (`Closes #id`) closes
+  the issue.
+
+`Status` enum gains `PLAN_REVIEW` and `PLANNED`:
+`IDEA | NEEDS_INPUT | READY | PLAN_REVIEW | PLANNED | BUILDING`. Done remains the
+closed state. The maintainer drives the two approval gates (and `/rework`); the
+agent does not auto-advance past either. GitLab forward-look:
+`status::idea|needs_input|ready|plan_review|planned|building`.
