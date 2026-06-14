@@ -1,4 +1,4 @@
 pyyaml>=6.0
 pytest>=8.0
 jsonschema>=4.21
-hypothesis>=6.100
+hypothesis>=6.155.2
