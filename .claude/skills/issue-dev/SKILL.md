@@ -1,6 +1,6 @@
 ---
 name: issue-dev
-description: Issue-driven development for Bliss — treat a GitHub issue as the living spec and launch an implementer from it. Use when the user says "launch issue #N", "implement issue #N", "start work on #N", "pick up the top of the backlog", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read the issue (body + comments) via the portable IssueTracker CLI (never gh directly), move it across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /launch (this wave); /capture, /backlog, /spec, /refine arrive in later waves.
+description: Issue-driven development for Bliss — treat a GitHub issue as the living spec and launch an implementer from it. Use when the user says "launch issue #N", "implement issue #N", "start work on #N", "pick up the top of the backlog", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read the issue (body + comments) via the portable IssueTracker CLI (never gh directly), move it across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /launch.
 ---
 
 # Issue-driven development playbook
@@ -95,8 +95,4 @@ Report the blocker. `needs-human` is the Blocked signal on the board; leave
 - Not a replacement for the dispatch skill — it sits on top of it, adding the
   issue read/gate/board-move/close wiring.
 
-## Coming in later waves (ADR-0069 plan)
-- `/capture "<idea>"` — create a `status:idea` + `ai-driven` issue (the inbox).
-- `/backlog` — `list --label status:ready` grouped by priority.
-- `/spec <id>` — brainstorm into the issue body; flip to `status:ready`.
-- `/refine <id>` — fold new comments into the body (comment-driven steering).
+See ADR-0069 plan for upcoming commands.
