@@ -37,7 +37,7 @@ jobs:
       # Single source of truth for the issue number across both triggers.
       ISSUE_NUMBER: ${{ github.event.issue.number || github.event.inputs.issue_number }}
     outputs:
-      valid: ${{ steps.ctx.outputs.valid }}
+      valid: ${{ steps.guard.outputs.valid }}
       dep: ${{ steps.ctx.outputs.dep }}
       from: ${{ steps.ctx.outputs.from }}
       to: ${{ steps.ctx.outputs.to }}
@@ -70,13 +70,37 @@ jobs:
           out = open(os.environ["GITHUB_OUTPUT"], "a")
           if not ctx:
               # Stray breaking-bump label on a hand-made issue -> no-op the run.
-              out.write("valid=false\n")
+              out.write("parsed=false\n")
               sys.exit(0)
           dep, frm, to, pr = ctx["dep"], ctx["from"], ctx["to"], ctx["pr"]
-          out.write("valid=true\n")
+          out.write("parsed=true\n")
           out.write(f"dep={dep}\nfrom={frm}\nto={to}\npr={pr}\n")
           out.write(f"claude_branch={identity.claude_branch(dep, to)}\n")
           PY
+      - name: Guard — Renovate PR still actionable
+        id: guard
+        env:
+          PARSED: ${{ steps.ctx.outputs.parsed }}
+          PR_NUMBER: ${{ steps.ctx.outputs.pr }}
+        run: |
+          set -euo pipefail
+          # Stray label / unparseable issue: silent no-op (pre-existing behaviour).
+          if [ "$PARSED" != "true" ]; then
+            echo "valid=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # A merged/closed Renovate PR deletes the branch agents A and D fetch (exit 128); short-circuit here. UNKNOWN keeps workflow_dispatch scratch runs alive.
+          STATE=$(gh pr view "$PR_NUMBER" --json state --jq .state 2>/dev/null || echo UNKNOWN)
+          case "$STATE" in
+            MERGED)
+              gh issue comment "$ISSUE_NUMBER" --body "Renovate PR #${PR_NUMBER} was merged directly while this breaking-bump run was queued. The version bump is already on \`main\`, but the pipeline can no longer fork the deleted branch to apply doc-coherence changes. A human should verify any ADR/doc/chart references to the old version are updated. Leaving this issue open for \`needs-human\`."
+              echo "valid=false" >> "$GITHUB_OUTPUT" ;;
+            CLOSED)
+              gh issue comment "$ISSUE_NUMBER" --body "Renovate PR #${PR_NUMBER} was closed without merging; the bump was abandoned. Closing this spine issue — nothing to migrate."
+              gh issue close "$ISSUE_NUMBER"
+              echo "valid=false" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "valid=true" >> "$GITHUB_OUTPUT" ;;
+          esac
 
   agent-a:
     needs: read-context
