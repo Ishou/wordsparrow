@@ -79,7 +79,7 @@
     "workbox-window": "^7.4.1"
   },
   "engines": {
-    "node": ">=22",
+    "node": ">=22.22.3",
     "pnpm": ">=11"
   },
   "packageManager": "pnpm@11.0.9",
