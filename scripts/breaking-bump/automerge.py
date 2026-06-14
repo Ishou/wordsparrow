@@ -1,8 +1,4 @@
-"""Auto-merge gate for ai-gate-cleared dependency bumps (ADR-0068).
-
-Pure decision over a `gh pr view --json ...` payload; the workflow is glue. A PR
-auto-merges only when every gate holds — see `should_automerge`.
-"""
+"""Auto-merge gate for ai-gate-cleared dependency bumps — ADR-0068 amendment 2026-06-14."""
 from __future__ import annotations
 
 STAMP_MARKER = "<!-- breaking-bump:cleared -->"
@@ -66,10 +62,7 @@ def _section6a_lgtm(reviews: list[dict]) -> bool:
 
 
 def should_automerge(pr: dict) -> tuple[bool, str]:
-    """Decide whether an ai-gate-cleared Renovate PR may auto-merge.
-
-    Returns (merge?, reason). Reason is for log output on both branches.
-    """
+    """Decide whether an ai-gate-cleared Renovate PR may auto-merge; returns (ok, reason)."""
     state = pr.get("state")
     if state != "OPEN":
         return False, f"pr not open (state={state})"
