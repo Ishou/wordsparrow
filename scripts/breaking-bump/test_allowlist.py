@@ -42,3 +42,35 @@ def test_is_allowlisted_is_case_insensitive():
 
 def test_is_allowlisted_empty_allowlist_blocks_all():
     assert allowlist.is_allowlisted("signoz", []) is False
+
+
+def test_load_types_reads_types_list(tmp_path):
+    f = tmp_path / "allowlist.yaml"
+    f.write_text("deps:\n  - signoz\ntypes:\n  - helm-chart\n  - github-action\n")
+    assert allowlist.load_types(f) == ["helm-chart", "github-action"]
+
+
+def test_load_types_empty_when_no_types_key(tmp_path):
+    f = tmp_path / "allowlist.yaml"
+    f.write_text("deps:\n  - signoz\n")
+    assert allowlist.load_types(f) == []
+
+
+def test_is_type_allowlisted_matches_dep_type_label():
+    assert allowlist.is_type_allowlisted(
+        ["update:minor", "dep-type:helm-chart"], ["helm-chart", "container-image"]
+    ) is True
+
+
+def test_is_type_allowlisted_is_case_insensitive():
+    assert allowlist.is_type_allowlisted(["Dep-Type:Helm-Chart"], ["helm-chart"]) is True
+
+
+def test_is_type_allowlisted_rejects_unlisted_type():
+    # A source library carries no dep-type label (or one not on the list) -> not admitted by type.
+    assert allowlist.is_type_allowlisted(["update:major"], ["helm-chart"]) is False
+    assert allowlist.is_type_allowlisted(["dep-type:npm-package"], ["helm-chart"]) is False
+
+
+def test_is_type_allowlisted_empty_types_blocks_all():
+    assert allowlist.is_type_allowlisted(["dep-type:helm-chart"], []) is False

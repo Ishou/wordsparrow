@@ -154,3 +154,22 @@ triggers are main-only, pull_request uses base workflow defs, and the merge is h
 so CLI-tool migrations (helm, actions) can touch their declared workflow pins.
 
 Design: `docs/superpowers/specs/2026-06-13-breaking-bump-plan-execution-contract-design.md`.
+
+## Amendment 2026-06-14 — broaden the rollout allowlist by dep-type
+
+The original rollout admitted deps **one name at a time** (`signoz`, then `helm`). That
+under-uses the pipeline: the real, frequent bump stream is infra/CI — Helm subcharts,
+container images, GitHub Actions — none of which touch application source. Refinement:
+the allowlist (`scripts/breaking-bump/allowlist.yaml`) gains a `types:` list admitting
+whole **dep-type classes**, alongside the existing per-name `deps:`. Renovate stamps a
+`dep-type:<type>` label per manager (`helmv3`→`helm-chart`, `datasource=docker`→
+`container-image`, `github-actions`→`github-action`); the Step-0 gate admits a PR if its
+dep name is in `deps:` **or** it carries an allowed `dep-type:` label. Source-library
+managers (`gradle`, `npm`) get **no** dep-type label and stay one-at-a-time under `deps:`.
+
+The label names a dep's **type**, not a promise of zero code changes — a chart's values
+schema or an action's inputs can still need edits, but only to manifests/CI, never to
+`.kt`/`.ts` source, so the blast radius stays bounded. Cost note: Helm subcharts are
+`0.x`, so each bump runs the full A→D pipeline (intended supervision, bounded by
+`prConcurrentLimit`); action/image minor/patch/digest bumps route to the cheap AI gate
+or no-op.

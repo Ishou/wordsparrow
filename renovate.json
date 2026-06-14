@@ -32,6 +32,21 @@
       "addLabels": ["update:{{updateType}}"]
     },
     {
+      "description": "Stamp the dep-type so the breaking-bump dispatcher (ADR-0068) can admit whole non-source classes by type, not one name at a time.",
+      "matchManagers": ["helmv3"],
+      "addLabels": ["dep-type:helm-chart"]
+    },
+    {
+      "description": "Container images (Dockerfile FROM + infra/*/values.yaml image tags) carry datasource=docker — stamp the dep-type for the breaking-bump dispatcher (ADR-0068).",
+      "matchDatasources": ["docker"],
+      "addLabels": ["dep-type:container-image"]
+    },
+    {
+      "description": "GitHub Actions — stamp the dep-type for the breaking-bump dispatcher (ADR-0068).",
+      "matchManagers": ["github-actions"],
+      "addLabels": ["dep-type:github-action"]
+    },
+    {
       "description": "Vite + Vitest + plugin-react + jsdom move together (peer-dep matrix).",
       "matchPackageNames": [
         "vite",
