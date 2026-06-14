@@ -52,14 +52,14 @@ class AuditingTracker(IssueTracker):
 
     def set_status(self, id: int, status: Status) -> None:
         before = self._inner.get(id).status
-        if before == status:  # no-op: skip the write and the audit comment
+        if before == status:
             return
         self._inner.set_status(id, status)
         self._audit(id, "set_status", f"status: {before.value if before else '-'} → {status.value}")
 
     def set_priority(self, id: int, priority: Priority) -> None:
         before = self._inner.get(id).priority
-        if before == priority:  # no-op: skip the write and the audit comment
+        if before == priority:
             return
         self._inner.set_priority(id, priority)
         self._audit(id, "set_priority", f"{before.value if before else '-'} → {priority.value}")
