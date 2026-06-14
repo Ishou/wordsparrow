@@ -22,7 +22,7 @@ dependencies {
     implementation(project(":game:domain"))
     implementation(project(":game:application"))
     // suspend adapters need coroutines-core at runtime.
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("org.slf4j:slf4j-api:2.0.16")
 
     // Ktor client + CIO engine — calls grid's REST API from HttpPuzzleProvider.
