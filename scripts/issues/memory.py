@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from models import Comment, Issue, IssueRef
+from models import Comment, Issue, IssueRef, Status
 from tracker import IssueTracker
 
 
@@ -27,11 +27,16 @@ class InMemoryTracker(IssueTracker):
     def get(self, id: int) -> Issue:
         return self._issues[id]
 
-    def list(self, labels: tuple[str, ...] = (), state: str = "open") -> list[Issue]:
+    def list(
+        self, labels: tuple[str, ...] = (), state: str = "open",
+        status: "Status | None" = None,
+    ) -> list[Issue]:
         want = set(labels)
         return [
             i for i in self._issues.values()
-            if (state == "all" or i.state == state) and want.issubset(set(i.labels))
+            if (state == "all" or i.state == state)
+            and want.issubset(set(i.labels))
+            and (status is None or i.status is status)
         ]
 
     def update_body(self, id: int, body: str) -> None:
@@ -57,6 +62,13 @@ class InMemoryTracker(IssueTracker):
 
     def label_definitions(self) -> dict[str, tuple[str, str]]:
         return dict(self._labels)
+
+    def set_status(self, id: int, status: Status) -> None:
+        self._issues[id] = replace(self._issues[id], status=status)
+
+    # GitHub provisions a Projects field here; the fake has no native board
+    def ensure_status_field(self, options: tuple[str, ...]) -> None:
+        return None
 
     def _close(self, id: int, reason: str) -> None:
         self._issues[id] = replace(self._issues[id], state="closed")

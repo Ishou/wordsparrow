@@ -5,10 +5,11 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+# abstract board column; adapters map to native representation (ADR-0069 amended)
 class Status(str, Enum):
-    IDEA = "status:idea"
-    READY = "status:ready"
-    BUILDING = "status:building"
+    IDEA = "idea"
+    READY = "ready"
+    BUILDING = "building"
 
 
 class Priority(str, Enum):
@@ -17,7 +18,6 @@ class Priority(str, Enum):
     LOW = "priority:low"
 
 
-STATUS_LABELS = frozenset(s.value for s in Status)
 PRIORITY_LABELS = frozenset(p.value for p in Priority)
 
 
@@ -42,15 +42,9 @@ class Issue:
     labels: tuple[str, ...]
     state: str  # "open" | "closed"
     url: str = ""
-
-    def _single(self, allowed: frozenset[str], enum: type) -> object | None:
-        hit = [lbl for lbl in self.labels if lbl in allowed]
-        return enum(hit[0]) if hit else None
-
-    @property
-    def status(self) -> Status | None:
-        return self._single(STATUS_LABELS, Status)
+    status: "Status | None" = None  # adapter-populated from the native board column
 
     @property
     def priority(self) -> Priority | None:
-        return self._single(PRIORITY_LABELS, Priority)
+        hit = [lbl for lbl in self.labels if lbl in PRIORITY_LABELS]
+        return Priority(hit[0]) if hit else None

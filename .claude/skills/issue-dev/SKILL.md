@@ -19,9 +19,9 @@ auto-audited (the `AuditingTracker` posts a `🤖 …` comment per change).
 Run from anywhere in the repo:
 
 ```sh
-scripts/issues/issues get <id>            # {id,title,body,labels,state,url}
+scripts/issues/issues get <id>            # {id,title,body,labels,state,url,status}
 scripts/issues/issues comments <id>       # the steering thread
-scripts/issues/issues list --label status:ready   # backlog
+scripts/issues/issues list --status ready # backlog (native board column)
 scripts/issues/issues set-status <id> building     # board move (audited)
 scripts/issues/issues add-label <id> needs-human   # escalation (audited)
 scripts/issues/issues comment <id> --body "…"      # human-facing note
@@ -30,18 +30,21 @@ scripts/issues/issues comment <id> --body "…"      # human-facing note
 Set `ISSUE_ACTOR` so audit comments attribute correctly:
 `ISSUE_ACTOR="launch:<session-or-run-id>" scripts/issues/issues set-status …`.
 
-Lifecycle (board columns = labels): `status:idea` → `status:ready` →
-`status:building` → **closed = Done**. `priority:*` ranks within a column.
-`needs-human` flags escalation.
+Lifecycle is **adapter-native** (ADR-0069 amended): the abstract status
+`idea` → `ready` → `building` → **Done** maps to the platform's real board
+column — a Projects v2 single-select field on GitHub (NOT a `status:*` label).
+`set-status` moves the card; `list --status <s>` filters by it. **Priority stays
+a label** (`priority:*`) and ranks within a column; `needs-human` flags escalation.
 
 ## /capture "<idea>" — the procedure
 
-The low-friction inbox. Derive a concise title from the idea and create a
-`status:idea` issue:
+The low-friction inbox. Derive a concise title from the idea, create the issue,
+then move it to the `idea` board column (status is a field, not a label):
 
 ```sh
 ISSUE_ACTOR=capture scripts/issues/issues create \
-  --title "<concise title>" --body "<idea>" --label status:idea
+  --title "<concise title>" --body "<idea>"
+ISSUE_ACTOR=capture scripts/issues/issues set-status <id> idea
 ```
 
 Do NOT add `ai-driven` — that label is for pipeline-synthesized issues, not human
@@ -77,12 +80,12 @@ Comment-driven steering — the asynchronous equivalent of steering a live sessi
 ## /backlog — the procedure
 
 ```sh
-scripts/issues/issues list --label status:ready
+scripts/issues/issues list --status ready
 ```
 
 Group the results by `priority:high` → `medium` → `low` (oldest-first within each)
-and present a compact table: issue #, title, priority. `--all` also lists
-`status:idea` and `status:building`. This is the terminal view of the same backlog
+and present a compact table: issue #, title, priority. `list --status idea` and
+`list --status building` show the other columns. This is the terminal view of the same backlog
 the board renders visually; the launcher picks the highest-priority ready issue.
 
 ## /launch <issue#> — the procedure
@@ -93,12 +96,12 @@ dispatch an implementer (ADR-0001 §6: implementer ≠ reviewer) and shepherd it
 ### 1. Read and gate
 - `scripts/issues/issues get <id>` and `… comments <id>`. The body + comments are
   the brief.
-- **Gate on status:**
-  - `status:ready` → proceed.
-  - `status:idea` → the spec isn't finished. Tell the user to `/spec <id>` first
+- **Gate on `status` (the `get` output's `status` field):**
+  - `ready` → proceed.
+  - `idea` → the spec isn't finished. Tell the user to `/spec <id>` first
     (or, if the body is already a complete spec, confirm with the user before
     proceeding).
-  - `status:building` → likely already launched. Check for an open PR that says
+  - `building` → likely already launched. Check for an open PR that says
     `Closes #<id>`; if one exists, resume shepherding it instead of re-launching.
   - closed → already Done; stop.
 - **Scope check:** if the issue clearly spans multiple bounded contexts or is
@@ -137,8 +140,8 @@ If the implementer is blocked, CI wedges past the fix budget, or §6a cap-locks:
 ```sh
 ISSUE_ACTOR="launch:<id>" scripts/issues/issues add-label <id> needs-human
 ```
-Report the blocker. `needs-human` is the Blocked signal on the board; leave
-`status:building` so the in-flight state is visible.
+Report the blocker. `needs-human` is the Blocked signal on the board; leave the
+status at `building` so the in-flight state is visible.
 
 ## What this skill is NOT
 - Not a code-writer — it orchestrates. Implementation happens in the dispatched
