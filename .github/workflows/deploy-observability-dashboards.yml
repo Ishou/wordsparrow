@@ -51,7 +51,8 @@ jobs:
 
       - name: Helm upgrade --install
         run: |
+          # helm v4's default 'watcher' wait hangs forever on this no-op ConfigMap apply; hookOnly awaits the post-upgrade Job that actually loads the config
           helm upgrade --install bliss-signoz-dashboards \
             ./infra/observability/dashboards \
             -n observability \
-            --wait --timeout 5m
+            --wait=hookOnly --timeout 5m
