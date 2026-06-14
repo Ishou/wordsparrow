@@ -10,7 +10,7 @@ kotlin {
 
 // Versions mirrored from grid/api/build.gradle.kts so the Ktor stack stays uniform across
 // bounded contexts. Bump in lockstep when grid moves.
-val ktorVersion = "3.4.3"
+val ktorVersion = "3.5.0"
 val kotlinxSerializationVersion = "1.11.0"
 val javaUuidGeneratorVersion = "5.2.0"
 

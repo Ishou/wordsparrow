@@ -4,7 +4,7 @@ plugins {
     `java-test-fixtures`
 }
 
-val ktorVersion = "3.4.3"
+val ktorVersion = "3.5.0"
 val testcontainersVersion = "1.21.4"
 
 kotlin {
