@@ -11,6 +11,7 @@ class InMemoryTracker(IssueTracker):
     def __init__(self) -> None:
         self._issues: dict[int, Issue] = {}
         self._comments: dict[int, list[Comment]] = {}
+        self._labels: dict[str, tuple[str, str]] = {}
         self._seq = 0
 
     def create(self, title: str, body: str, labels: tuple[str, ...] = ()) -> IssueRef:
@@ -50,6 +51,12 @@ class InMemoryTracker(IssueTracker):
     def remove_label(self, id: int, label: str) -> None:
         issue = self._issues[id]
         self._issues[id] = replace(issue, labels=tuple(l for l in issue.labels if l != label))
+
+    def ensure_label(self, name: str, color: str, description: str) -> None:
+        self._labels[name] = (color, description)
+
+    def label_definitions(self) -> dict[str, tuple[str, str]]:
+        return dict(self._labels)
 
     def _close(self, id: int, reason: str) -> None:
         self._issues[id] = replace(self._issues[id], state="closed")

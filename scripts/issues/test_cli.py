@@ -25,3 +25,14 @@ def test_set_status_via_cli(capsys):
     cli.main(["get", "1"], tracker=tracker)
     out = json.loads(capsys.readouterr().out)
     assert "status:building" in out["labels"]
+
+
+def test_bootstrap_ensures_six_workflow_labels(capsys):
+    tracker = InMemoryTracker()
+    cli.main(["bootstrap"], tracker=tracker)
+    capsys.readouterr()
+    defs = tracker.label_definitions()
+    assert set(defs) == {
+        "status:idea", "status:ready", "status:building",
+        "priority:high", "priority:medium", "priority:low",
+    }

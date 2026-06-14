@@ -41,3 +41,12 @@ def test_create_returns_ref_from_url():
     ref = GitHubTracker(runner=runner).create("T", "B", labels=("status:idea",))
     assert ref.id == 42
     assert runner.calls[0][:3] == ["gh", "issue", "create"]
+
+
+def test_ensure_label_calls_gh_label_create_force():
+    runner = FakeRunner([""])
+    GitHubTracker(runner=runner).ensure_label("status:ready", "0E8A16", "Ready")
+    assert runner.calls[0] == [
+        "gh", "label", "create", "status:ready",
+        "--color", "0E8A16", "--description", "Ready", "--force",
+    ]

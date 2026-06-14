@@ -40,6 +40,9 @@ class IssueTracker(ABC):
     def remove_label(self, id: int, label: str) -> None: ...
 
     @abstractmethod
+    def ensure_label(self, name: str, color: str, description: str) -> None: ...
+
+    @abstractmethod
     def _close(self, id: int, reason: str) -> None: ...
 
     # invariants enforced once here so every adapter inherits them

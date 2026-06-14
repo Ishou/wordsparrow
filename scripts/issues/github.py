@@ -69,5 +69,9 @@ class GitHubTracker(IssueTracker):
     def remove_label(self, id: int, label: str) -> None:
         self._run(["gh", "issue", "edit", str(id), "--remove-label", label])
 
+    def ensure_label(self, name: str, color: str, description: str) -> None:
+        self._run(["gh", "label", "create", name, "--color", color,
+                   "--description", description, "--force"])
+
     def _close(self, id: int, reason: str) -> None:
         self._run(["gh", "issue", "close", str(id), "--reason", reason])
