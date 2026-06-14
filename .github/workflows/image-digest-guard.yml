@@ -1,0 +1,60 @@
+name: image-digest-guard
+
+# Fails a PR when an infra image tag bumps but its pinned digest is left stale (a silent no-op); see scripts/image_digests/.
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**/values.yaml'
+      - 'infra/**/values-prod.yaml'
+      - 'scripts/image_digests/**'
+      - '.github/workflows/image-digest-guard.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**/values.yaml'
+      - 'infra/**/values-prod.yaml'
+      - 'scripts/image_digests/**'
+      - '.github/workflows/image-digest-guard.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-digest-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  digests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: Determine base ref to diff against
+        id: base
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_BRANCH: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags --quiet origin "$BASE_BRANCH"
+            echo "ref=origin/$BASE_BRANCH" >> "$GITHUB_OUTPUT"
+          elif git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            echo "ref=$BEFORE_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=HEAD^" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14.6'
+      - run: pip install pyyaml pytest
+      - name: Unit tests (parse/merge/diff logic)
+        run: python -m pytest scripts/image_digests -q
+      - name: Verify every tag bump also bumped its pinned digest
+        env:
+          BASE_REF: ${{ steps.base.outputs.ref }}
+        run: python scripts/image_digests/check_pinned_digests.py "$BASE_REF" infra
