@@ -29,7 +29,7 @@ dependencies {
     implementation("com.zaxxer:HikariCP:7.0.2")
     implementation("org.flywaydb:flyway-core:12.6.0")
     implementation("org.flywaydb:flyway-database-postgresql:12.6.0")
-    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("org.slf4j:slf4j-api:2.0.18")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     // NATS JetStream client - user.deleted consumer (ADR-0049).

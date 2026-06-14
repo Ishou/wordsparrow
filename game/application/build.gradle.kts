@@ -8,7 +8,7 @@ kotlin {
 
 dependencies {
     implementation(project(":game:domain"))
-    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("org.slf4j:slf4j-api:2.0.18")
     // Use cases are `suspend` so the WebSocket layer (Wave F) can call them
     // from coroutine context without blocking the event loop.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
