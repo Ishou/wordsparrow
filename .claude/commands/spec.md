@@ -13,7 +13,7 @@ Invoke the `issue-dev` skill and follow its "/spec" procedure.
 ## What it does
 
 1. Reads the current issue via `scripts/issues/issues get <id>` (body + labels).
-2. Runs the `brainstorming` skill — but the **terminal artifact is the issue
+2. Runs the `superpowers:brainstorming` skill — but the **terminal artifact is the issue
    body**, not a `design.md` file. Writes the agreed spec with
    `scripts/issues/issues update-body <id> --body "<spec>"`.
 3. Flips the issue to ready: `scripts/issues/issues set-status <id> ready`.

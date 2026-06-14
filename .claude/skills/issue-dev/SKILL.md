@@ -53,7 +53,7 @@ Inbox; `/spec <id>` later turns it into an implementable spec.
 Turn a captured idea into an implementable spec, written into the **issue body**.
 
 1. Read the current issue: `scripts/issues/issues get <id>`.
-2. Run the `brainstorming` skill, but the terminal artifact is the issue body —
+2. Run the `superpowers:brainstorming` skill, but the terminal artifact is the issue body —
    not a `design.md` file. Write the agreed spec:
    `scripts/issues/issues update-body <id> --body "<spec>"`.
 3. Flip to ready: `scripts/issues/issues set-status <id> ready`.
