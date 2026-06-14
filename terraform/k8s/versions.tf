@@ -12,7 +12,7 @@
 # half-state that confuses `tofu init`.
 
 terraform {
-  required_version = "~> 1.10"
+  required_version = "~> 1.15"
 
   # Remote state on Hetzner Object Storage (FSN1), per ADR-0010 §2.
   # Bucket is bootstrapped out-of-band (one-time human step) —
