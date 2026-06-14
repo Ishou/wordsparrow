@@ -9,14 +9,14 @@ storage:
   storageClass: "hcloud-volumes"
 streamInit:
   image:
-    # natsio/nats-box:0.19.5 OCI image index digest, resolved 2026-05-20.
-    digest: "sha256:5d513bf0bb82d6af3fe8363097eb14d2e4ca3242db24140db88df4a4ba082442"
+    # natsio/nats-box:0.19.7 OCI image index digest, resolved 2026-06-14.
+    digest: "sha256:ffce8bd103383f179f8c7f11cf645726acf5d17280706c530c3b342dbe16334c"
 
-# Prometheus exporter sidecar — on in prod; digest pinned to multi-arch image index for natsio/prometheus-nats-exporter:0.15.0.
+# Prometheus exporter sidecar — on in prod; digest pinned to multi-arch image index for natsio/prometheus-nats-exporter:0.20.1.
 metricsExporter:
   enabled: true
   image:
-    digest: "sha256:1f6787754b8b083f271adea4bb699b9c9e21279c89d903f1710f7647c604f145"
+    digest: "sha256:4fbf6dacb84780a45a1c3af9b1080c69451a288d20902deae671b80717bb8f61"
 
 # DLQ stream — on in prod (scaling-readiness per ADR-0049).
 dlq:
