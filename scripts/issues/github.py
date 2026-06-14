@@ -61,7 +61,13 @@ class GitHubTracker(IssueTracker):
         status: "Status | None" = None,
     ) -> list[Issue]:
         if status is not None:
-            return self._list_by_status(status)
+            issues = self._list_by_status(status)
+            want = set(labels)
+            return [
+                i for i in issues
+                if (state == "all" or i.state == state)
+                and want.issubset(set(i.labels))
+            ]
         argv = ["gh", "issue", "list", "--state", state, "--json", _VIEW_FIELDS, "--limit", "1000"]
         for lbl in labels:
             argv += ["--label", lbl]
@@ -145,7 +151,7 @@ class GitHubTracker(IssueTracker):
     def _item_status(self, item: "dict | None") -> "Status | None":
         if not item:
             return None
-        return _OPTION_TO_STATUS.get(item.get(self._field) or item.get("status"))
+        return _OPTION_TO_STATUS.get(item.get(self._field))
 
     def _move_to_option(self, id: int, option_name: str) -> None:
         item = self._find_item(id)
@@ -165,7 +171,7 @@ class GitHubTracker(IssueTracker):
         target = _STATUS_TO_OPTION[status]
         out = []
         for item in self._items():
-            if (item.get(self._field) or item.get("status")) != target:
+            if item.get(self._field) != target:
                 continue
             content = item.get("content") or {}
             if "number" not in content:

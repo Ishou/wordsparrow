@@ -49,6 +49,15 @@ def test_list_filters_by_label_and_state(tracker: IssueTracker):
     assert [i.id for i in hits] == [a.id]
 
 
+def test_list_status_and_label_filters_compose(tracker: IssueTracker):
+    a = tracker.create("a", "b", labels=("priority:high",))
+    tracker.set_status(a.id, Status.READY)
+    b = tracker.create("b", "b", labels=("priority:low",))
+    tracker.set_status(b.id, Status.READY)
+    hits = tracker.list(labels=("priority:high",), status=Status.READY)
+    assert [i.id for i in hits] == [a.id]
+
+
 def test_comments_roundtrip(tracker: IssueTracker):
     ref = tracker.create("t", "b")
     tracker.comment(ref.id, "hello")
