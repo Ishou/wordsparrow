@@ -883,7 +883,69 @@ Each gets its own `writing-plans` pass after the prior wave merges (review may r
 - **Wave 5 — `/launch`.** A `launch` skill + command: read issue body + comments via the CLI, `set-status building`, dispatch the existing `dispatch` worktree-agent flow with the brief, open PR(s) with `Closes #<id>`, schedule the default auto-merge cron; on failure add `needs-human`. Acceptance: launching a `status:ready` issue produces a PR linked to it and moves it to Building.
 - **Wave 6 — `/capture` + `/backlog`.** `capture` creates a `status:idea` + `ai-driven` issue; `backlog` lists `status:ready` grouped by priority. Acceptance: round-trip an idea → appears in backlog after `/spec`.
 - **Wave 7 — `/spec` + `/refine`.** `/spec` runs brainstorming with the issue body as the terminal artifact and flips to `status:ready`; `/refine` reads new comments, updates the body, replies with the diff summary. Acceptance: a comment instruction is reflected in the body and audit-logged.
-- **Wave 8 *(later)* — CI-native triggers.** A scheduled workflow polling `list(status:ready)` (portable) plus an optional GitHub `issue_comment` trigger for refine. Acceptance: a ready issue is picked up without a local session.
+- **Wave 9 *(later)* — CI-native triggers.** A scheduled workflow polling ready issues (portable) plus an optional GitHub `issue_comment` trigger for refine. Acceptance: a ready issue is picked up without a local session.
+
+---
+
+## Wave 8 — native status board (ADR-0069 amendment 2026-06-14)
+
+Status moves from `status:*` labels to the platform's native board column. The
+port keeps an abstract `Status` enum; the GitHub adapter drives a Projects v2
+single-select field via `gh project …`. Priority stays a label. One PR; invoke
+the §4 soft-target override if it runs long (coherent port-contract refactor).
+
+**Config (env, read by `GitHubTracker`):** `ISSUE_PROJECT_OWNER` (default
+`Ishou`), `ISSUE_PROJECT_NUMBER` (default `4`), `ISSUE_STATUS_FIELD` (default
+`Lifecycle`). The fake ignores these.
+
+**Files:**
+- `scripts/issues/models.py` — `Status` enum values become abstract
+  (`IDEA="idea"`, `READY="ready"`, `BUILDING="building"`); delete `STATUS_LABELS`.
+  `Issue` gains a `status: Status | None = None` field (adapter-populated) and
+  loses the label-derived `status` property; the `priority` property + `PRIORITY_LABELS` stay.
+- `scripts/issues/tracker.py` — `set_status` and a new `list(..., status=None)`
+  filter become abstract (adapter-native); delete the status branch of `_swap`
+  (keep it for priority); `close` no longer strips status labels (Done is a board
+  state). `set_priority` stays concrete.
+- `scripts/issues/memory.py` — store an abstract `status` per issue; `set_status`
+  sets it, `get` returns it, `list(status=…)` filters on it; `ensure_status_field`
+  is a no-op.
+- `scripts/issues/github.py` — the substantive change:
+  - `ensure_status_field(options)` → `gh project field-create … --data-type
+    SINGLE_SELECT --single-select-options "Idea,Ready,Building,Done"` if the field
+    is absent (idempotent: check `gh project field-list` first).
+  - `set_status(id, status)` → resolve the project node id (`gh project view
+    <num> --owner <o> --format json` → `.id`), the field id + option id (`gh
+    project field-list`), ensure the issue is an item (find via `gh project
+    item-list`, else `gh project item-add <num> --owner <o> --url <issue-url>`),
+    then `gh project item-edit --project-id <pid> --id <item-id> --field-id <fid>
+    --single-select-option-id <oid>`.
+  - `get(id)` → after the issue JSON, find its project item in `gh project
+    item-list <num> --owner <o> --format json` and read the status field value →
+    map to `Status`.
+  - `list(status=…)` → `gh project item-list` filtered to items whose status field
+    equals the option name, returning their issue content.
+  - `close(id, …)` → set status Done then close the issue.
+  - All via the injected `runner`; tests assert the `gh project …` argv with the
+    FakeRunner (no network), mirroring Wave 3's pattern.
+- `scripts/issues/auditing.py` — `set_status` audit reads `get().status` before;
+  works unchanged against the abstract enum.
+- `scripts/issues/cli.py` — `set-status`/`list --status` use abstract enum names;
+  `bootstrap` ensures `priority:*` labels **and** calls `ensure_status_field`
+  (GitHub). Drop status-label creation.
+- `scripts/issues/test_*.py` — update `test_models` (no status property),
+  `test_contract` (status via set/get + `list(status=…)` on the fake),
+  `test_github` (FakeRunner asserts the `gh project` argv), `test_cli`.
+- `docs/issue-board.md` — rewrite: GitHub board groups by the native `Lifecycle`
+  field (no label noise); GitLab uses `status::*` scoped labels. Priority is a
+  label on both.
+- `.claude/skills/issue-dev/SKILL.md` — update the CLI examples (status drives the
+  field; `set-status` unchanged at the CLI surface; note priority stays a label).
+
+**Acceptance:** `bootstrap` creates the `Lifecycle` field idempotently; `set-status
+<id> building` moves the issue's Projects card to Building with no `status:*`
+label touched; `list --status ready` returns ready items; contract tests pass on
+the fake; `test_github` asserts the `gh project` argv with no network.
 
 ---
 
