@@ -1,6 +1,6 @@
 ---
 name: issue-dev
-description: Issue-driven development for Bliss — treat a GitHub issue as the living spec, capture ideas, view the prioritized backlog, and launch an implementer from a ready issue. Use when the user says "capture this idea", "add it to the backlog", "show the backlog", "what's next to work on", "launch issue #N", "implement issue #N", "start work on #N", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read/write issues via the portable IssueTracker CLI (never gh directly), move them across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /capture, /backlog, /launch.
+description: Issue-driven development for Bliss — treat a GitHub issue as the living spec, capture ideas, develop and refine the spec in the issue, view the prioritized backlog, and launch an implementer from a ready issue. Use when the user says "capture this idea", "spec out issue #N", "write the spec for #N", "refine #N", "fold these comments into #N", "show the backlog", "what's next to work on", "launch issue #N", "implement issue #N", "start work on #N", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read/write issues via the portable IssueTracker CLI (never gh directly), move them across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /capture, /spec, /refine, /backlog, /launch.
 ---
 
 # Issue-driven development playbook
@@ -47,6 +47,32 @@ ISSUE_ACTOR=capture scripts/issues/issues create \
 Do NOT add `ai-driven` — that label is for pipeline-synthesized issues, not human
 captures. No-arg invocation: ask the user for the idea first. The issue lands in
 Inbox; `/spec <id>` later turns it into an implementable spec.
+
+## /spec <issue#> — the procedure
+
+Turn a captured idea into an implementable spec, written into the **issue body**.
+
+1. Read the current issue: `scripts/issues/issues get <id>`.
+2. Run the `brainstorming` skill, but the terminal artifact is the issue body —
+   not a `design.md` file. Write the agreed spec:
+   `scripts/issues/issues update-body <id> --body "<spec>"`.
+3. Flip to ready: `scripts/issues/issues set-status <id> ready`.
+4. ADR-worthy work (new dependency, cross-context contract, deploy-target change)
+   still writes/links a reviewed ADR file; the body links to it.
+
+If the idea is really several workstreams, split it into linked issues rather
+than one oversized spec.
+
+## /refine <issue#> — the procedure
+
+Comment-driven steering — the asynchronous equivalent of steering a live session.
+
+1. Read the thread: `scripts/issues/issues comments <id>` (and `… get <id>`).
+2. Fold new instructions into the body:
+   `scripts/issues/issues update-body <id> --body "<revised spec>"`. The body is
+   the single authoritative spec; comments are the steering log, not the spec.
+3. Reply with a one-line summary of what changed:
+   `scripts/issues/issues comment <id> --body "<summary>"`.
 
 ## /backlog — the procedure
 
@@ -120,4 +146,4 @@ Report the blocker. `needs-human` is the Blocked signal on the board; leave
 - Not a replacement for the dispatch skill — it sits on top of it, adding the
   issue read/gate/board-move/close wiring.
 
-See ADR-0069 plan for upcoming commands.
+See ADR-0069 and its design spec for the full rationale.
