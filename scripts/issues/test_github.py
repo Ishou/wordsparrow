@@ -27,7 +27,7 @@ def _issue_json(number=5, **over):
 
 
 def test_get_parses_issue_and_native_status():
-    item_list = json.dumps({"items": [{"id": "IT", "lifecycle": "Ready",
+    item_list = json.dumps({"items": [{"id": "IT", "status": "Ready",
                                        "content": {"number": 5}}]})
     runner = FakeRunner([_issue_json(), item_list])
     issue = GitHubTracker(runner=runner).get(5)
@@ -52,24 +52,38 @@ def test_create_returns_ref_from_url():
 
 
 def test_ensure_status_field_creates_when_absent():
-    # field-list returns no Lifecycle field → field-create runs
+    # field-list returns no Status field → field-create runs
     runner = FakeRunner([json.dumps({"fields": [{"name": "Title"}]})])
     GitHubTracker(runner=runner).ensure_status_field()
     assert runner.calls[0][:3] == ["gh", "project", "field-list"]
     create = runner.calls[1]
     assert create[:3] == ["gh", "project", "field-create"]
     assert "--data-type" in create and "SINGLE_SELECT" in create
-    assert "Idea,Ready,Building,Done" in create
+    assert "Idea,Needs Input,Ready,Building,Done" in create
 
 
-def test_ensure_status_field_is_idempotent_when_present():
-    runner = FakeRunner([json.dumps({"fields": [{"name": "Lifecycle"}]})])
+def test_ensure_status_field_is_noop_when_options_match():
+    runner = FakeRunner([json.dumps({"fields": [{"name": "Status", "id": "FID", "options": [
+        {"name": "Idea"}, {"name": "Needs Input"}, {"name": "Ready"},
+        {"name": "Building"}, {"name": "Done"}]}]})])
     GitHubTracker(runner=runner).ensure_status_field()
     assert [c[:3] for c in runner.calls] == [["gh", "project", "field-list"]]
 
 
+def test_ensure_status_field_updates_options_when_present_but_differ():
+    # built-in Status field exists with default options → graphql updates them
+    runner = FakeRunner([json.dumps({"fields": [{"name": "Status", "id": "FID", "options": [
+        {"name": "Todo"}, {"name": "In Progress"}, {"name": "Done"}]}]})])
+    GitHubTracker(runner=runner).ensure_status_field()
+    mut = runner.calls[-1]
+    assert mut[:3] == ["gh", "api", "graphql"]
+    query = mut[-1]
+    assert "updateProjectV2Field" in query and "FID" in query
+    assert '"Idea"' in query and '"Ready"' in query and '"Building"' in query
+
+
 def test_set_status_edits_existing_item_single_select():
-    field = json.dumps({"fields": [{"name": "Lifecycle", "id": "FID",
+    field = json.dumps({"fields": [{"name": "Status", "id": "FID",
                                     "options": [{"name": "Building", "id": "OID"}]}]})
     items = json.dumps({"items": [{"id": "ITEM-1", "content": {"number": 5}}]})
     project = json.dumps({"id": "PID"})
@@ -85,7 +99,7 @@ def test_set_status_edits_existing_item_single_select():
 
 
 def test_set_status_adds_item_when_missing():
-    field = json.dumps({"fields": [{"name": "Lifecycle", "id": "FID",
+    field = json.dumps({"fields": [{"name": "Status", "id": "FID",
                                     "options": [{"name": "Ready", "id": "OID"}]}]})
     empty = json.dumps({"items": []})
     url = json.dumps({"url": "https://x/9"})
@@ -99,8 +113,8 @@ def test_set_status_adds_item_when_missing():
 
 def test_list_by_status_filters_items():
     items = json.dumps({"items": [
-        {"id": "a", "lifecycle": "Ready", "content": _issue_dict(1)},
-        {"id": "b", "lifecycle": "Idea", "content": _issue_dict(2)},
+        {"id": "a", "status": "Ready", "content": _issue_dict(1)},
+        {"id": "b", "status": "Idea", "content": _issue_dict(2)},
     ]})
     runner = FakeRunner([items])
     out = GitHubTracker(runner=runner).list(status=Status.READY)

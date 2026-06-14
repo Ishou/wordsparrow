@@ -8,7 +8,7 @@ import os
 import sys
 
 from auditing import AuditingTracker
-from github import GitHubTracker
+from github import GitHubTracker, _FIELD_OPTIONS
 from models import Priority, Status
 from tracker import IssueTracker
 
@@ -19,8 +19,6 @@ _WORKFLOW_LABELS: tuple[tuple[str, str, str], ...] = (
     ("priority:medium", "FBCA04", "Triage: worth doing — schedule after high-priority work"),
     ("priority:low", "C5DEF5", "Triage: cosmetic/prospective — do opportunistically or close"),
 )
-
-_STATUS_OPTIONS: tuple[str, ...] = ("Idea", "Ready", "Building", "Done")
 
 
 def _default_tracker() -> IssueTracker:
@@ -75,10 +73,10 @@ def main(argv: list[str], tracker: IssueTracker | None = None) -> None:
     elif a.cmd == "bootstrap":
         for name, color, desc in _WORKFLOW_LABELS:
             t.ensure_label(name, color, desc)
-        t.ensure_status_field(_STATUS_OPTIONS)
+        t.ensure_status_field(_FIELD_OPTIONS)
         print(json.dumps({
             "ensured_labels": [name for name, _, _ in _WORKFLOW_LABELS],
-            "status_field": list(_STATUS_OPTIONS),
+            "status_field": list(_FIELD_OPTIONS),
         }))
 
 
