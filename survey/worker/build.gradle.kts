@@ -12,7 +12,7 @@ application {
     applicationName = "survey-worker"
 }
 
-val logbackVersion = "1.5.32"
+val logbackVersion = "1.5.34"
 val logstashEncoderVersion = "9.0"
 val testcontainersVersion = "1.21.4"
 val konsistVersion = "0.17.3"
