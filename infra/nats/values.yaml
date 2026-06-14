@@ -23,7 +23,7 @@ metricsExporter:
   image:
     repository: natsio/prometheus-nats-exporter
     # renovate: datasource=docker depName=natsio/prometheus-nats-exporter
-    tag: "0.15.0"
+    tag: "0.20.1"
     digest: ""
   port: 7777
   resources:
