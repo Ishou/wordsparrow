@@ -88,11 +88,7 @@ jobs:
           if [ "$PARSED" != "true" ]; then
             echo "valid=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          # The pipeline forks the Renovate branch in agents A and D; if that PR was
-          # merged or closed mid-run the branch is gone and every `git fetch` of it
-          # dies with exit 128. Detect it here and short-circuit with a legible issue
-          # comment instead. UNKNOWN keeps workflow_dispatch scratch runs (synthetic
-          # PR) on the live path.
+          # A merged/closed Renovate PR deletes the branch agents A and D fetch (exit 128); short-circuit here. UNKNOWN keeps workflow_dispatch scratch runs alive.
           STATE=$(gh pr view "$PR_NUMBER" --json state --jq .state 2>/dev/null || echo UNKNOWN)
           case "$STATE" in
             MERGED)
