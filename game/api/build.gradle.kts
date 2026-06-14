@@ -22,11 +22,11 @@ kotlin {
 
 // Versions mirrored from grid/api/build.gradle.kts so the Ktor stack stays uniform across
 // bounded contexts. Bump in lockstep when grid moves.
-val ktorVersion = "3.4.3"
+val ktorVersion = "3.5.0"
 val kotlinxSerializationVersion = "1.11.0"
 val logbackVersion = "1.5.34"
 val logstashEncoderVersion = "9.0"
-val junitVersion = "5.11.4"
+val junitVersion = "5.14.4"
 val assertkVersion = "0.28.1"
 val konsistVersion = "0.17.3"
 val kotestPropertyVersion = "6.1.11"
@@ -56,7 +56,7 @@ dependencies {
         implementation("io.netty:netty-codec-http2:4.2.15.Final")
         implementation("io.netty:netty-codec-compression:4.2.15.Final")
         implementation("io.netty:netty-transport-native-epoll:4.2.15.Final")
-        implementation("com.fasterxml.jackson.core:jackson-core:2.21.3")
+        implementation("com.fasterxml.jackson.core:jackson-core:2.22.0")
         implementation("tools.jackson.core:jackson-core:3.1.1")
     }
 
@@ -66,7 +66,7 @@ dependencies {
     implementation(project(":game:infrastructure"))
 
     // NATS client — Module.kt holds Connection to register ApplicationStopped close-hook (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     // Ktor server core + Netty engine (ADR-0006 §1).
     implementation("io.ktor:ktor-server-core:$ktorVersion")

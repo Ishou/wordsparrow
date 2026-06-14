@@ -4,7 +4,7 @@ plugins {
     `java-test-fixtures`
 }
 
-val ktorVersion = "3.4.3"
+val ktorVersion = "3.5.0"
 val testcontainersVersion = "1.21.4"
 
 kotlin {
@@ -27,13 +27,13 @@ dependencies {
 
     implementation("org.postgresql:postgresql:42.7.11")
     implementation("com.zaxxer:HikariCP:7.0.2")
-    implementation("org.flywaydb:flyway-core:12.6.0")
-    implementation("org.flywaydb:flyway-database-postgresql:12.6.0")
+    implementation("org.flywaydb:flyway-core:12.8.1")
+    implementation("org.flywaydb:flyway-database-postgresql:12.8.1")
     implementation("org.slf4j:slf4j-api:2.0.18")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     // NATS JetStream client - user.deleted consumer (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     // Lingua language detector — LanguageDetector port implementation.
     implementation("com.github.pemistahl:lingua:1.2.2")
@@ -41,7 +41,7 @@ dependencies {
     testFixturesImplementation(project(":survey:domain"))
     testFixturesImplementation(project(":survey:application"))
 
-    testImplementation(platform("org.junit:junit-bom:5.11.4"))
+    testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.28.1")

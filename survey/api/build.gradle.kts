@@ -14,11 +14,11 @@ kotlin {
 }
 
 // Versions mirrored from identity/api/build.gradle.kts so the Ktor stack stays uniform.
-val ktorVersion = "3.4.3"
+val ktorVersion = "3.5.0"
 val kotlinxSerializationVersion = "1.11.0"
 val logbackVersion = "1.5.34"
 val logstashEncoderVersion = "9.0"
-val junitVersion = "5.11.4"
+val junitVersion = "5.14.4"
 val assertkVersion = "0.28.1"
 val konsistVersion = "0.17.3"
 
@@ -36,7 +36,7 @@ dependencies {
     implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
 
     // NATS JetStream client — JetStream consumer per ADR-0049.
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     // Ktor server core + CIO engine.

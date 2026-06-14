@@ -10,7 +10,7 @@ kotlin {
 
 // Versions mirrored from grid/api/build.gradle.kts so the Ktor stack stays uniform across
 // bounded contexts. Bump in lockstep when grid moves.
-val ktorVersion = "3.4.3"
+val ktorVersion = "3.5.0"
 val kotlinxSerializationVersion = "1.11.0"
 val javaUuidGeneratorVersion = "5.2.0"
 
@@ -22,7 +22,7 @@ dependencies {
     implementation(project(":game:domain"))
     implementation(project(":game:application"))
     // suspend adapters need coroutines-core at runtime.
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("org.slf4j:slf4j-api:2.0.18")
 
     // Ktor client + CIO engine — calls grid's REST API from HttpPuzzleProvider.
@@ -37,7 +37,7 @@ dependencies {
     implementation("com.fasterxml.uuid:java-uuid-generator:$javaUuidGeneratorVersion")
 
     // NATS JetStream client — cross-context event subscribers (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     // Postgres pool + Flyway — staged for PostgresLobbyRepository (PR #5).
     // Today these only back the V1 Flyway migration + MigrationTest; the Konsist
@@ -45,10 +45,10 @@ dependencies {
     // src/main/kotlin until the adapter lands.
     implementation("org.postgresql:postgresql:42.7.11")
     implementation("com.zaxxer:HikariCP:7.0.2")
-    implementation("org.flywaydb:flyway-core:12.6.0")
-    implementation("org.flywaydb:flyway-database-postgresql:12.6.0")
+    implementation("org.flywaydb:flyway-core:12.8.1")
+    implementation("org.flywaydb:flyway-database-postgresql:12.8.1")
 
-    testImplementation(platform("org.junit:junit-bom:5.11.4"))
+    testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.28.1")
