@@ -1,4 +1,11 @@
-# Rollout allowlist (ADR-0068). Expand one dep at a time; remove on promotion to full tree.
+# Rollout allowlist (ADR-0068).
+# `deps:` — source libraries (gradle/npm), admitted one dep at a time by name.
+# `types:` — whole non-source dep-type classes, admitted regardless of name; matched
+# against Renovate's `dep-type:<type>` PR label (renovate.json stamps it per manager).
 deps:
   - signoz
   - helm
+types:
+  - helm-chart        # helmv3 Chart.yaml subcharts
+  - container-image   # Dockerfile FROM + infra/*/values.yaml image tags (datasource=docker)
+  - github-action     # github-actions workflow pins

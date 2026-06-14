@@ -69,11 +69,15 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
-          import os, sys
+          import json, os, sys
           sys.path.insert(0, "scripts/breaking-bump")
           import allowlist
-          deps = allowlist.load_allowlist("scripts/breaking-bump/allowlist.yaml")
-          ok = allowlist.is_allowlisted(os.environ["DEP"], deps)
+          path = "scripts/breaking-bump/allowlist.yaml"
+          labels = json.load(open("/tmp/pr.json")).get("labels") or []
+          ok = (
+              allowlist.is_allowlisted(os.environ["DEP"], allowlist.load_allowlist(path))
+              or allowlist.is_type_allowlisted(labels, allowlist.load_types(path))
+          )
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"allowlisted={'true' if ok else 'false'}\n")
           PY

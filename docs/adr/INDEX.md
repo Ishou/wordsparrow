@@ -115,6 +115,7 @@ ADR-0068  infra/tools-upgrade-sources.yaml           Source registry now governe
 # ADR-0068: amendment 2026-06-13 (prompt-injection threat model + structural hardening); no new binding paths — guards land under scripts/breaking-bump/**, prompts/**, workflows above
 # ADR-0068: amendment 2026-06-13 (deterministic agent-d finalize + PR-exists gate); no new binding paths — finalize step lands in the breaking-bump workflow + agent-d prompt above
 # ADR-0068: amendment 2026-06-13 (plan = AI execution contract; scope.files manifest + workflow-sensitivity split); no new binding paths — plan/gate/prompt changes land under scripts/breaking-bump/** + prompts/** above
+# ADR-0068: amendment 2026-06-14 (broaden allowlist by dep-type; renovate.json stamps dep-type:<type> labels, allowlist.yaml gains types:); no new binding paths — changes land under scripts/breaking-bump/** + the dispatch workflow above (renovate.json governed repo-wide)
 ```
 
 ## Adding entries
