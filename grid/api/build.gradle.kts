@@ -43,7 +43,7 @@ val hikariVersion = "7.0.2"
 val flywayVersion = "12.6.0"
 val testcontainersVersion = "1.21.4"
 val kotestPropertyVersion = "6.1.11"
-val commonsCsvVersion = "1.12.0"
+val commonsCsvVersion = "1.14.1"
 
 application {
     mainClass.set("com.bliss.grid.api.MainKt")
