@@ -234,7 +234,7 @@ jobs:
             exit 0
           fi
           gh pr comment "$PR_NUMBER" --body "$MARKER
-          breaking-bump AI gate: no breaking changes found in the changelog for \`$DEP\` \`$FROM\` -> \`$TO\`. Safe to merge (human still clicks merge)."
+          breaking-bump AI gate: no breaking changes found in the changelog for \`$DEP\` \`$FROM\` -> \`$TO\`. Auto-merge is armed — \`breaking-bump-automerge.yml\` merges this once CI is green and §6a posts LGTM (unless the diff touches \`.github/workflows/\`, which stays human-gated)."
 
       - name: Create spine issue (breaking / ambiguous)
         if: steps.verdict.outputs.route == 'pipeline'

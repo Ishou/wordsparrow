@@ -1,0 +1,79 @@
+name: breaking-bump-automerge
+
+# Auto-merge ai-gate-cleared >=1.x minor/patch Renovate PRs (ADR-0068 amendment 2026-06-14). Gate lives in scripts/breaking-bump/automerge.py; this workflow is gh-glue and never checks out PR head code.
+
+on:
+  workflow_run:
+    workflows: ["CI", "Claude Code Review"]
+    types: [completed]
+  pull_request_review:
+    types: [submitted]
+
+concurrency:
+  # Serialise per head branch so two completing checks can't double-merge.
+  group: bb-automerge-${{ github.event.workflow_run.head_branch || github.event.pull_request.head.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    # Renovate branches only — everything else is none of this workflow's business.
+    if: >-
+      (github.event_name == 'workflow_run' && startsWith(github.event.workflow_run.head_branch, 'renovate/')) ||
+      (github.event_name == 'pull_request_review' && startsWith(github.event.pull_request.head.ref, 'renovate/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Always the default-branch (trusted) version — never the PR head.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14.6'
+      - run: pip install -r scripts/breaking-bump/requirements.txt
+
+      - name: Resolve the PR number
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_DIRECT: ${{ github.event.pull_request.number }}
+          WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request_review" ]; then
+            PR="$PR_DIRECT"
+          else
+            PR=$(gh pr list --head "$WR_BRANCH" --state open --json number --jq '.[0].number // empty')
+          fi
+          if [ -z "${PR:-}" ]; then
+            echo "::notice::no open PR for this event — no-op."
+          fi
+          echo "pr=${PR:-}" >> "$GITHUB_OUTPUT"
+
+      - name: Evaluate the gate and merge
+        if: steps.pr.outputs.pr != ''
+        env:
+          # CLAUDE_BOT_PAT so the merge's push to main triggers deploy workflows
+          # (a GITHUB_TOKEN-driven merge would not). No untrusted code runs here.
+          GH_TOKEN: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
+          PR: ${{ steps.pr.outputs.pr }}
+        run: |
+          set -euo pipefail
+          gh pr view "$PR" --json state,author,headRefName,statusCheckRollup,reviews,comments,files > /tmp/pr.json
+          set +e
+          REASON=$(python3 scripts/breaking-bump/automerge.py < /tmp/pr.json)
+          CODE=$?
+          set -e
+          echo "automerge decision for #$PR: ${REASON} (code=${CODE})"
+          case "$CODE" in
+            0) gh pr merge "$PR" --squash --delete-branch
+               echo "::notice::auto-merged #$PR — $REASON" ;;
+            2) echo "::notice::auto-merge skipped #$PR — $REASON" ;;
+            *) echo "::error::automerge decider errored for #$PR (code=$CODE)"; exit 1 ;;
+          esac
