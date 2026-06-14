@@ -1,7 +1,4 @@
-# Rollout allowlist (ADR-0068).
-# `deps:` — source libraries (gradle/npm), admitted one dep at a time by name.
-# `types:` — whole non-source dep-type classes, admitted regardless of name; matched
-# against Renovate's `dep-type:<type>` PR label (renovate.json stamps it per manager).
+# Rollout allowlist (ADR-0068): `deps:` = per-name source libs; `types:` = non-source dep-type classes matched against Renovate's dep-type:<type> PR label.
 deps:
   - signoz
   - helm
