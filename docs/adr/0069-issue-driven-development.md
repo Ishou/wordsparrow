@@ -1,4 +1,4 @@
-# ADR-0069: Issue-driven development — tracker port + label lifecycle
+# ADR-0069: Issue-driven development — tracker port + status lifecycle
 
 ## Status
 Accepted
@@ -17,14 +17,22 @@ Introduce an `IssueTracker` port (`scripts/issues/`) that every skill, launcher,
 and CI step calls instead of `gh` directly. A `GitHubTracker` adapter shells to
 `gh` (no new runtime dependency); a `GitLabTracker` (shells to `glab`) is added
 later with zero caller changes. An `AuditingTracker` decorator comments on every
-mutation, so the issue thread is the portable audit log. Lifecycle is
-label-driven so it renders as a board on either platform:
-`status:idea|ready|building` are the columns (Done = closed issue), `priority:*`
-ranks within a column, `needs-human` flags escalation. Port invariants: at most
-one `status:*` and one `priority:*` label at a time; `close` clears `status:*`.
-Commands (`/capture`, `/spec`, `/refine`, `/launch`, `/backlog`) call the CLI;
-the portable automation path is a CI **scheduled poll** of `status:ready`
-(GitHub issue-event triggers are an optional accelerator GitLab lacks).
+mutation, so the issue thread is the portable audit log.
+
+**Lifecycle status is an abstract concept the port owns; each adapter maps it to
+the platform's *native* board mechanism (amended 2026-06-14 — see below):** the
+port exposes a `Status` enum (`IDEA|READY|BUILDING`) and `set_status(id, status)`
+meaning "move to this board column." The adapter decides the representation —
+**GitHub** uses a Projects v2 single-select field (the real board column; mutual
+exclusion is native to single-select, no `status:*` labels); **GitLab** uses
+scoped labels `status::idea|ready|building` (mutually exclusive by the `::`
+convention, the native backing of GitLab Issue Board lists). `close` moves to
+Done. **Priority stays label-driven** on both (`priority:*` ranks within a column;
+it filters natively on either platform and doesn't benefit from being a native
+column). `needs-human` flags escalation. Commands (`/capture`, `/spec`,
+`/refine`, `/launch`, `/backlog`) call the CLI; the portable automation path is a
+CI **scheduled poll** of ready issues (GitHub issue-event triggers are an optional
+accelerator GitLab lacks).
 
 ## Consequences
 Specs move from reviewed files to issue bodies — intent, not shipped code: the
@@ -34,3 +42,18 @@ remote steerability, and the orchestration layer stops hardcoding `gh`. Costs: a
 new Python module + CLI to maintain, and care with `gh` rate limits under
 polling. Relates to ADR-0001 (file-based plans, still used) and ADR-0068
 (issues as breaking-bump spines).
+
+## Amendment 2026-06-14 — status is adapter-native, not label-driven
+The original decision made `status:*` GitHub labels the board substrate. That
+left the GitHub Projects v2 board needing a parallel single-select field
+(duplicate state, drift) or a noisy label-grouped board. Resolution: the port
+treats status as an abstract lifecycle and each adapter maps it to the platform's
+native board column — GitHub Projects v2 single-select field (via `gh project
+item-edit`/`item-list`/`field-create`; needs the `project` OAuth scope and a
+configured project), GitLab scoped `status::*` labels later. `priority:*` stays a
+label on both. Cost: GitHub status reads/writes now go through Projects v2
+(more `gh` calls, an item must be on the project) instead of a one-shot label
+edit; the backlog `list` queries project items by field value. Benefit: a clean
+native board on each platform with mutual exclusion enforced by the platform, and
+a more honest port (move-to-column, not set-a-label). Implementation:
+`docs/superpowers/plans/2026-06-14-issue-driven-development.md` Wave 8.
