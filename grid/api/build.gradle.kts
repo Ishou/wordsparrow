@@ -19,7 +19,7 @@ kotlin {
     jvmToolchain(21)
 }
 
-val ktorVersion = "3.4.3"
+val ktorVersion = "3.5.0"
 val kotlinxSerializationVersion = "1.11.0"
 val logbackVersion = "1.5.32"
 val logstashEncoderVersion = "9.0"
