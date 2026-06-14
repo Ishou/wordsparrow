@@ -119,7 +119,7 @@ ingress:
 # to the bundled SigNoz collector over OTLP/gRPC inside the cluster
 # (no public ingress).
 #
-# What's collected once this lands (k8s-infra 0.15.1 defaults
+# What's collected once this lands (k8s-infra 0.16.0 defaults
 # already enable all of these — no explicit toggles needed):
 #
 # | Layer       | Receiver / Source                  | Examples                                                   |
@@ -180,7 +180,7 @@ k8s-infra:
     kubernetesAttributes: {enabled: true}
     resourceDetection:  {enabled: true}
     otlpExporter:       {enabled: true}
-    # Forward-compat for k8s-infra v0.16+ (our subchart is 0.15.1; see ADR-0038). Prevents dual-export on bump.
+    # Active on the live 0.16.0 pin (see ADR-0038). Prevents dual-export.
     otlphttpExporter:   {enabled: false}
     # selfTelemetry disabled 2026-05-12: ~5 MB/day per collector wasn't
     # worth the queue-depth/batch metrics for our scale. Re-enable if
