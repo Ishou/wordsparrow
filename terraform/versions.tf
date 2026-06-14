@@ -18,7 +18,7 @@ terraform {
     # minor flows in, 6.x does not without a deliberate bump.
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 5.19"
+      version = "~> 5.20"
     }
   }
 }
