@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "2.4.0"
+    kotlin("plugin.serialization") version "2.3.21"
     `java-test-fixtures`
 }
 
