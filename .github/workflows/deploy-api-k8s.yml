@@ -413,7 +413,7 @@ jobs:
           if [ -n "${MAINTAINER_USER_IDS:-}" ]; then
             set -- "$@" --set "maintainerRoleBootstrap.userIds=$MAINTAINER_USER_IDS"
           fi
-          # helm v4's default 'watcher' wait hangs forever (ignoring --timeout) on before-hook-creation hook deletion; 'legacy' waits for the rollout without that bug
+          # helm v4.2.1 'watcher' wait burns the full --timeout on each before-hook-creation hook deletion (helm/helm#32214); 'legacy' avoids it while still waiting for the rollout
           set -- "$@" --wait=legacy --timeout 5m
           "$@"
 

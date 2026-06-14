@@ -51,7 +51,7 @@ jobs:
 
       - name: Helm upgrade --install
         run: |
-          # helm v4's default 'watcher' wait hangs forever (ignoring --timeout) on before-hook-creation hook deletion; hookOnly waits only for the post-upgrade Job that loads the config
+          # helm v4.2.1 'watcher' wait burns the full --timeout on each before-hook-creation hook deletion (helm/helm#32214); hookOnly waits only for the post-upgrade Job that loads the config
           helm upgrade --install bliss-signoz-dashboards \
             ./infra/observability/dashboards \
             -n observability \
