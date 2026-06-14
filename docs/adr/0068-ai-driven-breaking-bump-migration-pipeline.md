@@ -173,3 +173,38 @@ schema or an action's inputs can still need edits, but only to manifests/CI, nev
 `0.x`, so each bump runs the full A→D pipeline (intended supervision, bounded by
 `prConcurrentLimit`); action/image minor/patch/digest bumps route to the cheap AI gate
 or no-op.
+
+## Amendment 2026-06-14 — auto-merge of ai-gate-cleared minor/patch bumps
+
+The `mergeable` route (an allowlisted `>=1.x` minor/patch whose AI smell test returns
+`green`) previously only stamped `<!-- breaking-bump:cleared -->` and left the PR for a
+human to merge. A dedicated workflow, `breaking-bump-automerge.yml`, now merges those PRs
+once they are provably safe.
+
+It fires on `workflow_run` completion of the **CI** and **Claude Code Review** workflows
+and on `pull_request_review` submission, and merges a PR only when **all** hold: head is
+`renovate/*` and author is `renovate[bot]`; the cleared stamp is present and authored by
+`github-actions[bot]` (an author check, so a human cannot forge it); every
+`statusCheckRollup` entry is `SUCCESS`/`NEUTRAL`/`SKIPPED`; the latest `claude-review`
+body starts with `LGTM` (the §6a signal is a COMMENTED review, so the body is read — not
+`reviewDecision`); and **no changed file is under `.github/workflows/`**.
+
+This required relaxing the earlier "§6a suppressed on `renovate/*`" decision: §6a now runs
+**review-only** on `renovate/*` (the reviewer posts an LGTM/Findings review; only the fixer
+steps stay gated off, so it still never pushes to a Renovate-owned branch — the
+Edited/Blocked deadlock is unchanged). Without a review there, the LGTM gate could never be
+met. Side effect: §6a reviews all open `renovate/*` PRs now, bounded by its 5-review cap. The last guard
+keeps `github-action` pin bumps (and any other workflow-touching bump) human-gated:
+auto-merging them would land a change on `main`, where workflows run with secrets, without
+human review — a supply-chain surface this ADR's threat model deliberately gates on the
+human merge. The decision is pure logic in `scripts/breaking-bump/automerge.py`
+(unit-tested); the workflow is `gh`→python glue and never checks out PR head code.
+
+GitHub-native auto-merge was rejected: `main` is unprotected, and native gating cannot see
+the §6a LGTM (a COMMENTED review, not an approval; the `claude-review` check passes even
+with findings). Honoring native auto-merge would force an APPROVED-review §6a-semantics
+change plus repo-wide branch protection — too broad. Majors and `0.x` bumps never reach
+the `mergeable` route, so they are never auto-merged; the human merge stays their safety
+net. Known unsolved trade-off: rapid sequential auto-merges can cancel in-flight deploys —
+no batching/quiet-window in v1. Design:
+`docs/superpowers/specs/2026-06-14-breaking-bump-automerge-design.md`.

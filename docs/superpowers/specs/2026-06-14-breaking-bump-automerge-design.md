@@ -57,7 +57,18 @@ out or builds PR head code, so there is no untrusted-code-execution surface.
    `PENDING` / `FAILURE` / `TIMED_OUT` / `CANCELLED`. (The automerge workflow's own
    run, if it surfaces as a check, is excluded.)
 4. The latest `claude-review` (`github-actions[bot]`) review body starts with
-   `LGTM` — read the body, not `reviewDecision`.
+   `LGTM` — read the body, not `reviewDecision`. **Prerequisite:** §6a was fully
+   suppressed on `renovate/*`, so it posted no review there and this condition could
+   never be met. We enable §6a **review-only** on `renovate/*` (run the reviewer, gate
+   the fixer off) so dep-bump PRs get an LGTM/Findings review without §6a pushing to
+   Renovate's branch (the Edited/Blocked deadlock ADR-0068 avoids). Side effect: §6a
+   now reviews *all* open `renovate/*` PRs, bounded by its 5-review cap + LGTM-skip.
+5. **No changed file is under `.github/workflows/`.** `github-action` minor/patch
+   bumps edit the `uses: …@sha` pin in workflow files; auto-merging them would land
+   a change on `main` (where workflows run with secrets) without a human click — a
+   supply-chain surface ADR-0068's threat model keeps human-gated. This is a
+   label-independent diff check, so it also catches any other workflow-touching
+   bump. Such PRs still get the cleared stamp and wait for a manual merge.
 
 If all hold → `gh pr merge <pr> --squash --delete-branch`. Otherwise no-op; a later
 event re-fires and re-evaluates. If the PR is already MERGED/CLOSED, skip.
@@ -65,9 +76,10 @@ event re-fires and re-evaluates. If the PR is already MERGED/CLOSED, skip.
 ### Scope
 
 Any allowlisted `>=1.x` **minor or patch** bump that reaches the `mergeable` route
-(i.e. carries the cleared stamp). Majors and any `0.x` bump never reach this route
-(they go to the full A→D pipeline), so they are never auto-merged. No further
-allowlist sub-scoping (not limited to frontend/dev-deps).
+(i.e. carries the cleared stamp), **except** bumps whose diff touches
+`.github/workflows/` (see gate condition 5). Majors and any `0.x` bump never reach
+this route (they go to the full A→D pipeline), so they are never auto-merged. No
+other allowlist sub-scoping (not limited to frontend/dev-deps).
 
 ### Components and testability
 
@@ -83,9 +95,11 @@ reviews,comments` payload. The workflow is thin glue: fetch JSON via `gh`, pipe 
 the decider, merge when it returns `True`. This mirrors the existing
 `routing.py` / `issue.py` pattern (logic in Python with tests; YAML is glue).
 
-TDD the decider against the four-condition truth table plus forge-resistance cases:
+TDD the decider against the gate's truth table plus forge-resistance cases:
 non-bot stamp author rejected, non-bot LGTM rejected, findings-not-LGTM body
-rejected, a single non-green check rejected, non-`renovate/*` branch rejected.
+rejected, a single non-green check rejected, non-`renovate/*` branch rejected,
+non-`renovate[bot]` author rejected, a `.github/workflows/` file in the diff
+rejected, already-merged/closed skipped, and the all-green happy path accepted.
 
 ### Companion edits
 
@@ -113,11 +127,16 @@ goes green, with no batching or quiet window (the §6a gate was chosen over the
 quiet-window option). A future follow-up could add a merge queue or a minimum
 spacing between auto-merges if deploy churn proves real.
 
-## Delivery — two PR waves
+## Delivery — three PR waves
 
-1. **Wave 1 (governance):** the ADR-0068 amendment + this spec doc. Merges first.
-2. **Wave 2 (implementation):** `breaking-bump-automerge.yml` + `automerge.py` +
-   tests + the dispatcher comment edit.
+1. **Wave 1 (governance):** the ADR-0068 amendment + this spec doc.
+2. **Wave 1.5 (prerequisite):** enable §6a review-only on `renovate/*` in
+   `claude-code-review.yml` (isolated PR — editing that workflow trips the
+   self-edit review path, so its own review is handled manually).
+3. **Wave 2 (implementation):** `breaking-bump-automerge.yml` + `automerge.py` +
+   tests + the dispatcher comment edit. The workflow also re-evaluates on
+   `breaking-bump-dispatch` completion so the cleared-stamp timing can't deadlock
+   the gate.
 
 ## Out of scope
 
