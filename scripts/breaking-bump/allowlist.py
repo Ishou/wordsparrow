@@ -1,9 +1,4 @@
-"""The rollout allowlist — gates the WHOLE dispatcher.
-
-Two admission paths: per-dep `deps:` (source libraries, one at a time) and whole
-`types:` classes (non-source dep-types, matched against Renovate's `dep-type:<type>`
-PR label).
-"""
+"""Rollout allowlist — gates the WHOLE dispatcher by dep name or dep-type class."""
 from __future__ import annotations
 
 from pathlib import Path
