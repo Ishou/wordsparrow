@@ -116,7 +116,7 @@ ADR-0068  infra/tools-upgrade-sources.yaml           Source registry now governe
 # ADR-0068: amendment 2026-06-13 (deterministic agent-d finalize + PR-exists gate); no new binding paths — finalize step lands in the breaking-bump workflow + agent-d prompt above
 # ADR-0068: amendment 2026-06-13 (plan = AI execution contract; scope.files manifest + workflow-sensitivity split); no new binding paths — plan/gate/prompt changes land under scripts/breaking-bump/** + prompts/** above
 # ADR-0068: amendment 2026-06-14 (broaden allowlist by dep-type; renovate.json stamps dep-type:<type> labels, allowlist.yaml gains types:); no new binding paths — changes land under scripts/breaking-bump/** + the dispatch workflow above (renovate.json governed repo-wide)
-ADR-0069  scripts/issues/**                          Issue-driven dev: call the IssueTracker port/CLI, never gh directly; status = adapter-native board column (GitHub Projects v2 field, GitLab scoped labels), priority = labels (amended 2026-06-14)
+ADR-0069  scripts/issues/**                          Issue-driven dev: IssueTracker port/CLI; status = adapter-native board column (GitHub Projects v2 built-in `Status` field); `needs_input` human-decision gate (addendum 2026-06-14); priority = labels
 ADR-0069  .claude/skills/issue-dev/**                Issue-driven workflow commands (/launch /capture /spec /refine /backlog) call the CLI
 ADR-0069  .github/workflows/issues-tests.yml         IssueTracker port unit tests (pytest) gate
 ```
