@@ -91,7 +91,7 @@ should_automerge(pr: dict) -> tuple[bool, str]   # (merge?, reason)
 ```
 
 `pr` is the parsed `gh pr view --json state,author,headRefName,statusCheckRollup,
-reviews,comments` payload. The workflow is thin glue: fetch JSON via `gh`, pipe to
+reviews,comments,files` payload. The workflow is thin glue: fetch JSON via `gh`, pipe to
 the decider, merge when it returns `True`. This mirrors the existing
 `routing.py` / `issue.py` pattern (logic in Python with tests; YAML is glue).
 
