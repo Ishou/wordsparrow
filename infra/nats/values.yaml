@@ -2,7 +2,7 @@ image:
   # nats:2.10-alpine. Pinned by digest in values-prod.yaml.
   repository: nats
   # renovate: datasource=docker depName=nats
-  tag: "2.10-alpine"
+  tag: "2.14-alpine"
   digest: ""
   pullPolicy: IfNotPresent
 
