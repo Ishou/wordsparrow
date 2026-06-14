@@ -55,7 +55,7 @@
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.1.0",
-    "@types/node": "^22.10.0",
+    "@types/node": "^22.19.21",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@typescript-eslint/eslint-plugin": "^8.59.2",
@@ -79,7 +79,7 @@
     "workbox-window": "^7.4.1"
   },
   "engines": {
-    "node": ">=22",
+    "node": ">=22.22.3",
     "pnpm": ">=11"
   },
   "packageManager": "pnpm@11.0.9",
