@@ -27,7 +27,7 @@ def _issue_json(number=5, **over):
 
 
 def test_get_parses_issue_and_native_status():
-    item_list = json.dumps({"items": [{"id": "IT", "Lifecycle": "Ready",
+    item_list = json.dumps({"items": [{"id": "IT", "lifecycle": "Ready",
                                        "content": {"number": 5}}]})
     runner = FakeRunner([_issue_json(), item_list])
     issue = GitHubTracker(runner=runner).get(5)
@@ -99,8 +99,8 @@ def test_set_status_adds_item_when_missing():
 
 def test_list_by_status_filters_items():
     items = json.dumps({"items": [
-        {"id": "a", "Lifecycle": "Ready", "content": _issue_dict(1)},
-        {"id": "b", "Lifecycle": "Idea", "content": _issue_dict(2)},
+        {"id": "a", "lifecycle": "Ready", "content": _issue_dict(1)},
+        {"id": "b", "lifecycle": "Idea", "content": _issue_dict(2)},
     ]})
     runner = FakeRunner([items])
     out = GitHubTracker(runner=runner).list(status=Status.READY)
