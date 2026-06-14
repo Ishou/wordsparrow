@@ -151,7 +151,8 @@ class GitHubTracker(IssueTracker):
     def _item_status(self, item: "dict | None") -> "Status | None":
         if not item:
             return None
-        return _OPTION_TO_STATUS.get(item.get(self._field))
+        # gh project item-list keys single-select values by the lowercased field name
+        return _OPTION_TO_STATUS.get(item.get(self._field.lower()))
 
     def _move_to_option(self, id: int, option_name: str) -> None:
         item = self._find_item(id)
@@ -171,7 +172,7 @@ class GitHubTracker(IssueTracker):
         target = _STATUS_TO_OPTION[status]
         out = []
         for item in self._items():
-            if item.get(self._field) != target:
+            if item.get(self._field.lower()) != target:
                 continue
             content = item.get("content") or {}
             if "number" not in content:
