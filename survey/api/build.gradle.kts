@@ -18,7 +18,7 @@ val ktorVersion = "3.5.0"
 val kotlinxSerializationVersion = "1.11.0"
 val logbackVersion = "1.5.34"
 val logstashEncoderVersion = "9.0"
-val junitVersion = "5.11.4"
+val junitVersion = "5.14.4"
 val assertkVersion = "0.28.1"
 val konsistVersion = "0.17.3"
 
