@@ -194,6 +194,22 @@ Full rationale is in MANIFESTO.md.
   gate fails if a new Helm chart or terraform cloud resource is added
   without updating the descriptor, or if `README.md` is stale. Regenerate
   with `make diagrams`.
+- **`post-bump-enhancement` issues are AI-synthesized, not authored.**
+  The ADR-0068 breaking-bump pipeline opens these as opportunistic
+  follow-ups; their bodies come from release notes + LLM inference, not
+  from reading our code, so every factual claim (key name, file/line,
+  "existing releases keep CSA") is a hypothesis to verify before acting,
+  not ground truth. The same bump can run several times and emit
+  near-identical follow-ups citing different spine issues — most apparent
+  duplication is that, so dedupe by spine reference before treating two as
+  distinct. Triage the backlog (dedupe → consolidate multi-angle
+  investigations into one umbrella → rank `priority:high|medium|low`) with
+  the `bump-triage` skill or `/bump-triage`; labels and comments apply
+  automatically, but confirm before closing any issue. **Tell** you're
+  about to make this mistake: you're about to open a PR implementing a
+  `post-bump-enhancement` body verbatim without having checked its claims
+  against the real chart/changelog, or you're filing a second issue for
+  work a sibling spine run already tracks.
 - **Comments document non-obvious WHY, in one line.** Default to no
   comment. If you write one, it's a single line on a non-obvious
   *why* — a hidden constraint, a subtle invariant, a workaround for a
