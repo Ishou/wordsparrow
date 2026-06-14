@@ -11,6 +11,7 @@
   "semanticCommitType": "chore",
   "semanticCommitScope": "deps",
   "platformCommit": "enabled",
+  "gitIgnoredAuthors": ["Ishou@users.noreply.github.com"],
   "commitBody": "Signed-off-by: Renovate Bot <bot@wordsparrow.io>",
   "branchPrefix": "renovate/",
   "automerge": false,
