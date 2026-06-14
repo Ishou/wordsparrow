@@ -40,7 +40,7 @@ val hikariVersion = "7.0.2"
 // exercises this path; post-deploy `/v1/health` plus previous-container
 // log watch is the prod gate. If the same crash recurs, revert and
 // restore the original comment block from git history.
-val flywayVersion = "12.6.0"
+val flywayVersion = "12.8.1"
 val testcontainersVersion = "1.21.4"
 val kotestPropertyVersion = "6.1.11"
 val commonsCsvVersion = "1.12.0"
