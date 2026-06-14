@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from auditing import AuditingTracker
 from memory import InMemoryTracker
-from models import Status
+from models import Priority, Status
 
 
 def _audit_comments(inner, id):
@@ -18,6 +18,26 @@ def test_set_status_emits_one_audit_comment_with_transition():
     audits = _audit_comments(inner, ref.id)
     assert any("status: idea → building" in a for a in audits)
     assert sum("set_status" in a for a in audits) == 2
+
+
+def test_set_status_noop_when_unchanged_emits_no_audit():
+    inner = InMemoryTracker()
+    audited = AuditingTracker(inner, actor="run-1", now=lambda: "t")
+    ref = audited.create("t", "b")
+    audited.set_status(ref.id, Status.IDEA)   # real transition: - → idea
+    audited.set_status(ref.id, Status.IDEA)   # no-op: idea → idea, must not audit
+    audits = _audit_comments(inner, ref.id)
+    assert sum("set_status" in a for a in audits) == 1
+
+
+def test_set_priority_noop_when_unchanged_emits_no_audit():
+    inner = InMemoryTracker()
+    audited = AuditingTracker(inner, actor="run-1", now=lambda: "t")
+    ref = audited.create("t", "b")
+    audited.set_priority(ref.id, Priority.HIGH)   # real transition: - → high
+    audited.set_priority(ref.id, Priority.HIGH)   # no-op: high → high, must not audit
+    audits = _audit_comments(inner, ref.id)
+    assert sum("set_priority" in a for a in audits) == 1
 
 
 def test_create_emits_audit_and_comment_is_not_audited():
