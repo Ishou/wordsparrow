@@ -5,18 +5,18 @@ from tracker import IssueTracker
 
 
 def test_create_then_get_roundtrip(tracker: IssueTracker):
-    ref = tracker.create("Title", "Body", labels=("status:idea",))
+    ref = tracker.create("Title", "Body")
     issue = tracker.get(ref.id)
     assert issue.title == "Title"
     assert issue.body == "Body"
-    assert issue.status is Status.IDEA
 
 
-def test_set_status_keeps_exactly_one_status_label(tracker: IssueTracker):
-    ref = tracker.create("t", "b", labels=("status:idea",))
+def test_set_status_moves_to_board_column_without_labels(tracker: IssueTracker):
+    ref = tracker.create("t", "b")
     tracker.set_status(ref.id, Status.BUILDING)
-    labels = tracker.get(ref.id).labels
-    assert [l for l in labels if l.startswith("status:")] == ["status:building"]
+    issue = tracker.get(ref.id)
+    assert issue.status is Status.BUILDING
+    assert [l for l in issue.labels if l.startswith("status:")] == []
 
 
 def test_set_priority_keeps_exactly_one_priority_label(tracker: IssueTracker):
@@ -26,19 +26,36 @@ def test_set_priority_keeps_exactly_one_priority_label(tracker: IssueTracker):
     assert [l for l in labels if l.startswith("priority:")] == ["priority:high"]
 
 
-def test_close_clears_status_and_marks_closed(tracker: IssueTracker):
-    ref = tracker.create("t", "b", labels=("status:building",))
+def test_close_marks_closed(tracker: IssueTracker):
+    ref = tracker.create("t", "b")
+    tracker.set_status(ref.id, Status.BUILDING)
     tracker.close(ref.id, reason="completed")
-    issue = tracker.get(ref.id)
-    assert issue.state == "closed"
-    assert [l for l in issue.labels if l.startswith("status:")] == []
+    assert tracker.get(ref.id).state == "closed"
+
+
+def test_list_filters_by_status(tracker: IssueTracker):
+    a = tracker.create("a", "b")
+    tracker.set_status(a.id, Status.READY)
+    b = tracker.create("b", "b")
+    tracker.set_status(b.id, Status.IDEA)
+    ready = tracker.list(status=Status.READY)
+    assert [i.id for i in ready] == [a.id]
 
 
 def test_list_filters_by_label_and_state(tracker: IssueTracker):
-    a = tracker.create("a", "b", labels=("status:ready", "priority:high"))
-    tracker.create("b", "b", labels=("status:idea",))
-    ready = tracker.list(labels=("status:ready",), state="open")
-    assert [i.id for i in ready] == [a.id]
+    a = tracker.create("a", "b", labels=("priority:high",))
+    tracker.create("b", "b", labels=("priority:low",))
+    hits = tracker.list(labels=("priority:high",), state="open")
+    assert [i.id for i in hits] == [a.id]
+
+
+def test_list_status_and_label_filters_compose(tracker: IssueTracker):
+    a = tracker.create("a", "b", labels=("priority:high",))
+    tracker.set_status(a.id, Status.READY)
+    b = tracker.create("b", "b", labels=("priority:low",))
+    tracker.set_status(b.id, Status.READY)
+    hits = tracker.list(labels=("priority:high",), status=Status.READY)
+    assert [i.id for i in hits] == [a.id]
 
 
 def test_comments_roundtrip(tracker: IssueTracker):

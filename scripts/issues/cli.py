@@ -13,14 +13,14 @@ from models import Priority, Status
 from tracker import IssueTracker
 
 
+# status lives in the native board field now; only priority is label-driven
 _WORKFLOW_LABELS: tuple[tuple[str, str, str], ...] = (
-    ("status:idea", "EDEDED", "Inbox: captured, not yet implementable"),
-    ("status:ready", "0E8A16", "Ready: spec complete enough to build"),
-    ("status:building", "1D76DB", "Building: implementer launched, PR(s) in flight"),
     ("priority:high", "E11D21", "Triage: do next — clear value, bounded scope"),
     ("priority:medium", "FBCA04", "Triage: worth doing — schedule after high-priority work"),
     ("priority:low", "C5DEF5", "Triage: cosmetic/prospective — do opportunistically or close"),
 )
+
+_STATUS_OPTIONS: tuple[str, ...] = ("Idea", "Ready", "Building", "Done")
 
 
 def _default_tracker() -> IssueTracker:
@@ -49,6 +49,7 @@ def main(argv: list[str], tracker: IssueTracker | None = None) -> None:
     g = sub.add_parser("get"); g.add_argument("id", type=int)
     li = sub.add_parser("list"); li.add_argument("--label", action="append", default=[])
     li.add_argument("--state", default="open")
+    li.add_argument("--status", choices=[s.name.lower() for s in Status], default=None)
     ub = sub.add_parser("update-body"); ub.add_argument("id", type=int); ub.add_argument("--body", required=True)
     cm = sub.add_parser("comment"); cm.add_argument("id", type=int); cm.add_argument("--body", required=True)
     cs = sub.add_parser("comments"); cs.add_argument("id", type=int)
@@ -62,7 +63,7 @@ def main(argv: list[str], tracker: IssueTracker | None = None) -> None:
     a = p.parse_args(argv)
     if a.cmd == "create": _emit(t.create(a.title, a.body, tuple(a.label)))
     elif a.cmd == "get": _emit(t.get(a.id))
-    elif a.cmd == "list": _emit(t.list(tuple(a.label), a.state))
+    elif a.cmd == "list": _emit(t.list(tuple(a.label), a.state, Status[a.status.upper()] if a.status else None))
     elif a.cmd == "update-body": t.update_body(a.id, a.body)
     elif a.cmd == "comment": t.comment(a.id, a.body)
     elif a.cmd == "comments": _emit(t.comments(a.id))
@@ -74,7 +75,11 @@ def main(argv: list[str], tracker: IssueTracker | None = None) -> None:
     elif a.cmd == "bootstrap":
         for name, color, desc in _WORKFLOW_LABELS:
             t.ensure_label(name, color, desc)
-        print(json.dumps({"ensured": [name for name, _, _ in _WORKFLOW_LABELS]}))
+        t.ensure_status_field(_STATUS_OPTIONS)
+        print(json.dumps({
+            "ensured_labels": [name for name, _, _ in _WORKFLOW_LABELS],
+            "status_field": list(_STATUS_OPTIONS),
+        }))
 
 
 if __name__ == "__main__":  # pragma: no cover

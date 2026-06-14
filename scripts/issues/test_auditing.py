@@ -12,11 +12,12 @@ def _audit_comments(inner, id):
 def test_set_status_emits_one_audit_comment_with_transition():
     inner = InMemoryTracker()
     audited = AuditingTracker(inner, actor="run-1", now=lambda: "2026-06-14T11:42Z")
-    ref = audited.create("t", "b", labels=("status:idea",))
+    ref = audited.create("t", "b")
+    audited.set_status(ref.id, Status.IDEA)
     audited.set_status(ref.id, Status.BUILDING)
     audits = _audit_comments(inner, ref.id)
-    assert any("status: status:idea → status:building" in a for a in audits)
-    assert sum("set_status" in a for a in audits) == 1
+    assert any("status: idea → building" in a for a in audits)
+    assert sum("set_status" in a for a in audits) == 2
 
 
 def test_create_emits_audit_and_comment_is_not_audited():

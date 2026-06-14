@@ -20,7 +20,7 @@ class AuditingTracker(IssueTracker):
         self._inner.comment(id, f"🤖 {action}{sep}{detail} · actor: {self._actor} · {self._now()}")
 
     def get(self, id: int) -> Issue: return self._inner.get(id)
-    def list(self, labels=(), state="open") -> list[Issue]: return self._inner.list(labels, state)
+    def list(self, labels=(), state="open", status=None) -> list[Issue]: return self._inner.list(labels, state, status)
     def comments(self, id: int) -> list[Comment]: return self._inner.comments(id)
 
     # comment is the audit channel — not itself audited
@@ -46,6 +46,9 @@ class AuditingTracker(IssueTracker):
     # repo-level: no issue thread to audit
     def ensure_label(self, name: str, color: str, description: str) -> None:
         self._inner.ensure_label(name, color, description)
+
+    def ensure_status_field(self, options: tuple[str, ...]) -> None:
+        self._inner.ensure_status_field(options)
 
     def set_status(self, id: int, status: Status) -> None:
         before = self._inner.get(id).status
