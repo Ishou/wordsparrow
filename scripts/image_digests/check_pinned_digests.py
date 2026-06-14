@@ -1,15 +1,4 @@
-"""Fail when an infra image's `tag:` is bumped but its pinned `digest:` is not.
-
-Infra images deploy by digest — the `digest:` is what actually gets pulled — so a
-tag bump that leaves the digest unchanged ships nothing (the nats-box 0.19.7
-no-op). This guard compares each chart's merged values (values.yaml +
-values-prod.yaml, as the deploy merges them) against a git base ref and flags any
-image whose tag moved while its non-empty digest stayed put.
-
-Diff-based on purpose: a digest deliberately *frozen* to an older build of a
-mutable tag (e.g. `nats:2.14-alpine`) is fine — it's only a bug when someone moves
-the tag without the digest. Empty digests (deploy-time-resolved) are ignored.
-"""
+"""Fail when an image tag: bumps but its pinned digest: does not."""
 from __future__ import annotations
 
 import subprocess
@@ -33,10 +22,7 @@ def deep_merge(base: object, override: object) -> object:
 
 
 def find_images(node: object, path: str = "") -> Iterator[tuple[str, str, str, str]]:
-    """Yield (path, repository, tag, digest) for every block with repository+tag.
-
-    digest is the stripped string, or "" when absent/empty.
-    """
+    """Yield (path, repository, tag, digest) for every image block with repository+tag."""
     if isinstance(node, dict):
         repo, tag = node.get("repository"), node.get("tag")
         if isinstance(repo, str) and isinstance(tag, (str, int, float)):

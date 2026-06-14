@@ -1,10 +1,6 @@
 name: image-digest-guard
 
-# Fails a PR when an infra image's `tag:` is bumped but its pinned `digest:` is
-# left stale — infra images deploy by digest, so that bump ships nothing (the
-# nats-box 0.19.7 no-op). Diff-based: it compares the change against the base ref,
-# so intentionally-frozen pins on mutable tags (e.g. nats:2.14-alpine) and
-# deploy-time-resolved empty digests are not flagged. See scripts/image_digests/.
+# Guard: fails if a tag bump leaves its pinned digest stale. See scripts/image_digests/.
 
 on:
   pull_request:
