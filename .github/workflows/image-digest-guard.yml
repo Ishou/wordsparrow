@@ -1,0 +1,50 @@
+name: image-digest-guard
+
+# Fails a PR when an infra image `digest:` no longer matches its `tag:`. Infra
+# images deploy by digest, so a tag bump that leaves a stale pinned digest ships
+# nothing (the nats-box 0.19.7 no-op). The guard merges values.yaml +
+# values-prod.yaml like the deploy does and verifies every pinned digest against
+# `crane digest <repo>:<tag>`. See scripts/image_digests/.
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**/values.yaml'
+      - 'infra/**/values-prod.yaml'
+      - 'scripts/image_digests/**'
+      - '.github/workflows/image-digest-guard.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**/values.yaml'
+      - 'infra/**/values-prod.yaml'
+      - 'scripts/image_digests/**'
+      - '.github/workflows/image-digest-guard.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-digest-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  digests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14.6'
+      - run: pip install pyyaml pytest
+      - name: Unit tests (parse/merge logic)
+        run: python -m pytest scripts/image_digests -q
+      - name: Install crane
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_x86_64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin crane
+          crane version
+      - name: Verify pinned image digests match their tags
+        run: python scripts/image_digests/check_pinned_digests.py infra
