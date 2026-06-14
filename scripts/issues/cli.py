@@ -13,6 +13,16 @@ from models import Priority, Status
 from tracker import IssueTracker
 
 
+_WORKFLOW_LABELS: tuple[tuple[str, str, str], ...] = (
+    ("status:idea", "EDEDED", "Inbox: captured, not yet implementable"),
+    ("status:ready", "0E8A16", "Ready: spec complete enough to build"),
+    ("status:building", "1D76DB", "Building: implementer launched, PR(s) in flight"),
+    ("priority:high", "E11D21", "Triage: do next — clear value, bounded scope"),
+    ("priority:medium", "FBCA04", "Triage: worth doing — schedule after high-priority work"),
+    ("priority:low", "C5DEF5", "Triage: cosmetic/prospective — do opportunistically or close"),
+)
+
+
 def _default_tracker() -> IssueTracker:
     backend = os.environ.get("ISSUE_TRACKER", "github")
     if backend != "github":
@@ -47,6 +57,7 @@ def main(argv: list[str], tracker: IssueTracker | None = None) -> None:
     al = sub.add_parser("add-label"); al.add_argument("id", type=int); al.add_argument("label")
     rl = sub.add_parser("remove-label"); rl.add_argument("id", type=int); rl.add_argument("label")
     cl = sub.add_parser("close"); cl.add_argument("id", type=int); cl.add_argument("--reason", default="completed")
+    sub.add_parser("bootstrap")
 
     a = p.parse_args(argv)
     if a.cmd == "create": _emit(t.create(a.title, a.body, tuple(a.label)))
@@ -60,6 +71,10 @@ def main(argv: list[str], tracker: IssueTracker | None = None) -> None:
     elif a.cmd == "add-label": t.add_label(a.id, a.label)
     elif a.cmd == "remove-label": t.remove_label(a.id, a.label)
     elif a.cmd == "close": t.close(a.id, a.reason)
+    elif a.cmd == "bootstrap":
+        for name, color, desc in _WORKFLOW_LABELS:
+            t.ensure_label(name, color, desc)
+        print(json.dumps({"ensured": [name for name, _, _ in _WORKFLOW_LABELS]}))
 
 
 if __name__ == "__main__":  # pragma: no cover

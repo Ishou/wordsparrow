@@ -43,6 +43,10 @@ class AuditingTracker(IssueTracker):
         self._inner.remove_label(id, label)
         self._audit(id, "remove_label", label)
 
+    # repo-level: no issue thread to audit
+    def ensure_label(self, name: str, color: str, description: str) -> None:
+        self._inner.ensure_label(name, color, description)
+
     def set_status(self, id: int, status: Status) -> None:
         before = self._inner.get(id).status
         self._inner.set_status(id, status)
