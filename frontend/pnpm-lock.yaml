@@ -89,7 +89,7 @@ importers:
         specifier: ^1.11.2
         version: 1.11.2(jsdom@29.1.1)(typescript@6.0.3)
       '@playwright/test':
-        specifier: ^1.59.1
+        specifier: ^1.60.0
         version: 1.60.0
       '@testing-library/dom':
         specifier: ^10.4.0
