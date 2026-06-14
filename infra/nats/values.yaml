@@ -11,7 +11,7 @@ streamInit:
     # natsio/nats-box bundles the nats CLI used to bootstrap the stream.
     repository: natsio/nats-box
     # renovate: datasource=docker depName=natsio/nats-box
-    tag: "0.19.5"
+    tag: "0.19.7"
     digest: ""
 
 # prometheus-nats-exporter sidecar — scrapes /varz, /connz, /jsz from the
@@ -23,7 +23,7 @@ metricsExporter:
   image:
     repository: natsio/prometheus-nats-exporter
     # renovate: datasource=docker depName=natsio/prometheus-nats-exporter
-    tag: "0.15.0"
+    tag: "0.20.1"
     digest: ""
   port: 7777
   resources:
