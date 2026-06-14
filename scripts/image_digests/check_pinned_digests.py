@@ -1,21 +1,25 @@
-"""Fail when a pinned image `digest:` no longer matches its `tag:`.
+"""Fail when an infra image's `tag:` is bumped but its pinned `digest:` is not.
 
-Infra images deploy by digest — the `digest:` is what actually gets pulled, so a
-`tag:` bump that leaves a stale digest is a silent no-op (this is exactly how the
-nats-box 0.19.7 bump shipped nothing). This guard merges each chart's
-values.yaml + values-prod.yaml the way helm does, finds every image block that
-pins a non-empty digest, and verifies that digest equals `crane digest
-<repository>:<tag>`. An empty digest is skipped — those are resolved at deploy time.
+Infra images deploy by digest — the `digest:` is what actually gets pulled — so a
+tag bump that leaves the digest unchanged ships nothing (the nats-box 0.19.7
+no-op). This guard compares each chart's merged values (values.yaml +
+values-prod.yaml, as the deploy merges them) against a git base ref and flags any
+image whose tag moved while its non-empty digest stayed put.
+
+Diff-based on purpose: a digest deliberately *frozen* to an older build of a
+mutable tag (e.g. `nats:2.14-alpine`) is fine — it's only a bug when someone moves
+the tag without the digest. Empty digests (deploy-time-resolved) are ignored.
 """
 from __future__ import annotations
 
 import subprocess
 import sys
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Callable
 
 import yaml
+
+Reader = Callable[[str], "str | None"]
 
 
 def deep_merge(base: object, override: object) -> object:
@@ -28,78 +32,104 @@ def deep_merge(base: object, override: object) -> object:
     return override
 
 
-def find_pinned_images(node: object, path: str = "") -> Iterator[tuple[str, str, str, str]]:
-    """Yield (path, repository, tag, digest) for every block pinning a non-empty digest."""
+def find_images(node: object, path: str = "") -> Iterator[tuple[str, str, str, str]]:
+    """Yield (path, repository, tag, digest) for every block with repository+tag.
+
+    digest is the stripped string, or "" when absent/empty.
+    """
     if isinstance(node, dict):
-        repo, tag, digest = node.get("repository"), node.get("tag"), node.get("digest")
-        if (
-            isinstance(repo, str)
-            and isinstance(tag, (str, int, float))
-            and isinstance(digest, str)
-            and digest.strip()
-        ):
-            yield path or "<root>", repo, str(tag), digest.strip()
+        repo, tag = node.get("repository"), node.get("tag")
+        if isinstance(repo, str) and isinstance(tag, (str, int, float)):
+            digest = node.get("digest")
+            yield (
+                path or "<root>",
+                repo,
+                str(tag),
+                digest.strip() if isinstance(digest, str) else "",
+            )
         for key, value in node.items():
-            yield from find_pinned_images(value, f"{path}.{key}" if path else str(key))
+            yield from find_images(value, f"{path}.{key}" if path else str(key))
     elif isinstance(node, list):
         for index, value in enumerate(node):
-            yield from find_pinned_images(value, f"{path}[{index}]")
+            yield from find_images(value, f"{path}[{index}]")
 
 
-def merged_chart_values(chart_dir: Path) -> dict:
-    """Merge values.yaml with an optional values-prod.yaml the way the deploy does."""
-    values = yaml.safe_load((chart_dir / "values.yaml").read_text()) or {}
-    prod = chart_dir / "values-prod.yaml"
-    if prod.exists():
-        values = deep_merge(values, yaml.safe_load(prod.read_text()) or {})
+def merged_values(reader: Reader, chart_rel: str) -> dict | None:
+    """Merge a chart's values.yaml + optional values-prod.yaml via `reader`; None if no base."""
+    base_text = reader(f"{chart_rel}/values.yaml")
+    if base_text is None:
+        return None
+    values = yaml.safe_load(base_text) or {}
+    prod_text = reader(f"{chart_rel}/values-prod.yaml")
+    if prod_text is not None:
+        values = deep_merge(values, yaml.safe_load(prod_text) or {})
     return values  # type: ignore[return-value]
 
 
-def chart_dirs(roots: list[Path]) -> list[Path]:
-    """Every directory under the roots that holds a values.yaml."""
-    seen = {f.parent for root in roots for f in root.rglob("values.yaml")}
-    return sorted(seen)
+def diff_problems(chart_rel: str, base: dict, head: dict) -> list[str]:
+    """Flag images whose tag changed but whose non-empty digest did not (the no-op)."""
+    base_images = {p: (repo, tag, dig) for p, repo, tag, dig in find_images(base)}
+    problems: list[str] = []
+    for path, repo, tag, digest in find_images(head):
+        if path not in base_images:
+            continue
+        _, base_tag, base_digest = base_images[path]
+        if tag != base_tag and digest and digest == base_digest:
+            problems.append(
+                f"{chart_rel} ({path}): {repo} tag {base_tag} -> {tag} but its pinned "
+                f"digest is unchanged ({digest[:23]}…) — bump the digest to match the new "
+                f"tag, or this deploys the old image (silent no-op)."
+            )
+    return problems
 
 
-def crane_digest(image: str) -> str:
-    """Resolve an image reference to its registry (OCI image-index) digest."""
-    proc = subprocess.run(
-        ["crane", "digest", image], capture_output=True, text=True, check=True
+def _git_show(ref: str, path: str) -> str | None:
+    result = subprocess.run(
+        ["git", "show", f"{ref}:{path}"], capture_output=True, text=True
     )
-    return proc.stdout.strip()
+    return result.stdout if result.returncode == 0 else None
+
+
+def _working_tree(path: str) -> str | None:
+    p = Path(path)
+    return p.read_text() if p.exists() else None
+
+
+def chart_rels(roots: list[str]) -> list[str]:
+    """Relative dirs (from repo root) holding a values.yaml in the working tree."""
+    return sorted({str(f.parent) for root in roots for f in Path(root).rglob("values.yaml")})
 
 
 def check(
-    roots: list[Path], resolve: Callable[[str], str] = crane_digest
+    base_ref: str,
+    roots: list[str],
+    head_reader: Reader = _working_tree,
+    base_reader: Reader | None = None,
 ) -> list[str]:
-    """Return a list of human-readable mismatch messages (empty == all pins fresh)."""
+    """Return mismatch messages comparing the working tree against `base_ref`."""
+    reader = base_reader or (lambda path: _git_show(base_ref, path))
     problems: list[str] = []
-    for chart in chart_dirs(roots):
-        for path, repo, tag, pinned in find_pinned_images(merged_chart_values(chart)):
-            image = f"{repo}:{tag}"
-            try:
-                actual = resolve(image)
-            except subprocess.CalledProcessError as exc:
-                problems.append(f"{chart}/{path}: could not resolve {image}: {exc.stderr.strip()}")
-                continue
-            if actual != pinned:
-                problems.append(
-                    f"{chart} ({path}): {image} pins digest {pinned} but the registry "
-                    f"digest is {actual} — bump the digest to match the tag (or the tag "
-                    f"is wrong)."
-                )
+    for chart in chart_rels(roots):
+        head = merged_values(head_reader, chart)
+        base = merged_values(reader, chart)
+        if head is None or base is None:  # new or deleted chart — nothing to diff
+            continue
+        problems.extend(diff_problems(chart, base, head))
     return problems
 
 
 def main(argv: list[str]) -> int:
-    roots = [Path(a) for a in argv[1:]] or [Path("infra")]
-    problems = check(roots)
+    if len(argv) < 2:
+        print("usage: check_pinned_digests.py <base-ref> [roots...]", file=sys.stderr)
+        return 2
+    base_ref, roots = argv[1], argv[2:] or ["infra"]
+    problems = check(base_ref, roots)
     if problems:
-        print("Image tag/digest mismatch — a tag bump left a stale pinned digest:\n")
+        print("Image tag bumped without updating its pinned digest (silent no-op):\n")
         for problem in problems:
             print(f"  ✗ {problem}")
         return 1
-    print("All pinned image digests match their tags.")
+    print("No tag-without-digest bumps detected.")
     return 0
 
 
