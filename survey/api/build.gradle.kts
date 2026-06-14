@@ -2,7 +2,7 @@
 
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "2.3.21"
+    kotlin("plugin.serialization") version "2.4.0"
     application
     id("com.gradleup.shadow") version "9.4.2"
 }
@@ -36,7 +36,7 @@ dependencies {
     implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
 
     // NATS JetStream client — JetStream consumer per ADR-0049.
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     // Ktor server core + CIO engine.

@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm")
     // Wire DTOs are @Serializable — kotlinx-serialization plugin generates the (de)serializers.
-    kotlin("plugin.serialization") version "2.3.21"
+    kotlin("plugin.serialization") version "2.4.0"
 }
 
 kotlin {
@@ -37,7 +37,7 @@ dependencies {
     implementation("com.fasterxml.uuid:java-uuid-generator:$javaUuidGeneratorVersion")
 
     // NATS JetStream client — cross-context event subscribers (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     // Postgres pool + Flyway — staged for PostgresLobbyRepository (PR #5).
     // Today these only back the V1 Flyway migration + MigrationTest; the Konsist
@@ -45,8 +45,8 @@ dependencies {
     // src/main/kotlin until the adapter lands.
     implementation("org.postgresql:postgresql:42.7.11")
     implementation("com.zaxxer:HikariCP:7.0.2")
-    implementation("org.flywaydb:flyway-core:12.6.0")
-    implementation("org.flywaydb:flyway-database-postgresql:12.6.0")
+    implementation("org.flywaydb:flyway-core:12.8.1")
+    implementation("org.flywaydb:flyway-database-postgresql:12.8.1")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")

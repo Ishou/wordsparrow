@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "2.3.21"
+    kotlin("plugin.serialization") version "2.4.0"
     `java-test-fixtures`
 }
 
@@ -20,7 +20,7 @@ dependencies {
     implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
 
     // JOSE/JWT: ID-token verification and Apple client-assertion signing (ADR-0046).
-    implementation("com.nimbusds:nimbus-jose-jwt:10.0.2")
+    implementation("com.nimbusds:nimbus-jose-jwt:10.9.1")
 
     // Ktor HTTP client — token-endpoint code exchange (ADR-0006).
     implementation("io.ktor:ktor-client-core:$ktorVersion")
@@ -31,13 +31,13 @@ dependencies {
 
     implementation("org.postgresql:postgresql:42.7.11")
     implementation("com.zaxxer:HikariCP:7.0.2")
-    implementation("org.flywaydb:flyway-core:12.6.0")
-    implementation("org.flywaydb:flyway-database-postgresql:12.6.0")
+    implementation("org.flywaydb:flyway-core:12.8.1")
+    implementation("org.flywaydb:flyway-database-postgresql:12.8.1")
     implementation("org.slf4j:slf4j-api:2.0.18")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     // NATS JetStream client — cross-context eventing publishers (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     testFixturesImplementation(project(":identity:domain"))
     testFixturesImplementation(project(":identity:application"))

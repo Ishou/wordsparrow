@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "2.3.21"
+    kotlin("plugin.serialization") version "2.4.0"
 }
 
 kotlin {
@@ -17,8 +17,8 @@ dependencies {
     // Postgres pool + migrations — used by BlissDatabase + PostgresPuzzleRepository.
     implementation("org.postgresql:postgresql:42.7.11")
     implementation("com.zaxxer:HikariCP:7.0.2")
-    implementation("org.flywaydb:flyway-core:12.6.0")
-    implementation("org.flywaydb:flyway-database-postgresql:12.6.0")
+    implementation("org.flywaydb:flyway-core:12.8.1")
+    implementation("org.flywaydb:flyway-database-postgresql:12.8.1")
     implementation("org.slf4j:slf4j-api:2.0.18")
 
     // Ktor client + CIO engine — used by MatomoAnalyticsAdapter to POST events
@@ -32,10 +32,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     // Commons CSV — RFC 4180 reader for the words-<lang>.csv corpus (ADR-0013 §8).
-    implementation("org.apache.commons:commons-csv:1.12.0")
+    implementation("org.apache.commons:commons-csv:1.14.1")
 
     // NATS JetStream client — cross-context event subscribers (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")

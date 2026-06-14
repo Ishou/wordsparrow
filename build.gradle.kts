@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.3.21" apply false
-    id("com.diffplug.spotless") version "8.4.0"
+    kotlin("jvm") version "2.4.0" apply false
+    id("com.diffplug.spotless") version "8.6.0"
 }
 
 allprojects {

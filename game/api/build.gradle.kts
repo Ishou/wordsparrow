@@ -8,7 +8,7 @@
 
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "2.3.21"
+    kotlin("plugin.serialization") version "2.4.0"
     application
     id("com.gradleup.shadow") version "9.4.2"
 }
@@ -66,7 +66,7 @@ dependencies {
     implementation(project(":game:infrastructure"))
 
     // NATS client — Module.kt holds Connection to register ApplicationStopped close-hook (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     // Ktor server core + Netty engine (ADR-0006 §1).
     implementation("io.ktor:ktor-server-core:$ktorVersion")

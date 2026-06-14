@@ -7,7 +7,7 @@
 
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "2.3.21"
+    kotlin("plugin.serialization") version "2.4.0"
     application
     id("com.gradleup.shadow") version "9.4.2"
 }
@@ -40,10 +40,10 @@ val hikariVersion = "7.0.2"
 // exercises this path; post-deploy `/v1/health` plus previous-container
 // log watch is the prod gate. If the same crash recurs, revert and
 // restore the original comment block from git history.
-val flywayVersion = "12.6.0"
+val flywayVersion = "12.8.1"
 val testcontainersVersion = "1.21.4"
 val kotestPropertyVersion = "6.1.11"
-val commonsCsvVersion = "1.12.0"
+val commonsCsvVersion = "1.14.1"
 
 application {
     mainClass.set("com.bliss.grid.api.MainKt")
@@ -132,7 +132,7 @@ dependencies {
     implementation("org.apache.commons:commons-csv:$commonsCsvVersion")
 
     // NATS JetStream client — cross-context event subscribers (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     testImplementation(platform("org.junit:junit-bom:$junitVersion"))
     testImplementation("org.junit.jupiter:junit-jupiter")
