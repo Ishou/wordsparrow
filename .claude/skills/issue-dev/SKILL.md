@@ -31,10 +31,14 @@ Set `ISSUE_ACTOR` so audit comments attribute correctly:
 `ISSUE_ACTOR="launch:<session-or-run-id>" scripts/issues/issues set-status …`.
 
 Lifecycle is **adapter-native** (ADR-0069 amended): the abstract status
-`idea` → `ready` → `building` → **Done** maps to the platform's real board
-column — a Projects v2 single-select field on GitHub (NOT a `status:*` label).
+`idea` → `needs_input` → `ready` → `building` → **Done** maps to the platform's
+real board column — the built-in `Status` single-select field on GitHub (NOT a
+`status:*` label). `needs_input` is the **human-decision gate**: when you can't
+finish a spec without the maintainer, park the issue there with a comment; the
+maintainer moves it back to `idea` (rework) or on to `ready` (approved).
 `set-status` moves the card; `list --status <s>` filters by it. **Priority stays
-a label** (`priority:*`) and ranks within a column; `needs-human` flags escalation.
+a label** (`priority:*`) and ranks within a column; `needs-human` (a label) flags
+a *launched* issue that hit a wall — distinct from the `needs_input` status.
 
 ## /capture "<idea>" — the procedure
 
@@ -59,7 +63,12 @@ Turn a captured idea into an implementable spec, written into the **issue body**
 2. Run the `superpowers:brainstorming` skill, but the terminal artifact is the issue body —
    not a `design.md` file. Write the agreed spec:
    `scripts/issues/issues update-body <id> --body "<spec>"`.
-3. Flip to ready: `scripts/issues/issues set-status <id> ready`.
+3. Flip to ready: `scripts/issues/issues set-status <id> ready` — **unless you
+   hit a decision only the maintainer can make** (scope, a product call, an
+   ambiguous requirement). Then park it at the human-decision gate instead:
+   `scripts/issues/issues set-status <id> needs_input` and post the question as a
+   comment. The maintainer moves it back to `idea` (rework) or to `ready`
+   (approved); a later `/refine` folds their answer into the body.
 4. ADR-worthy work (new dependency, cross-context contract, deploy-target change)
    still writes/links a reviewed ADR file; the body links to it.
 

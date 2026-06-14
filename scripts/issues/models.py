@@ -8,6 +8,7 @@ from enum import Enum
 # abstract board column; adapters map to native representation (ADR-0069 amended)
 class Status(str, Enum):
     IDEA = "idea"
+    NEEDS_INPUT = "needs_input"
     READY = "ready"
     BUILDING = "building"
 

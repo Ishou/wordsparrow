@@ -19,10 +19,13 @@ def _run(argv: list[str]) -> str:
 _VIEW_FIELDS = "number,title,body,labels,state,url"
 
 # abstract Status ↔ native Projects single-select option name (Done has no enum)
-_STATUS_TO_OPTION = {Status.IDEA: "Idea", Status.READY: "Ready", Status.BUILDING: "Building"}
+_STATUS_TO_OPTION = {Status.IDEA: "Idea", Status.NEEDS_INPUT: "Needs Input",
+                     Status.READY: "Ready", Status.BUILDING: "Building"}
 _OPTION_TO_STATUS = {v: k for k, v in _STATUS_TO_OPTION.items()}
 _DONE_OPTION = "Done"
-_FIELD_OPTIONS = ("Idea", "Ready", "Building", "Done")
+_FIELD_OPTIONS = ("Idea", "Needs Input", "Ready", "Building", "Done")
+_OPTION_COLORS = {"Idea": "GRAY", "Needs Input": "ORANGE", "Ready": "GREEN",
+                  "Building": "BLUE", "Done": "PURPLE"}
 
 
 class GitHubTracker(IssueTracker):
@@ -30,7 +33,7 @@ class GitHubTracker(IssueTracker):
         self._run = runner
         self._owner = os.environ.get("ISSUE_PROJECT_OWNER", "Ishou")
         self._number = os.environ.get("ISSUE_PROJECT_NUMBER", "4")
-        self._field = os.environ.get("ISSUE_STATUS_FIELD", "Lifecycle")
+        self._field = os.environ.get("ISSUE_STATUS_FIELD", "Status")
 
     def _issue_from_json(self, data: dict, status: "Status | None" = None) -> Issue:
         return Issue(
@@ -100,11 +103,27 @@ class GitHubTracker(IssueTracker):
     # --- native status board (Projects v2 single-select field) ---
 
     def ensure_status_field(self, options: tuple[str, ...] = _FIELD_OPTIONS) -> None:
-        if self._field_json() is not None:
+        field = self._field_json()
+        if field is None:
+            self._run(["gh", "project", "field-create", self._number, "--owner", self._owner,
+                       "--name", self._field, "--data-type", "SINGLE_SELECT",
+                       "--single-select-options", ",".join(options)])
             return
-        self._run(["gh", "project", "field-create", self._number, "--owner", self._owner,
-                   "--name", self._field, "--data-type", "SINGLE_SELECT",
-                   "--single-select-options", ",".join(options)])
+        if tuple(o.get("name") for o in field.get("options", [])) == tuple(options):
+            return
+        self._set_field_options(field["id"], options)
+
+    def _set_field_options(self, field_id: str, options: tuple[str, ...]) -> None:
+        opts = ", ".join(
+            f'{{name: "{n}", color: {_OPTION_COLORS.get(n, "GRAY")}, description: ""}}'
+            for n in options
+        )
+        mutation = (
+            f'mutation {{ updateProjectV2Field(input: {{fieldId: "{field_id}", '
+            f'singleSelectOptions: [{opts}]}}) {{ projectV2Field {{ '
+            f'... on ProjectV2SingleSelectField {{ id }} }} }} }}'
+        )
+        self._run(["gh", "api", "graphql", "-f", f"query={mutation}"])
 
     def set_status(self, id: int, status: Status) -> None:
         self._move_to_option(id, _STATUS_TO_OPTION[status])

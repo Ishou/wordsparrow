@@ -35,4 +35,4 @@ def test_bootstrap_ensures_priority_labels_and_status_field(capsys):
     assert set(tracker.label_definitions()) == {
         "priority:high", "priority:medium", "priority:low",
     }
-    assert out["status_field"] == ["Idea", "Ready", "Building", "Done"]
+    assert out["status_field"] == ["Idea", "Needs Input", "Ready", "Building", "Done"]
