@@ -8,7 +8,7 @@ matomo:
     # Manifesto (digest pinning): empty -> tag fallback. Prod sets digest.
     digest: ""
     # renovate: datasource=docker depName=matomo
-    tag: "5.2.1-apache"
+    tag: "5.11.1-apache"
     pullPolicy: IfNotPresent
     # When true, helm install/upgrade fails fast if digest is empty.
     requireDigest: false
