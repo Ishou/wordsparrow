@@ -19,7 +19,7 @@ dependencies {
     implementation("com.zaxxer:HikariCP:7.0.2")
     implementation("org.flywaydb:flyway-core:12.6.0")
     implementation("org.flywaydb:flyway-database-postgresql:12.6.0")
-    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("org.slf4j:slf4j-api:2.0.18")
 
     // Ktor client + CIO engine — used by MatomoAnalyticsAdapter to POST events
     // to the self-hosted Matomo server (ADR-0025). Mirrors :game:infrastructure's
