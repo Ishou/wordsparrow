@@ -2,7 +2,7 @@
 # IaC for v1). `~> 1.51` admits 1.51.x patches but blocks 2.x.
 
 terraform {
-  required_version = "~> 1.10"
+  required_version = "~> 1.15"
 
   required_providers {
     hcloud = {

@@ -10,7 +10,7 @@
 # Terraform providers.
 
 terraform {
-  required_version = "~> 1.9"
+  required_version = "~> 1.15"
 
   required_providers {
     # cloudflare/cloudflare v5.x is the current major as of 2026-04;
