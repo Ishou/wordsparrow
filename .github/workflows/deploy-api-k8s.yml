@@ -413,7 +413,8 @@ jobs:
           if [ -n "${MAINTAINER_USER_IDS:-}" ]; then
             set -- "$@" --set "maintainerRoleBootstrap.userIds=$MAINTAINER_USER_IDS"
           fi
-          set -- "$@" --wait --timeout 5m
+          # helm v4's default 'watcher' wait hangs forever (ignoring --timeout) on before-hook-creation hook deletion; 'legacy' waits for the rollout without that bug
+          set -- "$@" --wait=legacy --timeout 5m
           "$@"
 
       - name: Capture failure diagnostics
@@ -479,10 +480,10 @@ jobs:
           if [ -n "$prev_rev" ]; then
             echo "Rolling back to revision $prev_rev"
             helm rollback "$RELEASE" "$prev_rev" \
-              -n wordsparrow --wait --timeout 2m
+              -n wordsparrow --wait=legacy --timeout 2m
           else
             echo "No prior good revision; uninstalling failed release"
-            helm uninstall "$RELEASE" -n wordsparrow --wait --timeout 2m
+            helm uninstall "$RELEASE" -n wordsparrow --wait=legacy --timeout 2m
           fi
 
       - name: Verify rollout
