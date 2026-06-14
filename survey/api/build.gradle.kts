@@ -16,7 +16,7 @@ kotlin {
 // Versions mirrored from identity/api/build.gradle.kts so the Ktor stack stays uniform.
 val ktorVersion = "3.4.3"
 val kotlinxSerializationVersion = "1.11.0"
-val logbackVersion = "1.5.32"
+val logbackVersion = "1.5.34"
 val logstashEncoderVersion = "9.0"
 val junitVersion = "5.11.4"
 val assertkVersion = "0.28.1"
