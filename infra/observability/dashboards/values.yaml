@@ -9,7 +9,7 @@ apiKey:
 image:
   # same image as infra/nats bootstrap job; bundles curl+jq+sh.
   repository: natsio/nats-box
-  tag: "0.19.5"
+  tag: "0.19.7"
   digest: "sha256:5d513bf0bb82d6af3fe8363097eb14d2e4ca3242db24140db88df4a4ba082442"
   pullPolicy: IfNotPresent
 
