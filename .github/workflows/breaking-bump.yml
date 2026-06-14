@@ -1417,11 +1417,12 @@ jobs:
       ISSUE_NUMBER: ${{ needs.read-context.outputs.issue_number }}
       CLAUDE_BRANCH: ${{ needs.read-context.outputs.claude_branch }}
     steps:
-      # CLAUDE_BOT_PAT carries the workflows scope GITHUB_TOKEN lacks (D may edit .github/workflows/** on an actions/* bump); fetch-depth:0 to fork from Renovate's tip SHA.
+      # GITHUB_TOKEN + persist-credentials:false: the attacker-content-handling agent runs in this checkout, so no PAT is persisted into .git/config (the agent has cat/Read and could lift it); the workflows-scope PAT lives only in the deterministic finalize push. fetch-depth:0 to fork from Renovate's tip SHA.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
-          token: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: { python-version: '3.14.6' }
       - run: pip install -r scripts/breaking-bump/requirements.txt
@@ -1436,7 +1437,7 @@ jobs:
       - name: Resolve Renovate branch tip + idempotency guard
         id: rev
         env:
-          GH_TOKEN: ${{ secrets.CLAUDE_BOT_PAT || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           # Idempotency: a prior run may already have forked.
@@ -1447,11 +1448,19 @@ jobs:
           fi
           REN_REF=$(gh pr view "$PR_NUMBER" --json headRefName --jq .headRefName)
           REN_OID=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)
-          git fetch origin "$REN_REF"
+          # persist-credentials:false leaves no stored credential; auth this read-only fetch inline with GITHUB_TOKEN.
+          git fetch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$REN_REF"
           git checkout -b "$CLAUDE_BRANCH" "$REN_OID"
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "ren_ref=$REN_REF" >> "$GITHUB_OUTPUT"
           echo "ren_oid=$REN_OID" >> "$GITHUB_OUTPUT"
+      - name: Assert no credential persisted into .git/config (defense-in-depth)
+        if: steps.rev.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          if grep -qiE 'authorization|x-access-token' .git/config; then
+            echo "::error::a git credential is persisted in .git/config — Agent D could read it"; exit 1
+          fi
       - name: Run Agent D (implementer)
         id: agent
         if: steps.rev.outputs.skip == 'false' && vars.BREAKING_BUMP_STUB != 'true'
