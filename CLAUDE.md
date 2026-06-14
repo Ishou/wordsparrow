@@ -204,8 +204,9 @@ Full rationale is in MANIFESTO.md.
   duplication is that, so dedupe by spine reference before treating two as
   distinct. Triage the backlog (dedupe → consolidate multi-angle
   investigations into one umbrella → rank `priority:high|medium|low`) with
-  the `bump-triage` skill or `/bump-triage`; labels and comments apply
-  automatically, but confirm before closing any issue. **Tell** you're
+  the `triage` skill or `/triage` (which triages any open issue, with a
+  dedicated lens for these synthesized follow-ups); labels and comments
+  apply automatically, but confirm before closing any issue. **Tell** you're
   about to make this mistake: you're about to open a PR implementing a
   `post-bump-enhancement` body verbatim without having checked its claims
   against the real chart/changelog, or you're filing a second issue for
