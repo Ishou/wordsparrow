@@ -1,15 +1,7 @@
 from __future__ import annotations
 
-import pytest
-
-from memory import InMemoryTracker
 from models import Priority, Status
 from tracker import IssueTracker
-
-
-@pytest.fixture
-def tracker() -> IssueTracker:
-    return InMemoryTracker()
 
 
 def test_create_then_get_roundtrip(tracker: IssueTracker):
