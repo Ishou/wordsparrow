@@ -36,7 +36,7 @@ dependencies {
     implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
 
     // NATS JetStream client — JetStream consumer per ADR-0049.
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     // Ktor server core + CIO engine.

@@ -33,7 +33,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     // NATS JetStream client - user.deleted consumer (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     // Lingua language detector — LanguageDetector port implementation.
     implementation("com.github.pemistahl:lingua:1.2.2")

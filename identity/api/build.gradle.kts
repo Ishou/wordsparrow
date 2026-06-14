@@ -63,7 +63,7 @@ dependencies {
     implementation(project(":identity:infrastructure"))
 
     // NATS client — Module.kt creates Connection + JetStream, registers ApplicationStopped close hook (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     // Ktor server core + Netty engine.
     implementation("io.ktor:ktor-server-core:$ktorVersion")

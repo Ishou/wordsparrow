@@ -35,7 +35,7 @@ dependencies {
     implementation("org.apache.commons:commons-csv:1.12.0")
 
     // NATS JetStream client — cross-context event subscribers (ADR-0049).
-    implementation("io.nats:jnats:2.20.6")
+    implementation("io.nats:jnats:2.25.3")
 
     testImplementation(platform("org.junit:junit-bom:5.11.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
