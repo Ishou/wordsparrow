@@ -82,6 +82,14 @@ jobs:
           NEXT_STATUS: ${{ steps.map.outputs.next_status }}
         run: scripts/issues/issues set-status "${ISSUE_NUMBER}" "${NEXT_STATUS}"
 
+      - name: Announce — folding the answer
+        if: steps.map.outputs.command == '/answer' && steps.map.outputs.answer != ''
+        env:
+          GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
+          ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: scripts/issues/issues comment "${ISSUE_NUMBER}" --body "🤖 Folding your answer into the spec…"
+
       - name: Fold the maintainer's answer into the spec (/answer ⇒ refine body)
         if: steps.map.outputs.command == '/answer' && steps.map.outputs.answer != ''
         env:
@@ -118,10 +126,18 @@ jobs:
             scratch comments, do not change the board status, and do not open a
             PR. Follow the issue-dev skill at `.claude/skills/issue-dev/SKILL.md`.
 
+      - name: Announce — writing the plan
+        if: steps.map.outputs.signal == 'write_plan'
+        env:
+          GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
+          ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: scripts/issues/issues comment "${ISSUE_NUMBER}" --body "🤖 Writing the implementation plan…"
+
       - name: Write the implementation plan (Ready ⇒ plan gate)
         if: steps.map.outputs.signal == 'write_plan'
         env:
-          # the agent reads the board and writes the plan_review status via the CLI.
+          # the agent reads the board and explores the repo via the CLI.
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
           ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
         uses: anthropics/claude-code-action@v1
@@ -131,16 +147,39 @@ jobs:
           additional_permissions: |
             actions: read
           claude_args: >-
-            --allowed-tools "Read,Glob,Grep,Bash(scripts/issues/issues:*),Bash(cat:*)"
+            --allowed-tools "Read,Glob,Grep,Bash(scripts/issues/issues:*),Bash(cat:*),Bash(ls:*),Bash(find:*),Bash(grep:*)"
           prompt: >-
-            Run the issue-dev `/spec`→plan procedure for issue
-            #${{ github.event.issue.number }} in this repository: read the issue
-            spec and comment thread via `scripts/issues/issues get` /
-            `comments`, write the implementation plan as a single issue comment
-            titled "## Implementation plan (Plan Review)", then move the board
-            with `scripts/issues/issues set-status ${{ github.event.issue.number }} plan_review`.
-            Do not open a PR. Follow the issue-dev skill at
-            `.claude/skills/issue-dev/SKILL.md`.
+            Write the implementation plan for issue
+            #${{ github.event.issue.number }}. Read the spec and steering thread
+            via `scripts/issues/issues get ${{ github.event.issue.number }}` and
+            `scripts/issues/issues comments ${{ github.event.issue.number }}`, and
+            inspect the actual files the spec references before planning. The
+            plan MUST implement the spec's "Decisions" faithfully and in full —
+            every decision and every affected file; do not narrow the scope or
+            substitute a different approach. If a decision is technically
+            infeasible as written, do NOT silently work around it: plan what you
+            can and flag the infeasible decision under a "## Blocking concerns"
+            heading with the reason and realistic alternatives, so the maintainer
+            can re-decide. Post the plan as a single issue comment titled "##
+            Implementation plan (Plan Review)". Do not change the board status,
+            do not open a PR, and do not post scratch comments. Follow the
+            issue-dev skill at `.claude/skills/issue-dev/SKILL.md`.
+
+      - name: Move to Plan Review once the plan is posted (Ready ⇒ Plan Review)
+        if: steps.map.outputs.signal == 'write_plan' && success()
+        env:
+          GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
+          ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: scripts/issues/issues set-status "${ISSUE_NUMBER}" plan_review
+
+      - name: Announce — dispatching the implementer
+        if: steps.map.outputs.signal == 'dispatch_implementer'
+        env:
+          GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
+          ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: scripts/issues/issues comment "${ISSUE_NUMBER}" --body "🤖 Dispatching an implementer to build this…"
 
       - name: Dispatch the implementer (/launch ⇒ Building)
         if: steps.map.outputs.signal == 'dispatch_implementer'

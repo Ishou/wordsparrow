@@ -36,3 +36,10 @@ def test_every_agent_step_has_pat_and_issues_cli_allowlist():
         args = step.get("with", {}).get("claude_args", "")
         assert "--allowed-tools" in args, name
         assert "Bash(scripts/issues/issues:*)" in args, name
+
+
+def test_plan_review_transition_is_deterministic_not_agent_owned():
+    # the board advance to plan_review is a run step, not left to the agent to perform.
+    steps = _load()["jobs"]["chatops"]["steps"]
+    movers = [s for s in steps if "plan_review" in str(s.get("run", ""))]
+    assert movers, "expected a deterministic run step that sets plan_review"
