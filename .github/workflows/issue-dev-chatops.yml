@@ -96,6 +96,9 @@ jobs:
           branch_prefix: chore/claude-
           additional_permissions: |
             actions: read
+          # without an allowlist claude-code-action denies every agent Bash call.
+          claude_args: >-
+            --allowed-tools "Read,Glob,Grep,Bash(scripts/issues/issues:*),Bash(printf:*),Bash(cat:*)"
           prompt: >-
             The maintainer answered an open question on issue
             #${{ github.event.issue.number }} at the Needs Input gate. Their
