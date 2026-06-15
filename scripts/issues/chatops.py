@@ -10,11 +10,13 @@ from models import Status
 class Command(str, Enum):
     APPROVE = "/approve"
     LAUNCH = "/launch"
-    REWORK = "/rework"
+    RESPEC = "/respec"
+    REPLAN = "/replan"
     ANSWER = "/answer"
 
 
 class Signal(str, Enum):
+    WRITE_SPEC = "write_spec"
     WRITE_PLAN = "write_plan"
     DISPATCH_IMPLEMENTER = "dispatch_implementer"
 
@@ -68,11 +70,17 @@ def map_command(body: str, status: "Status | None") -> Action:
             return Action(cmd, Status.BUILDING, Signal.DISPATCH_IMPLEMENTER)
         return Action(cmd)
 
-    if cmd is Command.REWORK:
-        if status is Status.NEEDS_INPUT:
-            return Action(cmd, Status.IDEA)
-        if status is Status.PLAN_REVIEW:
-            return Action(cmd, Status.READY)
+    if cmd is Command.RESPEC:
+        # big change: regenerate the spec from idea, carrying optional context.
+        if status in (Status.IDEA, Status.NEEDS_INPUT, Status.READY,
+                      Status.PLAN_REVIEW, Status.PLANNED):
+            return Action(cmd, Status.IDEA, Signal.WRITE_SPEC, answer=_parse_answer(rest))
+        return Action(cmd)
+
+    if cmd is Command.REPLAN:
+        # big change: regenerate the plan; only meaningful once a plan exists.
+        if status in (Status.PLAN_REVIEW, Status.PLANNED):
+            return Action(cmd, Status.READY, Signal.WRITE_PLAN, answer=_parse_answer(rest))
         return Action(cmd)
 
     if cmd is Command.ANSWER:

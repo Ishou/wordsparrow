@@ -1,6 +1,6 @@
 ---
 name: issue-dev
-description: Issue-driven development for Bliss — treat a GitHub issue as the living spec, capture ideas, develop and refine the spec in the issue, view the prioritized backlog, and launch an implementer from a ready issue. Use when the user says "capture this idea", "spec out issue #N", "write the spec for #N", "refine #N", "fold these comments into #N", "show the backlog", "what's next to work on", "launch issue #N", "implement issue #N", "start work on #N", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read/write issues via the portable IssueTracker CLI (never gh directly), move them across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /capture, /spec, /refine, /backlog, /launch. Comment-driven ChatOps commands: /approve, /launch, /rework, /answer.
+description: Issue-driven development for Bliss — treat a GitHub issue as the living spec, capture ideas, develop and refine the spec in the issue, view the prioritized backlog, and launch an implementer from a ready issue. Use when the user says "capture this idea", "spec out issue #N", "write the spec for #N", "refine #N", "fold these comments into #N", "show the backlog", "what's next to work on", "launch issue #N", "implement issue #N", "start work on #N", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read/write issues via the portable IssueTracker CLI (never gh directly), move them across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /capture, /spec, /refine, /backlog, /launch. Comment-driven ChatOps commands: /approve, /launch, /respec, /replan, /answer.
 ---
 
 # Issue-driven development playbook
@@ -36,10 +36,16 @@ one for the spec, one for the plan:
 **Done**. It maps to the platform's real board column — the built-in `Status`
 single-select field on GitHub (NOT a `status:*` label).
 - `needs_input` — **spec gate**: agent drafts the spec, parks here with a comment;
-  maintainer approves (→ `ready`) or `/rework` (→ `idea`).
+  maintainer approves (→ `ready`) or `/respec` (→ `idea`, fresh spec).
 - `ready` — spec approved; agent **writes the implementation plan** (parking).
-- `plan_review` — **plan gate**: plan awaits the maintainer; approve (→ `planned`)
-  or `/rework` (redo the plan; back to `needs_input` only if the spec is wrong).
+- `plan_review` — **plan gate**: plan awaits the maintainer; approve (→ `planned`),
+  `/replan` (redo the plan), or `/respec` (back to `idea` when the spec is wrong).
+
+**ChatOps commands by size of change:** `/answer` folds a *small* maintainer
+input into the existing spec; `/respec` regenerates the *whole* spec from scratch
+(→ `idea`, then the spec-writer agent → `needs_input`); `/replan` regenerates the
+*whole* plan (→ `ready`, then write_plan → `plan_review`). Both `/respec` and
+`/replan` take optional free-form context describing the big change.
 - `planned` — plan approved, queued for `/launch`.
 The agent never auto-advances past a gate. `set-status` moves the card;
 `list --status <s>` filters by it. **Priority stays a label** (`priority:*`) and
@@ -87,7 +93,7 @@ Turn a captured idea into an implementable spec, written into the **issue body**
    hit a decision only the maintainer can make** (scope, a product call, an
    ambiguous requirement). Then park it at the human-decision gate instead:
    `scripts/issues/issues set-status <id> needs_input` and post the question as a
-   comment. The maintainer moves it back to `idea` (rework) or to `ready`
+   comment. The maintainer moves it back to `idea` (`/respec`) or to `ready`
    (approved); a later `/refine` folds their answer into the body.
 5. ADR-worthy work (new dependency, cross-context contract, deploy-target change)
    still writes/links a reviewed ADR file; the body links to it.
@@ -184,13 +190,14 @@ in `scripts/issues/chatops.py`):
 | `/approve` | Needs Input | → Ready, then the agent **writes the implementation plan** (plan gate) |
 | `/approve` | Plan Review | → Planned |
 | `/launch` | Planned (also Ready / Needs Input as a maintainer override) | → Building, then the agent **dispatches the implementer** → PR `Closes #<id>` |
-| `/rework` | Needs Input | → Idea |
-| `/rework` | Plan Review | → Ready (redo the plan) |
-| `/answer <n>` | any | record the chosen option `<n>`; no status change |
+| `/respec [context]` | Idea / Needs Input / Ready / Plan Review / Planned | → Idea, then the agent **regenerates the whole spec** → Needs Input |
+| `/replan [context]` | Plan Review / Planned | → Ready, then the agent **regenerates the whole plan** → Plan Review |
+| `/answer <text>` | any | fold the maintainer's small input into the spec body; no status change |
 
 Anything else (plain prose, bot `🤖` audit comments, out-of-gate transitions) is a
-no-op. Board writes from CI need the **`ISSUE_PROJECT_PAT`** secret (fine-grained,
-`project` + `repo`) — the default `GITHUB_TOKEN` cannot write Projects v2 fields.
+no-op. Board writes from CI need the **`ISSUE_PROJECT_PAT`** secret — a **classic**
+PAT with `project` + `repo` + `read:org` (fine-grained PATs cannot reach a
+user-owned Projects v2 board; the default `GITHUB_TOKEN` cannot write the field).
 **Done-on-merge** is GitHub Projects' native "Item closed → Done" workflow, not
 this automation.
 
