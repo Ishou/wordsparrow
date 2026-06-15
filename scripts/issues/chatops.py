@@ -24,7 +24,7 @@ class Action:
     command: "Command | None" = None
     next_status: "Status | None" = None  # board write; None ⇒ no status change
     signal: "Signal | None" = None  # agent step to run, if any
-    answer: "int | None" = None  # parsed /answer <n>; None unless ANSWER
+    answer: "str | None" = None  # free-form /answer text; None unless ANSWER
 
 
 _NOOP = Action()
@@ -43,12 +43,10 @@ def _parse_command(body: str) -> "tuple[Command, str] | None":
     return None
 
 
-def _parse_answer(rest: str) -> "int | None":
-    head = rest.strip().split(None, 1)[0] if rest.strip() else ""
-    try:
-        return int(head)
-    except ValueError:
-        return None
+def _parse_answer(rest: str) -> "str | None":
+    # the maintainer's answer is free-form prose (often an option label, not a
+    # number); collapse to one line so it survives a single GITHUB_OUTPUT row.
+    return " ".join(rest.split()) or None
 
 
 def map_command(body: str, status: "Status | None") -> Action:
