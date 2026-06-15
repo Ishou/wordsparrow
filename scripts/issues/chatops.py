@@ -44,8 +44,7 @@ def _parse_command(body: str) -> "tuple[Command, str] | None":
 
 
 def _parse_answer(rest: str) -> "str | None":
-    # the maintainer's answer is free-form prose (often an option label, not a
-    # number); collapse to one line so it survives a single GITHUB_OUTPUT row.
+    # collapse to one line: multi-line answers would break a GITHUB_OUTPUT row.
     return " ".join(rest.split()) or None
 
 
