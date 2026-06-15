@@ -2,8 +2,18 @@ from __future__ import annotations
 
 import json
 
-from github import GitHubTracker
+import pytest
+
+from github import GitHubTracker, _run
 from models import Status
+
+
+def test_run_surfaces_stderr_on_failure():
+    with pytest.raises(RuntimeError) as exc:
+        _run(["bash", "-c", "echo 'boom: bad credentials' >&2; exit 7"])
+    msg = str(exc.value)
+    assert "boom: bad credentials" in msg
+    assert "exited 7" in msg
 
 
 class FakeRunner:
