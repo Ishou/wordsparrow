@@ -71,7 +71,6 @@ def map_command(body: str, status: "Status | None") -> Action:
         return Action(cmd)
 
     if cmd is Command.RESPEC:
-        # big change: regenerate the spec from idea, carrying optional context.
         if status in (Status.IDEA, Status.NEEDS_INPUT, Status.READY,
                       Status.PLAN_REVIEW, Status.PLANNED):
             return Action(cmd, Status.IDEA, Signal.WRITE_SPEC, answer=_parse_answer(rest))
