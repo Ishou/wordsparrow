@@ -69,13 +69,27 @@ Turn a captured idea into an implementable spec, written into the **issue body**
 2. Run the `superpowers:brainstorming` skill, but the terminal artifact is the issue body —
    not a `design.md` file. Write the agreed spec:
    `scripts/issues/issues update-body <id> --body "<spec>"`.
-3. Flip to ready: `scripts/issues/issues set-status <id> ready` — **unless you
+3. **Feasibility-gate every option (hard requirement).** Before the spec can go
+   `ready`, each concrete approach/option in the body must be feasibility-checked
+   against the actual code — not assumed from how the stack usually works. For each
+   option, either **cite the file/structure that makes it work** (open it and
+   confirm), or label it **`UNVALIDATED — confirm <X> first`** and do not present it
+   as a vetted choice. A caveat written *inside* an option ("needs to confirm…") is
+   forbidden — resolve it, or label the whole option UNVALIDATED. Architectural
+   verbs ("derive at render time", "inherit from", "share at build time") are the
+   highest-risk; confirm the mechanism exists in *this* repo. **You may not
+   `set-status ready` while any option is still UNVALIDATED** — finish the check or
+   drop the option. (2026-06-15: #976's CNPG spec proposed "derive `waitImage` from
+   the db-chart `imageName` at render time" — impossible, the charts are separate
+   Helm releases and the code comment said so; it shipped as a vetted choice and
+   broke three stages later.)
+4. Flip to ready: `scripts/issues/issues set-status <id> ready` — **unless you
    hit a decision only the maintainer can make** (scope, a product call, an
    ambiguous requirement). Then park it at the human-decision gate instead:
    `scripts/issues/issues set-status <id> needs_input` and post the question as a
    comment. The maintainer moves it back to `idea` (rework) or to `ready`
    (approved); a later `/refine` folds their answer into the body.
-4. ADR-worthy work (new dependency, cross-context contract, deploy-target change)
+5. ADR-worthy work (new dependency, cross-context contract, deploy-target change)
    still writes/links a reviewed ADR file; the body links to it.
 
 If the idea is really several workstreams, split it into linked issues rather

@@ -159,7 +159,10 @@ jobs:
             infeasible as written, do NOT silently work around it: plan what you
             can and flag the infeasible decision under a "## Blocking concerns"
             heading with the reason and realistic alternatives, so the maintainer
-            can re-decide. Post the plan as a single issue comment titled "##
+            can re-decide. Feasibility-check every approach you put in the plan
+            against the actual files before committing to it — cite the
+            file/structure that makes it work; never propose a mechanism you have
+            not confirmed exists in this repo. Post the plan as a single issue comment titled "##
             Implementation plan (Plan Review)". Do not change the board status,
             do not open a PR, and do not post scratch comments. Follow the
             issue-dev skill at `.claude/skills/issue-dev/SKILL.md`.

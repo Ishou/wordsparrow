@@ -281,6 +281,24 @@ Full rationale is in MANIFESTO.md.
   you have a schema-validator error from a remote API, you're about
   to edit one missing field, and you have not yet fetched a known
   good example. Stop. Fetch first.
+- **Verify an option against the code before offering it as a choice.**
+  When a spec, plan, or recommendation presents concrete approaches,
+  each one is feasibility-checked against *this* codebase first —
+  cite the file/structure that makes it work, or mark it
+  `UNVALIDATED — confirm <X> first` and don't present it as vetted. A
+  caveat written *inside* an option ("needs to confirm…") is not a
+  substitute for resolving it: resolve it, or label the whole option
+  UNVALIDATED. Architectural verbs — "derive at render time", "inherit
+  from", "share at build time" — are the highest-risk; confirm the
+  mechanism exists *here*, don't assume it from how the stack usually
+  works. **Tell** you're about to make this mistake: you're writing
+  "approach (a) vs (b)" into a spec/plan and you have not opened the
+  files that make each one work. The 2026-06-15 #976 CNPG spec proposed
+  "derive `waitImage` from the db-chart `imageName` at render time" —
+  architecturally impossible (the charts are separate Helm releases;
+  the code comment said so), and the option even carried its own
+  contradicting caveat. It was picked as vetted and only surfaced three
+  stages later when an agent tried to build it.
 
 ## Things to never do without explicit approval
 
