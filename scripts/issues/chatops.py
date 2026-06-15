@@ -1,8 +1,4 @@
-"""Pure ChatOps command→action mapper for the issue-dev lifecycle. No I/O.
-
-Maps an OWNER comment body + the issue's current Status to a recognized slash
-command and the resulting board action, encoding the two-gate rules (ADR-0069).
-"""
+"""Pure ChatOps command→action mapper for the issue-dev lifecycle. No I/O."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -56,10 +52,7 @@ def _parse_answer(rest: str) -> "int | None":
 
 
 def map_command(body: str, status: "Status | None") -> Action:
-    """Recognize a command in `body` at `status` and return the resulting Action.
-
-    Unknown commands, malformed `/answer`, or out-of-gate transitions are no-ops.
-    """
+    """Map body + status to a board action; unknown/out-of-gate commands are no-ops."""
     parsed = _parse_command(body)
     if parsed is None:
         return _NOOP
