@@ -89,7 +89,8 @@ jobs:
           ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ANSWER: ${{ steps.map.outputs.answer }}
-        run: scripts/issues/issues comment "${ISSUE_NUMBER}" --body "🤖 Maintainer answer recorded: ${ANSWER}"
+        run: |
+          scripts/issues/issues comment "${ISSUE_NUMBER}" --body "🤖 Maintainer answer recorded: ${ANSWER}"
 
       - name: Write the implementation plan (Ready ⇒ plan gate)
         if: steps.map.outputs.signal == 'write_plan'
