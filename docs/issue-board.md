@@ -56,6 +56,38 @@ Config (env, read by the GitHub adapter): `ISSUE_PROJECT_OWNER` (default
 Drag-rank within a column is a visual cue only; it is not machine-read. Use the
 `priority:*` labels for the rank that automation honors.
 
+## Comment-driven ChatOps
+
+`.github/workflows/issue-dev-chatops.yml` (ADR-0069) lets you steer the lifecycle
+from issue comments with **no polling** — GitHub fires `issue_comment` instantly.
+A comment that **leads** with a slash command, posted by the repo `OWNER`, maps to
+a board action via the pure mapper `scripts/issues/chatops.py`:
+
+| Command | At status | Effect |
+|---|---|---|
+| `/approve` | Needs Input | → Ready, then the agent writes the implementation plan |
+| `/approve` | Plan Review | → Planned |
+| `/launch` | Planned (also Ready / Needs Input override) | → Building, then the agent dispatches the implementer → PR `Closes #<id>` |
+| `/rework` | Needs Input | → Idea |
+| `/rework` | Plan Review | → Ready (redo the plan) |
+| `/answer <n>` | any | record the chosen option `<n>`; no status change |
+
+Plain prose, the bot's own `🤖` audit comments, and out-of-gate transitions are
+no-ops; the workflow only runs for the `OWNER`.
+
+### Required secret: `ISSUE_PROJECT_PAT`
+
+Board writes from CI go through Projects v2 single-select fields, which the default
+`GITHUB_TOKEN` **cannot** write. The workflow's status-write steps use a
+fine-grained PAT with **`project` (read+write) + `repo`** scope, exposed as
+`GH_TOKEN`. Add it once as the repo secret `ISSUE_PROJECT_PAT`
+(Settings → Secrets and variables → Actions). The agent steps additionally use
+`CLAUDE_CODE_OAUTH_TOKEN` (shared with `claude.yml`).
+
+**Done-on-merge** is handled by GitHub Projects' native "Item closed → Done"
+workflow (configured on the project), not by this automation — closing the issue
+via `Closes #<id>` moves the card to Done automatically.
+
 ## GitLab (forward-looking)
 
 Once a `GitLabTracker` (glab) adapter exists, the same abstract `Status` maps to

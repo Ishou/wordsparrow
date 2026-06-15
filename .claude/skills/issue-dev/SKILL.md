@@ -1,6 +1,6 @@
 ---
 name: issue-dev
-description: Issue-driven development for Bliss — treat a GitHub issue as the living spec, capture ideas, develop and refine the spec in the issue, view the prioritized backlog, and launch an implementer from a ready issue. Use when the user says "capture this idea", "spec out issue #N", "write the spec for #N", "refine #N", "fold these comments into #N", "show the backlog", "what's next to work on", "launch issue #N", "implement issue #N", "start work on #N", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read/write issues via the portable IssueTracker CLI (never gh directly), move them across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /capture, /spec, /refine, /backlog, /launch.
+description: Issue-driven development for Bliss — treat a GitHub issue as the living spec, capture ideas, develop and refine the spec in the issue, view the prioritized backlog, and launch an implementer from a ready issue. Use when the user says "capture this idea", "spec out issue #N", "write the spec for #N", "refine #N", "fold these comments into #N", "show the backlog", "what's next to work on", "launch issue #N", "implement issue #N", "start work on #N", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read/write issues via the portable IssueTracker CLI (never gh directly), move them across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /capture, /spec, /refine, /backlog, /launch. Comment-driven ChatOps commands: /approve, /launch, /rework, /answer.
 ---
 
 # Issue-driven development playbook
@@ -157,6 +157,28 @@ ISSUE_ACTOR="launch:<id>" scripts/issues/issues add-label <id> needs-human
 ```
 Report the blocker. `needs-human` is the Blocked signal on the board; leave the
 status at `building` so the in-flight state is visible.
+
+## ChatOps commands (comment-driven, OWNER-only)
+
+`.github/workflows/issue-dev-chatops.yml` (ADR-0069) lets the maintainer drive the
+lifecycle from issue comments — no polling. A comment that **leads** with a slash
+command, posted by the repo `OWNER`, maps to a board action (the pure mapper lives
+in `scripts/issues/chatops.py`):
+
+| Command | At status | Effect |
+|---|---|---|
+| `/approve` | Needs Input | → Ready, then the agent **writes the implementation plan** (plan gate) |
+| `/approve` | Plan Review | → Planned |
+| `/launch` | Planned (also Ready / Needs Input as a maintainer override) | → Building, then the agent **dispatches the implementer** → PR `Closes #<id>` |
+| `/rework` | Needs Input | → Idea |
+| `/rework` | Plan Review | → Ready (redo the plan) |
+| `/answer <n>` | any | record the chosen option `<n>`; no status change |
+
+Anything else (plain prose, bot `🤖` audit comments, out-of-gate transitions) is a
+no-op. Board writes from CI need the **`ISSUE_PROJECT_PAT`** secret (fine-grained,
+`project` + `repo`) — the default `GITHUB_TOKEN` cannot write Projects v2 fields.
+**Done-on-merge** is GitHub Projects' native "Item closed → Done" workflow, not
+this automation.
 
 ## What this skill is NOT
 - Not a code-writer — it orchestrates. Implementation happens in the dispatched
