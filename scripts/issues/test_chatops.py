@@ -44,19 +44,20 @@ def test_rework_at_plan_review_goes_ready():
     assert map_command("/rework", Status.PLAN_REVIEW) == Action(Command.REWORK, Status.READY)
 
 
-def test_answer_parses_integer_no_status_change():
-    a = map_command("/answer 2", Status.NEEDS_INPUT)
-    assert a == Action(Command.ANSWER, answer=2)
-    assert a.next_status is None
+def test_answer_records_freeform_value_no_status_change():
+    a = map_command("/answer b", Status.NEEDS_INPUT)
+    assert a == Action(Command.ANSWER, answer="b")
+    assert a.next_status is None and a.signal is None
 
 
-def test_answer_without_integer_is_recognized_with_none_answer():
+def test_answer_keeps_multi_word_prose_collapsed_to_one_line():
+    a = map_command("/answer go with b,  include grid", Status.NEEDS_INPUT)
+    assert a.answer == "go with b, include grid"
+
+
+def test_answer_without_value_is_recognized_with_none_answer():
     a = map_command("/answer", Status.NEEDS_INPUT)
     assert a.command is Command.ANSWER and a.answer is None
-
-
-def test_answer_non_numeric_is_none():
-    assert map_command("/answer foo", Status.NEEDS_INPUT).answer is None
 
 
 def test_unknown_command_is_noop():
