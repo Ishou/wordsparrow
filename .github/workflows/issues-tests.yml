@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/issues/**'
       - '.github/workflows/issues-tests.yml'
+      - '.github/workflows/issue-dev-chatops.yml'
 
 permissions:
   contents: read
