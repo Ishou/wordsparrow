@@ -137,7 +137,6 @@ jobs:
       - name: Write the implementation plan (Ready ⇒ plan gate)
         if: steps.map.outputs.signal == 'write_plan'
         env:
-          # the agent reads the board and explores the repo via the CLI.
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
           ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
         uses: anthropics/claude-code-action@v1
