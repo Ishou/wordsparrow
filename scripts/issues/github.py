@@ -13,7 +13,13 @@ Runner = Callable[[list[str]], str]
 
 
 def _run(argv: list[str]) -> str:
-    return subprocess.run(argv, check=True, capture_output=True, text=True).stdout
+    # check=True's CalledProcessError drops stderr, turning every gh auth/API
+    # failure into an opaque empty-stdout JSON error downstream; surface it.
+    proc = subprocess.run(argv, capture_output=True, text=True)
+    if proc.returncode != 0:
+        detail = proc.stderr.strip() or proc.stdout.strip() or "(no output)"
+        raise RuntimeError(f"`{' '.join(argv)}` exited {proc.returncode}: {detail}")
+    return proc.stdout
 
 
 _VIEW_FIELDS = "number,title,body,labels,state,url"
