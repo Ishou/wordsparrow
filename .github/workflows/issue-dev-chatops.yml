@@ -112,18 +112,26 @@ jobs:
             questions" section (leave any still-open questions). Write the
             revised spec back with `scripts/issues/issues update-body
             ${{ github.event.issue.number }} --body "<revised spec>"`, then post a
-            one-line summary comment of what changed. Do not change the board
-            status and do not open a PR. Follow the issue-dev skill at
-            `.claude/skills/issue-dev/SKILL.md`.
+            one-line summary comment of what changed. Preserve the spec's
+            existing Markdown heading style (ATX `##`). Use only the
+            `scripts/issues/issues` CLI plus `printf`/`cat`; do not post test or
+            scratch comments, do not change the board status, and do not open a
+            PR. Follow the issue-dev skill at `.claude/skills/issue-dev/SKILL.md`.
 
       - name: Write the implementation plan (Ready ⇒ plan gate)
         if: steps.map.outputs.signal == 'write_plan'
+        env:
+          # the agent reads the board and writes the plan_review status via the CLI.
+          GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
+          ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           branch_prefix: chore/claude-
           additional_permissions: |
             actions: read
+          claude_args: >-
+            --allowed-tools "Read,Glob,Grep,Bash(scripts/issues/issues:*),Bash(cat:*)"
           prompt: >-
             Run the issue-dev `/spec`→plan procedure for issue
             #${{ github.event.issue.number }} in this repository: read the issue
@@ -136,12 +144,18 @@ jobs:
 
       - name: Dispatch the implementer (/launch ⇒ Building)
         if: steps.map.outputs.signal == 'dispatch_implementer'
+        env:
+          # the implementer reads the board via the CLI and pushes a branch + PR.
+          GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
+          ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           branch_prefix: chore/claude-
           additional_permissions: |
             actions: read
+          claude_args: >-
+            --allowed-tools "Read,Glob,Grep,Edit,Write,Bash(scripts/issues/issues:*),Bash(scripts/adr-context.sh:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(pnpm:*),Bash(npm:*),Bash(npx:*),Bash(node:*),Bash(./gradlew:*),Bash(gradle:*),Bash(python3:*),Bash(cat:*),Bash(ls:*),Bash(test:*),Bash(printf:*)"
           prompt: >-
             Run the issue-dev `/launch` procedure for issue
             #${{ github.event.issue.number }} in this repository: read the issue
