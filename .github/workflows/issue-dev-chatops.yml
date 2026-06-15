@@ -1,0 +1,119 @@
+name: issue-dev-chatops
+
+# Comment-driven ChatOps for the issue-dev lifecycle (ADR-0069): OWNER slash
+# commands drive board transitions and agent steps with no polling.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+  actions: read
+
+jobs:
+  chatops:
+    # OWNER-only; body must lead with a slash command; never react to the bot's
+    # own audit/answer comments (loop guard).
+    if: >-
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.comment.user.login != 'github-actions[bot]' &&
+      !startsWith(github.event.comment.body, '🤖') &&
+      (startsWith(github.event.comment.body, '/approve') ||
+       startsWith(github.event.comment.body, '/launch') ||
+       startsWith(github.event.comment.body, '/rework') ||
+       startsWith(github.event.comment.body, '/answer'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14.6'
+
+      - name: Install issues CLI deps
+        run: pip install -r scripts/issues/requirements.txt
+
+      - name: Read current status from the board
+        id: read
+        env:
+          GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          status="$(scripts/issues/issues get "${ISSUE_NUMBER}" | python -c 'import json,sys; print(json.load(sys.stdin).get("status") or "")')"
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+
+      - name: Map comment to a lifecycle action
+        id: map
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          CURRENT_STATUS: ${{ steps.read.outputs.status }}
+        run: |
+          cd scripts/issues
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          from chatops import map_command
+          from models import Status
+
+          body = os.environ["COMMENT_BODY"]
+          raw = os.environ.get("CURRENT_STATUS", "").strip()
+          status = Status(raw) if raw else None
+          action = map_command(body, status)
+
+          print(f"command={action.command.value if action.command else ''}")
+          print(f"next_status={action.next_status.value if action.next_status else ''}")
+          print(f"signal={action.signal.value if action.signal else ''}")
+          print(f"answer={action.answer if action.answer is not None else ''}")
+          PY
+
+      - name: Apply board transition
+        if: steps.map.outputs.next_status != ''
+        env:
+          # Projects v2 field writes need the PAT; the default GITHUB_TOKEN can't.
+          GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
+          ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          NEXT_STATUS: ${{ steps.map.outputs.next_status }}
+        run: scripts/issues/issues set-status "${ISSUE_NUMBER}" "${NEXT_STATUS}"
+
+      - name: Write the implementation plan (Ready ⇒ plan gate)
+        if: steps.map.outputs.signal == 'write_plan'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          branch_prefix: chore/claude-
+          additional_permissions: |
+            actions: read
+          prompt: >-
+            Run the issue-dev `/spec`→plan procedure for issue
+            #${{ github.event.issue.number }} in this repository: read the issue
+            spec and comment thread via `scripts/issues/issues get` /
+            `comments`, write the implementation plan as a single issue comment
+            titled "## Implementation plan (Plan Review)", then move the board
+            with `scripts/issues/issues set-status ${{ github.event.issue.number }} plan_review`.
+            Do not open a PR. Follow the issue-dev skill at
+            `.claude/skills/issue-dev/SKILL.md`.
+
+      - name: Dispatch the implementer (/launch ⇒ Building)
+        if: steps.map.outputs.signal == 'dispatch_implementer'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          branch_prefix: chore/claude-
+          additional_permissions: |
+            actions: read
+          prompt: >-
+            Run the issue-dev `/launch` procedure for issue
+            #${{ github.event.issue.number }} in this repository: read the issue
+            spec + comment thread, then implement it. Open a PR whose body
+            contains `Closes #${{ github.event.issue.number }}` so the merge
+            closes the issue. Follow the issue-dev skill at
+            `.claude/skills/issue-dev/SKILL.md` and its dispatch conventions
+            (ADR pre-read, DCO sign-off, ≤400-line target). The board is
+            already at Building.
