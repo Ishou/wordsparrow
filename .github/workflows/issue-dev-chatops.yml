@@ -26,7 +26,7 @@ jobs:
        startsWith(github.event.comment.body, '/rework') ||
        startsWith(github.event.comment.body, '/answer'))
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 50
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -92,6 +92,7 @@ jobs:
 
       - name: Fold the maintainer's answer into the spec (/answer ⇒ refine body)
         if: steps.map.outputs.command == '/answer' && steps.map.outputs.answer != ''
+        timeout-minutes: 20
         env:
           # the agent's `issues get` reads the Projects board; needs the PAT.
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
@@ -136,6 +137,7 @@ jobs:
 
       - name: Write the implementation plan (Ready ⇒ plan gate)
         if: steps.map.outputs.signal == 'write_plan'
+        timeout-minutes: 30
         env:
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
           ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
@@ -185,6 +187,7 @@ jobs:
 
       - name: Dispatch the implementer (/launch ⇒ Building)
         if: steps.map.outputs.signal == 'dispatch_implementer'
+        timeout-minutes: 45
         env:
           # the implementer reads the board via the CLI and pushes a branch + PR.
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
