@@ -96,6 +96,10 @@ jobs:
           branch_prefix: chore/claude-
           additional_permissions: |
             actions: read
+          # Without an allowlist the agent's every Bash call is denied; it only
+          # needs the issues CLI (which shells to gh itself) plus printf to read $ANSWER.
+          claude_args: >-
+            --allowed-tools "Read,Glob,Grep,Bash(scripts/issues/issues:*),Bash(printf:*),Bash(cat:*)"
           prompt: >-
             The maintainer answered an open question on issue
             #${{ github.event.issue.number }} at the Needs Input gate. Their
