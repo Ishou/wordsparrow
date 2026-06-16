@@ -7,8 +7,9 @@ from dataclasses import dataclass
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-# the :line suffix is what makes a citation verifiable and distinct from a proposed new file.
-_CITATION = re.compile(r"((?:[\w.\-]+/)+[\w.\-]+\.[A-Za-z0-9]+):(\d+)")
+# filename (directory optional) + :line; extension allowlist excludes times, versions, host:ports.
+_SRC_EXT = r"ya?ml|py|kts?|tsx?|jsx?|mjs|cjs|sh|md|json|toml|ini|cfg|sql|tf|txt|lock|gradle|properties"
+_CITATION = re.compile(rf"((?:[\w.\-]+/)*[\w.\-]+\.(?:{_SRC_EXT})):(\d+)")
 _PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME|XXX)\b")
 
 
