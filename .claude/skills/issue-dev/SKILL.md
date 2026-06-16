@@ -30,11 +30,11 @@ scripts/issues/issues check-plan <id>     # same proofs on the latest plan comme
 ```
 
 **Proof loop (AI + deterministic, ADR-0069):** the spec-writer and plan-writer
-agents must work *in tandem* with `check` / `check-plan` — cite feasibility
-evidence as `path:line`, run the checker on the draft, fix every reported PROBLEM
-(fabricated citations, leftover placeholders), and repeat until it passes before
-finalizing. The chatops workflow re-runs the checker as a safety net: a fabricated
-`path:line` fails the run and the spec/plan does not advance.
+agents **gate their output on** `check` / `check-plan` — its output is
+authoritative, not advisory. Cite feasibility evidence as `path:line`, run the
+checker on the draft, fix every reported `PROBLEM`, and re-run until it exits clean
+before finalizing. The chatops workflow re-runs the checker as a safety net: a
+fabricated `path:line` fails the run and the spec/plan does not advance.
 
 Set `ISSUE_ACTOR` so audit comments attribute correctly:
 `ISSUE_ACTOR="launch:<session-or-run-id>" scripts/issues/issues set-status …`.

@@ -123,13 +123,14 @@ jobs:
             option proven infeasible; a caveat written inside an option is
             forbidden. Write the new spec back with `scripts/issues/issues
             update-body ${{ github.event.issue.number }} --body "<spec>"`. Then
-            work in tandem with the deterministic checker: run `scripts/issues/issues
-            check ${{ github.event.issue.number }}`, fix every PROBLEM it prints
-            (fabricated `path:line` citations, leftover placeholders),
-            `update-body` again, and repeat until it passes — never finalize while
-            it still reports a problem. Finally do a readability pass so the spec
-            reads cleanly for a human, then post a one-line summary comment. Do not
-            change the board status, do not open a PR, and do not post scratch comments.
+            gate the result on the checker — its output is authoritative, not
+            advisory: run `scripts/issues/issues check
+            ${{ github.event.issue.number }}`; for every `PROBLEM` line it prints,
+            fix the cause and `update-body` again, then re-run — until it exits
+            clean. Do not finalize while it reports any problem. Last, do a
+            readability pass so the spec reads cleanly for a human, then post a
+            one-line summary comment. Do not change the board status, do not open
+            a PR, and do not post scratch comments.
 
       - name: Proof the rewritten spec (fail the run if a citation is fabricated)
         if: steps.map.outputs.signal == 'write_spec' && success()
@@ -234,11 +235,11 @@ jobs:
             that makes it work as `path:line` (open it and confirm the line);
             never propose a mechanism you have not confirmed exists in this repo.
             Post the plan as a single issue comment titled "## Implementation plan
-            (Plan Review)". Then work in tandem with the deterministic checker:
-            run `scripts/issues/issues check-plan ${{ github.event.issue.number }}`,
-            and if it prints any PROBLEM (fabricated `path:line`, placeholders),
-            post a corrected plan comment and re-run until it passes — never
-            finalize while it still reports a problem. Do not change the board
+            (Plan Review)". Then gate the result on the checker — its output is
+            authoritative, not advisory: run `scripts/issues/issues check-plan
+            ${{ github.event.issue.number }}`; for every `PROBLEM` line it prints,
+            post a corrected plan comment and re-run — until it exits clean. Do not
+            finalize while it reports any problem. Do not change the board
             status, do not open a PR, and do not post scratch comments. Follow the
             issue-dev skill at `.claude/skills/issue-dev/SKILL.md`.
 
