@@ -57,6 +57,25 @@ def test_replan_before_a_plan_exists_is_noop_transition():
     assert a.command is Command.REPLAN and a.next_status is None and a.signal is None
 
 
+def test_correct_fixes_spec_in_place_without_a_board_move():
+    a = map_command("/correct drop the image-digest-guard.yml citations", Status.NEEDS_INPUT)
+    assert a == Action(Command.CORRECT, signal=Signal.CORRECT_SPEC,
+                       answer="drop the image-digest-guard.yml citations")
+    assert a.next_status is None
+
+
+def test_correct_plan_targets_the_plan_only_at_plan_stages():
+    a = map_command("/correct-plan fix the guard step", Status.PLAN_REVIEW)
+    assert a == Action(Command.CORRECT_PLAN, signal=Signal.CORRECT_PLAN,
+                       answer="fix the guard step")
+    assert a.next_status is None
+
+
+def test_correct_plan_before_a_plan_exists_is_noop():
+    a = map_command("/correct-plan x", Status.NEEDS_INPUT)
+    assert a.command is Command.CORRECT_PLAN and a.signal is None
+
+
 def test_rework_is_no_longer_a_command():
     assert map_command("/rework", Status.PLAN_REVIEW) == Action()
 
