@@ -2,8 +2,29 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from memory import InMemoryTracker
 import cli
+
+
+def test_check_fails_on_a_fabricated_citation(capsys):
+    tracker = InMemoryTracker()
+    cli.main(["create", "--title", "T",
+              "--body", "the guard mirrors .github/workflows/nope-guard.yml:9"], tracker=tracker)
+    capsys.readouterr()
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["check", "1"], tracker=tracker)
+    assert exc.value.code == 1
+    assert "nope-guard.yml:9" in capsys.readouterr().err
+
+
+def test_check_passes_a_body_with_no_bad_citations(capsys):
+    tracker = InMemoryTracker()
+    cli.main(["create", "--title", "T", "--body", "plain prose, no path:line evidence"], tracker=tracker)
+    capsys.readouterr()
+    cli.main(["check", "1"], tracker=tracker)
+    assert "passes all proofs" in capsys.readouterr().out
 
 
 def test_create_then_list_by_status_via_cli(capsys):
