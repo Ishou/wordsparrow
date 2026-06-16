@@ -23,6 +23,21 @@ def test_citation_past_end_of_file_is_flagged(tmp_path):
     assert len(problems) == 1 and "only 2 lines" in problems[0].detail
 
 
+def test_bare_filename_citation_without_a_directory_is_flagged(tmp_path):
+    # the directory-less form `foo.yml:32` evaded the original regex (#976 redux).
+    problems = check_citations("mirrors image-digest-guard.yml:32 (confirmed)", tmp_path)
+    assert len(problems) == 1 and "image-digest-guard.yml:32" in problems[0].detail
+
+
+def test_bare_real_filename_citation_passes(tmp_path):
+    (tmp_path / "values.yaml").write_text("a\nb\nc\n")
+    assert check_citations("see values.yaml:2", tmp_path) == []
+
+
+def test_times_versions_and_host_ports_are_not_citations(tmp_path):
+    assert check_citations("at 12:30, python 3.14.6, host.com:443, ratio 5:1", tmp_path) == []
+
+
 def test_bare_path_without_line_is_not_checked(tmp_path):
     # a proposed new file is named without a line number — not a citation.
     assert check_citations("create scripts/cnpg_image_sync/check.py", tmp_path) == []
