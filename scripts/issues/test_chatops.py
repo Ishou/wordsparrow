@@ -36,12 +36,29 @@ def test_launch_at_idea_is_noop_transition():
     assert a.next_status is None
 
 
-def test_rework_at_needs_input_goes_idea():
-    assert map_command("/rework", Status.NEEDS_INPUT) == Action(Command.REWORK, Status.IDEA)
+def test_respec_from_plan_review_goes_idea_and_signals_spec():
+    a = map_command("/respec the plan found approach b impossible", Status.PLAN_REVIEW)
+    assert a == Action(Command.RESPEC, Status.IDEA, Signal.WRITE_SPEC,
+                       answer="the plan found approach b impossible")
 
 
-def test_rework_at_plan_review_goes_ready():
-    assert map_command("/rework", Status.PLAN_REVIEW) == Action(Command.REWORK, Status.READY)
+def test_respec_from_idea_still_signals_spec():
+    a = map_command("/respec", Status.IDEA)
+    assert a == Action(Command.RESPEC, Status.IDEA, Signal.WRITE_SPEC)
+
+
+def test_replan_from_plan_review_goes_ready_and_signals_plan():
+    a = map_command("/replan", Status.PLAN_REVIEW)
+    assert a == Action(Command.REPLAN, Status.READY, Signal.WRITE_PLAN)
+
+
+def test_replan_before_a_plan_exists_is_noop_transition():
+    a = map_command("/replan", Status.READY)
+    assert a.command is Command.REPLAN and a.next_status is None and a.signal is None
+
+
+def test_rework_is_no_longer_a_command():
+    assert map_command("/rework", Status.PLAN_REVIEW) == Action()
 
 
 def test_answer_records_freeform_value_no_status_change():
