@@ -149,7 +149,7 @@ jobs:
         run: scripts/issues/issues set-status "${ISSUE_NUMBER}" needs_input
 
       - name: Announce — correcting the spec
-        if: steps.map.outputs.signal == 'correct_spec'
+        if: steps.map.outputs.signal == 'correct_spec' && steps.map.outputs.answer != ''
         env:
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
           ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
@@ -157,7 +157,7 @@ jobs:
         run: scripts/issues/issues comment "${ISSUE_NUMBER}" --body "🤖 Applying your correction to the spec…"
 
       - name: Correct the spec in place (/correct ⇒ targeted fix)
-        if: steps.map.outputs.signal == 'correct_spec'
+        if: steps.map.outputs.signal == 'correct_spec' && steps.map.outputs.answer != ''
         timeout-minutes: 25
         env:
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
@@ -190,7 +190,7 @@ jobs:
             status, do not open a PR, and do not post scratch comments.
 
       - name: Proof the corrected spec (fail the run if a citation is fabricated)
-        if: steps.map.outputs.signal == 'correct_spec' && success()
+        if: steps.map.outputs.signal == 'correct_spec' && steps.map.outputs.answer != '' && success()
         env:
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -308,7 +308,7 @@ jobs:
         run: scripts/issues/issues set-status "${ISSUE_NUMBER}" plan_review
 
       - name: Announce — correcting the plan
-        if: steps.map.outputs.signal == 'correct_plan'
+        if: steps.map.outputs.signal == 'correct_plan' && steps.map.outputs.answer != ''
         env:
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
           ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
@@ -316,7 +316,7 @@ jobs:
         run: scripts/issues/issues comment "${ISSUE_NUMBER}" --body "🤖 Applying your correction to the plan…"
 
       - name: Correct the plan (/correct-plan ⇒ targeted fix)
-        if: steps.map.outputs.signal == 'correct_plan'
+        if: steps.map.outputs.signal == 'correct_plan' && steps.map.outputs.answer != ''
         timeout-minutes: 25
         env:
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
@@ -347,7 +347,7 @@ jobs:
             do not open a PR, and do not post scratch comments.
 
       - name: Proof the corrected plan (fail the run if a citation is fabricated)
-        if: steps.map.outputs.signal == 'correct_plan' && success()
+        if: steps.map.outputs.signal == 'correct_plan' && steps.map.outputs.answer != '' && success()
         env:
           GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
