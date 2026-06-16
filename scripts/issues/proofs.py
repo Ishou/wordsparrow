@@ -7,8 +7,7 @@ from dataclasses import dataclass
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-# a code/config filename (directory optional) + :line; the extension allowlist keeps
-# 12:30, 3.14.6 and host.com:443 out while still catching a bare `foo.yml:32`.
+# filename (directory optional) + :line; extension allowlist excludes times, versions, host:ports.
 _SRC_EXT = r"ya?ml|py|kts?|tsx?|jsx?|mjs|cjs|sh|md|json|toml|ini|cfg|sql|tf|txt|lock|gradle|properties"
 _CITATION = re.compile(rf"((?:[\w.\-]+/)*[\w.\-]+\.(?:{_SRC_EXT})):(\d+)")
 _PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME|XXX)\b")

@@ -24,7 +24,6 @@ def test_citation_past_end_of_file_is_flagged(tmp_path):
 
 
 def test_bare_filename_citation_without_a_directory_is_flagged(tmp_path):
-    # the directory-less form `foo.yml:32` evaded the original regex (#976 redux).
     problems = check_citations("mirrors image-digest-guard.yml:32 (confirmed)", tmp_path)
     assert len(problems) == 1 and "image-digest-guard.yml:32" in problems[0].detail
 
