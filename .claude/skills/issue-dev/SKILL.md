@@ -1,6 +1,6 @@
 ---
 name: issue-dev
-description: Issue-driven development for Bliss — treat a GitHub issue as the living spec, capture ideas, develop and refine the spec in the issue, view the prioritized backlog, and launch an implementer from a ready issue. Use when the user says "capture this idea", "spec out issue #N", "write the spec for #N", "refine #N", "fold these comments into #N", "show the backlog", "what's next to work on", "launch issue #N", "implement issue #N", "start work on #N", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read/write issues via the portable IssueTracker CLI (never gh directly), move them across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /capture, /spec, /refine, /backlog, /launch. Comment-driven ChatOps commands: /approve, /launch, /respec, /replan, /answer.
+description: Issue-driven development for Bliss — treat a GitHub issue as the living spec, capture ideas, develop and refine the spec in the issue, view the prioritized backlog, and launch an implementer from a ready issue. Use when the user says "capture this idea", "spec out issue #N", "write the spec for #N", "refine #N", "fold these comments into #N", "show the backlog", "what's next to work on", "launch issue #N", "implement issue #N", "start work on #N", or asks to turn a prioritized issue into a PR. Encodes ADR-0069: read/write issues via the portable IssueTracker CLI (never gh directly), move them across the status:* board, dispatch the implementer via the dispatch skill, and let the merge close the issue. Commands: /capture, /spec, /refine, /backlog, /launch. Comment-driven ChatOps commands: /approve, /launch, /respec, /replan, /correct, /correct-plan, /answer.
 ---
 
 # Issue-driven development playbook
@@ -51,10 +51,13 @@ single-select field on GitHub (NOT a `status:*` label).
   `/replan` (redo the plan), or `/respec` (back to `idea` when the spec is wrong).
 
 **ChatOps commands by size of change:** `/answer` folds a *small* maintainer
-input into the existing spec; `/respec` regenerates the *whole* spec from scratch
-(→ `idea`, then the spec-writer agent → `needs_input`); `/replan` regenerates the
-*whole* plan (→ `ready`, then write_plan → `plan_review`). Both `/respec` and
-`/replan` take optional free-form context describing the big change.
+*decision* into the existing spec; `/correct` / `/correct-plan` apply a *targeted
+fix* to the existing spec / plan in place (no board move); `/respec` / `/replan`
+regenerate the *whole* spec / plan from scratch. `/correct` and `/correct-plan`
+**require** a fix argument (bare invocation is a no-op); `/respec` and `/replan`
+take optional free-form context describing the big change. The correction and
+regeneration agents all run the proof loop (`check` / `check-plan`) before
+finalizing.
 - `planned` — plan approved, queued for `/launch`.
 The agent never auto-advances past a gate. `set-status` moves the card;
 `list --status <s>` filters by it. **Priority stays a label** (`priority:*`) and
@@ -201,6 +204,8 @@ in `scripts/issues/chatops.py`):
 | `/launch` | Planned (also Ready / Needs Input as a maintainer override) | → Building, then the agent **dispatches the implementer** → PR `Closes #<id>` |
 | `/respec [context]` | Idea / Needs Input / Ready / Plan Review / Planned | → Idea, then the agent **regenerates the whole spec** → Needs Input |
 | `/replan [context]` | Plan Review / Planned | → Ready, then the agent **regenerates the whole plan** → Plan Review |
+| `/correct <fix>` | Idea / Needs Input / Ready / Plan Review / Planned | agent applies a **targeted fix to the spec body** in place; no board move |
+| `/correct-plan <fix>` | Plan Review / Planned | agent applies a **targeted fix to the plan comment**; no board move |
 | `/answer <text>` | any | fold the maintainer's small input into the spec body; no status change |
 
 Anything else (plain prose, bot `🤖` audit comments, out-of-gate transitions) is a

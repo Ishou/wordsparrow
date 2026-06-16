@@ -12,12 +12,16 @@ class Command(str, Enum):
     LAUNCH = "/launch"
     RESPEC = "/respec"
     REPLAN = "/replan"
+    CORRECT = "/correct"
+    CORRECT_PLAN = "/correct-plan"
     ANSWER = "/answer"
 
 
 class Signal(str, Enum):
     WRITE_SPEC = "write_spec"
+    CORRECT_SPEC = "correct_spec"
     WRITE_PLAN = "write_plan"
+    CORRECT_PLAN = "correct_plan"
     DISPATCH_IMPLEMENTER = "dispatch_implementer"
 
 
@@ -80,6 +84,19 @@ def map_command(body: str, status: "Status | None") -> Action:
         # big change: regenerate the plan; only meaningful once a plan exists.
         if status in (Status.PLAN_REVIEW, Status.PLANNED):
             return Action(cmd, Status.READY, Signal.WRITE_PLAN, answer=_parse_answer(rest))
+        return Action(cmd)
+
+    if cmd is Command.CORRECT:
+        # targeted in-place fix of the existing spec; no board move.
+        if status in (Status.IDEA, Status.NEEDS_INPUT, Status.READY,
+                      Status.PLAN_REVIEW, Status.PLANNED):
+            return Action(cmd, signal=Signal.CORRECT_SPEC, answer=_parse_answer(rest))
+        return Action(cmd)
+
+    if cmd is Command.CORRECT_PLAN:
+        # targeted fix of the plan; only meaningful once a plan exists.
+        if status in (Status.PLAN_REVIEW, Status.PLANNED):
+            return Action(cmd, signal=Signal.CORRECT_PLAN, answer=_parse_answer(rest))
         return Action(cmd)
 
     if cmd is Command.ANSWER:
