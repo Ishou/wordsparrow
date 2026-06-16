@@ -53,10 +53,11 @@ single-select field on GitHub (NOT a `status:*` label).
 **ChatOps commands by size of change:** `/answer` folds a *small* maintainer
 *decision* into the existing spec; `/correct` / `/correct-plan` apply a *targeted
 fix* to the existing spec / plan in place (no board move); `/respec` / `/replan`
-regenerate the *whole* spec / plan from scratch. `/correct`, `/correct-plan`,
-`/respec` and `/replan` take optional free-form text (the fix or the big change).
-The correction and regeneration agents all run the proof loop (`check` /
-`check-plan`) before finalizing.
+regenerate the *whole* spec / plan from scratch. `/correct` and `/correct-plan`
+**require** a fix argument (bare invocation is a no-op); `/respec` and `/replan`
+take optional free-form context describing the big change. The correction and
+regeneration agents all run the proof loop (`check` / `check-plan`) before
+finalizing.
 - `planned` — plan approved, queued for `/launch`.
 The agent never auto-advances past a gate. `set-status` moves the card;
 `list --status <s>` filters by it. **Priority stays a label** (`priority:*`) and
