@@ -81,7 +81,8 @@ def main(argv: list[str], tracker: IssueTracker | None = None) -> None:
     elif a.cmd == "check-plan":
         plans = [c.body for c in t.comments(a.id) if "Implementation plan" in c.body]
         if not plans:
-            print("OK: no plan comment to proof")
+            print("PROBLEM [missing] no 'Implementation plan' comment found", file=sys.stderr)
+            raise SystemExit(1)
         else:
             _proof_or_die(run_all(plans[-1]), "plan")
     elif a.cmd == "set-status": t.set_status(a.id, Status[a.status.upper()])

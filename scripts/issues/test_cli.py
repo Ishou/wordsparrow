@@ -8,6 +8,16 @@ from memory import InMemoryTracker
 import cli
 
 
+def test_check_plan_fails_when_no_plan_comment_posted(capsys):
+    tracker = InMemoryTracker()
+    cli.main(["create", "--title", "T", "--body", "B"], tracker=tracker)
+    capsys.readouterr()
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["check-plan", "1"], tracker=tracker)
+    assert exc.value.code == 1
+    assert "missing" in capsys.readouterr().err
+
+
 def test_check_fails_on_a_fabricated_citation(capsys):
     tracker = InMemoryTracker()
     cli.main(["create", "--title", "T",
