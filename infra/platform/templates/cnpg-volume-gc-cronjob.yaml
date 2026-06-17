@@ -88,7 +88,7 @@ spec:
                     [ "${1:-}" = "Released" ] || continue
                     [ "${2:-}" = "$STORAGE_CLASS" ] || continue
                     [ "${3:-}" = "Retain" ] || continue
-                    seen=$(kubectl get "$pv" -o jsonpath='{.metadata.annotations}' | grep -o 'first-seen-released":"[0-9]*' | grep -o '[0-9]*$' || true)
+                    seen=$(kubectl get "$pv" -o jsonpath='{.metadata.annotations.volume-gc\.wordsparrow\.io/first-seen-released}' 2>/dev/null || true)
                     if [ -z "$seen" ]; then
                       kubectl annotate "$pv" "$ann=$now" --overwrite
                       echo "marked $pv first-seen=$now"
