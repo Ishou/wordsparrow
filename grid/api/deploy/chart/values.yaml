@@ -53,7 +53,7 @@ postgres:
     # Distro continuity: bookworm → bookworm (cnpg requires same OS
     # base for in-place upgrades). The trixie line is the future
     # default (cnpg 1.29+); deferring that transition to its own PR.
-    imageName: "ghcr.io/cloudnative-pg/postgresql:18.1-system-bookworm@sha256:61654dc3b1aa2191e083288caf332e60daa342817a64a285283e69e31f1c854d"
+    imageName: "ghcr.io/cloudnative-pg/postgresql:18.4-system-bookworm@sha256:8707614e5941638307d173469b293db1b50e36454d321a03ca402ca2a58c79ad"
     storage:
       size: 10Gi
       # Empty = cluster default. Prod "hcloud-volumes"; local "local-path".
