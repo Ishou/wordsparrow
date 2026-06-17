@@ -4,7 +4,7 @@ cluster:
   # PostgreSQL image — pinned by tag AND digest, kept in lockstep with
   # game/api + identity/api db-charts so all contexts move major versions
   # in the same operator window.
-  imageName: "ghcr.io/cloudnative-pg/postgresql:18.1-system-bookworm@sha256:61654dc3b1aa2191e083288caf332e60daa342817a64a285283e69e31f1c854d"
+  imageName: "ghcr.io/cloudnative-pg/postgresql:18.4-system-bookworm@sha256:8707614e5941638307d173469b293db1b50e36454d321a03ca402ca2a58c79ad"
   storage:
     size: 5Gi
     # Empty = cluster default. Prod "hcloud-volumes"; local "local-path".

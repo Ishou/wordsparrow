@@ -49,7 +49,7 @@ database:
   # cached CNPG postgres image (pg_isready binary) without depending
   # on the db chart's value file at template-render time. Bump both
   # together when CNPG ships a new postgres tag.
-  waitImage: "ghcr.io/cloudnative-pg/postgresql:18.1-system-bookworm@sha256:61654dc3b1aa2191e083288caf332e60daa342817a64a285283e69e31f1c854d"
+  waitImage: "ghcr.io/cloudnative-pg/postgresql:18.4-system-bookworm@sha256:8707614e5941638307d173469b293db1b50e36454d321a03ca402ca2a58c79ad"
 service:
   type: ClusterIP
   # Prod listens on 8081. Local-dev default in Main.kt is 7778; the chart
