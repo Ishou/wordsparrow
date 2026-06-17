@@ -17,7 +17,7 @@ rules:
   # No delete verb: the in-tree PV reclaim controller removes the PV once policy is Delete.
   - apiGroups: [""]
     resources: ["persistentvolumes"]
-    verbs: ["get", "list", "patch", "update"]
+    verbs: ["get", "list", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
