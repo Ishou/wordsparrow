@@ -22,9 +22,10 @@ volumeGc:
   # A PV must stay Released past this window before its reclaim policy is flipped to Delete.
   graceSeconds: 604800
   image:
-    repository: rancher/kubectl
-    # renovate: datasource=docker depName=rancher/kubectl
-    tag: "v1.31.4"
+    # alpine/k8s bundles a shell + kubectl; rancher/kubectl is distroless (no /bin/sh) so the reaper can't run.
+    repository: alpine/k8s
+    # renovate: datasource=docker depName=alpine/k8s
+    tag: "1.31.4"
     digest: ""
     pullPolicy: IfNotPresent
   resources:
