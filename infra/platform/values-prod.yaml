@@ -15,8 +15,8 @@ clusterIssuer:
 volumeGc:
   enabled: true
   image:
-    # rancher/kubectl:v1.31.4 OCI image index digest, resolved 2026-06-17.
-    digest: "sha256:5135fe5999d8472793979e1da0d1559da758c37668c3dfb1650c8f95adc706d0"
+    # alpine/k8s:1.31.4 OCI image index digest, resolved 2026-06-17.
+    digest: "sha256:9c4976d47656d78cf53a92b0203fc54ac45eae18a2b45001ac221c27da4c8036"
 
 cert-manager:
   enabled: true
