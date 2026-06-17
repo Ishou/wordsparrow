@@ -12,6 +12,9 @@ clusterIssuer:
   selfsigned:
     enabled: false
 
+volumeGc:
+  enabled: true
+
 cert-manager:
   enabled: true
   # HTTP01 solver runs through ingress-nginx, so no DNS01 nameservers needed.

@@ -14,6 +14,26 @@ clusterIssuer:
   selfsigned:
     enabled: false
 
+# Orphaned-volume garbage collector — reclaims long-Released hcloud volumes left by CNPG churn (ADR-0070).
+volumeGc:
+  enabled: false
+  schedule: "17 4 * * 0"
+  storageClass: hcloud-volumes
+  # A PV must stay Released past this window before its reclaim policy is flipped to Delete.
+  graceSeconds: 604800
+  image:
+    repository: rancher/kubectl
+    # renovate: datasource=docker depName=rancher/kubectl
+    tag: "v1.31.4"
+    digest: ""
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
 cert-manager:
   enabled: true
   # CRDs are part of the same release — no separate kubectl apply step.
