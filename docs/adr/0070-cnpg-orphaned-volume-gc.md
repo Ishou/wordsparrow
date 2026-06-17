@@ -55,5 +55,5 @@ so it would risk auto-deleting a primary on a mistaken PVC deletion.
   no `delete` and no Hetzner credential, so its blast radius is "change a PV's
   reclaim policy" — and only on volumes that are already `Released`.
 - Ships disabled by default (`volumeGc.enabled: false`); `values-prod.yaml`
-  enables it. The image digest is pinned by Renovate after merge, matching the
-  rest of the infra image posture.
+  enables it. The image digest is manually pinned in `values-prod.yaml`;
+  Renovate keeps it current thereafter.
