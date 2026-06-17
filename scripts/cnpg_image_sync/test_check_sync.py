@@ -62,8 +62,7 @@ def test_missing_key():
 
 
 def test_three_level_path():
-    # The grid chart uses a three-level key path (postgres.cluster.imageName);
-    # verify the walk succeeds and returns no problems when the value matches.
+    # grid is the only context with a 3-level key (postgres.cluster.imageName)
     path = "grid/api/deploy/chart/values.yaml"
     reader = _make_reader({path: yaml.dump({"postgres": {"cluster": {"imageName": IMAGE}}})})
     assert guard.check(reader=reader) == []

@@ -9,10 +9,7 @@ import yaml
 
 Reader = Callable[[str], str]
 
-# All 7 CNPG postgres image refs that must pin the same tag+digest.
-# Grid uses a three-level key path; all others use two-level paths.
-# The duplication of waitImage alongside cluster.imageName is deliberate —
-# see each chart/values.yaml for the render-time isolation rationale.
+# waitImage duplication alongside cluster.imageName is deliberate — see each values.yaml.
 SOURCES: list[tuple[str, tuple[str, ...]]] = [
     ("grid/api/deploy/chart/values.yaml",        ("postgres", "cluster", "imageName")),
     ("game/api/deploy/db-chart/values.yaml",     ("cluster", "imageName")),
