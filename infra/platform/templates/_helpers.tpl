@@ -20,3 +20,13 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/part-of: wordsparrow-platform
 {{- end -}}
+
+{{- define "platform.volumeGcImage" -}}
+{{- with .Values.volumeGc.image -}}
+{{- if .digest -}}
+{{- printf "%s:%s@%s" .repository .tag .digest -}}
+{{- else -}}
+{{- printf "%s:%s" .repository .tag -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

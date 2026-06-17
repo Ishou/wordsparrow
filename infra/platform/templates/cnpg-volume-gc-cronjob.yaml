@@ -1,0 +1,111 @@
+{{- if .Values.volumeGc.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: platform-volume-gc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "platform.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: platform-volume-gc
+  labels:
+    {{- include "platform.labels" . | nindent 4 }}
+rules:
+  # No delete verb: the in-tree PV reclaim controller removes the PV once policy is Delete.
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: platform-volume-gc
+  labels:
+    {{- include "platform.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: platform-volume-gc
+subjects:
+  - kind: ServiceAccount
+    name: platform-volume-gc
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: platform-volume-gc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "platform.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.volumeGc.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            {{- include "platform.labels" . | nindent 12 }}
+        spec:
+          serviceAccountName: platform-volume-gc
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: volume-gc
+              image: {{ include "platform.volumeGcImage" . | quote }}
+              imagePullPolicy: {{ .Values.volumeGc.image.pullPolicy }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                {{- toYaml .Values.volumeGc.resources | nindent 16 }}
+              env:
+                - { name: STORAGE_CLASS, value: {{ .Values.volumeGc.storageClass | quote }} }
+                - { name: GRACE_SECONDS, value: {{ .Values.volumeGc.graceSeconds | quote }} }
+                - { name: HOME, value: /tmp }
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  ann="volume-gc.wordsparrow.io/first-seen-released"
+                  now=$(date +%s)
+                  for pv in $(kubectl get pv -o name); do
+                    set -- $(kubectl get "$pv" -o jsonpath='{.status.phase} {.spec.storageClassName} {.spec.persistentVolumeReclaimPolicy}')
+                    [ "${1:-}" = "Released" ] || continue
+                    [ "${2:-}" = "$STORAGE_CLASS" ] || continue
+                    [ "${3:-}" = "Retain" ] || continue
+                    seen=$(kubectl get "$pv" -o jsonpath='{.metadata.annotations.volume-gc\.wordsparrow\.io/first-seen-released}' 2>/dev/null || true)
+                    if [ -z "$seen" ]; then
+                      kubectl annotate "$pv" "$ann=$now" --overwrite
+                      echo "marked $pv first-seen=$now"
+                      continue
+                    fi
+                    age=$((now - seen))
+                    if [ "$age" -ge "$GRACE_SECONDS" ]; then
+                      kubectl patch "$pv" -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}'
+                      echo "reclaimed $pv released_for=${age}s"
+                    else
+                      echo "waiting $pv released_for=${age}s grace=${GRACE_SECONDS}s"
+                    fi
+                  done
+                  echo "volume-gc sweep complete"
+              volumeMounts:
+                - { name: tmp, mountPath: /tmp }
+          volumes:
+            - name: tmp
+              emptyDir: {}
+{{- end }}

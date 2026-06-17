@@ -12,6 +12,12 @@ clusterIssuer:
   selfsigned:
     enabled: false
 
+volumeGc:
+  enabled: true
+  image:
+    # rancher/kubectl:v1.31.4 OCI image index digest, resolved 2026-06-17.
+    digest: "sha256:5135fe5999d8472793979e1da0d1559da758c37668c3dfb1650c8f95adc706d0"
+
 cert-manager:
   enabled: true
   # HTTP01 solver runs through ingress-nginx, so no DNS01 nameservers needed.
