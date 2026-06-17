@@ -1,0 +1,52 @@
+name: cnpg-image-sync
+
+# Fails a PR when any of the 7 CNPG postgres image refs diverge from the others.
+# All 7 (3x db-chart cluster.imageName, 3x chart database.waitImage, 1x grid
+# postgres.cluster.imageName) must pin the same tag+digest after every bump.
+
+on:
+  pull_request:
+    paths:
+      - 'grid/api/deploy/chart/values.yaml'
+      - 'game/api/deploy/db-chart/values.yaml'
+      - 'identity/api/deploy/db-chart/values.yaml'
+      - 'survey/api/deploy/db-chart/values.yaml'
+      - 'game/api/deploy/chart/values.yaml'
+      - 'identity/api/deploy/chart/values.yaml'
+      - 'survey/api/deploy/chart/values.yaml'
+      - 'scripts/cnpg_image_sync/**'
+      - '.github/workflows/cnpg-image-sync.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'grid/api/deploy/chart/values.yaml'
+      - 'game/api/deploy/db-chart/values.yaml'
+      - 'identity/api/deploy/db-chart/values.yaml'
+      - 'survey/api/deploy/db-chart/values.yaml'
+      - 'game/api/deploy/chart/values.yaml'
+      - 'identity/api/deploy/chart/values.yaml'
+      - 'survey/api/deploy/chart/values.yaml'
+      - 'scripts/cnpg_image_sync/**'
+      - '.github/workflows/cnpg-image-sync.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cnpg-image-sync-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14.6'
+      - run: pip install pyyaml pytest
+      - name: Unit tests
+        run: python -m pytest scripts/cnpg_image_sync -q
+      - name: CNPG image sync check
+        run: python scripts/cnpg_image_sync/check_sync.py
