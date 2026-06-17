@@ -1,8 +1,6 @@
 name: cnpg-image-sync
 
-# Fails a PR when any of the 7 CNPG postgres image refs diverge from the others.
-# All 7 (3x db-chart cluster.imageName, 3x chart database.waitImage, 1x grid
-# postgres.cluster.imageName) must pin the same tag+digest after every bump.
+# Fails a PR when any of the 7 CNPG image refs diverge; all must pin the same tag+digest.
 
 on:
   pull_request:
