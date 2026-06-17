@@ -28,7 +28,7 @@ val junitVersion = "5.14.4"
 val assertkVersion = "0.28.1"
 val konsistVersion = "0.17.3"
 val postgresqlJdbcVersion = "42.7.11"
-val hikariVersion = "7.0.2"
+val hikariVersion = "7.1.0"
 // Flyway 12 retry — bumped 2026-05-10 after the 11.10.4 → 12.6.0 release
 // span (~9 months). The original 12.x revert (see git history for the prior
 // shape of this comment) was caused by `Flyway.<init>()` autoloading
