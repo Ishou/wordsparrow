@@ -42,3 +42,12 @@ def test_plan_review_transition_is_deterministic_not_agent_owned():
     steps = _load()["jobs"]["chatops"]["steps"]
     movers = [s for s in steps if "plan_review" in str(s.get("run", ""))]
     assert movers, "expected a deterministic run step that sets plan_review"
+
+
+def test_launch_has_a_no_pr_escalation_guard():
+    # a /launch that opens no PR must escalate, not dead-end at Building.
+    steps = _load()["jobs"]["chatops"]["steps"]
+    guards = [s for s in steps
+              if "dispatch_implementer" in str(s.get("if", ""))
+              and "needs-human" in str(s.get("run", ""))]
+    assert guards, "expected a deterministic needs-human guard after dispatch"
