@@ -375,7 +375,7 @@ jobs:
           additional_permissions: |
             actions: read
           claude_args: >-
-            --allowed-tools "Read,Glob,Grep,Edit,Write,Bash(scripts/issues/issues:*),Bash(scripts/adr-context.sh:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(pnpm:*),Bash(npm:*),Bash(npx:*),Bash(node:*),Bash(./gradlew:*),Bash(gradle:*),Bash(python3:*),Bash(cat:*),Bash(ls:*),Bash(test:*),Bash(printf:*)"
+            --allowed-tools "Read,Glob,Grep,Edit,Write,Bash(scripts/issues/issues:*),Bash(scripts/adr-context.sh:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(pnpm:*),Bash(npm:*),Bash(npx:*),Bash(node:*),Bash(./gradlew:*),Bash(gradle:*),Bash(python3:*),Bash(cat:*),Bash(ls:*),Bash(test:*),Bash(printf:*),Bash(mkdir:*),Bash(sed:*),Bash(awk:*),Bash(find:*),Bash(mv:*),Bash(cp:*),Bash(rm:*),Bash(chmod:*),Bash(grep:*),Bash(curl:*),Bash(diff:*),Bash(head:*),Bash(tail:*),Bash(wc:*),Bash(touch:*)"
           prompt: >-
             Run the issue-dev `/launch` procedure for issue
             #${{ github.event.issue.number }} in this repository: read the issue
@@ -383,5 +383,27 @@ jobs:
             contains `Closes #${{ github.event.issue.number }}` so the merge
             closes the issue. Follow the issue-dev skill at
             `.claude/skills/issue-dev/SKILL.md` and its dispatch conventions
-            (ADR pre-read, DCO sign-off, ≤400-line target). The board is
-            already at Building.
+            (ADR pre-read, DCO sign-off, ≤400-line target). The board is already
+            at Building. **You must finish with either a PR or an escalation —
+            never exit silently.** If a required input cannot be obtained from
+            this sandbox (e.g. a registry digest behind network egress) or a step
+            is otherwise blocked, implement everything you can, open the PR with
+            the blocker called out as a `TODO(maintainer)` in the diff and named
+            in the PR body, and run `scripts/issues/issues add-label
+            ${{ github.event.issue.number }} needs-human`. If you cannot open a PR
+            at all, post a comment explaining exactly what blocked you and run the
+            same `add-label … needs-human`.
+
+      - name: Escalate if the implementer opened no PR (Building dead-end guard)
+        if: steps.map.outputs.signal == 'dispatch_implementer' && always()
+        env:
+          GH_TOKEN: ${{ secrets.ISSUE_PROJECT_PAT }}
+          ISSUE_ACTOR: chatops:${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          has_pr=$(gh pr list --state open --limit 100 --json body \
+            -q "[.[] | select(.body | contains(\"Closes #${ISSUE_NUMBER}\"))] | length")
+          if [ "${has_pr:-0}" -eq 0 ]; then
+            scripts/issues/issues add-label "${ISSUE_NUMBER}" needs-human
+            scripts/issues/issues comment "${ISSUE_NUMBER}" --body "🤖 /launch finished but no PR closing this issue was opened — the implementer is blocked. Flagged needs-human; a maintainer should review the run."
+          fi
