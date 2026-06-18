@@ -312,9 +312,11 @@ jobs:
             authoritative, not advisory: run `scripts/issues/issues check-plan
             ${{ github.event.issue.number }}`; for every `PROBLEM` line it prints,
             post a corrected plan comment and re-run — until it exits clean. Do not
-            finalize while it reports any problem. Do not change the board
-            status, do not open a PR, and do not post scratch comments. Follow the
-            issue-dev skill at `.claude/skills/issue-dev/SKILL.md`.
+            finalize while it reports any problem. If CONTEXT was non-empty, before
+            you finalize re-read it and confirm the plan now satisfies it in full;
+            if not, revise and repeat. Do not change the board status, do not open
+            a PR, and do not post scratch comments. Follow the issue-dev skill at
+            `.claude/skills/issue-dev/SKILL.md`.
 
       - name: Proof the plan comment (fail the run if a citation is fabricated)
         if: steps.map.outputs.signal == 'write_plan' && success()
