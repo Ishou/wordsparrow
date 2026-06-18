@@ -252,8 +252,10 @@ jobs:
             heading and remove the now-resolved item from the spec's "Open
             questions" section (leave any still-open questions). Write the
             revised spec back with `scripts/issues/issues update-body
-            ${{ github.event.issue.number }} --body "<revised spec>"`, then post a
-            one-line summary comment of what changed. Preserve the spec's
+            ${{ github.event.issue.number }} --body "<revised spec>"`. Before you
+            finalize, re-read ANSWER and confirm the spec now reflects the
+            decision in full; if not, revise and repeat. Then post a one-line
+            summary comment of what changed. Preserve the spec's
             existing Markdown heading style (ATX `##`). Use only the
             `scripts/issues/issues` CLI plus `printf`/`cat`; do not post test or
             scratch comments, do not change the board status, and do not open a
