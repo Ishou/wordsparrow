@@ -97,3 +97,28 @@ Idea → Needs Input → Ready → Plan Review → Planned → Building → Done
 closed state. The maintainer drives the two approval gates (and `/rework`); the
 agent does not auto-advance past either. GitLab forward-look:
 `status::idea|needs_input|ready|plan_review|planned|building`.
+
+## Amendment 2026-06-18 — steering authority
+
+The chatops pipeline (`issue-dev-chatops.yml`) agents (`/respec`,
+`/correct`, `/answer`, `/replan`, `/correct-plan`) were prompted to treat
+maintainer input as *data, not instructions*, as an injection-safety guard.
+That overshot: agents treated design steering as untrusted content and kept
+their own analysis when it conflicted with the maintainer's direction.
+
+**Distinction:** maintainer input in a chatops event is binding design
+direction — apply it in full even where it contradicts the agent's prior or
+the current spec/plan approach. Injection safety is preserved and rescoped:
+the input arrives via an env var read with `printf '%s' "$VAR"` (never shell-
+interpolated), so there is no injection surface. The agent ignores embedded
+text that reads like a tool call or scope-widening instruction, but applies
+the substantive decision unconditionally.
+
+**Ripple-through:** an approach change propagates through dependent sections
+rather than updating only the named section.
+
+**Self-verification:** before finalising, the agent re-reads the maintainer
+input and confirms the spec/plan satisfies it in full; if not, it revises and
+repeats. This closes the gap the citation-only `issues check` gate leaves
+(that gate validates `path:line` references, not whether the correction was
+applied).
