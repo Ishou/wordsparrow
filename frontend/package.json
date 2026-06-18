@@ -80,9 +80,9 @@
   },
   "engines": {
     "node": ">=22.22.3",
-    "pnpm": ">=11"
+    "pnpm": ">=11.7.0"
   },
-  "packageManager": "pnpm@11.0.9",
+  "packageManager": "pnpm@11.7.0",
   "msw": {
     "workerDirectory": [
       "public"
