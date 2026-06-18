@@ -262,7 +262,7 @@ jobs:
             decision in full; if not, revise and repeat. Then post a one-line
             summary comment of what changed. Preserve the spec's
             existing Markdown heading style (ATX `##`). Use only the
-            `scripts/issues/issues` CLI plus `printf`/`cat`; do not post test or
+            `scripts/issues/issues` CLI plus `printf`/`cat`/`Write`; do not post test or
             scratch comments, do not change the board status, and do not open a
             PR. Follow the issue-dev skill at `.claude/skills/issue-dev/SKILL.md`.
 
