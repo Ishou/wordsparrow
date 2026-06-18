@@ -13,6 +13,8 @@ overrides:
   # the direct dep + plugin-react@6 so plugin shapes match across the
   # rolldown vs rollup type defs.
   vite: ^8.0.16
+  # qs pinned to the patched line; lives here (not package.json) because pnpm 11.7 stops reading the package.json pnpm field.
+  qs: 6.15.2
 
 # pnpm 11 fails install when a dependency in the graph runs an install
 # script unless the package is on this allowlist (was a soft warning in
