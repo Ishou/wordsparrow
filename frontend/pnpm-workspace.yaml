@@ -26,3 +26,8 @@ allowBuilds:
   msw: true
   protobufjs: true
   unrs-resolver: true
+
+# Supply-chain cooldown (ADR-0071): refuse any dependency version younger than 24h, at resolution AND frozen-lockfile verify, transitive included.
+minimumReleaseAge: 1440
+# Day-1 CVE escape hatch: add the exact "pkg@version" here after a human vets the advisory, then merge. See ADR-0071.
+minimumReleaseAgeExclude: []

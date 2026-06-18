@@ -17,6 +17,8 @@
   "automerge": false,
   "platformAutomerge": false,
   "configMigration": true,
+  "minimumReleaseAge": "1 day",
+  "internalChecksFilter": "strict",
   "lockFileMaintenance": {
     "enabled": false
   },
@@ -24,7 +26,9 @@
     "enabled": true,
     "labels": ["security"],
     "schedule": ["at any time"],
-    "prCreation": "immediate"
+    "prCreation": "immediate",
+    "minimumReleaseAge": "0",
+    "internalChecksFilter": "none"
   },
   "packageRules": [
     {

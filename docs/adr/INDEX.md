@@ -124,6 +124,8 @@ ADR-0069  .claude/skills/issue-dev/**                Issue-driven workflow comma
 ADR-0069  .github/workflows/issues-tests.yml         IssueTracker port unit tests (pytest) gate
 # ADR-0069: amendment 2026-06-14 (two-gate lifecycle: + plan_review + planned states; spec gate AND plan gate) — no new binding paths; changes land under scripts/issues/** above
 ADR-0070  infra/platform/templates/cnpg-volume-gc-cronjob.yaml  Token-free GC of orphaned hcloud volumes: flip long-Released Retain PVs to Delete so the CSI reclaims them
+ADR-0071  frontend/pnpm-workspace.yaml               24h install cooldown (minimumReleaseAge) + day-1 CVE escape hatch (minimumReleaseAgeExclude)
+ADR-0071  renovate.json                              Renovate cooldown aligned to pnpm (minimumReleaseAge 1d + strict); vulnerabilityAlerts overrides it to 0 for security PRs
 ```
 
 ## Adding entries
