@@ -68,6 +68,14 @@ def test_update_body_requires_exactly_one_body_source():
         cli.main(["update-body", "1", "--body", "x", "--body-file", "/tmp/y"], tracker=tracker)  # both
 
 
+def test_check_requires_file_or_issue_id():
+    tracker = InMemoryTracker()
+    with pytest.raises(SystemExit):
+        cli.main(["check"], tracker=tracker)
+    with pytest.raises(SystemExit):
+        cli.main(["check-plan"], tracker=tracker)
+
+
 def test_check_file_proofs_a_local_draft_before_posting(capsys, tmp_path):
     tracker = InMemoryTracker()
     clean = tmp_path / "ok.md"; clean.write_text("prose with no path:line evidence")

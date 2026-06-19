@@ -40,6 +40,8 @@ def _body_arg(args) -> str:
 
 def _check_source(args, tracker, plan: bool) -> str:
     """Body to proof: a local --file (pre-post draft) or the posted content."""
+    if args.file is None and args.id is None:
+        raise SystemExit("provide either --file <path> or a positional issue id")
     if args.file is not None:
         return pathlib.Path(args.file).read_text()
     if plan:
