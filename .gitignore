@@ -16,6 +16,16 @@ build/
 # Superpowers brainstorming session artefacts (mockups, server state).
 .superpowers/
 
+# design-sync (claude.ai/design): staged converter, build output, and
+# machine state. Durable sync inputs under .design-sync/ (config.json,
+# NOTES.md, conventions.md, previews/, overrides/, tsconfig.sync.json)
+# ARE committed; only the ephemera below are ignored.
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+
 # Helm: subchart tarballs are downloaded by `helm dependency update`
 # and reproduced from Chart.lock; never commit them.
 infra/*/charts/

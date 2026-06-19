@@ -1,0 +1,36 @@
+{
+  "projectId": "402d7bb0-77ff-4745-a96f-a0da03c42d17",
+  "shape": "package",
+  "pkg": "@bliss/frontend",
+  "globalName": "WordSparrow",
+  "tsconfig": "../.design-sync/tsconfig.sync.json",
+  "cssEntry": "styled-system/styles.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "extraFonts": [
+    "node_modules/@fontsource-variable/fraunces/full.css",
+    "node_modules/@fontsource-variable/fraunces/full-italic.css",
+    "node_modules/@fontsource-variable/outfit/wght.css",
+    "node_modules/@fontsource/lekton/700.css"
+  ],
+  "runtimeFontPrefixes": ["Cascadia", "Outfit Variable fallback", "Fraunces Variable fallback"],
+  "overrides": {
+    "Dialog": { "cardMode": "single", "viewport": "480x460" },
+    "Toast": { "cardMode": "single", "viewport": "500x180" }
+  },
+  "buildCmd": "pnpm panda:codegen && npx panda cssgen --outfile styled-system/styles.css",
+  "componentSrcMap": {
+    "Button": "src/ui/components/primitives/Button.tsx",
+    "IconButton": "src/ui/components/primitives/IconButton.tsx",
+    "TextField": "src/ui/components/primitives/TextField.tsx",
+    "Dialog": "src/ui/components/primitives/Dialog.tsx",
+    "RadioGroup": "src/ui/components/primitives/RadioGroup.tsx",
+    "Select": "src/ui/components/primitives/Select.tsx",
+    "ToggleGroup": "src/ui/components/primitives/ToggleGroup.tsx",
+    "OverflowMenu": "src/ui/components/primitives/OverflowMenu.tsx",
+    "Toast": "src/ui/components/primitives/Toast.tsx",
+    "PinInput": "src/ui/components/primitives/PinInput.tsx",
+    "Sparrow": "src/ui/components/brand/Sparrow.tsx",
+    "Wordmark": "src/ui/components/brand/Wordmark.tsx",
+    "Lockup": "src/ui/components/brand/Lockup.tsx"
+  }
+}
