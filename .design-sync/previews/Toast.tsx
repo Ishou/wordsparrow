@@ -10,9 +10,7 @@ function Emit({ text, tone }: { text: string; tone: 'info' | 'error' }) {
   return <Toast />;
 }
 
-// The toast is `position: fixed` (bottom-right corner notification). A
-// transformed, sized ancestor becomes its containing block, so it renders
-// fully inside the preview cell instead of escaping to the viewport edge.
+// position:fixed is contained by the transform ancestor, keeping the toast inside the preview cell.
 function Stage({ text, tone }: { text: string; tone: 'info' | 'error' }) {
   return (
     <ToastProvider>
