@@ -122,3 +122,29 @@ input and confirms the spec/plan satisfies it in full; if not, it revises and
 repeats. This closes the gap the citation-only `issues check` gate leaves
 (that gate validates `path:line` references, not whether the correction was
 applied).
+
+## Amendment 2026-06-18 — deterministic posting + prompt factoring
+
+The earlier "agents write large bodies" fix let the chatops agents post via the
+CLI directly. On the plan path (which posts a `comment`, accumulating, vs a
+spec's `update-body`, overwriting), agents improvised — posting scratch/test
+comments and duplicate plans while figuring out how to post a long body, and
+re-posting on each proof-loop iteration.
+
+**Deterministic write path.** Every agent now composes the body as a **draft
+file**, validates it with `scripts/issues/issues check --file <path>` (spec) or
+`check-plan --file <path>` (plan), and posts it **exactly once** with
+`update-body --body-file <path>` / `comment --body-file <path>`. The proof loop
+runs on the draft *before* posting, so a fix never produces an extra comment.
+The CLI gains `--body-file` (`update-body`, `comment`) and `--file` (`check`,
+`check-plan`); these stay portable (no GitHub-specific orchestration), so the
+determinism lives in the CLI, not the workflow YAML.
+
+**Prompt factoring.** The per-step prompts were accreted human prose in the
+workflow YAML — long, unstructured, and drifting (copy-paste between the five
+agents caused the recurring "you missed agent N" review findings). Prompts are
+extracted to versioned files under `.github/issue-dev/prompts/` (mirroring
+ADR-0068's `.github/breaking-bump/prompts/`): a shared `_contract.md` (the write
+path, binding-directive rule, evidence rule, hard rules) plus a per-agent file
+stating only its delta. Each workflow step is now a thin "read `<file>.md` and
+follow it" pointer.

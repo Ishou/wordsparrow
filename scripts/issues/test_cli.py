@@ -37,6 +37,63 @@ def test_check_passes_a_body_with_no_bad_citations(capsys):
     assert "passes all proofs" in capsys.readouterr().out
 
 
+def test_update_body_reads_from_body_file(capsys, tmp_path):
+    tracker = InMemoryTracker()
+    cli.main(["create", "--title", "T", "--body", "old"], tracker=tracker)
+    f = tmp_path / "spec.md"
+    f.write_text("brand new spec body with backticks `x` and $vars")
+    cli.main(["update-body", "1", "--body-file", str(f)], tracker=tracker)
+    capsys.readouterr()
+    cli.main(["get", "1"], tracker=tracker)
+    assert "brand new spec body" in json.loads(capsys.readouterr().out)["body"]
+
+
+def test_comment_reads_from_body_file(capsys, tmp_path):
+    tracker = InMemoryTracker()
+    cli.main(["create", "--title", "T", "--body", "B"], tracker=tracker)
+    f = tmp_path / "plan.md"
+    f.write_text("## Implementation plan (Plan Review)\nfull plan text")
+    capsys.readouterr()
+    cli.main(["comment", "1", "--body-file", str(f)], tracker=tracker)
+    cli.main(["comments", "1"], tracker=tracker)
+    assert "full plan text" in capsys.readouterr().out
+
+
+def test_update_body_requires_exactly_one_body_source():
+    tracker = InMemoryTracker()
+    cli.main(["create", "--title", "T", "--body", "B"], tracker=tracker)
+    with pytest.raises(SystemExit):
+        cli.main(["update-body", "1"], tracker=tracker)  # neither
+    with pytest.raises(SystemExit):
+        cli.main(["update-body", "1", "--body", "x", "--body-file", "/tmp/y"], tracker=tracker)  # both
+
+
+def test_check_requires_file_or_issue_id():
+    tracker = InMemoryTracker()
+    with pytest.raises(SystemExit):
+        cli.main(["check"], tracker=tracker)
+    with pytest.raises(SystemExit):
+        cli.main(["check-plan"], tracker=tracker)
+
+
+def test_check_file_proofs_a_local_draft_before_posting(capsys, tmp_path):
+    tracker = InMemoryTracker()
+    clean = tmp_path / "ok.md"; clean.write_text("prose with no path:line evidence")
+    cli.main(["check", "--file", str(clean)], tracker=tracker)
+    assert "passes all proofs" in capsys.readouterr().out
+    bad = tmp_path / "bad.md"; bad.write_text("cite .github/workflows/nope-guard.yml:9")
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["check", "--file", str(bad)], tracker=tracker)
+    assert exc.value.code == 1 and "nope-guard.yml:9" in capsys.readouterr().err
+
+
+def test_check_plan_file_proofs_a_local_plan_draft(capsys, tmp_path):
+    tracker = InMemoryTracker()
+    f = tmp_path / "plan.md"; f.write_text("## Implementation plan\nclean prose, no citations")
+    cli.main(["check-plan", "--file", str(f)], tracker=tracker)
+    assert "passes all proofs" in capsys.readouterr().out
+
+
 def test_create_then_list_by_status_via_cli(capsys):
     tracker = InMemoryTracker()
     cli.main(["create", "--title", "T", "--body", "B", "--label", "priority:high"],
