@@ -5,6 +5,7 @@ import argparse
 import dataclasses
 import json
 import os
+import pathlib
 import sys
 
 from auditing import AuditingTracker
@@ -28,6 +29,26 @@ def _default_tracker() -> IssueTracker:
         raise SystemExit(f"unknown ISSUE_TRACKER={backend!r} (only 'github' so far)")
     actor = os.environ.get("ISSUE_ACTOR", "claude-session")
     return AuditingTracker(GitHubTracker(), actor=actor)
+
+
+def _body_arg(args) -> str:
+    """Body text from exactly one of --body / --body-file."""
+    if (args.body is None) == (args.body_file is None):
+        raise SystemExit("provide exactly one of --body / --body-file")
+    return pathlib.Path(args.body_file).read_text() if args.body_file else args.body
+
+
+def _check_source(args, tracker, plan: bool) -> str:
+    """Body to proof: a local --file (pre-post draft) or the posted content."""
+    if args.file is not None:
+        return pathlib.Path(args.file).read_text()
+    if plan:
+        plans = [c.body for c in tracker.comments(args.id) if "Implementation plan" in c.body]
+        if not plans:
+            print("PROBLEM [missing] no 'Implementation plan' comment found", file=sys.stderr)
+            raise SystemExit(1)
+        return plans[-1]
+    return tracker.get(args.id).body
 
 
 def _proof_or_die(problems, what: str) -> None:
@@ -57,11 +78,13 @@ def main(argv: list[str], tracker: IssueTracker | None = None) -> None:
     li = sub.add_parser("list"); li.add_argument("--label", action="append", default=[])
     li.add_argument("--state", default="open")
     li.add_argument("--status", choices=[s.name.lower() for s in Status], default=None)
-    ub = sub.add_parser("update-body"); ub.add_argument("id", type=int); ub.add_argument("--body", required=True)
-    cm = sub.add_parser("comment"); cm.add_argument("id", type=int); cm.add_argument("--body", required=True)
+    ub = sub.add_parser("update-body"); ub.add_argument("id", type=int)
+    ub.add_argument("--body"); ub.add_argument("--body-file")
+    cm = sub.add_parser("comment"); cm.add_argument("id", type=int)
+    cm.add_argument("--body"); cm.add_argument("--body-file")
     cs = sub.add_parser("comments"); cs.add_argument("id", type=int)
-    ck = sub.add_parser("check"); ck.add_argument("id", type=int)
-    ckp = sub.add_parser("check-plan"); ckp.add_argument("id", type=int)
+    ck = sub.add_parser("check"); ck.add_argument("id", type=int, nargs="?"); ck.add_argument("--file")
+    ckp = sub.add_parser("check-plan"); ckp.add_argument("id", type=int, nargs="?"); ckp.add_argument("--file")
     ss = sub.add_parser("set-status"); ss.add_argument("id", type=int); ss.add_argument("status", choices=[s.name.lower() for s in Status])
     sp = sub.add_parser("set-priority"); sp.add_argument("id", type=int); sp.add_argument("priority", choices=[p.name.lower() for p in Priority])
     al = sub.add_parser("add-label"); al.add_argument("id", type=int); al.add_argument("label")
@@ -73,18 +96,13 @@ def main(argv: list[str], tracker: IssueTracker | None = None) -> None:
     if a.cmd == "create": _emit(t.create(a.title, a.body, tuple(a.label)))
     elif a.cmd == "get": _emit(t.get(a.id))
     elif a.cmd == "list": _emit(t.list(tuple(a.label), a.state, Status[a.status.upper()] if a.status else None))
-    elif a.cmd == "update-body": t.update_body(a.id, a.body)
-    elif a.cmd == "comment": t.comment(a.id, a.body)
+    elif a.cmd == "update-body": t.update_body(a.id, _body_arg(a))
+    elif a.cmd == "comment": t.comment(a.id, _body_arg(a))
     elif a.cmd == "comments": _emit(t.comments(a.id))
     elif a.cmd == "check":
-        _proof_or_die(run_all(t.get(a.id).body), "spec")
+        _proof_or_die(run_all(_check_source(a, t, plan=False)), "spec")
     elif a.cmd == "check-plan":
-        plans = [c.body for c in t.comments(a.id) if "Implementation plan" in c.body]
-        if not plans:
-            print("PROBLEM [missing] no 'Implementation plan' comment found", file=sys.stderr)
-            raise SystemExit(1)
-        else:
-            _proof_or_die(run_all(plans[-1]), "plan")
+        _proof_or_die(run_all(_check_source(a, t, plan=True)), "plan")
     elif a.cmd == "set-status": t.set_status(a.id, Status[a.status.upper()])
     elif a.cmd == "set-priority": t.set_priority(a.id, Priority[a.priority.upper()])
     elif a.cmd == "add-label": t.add_label(a.id, a.label)
