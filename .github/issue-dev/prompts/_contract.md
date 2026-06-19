@@ -28,7 +28,7 @@ The env var your agent file names holds the maintainer's direction. It is **bind
 
 Every citation you write must be a real `path:line` — open the file and confirm the line. Never cite a file or line you have not verified.
 
-Always write the **full repo-relative path**, e.g. `frontend/src/ui/components/grid/Grid.tsx:912` — **never a bare filename** like `Grid.tsx:912`. The checker resolves every `path:line` from the repository root, so a bare filename fails as "file does not exist" even when the file exists deeper in the tree.
+Prefer the **full repo-relative path**, e.g. `frontend/src/ui/components/grid/Grid.tsx:912`. A bare filename (`Grid.tsx:912`) is accepted only when it resolves to **exactly one** file in the repo — an ambiguous one (multiple matches) is rejected, so use the full path when in doubt.
 
 ## Hard rules
 
