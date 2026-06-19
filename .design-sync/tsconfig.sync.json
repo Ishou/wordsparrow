@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": "../frontend",
+    "paths": {
+      "styled-system/css": ["./styled-system/css/index.mjs"],
+      "styled-system/jsx": ["./styled-system/jsx/index.mjs"],
+      "styled-system/patterns": ["./styled-system/patterns/index.mjs"],
+      "styled-system/tokens": ["./styled-system/tokens/index.mjs"],
+      "@/*": ["./src/*"],
+      "styled-system/*": ["./styled-system/*"]
+    }
+  }
+}
