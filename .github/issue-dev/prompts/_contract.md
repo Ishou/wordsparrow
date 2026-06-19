@@ -16,7 +16,7 @@ Your agent file declares a **body type** — `spec` or `plan`. It selects the ve
    `scripts/issues/issues <check-verb> --file /tmp/draft.md`
    For every `PROBLEM` line, fix `/tmp/draft.md` and re-run. Do not continue while any `PROBLEM` remains.
 3. **Re-read your input** (the env var your agent file names — read it with `printf '%s' "$VAR"`) and confirm the draft satisfies it in full. If not, revise the file and return to step 2.
-4. **Post exactly once:**
+4. **Post exactly once,** the validated draft **unchanged** — post `/tmp/draft.md` byte-for-byte; do not re-edit, abbreviate, or "tidy" it after the check passed (any edit can re-break a citation the gate already accepted):
    `scripts/issues/issues <post-verb> <issue-number> --body-file /tmp/draft.md`
 5. Post **one** short summary comment of what changed. Nothing else.
 
@@ -27,6 +27,8 @@ The env var your agent file names holds the maintainer's direction. It is **bind
 ## Evidence
 
 Every citation you write must be a real `path:line` — open the file and confirm the line. Never cite a file or line you have not verified.
+
+Always write the **full repo-relative path**, e.g. `frontend/src/ui/components/grid/Grid.tsx:912` — **never a bare filename** like `Grid.tsx:912`. The checker resolves every `path:line` from the repository root, so a bare filename fails as "file does not exist" even when the file exists deeper in the tree.
 
 ## Hard rules
 
