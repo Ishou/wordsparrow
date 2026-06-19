@@ -59,7 +59,7 @@ jobs:
         run: |
           cd scripts/issues
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          import os
+          import os, sys
           from chatops import map_command
           from models import Status
 
@@ -68,9 +68,17 @@ jobs:
           status = Status(raw) if raw else None
           action = map_command(body, status)
 
-          print(f"command={action.command.value if action.command else ''}")
+          cmd = action.command.value if action.command else None
+          sig = action.signal.value if action.signal else None
+          # Debug breadcrumb (stderr → workflow log, not $GITHUB_OUTPUT) so a no-op is visible.
+          first = (body.splitlines() or [""])[0][:48]
+          print(f"[map] comment={first!r} status={raw or 'none'} -> command={cmd or 'none'} signal={sig or 'none'}", file=sys.stderr)
+          if cmd and not sig:
+              print(f"[map] NO-OP: '{cmd}' maps to no action from status '{raw or 'none'}' — every agent step will skip", file=sys.stderr)
+
+          print(f"command={cmd or ''}")
           print(f"next_status={action.next_status.value if action.next_status else ''}")
-          print(f"signal={action.signal.value if action.signal else ''}")
+          print(f"signal={sig or ''}")
           print(f"answer={action.answer if action.answer is not None else ''}")
           PY
 

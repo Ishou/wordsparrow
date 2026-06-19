@@ -33,6 +33,35 @@ def test_bare_real_filename_citation_passes(tmp_path):
     assert check_citations("see values.yaml:2", tmp_path) == []
 
 
+def test_bare_filename_resolves_unambiguously_deeper_in_the_tree(tmp_path):
+    # The agent's terse `Grid.tsx:12` resolves to the single real file in the tree.
+    (tmp_path / "a" / "b").mkdir(parents=True)
+    (tmp_path / "a" / "b" / "Grid.tsx").write_text("\n".join(str(i) for i in range(20)))
+    assert check_citations("the formula at Grid.tsx:12", tmp_path) == []
+
+
+def test_bare_filename_resolved_but_past_eof_is_flagged(tmp_path):
+    (tmp_path / "a").mkdir()
+    (tmp_path / "a" / "Grid.tsx").write_text("one\ntwo\n")
+    problems = check_citations("Grid.tsx:50", tmp_path)
+    assert len(problems) == 1 and "only 2 lines" in problems[0].detail
+
+
+def test_ambiguous_bare_filename_is_flagged(tmp_path):
+    (tmp_path / "a").mkdir(); (tmp_path / "b").mkdir()
+    (tmp_path / "a" / "index.ts").write_text("x\n")
+    (tmp_path / "b" / "index.ts").write_text("x\n")
+    problems = check_citations("see index.ts:1", tmp_path)
+    assert len(problems) == 1 and "ambiguous" in problems[0].detail
+
+
+def test_bare_filename_inside_a_vendored_tree_is_not_resolved(tmp_path):
+    (tmp_path / "node_modules" / "pkg").mkdir(parents=True)
+    (tmp_path / "node_modules" / "pkg" / "Weird.tsx").write_text("x\n")
+    problems = check_citations("Weird.tsx:1", tmp_path)
+    assert len(problems) == 1 and "does not exist" in problems[0].detail
+
+
 def test_times_versions_and_host_ports_are_not_citations(tmp_path):
     assert check_citations("at 12:30, python 3.14.6, host.com:443, ratio 5:1", tmp_path) == []
 
