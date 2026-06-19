@@ -35,7 +35,7 @@ const gridContainer = css({
   borderColor: 'gridLine',
   width: '100%',
   // Width is bounded by the TransformComponent wrapper below
-  // (`transformWrapperBaseStyle.width` — a `min(100cqw, 100cqh, 720px)`
+  // (`transformWrapperBaseStyle.width` — a `min(100cqw, 100cqh * W/H)`
   // clamp against the flex shell's container box).
   // Allow border arrows on edge cells to bleed outside the grid border box.
   overflow: 'visible',
@@ -61,8 +61,9 @@ const gridFrame = css({ position: 'relative', width: '100%', overflow: 'visible'
 //    on a 1080 p laptop after ~280 px of chrome had already stacked.
 //
 // 2. Establish a `container-type: size` so the wrapper inside can size
-//    itself by `min(100cqw, 100cqh, 720px)` — i.e. the smaller of
-//    available width and available height, capped at the design ceiling.
+//    itself by `min(100cqw, 100cqh * W/H)` — i.e. the smaller of
+//    available width and the maximum width such that the aspect-ratio-
+//    derived height still fits inside the container's height.
 //    Container queries are the cleanest way to make a square box
 //    auto-square inside a flex slot whose width and height are
 //    independently constrained; an `aspect-ratio` + max-width /
@@ -118,10 +119,9 @@ const bottomBarStyles = css({
 // explicit width here keeps the outer box driving layout and the grid
 // inside fills it.
 //
-// Width formula: `min(100cqw, 100cqh * W/H, 720px)`. The first term
-// honors the container's width; the second is the maximum width such
-// that `height = width * H/W` still fits inside the container's height;
-// the third caps the longer side at 720 px on very large displays.
+// Width formula: `min(100cqw, 100cqh * W/H)`. The first term honors the
+// container's width; the second is the maximum width such that
+// `height = width * H/W` still fits inside the container's height.
 // `aspect-ratio` then derives the height from the width — no explicit
 // `height` value, so a single source of truth drives both axes.
 //
@@ -803,7 +803,7 @@ export function Grid({
   // doesn't help). We measure the shell's distance from the visible
   // viewport top and shrink its `maxHeight` to fit the remaining
   // space; because the inner wrapper is sized via
-  // `min(100cqw, 100cqh, 720px)` against the shell, that shrink
+  // `min(100cqw, 100cqh * W/H)` against the shell, that shrink
   // propagates to both the wrapper's width and height in lockstep —
   // keeping the grid square. `null` = no override (the shell takes its
   // natural flex-grow height).
@@ -909,7 +909,7 @@ export function Grid({
         // geometry consistent and avoids any pinch/pan regressions.
         // `margin: 0 auto` is intentionally omitted — the stage handles
         // centering inside gridShell now.
-        width: `min(100cqw, calc(100cqh * ${puzzle.width} / ${puzzle.height}), 720px)`,
+        width: `min(100cqw, calc(100cqh * ${puzzle.width} / ${puzzle.height}))`,
         aspectRatio: `${puzzle.width} / ${puzzle.height}`,
         touchAction,
         cursor,
@@ -928,7 +928,7 @@ export function Grid({
   // (mirrors the `margin: 0 auto` that was on transformWrapperStyle).
   const stageStyle = useMemo(
     () => ({
-      width: `min(100cqw, calc(100cqh * ${puzzle.width} / ${puzzle.height}), 720px)`,
+      width: `min(100cqw, calc(100cqh * ${puzzle.width} / ${puzzle.height}))`,
       aspectRatio: `${puzzle.width} / ${puzzle.height}`,
       margin: '0 auto',
       position: 'relative' as const,

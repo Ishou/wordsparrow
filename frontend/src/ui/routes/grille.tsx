@@ -36,7 +36,7 @@ type ActiveFocus = { readonly position: Position; readonly direction: 'across' |
 // is the brand's pre-defined raised-surface role; padding keeps the
 // grid off the panel edge without colliding with the grid's own
 // container-query sizing (the inner Grid still squares against
-// `min(100cqw, 100cqh, …)` of THIS box).
+// `min(100cqw, 100cqh * W/H)` of THIS box).
 const gridPanelStyles = css({
   width: '100%',
   flex: '1 1 0',
@@ -53,6 +53,12 @@ const gridPanelStyles = css({
   '@media (any-pointer: coarse) and (any-hover: none)': {
     marginInline: '-16px',
     width: 'calc(100% + 32px)',
+    borderRadius: 0,
+  },
+  // Large-desktop: break the grid panel out of the 720 px wrapper so gridShell sees the full viewport width.
+  '@media (min-width: 768px) and (any-pointer: fine)': {
+    marginInline: 'calc(50% - 50dvw)',
+    width: '100dvw',
     borderRadius: 0,
   },
 });

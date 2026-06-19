@@ -74,6 +74,12 @@ const gridPanelStyles = css({
     width: 'calc(100% + 32px)',
     borderRadius: 0,
   },
+  // Large-desktop: break the grid panel out of the 720 px wrapper so gridShell sees the full viewport width.
+  '@media (min-width: 768px) and (any-pointer: fine)': {
+    marginInline: 'calc(50% - 50dvw)',
+    width: '100dvw',
+    borderRadius: 0,
+  },
 });
 
 // Visually-hidden h1 for the heading-hierarchy contract — matches
