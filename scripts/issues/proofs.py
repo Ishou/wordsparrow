@@ -51,8 +51,7 @@ def check_citations(body: str, root: pathlib.Path = _REPO_ROOT) -> list[Problem]
         path, line = match.group(1), int(match.group(2))
         target = root / path
         if not target.is_file():
-            # A bare filename (no directory) may be the agent's terse shorthand for a
-            # file that exists deeper in the tree — accept it iff it resolves unambiguously.
+            # bare filename — tree-search to accept if unambiguous
             if "/" not in path:
                 hits = _resolve_bare(path, root)
                 if len(hits) == 1:
