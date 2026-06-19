@@ -36,7 +36,7 @@ type ActiveFocus = { readonly position: Position; readonly direction: 'across' |
 // is the brand's pre-defined raised-surface role; padding keeps the
 // grid off the panel edge without colliding with the grid's own
 // container-query sizing (the inner Grid still squares against
-// `min(100cqw, 100cqh, …)` of THIS box).
+// `min(100cqw, 100cqh * W/H)` of THIS box).
 const gridPanelStyles = css({
   width: '100%',
   flex: '1 1 0',
