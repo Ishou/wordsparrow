@@ -3,6 +3,8 @@ import { Cell } from '../components/Cell/Cell';
 import { DefCell } from '../components/DefCell/DefCell';
 import { Grid } from '../components/Grid/Grid';
 import { ClueRail } from '../components/ClueRail/ClueRail';
+import { Button } from '../components/Button/Button';
+import { KeyboardKey } from '../components/KeyboardKey/KeyboardKey';
 import type { GridLayout } from '../components/Grid/layout';
 
 const SAMPLE_LAYOUT: GridLayout = {
@@ -82,6 +84,25 @@ export function DesignSystemGallery() {
         <figure className={css({ display: 'flex', flexDirection: 'column', gap: 'xs', margin: 0, width: '320px' })}>
           <ClueRail direction="horizontal" clue="Capitale de la France" index={4} total={18} />
           <figcaption className={css({ fontSize: 'sm', color: 'fg' })}>ClueRail</figcaption>
+        </figure>
+      </section>
+      <section aria-label="Actions et clavier" className={css({ display: 'flex', flexWrap: 'wrap', gap: 'lg', alignItems: 'flex-start' })}>
+        <figure className={css({ display: 'flex', flexDirection: 'column', gap: 'xs', margin: 0 })}>
+          <div className={css({ display: 'flex', gap: 'sm', flexWrap: 'wrap' })}>
+            <Button variant="primary">Jouer</Button>
+            <Button variant="secondary">Partager</Button>
+            <Button variant="primary" disabled>Valider</Button>
+          </div>
+          <figcaption className={css({ fontSize: 'sm', color: 'fg' })}>Button — primary · secondary · disabled</figcaption>
+        </figure>
+        <figure className={css({ display: 'flex', flexDirection: 'column', gap: 'xs', margin: 0 })}>
+          <div className={css({ display: 'flex', gap: 'xs' })}>
+            <KeyboardKey type="letter" label="A" />
+            <KeyboardKey type="letter" label="Z" />
+            <KeyboardKey type="backspace" />
+            <KeyboardKey type="confirm" />
+          </div>
+          <figcaption className={css({ fontSize: 'sm', color: 'fg' })}>KeyboardKey — letter · backspace · confirm</figcaption>
         </figure>
       </section>
     </main>

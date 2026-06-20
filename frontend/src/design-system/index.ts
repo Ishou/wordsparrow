@@ -6,3 +6,5 @@ export { DefCell, type DefCellProps, type DefArrow } from './components/DefCell/
 export { Grid, type GridProps, type GridSize } from './components/Grid/Grid';
 export { type GridLayout, type GridCellSpec, resolveGrid } from './components/Grid/layout';
 export { ClueRail, type ClueRailProps, type ClueDirection } from './components/ClueRail/ClueRail';
+export { Button, type ButtonProps, type ButtonVariant } from './components/Button/Button';
+export { KeyboardKey, type KeyboardKeyProps, type KeyboardKeyType } from './components/KeyboardKey/KeyboardKey';
