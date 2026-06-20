@@ -1,6 +1,25 @@
 import { css } from 'styled-system/css';
 import { Cell } from '../components/Cell/Cell';
 import { DefCell } from '../components/DefCell/DefCell';
+import { Grid } from '../components/Grid/Grid';
+import { ClueRail } from '../components/ClueRail/ClueRail';
+import type { GridLayout } from '../components/Grid/layout';
+
+const SAMPLE_LAYOUT: GridLayout = {
+  columns: 5,
+  cells: [
+    { kind: 'def', clues: ['Petit oiseau'], arrow: 'right' },
+    { kind: 'letter', letter: 'M' },
+    { kind: 'letter', letter: 'É' },
+    { kind: 'def', clues: ['Note'], arrow: 'down' },
+    { kind: 'empty' },
+    { kind: 'def', clues: ['Arbre'], arrow: 'right' },
+    { kind: 'letter', letter: 'P', active: true },
+    { kind: 'letter', letter: 'A', active: true },
+    { kind: 'letter', letter: 'R', active: true },
+    { kind: 'letter', letter: 'I', active: true },
+  ],
+};
 
 // Panda kebab-cases camelCase segments: jadeInk → --colors-ws-jade-ink.
 const SWATCHES = [
@@ -49,6 +68,20 @@ export function DesignSystemGallery() {
             <div style={{ width: 64 }}><DefCell clues={['Arbre'] as const} arrow="right" active /></div>
           </div>
           <figcaption className={css({ fontSize: 'sm', color: 'fg' })}>DefCell — single → · single ↓ · split · active</figcaption>
+        </figure>
+      </section>
+      <section aria-label="Composites" className={css({ display: 'flex', flexWrap: 'wrap', gap: 'lg', alignItems: 'flex-start' })}>
+        <figure className={css({ display: 'flex', flexDirection: 'column', gap: 'xs', margin: 0, width: '320px' })}>
+          <Grid layout={SAMPLE_LAYOUT} size="full" />
+          <figcaption className={css({ fontSize: 'sm', color: 'fg' })}>Grid — full</figcaption>
+        </figure>
+        <figure className={css({ display: 'flex', flexDirection: 'column', gap: 'xs', margin: 0, width: '160px' })}>
+          <Grid layout={SAMPLE_LAYOUT} size="mini" />
+          <figcaption className={css({ fontSize: 'sm', color: 'fg' })}>Grid — mini</figcaption>
+        </figure>
+        <figure className={css({ display: 'flex', flexDirection: 'column', gap: 'xs', margin: 0, width: '320px' })}>
+          <ClueRail direction="horizontal" clue="Capitale de la France" index={4} total={18} />
+          <figcaption className={css({ fontSize: 'sm', color: 'fg' })}>ClueRail</figcaption>
         </figure>
       </section>
     </main>
