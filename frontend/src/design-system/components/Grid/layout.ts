@@ -1,4 +1,3 @@
-// Pure helpers turning a puzzle layout descriptor into render-ready cells.
 // Kept separate from the Grid component so the board logic is unit-testable.
 
 export type GridCellSpec =
@@ -32,9 +31,4 @@ export function resolveGrid(layout: GridLayout): readonly ResolvedCell[] {
 
 export function rowCount(layout: GridLayout): number {
   return layout.cells.length / layout.columns;
-}
-
-// `kind` maps to the atom each cell renders as; def cells default to a right arrow.
-export function cellKind(spec: GridCellSpec): 'empty' | 'letter' | 'def' {
-  return spec.kind;
 }

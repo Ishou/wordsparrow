@@ -28,6 +28,7 @@ export function Grid({ layout, size = 'full' }: GridProps) {
   const cells = resolveGrid(layout);
   return (
     <div
+      role="img"
       data-grid-size={size}
       aria-label="Grille de mots fléchés"
       className={`${board} ${size === 'mini' ? miniSize : fullSize}`}
