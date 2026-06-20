@@ -8,3 +8,9 @@ export { type GridLayout, type GridCellSpec, resolveGrid } from './components/Gr
 export { ClueRail, type ClueRailProps, type ClueDirection } from './components/ClueRail/ClueRail';
 export { Button, type ButtonProps, type ButtonVariant } from './components/Button/Button';
 export { KeyboardKey, type KeyboardKeyProps, type KeyboardKeyType } from './components/KeyboardKey/KeyboardKey';
+export { StatCard, type StatCardProps, type StatKind } from './components/StatCard/StatCard';
+export { StreakPill, type StreakPillProps } from './components/StreakPill/StreakPill';
+export { DifficultyDots, type DifficultyDotsProps, type DifficultyLevel } from './components/DifficultyDots/DifficultyDots';
+export { CalendarDay, type CalendarDayProps, type CalendarDayState } from './components/CalendarDay/CalendarDay';
+export { BottomNav, type BottomNavProps, type NavKey } from './components/BottomNav/BottomNav';
+export { DailyCard, type DailyCardProps } from './components/DailyCard/DailyCard';

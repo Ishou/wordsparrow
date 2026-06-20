@@ -5,6 +5,12 @@ import { Grid } from '../components/Grid/Grid';
 import { ClueRail } from '../components/ClueRail/ClueRail';
 import { Button } from '../components/Button/Button';
 import { KeyboardKey } from '../components/KeyboardKey/KeyboardKey';
+import { StatCard } from '../components/StatCard/StatCard';
+import { StreakPill } from '../components/StreakPill/StreakPill';
+import { DifficultyDots } from '../components/DifficultyDots/DifficultyDots';
+import { CalendarDay } from '../components/CalendarDay/CalendarDay';
+import { BottomNav } from '../components/BottomNav/BottomNav';
+import { DailyCard } from '../components/DailyCard/DailyCard';
 import type { GridLayout } from '../components/Grid/layout';
 
 const SAMPLE_LAYOUT: GridLayout = {
@@ -104,6 +110,22 @@ export function DesignSystemGallery() {
           </div>
           <figcaption className={css({ fontSize: 'sm', color: 'fg' })}>KeyboardKey — letter · backspace · confirm</figcaption>
         </figure>
+      </section>
+      <section aria-label="Accueil et navigation" className={css({ display: 'flex', flexWrap: 'wrap', gap: 'lg', alignItems: 'flex-start' })}>
+        <div className={css({ display: 'flex', gap: 'sm' })}>
+          <StatCard kind="temps" value="02:14" />
+          <StatCard kind="serie" value="🔥 8" />
+        </div>
+        <StreakPill streak={7} timer="02:14" />
+        <DifficultyDots level="moyen" />
+        <div className={css({ display: 'flex', gap: 'xs' })}>
+          <CalendarDay day={18} state="solved" />
+          <CalendarDay day={19} state="solved" />
+          <CalendarDay day={20} state="today" />
+          <CalendarDay day={21} state="unsolved" />
+        </div>
+        <div className={css({ width: '300px' })}><BottomNav active="accueil" /></div>
+        <DailyCard date="Mercredi 20 juin" level="moyen" />
       </section>
     </main>
   );
