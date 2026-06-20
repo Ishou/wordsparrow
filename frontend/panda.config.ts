@@ -56,6 +56,7 @@ export default defineConfig({
           khaki: { value: '#4C4824' },
           or: { value: '#D8C77A' },
           sakura: { value: '#D45D83' },
+          sakuraDark: { value: '#BE4970' },
           sakuraRose: { value: '#E586A4' },
           sakuraBlush: { value: '#F7DEE7' },
         },
