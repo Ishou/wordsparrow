@@ -33,3 +33,13 @@ describe('resolveGrid', () => {
     expect(() => resolveGrid({ columns: 0, cells: [] })).toThrow(/at least one column/);
   });
 });
+
+describe('rowCount', () => {
+  it('rejects a ragged layout', () => {
+    expect(() => rowCount({ columns: 3, cells: [{ kind: 'empty' }, { kind: 'empty' }] })).toThrow(/multiple of columns/);
+  });
+
+  it('rejects a zero-column layout', () => {
+    expect(() => rowCount({ columns: 0, cells: [] })).toThrow(/at least one column/);
+  });
+});

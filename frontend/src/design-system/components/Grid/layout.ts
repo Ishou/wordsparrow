@@ -30,5 +30,9 @@ export function resolveGrid(layout: GridLayout): readonly ResolvedCell[] {
 }
 
 export function rowCount(layout: GridLayout): number {
+  if (layout.columns < 1) throw new Error('Grid layout needs at least one column');
+  if (layout.cells.length % layout.columns !== 0) {
+    throw new Error(`Grid cells (${layout.cells.length}) is not a multiple of columns (${layout.columns})`);
+  }
   return layout.cells.length / layout.columns;
 }
