@@ -15,7 +15,7 @@ const byState = {
   empty: css({ bg: 'white', boxShadow: '0 2px 4px rgba(15, 45, 35, 0.12)' }),
   solved: css({ bg: 'ws.sable', color: 'ws.khaki' }),
   // Deeper-sakura inner ring keeps the active word legible on the jade field.
-  active: css({ bg: 'ws.sakura', color: 'white', boxShadow: 'inset 0 0 0 2px #BE4970' }),
+  active: css({ bg: 'ws.sakura', color: 'white', boxShadow: 'inset 0 0 0 2px token(colors.ws.sakuraDark)' }),
 } as const;
 
 export type CellState = keyof typeof byState;
