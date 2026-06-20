@@ -23,11 +23,9 @@ const byType = {
 
 export type KeyboardKeyType = keyof typeof byType;
 
-export interface KeyboardKeyProps {
-  readonly type: KeyboardKeyType;
-  readonly label?: string;
-  readonly onPress?: () => void;
-}
+type LetterKeyProps = { readonly type: 'letter'; readonly label: string; readonly onPress?: () => void };
+type IconKeyProps = { readonly type: 'confirm' | 'backspace'; readonly label?: string; readonly onPress?: () => void };
+export type KeyboardKeyProps = LetterKeyProps | IconKeyProps;
 
 // Icon keys carry an accessible name since their glyph is decorative.
 const ARIA: Record<KeyboardKeyType, string | undefined> = {
