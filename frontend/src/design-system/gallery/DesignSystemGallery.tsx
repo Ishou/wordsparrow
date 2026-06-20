@@ -1,7 +1,6 @@
 import { css } from 'styled-system/css';
 
-// [label, panda token path, generated CSS custom property]. Panda kebab-cases
-// camelCase token segments, so jadeInk → --colors-ws-jade-ink.
+// Panda kebab-cases camelCase segments: jadeInk → --colors-ws-jade-ink.
 const SWATCHES = [
   ['Jade', 'ws.jade', '--colors-ws-jade'],
   ['Jade ink', 'ws.jadeInk', '--colors-ws-jade-ink'],
