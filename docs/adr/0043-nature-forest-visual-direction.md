@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-05-16. Supersedes ADR-0005 §4 (palette) and §5 (typography); supersedes ADR-0008 (Nunito FOUT strategy). Cites ADR-0050 (a11y baseline) for the contrast verification matrix below.
+Accepted, 2026-05-16. **Palette and typography partially superseded by ADR-0072** (jade/sakura/khaki identity) — ADR-0043's light-only theme and semantic-token-layering decisions remain in effect until the v2 migration lands. Supersedes ADR-0005 §4 (palette) and §5 (typography); supersedes ADR-0008 (Nunito FOUT strategy). Cites ADR-0050 (a11y baseline) for the contrast verification matrix below.
 
 ## Context
 

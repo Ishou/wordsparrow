@@ -130,6 +130,10 @@ ADR-0069  .github/issue-dev/prompts/**               Versioned ChatOps agent pro
 ADR-0070  infra/platform/templates/cnpg-volume-gc-cronjob.yaml  Token-free GC of orphaned hcloud volumes: flip long-Released Retain PVs to Delete so the CSI reclaims them
 ADR-0071  frontend/pnpm-workspace.yaml               24h install cooldown (minimumReleaseAge) + day-1 CVE escape hatch (minimumReleaseAgeExclude)
 ADR-0071  renovate.json                              Renovate cooldown aligned to pnpm (minimumReleaseAge 1d + strict); vulnerabilityAlerts overrides it to 0 for security PRs
+ADR-0072  frontend/src/design-system/**              WordSparrow design system v2 (jade/sakura/khaki); standalone module, app-isolated via eslint-boundaries; atoms → composites
+ADR-0072  frontend/panda.config.ts                   v2 token set (`ws.*`) added namespaced, coexisting with ADR-0043's current tokens (no edits to existing tokens)
+ADR-0072  frontend/src/ui/routes/design-system.tsx   Dev-only gallery route rendering every v2 component + variant (no Storybook); also the design-sync synth-entry surface
+# ADR-0072: supersedes ADR-0043 for palette + typography (visual identity); ADR-0043's light-only theme + semantic-token-layering decisions still apply. Migration of the live app to v2 is a tracked follow-up.
 ```
 
 ## Adding entries
