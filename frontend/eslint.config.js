@@ -126,7 +126,7 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.browser, ...globals.es2022, ...globals.node } },
     rules: { 'boundaries/dependencies': 'off', 'boundaries/no-unknown': 'off' },
   },
-  // Gallery route is the sole sanctioned app→module bridge until migration (ADR-0072).
+  // Gallery route is the sole sanctioned app→module bridge (ADR-0072).
   {
     files: ['src/ui/routes/design-system.tsx'],
     rules: { 'boundaries/dependencies': 'off' },

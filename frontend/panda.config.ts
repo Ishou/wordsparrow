@@ -48,7 +48,7 @@ export default defineConfig({
   theme: {
     tokens: {
       colors: {
-        // WordSparrow v2 (ADR-0072): jade/sakura/khaki, namespaced under `ws` to coexist with the ADR-0043 tokens below until the migration.
+        // WordSparrow v2 (ADR-0072): jade/sakura/khaki — namespaced 'ws' to avoid collision with the ADR-0043 colour tokens.
         ws: {
           jade: { value: '#C4E5D3' },
           jadeInk: { value: '#214B40' },
