@@ -51,6 +51,8 @@ export default tseslint.config(
         { type: 'application', pattern: 'src/application/**' },
         { type: 'infrastructure', pattern: 'src/infrastructure/**' },
         { type: 'ui', pattern: 'src/ui/**' },
+        // Standalone v2 design system (ADR-0072): isolated from app layers.
+        { type: 'design-system', pattern: 'src/design-system/**' },
       ],
       // src/main.tsx is the composition root and may wire ui + infrastructure.
       'boundaries/include': ['src/**/*'],
@@ -101,6 +103,8 @@ export default tseslint.config(
               from: { type: 'ui' },
               allow: [{ to: { type: 'domain' } }, { to: { type: 'application' } }],
             },
+            // v2 design system imports nothing from app layers (ADR-0072 standalone invariant).
+            { from: { type: 'design-system' }, allow: [] },
           ],
         },
       ],
@@ -121,6 +125,12 @@ export default tseslint.config(
     files: ['tests/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],
     languageOptions: { globals: { ...globals.browser, ...globals.es2022, ...globals.node } },
     rules: { 'boundaries/dependencies': 'off', 'boundaries/no-unknown': 'off' },
+  },
+  // The dev-only gallery route is the single sanctioned bridge from the app
+  // into the standalone v2 module (ADR-0072), until the migration.
+  {
+    files: ['src/ui/routes/design-system.tsx'],
+    rules: { 'boundaries/dependencies': 'off' },
   },
   // UI layer must not render raw Error.message — use messageForApiError() or route-level typed-error mapping.
   {
