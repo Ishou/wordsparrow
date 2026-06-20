@@ -48,6 +48,17 @@ export default defineConfig({
   theme: {
     tokens: {
       colors: {
+        // WordSparrow v2 (ADR-0072): jade/sakura/khaki — namespaced 'ws' to avoid collision with the ADR-0043 colour tokens.
+        ws: {
+          jade: { value: '#C4E5D3' },
+          jadeInk: { value: '#214B40' },
+          sable: { value: '#E8E2C6' },
+          khaki: { value: '#4C4824' },
+          or: { value: '#D8C77A' },
+          sakura: { value: '#D45D83' },
+          sakuraRose: { value: '#E586A4' },
+          sakuraBlush: { value: '#F7DEE7' },
+        },
         // Primary ramp — mousse (moss-green brand + success/validation).
         // ADR-0043 anchors:
         //   .100 = #dfeacb (mousse pâle — accentBg, validated cell bg)
