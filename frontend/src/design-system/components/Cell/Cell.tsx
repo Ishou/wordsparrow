@@ -12,8 +12,7 @@ const base = css({
   userSelect: 'none',
 });
 
-// Raised keycaps carry a solid bottom edge + ambient shadow; a solved cell
-// flattens (inset) — that drop is the solve motion's resting state.
+// Raised keycap relief + inset solved state = the visual "settle" on correct entry.
 const byState = {
   empty: css({
     bgImage: 'linear-gradient(180deg, #FBFAF3, #EFEADB)',

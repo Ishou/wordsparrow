@@ -2,8 +2,7 @@ import { css } from 'styled-system/css';
 import { renderCell } from '../Grid/Grid';
 import type { GridLayout } from '../Grid/layout';
 
-// The play-screen board (PlayGrid.dc.html): fixed-size keycaps on a fixed track,
-// no frame — it bleeds past its window and zooms as a whole.
+// Play-screen board: fixed-size keycaps, no frame — bleeds and zooms as a block.
 export const DAILY_BOARD: GridLayout = {
   columns: 7,
   cells: [

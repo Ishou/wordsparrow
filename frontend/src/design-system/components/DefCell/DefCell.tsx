@@ -2,8 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { CaretRight, CaretDown, ArrowBendRightDown } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 
-// Deep-sage raised keycap (#4F6E5C) with maximized cream clue text — cream on
-// this sage clears WCAG AA (~5.3:1). A distinct material from the letter tiles.
+// Deep-sage surface; cream text clears WCAG AA (~5.3:1). Distinct from letter tiles.
 const cell = css({
   position: 'relative',
   aspectRatio: '1',
@@ -48,8 +47,7 @@ export interface DefCellProps {
   readonly active?: boolean;
 }
 
-// Binary-search the largest font size that fits the clue in its cell, so short
-// clues read big and long ones shrink to fit — never overflowing.
+// Binary-search font size so every clue fills its cell without overflowing.
 function fitSpan(span: HTMLElement) {
   const cont = span.parentElement;
   if (!cont) return;
