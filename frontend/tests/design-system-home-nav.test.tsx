@@ -4,10 +4,11 @@ import { StatCard, StreakPill, DifficultyDots, CalendarDay, BottomNav, DailyCard
 import { expectAxeClean } from '@/test/a11y';
 
 describe('home + nav components', () => {
-  it('StatCard renders its label and value, a11y clean', async () => {
-    const { container } = render(<StatCard kind="temps" value="02:14" />);
-    expect(screen.getByText('TEMPS')).toBeTruthy();
+  it('StatCard renders both stats, a11y clean', async () => {
+    const { container } = render(<StatCard temps="02:14" serie="🔥 8" />);
+    expect(screen.getByText('Temps')).toBeTruthy();
     expect(screen.getByText('02:14')).toBeTruthy();
+    expect(screen.getByText('Série')).toBeTruthy();
     await expectAxeClean(container);
   });
 

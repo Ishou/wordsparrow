@@ -11,6 +11,9 @@ describe('Cell', () => {
     rerender(<Cell state="active" letter="R" />);
     expect(container.querySelector('[data-cell-state="active"]')?.textContent).toBe('R');
     await expectAxeClean(container);
+    rerender(<Cell state="activeWord" letter="A" />);
+    expect(container.querySelector('[data-cell-state="activeWord"]')?.textContent).toBe('A');
+    await expectAxeClean(container);
     rerender(<Cell state="empty" letter="X" />);
     expect(container.querySelector('[data-cell-state="empty"]')?.textContent).toBe('');
     await expectAxeClean(container);

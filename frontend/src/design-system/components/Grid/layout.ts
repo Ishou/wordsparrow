@@ -1,9 +1,12 @@
 // Kept separate from the Grid component so the board logic is unit-testable.
 
+import type { DefArrow } from '../DefCell/DefCell';
+
 export type GridCellSpec =
   | { readonly kind: 'empty' }
-  | { readonly kind: 'letter'; readonly letter: string; readonly active?: boolean }
-  | { readonly kind: 'def'; readonly clues: readonly string[]; readonly arrow?: 'right' | 'down'; readonly active?: boolean };
+  // `active` = part of the focused word (blush); `cursor` = the single focused cell (sakura).
+  | { readonly kind: 'letter'; readonly letter: string; readonly active?: boolean; readonly cursor?: boolean }
+  | { readonly kind: 'def'; readonly clues: readonly string[]; readonly arrow?: DefArrow; readonly active?: boolean };
 
 export interface GridLayout {
   readonly columns: number;

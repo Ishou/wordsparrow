@@ -14,8 +14,9 @@ const base = css({
   width: '2.4em',
   height: '2.4em',
   borderRadius: '999px',
+  fontFamily: 'wsUi',
   fontWeight: 'bold',
-  fontSize: 'sm',
+  fontSize: '13px',
 });
 const byState = {
   solved: css({ bg: 'ws.sakura', color: 'white' }),

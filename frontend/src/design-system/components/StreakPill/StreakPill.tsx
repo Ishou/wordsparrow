@@ -5,25 +5,36 @@ export interface StreakPillProps {
   readonly timer?: string;
 }
 
+// Frosted-glass pill; the 🔥 stays an emoji per the design source of truth.
 const pill = css({
   display: 'inline-flex',
   alignItems: 'center',
-  gap: 'xs',
-  bg: 'rgba(255, 255, 255, 0.74)',
+  gap: '6px',
+  bg: 'rgba(255,255,255,0.6)',
+  backdropFilter: 'blur(8px)',
+  border: '0.5px solid rgba(255,255,255,0.7)',
   color: 'ws.jadeInk',
-  fontWeight: 'bold',
-  fontSize: 'sm',
-  paddingInline: 'sm',
-  paddingBlock: 'xs',
+  fontFamily: 'wsUi',
+  fontWeight: 'extrabold',
+  fontSize: '14px',
+  paddingInline: '13px',
+  paddingBlock: '7px',
   borderRadius: '999px',
+  boxShadow: '0 1px 3px rgba(33,75,64,0.1)',
 });
+const sep = css({ width: '1px', height: '14px', bg: 'rgba(33,75,64,0.18)' });
 
 export function StreakPill({ streak, timer }: StreakPillProps) {
   return (
     <span className={pill}>
-      <span aria-hidden="true">🔥</span>
+      <span aria-hidden="true" className={css({ fontSize: '13px' })}>🔥</span>
       <span aria-label={`Série de ${streak} jours`}>{streak}</span>
-      {timer ? <span aria-hidden="true">· {timer}</span> : null}
+      {timer ? (
+        <>
+          <span aria-hidden="true" className={sep} />
+          <span className={css({ fontWeight: 'bold' })}>{timer}</span>
+        </>
+      ) : null}
     </span>
   );
 }
