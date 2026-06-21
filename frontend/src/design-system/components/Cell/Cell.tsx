@@ -5,17 +5,34 @@ const base = css({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontWeight: 'bold',
-  fontSize: '1.4em',
+  fontFamily: 'wsMono',
+  fontWeight: 'semibold',
+  fontSize: '1.5em',
   borderRadius: '9px',
   userSelect: 'none',
 });
 
+// Raised keycap relief + inset solved state = the visual "settle" on correct entry.
 const byState = {
-  empty: css({ bg: 'white', boxShadow: '0 2px 4px rgba(15, 45, 35, 0.12)' }),
-  solved: css({ bg: 'ws.sable', color: 'ws.khaki' }),
-  // Deeper-sakura inner ring keeps the active word legible on the jade field.
-  active: css({ bg: 'ws.sakura', color: 'white', boxShadow: 'inset 0 0 0 2px token(colors.ws.sakuraDark)' }),
+  empty: css({
+    bgImage: 'linear-gradient(180deg, #FBFAF3, #EFEADB)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.75), 0 2.5px 0 0 #DCD6C5, 0 3px 5px -3px rgba(33,75,64,0.16)',
+  }),
+  solved: css({
+    bg: 'ws.sable',
+    color: 'ws.khaki',
+    boxShadow: 'inset 0 1px 3px rgba(33,75,64,0.16), inset 0 0 0 1px rgba(33,75,64,0.07)',
+  }),
+  activeWord: css({
+    bg: 'ws.sakuraBlush',
+    color: 'ws.khaki',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6), inset 0 0 0 1.5px rgba(212,93,131,0.5), 0 4px 0 0 #E9C3D0, 0 4px 6px -3px rgba(33,75,64,0.2)',
+  }),
+  active: css({
+    bg: 'ws.sakura',
+    color: 'white',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 0 2px token(colors.ws.sakuraDark), 0 4px 0 0 #A84362, 0 4px 6px -3px rgba(33,75,64,0.24)',
+  }),
 } as const;
 
 export type CellState = keyof typeof byState;

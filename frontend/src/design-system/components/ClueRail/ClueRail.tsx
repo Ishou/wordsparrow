@@ -1,30 +1,39 @@
+import { CaretLeft, CaretRight, CaretDown, Minus, Plus } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 
 const rail = css({
+  bg: 'white',
+  borderRadius: '16px',
+  padding: '13px 16px 14px',
+  boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 8px 22px rgba(33,75,64,0.10)',
+});
+const topRow = css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '9px' });
+const labelGroup = css({ display: 'flex', alignItems: 'center', gap: '8px' });
+const dot = css({ width: '7px', height: '7px', borderRadius: '999px', bg: 'ws.sakura', flexShrink: 0 });
+const label = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.14em', color: '#A8842B', display: 'inline-flex', alignItems: 'center', gap: '4px' });
+const sep = css({ width: '1px', height: '11px', bg: 'rgba(76,72,36,0.22)' });
+const counter = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.7, whiteSpace: 'nowrap' });
+
+const zoom = css({ display: 'flex', alignItems: 'center', bg: '#F2EDDC', borderRadius: '9px', overflow: 'hidden' });
+const zoomBtn = css({ width: '32px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'transparent', border: 'none', color: 'ws.jadeInk', cursor: 'pointer' });
+const zoomSep = css({ width: '1px', height: '15px', bg: 'rgba(33,75,64,0.16)' });
+
+const mainRow = css({ display: 'flex', alignItems: 'center', gap: '10px' });
+const stepper = css({
+  flex: 'none',
+  width: '40px',
+  height: '40px',
   display: 'flex',
   alignItems: 'center',
-  gap: 'sm',
-  bg: 'white',
-  borderRadius: 'md',
-  padding: 'sm',
-  boxShadow: 'floating',
-});
-const stepper = css({
-  flexShrink: 0,
-  width: '34px',
-  height: '34px',
-  borderRadius: 'sm',
-  bg: 'ws.jade',
+  justifyContent: 'center',
+  borderRadius: '13px',
+  bg: '#F2EDDC',
   color: 'ws.jadeInk',
-  fontWeight: 'bold',
+  fontSize: '18px',
   cursor: 'pointer',
   _disabled: { opacity: 0.4, cursor: 'not-allowed' },
 });
-const body = css({ flex: 1, minWidth: 0 });
-const label = css({ fontSize: 'xs', fontWeight: 'bold', letterSpacing: '0.06em', color: 'ws.khaki', display: 'flex', alignItems: 'center', gap: 'xs' });
-const dot = css({ width: '7px', height: '7px', borderRadius: '999px', bg: 'ws.sakura' });
-const clueText = css({ fontSize: 'md', fontWeight: 'semibold', color: 'ws.jadeInk', margin: 0, lineHeight: '1.2' });
-const counter = css({ flexShrink: 0, fontSize: 'sm', fontWeight: 'semibold', color: 'ws.khaki' });
+const clueText = css({ flex: 1, textAlign: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '20px', lineHeight: '1.12', letterSpacing: '-0.01em', color: 'ws.jadeInk' });
 
 export type ClueDirection = 'horizontal' | 'vertical';
 
@@ -35,21 +44,38 @@ export interface ClueRailProps {
   readonly total: number;
   readonly onPrev?: () => void;
   readonly onNext?: () => void;
+  readonly onZoomIn?: () => void;
+  readonly onZoomOut?: () => void;
 }
 
 const DIRECTION_TEXT: Record<ClueDirection, string> = { horizontal: 'HORIZONTAL', vertical: 'VERTICAL' };
-const DIRECTION_ARROW: Record<ClueDirection, string> = { horizontal: '›', vertical: '⌄' };
 
-export function ClueRail({ direction, clue, index, total, onPrev, onNext }: ClueRailProps) {
+export function ClueRail({ direction, clue, index, total, onPrev, onNext, onZoomIn, onZoomOut }: ClueRailProps) {
   return (
     <div className={rail} role="group" aria-label="Indice actif">
-      <button type="button" className={stepper} onClick={onPrev} disabled={index <= 1} aria-label="Indice précédent">‹</button>
-      <div className={body}>
-        <p className={label}><span aria-hidden="true" className={dot} />{DIRECTION_TEXT[direction]}<span aria-hidden="true">{DIRECTION_ARROW[direction]}</span></p>
-        <p className={clueText}>{clue}</p>
+      <div className={topRow}>
+        <div className={labelGroup}>
+          <span aria-hidden="true" className={dot} />
+          <span className={label}>
+            {DIRECTION_TEXT[direction]}
+            {direction === 'horizontal'
+              ? <CaretRight aria-hidden="true" weight="bold" />
+              : <CaretDown aria-hidden="true" weight="bold" />}
+          </span>
+          <span aria-hidden="true" className={sep} />
+          <span className={counter} aria-label={`Indice ${index} sur ${total}`}>{index} / {total}</span>
+        </div>
+        <div className={zoom}>
+          <button type="button" className={zoomBtn} onClick={onZoomOut} aria-label="Dézoomer"><Minus aria-hidden="true" weight="bold" /></button>
+          <span aria-hidden="true" className={zoomSep} />
+          <button type="button" className={zoomBtn} onClick={onZoomIn} aria-label="Zoomer"><Plus aria-hidden="true" weight="bold" /></button>
+        </div>
       </div>
-      <span className={counter}>{index} / {total}</span>
-      <button type="button" className={stepper} onClick={onNext} disabled={index >= total} aria-label="Indice suivant">›</button>
+      <div className={mainRow}>
+        <button type="button" className={stepper} onClick={onPrev} disabled={index <= 1} aria-label="Indice précédent"><CaretLeft aria-hidden="true" weight="bold" /></button>
+        <div className={clueText}>{clue}</div>
+        <button type="button" className={stepper} onClick={onNext} disabled={index >= total} aria-label="Indice suivant"><CaretRight aria-hidden="true" weight="bold" /></button>
+      </div>
     </div>
   );
 }

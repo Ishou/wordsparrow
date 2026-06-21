@@ -59,6 +59,9 @@ export default defineConfig({
           sakuraDark: { value: '#BE4970' },
           sakuraRose: { value: '#E586A4' },
           sakuraBlush: { value: '#F7DEE7' },
+          // Deep sage clue-cell surface; cream text on it clears WCAG AA (~5.3:1).
+          clueSurface: { value: '#4F6E5C' },
+          clueText: { value: '#FBF6E9' },
         },
         // Primary ramp — mousse (moss-green brand + success/validation).
         // ADR-0043 anchors:
@@ -189,6 +192,11 @@ export default defineConfig({
         // input cells, headings, lobby surfaces, and the
         // CurrentCluePanel stay on the `body` (Outfit) token.
         mono: { value: '"Lekton", ui-monospace, "SFMono-Regular", Menlo, "Cascadia Code", monospace' },
+        // WordSparrow v2 (ADR-0072): Fredoka display, Nunito UI, Spline Sans Mono grid letters, Hanken Grotesk clues.
+        wsDisplay: { value: '"Fredoka Variable", "Nunito Variable", system-ui, sans-serif' },
+        wsUi: { value: '"Nunito Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' },
+        wsMono: { value: '"Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, monospace' },
+        wsClue: { value: '"Hanken Grotesk Variable", "Nunito Variable", system-ui, sans-serif' },
       },
       // Type scale — ADR-0005 §5. Mobile-first sizes; the `md` breakpoint
       // bumps each by 1.125× via the `md` conditional in route styles.

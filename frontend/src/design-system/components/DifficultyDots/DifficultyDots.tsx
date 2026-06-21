@@ -10,8 +10,8 @@ const FILLED: Record<DifficultyLevel, number> = { facile: 1, moyen: 2, difficile
 const LABEL: Record<DifficultyLevel, string> = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' };
 
 const row = css({ display: 'inline-flex', alignItems: 'center', gap: 'xs' });
-const name = css({ fontSize: 'sm', fontWeight: 'semibold', color: 'ws.jadeInk' });
-const dot = css({ width: '9px', height: '9px', borderRadius: '999px', bg: 'ws.sable' });
+const name = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.khaki', whiteSpace: 'nowrap' });
+const dot = css({ width: '7px', height: '7px', borderRadius: '999px', bg: 'ws.sable' });
 const dotOn = css({ bg: 'ws.sakura' });
 
 export function DifficultyDots({ level }: DifficultyDotsProps) {

@@ -1,24 +1,26 @@
+import { Check, Backspace } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 
 const base = css({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  minWidth: '2em',
-  height: '2.6em',
+  minWidth: '2.1em',
+  height: '2.55em',
   paddingInline: 'xs',
-  borderRadius: 'sm',
-  fontWeight: 'bold',
-  fontSize: 'body',
+  borderRadius: '7px',
+  fontFamily: 'wsUi',
+  fontWeight: 'semibold',
+  fontSize: '19px',
   cursor: 'pointer',
-  boxShadow: '0 1px 3px rgba(20, 50, 40, 0.12)',
+  boxShadow: '0 1px 0 rgba(33,75,64,0.1)',
   _focusVisible: { outline: '2px solid token(colors.ws.sakura)', outlineOffset: '1px' },
 });
 
 const byType = {
-  letter: css({ bg: 'white', color: 'ws.khaki' }),
+  letter: css({ bg: '#EAE6D6', color: 'ws.khaki' }),
   confirm: css({ bg: 'ws.sakura', color: 'white' }),
-  backspace: css({ bg: 'white', color: 'ws.khaki' }),
+  backspace: css({ bg: '#DED7BE', color: 'ws.khaki' }),
 } as const;
 
 export type KeyboardKeyType = keyof typeof byType;
@@ -34,13 +36,12 @@ const ARIA: Record<KeyboardKeyType, string | undefined> = {
   backspace: 'Effacer',
 };
 
-const GLYPH: Record<KeyboardKeyType, string> = { letter: '', confirm: '✓', backspace: '⌫' };
-
 export function KeyboardKey({ type, label, onPress }: KeyboardKeyProps) {
-  const visible = type === 'letter' ? label ?? '' : GLYPH[type];
   return (
     <button type="button" aria-label={ARIA[type] ?? label} className={cx(base, byType[type])} onClick={onPress}>
-      <span aria-hidden={type !== 'letter'}>{visible}</span>
+      {type === 'letter' ? <span>{label}</span> : null}
+      {type === 'confirm' ? <Check aria-hidden="true" weight="bold" /> : null}
+      {type === 'backspace' ? <Backspace aria-hidden="true" weight="bold" /> : null}
     </button>
   );
 }

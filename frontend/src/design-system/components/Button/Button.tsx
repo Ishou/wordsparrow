@@ -5,20 +5,21 @@ const base = css({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontWeight: 'bold',
-  fontSize: 'body',
+  fontFamily: 'wsUi',
+  fontWeight: 'extrabold',
+  fontSize: '17px',
   paddingInline: 'lg',
-  paddingBlock: 'sm',
-  borderRadius: 'md',
+  paddingBlock: '14px',
+  borderRadius: '14px',
   cursor: 'pointer',
   transition: 'background-color 120ms ease-out, opacity 120ms ease-out',
   _focusVisible: { outline: '2px solid token(colors.ws.sakura)', outlineOffset: '2px' },
-  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
 });
 
 const byVariant = {
-  primary: css({ bg: 'ws.sakura', color: 'white', border: 'none', _hover: { bg: 'ws.sakuraDark' } }),
-  secondary: css({ bg: 'transparent', color: 'ws.jadeInk', border: '1.5px solid token(colors.ws.jadeInk)', _hover: { bg: 'ws.jade' } }),
+  // Sakura CTA carries a soft glow; disabled is a flat sable, not just dimmed.
+  primary: css({ bg: 'ws.sakura', color: 'white', border: 'none', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', '&:hover:not(:disabled)': { bg: 'ws.sakuraDark' }, _disabled: { bg: '#E0DAC8', color: '#A09A82', boxShadow: 'none', cursor: 'not-allowed' } }),
+  secondary: css({ bg: 'transparent', color: 'ws.jadeInk', border: '1.6px solid token(colors.ws.jadeInk)', fontWeight: 'bold', '&:hover:not(:disabled)': { bg: 'ws.jade' }, _disabled: { opacity: 0.5, cursor: 'not-allowed' } }),
 } as const;
 
 export type ButtonVariant = keyof typeof byVariant;
