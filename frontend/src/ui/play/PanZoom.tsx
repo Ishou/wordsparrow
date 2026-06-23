@@ -139,6 +139,24 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     rafId.current = requestAnimationFrame(tick);
   }, [apply]);
   useEffect(() => () => cancelAnimationFrame(rafId.current), []);
+  // The grid is positioned purely by transform, so the viewport must never
+  // scroll. Focusing a cell makes the browser scroll the overflow:hidden
+  // viewport to the cell's LAYOUT position (ignoring the transform) to reveal
+  // it — which shifts the whole stage AND the edge-fade overlay (the 55px
+  // misposition). Snap any such scroll straight back to 0; reveal() already
+  // keeps the focused cell visible via the transform.
+  useEffect(() => {
+    const vp = vpRef.current;
+    if (!vp) return;
+    const onScroll = () => {
+      if (vp.scrollLeft !== 0 || vp.scrollTop !== 0) {
+        vp.scrollLeft = 0;
+        vp.scrollTop = 0;
+      }
+    };
+    vp.addEventListener('scroll', onScroll, { passive: true });
+    return () => vp.removeEventListener('scroll', onScroll);
+  }, []);
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
