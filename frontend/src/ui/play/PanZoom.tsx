@@ -82,6 +82,13 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
     const vp = vpRef.current;
     if (!edgeFade || !fadeRef.current || !vp) return;
+    // The fade is fixed to the viewport while a frame animation slides the board
+    // under it via CSS; a vignette computed for the destination would land over
+    // still-travelling cells (a mid-grid seam). Suppress until the board settles.
+    if (frameAnimActive.current) {
+      fadeRef.current.style.boxShadow = 'none';
+      return;
+    }
     // Fade only the edges that hide cells beyond them (not visible grid borders).
     const cw = contentWidth * scale.current;
     const ch = contentHeight * scale.current;
@@ -118,8 +125,9 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     animTimer.current = window.setTimeout(() => {
       frameAnimActive.current = false;
       if (stRef.current) { stRef.current.style.transition = ''; stRef.current.style.willChange = 'auto'; }
+      apply(); // board settled — recompute the edge fade at the final position
     }, ANIM_MS + 40);
-  }, []);
+  }, [apply]);
   // Fully tear down an in-flight frame animation when an input takes over, so
   // the layer it promoted (transition + will-change) drops and the stage
   // re-paints sharp — a transition/will-change left live under a concurrent
