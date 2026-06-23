@@ -74,7 +74,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   const pinchDist = useRef(0);
   const moved = useRef(0);
   const idle = useRef(0);
-  const animTimer = useRef(0);
+  const rafId = useRef(0);
   const reduceMotion = useRef(false);
   const frameAnimActive = useRef(false);
 
@@ -106,21 +106,43 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   }, []);
   useEffect(() => () => window.clearTimeout(idle.current), []);
 
-  // Ease a programmatic frame change; honour reduced-motion (ADR-0050).
+  // Animate a frame change with a JS tween (not a CSS transition) so apply()
+  // runs every frame: the transform and the edge fade update together, always
+  // in lockstep. A CSS transition animates the transform on the compositor
+  // while the fade — set once for the destination — drifts over the still-
+  // travelling cells (a misaligned vignette band); a forced layer at a
+  // fractional scale also tiles into a seam. No will-change: the stage
+  // re-paints sharp each frame. Honours reduced-motion (ADR-0050).
   const ANIM_MS = 220;
-  const animateNext = useCallback(() => {
-    const st = stRef.current;
-    if (!st || reduceMotion.current) return;
-    frameAnimActive.current = true;
-    st.style.willChange = 'transform';
-    st.style.transition = `transform ${ANIM_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
-    window.clearTimeout(animTimer.current);
-    animTimer.current = window.setTimeout(() => {
+  const tweenFrame = useCallback((toScale: number, toTx: number, toTy: number) => {
+    cancelAnimationFrame(rafId.current);
+    const fromScale = scale.current;
+    const fromTx = tx.current;
+    const fromTy = ty.current;
+    if (reduceMotion.current) {
+      scale.current = toScale;
+      tx.current = toTx;
+      ty.current = toTy;
       frameAnimActive.current = false;
-      if (stRef.current) { stRef.current.style.transition = ''; stRef.current.style.willChange = 'auto'; }
-    }, ANIM_MS + 40);
-  }, []);
-  useEffect(() => () => window.clearTimeout(animTimer.current), []);
+      apply();
+      return;
+    }
+    frameAnimActive.current = true;
+    let start = 0;
+    const tick = (now: number) => {
+      if (!start) start = now;
+      const t = Math.min(1, (now - start) / ANIM_MS);
+      const k = 1 - Math.pow(1 - t, 3); // ease-out
+      scale.current = fromScale + (toScale - fromScale) * k;
+      tx.current = fromTx + (toTx - fromTx) * k;
+      ty.current = fromTy + (toTy - fromTy) * k;
+      apply();
+      if (t < 1) rafId.current = requestAnimationFrame(tick);
+      else frameAnimActive.current = false;
+    };
+    rafId.current = requestAnimationFrame(tick);
+  }, [apply]);
+  useEffect(() => () => cancelAnimationFrame(rafId.current), []);
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -262,15 +284,25 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
           tx.current,
           ty.current,
         );
+        // Clamp the target to valid pan bounds without disturbing the live
+        // position, then tween the live position to that clamped target.
+        const fromScale = scale.current;
+        const fromTx = tx.current;
+        const fromTy = ty.current;
         scale.current = next.scale;
         tx.current = next.tx;
         ty.current = next.ty;
         clamp();
-        animateNext();
-        apply();
+        const toScale = scale.current;
+        const toTx = tx.current;
+        const toTy = ty.current;
+        scale.current = fromScale;
+        tx.current = fromTx;
+        ty.current = fromTy;
+        tweenFrame(toScale, toTx, toTy);
       },
     }),
-    [apply, clamp, zoomTo, animateNext, padTop, padBottom, padX, minScale],
+    [apply, clamp, zoomTo, tweenFrame, padTop, padBottom, padX, minScale],
   );
 
   // Capture only after a drag starts, so a tap's click still reaches the cell.
