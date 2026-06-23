@@ -49,12 +49,15 @@ const viewport = css({
 // drop it on settle, so the browser re-paints crisply at the resting scale.
 const stage = css({ position: 'absolute', top: 0, left: 0, transformOrigin: '0 0' });
 const fade = css({ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 'inherit', zIndex: 2 });
-// Per-edge inset jade vignette; only applied to an edge that hides cells.
+// Per-edge jade dissolve, applied only to an edge that hides cells. A linear
+// gradient (not a box-shadow) so it fades continuously to transparent with no
+// hard inner boundary — a box-shadow concentrates into a band whose inner edge
+// reads as a misaligned line landing on/between cells.
 const EDGE_FADE = {
-  left: 'inset 38px 0 30px -24px var(--colors-ws-jade)',
-  right: 'inset -38px 0 30px -24px var(--colors-ws-jade)',
-  top: 'inset 0 38px 30px -24px var(--colors-ws-jade)',
-  bottom: 'inset 0 -38px 30px -24px var(--colors-ws-jade)',
+  left: 'linear-gradient(to right, var(--colors-ws-jade), transparent 60px)',
+  right: 'linear-gradient(to left, var(--colors-ws-jade), transparent 60px)',
+  top: 'linear-gradient(to bottom, var(--colors-ws-jade), transparent 60px)',
+  bottom: 'linear-gradient(to top, var(--colors-ws-jade), transparent 60px)',
 } as const;
 
 const TAP_SLOP = 6;
@@ -91,7 +94,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (tx.current + cw > vp.clientWidth + e) parts.push(EDGE_FADE.right);
     if (ty.current < -e) parts.push(EDGE_FADE.top);
     if (ty.current + ch > vp.clientHeight + e) parts.push(EDGE_FADE.bottom);
-    fadeRef.current.style.boxShadow = parts.length ? parts.join(', ') : 'none';
+    fadeRef.current.style.background = parts.length ? parts.join(', ') : 'none';
   }, [contentWidth, contentHeight, edgeFade]);
 
   // Promote to a GPU layer while gesturing; drop it on settle to re-paint sharp.
