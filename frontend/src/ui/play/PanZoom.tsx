@@ -82,10 +82,13 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
     const vp = vpRef.current;
     if (!edgeFade || !fadeRef.current || !vp) return;
-    // Dissolve the grid's real edge into the surrounding field. Each gradient
-    // is pinned to a board edge (in viewport space), so it shows only when that
-    // edge is on-screen with field beyond it — never when the grid has bled
-    // past the viewport edge (which would dim interior cells).
+    // Dissolve the grid's real edge into the surrounding field. Each gradient is
+    // pinned to a board edge (in viewport space) and only shows when that edge
+    // sits INSIDE the play area with field beyond it: between the header inset
+    // (padTop) and the bottom bar (padBottom) vertically, and the side gutters
+    // (padX) horizontally. When the grid bleeds to a screen edge or behind a
+    // bar there is no field there — and no fade (it would otherwise dim interior
+    // cells / sit over the bar).
     const vw = vp.clientWidth;
     const vh = vp.clientHeight;
     const left = tx.current;
@@ -95,12 +98,12 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     const jade = 'var(--colors-ws-jade)';
     const f = EDGE_FADE_PX;
     const parts: string[] = [];
-    if (left > 1 && left < vw) parts.push(`linear-gradient(to right, ${jade} ${left}px, transparent ${left + f}px)`);
-    if (right > 0 && right < vw - 1) parts.push(`linear-gradient(to left, ${jade} ${vw - right}px, transparent ${vw - right + f}px)`);
-    if (top > 1 && top < vh) parts.push(`linear-gradient(to bottom, ${jade} ${top}px, transparent ${top + f}px)`);
-    if (bottom > 0 && bottom < vh - 1) parts.push(`linear-gradient(to top, ${jade} ${vh - bottom}px, transparent ${vh - bottom + f}px)`);
+    if (left > padX + 1 && left < vw) parts.push(`linear-gradient(to right, ${jade} ${left}px, transparent ${left + f}px)`);
+    if (right > 0 && right < vw - padX - 1) parts.push(`linear-gradient(to left, ${jade} ${vw - right}px, transparent ${vw - right + f}px)`);
+    if (top > padTop + 1 && top < vh) parts.push(`linear-gradient(to bottom, ${jade} ${top}px, transparent ${top + f}px)`);
+    if (bottom > 0 && bottom < vh - padBottom - 1) parts.push(`linear-gradient(to top, ${jade} ${vh - bottom}px, transparent ${vh - bottom + f}px)`);
     fadeRef.current.style.background = parts.length ? parts.join(', ') : 'none';
-  }, [contentWidth, contentHeight, edgeFade]);
+  }, [contentWidth, contentHeight, edgeFade, padTop, padBottom, padX]);
 
   // Promote to a GPU layer while gesturing; drop it on settle to re-paint sharp.
   const promote = useCallback(() => {
