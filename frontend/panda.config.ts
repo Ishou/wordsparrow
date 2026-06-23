@@ -318,6 +318,28 @@ export default defineConfig({
         from: { opacity: '0', transform: 'translateY(8px)' },
         to: { opacity: '1', transform: 'translateY(0)' },
       },
+      // Solve ripple: a raised keycap drops and flattens (ADR-0072 solve motion).
+      wsFlatten: {
+        '0%': { transform: 'translateY(-3px)', boxShadow: '0 3px 0 0 #D6CAA4, 0 6px 9px -3px rgba(33,75,64,0.2)' },
+        '55%': { transform: 'translateY(1px)', boxShadow: 'inset 0 1px 3px rgba(33,75,64,0.16), inset 0 0 0 1px rgba(33,75,64,0.07)' },
+        '100%': { transform: 'translateY(0)', boxShadow: 'inset 0 1px 3px rgba(33,75,64,0.16), inset 0 0 0 1px rgba(33,75,64,0.07)' },
+      },
+      // Win celebration (Phase 3): screen fade, drifting sakura petals, blossom pulse.
+      wsFade: { from: { opacity: '0' }, to: { opacity: '1' } },
+      wsPetalFall: {
+        '0%': { transform: 'translateY(0) translateX(0) rotate(0deg)' },
+        '50%': { transform: 'translateY(460px) translateX(18px) rotate(180deg)' },
+        '100%': { transform: 'translateY(900px) translateX(-12px) rotate(374deg)' },
+      },
+      wsBloomGlow: {
+        '0%, 100%': { transform: 'scale(1)' },
+        '50%': { transform: 'scale(1.05)' },
+      },
+      // Settings bottom sheet entrance: rises from the bottom edge.
+      wsSheetUp: {
+        from: { transform: 'translateY(100%)' },
+        to: { transform: 'translateY(0)' },
+      },
     },
   },
 });

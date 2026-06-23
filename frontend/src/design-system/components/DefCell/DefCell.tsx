@@ -1,11 +1,13 @@
 import { useLayoutEffect, useRef } from 'react';
-import { CaretRight, CaretDown, ArrowBendRightDown } from '@phosphor-icons/react';
+import { CaretRight, CaretDown, ArrowBendRightDown, ArrowBendDownRight } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 
 // Deep-sage surface; cream text clears WCAG AA (~5.3:1). Distinct from letter tiles.
 const cell = css({
   position: 'relative',
   aspectRatio: '1',
+  // Honour the grid track instead of growing to fit two stacked clues.
+  minHeight: 0,
   borderRadius: '9px',
   bg: 'ws.clueSurface',
   color: 'ws.clueText',
@@ -15,12 +17,11 @@ const cellActive = css({
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1.5px token(colors.ws.sakura), 0 4px 0 0 token(colors.ws.sakuraDark), 0 5px 8px -3px rgba(212,93,131,0.26)',
 });
 
-const single = css({ display: 'flex', alignItems: 'flex-start', padding: '5px 11px 5px 7px' });
-const clue = css({ fontFamily: 'wsClue', fontSize: '14px', fontWeight: 'bold', lineHeight: '1.04', letterSpacing: '-0.01em', textWrap: 'balance' });
-
+const flushTop = css({ display: 'flex', alignItems: 'flex-start' });
 const split = css({ display: 'flex', flexDirection: 'column' });
-const half = css({ position: 'relative', flex: 1, display: 'flex', alignItems: 'flex-start', padding: '3px 12px 3px 7px' });
+const halfBox = css({ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', alignItems: 'flex-start' });
 const divider = css({ height: '1px', bg: 'rgba(255,255,255,0.2)' });
+const clue = css({ fontFamily: 'wsClue', fontSize: '14px', fontWeight: 'bold', lineHeight: '1.04', letterSpacing: '-0.01em', textWrap: 'balance' });
 
 const tab = css({
   position: 'absolute',
@@ -36,16 +37,25 @@ const tab = css({
   zIndex: 5,
 });
 const tabCaret = css({ fontSize: '0.68em' });
-const tabRight = css({ right: '-0.5em', top: '50%', transform: 'translateY(-50%)' });
-const tabDown = css({ bottom: '-0.5em', left: '50%', transform: 'translateX(-50%)' });
+const tabBend = css({ fontSize: '0.82em' });
+const atRightMid = css({ right: '-0.5em', top: '50%', transform: 'translateY(-50%)' });
+const atRightTop = css({ right: '-0.5em', top: '27%', transform: 'translateY(-50%)' });
+const atRightBot = css({ right: '-0.5em', top: '73%', transform: 'translateY(-50%)' });
+const atBottom = css({ bottom: '-0.5em', left: '50%', transform: 'translateX(-50%)' });
 
-export type DefArrow = 'right' | 'down' | 'right-down';
+export type DefArrow = 'right' | 'down' | 'right-down' | 'down-right';
 
 export interface DefCellProps {
   readonly clues: readonly string[];
+  // Per-clue arrows; `arrow` is the single-clue shorthand. Defaults: right / down.
   readonly arrow?: DefArrow;
+  readonly arrows?: readonly DefArrow[];
   readonly active?: boolean;
 }
+
+// An answer exits to the right (right / right-down) or downward (down / down-right);
+// the tab sits on that edge, pointing toward where the answer begins.
+const exitsRight = (a: DefArrow) => a === 'right' || a === 'right-down';
 
 // Binary-search font size so every clue fills its cell without overflowing.
 function fitSpan(span: HTMLElement) {
@@ -60,10 +70,16 @@ function fitSpan(span: HTMLElement) {
   span.style.whiteSpace = 'normal';
   span.style.overflowWrap = 'normal';
   span.style.wordBreak = 'normal';
+  // Rule: hyphenate only longer words (≥8 letters, ≥4 before / ≥3 after the
+  // break) via fr patterns (lang="fr"), so the font stays readable. Shorter
+  // words never break.
+  span.style.hyphens = 'auto';
+  span.style.setProperty('-webkit-hyphens', 'auto');
+  span.style.setProperty('hyphenate-limit-chars', '8 4 3');
   span.style.lineHeight = '1.04';
-  let lo = 8;
+  let lo = 5;
   let hi = 24;
-  let best = 8;
+  let best = 5;
   for (let i = 0; i < 9; i++) {
     const mid = (lo + hi) / 2;
     span.style.fontSize = `${mid}px`;
@@ -100,39 +116,48 @@ function Clue({ text }: { text: string }) {
   return <span ref={useFitText(text)} className={clue}>{text}</span>;
 }
 
-function Tab({ arrow }: { arrow: DefArrow }) {
-  const placement = arrow === 'down' ? tabDown : tabRight;
+function Tab({ arrow, place }: { arrow: DefArrow; place: string }) {
   return (
-    <span className={cx(tab, placement)}>
+    <span className={cx(tab, place)}>
       {arrow === 'down' && <CaretDown aria-hidden="true" weight="bold" className={tabCaret} />}
       {arrow === 'right' && <CaretRight aria-hidden="true" weight="bold" className={tabCaret} />}
-      {arrow === 'right-down' && <ArrowBendRightDown aria-hidden="true" weight="bold" className={tabCaret} />}
+      {arrow === 'right-down' && <ArrowBendRightDown aria-hidden="true" weight="bold" className={tabBend} />}
+      {arrow === 'down-right' && <ArrowBendDownRight aria-hidden="true" weight="bold" className={tabBend} />}
     </span>
   );
 }
 
-export function DefCell({ clues, arrow = 'right', active = false }: DefCellProps) {
+// Padding reserves room on the edges where this clue's tab(s) sit.
+function pad(right: boolean, bottom: boolean): string {
+  return `${bottom ? 3 : 5}px ${right ? 14 : 8}px ${bottom ? 11 : 5}px 7px`;
+}
+
+export function DefCell({ clues, arrow = 'right', arrows, active = false }: DefCellProps) {
   const isSplit = clues.length >= 2;
+  if (!isSplit) {
+    const a = arrows?.[0] ?? arrow;
+    const r = exitsRight(a);
+    return (
+      <div data-defcell="single" className={cx(cell, active && cellActive, flushTop)} style={{ padding: pad(r, !r) }}>
+        <Clue text={clues[0]} />
+        <Tab arrow={a} place={r ? atRightMid : atBottom} />
+      </div>
+    );
+  }
+  const a0 = arrows?.[0] ?? 'right';
+  const a1 = arrows?.[1] ?? 'down';
+  // The bottom tab lives at the cell's bottom edge, so the lower half always clears it.
   return (
-    <div data-defcell={isSplit ? 'split' : 'single'} className={cx(cell, active && cellActive, isSplit ? split : single)}>
-      {isSplit ? (
-        <>
-          <div className={half}>
-            <Clue text={clues[0]} />
-            <Tab arrow="right" />
-          </div>
-          <div className={divider} />
-          <div className={half}>
-            <Clue text={clues[1]} />
-            <Tab arrow="down" />
-          </div>
-        </>
-      ) : (
-        <>
-          <Clue text={clues[0]} />
-          <Tab arrow={arrow} />
-        </>
-      )}
+    <div data-defcell="split" className={cx(cell, active && cellActive, split)}>
+      <div className={halfBox} style={{ padding: pad(exitsRight(a0), false) }}>
+        <Clue text={clues[0]} />
+      </div>
+      <div className={divider} />
+      <div className={halfBox} style={{ padding: pad(exitsRight(a1), true) }}>
+        <Clue text={clues[1]} />
+      </div>
+      <Tab arrow={a0} place={exitsRight(a0) ? atRightTop : atBottom} />
+      <Tab arrow={a1} place={exitsRight(a1) ? atRightBot : atBottom} />
     </div>
   );
 }
