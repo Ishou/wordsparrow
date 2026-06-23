@@ -128,17 +128,6 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
       apply(); // board settled — recompute the edge fade at the final position
     }, ANIM_MS + 40);
   }, [apply]);
-  // Fully tear down an in-flight frame animation when an input takes over, so
-  // the layer it promoted (transition + will-change) drops and the stage
-  // re-paints sharp — a transition/will-change left live under a concurrent
-  // zoom leaves a stuck tiled layer (the vertical "bleed" seam). No-op when no
-  // frame animation is running, so normal gesture/wheel promotion is untouched.
-  const stopAnim = useCallback(() => {
-    if (!frameAnimActive.current) return;
-    frameAnimActive.current = false;
-    window.clearTimeout(animTimer.current);
-    if (stRef.current) { stRef.current.style.transition = ''; stRef.current.style.willChange = 'auto'; }
-  }, []);
   useEffect(() => () => window.clearTimeout(animTimer.current), []);
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -190,7 +179,9 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
 
   const zoomTo = useCallback(
     (next: number, cx0: number, cy0: number) => {
-      stopAnim(); // a zoom (button / wheel / pinch) takes over from a frame animation
+      // Ignore zoom while a frame animation owns the view (≤220ms). Letting a
+      // zoom write transforms mid-animation leaves a stuck tiled layer (seam).
+      if (frameAnimActive.current) return;
       const s = Math.min(maxScale, Math.max(lowerBound(), next));
       const k = s / scale.current;
       tx.current = cx0 - (cx0 - tx.current) * k;
@@ -199,7 +190,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
       clamp();
       apply();
     },
-    [apply, clamp, lowerBound, maxScale, stopAnim],
+    [apply, clamp, lowerBound, maxScale],
   );
 
   useEffect(() => {
@@ -250,9 +241,9 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
         if (vp) zoomTo(scale.current / STEP, vp.clientWidth / 2, vp.clientHeight / 2);
       },
       reveal: (x, y, w, h) => {
+        if (frameAnimActive.current) return; // a frame animation owns the view
         const vp = vpRef.current;
         if (!vp) return;
-        stopAnim(); // cursor-follow is instant
         const m = 14;
         const vw = vp.clientWidth;
         const vh = vp.clientHeight;
@@ -287,7 +278,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
         apply();
       },
     }),
-    [apply, clamp, zoomTo, animateNext, stopAnim, padTop, padBottom, padX, minScale],
+    [apply, clamp, zoomTo, animateNext, padTop, padBottom, padX, minScale],
   );
 
   // Capture only after a drag starts, so a tap's click still reaches the cell.
@@ -300,9 +291,11 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
+    // Ignore pan/pinch while a frame animation owns the view (≤220ms). Cell
+    // taps still work — they fire onClick, not this pointer-drag tracking.
+    if (frameAnimActive.current) return;
     // Don't capture yet: capturing on down redirects the click off the cell
     // button. We capture only once a drag passes the tap threshold (below).
-    stopAnim(); // a gesture takes over from any in-flight frame animation
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 1) moved.current = 0;
   };
