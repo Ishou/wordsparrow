@@ -21,6 +21,9 @@ import { WinScreen } from './WinScreen';
 const CELL = 56;
 const GAP = 5;
 const STRIDE = CELL + GAP;
+// Breathing gap between the last row and the bottom bar at the pan extreme
+// (mirrors padTop's gap above the first row under the header).
+const BOARD_BOTTOM_GAP = 14;
 
 const KEY_ROWS = [
   ['A', 'Z', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -122,7 +125,22 @@ const hintBtn = css({
 const hintBulb = css({ color: 'ws.or' });
 // Every key the same fixed width (sized to fit 10 per row, gap 5px); shorter
 // rows centre rather than stretch.
-const keyboard = css({ display: 'flex', flexDirection: 'column', gap: '7px', alignItems: 'stretch', width: '100%', '& button': { flex: 'none', width: 'calc((100% - 45px) / 10)', minWidth: 0 } });
+const keyboard = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '7px',
+  alignItems: 'stretch',
+  width: '100%',
+  // Frosted glass panel — same treatment as the header bar; the grid bleeds
+  // behind it, calmed and blurred.
+  bg: 'rgba(255,255,255,0.62)',
+  backdropFilter: 'blur(10px)',
+  border: '0.5px solid rgba(255,255,255,0.7)',
+  borderRadius: '18px',
+  padding: '9px 10px',
+  boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
+  '& button': { flex: 'none', width: 'calc((100% - 45px) / 10)', minWidth: 0 },
+});
 const keyRow = css({ display: 'flex', gap: '5px', justifyContent: 'center' });
 // Post-win: the keyboard/clue rail are dead, so the bottom bar becomes a single
 // re-entry back to the celebration.
@@ -605,7 +623,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         </div>
       </header>
 
-      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit="height" framePad={14} padTop={68} padBottom={bottomInset} padX={14} maxScale={2.6} edgeFade>
+      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit="height" framePad={14} padTop={68} padBottom={bottomInset + BOARD_BOTTOM_GAP} padX={14} maxScale={2.6} edgeFade>
         <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
           {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {
             const row = Math.floor(i / puzzle.width);

@@ -129,9 +129,13 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     const ch = contentHeight * scale.current;
     // pan-insets stop each edge with a gap instead of flush against the viewport.
     tx.current = cw <= vw ? (vw - cw) / 2 : Math.min(padX, Math.max(vw - cw - padX, tx.current));
-    if (ch > vh) ty.current = Math.min(padTop, Math.max(vh - ch - padBottom, ty.current));
-    else if (ch >= vh - padBottom - 1) ty.current = 0; // at fit: top-aligned, bottom gap
-    else ty.current = (vh - ch) / 2; // unzoomed: centred in the gutter
+    // The board bleeds behind both overlay bars; panning is bounded to the
+    // clear band between them (padTop below the top, padBottom above the
+    // bottom). When the board is shorter than the band it centres there.
+    const clearTop = padTop;
+    const clearBottom = vh - padBottom;
+    if (ch > clearBottom - clearTop) ty.current = Math.min(clearTop, Math.max(clearBottom - ch, ty.current));
+    else ty.current = clearTop + (clearBottom - clearTop - ch) / 2;
   }, [contentWidth, contentHeight, padTop, padBottom, padX]);
 
   const zoomTo = useCallback(
