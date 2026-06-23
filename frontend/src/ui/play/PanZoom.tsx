@@ -1,11 +1,15 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react';
 import { css, cx } from 'styled-system/css';
+import { computeFrame } from './computeFrame';
 
 export interface PanZoomHandle {
   zoomIn: () => void;
   zoomOut: () => void;
   // Pan so a content-space rect becomes visible (used to follow the cursor).
   reveal: (x: number, y: number, w: number, h: number) => void;
+  // Zoom (out only) + pan so a content-space rect is framed in the clear band,
+  // animated. Used to auto-frame the focused clue.
+  frame: (x: number, y: number, w: number, h: number) => void;
 }
 
 export interface PanZoomProps {
@@ -70,6 +74,9 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   const pinchDist = useRef(0);
   const moved = useRef(0);
   const idle = useRef(0);
+  const animTimer = useRef(0);
+  const reduceMotion = useRef(false);
+  const frameAnimActive = useRef(false);
 
   const apply = useCallback(() => {
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
@@ -98,6 +105,41 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     }, 180);
   }, []);
   useEffect(() => () => window.clearTimeout(idle.current), []);
+
+  // Ease a programmatic frame change; honour reduced-motion (ADR-0050).
+  const ANIM_MS = 220;
+  const animateNext = useCallback(() => {
+    const st = stRef.current;
+    if (!st || reduceMotion.current) return;
+    frameAnimActive.current = true;
+    st.style.willChange = 'transform';
+    st.style.transition = `transform ${ANIM_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
+    window.clearTimeout(animTimer.current);
+    animTimer.current = window.setTimeout(() => {
+      frameAnimActive.current = false;
+      if (stRef.current) { stRef.current.style.transition = ''; stRef.current.style.willChange = 'auto'; }
+    }, ANIM_MS + 40);
+  }, []);
+  // Fully tear down an in-flight frame animation when an input takes over, so
+  // the layer it promoted (transition + will-change) drops and the stage
+  // re-paints sharp — a transition/will-change left live under a concurrent
+  // zoom leaves a stuck tiled layer (the vertical "bleed" seam). No-op when no
+  // frame animation is running, so normal gesture/wheel promotion is untouched.
+  const stopAnim = useCallback(() => {
+    if (!frameAnimActive.current) return;
+    frameAnimActive.current = false;
+    window.clearTimeout(animTimer.current);
+    if (stRef.current) { stRef.current.style.transition = ''; stRef.current.style.willChange = 'auto'; }
+  }, []);
+  useEffect(() => () => window.clearTimeout(animTimer.current), []);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reduceMotion.current = mq.matches;
+    const onChange = () => { reduceMotion.current = mq.matches; };
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, []);
 
   // Fill the full viewport on the fit axis so the board bleeds behind the
   // overlay bars on every side; padBottom governs only pan + reveal (keeping
@@ -140,6 +182,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
 
   const zoomTo = useCallback(
     (next: number, cx0: number, cy0: number) => {
+      stopAnim(); // a zoom (button / wheel / pinch) takes over from a frame animation
       const s = Math.min(maxScale, Math.max(lowerBound(), next));
       const k = s / scale.current;
       tx.current = cx0 - (cx0 - tx.current) * k;
@@ -148,7 +191,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
       clamp();
       apply();
     },
-    [apply, clamp, lowerBound, maxScale],
+    [apply, clamp, lowerBound, maxScale, stopAnim],
   );
 
   useEffect(() => {
@@ -201,6 +244,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
       reveal: (x, y, w, h) => {
         const vp = vpRef.current;
         if (!vp) return;
+        stopAnim(); // cursor-follow is instant
         const m = 14;
         const vw = vp.clientWidth;
         const vh = vp.clientHeight;
@@ -215,8 +259,27 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
         clamp();
         apply();
       },
+      frame: (x, y, w, h) => {
+        const vp = vpRef.current;
+        if (!vp) return;
+        const next = computeFrame(
+          { x, y, w, h },
+          { w: vp.clientWidth, h: vp.clientHeight },
+          { top: padTop, bottom: padBottom, x: padX },
+          scale.current,
+          minScale,
+          tx.current,
+          ty.current,
+        );
+        scale.current = next.scale;
+        tx.current = next.tx;
+        ty.current = next.ty;
+        clamp();
+        animateNext();
+        apply();
+      },
     }),
-    [apply, clamp, zoomTo, padBottom],
+    [apply, clamp, zoomTo, animateNext, stopAnim, padTop, padBottom, padX, minScale],
   );
 
   // Capture only after a drag starts, so a tap's click still reaches the cell.
@@ -231,6 +294,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   const onPointerDown = (e: React.PointerEvent) => {
     // Don't capture yet: capturing on down redirects the click off the cell
     // button. We capture only once a drag passes the tap threshold (below).
+    stopAnim(); // a gesture takes over from any in-flight frame animation
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 1) moved.current = 0;
   };

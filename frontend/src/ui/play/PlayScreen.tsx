@@ -471,6 +471,30 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     [nav, orderedClues, displayOrdinal],
   );
 
+  // Auto-frame the active clue (def-cell + word) when it changes — zoom out
+  // only to fit, animated. Within-clue cursor moves stay on the per-cell reveal.
+  const framedClueRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!clue) {
+      framedClueRef.current = null;
+      return;
+    }
+    const k = `${clue.definition.position.row}:${clue.definition.position.col}:${clue.clue.arrow}`;
+    if (k === framedClueRef.current) return;
+    framedClueRef.current = k;
+    let minRow = clue.definition.position.row;
+    let maxRow = minRow;
+    let minCol = clue.definition.position.col;
+    let maxCol = minCol;
+    for (const c of clue.cells) {
+      minRow = Math.min(minRow, c.position.row);
+      maxRow = Math.max(maxRow, c.position.row);
+      minCol = Math.min(minCol, c.position.col);
+      maxCol = Math.max(maxCol, c.position.col);
+    }
+    pzRef.current?.frame(minCol * STRIDE, minRow * STRIDE, (maxCol - minCol) * STRIDE + CELL, (maxRow - minRow) * STRIDE + CELL);
+  }, [clue]);
+
   // Backspace that always steps back: the hook erases a filled cell in place
   // (correct for /grille), but in /play we want every press to move, so after
   // an in-place erase we nudge focus to the previous cell. The hook's
