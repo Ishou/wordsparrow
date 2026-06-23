@@ -49,16 +49,13 @@ const viewport = css({
 // drop it on settle, so the browser re-paints crisply at the resting scale.
 const stage = css({ position: 'absolute', top: 0, left: 0, transformOrigin: '0 0' });
 const fade = css({ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 'inherit', zIndex: 2 });
-// Per-edge jade dissolve, applied only to an edge that hides cells. A linear
-// gradient (not a box-shadow) so it fades continuously to transparent with no
-// hard inner boundary — a box-shadow concentrates into a band whose inner edge
-// reads as a misaligned line landing on/between cells.
-const EDGE_FADE = {
-  left: 'linear-gradient(to right, var(--colors-ws-jade), transparent 60px)',
-  right: 'linear-gradient(to left, var(--colors-ws-jade), transparent 60px)',
-  top: 'linear-gradient(to bottom, var(--colors-ws-jade), transparent 60px)',
-  bottom: 'linear-gradient(to top, var(--colors-ws-jade), transparent 60px)',
-} as const;
+// Distance (px) over which the grid's edge dissolves into the surrounding
+// field. The dissolve tracks the grid's REAL edge in viewport space, so it only
+// appears when that edge is on-screen with field beyond it — when the grid has
+// bled past a viewport edge there is no edge to dissolve and no fade (a
+// viewport-pinned fade would instead dim interior cells: e2e
+// play-clue-frame-edge-fade).
+const EDGE_FADE_PX = 56;
 
 const TAP_SLOP = 6;
 const STEP = 1.25;
@@ -85,15 +82,23 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
     const vp = vpRef.current;
     if (!edgeFade || !fadeRef.current || !vp) return;
-    // Fade only the edges that hide cells beyond them (not visible grid borders).
-    const cw = contentWidth * scale.current;
-    const ch = contentHeight * scale.current;
-    const e = 0.5;
+    // Dissolve the grid's real edge into the surrounding field. Each gradient
+    // is pinned to a board edge (in viewport space), so it shows only when that
+    // edge is on-screen with field beyond it — never when the grid has bled
+    // past the viewport edge (which would dim interior cells).
+    const vw = vp.clientWidth;
+    const vh = vp.clientHeight;
+    const left = tx.current;
+    const right = tx.current + contentWidth * scale.current;
+    const top = ty.current;
+    const bottom = ty.current + contentHeight * scale.current;
+    const jade = 'var(--colors-ws-jade)';
+    const f = EDGE_FADE_PX;
     const parts: string[] = [];
-    if (tx.current < -e) parts.push(EDGE_FADE.left);
-    if (tx.current + cw > vp.clientWidth + e) parts.push(EDGE_FADE.right);
-    if (ty.current < -e) parts.push(EDGE_FADE.top);
-    if (ty.current + ch > vp.clientHeight + e) parts.push(EDGE_FADE.bottom);
+    if (left > 1 && left < vw) parts.push(`linear-gradient(to right, ${jade} ${left}px, transparent ${left + f}px)`);
+    if (right > 0 && right < vw - 1) parts.push(`linear-gradient(to left, ${jade} ${vw - right}px, transparent ${vw - right + f}px)`);
+    if (top > 1 && top < vh) parts.push(`linear-gradient(to bottom, ${jade} ${top}px, transparent ${top + f}px)`);
+    if (bottom > 0 && bottom < vh - 1) parts.push(`linear-gradient(to top, ${jade} ${vh - bottom}px, transparent ${vh - bottom + f}px)`);
     fadeRef.current.style.background = parts.length ? parts.join(', ') : 'none';
   }, [contentWidth, contentHeight, edgeFade]);
 
