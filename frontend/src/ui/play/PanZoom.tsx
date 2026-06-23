@@ -77,18 +77,22 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
     const vp = vpRef.current;
     if (!edgeFade || !fadeRef.current || !vp) return;
-    // Soften the LEFT/RIGHT screen-edge cutoff when the zoomed-in grid bleeds
-    // past those edges. Top/bottom are bounded by the header and the bottom bar
-    // (the grid bleeds behind them), so they never fade.
+    // Fenêtré window: soften each viewport edge the grid overflows past with a
+    // jade dissolve from the screen edge inward. Top/bottom mirror a bled side —
+    // no bar geometry; where a bar overlaps the screen edge it just sits on top.
     const vw = vp.clientWidth;
+    const vh = vp.clientHeight;
     const cw = contentWidth * scale.current;
+    const ch = contentHeight * scale.current;
     const jade = 'var(--colors-ws-jade)';
-    const f = EDGE_FADE_PX;
+    const d = EDGE_FADE_PX;
     const parts: string[] = [];
-    if (tx.current < -1) parts.push(`linear-gradient(to right, ${jade}, transparent ${f}px)`);
-    if (tx.current + cw > vw + 1) parts.push(`linear-gradient(to left, ${jade}, transparent ${f}px)`);
+    if (tx.current < -1) parts.push(`linear-gradient(to right, ${jade}, transparent ${d}px)`);
+    if (tx.current + cw > vw + 1) parts.push(`linear-gradient(to left, ${jade}, transparent ${d}px)`);
+    if (ty.current < -1) parts.push(`linear-gradient(to bottom, ${jade}, transparent ${d}px)`);
+    if (ty.current + ch > vh + 1) parts.push(`linear-gradient(to top, ${jade}, transparent ${d}px)`);
     fadeRef.current.style.background = parts.length ? parts.join(', ') : 'none';
-  }, [contentWidth, edgeFade]);
+  }, [contentWidth, contentHeight, edgeFade]);
 
   // Promote to a GPU layer while gesturing; drop it on settle to re-paint sharp.
   const promote = useCallback(() => {
