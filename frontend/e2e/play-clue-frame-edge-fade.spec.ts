@@ -1,17 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The /play solo screen auto-frames the focused clue (PanZoom zoom + pan), and
-// PanZoom's edge fade dissolves the grid's edge into the surrounding jade FIELD.
-// It must therefore only show where there is field beside that edge — never
-// where the grid bleeds to a screen edge, behind the header, or down to the
-// bottom bar (the grid bleeds behind those; there is no field to dissolve into).
+// PanZoom's edge fade softens the LEFT/RIGHT screen-edge cutoff when the
+// zoomed-in grid bleeds past those edges. It is NOT applied to the top/bottom
+// edges — those are bounded by the header and the bottom keyboard bar (the grid
+// bleeds behind them), so a fade there would sit over / above a bar.
 //
 // The maintainer's case: tabbing the clue rail to "Unite informatique" frames a
-// clue whose grid fills the whole play area — it bleeds to the left/right screen
-// edges, behind the header (top) and down to the bottom bar (bottom). So NO edge
-// has field beside it and NO fade should be active. A viewport-pinned fade
-// instead dims interior cells; a fade keyed off the viewport bottom (not the
-// bar) wrongly shows a bottom fade. Both make this fail.
+// clue zoomed in enough that the grid bleeds past BOTH side screen edges, while
+// its bottom edge sits at the bottom bar (not bled past the viewport). So the
+// left and right edges must fade, and the top and bottom must not.
 
 async function gotoPlay(page: Page): Promise<void> {
   await page.setViewportSize({ width: 440, height: 850 });
@@ -30,7 +27,7 @@ function activeClue(page: Page): Promise<string | null> {
 }
 
 test.describe('/play clue auto-frame edge fade', () => {
-  test('framing "Unite informatique" shows no edge fade (grid fills the play area)', async ({ page }) => {
+  test('framing "Unite informatique" fades only the bled side edges, not top/bottom', async ({ page }) => {
     await gotoPlay(page);
 
     // Tab the clue rail forward until the active clue is "Unite informatique".
@@ -55,9 +52,9 @@ test.describe('/play clue auto-frame edge fade', () => {
       if (css.includes('to left') || css.includes('inset -38px')) edges.push('right');
       if (css.includes('to bottom') || /inset 0(px)? 38px/.test(css)) edges.push('top');
       if (css.includes('to top') || /inset 0(px)? -38px/.test(css)) edges.push('bottom');
-      return edges;
+      return edges.sort();
     });
 
-    expect(active, `the grid fills the play area here, so no edge fade should be active; got: ${active.join(', ')}`).toEqual([]);
+    expect(active, `expected the two bled side edges to fade and top/bottom not; got: ${active.join(', ') || '(none)'}`).toEqual(['left', 'right']);
   });
 });

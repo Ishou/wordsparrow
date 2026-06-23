@@ -49,13 +49,8 @@ const viewport = css({
 // drop it on settle, so the browser re-paints crisply at the resting scale.
 const stage = css({ position: 'absolute', top: 0, left: 0, transformOrigin: '0 0' });
 const fade = css({ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 'inherit', zIndex: 2 });
-// Distance (px) over which the grid's edge dissolves into the surrounding
-// field. The dissolve tracks the grid's REAL edge in viewport space, so it only
-// appears when that edge is on-screen with field beyond it — when the grid has
-// bled past a viewport edge there is no edge to dissolve and no fade (a
-// viewport-pinned fade would instead dim interior cells: e2e
-// play-clue-frame-edge-fade).
-const EDGE_FADE_PX = 56;
+// Distance (px) over which a cut-off side edge softens into the field.
+const EDGE_FADE_PX = 40;
 
 const TAP_SLOP = 6;
 const STEP = 1.25;
@@ -82,28 +77,18 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
     const vp = vpRef.current;
     if (!edgeFade || !fadeRef.current || !vp) return;
-    // Dissolve the grid's real edge into the surrounding field. Each gradient is
-    // pinned to a board edge (in viewport space) and only shows when that edge
-    // sits INSIDE the play area with field beyond it: between the header inset
-    // (padTop) and the bottom bar (padBottom) vertically, and the side gutters
-    // (padX) horizontally. When the grid bleeds to a screen edge or behind a
-    // bar there is no field there — and no fade (it would otherwise dim interior
-    // cells / sit over the bar).
+    // Soften the LEFT/RIGHT screen-edge cutoff when the zoomed-in grid bleeds
+    // past those edges. Top/bottom are bounded by the header and the bottom bar
+    // (the grid bleeds behind them), so they never fade.
     const vw = vp.clientWidth;
-    const vh = vp.clientHeight;
-    const left = tx.current;
-    const right = tx.current + contentWidth * scale.current;
-    const top = ty.current;
-    const bottom = ty.current + contentHeight * scale.current;
+    const cw = contentWidth * scale.current;
     const jade = 'var(--colors-ws-jade)';
     const f = EDGE_FADE_PX;
     const parts: string[] = [];
-    if (left > padX + 1 && left < vw) parts.push(`linear-gradient(to right, ${jade} ${left}px, transparent ${left + f}px)`);
-    if (right > 0 && right < vw - padX - 1) parts.push(`linear-gradient(to left, ${jade} ${vw - right}px, transparent ${vw - right + f}px)`);
-    if (top > padTop + 1 && top < vh) parts.push(`linear-gradient(to bottom, ${jade} ${top}px, transparent ${top + f}px)`);
-    if (bottom > 0 && bottom < vh - padBottom - 1) parts.push(`linear-gradient(to top, ${jade} ${vh - bottom}px, transparent ${vh - bottom + f}px)`);
+    if (tx.current < -1) parts.push(`linear-gradient(to right, ${jade}, transparent ${f}px)`);
+    if (tx.current + cw > vw + 1) parts.push(`linear-gradient(to left, ${jade}, transparent ${f}px)`);
     fadeRef.current.style.background = parts.length ? parts.join(', ') : 'none';
-  }, [contentWidth, contentHeight, edgeFade, padTop, padBottom, padX]);
+  }, [contentWidth, edgeFade]);
 
   // Promote to a GPU layer while gesturing; drop it on settle to re-paint sharp.
   const promote = useCallback(() => {
