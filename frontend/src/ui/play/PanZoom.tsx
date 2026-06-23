@@ -99,18 +99,19 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   }, []);
   useEffect(() => () => window.clearTimeout(idle.current), []);
 
-  // Height fit leaves a bottom gap (padBottom) so the last row clears the edge;
-  // the board is top-aligned (below) so it still bleeds behind the bar at the top.
+  // Fill the full viewport on the fit axis so the board bleeds behind the
+  // overlay bars on every side; padBottom governs only pan + reveal (keeping
+  // the focused cell clear of the bottom bar), not the initial fit.
   const fitScale = useCallback(() => {
     const vp = vpRef.current;
     if (!vp) return 1;
     const sx = vp.clientWidth / contentWidth;
-    const sy = (vp.clientHeight - padBottom) / contentHeight;
+    const sy = vp.clientHeight / contentHeight;
     if (fit === 'cover') return Math.max(sx, sy);
     if (fit === 'height') return sy;
     if (fit === 'width') return sx;
     return Math.min(sx, sy);
-  }, [contentWidth, contentHeight, fit, padBottom]);
+  }, [contentWidth, contentHeight, fit]);
   // `fit` sets the initial zoom; the floor lets you unzoom back to the whole board.
   const containScale = useCallback(() => {
     const vp = vpRef.current;
@@ -206,12 +207,12 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
         if (left < m) tx.current += m - left;
         else if (right > vw - m) tx.current -= right - (vw - m);
         if (top < m) ty.current += m - top;
-        else if (bottom > vh - m) ty.current -= bottom - (vh - m);
+        else if (bottom > vh - padBottom - m) ty.current -= bottom - (vh - padBottom - m);
         clamp();
         apply();
       },
     }),
-    [apply, clamp, zoomTo],
+    [apply, clamp, zoomTo, padBottom],
   );
 
   // Capture only after a drag starts, so a tap's click still reaches the cell.

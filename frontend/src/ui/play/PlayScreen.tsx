@@ -100,7 +100,9 @@ const letterInput = css({
 });
 const letterInputOnActive = css({ color: 'white' });
 
-const bottomBar = css({ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px` });
+// Overlay bar: the grid bleeds behind it (same as the header). Its measured
+// height feeds PanZoom's padBottom so the focused cell stays above it.
+const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px` });
 // Compact hint chip, lives in the ClueRail label row (replacing the counter).
 const hintBtn = css({
   display: 'inline-flex',
@@ -221,6 +223,18 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const pzRef = useRef<PanZoomHandle>(null);
+  // Measured height of the overlay bottom bar — reserved by PanZoom so the
+  // grid bleeds behind it while the focused cell stays above it.
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const [bottomInset, setBottomInset] = useState(280);
+  useEffect(() => {
+    const el = bottomRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => setBottomInset(el.offsetHeight));
+    setBottomInset(el.offsetHeight);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const BOARD_W = puzzle.width * CELL + (puzzle.width - 1) * GAP;
   const BOARD_H = puzzle.height * CELL + (puzzle.height - 1) * GAP;
@@ -591,7 +605,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         </div>
       </header>
 
-      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit="height" framePad={14} padTop={68} padBottom={18} padX={14} maxScale={2.6} edgeFade>
+      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit="height" framePad={14} padTop={68} padBottom={bottomInset} padX={14} maxScale={2.6} edgeFade>
         <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
           {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {
             const row = Math.floor(i / puzzle.width);
@@ -629,7 +643,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
 
       <PlayMenu open={menuOpen} onClose={() => setMenuOpen(false)} onRecommencer={handleReplay} />
 
-      <div className={bottomBar}>
+      <div className={bottomBar} ref={bottomRef}>
         {won ? (
           <Button variant="secondary" className={resultsBtn} onClick={() => setWinDismissed(false)}>
             <Trophy aria-hidden="true" weight="fill" />
