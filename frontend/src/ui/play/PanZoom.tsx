@@ -54,6 +54,12 @@ const EDGE_FADE_PX = 40;
 
 const TAP_SLOP = 6;
 const STEP = 1.25;
+// Wheel zoom is exponential in normalized scroll distance, so a mouse notch and
+// a Magic-Mouse / trackpad swipe of the same intent zoom alike (not a fixed step
+// per event). Higher = faster; ~0.0015 ≈ 15% per 100px notch. Tune by feel.
+const WHEEL_ZOOM_K = 0.0015;
+const WHEEL_ZOOM_MAX = 0.3; // cap one event at ~±30% so a fast flick can't jump
+const PINCH_ZOOM_BOOST = 6; // ctrlKey wheel = trackpad pinch; its deltas are tiny
 
 export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   { contentWidth, contentHeight, minScale = 0.5, maxScale = 3, fit = 'contain', overscan = 1.08, padTop = 0, padBottom = 0, padX = 0, framePad = 0, edgeFade = false, className, children },
@@ -254,7 +260,15 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
       e.preventDefault();
       promote();
       const rect = vp.getBoundingClientRect();
-      zoomTo(scale.current * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.clientX - rect.left, e.clientY - rect.top);
+      // Normalize to pixels so the zoom tracks scroll distance, not event count
+      // (a notch fires one big delta; a Magic Mouse / trackpad fires a stream of
+      // tiny ones). ctrlKey is a trackpad pinch — its deltas are much smaller.
+      let dy = e.deltaY;
+      if (e.deltaMode === 1) dy *= 16; // lines → px
+      else if (e.deltaMode === 2) dy *= vp.clientHeight; // pages → px
+      const k = e.ctrlKey ? WHEEL_ZOOM_K * PINCH_ZOOM_BOOST : WHEEL_ZOOM_K;
+      const factor = Math.exp(Math.max(-WHEEL_ZOOM_MAX, Math.min(WHEEL_ZOOM_MAX, -dy * k)));
+      zoomTo(scale.current * factor, e.clientX - rect.left, e.clientY - rect.top);
       settle();
     };
     vp.addEventListener('wheel', onWheel, { passive: false });
