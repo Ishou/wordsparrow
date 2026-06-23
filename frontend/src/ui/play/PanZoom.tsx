@@ -57,7 +57,7 @@ const STEP = 1.25;
 // Wheel zoom is exponential in normalized scroll distance, so a mouse notch and
 // a Magic-Mouse / trackpad swipe of the same intent zoom alike (not a fixed step
 // per event). Higher = faster; ~0.0015 ≈ 15% per 100px notch. Tune by feel.
-const WHEEL_ZOOM_K = 0.0015;
+const WHEEL_ZOOM_K = 0.003;
 const WHEEL_ZOOM_MAX = 0.3; // cap one event at ~±30% so a fast flick can't jump
 const PINCH_ZOOM_BOOST = 6; // ctrlKey wheel = trackpad pinch; its deltas are tiny
 
