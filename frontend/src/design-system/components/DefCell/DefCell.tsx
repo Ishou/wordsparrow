@@ -16,6 +16,15 @@ const cell = css({
 const cellActive = css({
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1.5px token(colors.ws.sakura), 0 4px 0 0 token(colors.ws.sakuraDark), 0 5px 8px -3px rgba(212,93,131,0.26)',
 });
+// Solved clue: settles into a light sage with dark jade-ink text + a flatter
+// elevation, so completed clues recede and the unsolved ones stay prominent.
+// (The dark text is applied inline at the call sites — a class `color` here
+// loses Panda's atomic ordering race against the base cell's cream.)
+const DONE_TEXT = '#214B40'; // ws.jadeInk — clears WCAG AA on clueSurfaceDone (~4.7:1)
+const cellValidated = css({
+  bg: 'ws.clueSurfaceDone',
+  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 0 0 #7E9C88, 0 3px 6px -3px rgba(33,75,64,0.16)',
+});
 
 const flushTop = css({ display: 'flex', alignItems: 'flex-start' });
 const split = css({ display: 'flex', flexDirection: 'column' });
@@ -51,6 +60,8 @@ export interface DefCellProps {
   readonly arrow?: DefArrow;
   readonly arrows?: readonly DefArrow[];
   readonly active?: boolean;
+  // All of this cell's clue word(s) are solved → subtly lighter "done" surface.
+  readonly validated?: boolean;
 }
 
 // An answer exits to the right (right / right-down) or downward (down / down-right);
@@ -132,13 +143,13 @@ function pad(right: boolean, bottom: boolean): string {
   return `${bottom ? 3 : 5}px ${right ? 14 : 8}px ${bottom ? 11 : 5}px 7px`;
 }
 
-export function DefCell({ clues, arrow = 'right', arrows, active = false }: DefCellProps) {
+export function DefCell({ clues, arrow = 'right', arrows, active = false, validated = false }: DefCellProps) {
   const isSplit = clues.length >= 2;
   if (!isSplit) {
     const a = arrows?.[0] ?? arrow;
     const r = exitsRight(a);
     return (
-      <div data-defcell="single" className={cx(cell, active && cellActive, flushTop)} style={{ padding: pad(r, !r) }}>
+      <div data-defcell="single" className={cx(cell, validated && cellValidated, active && cellActive, flushTop)} style={{ padding: pad(r, !r), color: validated ? DONE_TEXT : undefined }}>
         <Clue text={clues[0]} />
         <Tab arrow={a} place={r ? atRightMid : atBottom} />
       </div>
@@ -148,7 +159,7 @@ export function DefCell({ clues, arrow = 'right', arrows, active = false }: DefC
   const a1 = arrows?.[1] ?? 'down';
   // The bottom tab lives at the cell's bottom edge, so the lower half always clears it.
   return (
-    <div data-defcell="split" className={cx(cell, active && cellActive, split)}>
+    <div data-defcell="split" className={cx(cell, validated && cellValidated, active && cellActive, split)} style={validated ? { color: DONE_TEXT } : undefined}>
       <div className={halfBox} style={{ padding: pad(exitsRight(a0), false) }}>
         <Clue text={clues[0]} />
       </div>

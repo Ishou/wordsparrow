@@ -123,6 +123,26 @@ test('a hint that fills a word’s last cell validates the whole word', async ({
   await expect(page.locator('input[data-row="1"][data-col="9"]')).toHaveAttribute('readonly', '');
 });
 
+test('solving a clue lights its definition cell (done surface + dark text)', async ({ page }) => {
+  await gotoPlay(page);
+  // "Point cardinal" = ENE across (1,7)..(1,9); its definition cell holds that text.
+  await focusInDirection(page, 1, 7, 'HORIZONTAL');
+  await typeLetters(page, ['E', 'N', 'E']);
+  await expect(page.locator('input[data-row="1"][data-col="9"]')).toHaveAttribute('readonly', '');
+
+  const defBg = () => page.evaluate(() => {
+    const d = [...document.querySelectorAll('[data-defcell]')].find((x) => (x.textContent ?? '').includes('Point cardinal'));
+    return d ? getComputedStyle(d).backgroundColor : null;
+  });
+  await expect.poll(defBg, { message: 'solved clue should take the done surface' }).toBe('rgb(159, 188, 168)'); // ws.clueSurfaceDone
+  const text = await page.evaluate(() => {
+    const d = [...document.querySelectorAll('[data-defcell]')].find((x) => (x.textContent ?? '').includes('Point cardinal'));
+    const span = d?.querySelector('span');
+    return span ? getComputedStyle(span).color : null;
+  });
+  expect(text, 'done clue text flips to dark jade-ink for contrast').toBe('rgb(33, 75, 64)'); // ws.jadeInk
+});
+
 test('a wrong completion wobbles the word and leaves it editable', async ({ page }) => {
   await gotoPlay(page);
   await focusInDirection(page, 1, 0, 'HORIZONTAL'); // NUMERO across

@@ -61,6 +61,9 @@ export default defineConfig({
           sakuraBlush: { value: '#F7DEE7' },
           // Deep sage clue-cell surface; cream text on it clears WCAG AA (~5.3:1).
           clueSurface: { value: '#4F6E5C' },
+          // Solved-clue surface: a light sage the clue settles into. Paired with
+          // jade-ink (not cream) text so it clears WCAG AA (~4.7:1).
+          clueSurfaceDone: { value: '#9FBCA8' },
           clueText: { value: '#FBF6E9' },
         },
         // Primary ramp — mousse (moss-green brand + success/validation).

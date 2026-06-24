@@ -508,6 +508,23 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     return list;
   }, [puzzle, byPos]);
 
+  // Definition cells whose every clue word is fully solved → lit "done" surface.
+  const solvedDefCells = useMemo(() => {
+    const wordsByDef = new Map<string, Position[][]>();
+    for (const c of orderedClues) {
+      const [dr, dc] = c.key.split(':');
+      const defKey = `${dr},${dc}`;
+      const arr = wordsByDef.get(defKey);
+      if (arr) arr.push(c.cells);
+      else wordsByDef.set(defKey, [c.cells]);
+    }
+    const done = new Set<string>();
+    for (const [defKey, words] of wordsByDef) {
+      if (words.every((w) => w.every((p) => validatedPositions.has(posKey(p.row, p.col))))) done.add(defKey);
+    }
+    return done;
+  }, [orderedClues, validatedPositions]);
+
   const clue = nav.currentClue;
   currentClueRef.current = clue;
   const clueOrdinal = useMemo(() => {
@@ -761,7 +778,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
             if (cell?.kind === 'definition') {
               const sorted = [...cell.clues].sort((x, y) => Number(!exitsRight(x.arrow)) - Number(!exitsRight(y.arrow)));
               const active = nav.highlightFor({ row, col }).currentArrow !== null;
-              return <DefCell key={i} clues={sorted.map((c) => c.text)} arrows={sorted.map((c) => c.arrow)} active={active} />;
+              return <DefCell key={i} clues={sorted.map((c) => c.text)} arrows={sorted.map((c) => c.arrow)} active={active} validated={solvedDefCells.has(posKey(row, col))} />;
             }
             if (cell?.kind === 'letter') {
               const k = posKey(row, col);
