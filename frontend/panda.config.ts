@@ -331,6 +331,14 @@ export default defineConfig({
         '35%': { boxShadow: '0 0 0 3px rgba(212,93,131,0.55), 0 0 14px 3px rgba(212,93,131,0.45)' },
         '100%': { boxShadow: '0 0 0 0 rgba(212,93,131,0)' },
       },
+      // Wrong-word feedback: a quick, low-amplitude rotational wobble of a
+      // completed-but-incorrect word's cells (the "not quite" head-shake).
+      wsShake: {
+        '0%, 100%': { transform: 'rotate(0deg)' },
+        '25%': { transform: 'rotate(-3deg)' },
+        '50%': { transform: 'rotate(3deg)' },
+        '75%': { transform: 'rotate(-2deg)' },
+      },
       // Win celebration (Phase 3): screen fade, drifting sakura petals, blossom pulse.
       wsFade: { from: { opacity: '0' }, to: { opacity: '1' } },
       wsPetalFall: {

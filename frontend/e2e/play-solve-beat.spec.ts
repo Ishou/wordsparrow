@@ -123,7 +123,18 @@ test('a hint that fills a word’s last cell validates the whole word', async ({
   await expect(page.locator('input[data-row="1"][data-col="9"]')).toHaveAttribute('readonly', '');
 });
 
-test('a wrong completion neither glows nor leaves the word', async ({ page }) => {
+test('a wrong completion wobbles the word and leaves it editable', async ({ page }) => {
+  await gotoPlay(page);
+  await focusInDirection(page, 1, 0, 'HORIZONTAL'); // NUMERO across
+  await typeLetters(page, ['N', 'U', 'M', 'E', 'R', 'X']); // wrong on the last letter
+  // The word's cells wobble (validation POST is async → poll for the animation).
+  await expect.poll(() => glow(page, 1, 2), { message: 'a wrong word must wobble' }).toBe('wsShake');
+  // …and stay editable so it can be fixed.
+  await expect(page.locator('input[data-row="1"][data-col="0"]')).toBeEditable();
+  await expect(page.locator('input[data-row="1"][data-col="5"]')).toBeEditable();
+});
+
+test('a wrong completion stays in the word — no celebration, no jump', async ({ page }) => {
   await gotoPlay(page);
   // Lock DOM so NUMERO's last cell (1,5) is validated (the boundary the cursor lands on).
   await focusInDirection(page, 0, 5, 'VERTICAL');
@@ -137,7 +148,9 @@ test('a wrong completion neither glows nor leaves the word', async ({ page }) =>
   await typeLetters(page, ['N', 'U', 'M', 'E', 'X']);
   await page.waitForTimeout(200);
 
-  expect(await glow(page, 1, 2), 'a wrong word must not glow').toBe('none');
+  // It wobbles (wrong) but never plays the sakura celebration halo, and the view
+  // does not jump to the next clue.
+  expect(await glow(page, 1, 2), 'a wrong word must not play the celebration halo').not.toBe('wsSolveGlow');
   expect(await activeClue(page), 'a wrong word must not jump to the next clue').toBe(clueBefore);
   // Focus stayed inside NUMERO (did not skip across to another word).
   const focused = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));

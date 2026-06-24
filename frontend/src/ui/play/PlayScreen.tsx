@@ -81,6 +81,8 @@ const spacer = css({ borderRadius: '9px' });
 const cellWrap = css({ position: 'relative', cursor: 'pointer' });
 // Sakura halo bloomed around a freshly-solved word's cells during the solve beat.
 const cellGlow = css({ borderRadius: '13px', zIndex: 1, animation: 'wsSolveGlow 0.45s ease-out both' });
+// Quick rotational wobble on a completed-but-wrong word's cells ("not quite").
+const cellShake = css({ zIndex: 1, animation: 'wsShake 0.4s ease-in-out both' });
 const letterInput = css({
   position: 'absolute',
   inset: 0,
@@ -172,6 +174,7 @@ function LetterSlot({
   onKeyDown,
   solveDelay,
   celebrateDelay,
+  rejectShake,
 }: {
   readonly row: number;
   readonly col: number;
@@ -184,6 +187,8 @@ function LetterSlot({
   readonly solveDelay?: number;
   // ms stagger for the sakura solve-beat halo; omit when not celebrating.
   readonly celebrateDelay?: number;
+  // true while this cell's word wobbles after a wrong completion.
+  readonly rejectShake?: boolean;
 }) {
   const state: CellState = validated
     ? 'solved'
@@ -197,7 +202,7 @@ function LetterSlot({
     // pan that starts on a cell never selects it; focus happens only on a real
     // click (handleClick), mirroring the prod grid.
     <div
-      className={cx(cellWrap, celebrateDelay !== undefined && cellGlow)}
+      className={cx(cellWrap, celebrateDelay !== undefined && cellGlow, rejectShake && cellShake)}
       style={celebrateDelay !== undefined ? { animationDelay: `${celebrateDelay}ms` } : undefined}
       data-row={row}
       data-col={col}
@@ -311,7 +316,18 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     [soloEntriesStore, puzzle.id],
   );
 
-  const autoValidation = useWordAutoValidation(puzzle, puzzleSolver, initialEntries, handleWordValidated);
+  // A completed word came back wrong: wobble its cells + an error haptic so the
+  // player knows to fix it (the word stays editable). Reduced motion → haptic
+  // only. (reduceMotionRef / setRejecting are declared below; read at call time.)
+  const handleWordRejected = useCallback((positions: ReadonlyArray<Position>) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([0, 28, 38, 28]);
+    if (reduceMotionRef.current) return;
+    setRejecting(new Set(positions.map((p) => posKey(p.row, p.col))));
+    if (rejectTimerRef.current) window.clearTimeout(rejectTimerRef.current);
+    rejectTimerRef.current = window.setTimeout(() => setRejecting(new Set()), 460);
+  }, []);
+
+  const autoValidation = useWordAutoValidation(puzzle, puzzleSolver, initialEntries, handleWordValidated, handleWordRejected);
 
   const handleHintReveal = useCallback(
     (row: number, column: number, letter: string) => {
@@ -358,6 +374,9 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   // clue. Interruptible: a tap or Next skips it. Skipped under reduced motion
   // (haptic only). celebrating maps each solved cell → its halo stagger (ms).
   const [celebrating, setCelebrating] = useState<ReadonlyMap<string, number>>(() => new Map());
+  // Cells of a completed-but-wrong word that are currently wobbling.
+  const [rejecting, setRejecting] = useState<ReadonlySet<string>>(() => new Set());
+  const rejectTimerRef = useRef<number | null>(null);
   // Cells of words that validated this tick (set by onWordValidated), consumed
   // once by the focus firewall to gate the solve beat. The current clue (the
   // word being left) is read from a ref so the firewall can glow the WHOLE word.
@@ -381,7 +400,10 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
       then();
     }, last + 480);
   }, []);
-  useEffect(() => () => { if (solveBeatRef.current) window.clearTimeout(solveBeatRef.current); }, []);
+  useEffect(() => () => {
+    if (solveBeatRef.current) window.clearTimeout(solveBeatRef.current);
+    if (rejectTimerRef.current) window.clearTimeout(rejectTimerRef.current);
+  }, []);
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -755,6 +777,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
                   onKeyDown={handleKeyDown}
                   solveDelay={solveDelays.get(k)}
                   celebrateDelay={celebrating.get(k)}
+                  rejectShake={rejecting.has(k)}
                 />
               );
             }

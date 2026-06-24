@@ -83,6 +83,10 @@ export function useWordAutoValidation(
   solver: PuzzleSolver,
   initialFilledCells: ReadonlyArray<PersistedFilledCell> = NO_INITIAL_FILL,
   onWordValidated?: OnWordValidated,
+  // Fired with a fully-filled word that came back WRONG (≥1 incorrect cell).
+  // The word stays editable; callers (solo /play) use it for a "not quite"
+  // signal. Prod /grille leaves it unset — wrong words stay silent.
+  onWordRejected?: OnWordValidated,
 ): WordAutoValidationState {
   const [validated, setValidated] = useState<ReadonlySet<string>>(() => new Set());
 
@@ -91,6 +95,8 @@ export function useWordAutoValidation(
   // each render).
   const onWordValidatedRef = useRef<OnWordValidated | undefined>(onWordValidated);
   onWordValidatedRef.current = onWordValidated;
+  const onWordRejectedRef = useRef<OnWordValidated | undefined>(onWordRejected);
+  onWordRejectedRef.current = onWordRejected;
 
   // Reset on puzzle swap AND rehydrate locks from persisted entries.
   // Solo letters live in localStorage; on a page reload the cells
@@ -282,11 +288,17 @@ export function useWordAutoValidation(
             return next;
           });
           for (const word of newlyLocked) onWordValidatedRef.current?.(word);
+          // Fully-filled words with ≥1 incorrect cell: surface for callers
+          // that want a "not quite" signal (the word stays editable).
+          for (const word of fullyFilled) {
+            if (word.some((p) => incorrect.has(positionKey(p.row, p.col)))) {
+              onWordRejectedRef.current?.(word);
+            }
+          }
         })
-        // Wrong words drop silently — incorrect fills are visually
-        // indistinguishable from in-progress ones per the product
-        // decision. Network failures behave the same way: the user
-        // can still try Vérifier for the explicit signal.
+        // Validation network failures drop silently — the user can still try
+        // Vérifier for the explicit signal. (A wrong word is signalled above
+        // via onWordRejected where the caller opts in.)
         .catch(() => {})
         .finally(() => {
           for (const word of fullyFilled) {
