@@ -10,6 +10,7 @@ import { PlayMenu } from './PlayMenu';
 import {
   useGridNavigation,
   type CellHighlight,
+  type Clue,
   type GridNavigation,
 } from '@/ui/components/grid/useGridNavigation';
 import { useWordAutoValidation } from '@/ui/components/grid/useWordAutoValidation';
@@ -78,6 +79,8 @@ const spacer = css({ borderRadius: '9px' });
 // transparent uncontrolled <input> sits on top carrying the live letter
 // (cell values live in the DOM per ADR-0002 §4, never in React state).
 const cellWrap = css({ position: 'relative', cursor: 'pointer' });
+// Sakura halo bloomed around a freshly-solved word's cells during the solve beat.
+const cellGlow = css({ borderRadius: '13px', zIndex: 1, animation: 'wsSolveGlow 0.45s ease-out both' });
 const letterInput = css({
   position: 'absolute',
   inset: 0,
@@ -168,6 +171,7 @@ function LetterSlot({
   nav,
   onKeyDown,
   solveDelay,
+  celebrateDelay,
 }: {
   readonly row: number;
   readonly col: number;
@@ -178,6 +182,8 @@ function LetterSlot({
   readonly onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
   // ms stagger for the flatten ripple when this cell just validated; omit for a static solved tile.
   readonly solveDelay?: number;
+  // ms stagger for the sakura solve-beat halo; omit when not celebrating.
+  readonly celebrateDelay?: number;
 }) {
   const state: CellState = validated
     ? 'solved'
@@ -191,7 +197,8 @@ function LetterSlot({
     // pan that starts on a cell never selects it; focus happens only on a real
     // click (handleClick), mirroring the prod grid.
     <div
-      className={cellWrap}
+      className={cx(cellWrap, celebrateDelay !== undefined && cellGlow)}
+      style={celebrateDelay !== undefined ? { animationDelay: `${celebrateDelay}ms` } : undefined}
       data-row={row}
       data-col={col}
       onClick={nav.handleClick}
@@ -295,6 +302,11 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const handleWordValidated = useCallback(
     (positions: ReadonlyArray<Position>) => {
       for (const p of positions) soloEntriesStore.lockCell(puzzle.id, p.row, p.col);
+      // Mark this word's cells as freshly validated so the firewall plays the
+      // solve beat (accumulates across words that validate in the same tick).
+      const set = justValidatedRef.current ?? new Set<string>();
+      for (const p of positions) set.add(posKey(p.row, p.col));
+      justValidatedRef.current = set;
     },
     [soloEntriesStore, puzzle.id],
   );
@@ -316,8 +328,11 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         next.add(k);
         return next;
       });
+      // Validate like a typed letter would: a hint that fills a word's last
+      // cell must lock (and can celebrate) the whole word, not just the cell.
+      autoValidation.onCellFilled({ row, col: column }, 'across');
     },
-    [soloEntriesStore, puzzle.id],
+    [soloEntriesStore, puzzle.id, autoValidation],
   );
 
   const handleHintConsumed = useCallback(() => soloEntriesStore.recordHintUsed(puzzle.id), [soloEntriesStore, puzzle.id]);
@@ -337,6 +352,45 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
 
+  // Solve beat: when a word is completed, hold on it briefly — a sakura halo
+  // ripples its cells + a haptic buzz — before the view advances, so the "your
+  // word was good" feedback registers instead of zapping straight to the next
+  // clue. Interruptible: a tap or Next skips it. Skipped under reduced motion
+  // (haptic only). celebrating maps each solved cell → its halo stagger (ms).
+  const [celebrating, setCelebrating] = useState<ReadonlyMap<string, number>>(() => new Map());
+  // Cells of words that validated this tick (set by onWordValidated), consumed
+  // once by the focus firewall to gate the solve beat. The current clue (the
+  // word being left) is read from a ref so the firewall can glow the WHOLE word.
+  const justValidatedRef = useRef<Set<string> | null>(null);
+  const currentClueRef = useRef<Clue | null>(null);
+  const solveBeatRef = useRef<number | null>(null);
+  const reduceMotionRef = useRef(false);
+  const cancelSolveBeat = useCallback(() => {
+    if (solveBeatRef.current === null) return;
+    window.clearTimeout(solveBeatRef.current);
+    solveBeatRef.current = null;
+    setCelebrating(new Map());
+  }, []);
+  const beginSolveBeat = useCallback((cells: ReadonlyMap<string, number>, then: () => void) => {
+    setCelebrating(cells);
+    let last = 0;
+    for (const d of cells.values()) last = Math.max(last, d);
+    solveBeatRef.current = window.setTimeout(() => {
+      solveBeatRef.current = null;
+      setCelebrating(new Map());
+      then();
+    }, last + 480);
+  }, []);
+  useEffect(() => () => { if (solveBeatRef.current) window.clearTimeout(solveBeatRef.current); }, []);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reduceMotionRef.current = mq.matches;
+    const onChange = () => { reduceMotionRef.current = mq.matches; };
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, []);
+
   const revealCell = useCallback((p: Position) => {
     pzRef.current?.reveal(p.col * STRIDE, p.row * STRIDE, CELL, CELL);
   }, []);
@@ -349,6 +403,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     onCellFilled: autoValidation.onCellFilled,
     onFocusChange: (position) => {
       if (!position) return;
+      cancelSolveBeat(); // a user tap during the beat skips it (no-op otherwise)
       activeFocusRef.current = position;
       revealCell(position);
     },
@@ -432,6 +487,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   }, [puzzle, byPos]);
 
   const clue = nav.currentClue;
+  currentClueRef.current = clue;
   const clueOrdinal = useMemo(() => {
     if (!clue) return -1;
     const k = `${clue.definition.position.row}:${clue.definition.position.col}:${clue.clue.arrow}`;
@@ -456,6 +512,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   // snapping to the first/last, focusing its first editable cell.
   const stepClue = useCallback(
     (dir: 1 | -1) => {
+      cancelSolveBeat(); // stepping the rail during the beat skips it
       tabDirRef.current = dir;
       jumpPendingRef.current = true;
       if (nav.localCursor) {
@@ -468,7 +525,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
       const cell = target.cells.find((p) => !validatedRef.current.has(posKey(p.row, p.col))) ?? target.cells[0];
       inputAt(cell.row, cell.col)?.focus();
     },
-    [nav, orderedClues, displayOrdinal],
+    [nav, orderedClues, displayOrdinal, cancelSolveBeat],
   );
 
   // Auto-frame the active clue (def-cell + word) when it changes — zoom out
@@ -588,6 +645,9 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   useEffect(() => {
     const wasJump = jumpPendingRef.current;
     jumpPendingRef.current = false;
+    // Consume any words that validated this tick once (gates the solve beat).
+    const justValidated = justValidatedRef.current;
+    justValidatedRef.current = null;
     const cur = fRow >= 0 ? { row: fRow, col: fCol } : null;
     const prev = prevFocusRef.current;
     prevFocusRef.current = cur;
@@ -598,13 +658,36 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         ? { dr: cur.row - prev.row, dc: cur.col - prev.col }
         : { dr: fDir === 'down' ? 1 : 0, dc: fDir === 'across' ? 1 : 0 };
     const target = findNextEditable(cur, vec, validatedPositions, adjacent);
-    if (target) inputAt(target.row, target.col)?.focus();
-    else if (adjacent && prev) inputAt(prev.row, prev.col)?.focus();
-    else if (!adjacent && !won) {
-      jumpPendingRef.current = true;
-      cycleClueRef.current(tabDirRef.current);
+    // The current word being left, and whether it's FULLY solved. A wrong or
+    // still-incomplete word (even one whose boundary cell a crossing already
+    // validated) keeps focus so the player can fix it: never skip across to a
+    // DIFFERENT word, never jump to the next clue, never glow.
+    const wordKeys = (currentClueRef.current?.cells ?? []).map((c) => posKey(c.position.row, c.position.col));
+    const fullySolved = wordKeys.length > 0 && wordKeys.every((k) => validatedPositions.has(k));
+    if (target && (fullySolved || wordKeys.includes(posKey(target.row, target.col)))) {
+      inputAt(target.row, target.col)?.focus();
+    } else if (adjacent && prev) {
+      inputAt(prev.row, prev.col)?.focus();
+    } else if (!adjacent && !won && fullySolved) {
+      const advance = () => {
+        jumpPendingRef.current = true;
+        cycleClueRef.current(tabDirRef.current);
+      };
+      // Celebrate only when THIS word just validated (not when tabbing onto an
+      // already-solved clue). Haptic either way; visual hold skipped if reduced.
+      const celebrate = !!justValidated && wordKeys.some((k) => justValidated.has(k));
+      if (celebrate) {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
+        if (!reduceMotionRef.current) {
+          const halo = new Map<string, number>();
+          wordKeys.forEach((k, i) => halo.set(k, i * 45));
+          beginSolveBeat(halo, advance);
+          return;
+        }
+      }
+      advance();
     }
-  }, [fRow, fCol, fDir, validatedPositions, findNextEditable, won]);
+  }, [fRow, fCol, fDir, validatedPositions, findNextEditable, won, beginSolveBeat]);
 
   const handleReplay = useCallback(() => {
     soloEntriesStore.clearForPuzzle(puzzle.id);
@@ -671,6 +754,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
                   nav={nav}
                   onKeyDown={handleKeyDown}
                   solveDelay={solveDelays.get(k)}
+                  celebrateDelay={celebrating.get(k)}
                 />
               );
             }
