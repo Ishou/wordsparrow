@@ -4,12 +4,7 @@ import com.bliss.grid.domain.generation.WordRepository
 import com.bliss.grid.domain.model.Word
 import kotlin.random.Random
 
-/**
- * Draws a small, count-capped, random sample of clue-answer pairs from the
- * resident corpus for the home teaser (ADR-0073). Bounds are clamped, never
- * trusted: the route validates and rejects malformed input, but the use case
- * stays defensible on its own.
- */
+/** Draws a count-capped random sample of clue-answer pairs for the home teaser (ADR-0073). */
 class SampleWordsUseCase(
     private val wordRepository: WordRepository,
     private val random: Random,

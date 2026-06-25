@@ -50,9 +50,7 @@ type RevealCellHintRequest = components['schemas']['RevealCellHintRequest'];
 type PuzzleSummary = components['schemas']['PuzzleSummary'];
 type SampleWord = components['schemas']['SampleWord'];
 
-// Inline teaser pool for the dev-only `/home` mini-game (ADR-0073). Real
-// short French clue->answer pairs; the producer draws an equivalent random
-// sample from the resident corpus.
+// Inline teaser pool for the home teaser (ADR-0073).
 const SAMPLE_WORDS: SampleWord[] = [
   { clue: 'Capitale de la France', answer: 'PARIS' },
   { clue: 'Astre du jour', answer: 'SOLEIL' },
@@ -236,9 +234,7 @@ const gridHandlers = [
     });
   }),
 
-  // GET /v1/words/sample — home-teaser pairs (ADR-0073). Filters an inline
-  // pool of real short French clue->answer pairs by the requested length
-  // range and slices to `count`, mirroring the producer's bare-array shape.
+  // GET /v1/words/sample — mirrors the producer's bare-array shape (ADR-0073).
   http.get('*/v1/words/sample', ({ request }) => {
     const url = new URL(request.url);
     const minLen = Math.min(Math.max(Number(url.searchParams.get('minLen') ?? 3), 3), 6);
