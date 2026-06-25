@@ -1,3 +1,4 @@
+import { Dialog } from '@ark-ui/react/dialog';
 import { X } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { Button } from '@/design-system';
@@ -138,7 +139,8 @@ export interface WinScreenProps {
 
 export function WinScreen({ time, onReplay, onShare, onDismiss }: WinScreenProps) {
   return (
-    <div className={screen} role="dialog" aria-modal="true" aria-label="Grille terminée">
+    <Dialog.Root open modal>
+      <Dialog.Content className={screen} aria-label="Grille terminée">
       <button type="button" className={closeBtn} onClick={onDismiss} aria-label="Revoir la grille">
         <X aria-hidden="true" weight="bold" />
       </button>
@@ -186,6 +188,7 @@ export function WinScreen({ time, onReplay, onShare, onDismiss }: WinScreenProps
 
         <div className={quiet}>Nouvelle grille demain</div>
       </div>
-    </div>
+      </Dialog.Content>
+    </Dialog.Root>
   );
 }
