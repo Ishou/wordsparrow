@@ -114,11 +114,11 @@ is part of the decision (§4), not incidental. The following is recorded as
 a **condition**, not as resolved clearance:
 
 > **Condition (carry into W2/W3).** Before the sample endpoint is promoted
-> beyond the dev-only `/home` teaser — e.g. exposed on a production route,
-> uncapped, or extended to return additional corpus-derived fields (POS,
-> sense, synonym, anything DBnary-derived) — the maintainer confirms per
-> the ADR-0058 matrix that the specific fields exposed carry no SA/NC
-> source. The current decision is clear for `{clue, answer}` over the
+> beyond the dev-only `/home` teaser — e.g. consumed by a production-facing
+> frontend route, uncapped, or extended to return additional corpus-derived
+> fields (POS, sense, synonym, anything DBnary-derived) — the maintainer
+> confirms per the ADR-0058 matrix that the specific fields exposed carry no
+> SA/NC source. The current decision is clear for `{clue, answer}` over the
 > Hunspell-fr surface + LLM clue; it does not pre-clear fields drawn from
 > SA/NC sources.
 
