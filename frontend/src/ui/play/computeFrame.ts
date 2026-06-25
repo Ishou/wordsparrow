@@ -1,14 +1,4 @@
-// Pure geometry for auto-framing a focused clue inside the PanZoom viewport.
-// No DOM — the imperative PanZoom.frame() method feeds it measured numbers.
-//
-// Rules (see 2026-06-… auto-frame design):
-//  - zoom-out-only: keep the current scale; shrink (down to minScale) only
-//    when the rect can't fit the clear band at the current scale; never zoom in.
-//  - when it fits: bring it fully into the clear band — centre if we changed
-//    zoom, else minimal pan (no motion when it's already inside).
-//  - when it can't fit even at minScale (tall vertical clues): align the rect's
-//    near edge (the definition end) to the band so the def + first cells show;
-//    the per-cell reveal then follows the cursor as it types past the fold.
+// Pure framing geometry; unit tests in computeFrame.test.ts document the contract.
 
 export interface Rect {
   readonly x: number;
