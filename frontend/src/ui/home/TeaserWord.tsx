@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { css, cx } from 'styled-system/css';
 import { Cell, DefCell } from '@/design-system';
+import type { SampleWord, WordsRepository } from '@/application';
 
-// Playable single-word teaser: correct → celebrate + rotate; wrong → wobble + break streak; bonus streak surfaced upward.
-const CLUES: ReadonlyArray<{ clue: string; answer: string }> = [
+// Inline fallback so the hero never empties if the corpus fetch fails.
+const FALLBACK: ReadonlyArray<SampleWord> = [
   { clue: 'Note', answer: 'SOL' },
   { clue: 'Roi', answer: 'LION' },
-  { clue: 'Mois', answer: 'MAI' },
-  { clue: 'Félin', answer: 'CHAT' },
   { clue: 'Astre', answer: 'LUNE' },
-  { clue: 'Fleur', answer: 'IRIS' },
-  { clue: 'Métal', answer: 'FER' },
   { clue: 'Refus', answer: 'NON' },
 ];
 
@@ -53,20 +50,37 @@ const skipBtn = css({
   _hover: { opacity: 1 },
   _active: { opacity: 1 },
 });
+// Calm placeholder row matching the teaser's height until the first batch lands.
+const loadingRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '42px',
+  fontFamily: 'wsUi',
+  fontSize: '13px',
+  fontWeight: 'semibold',
+  color: 'ws.khaki',
+  opacity: 0.55,
+});
 
-function nextIndex(current: number): number {
-  const j = Math.floor(Math.random() * CLUES.length);
-  return j === current ? (j + 1) % CLUES.length : j;
+function nextIndex(current: number, length: number): number {
+  if (length <= 1) return 0;
+  const j = Math.floor(Math.random() * length);
+  return j === current ? (j + 1) % length : j;
 }
 
 export interface TeaserWordProps {
   // Reports the bonus streak (consecutive correct words) + the best so far.
   readonly onStreak?: (current: number, best: number) => void;
+  // Source of teaser pairs (ADR-0073). Absent in test fixtures → inline fallback.
+  readonly wordsRepository?: WordsRepository;
 }
 
-export function TeaserWord({ onStreak }: TeaserWordProps) {
-  const [idx, setIdx] = useState(() => Math.floor(Math.random() * CLUES.length));
-  const { clue, answer } = CLUES[idx];
+export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
+  const [pool, setPool] = useState<ReadonlyArray<SampleWord>>(FALLBACK);
+  const [loading, setLoading] = useState(wordsRepository != null);
+  const [idx, setIdx] = useState(() => Math.floor(Math.random() * FALLBACK.length));
+  const { clue, answer } = pool[idx];
   const target = answer.toUpperCase();
   const n = target.length;
   // lettersRef is the sync source of truth for fast typists; `letters` mirrors it for render.
@@ -81,6 +95,28 @@ export function TeaserWord({ onStreak }: TeaserWordProps) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
   const focusOnNext = useRef(false); // focus cell 0 only after a rotation, not on mount
   const timer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!wordsRepository) return;
+    let cancelled = false;
+    wordsRepository
+      .fetchSampleWords({ minLen: 3, maxLen: 6, count: 8 })
+      .then((words) => {
+        if (cancelled) return;
+        const usable = words.filter((w) => /^[A-Z]+$/.test(w.answer.toUpperCase()));
+        if (usable.length > 0) {
+          setPool(usable);
+          setIdx(Math.floor(Math.random() * usable.length));
+          lettersRef.current = Array(usable[0].answer.length).fill('');
+          setLetters(lettersRef.current);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [wordsRepository]);
 
   useEffect(() => {
     if (focusOnNext.current) {
@@ -98,13 +134,13 @@ export function TeaserWord({ onStreak }: TeaserWordProps) {
   const rotate = (toIdx: number) => {
     if (timer.current) window.clearTimeout(timer.current);
     focusOnNext.current = true;
-    commit(Array(CLUES[toIdx].answer.length).fill(''));
+    commit(Array(pool[toIdx].answer.length).fill(''));
     setIdx(toIdx);
     setSolved(false);
     setWrong(false);
     setErrored(false);
   };
-  const skip = () => rotate(nextIndex(idx));
+  const skip = () => rotate(nextIndex(idx, pool.length));
 
   const handleChange = (i: number, raw: string) => {
     if (solved) return; // typing stays live through the wobble (no input lock)
@@ -126,7 +162,7 @@ export function TeaserWord({ onStreak }: TeaserWordProps) {
       setFocus(null);
       refs.current[i]?.blur();
       if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
-      timer.current = window.setTimeout(() => rotate(nextIndex(idx)), 900);
+      timer.current = window.setTimeout(() => rotate(nextIndex(idx, pool.length)), 900);
     } else if (next.every((c) => c !== '') && !wasFull) {
       // Just completed but wrong: wobble + break streak; re-editing an already-full word doesn't re-fire.
       if (timer.current) window.clearTimeout(timer.current);
@@ -166,6 +202,17 @@ export function TeaserWord({ onStreak }: TeaserWordProps) {
     commit(next);
     if (i > 0) refs.current[i - 1]?.focus();
   };
+
+  if (loading) {
+    return (
+      <div className={wrap}>
+        <div className={loadingRow} aria-live="polite">
+          Un instant…
+        </div>
+        <div className={skipRow} />
+      </div>
+    );
+  }
 
   return (
     <div className={wrap}>

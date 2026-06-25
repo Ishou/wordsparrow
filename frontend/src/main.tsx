@@ -11,6 +11,7 @@ import {
   createHttpPuzzleRepository,
   createHttpPuzzleSolver,
   createHttpSurveyClient,
+  createHttpWordsRepository,
   createReconnectingGameClient,
   createWebSocketGameClient,
 } from '@/infrastructure';
@@ -162,6 +163,9 @@ enableMocks()
     const puzzleSolver = createHttpPuzzleSolver({
       baseUrl: gridApiBaseUrl,
     });
+    const wordsRepository = createHttpWordsRepository({
+      baseUrl: gridApiBaseUrl,
+    });
     // Compose the full SessionClient: the HTTP adapter covers eraseSession
     // while the localStorage helpers cover getSessionId/clearLocalSession.
     // This is the only place allowed to import both; ui/ components receive
@@ -269,6 +273,7 @@ enableMocks()
             ...baseContext,
             puzzleRepository,
             puzzleSolver,
+            wordsRepository,
             sessionClient,
             soloEntriesStore,
             tourSeenStore,
@@ -279,7 +284,7 @@ enableMocks()
             lobbyJoinCodeStash: sessionStorageLobbyJoinCodeStash,
           };
         })()
-      : { ...baseContext, puzzleRepository, puzzleSolver, sessionClient, soloEntriesStore, tourSeenStore };
+      : { ...baseContext, puzzleRepository, puzzleSolver, wordsRepository, sessionClient, soloEntriesStore, tourSeenStore };
     const router = createAppRouter({ context, multiplayer });
 
     // Track page views on every route resolution. `onResolved` fires after

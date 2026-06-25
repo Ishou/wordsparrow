@@ -1,7 +1,7 @@
 import { HeadContent, Outlet, createRootRouteWithContext } from '@tanstack/react-router';
 import { useLayoutEffect } from 'react';
 import { css } from 'styled-system/css';
-import type { PuzzleRepository, PuzzleSolver } from '@/application';
+import type { PuzzleRepository, PuzzleSolver, WordsRepository } from '@/application';
 import type { AnalyticsPort } from '@/application/analytics';
 import type { AuthClient } from '@/application/auth';
 import type { GameClient, LobbyClient } from '@/application/game';
@@ -38,6 +38,9 @@ export interface AppSession {
 export interface AppRouterContext {
   readonly puzzleRepository: PuzzleRepository;
   readonly puzzleSolver: PuzzleSolver;
+  // Teaser word source (ADR-0073). Optional so route-level Vitest fixtures
+  // can omit it; the dev-only `/home` teaser falls back to inline pairs.
+  readonly wordsRepository?: WordsRepository;
   readonly sessionClient: SessionClient;
   readonly soloEntriesStore: SoloEntriesStore;
   readonly tourSeenStore: TourSeenStore;
