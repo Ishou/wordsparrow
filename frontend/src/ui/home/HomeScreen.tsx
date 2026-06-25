@@ -235,7 +235,7 @@ export function HomeScreen({
                         type="button"
                         className={dayDotBtn}
                         style={dayDotStyle(d.today, d.solved)}
-                        onClick={() => navigate({ to: '/grille', search: { date: d.iso } })}
+                        onClick={() => navigate({ to: '/play', search: { date: d.iso } })}
                         aria-label={`${d.label}${d.today ? " (aujourd'hui)" : ''}${d.solved ? ' — terminée' : ''}`}
                       >
                         {d.num}

@@ -27,10 +27,19 @@ function PlayRouteComponent() {
   return <PlayScreen puzzle={puzzle} puzzleSolver={puzzleSolver} soloEntriesStore={soloEntriesStore} />;
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 export const Route = createRoute({
   getParentRoute: () => RootRoute,
   path: '/play',
-  loader: ({ context }): Promise<Puzzle | null> => context.puzzleRepository.fetchDaily(undefined),
+  // `?date=YYYY-MM-DD` opens that day's grid (the home strip links here);
+  // any other value resolves to "today", same as the /grille archive route.
+  validateSearch: (search: Record<string, unknown>): { date?: string } =>
+    typeof search.date === 'string' && ISO_DATE.test(search.date) ? { date: search.date } : {},
+  loaderDeps: ({ search }) => ({
+    date: typeof search.date === 'string' && ISO_DATE.test(search.date) ? search.date : undefined,
+  }),
+  loader: ({ context, deps }): Promise<Puzzle | null> => context.puzzleRepository.fetchDaily(deps.date),
   component: PlayRouteComponent,
   errorComponent: PlayUnavailable,
 });
