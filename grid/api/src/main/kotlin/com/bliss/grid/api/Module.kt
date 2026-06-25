@@ -5,6 +5,7 @@ import com.bliss.grid.api.infrastructure.Database
 import com.bliss.grid.api.routes.deleteSession
 import com.bliss.grid.api.routes.health
 import com.bliss.grid.api.routes.puzzles
+import com.bliss.grid.api.routes.words
 import com.bliss.grid.application.analytics.AnalyticsEventSink
 import com.bliss.grid.application.auth.CookieVerifier
 import com.bliss.grid.application.puzzle.DailyPuzzleSelector
@@ -18,6 +19,7 @@ import com.bliss.grid.application.puzzle.PuzzleRepository
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
+import com.bliss.grid.application.words.SampleWordsUseCase
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.infrastructure.analytics.MatomoAnalyticsAdapter
 import com.bliss.grid.infrastructure.analytics.NoopAnalyticsAdapter
@@ -59,6 +61,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
+import kotlin.random.Random
 
 /** Wires CORS, content negotiation (JSON), call logging, RFC 7807 errors, and routes. */
 fun Application.module() {
@@ -191,6 +194,7 @@ fun Application.module() {
 
     val wordRepository = CsvWordRepository.frenchFromClasspath()
     val generatePuzzle = GeneratePuzzleUseCase(wordRepository, defaultPuzzleConstraints())
+    val sampleWords = SampleWordsUseCase(wordRepository, Random.Default)
 
     // Pick adapters on the live DataSource: production has DATABASE_URL set
     // (Helm chart guarantees it) and gets the durable Postgres path. Local
@@ -310,6 +314,7 @@ fun Application.module() {
             dailyPuzzleSelector = dailyPuzzleSelector,
         )
         deleteSession(deleteSession)
+        words(sampleWords)
     }
 }
 

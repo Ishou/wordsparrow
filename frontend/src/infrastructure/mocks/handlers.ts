@@ -48,6 +48,25 @@ type Position = components['schemas']['Position'];
 type ValidatePuzzleRequest = components['schemas']['ValidatePuzzleRequest'];
 type RevealCellHintRequest = components['schemas']['RevealCellHintRequest'];
 type PuzzleSummary = components['schemas']['PuzzleSummary'];
+type SampleWord = components['schemas']['SampleWord'];
+
+// Inline teaser pool for the dev-only `/home` mini-game (ADR-0073). Real
+// short French clue->answer pairs; the producer draws an equivalent random
+// sample from the resident corpus.
+const SAMPLE_WORDS: SampleWord[] = [
+  { clue: 'Capitale de la France', answer: 'PARIS' },
+  { clue: 'Astre du jour', answer: 'SOLEIL' },
+  { clue: 'Liquide vital', answer: 'EAU' },
+  { clue: 'Felin domestique', answer: 'CHAT' },
+  { clue: 'Couleur du ciel', answer: 'BLEU' },
+  { clue: 'Fleur a epines', answer: 'ROSE' },
+  { clue: 'Voie urbaine', answer: 'RUE' },
+  { clue: 'Air en mouvement', answer: 'VENT' },
+  { clue: 'Meuble plat', answer: 'TABLE' },
+  { clue: 'Vegetal a tronc', answer: 'ARBRE' },
+  { clue: 'Souverain', answer: 'ROI' },
+  { clue: 'Habitation', answer: 'MAISON' },
+];
 
 // Cast through `unknown` because Vite's JSON import returns the
 // inferred literal type; the cast is structurally validated at runtime
@@ -215,6 +234,20 @@ const gridHandlers = [
         incorrect.length === 0 && submitted.size === fixtureLetterCellCount,
       incorrectCells: incorrect,
     });
+  }),
+
+  // GET /v1/words/sample — home-teaser pairs (ADR-0073). Filters an inline
+  // pool of real short French clue->answer pairs by the requested length
+  // range and slices to `count`, mirroring the producer's bare-array shape.
+  http.get('*/v1/words/sample', ({ request }) => {
+    const url = new URL(request.url);
+    const minLen = Math.min(Math.max(Number(url.searchParams.get('minLen') ?? 3), 3), 6);
+    const maxLen = Math.min(Math.max(Number(url.searchParams.get('maxLen') ?? 6), minLen), 6);
+    const count = Math.min(Math.max(Number(url.searchParams.get('count') ?? 8), 1), 50);
+    const pool = SAMPLE_WORDS.filter(
+      (w) => w.answer.length >= minLen && w.answer.length <= maxLen,
+    );
+    return HttpResponse.json(pool.slice(0, count));
   }),
 ];
 
