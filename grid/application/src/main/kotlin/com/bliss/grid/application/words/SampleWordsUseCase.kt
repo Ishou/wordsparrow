@@ -21,9 +21,7 @@ class SampleWordsUseCase(
         val byLemma = LinkedHashMap<String, Word>()
         for (length in low..high) {
             for (word in wordRepository.findByLength(length)) {
-                if (word.text.length == length && word.text.all { it in 'A'..'Z' }) {
-                    byLemma.putIfAbsent(word.lemma, word)
-                }
+                byLemma.putIfAbsent(word.lemma, word)
             }
         }
 
