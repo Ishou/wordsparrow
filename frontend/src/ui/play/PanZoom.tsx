@@ -75,9 +75,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
     const vp = vpRef.current;
     if (!edgeFade || !fadeRef.current || !vp) return;
-    // Fenêtré window: soften each viewport edge the grid overflows past with a
-    // jade dissolve from the screen edge inward. Top/bottom mirror a bled side —
-    // no bar geometry; where a bar overlaps the screen edge it just sits on top.
+    // Soften each overflowing edge with a jade dissolve; top/bottom mirror a bled side.
     const vw = vp.clientWidth;
     const vh = vp.clientHeight;
     const cw = contentWidth * scale.current;
@@ -104,13 +102,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   }, []);
   useEffect(() => () => window.clearTimeout(idle.current), []);
 
-  // Animate a frame change with a JS tween (not a CSS transition) so apply()
-  // runs every frame: the transform and the edge fade update together, always
-  // in lockstep. A CSS transition animates the transform on the compositor
-  // while the fade — set once for the destination — drifts over the still-
-  // travelling cells (a misaligned vignette band); a forced layer at a
-  // fractional scale also tiles into a seam. No will-change: the stage
-  // re-paints sharp each frame. Honours reduced-motion (ADR-0050).
+  // JS tween (not CSS transition) so the transform and edge-fade always update in lockstep each frame.
   const ANIM_MS = 220;
   const tweenFrame = useCallback((toScale: number, toTx: number, toTy: number) => {
     cancelAnimationFrame(rafId.current);
@@ -141,12 +133,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     rafId.current = requestAnimationFrame(tick);
   }, [apply]);
   useEffect(() => () => cancelAnimationFrame(rafId.current), []);
-  // The grid is positioned purely by transform, so the viewport must never
-  // scroll. Focusing a cell makes the browser scroll the overflow:hidden
-  // viewport to the cell's LAYOUT position (ignoring the transform) to reveal
-  // it — which shifts the whole stage AND the edge-fade overlay (the 55px
-  // misposition). Snap any such scroll straight back to 0; reveal() already
-  // keeps the focused cell visible via the transform.
+  // Snap viewport scroll to 0: focus triggers a browser scroll that shifts the transform-positioned stage.
   useEffect(() => {
     const vp = vpRef.current;
     if (!vp) return;
@@ -168,9 +155,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     return () => mq.removeEventListener?.('change', onChange);
   }, []);
 
-  // Fill the full viewport on the fit axis so the board bleeds behind the
-  // overlay bars on every side; padBottom governs only pan + reveal (keeping
-  // the focused cell clear of the bottom bar), not the initial fit.
+  // fit fills the viewport; padBottom governs only pan + reveal, not the initial fit.
   const fitScale = useCallback(() => {
     const vp = vpRef.current;
     if (!vp) return 1;
@@ -198,9 +183,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     const ch = contentHeight * scale.current;
     // pan-insets stop each edge with a gap instead of flush against the viewport.
     tx.current = cw <= vw ? (vw - cw) / 2 : Math.min(padX, Math.max(vw - cw - padX, tx.current));
-    // The board bleeds behind both overlay bars; panning is bounded to the
-    // clear band between them (padTop below the top, padBottom above the
-    // bottom). When the board is shorter than the band it centres there.
+    // Pan bounded to the clear band between overlay bars; centre when board is shorter than the band.
     const clearTop = padTop;
     const clearBottom = vh - padBottom;
     if (ch > clearBottom - clearTop) ty.current = Math.min(clearTop, Math.max(clearBottom - ch, ty.current));
@@ -209,8 +192,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
 
   const zoomTo = useCallback(
     (next: number, cx0: number, cy0: number) => {
-      // Ignore zoom while a frame animation owns the view (≤220ms). Letting a
-      // zoom write transforms mid-animation leaves a stuck tiled layer (seam).
+      // Ignore zoom while a frame animation owns the view — a mid-animation zoom leaves a stuck tiled layer.
       if (frameAnimActive.current) return;
       const s = Math.min(maxScale, Math.max(lowerBound(), next));
       const k = s / scale.current;
@@ -252,9 +234,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
       e.preventDefault();
       promote();
       const rect = vp.getBoundingClientRect();
-      // Normalize to pixels so the zoom tracks scroll distance, not event count
-      // (a notch fires one big delta; a Magic Mouse / trackpad fires a stream of
-      // tiny ones). ctrlKey is a trackpad pinch — its deltas are much smaller.
+      // Normalize to pixels: one notch fires one big delta; trackpad fires a stream of tiny ones.
       let dy = e.deltaY;
       if (e.deltaMode === 1) dy *= 16; // lines → px
       else if (e.deltaMode === 2) dy *= vp.clientHeight; // pages → px
@@ -308,8 +288,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
           tx.current,
           ty.current,
         );
-        // Clamp the target to valid pan bounds without disturbing the live
-        // position, then tween the live position to that clamped target.
+        // Clamp the target to valid pan bounds without disturbing the live position, then tween to it.
         const fromScale = scale.current;
         const fromTx = tx.current;
         const fromTy = ty.current;
@@ -339,11 +318,9 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    // Ignore pan/pinch while a frame animation owns the view (≤220ms). Cell
-    // taps still work — they fire onClick, not this pointer-drag tracking.
+    // Ignore pan/pinch while a frame animation owns the view — taps still fire onClick.
     if (frameAnimActive.current) return;
-    // Don't capture yet: capturing on down redirects the click off the cell
-    // button. We capture only once a drag passes the tap threshold (below).
+    // Capture only once a drag exceeds the tap threshold, not on down, so taps still reach the cell.
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 1) moved.current = 0;
   };

@@ -32,8 +32,7 @@ async function gotoPlay(page: Page): Promise<void> {
   await page.evaluate(() => document.fonts.ready);
 }
 
-// Focus (row,col) and make sure we're typing in `want` direction (toggle if the
-// crossing cell defaulted the other way), then return the active clue label.
+// Focus cell and toggle direction to `want` if the crossing cell defaulted otherwise.
 async function focusInDirection(page: Page, row: number, col: number, want: 'HORIZONTAL' | 'VERTICAL'): Promise<void> {
   await page.evaluate(({ row, col }) => {
     document.querySelector<HTMLInputElement>(`input[data-cell-kind="letter"][data-row="${row}"][data-col="${col}"]`)?.focus();
@@ -66,8 +65,7 @@ test('a correct word holds with a sakura halo on the whole word, then advances',
   await typeLetters(page, ['N', 'U', 'M', 'E', 'R', 'O']);
   await expect(page.locator('input[data-row="1"][data-col="0"]')).toHaveAttribute('readonly', '');
 
-  // During the beat: the halo is on cells across the WHOLE word, and the view
-  // has not advanced (still the clue we just solved).
+  // Beat active: halo on all word cells, view still shows the just-solved clue.
   await expect.poll(() => glow(page, 1, 0)).toBe('wsSolveGlow');
   await expect.poll(() => glow(page, 1, 5)).toBe('wsSolveGlow');
   expect(await activeClue(page), 'view must hold on the solved clue during the beat').toBe(solvedClue);
@@ -152,8 +150,7 @@ test('a wrong completion stays in the word — no celebration, no jump', async (
   await typeLetters(page, ['N', 'U', 'M', 'E', 'X']);
   await page.waitForTimeout(200);
 
-  // It wobbles (wrong) but never plays the sakura celebration halo, and the view
-  // does not jump to the next clue.
+  // Wrong word wobbles but never shows the sakura halo and never advances the clue.
   expect(await glow(page, 1, 2), 'a wrong word must not play the celebration halo').not.toBe('wsSolveGlow');
   expect(await activeClue(page), 'a wrong word must not jump to the next clue').toBe(clueBefore);
   // Focus stayed inside NUMERO (did not skip across to another word).
