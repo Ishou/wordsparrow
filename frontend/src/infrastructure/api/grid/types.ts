@@ -117,7 +117,7 @@ export interface paths {
          *     dev-only `/home` teaser mini-game (ADR-0073). The teaser validates
          *     client-side, so this endpoint returns the `answer` in **plaintext**
          *     — a deliberate, ADR-0073-blessed exception to the daily-puzzle
-         *     no-leak posture (PR #218): these are a random teaser pool, never the
+         *     no-leak posture (ADR-0073 §3): these are a random teaser pool, never the
          *     daily answer key, so exposing them leaks no daily solution.
          *
          *     Inputs are bounded server-side (ADR-0073 §4): `count` is clamped to
@@ -974,8 +974,10 @@ export interface operations {
             /**
              * @description Request bounds are malformed. RFC 7807 body;
              *     `type` is `https://bliss.example/errors/invalid-sample-bounds`.
-             *     Variants: `minLen`/`maxLen`/`count` is non-integer or
-             *     out-of-range, or `minLen` exceeds `maxLen`.
+             *     Variants: `minLen` or `maxLen` is non-integer or outside 3–6,
+             *     `count` is non-integer or less than 1, or `minLen` exceeds
+             *     `maxLen`. (`count` values above the server ceiling are clamped,
+             *     not rejected.)
              */
             400: {
                 headers: {
