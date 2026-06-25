@@ -3,10 +3,6 @@ import { X } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { Button } from '@/design-system';
 
-// The reward moment (Phase 3) — faithful to the "Win Screen" Claude Design.
-// Full jade→blush field (no card): a pulsing cherry blossom, "Grille terminée !",
-// a bloomed mini-grid motif, frosted stats, and Rejouer / Partager. Petals drift.
-
 const screen = css({
   position: 'absolute',
   inset: 0,

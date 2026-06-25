@@ -1,16 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The /play grid is positioned purely by PanZoom's CSS transform, so its
-// viewport must never scroll. But focusing a cell makes the browser scroll the
-// overflow:hidden viewport to the cell's LAYOUT position (ignoring the
-// transform) to "reveal" it — which shifts the whole stage AND the edge-fade
-// overlay sideways (the ~55px misposition the maintainer kept seeing: the right
-// fade landing mid-grid, the left going off-screen, the grid itself shifted).
-//
-// PanZoom snaps any such scroll back to 0. This pins the maintainer's case:
-// tabbing the clue rail to "Unite informatique" focuses a cell whose layout
-// position is off-viewport, and must leave the viewport scroll at 0 with the
-// edge-fade overlay still aligned to the viewport.
+// PanZoom.scrollLeft must stay 0; a browser-scroll triggered by cell focus must not shift the edge-fade overlay.
 
 async function gotoPlay(page: Page): Promise<void> {
   await page.setViewportSize({ width: 440, height: 850 });

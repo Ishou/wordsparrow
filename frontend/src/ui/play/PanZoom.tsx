@@ -7,8 +7,7 @@ export interface PanZoomHandle {
   zoomOut: () => void;
   // Pan so a content-space rect becomes visible (used to follow the cursor).
   reveal: (x: number, y: number, w: number, h: number) => void;
-  // Zoom (out only) + pan so a content-space rect is framed in the clear band,
-  // animated. Used to auto-frame the focused clue.
+  // Zoom-out + pan so a rect is centred in the clear band, animated (auto-frame).
   frame: (x: number, y: number, w: number, h: number) => void;
 }
 
@@ -17,13 +16,10 @@ export interface PanZoomProps {
   readonly contentHeight: number;
   readonly minScale?: number;
   readonly maxScale?: number;
-  // Base fit: 'contain' shows the whole board; 'cover' fills both axes (bleeds);
-  // 'height'/'width' fill that one axis and let the other bleed. The fit scale
-  // becomes the zoom floor so the board never shrinks back to a framed margin.
+  // 'cover' fills both axes (bleeds); 'height'/'width' fill one axis; fit scale becomes the zoom floor.
   readonly fit?: 'cover' | 'contain' | 'height' | 'width';
   readonly overscan?: number;
-  // Max pan past flush (px) at the board's edges, so an edge stops with a gap
-  // instead of jamming flush: padTop = top edge, padX = left/right edges.
+  // Max pan gap (px) past flush: padTop = top-edge gap, padX = left/right-edge gap.
   readonly padTop?: number;
   readonly padBottom?: number;
   readonly padX?: number;
@@ -44,9 +40,7 @@ const viewport = css({
   userSelect: 'none',
   _active: { cursor: 'grabbing' },
 });
-// No permanent will-change: a forced layer rasterizes once at 1× and the GPU
-// stretches that bitmap (blurry text). We promote only during a gesture and
-// drop it on settle, so the browser re-paints crisply at the resting scale.
+// No permanent will-change: promote during gesture only so the browser re-paints crisply at rest.
 const stage = css({ position: 'absolute', top: 0, left: 0, transformOrigin: '0 0' });
 const fade = css({ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 'inherit', zIndex: 2 });
 // Distance (px) over which a cut-off side edge softens into the field.
@@ -54,9 +48,7 @@ const EDGE_FADE_PX = 40;
 
 const TAP_SLOP = 6;
 const STEP = 1.25;
-// Wheel zoom is exponential in normalized scroll distance, so a mouse notch and
-// a Magic-Mouse / trackpad swipe of the same intent zoom alike (not a fixed step
-// per event). Higher = faster; ~0.0015 ≈ 15% per 100px notch. Tune by feel.
+// Exponential in normalized scroll distance so mouse notch ≈ trackpad swipe; higher = faster.
 const WHEEL_ZOOM_K = 0.003;
 const WHEEL_ZOOM_MAX = 0.3; // cap one event at ~±30% so a fast flick can't jump
 const PINCH_ZOOM_BOOST = 6; // ctrlKey wheel = trackpad pinch; its deltas are tiny

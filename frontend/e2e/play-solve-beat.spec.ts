@@ -1,20 +1,4 @@
-/**
- * Solo /play solve beat.
- *
- * Completing a word correctly must NOT zap straight to the next clue: PlayScreen
- * holds on the solved word for a beat — a sakura halo (`wsSolveGlow`) ripples
- * every one of its cells and the view stays put — before advancing, so the
- * "your word was good" feedback registers.
- *
- * Conversely a word that is filled but NOT validated (wrong, even when a
- * crossing word already locked its boundary cell) must neither glow nor leave
- * the word — focus stays so the player can fix it.
- *
- * Fixture (frontend/src/infrastructure/mocks/fixtures/puzzle.json):
- *   NUMERO runs across row 1 (1,0)..(1,5); DOM runs down col 5 (0,5)..(2,5),
- *   crossing NUMERO's last cell (1,5)=O. (1,0) and (0,5) are crossing cells and
- *   /play mounts with a vertical clue auto-focused, so we set direction first.
- */
+// Fixture: NUMERO across row 1 (1,0)–(1,5); DOM down col 5 (0,5)–(2,5), crossing at (1,5)=O.
 import { expect, test, type Page } from '@playwright/test';
 
 function activeClue(page: Page): Promise<string | null> {

@@ -22,8 +22,7 @@ import { WinScreen } from './WinScreen';
 const CELL = 56;
 const GAP = 5;
 const STRIDE = CELL + GAP;
-// Breathing gap between the last row and the bottom bar at the pan extreme
-// (mirrors padTop's gap above the first row under the header).
+// Breathing gap at the pan extreme, mirroring padTop's gap above the first row.
 const BOARD_BOTTOM_GAP = 14;
 
 const KEY_ROWS = [
@@ -39,8 +38,7 @@ const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marg
 const GUTTER = '14px';
 // Overlay region: the grid bleeds behind it; pan-inset keeps the top reachable.
 const header = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, padding: `12px ${GUTTER} 0` });
-// One frosted pill holds exit · brand · timer · settings, legible over the
-// bleeding grid without per-element glow.
+// Frosted pill holds exit · brand · timer · settings, legible over the bleeding grid.
 const headerBar = css({
   display: 'flex',
   alignItems: 'center',
@@ -75,9 +73,7 @@ const viewportFill = css({ flex: '1', minHeight: 0 });
 const boardGrid = css({ display: 'grid' });
 const spacer = css({ borderRadius: '9px' });
 
-// Each letter slot: the design-system keycap renders the state visuals; a
-// transparent uncontrolled <input> sits on top carrying the live letter
-// (cell values live in the DOM per ADR-0002 §4, never in React state).
+// Keycap (state visuals) + transparent uncontrolled input on top; cell values in the DOM (ADR-0002 §4).
 const cellWrap = css({ position: 'relative', cursor: 'pointer' });
 // Sakura halo bloomed around a freshly-solved word's cells during the solve beat.
 const cellGlow = css({ borderRadius: '13px', zIndex: 1, animation: 'wsSolveGlow 0.45s ease-out both' });

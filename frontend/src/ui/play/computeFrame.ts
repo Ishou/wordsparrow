@@ -10,8 +10,7 @@ export interface FrameViewport {
   readonly w: number;
   readonly h: number;
 }
-// Clear band insets: the overlay bars (top header, bottom keyboard) and the
-// left/right pan gutter. The band is [x, w-x] × [top, h-bottom].
+// Clear band insets: overlay bars + pan gutters. Band is [x, w-x] × [top, h-bottom].
 export interface FrameInsets {
   readonly top: number;
   readonly bottom: number;
@@ -25,11 +24,7 @@ export interface FrameResult {
 
 const EPS = 0.5;
 
-// Pan one axis: bring [r0, r1] (stage-space extent at the target scale) into
-// the band [lo, hi]. `center` forces centring (used when we changed zoom);
-// otherwise it's a minimal nudge from `current`. When the extent is larger
-// than the band (overflow), the rect's near edge is pinned to `lo` so the
-// definition end stays visible.
+// Bring [r0, r1] into band [lo, hi]: centre when zoomed, nudge when drifted, pin near edge on overflow.
 function panAxis(r0: number, r1: number, lo: number, hi: number, current: number, center: boolean): number {
   const extent = r1 - r0;
   const band = hi - lo;
