@@ -4,8 +4,14 @@ import { HomeScreen } from '@/ui/home/HomeScreen';
 import { Route as RootRoute } from './__root';
 
 function HomeRouteComponent() {
-  const { puzzleRepository, soloEntriesStore } = Route.useRouteContext();
-  return <HomeScreen puzzleRepository={puzzleRepository} soloEntriesStore={soloEntriesStore} />;
+  const { puzzleRepository, soloEntriesStore, wordsRepository } = Route.useRouteContext();
+  return (
+    <HomeScreen
+      puzzleRepository={puzzleRepository}
+      soloEntriesStore={soloEntriesStore}
+      wordsRepository={wordsRepository}
+    />
+  );
 }
 
 export const Route = createRoute({

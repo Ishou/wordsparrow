@@ -15,6 +15,11 @@ export type {
 } from './puzzle';
 export { HintRequestError } from './puzzle';
 export type {
+  SampleWord,
+  SampleWordsOptions,
+  WordsRepository,
+} from './words';
+export type {
   AuthClient,
   GetMeResult,
   LinkedProvider,

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
-import type { DailySummary, PuzzleRepository } from '@/application';
+import type { DailySummary, PuzzleRepository, WordsRepository } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Lockup } from '@/design-system';
 import { TeaserWord } from './TeaserWord';
@@ -100,9 +100,11 @@ function dayDotStyle(today: boolean, solved: boolean): CSSProperties {
 export function HomeScreen({
   puzzleRepository,
   soloEntriesStore,
+  wordsRepository,
 }: {
   readonly puzzleRepository: PuzzleRepository;
   readonly soloEntriesStore: SoloEntriesStore;
+  readonly wordsRepository?: WordsRepository;
 }) {
   const navigate = useNavigate();
   const [streak, setStreak] = useState({ cur: 0, best: 0 });
@@ -185,7 +187,10 @@ export function HomeScreen({
               ) : null}
             </div>
             <div className={teaser}>
-              <TeaserWord onStreak={(cur, best) => setStreak({ cur, best })} />
+              <TeaserWord
+                wordsRepository={wordsRepository}
+                onStreak={(cur, best) => setStreak({ cur, best })}
+              />
             </div>
             <div className={heroEyebrow}>
               Grille du jour

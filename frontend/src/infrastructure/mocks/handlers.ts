@@ -48,6 +48,21 @@ type Position = components['schemas']['Position'];
 type ValidatePuzzleRequest = components['schemas']['ValidatePuzzleRequest'];
 type RevealCellHintRequest = components['schemas']['RevealCellHintRequest'];
 type PuzzleSummary = components['schemas']['PuzzleSummary'];
+type SampleWord = components['schemas']['SampleWord'];
+
+// Preview teaser pool (ADR-0073): short French clue→answer pairs, answers uppercase A–Z.
+const sampleWordPool: ReadonlyArray<SampleWord> = [
+  { clue: 'Note de musique', answer: 'SOL' },
+  { clue: 'Roi des animaux', answer: 'LION' },
+  { clue: "Cinquième mois de l'année", answer: 'MAI' },
+  { clue: 'Petit félin domestique', answer: 'CHAT' },
+  { clue: 'Astre de la nuit', answer: 'LUNE' },
+  { clue: 'Fleur aux pétales fins', answer: 'IRIS' },
+  { clue: 'Métal qui rouille', answer: 'FER' },
+  { clue: 'Le contraire de oui', answer: 'NON' },
+  { clue: 'Capitale de la France', answer: 'PARIS' },
+  { clue: 'Oiseau qui jacasse', answer: 'PIE' },
+];
 
 // Cast through `unknown` because Vite's JSON import returns the
 // inferred literal type; the cast is structurally validated at runtime
@@ -96,6 +111,17 @@ const HINT_PROBLEM_INVALID_COORD = {
  * URL) and any same-origin proxy a future ADR introduces.
  */
 const gridHandlers = [
+  // GET /v1/words/sample — bare SampleWord[] (ADR-0073), clamps count/minLen/maxLen like the server.
+  http.get('*/v1/words/sample', ({ request }) => {
+    const url = new URL(request.url);
+    const minLen = Math.min(Math.max(Number(url.searchParams.get('minLen') ?? 3), 3), 6);
+    const maxLen = Math.min(Math.max(Number(url.searchParams.get('maxLen') ?? 6), 3), 6);
+    const count = Math.min(Math.max(Number(url.searchParams.get('count') ?? 8), 1), 50);
+    const inRange = sampleWordPool.filter(
+      (w) => w.answer.length >= Math.min(minLen, maxLen) && w.answer.length <= Math.max(minLen, maxLen),
+    );
+    return HttpResponse.json(inRange.slice(0, count) satisfies SampleWord[]);
+  }),
   // GET /v1/puzzles/daily/list — must precede the `/v1/puzzles/daily`
   // and `:puzzleId` handlers (MSW dispatches the first match). Builds a
   // DESC-by-date slice clamped to today UTC and the 2026-01-01 launch
