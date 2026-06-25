@@ -103,6 +103,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/words/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sample random clue→answer pairs for the home teaser.
+         * @description Returns a small, count-capped, random sample of `SampleWord`
+         *     clue→answer pairs drawn from the resident French corpus, for the
+         *     dev-only `/home` teaser mini-game (ADR-0073). The teaser validates
+         *     client-side, so this endpoint returns the `answer` in **plaintext**
+         *     — a deliberate, ADR-0073-blessed exception to the daily-puzzle
+         *     no-leak posture (ADR-0073 §3): these are a random teaser pool, never the
+         *     daily answer key, so exposing them leaks no daily solution.
+         *
+         *     Inputs are bounded server-side (ADR-0073 §4): `count` is clamped to
+         *     the documented maximum, the length range is bounded, and
+         *     `minLen ≤ maxLen` is enforced — an inverted or out-of-range request
+         *     is rejected with a 400, not silently served.
+         */
+        get: operations["sampleWords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/puzzles/{puzzleId}/hints": {
         parameters: {
             query?: never;
@@ -621,6 +652,24 @@ export interface components {
              */
             instance?: string;
         };
+        /**
+         * @description A single clue→answer pair for the home teaser (ADR-0073). Both
+         *     fields are always present; the `answer` ships in plaintext because
+         *     the teaser validates client-side (see `sampleWords`).
+         */
+        SampleWord: {
+            /**
+             * @description One clue text for the sampled word.
+             * @example Capitale de la France
+             */
+            clue: string;
+            /**
+             * @description The corpus word's folded surface form — uppercase ASCII A–Z, per
+             *     the `Word.text` invariant (ADR-0073 §1).
+             * @example PARIS
+             */
+            answer: string;
+        };
     };
     responses: never;
     parameters: {
@@ -860,6 +909,75 @@ export interface operations {
             /**
              * @description `from` or `to` is not a valid ISO-8601 date. RFC 7807;
              *     `type` is `https://bliss.example/errors/invalid-puzzle-date`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sampleWords: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Minimum answer length (inclusive), in letters. Defaults to 3.
+                 *     Valid range is 3..6 inclusive; values outside that range, a
+                 *     non-integer, or a `minLen` greater than `maxLen` produce a 400
+                 *     with problem type
+                 *     `https://bliss.example/errors/invalid-sample-bounds`.
+                 */
+                minLen?: number;
+                /**
+                 * @description Maximum answer length (inclusive), in letters. Defaults to 6.
+                 *     Valid range is 3..6 inclusive; values outside that range, a
+                 *     non-integer, or a `maxLen` smaller than `minLen` produce a 400
+                 *     with problem type
+                 *     `https://bliss.example/errors/invalid-sample-bounds`.
+                 */
+                maxLen?: number;
+                /**
+                 * @description Number of clue→answer pairs to return. Defaults to 8. Bounded
+                 *     server-side to a maximum of 50; requests above the ceiling are
+                 *     clamped to 50 (an unbounded `count` would let a caller drain the
+                 *     corpus answer-by-answer, ADR-0073 §4). Non-positive or
+                 *     non-integer values produce a 400 with problem type
+                 *     `https://bliss.example/errors/invalid-sample-bounds`. Fewer than
+                 *     `count` pairs may be returned when the corpus holds fewer
+                 *     distinct headwords in the requested length range.
+                 */
+                count?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description Sample resolved. A bare array of `SampleWord` pairs, deduped by
+             *     headword and randomly drawn from the requested length range. May
+             *     hold fewer than `count` entries when the corpus is thin for the
+             *     range.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SampleWord"][];
+                };
+            };
+            /**
+             * @description Request bounds are malformed. RFC 7807 body;
+             *     `type` is `https://bliss.example/errors/invalid-sample-bounds`.
+             *     Variants: `minLen` or `maxLen` is non-integer or outside 3–6,
+             *     `count` is non-integer or less than 1, or `minLen` exceeds
+             *     `maxLen`. (`count` values above the server ceiling are clamped,
+             *     not rejected.)
              */
             400: {
                 headers: {
