@@ -16,10 +16,7 @@ const cell = css({
 const cellActive = css({
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1.5px token(colors.ws.sakura), 0 4px 0 0 token(colors.ws.sakuraDark), 0 5px 8px -3px rgba(212,93,131,0.26)',
 });
-// Solved clue: settles into a light sage with dark jade-ink text + a flatter
-// elevation, so completed clues recede and the unsolved ones stay prominent.
-// (The dark text is applied inline at the call sites — a class `color` here
-// loses Panda's atomic ordering race against the base cell's cream.)
+// Solved-clue text applied inline at call sites: a class `color` loses Panda's atomic ordering race against the base cream.
 const DONE_TEXT = '#214B40'; // ws.jadeInk — clears WCAG AA on clueSurfaceDone (~4.7:1)
 const cellValidated = css({
   bg: 'ws.clueSurfaceDone',
@@ -64,8 +61,7 @@ export interface DefCellProps {
   readonly validated?: boolean;
 }
 
-// An answer exits to the right (right / right-down) or downward (down / down-right);
-// the tab sits on that edge, pointing toward where the answer begins.
+// An answer exits right (right / right-down) or down; the tab sits on that edge, pointing where it begins.
 const exitsRight = (a: DefArrow) => a === 'right' || a === 'right-down';
 
 // Binary-search font size so every clue fills its cell without overflowing.
@@ -81,9 +77,7 @@ function fitSpan(span: HTMLElement) {
   span.style.whiteSpace = 'normal';
   span.style.overflowWrap = 'normal';
   span.style.wordBreak = 'normal';
-  // Rule: hyphenate only longer words (≥8 letters, ≥4 before / ≥3 after the
-  // break) via fr patterns (lang="fr"), so the font stays readable. Shorter
-  // words never break.
+  // Hyphenate only longer words (≥8 letters, ≥4 before / ≥3 after) via fr patterns, so the font stays readable.
   span.style.hyphens = 'auto';
   span.style.setProperty('-webkit-hyphens', 'auto');
   span.style.setProperty('hyphenate-limit-chars', '8 4 3');

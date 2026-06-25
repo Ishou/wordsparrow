@@ -1,8 +1,7 @@
 import type { CSSProperties } from 'react';
 import { css } from 'styled-system/css';
 
-// WordSparrow brand lockup (ADR-0072 identity): the tilted sparrow-tile mark
-// + the bichrome "WordSparrow" wordmark. Faithful to the "App Lockup" design.
+// WordSparrow brand lockup (ADR-0072 identity): tilted sparrow-tile mark + bichrome wordmark.
 
 export type MarkColorway = 'sakura' | 'cream';
 export type MarkVariant = 'strong' | 'simple';

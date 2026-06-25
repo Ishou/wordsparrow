@@ -83,9 +83,7 @@ export function useWordAutoValidation(
   solver: PuzzleSolver,
   initialFilledCells: ReadonlyArray<PersistedFilledCell> = NO_INITIAL_FILL,
   onWordValidated?: OnWordValidated,
-  // Fired with a fully-filled word that came back WRONG (≥1 incorrect cell).
-  // The word stays editable; callers (solo /play) use it for a "not quite"
-  // signal. Prod /grille leaves it unset — wrong words stay silent.
+  // Fully-filled-but-wrong word; word stays editable. Unset in /grille → silent.
   onWordRejected?: OnWordValidated,
 ): WordAutoValidationState {
   const [validated, setValidated] = useState<ReadonlySet<string>>(() => new Set());
@@ -288,17 +286,14 @@ export function useWordAutoValidation(
             return next;
           });
           for (const word of newlyLocked) onWordValidatedRef.current?.(word);
-          // Fully-filled words with ≥1 incorrect cell: surface for callers
-          // that want a "not quite" signal (the word stays editable).
+          // Surface fully-filled-but-wrong words for the opt-in "not quite" signal.
           for (const word of fullyFilled) {
             if (word.some((p) => incorrect.has(positionKey(p.row, p.col)))) {
               onWordRejectedRef.current?.(word);
             }
           }
         })
-        // Validation network failures drop silently — the user can still try
-        // Vérifier for the explicit signal. (A wrong word is signalled above
-        // via onWordRejected where the caller opts in.)
+        // Validation network failures drop silently — Vérifier stays as the explicit fallback.
         .catch(() => {})
         .finally(() => {
           for (const word of fullyFilled) {

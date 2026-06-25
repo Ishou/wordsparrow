@@ -48,8 +48,7 @@ export interface ClueRailProps {
   readonly onNext?: () => void;
   readonly onZoomIn?: () => void;
   readonly onZoomOut?: () => void;
-  // Replaces the index/total counter in the label row (e.g. a hint control);
-  // index/total still drive the prev/next bounds when no slot is given.
+  // Replaces the index/total counter in the label row (e.g. a hint control); index/total still drive prev/next bounds.
   readonly trailing?: ReactNode;
 }
 

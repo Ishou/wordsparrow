@@ -40,8 +40,7 @@ const ARIA: Record<KeyboardKeyType, string | undefined> = {
 };
 
 export function KeyboardKey({ type, label, onPress }: KeyboardKeyProps) {
-  // Fire on primary-button pointerdown and preventDefault so the focused grid
-  // cell never blurs — the cursor stays put, matching the refined prod keyboard.
+  // Fire on primary-button pointerdown + preventDefault so the focused grid cell never blurs (cursor stays put).
   const handlePointerDown = (e: PointerEvent<HTMLButtonElement>) => {
     if (e.button !== 0) return;
     e.preventDefault();

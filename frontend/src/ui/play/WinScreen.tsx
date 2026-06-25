@@ -107,8 +107,7 @@ const PETALS = PETAL_LEFTS.map((left, i) => ({
   delay: `-${((i * 1.7) % 9).toFixed(1)}s`,
 }));
 
-// Decorative "bloomed grid" motif (7×6): jade definition cells with a gold
-// edge, the rest blushed in blush / rose / sakura, one gold accent.
+// Decorative "bloomed grid" motif (7×6): jade def-cells with a gold edge, the rest blushed.
 const CELL = {
   D: { bg: '#214B40', sh: 'inset -2px 0 0 0 #D8C77A' },
   B: { bg: '#F7DEE7', sh: 'none' },

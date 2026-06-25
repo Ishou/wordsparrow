@@ -4,8 +4,7 @@ import { css } from 'styled-system/css';
 import { WinScreen } from '@/ui/play/WinScreen';
 import { Route as RootRoute } from './__root';
 
-// Phone-shaped jade field so the WinScreen overlay (position: absolute) has a
-// positioned ancestor and reads in its real context.
+// Phone-shaped jade field giving the absolute-positioned WinScreen overlay a positioned ancestor.
 const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marginInline: 'auto', height: '100dvh', overflow: 'hidden', bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)' });
 
 function FinishScreen() {

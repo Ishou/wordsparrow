@@ -7,9 +7,7 @@ import { Route as RootRoute } from './__root';
 
 const notice = css({ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '24px', fontFamily: 'wsUi', fontSize: '15px', color: 'ws.jadeInk', bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)' });
 
-// Dev-only route: the real grid ports back it, served by MSW under
-// `pnpm dev:preview` (VITE_MOCK_GRID_API=true). Plain `pnpm dev` has no
-// grid-api, so the loader resolves null / throws and this hint shows.
+// Dev-only route served by MSW under `pnpm dev:preview`; plain `pnpm dev` has no grid-api, so this hint shows.
 function PlayUnavailable() {
   return (
     <main className={notice}>
@@ -32,8 +30,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export const Route = createRoute({
   getParentRoute: () => RootRoute,
   path: '/play',
-  // `?date=YYYY-MM-DD` opens that day's grid (the home strip links here);
-  // any other value resolves to "today", same as the /grille archive route.
+  // `?date=YYYY-MM-DD` opens that day's grid; any other value resolves to "today".
   validateSearch: (search: Record<string, unknown>): { date?: string } =>
     typeof search.date === 'string' && ISO_DATE.test(search.date) ? { date: search.date } : {},
   loaderDeps: ({ search }) => ({
