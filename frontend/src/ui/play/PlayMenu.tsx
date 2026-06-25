@@ -5,8 +5,7 @@ import { ArrowCounterClockwise, BookOpenText, SpeakerSimpleHigh, SpeakerSimpleSl
 import { css } from 'styled-system/css';
 import { Button } from '@/design-system';
 
-// Forward-declared preference: persists the user's choice so a future sound
-// layer can read it. No effect today — the app ships no sound effects yet.
+// Forward-declared preference: persists sound choice for a future sound layer; no effect today.
 const SOUND_KEY = 'ws-play-sound';
 function readSound(): boolean {
   try {

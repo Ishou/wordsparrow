@@ -1,8 +1,7 @@
 import { css } from 'styled-system/css';
 import { Lockup, SparrowMark, Wordmark } from '@/design-system';
 
-// Faithful reproduction of the "App Lockup" Claude Design: the sparrow-tile
-// mark + bichrome wordmark, horizontal / vertical, across app contexts.
+// App Lockup design screen: sparrow-tile mark + bichrome wordmark, horizontal / vertical.
 
 const page = css({ minHeight: '100vh', bg: '#E7E3D7', padding: '52px 28px 90px', fontFamily: 'wsUi', color: 'ws.jadeInk' });
 const inner = css({ maxWidth: '1120px', marginInline: 'auto' });

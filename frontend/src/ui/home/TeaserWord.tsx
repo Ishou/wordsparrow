@@ -2,12 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { css, cx } from 'styled-system/css';
 import { Cell, DefCell } from '@/design-system';
 
-// A small, actually-playable single word on the home hero: tap any cell to
-// focus it, type to auto-advance, backspace to step back. Completing the word
-// auto-validates — correct settles + celebrates (sakura halo) then rotates to a
-// fresh clue; wrong wobbles (wsShake), breaks the streak, and clears for a
-// retry. After an error a discreet "Passer" lets you skip a clue you're stuck
-// on. A bonus streak (consecutive correct words, + best) is surfaced upward.
+// Playable single-word teaser: correct → celebrate + rotate; wrong → wobble + break streak; bonus streak surfaced upward.
 const CLUES: ReadonlyArray<{ clue: string; answer: string }> = [
   { clue: 'Note', answer: 'SOL' },
   { clue: 'Roi', answer: 'LION' },
@@ -21,8 +16,7 @@ const CLUES: ReadonlyArray<{ clue: string; answer: string }> = [
 
 const wrap = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' });
 const row = css({ display: 'flex', gap: '4px' });
-// 42px wide + font-size 13px → Cell/DefCell render at teaser size with a
-// proportional (1.5em) letter.
+// 42px wide + font-size 13px → Cell/DefCell renders at teaser size.
 const box = css({ position: 'relative', width: '42px', fontSize: '13px' });
 const glow = css({ borderRadius: '9px', zIndex: 1, animation: 'wsSolveGlow 0.5s ease-out both' });
 const shake = css({ animation: 'wsShake 0.4s ease-in-out both' });
@@ -75,8 +69,7 @@ export function TeaserWord({ onStreak }: TeaserWordProps) {
   const { clue, answer } = CLUES[idx];
   const target = answer.toUpperCase();
   const n = target.length;
-  // lettersRef is the synchronous source of truth (a fast typist fires several
-  // keystrokes before React re-renders); `letters` only mirrors it for render.
+  // lettersRef is the sync source of truth for fast typists; `letters` mirrors it for render.
   const lettersRef = useRef<string[]>(Array(n).fill(''));
   const [letters, setLetters] = useState<string[]>(lettersRef.current);
   const [focus, setFocus] = useState<number | null>(null);
@@ -135,9 +128,7 @@ export function TeaserWord({ onStreak }: TeaserWordProps) {
       if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
       timer.current = window.setTimeout(() => rotate(nextIndex(idx)), 900);
     } else if (next.every((c) => c !== '') && !wasFull) {
-      // JUST completed but wrong → wobble + break the streak, keeping letters +
-      // focus. Editing an already-full word doesn't re-fire this — those
-      // keystrokes fall through to the advance below so the cursor keeps moving.
+      // Just completed but wrong: wobble + break streak; re-editing an already-full word doesn't re-fire.
       if (timer.current) window.clearTimeout(timer.current);
       streakRef.current = 0;
       onStreak?.(0, bestRef.current);
@@ -165,9 +156,7 @@ export function TeaserWord({ onStreak }: TeaserWordProps) {
     }
     if (e.key !== 'Backspace') return;
     e.preventDefault();
-    // Backspace always steps back (matches the play grid): a filled cell erases
-    // in place then the cursor steps back; an empty cell steps back and erases
-    // the previous. Either way focus lands one cell to the left.
+    // Backspace always steps back: filled cell erases in place + moves left; empty cell erases previous.
     const next = [...lettersRef.current];
     if (next[i]) {
       next[i] = '';
@@ -199,14 +188,10 @@ export function TeaserWord({ onStreak }: TeaserWordProps) {
                   refs.current[i] = el;
                 }}
                 className={input}
-                // Always-empty "capture" input: the Cell renders the letter (from
-                // state), so typing always overtypes (no maxLength block, no
-                // visible text selection) and any cell stays editable on re-focus.
+                // Always-empty capture input: Cell renders the letter so typing always overtypes.
                 value=""
                 maxLength={1}
-                // Roving tabindex: the word is a single Tab stop (the active
-                // cell, or the first). Tab enters/leaves the game as a whole; it
-                // never hops between slots — arrows / tap do that.
+                // Roving tabindex: word is a single Tab stop; arrows/tap move between slots.
                 tabIndex={i === (focus ?? 0) ? 0 : -1}
                 inputMode="text"
                 autoComplete="off"

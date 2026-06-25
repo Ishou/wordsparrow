@@ -104,8 +104,7 @@ const letterInput = css({
 });
 const letterInputOnActive = css({ color: 'white' });
 
-// Overlay bar: the grid bleeds behind it (same as the header). Its measured
-// height feeds PanZoom's padBottom so the focused cell stays above it.
+// Overlay bar — its measured height feeds PanZoom's padBottom so the focused cell stays above it.
 const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px` });
 // Compact hint chip, lives in the ClueRail label row (replacing the counter).
 const hintBtn = css({
@@ -124,16 +123,14 @@ const hintBtn = css({
   _disabled: { opacity: 0.45, cursor: 'not-allowed' },
 });
 const hintBulb = css({ color: 'ws.or' });
-// Every key the same fixed width (sized to fit 10 per row, gap 5px); shorter
-// rows centre rather than stretch.
+// Every key the same fixed width (10 per row, gap 5px); shorter rows centre.
 const keyboard = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '7px',
   alignItems: 'stretch',
   width: '100%',
-  // Frosted glass panel — same treatment as the header bar; the grid bleeds
-  // behind it, calmed and blurred.
+  // Frosted glass — mirrors the header; grid bleeds behind.
   bg: 'rgba(255,255,255,0.62)',
   backdropFilter: 'blur(10px)',
   border: '0.5px solid rgba(255,255,255,0.7)',
@@ -143,8 +140,7 @@ const keyboard = css({
   '& button': { flex: 'none', width: 'calc((100% - 45px) / 10)', minWidth: 0 },
 });
 const keyRow = css({ display: 'flex', gap: '5px', justifyContent: 'center' });
-// Post-win: the keyboard/clue rail are dead, so the bottom bar becomes a single
-// re-entry back to the celebration.
+// Post-win: bottom bar becomes a single re-entry to the celebration.
 const resultsBtn = css({ width: '100%', gap: '9px' });
 
 function pad(n: number): string {
@@ -194,9 +190,7 @@ function LetterSlot({
         ? 'activeWord'
         : 'empty';
   return (
-    // mousedown-preventDefault stops the input focusing on pointer-down, so a
-    // pan that starts on a cell never selects it; focus happens only on a real
-    // click (handleClick), mirroring the prod grid.
+    // mousedown-preventDefault keeps pan-start on a cell from stealing focus.
     <div
       className={cx(cellWrap, celebrateDelay !== undefined && cellGlow, rejectShake && cellShake)}
       style={celebrateDelay !== undefined ? { animationDelay: `${celebrateDelay}ms` } : undefined}
@@ -249,8 +243,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const pzRef = useRef<PanZoomHandle>(null);
-  // Measured height of the overlay bottom bar — reserved by PanZoom so the
-  // grid bleeds behind it while the focused cell stays above it.
+  // Measured height of the overlay bottom bar — PanZoom reserves it so the focused cell stays above.
   const bottomRef = useRef<HTMLDivElement>(null);
   const [bottomInset, setBottomInset] = useState(280);
   useEffect(() => {
@@ -279,8 +272,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     return m;
   }, [initialEntries]);
 
-  // Hint-revealed cells: locked + correct, persisted across reloads. `loaded`
-  // gates the mount auto-focus so it sees hint-locks before choosing a cell.
+  // Hint-revealed cells: locked + correct; `loaded` gates auto-focus until they're restored.
   const [lockedHintCells, setLockedHintCells] = useState<ReadonlySet<string>>(() => new Set());
   const [lockedLoaded, setLockedLoaded] = useState(false);
   useEffect(() => {
@@ -289,8 +281,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     setLockedLoaded(true);
   }, [puzzle.id, soloEntriesStore]);
 
-  // Gate the flatten ripple so cells rehydrated-as-solved on reload don't all
-  // animate; only words validated after a real interaction ripple.
+  // Gate the flatten ripple: only cells validated after a real interaction animate.
   const userActedRef = useRef(false);
   const handleCellChange = useCallback(
     (row: number, col: number, letter: string | null) => {
@@ -303,8 +294,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const handleWordValidated = useCallback(
     (positions: ReadonlyArray<Position>) => {
       for (const p of positions) soloEntriesStore.lockCell(puzzle.id, p.row, p.col);
-      // Mark this word's cells as freshly validated so the firewall plays the
-      // solve beat (accumulates across words that validate in the same tick).
+      // Marks cells freshly validated so the focus firewall can trigger the solve beat.
       const set = justValidatedRef.current ?? new Set<string>();
       for (const p of positions) set.add(posKey(p.row, p.col));
       justValidatedRef.current = set;
@@ -312,9 +302,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     [soloEntriesStore, puzzle.id],
   );
 
-  // A completed word came back wrong: wobble its cells + an error haptic so the
-  // player knows to fix it (the word stays editable). Reduced motion → haptic
-  // only. (reduceMotionRef / setRejecting are declared below; read at call time.)
+  // Wrong word: wobble + haptic; reduced motion skips the wobble.
   const handleWordRejected = useCallback((positions: ReadonlyArray<Position>) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([0, 28, 38, 28]);
     if (reduceMotionRef.current) return;
@@ -340,8 +328,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         next.add(k);
         return next;
       });
-      // Validate like a typed letter would: a hint that fills a word's last
-      // cell must lock (and can celebrate) the whole word, not just the cell.
+      // Triggers full-word solve beat when a hint fills the last cell.
       autoValidation.onCellFilled({ row, col: column }, 'across');
     },
     [soloEntriesStore, puzzle.id, autoValidation],
@@ -359,23 +346,16 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     return merged;
   }, [autoValidation.validated, lockedHintCells]);
 
-  // Keep the latest validated set readable from stable callbacks (the hint
-  // button resolves the focused cell lazily at click time).
+  // Stable ref so callbacks always read the latest validated set.
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
 
-  // Solve beat: when a word is completed, hold on it briefly — a sakura halo
-  // ripples its cells + a haptic buzz — before the view advances, so the "your
-  // word was good" feedback registers instead of zapping straight to the next
-  // clue. Interruptible: a tap or Next skips it. Skipped under reduced motion
-  // (haptic only). celebrating maps each solved cell → its halo stagger (ms).
+  // Solve beat: brief sakura halo + haptic on completion; interruptible; skipped under reduced motion.
   const [celebrating, setCelebrating] = useState<ReadonlyMap<string, number>>(() => new Map());
   // Cells of a completed-but-wrong word that are currently wobbling.
   const [rejecting, setRejecting] = useState<ReadonlySet<string>>(() => new Set());
   const rejectTimerRef = useRef<number | null>(null);
-  // Cells of words that validated this tick (set by onWordValidated), consumed
-  // once by the focus firewall to gate the solve beat. The current clue (the
-  // word being left) is read from a ref so the firewall can glow the WHOLE word.
+  // Cells validated this tick, consumed once by the focus firewall to gate the solve beat.
   const justValidatedRef = useRef<Set<string> | null>(null);
   const currentClueRef = useRef<Clue | null>(null);
   const solveBeatRef = useRef<number | null>(null);
@@ -425,8 +405,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
       activeFocusRef.current = position;
       revealCell(position);
     },
-    // Force the zoom guard on so prod's window-scroll keyboard-avoidance never
-    // fires; PanZoom.reveal() keeps the focused cell visible instead.
+    // Force the zoom guard on so PanZoom.reveal() handles scroll avoidance instead of the browser.
     getZoomScale: () => 2,
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
   });
@@ -438,18 +417,13 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     hint.request(f.row, f.col);
   }, [hint]);
 
-  // Tab/cycle direction, so skipping over a fully-solved clue continues the way
-  // you were going. cycleClueRef avoids depending on the churning `nav` object.
-  // jumpPendingRef marks a Tab/cycle jump so the skip below classifies it as a
-  // jump even when it lands adjacent (clue starts in the same row), instead of
-  // mistaking it for an arrow move and reverting — which looped.
+  // Tab direction + jump flag so the validated-cell skip can distinguish arrow moves from Tab/cycle.
   const tabDirRef = useRef<1 | -1>(1);
   const jumpPendingRef = useRef(false);
   const cycleClueRef = useRef(nav.cycleClue);
   cycleClueRef.current = nav.cycleClue;
 
-  // Flatten ripple: stagger a solveDelay across cells that just entered the
-  // validated set (a freshly-solved word, or a hint-revealed cell), then clear.
+  // Flatten ripple: stagger solveDelay across newly-validated cells, then clear.
   const [solveDelays, setSolveDelays] = useState<ReadonlyMap<string, number>>(() => new Map());
   const prevValidatedRef = useRef<ReadonlySet<string>>(new Set());
   const solveTimerRef = useRef<number | null>(null);
@@ -472,9 +446,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   }, [validatedPositions]);
   useEffect(() => () => { if (solveTimerRef.current) window.clearTimeout(solveTimerRef.current); }, []);
 
-  // Ordered clue list (across-then-down, by start cell) with each clue's
-  // letter cells — drives the ClueRail counter (same order cycleClue walks)
-  // and the validated-cell focus firewall below.
+  // Clues ordered across-then-down; drives the ClueRail counter and the focus firewall.
   const orderedClues = useMemo(() => {
     const list: { key: string; startRow: number; startCol: number; across: boolean; text: string; cells: Position[] }[] = [];
     for (const cell of puzzle.cells) {
@@ -529,9 +501,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     return orderedClues.findIndex((c) => c.key === k);
   }, [clue, orderedClues]);
 
-  // The rail stays mounted with no focused cell: it shows the live clue when
-  // one is focused, the last shown clue after blur, and the first unsolved
-  // clue on load (seeded to match the mount auto-focus below — no flash).
+  // Rail stays mounted: shows live clue on focus, last clue on blur, first unsolved on load.
   const [lastOrdinal, setLastOrdinal] = useState(() => {
     const i = orderedClues.findIndex((c) => c.cells.some((p) => !autoValidation.validated.has(posKey(p.row, p.col))));
     return i < 0 ? 0 : i;
@@ -542,9 +512,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const displayOrdinal = clueOrdinal >= 0 ? clueOrdinal : lastOrdinal;
   const displayClue = orderedClues[displayOrdinal];
 
-  // Step clues from the rail. Focused → the hook's cycleClue (keeps its
-  // tab/jump nuance); unfocused → continue from the shown clue rather than
-  // snapping to the first/last, focusing its first editable cell.
+  // Step clues: focused delegates to cycleClue; unfocused continues from the shown clue.
   const stepClue = useCallback(
     (dir: 1 | -1) => {
       cancelSolveBeat(); // stepping the rail during the beat skips it
@@ -563,8 +531,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     [nav, orderedClues, displayOrdinal, cancelSolveBeat],
   );
 
-  // Auto-frame the active clue (def-cell + word) when it changes — zoom out
-  // only to fit, animated. Within-clue cursor moves stay on the per-cell reveal.
+  // Auto-frame the active clue when it changes; within-clue moves use per-cell reveal.
   const framedClueRef = useRef<string | null>(null);
   useEffect(() => {
     if (!clue) {
@@ -587,10 +554,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     pzRef.current?.frame(minCol * STRIDE, minRow * STRIDE, (maxCol - minCol) * STRIDE + CELL, (maxRow - minRow) * STRIDE + CELL);
   }, [clue]);
 
-  // Backspace that always steps back: the hook erases a filled cell in place
-  // (correct for /grille), but in /play we want every press to move, so after
-  // an in-place erase we nudge focus to the previous cell. The hook's
-  // eraseLetter still does the erase + persistence + value-mirror sync.
+  // /play backspace always moves: after an in-place erase, nudge focus to the previous cell.
   const playBackspace = useCallback(() => {
     const cur = nav.localCursor;
     const el = cur ? inputAt(cur.position.row, cur.position.col) : null;
@@ -621,11 +585,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     [nav, playBackspace],
   );
 
-  // Walk from `from` along `vec`, skipping validated cells, to the first
-  // editable one. `adjacent` (arrow/type) crosses non-letter gaps to the next
-  // typeable cell in the row/col; a jump (Tab/cycle) stops at the word
-  // boundary. Never jumps to another clue — Tab order stays the hook's job, so
-  // the skip can't fight cycleClue's direction (which broke Shift+Tab + looped).
+  // Walks along vec skipping validated cells; adjacent crosses gaps, jump stops at word boundary.
   const findNextEditable = useCallback(
     (from: Position, vec: { dr: number; dc: number }, validated: ReadonlySet<string>, adjacent: boolean): Position | null => {
       if (vec.dr === 0 && vec.dc === 0) return null;
@@ -649,9 +609,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const letterCount = useMemo(() => puzzle.cells.filter((c) => c.kind === 'letter').length, [puzzle]);
   const won = letterCount > 0 && validatedPositions.size >= letterCount;
 
-  // On first mount, select the first unsolved clue so the rail's clue is the
-  // active one (def-cell ringed, first cell focused). Safe to auto-focus: the
-  // letter inputs are inputMode="none", so no native keyboard pops.
+  // Auto-focus the first unsolved cell on mount; safe because inputMode="none" suppresses the keyboard.
   const didAutoFocusRef = useRef(false);
   useEffect(() => {
     if (didAutoFocusRef.current || won || !lockedLoaded) return;
@@ -660,19 +618,11 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     if (!cl || !target) return;
     didAutoFocusRef.current = true;
     inputAt(target.row, target.col)?.focus();
-    // Focusing a crossing cell resumes the across clue; match the clue we
-    // picked. Direction is still the hook's initial 'across' here (this is
-    // the first focus), so one toggle orients a vertical clue to 'down'.
+    // Toggle direction when the auto-focused clue is vertical (hook starts at 'across').
     if (!cl.across) nav.toggleDirection();
   }, [orderedClues, validatedPositions, won, lockedLoaded, nav]);
 
-  // Validated cells must never hold focus, without touching the hook's refined
-  // key handling. Infer intent from the focus delta:
-  //  - adjacent move (arrow / type / erase): skip in that direction only; at a
-  //    dead-end revert to where we came from — never jump clues, never loop.
-  //  - non-adjacent jump (Tab / cycle): walk within the landed clue to its first
-  //    editable cell; if the whole clue is solved, advance to the next clue via
-  //    the hook in the Tab direction (so it can't fight cycleClue / loop).
+  // Skip validated cells: adjacent move stays in direction (dead-end reverts), jump walks to first editable.
   const fRow = nav.localCursor?.position.row ?? -1;
   const fCol = nav.localCursor?.position.col ?? -1;
   const fDir = nav.localCursor?.direction ?? 'across';
@@ -693,10 +643,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         ? { dr: cur.row - prev.row, dc: cur.col - prev.col }
         : { dr: fDir === 'down' ? 1 : 0, dc: fDir === 'across' ? 1 : 0 };
     const target = findNextEditable(cur, vec, validatedPositions, adjacent);
-    // The current word being left, and whether it's FULLY solved. A wrong or
-    // still-incomplete word (even one whose boundary cell a crossing already
-    // validated) keeps focus so the player can fix it: never skip across to a
-    // DIFFERENT word, never jump to the next clue, never glow.
+    // Only advance if the WHOLE current word is solved; partial or wrong keeps focus.
     const wordKeys = (currentClueRef.current?.cells ?? []).map((c) => posKey(c.position.row, c.position.col));
     const fullySolved = wordKeys.length > 0 && wordKeys.every((k) => validatedPositions.has(k));
     if (target && (fullySolved || wordKeys.includes(posKey(target.row, target.col)))) {
@@ -708,8 +655,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         jumpPendingRef.current = true;
         cycleClueRef.current(tabDirRef.current);
       };
-      // Celebrate only when THIS word just validated (not when tabbing onto an
-      // already-solved clue). Haptic either way; visual hold skipped if reduced.
+      // Celebrate only when THIS word just validated, not when tabbing onto an already-solved clue.
       const celebrate = !!justValidated && wordKeys.some((k) => justValidated.has(k));
       if (celebrate) {
         if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);

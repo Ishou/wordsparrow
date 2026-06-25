@@ -7,20 +7,14 @@ import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Lockup } from '@/design-system';
 import { TeaserWord } from './TeaserWord';
 
-// Daily-card state, mirroring /accueil: the daily loads client-side so the rest
-// of the home paints immediately. `unavailable` (ADR-0042 / 404) is a calm
-// "bientôt", not an error.
+// Daily-card state: loading → ok/unavailable/error (ADR-0042 / 404 → calm "bientôt").
 type DailyState =
   | { readonly status: 'loading' }
   | { readonly status: 'ok'; readonly puzzle: Puzzle }
   | { readonly status: 'unavailable' }
   | { readonly status: 'error' };
 
-// v2 home (ADR-0072 redesign), ported from the "Home Screen" Claude Design
-// file into our tokens/fonts. Dev-only sandbox route, like /play — the
-// functional /accueil is untouched. No difficulty shown. The "previous grids"
-// strip is real: dailies come from listDailySummaries and each day's solved
-// mark is derived from the solo store (locked cells == letter cells).
+// v2 home (ADR-0072): dev-only sandbox; /accueil untouched; previous grids strip uses real summaries.
 
 const shell = css({
   minHeight: '100dvh',
@@ -47,8 +41,7 @@ const greetingHi = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSi
 const greetingSub = css({ fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.8, marginTop: '3px' });
 
 const hero = css({ flex: 'none', bg: 'white', borderRadius: '22px', padding: '14px 22px 22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
-// Thin reserved band above the teaser for the discreet bonus-game streak chip
-// (right-aligned; only filled at streak ≥ 2 so it never collides with the word).
+// Reserved band above the teaser for the streak chip (right-aligned; only filled at streak ≥ 2).
 const heroTop = css({ height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '6px' });
 const streakChip = css({ display: 'inline-flex', alignItems: 'center', gap: '5px', bg: 'ws.sable', borderRadius: '999px', padding: '4px 10px', fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', boxShadow: '0 1px 2px rgba(33,75,64,0.08)' });
 const streakRecord = css({ opacity: 0.55, fontWeight: 'semibold' });
@@ -86,8 +79,7 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-// UTC YYYY-MM-DD — matches the wire `DailySummary.date` and the server's
-// `to <= today UTC` clamp, so day keys line up regardless of local tz.
+// UTC YYYY-MM-DD — matches DailySummary.date and the server's UTC clamp.
 function isoUtcDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -98,8 +90,7 @@ function longDateFr(iso: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-// A solved day fills sakura; today keeps a sakura ring; an unplayed past day is
-// a calm white dot.
+// Solved day: sakura fill; today: sakura ring; unplayed past: white dot.
 function dayDotStyle(today: boolean, solved: boolean): CSSProperties {
   if (solved) return { background: 'var(--colors-ws-sakura)', color: 'white', border: today ? '2px solid var(--colors-ws-sakura)' : undefined };
   if (today) return { background: 'transparent', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' };
@@ -116,8 +107,7 @@ export function HomeScreen({
   const navigate = useNavigate();
   const [streak, setStreak] = useState({ cur: 0, best: 0 });
 
-  // Reflect the real daily: fetched client-side so the teaser + week strip paint
-  // at once; the Jouer CTA gates on whether today's grid is actually available.
+  // Fetched client-side so the teaser + strip paint at once; CTA gates on today's availability.
   const [daily, setDaily] = useState<DailyState>({ status: 'loading' });
   const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -149,9 +139,7 @@ export function HomeScreen({
     return { greeting: g, dateLabel: dl, week: days, range: { from: days[0].iso, to: days[6].iso } };
   }, []);
 
-  // The "previous grids" strip is real: pull the last-7-days summaries and mark
-  // each day solved when the solo store has it fully locked. Failure → no marks
-  // (the strip still paints the calendar), never an error surface.
+  // Pulls last-7-days summaries; marks each day solved when the solo store has it fully locked.
   const [history, setHistory] = useState<ReadonlyArray<DailySummary>>([]);
   useEffect(() => {
     let cancelled = false;
