@@ -1,13 +1,26 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
+import type { Puzzle } from '@/domain';
+import type { DailySummary, PuzzleRepository } from '@/application';
+import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Lockup } from '@/design-system';
 import { TeaserWord } from './TeaserWord';
 
+// Daily-card state, mirroring /accueil: the daily loads client-side so the rest
+// of the home paints immediately. `unavailable` (ADR-0042 / 404) is a calm
+// "bientôt", not an error.
+type DailyState =
+  | { readonly status: 'loading' }
+  | { readonly status: 'ok'; readonly puzzle: Puzzle }
+  | { readonly status: 'unavailable' }
+  | { readonly status: 'error' };
+
 // v2 home (ADR-0072 redesign), ported from the "Home Screen" Claude Design
 // file into our tokens/fonts. Dev-only sandbox route, like /play — the
-// functional /accueil is untouched. No difficulty + no streak yet; the
-// "previous grids" strip only marks today (we keep no per-day solved history).
+// functional /accueil is untouched. No difficulty shown. The "previous grids"
+// strip is real: dailies come from listDailySummaries and each day's solved
+// mark is derived from the solo store (locked cells == letter cells).
 
 const shell = css({
   minHeight: '100dvh',
@@ -43,7 +56,7 @@ const teaser = css({ display: 'flex', justifyContent: 'center', marginBottom: '6
 
 const heroEyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#A8842B', marginBottom: '6px', textAlign: 'center' });
 const heroDate = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '27px', color: 'ws.jadeInk', lineHeight: '1.05', textAlign: 'center' });
-const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakura', color: 'white', fontFamily: 'wsUi', fontWeight: 'extrabold', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' } });
+const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakura', color: 'white', fontFamily: 'wsUi', fontWeight: 'extrabold', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' }, _disabled: { bg: 'ws.khaki', opacity: 0.45, cursor: 'default', boxShadow: 'none', _active: { transform: 'none' } } });
 
 const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px' });
 const prevLabel = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk', marginBottom: '12px', paddingLeft: '2px' });
@@ -71,22 +84,87 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export function HomeScreen() {
+// UTC YYYY-MM-DD — matches the wire `DailySummary.date` and the server's
+// `to <= today UTC` clamp, so day keys line up regardless of local tz.
+function isoUtcDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+// A solved day fills sakura; today keeps a sakura ring; an unplayed past day is
+// a calm white dot.
+function dayDotStyle(today: boolean, solved: boolean): CSSProperties {
+  if (solved) return { background: 'var(--colors-ws-sakura)', color: 'white', border: today ? '2px solid var(--colors-ws-sakura)' : undefined };
+  if (today) return { background: 'transparent', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' };
+  return { background: 'white', color: 'var(--colors-ws-khaki)' };
+}
+
+export function HomeScreen({
+  puzzleRepository,
+  soloEntriesStore,
+}: {
+  readonly puzzleRepository: PuzzleRepository;
+  readonly soloEntriesStore: SoloEntriesStore;
+}) {
   const navigate = useNavigate();
   const [streak, setStreak] = useState({ cur: 0, best: 0 });
 
-  const { greeting, dateLabel, week } = useMemo(() => {
+  // Reflect the real daily: fetched client-side so the teaser + week strip paint
+  // at once; the Jouer CTA gates on whether today's grid is actually available.
+  const [daily, setDaily] = useState<DailyState>({ status: 'loading' });
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    setDaily({ status: 'loading' });
+    puzzleRepository
+      .fetchDaily()
+      .then((puzzle) => {
+        if (cancelled) return;
+        setDaily(puzzle === null ? { status: 'unavailable' } : { status: 'ok', puzzle });
+      })
+      .catch(() => {
+        if (!cancelled) setDaily({ status: 'error' });
+      });
+    return () => { cancelled = true; };
+  }, [puzzleRepository, retry]);
+
+  const { greeting, dateLabel, week, range } = useMemo(() => {
     const now = new Date();
     const g = timeGreeting(now.getHours());
     const dl = capitalize(new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(now));
-    // Last 7 days ending today; only today is marked (no solved history yet).
+    // Last 7 UTC days ending today (today last). ISO keys match the summaries.
+    const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(now);
-      d.setDate(now.getDate() - (6 - i));
-      return { wd: WD_LETTERS[d.getDay()], num: d.getDate(), today: i === 6 };
+      const d = new Date(todayUtc);
+      d.setUTCDate(todayUtc.getUTCDate() - (6 - i));
+      return { iso: isoUtcDate(d), wd: WD_LETTERS[d.getUTCDay()], num: d.getUTCDate(), today: i === 6 };
     });
-    return { greeting: g, dateLabel: dl, week: days };
+    return { greeting: g, dateLabel: dl, week: days, range: { from: days[0].iso, to: days[6].iso } };
   }, []);
+
+  // The "previous grids" strip is real: pull the last-7-days summaries and mark
+  // each day solved when the solo store has it fully locked. Failure → no marks
+  // (the strip still paints the calendar), never an error surface.
+  const [history, setHistory] = useState<ReadonlyArray<DailySummary>>([]);
+  useEffect(() => {
+    let cancelled = false;
+    puzzleRepository
+      .listDailySummaries({ from: range.from, to: range.to })
+      .then((page) => { if (!cancelled) setHistory(page.items); })
+      .catch(() => { if (!cancelled) setHistory([]); });
+    return () => { cancelled = true; };
+  }, [puzzleRepository, range.from, range.to]);
+
+  const weekCells = useMemo(() => {
+    const byDate = new Map(history.map((s) => [s.date, s]));
+    return week.map((d) => {
+      const summary = byDate.get(d.iso);
+      const solved =
+        summary != null &&
+        summary.totalLetterCells > 0 &&
+        soloEntriesStore.loadLockedCells(summary.id).length >= summary.totalLetterCells;
+      return { ...d, solved };
+    });
+  }, [week, history, soloEntriesStore]);
 
   return (
     <main className={shell} lang="fr">
@@ -113,26 +191,38 @@ export function HomeScreen() {
             <div className={teaser}>
               <TeaserWord onStreak={(cur, best) => setStreak({ cur, best })} />
             </div>
-            <div className={heroEyebrow}>Grille du jour</div>
+            <div className={heroEyebrow}>
+              Grille du jour
+              {daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}
+            </div>
             <div className={heroDate}>{dateLabel}</div>
-            <button type="button" className={playBtn} onClick={() => navigate({ to: '/play' })}>Jouer</button>
+            <button
+              type="button"
+              className={playBtn}
+              disabled={daily.status === 'loading' || daily.status === 'unavailable'}
+              onClick={() => {
+                if (daily.status === 'ok') navigate({ to: '/play' });
+                else if (daily.status === 'error') setRetry((n) => n + 1);
+              }}
+            >
+              {daily.status === 'ok'
+                ? 'Jouer'
+                : daily.status === 'loading'
+                  ? 'Chargement…'
+                  : daily.status === 'unavailable'
+                    ? 'Bientôt disponible'
+                    : 'Réessayer'}
+            </button>
           </section>
 
           <section className={prevWrap}>
             <div className={prevLabel}>Grilles précédentes</div>
             <div className={prevCard}>
               <div className={prevRow}>
-                {week.map((d, i) => (
+                {weekCells.map((d, i) => (
                   <div key={i} className={dayCol}>
                     <span className={dayWd}>{d.wd}</span>
-                    <span
-                      className={dayDot}
-                      style={
-                        d.today
-                          ? { background: 'transparent', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' }
-                          : { background: 'white', color: 'var(--colors-ws-khaki)' }
-                      }
-                    >
+                    <span className={dayDot} style={dayDotStyle(d.today, d.solved)}>
                       {d.num}
                     </span>
                   </div>

@@ -3,8 +3,13 @@ import { createRoute } from '@tanstack/react-router';
 import { HomeScreen } from '@/ui/home/HomeScreen';
 import { Route as RootRoute } from './__root';
 
+function HomeRouteComponent() {
+  const { puzzleRepository, soloEntriesStore } = Route.useRouteContext();
+  return <HomeScreen puzzleRepository={puzzleRepository} soloEntriesStore={soloEntriesStore} />;
+}
+
 export const Route = createRoute({
   getParentRoute: () => RootRoute,
   path: '/home',
-  component: HomeScreen,
+  component: HomeRouteComponent,
 });
