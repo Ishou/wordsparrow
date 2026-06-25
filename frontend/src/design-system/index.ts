@@ -15,3 +15,15 @@ export { DifficultyDots, type DifficultyDotsProps, type DifficultyLevel } from '
 export { CalendarDay, type CalendarDayProps, type CalendarDayState } from './components/CalendarDay/CalendarDay';
 export { BottomNav, type BottomNavProps, type NavKey } from './components/BottomNav/BottomNav';
 export { DailyCard, type DailyCardProps } from './components/DailyCard/DailyCard';
+export {
+  SparrowMark,
+  Wordmark,
+  Lockup,
+  type SparrowMarkProps,
+  type WordmarkProps,
+  type LockupProps,
+  type MarkColorway,
+  type MarkVariant,
+  type MarkTile,
+  type WordmarkTone,
+} from './components/Lockup/Lockup';

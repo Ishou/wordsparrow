@@ -1,3 +1,4 @@
+import { type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import { Check, Backspace } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 
@@ -13,6 +14,8 @@ const base = css({
   fontWeight: 'semibold',
   fontSize: '19px',
   cursor: 'pointer',
+  // Tap fires on pointerdown without stealing focus from the grid cell; manipulation kills the double-tap delay.
+  touchAction: 'manipulation',
   boxShadow: '0 1px 0 rgba(33,75,64,0.1)',
   _focusVisible: { outline: '2px solid token(colors.ws.sakura)', outlineOffset: '1px' },
 });
@@ -37,8 +40,28 @@ const ARIA: Record<KeyboardKeyType, string | undefined> = {
 };
 
 export function KeyboardKey({ type, label, onPress }: KeyboardKeyProps) {
+  // Fire on primary-button pointerdown + preventDefault so the focused grid cell never blurs (cursor stays put).
+  const handlePointerDown = (e: PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    onPress?.();
+  };
+  // Enter/Space activation for keyboard users (pointerdown won't fire for them).
+  const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    onPress?.();
+  };
+  const handleContextMenu = (e: MouseEvent) => e.preventDefault();
   return (
-    <button type="button" aria-label={ARIA[type] ?? label} className={cx(base, byType[type])} onClick={onPress}>
+    <button
+      type="button"
+      aria-label={ARIA[type] ?? label}
+      className={cx(base, byType[type])}
+      onPointerDown={handlePointerDown}
+      onKeyDown={handleKeyDown}
+      onContextMenu={handleContextMenu}
+    >
       {type === 'letter' ? <span>{label}</span> : null}
       {type === 'confirm' ? <Check aria-hidden="true" weight="bold" /> : null}
       {type === 'backspace' ? <Backspace aria-hidden="true" weight="bold" /> : null}

@@ -126,9 +126,10 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.browser, ...globals.es2022, ...globals.node } },
     rules: { 'boundaries/dependencies': 'off', 'boundaries/no-unknown': 'off' },
   },
-  // Gallery route is the sole sanctioned app→module bridge (ADR-0072).
+  // Sanctioned DEV-only app→module bridges (ADR-0072): the gallery route and
+  // the /play + /home demo modules, all consuming the standalone design-system.
   {
-    files: ['src/ui/routes/design-system.tsx'],
+    files: ['src/ui/routes/design-system.tsx', 'src/ui/play/**', 'src/ui/home/**'],
     rules: { 'boundaries/dependencies': 'off' },
   },
   // UI layer must not render raw Error.message — use messageForApiError() or route-level typed-error mapping.

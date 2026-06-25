@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { CaretLeft, CaretRight, CaretDown, Minus, Plus } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 
@@ -14,6 +15,7 @@ const label = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', le
 const sep = css({ width: '1px', height: '11px', bg: 'rgba(76,72,36,0.22)' });
 const counter = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.7, whiteSpace: 'nowrap' });
 
+const rightGroup = css({ display: 'flex', alignItems: 'center', gap: '10px' });
 const zoom = css({ display: 'flex', alignItems: 'center', bg: '#F2EDDC', borderRadius: '9px', overflow: 'hidden' });
 const zoomBtn = css({ width: '32px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'transparent', border: 'none', color: 'ws.jadeInk', cursor: 'pointer' });
 const zoomSep = css({ width: '1px', height: '15px', bg: 'rgba(33,75,64,0.16)' });
@@ -46,11 +48,13 @@ export interface ClueRailProps {
   readonly onNext?: () => void;
   readonly onZoomIn?: () => void;
   readonly onZoomOut?: () => void;
+  // Replaces the index/total counter in the label row (e.g. a hint control); index/total still drive prev/next bounds.
+  readonly trailing?: ReactNode;
 }
 
 const DIRECTION_TEXT: Record<ClueDirection, string> = { horizontal: 'HORIZONTAL', vertical: 'VERTICAL' };
 
-export function ClueRail({ direction, clue, index, total, onPrev, onNext, onZoomIn, onZoomOut }: ClueRailProps) {
+export function ClueRail({ direction, clue, index, total, onPrev, onNext, onZoomIn, onZoomOut, trailing }: ClueRailProps) {
   return (
     <div className={rail} role="group" aria-label="Indice actif">
       <div className={topRow}>
@@ -62,13 +66,20 @@ export function ClueRail({ direction, clue, index, total, onPrev, onNext, onZoom
               ? <CaretRight aria-hidden="true" weight="bold" />
               : <CaretDown aria-hidden="true" weight="bold" />}
           </span>
-          <span aria-hidden="true" className={sep} />
-          <span className={counter} aria-label={`Indice ${index} sur ${total}`}>{index} / {total}</span>
+          {trailing ? null : (
+            <>
+              <span aria-hidden="true" className={sep} />
+              <span className={counter} aria-label={`Indice ${index} sur ${total}`}>{index} / {total}</span>
+            </>
+          )}
         </div>
-        <div className={zoom}>
-          <button type="button" className={zoomBtn} onClick={onZoomOut} aria-label="Dézoomer"><Minus aria-hidden="true" weight="bold" /></button>
-          <span aria-hidden="true" className={zoomSep} />
-          <button type="button" className={zoomBtn} onClick={onZoomIn} aria-label="Zoomer"><Plus aria-hidden="true" weight="bold" /></button>
+        <div className={rightGroup}>
+          {trailing}
+          <div className={zoom}>
+            <button type="button" className={zoomBtn} onClick={onZoomOut} aria-label="Dézoomer"><Minus aria-hidden="true" weight="bold" /></button>
+            <span aria-hidden="true" className={zoomSep} />
+            <button type="button" className={zoomBtn} onClick={onZoomIn} aria-label="Zoomer"><Plus aria-hidden="true" weight="bold" /></button>
+          </div>
         </div>
       </div>
       <div className={mainRow}>

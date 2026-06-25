@@ -83,6 +83,8 @@ export function useWordAutoValidation(
   solver: PuzzleSolver,
   initialFilledCells: ReadonlyArray<PersistedFilledCell> = NO_INITIAL_FILL,
   onWordValidated?: OnWordValidated,
+  // Fully-filled-but-wrong word; word stays editable. Unset in /grille → silent.
+  onWordRejected?: OnWordValidated,
 ): WordAutoValidationState {
   const [validated, setValidated] = useState<ReadonlySet<string>>(() => new Set());
 
@@ -91,6 +93,8 @@ export function useWordAutoValidation(
   // each render).
   const onWordValidatedRef = useRef<OnWordValidated | undefined>(onWordValidated);
   onWordValidatedRef.current = onWordValidated;
+  const onWordRejectedRef = useRef<OnWordValidated | undefined>(onWordRejected);
+  onWordRejectedRef.current = onWordRejected;
 
   // Reset on puzzle swap AND rehydrate locks from persisted entries.
   // Solo letters live in localStorage; on a page reload the cells
@@ -282,11 +286,14 @@ export function useWordAutoValidation(
             return next;
           });
           for (const word of newlyLocked) onWordValidatedRef.current?.(word);
+          // Surface fully-filled-but-wrong words for the opt-in "not quite" signal.
+          for (const word of fullyFilled) {
+            if (word.some((p) => incorrect.has(positionKey(p.row, p.col)))) {
+              onWordRejectedRef.current?.(word);
+            }
+          }
         })
-        // Wrong words drop silently — incorrect fills are visually
-        // indistinguishable from in-progress ones per the product
-        // decision. Network failures behave the same way: the user
-        // can still try Vérifier for the explicit signal.
+        // Validation network failures drop silently — Vérifier stays as the explicit fallback.
         .catch(() => {})
         .finally(() => {
           for (const word of fullyFilled) {

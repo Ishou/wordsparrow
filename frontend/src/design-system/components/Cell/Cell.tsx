@@ -18,6 +18,12 @@ const byState = {
     bgImage: 'linear-gradient(180deg, #FBFAF3, #EFEADB)',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.75), 0 2.5px 0 0 #DCD6C5, 0 3px 5px -3px rgba(33,75,64,0.16)',
   }),
+  // A typed-but-unlocked cell: still a raised keycap, but now carries its letter.
+  filled: css({
+    bgImage: 'linear-gradient(180deg, #FBFAF3, #EFEADB)',
+    color: 'ws.khaki',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.75), 0 2.5px 0 0 #DCD6C5, 0 3px 5px -3px rgba(33,75,64,0.16)',
+  }),
   solved: css({
     bg: 'ws.sable',
     color: 'ws.khaki',
@@ -35,16 +41,26 @@ const byState = {
   }),
 } as const;
 
+// Opt-in flatten ripple, played once when a cell becomes solved.
+const solveRipple = css({ animation: 'wsFlatten 0.26s ease both' });
+
 export type CellState = keyof typeof byState;
 
 export interface CellProps {
   readonly state: CellState;
   readonly letter?: string;
+  // ms stagger for the solve ripple; omit to render solved statically (no motion).
+  readonly solveDelay?: number;
 }
 
-export function Cell({ state, letter }: CellProps) {
+export function Cell({ state, letter, solveDelay }: CellProps) {
+  const ripple = state === 'solved' && solveDelay !== undefined;
   return (
-    <div data-cell-state={state} className={cx(base, byState[state])}>
+    <div
+      data-cell-state={state}
+      className={cx(base, byState[state], ripple && solveRipple)}
+      style={ripple ? { animationDelay: `${solveDelay}ms` } : undefined}
+    >
       {state === 'empty' ? '' : letter}
     </div>
   );

@@ -1,0 +1,28 @@
+import { createRoute, useNavigate } from '@tanstack/react-router';
+import { css } from 'styled-system/css';
+// Sanctioned app→module bridge (ADR-0072); registered only in DEV.
+import { WinScreen } from '@/ui/play/WinScreen';
+import { Route as RootRoute } from './__root';
+
+// Phone-shaped jade field giving the absolute-positioned WinScreen overlay a positioned ancestor.
+const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marginInline: 'auto', height: '100dvh', overflow: 'hidden', bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)' });
+
+function FinishScreen() {
+  const navigate = useNavigate();
+  const share = () => {
+    const text = "J'ai terminé la grille WordSparrow du jour ! 🌸";
+    if (typeof navigator !== 'undefined' && navigator.share) void navigator.share({ text }).catch(() => {});
+    else void navigator.clipboard?.writeText(text).catch(() => {});
+  };
+  return (
+    <div className={shell}>
+      <WinScreen time="04:12" onReplay={() => void navigate({ to: '/play' })} onShare={share} onDismiss={() => void navigate({ to: '/play' })} />
+    </div>
+  );
+}
+
+export const Route = createRoute({
+  getParentRoute: () => RootRoute,
+  path: '/finish',
+  component: FinishScreen,
+});

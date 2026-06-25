@@ -61,6 +61,8 @@ export default defineConfig({
           sakuraBlush: { value: '#F7DEE7' },
           // Deep sage clue-cell surface; cream text on it clears WCAG AA (~5.3:1).
           clueSurface: { value: '#4F6E5C' },
+          // Solved-clue light sage; pairs with jade-ink (not cream) text for WCAG AA (~4.7:1).
+          clueSurfaceDone: { value: '#9FBCA8' },
           clueText: { value: '#FBF6E9' },
         },
         // Primary ramp — mousse (moss-green brand + success/validation).
@@ -317,6 +319,41 @@ export default defineConfig({
       cardRise: {
         from: { opacity: '0', transform: 'translateY(8px)' },
         to: { opacity: '1', transform: 'translateY(0)' },
+      },
+      // Solve ripple: a raised keycap drops and flattens (ADR-0072 solve motion).
+      wsFlatten: {
+        '0%': { transform: 'translateY(-3px)', boxShadow: '0 3px 0 0 #D6CAA4, 0 6px 9px -3px rgba(33,75,64,0.2)' },
+        '55%': { transform: 'translateY(1px)', boxShadow: 'inset 0 1px 3px rgba(33,75,64,0.16), inset 0 0 0 1px rgba(33,75,64,0.07)' },
+        '100%': { transform: 'translateY(0)', boxShadow: 'inset 0 1px 3px rgba(33,75,64,0.16), inset 0 0 0 1px rgba(33,75,64,0.07)' },
+      },
+      // Sakura halo around a freshly-solved word before advancing.
+      wsSolveGlow: {
+        '0%': { boxShadow: '0 0 0 0 rgba(212,93,131,0)' },
+        '35%': { boxShadow: '0 0 0 3px rgba(212,93,131,0.55), 0 0 14px 3px rgba(212,93,131,0.45)' },
+        '100%': { boxShadow: '0 0 0 0 rgba(212,93,131,0)' },
+      },
+      // Head-shake on a completed-but-wrong word.
+      wsShake: {
+        '0%, 100%': { transform: 'rotate(0deg)' },
+        '25%': { transform: 'rotate(-3deg)' },
+        '50%': { transform: 'rotate(3deg)' },
+        '75%': { transform: 'rotate(-2deg)' },
+      },
+      // Win celebration (Phase 3): screen fade, drifting sakura petals, blossom pulse.
+      wsFade: { from: { opacity: '0' }, to: { opacity: '1' } },
+      wsPetalFall: {
+        '0%': { transform: 'translateY(0) translateX(0) rotate(0deg)' },
+        '50%': { transform: 'translateY(460px) translateX(18px) rotate(180deg)' },
+        '100%': { transform: 'translateY(900px) translateX(-12px) rotate(374deg)' },
+      },
+      wsBloomGlow: {
+        '0%, 100%': { transform: 'scale(1)' },
+        '50%': { transform: 'scale(1.05)' },
+      },
+      // Settings bottom sheet entrance: rises from the bottom edge.
+      wsSheetUp: {
+        from: { transform: 'translateY(100%)' },
+        to: { transform: 'translateY(0)' },
       },
     },
   },

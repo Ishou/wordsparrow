@@ -1,0 +1,260 @@
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { css } from 'styled-system/css';
+import type { Puzzle } from '@/domain';
+import type { DailySummary, PuzzleRepository } from '@/application';
+import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
+import { Lockup } from '@/design-system';
+import { TeaserWord } from './TeaserWord';
+
+// Daily-card state: loading → ok/unavailable/error (ADR-0042 / 404 → calm "bientôt").
+type DailyState =
+  | { readonly status: 'loading' }
+  | { readonly status: 'ok'; readonly puzzle: Puzzle }
+  | { readonly status: 'unavailable' }
+  | { readonly status: 'error' };
+
+// v2 home (ADR-0072): dev-only sandbox; /accueil untouched; previous grids strip uses real summaries.
+
+const shell = css({
+  minHeight: '100dvh',
+  bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+});
+// Mobile-width column, centred on larger viewports (the design is a phone screen).
+const frame = css({
+  width: '100%',
+  maxWidth: '420px',
+  flex: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+});
+const content = css({ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: 'calc(env(safe-area-inset-top) + 22px) 22px 0', overflowY: 'auto' });
+
+const appBar = css({ flex: 'none', display: 'flex', alignItems: 'center', marginBottom: '24px' });
+
+const greetingBox = css({ flex: 'none', marginBottom: '18px' });
+const greetingHi = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', color: 'ws.jadeInk', lineHeight: '1.1' });
+const greetingSub = css({ fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.8, marginTop: '3px' });
+
+const hero = css({ flex: 'none', bg: 'white', borderRadius: '22px', padding: '14px 22px 22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
+// Reserved band above the teaser for the streak chip (right-aligned; only filled at streak ≥ 2).
+const heroTop = css({ height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '6px' });
+const streakChip = css({ display: 'inline-flex', alignItems: 'center', gap: '5px', bg: 'ws.sable', borderRadius: '999px', padding: '4px 10px', fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', boxShadow: '0 1px 2px rgba(33,75,64,0.08)' });
+const streakRecord = css({ opacity: 0.55, fontWeight: 'semibold' });
+const teaser = css({ display: 'flex', justifyContent: 'center', marginBottom: '6px' });
+
+const heroEyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#A8842B', marginBottom: '6px', textAlign: 'center' });
+const heroDate = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '27px', color: 'ws.jadeInk', lineHeight: '1.05', textAlign: 'center' });
+const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakura', color: 'white', fontFamily: 'wsUi', fontWeight: 'extrabold', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' }, _disabled: { bg: 'ws.khaki', opacity: 0.45, cursor: 'default', boxShadow: 'none', _active: { transform: 'none' } } });
+
+const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px' });
+const prevLabel = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk', marginBottom: '12px', paddingLeft: '2px' });
+const prevCard = css({ bg: 'ws.sable', borderRadius: '18px', padding: '15px 10px', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
+const prevRow = css({ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' });
+const dayCol = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', flex: 1 });
+const dayWd = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.65 });
+const dayDot = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px' });
+// A playable past/today day is a button: same dot, with a press affordance.
+const dayDotBtn = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px', padding: 0, cursor: 'pointer', transition: 'transform 120ms', _hover: { transform: 'translateY(-1px)' }, _active: { transform: 'translateY(0)' } });
+
+const nav = css({ flex: 'none', bg: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(14px)', borderTop: '0.5px solid rgba(33,75,64,0.10)', padding: '10px 28px calc(8px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' });
+const navItem = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 });
+const navLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold' });
+
+const WD_LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'] as const;
+
+function timeGreeting(hour: number): { hi: string; sub: string } {
+  if (hour < 5) return { hi: 'Encore debout ? 🌙', sub: 'La nuit est calme — parfaite pour quelques mots.' };
+  if (hour < 12) return { hi: 'Bonjour ☀️', sub: 'Une nouvelle grille pour bien commencer la journée.' };
+  if (hour < 18) return { hi: 'Bel après-midi 🌤️', sub: 'Une grille pour souffler un peu.' };
+  if (hour < 22) return { hi: 'Bonsoir 🌆', sub: "La grille du soir t'attend." };
+  return { hi: 'Bonne nuit 🌙', sub: 'Un dernier mot avant de dormir ?' };
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// UTC YYYY-MM-DD — matches DailySummary.date and the server's UTC clamp.
+function isoUtcDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+// "Jeudi 25 juin" from a UTC ISO date — used for the day-dot aria labels.
+function longDateFr(iso: string): string {
+  const s = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`));
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Solved day: sakura fill; today: sakura ring; unplayed past: white dot.
+function dayDotStyle(today: boolean, solved: boolean): CSSProperties {
+  if (solved) return { background: 'var(--colors-ws-sakura)', color: 'white', border: today ? '2px solid var(--colors-ws-sakura)' : undefined };
+  if (today) return { background: 'transparent', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' };
+  return { background: 'white', color: 'var(--colors-ws-khaki)' };
+}
+
+export function HomeScreen({
+  puzzleRepository,
+  soloEntriesStore,
+}: {
+  readonly puzzleRepository: PuzzleRepository;
+  readonly soloEntriesStore: SoloEntriesStore;
+}) {
+  const navigate = useNavigate();
+  const [streak, setStreak] = useState({ cur: 0, best: 0 });
+
+  // Fetched client-side so the teaser + strip paint at once; CTA gates on today's availability.
+  const [daily, setDaily] = useState<DailyState>({ status: 'loading' });
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    setDaily({ status: 'loading' });
+    puzzleRepository
+      .fetchDaily()
+      .then((puzzle) => {
+        if (cancelled) return;
+        setDaily(puzzle === null ? { status: 'unavailable' } : { status: 'ok', puzzle });
+      })
+      .catch(() => {
+        if (!cancelled) setDaily({ status: 'error' });
+      });
+    return () => { cancelled = true; };
+  }, [puzzleRepository, retry]);
+
+  const { greeting, dateLabel, week, range } = useMemo(() => {
+    const now = new Date();
+    const g = timeGreeting(now.getHours());
+    const dl = capitalize(new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(now));
+    // Last 7 UTC days ending today (today last). ISO keys match the summaries.
+    const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(todayUtc);
+      d.setUTCDate(todayUtc.getUTCDate() - (6 - i));
+      return { iso: isoUtcDate(d), wd: WD_LETTERS[d.getUTCDay()], num: d.getUTCDate(), today: i === 6 };
+    });
+    return { greeting: g, dateLabel: dl, week: days, range: { from: days[0].iso, to: days[6].iso } };
+  }, []);
+
+  // Pulls last-7-days summaries; marks each day solved when the solo store has it fully locked.
+  const [history, setHistory] = useState<ReadonlyArray<DailySummary>>([]);
+  useEffect(() => {
+    let cancelled = false;
+    puzzleRepository
+      .listDailySummaries({ from: range.from, to: range.to })
+      .then((page) => { if (!cancelled) setHistory(page.items); })
+      .catch(() => { if (!cancelled) setHistory([]); });
+    return () => { cancelled = true; };
+  }, [puzzleRepository, range.from, range.to]);
+
+  const weekCells = useMemo(() => {
+    const byDate = new Map(history.map((s) => [s.date, s]));
+    return week.map((d) => {
+      const summary = byDate.get(d.iso);
+      const solved =
+        summary != null &&
+        summary.totalLetterCells > 0 &&
+        soloEntriesStore.loadLockedCells(summary.id).length >= summary.totalLetterCells;
+      return { ...d, available: summary != null, label: longDateFr(d.iso), solved };
+    });
+  }, [week, history, soloEntriesStore]);
+
+  return (
+    <main className={shell} lang="fr">
+      <div className={frame}>
+        <div className={content}>
+          <header className={appBar}>
+            <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
+          </header>
+
+          <section className={greetingBox}>
+            <h1 className={greetingHi}>{greeting.hi}</h1>
+            <p className={greetingSub}>{greeting.sub}</p>
+          </section>
+
+          <section className={hero}>
+            <div className={heroTop}>
+              {streak.best >= 2 ? (
+                <div className={streakChip}>
+                  <span>🔥 {streak.cur}</span>
+                  <span className={streakRecord}>· record {streak.best}</span>
+                </div>
+              ) : null}
+            </div>
+            <div className={teaser}>
+              <TeaserWord onStreak={(cur, best) => setStreak({ cur, best })} />
+            </div>
+            <div className={heroEyebrow}>
+              Grille du jour
+              {daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}
+            </div>
+            <div className={heroDate}>{dateLabel}</div>
+            <button
+              type="button"
+              className={playBtn}
+              disabled={daily.status === 'loading' || daily.status === 'unavailable'}
+              onClick={() => {
+                if (daily.status === 'ok') navigate({ to: '/play' });
+                else if (daily.status === 'error') setRetry((n) => n + 1);
+              }}
+            >
+              {daily.status === 'ok'
+                ? 'Jouer'
+                : daily.status === 'loading'
+                  ? 'Chargement…'
+                  : daily.status === 'unavailable'
+                    ? 'Bientôt disponible'
+                    : 'Réessayer'}
+            </button>
+          </section>
+
+          <section className={prevWrap}>
+            <div className={prevLabel}>Grilles précédentes</div>
+            <div className={prevCard}>
+              <div className={prevRow}>
+                {weekCells.map((d, i) => (
+                  <div key={i} className={dayCol}>
+                    <span className={dayWd}>{d.wd}</span>
+                    {d.available ? (
+                      <button
+                        type="button"
+                        className={dayDotBtn}
+                        style={dayDotStyle(d.today, d.solved)}
+                        onClick={() => navigate({ to: '/play', search: { date: d.iso } })}
+                        aria-label={`${d.label}${d.today ? " (aujourd'hui)" : ''}${d.solved ? ' — terminée' : ''}`}
+                      >
+                        {d.num}
+                      </button>
+                    ) : (
+                      <span className={dayDot} style={dayDotStyle(d.today, d.solved)}>
+                        {d.num}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <nav className={nav} aria-label="Navigation principale">
+          <button type="button" className={navItem} aria-current="page">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11.2 12 5l8 6.2V19a1 1 0 0 1-1 1h-4.2v-5.2H9.2V20H5a1 1 0 0 1-1-1z" stroke="var(--colors-ws-sakura)" strokeWidth="1.9" strokeLinejoin="round" /></svg>
+            <span className={navLabel} style={{ color: 'var(--colors-ws-sakura)' }}>Accueil</span>
+          </button>
+          <button type="button" className={navItem}>
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="4.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /></svg>
+            <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Grilles</span>
+          </button>
+          <button type="button" className={navItem}>
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8.4" r="3.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><path d="M5 19.5c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" strokeLinecap="round" /></svg>
+            <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Compte</span>
+          </button>
+        </nav>
+      </div>
+    </main>
+  );
+}
