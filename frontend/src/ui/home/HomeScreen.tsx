@@ -65,6 +65,8 @@ const prevRow = css({ display: 'flex', alignItems: 'flex-start', justifyContent:
 const dayCol = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', flex: 1 });
 const dayWd = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.65 });
 const dayDot = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px' });
+// A playable past/today day is a button: same dot, with a press affordance.
+const dayDotBtn = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px', padding: 0, cursor: 'pointer', transition: 'transform 120ms', _hover: { transform: 'translateY(-1px)' }, _active: { transform: 'translateY(0)' } });
 
 const nav = css({ flex: 'none', bg: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(14px)', borderTop: '0.5px solid rgba(33,75,64,0.10)', padding: '10px 28px calc(8px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' });
 const navItem = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 });
@@ -88,6 +90,12 @@ function capitalize(s: string): string {
 // `to <= today UTC` clamp, so day keys line up regardless of local tz.
 function isoUtcDate(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+// "Jeudi 25 juin" from a UTC ISO date — used for the day-dot aria labels.
+function longDateFr(iso: string): string {
+  const s = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`));
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 // A solved day fills sakura; today keeps a sakura ring; an unplayed past day is
@@ -162,7 +170,7 @@ export function HomeScreen({
         summary != null &&
         summary.totalLetterCells > 0 &&
         soloEntriesStore.loadLockedCells(summary.id).length >= summary.totalLetterCells;
-      return { ...d, solved };
+      return { ...d, available: summary != null, label: longDateFr(d.iso), solved };
     });
   }, [week, history, soloEntriesStore]);
 
@@ -222,9 +230,21 @@ export function HomeScreen({
                 {weekCells.map((d, i) => (
                   <div key={i} className={dayCol}>
                     <span className={dayWd}>{d.wd}</span>
-                    <span className={dayDot} style={dayDotStyle(d.today, d.solved)}>
-                      {d.num}
-                    </span>
+                    {d.available ? (
+                      <button
+                        type="button"
+                        className={dayDotBtn}
+                        style={dayDotStyle(d.today, d.solved)}
+                        onClick={() => navigate({ to: '/grille', search: { date: d.iso } })}
+                        aria-label={`${d.label}${d.today ? " (aujourd'hui)" : ''}${d.solved ? ' — terminée' : ''}`}
+                      >
+                        {d.num}
+                      </button>
+                    ) : (
+                      <span className={dayDot} style={dayDotStyle(d.today, d.solved)}>
+                        {d.num}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
