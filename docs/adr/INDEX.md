@@ -134,6 +134,11 @@ ADR-0072  frontend/src/design-system/**              WordSparrow design system v
 ADR-0072  frontend/panda.config.ts                   v2 token set (`ws.*`) added namespaced, coexisting with ADR-0043's current tokens (no edits to existing tokens)
 ADR-0072  frontend/src/ui/routes/design-system.tsx   Dev-only gallery route rendering every v2 component + variant (no Storybook); also the design-sync synth-entry surface
 # ADR-0072: supersedes ADR-0043 for palette + typography (visual identity); ADR-0043's light-only theme + semantic-token-layering decisions still apply. Migration of the live app to v2 is a tracked follow-up.
+ADR-0073  grid/api/openapi.yaml                      GET /v1/words/sample (minLen/maxLen/count) → SampleWord{clue,answer}; count + length-range capped server-side; random teaser pool, NOT the daily answer key
+ADR-0073  grid/api/src/**/Module.kt                  Sample handler reads the resident CsvWordRepository (Module.kt:192); findByLength per L, dedupe by Word.lemma, plaintext answer (teaser validates client-side)
+ADR-0073  frontend/src/application/grid/**            Home-teaser consumer of /v1/words/sample (W4)
+ADR-0073  frontend/src/infrastructure/api/grid/types.ts  Generated SampleWord type (drift gate)
+# ADR-0073: cross-references ADR-0058 — {clue, answer} over Hunspell-fr surface + LLM clue is clear under the matrix; widening to SA/NC-derived fields or beyond the dev teaser is gated on a per-source review (condition recorded in the ADR).
 ```
 
 ## Adding entries
