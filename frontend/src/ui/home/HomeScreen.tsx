@@ -1,0 +1,162 @@
+import { useMemo, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { css } from 'styled-system/css';
+import { Lockup } from '@/design-system';
+import { TeaserWord } from './TeaserWord';
+
+// v2 home (ADR-0072 redesign), ported from the "Home Screen" Claude Design
+// file into our tokens/fonts. Dev-only sandbox route, like /play — the
+// functional /accueil is untouched. No difficulty + no streak yet; the
+// "previous grids" strip only marks today (we keep no per-day solved history).
+
+const shell = css({
+  minHeight: '100dvh',
+  bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+});
+// Mobile-width column, centred on larger viewports (the design is a phone screen).
+const frame = css({
+  width: '100%',
+  maxWidth: '420px',
+  flex: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+});
+const content = css({ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: 'calc(env(safe-area-inset-top) + 22px) 22px 0', overflowY: 'auto' });
+
+const appBar = css({ flex: 'none', display: 'flex', alignItems: 'center', marginBottom: '24px' });
+
+const greetingBox = css({ flex: 'none', marginBottom: '18px' });
+const greetingHi = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', color: 'ws.jadeInk', lineHeight: '1.1' });
+const greetingSub = css({ fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.8, marginTop: '3px' });
+
+const hero = css({ flex: 'none', bg: 'white', borderRadius: '22px', padding: '14px 22px 22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
+// Thin reserved band above the teaser for the discreet bonus-game streak chip
+// (right-aligned; only filled at streak ≥ 2 so it never collides with the word).
+const heroTop = css({ height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '6px' });
+const streakChip = css({ display: 'inline-flex', alignItems: 'center', gap: '5px', bg: 'ws.sable', borderRadius: '999px', padding: '4px 10px', fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', boxShadow: '0 1px 2px rgba(33,75,64,0.08)' });
+const streakRecord = css({ opacity: 0.55, fontWeight: 'semibold' });
+const teaser = css({ display: 'flex', justifyContent: 'center', marginBottom: '6px' });
+
+const heroEyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#A8842B', marginBottom: '6px', textAlign: 'center' });
+const heroDate = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '27px', color: 'ws.jadeInk', lineHeight: '1.05', textAlign: 'center' });
+const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakura', color: 'white', fontFamily: 'wsUi', fontWeight: 'extrabold', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' } });
+
+const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px' });
+const prevLabel = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk', marginBottom: '12px', paddingLeft: '2px' });
+const prevCard = css({ bg: 'ws.sable', borderRadius: '18px', padding: '15px 10px', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
+const prevRow = css({ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' });
+const dayCol = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', flex: 1 });
+const dayWd = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.65 });
+const dayDot = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px' });
+
+const nav = css({ flex: 'none', bg: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(14px)', borderTop: '0.5px solid rgba(33,75,64,0.10)', padding: '10px 28px calc(8px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' });
+const navItem = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 });
+const navLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold' });
+
+const WD_LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'] as const;
+
+function timeGreeting(hour: number): { hi: string; sub: string } {
+  if (hour < 5) return { hi: 'Encore debout ? 🌙', sub: 'La nuit est calme — parfaite pour quelques mots.' };
+  if (hour < 12) return { hi: 'Bonjour ☀️', sub: 'Une nouvelle grille pour bien commencer la journée.' };
+  if (hour < 18) return { hi: 'Bel après-midi 🌤️', sub: 'Une grille pour souffler un peu.' };
+  if (hour < 22) return { hi: 'Bonsoir 🌆', sub: "La grille du soir t'attend." };
+  return { hi: 'Bonne nuit 🌙', sub: 'Un dernier mot avant de dormir ?' };
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+export function HomeScreen() {
+  const navigate = useNavigate();
+  const [streak, setStreak] = useState({ cur: 0, best: 0 });
+
+  const { greeting, dateLabel, week } = useMemo(() => {
+    const now = new Date();
+    const g = timeGreeting(now.getHours());
+    const dl = capitalize(new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(now));
+    // Last 7 days ending today; only today is marked (no solved history yet).
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now);
+      d.setDate(now.getDate() - (6 - i));
+      return { wd: WD_LETTERS[d.getDay()], num: d.getDate(), today: i === 6 };
+    });
+    return { greeting: g, dateLabel: dl, week: days };
+  }, []);
+
+  return (
+    <main className={shell} lang="fr">
+      <div className={frame}>
+        <div className={content}>
+          <header className={appBar}>
+            <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
+          </header>
+
+          <section className={greetingBox}>
+            <h1 className={greetingHi}>{greeting.hi}</h1>
+            <p className={greetingSub}>{greeting.sub}</p>
+          </section>
+
+          <section className={hero}>
+            <div className={heroTop}>
+              {streak.best >= 2 ? (
+                <div className={streakChip}>
+                  <span>🔥 {streak.cur}</span>
+                  <span className={streakRecord}>· record {streak.best}</span>
+                </div>
+              ) : null}
+            </div>
+            <div className={teaser}>
+              <TeaserWord onStreak={(cur, best) => setStreak({ cur, best })} />
+            </div>
+            <div className={heroEyebrow}>Grille du jour</div>
+            <div className={heroDate}>{dateLabel}</div>
+            <button type="button" className={playBtn} onClick={() => navigate({ to: '/play' })}>Jouer</button>
+          </section>
+
+          <section className={prevWrap}>
+            <div className={prevLabel}>Grilles précédentes</div>
+            <div className={prevCard}>
+              <div className={prevRow}>
+                {week.map((d, i) => (
+                  <div key={i} className={dayCol}>
+                    <span className={dayWd}>{d.wd}</span>
+                    <span
+                      className={dayDot}
+                      style={
+                        d.today
+                          ? { background: 'transparent', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' }
+                          : { background: 'white', color: 'var(--colors-ws-khaki)' }
+                      }
+                    >
+                      {d.num}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <nav className={nav} aria-label="Navigation principale">
+          <button type="button" className={navItem} aria-current="page">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11.2 12 5l8 6.2V19a1 1 0 0 1-1 1h-4.2v-5.2H9.2V20H5a1 1 0 0 1-1-1z" stroke="var(--colors-ws-sakura)" strokeWidth="1.9" strokeLinejoin="round" /></svg>
+            <span className={navLabel} style={{ color: 'var(--colors-ws-sakura)' }}>Accueil</span>
+          </button>
+          <button type="button" className={navItem}>
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="4.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /></svg>
+            <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Grilles</span>
+          </button>
+          <button type="button" className={navItem}>
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8.4" r="3.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><path d="M5 19.5c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" strokeLinecap="round" /></svg>
+            <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Compte</span>
+          </button>
+        </nav>
+      </div>
+    </main>
+  );
+}

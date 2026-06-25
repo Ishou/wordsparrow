@@ -15,6 +15,7 @@ import { Route as ContribuerRoute } from './routes/contribuer';
 import { Route as ContribuerPairsRoute } from './routes/contribuer.pairs';
 import { Route as DesignSystemRoute } from './routes/design-system';
 import { Route as PlayRoute } from './routes/play';
+import { Route as HomeRoute } from './routes/home';
 import { Route as FinishRoute } from './routes/finish';
 import { Route as LockupRoute } from './routes/lockup';
 
@@ -44,7 +45,7 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
   // Multiplayer-flag-gated routes: lobby + the `/join/$code` share-link
   // landing both require the game-api adapter on the router context.
   // Dev-only v2 design-system gallery (ADR-0072) — never registered in prod.
-  const devChildren = import.meta.env.DEV ? [DesignSystemRoute, PlayRoute, FinishRoute, LockupRoute] : [];
+  const devChildren = import.meta.env.DEV ? [DesignSystemRoute, PlayRoute, HomeRoute, FinishRoute, LockupRoute] : [];
   const children = multiplayer
     ? [...baseChildren, JoinRoute, LobbyRoute, ...devChildren]
     : [...baseChildren, ...devChildren];
