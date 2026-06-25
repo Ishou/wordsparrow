@@ -38,8 +38,7 @@ export interface AppSession {
 export interface AppRouterContext {
   readonly puzzleRepository: PuzzleRepository;
   readonly puzzleSolver: PuzzleSolver;
-  // Teaser word source (ADR-0073). Optional so route-level Vitest fixtures
-  // can omit it; the dev-only `/home` teaser falls back to inline pairs.
+  // Optional: route-level Vitest fixtures can omit it; teaser falls back to inline pairs (ADR-0073).
   readonly wordsRepository?: WordsRepository;
   readonly sessionClient: SessionClient;
   readonly soloEntriesStore: SoloEntriesStore;

@@ -50,8 +50,7 @@ type RevealCellHintRequest = components['schemas']['RevealCellHintRequest'];
 type PuzzleSummary = components['schemas']['PuzzleSummary'];
 type SampleWord = components['schemas']['SampleWord'];
 
-// Preview teaser pool (ADR-0073): real short French clue→answer pairs;
-// answers are uppercase A–Z so the teaser validates client-side.
+// Preview teaser pool (ADR-0073): short French clue→answer pairs, answers uppercase A–Z.
 const sampleWordPool: ReadonlyArray<SampleWord> = [
   { clue: 'Note de musique', answer: 'SOL' },
   { clue: 'Roi des animaux', answer: 'LION' },
@@ -112,8 +111,7 @@ const HINT_PROBLEM_INVALID_COORD = {
  * URL) and any same-origin proxy a future ADR introduces.
  */
 const gridHandlers = [
-  // GET /v1/words/sample — bare `SampleWord[]` for the home teaser
-  // (ADR-0073). Honours `count`/`minLen`/`maxLen`, clamped like the server.
+  // GET /v1/words/sample — bare SampleWord[] (ADR-0073), clamps count/minLen/maxLen like the server.
   http.get('*/v1/words/sample', ({ request }) => {
     const url = new URL(request.url);
     const minLen = Math.min(Math.max(Number(url.searchParams.get('minLen') ?? 3), 3), 6);

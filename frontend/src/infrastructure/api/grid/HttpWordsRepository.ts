@@ -1,11 +1,7 @@
 import type { SampleWord, SampleWordsOptions, WordsRepository } from '@/application';
 import { createGridApiClient, type GridApiClient } from './client';
 
-// HTTP adapter for the application-layer `WordsRepository` port. Wraps
-// `createGridApiClient`, lifting RFC 7807 problem bodies into a flat
-// `Error.message`. Per ADR-0002 §7 only this layer may import the
-// generated client; the composition root (`main.tsx`) constructs an
-// instance and threads it through the router context.
+// Only this layer may import the generated client (ADR-0002 §7); RFC 7807 errors are flattened to Error.message.
 export interface HttpWordsRepositoryOptions {
   readonly baseUrl: string;
   readonly fetch?: typeof globalThis.fetch;

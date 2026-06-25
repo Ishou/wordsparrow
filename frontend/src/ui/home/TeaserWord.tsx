@@ -105,9 +105,10 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
         if (cancelled) return;
         const usable = words.filter((w) => /^[A-Z]+$/.test(w.answer.toUpperCase()));
         if (usable.length > 0) {
+          const newIdx = Math.floor(Math.random() * usable.length);
           setPool(usable);
-          setIdx(Math.floor(Math.random() * usable.length));
-          lettersRef.current = Array(usable[0].answer.length).fill('');
+          setIdx(newIdx);
+          lettersRef.current = Array(usable[newIdx].answer.length).fill('');
           setLetters(lettersRef.current);
         }
         setLoading(false);
