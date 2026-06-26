@@ -1,6 +1,5 @@
 import { css } from 'styled-system/css';
 
-// Shared v2 content-page chrome: white rounded cards on the jade gradient (legal/help mockups).
 export const eyebrow = css({
   fontFamily: 'wsUi',
   fontSize: '11px',
@@ -36,7 +35,6 @@ export const sectionHeading = css({
   fontSize: '16px',
   color: 'ws.jadeInk',
   margin: '0 0 7px',
-  // sakura bullet before each section heading (mockup .sh .b)
   _before: {
     content: '""',
     flex: 'none',

@@ -15,7 +15,7 @@ import { css, cx } from 'styled-system/css';
 
 const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out' });
 const positioner = css({ position: 'fixed', inset: 0, zIndex: 1001, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' });
-// Compact sheet — sized so the dimmed home (appbar + greeting) stays visible above it (mockup frame 2).
+// Compact sheet — sized so the dimmed home (appbar + greeting) stays visible above.
 const sheet = css({
   width: '100%',
   maxWidth: '440px',
