@@ -22,7 +22,6 @@ const back = css({
 });
 const spacer = css({ flex: 1 });
 
-// Shared v2 legal-page chrome: a back affordance to home plus the brand lockup.
 export function BackHeader() {
   return (
     <div className={row}>
