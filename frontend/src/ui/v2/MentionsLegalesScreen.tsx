@@ -2,88 +2,91 @@ import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
+import { contentCard, eyebrow, lede, sectionBody, sectionHeading } from './contentPage';
 
-const article = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '14px',
-  color: 'ws.khaki',
-  '& h1': {
-    fontFamily: 'wsDisplay',
-    fontWeight: 'semibold',
-    fontSize: '28px',
-    lineHeight: '1.1',
-    color: 'ws.jadeInk',
-    margin: 0,
-  },
-  '& h2': {
-    fontFamily: 'wsDisplay',
-    fontWeight: 'semibold',
-    fontSize: '17px',
-    color: 'ws.jadeInk',
-    marginTop: '14px',
-    marginBottom: 0,
-  },
-  '& p': {
-    fontFamily: 'wsUi',
-    fontSize: '15px',
-    lineHeight: '1.6',
-    margin: 0,
-  },
-  '& a': {
-    color: 'ws.sakura',
-    fontWeight: 'semibold',
-    textDecoration: 'underline',
-  },
-  '& strong': { fontWeight: 'bold', color: 'ws.jadeInk' },
+const title = css({
+  fontFamily: 'wsDisplay',
+  fontWeight: 'semibold',
+  fontSize: '26px',
+  lineHeight: '1.1',
+  color: 'ws.jadeInk',
+  margin: '0 0 4px',
 });
+
+const stack = css({ display: 'flex', flexDirection: 'column', gap: '14px' });
+
+const link = css({ color: 'ws.sakura', fontWeight: 'bold', textDecoration: 'underline' });
 
 export function MentionsLegalesScreen() {
   return (
     <PhoneShell header={<BackHeader />}>
-      <article className={article}>
-        <h1>Mentions légales</h1>
+      <article className={stack}>
+        <header>
+          <div className={eyebrow}>Informations légales</div>
+          <h1 className={title}>Mentions légales</h1>
+          <p className={lede}>
+            L&apos;essentiel sur l&apos;éditeur du jeu, l&apos;hébergement et tes droits.
+          </p>
+        </header>
 
-        <h2>Éditeur</h2>
-        <p>
-          WordSparrow est édité par <strong>Colin Auberger</strong>, contact :{' '}
-          <a href="mailto:contact@wordsparrow.io">contact@wordsparrow.io</a>.
-        </p>
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Éditeur</h2>
+          <p className={sectionBody}>
+            WordSparrow est édité par <strong>Colin Auberger</strong>, contact :{' '}
+            <a className={link} href="mailto:contact@wordsparrow.io">
+              contact@wordsparrow.io
+            </a>
+            .
+          </p>
+        </section>
 
-        <h2>Hébergement</h2>
-        <p>
-          Le service est hébergé par <strong>Hetzner Online GmbH</strong>,
-          Industriestr. 25, 91710 Gunzenhausen, Allemagne (
-          <a href="https://www.hetzner.com" target="_blank" rel="noopener noreferrer">
-            hetzner.com
-          </a>
-          ). La diffusion du contenu statique et la résolution DNS sont assurées par{' '}
-          <strong>Cloudflare, Inc.</strong>, 101 Townsend St, San Francisco, CA 94107,
-          États-Unis (
-          <a href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer">
-            cloudflare.com
-          </a>
-          ).
-        </p>
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Hébergement</h2>
+          <p className={sectionBody}>
+            Le service est hébergé par <strong>Hetzner Online GmbH</strong>, Industriestr. 25,
+            91710 Gunzenhausen, Allemagne (
+            <a className={link} href="https://www.hetzner.com" target="_blank" rel="noopener noreferrer">
+              hetzner.com
+            </a>
+            ). La diffusion du contenu statique et la résolution DNS sont assurées par{' '}
+            <strong>Cloudflare, Inc.</strong>, 101 Townsend St, San Francisco, CA 94107, États-Unis (
+            <a className={link} href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer">
+              cloudflare.com
+            </a>
+            ).
+          </p>
+        </section>
 
-        <h2>Propriété intellectuelle</h2>
-        <p>
-          Le code source de WordSparrow est publié sous licence FSL-1.1-MIT (Functional
-          Source License 1.1, Apache MIT future). Voir le dépôt public du projet pour les
-          conditions d&apos;utilisation, de modification et de redistribution.
-        </p>
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Propriété intellectuelle</h2>
+          <p className={sectionBody}>
+            Le code source de WordSparrow est publié sous licence FSL-1.1-MIT (Functional Source
+            License 1.1, Apache MIT future). Voir le dépôt public du projet pour les conditions
+            d&apos;utilisation, de modification et de redistribution.
+          </p>
+        </section>
 
-        <h2>Données personnelles</h2>
-        <p>
-          Le traitement de tes données personnelles est décrit dans la{' '}
-          <Link to="/v2/confidentialite">politique de confidentialité</Link>.
-        </p>
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Données personnelles</h2>
+          <p className={sectionBody}>
+            Le traitement de tes données personnelles est décrit dans la{' '}
+            <Link className={link} to="/v2/confidentialite">
+              politique de confidentialité
+            </Link>
+            .
+          </p>
+        </section>
 
-        <h2>Signaler un problème</h2>
-        <p>
-          Pour signaler un contenu illicite, un bug ou une faille de sécurité, écris à{' '}
-          <a href="mailto:contact@wordsparrow.io">contact@wordsparrow.io</a>.
-        </p>
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Signaler un problème</h2>
+          <p className={sectionBody}>
+            Pour signaler un contenu illicite, un bug ou une faille de sécurité, écris à{' '}
+            <a className={link} href="mailto:contact@wordsparrow.io">
+              contact@wordsparrow.io
+            </a>
+            .
+          </p>
+        </section>
       </article>
     </PhoneShell>
   );

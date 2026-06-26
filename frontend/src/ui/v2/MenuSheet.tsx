@@ -15,33 +15,34 @@ import { css, cx } from 'styled-system/css';
 
 const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out' });
 const positioner = css({ position: 'fixed', inset: 0, zIndex: 1001, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' });
+// Compact sheet — sized so the dimmed home (appbar + greeting) stays visible above.
 const sheet = css({
   width: '100%',
   maxWidth: '440px',
   bg: 'white',
   borderTopLeftRadius: '22px',
   borderTopRightRadius: '22px',
-  padding: '18px 16px calc(22px + env(safe-area-inset-bottom))',
+  padding: '14px 16px calc(18px + env(safe-area-inset-bottom))',
   boxShadow: '0 -8px 30px rgba(20,40,34,0.22)',
   fontFamily: 'wsUi',
   animation: 'wsSheetUp 260ms cubic-bezier(0.32,0.72,0,1)',
   outline: 'none',
 });
-const grab = css({ width: '42px', height: '5px', borderRadius: '999px', bg: 'rgba(33,75,64,0.18)', margin: '0 auto 14px' });
+const grab = css({ width: '42px', height: '5px', borderRadius: '999px', bg: 'rgba(33,75,64,0.18)', margin: '0 auto 12px' });
 
-const head = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 8px 14px', borderBottom: '1px solid #EEF3EC', marginBottom: '6px' });
+const head = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 8px 12px', borderBottom: '1px solid #EEF3EC', marginBottom: '4px' });
 const headAvatar = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', bg: 'ws.sakura', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '18px' });
 const headName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const headSub = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.7, marginTop: '2px' });
 
-const list = css({ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '2px', padding: 0, margin: 0 });
+const list = css({ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0', padding: 0, margin: 0 });
 const rowBase = {
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
   width: '100%',
-  minHeight: '54px',
-  padding: '12px 8px',
+  minHeight: '48px',
+  padding: '10px 8px',
   borderRadius: '13px',
   textAlign: 'left' as const,
   fontFamily: 'wsUi',
