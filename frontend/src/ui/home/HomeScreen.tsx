@@ -40,11 +40,13 @@ const content = css({ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'co
 const appBar = css({ flex: 'none', display: 'flex', alignItems: 'center', marginBottom: '24px' });
 const menuBtn = css({ marginLeft: 'auto', flex: 'none', width: '44px', height: '44px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'rgba(255,255,255,0.62)', color: 'ws.jadeInk', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'rgba(255,255,255,0.82)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
-const greetingBox = css({ flex: 'none', marginBottom: '18px' });
-const greetingHi = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', color: 'ws.jadeInk', lineHeight: '1.1' });
-const greetingSub = css({ fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.8, marginTop: '3px' });
-
-const hero = css({ flex: 'none', bg: 'white', borderRadius: '22px', padding: '14px 22px 22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
+const hero = css({ flex: 'none', bg: 'white', borderRadius: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
+// clipPath clips upward overflow (midday sun, night stars) while its -34 px bottom inset lets the branch drape over heroBody; zIndex 2 keeps it above.
+const heroArt = css({ position: 'relative', height: '116px', borderTopLeftRadius: '22px', borderTopRightRadius: '22px', zIndex: 2, clipPath: 'inset(0 0 -34px 0 round 22px 22px 0 0)' });
+const heroBody = css({ position: 'relative', zIndex: 1, padding: '12px 22px 22px' });
+const heroGreeting = css({ marginBottom: '12px' });
+const heroHi = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '23px', color: 'ws.jadeInk', lineHeight: '1.1' });
+const heroSub = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.8, marginTop: '2px' });
 // Reserved band above the teaser for the streak chip (right-aligned; only filled at streak ≥ 2).
 const heroTop = css({ height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '6px' });
 const streakChip = css({ display: 'inline-flex', alignItems: 'center', gap: '5px', bg: 'ws.sable', borderRadius: '999px', padding: '4px 10px', fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', boxShadow: '0 1px 2px rgba(33,75,64,0.08)' });
@@ -182,59 +184,59 @@ export function HomeScreen({
             </button>
           </header>
 
-          <HomeGreetingArt bucket={bucket} now={nowDate} />
-
-          <section className={greetingBox}>
-            <h1 className={greetingHi}>{greeting.hi}</h1>
-            <p className={greetingSub}>{greeting.sub}</p>
-          </section>
-
           <section className={hero}>
-            <div className={heroTop}>
+            <HomeGreetingArt bucket={bucket} now={nowDate} className={heroArt} drape={34} />
+            <div className={heroBody}>
+              <div className={heroGreeting}>
+                <h1 className={heroHi}>{greeting.hi}</h1>
+                <p className={heroSub}>{greeting.sub}</p>
+              </div>
               {streak.best >= 2 ? (
-                <div className={streakChip}>
-                  <span>🔥 {streak.cur}</span>
-                  <span className={streakRecord}>· record {streak.best}</span>
+                <div className={heroTop}>
+                  <div className={streakChip}>
+                    <span>🔥 {streak.cur}</span>
+                    <span className={streakRecord}>· record {streak.best}</span>
+                  </div>
                 </div>
               ) : null}
-            </div>
-            <div className={teaser}>
-              <TeaserWord
-                wordsRepository={wordsRepository}
-                onStreak={(cur, best) => setStreak({ cur, best })}
-              />
-            </div>
-            {daily.status === 'loading' ? (
-              <div role="status" aria-busy="true" aria-label="Chargement de la grille du jour">
-                <Skeleton tone="onCard" width={130} height={11} style={{ margin: '0 auto 10px' }} />
-                <Skeleton tone="onCard" width={180} height={26} style={{ margin: '0 auto' }} />
+              <div className={teaser}>
+                <TeaserWord
+                  wordsRepository={wordsRepository}
+                  onStreak={(cur, best) => setStreak({ cur, best })}
+                />
               </div>
-            ) : (
-              <>
-                <div className={heroEyebrow}>
-                  Grille du jour
-                  {daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}
+              {daily.status === 'loading' ? (
+                <div role="status" aria-busy="true" aria-label="Chargement de la grille du jour">
+                  <Skeleton tone="onCard" width={130} height={11} style={{ margin: '0 auto 10px' }} />
+                  <Skeleton tone="onCard" width={180} height={26} style={{ margin: '0 auto' }} />
                 </div>
-                <div className={heroDate}>{dateLabel}</div>
-              </>
-            )}
-            <button
-              type="button"
-              className={playBtn}
-              disabled={daily.status === 'loading' || daily.status === 'unavailable'}
-              onClick={() => {
-                if (daily.status === 'ok') navigate({ to: '/v2/play' });
-                else if (daily.status === 'error') setRetry((n) => n + 1);
-              }}
-            >
-              {daily.status === 'ok'
-                ? 'Jouer'
-                : daily.status === 'loading'
-                  ? 'Chargement…'
-                  : daily.status === 'unavailable'
-                    ? 'Bientôt disponible'
-                    : 'Réessayer'}
-            </button>
+              ) : (
+                <>
+                  <div className={heroEyebrow}>
+                    Grille du jour
+                    {daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}
+                  </div>
+                  <div className={heroDate}>{dateLabel}</div>
+                </>
+              )}
+              <button
+                type="button"
+                className={playBtn}
+                disabled={daily.status === 'loading' || daily.status === 'unavailable'}
+                onClick={() => {
+                  if (daily.status === 'ok') navigate({ to: '/v2/play' });
+                  else if (daily.status === 'error') setRetry((n) => n + 1);
+                }}
+              >
+                {daily.status === 'ok'
+                  ? 'Jouer'
+                  : daily.status === 'loading'
+                    ? 'Chargement…'
+                    : daily.status === 'unavailable'
+                      ? 'Bientôt disponible'
+                      : 'Réessayer'}
+              </button>
+            </div>
           </section>
 
           <section className={prevWrap}>
