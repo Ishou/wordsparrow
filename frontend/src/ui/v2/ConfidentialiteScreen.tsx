@@ -16,7 +16,7 @@ const intro = css({
   margin: 0,
 });
 
-// v2 carded re-skin of the shared PrivacyNotice body (it owns its own <h1> + sections).
+// PrivacyNotice owns its heading structure — parent selectors required.
 const card = css({
   bg: 'white',
   borderRadius: '18px',
