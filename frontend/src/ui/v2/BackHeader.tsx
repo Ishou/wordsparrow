@@ -1,7 +1,11 @@
-import { Link } from '@tanstack/react-router';
+import { Link, type LinkProps } from '@tanstack/react-router';
 import { CaretLeft } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { Lockup } from '@/design-system';
+
+export interface BackHeaderProps {
+  readonly to?: LinkProps['to'];
+}
 
 const row = css({ display: 'flex', alignItems: 'center', gap: '10px' });
 const back = css({
@@ -22,10 +26,10 @@ const back = css({
 });
 const spacer = css({ flex: 1 });
 
-export function BackHeader() {
+export function BackHeader({ to = '/v2/home' }: BackHeaderProps = {}) {
   return (
     <div className={row}>
-      <Link to="/v2/home" className={back}>
+      <Link to={to} className={back}>
         <CaretLeft size={16} weight="bold" aria-hidden="true" />
         Retour
       </Link>

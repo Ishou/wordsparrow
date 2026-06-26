@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { List } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
 import type { DailySummary, PuzzleRepository, WordsRepository } from '@/application';
@@ -35,6 +36,7 @@ const frame = css({
 const content = css({ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: 'calc(env(safe-area-inset-top) + 22px) 22px 0', overflowY: 'auto' });
 
 const appBar = css({ flex: 'none', display: 'flex', alignItems: 'center', marginBottom: '24px' });
+const menuBtn = css({ marginLeft: 'auto', flex: 'none', width: '44px', height: '44px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'rgba(255,255,255,0.62)', color: 'ws.jadeInk', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'rgba(255,255,255,0.82)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
 const greetingBox = css({ flex: 'none', marginBottom: '18px' });
 const greetingHi = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', color: 'ws.jadeInk', lineHeight: '1.1' });
@@ -170,6 +172,14 @@ export function HomeScreen({
         <div className={content}>
           <header className={appBar}>
             <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
+            <button
+              type="button"
+              className={menuBtn}
+              aria-label="Ouvrir le menu"
+              onClick={() => navigate({ to: '/v2/menu' })}
+            >
+              <List size={22} weight="bold" aria-hidden="true" />
+            </button>
           </header>
 
           <section className={greetingBox}>
@@ -254,7 +264,7 @@ export function HomeScreen({
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="4.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /></svg>
             <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Grilles</span>
           </button>
-          <button type="button" className={navItem}>
+          <button type="button" className={navItem} onClick={() => navigate({ to: '/v2/menu' })}>
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8.4" r="3.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><path d="M5 19.5c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" strokeLinecap="round" /></svg>
             <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Compte</span>
           </button>
