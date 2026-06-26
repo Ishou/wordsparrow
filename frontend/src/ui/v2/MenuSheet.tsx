@@ -7,7 +7,6 @@ import {
   Gear,
   Moon,
   ChatCircleDots,
-  FileText,
   CaretRight,
   type Icon,
 } from '@phosphor-icons/react';
@@ -96,9 +95,9 @@ export interface MenuSheetProps {
 export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
   const navigate = useNavigate();
 
-  const goLegal = () => {
+  const goReglages = () => {
     onClose();
-    navigate({ to: '/v2/mentions-legales' });
+    navigate({ to: '/v2/reglages' });
   };
 
   const subline = streak != null && streak >= 1 ? `Joueur invité · 🔥 série ${streak}` : 'Joueur invité';
@@ -123,7 +122,17 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
             <nav aria-label="Menu">
               <ul className={list}>
                 <SoonRow icon={User}>Mon compte</SoonRow>
-                <SoonRow icon={Gear} soft>Réglages</SoonRow>
+                <li>
+                  <button type="button" className={rowActive} onClick={goReglages}>
+                    <Tile icon={Gear} soft />
+                    <span className={labelWrap}>
+                      <span className={label}>Réglages</span>
+                    </span>
+                    <span className={chevron}>
+                      <CaretRight size={18} weight="bold" aria-hidden="true" />
+                    </span>
+                  </button>
+                </li>
                 <li className={rowSwitch}>
                   <button type="button" role="switch" aria-checked={false} aria-disabled="true" aria-label="Mode sombre" className={switchBtn} onClick={() => {}}>
                     <Tile icon={Moon} soft />
@@ -136,17 +145,6 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
                   </button>
                 </li>
                 <SoonRow icon={ChatCircleDots}>Aide</SoonRow>
-                <li>
-                  <button type="button" className={rowActive} onClick={goLegal}>
-                    <Tile icon={FileText} />
-                    <span className={labelWrap}>
-                      <span className={label}>Mentions &amp; confidentialité</span>
-                    </span>
-                    <span className={chevron}>
-                      <CaretRight size={18} weight="bold" aria-hidden="true" />
-                    </span>
-                  </button>
-                </li>
               </ul>
             </nav>
           </Dialog.Content>
