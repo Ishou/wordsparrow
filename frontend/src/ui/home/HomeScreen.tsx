@@ -6,6 +6,7 @@ import type { Puzzle } from '@/domain';
 import type { DailySummary, PuzzleRepository, WordsRepository } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Lockup } from '@/design-system';
+import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { TeaserWord } from './TeaserWord';
 
 // Daily-card state: loading → ok/unavailable/error (ADR-0042 / 404 → calm "bientôt").
@@ -110,6 +111,7 @@ export function HomeScreen({
 }) {
   const navigate = useNavigate();
   const [streak, setStreak] = useState({ cur: 0, best: 0 });
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Fetched client-side so the teaser + strip paint at once; CTA gates on today's availability.
   const [daily, setDaily] = useState<DailyState>({ status: 'loading' });
@@ -176,7 +178,8 @@ export function HomeScreen({
               type="button"
               className={menuBtn}
               aria-label="Ouvrir le menu"
-              onClick={() => navigate({ to: '/v2/menu' })}
+              aria-haspopup="dialog"
+              onClick={() => setMenuOpen(true)}
             >
               <List size={22} weight="bold" aria-hidden="true" />
             </button>
@@ -264,12 +267,14 @@ export function HomeScreen({
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="4.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /></svg>
             <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Grilles</span>
           </button>
-          <button type="button" className={navItem} onClick={() => navigate({ to: '/v2/menu' })}>
+          <button type="button" className={navItem} aria-haspopup="dialog" onClick={() => setMenuOpen(true)}>
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8.4" r="3.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><path d="M5 19.5c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" strokeLinecap="round" /></svg>
             <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Compte</span>
           </button>
         </nav>
       </div>
+
+      <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} streak={streak.cur} />
     </main>
   );
 }
