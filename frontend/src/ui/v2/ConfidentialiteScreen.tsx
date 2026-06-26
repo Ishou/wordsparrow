@@ -44,7 +44,7 @@ const cta = css({
 
 export function ConfidentialiteScreen() {
   return (
-    <PhoneShell header={<BackHeader />}>
+    <PhoneShell header={<BackHeader to="/v2/reglages" />}>
       <article className={stack}>
         <header>
           <div className={eyebrow}>Tes données</div>

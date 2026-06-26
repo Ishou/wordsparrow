@@ -19,7 +19,7 @@ const link = css({ color: 'ws.sakura', fontWeight: 'bold', textDecoration: 'unde
 
 export function MentionsLegalesScreen() {
   return (
-    <PhoneShell header={<BackHeader />}>
+    <PhoneShell header={<BackHeader to="/v2/reglages" />}>
       <article className={stack}>
         <header>
           <div className={eyebrow}>Informations légales</div>
