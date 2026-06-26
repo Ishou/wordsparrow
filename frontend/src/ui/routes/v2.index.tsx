@@ -14,7 +14,7 @@ function V2IndexComponent() {
   );
 }
 
-// `/v2` maps to home; `/v2/home` stays a working alias (BackHeader targets it).
+// alias kept so /v2/home back-targets remain valid while sibling screens exist.
 export const Route = createRoute({
   getParentRoute: () => V2Route,
   path: '/',
