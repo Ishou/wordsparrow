@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { css, cx } from 'styled-system/css';
-import { Cell, DefCell } from '@/design-system';
+import { Cell, DefCell, Skeleton } from '@/design-system';
 import type { SampleWord, WordsRepository } from '@/application';
 
 // Inline fallback so the hero never empties if the corpus fetch fails.
@@ -12,9 +12,11 @@ const FALLBACK: ReadonlyArray<SampleWord> = [
 ];
 
 const wrap = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' });
-const row = css({ display: 'flex', gap: '4px' });
+const row = css({ display: 'flex', alignItems: 'center', gap: '4px' });
 // 42px wide + font-size 13px → Cell/DefCell renders at teaser size.
 const box = css({ position: 'relative', width: '42px', fontSize: '13px' });
+// The clue is a standalone word (not a uniform grid), so the def cell reads at 1.5× the letters.
+const defBox = css({ position: 'relative', width: '63px', fontSize: '19.5px' });
 const glow = css({ borderRadius: '9px', zIndex: 1, animation: 'wsSolveGlow 0.5s ease-out both' });
 const shake = css({ animation: 'wsShake 0.4s ease-in-out both' });
 const input = css({
@@ -49,18 +51,6 @@ const skipBtn = css({
   transition: 'opacity 120ms',
   _hover: { opacity: 1 },
   _active: { opacity: 1 },
-});
-// Calm placeholder row matching the teaser's height until the first batch lands.
-const loadingRow = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: '42px',
-  fontFamily: 'wsUi',
-  fontSize: '13px',
-  fontWeight: 'semibold',
-  color: 'ws.khaki',
-  opacity: 0.55,
 });
 
 function nextIndex(current: number, length: number): number {
@@ -100,7 +90,7 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
     if (!wordsRepository) return;
     let cancelled = false;
     wordsRepository
-      .fetchSampleWords({ minLen: 3, maxLen: 6, count: 8 })
+      .fetchSampleWords({ minLen: 3, maxLen: 6, count: 24 })
       .then((words) => {
         if (cancelled) return;
         const usable = words.filter((w) => /^[A-Z]+$/.test(w.answer.toUpperCase()));
@@ -205,10 +195,14 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
   };
 
   if (loading) {
+    // Self-skeleton: same row layout (def cell + letter cells) with shimmer placeholders.
     return (
-      <div className={wrap}>
-        <div className={loadingRow} aria-live="polite">
-          Un instant…
+      <div className={wrap} role="status" aria-busy="true" aria-label="Chargement du mot du jour">
+        <div className={row}>
+          <Skeleton tone="deep" width={63} height={63} radius={9} />
+          <Skeleton tone="onCard" width={42} height={42} radius={9} />
+          <Skeleton tone="onCard" width={42} height={42} radius={9} />
+          <Skeleton tone="onCard" width={42} height={42} radius={9} />
         </div>
         <div className={skipRow} />
       </div>
@@ -218,7 +212,7 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
   return (
     <div className={wrap}>
       <div className={row}>
-        <div className={box}>
+        <div className={defBox}>
           <DefCell clues={[clue]} arrow="right" validated={solved} />
         </div>
         {Array.from({ length: n }, (_, i) => {
