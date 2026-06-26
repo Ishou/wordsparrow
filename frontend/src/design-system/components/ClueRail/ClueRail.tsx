@@ -11,7 +11,7 @@ const rail = css({
 const topRow = css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '9px' });
 const labelGroup = css({ display: 'flex', alignItems: 'center', gap: '8px' });
 const dot = css({ width: '7px', height: '7px', borderRadius: '999px', bg: 'ws.sakura', flexShrink: 0 });
-const label = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.14em', color: '#A8842B', display: 'inline-flex', alignItems: 'center', gap: '4px' });
+const label = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.14em', color: '#6B520F', display: 'inline-flex', alignItems: 'center', gap: '4px' });
 const sep = css({ width: '1px', height: '11px', bg: 'rgba(76,72,36,0.22)' });
 const counter = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.7, whiteSpace: 'nowrap' });
 

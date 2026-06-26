@@ -61,7 +61,7 @@ const monthLabel = css({
   fontWeight: 'extrabold',
   letterSpacing: '0.12em',
   textTransform: 'uppercase',
-  color: '#A8842B',
+  color: '#6B520F',
   margin: '4px 4px 10px',
 });
 

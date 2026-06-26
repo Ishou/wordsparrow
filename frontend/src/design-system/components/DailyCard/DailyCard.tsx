@@ -24,7 +24,7 @@ const card = css({
 });
 const teaser = css({ display: 'flex', gap: '4px', marginBottom: '4px' });
 const teaserBox = css({ width: '42px', height: '42px' });
-const eyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#A8842B' });
+const eyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#6B520F' });
 const date = css({ fontFamily: 'wsDisplay', fontSize: '27px', fontWeight: 'semibold', color: 'ws.jadeInk', margin: 0, lineHeight: '1.05' });
 
 export function DailyCard({ date: d, level, onPlay }: DailyCardProps) {
