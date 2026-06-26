@@ -7,6 +7,7 @@ import type { DailySummary, PuzzleRepository, WordsRepository } from '@/applicat
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Lockup, Skeleton } from '@/design-system';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
+import { HomeGreetingArt, bucketForHour, greetingForBucket } from './HomeGreetingArt';
 import { TeaserWord } from './TeaserWord';
 
 // Daily-card state: loading → ok/unavailable/error (ADR-0042 / 404 → calm "bientôt").
@@ -70,14 +71,6 @@ const navLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold' 
 
 const WD_LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'] as const;
 
-function timeGreeting(hour: number): { hi: string; sub: string } {
-  if (hour < 5) return { hi: 'Encore debout ? 🌙', sub: 'La nuit est calme — parfaite pour quelques mots.' };
-  if (hour < 12) return { hi: 'Bonjour ☀️', sub: 'Une nouvelle grille pour bien commencer la journée.' };
-  if (hour < 18) return { hi: 'Bel après-midi 🌤️', sub: 'Une grille pour souffler un peu.' };
-  if (hour < 22) return { hi: 'Bonsoir 🌆', sub: "La grille du soir t'attend." };
-  return { hi: 'Bonne nuit 🌙', sub: 'Un dernier mot avant de dormir ?' };
-}
-
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -131,9 +124,10 @@ export function HomeScreen({
     return () => { cancelled = true; };
   }, [puzzleRepository, retry]);
 
-  const { greeting, dateLabel, week, range } = useMemo(() => {
+  const { greeting, bucket, now: nowDate, dateLabel, week, range } = useMemo(() => {
     const now = new Date();
-    const g = timeGreeting(now.getHours());
+    const b = bucketForHour(now.getHours());
+    const g = greetingForBucket(b);
     const dl = capitalize(new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(now));
     // Last 7 UTC days ending today (today last). ISO keys match the summaries.
     const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -142,7 +136,7 @@ export function HomeScreen({
       d.setUTCDate(todayUtc.getUTCDate() - (6 - i));
       return { iso: isoUtcDate(d), wd: WD_LETTERS[d.getUTCDay()], num: d.getUTCDate(), today: i === 6 };
     });
-    return { greeting: g, dateLabel: dl, week: days, range: { from: days[0].iso, to: days[6].iso } };
+    return { greeting: g, bucket: b, now, dateLabel: dl, week: days, range: { from: days[0].iso, to: days[6].iso } };
   }, []);
 
   // Pulls last-7-days summaries; marks each day solved when the solo store has it fully locked.
@@ -187,6 +181,8 @@ export function HomeScreen({
               <List size={22} weight="bold" aria-hidden="true" />
             </button>
           </header>
+
+          <HomeGreetingArt bucket={bucket} now={nowDate} />
 
           <section className={greetingBox}>
             <h1 className={greetingHi}>{greeting.hi}</h1>

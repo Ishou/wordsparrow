@@ -127,6 +127,16 @@ describe('v2 menu sheet', () => {
     expect(screen.queryByText('Mentions & confidentialité')).toBeNull();
   });
 
+  it('renders a visible (display:block) grab handle at the top of the sheet', async () => {
+    renderSheetWithTrigger();
+    fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
+    const dialog = await screen.findByRole('dialog');
+    // The pill is decorative; find it by its hidden span and assert the block fix that makes it render.
+    const grab = dialog.querySelector('span[aria-hidden="true"]');
+    expect(grab).toBeTruthy();
+    expect(grab?.className).toContain('d_block');
+  });
+
   it('navigates Réglages and keeps placeholders non-navigating', async () => {
     renderSheetWithTrigger();
     fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
