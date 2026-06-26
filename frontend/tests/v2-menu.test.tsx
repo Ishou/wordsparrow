@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
   RouterProvider,
   createMemoryHistory,
@@ -6,13 +7,52 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { MenuScreen } from '@/ui/v2/MenuScreen';
+import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { Route as V2Route } from '@/ui/routes/v2';
 import { Route as V2IndexRoute } from '@/ui/routes/v2.index';
 import { Route as HomeRoute } from '@/ui/routes/home';
 import { Route as V2MenuRoute } from '@/ui/routes/v2.menu';
 import { expectAxeClean } from '@/test/a11y';
+
+// Mounts MenuSheet under a router (for useNavigate) behind a trigger that mirrors
+// the home avatar button, so open/close + focus-return are exercised end-to-end.
+// zag schedules the dialog's dismiss/focus-trap listeners via rAF + setTimeout
+// after the open transition; drain both queues before firing close events.
+const flushDialog = async () => {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  });
+};
+
+function renderSheetWithTrigger(onCloseSpy?: () => void) {
+  function Harness() {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <button type="button" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+          Ouvrir le menu
+        </button>
+        <MenuSheet
+          open={open}
+          onClose={() => {
+            onCloseSpy?.();
+            setOpen(false);
+          }}
+          streak={6}
+        />
+      </>
+    );
+  }
+  const rootRoute = createRootRoute();
+  const route = createRoute({ getParentRoute: () => rootRoute, path: '/', component: Harness });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([route]),
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  });
+  return render(<RouterProvider router={router} />);
+}
 
 function renderMenu() {
   const rootRoute = createRootRoute();
@@ -69,6 +109,77 @@ describe('v2 menu screen', () => {
     await screen.findByRole('heading', { level: 1, name: 'Menu' });
 
     await expectAxeClean(container);
+  });
+});
+
+describe('v2 menu sheet', () => {
+  it('opens from the home trigger and shows the profile header + rows', async () => {
+    renderSheetWithTrigger();
+
+    const trigger = await screen.findByRole('button', { name: 'Ouvrir le menu' });
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeTruthy();
+    expect(screen.getByText('Toi')).toBeTruthy();
+    expect(screen.getByText('Joueur invité · 🔥 série 6')).toBeTruthy();
+    expect(screen.getByText('Mon compte')).toBeTruthy();
+    expect(screen.getByText('Réglages')).toBeTruthy();
+    expect(screen.getByRole('switch', { name: 'Mode sombre' })).toBeTruthy();
+    expect(screen.getByText('Aide')).toBeTruthy();
+    expect(screen.getByText('Mentions & confidentialité')).toBeTruthy();
+  });
+
+  it('links the legal row to /v2/mentions-legales and keeps placeholders non-navigating', async () => {
+    renderSheetWithTrigger();
+    fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
+    await screen.findByRole('dialog');
+
+    expect(screen.getByRole('button', { name: /Mentions & confidentialité/ })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Mon compte' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Réglages' })).toBeNull();
+    expect(screen.getAllByText('Bientôt').length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('closes on Escape (ADR-0050)', async () => {
+    const onClose = vi.fn();
+    renderSheetWithTrigger(onClose);
+    fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
+    await screen.findByRole('dialog');
+    await flushDialog();
+
+    await act(async () => {
+      fireEvent.keyDown(document, { key: 'Escape' });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('returns focus to the trigger when closed', async () => {
+    renderSheetWithTrigger();
+    const trigger = await screen.findByRole('button', { name: 'Ouvrir le menu' });
+    // jsdom doesn't focus on click; focus explicitly so Ark has a node to restore to.
+    trigger.focus();
+    fireEvent.click(trigger);
+    await screen.findByRole('dialog');
+    await flushDialog();
+
+    await act(async () => {
+      fireEvent.pointerDown(screen.getByTestId('menu-sheet-backdrop'));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 4000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 4000 });
+  });
+
+  it('is axe-clean when open (ADR-0050)', async () => {
+    const { baseElement } = renderSheetWithTrigger();
+    fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
+    await screen.findByRole('dialog');
+
+    await expectAxeClean(baseElement);
   });
 });
 
