@@ -1,74 +1,92 @@
 import { css } from 'styled-system/css';
-import type { SessionClient } from '@/application/session/SessionClient';
-import { PrivacyNotice } from '@/ui/components/PrivacyNotice';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
-import { eyebrow } from './contentPage';
+import { contentCard, eyebrow, lede, sectionBody, sectionHeading } from './contentPage';
 
-const stack = css({ display: 'flex', flexDirection: 'column', gap: '14px' });
-
-const intro = css({
+const title = css({
   fontFamily: 'wsDisplay',
   fontWeight: 'semibold',
   fontSize: '26px',
   lineHeight: '1.1',
   color: 'ws.jadeInk',
-  margin: 0,
+  margin: '0 0 4px',
 });
 
-// PrivacyNotice owns its heading structure — parent selectors required.
-const card = css({
-  bg: 'white',
-  borderRadius: '18px',
-  padding: '20px 18px',
-  boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)',
-  color: '#42594F',
-  '& h1': {
-    fontFamily: 'wsDisplay',
-    fontWeight: 'semibold',
-    fontSize: '22px',
-    color: 'ws.jadeInk',
-    lineHeight: '1.15',
-  },
-  '& h2': {
-    fontFamily: 'wsDisplay',
-    fontWeight: 'semibold',
-    fontSize: '16px',
-    color: 'ws.jadeInk',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    _before: {
-      content: '""',
-      flex: 'none',
-      width: '7px',
-      height: '7px',
-      borderRadius: '50%',
-      bg: 'ws.sakura',
-    },
-  },
-  '& h3': { fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '14px', color: 'ws.jadeInk' },
-  '& p, & li, & td, & th': { fontFamily: 'wsUi', fontSize: '14px', lineHeight: '1.6' },
-  '& strong': { fontWeight: 'bold', color: 'ws.jadeInk' },
-  '& a': { color: 'ws.sakura', fontWeight: 'bold', textDecoration: 'underline' },
+const stack = css({ display: 'flex', flexDirection: 'column', gap: '14px' });
+
+const pillRow = css({ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' });
+
+const pill = css({
+  fontFamily: 'wsUi',
+  fontSize: '11px',
+  fontWeight: 'extrabold',
+  color: 'ws.khaki',
+  bg: 'ws.sable',
+  borderRadius: '999px',
+  padding: '5px 11px',
 });
 
-export function ConfidentialiteScreen({
-  sessionClient,
-}: {
-  readonly sessionClient: SessionClient;
-}) {
+const cta = css({
+  appearance: 'none',
+  width: '100%',
+  height: '46px',
+  marginTop: '4px',
+  borderRadius: '13px',
+  border: '2px solid rgba(33,75,64,0.18)',
+  bg: 'transparent',
+  fontFamily: 'wsUi',
+  fontWeight: 'extrabold',
+  fontSize: '14px',
+  color: 'ws.jadeInk',
+  cursor: 'not-allowed',
+  opacity: 0.7,
+});
+
+export function ConfidentialiteScreen() {
   return (
     <PhoneShell header={<BackHeader />}>
-      <div className={stack}>
+      <article className={stack}>
         <header>
           <div className={eyebrow}>Tes données</div>
-          <p className={intro}>On garde les choses simples.</p>
+          <h1 className={title}>Confidentialité</h1>
+          <p className={lede}>
+            On garde les choses simples : le minimum de données, jamais de revente, et tu gardes la
+            main.
+          </p>
         </header>
-        <div className={card}>
-          <PrivacyNotice lang="fr" sessionClient={sessionClient} />
-        </div>
-      </div>
+
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Ce que l&apos;on collecte</h2>
+          <p className={sectionBody}>
+            Ta progression de jeu (mots trouvés, séries) reste <strong>sur ton appareil</strong>. On
+            mesure des stats d&apos;usage anonymes pour améliorer le jeu.
+          </p>
+          <div className={pillRow}>
+            <span className={pill}>Progression locale</span>
+            <span className={pill}>Stats anonymes</span>
+          </div>
+        </section>
+
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Cookies</h2>
+          <p className={sectionBody}>
+            Strictement nécessaires + mesure d&apos;audience anonyme. Pas de pistage publicitaire.
+          </p>
+        </section>
+
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Tes droits</h2>
+          <p className={sectionBody}>
+            Tu peux à tout moment effacer ta progression et tes préférences depuis les Réglages.
+            Accès, rectification, suppression — c&apos;est toi qui décides.
+          </p>
+        </section>
+
+        {/* Réglages v2 not built yet — inert placeholder, no dead link. */}
+        <button type="button" className={cta} disabled>
+          Gérer mes préférences
+        </button>
+      </article>
     </PhoneShell>
   );
 }

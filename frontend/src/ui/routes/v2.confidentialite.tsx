@@ -4,8 +4,7 @@ import { ConfidentialiteScreen } from '@/ui/v2/ConfidentialiteScreen';
 import { Route as V2Route } from './v2';
 
 function ConfidentialiteRouteComponent() {
-  const { sessionClient } = Route.useRouteContext();
-  return <ConfidentialiteScreen sessionClient={sessionClient} />;
+  return <ConfidentialiteScreen />;
 }
 
 export const Route = createRoute({
