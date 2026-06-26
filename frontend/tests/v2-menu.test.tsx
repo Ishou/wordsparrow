@@ -16,10 +16,7 @@ import { Route as HomeRoute } from '@/ui/routes/home';
 import { Route as V2MenuRoute } from '@/ui/routes/v2.menu';
 import { expectAxeClean } from '@/test/a11y';
 
-// Mounts MenuSheet under a router (for useNavigate) behind a trigger that mirrors
-// the home avatar button, so open/close + focus-return are exercised end-to-end.
-// zag schedules the dialog's dismiss/focus-trap listeners via rAF + setTimeout
-// after the open transition; drain both queues before firing close events.
+// zag schedules dismiss/focus-trap listeners via rAF + setTimeout; drain both before firing close events.
 const flushDialog = async () => {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 50));

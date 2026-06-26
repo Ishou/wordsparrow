@@ -49,7 +49,7 @@ const rowBase = {
   background: 'transparent',
 };
 const rowActive = css({ ...rowBase, textDecoration: 'none', cursor: 'pointer', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
-const rowSwitch = css({ ...rowBase, cursor: 'pointer', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const rowSwitch = css({ ...rowBase, cursor: 'pointer' });
 const rowInert = css({ ...rowBase });
 
 const tile = css({ flex: 'none', width: '34px', height: '34px', borderRadius: '10px', bg: 'ws.jade', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'ws.jadeInk' });
@@ -63,7 +63,7 @@ const chevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opaci
 const sw = css({ marginLeft: 'auto', width: '42px', height: '24px', borderRadius: '999px', flex: 'none', position: 'relative', transition: 'background 160ms', bg: 'rgba(33,75,64,0.18)' });
 const swKnob = css({ position: 'absolute', top: '3px', left: '3px', width: '18px', height: '18px', borderRadius: '50%', bg: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' });
 
-const switchBtn = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', textAlign: 'left' });
+const switchBtn = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', textAlign: 'left', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const srTitle = css({ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 });
 
 function Tile({ icon: I, soft }: { readonly icon: Icon; readonly soft?: boolean }) {
@@ -124,7 +124,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
                 <SoonRow icon={User}>Mon compte</SoonRow>
                 <SoonRow icon={Gear} soft>Réglages</SoonRow>
                 <li className={rowSwitch}>
-                  <button type="button" role="switch" aria-checked={false} aria-label="Mode sombre" className={switchBtn} onClick={() => {}}>
+                  <button type="button" role="switch" aria-checked={false} aria-disabled="true" aria-label="Mode sombre" className={switchBtn} onClick={() => {}}>
                     <Tile icon={Moon} soft />
                     <span className={labelWrap}>
                       <span className={label}>Mode sombre</span>
