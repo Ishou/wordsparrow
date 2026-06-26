@@ -1,10 +1,10 @@
 import { createRoute } from '@tanstack/react-router';
 // Sanctioned app→module bridge (ADR-0072); registered only in DEV.
 import { LockupScreen } from '@/ui/play/LockupScreen';
-import { Route as RootRoute } from './__root';
+import { Route as V2Route } from './v2';
 
 export const Route = createRoute({
-  getParentRoute: () => RootRoute,
-  path: '/lockup',
+  getParentRoute: () => V2Route,
+  path: 'lockup',
   component: LockupScreen,
 });

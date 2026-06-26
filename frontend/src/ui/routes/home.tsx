@@ -1,7 +1,7 @@
 import { createRoute } from '@tanstack/react-router';
 // Sanctioned app→module bridge (ADR-0072); registered only in DEV.
 import { HomeScreen } from '@/ui/home/HomeScreen';
-import { Route as RootRoute } from './__root';
+import { Route as V2Route } from './v2';
 
 function HomeRouteComponent() {
   const { puzzleRepository, soloEntriesStore, wordsRepository } = Route.useRouteContext();
@@ -15,7 +15,7 @@ function HomeRouteComponent() {
 }
 
 export const Route = createRoute({
-  getParentRoute: () => RootRoute,
-  path: '/home',
+  getParentRoute: () => V2Route,
+  path: 'home',
   component: HomeRouteComponent,
 });
