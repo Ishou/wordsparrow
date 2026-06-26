@@ -6,7 +6,7 @@ export const eyebrow = css({
   fontWeight: 'extrabold',
   letterSpacing: '0.16em',
   textTransform: 'uppercase',
-  color: '#A8842B',
+  color: '#6B520F',
   marginBottom: '6px',
 });
 

@@ -60,7 +60,7 @@ const groupLabel = css({
   fontWeight: 'extrabold',
   letterSpacing: '0.16em',
   textTransform: 'uppercase',
-  color: '#A8842B',
+  color: '#6B520F',
   margin: '0 6px 7px',
 });
 const listCard = css({
@@ -187,7 +187,7 @@ export function ReglagesScreen() {
           </ul>
         </nav>
 
-        <p className={foot}>WordSparrow · v2.0 · fait avec soin 🐦</p>
+        <p className={foot}>WordSparrow · fait avec soin 🐦</p>
       </div>
     </PhoneShell>
   );
