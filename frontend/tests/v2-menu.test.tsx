@@ -124,18 +124,18 @@ describe('v2 menu sheet', () => {
     expect(screen.getByText('Réglages')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Mode sombre' })).toBeTruthy();
     expect(screen.getByText('Aide')).toBeTruthy();
-    expect(screen.getByText('Mentions & confidentialité')).toBeTruthy();
+    expect(screen.queryByText('Mentions & confidentialité')).toBeNull();
   });
 
-  it('links the legal row to /v2/mentions-legales and keeps placeholders non-navigating', async () => {
+  it('navigates Réglages and keeps placeholders non-navigating', async () => {
     renderSheetWithTrigger();
     fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
     await screen.findByRole('dialog');
 
-    expect(screen.getByRole('button', { name: /Mentions & confidentialité/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Réglages' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Mentions & confidentialité/ })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Mon compte' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Réglages' })).toBeNull();
-    expect(screen.getAllByText('Bientôt').length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText('Bientôt').length).toBeGreaterThanOrEqual(2);
   });
 
   it('closes on Escape (ADR-0050)', async () => {
