@@ -33,7 +33,7 @@ const base = css({
     backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent)',
     animation: 'wsShimmer 1.5s infinite',
   },
-  // Reduced motion: a calm static block, no sweeping band.
+  // display:none removes the band entirely; animation:none alone leaves a static artifact.
   '@media (prefers-reduced-motion: reduce)': { _after: { animation: 'none', display: 'none' } },
 });
 
