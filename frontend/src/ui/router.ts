@@ -14,6 +14,8 @@ import { Route as LegalNoticeRoute } from './routes/mentions-legales';
 import { Route as ContribuerRoute } from './routes/contribuer';
 import { Route as ContribuerPairsRoute } from './routes/contribuer.pairs';
 import { Route as V2Route } from './routes/v2';
+import { Route as V2IndexRoute } from './routes/v2.index';
+import { Route as V2MenuRoute } from './routes/v2.menu';
 import { Route as V2MentionsLegalesRoute } from './routes/v2.mentions-legales';
 import { Route as V2ConfidentialiteRoute } from './routes/v2.confidentialite';
 import { Route as DesignSystemRoute } from './routes/design-system';
@@ -51,7 +53,9 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
   const devChildren = import.meta.env.DEV
     ? [
         V2Route.addChildren([
+          V2IndexRoute,
           HomeRoute,
+          V2MenuRoute,
           PlayRoute,
           FinishRoute,
           LockupRoute,
