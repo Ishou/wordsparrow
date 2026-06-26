@@ -355,6 +355,10 @@ export default defineConfig({
         from: { transform: 'translateY(100%)' },
         to: { transform: 'translateY(0)' },
       },
+      wsShimmer: {
+        '0%': { transform: 'translateX(-100%)' },
+        '100%': { transform: 'translateX(100%)' },
+      },
     },
   },
 });

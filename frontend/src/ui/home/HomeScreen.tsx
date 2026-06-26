@@ -5,7 +5,7 @@ import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
 import type { DailySummary, PuzzleRepository, WordsRepository } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
-import { Lockup } from '@/design-system';
+import { Lockup, Skeleton } from '@/design-system';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { TeaserWord } from './TeaserWord';
 
@@ -147,12 +147,15 @@ export function HomeScreen({
 
   // Pulls last-7-days summaries; marks each day solved when the solo store has it fully locked.
   const [history, setHistory] = useState<ReadonlyArray<DailySummary>>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
   useEffect(() => {
     let cancelled = false;
+    setHistoryLoading(true);
     puzzleRepository
       .listDailySummaries({ from: range.from, to: range.to })
       .then((page) => { if (!cancelled) setHistory(page.items); })
-      .catch(() => { if (!cancelled) setHistory([]); });
+      .catch(() => { if (!cancelled) setHistory([]); })
+      .finally(() => { if (!cancelled) setHistoryLoading(false); });
     return () => { cancelled = true; };
   }, [puzzleRepository, range.from, range.to]);
 
@@ -205,11 +208,20 @@ export function HomeScreen({
                 onStreak={(cur, best) => setStreak({ cur, best })}
               />
             </div>
-            <div className={heroEyebrow}>
-              Grille du jour
-              {daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}
-            </div>
-            <div className={heroDate}>{dateLabel}</div>
+            {daily.status === 'loading' ? (
+              <div role="status" aria-busy="true" aria-label="Chargement de la grille du jour">
+                <Skeleton tone="onCard" width={130} height={11} style={{ margin: '0 auto 10px' }} />
+                <Skeleton tone="onCard" width={180} height={26} style={{ margin: '0 auto' }} />
+              </div>
+            ) : (
+              <>
+                <div className={heroEyebrow}>
+                  Grille du jour
+                  {daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}
+                </div>
+                <div className={heroDate}>{dateLabel}</div>
+              </>
+            )}
             <button
               type="button"
               className={playBtn}
@@ -231,9 +243,16 @@ export function HomeScreen({
 
           <section className={prevWrap}>
             <div className={prevLabel}>Grilles précédentes</div>
-            <div className={prevCard}>
+            <div className={prevCard} aria-busy={historyLoading || undefined}>
               <div className={prevRow}>
-                {weekCells.map((d, i) => (
+                {historyLoading
+                  ? week.map((d, i) => (
+                      <div key={i} className={dayCol}>
+                        <span className={dayWd}>{d.wd}</span>
+                        <Skeleton tone="deep" width={34} height={34} circle />
+                      </div>
+                    ))
+                  : weekCells.map((d, i) => (
                   <div key={i} className={dayCol}>
                     <span className={dayWd}>{d.wd}</span>
                     {d.available ? (
