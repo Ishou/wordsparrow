@@ -228,7 +228,18 @@ const banner = css({
   marginBottom: '16px',
 });
 
-export function HomeGreetingArt({ bucket, now }: { readonly bucket: DayBucket; readonly now?: Date }): ReactElement {
+export function HomeGreetingArt({
+  bucket,
+  now,
+  className,
+  drape,
+}: {
+  readonly bucket: DayBucket;
+  readonly now?: Date;
+  readonly className?: string;
+  // When set, the branch SVG overflows the banner's bottom edge so it drapes onto whatever sits below.
+  readonly drape?: number;
+}): ReactElement {
   const rawId = useId();
   const p = `${rawId.replace(/:/g, '')}-`;
   const phase = useMemo(() => moonPhase(now ?? new Date()), [now]);
@@ -240,8 +251,12 @@ export function HomeGreetingArt({ bucket, now }: { readonly bucket: DayBucket; r
       : `linear-gradient(180deg, ${stops[0]}, ${stops[1]})`;
 
   return (
-    <div className={banner} style={{ backgroundImage: gradient }} aria-hidden="true">
-      <svg viewBox="0 0 300 168" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+    <div className={className ?? banner} style={{ backgroundImage: gradient, overflow: drape ? 'visible' : undefined }} aria-hidden="true">
+      <svg
+        viewBox="0 0 300 168"
+        preserveAspectRatio="xMidYMax slice"
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: drape ? `calc(100% + ${drape}px)` : '100%', overflow: 'visible' }}
+      >
         <Defs p={p} />
         {art.night
           ? STARS.map(([cx, cy, r], i) => <circle key={i} cx={cx} cy={cy} r={r} fill="#E9E2BD" />)
