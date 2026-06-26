@@ -25,10 +25,10 @@ export function greetingForBucket(bucket: DayBucket): { readonly hi: string; rea
   }
 }
 
-// Shared celestial arc (quadratic Bézier): east-right horizon → apex → west-left horizon.
+// Apex kept low (y≈75) so sun/moon stay inside the fused banner's cropped visible band, not above it.
 const ARC: readonly [readonly [number, number], readonly [number, number], readonly [number, number]] = [
   [276, 120],
-  [150, -60],
+  [150, 30],
   [24, 120],
 ];
 
@@ -83,13 +83,14 @@ function artFor(bucket: DayBucket): BucketArt {
   }
 }
 
+// Staggered scatter flanking the apex moon (150,75): kept off the edges and below the banner's top crop (y≳60).
 const STARS: readonly (readonly [number, number, number])[] = [
-  [56, 34, 1.8],
-  [100, 22, 1.3],
-  [186, 40, 1.5],
-  [40, 72, 1.3],
-  [276, 92, 1.4],
-  [222, 20, 1.2],
+  [50, 66, 1.5],
+  [86, 85, 1.0],
+  [116, 63, 1.1],
+  [192, 64, 1.3],
+  [228, 81, 1.4],
+  [258, 70, 1.0],
 ];
 
 function Sun({ t, soft }: Body): ReactElement {
