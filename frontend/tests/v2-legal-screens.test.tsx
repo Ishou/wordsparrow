@@ -36,7 +36,7 @@ describe('v2 legal screens', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Éditeur' })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: 'Hébergement' })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: 'Données personnelles' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Retour/ })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Retour/ })).toHaveAttribute('href', '/v2/reglages');
     expect(container.querySelector('main#main-content')).toBeTruthy();
 
     await expectAxeClean(container);
@@ -53,7 +53,7 @@ describe('v2 legal screens', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Cookies' })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: 'Tes droits' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Gérer mes préférences' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Retour/ })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Retour/ })).toHaveAttribute('href', '/v2/reglages');
     expect(container.querySelector('main#main-content')).toBeTruthy();
 
     await expectAxeClean(container);
