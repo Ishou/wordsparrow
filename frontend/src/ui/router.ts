@@ -14,6 +14,8 @@ import { Route as LegalNoticeRoute } from './routes/mentions-legales';
 import { Route as ContribuerRoute } from './routes/contribuer';
 import { Route as ContribuerPairsRoute } from './routes/contribuer.pairs';
 import { Route as V2Route } from './routes/v2';
+import { Route as V2MentionsLegalesRoute } from './routes/v2.mentions-legales';
+import { Route as V2ConfidentialiteRoute } from './routes/v2.confidentialite';
 import { Route as DesignSystemRoute } from './routes/design-system';
 import { Route as PlayRoute } from './routes/play';
 import { Route as HomeRoute } from './routes/home';
@@ -47,7 +49,17 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
   // landing both require the game-api adapter on the router context.
   // Dev-only v2 design-system screens (ADR-0072) under a gated /v2 parent — never registered in prod.
   const devChildren = import.meta.env.DEV
-    ? [V2Route.addChildren([HomeRoute, PlayRoute, FinishRoute, LockupRoute, DesignSystemRoute])]
+    ? [
+        V2Route.addChildren([
+          HomeRoute,
+          PlayRoute,
+          FinishRoute,
+          LockupRoute,
+          DesignSystemRoute,
+          V2MentionsLegalesRoute,
+          V2ConfidentialiteRoute,
+        ]),
+      ]
     : [];
   const children = multiplayer
     ? [...baseChildren, JoinRoute, LobbyRoute, ...devChildren]
