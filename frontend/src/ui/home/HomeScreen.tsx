@@ -278,7 +278,7 @@ export function HomeScreen({
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11.2 12 5l8 6.2V19a1 1 0 0 1-1 1h-4.2v-5.2H9.2V20H5a1 1 0 0 1-1-1z" stroke="var(--colors-ws-sakura)" strokeWidth="1.9" strokeLinejoin="round" /></svg>
             <span className={navLabel} style={{ color: 'var(--colors-ws-sakura)' }}>Accueil</span>
           </button>
-          <button type="button" className={navItem}>
+          <button type="button" className={navItem} onClick={() => navigate({ to: '/v2/grilles' })}>
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="4.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /></svg>
             <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Grilles</span>
           </button>

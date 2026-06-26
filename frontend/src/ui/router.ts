@@ -19,6 +19,7 @@ import { Route as V2MenuRoute } from './routes/v2.menu';
 import { Route as V2MentionsLegalesRoute } from './routes/v2.mentions-legales';
 import { Route as V2ConfidentialiteRoute } from './routes/v2.confidentialite';
 import { Route as V2ReglagesRoute } from './routes/v2.reglages';
+import { Route as V2GrillesRoute } from './routes/v2.grilles';
 import { Route as DesignSystemRoute } from './routes/design-system';
 import { Route as PlayRoute } from './routes/play';
 import { Route as HomeRoute } from './routes/home';
@@ -64,6 +65,7 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
           V2MentionsLegalesRoute,
           V2ConfidentialiteRoute,
           V2ReglagesRoute,
+          V2GrillesRoute,
         ]),
       ]
     : [];
