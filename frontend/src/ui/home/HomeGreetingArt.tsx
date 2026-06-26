@@ -237,7 +237,7 @@ export function HomeGreetingArt({
   readonly bucket: DayBucket;
   readonly now?: Date;
   readonly className?: string;
-  // When set, the branch SVG overflows the banner's bottom edge so it drapes onto whatever sits below.
+  // parent must not set overflow: hidden, or the drape is clipped.
   readonly drape?: number;
 }): ReactElement {
   const rawId = useId();
@@ -251,7 +251,7 @@ export function HomeGreetingArt({
       : `linear-gradient(180deg, ${stops[0]}, ${stops[1]})`;
 
   return (
-    <div className={className ?? banner} style={{ backgroundImage: gradient, overflow: drape ? 'visible' : undefined }} aria-hidden="true">
+    <div className={className ?? banner} style={{ backgroundImage: gradient }} aria-hidden="true">
       <svg
         viewBox="0 0 300 168"
         preserveAspectRatio="xMidYMax slice"
