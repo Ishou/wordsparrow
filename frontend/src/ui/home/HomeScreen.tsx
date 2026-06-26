@@ -202,7 +202,7 @@ export function HomeScreen({
               className={playBtn}
               disabled={daily.status === 'loading' || daily.status === 'unavailable'}
               onClick={() => {
-                if (daily.status === 'ok') navigate({ to: '/play' });
+                if (daily.status === 'ok') navigate({ to: '/v2/play' });
                 else if (daily.status === 'error') setRetry((n) => n + 1);
               }}
             >
@@ -228,7 +228,7 @@ export function HomeScreen({
                         type="button"
                         className={dayDotBtn}
                         style={dayDotStyle(d.today, d.solved)}
-                        onClick={() => navigate({ to: '/play', search: { date: d.iso } })}
+                        onClick={() => navigate({ to: '/v2/play', search: { date: d.iso } })}
                         aria-label={`${d.label}${d.today ? " (aujourd'hui)" : ''}${d.solved ? ' — terminée' : ''}`}
                       >
                         {d.num}
