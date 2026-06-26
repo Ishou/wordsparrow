@@ -1,9 +1,7 @@
 import { useId, useMemo, type ReactElement } from 'react';
 import { css } from 'styled-system/css';
 
-// Time-of-day home illustration (ADR-0072): one shared sakura branch + cell-sparrow over a
-// per-bucket sky; sun & moon ride a single hidden celestial arc. Ported from
-// mockups/home-greetings-v2.html. Moon uses the real current phase (deterministic, no network).
+// ADR-0072: time-of-day illustration; moon phase is deterministic (synodic formula, no network).
 
 export type DayBucket = 'matin' | 'apresMidi' | 'soir' | 'nuit';
 
@@ -138,8 +136,7 @@ function Moon({ t, night, phase }: Body & { readonly night?: boolean; readonly p
   );
 }
 
-// Reusable sakura/branch symbols — mirror the mockup's <symbol> defs so the <use> geometry
-// (x/y/width/height) ports verbatim. `p` namespaces ids so multiple banners can't collide.
+// `p` prefix keeps SVG symbol ids unique when multiple banners coexist in the same document.
 function Defs({ p }: { readonly p: string }): ReactElement {
   return (
     <defs>
