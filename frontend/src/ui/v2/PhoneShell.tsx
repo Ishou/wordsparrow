@@ -3,11 +3,10 @@ import { css } from 'styled-system/css';
 
 export interface PhoneShellProps {
   readonly children: ReactNode;
-  // Optional chrome above the scrollable body (e.g. a back link + Lockup).
   readonly header?: ReactNode;
 }
 
-// Outer jade field: fills the viewport, centres the phone-width column (ADR-0072).
+// ADR-0072 phone-width column.
 const shell = css({
   minHeight: '100dvh',
   bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
