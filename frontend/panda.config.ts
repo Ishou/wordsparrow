@@ -355,7 +355,6 @@ export default defineConfig({
         from: { transform: 'translateY(100%)' },
         to: { transform: 'translateY(0)' },
       },
-      // Loading-skeleton shimmer: a light band sweeps left→right across the placeholder.
       wsShimmer: {
         '0%': { transform: 'translateX(-100%)' },
         '100%': { transform: 'translateX(100%)' },

@@ -1,7 +1,7 @@
 import { css, cx } from 'styled-system/css';
 import type { CSSProperties } from 'react';
 
-// Tone matches the surface the placeholder sits on (mockup: base / deeper / on-white).
+// Tone matches the surface the placeholder sits on.
 export type SkeletonTone = 'jade' | 'deep' | 'onCard';
 
 export interface SkeletonProps {

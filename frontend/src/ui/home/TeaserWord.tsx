@@ -195,7 +195,6 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
   };
 
   if (loading) {
-    // Self-skeleton: same row layout (def cell + letter cells) with shimmer placeholders.
     return (
       <div className={wrap} role="status" aria-busy="true" aria-label="Chargement du mot du jour">
         <div className={row}>
