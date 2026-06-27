@@ -1,19 +1,8 @@
-import type { ReactNode } from 'react';
-import { Link, type LinkProps } from '@tanstack/react-router';
-import {
-  Bell,
-  SpeakerHigh,
-  Moon,
-  Lock,
-  FileText,
-  Scroll,
-  Cookie,
-  ChatCircleDots,
-  Envelope,
-  CaretRight,
-  type Icon,
-} from '@phosphor-icons/react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link, useNavigate, useRouteContext, type LinkProps } from '@tanstack/react-router';
+import { Lock, FileText, Envelope, CaretRight, GoogleLogo, SignOut, User, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
+import { useAuth } from '@/ui/components/auth';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 
@@ -51,16 +40,17 @@ const avatar = css({
   fontWeight: 'semibold',
   fontSize: '20px',
 });
+const avatarAnon = css({ bg: 'ws.jade', color: 'ws.jadeInk' });
 const profileName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const profileMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.7, marginTop: '2px' });
 
 const groupLabel = css({
   fontFamily: 'wsUi',
-  fontSize: '10px',
-  fontWeight: 'extrabold',
-  letterSpacing: '0.16em',
+  fontSize: '11px',
+  fontWeight: 'black',
+  letterSpacing: '0.08em',
   textTransform: 'uppercase',
-  color: '#6B520F',
+  color: '#543C00',
   margin: '0 6px 7px',
 });
 const listCard = css({
@@ -87,19 +77,13 @@ const rowBase = {
   background: 'transparent',
 };
 const rowActive = css({ ...rowBase, textDecoration: 'none', cursor: 'pointer', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' } });
-const rowInert = css({ ...rowBase });
 const lastFlat = css({ borderBottom: 'none' });
 
 const tile = css({ flex: 'none', width: '30px', height: '30px', borderRadius: '9px', bg: 'ws.jade', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'ws.jadeInk' });
 const tileSoft = css({ bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
 
 const label = css({ fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk' });
-const soon = css({ marginLeft: 'auto', flex: 'none', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', bg: 'ws.sable', borderRadius: '999px', padding: '3px 9px' });
 const chevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
-
-const sw = css({ marginLeft: 'auto', width: '42px', height: '24px', borderRadius: '999px', flex: 'none', position: 'relative', transition: 'background 160ms', bg: 'rgba(33,75,64,0.18)' });
-const swKnob = css({ position: 'absolute', top: '3px', left: '3px', width: '18px', height: '18px', borderRadius: '50%', bg: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' });
-const switchBtn = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', minHeight: '48px', border: 'none', borderBottom: 'none', background: 'transparent', padding: '12px 14px', cursor: 'pointer', textAlign: 'left', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' } });
 
 const foot = css({ fontFamily: 'wsMono', fontSize: '11px', color: 'ws.khaki', opacity: 0.6, textAlign: 'center', paddingTop: '10px' });
 
@@ -125,13 +109,116 @@ function LinkRow({ icon, soft, to, last, children }: { readonly icon: Icon; read
   );
 }
 
-function SoonRow({ icon, soft, last, children }: { readonly icon: Icon; readonly soft?: boolean; readonly last?: boolean; readonly children: ReactNode }) {
+function MailRow({ icon, href, last, children }: { readonly icon: Icon; readonly href: string; readonly last?: boolean; readonly children: ReactNode }) {
   return (
-    <li className={last ? cx(rowInert, lastFlat) : rowInert} aria-disabled="true">
-      <Tile icon={icon} soft={soft} />
-      <span className={label}>{children}</span>
-      <span className={soon}>Bientôt</span>
+    <li>
+      <a href={href} className={last ? cx(rowActive, lastFlat) : rowActive}>
+        <Tile icon={icon} />
+        <span className={label}>{children}</span>
+        <span className={chevron}>
+          <CaretRight size={16} weight="bold" aria-hidden="true" />
+        </span>
+      </a>
     </li>
+  );
+}
+
+function initialFor(displayName: string): string {
+  return ([...displayName][0] ?? '?').toLocaleUpperCase('fr-FR');
+}
+
+function ProfileCard() {
+  const { state } = useAuth();
+  if (state.status === 'authed') {
+    return (
+      <div className={profile}>
+        <span className={avatar} aria-hidden="true">{initialFor(state.whoami.displayName)}</span>
+        <div>
+          <div className={profileName}>{state.whoami.displayName}</div>
+          <div className={profileMeta}>Connecté</div>
+        </div>
+      </div>
+    );
+  }
+  const loading = state.status === 'loading';
+  return (
+    <div className={profile}>
+      <span className={cx(avatar, avatarAnon)} aria-hidden="true">
+        <User size={24} weight="bold" />
+      </span>
+      <div>
+        <div className={profileName}>{loading ? '…' : 'Invité'}</div>
+        <div className={profileMeta}>{loading ? '…' : 'Joueur invité'}</div>
+      </div>
+    </div>
+  );
+}
+
+// Anchor required: browser must follow the 302 chain to accept Set-Cookie (button + location.assign breaks this).
+function SignInRow() {
+  const { authClient } = useRouteContext({ from: '__root__' });
+  const [returnTo, setReturnTo] = useState('');
+  useEffect(() => setReturnTo(window.location.href), []);
+  const href = authClient && returnTo ? authClient.signInUrl('google', returnTo) : '#';
+  const disabled = href === '#';
+  return (
+    <li>
+      <a
+        href={href}
+        aria-disabled={disabled ? true : undefined}
+        className={cx(rowActive, lastFlat)}
+      >
+        <Tile icon={GoogleLogo} />
+        <span className={label}>Se connecter avec Google</span>
+        <span className={chevron}>
+          <CaretRight size={16} weight="bold" aria-hidden="true" />
+        </span>
+      </a>
+    </li>
+  );
+}
+
+function LogoutRow() {
+  const { authClient } = useRouteContext({ from: '__root__' });
+  const { refresh } = useAuth();
+  const navigate = useNavigate();
+  const handleLogout = async () => {
+    if (!authClient) return;
+    try {
+      await authClient.logout();
+      await refresh();
+      void navigate({ to: '/v2' });
+    } catch (cause) {
+      console.warn('logout failed', cause);
+    }
+  };
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => { void handleLogout(); }}
+        className={cx(rowActive, lastFlat)}
+      >
+        <Tile icon={SignOut} soft />
+        <span className={label}>Se déconnecter</span>
+        <span className={chevron}>
+          <CaretRight size={16} weight="bold" aria-hidden="true" />
+        </span>
+      </button>
+    </li>
+  );
+}
+
+function CompteGroup() {
+  const { state } = useAuth();
+  if (state.status === 'loading') return null;
+  return (
+    <nav aria-label="Compte">
+      <div className={groupLabel}>Compte</div>
+      <ul className={listCard}>
+        {state.status === 'authed' ? <LogoutRow /> : <SignInRow />}
+      </ul>
+    </nav>
   );
 }
 
@@ -141,49 +228,22 @@ export function ReglagesScreen() {
       <div className={stack}>
         <h1 className={title}>Réglages</h1>
 
-        <div className={profile}>
-          <span className={avatar} aria-hidden="true">T</span>
-          <div>
-            <div className={profileName}>Toi</div>
-            <div className={profileMeta}>Joueur invité</div>
-          </div>
-          <span className={chevron} aria-hidden="true">
-            <CaretRight size={18} weight="bold" />
-          </span>
-        </div>
+        <ProfileCard />
 
-        <nav aria-label="Préférences">
-          <div className={groupLabel}>Préférences</div>
-          <ul className={listCard}>
-            <SoonRow icon={Bell}>Notifications</SoonRow>
-            <SoonRow icon={SpeakerHigh}>Son &amp; vibrations</SoonRow>
-            <li>
-              <button type="button" role="switch" aria-checked={false} aria-disabled="true" aria-label="Thème sombre" className={cx(switchBtn, lastFlat)} onClick={() => {}}>
-                <Tile icon={Moon} />
-                <span className={label}>Thème sombre</span>
-                <span className={sw}>
-                  <span className={swKnob} />
-                </span>
-              </button>
-            </li>
-          </ul>
-        </nav>
+        <CompteGroup />
 
         <nav aria-label="Confidentialité &amp; légal">
           <div className={groupLabel}>Confidentialité &amp; légal</div>
           <ul className={listCard}>
             <LinkRow icon={Lock} soft to="/v2/confidentialite">Confidentialité</LinkRow>
-            <LinkRow icon={FileText} soft to="/v2/mentions-legales">Mentions légales</LinkRow>
-            <SoonRow icon={Scroll} soft>Conditions d&apos;utilisation</SoonRow>
-            <SoonRow icon={Cookie} soft last>Gérer les cookies</SoonRow>
+            <LinkRow icon={FileText} soft to="/v2/mentions-legales" last>Mentions légales</LinkRow>
           </ul>
         </nav>
 
         <nav aria-label="Aide">
           <div className={groupLabel}>Aide</div>
           <ul className={listCard}>
-            <SoonRow icon={ChatCircleDots}>Centre d&apos;aide</SoonRow>
-            <SoonRow icon={Envelope} last>Nous écrire</SoonRow>
+            <MailRow icon={Envelope} href="mailto:contact@wordsparrow.io" last>Nous écrire</MailRow>
           </ul>
         </nav>
 
