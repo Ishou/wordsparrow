@@ -74,7 +74,7 @@ all environments. Move the index: the root index route renders the v2 home
 (or the root `/` redirects to `/v2`). v1 base routes become `redirect`
 loaders. The `multiplayer` flag still gates the lobby/join routes (ADR-0018).
 
-### 3. Sequencing (expand-and-contract — ADR-0001 §waves)
+### 3. Sequencing (expand-and-contract — CLAUDE.md)
 
 1. **Wave 1 — this ADR** (governance). Decide the contribuer disposition.
 2. **Wave 2 — flip + redirects.** Un-gate `/v2/*`, redirect v1 paths, root → v2.
