@@ -21,6 +21,7 @@ import { Route as V2ConfidentialiteRoute } from './routes/v2.confidentialite';
 import { Route as V2ReglagesRoute } from './routes/v2.reglages';
 import { Route as V2GrillesRoute } from './routes/v2.grilles';
 import { Route as V2LobbyRoute } from './routes/v2.lobby.$lobbyId';
+import { Route as V2JoinRoute } from './routes/v2.join.$code';
 import { Route as DesignSystemRoute } from './routes/design-system';
 import { Route as PlayRoute } from './routes/play';
 import { Route as HomeRoute } from './routes/home';
@@ -66,7 +67,7 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
     V2ConfidentialiteRoute,
     V2ReglagesRoute,
     V2GrillesRoute,
-    ...(multiplayer ? [V2LobbyRoute] : []),
+    ...(multiplayer ? [V2LobbyRoute, V2JoinRoute] : []),
   ];
   const devChildren = import.meta.env.DEV ? [V2Route.addChildren(v2Children)] : [];
   const children = multiplayer

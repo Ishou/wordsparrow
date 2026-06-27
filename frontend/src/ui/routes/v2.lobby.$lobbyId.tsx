@@ -1,7 +1,7 @@
 // DEV+multiplayer-gated v2 reskin (ADR-0072) of `/lobby/$lobbyId`; smart container over `useLobbyConnection`.
 
 import { createRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import type { Lobby, LobbyId } from '@/domain/game';
 import { useLobbyConnection } from '@/ui/components/lobby/useLobbyConnection';
 import { useToast } from '@/ui/components/primitives';
@@ -10,6 +10,7 @@ import { PhoneShell } from '@/ui/v2/PhoneShell';
 import { BackHeader } from '@/ui/v2/BackHeader';
 import { SalonScreen } from '@/ui/v2/multiplayer/SalonScreen';
 import { LiveCoopScreen } from '@/ui/v2/multiplayer/LiveCoopScreen';
+import { ResultatsScreen } from '@/ui/v2/multiplayer/ResultatsScreen';
 import { css } from 'styled-system/css';
 import { Route as V2Route } from './v2';
 
@@ -39,7 +40,9 @@ function V2LobbyPage() {
   const getSession = ctx.getSession!;
   const setPersistedPseudonym = ctx.setPseudonym;
   const lobbyJoinCodeStash = ctx.lobbyJoinCodeStash!;
+  const lobbyClient = ctx.lobbyClient!;
   const navigate = useNavigate();
+  const [isReplaying, setIsReplaying] = useState(false);
   // Destructure show/dismiss (not the wrapper object) — the object is recreated each render and would re-trigger the connection effect.
   const { show: showToast, dismiss: dismissToast } = useToast();
   const { say: announce } = useAnnouncer();
@@ -85,6 +88,25 @@ function V2LobbyPage() {
     void navigate({ to: '/v2/home' });
   }, [actions, navigate]);
 
+  const handleReplay = useCallback(() => {
+    setIsReplaying(true);
+    const { sessionId: ownerSessionId, pseudonym: ownerPseudonym } = getSession();
+    lobbyClient
+      .createLobby({ ownerSessionId, ownerPseudonym })
+      .then((created) =>
+        navigate({ to: '/v2/lobby/$lobbyId', params: { lobbyId: created.id } }),
+      )
+      .catch(() => {
+        setIsReplaying(false);
+        showToast({ text: 'Impossible de créer une partie. Réessaie.', tone: 'error' });
+      });
+  }, [getSession, lobbyClient, navigate, showToast]);
+
+  const handleHome = useCallback(() => {
+    actions.leave();
+    void navigate({ to: '/v2/home' });
+  }, [actions, navigate]);
+
   if (!joinConfirmed || joinDenied != null) {
     return <V2LobbyPlaceholder text="Connexion à la partie…" />;
   }
@@ -109,17 +131,12 @@ function V2LobbyPage() {
     );
   }
 
-  if (
-    (lobby.state === 'IN_PROGRESS' || lobby.state === 'COMPLETED') &&
-    lobby.game &&
-    gridPuzzle
-  ) {
+  if (lobby.state === 'IN_PROGRESS' && lobby.game && gridPuzzle) {
     return (
       <LiveCoopScreen
         puzzle={gridPuzzle}
         startedAt={lobby.game.startedAt}
-        frozenAtMs={lobby.state === 'COMPLETED' ? view.durationMs ?? 0 : undefined}
-        isCompleted={lobby.state === 'COMPLETED'}
+        isCompleted={false}
         sessionId={sessionId}
         players={lobby.players}
         playersBySessionId={playersBySessionId}
@@ -134,9 +151,20 @@ function V2LobbyPage() {
     );
   }
 
-  // COMPLETED with no mapped game snapshot → W4 builds Résultats.
+  // COMPLETED co-op finish — the frozen grid is left behind; Résultats is the destination.
   if (lobby.state === 'COMPLETED') {
-    return <V2LobbyPlaceholder text="Partie terminée." />;
+    return (
+      <PhoneShell header={<BackHeader to="/v2/home" />}>
+        <ResultatsScreen
+          durationMs={view.durationMs ?? 0}
+          players={lobby.players}
+          ownerSessionId={lobby.ownerSessionId}
+          isReplaying={isReplaying}
+          onReplay={handleReplay}
+          onHome={handleHome}
+        />
+      </PhoneShell>
+    );
   }
   return <V2LobbyPlaceholder text="La partie est en cours…" />;
 }
