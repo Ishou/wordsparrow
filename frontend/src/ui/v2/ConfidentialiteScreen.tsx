@@ -19,7 +19,7 @@ const pillRow = css({ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: 
 const pill = css({
   fontFamily: 'wsUi',
   fontSize: '11px',
-  fontWeight: 'extrabold',
+  fontWeight: 'black',
   color: 'ws.khaki',
   bg: 'ws.sable',
   borderRadius: '999px',
@@ -35,7 +35,7 @@ const cta = css({
   border: '2px solid rgba(33,75,64,0.18)',
   bg: 'transparent',
   fontFamily: 'wsUi',
-  fontWeight: 'extrabold',
+  fontWeight: 'black',
   fontSize: '14px',
   color: 'ws.jadeInk',
   cursor: 'not-allowed',

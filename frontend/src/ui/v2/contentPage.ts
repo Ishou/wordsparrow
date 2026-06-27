@@ -3,10 +3,10 @@ import { css } from 'styled-system/css';
 export const eyebrow = css({
   fontFamily: 'wsUi',
   fontSize: '11px',
-  fontWeight: 'extrabold',
-  letterSpacing: '0.16em',
+  fontWeight: 'black',
+  letterSpacing: '0.08em',
   textTransform: 'uppercase',
-  color: '#6B520F',
+  color: '#543C00',
   marginBottom: '6px',
 });
 
