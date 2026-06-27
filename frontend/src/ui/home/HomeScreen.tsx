@@ -95,8 +95,7 @@ const streakChip = css({ display: 'inline-flex', alignItems: 'center', gap: '5px
 const streakRecord = css({ opacity: 0.55, fontWeight: 'semibold' });
 const teaser = css({ display: 'flex', justifyContent: 'center', marginBottom: '6px' });
 
-// Fixed band so the eyebrow+date (51px), the delayed skeleton, and the pre-skeleton null all occupy the
-// same height — the daily content resolving must not jolt the card height (measured 589→640 jump otherwise).
+// Reserve 51 px so async resolution doesn't shift the card height (measured 589→640 jump without).
 const dailyBand = css({ minHeight: '51px', display: 'flex', flexDirection: 'column', justifyContent: 'center' });
 const heroEyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#543C00', marginBottom: '6px', textAlign: 'center' });
 const heroDate = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '27px', color: 'ws.jadeInk', lineHeight: '1.05', textAlign: 'center' });
@@ -412,8 +411,6 @@ export function HomeScreen({
             <div className={prevCard} aria-busy={historyLoading || undefined}>
               <div className={prevRow}>
                 {week.map((d, i) => {
-                  // Dates render immediately; the solved colour + click target fill in once history loads
-                  // (no loading→content swap, so the circles don't flicker on arrival).
                   const cell = historyLoading ? null : weekCells[i];
                   return (
                     <div key={i} className={dayCol}>

@@ -24,9 +24,6 @@ import { PanZoom, type PanZoomHandle } from './PanZoom';
 import { WinScreen } from './WinScreen';
 import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
-// Immersive phone-shaped shell: the jade field fills it; the grid bleeds within.
-// Phone: full-bleed immersive board. Tablet/desktop: a wider framed card on the jade surround,
-// so the whole board fits with little/no zoom (consistent with the content-screen frame).
 const stage = css({
   minHeight: '100dvh',
   display: 'flex',
@@ -37,6 +34,7 @@ const stage = css({
   // Desktop: drop the surround — the board goes immersive on the full-bleed gradient.
   lg: { bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)', bg: 'transparent', padding: 0, alignItems: 'stretch' },
 });
+// Immersive phone-shaped shell: the jade field fills it; the grid bleeds within.
 const shell = css({
   position: 'relative',
   width: '100%',

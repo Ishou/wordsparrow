@@ -25,8 +25,6 @@ import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
 // ADR-0072 v2 co-op IN_PROGRESS screen: shared grid + presence + timer + roster, wired like prod InGameView.
 
-// Phone: full-bleed immersive board. Tablet/desktop: a wider framed card on the jade surround
-// so the whole board fits with little/no zoom (matches solo PlayScreen + the content frame).
 const stage = css({
   minHeight: '100dvh',
   display: 'flex',

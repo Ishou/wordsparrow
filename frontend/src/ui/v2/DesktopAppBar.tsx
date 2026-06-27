@@ -5,8 +5,7 @@ import { css, cx } from 'styled-system/css';
 import { Lockup } from '@/design-system';
 import { MenuSheet } from './MenuSheet';
 
-// The single desktop top bar: lockup (left) · Accueil/Grilles (centre) · trailing slot + menu (right).
-// Rendered only at lg; consumers keep their own mobile/tablet header below the breakpoint.
+// Single desktop top bar: lockup · nav · trailing slot + menu. Hidden below lg.
 const bar = css({
   display: 'none',
   lg: {

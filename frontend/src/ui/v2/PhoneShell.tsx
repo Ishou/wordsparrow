@@ -9,9 +9,7 @@ export interface PhoneShellProps {
   readonly navActive?: 'accueil' | 'grilles';
 }
 
-// ADR-0072 phone-width column on phones; from tablet up it becomes a contained
-// app card floating on a calm jade surround (the gradient rides the card so the
-// inner frosted surfaces read the same as on mobile).
+// ADR-0072 §2 — phone-width on phones; contained jade-surround card from tablet up.
 const shell = css({
   minHeight: '100dvh',
   bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',

@@ -75,9 +75,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
     const vp = vpRef.current;
     if (!edgeFade || !fadeRef.current || !vp) return;
-    // Dissolve each overflowing edge into the field. The overlay carries the same jade gradient as the
-    // board's background, masked to the bleeding edge(s), so it blends whether the field is flat (mobile,
-    // full-bleed) or a gradient slice (desktop, contained) — a solid colour only matched the flat case.
+    // Mask overlay uses the jade gradient so it blends on both flat and gradient board backgrounds.
     const vw = vp.clientWidth;
     const vh = vp.clientHeight;
     const cw = contentWidth * scale.current;
