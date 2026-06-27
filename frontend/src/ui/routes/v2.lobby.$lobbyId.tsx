@@ -108,7 +108,6 @@ function V2LobbyPage() {
   if (lobby.state === 'COMPLETED') {
     return <V2LobbyPlaceholder text="Partie terminée." />;
   }
-  // IN_PROGRESS placeholder until the live co-op grid + résultats views land.
   return <V2LobbyPlaceholder text="La partie est en cours…" />;
 }
 
