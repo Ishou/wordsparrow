@@ -4,12 +4,15 @@ import { HomeScreen } from '@/ui/home/HomeScreen';
 import { Route as V2Route } from './v2';
 
 function HomeRouteComponent() {
-  const { puzzleRepository, soloEntriesStore, wordsRepository } = Route.useRouteContext();
+  const { puzzleRepository, soloEntriesStore, wordsRepository, lobbyClient, getSession } =
+    Route.useRouteContext();
   return (
     <HomeScreen
       puzzleRepository={puzzleRepository}
       soloEntriesStore={soloEntriesStore}
       wordsRepository={wordsRepository}
+      lobbyClient={lobbyClient}
+      getSession={getSession}
     />
   );
 }
