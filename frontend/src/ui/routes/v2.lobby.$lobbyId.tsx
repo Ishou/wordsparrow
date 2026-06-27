@@ -1,9 +1,4 @@
-// v2 multiplayer lobby route (ADR-0072 reskin of `/lobby/$lobbyId`).
-// Smart container: loads the lobby via REST, drives `useLobbyConnection`
-// (same context seams the prod route wires), and renders the v2 Salon
-// while WAITING. IN_PROGRESS / COMPLETED are temporary placeholders —
-// the live grid (W3) and Résultats (W4) land in later waves. Registered
-// only under `import.meta.env.DEV && multiplayer` (see `router.ts`).
+// DEV+multiplayer-gated v2 reskin (ADR-0072) of `/lobby/$lobbyId`; smart container over `useLobbyConnection`.
 
 import { createRoute, useNavigate } from '@tanstack/react-router';
 import { useCallback } from 'react';
@@ -113,7 +108,7 @@ function V2LobbyPage() {
   if (lobby.state === 'COMPLETED') {
     return <V2LobbyPlaceholder text="Partie terminée." />;
   }
-  {/* TODO(W3/W4): live co-op grid (IN_PROGRESS) + Résultats (COMPLETED). */}
+  // IN_PROGRESS placeholder until the live co-op grid + résultats views land.
   return <V2LobbyPlaceholder text="La partie est en cours…" />;
 }
 
