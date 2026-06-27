@@ -2,8 +2,7 @@ import { css } from 'styled-system/css';
 import type { Player, SessionId } from '@/domain/game';
 import { playerColorVars, playerInitial } from '@/ui/lib/playerColor';
 
-// ADR-0072 v2 co-op finish (COMPLETED): "Résolue !", final time, contributors, Rejouer + retour.
-// No winner / scores — versus is a deferred follow-up (spec 2026-06-27 §Scope).
+// ADR-0072 co-op finish: no scores — versus mode is a deferred follow-up.
 
 const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;

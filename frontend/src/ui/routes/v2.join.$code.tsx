@@ -1,5 +1,4 @@
 // DEV+multiplayer-gated v2 share-link landing (ADR-0072 reskin of `/join/$code`).
-// Resolves the code via `findByCode`, stashes it for the lobby route's WS-open, replaces the URL.
 
 import { createRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
@@ -57,7 +56,8 @@ function V2JoinRedirect() {
 
 function V2JoinError({ error }: { readonly error: Error }) {
   const detail =
-    error instanceof LobbyClientError && error.kind === 'not-found'
+    (error instanceof LobbyClientError && error.kind === 'not-found') ||
+    error.message === 'Code invalide ou partie expirée.'
       ? 'Code invalide ou partie expirée.'
       : 'Une erreur est survenue. Réessaie.';
   return (

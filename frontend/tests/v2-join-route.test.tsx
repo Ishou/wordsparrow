@@ -132,7 +132,7 @@ describe('v2 /join/$code route', () => {
 
   it('rejects a malformed code at parse-time without calling findByCode', async () => {
     const { lobbyClient } = renderJoin('/v2/join/!!');
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Code invalide ou partie expirée.');
     expect(lobbyClient.findByCode).not.toHaveBeenCalled();
   });
 });
