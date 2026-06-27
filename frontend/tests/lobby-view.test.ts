@@ -31,6 +31,8 @@ const puzzle: GamePuzzle = {
   height: 1,
   hintsAllowed: 0,
   cells: [{ kind: 'letter', position: { row: 0, column: 0 }, letter: null }],
+  clues: [],
+  createdAt: '2026-05-02T15:31:00Z' as Instant,
 };
 
 describe('reduceLobby', () => {
