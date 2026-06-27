@@ -39,8 +39,9 @@ export function GrillesEmptyState({ onPlay }: { readonly onPlay: () => void }) {
     <SparrowState
       scene={nestScene}
       title="Pas encore de grilles"
-      body={'Ton archive se remplira au fil des jours. Commence aujourd’hui !'}
+      body={"Ton archive se remplira au fil des jours. Commence aujourd’hui !"}
       cta={{ label: 'Jouer la grille du jour', onClick: onPlay }}
+      as="p"
     />
   );
 }

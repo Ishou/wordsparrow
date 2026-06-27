@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react';
 import { css } from 'styled-system/css';
 
-// Shared v2 full-bleed state layout (empty / error / "bientôt"): a centred sparrow scene,
-// title, body, and an optional primary action. Scenes are passed in so each state supplies
-// its own illustration (nest, moon, cloud, 404…) while the type scale + CTA stay consistent.
+// Centred state layout (empty / error / "bientôt"): scene slot + type scale + optional CTA.
 const wrap = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '32px 8px 8px' });
 const art = css({ display: 'flex', justifyContent: 'center', marginBottom: '16px' });
 const titleCss = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '22px', lineHeight: '1.1', color: 'ws.jadeInk' });
@@ -33,13 +31,14 @@ export interface SparrowStateProps {
   readonly title: string;
   readonly body: string;
   readonly cta?: { readonly label: string; readonly onClick: () => void };
+  readonly as?: 'h1' | 'p';
 }
 
-export function SparrowState({ scene, title, body, cta }: SparrowStateProps) {
+export function SparrowState({ scene, title, body, cta, as: Tag = 'h1' }: SparrowStateProps) {
   return (
     <div className={wrap}>
       <div className={art}>{scene}</div>
-      <p className={titleCss}>{title}</p>
+      <Tag className={titleCss}>{title}</Tag>
       <p className={bodyCss}>{body}</p>
       {cta ? (
         <button type="button" className={ctaCss} onClick={cta.onClick}>
