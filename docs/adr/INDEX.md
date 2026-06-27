@@ -133,7 +133,10 @@ ADR-0071  renovate.json                              Renovate cooldown aligned t
 ADR-0072  frontend/src/design-system/**              WordSparrow design system v2 (jade/sakura/khaki); standalone module, app-isolated via eslint-boundaries; atoms → composites
 ADR-0072  frontend/panda.config.ts                   v2 token set (`ws.*`) added namespaced, coexisting with ADR-0043's current tokens (no edits to existing tokens)
 ADR-0072  frontend/src/ui/routes/design-system.tsx   Dev-only gallery route rendering every v2 component + variant (no Storybook); also the design-sync synth-entry surface
-# ADR-0072: supersedes ADR-0043 for palette + typography (visual identity); ADR-0043's light-only theme + semantic-token-layering decisions still apply. Migration of the live app to v2 is a tracked follow-up.
+# ADR-0072: supersedes ADR-0043 for palette + typography (visual identity); ADR-0043's light-only theme + semantic-token-layering decisions still apply. Migration of the live app to v2 is a tracked follow-up (now ADR-0074).
+ADR-0074  frontend/src/ui/router.ts                  v1→v2 cutover: un-gate /v2 in prod, root → v2 home, v1 paths become redirects (preserve search params); multiplayer flag still gates lobby/join
+ADR-0074  frontend/src/ui/routes/**                  Expand-and-contract: v1 route files become redirect loaders in Wave 2, deleted in Wave 3; covered v1 paths redirect to their /v2 equivalent
+# ADR-0074: production cutover from the v1 forest design to the v2 jade/sakura design. Redirect-first; contribuer carried forward (not dropped); v1 code deleted only in the contract wave.
 ADR-0073  grid/api/openapi.yaml                      GET /v1/words/sample (minLen/maxLen/count) → SampleWord{clue,answer}; count + length-range capped server-side; random teaser pool, NOT the daily answer key
 ADR-0073  grid/api/src/**/Module.kt                  Sample handler reads the resident CsvWordRepository (Module.kt:192); findByLength per L, dedupe by Word.lemma, plaintext answer (teaser validates client-side)
 ADR-0073  frontend/src/application/grid/**            Home-teaser consumer of /v1/words/sample (W4)
