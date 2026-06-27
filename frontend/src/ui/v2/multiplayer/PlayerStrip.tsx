@@ -2,9 +2,7 @@ import { css, cx } from 'styled-system/css';
 import type { Player, SessionId } from '@/domain/game';
 import { playerColorVars, playerInitial } from '@/ui/lib/playerColor';
 
-// Compact horizontal roster overlaid on the co-op grid. Dumb: takes the
-// player list + the derived presence sets and renders an avatar per peer
-// with a status dot. v2 jade tokens (ADR-0072); no client / WS access.
+// ADR-0072 compact co-op roster: dumb — takes the player list + derived presence sets, renders an avatar + status dot per peer.
 
 const strip = css({
   display: 'flex',

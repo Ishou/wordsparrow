@@ -17,13 +17,7 @@ import { CoopPresenceLayer } from './CoopPresenceLayer';
 import { LiveTimer } from './LiveTimer';
 import { PlayerStrip } from './PlayerStrip';
 
-// v2 co-op IN_PROGRESS screen (ADR-0072): the shared mots-fléchés grid, peer
-// presence, the live timer and the roster. Mirrors prod `InGameView` data
-// wiring (local edits → cellUpdate, remote `cellUpdated` applied to the
-// uncontrolled inputs, server `wordLocked` drives validation) but renders the
-// design-system Cell/DefCell board inside the immersive jade shell `/v2/play`
-// uses. No local validation — the server is authoritative (AsyncAPI omits the
-// canonical answer; `gameSolved` lights the whole grid).
+// ADR-0072 v2 co-op IN_PROGRESS screen: shared grid + presence + timer + roster, wired like prod InGameView.
 
 const CELL = 56;
 const GAP = 5;
@@ -303,15 +297,15 @@ export function LiveCoopScreen({
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
   });
 
-  // Inbound remote writes land directly on the uncontrolled inputs (ADR-0002 §4),
-  // never re-emitting `onCellChange`. Stable subscription; the registrar replays nothing.
+  // Inbound remote writes land directly on the uncontrolled inputs (ADR-0002 §4), never re-emitting onCellChange.
+  const { applyRemoteCellUpdate } = nav;
   useEffect(() => {
     const unsubscribe = subscribeToRemoteCellUpdates((event) => {
       if (event.type !== 'cellUpdated') return;
-      nav.applyRemoteCellUpdate(event.row, event.column, event.letter);
+      applyRemoteCellUpdate(event.row, event.column, event.letter);
     });
     return unsubscribe;
-  }, [subscribeToRemoteCellUpdates, nav]);
+  }, [subscribeToRemoteCellUpdates, applyRemoteCellUpdate]);
 
   // Peer presence state → typing/idle/lost sets for the roster strip + grid badges.
   const presenceState = usePresenceState(subscribeToRemotePresence, sessionId);
@@ -331,8 +325,7 @@ export function LiveCoopScreen({
     return set;
   }, [presenceState]);
 
-  // Announce "grille résolue" once on completion (join/leave + mot validé are
-  // announced inside useLobbyConnection; this closes the ADR-0050 multi list).
+  // ADR-0050: announce completion once (join/leave + mot validé already announced inside useLobbyConnection).
   const announcer = useAnnouncer();
   const announcedSolvedRef = useRef(false);
   useEffect(() => {

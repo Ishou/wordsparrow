@@ -11,8 +11,7 @@ import { expectAxeClean } from '@/test/a11y';
 const selfId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const peerId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
 
-// 2×2 puzzle: a definition (right arrow) at (0,0) with the across word OUI
-// spanning (0,1)..(0,2). Letter cells carry empty entries (server-blank).
+// 1×3 puzzle: a right-arrow definition at (0,0); the across word spans (0,1)..(0,2), entries server-blank.
 const puzzle: Puzzle = {
   id: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a60',
   title: 'Test',

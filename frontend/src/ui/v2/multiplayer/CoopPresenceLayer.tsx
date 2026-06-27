@@ -8,11 +8,7 @@ import {
   useRemotePresences,
 } from '@/ui/components/grid/PresenceOverlay';
 
-// Co-op presence overlay (ADR-0018 §"Presence", ADR-0072 tokens). Subscribes
-// to the remote `presenceUpdated` stream — the one component in this screen
-// allowed WS access — and paints each peer's focused cell + word range in
-// their stable per-session colour over the v2 board. Positioned absolutely on
-// the same fixed CELL/GAP geometry as the board so it tracks under PanZoom.
+// ADR-0018 §"Presence" / ADR-0072: paints each peer's cursor + word on the v2 board from the remote presence stream.
 
 const layer = css({
   position: 'absolute',
@@ -76,8 +72,7 @@ export function CoopPresenceLayer({
 }: CoopPresenceLayerProps) {
   const remotePresences = useRemotePresences(subscribeToRemotePresence, currentSessionId);
 
-  // Reuse the prod per-cell resolver; the local cursor is owned by the grid
-  // itself in this screen, so only remote peers feed the overlay.
+  // localCursor null: the grid owns the local cursor here, so only remote peers feed the overlay.
   const cellPresence = useMemo(
     () =>
       buildCellPresenceMap({

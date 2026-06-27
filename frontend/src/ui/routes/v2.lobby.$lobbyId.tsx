@@ -134,8 +134,7 @@ function V2LobbyPage() {
     );
   }
 
-  // COMPLETED before the game/puzzle is mapped (e.g. a hard refresh that
-  // resolves COMPLETED but no game snapshot) → W4 builds Résultats.
+  // COMPLETED with no mapped game snapshot → W4 builds Résultats.
   if (lobby.state === 'COMPLETED') {
     return <V2LobbyPlaceholder text="Partie terminée." />;
   }

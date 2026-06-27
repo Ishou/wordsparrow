@@ -2,10 +2,7 @@ import { useEffect, useState } from 'react';
 import { Timer } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 
-// v2 co-op timer: ticks against the server-emitted lobby start instant so
-// every client converges on the same elapsed value; freezes at `frozenAtMs`
-// once the grid is solved (COMPLETED). Mirrors the prod TimerPill clock math
-// in ADR-0072 jade tokens.
+// ADR-0072 co-op timer: ticks against the server start instant, freezes at `frozenAtMs` (mirrors prod TimerPill).
 
 const SECOND_MS = 1000;
 const HOUR_MS = 60 * 60 * 1000;
