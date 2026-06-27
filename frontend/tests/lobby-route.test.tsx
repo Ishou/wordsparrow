@@ -252,6 +252,26 @@ describe('Lobby route WebSocket lifecycle', () => {
     unmount();
     expect(gameClient.disconnectCalls.count).toBe(1);
   });
+
+  it('does not tear down / reconnect the socket when re-rendered by inbound events', async () => {
+    const gameClient = makeFakeGameClient();
+    renderLobby({ gameClient });
+    await screen.findByRole('heading', { name: /WordSparrow/ });
+    // A stream of state-mutating frames must not re-run the connect
+    // effect: a fresh dependency reference (e.g. a wrapper object) would
+    // disconnect + reconnect on every render.
+    act(() => {
+      gameClient.dispatch({
+        type: 'playerJoined',
+        sessionId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6d' as SessionId,
+        pseudonym: 'Joueur 9012' as Pseudonym,
+        joinedAt: '2026-05-02T15:30:02Z',
+      });
+      gameClient.dispatch({ type: 'playerLeft', sessionId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6d' as SessionId });
+    });
+    expect(gameClient.connectCalls).toEqual([{ lobbyId }]);
+    expect(gameClient.disconnectCalls.count).toBe(0);
+  });
 });
 
 // `applyEvent` is the lobby route's local-state reducer: every inbound

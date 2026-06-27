@@ -177,10 +177,8 @@ function LobbyPage() {
     gameClient,
     getSession,
     setPersistedPseudonym,
-    lobbyJoinCodeStash: {
-      read: (id) => lobbyJoinCodeStash.read(id),
-      clear: (id) => lobbyJoinCodeStash.clear(id),
-    },
+    // Pass the context stash directly — a fresh object literal here would re-run the connect effect (which holds it as a dependency) on every render.
+    lobbyJoinCodeStash,
     showToast,
     dismissToast,
     announce,
