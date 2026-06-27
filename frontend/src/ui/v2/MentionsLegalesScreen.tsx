@@ -15,7 +15,7 @@ const title = css({
 
 const stack = css({ display: 'flex', flexDirection: 'column', gap: '14px' });
 
-const link = css({ color: 'ws.sakura', fontWeight: 'bold', textDecoration: 'underline' });
+const link = css({ color: 'ws.sakuraDark', fontWeight: 'bold', textDecoration: 'underline' });
 
 export function MentionsLegalesScreen() {
   return (

@@ -42,7 +42,7 @@ const avatar = css({
 });
 const avatarAnon = css({ bg: 'ws.jade', color: 'ws.jadeInk' });
 const profileName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
-const profileMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.7, marginTop: '2px' });
+const profileMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
 
 const groupLabel = css({
   fontFamily: 'wsUi',
@@ -85,7 +85,7 @@ const tileSoft = css({ bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
 const label = css({ fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk' });
 const chevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
 
-const foot = css({ fontFamily: 'wsMono', fontSize: '11px', color: 'ws.khaki', opacity: 0.6, textAlign: 'center', paddingTop: '10px' });
+const foot = css({ fontFamily: 'wsMono', fontSize: '11px', color: 'ws.khaki', opacity: 0.85, textAlign: 'center', paddingTop: '10px' });
 
 function Tile({ icon: I, soft }: { readonly icon: Icon; readonly soft?: boolean }) {
   return (

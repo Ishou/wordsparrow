@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Dialog } from '@ark-ui/react/dialog';
 import { Portal } from '@ark-ui/react/portal';
 import { useNavigate } from '@tanstack/react-router';
@@ -28,11 +28,13 @@ const sheet = css({
   outline: 'none',
 });
 const grab = css({ display: 'block', width: '42px', height: '5px', borderRadius: '999px', bg: 'rgba(33,75,64,0.18)', margin: '0 auto 12px' });
+// Generous drag target around the grab bar; touch-action:none so the vertical drag-to-dismiss isn't stolen by scroll (ADR-0016 amendment).
+const dragZone = css({ touchAction: 'none', cursor: 'grab', padding: '6px 0 2px', marginTop: '-6px', _active: { cursor: 'grabbing' } });
 
 const head = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 8px 12px', borderBottom: '1px solid #EEF3EC', marginBottom: '4px' });
 const headAvatar = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', bg: 'ws.sakura', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '18px' });
 const headName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
-const headSub = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.7, marginTop: '2px' });
+const headSub = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
 
 const list = css({ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0', padding: 0, margin: 0 });
 const rowBase = {
@@ -94,6 +96,35 @@ export interface MenuSheetProps {
 
 export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
   const navigate = useNavigate();
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startY = useRef(0);
+  const curY = useRef(0);
+
+  const onDragDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    startY.current = e.clientY;
+    curY.current = 0;
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onDragMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragging) return;
+    const dy = Math.max(0, e.clientY - startY.current);
+    curY.current = dy;
+    setDragY(dy);
+  };
+  // Past ~90px (or a quick flick) the sheet dismisses; otherwise it springs back.
+  const onDragUp = () => {
+    if (!dragging) return;
+    setDragging(false);
+    if (curY.current > 90) onClose();
+    setDragY(0);
+  };
+
+  const sheetStyle =
+    dragging || dragY > 0
+      ? { transform: `translateY(${dragY}px)`, transition: dragging ? 'none' : 'transform 240ms cubic-bezier(0.32,0.72,0,1)', animation: 'none' as const }
+      : undefined;
 
   const goReglages = () => {
     onClose();
@@ -107,9 +138,17 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
       <Portal>
         <Dialog.Backdrop className={scrim} data-testid="menu-sheet-backdrop" />
         <Dialog.Positioner className={positioner}>
-          <Dialog.Content className={sheet}>
+          <Dialog.Content className={sheet} style={sheetStyle}>
             <Dialog.Title className={srTitle}>Menu</Dialog.Title>
-            <span aria-hidden="true" className={grab} />
+            <div
+              className={dragZone}
+              onPointerDown={onDragDown}
+              onPointerMove={onDragMove}
+              onPointerUp={onDragUp}
+              onPointerCancel={onDragUp}
+            >
+              <span aria-hidden="true" className={grab} />
+            </div>
 
             <div className={head}>
               <span className={headAvatar} aria-hidden="true">T</span>

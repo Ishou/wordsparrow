@@ -61,6 +61,7 @@ function litPath(R: number, phase: number): string {
 interface Body {
   readonly t: number;
   readonly soft?: boolean;
+  readonly dawn?: boolean;
 }
 interface BucketArt {
   readonly sky: readonly [string, string, string?];
@@ -73,7 +74,7 @@ interface BucketArt {
 function artFor(bucket: DayBucket): BucketArt {
   switch (bucket) {
     case 'matin':
-      return { sky: ['#FBE3C4', '#FCEFD8', '#DCEFE1'], skyMid: '56%', sun: { t: 0.04 }, moon: { t: 0.96 } };
+      return { sky: ['#FBE3C4', '#FCEFD8', '#DCEFE1'], skyMid: '56%', sun: { t: 0.04, dawn: true }, moon: { t: 0.96 } };
     case 'apresMidi':
       return { sky: ['#8CC1E8', '#B4D9EF', '#DDEFF2'], skyMid: '54%', sun: { t: 0.6 } };
     case 'soir':
@@ -93,8 +94,19 @@ const STARS: readonly (readonly [number, number, number])[] = [
   [258, 70, 1.0],
 ];
 
-function Sun({ t, soft }: Body): ReactElement {
+function Sun({ t, soft, dawn }: Body): ReactElement {
   const [x, y] = arcPoint(t);
+  if (dawn) {
+    // Faint rising sun: soft disc + halo, no rays (reads as dawn). Kept compact so it stays inside the banner —
+    // only the branch is allowed to drape onto the card below.
+    return (
+      <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
+        <circle r="25" fill="#F7C877" opacity="0.16" />
+        <circle r="18" fill="#F7C877" opacity="0.34" />
+        <circle r="13" fill="#F8CE86" opacity="0.92" />
+      </g>
+    );
+  }
   if (soft) {
     return (
       <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
@@ -262,7 +274,7 @@ export function HomeGreetingArt({
         {art.night
           ? STARS.map(([cx, cy, r], i) => <circle key={i} cx={cx} cy={cy} r={r} fill="#E9E2BD" />)
           : null}
-        {art.sun ? <Sun t={art.sun.t} soft={art.sun.soft} /> : null}
+        {art.sun ? <Sun t={art.sun.t} soft={art.sun.soft} dawn={art.sun.dawn} /> : null}
         {art.moon ? <Moon t={art.moon.t} night={art.night} phase={phase} /> : null}
         <use href={`#${p}fg`} x="0" y="0" width="300" height="168" />
       </svg>

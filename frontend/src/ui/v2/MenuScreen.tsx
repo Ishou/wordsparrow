@@ -70,7 +70,7 @@ const iconTileSoft = css({ bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
 
 const labelWrap = css({ display: 'flex', flexDirection: 'column', minWidth: 0 });
 const label = css({ fontSize: '16px', fontWeight: 'bold', color: 'ws.jadeInk' });
-const soon = css({ fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.7 });
+const soon = css({ fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85 });
 
 const trailing = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.45, display: 'flex' });
 const togglePlaceholder = css({

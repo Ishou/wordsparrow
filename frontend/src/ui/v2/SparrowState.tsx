@@ -13,7 +13,7 @@ const ctaCss = css({
   padding: '0 26px',
   border: 'none',
   borderRadius: '15px',
-  bg: 'ws.sakura',
+  bg: 'ws.sakuraDark',
   color: 'white',
   fontFamily: 'wsUi',
   fontWeight: 'black',
