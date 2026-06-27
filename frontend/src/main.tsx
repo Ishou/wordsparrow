@@ -65,7 +65,23 @@ import type { Pseudonym, SessionId } from '@/domain/game';
 // no metrics-matched fallback face would be generated. See
 // `vite.config.ts` and `src/ui/styles/fonts.css` for the rationale.
 import '@/ui/styles/fonts.css';
+// v2 (ADR-0072) faces, declared inline with font-display: block — see the file header.
+import '@/design-system/fonts.css';
 import '@/ui/styles/index.css';
+// Preload the home-critical v2 faces (Fredoka display + Nunito UI, latin) so they're ready at first
+// paint; `block` then lands straight on the brand font with no font-load flash. `?url` resolves in
+// dev and build alike. The grid faces (Hanken/Spline) aren't above the fold and stay on plain `block`.
+import fredokaLatinUrl from '@fontsource-variable/fredoka/files/fredoka-latin-wght-normal.woff2?url';
+import nunitoLatinUrl from '@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2?url';
+for (const href of [fredokaLatinUrl, nunitoLatinUrl]) {
+  const link = document.createElement('link');
+  link.rel = 'preload';
+  link.as = 'font';
+  link.type = 'font/woff2';
+  link.href = href;
+  link.crossOrigin = 'anonymous';
+  document.head.appendChild(link);
+}
 
 // MSW bootstrap (ADR-0007 §5). Two independent flags pick which API
 // surfaces are intercepted:
@@ -307,26 +323,42 @@ enableMocks()
         : undefined;
 
     // onCaughtError only: onUncaughtError would double-emit via the window.error handler.
-    createRoot(container, {
-      onCaughtError: (error, errorInfo) => {
-        if (import.meta.env.DEV) {
-          // dev-only: React's default console.error firehose.
-          console.error('Caught error:', error, errorInfo);
-        }
-        reportCaughtError(error, 'react-caught');
-      },
-    }).render(
-      <StrictMode>
-        <AuthProvider
-          authClient={authClient}
-          getPseudonym={getPseudonym}
-          getLocalSessionId={getOrCreateSessionId}
-          onAuthed={onAuthed}
-        >
-          <App router={router} />
-        </AuthProvider>
-      </StrictMode>,
-    );
+    const mount = () =>
+      createRoot(container, {
+        onCaughtError: (error, errorInfo) => {
+          if (import.meta.env.DEV) {
+            // dev-only: React's default console.error firehose.
+            console.error('Caught error:', error, errorInfo);
+          }
+          reportCaughtError(error, 'react-caught');
+        },
+      }).render(
+        <StrictMode>
+          <AuthProvider
+            authClient={authClient}
+            getPseudonym={getPseudonym}
+            getLocalSessionId={getOrCreateSessionId}
+            onAuthed={onAuthed}
+          >
+            <App router={router} />
+          </AuthProvider>
+        </StrictMode>,
+      );
+
+    // Paint once the above-the-fold brand faces (Fredoka display + Nunito UI) are ready, so the UI
+    // appears in them in a single step — no fallback→brand swap and no hidden-text beat from
+    // `font-display: block`. Capped at 1.2s so a stalled font never blocks the app; the preloaded
+    // faces (top of file) make this resolve within a frame on a warm load.
+    if (typeof document !== 'undefined' && typeof document.fonts?.load === 'function') {
+      const ready = Promise.all([
+        document.fonts.load('1em "Fredoka Variable"'),
+        document.fonts.load('1em "Nunito Variable"'),
+      ]).then(() => undefined).catch(() => undefined);
+      const cap = new Promise<void>((resolve) => setTimeout(resolve, 1200));
+      void Promise.race([ready, cap]).then(mount);
+    } else {
+      mount();
+    }
 
     registerServiceWorker();
   });
