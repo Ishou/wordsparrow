@@ -9,6 +9,7 @@ import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { PhoneShell } from '@/ui/v2/PhoneShell';
 import { BackHeader } from '@/ui/v2/BackHeader';
 import { SalonScreen } from '@/ui/v2/multiplayer/SalonScreen';
+import { LiveCoopScreen } from '@/ui/v2/multiplayer/LiveCoopScreen';
 import { css } from 'styled-system/css';
 import { Route as V2Route } from './v2';
 
@@ -60,6 +61,9 @@ function V2LobbyPage() {
     isStarting,
     isRotating,
     sessionId,
+    gridPuzzle,
+    initialEntries,
+    playersBySessionId,
     actions,
   } = useLobbyConnection({
     lobbyId: lobbyId as LobbyId,
@@ -105,6 +109,32 @@ function V2LobbyPage() {
     );
   }
 
+  if (
+    (lobby.state === 'IN_PROGRESS' || lobby.state === 'COMPLETED') &&
+    lobby.game &&
+    gridPuzzle
+  ) {
+    return (
+      <LiveCoopScreen
+        puzzle={gridPuzzle}
+        startedAt={lobby.game.startedAt}
+        frozenAtMs={lobby.state === 'COMPLETED' ? view.durationMs ?? 0 : undefined}
+        isCompleted={lobby.state === 'COMPLETED'}
+        sessionId={sessionId}
+        players={lobby.players}
+        playersBySessionId={playersBySessionId}
+        initialEntries={initialEntries}
+        lockedPositions={lobby.game.lockedPositions ?? []}
+        onCellChange={actions.cellUpdate}
+        onLocalFocusChange={actions.cellFocus}
+        subscribeToRemoteCellUpdates={actions.subscribeToRemoteCellUpdates}
+        subscribeToRemotePresence={actions.subscribeToRemotePresence}
+        onLeave={handleLeave}
+      />
+    );
+  }
+
+  // COMPLETED with no mapped game snapshot → W4 builds Résultats.
   if (lobby.state === 'COMPLETED') {
     return <V2LobbyPlaceholder text="Partie terminée." />;
   }
