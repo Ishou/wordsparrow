@@ -33,8 +33,7 @@ function V2LobbyPlaceholder({ text }: { readonly text: string }) {
   );
 }
 
-// Bad / expired lobby URL: getLobby rejects → this boundary instead of a blank crash.
-// Headerless SparrowState, matching the 404 error pattern (the CTA handles navigation).
+// getLobby rejection boundary — headerless SparrowState matching the 404 error pattern; CTA handles navigation
 function V2LobbyError() {
   const navigate = useNavigate();
   return (

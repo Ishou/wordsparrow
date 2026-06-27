@@ -16,8 +16,7 @@ const layer = css({
   pointerEvents: 'none',
   zIndex: 2,
 });
-// v2 light grid: translucent tint of the player's light hue (--player-color), not prod's near-black --player-*-bg.
-// Use color-mix (not element opacity) so the badge child stays fully opaque.
+// color-mix (not element opacity) so the badge child stays fully opaque against the v2 light --player-color
 const wordTint = css({
   position: 'absolute',
   borderRadius: '9px',

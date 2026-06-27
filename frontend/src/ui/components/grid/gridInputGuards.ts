@@ -1,10 +1,4 @@
-// Keeps a crossword letter <input> "pure": no soft keyboard, no autofill,
-// no autocomplete/autocorrect/spellcheck, no password-manager or writing-
-// assistant overlays. Spread into every grid cell input (solo + co-op) so
-// the two grids can't drift. inputMode 'none' suppresses the OS keyboard —
-// letters arrive via the on-screen keyboard / physical keys, uppercased in
-// useGridNavigation. The macOS caps-lock glyph is an OS indicator and is
-// not something a web page can suppress.
+// opt-outs for autofill, password managers, and writing assistants — all in one place so solo + co-op can't drift
 export const GRID_INPUT_GUARDS = {
   type: 'search',
   role: 'textbox',

@@ -1,8 +1,6 @@
 import type { Cell, Position, Puzzle } from '@/domain';
 
-// Single source for the across-then-down clue ordering that drives every
-// ClueRail counter + focus firewall. Shared by solo PlayScreen and the v2
-// co-op LiveCoopScreen so the two can't drift.
+// canonical across-then-down ordering — shared by PlayScreen and LiveCoopScreen so the two can't drift
 
 export interface OrderedClue {
   readonly key: string;

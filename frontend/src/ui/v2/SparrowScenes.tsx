@@ -1,8 +1,6 @@
 import type { ReactElement } from 'react';
 
-// Single source for the "flown away" sparrow used by every error/empty state
-// (404, bad lobby, bad join). Pass `badge` to print a faded label behind the
-// bird (e.g. "404"); omit it for a bare flight. One geometry → no drift.
+// shared sparrow flight for every error/empty state — one geometry so 404, bad lobby, and bad join can't drift
 export function sparrowFlightScene(badge?: string): ReactElement {
   return (
     <svg width="150" height="130" viewBox="0 0 150 130" role="img" aria-label="Un moineau qui s'envole">

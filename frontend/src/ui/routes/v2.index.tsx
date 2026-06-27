@@ -4,8 +4,7 @@ import { HomeScreen } from '@/ui/home/HomeScreen';
 import { Route as V2Route } from './v2';
 
 function V2IndexComponent() {
-  // Multiplayer adapters live on the context only when the flag is on; forward them so the
-  // canonical home offers co-op + join (undefined → those entries stay hidden otherwise).
+  // forward multiplayer adapters from context so HomeScreen shows co-op + join when the flag is on (undefined hides them)
   const { puzzleRepository, soloEntriesStore, wordsRepository, lobbyClient, getSession } =
     Route.useRouteContext();
   return (
