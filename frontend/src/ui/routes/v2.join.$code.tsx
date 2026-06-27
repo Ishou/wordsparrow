@@ -54,12 +54,20 @@ function V2JoinRedirect() {
   );
 }
 
+// Tags the parse-time malformed-code reject so the boundary maps it without reading `error.message` (lint-forbidden).
+class MalformedCodeError extends Error {
+  readonly malformedCode = true;
+}
+
 function V2JoinError({ error }: { readonly error: Error }) {
-  const detail =
-    (error instanceof LobbyClientError && error.kind === 'not-found') ||
-    error.message === 'Code invalide ou partie expirée.'
-      ? 'Code invalide ou partie expirée.'
-      : 'Une erreur est survenue. Réessaie.';
+  // The parse-time reject and a `not-found` findByCode both mean "bad/expired code".
+  // TanStack wraps a `parseParams` throw in a PathParamError, preserving ours as `cause`.
+  const badCode =
+    error.cause instanceof MalformedCodeError ||
+    (error instanceof LobbyClientError && error.kind === 'not-found');
+  const detail = badCode
+    ? 'Code invalide ou partie expirée.'
+    : 'Une erreur est survenue. Réessaie.';
   return (
     <PhoneShell header={<BackHeader to="/v2/home" />}>
       <div className={errorWrap}>
@@ -77,7 +85,7 @@ export const Route = createRoute({
     const code = String(raw.code ?? '').toUpperCase();
     // Reject at parse-time so a malformed code renders the error boundary without a wasted `findByCode`.
     if (!LOBBY_CODE_PATTERN.test(code)) {
-      throw new Error('Code invalide ou partie expirée.');
+      throw new MalformedCodeError('Code invalide ou partie expirée.');
     }
     return { code };
   },
