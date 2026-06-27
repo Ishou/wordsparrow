@@ -60,8 +60,7 @@ class MalformedCodeError extends Error {
 }
 
 function V2JoinError({ error }: { readonly error: Error }) {
-  // The parse-time reject and a `not-found` findByCode both mean "bad/expired code".
-  // TanStack wraps a `parseParams` throw in a PathParamError, preserving ours as `cause`.
+  // Bad/expired code surfaces two ways: our parse-time reject (TanStack preserves it as `cause`) or a not-found findByCode.
   const badCode =
     error.cause instanceof MalformedCodeError ||
     (error instanceof LobbyClientError && error.kind === 'not-found');

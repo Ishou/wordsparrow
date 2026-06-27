@@ -12,6 +12,7 @@ import type { LobbyClient } from '@/application/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { Lobby, LobbyId, Pseudonym, SessionId } from '@/domain/game';
 import { HomeScreen } from '@/ui/home/HomeScreen';
+import { expectAxeClean } from '@/test/a11y';
 
 const sessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const pseudonym = 'Joueur 1234' as Pseudonym;
@@ -92,6 +93,12 @@ describe('v2 home co-op entry', () => {
   it('shows the co-op button when the flag is on', async () => {
     renderHome({ multiplayer: true });
     expect(await screen.findByRole('button', { name: /Jouer à plusieurs/ })).toBeInTheDocument();
+  });
+
+  it('co-op button is axe-clean (ADR-0050)', async () => {
+    const { container } = renderHome({ multiplayer: true });
+    await screen.findByRole('button', { name: /Jouer à plusieurs/ });
+    await expectAxeClean(container);
   });
 
   it('creates a lobby and navigates to it on click', async () => {
