@@ -89,7 +89,7 @@ loaders. The `multiplayer` flag still gates the lobby/join routes (ADR-0018).
 - **Easier:** one production design; the dev-only `/v2` split disappears; the
   desktop/tablet responsive work (PR #1054) reaches real users.
 - **Harder / risk:** the cutover touches the router (a load-bearing file under
-  ADR-0066); redirects must preserve search params (e.g. `/grille?date=`).
+  ADR-0054); redirects must preserve search params (e.g. `/grille?date=`).
   Wave 2 must keep v1 code compiling until Wave 3 (expand-and-contract), so the
   tree briefly carries both designs.
 - **Reversible:** Wave 2 is a router-only change; reverting re-gates `/v2`.
