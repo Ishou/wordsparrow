@@ -34,12 +34,20 @@ const nestScene = (
   </svg>
 );
 
-export function GrillesEmptyState({ onPlay }: { readonly onPlay: () => void }) {
+// Copy depends on which tab is empty: a filtered tab still has an archive, it's just empty in that bucket.
+const COPY: Record<'all' | 'todo' | 'done', { readonly title: string; readonly body: string }> = {
+  all: { title: 'Pas encore de grilles', body: 'Ton archive se remplira au fil des jours. Commence aujourd’hui !' },
+  todo: { title: 'Aucune grille en cours', body: 'Tu n’as pas de grille commencée à reprendre pour le moment.' },
+  done: { title: 'Aucune grille terminée', body: 'Termine une grille et tu la retrouveras ici.' },
+};
+
+export function GrillesEmptyState({ onPlay, filter = 'all' }: { readonly onPlay: () => void; readonly filter?: 'all' | 'todo' | 'done' }) {
+  const copy = COPY[filter];
   return (
     <SparrowState
       scene={nestScene}
-      title="Pas encore de grilles"
-      body={"Ton archive se remplira au fil des jours. Commence aujourd’hui !"}
+      title={copy.title}
+      body={copy.body}
       cta={{ label: 'Jouer la grille du jour', onClick: onPlay }}
       as="p"
     />

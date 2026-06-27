@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { css, cx } from 'styled-system/css';
 import { computeFrame } from './computeFrame';
 
@@ -75,19 +75,32 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
     const vp = vpRef.current;
     if (!edgeFade || !fadeRef.current || !vp) return;
-    // Soften each overflowing edge with a jade dissolve; top/bottom mirror a bled side.
+    // Dissolve each overflowing edge into the field. The overlay carries the same jade gradient as the
+    // board's background, masked to the bleeding edge(s), so it blends whether the field is flat (mobile,
+    // full-bleed) or a gradient slice (desktop, contained) — a solid colour only matched the flat case.
     const vw = vp.clientWidth;
     const vh = vp.clientHeight;
     const cw = contentWidth * scale.current;
     const ch = contentHeight * scale.current;
-    const jade = 'var(--colors-ws-jade)';
     const d = EDGE_FADE_PX;
-    const parts: string[] = [];
-    if (tx.current < -1) parts.push(`linear-gradient(to right, ${jade}, transparent ${d}px)`);
-    if (tx.current + cw > vw + 1) parts.push(`linear-gradient(to left, ${jade}, transparent ${d}px)`);
-    if (ty.current < -1) parts.push(`linear-gradient(to bottom, ${jade}, transparent ${d}px)`);
-    if (ty.current + ch > vh + 1) parts.push(`linear-gradient(to top, ${jade}, transparent ${d}px)`);
-    fadeRef.current.style.background = parts.length ? parts.join(', ') : 'none';
+    const masks: string[] = [];
+    if (tx.current < -1) masks.push(`linear-gradient(to right, #000, transparent ${d}px)`);
+    if (tx.current + cw > vw + 1) masks.push(`linear-gradient(to left, #000, transparent ${d}px)`);
+    if (ty.current < -1) masks.push(`linear-gradient(to bottom, #000, transparent ${d}px)`);
+    if (ty.current + ch > vh + 1) masks.push(`linear-gradient(to top, #000, transparent ${d}px)`);
+    const el = fadeRef.current;
+    if (masks.length) {
+      const m = masks.join(', ');
+      el.style.background = 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)';
+      el.style.setProperty('mask-image', m);
+      el.style.setProperty('-webkit-mask-image', m);
+      el.style.setProperty('mask-composite', 'add');
+      el.style.setProperty('-webkit-mask-composite', 'source-over');
+    } else {
+      el.style.background = 'none';
+      el.style.removeProperty('mask-image');
+      el.style.removeProperty('-webkit-mask-image');
+    }
   }, [contentWidth, contentHeight, edgeFade]);
 
   // Promote to a GPU layer while gesturing; drop it on settle to re-paint sharp.
@@ -164,8 +177,9 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (fit === 'cover') return Math.max(sx, sy);
     if (fit === 'height') return sy;
     if (fit === 'width') return sx;
-    return Math.min(sx, sy);
-  }, [contentWidth, contentHeight, fit]);
+    // contain: fit the whole board inside the clear band (viewport minus the pan-insets) so no edge clips.
+    return Math.min((vp.clientWidth - 2 * padX) / contentWidth, (vp.clientHeight - padTop - padBottom) / contentHeight);
+  }, [contentWidth, contentHeight, fit, padTop, padBottom, padX]);
   // `fit` sets the initial zoom; the floor lets you unzoom back to the whole board.
   const containScale = useCallback(() => {
     const vp = vpRef.current;
@@ -205,7 +219,8 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     [apply, clamp, lowerBound, maxScale],
   );
 
-  useEffect(() => {
+  // Layout effect so the initial fit transform is applied before the browser paints (no unfitted flash).
+  useLayoutEffect(() => {
     const vp = vpRef.current;
     if (vp) {
       scale.current = fit === 'cover' ? fitScale() * overscan : fitScale();

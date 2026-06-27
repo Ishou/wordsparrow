@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowRight, Eye, EyeSlash, List, UsersThree } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
@@ -10,8 +10,10 @@ import type { Pseudonym, SessionId } from '@/domain/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Lockup, Skeleton } from '@/design-system';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
+import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { HomeGreetingArt, bucketForHour, greetingForBucket } from './HomeGreetingArt';
 import { TeaserWord } from './TeaserWord';
+import { useDelayedFlag } from '@/ui/lib/useDelayedFlag';
 
 type HomeSession = { readonly sessionId: SessionId; readonly pseudonym: Pseudonym };
 
@@ -30,8 +32,11 @@ const shell = css({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
+  // Tablet: a contained app card on a calm jade surround. Desktop: full-bleed for the 2-col layout.
+  md: { bgImage: 'none', bg: '#9CCBB1', justifyContent: 'center', padding: '40px 24px' },
+  lg: { bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0 },
 });
-// Mobile-width column, centred on larger viewports (the design is a phone screen).
+// Phone: mobile column. Tablet: centred framed card. Desktop: a wide 2-column container.
 const frame = css({
   width: '100%',
   maxWidth: '420px',
@@ -39,15 +44,47 @@ const frame = css({
   minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
+  bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
+  md: {
+    flex: 'none',
+    maxWidth: '460px',
+    height: 'min(900px, calc(100dvh - 80px))',
+    borderRadius: '28px',
+    overflow: 'hidden',
+    boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
+  },
+  lg: {
+    maxWidth: '1140px',
+    height: 'auto',
+    minHeight: '100dvh',
+    borderRadius: 0,
+    boxShadow: 'none',
+    bgImage: 'none',
+    overflow: 'visible',
+  },
 });
-const content = css({ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: 'calc(env(safe-area-inset-top) + 22px) 22px 0', overflowY: 'auto' });
+const content = css({
+  flex: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  padding: 'calc(env(safe-area-inset-top) + 22px) 22px 0',
+  overflowY: 'auto',
+  // Desktop: top nav, then the two columns vertically centred in the remaining space.
+  lg: { overflow: 'visible', padding: '0 36px 40px' },
+});
 
-const appBar = css({ flex: 'none', display: 'flex', alignItems: 'center', marginBottom: '24px' });
+// Phone/tablet header only — desktop uses the shared DesktopAppBar above the frame.
+const appBar = css({ flex: 'none', display: 'flex', alignItems: 'center', marginBottom: '24px', lg: { display: 'none' } });
+// Desktop hub: hero (left) + grilles (right) side by side, centred in the viewport. Passthrough on phone/tablet.
+const hub = css({ display: 'contents', lg: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 0.92fr)', columnGap: '36px', alignItems: 'start', alignContent: 'center', flex: 1, minHeight: 0 } });
 const menuBtn = css({ marginLeft: 'auto', flex: 'none', width: '44px', height: '44px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'rgba(255,255,255,0.62)', color: 'ws.jadeInk', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'rgba(255,255,255,0.82)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const brandLink = css({ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', borderRadius: '12px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '4px' } });
 
 const hero = css({ flex: 'none', bg: 'white', borderRadius: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
 // clipPath clips upward overflow (midday sun, night stars) while its -34 px bottom inset lets the branch drape over heroBody; zIndex 2 keeps it above.
-const heroArt = css({ position: 'relative', height: '116px', borderTopLeftRadius: '22px', borderTopRightRadius: '22px', zIndex: 2, clipPath: 'inset(0 0 -34px 0 round 22px 22px 0 0)' });
+// Taller on the wider desktop hero so the slice-scaled sky (sun/moon) clears the visible band.
+const heroArt = css({ position: 'relative', height: '116px', borderTopLeftRadius: '22px', borderTopRightRadius: '22px', zIndex: 2, clipPath: 'inset(0 0 -34px 0 round 22px 22px 0 0)', lg: { height: '208px' } });
 const heroBody = css({ position: 'relative', zIndex: 1, padding: '12px 22px 22px' });
 const heroGreeting = css({ marginBottom: '12px' });
 const heroHi = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '23px', color: 'ws.jadeInk', lineHeight: '1.1' });
@@ -58,6 +95,9 @@ const streakChip = css({ display: 'inline-flex', alignItems: 'center', gap: '5px
 const streakRecord = css({ opacity: 0.55, fontWeight: 'semibold' });
 const teaser = css({ display: 'flex', justifyContent: 'center', marginBottom: '6px' });
 
+// Fixed band so the eyebrow+date (51px), the delayed skeleton, and the pre-skeleton null all occupy the
+// same height — the daily content resolving must not jolt the card height (measured 589→640 jump otherwise).
+const dailyBand = css({ minHeight: '51px', display: 'flex', flexDirection: 'column', justifyContent: 'center' });
 const heroEyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#543C00', marginBottom: '6px', textAlign: 'center' });
 const heroDate = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '27px', color: 'ws.jadeInk', lineHeight: '1.05', textAlign: 'center' });
 const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' }, _disabled: { bg: 'ws.khaki', opacity: 0.45, cursor: 'default', boxShadow: 'none', _active: { transform: 'none' } } });
@@ -88,7 +128,7 @@ const joinEyeBtn = css({ position: 'absolute', right: '4px', top: '50%', transfo
 const joinGo = css({ flex: 'none', width: '48px', height: '48px', borderRadius: '13px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'ws.jade', color: 'ws.jadeInk', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: '#A9D8BE' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const joinErr = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '7px', textAlign: 'center' });
 
-const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px' });
+const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px', lg: { marginTop: 0, paddingBottom: 0 } });
 const prevLabel = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk', marginBottom: '12px', paddingLeft: '2px' });
 const prevCard = css({ bg: 'ws.sable', borderRadius: '18px', padding: '15px 10px', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
 const prevRow = css({ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' });
@@ -98,7 +138,7 @@ const dayDot = css({ width: '34px', height: '34px', borderRadius: '50%', display
 // A playable past/today day is a button: same dot, with a press affordance.
 const dayDotBtn = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px', padding: 0, cursor: 'pointer', transition: 'transform 120ms', _hover: { transform: 'translateY(-1px)' }, _active: { transform: 'translateY(0)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
-const nav = css({ flex: 'none', bg: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(14px)', borderTop: '0.5px solid rgba(33,75,64,0.10)', padding: '10px 28px calc(8px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' });
+const nav = css({ flex: 'none', bg: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(14px)', borderTop: '0.5px solid rgba(33,75,64,0.10)', padding: '10px 28px calc(8px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', lg: { display: 'none' } });
 const navItem = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px', borderRadius: '8px' } });
 const navLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold' });
 
@@ -229,12 +269,18 @@ export function HomeScreen({
     });
   }, [week, history, soloEntriesStore]);
 
+  // Skeleton only if the daily is still loading after a beat — a fast fetch resolves first, no flash.
+  const showDailySkeleton = useDelayedFlag(daily.status === 'loading');
+
   return (
     <main className={shell} lang="fr">
       <div className={frame}>
+        <DesktopAppBar active="accueil" streak={streak.cur} />
         <div className={content}>
           <header className={appBar}>
-            <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
+            <Link to="/v2" className={brandLink} aria-label="Accueil">
+              <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
+            </Link>
             <button
               type="button"
               className={menuBtn}
@@ -246,6 +292,7 @@ export function HomeScreen({
             </button>
           </header>
 
+          <div className={hub}>
           <section className={hero}>
             <HomeGreetingArt bucket={bucket} now={nowDate} className={heroArt} drape={34} />
             <div className={heroBody}>
@@ -267,21 +314,25 @@ export function HomeScreen({
                   onStreak={(cur, best) => setStreak({ cur, best })}
                 />
               </div>
-              {daily.status === 'loading' ? (
-                <div role="status" aria-busy="true" aria-label="Chargement de la grille du jour">
-                  <Skeleton tone="onCard" width={130} height={11} style={{ margin: '0 auto 10px' }} />
-                  <Skeleton tone="onCard" width={180} height={26} style={{ margin: '0 auto' }} />
-                </div>
-              ) : (
-                <>
-                  <div className={heroEyebrow}>
-                    {daily.status === 'error'
-                      ? 'Chargement impossible'
-                      : `Grille du jour${daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}`}
-                  </div>
-                  <div className={heroDate}>{daily.status === 'error' ? 'Oups, ça a coincé' : dateLabel}</div>
-                </>
-              )}
+              <div className={dailyBand}>
+                {daily.status === 'loading' ? (
+                  showDailySkeleton ? (
+                    <div role="status" aria-busy="true" aria-label="Chargement de la grille du jour">
+                      <Skeleton tone="onCard" width={130} height={11} style={{ margin: '0 auto 10px' }} />
+                      <Skeleton tone="onCard" width={180} height={26} style={{ margin: '0 auto' }} />
+                    </div>
+                  ) : null
+                ) : (
+                  <>
+                    <div className={heroEyebrow}>
+                      {daily.status === 'error'
+                        ? 'Chargement impossible'
+                        : `Grille du jour${daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}`}
+                    </div>
+                    <div className={heroDate}>{daily.status === 'error' ? 'Oups, ça a coincé' : dateLabel}</div>
+                  </>
+                )}
+              </div>
               <button
                 type="button"
                 className={playBtn}
@@ -360,36 +411,35 @@ export function HomeScreen({
             <div className={prevLabel}>Grilles précédentes</div>
             <div className={prevCard} aria-busy={historyLoading || undefined}>
               <div className={prevRow}>
-                {historyLoading
-                  ? week.map((d, i) => (
-                      <div key={i} className={dayCol}>
-                        <span className={dayWd}>{d.wd}</span>
-                        <Skeleton tone="deep" width={34} height={34} circle />
-                      </div>
-                    ))
-                  : weekCells.map((d, i) => (
-                  <div key={i} className={dayCol}>
-                    <span className={dayWd}>{d.wd}</span>
-                    {d.available ? (
-                      <button
-                        type="button"
-                        className={dayDotBtn}
-                        style={dayDotStyle(d.today, d.solved)}
-                        onClick={() => navigate({ to: '/v2/play', search: { date: d.iso } })}
-                        aria-label={`${d.label}${d.today ? " (aujourd'hui)" : ''}${d.solved ? ' — terminée' : ''}`}
-                      >
-                        {d.num}
-                      </button>
-                    ) : (
-                      <span className={dayDot} style={dayDotStyle(d.today, d.solved)}>
-                        {d.num}
-                      </span>
-                    )}
-                  </div>
-                ))}
+                {week.map((d, i) => {
+                  // Dates render immediately; the solved colour + click target fill in once history loads
+                  // (no loading→content swap, so the circles don't flicker on arrival).
+                  const cell = historyLoading ? null : weekCells[i];
+                  return (
+                    <div key={i} className={dayCol}>
+                      <span className={dayWd}>{d.wd}</span>
+                      {cell?.available ? (
+                        <button
+                          type="button"
+                          className={dayDotBtn}
+                          style={dayDotStyle(d.today, cell.solved)}
+                          onClick={() => navigate({ to: '/v2/play', search: { date: d.iso } })}
+                          aria-label={`${cell.label}${d.today ? " (aujourd'hui)" : ''}${cell.solved ? ' — terminée' : ''}`}
+                        >
+                          {d.num}
+                        </button>
+                      ) : (
+                        <span className={dayDot} style={dayDotStyle(d.today, cell?.solved ?? false)}>
+                          {d.num}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </section>
+          </div>
         </div>
 
         <nav className={nav} aria-label="Navigation principale">

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useRouteContext, type LinkProps } from '@tanstack/react-router';
-import { Lock, FileText, Envelope, CaretRight, GoogleLogo, SignOut, User, type Icon } from '@phosphor-icons/react';
+import { Link, useRouteContext, type LinkProps } from '@tanstack/react-router';
+import { Lock, FileText, Envelope, CaretRight, GoogleLogo, User, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { useAuth } from '@/ui/components/auth';
 import { PhoneShell } from './PhoneShell';
@@ -178,45 +178,15 @@ function SignInRow() {
   );
 }
 
-function LogoutRow() {
-  const { authClient } = useRouteContext({ from: '__root__' });
-  const { refresh } = useAuth();
-  const navigate = useNavigate();
-  const handleLogout = async () => {
-    if (!authClient) return;
-    try {
-      await authClient.logout();
-      await refresh();
-      void navigate({ to: '/v2' });
-    } catch (cause) {
-      console.warn('logout failed', cause);
-    }
-  };
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={() => { void handleLogout(); }}
-        className={cx(rowActive, lastFlat)}
-      >
-        <Tile icon={SignOut} soft />
-        <span className={label}>Se déconnecter</span>
-        <span className={chevron}>
-          <CaretRight size={16} weight="bold" aria-hidden="true" />
-        </span>
-      </button>
-    </li>
-  );
-}
-
 function CompteGroup() {
   const { state } = useAuth();
-  if (state.status === 'loading') return null;
+  // Sign-out now lives in the main menu; Réglages only offers sign-in, to guests.
+  if (state.status !== 'anon') return null;
   return (
     <nav aria-label="Compte">
       <div className={groupLabel}>Compte</div>
       <ul className={listCard}>
-        {state.status === 'authed' ? <LogoutRow /> : <SignInRow />}
+        <SignInRow />
       </ul>
     </nav>
   );
