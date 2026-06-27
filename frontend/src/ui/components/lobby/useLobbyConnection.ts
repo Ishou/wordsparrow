@@ -24,11 +24,7 @@ import {
 
 export type { LobbyView } from './lobbyView';
 
-// The seams the lobby route owns and the hook borrows: the persisted
-// pseudonym writer, the toast channel, the SR announcer, the
-// navigate-on-deny callback, and the join-code stash. Injected (rather
-// than read from router context inside the hook) so the hook is
-// testable in isolation and `ui/` keeps zero `infrastructure/` imports.
+// Seams injected so the hook is testable without infrastructure imports.
 export interface LobbyConnectionArgs {
   readonly lobbyId: LobbyId;
   readonly initialLobby: Lobby;
@@ -45,11 +41,7 @@ export interface LobbyConnectionArgs {
   readonly onJoinDenied: (message: string) => void;
 }
 
-// The reusable lobby brain: connection lifecycle + folded `LobbyView`
-// snapshot + the join/start/rotate/pseudonym sub-states + the action
-// callbacks + the grid-wiring seams every renderer (prod route, v2
-// route) needs. No JSX — the smart container (route) renders dumb
-// components from this return.
+// Returned by useLobbyConnection; consumed by both the prod route and v2 routes.
 export interface LobbyConnection {
   readonly view: LobbyView;
   readonly connectionState: ConnectionState;
@@ -58,12 +50,9 @@ export interface LobbyConnection {
   readonly joinConfirmed: boolean;
   readonly isStarting: boolean;
   readonly isRotating: boolean;
-  // Local session identity, surfaced so renderers mark the local row /
-  // gate owner controls without re-reading `getSession`.
+  // Local session identity — renderers mark the local row / gate owner controls without re-reading `getSession`.
   readonly sessionId: SessionId;
-  // Derived render-ready values (memoised in the hook): the UI-shape
-  // puzzle, the initial entries seed, and a sessionId→Player lookup the
-  // presence overlay consumes.
+  // Derived render-ready values (memoised): UI-shape puzzle, initial entries seed, sessionId→Player lookup.
   readonly gridPuzzle: Puzzle | null;
   readonly initialEntries: ReadonlyArray<{ row: number; column: number; letter: string }>;
   readonly playersBySessionId: ReadonlyMap<SessionId, Player>;
@@ -78,19 +67,14 @@ export interface LobbyActions {
   readonly copyShareUrl: () => void;
   readonly clearPseudonymError: () => void;
   readonly closeModal: () => void;
-  // Local letter write → outbound `cellUpdate`. `string | null` matches
-  // the Grid hook's report shape; normalised to a single uppercase
-  // letter upstream so the `Letter` cast is sound.
+  // `string | null` matches the Grid hook's report shape; normalised to uppercase so the `Letter` cast is sound.
   readonly cellUpdate: (row: number, column: number, letter: string | null) => void;
-  // Local focus → outbound `cellFocus` frame. Position is the UI-shape
-  // `{ row, col }`; `null` means no cell focused.
+  // Position is the UI-shape `{ row, col }`; `null` means no cell focused.
   readonly cellFocus: (
     position: Position | null,
     direction: 'across' | 'down' | null,
   ) => void;
-  // Stable subscribe registrars for the grid's remote-update / presence
-  // streams. The presence registrar replays the current snapshot
-  // synchronously before forwarding live frames.
+  // Stable registrars; the presence registrar replays the current snapshot synchronously before forwarding live frames.
   readonly subscribeToRemoteCellUpdates: (handler: (event: GameEvent) => void) => () => void;
   readonly subscribeToRemotePresence: (handler: (event: GameEvent) => void) => () => void;
 }
