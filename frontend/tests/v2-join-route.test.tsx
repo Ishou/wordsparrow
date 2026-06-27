@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { expectAxeClean } from '@/test/a11y';
 import type { PuzzleRepository, PuzzleSolver } from '@/application';
 import { LobbyClientError, type GameClient, type LobbyClient } from '@/application/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
@@ -134,5 +135,15 @@ describe('v2 /join/$code route', () => {
     const { lobbyClient } = renderJoin('/v2/join/!!');
     expect(await screen.findByRole('alert')).toHaveTextContent('Code invalide ou partie expirée.');
     expect(lobbyClient.findByCode).not.toHaveBeenCalled();
+  });
+
+  it('V2JoinError is axe-clean (ADR-0050)', async () => {
+    const { container } = renderJoin('/v2/join/Z9Z9Z9', {
+      findByCode: vi.fn().mockRejectedValue(
+        new LobbyClientError({ kind: 'not-found', status: 404, problem: null, message: 'gone' }),
+      ),
+    });
+    await screen.findByRole('alert');
+    await expectAxeClean(container);
   });
 });
