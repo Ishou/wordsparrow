@@ -1,20 +1,44 @@
-import { createRoute } from '@tanstack/react-router';
-import { css } from 'styled-system/css';
+import { createRoute, useNavigate } from '@tanstack/react-router';
 import type { Puzzle } from '@/domain';
 // Sanctioned app→module bridge (ADR-0072); registered only in DEV.
 import { PlayScreen } from '@/ui/play/PlayScreen';
+import { PhoneShell } from '@/ui/v2/PhoneShell';
+import { SparrowState } from '@/ui/v2/SparrowState';
 import { Route as V2Route } from './v2';
 
-const notice = css({ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '24px', fontFamily: 'wsUi', fontSize: '15px', color: 'ws.jadeInk', bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)' });
+// Rising sun on the horizon with a sparrow above — the daily "bientôt" state (mockups/error-states-v2.html #1).
+const sunriseScene = (
+  <svg width="150" height="120" viewBox="0 0 150 120" role="img" aria-label="Un lever de soleil">
+    <defs>
+      <symbol id="puBird" viewBox="0 0 64 64">
+        <path d="M9 30 L24 33 L20 44 Z" fill="#214B40" />
+        <path d="M22 44 C16 41 16 30 21 24 C26 18 35 17 42 21 C46 23 49 27 49 31 L57 29 L49 34 C49 41 43 47 35 47 C30 47 25 46 22 44 Z" fill="#D45D83" />
+        <path d="M28 30 C35 29 41 33 42 40 C35 41 29 38 28 30 Z" fill="#BE4970" />
+        <path d="M24 42 C27 45 32 45 36 44 C33 47 27 47 24 42 Z" fill="#F6C9D7" />
+        <path d="M49 30 L58 31.5 L49 33.5 Z" fill="#D8C77A" />
+        <circle cx="44.5" cy="29.5" r="2.4" fill="#fff" />
+        <circle cx="45" cy="29.7" r="1.3" fill="#214B40" />
+      </symbol>
+    </defs>
+    <path d="M33 82 A42 42 0 0 1 117 82 Z" fill="#F6C98C" opacity="0.18" />
+    <path d="M51 82 A24 24 0 0 1 99 82 Z" fill="#F6C98C" />
+    <line x1="8" y1="82" x2="142" y2="82" stroke="#C4E5D3" strokeWidth="3" strokeLinecap="round" />
+    <use href="#puBird" x="90" y="28" width="40" height="40" transform="rotate(-8 110 48)" />
+  </svg>
+);
 
-// Dev-only route served by MSW under `pnpm dev:preview`; plain `pnpm dev` has no grid-api, so this hint shows.
+// No puzzle: the daily isn't generated yet (ADR-0042 → 404), or plain `pnpm dev` has no grid-api (run `pnpm dev:preview` for MSW).
 function PlayUnavailable() {
+  const navigate = useNavigate();
   return (
-    <main className={notice}>
-      <p role="status">
-        Grille indisponible. Lancez <code>pnpm dev:preview</code> pour activer les mocks&nbsp;(MSW).
-      </p>
-    </main>
+    <PhoneShell>
+      <SparrowState
+        scene={sunriseScene}
+        title="Bientôt disponible"
+        body="La grille du jour se prépare. Elle arrive au lever du soleil."
+        cta={{ label: 'Voir les grilles passées', onClick: () => void navigate({ to: '/v2/grilles' }) }}
+      />
+    </PhoneShell>
   );
 }
 

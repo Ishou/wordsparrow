@@ -6,6 +6,8 @@ import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Skeleton } from '@/design-system';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
+import { SegmentedControl } from './SegmentedControl';
+import { GrillesEmptyState } from './GrillesEmptyState';
 
 type Status = 'done' | 'progress' | 'new';
 type Filter = 'all' | 'todo' | 'done';
@@ -32,36 +34,15 @@ const title = css({
   margin: '0 0 14px',
 });
 
-const seg = css({
-  display: 'flex',
-  bg: 'ws.sable',
-  borderRadius: '13px',
-  padding: '4px',
-  gap: '4px',
-  marginBottom: '18px',
-});
-const segBtn = css({
-  flex: 1,
-  border: 'none',
-  background: 'transparent',
-  borderRadius: '10px',
-  padding: '9px 0',
-  fontFamily: 'wsUi',
-  fontWeight: 'extrabold',
-  fontSize: '12.5px',
-  color: 'ws.khaki',
-  cursor: 'pointer',
-  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
-});
-const segOn = css({ bg: 'white', color: 'ws.jadeInk', boxShadow: '0 2px 6px rgba(33,75,64,0.12)' });
+const filterBar = css({ marginBottom: '18px' });
 
 const monthLabel = css({
   fontFamily: 'wsUi',
   fontSize: '11px',
-  fontWeight: 'extrabold',
-  letterSpacing: '0.12em',
+  fontWeight: 'black',
+  letterSpacing: '0.08em',
   textTransform: 'uppercase',
-  color: '#6B520F',
+  color: '#543C00',
   margin: '4px 4px 10px',
 });
 
@@ -91,7 +72,7 @@ const dotProg = css({ bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
 const dotNew = css({ bg: 'ws.sable', color: 'ws.khaki' });
 
 const mid = css({ flex: 1, minWidth: 0 });
-const dTitle = css({ fontFamily: 'wsUi', fontWeight: 'extrabold', fontSize: '14px', color: 'ws.jadeInk' });
+const dTitle = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk' });
 const dMeta = css({ fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '11.5px', color: 'ws.khaki', opacity: 0.7, marginTop: '2px' });
 const bar = css({ height: '7px', borderRadius: '999px', bg: 'rgba(33,75,64,0.1)', overflow: 'hidden', marginTop: '7px' });
 const barFill = css({ display: 'block', height: '100%', borderRadius: '999px', bg: '#4F6E5C' });
@@ -102,7 +83,7 @@ const cta = css({
   borderRadius: '11px',
   padding: '9px 13px',
   fontFamily: 'wsUi',
-  fontWeight: 'extrabold',
+  fontWeight: 'black',
   fontSize: '12.5px',
   cursor: 'pointer',
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
@@ -133,15 +114,13 @@ const moreBtn = css({
   borderRadius: '12px',
   padding: '11px 18px',
   fontFamily: 'wsUi',
-  fontWeight: 'extrabold',
+  fontWeight: 'black',
   fontSize: '13px',
   color: 'ws.jadeInk',
   cursor: 'pointer',
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
   _disabled: { opacity: 0.5, cursor: 'default' },
 });
-
-const empty = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.7, textAlign: 'center', padding: '24px 0' });
 
 const SYMBOL: Record<Status, string> = { done: '✓', progress: '◔', new: '○' };
 
@@ -187,10 +166,21 @@ export function GrillesArchiveScreen({
   const [summaries, setSummaries] = useState<ReadonlyArray<DailySummary>>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Gate the skeleton behind a short delay so sub-200ms loads never flash it.
+  const [showSkeleton, setShowSkeleton] = useState(false);
   // Oldest date we've already requested down to; load-more widens the window further back.
   const [floor, setFloor] = useState<string | undefined>(undefined);
 
   const todayIso = useMemo(() => isoUtcDate(new Date()), []);
+
+  useEffect(() => {
+    if (!loading) {
+      setShowSkeleton(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSkeleton(true), 200);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   useEffect(() => {
     let cancelled = false;
@@ -261,22 +251,15 @@ export function GrillesArchiveScreen({
     <PhoneShell header={<BackHeader to="/v2" />}>
       <h1 className={title}>Grilles</h1>
 
-      <div className={seg} role="tablist" aria-label="Filtrer les grilles">
-        {FILTERS.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            role="tab"
-            aria-selected={filter === f.id}
-            className={filter === f.id ? cx(segBtn, segOn) : segBtn}
-            onClick={() => setFilter(f.id)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        className={filterBar}
+        ariaLabel="Filtrer les grilles"
+        options={FILTERS}
+        value={filter}
+        onChange={setFilter}
+      />
 
-      {loading ? (
+      {showSkeleton ? (
         <ul className={list} aria-busy="true" aria-label="Chargement des grilles">
           {Array.from({ length: 5 }, (_, i) => (
             <li key={i} className={card}>
@@ -289,8 +272,8 @@ export function GrillesArchiveScreen({
             </li>
           ))}
         </ul>
-      ) : visible.length === 0 ? (
-        <p className={empty}>Aucune grille à afficher.</p>
+      ) : loading ? null : visible.length === 0 ? (
+        <GrillesEmptyState onPlay={() => navigate({ to: '/v2/play' })} />
       ) : (
         <>
           {months.map((m) => (
