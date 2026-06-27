@@ -21,6 +21,7 @@ import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
 import { CoopPresenceLayer } from './CoopPresenceLayer';
 import { LiveTimer } from './LiveTimer';
 import { PlayerStrip } from './PlayerStrip';
+import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
 // ADR-0072 v2 co-op IN_PROGRESS screen: shared grid + presence + timer + roster, wired like prod InGameView.
 
@@ -223,20 +224,7 @@ export function LiveCoopScreen({
     return () => ro.disconnect();
   }, []);
 
-  // Desktop lays the header + clue rail in normal flow (board fits between them, no overlay),
-  // so the PanZoom only needs small breathing pads instead of reserving the bar heights.
-  // Initialise synchronously so the first paint already uses the right layout (no mobile→desktop re-fit flicker).
-  const [isDesktop, setIsDesktop] = useState(
-    () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(min-width: 1024px)').matches,
-  );
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const update = () => setIsDesktop(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
+  const isDesktop = useIsDesktop();
 
   const BOARD_W = puzzle.width * CELL + (puzzle.width - 1) * GAP;
   const BOARD_H = puzzle.height * CELL + (puzzle.height - 1) * GAP;

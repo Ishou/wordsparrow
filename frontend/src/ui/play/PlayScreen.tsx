@@ -22,6 +22,7 @@ import { useWordAutoValidation } from '@/ui/components/grid/useWordAutoValidatio
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
 import { PanZoom, type PanZoomHandle } from './PanZoom';
 import { WinScreen } from './WinScreen';
+import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
 // Immersive phone-shaped shell: the jade field fills it; the grid bleeds within.
 // Phone: full-bleed immersive board. Tablet/desktop: a wider framed card on the jade surround,
@@ -251,20 +252,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     return () => ro.disconnect();
   }, []);
 
-  // Desktop lays the header + clue rail in normal flow (board fits between them, no overlay),
-  // so the PanZoom only needs small breathing pads instead of reserving the bar heights.
-  // Initialise synchronously so the first paint already uses the right layout (no mobile→desktop re-fit flicker).
-  const [isDesktop, setIsDesktop] = useState(
-    () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(min-width: 1024px)').matches,
-  );
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const update = () => setIsDesktop(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
+  const isDesktop = useIsDesktop();
 
   const BOARD_W = puzzle.width * CELL + (puzzle.width - 1) * GAP;
   const BOARD_H = puzzle.height * CELL + (puzzle.height - 1) * GAP;
