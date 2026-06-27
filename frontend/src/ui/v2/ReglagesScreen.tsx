@@ -154,8 +154,7 @@ function ProfileCard() {
   );
 }
 
-// Real anchor (mirrors auth/SignInButton): a button + location.assign loses the
-// navigation semantics the browser needs to follow the 302 and accept Set-Cookie.
+// Anchor required: browser must follow the 302 chain to accept Set-Cookie (button + location.assign breaks this).
 function SignInRow() {
   const { authClient } = useRouteContext({ from: '__root__' });
   const [returnTo, setReturnTo] = useState('');
