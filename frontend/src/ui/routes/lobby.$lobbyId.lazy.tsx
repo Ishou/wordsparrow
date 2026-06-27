@@ -39,9 +39,7 @@ import { useLobbyConnection } from '@/ui/components/lobby/useLobbyConnection';
 import { Button, useToast } from '@/ui/components/primitives';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 
-// Re-exported for `tests/lobby-multi-announce.test.tsx`, which imports
-// the announce mapping from this route module. The logic now lives in
-// `ui/components/lobby/lobbyEvents` and is shared with the hook.
+// Re-exported to preserve the lobby-multi-announce test import path.
 export {
   type MultiAnnounceContext,
   multiAnnouncementFor,
