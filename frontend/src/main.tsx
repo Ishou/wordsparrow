@@ -68,9 +68,7 @@ import '@/ui/styles/fonts.css';
 // v2 (ADR-0072) faces, declared inline with font-display: block — see the file header.
 import '@/design-system/fonts.css';
 import '@/ui/styles/index.css';
-// Preload the home-critical v2 faces (Fredoka display + Nunito UI, latin) so they're ready at first
-// paint; `block` then lands straight on the brand font with no font-load flash. `?url` resolves in
-// dev and build alike. The grid faces (Hanken/Spline) aren't above the fold and stay on plain `block`.
+// ADR-0072 §3 — preload above-the-fold v2 faces (Fredoka + Nunito latin) to fill the block window.
 import fredokaLatinUrl from '@fontsource-variable/fredoka/files/fredoka-latin-wght-normal.woff2?url';
 import nunitoLatinUrl from '@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2?url';
 for (const href of [fredokaLatinUrl, nunitoLatinUrl]) {
@@ -345,10 +343,7 @@ enableMocks()
         </StrictMode>,
       );
 
-    // Paint once the above-the-fold brand faces (Fredoka display + Nunito UI) are ready, so the UI
-    // appears in them in a single step — no fallback→brand swap and no hidden-text beat from
-    // `font-display: block`. Capped at 1.2s so a stalled font never blocks the app; the preloaded
-    // faces (top of file) make this resolve within a frame on a warm load.
+    // ADR-0072 §3 — render-gate: defer paint until brand faces are ready (1.2 s cap).
     if (typeof document !== 'undefined' && typeof document.fonts?.load === 'function') {
       const ready = Promise.all([
         document.fonts.load('1em "Fredoka Variable"'),

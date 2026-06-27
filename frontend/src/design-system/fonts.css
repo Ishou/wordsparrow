@@ -1,19 +1,4 @@
-/* WordSparrow v2 type stack (ADR-0072): Fredoka (display), Nunito (UI),
- * Hanken Grotesk (clues), Spline Sans Mono (grid letters).
- *
- * Declared inline (rather than importing each fontsource package index.css) for
- * two reasons:
- *   1. `font-display: block` instead of fontsource's baked-in `swap`. `swap`
- *      paints fallback text then swaps to the brand font (FOUT flicker on F5);
- *      `optional` keeps the fallback permanently on an uncached load (the brand
- *      type vanishes). `block` always lands on the brand font with no swap — a
- *      brief invisible beat while the woff2 loads, imperceptible on a warm/local
- *      load. (A build-time preload would make it instant; deferred.)
- *   2. inline faces are visible to the `fontaine` Vite plugin (build) for
- *      metrics-matched fallbacks; a CSS-side `@import` is inlined too late.
- *
- * Latin + Latin-Ext partitions only (French copy). `url()` resolves through
- * Vite's bare-module resolver to the `@fontsource*` woff2 assets. */
+/* ADR-0072 §3 — v2 type stack; font-display:block + render-gate; inline @font-face for fontaine visibility. */
 
 /* ── Fredoka Variable — display (wsDisplay) ── */
 @font-face {
