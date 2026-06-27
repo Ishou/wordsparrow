@@ -53,6 +53,7 @@ interface FakeGameClient extends GameClient {
   readonly setGridConfigCalls: GridConfig[];
   readonly startGameCalls: { count: number };
   readonly rotateCalls: { count: number };
+  readonly leaveCalls: { count: number };
   readonly cellUpdateCalls: Array<{ row: number; column: number; letter: Letter | null }>;
   readonly cellFocusCalls: Array<{
     row: number | null;
@@ -74,6 +75,7 @@ const makeFakeGameClient = (): FakeGameClient => {
   const setGridConfigCalls: GridConfig[] = [];
   const startGameCalls = { count: 0 };
   const rotateCalls = { count: 0 };
+  const leaveCalls = { count: 0 };
   const cellUpdateCalls: Array<{ row: number; column: number; letter: Letter | null }> = [];
   const cellFocusCalls: Array<{
     row: number | null;
@@ -87,6 +89,7 @@ const makeFakeGameClient = (): FakeGameClient => {
     setGridConfigCalls,
     startGameCalls,
     rotateCalls,
+    leaveCalls,
     cellUpdateCalls,
     cellFocusCalls,
     subscriberCount: () => subscribers.size,
@@ -102,7 +105,7 @@ const makeFakeGameClient = (): FakeGameClient => {
     startGame: () => { startGameCalls.count += 1; },
     cellUpdate: (row, column, letter) => { cellUpdateCalls.push({ row, column, letter }); },
     cellFocus: (row, column, direction) => { cellFocusCalls.push({ row, column, direction }); },
-    leaveLobby: () => {},
+    leaveLobby: () => { leaveCalls.count += 1; },
     rotateCode: () => { rotateCalls.count += 1; },
     disconnect: () => { disconnectCalls.count += 1; },
     subscribe: (handler) => { subscribers.add(handler); return () => { subscribers.delete(handler); }; },
@@ -255,6 +258,15 @@ describe('useLobbyConnection actions', () => {
       });
     });
     expect(result.current.isRotating).toBe(false);
+  });
+
+  it('leave() forwards to gameClient.leaveLobby without disconnecting itself', () => {
+    const gameClient = makeFakeGameClient();
+    const { result } = renderHook(() => useLobbyConnection(makeArgs(gameClient)));
+    act(() => result.current.actions.leave());
+    expect(gameClient.leaveCalls.count).toBe(1);
+    // leave() owns no navigation/teardown — the caller navigates, unmount disconnects.
+    expect(gameClient.disconnectCalls.count).toBe(0);
   });
 
   it('cellUpdate() forwards row/column/letter', () => {

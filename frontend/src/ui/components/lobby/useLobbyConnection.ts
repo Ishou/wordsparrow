@@ -65,6 +65,8 @@ export interface LobbyActions {
   readonly start: () => void;
   readonly rotateCode: () => void;
   readonly copyShareUrl: () => void;
+  // Voluntary leave: frees the slot server-side. Navigation is the caller's concern — the hook owns no navigate seam.
+  readonly leave: () => void;
   readonly clearPseudonymError: () => void;
   readonly closeModal: () => void;
   // `string | null` matches the Grid hook's report shape; normalised to uppercase so the `Letter` cast is sound.
@@ -351,6 +353,10 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     void navigator.clipboard?.writeText(shareUrl);
   }, [lobbyCode]);
 
+  const leave = useCallback(() => {
+    gameClient.leaveLobby();
+  }, [gameClient]);
+
   const cellUpdate = useCallback((row: number, col: number, letter: string | null) => {
     // The Grid hook reports `string | null`; `cellUpdate` expects
     // `Letter | null`. The hook normalizes to a single uppercase letter
@@ -459,6 +465,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       start,
       rotateCode,
       copyShareUrl,
+      leave,
       clearPseudonymError,
       closeModal,
       cellUpdate,
@@ -472,6 +479,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       start,
       rotateCode,
       copyShareUrl,
+      leave,
       clearPseudonymError,
       closeModal,
       cellUpdate,

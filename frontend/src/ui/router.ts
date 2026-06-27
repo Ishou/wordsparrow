@@ -20,6 +20,7 @@ import { Route as V2MentionsLegalesRoute } from './routes/v2.mentions-legales';
 import { Route as V2ConfidentialiteRoute } from './routes/v2.confidentialite';
 import { Route as V2ReglagesRoute } from './routes/v2.reglages';
 import { Route as V2GrillesRoute } from './routes/v2.grilles';
+import { Route as V2LobbyRoute } from './routes/v2.lobby.$lobbyId';
 import { Route as DesignSystemRoute } from './routes/design-system';
 import { Route as PlayRoute } from './routes/play';
 import { Route as HomeRoute } from './routes/home';
@@ -52,23 +53,22 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
   // Multiplayer-flag-gated routes: lobby + the `/join/$code` share-link
   // landing both require the game-api adapter on the router context.
   // Dev-only v2 design-system screens (ADR-0072) under a gated /v2 parent — never registered in prod.
-  const devChildren = import.meta.env.DEV
-    ? [
-        V2Route.addChildren([
-          V2IndexRoute,
-          HomeRoute,
-          V2MenuRoute,
-          PlayRoute,
-          FinishRoute,
-          LockupRoute,
-          DesignSystemRoute,
-          V2MentionsLegalesRoute,
-          V2ConfidentialiteRoute,
-          V2ReglagesRoute,
-          V2GrillesRoute,
-        ]),
-      ]
-    : [];
+  // The v2 lobby reskin is DEV-AND-multiplayer gated (it needs the game-api adapter), mirroring prod `/lobby`.
+  const v2Children = [
+    V2IndexRoute,
+    HomeRoute,
+    V2MenuRoute,
+    PlayRoute,
+    FinishRoute,
+    LockupRoute,
+    DesignSystemRoute,
+    V2MentionsLegalesRoute,
+    V2ConfidentialiteRoute,
+    V2ReglagesRoute,
+    V2GrillesRoute,
+    ...(multiplayer ? [V2LobbyRoute] : []),
+  ];
+  const devChildren = import.meta.env.DEV ? [V2Route.addChildren(v2Children)] : [];
   const children = multiplayer
     ? [...baseChildren, JoinRoute, LobbyRoute, ...devChildren]
     : [...baseChildren, ...devChildren];
