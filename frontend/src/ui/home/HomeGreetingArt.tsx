@@ -97,8 +97,7 @@ const STARS: readonly (readonly [number, number, number])[] = [
 function Sun({ t, soft, dawn }: Body): ReactElement {
   const [x, y] = arcPoint(t);
   if (dawn) {
-    // Faint rising sun: soft disc + halo, no rays (reads as dawn). Kept compact so it stays inside the banner —
-    // only the branch is allowed to drape onto the card below.
+    // Dawn: disc + halo, no rays; only the branch is allowed to drape onto the card.
     return (
       <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
         <circle r="25" fill="#F7C877" opacity="0.16" />

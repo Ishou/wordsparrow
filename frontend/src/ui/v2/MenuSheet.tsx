@@ -113,7 +113,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
     curY.current = dy;
     setDragY(dy);
   };
-  // Past ~90px (or a quick flick) the sheet dismisses; otherwise it springs back.
+  // Past 90 px the sheet dismisses; otherwise springs back.
   const onDragUp = () => {
     if (!dragging) return;
     setDragging(false);
