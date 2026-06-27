@@ -53,9 +53,9 @@ const streakChip = css({ display: 'inline-flex', alignItems: 'center', gap: '5px
 const streakRecord = css({ opacity: 0.55, fontWeight: 'semibold' });
 const teaser = css({ display: 'flex', justifyContent: 'center', marginBottom: '6px' });
 
-const heroEyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#6B520F', marginBottom: '6px', textAlign: 'center' });
+const heroEyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#543C00', marginBottom: '6px', textAlign: 'center' });
 const heroDate = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '27px', color: 'ws.jadeInk', lineHeight: '1.05', textAlign: 'center' });
-const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakura', color: 'white', fontFamily: 'wsUi', fontWeight: 'extrabold', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' }, _disabled: { bg: 'ws.khaki', opacity: 0.45, cursor: 'default', boxShadow: 'none', _active: { transform: 'none' } } });
+const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakura', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' }, _disabled: { bg: 'ws.khaki', opacity: 0.45, cursor: 'default', boxShadow: 'none', _active: { transform: 'none' } } });
 
 const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px' });
 const prevLabel = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk', marginBottom: '12px', paddingLeft: '2px' });
