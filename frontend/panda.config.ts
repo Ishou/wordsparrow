@@ -359,6 +359,11 @@ export default defineConfig({
         '0%': { transform: 'translateX(-100%)' },
         '100%': { transform: 'translateX(100%)' },
       },
+      // Typing-presence dot: a soft opacity pulse while a peer is typing.
+      wsPulse: {
+        '0%, 100%': { opacity: '1' },
+        '50%': { opacity: '0.4' },
+      },
     },
   },
 });
