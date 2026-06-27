@@ -55,14 +55,14 @@ const teaser = css({ display: 'flex', justifyContent: 'center', marginBottom: '6
 
 const heroEyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#543C00', marginBottom: '6px', textAlign: 'center' });
 const heroDate = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '27px', color: 'ws.jadeInk', lineHeight: '1.05', textAlign: 'center' });
-const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakura', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' }, _disabled: { bg: 'ws.khaki', opacity: 0.45, cursor: 'default', boxShadow: 'none', _active: { transform: 'none' } } });
+const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' }, _disabled: { bg: 'ws.khaki', opacity: 0.45, cursor: 'default', boxShadow: 'none', _active: { transform: 'none' } } });
 
 const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px' });
 const prevLabel = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk', marginBottom: '12px', paddingLeft: '2px' });
 const prevCard = css({ bg: 'ws.sable', borderRadius: '18px', padding: '15px 10px', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
 const prevRow = css({ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' });
 const dayCol = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', flex: 1 });
-const dayWd = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.65 });
+const dayWd = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9 });
 const dayDot = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px' });
 // A playable past/today day is a button: same dot, with a press affordance.
 const dayDotBtn = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px', padding: 0, cursor: 'pointer', transition: 'transform 120ms', _hover: { transform: 'translateY(-1px)' }, _active: { transform: 'translateY(0)' } });
@@ -213,10 +213,11 @@ export function HomeScreen({
               ) : (
                 <>
                   <div className={heroEyebrow}>
-                    Grille du jour
-                    {daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}
+                    {daily.status === 'error'
+                      ? 'Chargement impossible'
+                      : `Grille du jour${daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}`}
                   </div>
-                  <div className={heroDate}>{dateLabel}</div>
+                  <div className={heroDate}>{daily.status === 'error' ? 'Oups, ça a coincé' : dateLabel}</div>
                 </>
               )}
               <button

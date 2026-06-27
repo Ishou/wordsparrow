@@ -73,7 +73,7 @@ const dotNew = css({ bg: 'ws.sable', color: 'ws.khaki' });
 
 const mid = css({ flex: 1, minWidth: 0 });
 const dTitle = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk' });
-const dMeta = css({ fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '11.5px', color: 'ws.khaki', opacity: 0.7, marginTop: '2px' });
+const dMeta = css({ fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '11.5px', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
 const bar = css({ height: '7px', borderRadius: '999px', bg: 'rgba(33,75,64,0.1)', overflow: 'hidden', marginTop: '7px' });
 const barFill = css({ display: 'block', height: '100%', borderRadius: '999px', bg: '#4F6E5C' });
 
@@ -88,7 +88,7 @@ const cta = css({
   cursor: 'pointer',
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
-const ctaPrimary = css({ bg: 'ws.sakura', color: 'white', boxShadow: '0 4px 10px rgba(212,93,131,0.3)' });
+const ctaPrimary = css({ bg: 'ws.sakuraDark', color: 'white', boxShadow: '0 4px 10px rgba(212,93,131,0.3)' });
 const ctaGhost = css({ bg: 'ws.sable', color: 'ws.khaki' });
 
 const todayFlag = css({
@@ -98,8 +98,8 @@ const todayFlag = css({
   fontWeight: 'black',
   letterSpacing: '0.05em',
   textTransform: 'uppercase',
-  color: 'ws.sakura',
-  bg: 'ws.sakuraBlush',
+  color: 'white',
+  bg: 'ws.sakuraDark',
   borderRadius: '999px',
   padding: '2px 7px',
   marginLeft: '6px',
