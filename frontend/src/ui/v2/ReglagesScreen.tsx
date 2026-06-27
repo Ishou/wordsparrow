@@ -1,18 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link, type LinkProps } from '@tanstack/react-router';
-import {
-  Bell,
-  SpeakerHigh,
-  Moon,
-  Lock,
-  FileText,
-  Scroll,
-  Cookie,
-  ChatCircleDots,
-  Envelope,
-  CaretRight,
-  type Icon,
-} from '@phosphor-icons/react';
+import { Lock, FileText, Envelope, CaretRight, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
@@ -56,11 +44,11 @@ const profileMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bol
 
 const groupLabel = css({
   fontFamily: 'wsUi',
-  fontSize: '10px',
-  fontWeight: 'extrabold',
-  letterSpacing: '0.16em',
+  fontSize: '11px',
+  fontWeight: 'black',
+  letterSpacing: '0.08em',
   textTransform: 'uppercase',
-  color: '#6B520F',
+  color: '#543C00',
   margin: '0 6px 7px',
 });
 const listCard = css({
@@ -87,19 +75,13 @@ const rowBase = {
   background: 'transparent',
 };
 const rowActive = css({ ...rowBase, textDecoration: 'none', cursor: 'pointer', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' } });
-const rowInert = css({ ...rowBase });
 const lastFlat = css({ borderBottom: 'none' });
 
 const tile = css({ flex: 'none', width: '30px', height: '30px', borderRadius: '9px', bg: 'ws.jade', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'ws.jadeInk' });
 const tileSoft = css({ bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
 
 const label = css({ fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk' });
-const soon = css({ marginLeft: 'auto', flex: 'none', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', bg: 'ws.sable', borderRadius: '999px', padding: '3px 9px' });
 const chevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
-
-const sw = css({ marginLeft: 'auto', width: '42px', height: '24px', borderRadius: '999px', flex: 'none', position: 'relative', transition: 'background 160ms', bg: 'rgba(33,75,64,0.18)' });
-const swKnob = css({ position: 'absolute', top: '3px', left: '3px', width: '18px', height: '18px', borderRadius: '50%', bg: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' });
-const switchBtn = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', minHeight: '48px', border: 'none', borderBottom: 'none', background: 'transparent', padding: '12px 14px', cursor: 'pointer', textAlign: 'left', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' } });
 
 const foot = css({ fontFamily: 'wsMono', fontSize: '11px', color: 'ws.khaki', opacity: 0.6, textAlign: 'center', paddingTop: '10px' });
 
@@ -125,12 +107,16 @@ function LinkRow({ icon, soft, to, last, children }: { readonly icon: Icon; read
   );
 }
 
-function SoonRow({ icon, soft, last, children }: { readonly icon: Icon; readonly soft?: boolean; readonly last?: boolean; readonly children: ReactNode }) {
+function MailRow({ icon, href, last, children }: { readonly icon: Icon; readonly href: string; readonly last?: boolean; readonly children: ReactNode }) {
   return (
-    <li className={last ? cx(rowInert, lastFlat) : rowInert} aria-disabled="true">
-      <Tile icon={icon} soft={soft} />
-      <span className={label}>{children}</span>
-      <span className={soon}>Bientôt</span>
+    <li>
+      <a href={href} className={last ? cx(rowActive, lastFlat) : rowActive}>
+        <Tile icon={icon} />
+        <span className={label}>{children}</span>
+        <span className={chevron}>
+          <CaretRight size={16} weight="bold" aria-hidden="true" />
+        </span>
+      </a>
     </li>
   );
 }
@@ -152,38 +138,18 @@ export function ReglagesScreen() {
           </span>
         </div>
 
-        <nav aria-label="Préférences">
-          <div className={groupLabel}>Préférences</div>
-          <ul className={listCard}>
-            <SoonRow icon={Bell}>Notifications</SoonRow>
-            <SoonRow icon={SpeakerHigh}>Son &amp; vibrations</SoonRow>
-            <li>
-              <button type="button" role="switch" aria-checked={false} aria-disabled="true" aria-label="Thème sombre" className={cx(switchBtn, lastFlat)} onClick={() => {}}>
-                <Tile icon={Moon} />
-                <span className={label}>Thème sombre</span>
-                <span className={sw}>
-                  <span className={swKnob} />
-                </span>
-              </button>
-            </li>
-          </ul>
-        </nav>
-
         <nav aria-label="Confidentialité &amp; légal">
           <div className={groupLabel}>Confidentialité &amp; légal</div>
           <ul className={listCard}>
             <LinkRow icon={Lock} soft to="/v2/confidentialite">Confidentialité</LinkRow>
-            <LinkRow icon={FileText} soft to="/v2/mentions-legales">Mentions légales</LinkRow>
-            <SoonRow icon={Scroll} soft>Conditions d&apos;utilisation</SoonRow>
-            <SoonRow icon={Cookie} soft last>Gérer les cookies</SoonRow>
+            <LinkRow icon={FileText} soft to="/v2/mentions-legales" last>Mentions légales</LinkRow>
           </ul>
         </nav>
 
         <nav aria-label="Aide">
           <div className={groupLabel}>Aide</div>
           <ul className={listCard}>
-            <SoonRow icon={ChatCircleDots}>Centre d&apos;aide</SoonRow>
-            <SoonRow icon={Envelope} last>Nous écrire</SoonRow>
+            <MailRow icon={Envelope} href="mailto:contact@wordsparrow.io" last>Nous écrire</MailRow>
           </ul>
         </nav>
 
