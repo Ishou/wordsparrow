@@ -23,10 +23,11 @@ const back = css({
   bg: 'rgba(255,255,255,0.62)',
   boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
   _hover: { bg: 'rgba(255,255,255,0.82)' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const spacer = css({ flex: 1 });
 
-export function BackHeader({ to = '/v2/home' }: BackHeaderProps = {}) {
+export function BackHeader({ to = '/v2' }: BackHeaderProps = {}) {
   return (
     <div className={row}>
       <Link to={to} className={back}>

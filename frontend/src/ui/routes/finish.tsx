@@ -15,7 +15,7 @@ function FinishScreen() {
     else void navigator.clipboard?.writeText(text).catch(() => {});
   };
   return (
-    <div className={shell}>
+    <div className={shell} lang="fr">
       <WinScreen time="04:12" onReplay={() => void navigate({ to: '/v2/play' })} onShare={share} onDismiss={() => void navigate({ to: '/v2/play' })} />
     </div>
   );

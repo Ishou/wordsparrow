@@ -38,7 +38,7 @@ const item = css({
   fontSize: '11px',
   fontWeight: 'bold',
 });
-const itemActive = css({ color: 'ws.sakura', opacity: 1, fontWeight: 'extrabold' });
+const itemActive = css({ color: 'ws.sakura', opacity: 1, fontWeight: 'black' });
 
 export function BottomNav({ active, onNavigate }: BottomNavProps) {
   return (

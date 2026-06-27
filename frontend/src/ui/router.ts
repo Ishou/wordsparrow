@@ -24,7 +24,6 @@ import { Route as V2LobbyRoute } from './routes/v2.lobby.$lobbyId';
 import { Route as V2JoinRoute } from './routes/v2.join.$code';
 import { Route as DesignSystemRoute } from './routes/design-system';
 import { Route as PlayRoute } from './routes/play';
-import { Route as HomeRoute } from './routes/home';
 import { Route as FinishRoute } from './routes/finish';
 import { Route as LockupRoute } from './routes/lockup';
 
@@ -57,7 +56,6 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
   // The v2 lobby reskin is DEV-AND-multiplayer gated (it needs the game-api adapter), mirroring prod `/lobby`.
   const v2Children = [
     V2IndexRoute,
-    HomeRoute,
     V2MenuRoute,
     PlayRoute,
     FinishRoute,

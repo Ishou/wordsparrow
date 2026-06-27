@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { CaretLeft, DotsThreeVertical, Lightbulb, Timer, Trophy } from '@phosphor-icons/react';
 import { useNavigate } from '@tanstack/react-router';
 import { css, cx } from 'styled-system/css';
-import type { ArrowDirection, Cell as DomainCell, Position, Puzzle } from '@/domain';
+import type { Cell as DomainCell, Position, Puzzle } from '@/domain';
 import type { PuzzleSolver } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
-import { Button, Cell, DefCell, ClueRail, KeyboardKey, Lockup, type CellState } from '@/design-system';
+import { Button, Cell, DefCell, ClueRail, Lockup, type CellState } from '@/design-system';
 import { PlayMenu } from './PlayMenu';
 import {
   useGridNavigation,
@@ -13,25 +13,14 @@ import {
   type Clue,
   type GridNavigation,
 } from '@/ui/components/grid/useGridNavigation';
+import { orderClues } from '@/ui/components/grid/orderClues';
+import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
+import { CELL, GAP, STRIDE, BOARD_BOTTOM_GAP, posKey, exitsRight } from '@/ui/components/grid/playLayout';
+import { Keyboard } from './Keyboard';
 import { useWordAutoValidation } from '@/ui/components/grid/useWordAutoValidation';
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
 import { PanZoom, type PanZoomHandle } from './PanZoom';
 import { WinScreen } from './WinScreen';
-
-// Fixed board geometry: the grid never reflows — PanZoom scales/pans it.
-const CELL = 56;
-const GAP = 5;
-const STRIDE = CELL + GAP;
-// Breathing gap at the pan extreme, mirroring padTop's gap above the first row.
-const BOARD_BOTTOM_GAP = 14;
-
-const KEY_ROWS = [
-  ['A', 'Z', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-  ['Q', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M'],
-  ['W', 'X', 'C', 'V', 'B', 'N'],
-] as const;
-
-const exitsRight = (a: ArrowDirection) => a === 'right' || a === 'right-down';
 
 // Immersive phone-shaped shell: the jade field fills it; the grid bleeds within.
 const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marginInline: 'auto', height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column', bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)', fontFamily: 'wsUi' });
@@ -64,6 +53,7 @@ const iconBtn = css({
   cursor: 'pointer',
   flex: 'none',
   _active: { background: 'rgba(33,75,64,0.08)' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const headerSpacer = css({ flex: 1 });
 const headerTimer = css({ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'wsMono', fontWeight: 'semibold', fontSize: '13.5px', color: 'ws.jadeInk', flex: 'none', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em', paddingInline: '2px' });
@@ -121,34 +111,14 @@ const hintBtn = css({
   bg: '#F2EDDC',
   cursor: 'pointer',
   _disabled: { opacity: 0.45, cursor: 'not-allowed' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const hintBulb = css({ color: 'ws.or' });
-// Every key the same fixed width (10 per row, gap 5px); shorter rows centre.
-const keyboard = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '7px',
-  alignItems: 'stretch',
-  width: '100%',
-  // Frosted glass — mirrors the header; grid bleeds behind.
-  bg: 'rgba(255,255,255,0.62)',
-  backdropFilter: 'blur(10px)',
-  border: '0.5px solid rgba(255,255,255,0.7)',
-  borderRadius: '18px',
-  padding: '9px 10px',
-  boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
-  '& button': { flex: 'none', width: 'calc((100% - 45px) / 10)', minWidth: 0 },
-});
-const keyRow = css({ display: 'flex', gap: '5px', justifyContent: 'center' });
 // Post-win: bottom bar becomes a single re-entry to the celebration.
 const resultsBtn = css({ width: '100%', gap: '9px' });
 
 function pad(n: number): string {
   return n.toString().padStart(2, '0');
-}
-
-function posKey(row: number, col: number): string {
-  return `${row},${col}`;
 }
 
 function inputAt(row: number, col: number): HTMLInputElement | null {
@@ -202,17 +172,7 @@ function LetterSlot({
       <Cell state={state} solveDelay={solveDelay} />
       <input
         ref={nav.registerCellRef}
-        type="search"
-        role="textbox"
-        inputMode="none"
-        autoComplete="off"
-        autoCapitalize="characters"
-        autoCorrect="off"
-        spellCheck={false}
-        enterKeyHint="next"
-        data-1p-ignore=""
-        data-lpignore="true"
-        data-form-type="other"
+        {...GRID_INPUT_GUARDS}
         aria-label={`Ligne ${row + 1}, colonne ${col + 1}`}
         defaultValue={entry}
         readOnly={validated}
@@ -447,34 +407,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   useEffect(() => () => { if (solveTimerRef.current) window.clearTimeout(solveTimerRef.current); }, []);
 
   // Clues ordered across-then-down; drives the ClueRail counter and the focus firewall.
-  const orderedClues = useMemo(() => {
-    const list: { key: string; startRow: number; startCol: number; across: boolean; text: string; cells: Position[] }[] = [];
-    for (const cell of puzzle.cells) {
-      if (cell.kind !== 'definition') continue;
-      for (const clue of cell.clues) {
-        const a = clue.arrow;
-        const startDr = a === 'down' || a === 'down-right' ? 1 : 0;
-        const startDc = a === 'right' || a === 'right-down' ? 1 : 0;
-        const dr = a === 'down' || a === 'right-down' ? 1 : 0;
-        const dc = a === 'right' || a === 'down-right' ? 1 : 0;
-        const across = a === 'right' || a === 'down-right';
-        const cells: Position[] = [];
-        let r = cell.position.row + startDr;
-        let c = cell.position.col + startDc;
-        while (r >= 0 && r < puzzle.height && c >= 0 && c < puzzle.width) {
-          const nx = byPos.get(posKey(r, c));
-          if (!nx || nx.kind !== 'letter') break;
-          cells.push({ row: r, col: c });
-          r += dr;
-          c += dc;
-        }
-        if (cells.length === 0) continue;
-        list.push({ key: `${cell.position.row}:${cell.position.col}:${a}`, startRow: cell.position.row + startDr, startCol: cell.position.col + startDc, across, text: clue.text, cells });
-      }
-    }
-    list.sort((x, y) => x.startRow - y.startRow || x.startCol - y.startCol || (x.across === y.across ? 0 : x.across ? -1 : 1));
-    return list;
-  }, [puzzle, byPos]);
+  const orderedClues = useMemo(() => orderClues(puzzle), [puzzle]);
 
   // Definition cells whose every clue word is fully solved → lit "done" surface.
   const solvedDefCells = useMemo(() => {
@@ -696,7 +629,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     <main className={shell} lang="fr">
       <header className={header}>
         <div className={headerBar}>
-          <button type="button" className={iconBtn} onClick={() => navigate({ to: '/v2/home' })} aria-label="Quitter la grille">
+          <button type="button" className={iconBtn} onClick={() => navigate({ to: '/v2' })} aria-label="Quitter la grille">
             <CaretLeft aria-hidden="true" weight="bold" />
           </button>
           <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
@@ -783,16 +716,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
                 }
               />
             ) : null}
-            <div className={keyboard}>
-              {KEY_ROWS.map((rowKeys, r) => (
-                <div key={r} className={keyRow}>
-                  {rowKeys.map((l) => (
-                    <KeyboardKey key={l} type="letter" label={l} onPress={() => nav.enterLetter(l)} />
-                  ))}
-                  {r === KEY_ROWS.length - 1 ? <KeyboardKey type="backspace" onPress={playBackspace} /> : null}
-                </div>
-              ))}
-            </div>
+            <Keyboard onLetter={(l) => nav.enterLetter(l)} onBackspace={playBackspace} />
           </>
         )}
       </div>

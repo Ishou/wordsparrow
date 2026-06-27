@@ -32,7 +32,7 @@ const grab = css({ display: 'block', width: '42px', height: '5px', borderRadius:
 const dragZone = css({ touchAction: 'none', cursor: 'grab', padding: '6px 0 2px', marginTop: '-6px', _active: { cursor: 'grabbing' } });
 
 const head = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 8px 12px', borderBottom: '1px solid #EEF3EC', marginBottom: '4px' });
-const headAvatar = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', bg: 'ws.sakura', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '18px' });
+const headAvatar = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', bg: 'ws.sakuraDark', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '18px' });
 const headName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const headSub = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
 
@@ -131,7 +131,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
     navigate({ to: '/v2/reglages' });
   };
 
-  const subline = streak != null && streak >= 1 ? `Joueur invité · 🔥 série ${streak}` : 'Joueur invité';
+  const subline = streak != null && streak >= 1 ? `🔥 série ${streak}` : 'Sans compte';
 
   return (
     <Dialog.Root open={open} onOpenChange={(d) => { if (!d.open) onClose(); }} modal closeOnInteractOutside closeOnEscape preventScroll>
@@ -151,9 +151,9 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
             </div>
 
             <div className={head}>
-              <span className={headAvatar} aria-hidden="true">T</span>
+              <span className={headAvatar} aria-hidden="true"><User size={22} weight="bold" /></span>
               <div>
-                <div className={headName}>Toi</div>
+                <div className={headName}>Invité</div>
                 <div className={headSub}>{subline}</div>
               </div>
             </div>

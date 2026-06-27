@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { List } from '@phosphor-icons/react';
+import { ArrowRight, Eye, EyeSlash, List, UsersThree } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
-import { UsersThree } from '@phosphor-icons/react';
 import type { Puzzle } from '@/domain';
+import { extractLobbyCode, LOBBY_CODE_PATTERN } from '@/domain/game/lobbyCode';
 import type { DailySummary, PuzzleRepository, WordsRepository } from '@/application';
 import type { LobbyClient } from '@/application/game';
 import type { Pseudonym, SessionId } from '@/domain/game';
@@ -63,7 +63,30 @@ const heroDate = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize
 const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' }, _disabled: { bg: 'ws.khaki', opacity: 0.45, cursor: 'default', boxShadow: 'none', _active: { transform: 'none' } } });
 
 // Secondary co-op entry under the daily card; jade-tinted so it reads below the primary sakura CTA.
-const coopBtn = css({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', height: '50px', marginTop: '12px', border: 'none', borderRadius: '15px', bg: 'rgba(255,255,255,0.62)', color: 'ws.jadeInk', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', transition: 'transform 120ms, background-color 120ms', _hover: { bg: 'rgba(255,255,255,0.82)' }, _active: { transform: 'translateY(1px)' }, _disabled: { opacity: 0.55, cursor: 'default', _active: { transform: 'none' } }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraDark)', outlineOffset: '2px' } });
+const coopBtn = css({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', height: '50px', marginTop: '12px', border: 'none', borderRadius: '15px', bg: 'rgba(255,255,255,0.62)', color: 'ws.jadeInk', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', transition: 'transform 120ms, background-color 120ms', _hover: { bg: 'rgba(255,255,255,0.82)' }, _active: { transform: 'translateY(1px)' }, _disabled: { opacity: 0.55, cursor: 'default', _active: { transform: 'none' } }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+
+const joinRow = css({ display: 'flex', gap: '8px', marginTop: '10px' });
+const joinField = css({ position: 'relative', flex: 1, minWidth: 0 });
+const joinInput = css({
+  width: '100%',
+  height: '48px',
+  borderRadius: '13px',
+  border: '1.5px solid rgba(33,75,64,0.12)',
+  bg: 'rgba(255,255,255,0.62)',
+  paddingLeft: '16px',
+  paddingRight: '44px',
+  fontFamily: 'wsUi',
+  fontSize: '15px',
+  fontWeight: 'bold',
+  color: 'ws.jadeInk',
+  letterSpacing: '0.04em',
+  _placeholder: { color: 'ws.khaki', opacity: 0.85, fontWeight: 'semibold', letterSpacing: 'normal' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+  '&[aria-invalid="true"]': { borderColor: 'ws.sakuraDark' },
+});
+const joinEyeBtn = css({ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: '10px', bg: 'transparent', color: 'ws.khaki', cursor: 'pointer', _hover: { color: 'ws.jadeInk' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const joinGo = css({ flex: 'none', width: '48px', height: '48px', borderRadius: '13px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'ws.jade', color: 'ws.jadeInk', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: '#A9D8BE' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const joinErr = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '7px', textAlign: 'center' });
 
 const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px' });
 const prevLabel = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk', marginBottom: '12px', paddingLeft: '2px' });
@@ -73,10 +96,10 @@ const dayCol = css({ display: 'flex', flexDirection: 'column', alignItems: 'cent
 const dayWd = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9 });
 const dayDot = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px' });
 // A playable past/today day is a button: same dot, with a press affordance.
-const dayDotBtn = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px', padding: 0, cursor: 'pointer', transition: 'transform 120ms', _hover: { transform: 'translateY(-1px)' }, _active: { transform: 'translateY(0)' } });
+const dayDotBtn = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px', padding: 0, cursor: 'pointer', transition: 'transform 120ms', _hover: { transform: 'translateY(-1px)' }, _active: { transform: 'translateY(0)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
 const nav = css({ flex: 'none', bg: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(14px)', borderTop: '0.5px solid rgba(33,75,64,0.10)', padding: '10px 28px calc(8px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' });
-const navItem = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 });
+const navItem = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px', borderRadius: '8px' } });
 const navLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold' });
 
 const WD_LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'] as const;
@@ -98,7 +121,7 @@ function longDateFr(iso: string): string {
 
 // Solved day: sakura fill; today: sakura ring; unplayed past: white dot.
 function dayDotStyle(today: boolean, solved: boolean): CSSProperties {
-  if (solved) return { background: 'var(--colors-ws-sakura)', color: 'white', border: today ? '2px solid var(--colors-ws-sakura)' : undefined };
+  if (solved) return { background: 'var(--colors-ws-sakura-dark)', color: 'white', border: today ? '2px solid var(--colors-ws-sakura-dark)' : undefined };
   if (today) return { background: 'transparent', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' };
   return { background: 'white', color: 'var(--colors-ws-khaki)' };
 }
@@ -131,6 +154,20 @@ export function HomeScreen({
       .createLobby({ ownerSessionId, ownerPseudonym })
       .then((created) => navigate({ to: '/v2/lobby/$lobbyId', params: { lobbyId: created.id } }))
       .catch(() => setCoopPending(false));
+  };
+
+  const joinInputRef = useRef<HTMLInputElement>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [joinRevealed, setJoinRevealed] = useState(false);
+  // extractLobbyCode also accepts a pasted share-link, so "just works" for both a bare code and a full URL.
+  const handleJoinCoop = (e: FormEvent) => {
+    e.preventDefault();
+    const code = extractLobbyCode(joinInputRef.current?.value ?? '');
+    if (!LOBBY_CODE_PATTERN.test(code)) {
+      setJoinError('Code à 6 caractères (lettres et chiffres).');
+      return;
+    }
+    navigate({ to: '/v2/join/$code', params: { code } });
   };
 
   // Fetched client-side so the teaser + strip paint at once; CTA gates on today's availability.
@@ -263,16 +300,58 @@ export function HomeScreen({
                       : 'Réessayer'}
               </button>
               {multiplayerOn ? (
-                <button
-                  type="button"
-                  className={coopBtn}
-                  onClick={handleCreateCoop}
-                  disabled={coopPending}
-                  aria-busy={coopPending || undefined}
-                >
-                  <UsersThree size={20} weight="bold" aria-hidden="true" />
-                  {coopPending ? 'Création…' : 'Jouer à plusieurs'}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className={coopBtn}
+                    onClick={handleCreateCoop}
+                    disabled={coopPending}
+                    aria-busy={coopPending || undefined}
+                  >
+                    <UsersThree size={20} weight="bold" aria-hidden="true" />
+                    {coopPending ? 'Création…' : 'Jouer à plusieurs'}
+                  </button>
+                  <form className={joinRow} onSubmit={handleJoinCoop}>
+                    <div className={joinField}>
+                      <input
+                        ref={joinInputRef}
+                        className={joinInput}
+                        type={joinRevealed ? 'text' : 'password'}
+                        autoComplete="off"
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        data-1p-ignore=""
+                        data-lpignore="true"
+                        data-form-type="other"
+                        placeholder="Rejoindre avec un code"
+                        aria-label="Rejoindre une partie avec un code"
+                        aria-invalid={joinError != null || undefined}
+                        aria-describedby={joinError != null ? 'home-join-error' : undefined}
+                        onInput={() => { if (joinError != null) setJoinError(null); }}
+                      />
+                      <button
+                        type="button"
+                        className={joinEyeBtn}
+                        onClick={() => setJoinRevealed((v) => !v)}
+                        aria-pressed={joinRevealed}
+                        aria-label={joinRevealed ? 'Masquer le code' : 'Afficher le code'}
+                      >
+                        {joinRevealed ? (
+                          <EyeSlash size={18} weight="bold" aria-hidden="true" />
+                        ) : (
+                          <Eye size={18} weight="bold" aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
+                    <button type="submit" className={joinGo} aria-label="Rejoindre la partie">
+                      <ArrowRight size={20} weight="bold" aria-hidden="true" />
+                    </button>
+                  </form>
+                  {joinError != null ? (
+                    <p id="home-join-error" className={joinErr} role="alert">{joinError}</p>
+                  ) : null}
+                </>
               ) : null}
             </div>
           </section>

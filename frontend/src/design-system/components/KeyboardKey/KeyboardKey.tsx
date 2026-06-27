@@ -17,12 +17,12 @@ const base = css({
   // Tap fires on pointerdown without stealing focus from the grid cell; manipulation kills the double-tap delay.
   touchAction: 'manipulation',
   boxShadow: '0 1px 0 rgba(33,75,64,0.1)',
-  _focusVisible: { outline: '2px solid token(colors.ws.sakura)', outlineOffset: '1px' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 
 const byType = {
   letter: css({ bg: '#EAE6D6', color: 'ws.khaki' }),
-  confirm: css({ bg: 'ws.sakura', color: 'white' }),
+  confirm: css({ bg: 'ws.sakuraDark', color: 'white' }),
   backspace: css({ bg: '#DED7BE', color: 'ws.khaki' }),
 } as const;
 

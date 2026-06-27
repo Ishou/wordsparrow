@@ -4,17 +4,21 @@ import { HomeScreen } from '@/ui/home/HomeScreen';
 import { Route as V2Route } from './v2';
 
 function V2IndexComponent() {
-  const { puzzleRepository, soloEntriesStore, wordsRepository } = Route.useRouteContext();
+  // Multiplayer adapters live on the context only when the flag is on; forward them so the
+  // canonical home offers co-op + join (undefined → those entries stay hidden otherwise).
+  const { puzzleRepository, soloEntriesStore, wordsRepository, lobbyClient, getSession } =
+    Route.useRouteContext();
   return (
     <HomeScreen
       puzzleRepository={puzzleRepository}
       soloEntriesStore={soloEntriesStore}
       wordsRepository={wordsRepository}
+      lobbyClient={lobbyClient}
+      getSession={getSession}
     />
   );
 }
 
-// alias kept so /v2/home back-targets remain valid while sibling screens exist.
 export const Route = createRoute({
   getParentRoute: () => V2Route,
   path: '/',

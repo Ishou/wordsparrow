@@ -61,13 +61,16 @@ function renderSalon(overrides: Partial<SalonScreenProps> = {}) {
 // The router mounts asynchronously; await the heading before synchronous queries.
 async function renderSalonReady(overrides: Partial<SalonScreenProps> = {}) {
   const result = renderSalon(overrides);
-  await screen.findByRole('heading', { level: 1, name: 'Salon' });
+  await screen.findByRole('heading', { level: 1, name: 'Partie' });
   return result;
 }
 
 describe('v2 SalonScreen', () => {
   it('renders the title, the code and the copy + quitter affordances', async () => {
     await renderSalonReady();
+    // Code is masked by default; reveal it before asserting the value.
+    expect(screen.queryByText('A2B3C4')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Afficher le code/ }));
     expect(screen.getByText('A2B3C4')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Copier le lien/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Quitter/ })).toBeTruthy();
@@ -94,7 +97,8 @@ describe('v2 SalonScreen', () => {
     expect(screen.queryByRole('button', { name: 'Jouer' })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Taille de la grille' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Nouveau code/ })).toBeNull();
-    // The code + copy + quitter stay available to everyone.
+    // The code (after reveal) + copy + quitter stay available to everyone.
+    fireEvent.click(screen.getByRole('button', { name: /Afficher le code/ }));
     expect(screen.getByText('A2B3C4')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Quitter/ })).toBeTruthy();
   });

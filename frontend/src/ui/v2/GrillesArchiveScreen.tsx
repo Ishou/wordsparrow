@@ -67,7 +67,7 @@ const dot = css({
   fontSize: '17px',
   flex: 'none',
 });
-const dotDone = css({ bg: 'ws.sakura', color: 'white' });
+const dotDone = css({ bg: 'ws.sakuraDark', color: 'white' });
 const dotProg = css({ bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
 const dotNew = css({ bg: 'ws.sable', color: 'ws.khaki' });
 
