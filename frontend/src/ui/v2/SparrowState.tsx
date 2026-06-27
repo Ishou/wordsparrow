@@ -6,7 +6,7 @@ const wrap = css({ display: 'flex', flexDirection: 'column', alignItems: 'center
 const art = css({ display: 'flex', justifyContent: 'center', marginBottom: '16px' });
 const titleCss = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '22px', lineHeight: '1.1', color: 'ws.jadeInk' });
 const bodyCss = css({ fontFamily: 'wsUi', fontWeight: 'semibold', fontSize: '14px', lineHeight: '1.45', color: 'ws.khaki', opacity: 0.8, marginTop: '8px', maxWidth: '300px' });
-// Mirrors the home daily CTA (HomeScreen playBtn) so primary actions read consistently across v2.
+// Matches the home screen's primary CTA scale so actions read consistently across v2.
 const ctaCss = css({
   marginTop: '22px',
   height: '52px',
