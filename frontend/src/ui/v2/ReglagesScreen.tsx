@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
-import { Link, type LinkProps } from '@tanstack/react-router';
-import { Lock, FileText, Envelope, CaretRight, type Icon } from '@phosphor-icons/react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link, useNavigate, useRouteContext, type LinkProps } from '@tanstack/react-router';
+import { Lock, FileText, Envelope, CaretRight, GoogleLogo, SignOut, User, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
+import { useAuth } from '@/ui/components/auth';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 
@@ -39,6 +40,7 @@ const avatar = css({
   fontWeight: 'semibold',
   fontSize: '20px',
 });
+const avatarAnon = css({ bg: 'ws.jade', color: 'ws.jadeInk' });
 const profileName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const profileMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.7, marginTop: '2px' });
 
@@ -121,22 +123,115 @@ function MailRow({ icon, href, last, children }: { readonly icon: Icon; readonly
   );
 }
 
+function initialFor(displayName: string): string {
+  return ([...displayName][0] ?? '?').toLocaleUpperCase('fr-FR');
+}
+
+function ProfileCard() {
+  const { state } = useAuth();
+  if (state.status === 'authed') {
+    return (
+      <div className={profile}>
+        <span className={avatar} aria-hidden="true">{initialFor(state.whoami.displayName)}</span>
+        <div>
+          <div className={profileName}>{state.whoami.displayName}</div>
+          <div className={profileMeta}>Connecté</div>
+        </div>
+      </div>
+    );
+  }
+  const loading = state.status === 'loading';
+  return (
+    <div className={profile}>
+      <span className={cx(avatar, avatarAnon)} aria-hidden="true">
+        <User size={24} weight="bold" />
+      </span>
+      <div>
+        <div className={profileName}>{loading ? '…' : 'Invité'}</div>
+        <div className={profileMeta}>{loading ? '…' : 'Joueur invité'}</div>
+      </div>
+    </div>
+  );
+}
+
+// Real anchor (mirrors auth/SignInButton): a button + location.assign loses the
+// navigation semantics the browser needs to follow the 302 and accept Set-Cookie.
+function SignInRow() {
+  const { authClient } = useRouteContext({ from: '__root__' });
+  const [returnTo, setReturnTo] = useState('');
+  useEffect(() => setReturnTo(window.location.href), []);
+  const href = authClient && returnTo ? authClient.signInUrl('google', returnTo) : '#';
+  const disabled = href === '#';
+  return (
+    <li>
+      <a
+        href={href}
+        aria-disabled={disabled ? true : undefined}
+        className={cx(rowActive, lastFlat)}
+      >
+        <Tile icon={GoogleLogo} />
+        <span className={label}>Se connecter avec Google</span>
+        <span className={chevron}>
+          <CaretRight size={16} weight="bold" aria-hidden="true" />
+        </span>
+      </a>
+    </li>
+  );
+}
+
+function LogoutRow() {
+  const { authClient } = useRouteContext({ from: '__root__' });
+  const { refresh } = useAuth();
+  const navigate = useNavigate();
+  const handleLogout = async () => {
+    if (!authClient) return;
+    try {
+      await authClient.logout();
+      await refresh();
+      void navigate({ to: '/v2' });
+    } catch (cause) {
+      console.warn('logout failed', cause);
+    }
+  };
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => { void handleLogout(); }}
+        className={cx(rowActive, lastFlat)}
+      >
+        <Tile icon={SignOut} soft />
+        <span className={label}>Se déconnecter</span>
+        <span className={chevron}>
+          <CaretRight size={16} weight="bold" aria-hidden="true" />
+        </span>
+      </button>
+    </li>
+  );
+}
+
+function CompteGroup() {
+  const { state } = useAuth();
+  if (state.status === 'loading') return null;
+  return (
+    <nav aria-label="Compte">
+      <div className={groupLabel}>Compte</div>
+      <ul className={listCard}>
+        {state.status === 'authed' ? <LogoutRow /> : <SignInRow />}
+      </ul>
+    </nav>
+  );
+}
+
 export function ReglagesScreen() {
   return (
     <PhoneShell header={<BackHeader to="/v2" />}>
       <div className={stack}>
         <h1 className={title}>Réglages</h1>
 
-        <div className={profile}>
-          <span className={avatar} aria-hidden="true">T</span>
-          <div>
-            <div className={profileName}>Toi</div>
-            <div className={profileMeta}>Joueur invité</div>
-          </div>
-          <span className={chevron} aria-hidden="true">
-            <CaretRight size={18} weight="bold" />
-          </span>
-        </div>
+        <ProfileCard />
+
+        <CompteGroup />
 
         <nav aria-label="Confidentialité &amp; légal">
           <div className={groupLabel}>Confidentialité &amp; légal</div>
