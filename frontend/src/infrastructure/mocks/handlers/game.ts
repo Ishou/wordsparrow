@@ -120,6 +120,49 @@ export const gameHandlers = [
     });
   }),
 
+  // POST /v1/lobbies/players/rebind — fired by the anon→authed post-auth
+  // hook on every sign-in; preview seeds an authed whoami, so this runs
+  // on first paint. Without it the request leaks to the prod game-api
+  // (ADR-0007 §5 / ADR-0009 §7). A 204 no-op is contract-faithful (the
+  // spec marks zero rows touched as success); preview has no seat to migrate.
+  http.post('*/v1/lobbies/players/rebind', async ({ request }) => {
+    let body: { anonSessionId?: string };
+    try {
+      body = (await request.json()) as { anonSessionId?: string };
+    } catch {
+      body = {};
+    }
+    if (!body?.anonSessionId) {
+      return problem(
+        400,
+        'https://bliss.example/errors/invalid-rebind-request',
+        'Invalid request body',
+        '`anonSessionId` is required.',
+      );
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // POST /v1/lobbies/players/unbind — symmetric to rebind; the menu's
+  // "Se déconnecter" calls it before logout. Same prod-leak class; 204 no-op.
+  http.post('*/v1/lobbies/players/unbind', async ({ request }) => {
+    let body: { anonPseudonym?: string };
+    try {
+      body = (await request.json()) as { anonPseudonym?: string };
+    } catch {
+      body = {};
+    }
+    if (!body?.anonPseudonym) {
+      return problem(
+        400,
+        'https://bliss.example/errors/invalid-unbind-request',
+        'Invalid request body',
+        '`anonPseudonym` is required.',
+      );
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // GET /v1/lobbies/by-code/:code — must match before the `:lobbyId`
   // catch-all below; MSW dispatches the first matching handler.
   http.get('*/v1/lobbies/by-code/:code', ({ params }) => {
