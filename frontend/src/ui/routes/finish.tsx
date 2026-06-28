@@ -9,14 +9,9 @@ const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marg
 
 function FinishScreen() {
   const navigate = useNavigate();
-  const share = () => {
-    const text = "J'ai terminé la grille WordSparrow du jour ! 🌸";
-    if (typeof navigator !== 'undefined' && navigator.share) void navigator.share({ text }).catch(() => {});
-    else void navigator.clipboard?.writeText(text).catch(() => {});
-  };
   return (
     <div className={shell} lang="fr">
-      <WinScreen time="04:12" onReplay={() => void navigate({ to: '/play' })} onShare={share} onDismiss={() => void navigate({ to: '/play' })} />
+      <WinScreen time="04:12" onReplay={() => void navigate({ to: '/play' })} onDismiss={() => void navigate({ to: '/play' })} />
     </div>
   );
 }
