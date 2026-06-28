@@ -341,6 +341,7 @@ export default defineConfig({
       },
       // Win celebration (Phase 3): screen fade, drifting sakura petals, blossom pulse.
       wsFade: { from: { opacity: '0' }, to: { opacity: '1' } },
+      wsFadeOut: { from: { opacity: '1' }, to: { opacity: '0' } },
       wsPetalFall: {
         '0%': { transform: 'translateY(0) translateX(0) rotate(0deg)' },
         '50%': { transform: 'translateY(460px) translateX(18px) rotate(180deg)' },
@@ -354,6 +355,11 @@ export default defineConfig({
       wsSheetUp: {
         from: { transform: 'translateY(100%)' },
         to: { transform: 'translateY(0)' },
+      },
+      // Bottom sheet exit: slides back down to the bottom edge (mirror of wsSheetUp).
+      wsSheetDown: {
+        from: { transform: 'translateY(0)', opacity: '1' },
+        to: { transform: 'translateY(100%)', opacity: '0' },
       },
       wsShimmer: {
         '0%': { transform: 'translateX(-100%)' },

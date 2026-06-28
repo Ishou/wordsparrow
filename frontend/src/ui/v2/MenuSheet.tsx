@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type TransitionEvent as ReactTransitionEvent } from 'react';
 import { Dialog } from '@ark-ui/react/dialog';
 import { Portal } from '@ark-ui/react/portal';
 import { Link, useNavigate, useRouteContext } from '@tanstack/react-router';
@@ -7,7 +7,7 @@ import { css, cx } from 'styled-system/css';
 import { useAuth } from '@/ui/components/auth';
 
 // Desktop uses a lighter scrim — the menu is a small anchored dropdown, not a full takeover.
-const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out', lg: { bg: 'rgba(15,33,28,0.16)' } });
+const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out', '&[data-state="closed"]': { animation: 'wsFadeOut 180ms ease-out forwards' }, lg: { bg: 'rgba(15,33,28,0.16)' } });
 // Phone/tablet: bottom-centred sheet. Desktop: top-right, anchored under the header menu button.
 const positioner = css({
   position: 'fixed',
@@ -29,6 +29,7 @@ const sheet = css({
   boxShadow: '0 -8px 30px rgba(20,40,34,0.22)',
   fontFamily: 'wsUi',
   animation: 'wsSheetUp 260ms cubic-bezier(0.32,0.72,0,1)',
+  '&[data-state="closed"]': { animation: 'wsSheetDown 260ms cubic-bezier(0.32,0.72,0,1) forwards' },
   outline: 'none',
   lg: {
     maxWidth: '290px',
@@ -36,6 +37,7 @@ const sheet = css({
     padding: '10px 10px 12px',
     boxShadow: '0 16px 44px rgba(20,40,34,0.22)',
     animation: 'wsFade 150ms ease-out',
+    '&[data-state="closed"]': { animation: 'wsFadeOut 150ms ease-out forwards' },
   },
 });
 const grab = css({ display: 'block', width: '42px', height: '5px', borderRadius: '999px', bg: 'rgba(33,75,64,0.18)', margin: '0 auto 12px' });
@@ -94,10 +96,15 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
   const navigate = useNavigate();
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [closing, setClosing] = useState(false);
   const startY = useRef(0);
   const curY = useRef(0);
 
+  // Reopening clears any leftover drag/dismiss transform so the open animation runs from scratch.
+  useEffect(() => { if (open) { setClosing(false); setDragY(0); } }, [open]);
+
   const onDragDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (closing) return;
     startY.current = e.clientY;
     curY.current = 0;
     setDragging(true);
@@ -109,18 +116,26 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
     curY.current = dy;
     setDragY(dy);
   };
-  // Past 90 px the sheet dismisses; otherwise springs back.
+  // Past 90 px the gesture commits: keep sliding to the bottom to dismiss; otherwise spring back open.
   const onDragUp = () => {
     if (!dragging) return;
     setDragging(false);
-    if (curY.current > 90) onClose();
-    setDragY(0);
+    if (curY.current > 90) setClosing(true);
+    else setDragY(0);
   };
-
-  const sheetStyle =
-    dragging || dragY > 0
-      ? { transform: `translateY(${dragY}px)`, transition: dragging ? 'none' : 'transform 240ms cubic-bezier(0.32,0.72,0,1)', animation: 'none' as const }
-      : undefined;
+  // Drag follows the finger (no transition); on release it transitions to the resting or fully-dismissed transform. closing suppresses the keyframe so it can't fight the slide-down.
+  const sheetStyle: CSSProperties | undefined = closing
+    ? { transform: 'translateY(100%)', transition: 'transform 240ms cubic-bezier(0.32,0.72,0,1)', animation: 'none' }
+    : dragging
+      ? { transform: `translateY(${dragY}px)`, transition: 'none' }
+      : dragY > 0
+        ? { transform: 'translateY(0)', transition: 'transform 240ms cubic-bezier(0.32,0.72,0,1)' }
+        : undefined;
+  const onSheetTransitionEnd = (e: ReactTransitionEvent<HTMLDivElement>) => {
+    if (e.propertyName !== 'transform') return;
+    if (closing) onClose();
+    else if (dragY > 0) setDragY(0);
+  };
 
   const goReglages = () => {
     onClose();
@@ -150,7 +165,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
       <Portal>
         <Dialog.Backdrop className={scrim} data-testid="menu-sheet-backdrop" />
         <Dialog.Positioner className={positioner}>
-          <Dialog.Content className={sheet} style={sheetStyle}>
+          <Dialog.Content className={sheet} style={sheetStyle} onTransitionEnd={onSheetTransitionEnd}>
             <Dialog.Title className={srTitle}>Menu</Dialog.Title>
             <div
               className={dragZone}
