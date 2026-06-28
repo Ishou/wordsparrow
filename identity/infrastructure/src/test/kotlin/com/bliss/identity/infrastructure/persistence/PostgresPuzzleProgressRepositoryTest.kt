@@ -148,6 +148,14 @@ class PostgresPuzzleProgressRepositoryTest {
         }
 
     @Test
+    fun `upsert with non-null base when no row exists conflicts`() =
+        runTest {
+            val outcome = repo.upsert(row(), expectedUpdatedAt = now)
+            assertThat(outcome).isInstanceOf(UpsertOutcome.Conflict::class)
+            assertThat(repo.find(userId, puzzleId)).isNull()
+        }
+
+    @Test
     fun `findByUser returns only the caller's rows`() =
         runTest {
             val other = UserId(UUID.randomUUID())
