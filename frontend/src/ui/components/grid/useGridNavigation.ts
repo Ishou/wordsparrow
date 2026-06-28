@@ -727,9 +727,7 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
     focusCell(prev);
   }, [bumpEntries, focusCell, lookup]);
 
-  // Imperative cursor step. Flip-then-step only when the cell HAS a word on the
-  // pressed axis (rotate, then move on the next press); with no such word, skip
-  // the dead flip and step straight past definition cells to the next letter.
+  // Flip to the pressed axis only when this cell has a word there; otherwise step straight.
   const moveCursor = useCallback(
     (direction: 'left' | 'right' | 'up' | 'down') => {
       const { focused: f, direction: dir } = stateRef.current;
