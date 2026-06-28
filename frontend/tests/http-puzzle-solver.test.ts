@@ -138,6 +138,47 @@ describe('HttpPuzzleSolver — requestHint', () => {
     }
   });
 
+  it('sends credentials so the __Secure-ws_session cookie reaches grid-api', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(
+      json({ row: 0, column: 0, letter: 'A', hintsRemaining: 1 }),
+    );
+    const solver = createHttpPuzzleSolver({
+      baseUrl: 'https://api.example.test',
+      fetch: fetchSpy,
+    });
+
+    await solver.requestHint(PUZZLE_ID, 0, 0);
+
+    const call = fetchSpy.mock.calls[0][0];
+    const init = call instanceof Request ? call : fetchSpy.mock.calls[0][1];
+    expect((init as Request).credentials).toBe('include');
+  });
+
+  it('throws HintRequestError(auth-required) on 401', async () => {
+    const solver = createHttpPuzzleSolver({
+      baseUrl: 'https://api.example.test',
+      fetch: vi.fn().mockResolvedValue(
+        json(
+          {
+            type: 'https://bliss.example/errors/auth-required',
+            title: 'Authentification requise',
+            status: 401,
+            detail: 'Cette action nécessite une session valide.',
+          },
+          401,
+          'application/problem+json',
+        ),
+      ),
+    });
+    try {
+      await solver.requestHint(PUZZLE_ID, 3, 5);
+      expect.fail('expected HintRequestError to throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(HintRequestError);
+      expect((err as HintRequestError).kind).toBe('auth-required');
+    }
+  });
+
   it('throws HintRequestError(transient) on 5xx', async () => {
     const solver = createHttpPuzzleSolver({
       baseUrl: 'https://api.example.test',

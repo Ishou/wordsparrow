@@ -119,6 +119,8 @@ export function useHintRequest(
               // tick still fires so an in-flight pill clears.
               scheduleLinger();
               return;
+            } else if (err.kind === 'auth-required') {
+              setErrorMessage('Connecte-toi pour utiliser les indices');
             } else {
               setErrorMessage('Erreur, réessayez');
             }

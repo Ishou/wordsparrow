@@ -50,6 +50,7 @@ export function createGridApiClient(options: GridApiClientOptions): Client<paths
   const client = createClient<paths>({
     baseUrl: options.baseUrl,
     fetch: options.fetch,
+    credentials: 'include', // cross-origin __Secure-ws_session cookie for cookie-authed hint/erase calls
   });
   client.use({
     onRequest({ request }) {
