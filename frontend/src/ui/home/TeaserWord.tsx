@@ -4,6 +4,7 @@ import { css, cx } from 'styled-system/css';
 import { Cell, DefCell, Skeleton } from '@/design-system';
 import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
+import { Keyboard } from '@/ui/play/Keyboard';
 import type { SampleWord, WordsRepository } from '@/application';
 
 
@@ -54,20 +55,11 @@ const skipBtn = css({
   _hover: { opacity: 1 },
   _active: { opacity: 1 },
 });
-// Touch-only dismiss for the native soft keyboard — sakuraDark passes AA on white.
-const collapseBtn = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '28px',
-  height: '20px',
-  border: 'none',
-  borderRadius: '999px',
-  background: 'ws.sakuraDark',
-  color: '#fff',
-  cursor: 'pointer',
-  _active: { opacity: 0.85 },
-});
+// Docks our on-screen keyboard at the bottom (touch only) so the native soft keyboard never has to open.
+const kbDock = css({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1100, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '6px 10px calc(8px + env(safe-area-inset-bottom))' });
+const kbInner = css({ width: '100%', maxWidth: '440px' });
+// Dismiss handle sits on the dock, above the keys (where a keyboard's collapse affordance belongs).
+const kbCollapse = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '46px', height: '24px', border: 'none', borderRadius: '999px', background: 'rgba(255,255,255,0.62)', backdropFilter: 'blur(10px)', boxShadow: '0 2px 12px rgba(33,75,64,0.14)', color: 'ws.jadeInk', cursor: 'pointer', _active: { opacity: 0.85 } });
 
 function nextIndex(current: number, length: number): number {
   if (length <= 1) return 0;
@@ -80,9 +72,11 @@ export interface TeaserWordProps {
   readonly onStreak?: (current: number, best: number) => void;
   // Source of teaser pairs (ADR-0073). Absent → the hero stays in its loading skeleton.
   readonly wordsRepository?: WordsRepository;
+  // Signals when the on-screen keyboard is docked so the host can hide the bottom nav it would overlap.
+  readonly onKeyboardToggle?: (open: boolean) => void;
 }
 
-export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
+export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: TeaserWordProps) {
   const touchPrimary = useTouchPrimary();
   const [pool, setPool] = useState<ReadonlyArray<SampleWord>>([]);
   // Always start in the skeleton; the prerender has no repository, so a hard-coded clue would flash before the real one loads.
@@ -134,6 +128,10 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
     }
   }, [idx]);
   useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
+
+  // Our on-screen keyboard docks at the bottom on touch while a cell is focused; tell the host so it can hide the bottom nav.
+  const kbOpen = touchPrimary && focus !== null && !solved;
+  useEffect(() => { onKeyboardToggle?.(kbOpen); }, [kbOpen, onKeyboardToggle]);
 
   const commit = (next: string[]) => {
     lettersRef.current = next;
@@ -193,6 +191,16 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
     }
   };
 
+  // Backspace always steps back: a filled cell erases in place + moves left; an empty cell erases the previous.
+  const backspaceAt = (i: number) => {
+    if (solved) return;
+    const next = [...lettersRef.current];
+    if (next[i]) next[i] = '';
+    else if (i > 0) next[i - 1] = '';
+    commit(next);
+    if (i > 0) refs.current[i - 1]?.focus();
+  };
+
   const handleKeyDown = (i: number, e: KeyboardEvent<HTMLInputElement>) => {
     if (solved) return;
     // Left/Right move between cells (allowed even mid-wobble so focus can move).
@@ -208,15 +216,7 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
     }
     if (e.key !== 'Backspace') return;
     e.preventDefault();
-    // Backspace always steps back: filled cell erases in place + moves left; empty cell erases previous.
-    const next = [...lettersRef.current];
-    if (next[i]) {
-      next[i] = '';
-    } else if (i > 0) {
-      next[i - 1] = '';
-    }
-    commit(next);
-    if (i > 0) refs.current[i - 1]?.focus();
+    backspaceAt(i);
   };
 
   if (loading || !current) {
@@ -234,6 +234,7 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
   }
 
   return (
+    <>
     <div className={wrap}>
       <div className={row}>
         <div className={defBox}>
@@ -260,8 +261,6 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
                 maxLength={1}
                 // Roving tabindex: word is a single Tab stop; arrows/tap move between slots.
                 tabIndex={i === (focus ?? 0) ? 0 : -1}
-                // Override the grid's `inputMode: 'none'`: the teaser wants the native soft keyboard to pop.
-                inputMode="text"
                 readOnly={solved}
                 aria-label={`${current.clue} — lettre ${i + 1} sur ${n}`}
                 onChange={(e) => handleChange(i, e.target.value)}
@@ -278,19 +277,29 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
           <button type="button" className={skipBtn} onClick={skip}>
             Passer ›
           </button>
-        ) : touchPrimary && focus !== null ? (
-          <button
-            type="button"
-            className={collapseBtn}
-            aria-label="Masquer le clavier"
-            // preventDefault keeps the cell focused until our onClick blurs it explicitly.
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={dismissKeyboard}
-          >
-            <CaretDown size={14} weight="bold" aria-hidden="true" />
-          </button>
         ) : null}
       </div>
     </div>
+    {kbOpen ? (
+      <div className={kbDock}>
+        <button
+          type="button"
+          className={kbCollapse}
+          aria-label="Masquer le clavier"
+          // preventDefault keeps the cell focused until our onClick blurs it explicitly.
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={dismissKeyboard}
+        >
+          <CaretDown size={16} weight="bold" aria-hidden="true" />
+        </button>
+        <div className={kbInner}>
+          <Keyboard
+            onLetter={(l) => { if (focus !== null) handleChange(focus, l); }}
+            onBackspace={() => { if (focus !== null) backspaceAt(focus); }}
+          />
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 }
