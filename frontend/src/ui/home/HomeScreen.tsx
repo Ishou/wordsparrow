@@ -178,6 +178,8 @@ export function HomeScreen({
   const navigate = useNavigate();
   const [streak, setStreak] = useState({ cur: 0, best: 0 });
   const [menuOpen, setMenuOpen] = useState(false);
+  // The teaser docks our on-screen keyboard over the bottom nav; hide the nav while it's up.
+  const [teaserTyping, setTeaserTyping] = useState(false);
   const [coopPending, setCoopPending] = useState(false);
 
   const multiplayerOn = lobbyClient != null && getSession != null;
@@ -294,6 +296,7 @@ export function HomeScreen({
                 <TeaserWord
                   wordsRepository={wordsRepository}
                   onStreak={(cur, best) => setStreak({ cur, best })}
+                  onKeyboardToggle={setTeaserTyping}
                 />
               </div>
               <div className={dailyBand}>
@@ -420,7 +423,7 @@ export function HomeScreen({
           </div>
         </div>
 
-        <BottomNav active="accueil" />
+        {!teaserTyping ? <BottomNav active="accueil" /> : null}
       </div>
 
       <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} streak={streak.cur} />
