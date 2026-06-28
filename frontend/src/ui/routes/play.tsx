@@ -1,10 +1,11 @@
-import { createRoute, useNavigate } from '@tanstack/react-router';
+import { createRoute, useNavigate, useRouter } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
 // Sanctioned app→module bridge (ADR-0072).
 import { PlayScreen } from '@/ui/play/PlayScreen';
 import { PhoneShell } from '@/ui/v2/PhoneShell';
 import { SparrowState } from '@/ui/v2/SparrowState';
+import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { INDEXABLE_ROUTES, SITE_BASE_URL, breadcrumbJsonLd, gameJsonLd, indexableHead } from '@/ui/seo';
 import { Route as AppLayoutRoute } from './app-layout';
 
@@ -39,6 +40,24 @@ function PlayUnavailable() {
         title="Bientôt disponible"
         body="La grille du jour se prépare. Elle arrive au lever du soleil."
         cta={{ label: 'Voir les grilles passées', onClick: () => void navigate({ to: '/grilles' }) }}
+      />
+    </PhoneShell>
+  );
+}
+
+// A thrown loader error is a transient failure (network blip, 5xx, an SW
+// status-0 fallthrough) — NOT the worker-not-ready 404, which the loader
+// maps to `null`. Showing "la grille se prépare" here would falsely tell
+// the player to come back at sunrise; offer a retry that re-runs the loader.
+function PlayLoadError() {
+  const router = useRouter();
+  return (
+    <PhoneShell>
+      <SparrowState
+        scene={sparrowFlightScene()}
+        title="Connexion interrompue"
+        body="La grille n'a pas pu être chargée. Vérifie ta connexion et réessaie."
+        cta={{ label: 'Réessayer', onClick: () => void router.invalidate() }}
       />
     </PhoneShell>
   );
@@ -94,7 +113,7 @@ export const Route = createRoute({
   pendingComponent: PlayPending,
   // Show the placeholder immediately so first client render matches the prerendered body (no blank frame, no grid flash).
   pendingMs: 0,
-  errorComponent: PlayUnavailable,
+  errorComponent: PlayLoadError,
   head: () => {
     const r = INDEXABLE_ROUTES.find((x) => x.path === '/play')!;
     return {
