@@ -12,20 +12,23 @@ const KEY_ROWS = [
 const keyboard = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '7px',
+  gap: '6px',
   alignItems: 'stretch',
   width: '100%',
   bg: 'rgba(255,255,255,0.62)',
   backdropFilter: 'blur(10px)',
   border: '0.5px solid rgba(255,255,255,0.7)',
   borderRadius: '18px',
-  padding: '9px 10px',
+  padding: '5px 6px',
   boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
-  '& button': { flex: 'none', width: 'calc((100% - 45px) / 10)', minWidth: 0 },
+  // 36px = 9 inter-key gaps × 4px; tight padding + gaps maximise each key's width.
+  '& button': { flex: 'none', width: 'calc((100% - 36px) / 10)', minWidth: 0 },
+  // Backspace is the lone non-letter — give it ~1.7× a letter so it's an easy target.
+  '& button[aria-label="Effacer"]': { width: 'calc((100% - 36px) / 10 * 1.7)' },
   // pointer:fine guards the lg hide — a touch tablet wider than 1024px has no physical keyboard.
   '@media (min-width: 1024px) and (pointer: fine)': { display: 'none' },
 });
-const keyRow = css({ display: 'flex', gap: '5px', justifyContent: 'center' });
+const keyRow = css({ display: 'flex', gap: '4px', justifyContent: 'center' });
 
 export interface KeyboardProps {
   readonly onLetter: (letter: string) => void;
