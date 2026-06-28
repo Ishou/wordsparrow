@@ -1,6 +1,7 @@
 // storage failures are non-fatal — every helper degrades to a no-op rather than throw.
 
 import type { SoloEntry, SoloLockedCell } from '@/application/solo/SoloEntriesStore';
+import type { SoloStorePayload } from '@/application/progress/SoloStorePayload';
 
 const KEY_PREFIX = 'bliss.solo.entries.';
 const LEGACY_KEY = 'bliss.solo.entries';
@@ -193,6 +194,47 @@ export function clearSoloEntriesForPuzzle(
   if (!(puzzleId in store)) return;
   delete store[puzzleId];
   writeStore(sessionId, store);
+}
+
+/** The full blob for one puzzle, normalised — backs the sync layer's merge (ADR-0075). */
+export function loadSoloPayload(sessionId: string, puzzleId: string): SoloStorePayload {
+  const bucket = readBucket(readStore(sessionId), puzzleId);
+  return {
+    entries: bucket.entries
+      .filter(
+        (e): e is StoredEntry =>
+          typeof e?.r === 'number' &&
+          typeof e?.c === 'number' &&
+          typeof e?.l === 'string' &&
+          e.l.length > 0,
+      )
+      .map((e) => ({ r: e.r, c: e.c, l: e.l })),
+    lockedCells: (bucket.lockedCells ?? [])
+      .filter((e): e is StoredLock => typeof e?.r === 'number' && typeof e?.c === 'number')
+      .map((e) => ({ r: e.r, c: e.c })),
+    hintsUsed:
+      typeof bucket.hintsUsed === 'number' && bucket.hintsUsed >= 0 ? bucket.hintsUsed : 0,
+  };
+}
+
+/** Replaces one puzzle's blob wholesale after a sync merge (ADR-0075). */
+export function replaceSoloPayload(
+  sessionId: string,
+  puzzleId: string,
+  payload: SoloStorePayload,
+): void {
+  const store = readStore(sessionId);
+  persistBucket(store, puzzleId, {
+    entries: payload.entries.map((e) => ({ r: e.r, c: e.c, l: e.l })),
+    lockedCells: payload.lockedCells.map((e) => ({ r: e.r, c: e.c })),
+    hintsUsed: payload.hintsUsed,
+  });
+  writeStore(sessionId, store);
+}
+
+/** Puzzle ids the device currently holds local progress for. */
+export function listSoloPuzzleIds(sessionId: string): string[] {
+  return Object.keys(readStore(sessionId));
 }
 
 /** Defensive sweep used by RGPD Art. 17 erase — removes every scoped + legacy key. */
