@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 
-// True at the `lg` breakpoint (≥1024px). Initialised synchronously so the first paint
-// already uses the desktop layout — avoids a mobile→desktop re-layout flicker on load.
+// True at the `lg` breakpoint (≥1024px); initialised synchronously to avoid a layout flicker on first paint.
 export function useIsDesktop(): boolean {
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(min-width: 1024px)').matches,
