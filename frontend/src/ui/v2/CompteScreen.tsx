@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouteContext } from '@tanstack/react-router';
-import { Check, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
+import { Check, CircleNotch, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { InvalidDisplayNameError, type GetMeResult } from '@/application/auth';
 import { useAuth } from '@/ui/components/auth';
@@ -38,7 +38,8 @@ const dangerWrap = css({ marginTop: '6px' });
 
 const signInCard = css({ bg: 'white', borderRadius: '20px', padding: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 12px 26px rgba(33,75,64,0.09)', textAlign: 'center' });
 const signInLede = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'semibold', color: 'ws.khaki', marginTop: '8px', marginBottom: '16px' });
-const googleBtn = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', height: '50px', borderRadius: '14px', bg: 'ws.jadeInk', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', textDecoration: 'none', cursor: 'pointer', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const googleBtn = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', height: '50px', borderRadius: '14px', bg: 'ws.jadeInk', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', textDecoration: 'none', cursor: 'pointer', transition: 'opacity 120ms', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const spin = css({ animation: 'wsSpin 0.7s linear infinite' });
 
 function initialFor(name: string): string {
   return ([...name.trim()][0] ?? '?').toLocaleUpperCase('fr-FR');
@@ -168,8 +169,10 @@ function AuthedCompte() {
 function SignInPrompt() {
   const { authClient } = useRouteContext({ from: '__root__' });
   const [returnTo, setReturnTo] = useState('');
+  const [redirecting, setRedirecting] = useState(false);
   useEffect(() => setReturnTo(window.location.href), []);
   const href = authClient && returnTo ? authClient.signInUrl('google', returnTo) : '#';
+  const disabled = href === '#' || redirecting;
   return (
     <div className={stack}>
       <div className={signInCard}>
@@ -178,9 +181,26 @@ function SignInPrompt() {
         </span>
         <p className={signInLede}>Connecte-toi pour retrouver ta progression sur tous tes appareils.</p>
         {/* Anchor required: the browser must follow the 302 chain to accept Set-Cookie. */}
-        <a href={href} aria-disabled={href === '#' ? true : undefined} className={googleBtn}>
-          <GoogleLogo size={20} weight="bold" aria-hidden="true" />
-          Se connecter avec Google
+        <a
+          href={href}
+          aria-disabled={disabled ? true : undefined}
+          aria-busy={redirecting || undefined}
+          className={googleBtn}
+          style={redirecting ? { pointerEvents: 'none', opacity: 0.85 } : undefined}
+          // Show progress while the browser follows the OAuth redirect chain.
+          onClick={() => { if (href !== '#') setRedirecting(true); }}
+        >
+          {redirecting ? (
+            <>
+              <CircleNotch size={20} weight="bold" aria-hidden="true" className={spin} />
+              Connexion…
+            </>
+          ) : (
+            <>
+              <GoogleLogo size={20} weight="bold" aria-hidden="true" />
+              Se connecter avec Google
+            </>
+          )}
         </a>
       </div>
     </div>

@@ -342,6 +342,7 @@ export default defineConfig({
       // Win celebration (Phase 3): screen fade, drifting sakura petals, blossom pulse.
       wsFade: { from: { opacity: '0' }, to: { opacity: '1' } },
       wsFadeOut: { from: { opacity: '1' }, to: { opacity: '0' } },
+      wsSpin: { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } },
       wsPetalFall: {
         '0%': { transform: 'translateY(0) translateX(0) rotate(0deg)' },
         '50%': { transform: 'translateY(460px) translateX(18px) rotate(180deg)' },
