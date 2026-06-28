@@ -104,7 +104,7 @@ describe('registerServiceWorker — update strategy', () => {
     expect(constructorCalls[0]!.options).toMatchObject({ updateViaCache: 'none' });
   });
 
-  it('reloads immediately when controlling fires within the fresh-load window', () => {
+  it('reloads immediately when controlling fires while the tab is visible', () => {
     registerServiceWorker();
 
     fireControlling();
@@ -112,25 +112,15 @@ describe('registerServiceWorker — update strategy', () => {
     expect(reloadMock).toHaveBeenCalledTimes(1);
   });
 
-  it('defers the reload when controlling fires after the fresh-load window', () => {
+  it('reloads a visible tab immediately even long after load (no time window)', () => {
     registerServiceWorker();
 
     vi.advanceTimersByTime(5000);
     fireControlling();
-    expect(reloadMock).not.toHaveBeenCalled();
-
-    // Tab is still visible — the deferred reload waits for the next
-    // hidden→visible transition before firing.
-    setVisibility('hidden');
-    document.dispatchEvent(new Event('visibilitychange'));
-    expect(reloadMock).not.toHaveBeenCalled();
-
-    setVisibility('visible');
-    document.dispatchEvent(new Event('visibilitychange'));
     expect(reloadMock).toHaveBeenCalledTimes(1);
   });
 
-  it('defers the reload when the tab is hidden, even within the fresh-load window', () => {
+  it('defers the reload while the tab is hidden until it is next shown', () => {
     setVisibility('hidden');
     registerServiceWorker();
 
@@ -152,10 +142,10 @@ describe('registerServiceWorker — update strategy', () => {
     expect(reloadMock).toHaveBeenCalledTimes(1);
   });
 
-  it('arms only one deferred-reload listener even if controlling fires multiple times mid-session', () => {
+  it('arms only one deferred-reload listener even if controlling fires multiple times while hidden', () => {
+    setVisibility('hidden');
     registerServiceWorker();
 
-    vi.advanceTimersByTime(5000);
     fireControlling();
     fireControlling();
 
