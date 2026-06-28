@@ -187,7 +187,6 @@ function SignInPrompt() {
           aria-busy={redirecting || undefined}
           className={googleBtn}
           style={redirecting ? { pointerEvents: 'none', opacity: 0.85 } : undefined}
-          // Show progress while the browser follows the OAuth redirect chain.
           onClick={() => { if (href !== '#') setRedirecting(true); }}
         >
           {redirecting ? (
