@@ -145,6 +145,9 @@ ADR-0073  frontend/src/infrastructure/api/grid/types.ts  Generated SampleWord ty
 ADR-0074  frontend/src/ui/router.ts                  v1→v2 cutover: drop the /v2 prefix (v2 routes → root), delete v1 routes, redirect renamed v1 paths (preserve search params); multiplayer flag still gates lobby/join
 ADR-0074  frontend/src/ui/routes/**                  Promote-to-root: ex-v2 routes lose their /v2 prefix and register at root; v1 route files deleted; renamed v1 paths (/grille→/play, /accueil→/, /privacy→/confidentialite) redirect
 # ADR-0074: production cutover from the v1 forest design to the v2 jade/sakura design. v2 promoted to root (NOT kept under /v2), v1 removed. Contribuer fully gated now, un-gated for the maintainer in a follow-up (needs a whoami role).
+ADR-0075  identity/api/openapi.yaml                  Cross-device solo progress sync: cookie-authed user-scoped /v1/users/me/progress (batch GET) + /v1/users/me/progress/{puzzleId} (GET/PUT); payload is an opaque SoloStore blob (no grid $ref); 409 optimistic-concurrency, 413 over 64 KiB cap; client-side semantic merge
+ADR-0075  identity/infrastructure/**                 V6__puzzle_progress table (user_id FK→users ON DELETE CASCADE, puzzle_id, payload JSONB, updated_at, PK (user_id, puzzle_id)); opaque per-puzzle blob, server never parses it (Wave 2)
+ADR-0075  frontend/src/infrastructure/session/**     Solo-progress sync layer over localStorageSolo: batch-pull + client-side semantic merge on authed load, debounced push, onAuthed anon carry-over (Wave 3)
 ```
 
 ## Adding entries
