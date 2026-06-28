@@ -1,6 +1,7 @@
 import { css } from 'styled-system/css';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
+import { EraseData } from './EraseData';
 import { contentCard, eyebrow, lede, sectionBody, sectionHeading } from './contentPage';
 
 const title = css({
@@ -24,22 +25,6 @@ const pill = css({
   bg: 'ws.sable',
   borderRadius: '999px',
   padding: '5px 11px',
-});
-
-const cta = css({
-  appearance: 'none',
-  width: '100%',
-  height: '46px',
-  marginTop: '4px',
-  borderRadius: '13px',
-  border: '2px solid rgba(33,75,64,0.18)',
-  bg: 'transparent',
-  fontFamily: 'wsUi',
-  fontWeight: 'black',
-  fontSize: '14px',
-  color: 'ws.jadeInk',
-  cursor: 'not-allowed',
-  opacity: 0.7,
 });
 
 export function ConfidentialiteScreen() {
@@ -77,15 +62,12 @@ export function ConfidentialiteScreen() {
         <section className={contentCard}>
           <h2 className={sectionHeading}>Tes droits</h2>
           <p className={sectionBody}>
-            Tu peux à tout moment effacer ta progression et tes préférences depuis les Réglages.
-            Accès, rectification, suppression — c&apos;est toi qui décides.
+            Accès, rectification, suppression — c&apos;est toi qui décides. Si tu as un compte, tu peux
+            effacer définitivement tes données serveur ci-dessous.
           </p>
         </section>
 
-        {/* Réglages v2 not built yet — inert placeholder, no dead link. */}
-        <button type="button" className={cta} disabled>
-          Gérer mes préférences
-        </button>
+        <EraseData />
       </article>
     </PhoneShell>
   );
