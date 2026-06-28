@@ -7,7 +7,6 @@ export interface MobileTopBarProps {
   readonly onMenuClick: () => void;
 }
 
-// Phone/tablet top bar for top-level destinations (home, grilles): brand → /, menu button. Hidden at lg.
 const bar = css({ flex: 'none', display: 'flex', alignItems: 'center', marginBottom: '24px', lg: { display: 'none' } });
 const brandLink = css({ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', borderRadius: '12px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '4px' } });
 const menuBtn = css({ marginLeft: 'auto', flex: 'none', width: '44px', height: '44px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'rgba(255,255,255,0.62)', color: 'ws.jadeInk', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'rgba(255,255,255,0.82)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
