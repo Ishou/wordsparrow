@@ -106,4 +106,45 @@ describe('MSW lobby REST handlers', () => {
     const body = (await response.json()) as Problem;
     expect(body.type).toBe('https://bliss.example/errors/lobby-not-found');
   });
+
+  // missing handler leaked to prod game-api on preview sign-in (ADR-0007 §5).
+  it('POST /v1/lobbies/players/rebind returns 204 (idempotent no-op)', async () => {
+    const response = await fetch(`${BASE}/v1/lobbies/players/rebind`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ anonSessionId: sessionId }),
+    });
+    expect(response.status).toBe(204);
+  });
+
+  it('POST /v1/lobbies/players/rebind returns 400 problem+json when anonSessionId is missing', async () => {
+    const response = await fetch(`${BASE}/v1/lobbies/players/rebind`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as Problem;
+    expect(body.type).toBe('https://bliss.example/errors/invalid-rebind-request');
+  });
+
+  it('POST /v1/lobbies/players/unbind returns 204 (idempotent no-op)', async () => {
+    const response = await fetch(`${BASE}/v1/lobbies/players/unbind`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ anonPseudonym: pseudonym }),
+    });
+    expect(response.status).toBe(204);
+  });
+
+  it('POST /v1/lobbies/players/unbind returns 400 problem+json when anonPseudonym is missing', async () => {
+    const response = await fetch(`${BASE}/v1/lobbies/players/unbind`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as Problem;
+    expect(body.type).toBe('https://bliss.example/errors/invalid-unbind-request');
+  });
 });

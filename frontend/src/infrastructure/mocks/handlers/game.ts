@@ -120,6 +120,44 @@ export const gameHandlers = [
     });
   }),
 
+  // preview→prod leak guard: anon→authed hook fires rebind on first paint (ADR-0007 §5).
+  http.post('*/v1/lobbies/players/rebind', async ({ request }) => {
+    let body: { anonSessionId?: string };
+    try {
+      body = (await request.json()) as { anonSessionId?: string };
+    } catch {
+      body = {};
+    }
+    if (!body?.anonSessionId) {
+      return problem(
+        400,
+        'https://bliss.example/errors/invalid-rebind-request',
+        'Invalid request body',
+        '`anonSessionId` is required.',
+      );
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // symmetric pre-logout path; same prod-leak class as rebind (ADR-0007 §5).
+  http.post('*/v1/lobbies/players/unbind', async ({ request }) => {
+    let body: { anonPseudonym?: string };
+    try {
+      body = (await request.json()) as { anonPseudonym?: string };
+    } catch {
+      body = {};
+    }
+    if (!body?.anonPseudonym) {
+      return problem(
+        400,
+        'https://bliss.example/errors/invalid-unbind-request',
+        'Invalid request body',
+        '`anonPseudonym` is required.',
+      );
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // GET /v1/lobbies/by-code/:code — must match before the `:lobbyId`
   // catch-all below; MSW dispatches the first matching handler.
   http.get('*/v1/lobbies/by-code/:code', ({ params }) => {
