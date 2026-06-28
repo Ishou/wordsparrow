@@ -727,26 +727,28 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
     focusCell(prev);
   }, [bumpEntries, focusCell, lookup]);
 
-  // Imperative cursor step; flip-then-step semantics (first press on wrong axis rotates, second moves).
+  // Imperative cursor step. Flip-then-step only when the cell HAS a word on the
+  // pressed axis (rotate, then move on the next press); with no such word, skip
+  // the dead flip and step straight past definition cells to the next letter.
   const moveCursor = useCallback(
     (direction: 'left' | 'right' | 'up' | 'down') => {
       const { focused: f, direction: dir } = stateRef.current;
       if (!f) return;
       if (direction === 'left' || direction === 'right') {
-        if (dir !== 'across') {
+        if (dir !== 'across' && lookup.clueAt(f.row, f.col, 'across')) {
           setDirection('across');
           return;
         }
         moveByVector(0, direction === 'right' ? 1 : -1);
         return;
       }
-      if (dir !== 'down') {
+      if (dir !== 'down' && lookup.clueAt(f.row, f.col, 'down')) {
         setDirection('down');
         return;
       }
       moveByVector(direction === 'down' ? 1 : -1, 0);
     },
-    [moveByVector],
+    [moveByVector, lookup],
   );
 
   const handleKeyDown = useCallback(
