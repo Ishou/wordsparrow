@@ -17,7 +17,7 @@ overrides:
   qs: 6.15.2
   # undici/tmp are dev-only (jsdom/vitest/panda + lhci toolchain); patched lines close Set-Cookie/SOCKS5 (undici) and path-traversal (tmp) CVEs.
   undici: 7.28.0
-  tmp: 0.2.6
+  tmp: 0.2.7
 
 # pnpm 11 fails install when a dependency in the graph runs an install
 # script unless the package is on this allowlist (was a soft warning in
@@ -27,7 +27,7 @@ overrides:
 # module resolver under eslint-import-resolver-typescript).
 allowBuilds:
   esbuild: true
-  puppeteer: true  # ADR-0064: lhci → lighthouse → puppeteer downloads pinned Chromium for audits
+  puppeteer: true # ADR-0064: lhci → lighthouse → puppeteer downloads pinned Chromium for audits
   msw: true
   protobufjs: true
   unrs-resolver: true
@@ -35,4 +35,8 @@ allowBuilds:
 # Supply-chain cooldown (ADR-0071): refuse any dependency version younger than 24h, at resolution AND frozen-lockfile verify, transitive included.
 minimumReleaseAge: 1440
 # Day-1 CVE escape hatch: add the exact "pkg@version" here after a human vets the advisory, then merge. See ADR-0071.
-minimumReleaseAgeExclude: []
+minimumReleaseAgeExclude:
+  [
+    # Renovate security update: tmp@0.2.7
+    tmp@0.2.7
+  ]
