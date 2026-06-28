@@ -27,6 +27,12 @@ application {
 }
 
 dependencies {
+    // Flyway 12.8.1 pulls jackson-bom 3.1.1; force jackson 3.x to 3.2.0 since databind 3.1.1 has the polymorphic-typing/@JsonView/SSRF CVEs fixed in 3.1.4.
+    constraints {
+        implementation("tools.jackson.core:jackson-core:3.2.0")
+        implementation("tools.jackson.core:jackson-databind:3.2.0")
+    }
+
     // Survey bounded-context inner layers (ADR-0001 §1).
     implementation(project(":survey:domain"))
     implementation(project(":survey:application"))
