@@ -44,7 +44,8 @@ const shell = css({
 // Phone: mobile column. Tablet: centred framed card. Desktop: a wide 2-column container.
 const frame = css({
   width: '100%',
-  maxWidth: '420px',
+  // Match PhoneShell's phone column so home and grilles share the exact same page width.
+  maxWidth: '440px',
   flex: 1,
   minHeight: 0,
   display: 'flex',
