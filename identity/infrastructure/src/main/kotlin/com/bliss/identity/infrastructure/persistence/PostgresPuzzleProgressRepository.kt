@@ -16,11 +16,7 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 import javax.sql.DataSource
 
-/**
- * Postgres-backed [ProgressRepository]. JDBC is blocking; every method wraps its calls in
- * `withContext(Dispatchers.IO)`. The optimistic-concurrency guard lives in the SQL `WHERE`
- * clause so the check-and-write is atomic (ADR-0075).
- */
+// JDBC is blocking; every method dispatches to IO; the optimistic-concurrency guard is atomic in SQL (ADR-0075).
 class PostgresPuzzleProgressRepository(
     private val dataSource: DataSource,
 ) : ProgressRepository {

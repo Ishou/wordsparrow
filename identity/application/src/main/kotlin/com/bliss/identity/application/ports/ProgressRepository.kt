@@ -22,10 +22,7 @@ interface ProgressRepository {
         puzzleId: PuzzleId,
     ): PuzzleProgress?
 
-    /**
-     * Inserts or updates one row, writing only when [expectedUpdatedAt] equals the stored
-     * `updated_at` (or no row exists when it is null). A mismatch yields [UpsertOutcome.Conflict].
-     */
+    // Null expectedUpdatedAt allows first write; a mismatch with the stored updated_at yields Conflict.
     suspend fun upsert(
         progress: PuzzleProgress,
         expectedUpdatedAt: Instant?,
