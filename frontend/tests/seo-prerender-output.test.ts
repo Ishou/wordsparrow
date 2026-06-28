@@ -85,11 +85,7 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       expect(robots).toContain('Sitemap: https://wordsparrow.io/sitemap.xml');
     });
 
-    // The generated SW must denylist every prerendered route from the
-    // `/index.html` navigation fallback, or a returning user's F5 on
-    // that route is served the home shell (the prerender-route-flash
-    // bug — only `index.html` is precached, so the fallback serves home
-    // for everything not denylisted).
+    // SW navigation fallback must exclude every prerendered route or returning users get the home shell.
     const PRERENDERED = [
       ...INDEXABLE_ROUTES.map((r) => r.path).filter((p) => p !== '/'),
       ...NOINDEX_PRERENDER_ROUTES.map((r) => r.path),

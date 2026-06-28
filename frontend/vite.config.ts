@@ -40,15 +40,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 // Both pieces are no-ops in dev (the dev server serves CSS/woff2
 // straight from `node_modules`); they only run during `vite build`.
 
-// Prerendered routes are flat `dist/<slug>.html` files written by the
-// post-build prerender step, AFTER Workbox generates its precache
-// manifest — so only `index.html` is precached and the navigation
-// fallback would otherwise serve the home shell for every prerendered
-// route on a returning user's F5 (ADR-0053). Denylist them so the SW
-// lets the navigation hit the network, where Cloudflare serves the
-// route's own prerendered HTML. `tests/seo-prerender-output.test.ts`
-// gates the generated SW denylist against the route manifest so this
-// list cannot silently drift from the prerendered routes.
+// Prerendered routes are post-Workbox; denylist so navigations hit Cloudflare's per-route HTML — ADR-0053.
 const PRERENDERED_ROUTE_PATHS = [
   '/play',
   '/grilles',
@@ -202,11 +194,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
         navigateFallback: '/index.html',
-        // Bypass `navigateFallback` for paths Cloudflare Pages serves
-        // directly (per-route prerendered HTML, robots, sitemap, API).
-        // Without these a returning user with the SW installed gets the
-        // home shell on F5 of any non-home route (mode: 'navigate' →
-        // fallback fires before the network) — ADR-0053, ADR-0026.
+        // Bypass navigateFallback for paths CF Pages serves directly; see ADR-0053, ADR-0026.
         navigateFallbackDenylist: [
           /^\/v1\//,
           /^\/robots\.txt$/,
