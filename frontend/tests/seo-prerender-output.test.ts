@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { INDEXABLE_ROUTES, SITE_BASE_URL } from '@/ui/seo';
+import { INDEXABLE_ROUTES, NOINDEX_PRERENDER_ROUTES, SITE_BASE_URL } from '@/ui/seo';
 
 const DIST = resolve(__dirname, '../dist');
 
@@ -83,6 +83,21 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       expect(robots).toContain('Disallow: /join/');
       expect(robots).toContain('Disallow: /privacy');
       expect(robots).toContain('Sitemap: https://wordsparrow.io/sitemap.xml');
+    });
+
+    // SW navigation fallback must exclude every prerendered route or returning users get the home shell.
+    const PRERENDERED = [
+      ...INDEXABLE_ROUTES.map((r) => r.path).filter((p) => p !== '/'),
+      ...NOINDEX_PRERENDER_ROUTES.map((r) => r.path),
+    ];
+    it.each(PRERENDERED)('SW navigation denylist excludes %s', (path) => {
+      const sw = readFileSync(resolve(DIST, 'sw.js'), 'utf8');
+      const denylist = /createHandlerBoundToURL\("\/index\.html"\),\{denylist:\[([^\]]*)\]/.exec(sw);
+      expect(denylist, 'NavigationRoute denylist not found in sw.js').not.toBeNull();
+      const matched = denylist![1]
+        .split(/,(?=\/)/)
+        .some((src) => new RegExp(src.replace(/^\/|\/$/g, '')).test(path));
+      expect(matched, `${path} is not in the SW navigation denylist`).toBe(true);
     });
 
     it('embeds JSON-LD WebApplication on the homepage', () => {
@@ -252,3 +267,4 @@ describe('per-route OG image assets', () => {
     },
   );
 });
+

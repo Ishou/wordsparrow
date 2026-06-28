@@ -39,6 +39,21 @@ import { VitePWA } from 'vite-plugin-pwa';
 //
 // Both pieces are no-ops in dev (the dev server serves CSS/woff2
 // straight from `node_modules`); they only run during `vite build`.
+
+// Prerendered routes are post-Workbox; denylist so navigations hit Cloudflare's per-route HTML — ADR-0053.
+const PRERENDERED_ROUTE_PATHS = [
+  '/play',
+  '/grilles',
+  '/aide',
+  '/mentions-legales',
+  '/confidentialite',
+  '/compte',
+] as const;
+const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const PRERENDER_NAV_DENYLIST: RegExp[] = PRERENDERED_ROUTE_PATHS.map(
+  (p) => new RegExp(`^${escapeRegExp(p)}/?$`),
+);
+
 function preloadLatinBodyFont(): Plugin {
   return {
     name: 'preload-latin-body-font',
@@ -179,15 +194,12 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
         navigateFallback: '/index.html',
-        // Bypass `navigateFallback` for files served by Cloudflare Pages
-        // directly. Without these, a returning user with the SW installed
-        // gets the SPA shell when typing `/robots.txt` or `/sitemap.xml`
-        // in the address bar (mode: 'navigate' → fallback fires). See
-        // ADR-0035.
+        // Bypass navigateFallback for paths CF Pages serves directly; see ADR-0053, ADR-0026.
         navigateFallbackDenylist: [
           /^\/v1\//,
           /^\/robots\.txt$/,
           /^\/sitemap\.xml$/,
+          ...PRERENDER_NAV_DENYLIST,
         ],
         cleanupOutdatedCaches: true,
         // skipWaiting+clientsClaim: see ADR-0026 for reload-on-update UX
