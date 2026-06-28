@@ -7,8 +7,19 @@ export interface MobileTopBarProps {
   readonly onMenuClick: () => void;
 }
 
-// Self-contained spacing (safe-area top, side gutter, bottom gap) so every host renders this bar identically — no slot may add padding around it.
-const bar = css({ flex: 'none', display: 'flex', alignItems: 'center', padding: 'calc(env(safe-area-inset-top) + 22px) 22px 24px', lg: { display: 'none' } });
+// Self-contained spacing + sticky so every host renders an identical bar that pins even when the outer document scrolls (iOS dvh can outgrow the app-shell); the frosted bg hides content sliding under it.
+const bar = css({
+  position: 'sticky',
+  top: 0,
+  zIndex: 20,
+  flex: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  padding: 'calc(env(safe-area-inset-top) + 22px) 22px 24px',
+  bg: 'rgba(205, 233, 218, 0.82)',
+  backdropFilter: 'blur(10px)',
+  lg: { display: 'none' },
+});
 const brandLink = css({ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', borderRadius: '12px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '4px' } });
 const menuBtn = css({ marginLeft: 'auto', flex: 'none', width: '44px', height: '44px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'rgba(255,255,255,0.62)', color: 'ws.jadeInk', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'rgba(255,255,255,0.82)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
