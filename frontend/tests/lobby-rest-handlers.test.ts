@@ -107,8 +107,7 @@ describe('MSW lobby REST handlers', () => {
     expect(body.type).toBe('https://bliss.example/errors/lobby-not-found');
   });
 
-  // The anon→authed post-auth hook POSTs rebind on every preview sign-in;
-  // a missing handler leaked to the prod game-api (ADR-0007 §5 / ADR-0009 §7).
+  // missing handler leaked to prod game-api on preview sign-in (ADR-0007 §5).
   it('POST /v1/lobbies/players/rebind returns 204 (idempotent no-op)', async () => {
     const response = await fetch(`${BASE}/v1/lobbies/players/rebind`, {
       method: 'POST',

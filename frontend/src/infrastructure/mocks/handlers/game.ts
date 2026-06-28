@@ -120,11 +120,7 @@ export const gameHandlers = [
     });
   }),
 
-  // POST /v1/lobbies/players/rebind — fired by the anon→authed post-auth
-  // hook on every sign-in; preview seeds an authed whoami, so this runs
-  // on first paint. Without it the request leaks to the prod game-api
-  // (ADR-0007 §5 / ADR-0009 §7). A 204 no-op is contract-faithful (the
-  // spec marks zero rows touched as success); preview has no seat to migrate.
+  // preview→prod leak guard: anon→authed hook fires rebind on first paint (ADR-0007 §5).
   http.post('*/v1/lobbies/players/rebind', async ({ request }) => {
     let body: { anonSessionId?: string };
     try {
@@ -143,8 +139,7 @@ export const gameHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // POST /v1/lobbies/players/unbind — symmetric to rebind; the menu's
-  // "Se déconnecter" calls it before logout. Same prod-leak class; 204 no-op.
+  // symmetric pre-logout path; same prod-leak class as rebind (ADR-0007 §5).
   http.post('*/v1/lobbies/players/unbind', async ({ request }) => {
     let body: { anonPseudonym?: string };
     try {
