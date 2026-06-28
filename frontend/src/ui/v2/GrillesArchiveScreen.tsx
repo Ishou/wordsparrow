@@ -61,11 +61,11 @@ const card = css({
   alignItems: 'center',
   gap: '12px',
   marginBottom: '10px',
-  boxShadow: '0 1px 2px rgba(33,75,64,0.05)',
+  boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
   cursor: 'pointer',
   transition: 'transform 120ms, box-shadow 120ms',
-  _hover: { transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(33,75,64,0.12)' },
-  _active: { transform: 'translateY(0)' },
+  _hover: { transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(33,75,64,0.14)' },
+  _active: { transform: 'translateY(1px)' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 
