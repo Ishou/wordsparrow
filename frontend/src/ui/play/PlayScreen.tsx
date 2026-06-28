@@ -444,8 +444,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     if (won && userActedRef.current) setWonLive(true);
   }, [won]);
 
-  // Auto-focus the first unsolved cell on mount — desktop only. On touch devices a programmatic
-  // focus pops the native keyboard despite inputMode="none"; mobile players tap a cell to start.
+  // Desktop only: touch devices pop the native keyboard on programmatic focus despite inputMode="none".
   const didAutoFocusRef = useRef(false);
   useEffect(() => {
     if (didAutoFocusRef.current || won || !lockedLoaded || touchPrimary) return;
