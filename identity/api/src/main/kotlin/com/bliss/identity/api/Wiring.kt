@@ -11,7 +11,10 @@ import com.bliss.identity.application.usecases.CompleteOidcLoginUseCase
 import com.bliss.identity.application.usecases.CompleteProviderLinkUseCase
 import com.bliss.identity.application.usecases.DeleteUserUseCase
 import com.bliss.identity.application.usecases.GetMeUseCase
+import com.bliss.identity.application.usecases.GetProgressUseCase
+import com.bliss.identity.application.usecases.ListProgressUseCase
 import com.bliss.identity.application.usecases.LogoutUseCase
+import com.bliss.identity.application.usecases.PutProgressUseCase
 import com.bliss.identity.application.usecases.UpdateMeUseCase
 import com.bliss.identity.application.usecases.WhoAmIUseCase
 import com.bliss.identity.domain.oidc.OidcVerifier
@@ -25,6 +28,7 @@ import com.bliss.identity.infrastructure.oidc.JwksCache
 import com.bliss.identity.infrastructure.oidc.KtorOidcCodeExchanger
 import com.bliss.identity.infrastructure.oidc.StaticOidcProviderConfigSource
 import com.bliss.identity.infrastructure.persistence.PostgresAuthAttemptRepository
+import com.bliss.identity.infrastructure.persistence.PostgresPuzzleProgressRepository
 import com.bliss.identity.infrastructure.persistence.PostgresSessionRepository
 import com.bliss.identity.infrastructure.persistence.PostgresUserProviderRepository
 import com.bliss.identity.infrastructure.persistence.PostgresUserRepository
@@ -46,6 +50,9 @@ class Wiring private constructor(
     private val _getMe: GetMeUseCase?,
     private val _updateMe: UpdateMeUseCase?,
     private val _deleteUser: DeleteUserUseCase?,
+    private val _listProgress: ListProgressUseCase?,
+    private val _getProgress: GetProgressUseCase?,
+    private val _putProgress: PutProgressUseCase?,
     private val _callbackDispatcher: CallbackDispatcher?,
 ) {
     val beginOidcLogin: BeginOidcLoginUseCase get() = require(_beginOidcLogin, "BeginOidcLoginUseCase")
@@ -56,6 +63,9 @@ class Wiring private constructor(
     val getMe: GetMeUseCase get() = require(_getMe, "GetMeUseCase")
     val updateMe: UpdateMeUseCase get() = require(_updateMe, "UpdateMeUseCase")
     val deleteUser: DeleteUserUseCase get() = require(_deleteUser, "DeleteUserUseCase")
+    val listProgress: ListProgressUseCase get() = require(_listProgress, "ListProgressUseCase")
+    val getProgress: GetProgressUseCase get() = require(_getProgress, "GetProgressUseCase")
+    val putProgress: PutProgressUseCase get() = require(_putProgress, "PutProgressUseCase")
     val callbackDispatcher: CallbackDispatcher get() = require(_callbackDispatcher, "CallbackDispatcher")
 
     // Nullable peek accessors so Module.kt can mount only the routes whose use case is wired,
@@ -67,6 +77,9 @@ class Wiring private constructor(
     internal val getMeOrNull: GetMeUseCase? get() = _getMe
     internal val updateMeOrNull: UpdateMeUseCase? get() = _updateMe
     internal val deleteUserOrNull: DeleteUserUseCase? get() = _deleteUser
+    internal val listProgressOrNull: ListProgressUseCase? get() = _listProgress
+    internal val getProgressOrNull: GetProgressUseCase? get() = _getProgress
+    internal val putProgressOrNull: PutProgressUseCase? get() = _putProgress
     internal val callbackDispatcherOrNull: CallbackDispatcher? get() = _callbackDispatcher
 
     private fun <T : Any> require(
@@ -89,6 +102,7 @@ class Wiring private constructor(
             val userProviders = PostgresUserProviderRepository(dataSource)
             val sessions = PostgresSessionRepository(dataSource)
             val attempts = PostgresAuthAttemptRepository(dataSource)
+            val progress = PostgresPuzzleProgressRepository(dataSource)
 
             val providerConfigs =
                 mapOf(
@@ -185,6 +199,9 @@ class Wiring private constructor(
                 _getMe = GetMeUseCase(users, userProviders),
                 _updateMe = UpdateMeUseCase(users, renamedBroadcaster, clock),
                 _deleteUser = DeleteUserUseCase(users, deletedBroadcaster, clock),
+                _listProgress = ListProgressUseCase(progress),
+                _getProgress = GetProgressUseCase(progress),
+                _putProgress = PutProgressUseCase(progress, clock),
                 _callbackDispatcher = callbackDispatcher,
             )
         }
@@ -198,6 +215,9 @@ class Wiring private constructor(
             getMe: GetMeUseCase? = null,
             updateMe: UpdateMeUseCase? = null,
             deleteUser: DeleteUserUseCase? = null,
+            listProgress: ListProgressUseCase? = null,
+            getProgress: GetProgressUseCase? = null,
+            putProgress: PutProgressUseCase? = null,
             callbackDispatcher: CallbackDispatcher? = null,
         ): Wiring =
             Wiring(
@@ -209,6 +229,9 @@ class Wiring private constructor(
                 _getMe = getMe,
                 _updateMe = updateMe,
                 _deleteUser = deleteUser,
+                _listProgress = listProgress,
+                _getProgress = getProgress,
+                _putProgress = putProgress,
                 _callbackDispatcher = callbackDispatcher,
             )
     }
