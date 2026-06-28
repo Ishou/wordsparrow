@@ -62,12 +62,13 @@ or routing regression therefore fails the build.
   initial response. JSON-LD `WebApplication` is embedded on the homepage
   for richer SERP eligibility.
 + No new runtime infrastructure; deterministic builds preserved.
-+ ADR-0026 (PWA / Workbox) untouched. Per-route HTML files match the
-  existing precache glob automatically. The Workbox `navigateFallbackDenylist`
-  was extended to include `/robots.txt` and `/sitemap.xml` so returning
++ ADR-0026 (PWA / Workbox) untouched. Per-route HTML files are written
+  post-Workbox (flat `dist/<slug>.html`) and therefore not precached;
+  they are added to `navigateFallbackDenylist` so the SW passes navigations
+  to the network, where Cloudflare Pages serves the route's own HTML.
+  `/robots.txt` and `/sitemap.xml` are also denylisted so returning
   users with the SW installed don't get the SPA shell when typing those
-  paths in the address bar — pre-existing bug observed during the design
-  conversation, fixed alongside.
+  paths in the address bar.
 + `sitemap.xml` is auto-generated at build from the same route manifest.
   It cannot drift from the routes the app actually indexes.
 - Adds a per-route render pass to the build (~5–7 s for 5 routes; well
