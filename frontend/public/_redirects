@@ -24,3 +24,8 @@
 # lobby/join: 200 rewrite (no prerendered file) — client resolves param (ADR-0026)
 /lobby/*             /                   200
 /join/*              /                   200
+
+# client-only routes (no prerendered .html) — 200 rewrite so a hard load / bookmark resolves client-side instead of 404 (ADR-0004)
+/reglages            /                   200
+/menu                /                   200
+/finish              /                   200
