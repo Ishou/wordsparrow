@@ -580,6 +580,12 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const letterCount = useMemo(() => puzzle.cells.filter((c) => c.kind === 'letter').length, [puzzle]);
   const won = letterCount > 0 && validatedPositions.size >= letterCount;
 
+  // userActedRef gates out the mount-time validation of persisted entries, so reviewing a done grid never celebrates.
+  const [wonLive, setWonLive] = useState(false);
+  useEffect(() => {
+    if (won && userActedRef.current) setWonLive(true);
+  }, [won]);
+
   // Auto-focus the first unsolved cell on mount; safe because inputMode="none" suppresses the keyboard.
   const didAutoFocusRef = useRef(false);
   useEffect(() => {
@@ -645,15 +651,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     soloEntriesStore.clearForPuzzle(puzzle.id);
     window.location.reload();
   }, [soloEntriesStore, puzzle.id]);
-
-  const handleShare = useCallback(() => {
-    const text = "J'ai terminé la grille WordSparrow du jour ! 🌸";
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      void navigator.share({ text }).catch(() => {});
-    } else {
-      void navigator.clipboard?.writeText(text).catch(() => {});
-    }
-  }, []);
 
   const timeLabel = `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}`;
 
@@ -731,15 +728,15 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         </div>
       </PanZoom>
 
-      {won && !winDismissed ? (
-        <WinScreen time={timeLabel} onReplay={handleReplay} onShare={handleShare} onDismiss={() => setWinDismissed(true)} />
+      {wonLive && !winDismissed ? (
+        <WinScreen time={timeLabel} onReplay={handleReplay} onDismiss={() => setWinDismissed(true)} />
       ) : null}
 
       <PlayMenu open={menuOpen} onClose={() => setMenuOpen(false)} onRecommencer={handleReplay} />
 
       <div className={bottomBar} ref={bottomRef}>
         {won ? (
-          <Button variant="secondary" className={resultsBtn} onClick={() => setWinDismissed(false)}>
+          <Button variant="secondary" className={resultsBtn} onClick={() => { setWonLive(true); setWinDismissed(false); }}>
             <Trophy aria-hidden="true" weight="fill" />
             Voir les résultats
           </Button>

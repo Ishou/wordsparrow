@@ -6,7 +6,8 @@ import { Button } from '@/design-system';
 const screen = css({
   position: 'absolute',
   inset: 0,
-  zIndex: 20,
+  // Above the sticky desktop app bar (zIndex 50) so the celebration fully covers the play field.
+  zIndex: 60,
   overflow: 'hidden',
   background:
     'radial-gradient(125% 78% at 50% 24%, rgba(247,222,231,0.95) 0%, rgba(247,222,231,0) 56%), linear-gradient(168deg, #CDE9DA 0%, #DEE7DD 46%, #F7DEE7 100%)',
@@ -89,8 +90,6 @@ const statCol = css({ flex: 1, display: 'flex', flexDirection: 'column', alignIt
 const statLabel = css({ fontFamily: 'wsUi', fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'ws.khaki', opacity: 0.7 });
 const statValue = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', color: 'ws.jadeInk', lineHeight: '1', whiteSpace: 'nowrap' });
 
-const subtext = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.8, marginTop: '-8px' });
-
 const actions = css({ width: '100%', maxWidth: '296px', display: 'flex', flexDirection: 'column', gap: '11px', marginTop: '2px' });
 const fullBtn = css({ width: '100%', height: '52px' });
 
@@ -127,12 +126,11 @@ const GRID = [
 export interface WinScreenProps {
   readonly time: string;
   readonly onReplay: () => void;
-  readonly onShare: () => void;
   // Dismiss the celebration to reveal the completed grid (without replaying).
   readonly onDismiss: () => void;
 }
 
-export function WinScreen({ time, onReplay, onShare, onDismiss }: WinScreenProps) {
+export function WinScreen({ time, onReplay, onDismiss }: WinScreenProps) {
   return (
     <Dialog.Root open modal>
       <Dialog.Content className={screen} aria-label="Grille terminée">
@@ -174,11 +172,9 @@ export function WinScreen({ time, onReplay, onShare, onDismiss }: WinScreenProps
             <span className={statValue}>{time}</span>
           </div>
         </div>
-        <div className={subtext}>Plus rapide que 78 % des joueurs</div>
 
         <div className={actions}>
           <Button variant="primary" className={fullBtn} onClick={onReplay}>Rejouer</Button>
-          <Button variant="secondary" className={fullBtn} onClick={onShare}>Partager</Button>
         </div>
 
         <div className={quiet}>Nouvelle grille demain</div>
