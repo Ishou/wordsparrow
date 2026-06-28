@@ -10,6 +10,7 @@ import type { Pseudonym, SessionId } from '@/domain/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Lockup, Skeleton } from '@/design-system';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
+import { BottomNav } from '@/ui/v2/BottomNav';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { SkipLink } from '@/ui/v2/SkipLink';
 import { PrimaryButton, SecondaryButton } from '@/ui/v2/Buttons';
@@ -70,7 +71,8 @@ const content = css({
   minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
-  padding: 'calc(env(safe-area-inset-top) + 22px) 22px 0',
+  // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it.
+  padding: 'calc(env(safe-area-inset-top) + 22px) 22px calc(64px + env(safe-area-inset-bottom))',
   overflowY: 'auto',
   // Desktop: top nav, then the two columns vertically centred in the remaining space.
   lg: { overflow: 'visible', padding: '0 36px 40px' },
@@ -136,10 +138,6 @@ const dayWd = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', co
 const dayDot = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px' });
 // A playable past/today day is a button: same dot, with a press affordance.
 const dayDotBtn = css({ width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13px', padding: 0, cursor: 'pointer', transition: 'transform 120ms', _hover: { transform: 'translateY(-1px)' }, _active: { transform: 'translateY(0)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
-
-const nav = css({ flex: 'none', bg: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(14px)', borderTop: '0.5px solid rgba(33,75,64,0.10)', padding: '10px 28px calc(8px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', lg: { display: 'none' } });
-const navItem = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px', borderRadius: '8px' } });
-const navLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold' });
 
 const WD_LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'] as const;
 
@@ -438,20 +436,7 @@ export function HomeScreen({
           </div>
         </div>
 
-        <nav className={nav} aria-label="Navigation principale">
-          <button type="button" className={navItem} aria-current="page">
-            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11.2 12 5l8 6.2V19a1 1 0 0 1-1 1h-4.2v-5.2H9.2V20H5a1 1 0 0 1-1-1z" stroke="var(--colors-ws-sakura)" strokeWidth="1.9" strokeLinejoin="round" /></svg>
-            <span className={navLabel} style={{ color: 'var(--colors-ws-sakura)' }}>Accueil</span>
-          </button>
-          <button type="button" className={navItem} onClick={() => navigate({ to: '/grilles' })}>
-            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="4.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /></svg>
-            <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Grilles</span>
-          </button>
-          <button type="button" className={navItem} aria-haspopup="dialog" onClick={() => setMenuOpen(true)}>
-            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8.4" r="3.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><path d="M5 19.5c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" strokeLinecap="round" /></svg>
-            <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Compte</span>
-          </button>
-        </nav>
+        <BottomNav active="accueil" onAccountClick={() => setMenuOpen(true)} />
       </div>
 
       <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} streak={streak.cur} />

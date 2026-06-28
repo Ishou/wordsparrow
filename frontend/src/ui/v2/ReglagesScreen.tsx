@@ -31,7 +31,7 @@ const avatar = css({
   width: '48px',
   height: '48px',
   borderRadius: '50%',
-  bg: 'ws.sakura',
+  bg: 'ws.sakuraDark',
   color: 'white',
   display: 'flex',
   alignItems: 'center',
@@ -40,7 +40,6 @@ const avatar = css({
   fontWeight: 'semibold',
   fontSize: '20px',
 });
-const avatarAnon = css({ bg: 'ws.jade', color: 'ws.jadeInk' });
 const profileLink = css({ textDecoration: 'none', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const profileName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const profileMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
@@ -147,7 +146,7 @@ function ProfileCard() {
   const loading = state.status === 'loading';
   return (
     <div className={profile}>
-      <span className={cx(avatar, avatarAnon)} aria-hidden="true">
+      <span className={avatar} aria-hidden="true">
         <User size={24} weight="bold" />
       </span>
       <div>
