@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useRouteContext, type LinkProps } from '@tanstack/react-router';
-import { Lock, FileText, Envelope, CaretRight, GoogleLogo, User, type Icon } from '@phosphor-icons/react';
+import { Lock, FileText, Envelope, CaretRight, GoogleLogo, Question, User, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { useAuth } from '@/ui/components/auth';
 import { PhoneShell } from './PhoneShell';
@@ -194,7 +194,7 @@ function CompteGroup() {
 
 export function ReglagesScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/v2" />}>
+    <PhoneShell header={<BackHeader to="/v2" />} backTo="/v2">
       <div className={stack}>
         <h1 className={title}>Réglages</h1>
 
@@ -213,6 +213,7 @@ export function ReglagesScreen() {
         <nav aria-label="Aide">
           <div className={groupLabel}>Aide</div>
           <ul className={listCard}>
+            <LinkRow icon={Question} soft to="/v2/aide">Aide &amp; raccourcis</LinkRow>
             <MailRow icon={Envelope} href="mailto:contact@wordsparrow.io" last>Nous écrire</MailRow>
           </ul>
         </nav>
