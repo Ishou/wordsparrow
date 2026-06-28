@@ -42,7 +42,6 @@ const grab = css({ display: 'block', width: '42px', height: '5px', borderRadius:
 // Generous drag target around the grab bar; touch-action:none so the vertical drag-to-dismiss isn't stolen by scroll (ADR-0016 amendment).
 const dragZone = css({ touchAction: 'none', cursor: 'grab', padding: '6px 0 2px', marginTop: '-6px', _active: { cursor: 'grabbing' }, lg: { display: 'none' } });
 
-// The header is a rounded link row into Mon compte, matching the menu items below it.
 const head = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', borderRadius: '13px' });
 const headLink = css({ textDecoration: 'none', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-2px' } });
 // Standalone separator so the rounded hover above never clips it.
