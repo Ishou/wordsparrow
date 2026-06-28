@@ -68,15 +68,12 @@ const frame = css({
     overflow: 'visible',
   },
 });
-// Phone/tablet top-bar slot: flex:none above the scroll body so the bar stays pinned (mirrors PhoneShell's headerSlot).
-const topBarSlot = css({ flex: 'none', padding: 'calc(env(safe-area-inset-top) + 22px) 22px 0', lg: { display: 'none' } });
-
 const content = css({
   flex: 1,
   minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
-  // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it; top spacing now lives in topBarSlot.
+  // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it; top spacing lives in MobileTopBar.
   padding: '0 22px calc(64px + env(safe-area-inset-bottom))',
   overflowY: 'auto',
   // Desktop: top nav, then the two columns vertically centred in the remaining space.
@@ -275,9 +272,7 @@ export function HomeScreen({
       <SkipLink />
       <div className={frame}>
         <DesktopAppBar active="accueil" streak={streak.cur} />
-        <div className={topBarSlot}>
-          <MobileTopBar onMenuClick={() => setMenuOpen(true)} />
-        </div>
+        <MobileTopBar onMenuClick={() => setMenuOpen(true)} />
         <div id="main-content" tabIndex={-1} className={content}>
           <div className={hub}>
           <section className={hero}>
@@ -353,7 +348,7 @@ export function HomeScreen({
                         ref={joinInputRef}
                         className={joinInput}
                         type={joinRevealed ? 'text' : 'password'}
-                        autoComplete="off"
+                        autoComplete="one-time-code"
                         autoCapitalize="characters"
                         autoCorrect="off"
                         spellCheck={false}

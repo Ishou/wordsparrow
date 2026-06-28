@@ -12,13 +12,16 @@ export interface PhoneShellProps {
   readonly navActive?: 'accueil' | 'grilles';
   // Desktop-only back target; phone/tablet uses the header's BackHeader (hidden at lg).
   readonly backTo?: LinkProps['to'];
+  // Header owns its own spacing (e.g. MobileTopBar): drop the slot padding + body top inset so it renders identically to home.
+  readonly headerFlush?: boolean;
   // Fixed full-bleed mobile bottom nav (home/grilles only); reserves body bottom inset when present.
   readonly bottomNav?: ReactNode;
 }
 
 // ADR-0072 §2 — phone-width on phones; contained jade-surround card from tablet up.
 const shell = css({
-  minHeight: '100dvh',
+  // Phone: cap to the viewport so the header pins and only the body scrolls (app-shell); desktop reverts to document scroll.
+  height: '100dvh',
   bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
   display: 'flex',
   flexDirection: 'column',
@@ -31,7 +34,7 @@ const shell = css({
     padding: '40px 24px',
   },
   // Desktop: drop the surround — full-bleed gradient with a top bar + contained content, matching home/play.
-  lg: { bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0, alignItems: 'stretch' },
+  lg: { height: 'auto', minHeight: '100dvh', bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0, alignItems: 'stretch' },
 });
 
 const frame = css({
@@ -95,15 +98,17 @@ const body = css({
 
 // Extra bottom inset so content clears the fixed BottomNav; reset at lg where the nav hides.
 const bodyWithNav = css({ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)', lg: { paddingBottom: '56px' } });
+// A self-spacing header (MobileTopBar) owns the top gap, so the body must not add its own.
+const bodyFlushTop = css({ paddingTop: 0, lg: { paddingTop: '26px' } });
 
-export function PhoneShell({ children, header, navActive, backTo, bottomNav }: PhoneShellProps) {
+export function PhoneShell({ children, header, navActive, backTo, headerFlush, bottomNav }: PhoneShellProps) {
   return (
     <div className={shell} lang="fr">
       <SkipLink />
       <div className={frame}>
         <DesktopAppBar active={navActive} />
-        {header != null ? <div className={headerSlot}>{header}</div> : null}
-        <main id="main-content" tabIndex={-1} className={bottomNav != null ? cx(body, bodyWithNav) : body}>
+        {header != null ? (headerFlush ? header : <div className={headerSlot}>{header}</div>) : null}
+        <main id="main-content" tabIndex={-1} className={cx(body, bottomNav != null && bodyWithNav, headerFlush && bodyFlushTop)}>
           {backTo != null ? (
             <Link to={backTo} className={deskBack}>
               <CaretLeft size={16} weight="bold" aria-hidden="true" />
