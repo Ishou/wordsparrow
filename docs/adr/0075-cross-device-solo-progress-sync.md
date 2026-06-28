@@ -45,8 +45,8 @@ A new table (the Flyway migration `V6__puzzle_progress.sql` is written in Wave
 
 ```sql
 CREATE TABLE puzzle_progress (
-    user_id    UUID        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    puzzle_id  TEXT        NOT NULL,
+    user_id    UUID        NOT NULL REFERENCES identity_users (user_id) ON DELETE CASCADE,
+    puzzle_id  UUID        NOT NULL,
     payload    JSONB       NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (user_id, puzzle_id)
