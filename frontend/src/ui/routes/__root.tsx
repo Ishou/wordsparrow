@@ -71,8 +71,7 @@ export interface AppRouterContext {
   readonly lobbyJoinCodeStash?: LobbyJoinCodeStash;
 }
 
-// v2 jade surround; self-contained (no router/auth hooks) so it renders even when the failure
-// is in the route tree. Reuses the sparrow scene + SparrowState for design consistency.
+// v2 jade surround; self-contained (no router/auth hooks) so it renders even when the route tree fails.
 const errorPageStyles = css({
   minHeight: '100dvh',
   display: 'flex',
