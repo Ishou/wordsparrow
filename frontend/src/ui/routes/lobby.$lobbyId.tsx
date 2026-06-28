@@ -195,6 +195,7 @@ export const Route = createRoute({
     context.lobbyClient!.getLobby(params.lobbyId as LobbyId),
   component: V2LobbyPage,
   pendingComponent: () => <V2LobbyPlaceholder text="Chargement de la partie…" />,
+  pendingMs: 0,
   errorComponent: V2LobbyError,
   head: () => noindexHead('Partie — WordSparrow', 'Partie de mots fléchés en multijoueur.'),
 });
