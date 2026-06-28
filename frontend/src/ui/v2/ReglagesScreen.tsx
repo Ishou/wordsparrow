@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useRouteContext, type LinkProps } from '@tanstack/react-router';
-import { Lock, FileText, Envelope, CaretRight, GoogleLogo, Question, User, type Icon } from '@phosphor-icons/react';
+import { type ReactNode } from 'react';
+import { Link, type LinkProps } from '@tanstack/react-router';
+import { Lock, FileText, Envelope, CaretRight, Question, User, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { useAuth } from '@/ui/components/auth';
 import { PhoneShell } from './PhoneShell';
@@ -129,9 +129,6 @@ function initialFor(displayName: string): string {
 
 function ProfileCard() {
   const { state } = useAuth();
-  const { authClient } = useRouteContext({ from: '__root__' });
-  const [returnTo, setReturnTo] = useState('');
-  useEffect(() => setReturnTo(window.location.href), []);
 
   if (state.status === 'authed') {
     return (
@@ -149,26 +146,19 @@ function ProfileCard() {
   }
 
   const loading = state.status === 'loading';
-  // Anchor required: browser must follow the 302 chain to accept Set-Cookie (button + location.assign breaks this).
-  const href = authClient && returnTo ? authClient.signInUrl('google', returnTo) : '#';
   return (
-    <a
-      href={href}
-      aria-label="Se connecter avec Google"
-      aria-disabled={href === '#' ? true : undefined}
-      className={cx(profile, profileLink)}
-    >
+    <Link to="/compte" className={cx(profile, profileLink)}>
       <span className={avatar} aria-hidden="true">
         <User size={24} weight="bold" />
       </span>
       <div>
         <div className={profileName}>{loading ? '…' : 'Invité'}</div>
-        <div className={profileMeta}>{loading ? '…' : 'Se connecter avec Google'}</div>
+        <div className={profileMeta}>{loading ? '…' : 'Sans compte'}</div>
       </div>
       <span className={chevron}>
-        <GoogleLogo size={18} weight="bold" aria-hidden="true" />
+        <CaretRight size={18} weight="bold" aria-hidden="true" />
       </span>
-    </a>
+    </Link>
   );
 }
 
