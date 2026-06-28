@@ -131,7 +131,12 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
     setWrong(false);
     setErrored(false);
   };
-  const skip = () => rotate(nextIndex(idx, pool.length));
+  // Skipping = giving up on the word, so it breaks the streak (a wrong guess alone doesn't).
+  const skip = () => {
+    streakRef.current = 0;
+    onStreak?.(0, bestRef.current);
+    rotate(nextIndex(idx, pool.length));
+  };
 
   const handleChange = (i: number, raw: string) => {
     if (solved) return; // typing stays live through the wobble (no input lock)
@@ -155,10 +160,8 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
       if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
       timer.current = window.setTimeout(() => rotate(nextIndex(idx, pool.length)), 900);
     } else if (next.every((c) => c !== '') && !wasFull) {
-      // Just completed but wrong: wobble + break streak; re-editing an already-full word doesn't re-fire.
+      // Wrong on completion: wobble + reveal Passer. The streak breaks on skip, not on a wrong guess; !wasFull stops a re-edit re-firing.
       if (timer.current) window.clearTimeout(timer.current);
-      streakRef.current = 0;
-      onStreak?.(0, bestRef.current);
       setWrong(true);
       setErrored(true);
       if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([0, 28, 38, 28]);
