@@ -41,6 +41,7 @@ export interface HintResult {
 export type HintErrorKind =
   | 'budget-exhausted'
   | 'invalid-coord'
+  | 'auth-required'
   | 'transient';
 
 // Typed error so the UI can branch on `err.kind` instead of regexing

@@ -81,6 +81,9 @@ export function createHttpPuzzleSolver(
         if (response.status === 400) {
           throw new HintRequestError('invalid-coord', null, detail);
         }
+        if (response.status === 401) {
+          throw new HintRequestError('auth-required', null, detail);
+        }
         throw new HintRequestError('transient', null, detail);
       }
       return {
