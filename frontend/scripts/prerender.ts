@@ -36,7 +36,8 @@ const DIST = resolve(import.meta.dirname, '../dist');
 // OG / JSON-LD; pass B leaves the puzzle endpoint hanging so the
 // route's pendingComponent (skeleton) renders; we graft pass A's
 // <head> onto pass B's body.
-// ADR-0074: only the home keeps the skeleton-grafting pass; v2 /play and /grilles render their own aria-busy loading, not the v1 `main [role="status"]` contract.
+
+// ADR-0074: /play and /grilles use aria-busy; only home needs the skeleton-grafting pass.
 const PUZZLE_LOADING_ROUTES: ReadonlySet<string> = new Set(['/']);
 
 // Hang auth/survey so AuthProvider stays in `loading` and the anon-redirect effect never fires.
