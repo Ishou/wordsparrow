@@ -221,9 +221,7 @@ function Defs({ p }: { readonly p: string }): ReactElement {
           <use href={`#${p}cluster`} x="226" y="36" width="56" height="56" />
           <use href={`#${p}cluster`} x="250" y="18" width="50" height="50" />
           <use href={`#${p}bird`} x="48" y="82" width="54" height="54" transform="rotate(-22 75 109)" />
-          <use href={`#${p}pet`} x="120" y="150" width="11" height="11" transform="rotate(28 125 155)" />
-          <use href={`#${p}pet`} x="170" y="158" width="9" height="9" transform="rotate(14 174 162)" />
-          <use href={`#${p}pet`} x="214" y="150" width="11" height="11" transform="rotate(-18 219 155)" />
+          {/* No falling petals below the branch: they land in the drape zone and bleed onto the card text. */}
         </g>
       </symbol>
     </defs>

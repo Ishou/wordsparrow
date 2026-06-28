@@ -25,7 +25,8 @@ const back = css({
   _hover: { bg: 'rgba(255,255,255,0.82)' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
-const spacer = css({ flex: 1 });
+// Desktop clusters Retour + Lockup on the left (like the play header); phone keeps the lockup pinned right.
+const spacer = css({ flex: 1, lg: { flex: '0 0 10px' } });
 
 export function BackHeader({ to = '/v2' }: BackHeaderProps = {}) {
   return (

@@ -1,20 +1,24 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Dialog } from '@ark-ui/react/dialog';
 import { Portal } from '@ark-ui/react/portal';
-import { useNavigate } from '@tanstack/react-router';
-import {
-  User,
-  Gear,
-  Moon,
-  ChatCircleDots,
-  CaretRight,
-  type Icon,
-} from '@phosphor-icons/react';
+import { useNavigate, useRouteContext } from '@tanstack/react-router';
+import { User, Gear, CaretRight, SignOut, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
+import { useAuth } from '@/ui/components/auth';
 
-const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out' });
-const positioner = css({ position: 'fixed', inset: 0, zIndex: 1001, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' });
-// Compact sheet — sized so the dimmed home (appbar + greeting) stays visible above.
+// Desktop uses a lighter scrim — the menu is a small anchored dropdown, not a full takeover.
+const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out', lg: { bg: 'rgba(15,33,28,0.16)' } });
+// Phone/tablet: bottom-centred sheet. Desktop: top-right, anchored under the header menu button.
+const positioner = css({
+  position: 'fixed',
+  inset: 0,
+  zIndex: 1001,
+  display: 'flex',
+  alignItems: 'flex-end',
+  justifyContent: 'center',
+  lg: { alignItems: 'flex-start', justifyContent: 'flex-end', paddingTop: '72px', paddingRight: 'max(24px, calc((100vw - 1140px) / 2))' },
+});
+// Phone/tablet: full-width sheet that slides up. Desktop: a compact rounded dropdown card that fades in.
 const sheet = css({
   width: '100%',
   maxWidth: '440px',
@@ -26,10 +30,17 @@ const sheet = css({
   fontFamily: 'wsUi',
   animation: 'wsSheetUp 260ms cubic-bezier(0.32,0.72,0,1)',
   outline: 'none',
+  lg: {
+    maxWidth: '290px',
+    borderRadius: '18px',
+    padding: '10px 10px 12px',
+    boxShadow: '0 16px 44px rgba(20,40,34,0.22)',
+    animation: 'wsFade 150ms ease-out',
+  },
 });
 const grab = css({ display: 'block', width: '42px', height: '5px', borderRadius: '999px', bg: 'rgba(33,75,64,0.18)', margin: '0 auto 12px' });
 // Generous drag target around the grab bar; touch-action:none so the vertical drag-to-dismiss isn't stolen by scroll (ADR-0016 amendment).
-const dragZone = css({ touchAction: 'none', cursor: 'grab', padding: '6px 0 2px', marginTop: '-6px', _active: { cursor: 'grabbing' } });
+const dragZone = css({ touchAction: 'none', cursor: 'grab', padding: '6px 0 2px', marginTop: '-6px', _active: { cursor: 'grabbing' }, lg: { display: 'none' } });
 
 const head = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 8px 12px', borderBottom: '1px solid #EEF3EC', marginBottom: '4px' });
 const headAvatar = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', bg: 'ws.sakuraDark', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '18px' });
@@ -51,21 +62,13 @@ const rowBase = {
   background: 'transparent',
 };
 const rowActive = css({ ...rowBase, textDecoration: 'none', cursor: 'pointer', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
-const rowSwitch = css({ ...rowBase, cursor: 'pointer' });
-const rowInert = css({ ...rowBase });
 
 const tile = css({ flex: 'none', width: '34px', height: '34px', borderRadius: '10px', bg: 'ws.jade', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'ws.jadeInk' });
 const tileSoft = css({ bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
 
 const labelWrap = css({ display: 'flex', flexDirection: 'column', minWidth: 0 });
 const label = css({ fontSize: '15px', fontWeight: 'bold', color: 'ws.jadeInk' });
-const soon = css({ marginLeft: 'auto', flex: 'none', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', bg: 'ws.sable', borderRadius: '999px', padding: '3px 9px' });
 const chevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
-
-const sw = css({ marginLeft: 'auto', width: '42px', height: '24px', borderRadius: '999px', flex: 'none', position: 'relative', transition: 'background 160ms', bg: 'rgba(33,75,64,0.18)' });
-const swKnob = css({ position: 'absolute', top: '3px', left: '3px', width: '18px', height: '18px', borderRadius: '50%', bg: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' });
-
-const switchBtn = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', textAlign: 'left', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const srTitle = css({ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 });
 
 function Tile({ icon: I, soft }: { readonly icon: Icon; readonly soft?: boolean }) {
@@ -76,17 +79,6 @@ function Tile({ icon: I, soft }: { readonly icon: Icon; readonly soft?: boolean 
   );
 }
 
-function SoonRow({ icon, soft, children }: { readonly icon: Icon; readonly soft?: boolean; readonly children: ReactNode }) {
-  return (
-    <li className={rowInert} aria-disabled="true">
-      <Tile icon={icon} soft={soft} />
-      <span className={labelWrap}>
-        <span className={label}>{children}</span>
-      </span>
-      <span className={soon}>Bientôt</span>
-    </li>
-  );
-}
 
 export interface MenuSheetProps {
   readonly open: boolean;
@@ -131,7 +123,23 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
     navigate({ to: '/v2/reglages' });
   };
 
-  const subline = streak != null && streak >= 1 ? `🔥 série ${streak}` : 'Sans compte';
+  const { state, refresh } = useAuth();
+  const { authClient } = useRouteContext({ from: '__root__' });
+  const authed = state.status === 'authed';
+  const displayName = authed ? state.whoami.displayName : 'Invité';
+  const initial = authed ? displayName.trim()[0]?.toUpperCase() ?? '?' : null;
+  const subline = streak != null && streak >= 1 ? `🔥 série ${streak}` : authed ? 'Connecté' : 'Sans compte';
+  const handleLogout = async () => {
+    if (!authClient) return;
+    onClose();
+    try {
+      await authClient.logout();
+      await refresh();
+      void navigate({ to: '/v2' });
+    } catch (cause) {
+      console.warn('logout failed', cause);
+    }
+  };
 
   return (
     <Dialog.Root open={open} onOpenChange={(d) => { if (!d.open) onClose(); }} modal closeOnInteractOutside closeOnEscape preventScroll>
@@ -151,16 +159,17 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
             </div>
 
             <div className={head}>
-              <span className={headAvatar} aria-hidden="true"><User size={22} weight="bold" /></span>
+              <span className={headAvatar} aria-hidden="true">
+                {authed ? initial : <User size={22} weight="bold" />}
+              </span>
               <div>
-                <div className={headName}>Invité</div>
+                <div className={headName}>{displayName}</div>
                 <div className={headSub}>{subline}</div>
               </div>
             </div>
 
             <nav aria-label="Menu">
               <ul className={list}>
-                <SoonRow icon={User}>Mon compte</SoonRow>
                 <li>
                   <button type="button" className={rowActive} onClick={goReglages}>
                     <Tile icon={Gear} soft />
@@ -172,18 +181,19 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
                     </span>
                   </button>
                 </li>
-                <li className={rowSwitch}>
-                  <button type="button" role="switch" aria-checked={false} aria-disabled="true" aria-label="Mode sombre" className={switchBtn} onClick={() => {}}>
-                    <Tile icon={Moon} soft />
-                    <span className={labelWrap}>
-                      <span className={label}>Mode sombre</span>
-                    </span>
-                    <span className={sw}>
-                      <span className={swKnob} />
-                    </span>
-                  </button>
-                </li>
-                <SoonRow icon={ChatCircleDots}>Aide</SoonRow>
+                {authed ? (
+                  <li>
+                    <button type="button" className={rowActive} onClick={() => { void handleLogout(); }}>
+                      <Tile icon={SignOut} soft />
+                      <span className={labelWrap}>
+                        <span className={label}>Se déconnecter</span>
+                      </span>
+                      <span className={chevron}>
+                        <CaretRight size={18} weight="bold" aria-hidden="true" />
+                      </span>
+                    </button>
+                  </li>
+                ) : null}
               </ul>
             </nav>
           </Dialog.Content>

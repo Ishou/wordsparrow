@@ -65,7 +65,21 @@ import type { Pseudonym, SessionId } from '@/domain/game';
 // no metrics-matched fallback face would be generated. See
 // `vite.config.ts` and `src/ui/styles/fonts.css` for the rationale.
 import '@/ui/styles/fonts.css';
+// v2 (ADR-0072) faces, declared inline with font-display: block — see the file header.
+import '@/design-system/fonts.css';
 import '@/ui/styles/index.css';
+// ADR-0072 §3 — preload above-the-fold v2 faces (Fredoka + Nunito latin) to fill the block window.
+import fredokaLatinUrl from '@fontsource-variable/fredoka/files/fredoka-latin-wght-normal.woff2?url';
+import nunitoLatinUrl from '@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2?url';
+for (const href of [fredokaLatinUrl, nunitoLatinUrl]) {
+  const link = document.createElement('link');
+  link.rel = 'preload';
+  link.as = 'font';
+  link.type = 'font/woff2';
+  link.href = href;
+  link.crossOrigin = 'anonymous';
+  document.head.appendChild(link);
+}
 
 // MSW bootstrap (ADR-0007 §5). Two independent flags pick which API
 // surfaces are intercepted:
@@ -307,26 +321,39 @@ enableMocks()
         : undefined;
 
     // onCaughtError only: onUncaughtError would double-emit via the window.error handler.
-    createRoot(container, {
-      onCaughtError: (error, errorInfo) => {
-        if (import.meta.env.DEV) {
-          // dev-only: React's default console.error firehose.
-          console.error('Caught error:', error, errorInfo);
-        }
-        reportCaughtError(error, 'react-caught');
-      },
-    }).render(
-      <StrictMode>
-        <AuthProvider
-          authClient={authClient}
-          getPseudonym={getPseudonym}
-          getLocalSessionId={getOrCreateSessionId}
-          onAuthed={onAuthed}
-        >
-          <App router={router} />
-        </AuthProvider>
-      </StrictMode>,
-    );
+    const mount = () =>
+      createRoot(container, {
+        onCaughtError: (error, errorInfo) => {
+          if (import.meta.env.DEV) {
+            // dev-only: React's default console.error firehose.
+            console.error('Caught error:', error, errorInfo);
+          }
+          reportCaughtError(error, 'react-caught');
+        },
+      }).render(
+        <StrictMode>
+          <AuthProvider
+            authClient={authClient}
+            getPseudonym={getPseudonym}
+            getLocalSessionId={getOrCreateSessionId}
+            onAuthed={onAuthed}
+          >
+            <App router={router} />
+          </AuthProvider>
+        </StrictMode>,
+      );
+
+    // ADR-0072 §3 — render-gate: defer paint until brand faces are ready (1.2 s cap).
+    if (typeof document !== 'undefined' && typeof document.fonts?.load === 'function') {
+      const ready = Promise.all([
+        document.fonts.load('1em "Fredoka Variable"'),
+        document.fonts.load('1em "Nunito Variable"'),
+      ]).then(() => undefined).catch(() => undefined);
+      const cap = new Promise<void>((resolve) => setTimeout(resolve, 1200));
+      void Promise.race([ready, cap]).then(mount);
+    } else {
+      mount();
+    }
 
     registerServiceWorker();
   });

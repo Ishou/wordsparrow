@@ -60,14 +60,26 @@ without touching them. The module is **isolated**: nothing under it imports app
 feature code, and no app file imports it, until migration — enforced by an
 `eslint-plugin-boundaries` rule.
 
-### 3. How it's seen and shipped to design
+### 3. Font-loading strategy for v2 faces
+
+The v2 type stack (`fonts.css` under `design-system/`) uses `font-display: block` rather than ADR-0008's `swap`.
+
+**Why `block` here, not `swap`:** ADR-0008 rejected `block` because an invisible-text beat on a slow connection is worse UX than a FOUT reflow. That reasoning holds for the live app's Nunito stack (which uses `swap` + `fontaine` fallbacks). For the v2 faces the trade-off is reversed: a JavaScript render-gate defers the first `ReactDOM.createRoot().render()` call until both Fredoka Variable and Nunito Variable are loaded (or until the 1.2 s cap fires). With the gate in place `block`'s invisible-text window is filled by React not yet painting at all — the user sees a blank page for one frame rather than fallback text that snaps to a different face. On a warm/cached load the preloaded woff2s resolve within a single frame and the cap never fires.
+
+**Why inline `@font-face`, not `@import`:** Same constraint as ADR-0008's fontaine note — the `fontaine` Vite plugin's `transform` hook runs before CSS-side `@import` resolution, so a CSS `@import` would hide the v2 `@font-face` blocks from fontaine and no metrics-matched fallback would be generated. The declarations live in `design-system/fonts.css` and are imported from `main.tsx`.
+
+**1.2 s cap rationale:** Guarantees the app is never blocked more than 1.2 s by a stalled font fetch. On a cold load without preload this is the worst case; the preloaded faces (injected at module evaluation before `enableMocks()`) make it resolve within a frame on a warm load.
+
+This amends ADR-0008's "Rejected" verdict for `block`: `block` remains wrong for the live Nunito stack (no render-gate there); it is correct for the v2 standalone module given the gate.
+
+### 4. How it's seen and shipped to design
 
 A dev-only `/design-system` gallery route renders every component + variant
 (there is no Storybook). The same module is **design-synced** to a *new*
 Claude Design project (the existing old-DS project is left intact) so the
 design agent builds with the real v2 components.
 
-### 4. Accessibility
+### 5. Accessibility
 
 ADR-0050's WCAG AA gate is binding: every component ships an axe check;
 khaki-on-sable, white-on-sakura, and jade-ink-on-jade contrast are verified.

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { CaretLeft, DotsThreeVertical, Lightbulb, Timer, Trophy } from '@phosphor-icons/react';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { css, cx } from 'styled-system/css';
 import type { Cell as DomainCell, Position, Puzzle } from '@/domain';
 import type { PuzzleSolver } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Button, Cell, DefCell, ClueRail, Lockup, type CellState } from '@/design-system';
+import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { PlayMenu } from './PlayMenu';
 import {
   useGridNavigation,
@@ -21,12 +22,41 @@ import { useWordAutoValidation } from '@/ui/components/grid/useWordAutoValidatio
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
 import { PanZoom, type PanZoomHandle } from './PanZoom';
 import { WinScreen } from './WinScreen';
+import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
+const stage = css({
+  minHeight: '100dvh',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)',
+  md: { bgImage: 'none', bg: '#9CCBB1', padding: '32px 24px' },
+  // Desktop: drop the surround — the board goes immersive on the full-bleed gradient.
+  lg: { bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)', bg: 'transparent', padding: 0, alignItems: 'stretch' },
+});
 // Immersive phone-shaped shell: the jade field fills it; the grid bleeds within.
-const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marginInline: 'auto', height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column', bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)', fontFamily: 'wsUi' });
+const shell = css({
+  position: 'relative',
+  width: '100%',
+  maxWidth: '440px',
+  height: '100dvh',
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
+  bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)',
+  fontFamily: 'wsUi',
+  md: {
+    maxWidth: '720px',
+    height: 'min(920px, calc(100dvh - 64px))',
+    borderRadius: '28px',
+    boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
+  },
+  // Desktop: match the home frame width so the top bars align; the board itself is capped narrower below.
+  lg: { maxWidth: '1140px', height: '100dvh', borderRadius: 0, boxShadow: 'none' },
+});
 const GUTTER = '14px';
 // Overlay region: the grid bleeds behind it; pan-inset keeps the top reachable.
-const header = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, padding: `12px ${GUTTER} 0` });
+const header = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, padding: `12px ${GUTTER} 0`, lg: { position: 'static', width: '100%', paddingTop: '24px', paddingInline: '36px' } });
 // Frosted pill holds exit · brand · timer · settings, legible over the bleeding grid.
 const headerBar = css({
   display: 'flex',
@@ -38,6 +68,8 @@ const headerBar = css({
   borderRadius: '999px',
   padding: '5px 8px',
   boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
+  // Desktop: a plain transparent bar (matching the home top bar), not a frosted floating pill.
+  lg: { bg: 'transparent', backdropFilter: 'none', border: 'none', borderRadius: 0, boxShadow: 'none', padding: '0', gap: '14px' },
 });
 const iconBtn = css({
   width: '32px',
@@ -54,12 +86,15 @@ const iconBtn = css({
   flex: 'none',
   _active: { background: 'rgba(33,75,64,0.08)' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+  // Desktop: frosted circle button matching the home top bar's menu button.
+  lg: { width: '44px', height: '44px', background: 'rgba(255,255,255,0.62)', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', fontSize: '20px', _hover: { background: 'rgba(255,255,255,0.82)' } },
 });
 const headerSpacer = css({ flex: 1 });
+const brandLink = css({ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', borderRadius: '12px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '4px' } });
 const headerTimer = css({ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'wsMono', fontWeight: 'semibold', fontSize: '13.5px', color: 'ws.jadeInk', flex: 'none', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em', paddingInline: '2px' });
 const headerTimerIcon = css({ fontSize: '14px', opacity: 0.55, flex: 'none' });
 // Full-bleed: grid bleeds to the edges mid-pan; a gap only appears at the board's edges.
-const viewportFill = css({ flex: '1', minHeight: 0 });
+const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%', maxWidth: '760px', marginInline: 'auto' } });
 const boardGrid = css({ display: 'grid' });
 const spacer = css({ borderRadius: '9px' });
 
@@ -95,7 +130,7 @@ const letterInput = css({
 const letterInputOnActive = css({ color: 'white' });
 
 // Overlay bar — its measured height feeds PanZoom's padBottom so the focused cell stays above it.
-const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px` });
+const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { position: 'static', paddingBottom: '24px' } });
 // Compact hint chip, lives in the ClueRail label row (replacing the counter).
 const hintBtn = css({
   display: 'inline-flex',
@@ -214,6 +249,8 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  const isDesktop = useIsDesktop();
 
   const BOARD_W = puzzle.width * CELL + (puzzle.width - 1) * GAP;
   const BOARD_H = puzzle.height * CELL + (puzzle.height - 1) * GAP;
@@ -626,25 +663,39 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   }, [won]);
 
   return (
+    <div className={stage}>
     <main className={shell} lang="fr">
-      <header className={header}>
-        <div className={headerBar}>
-          <button type="button" className={iconBtn} onClick={() => navigate({ to: '/v2' })} aria-label="Quitter la grille">
-            <CaretLeft aria-hidden="true" weight="bold" />
-          </button>
-          <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
-          <span className={headerSpacer} />
-          <span className={headerTimer} aria-label={`Temps ${timeLabel}`}>
-            <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
-            {timeLabel}
-          </span>
-          <button type="button" className={iconBtn} onClick={() => setMenuOpen(true)} aria-label="Réglages">
-            <DotsThreeVertical aria-hidden="true" weight="bold" />
-          </button>
-        </div>
-      </header>
+      {isDesktop ? (
+        <DesktopAppBar
+          trailing={
+            <span className={headerTimer} aria-label={`Temps ${timeLabel}`}>
+              <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
+              {timeLabel}
+            </span>
+          }
+        />
+      ) : (
+        <header className={header}>
+          <div className={headerBar}>
+            <button type="button" className={iconBtn} onClick={() => navigate({ to: '/v2' })} aria-label="Quitter la grille">
+              <CaretLeft aria-hidden="true" weight="bold" />
+            </button>
+            <Link to="/v2" className={brandLink} aria-label="Accueil">
+              <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
+            </Link>
+            <span className={headerSpacer} />
+            <span className={headerTimer} aria-label={`Temps ${timeLabel}`}>
+              <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
+              {timeLabel}
+            </span>
+            <button type="button" className={iconBtn} onClick={() => setMenuOpen(true)} aria-label="Réglages">
+              <DotsThreeVertical aria-hidden="true" weight="bold" />
+            </button>
+          </div>
+        </header>
+      )}
 
-      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit="height" framePad={14} padTop={68} padBottom={bottomInset + BOARD_BOTTOM_GAP} padX={14} maxScale={2.6} edgeFade>
+      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit={isDesktop ? 'contain' : 'height'} framePad={14} padTop={isDesktop ? 12 : 68} padBottom={isDesktop ? 12 : bottomInset + BOARD_BOTTOM_GAP} padX={14} maxScale={2.6} edgeFade>
         <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
           {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {
             const row = Math.floor(i / puzzle.width);
@@ -721,5 +772,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         )}
       </div>
     </main>
+    </div>
   );
 }

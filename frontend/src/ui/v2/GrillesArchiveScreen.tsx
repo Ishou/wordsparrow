@@ -217,8 +217,9 @@ export function GrillesArchiveScreen({
 
   const visible = useMemo(
     () =>
+      // "À finir" = started but not yet finished (in progress), not every unplayed grid.
       rows.filter((r) =>
-        filter === 'all' ? true : filter === 'done' ? r.status === 'done' : r.status !== 'done',
+        filter === 'all' ? true : filter === 'done' ? r.status === 'done' : r.status === 'progress',
       ),
     [rows, filter],
   );
@@ -248,7 +249,7 @@ export function GrillesArchiveScreen({
   };
 
   return (
-    <PhoneShell header={<BackHeader to="/v2" />}>
+    <PhoneShell header={<BackHeader to="/v2" />} navActive="grilles">
       <h1 className={title}>Grilles</h1>
 
       <SegmentedControl
@@ -273,7 +274,7 @@ export function GrillesArchiveScreen({
           ))}
         </ul>
       ) : loading ? null : visible.length === 0 ? (
-        <GrillesEmptyState onPlay={() => navigate({ to: '/v2/play' })} />
+        <GrillesEmptyState filter={filter} onPlay={() => navigate({ to: '/v2/play' })} />
       ) : (
         <>
           {months.map((m) => (

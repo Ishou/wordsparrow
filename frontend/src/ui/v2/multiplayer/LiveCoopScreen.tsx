@@ -5,6 +5,7 @@ import type { Cell as DomainCell, Position, Puzzle } from '@/domain';
 import type { GameEvent, Unsubscribe } from '@/application/game';
 import type { Player, SessionId } from '@/domain/game';
 import { Cell, ClueRail, DefCell, Lockup, type CellState } from '@/design-system';
+import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import {
   useGridNavigation,
   type CellHighlight,
@@ -20,12 +21,43 @@ import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
 import { CoopPresenceLayer } from './CoopPresenceLayer';
 import { LiveTimer } from './LiveTimer';
 import { PlayerStrip } from './PlayerStrip';
+import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
 // ADR-0072 v2 co-op IN_PROGRESS screen: shared grid + presence + timer + roster, wired like prod InGameView.
 
-const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marginInline: 'auto', height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column', bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)', fontFamily: 'wsUi' });
+const stage = css({
+  minHeight: '100dvh',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)',
+  md: { bgImage: 'none', bg: '#9CCBB1', padding: '32px 24px' },
+  // Desktop: drop the surround — the board goes immersive on the full-bleed gradient.
+  lg: { bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)', bg: 'transparent', padding: 0, alignItems: 'stretch' },
+});
+const shell = css({
+  position: 'relative',
+  width: '100%',
+  maxWidth: '440px',
+  height: '100dvh',
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
+  bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)',
+  fontFamily: 'wsUi',
+  md: {
+    maxWidth: '720px',
+    height: 'min(920px, calc(100dvh - 64px))',
+    borderRadius: '28px',
+    boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
+  },
+  // Desktop: match the home frame width so the top bars align; the board itself is capped narrower below.
+  lg: { maxWidth: '1140px', height: '100dvh', borderRadius: 0, boxShadow: 'none' },
+});
 const GUTTER = '14px';
-const header = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 4, padding: `12px ${GUTTER} 0`, display: 'flex', flexDirection: 'column', gap: '8px' });
+const header = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 4, padding: `12px ${GUTTER} 0`, display: 'flex', flexDirection: 'column', gap: '8px', lg: { position: 'static', width: '100%', paddingTop: '24px', paddingInline: '36px' } });
+// Desktop presence row: aligned with the contained board under the shared nav bar.
+const coopPresence = css({ display: 'none', lg: { display: 'block', width: '100%', maxWidth: '760px', marginInline: 'auto', paddingInline: '14px', paddingTop: '10px' } });
 const headerBar = css({
   display: 'flex',
   alignItems: 'center',
@@ -36,6 +68,8 @@ const headerBar = css({
   borderRadius: '999px',
   padding: '5px 8px',
   boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
+  // Desktop: a plain transparent bar (matching the home top bar), not a frosted floating pill.
+  lg: { bg: 'transparent', backdropFilter: 'none', border: 'none', borderRadius: 0, boxShadow: 'none', padding: '0', gap: '14px' },
 });
 const iconBtn = css({
   width: '32px',
@@ -52,9 +86,11 @@ const iconBtn = css({
   flex: 'none',
   _active: { background: 'rgba(33,75,64,0.08)' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+  // Desktop: frosted circle button matching the home top bar's menu button.
+  lg: { width: '44px', height: '44px', background: 'rgba(255,255,255,0.62)', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', fontSize: '20px', _hover: { background: 'rgba(255,255,255,0.82)' } },
 });
 const headerSpacer = css({ flex: 1 });
-const viewportFill = css({ flex: '1', minHeight: 0 });
+const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%', maxWidth: '760px', marginInline: 'auto' } });
 const boardWrap = css({ position: 'relative', width: 'max-content' });
 const boardGrid = css({ display: 'grid', position: 'relative', zIndex: 1 });
 const spacer = css({ borderRadius: '9px' });
@@ -85,7 +121,7 @@ const letterInput = css({
 });
 const letterInputOnActive = css({ color: 'white' });
 
-const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 4, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px` });
+const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 4, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { position: 'static', paddingBottom: '24px' } });
 function LetterSlot({
   row,
   col,
@@ -185,6 +221,8 @@ export function LiveCoopScreen({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  const isDesktop = useIsDesktop();
 
   const BOARD_W = puzzle.width * CELL + (puzzle.width - 1) * GAP;
   const BOARD_H = puzzle.height * CELL + (puzzle.height - 1) * GAP;
@@ -286,29 +324,45 @@ export function LiveCoopScreen({
   );
 
   return (
+    <div className={stage}>
     <main className={shell} lang="fr">
-      <header className={header}>
-        <div className={headerBar}>
-          <button type="button" className={iconBtn} onClick={onLeave} aria-label="Quitter la partie">
-            <CaretLeft aria-hidden="true" weight="bold" />
-          </button>
-          <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
-          <span className={headerSpacer} />
-          <LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />
-          <button type="button" className={iconBtn} onClick={onLeave} aria-label="Quitter">
-            <SignOut aria-hidden="true" weight="bold" />
-          </button>
-        </div>
-        <PlayerStrip
-          players={players}
-          currentSessionId={sessionId}
-          typingSessionIds={typingSessionIds}
-          idleSessionIds={idleSessionIds}
-          disconnectingSessionIds={disconnectingSessionIds}
-        />
-      </header>
+      {isDesktop ? (
+        <>
+          <DesktopAppBar trailing={<LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />} />
+          <div className={coopPresence}>
+            <PlayerStrip
+              players={players}
+              currentSessionId={sessionId}
+              typingSessionIds={typingSessionIds}
+              idleSessionIds={idleSessionIds}
+              disconnectingSessionIds={disconnectingSessionIds}
+            />
+          </div>
+        </>
+      ) : (
+        <header className={header}>
+          <div className={headerBar}>
+            <button type="button" className={iconBtn} onClick={onLeave} aria-label="Quitter la partie">
+              <CaretLeft aria-hidden="true" weight="bold" />
+            </button>
+            <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
+            <span className={headerSpacer} />
+            <LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />
+            <button type="button" className={iconBtn} onClick={onLeave} aria-label="Quitter">
+              <SignOut aria-hidden="true" weight="bold" />
+            </button>
+          </div>
+          <PlayerStrip
+            players={players}
+            currentSessionId={sessionId}
+            typingSessionIds={typingSessionIds}
+            idleSessionIds={idleSessionIds}
+            disconnectingSessionIds={disconnectingSessionIds}
+          />
+        </header>
+      )}
 
-      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit="height" framePad={14} padTop={104} padBottom={bottomInset + BOARD_BOTTOM_GAP} padX={14} maxScale={2.6} edgeFade>
+      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit={isDesktop ? 'contain' : 'height'} framePad={14} padTop={isDesktop ? 12 : 104} padBottom={isDesktop ? 12 : bottomInset + BOARD_BOTTOM_GAP} padX={14} maxScale={2.6} edgeFade>
         <div className={boardWrap}>
           <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
             {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {
@@ -369,5 +423,6 @@ export function LiveCoopScreen({
         ) : null}
       </div>
     </main>
+    </div>
   );
 }
