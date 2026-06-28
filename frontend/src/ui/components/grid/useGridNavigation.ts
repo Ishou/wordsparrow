@@ -643,7 +643,8 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
       if (!f) return;
       let row = f.row + dr, col = f.col + dc;
       while (row >= 0 && row < puzzle.height && col >= 0 && col < puzzle.width) {
-        if (lookup.cellAt(row, col)?.kind === 'letter') return focusCell({ row, col });
+        // Skip validated (locked) letters too, so a run of solved cells doesn't trap the cursor — landing direct here keeps the jump in the arrow's direction.
+        if (lookup.cellAt(row, col)?.kind === 'letter' && !isCellValidatedRef.current?.(row, col)) return focusCell({ row, col });
         row += dr; col += dc;
       }
     },
