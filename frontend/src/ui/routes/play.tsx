@@ -7,7 +7,7 @@ import { SparrowState } from '@/ui/v2/SparrowState';
 import { INDEXABLE_ROUTES, SITE_BASE_URL, breadcrumbJsonLd, gameJsonLd, indexableHead } from '@/ui/seo';
 import { Route as AppLayoutRoute } from './app-layout';
 
-// Rising sun on the horizon with a sparrow above — the daily "bientôt" state (mockups/error-states-v2.html #1).
+// Rising sun on the horizon with a sparrow above — the daily "bientôt" state.
 const sunriseScene = (
   <svg width="150" height="120" viewBox="0 0 150 120" role="img" aria-label="Un lever de soleil">
     <defs>

@@ -79,7 +79,7 @@ export interface PrerenderRoute {
 
 // Noindex routes still prerendered so Cloudflare Pages serves the route's own shell, not the home shell.
 export const NOINDEX_PRERENDER_ROUTES: ReadonlyArray<PrerenderRoute> = [
-  // `/contribuer` is unregistered post-cutover (ADR-0074) — dropped until its maintainer follow-up re-exposes it.
+  // /contribuer is unregistered post-cutover (ADR-0074).
   { path: '/compte', title: 'Mon compte — WordSparrow' },
 ];
 
