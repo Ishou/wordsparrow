@@ -27,6 +27,9 @@ tags:
   - name: auth
     description: |
       OIDC sign-in flows, provider callbacks, session management (whoami, logout).
+  - name: progress
+    description: |
+      Cross-device solo puzzle progress, stored per user as an opaque blob (ADR-0075).
   - name: users
     description: |
       Current-user read/write, right-to-erasure (RGPD Article 17), and provider linking.
@@ -252,6 +255,77 @@ paths:
         '400': { $ref: '#/components/responses/ProblemDetails' }
         '401': { $ref: '#/components/responses/ProblemDetails' }
 
+  /v1/users/me/progress:
+    get:
+      operationId: listProgress
+      summary: Batch-pull all of the current user's solo puzzle progress.
+      description: |
+        Returns every stored puzzle-progress entry for the authenticated
+        player in one call — the grilles archive needs the full set on load,
+        not one round-trip per puzzle. Returns an empty `items` array when the
+        player has stored nothing; never 404.
+      tags: [progress]
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The authenticated user's full set of progress entries.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProgressList' }
+        '401': { $ref: '#/components/responses/ProblemDetails' }
+
+  /v1/users/me/progress/{puzzleId}:
+    get:
+      operationId: getProgress
+      summary: Pull the current user's progress for one puzzle.
+      description: |
+        Returns the stored progress entry for one puzzle, or 404 when the
+        player has no row for it.
+      tags: [progress]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PuzzleIdPath'
+      responses:
+        '200':
+          description: The stored progress entry for the requested puzzle.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProgressEntry' }
+        '401': { $ref: '#/components/responses/ProblemDetails' }
+        '404': { $ref: '#/components/responses/ProblemDetails' }
+    put:
+      operationId: putProgress
+      summary: Push the current user's progress for one puzzle.
+      description: |
+        Upserts the player's progress for one puzzle and returns the
+        server-stamped `updatedAt`. The server stores `payload` verbatim and
+        never parses it (ADR-0075). When `baseUpdatedAt` is present and does
+        not match the row's current `updatedAt`, the push is rejected with 409
+        so the client can re-pull, re-merge, and re-push (optimistic
+        concurrency).
+      tags: [progress]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PuzzleIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProgressUpdate' }
+      responses:
+        '200':
+          description: Stored. Returns the server-stamped write time.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProgressWriteResult' }
+        '400': { $ref: '#/components/responses/ProblemDetails' }
+        '401': { $ref: '#/components/responses/ProblemDetails' }
+        '409': { $ref: '#/components/responses/ProblemDetails' }
+        '413': { $ref: '#/components/responses/ProblemDetails' }
+
 components:
   securitySchemes:
     sessionCookie:
@@ -269,6 +343,16 @@ components:
         type: string
         enum: [google, apple]
         x-enum-varnames: [GOOGLE, APPLE]
+
+    PuzzleIdPath:
+      in: path
+      name: puzzleId
+      required: true
+      description: Opaque grid puzzle identifier the progress is stored under.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
 
   schemas:
     User:
@@ -311,6 +395,37 @@ components:
       required: [authorizeUrl]
       properties:
         authorizeUrl: { type: string, format: uri }
+
+    ProgressEntry:
+      type: object
+      required: [puzzleId, payload, updatedAt]
+      properties:
+        puzzleId: { type: string, minLength: 1, maxLength: 128 }
+        # Opaque frontend SoloStore blob — identity never parses grid's cell shape (ADR-0075).
+        payload: { type: object, additionalProperties: true }
+        updatedAt: { type: string, format: date-time }
+
+    ProgressList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ProgressEntry' }
+
+    ProgressUpdate:
+      type: object
+      required: [payload]
+      properties:
+        # Opaque frontend SoloStore blob — stored verbatim (ADR-0075).
+        payload: { type: object, additionalProperties: true }
+        baseUpdatedAt: { type: string, format: date-time }
+
+    ProgressWriteResult:
+      type: object
+      required: [updatedAt]
+      properties:
+        updatedAt: { type: string, format: date-time }
 
     ProblemDetails:
       type: object
