@@ -1,27 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { CaretLeft, DotsThreeVertical, Lightbulb, Timer, Trophy } from '@phosphor-icons/react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { css, cx } from 'styled-system/css';
+import { css } from 'styled-system/css';
 import type { Cell as DomainCell, Position, Puzzle } from '@/domain';
 import type { PuzzleSolver } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
-import { Button, Cell, DefCell, ClueRail, Lockup, type CellState } from '@/design-system';
+import { Button, ClueRail, Lockup } from '@/design-system';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { SkipLink } from '@/ui/v2/SkipLink';
-import {
-  useGridNavigation,
-  type CellHighlight,
-  type Clue,
-  type GridNavigation,
-} from '@/ui/components/grid/useGridNavigation';
+import { useGridNavigation, type Clue } from '@/ui/components/grid/useGridNavigation';
 import { orderClues } from '@/ui/components/grid/orderClues';
-import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
-import { CELL, GAP, STRIDE, BOARD_BOTTOM_GAP, posKey, exitsRight } from '@/ui/components/grid/playLayout';
+import { CELL, STRIDE, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
+import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
 import { Keyboard } from './Keyboard';
 import { useWordAutoValidation } from '@/ui/components/grid/useWordAutoValidation';
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
-import { PanZoom, type PanZoomHandle } from './PanZoom';
 import { WinScreen } from './WinScreen';
 import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
@@ -96,39 +90,6 @@ const headerTimer = css({ display: 'inline-flex', alignItems: 'center', gap: '4p
 const headerTimerIcon = css({ fontSize: '14px', opacity: 0.55, flex: 'none' });
 // Mobile bleeds full-field; desktop viewport is the clear band between the 72px app bar and the ~140px clue rail, so the grid fits inside it.
 const viewportFill = css({ flex: '1', minHeight: 0, lg: { position: 'absolute', top: '72px', left: 0, right: 0, bottom: '140px' } });
-const boardGrid = css({ display: 'grid' });
-const spacer = css({ borderRadius: '9px' });
-
-// Keycap (state visuals) + transparent uncontrolled input on top; cell values in the DOM (ADR-0002 §4).
-const cellWrap = css({ position: 'relative', cursor: 'pointer' });
-// Sakura halo bloomed around a freshly-solved word's cells during the solve beat.
-const cellGlow = css({ borderRadius: '13px', zIndex: 1, animation: 'wsSolveGlow 0.45s ease-out both' });
-// Quick rotational wobble on a completed-but-wrong word's cells ("not quite").
-const cellShake = css({ zIndex: 1, animation: 'wsShake 0.4s ease-in-out both' });
-const letterInput = css({
-  position: 'absolute',
-  inset: 0,
-  width: '100%',
-  height: '100%',
-  appearance: 'none',
-  WebkitAppearance: 'none',
-  border: 'none',
-  outline: 'none',
-  background: 'transparent',
-  padding: 0,
-  margin: 0,
-  textAlign: 'center',
-  fontFamily: 'wsMono',
-  fontWeight: 'semibold',
-  fontSize: '1.5em',
-  color: 'ws.khaki',
-  caretColor: 'transparent',
-  borderRadius: '9px',
-  cursor: 'pointer',
-  '&::-webkit-search-cancel-button, &::-webkit-search-decoration': { WebkitAppearance: 'none', display: 'none' },
-  '&:read-only': { cursor: 'default' },
-});
-const letterInputOnActive = css({ color: 'white' });
 
 // Overlay bar (padBottom drives focus-reveal); no top-pad — board reserves BOARD_BOTTOM_GAP below itself.
 const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `0 ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { paddingBottom: '24px' } });
@@ -161,72 +122,6 @@ function inputAt(row: number, col: number): HTMLInputElement | null {
   return document.querySelector<HTMLInputElement>(`input[data-cell-kind="letter"][data-row="${row}"][data-col="${col}"]`);
 }
 
-// One letter slot: keycap (state visuals) + transparent input (live value).
-function LetterSlot({
-  row,
-  col,
-  entry,
-  validated,
-  highlight,
-  nav,
-  onKeyDown,
-  solveDelay,
-  celebrateDelay,
-  rejectShake,
-}: {
-  readonly row: number;
-  readonly col: number;
-  readonly entry: string;
-  readonly validated: boolean;
-  readonly highlight: CellHighlight;
-  readonly nav: GridNavigation;
-  readonly onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
-  // ms stagger for the flatten ripple when this cell just validated; omit for a static solved tile.
-  readonly solveDelay?: number;
-  // ms stagger for the sakura solve-beat halo; omit when not celebrating.
-  readonly celebrateDelay?: number;
-  // true while this cell's word wobbles after a wrong completion.
-  readonly rejectShake?: boolean;
-}) {
-  const state: CellState = validated
-    ? 'solved'
-    : highlight.focused
-      ? 'active'
-      : highlight.currentWord
-        ? 'activeWord'
-        : 'empty';
-  return (
-    // mousedown-preventDefault keeps pan-start on a cell from stealing focus.
-    <div
-      className={cx(cellWrap, celebrateDelay !== undefined && cellGlow, rejectShake && cellShake)}
-      style={celebrateDelay !== undefined ? { animationDelay: `${celebrateDelay}ms` } : undefined}
-      data-row={row}
-      data-col={col}
-      onClick={nav.handleClick}
-      onMouseDown={(e) => e.preventDefault()}
-    >
-      <Cell state={state} solveDelay={solveDelay} />
-      <input
-        ref={nav.registerCellRef}
-        {...GRID_INPUT_GUARDS}
-        aria-label={`Ligne ${row + 1}, colonne ${col + 1}`}
-        defaultValue={entry}
-        readOnly={validated}
-        aria-readonly={validated || undefined}
-        tabIndex={validated ? -1 : undefined}
-        className={cx(letterInput, state === 'active' && letterInputOnActive)}
-        data-row={row}
-        data-col={col}
-        data-cell-kind="letter"
-        onKeyDown={onKeyDown}
-        onFocus={nav.handleFocus}
-        onBlur={nav.handleBlur}
-        onInput={nav.handleInput}
-      />
-    </div>
-  );
-}
-
 export interface PlayScreenProps {
   readonly puzzle: Puzzle;
   readonly puzzleSolver: PuzzleSolver;
@@ -238,7 +133,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const [winDismissed, setWinDismissed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const pzRef = useRef<PanZoomHandle>(null);
+  const boardRef = useRef<PuzzleBoardHandle>(null);
   // Measured height of the overlay bottom bar — PanZoom reserves it so the focused cell stays above.
   const bottomRef = useRef<HTMLDivElement>(null);
   const [bottomInset, setBottomInset] = useState(280);
@@ -252,9 +147,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   }, []);
 
   const isDesktop = useIsDesktop();
-
-  const BOARD_W = puzzle.width * CELL + (puzzle.width - 1) * GAP;
-  const BOARD_H = puzzle.height * CELL + (puzzle.height - 1) * GAP;
 
   const byPos = useMemo(() => {
     const m = new Map<string, DomainCell>();
@@ -348,34 +240,16 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
 
-  // Solve beat: brief sakura halo + haptic on completion; interruptible; skipped under reduced motion.
-  const [celebrating, setCelebrating] = useState<ReadonlyMap<string, number>>(() => new Map());
   // Cells of a completed-but-wrong word that are currently wobbling.
   const [rejecting, setRejecting] = useState<ReadonlySet<string>>(() => new Set());
   const rejectTimerRef = useRef<number | null>(null);
   // Cells validated this tick, consumed once by the focus firewall to gate the solve beat.
   const justValidatedRef = useRef<Set<string> | null>(null);
   const currentClueRef = useRef<Clue | null>(null);
-  const solveBeatRef = useRef<number | null>(null);
+  // The board owns the solve beat; the firewall queues the advance here for the board to run when the beat ends.
+  const pendingAdvanceRef = useRef<(() => void) | null>(null);
   const reduceMotionRef = useRef(false);
-  const cancelSolveBeat = useCallback(() => {
-    if (solveBeatRef.current === null) return;
-    window.clearTimeout(solveBeatRef.current);
-    solveBeatRef.current = null;
-    setCelebrating(new Map());
-  }, []);
-  const beginSolveBeat = useCallback((cells: ReadonlyMap<string, number>, then: () => void) => {
-    setCelebrating(cells);
-    let last = 0;
-    for (const d of cells.values()) last = Math.max(last, d);
-    solveBeatRef.current = window.setTimeout(() => {
-      solveBeatRef.current = null;
-      setCelebrating(new Map());
-      then();
-    }, last + 480);
-  }, []);
   useEffect(() => () => {
-    if (solveBeatRef.current) window.clearTimeout(solveBeatRef.current);
     if (rejectTimerRef.current) window.clearTimeout(rejectTimerRef.current);
   }, []);
   useEffect(() => {
@@ -387,10 +261,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     return () => mq.removeEventListener?.('change', onChange);
   }, []);
 
-  const revealCell = useCallback((p: Position) => {
-    pzRef.current?.reveal(p.col * STRIDE, p.row * STRIDE, CELL, CELL);
-  }, []);
-
   // Last focused cell — survives blur so the out-of-grid hint button can read it.
   const activeFocusRef = useRef<Position | null>(null);
 
@@ -399,14 +269,21 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     onCellFilled: autoValidation.onCellFilled,
     onFocusChange: (position) => {
       if (!position) return;
-      cancelSolveBeat(); // a user tap during the beat skips it (no-op otherwise)
+      boardRef.current?.cancelBeat(); // a user tap during the beat skips it (no-op otherwise)
       activeFocusRef.current = position;
-      revealCell(position);
+      boardRef.current?.revealCell(position);
     },
     // Force the zoom guard on so PanZoom.reveal() handles scroll avoidance instead of the browser.
     getZoomScale: () => 2,
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
   });
+
+  // The board fired the beat for a freshly-solved word; now advance to the next word (if the firewall queued it).
+  const handleBeatComplete = useCallback(() => {
+    const advance = pendingAdvanceRef.current;
+    pendingAdvanceRef.current = null;
+    advance?.();
+  }, []);
 
   const requestHint = useCallback(() => {
     const f = activeFocusRef.current;
@@ -420,29 +297,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const jumpPendingRef = useRef(false);
   const cycleClueRef = useRef(nav.cycleClue);
   cycleClueRef.current = nav.cycleClue;
-
-  // Flatten ripple: stagger solveDelay across newly-validated cells, then clear.
-  const [solveDelays, setSolveDelays] = useState<ReadonlyMap<string, number>>(() => new Map());
-  const prevValidatedRef = useRef<ReadonlySet<string>>(new Set());
-  const solveTimerRef = useRef<number | null>(null);
-  useEffect(() => {
-    const prev = prevValidatedRef.current;
-    prevValidatedRef.current = validatedPositions;
-    if (!userActedRef.current) return;
-    const added = [...validatedPositions].filter((k) => !prev.has(k));
-    if (added.length === 0) return;
-    added.sort((a, b) => {
-      const [ar, ac] = a.split(',').map(Number);
-      const [br, bc] = b.split(',').map(Number);
-      return ar - br || ac - bc;
-    });
-    const next = new Map<string, number>();
-    added.forEach((k, i) => next.set(k, i * 45));
-    setSolveDelays(next);
-    if (solveTimerRef.current) window.clearTimeout(solveTimerRef.current);
-    solveTimerRef.current = window.setTimeout(() => setSolveDelays(new Map()), (added.length - 1) * 45 + 340);
-  }, [validatedPositions]);
-  useEffect(() => () => { if (solveTimerRef.current) window.clearTimeout(solveTimerRef.current); }, []);
 
   // Clues ordered across-then-down; drives the ClueRail counter and the focus firewall.
   const orderedClues = useMemo(() => orderClues(puzzle), [puzzle]);
@@ -486,7 +340,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   // Step clues: focused delegates to cycleClue; unfocused continues from the shown clue.
   const stepClue = useCallback(
     (dir: 1 | -1) => {
-      cancelSolveBeat(); // stepping the rail during the beat skips it
+      boardRef.current?.cancelBeat(); // stepping the rail during the beat skips it
       tabDirRef.current = dir;
       jumpPendingRef.current = true;
       if (nav.localCursor) {
@@ -499,7 +353,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
       const cell = target.cells.find((p) => !validatedRef.current.has(posKey(p.row, p.col))) ?? target.cells[0];
       inputAt(cell.row, cell.col)?.focus();
     },
-    [nav, orderedClues, displayOrdinal, cancelSolveBeat],
+    [nav, orderedClues, displayOrdinal],
   );
 
   // Auto-frame the active clue when it changes; within-clue moves use per-cell reveal.
@@ -522,7 +376,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
       minCol = Math.min(minCol, c.position.col);
       maxCol = Math.max(maxCol, c.position.col);
     }
-    pzRef.current?.frame(minCol * STRIDE, minRow * STRIDE, (maxCol - minCol) * STRIDE + CELL, (maxRow - minRow) * STRIDE + CELL);
+    boardRef.current?.panZoom?.frame(minCol * STRIDE, minRow * STRIDE, (maxCol - minCol) * STRIDE + CELL, (maxRow - minRow) * STRIDE + CELL);
   }, [clue]);
 
   // /play backspace always moves: after an in-place erase, nudge focus to the previous cell.
@@ -635,17 +489,13 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
       // Celebrate only when THIS word just validated, not when tabbing onto an already-solved clue.
       const celebrate = !!justValidated && wordKeys.some((k) => justValidated.has(k));
       if (celebrate) {
-        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
-        if (!reduceMotionRef.current) {
-          const halo = new Map<string, number>();
-          wordKeys.forEach((k, i) => halo.set(k, i * 45));
-          beginSolveBeat(halo, advance);
-          return;
-        }
+        // The board runs the beat (halo + haptic) off the validatedPositions diff, then calls onBeatComplete → this advance.
+        pendingAdvanceRef.current = advance;
+        return;
       }
       advance();
     }
-  }, [fRow, fCol, fDir, validatedPositions, findNextEditable, won, beginSolveBeat]);
+  }, [fRow, fCol, fDir, validatedPositions, findNextEditable, won]);
 
   const handleReplay = useCallback(() => {
     soloEntriesStore.clearForPuzzle(puzzle.id);
@@ -694,39 +544,23 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         </header>
       )}
 
-      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit="contain" padTop={isDesktop ? 18 : 68} padBottom={isDesktop ? 6 : bottomInset + BOARD_BOTTOM_GAP} padX={isDesktop ? 24 : 14} maxScale={2.6} edgeFade>
-        <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
-          {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {
-            const row = Math.floor(i / puzzle.width);
-            const col = i % puzzle.width;
-            const cell = byPos.get(posKey(row, col));
-            if (cell?.kind === 'definition') {
-              const sorted = [...cell.clues].sort((x, y) => Number(!exitsRight(x.arrow)) - Number(!exitsRight(y.arrow)));
-              const active = nav.highlightFor({ row, col }).currentArrow !== null;
-              return <DefCell key={i} clues={sorted.map((c) => c.text)} arrows={sorted.map((c) => c.arrow)} active={active} validated={solvedDefCells.has(posKey(row, col))} />;
-            }
-            if (cell?.kind === 'letter') {
-              const k = posKey(row, col);
-              return (
-                <LetterSlot
-                  key={i}
-                  row={row}
-                  col={col}
-                  entry={entryAt.get(k) ?? ''}
-                  validated={validatedPositions.has(k)}
-                  highlight={nav.highlightFor({ row, col })}
-                  nav={nav}
-                  onKeyDown={handleKeyDown}
-                  solveDelay={solveDelays.get(k)}
-                  celebrateDelay={celebrating.get(k)}
-                  rejectShake={rejecting.has(k)}
-                />
-              );
-            }
-            return <div key={i} className={spacer} />;
-          })}
-        </div>
-      </PanZoom>
+      <PuzzleBoard
+        ref={boardRef}
+        puzzle={puzzle}
+        nav={nav}
+        validatedPositions={validatedPositions}
+        entryAt={entryAt}
+        solvedDefCells={solvedDefCells}
+        rejectingPositions={rejecting}
+        className={viewportFill}
+        padTop={isDesktop ? 18 : 68}
+        padBottom={isDesktop ? 6 : bottomInset + BOARD_BOTTOM_GAP}
+        padX={isDesktop ? 24 : 14}
+        edgeFade
+        onKeyDown={handleKeyDown}
+        celebrateGuard={() => userActedRef.current}
+        onBeatComplete={handleBeatComplete}
+      />
 
       {wonLive && !winDismissed ? (
         <WinScreen time={timeLabel} onReplay={handleReplay} onDismiss={() => setWinDismissed(true)} />
@@ -750,8 +584,8 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
                 total={orderedClues.length}
                 onPrev={() => stepClue(-1)}
                 onNext={() => stepClue(1)}
-                onZoomIn={() => pzRef.current?.zoomIn()}
-                onZoomOut={() => pzRef.current?.zoomOut()}
+                onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
+                onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
                 trailing={
                   <button
                     type="button"

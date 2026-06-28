@@ -1,24 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { CaretLeft, SignOut } from '@phosphor-icons/react';
-import { css, cx } from 'styled-system/css';
-import type { Cell as DomainCell, Position, Puzzle } from '@/domain';
+import { css } from 'styled-system/css';
+import type { Position, Puzzle } from '@/domain';
 import type { GameEvent, Unsubscribe } from '@/application/game';
 import type { Player, SessionId } from '@/domain/game';
-import { Cell, ClueRail, DefCell, Lockup, type CellState } from '@/design-system';
+import { ClueRail, Lockup } from '@/design-system';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { SkipLink } from '@/ui/v2/SkipLink';
-import {
-  useGridNavigation,
-  type CellHighlight,
-  type GridNavigation,
-} from '@/ui/components/grid/useGridNavigation';
+import { useGridNavigation } from '@/ui/components/grid/useGridNavigation';
 import { orderClues } from '@/ui/components/grid/orderClues';
-import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
-import { CELL, GAP, STRIDE, BOARD_BOTTOM_GAP, posKey, exitsRight } from '@/ui/components/grid/playLayout';
+import { CELL, GAP, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
+import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
 import { Keyboard } from '@/ui/play/Keyboard';
 import { usePresenceState } from '@/ui/components/grid/usePresenceState';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
-import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
 import { CoopPresenceLayer } from './CoopPresenceLayer';
 import { LiveTimer } from './LiveTimer';
 import { PlayerStrip } from './PlayerStrip';
@@ -92,90 +87,8 @@ const iconBtn = css({
 });
 const headerSpacer = css({ flex: 1 });
 const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%', maxWidth: '760px', marginInline: 'auto' } });
-const boardWrap = css({ position: 'relative', width: 'max-content' });
-const boardGrid = css({ display: 'grid', position: 'relative', zIndex: 1 });
-const spacer = css({ borderRadius: '9px' });
-
-const cellWrap = css({ position: 'relative', cursor: 'pointer' });
-const letterInput = css({
-  position: 'absolute',
-  inset: 0,
-  width: '100%',
-  height: '100%',
-  appearance: 'none',
-  WebkitAppearance: 'none',
-  border: 'none',
-  outline: 'none',
-  background: 'transparent',
-  padding: 0,
-  margin: 0,
-  textAlign: 'center',
-  fontFamily: 'wsMono',
-  fontWeight: 'semibold',
-  fontSize: '1.5em',
-  color: 'ws.khaki',
-  caretColor: 'transparent',
-  borderRadius: '9px',
-  cursor: 'pointer',
-  '&::-webkit-search-cancel-button, &::-webkit-search-decoration': { WebkitAppearance: 'none', display: 'none' },
-  '&:read-only': { cursor: 'default' },
-});
-const letterInputOnActive = css({ color: 'white' });
 
 const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 4, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { position: 'static', paddingBottom: '24px' } });
-function LetterSlot({
-  row,
-  col,
-  entry,
-  validated,
-  highlight,
-  nav,
-  onKeyDown,
-}: {
-  readonly row: number;
-  readonly col: number;
-  readonly entry: string;
-  readonly validated: boolean;
-  readonly highlight: CellHighlight;
-  readonly nav: GridNavigation;
-  readonly onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
-}) {
-  const state: CellState = validated
-    ? 'solved'
-    : highlight.focused
-      ? 'active'
-      : highlight.currentWord
-        ? 'activeWord'
-        : 'empty';
-  return (
-    <div
-      className={cellWrap}
-      data-row={row}
-      data-col={col}
-      onClick={nav.handleClick}
-      onMouseDown={(e) => e.preventDefault()}
-    >
-      <Cell state={state} />
-      <input
-        ref={nav.registerCellRef}
-        {...GRID_INPUT_GUARDS}
-        aria-label={`Ligne ${row + 1}, colonne ${col + 1}`}
-        defaultValue={entry}
-        readOnly={validated}
-        aria-readonly={validated || undefined}
-        tabIndex={validated ? -1 : undefined}
-        className={cx(letterInput, state === 'active' && letterInputOnActive)}
-        data-row={row}
-        data-col={col}
-        data-cell-kind="letter"
-        onKeyDown={onKeyDown}
-        onFocus={nav.handleFocus}
-        onBlur={nav.handleBlur}
-        onInput={nav.handleInput}
-      />
-    </div>
-  );
-}
 
 export interface LiveCoopScreenProps {
   readonly puzzle: Puzzle;
@@ -211,7 +124,7 @@ export function LiveCoopScreen({
   subscribeToRemotePresence,
   onLeave,
 }: LiveCoopScreenProps) {
-  const pzRef = useRef<PanZoomHandle>(null);
+  const boardRef = useRef<PuzzleBoardHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [bottomInset, setBottomInset] = useState(220);
   useEffect(() => {
@@ -224,15 +137,6 @@ export function LiveCoopScreen({
   }, []);
 
   const isDesktop = useIsDesktop();
-
-  const BOARD_W = puzzle.width * CELL + (puzzle.width - 1) * GAP;
-  const BOARD_H = puzzle.height * CELL + (puzzle.height - 1) * GAP;
-
-  const byPos = useMemo(() => {
-    const m = new Map<string, DomainCell>();
-    for (const c of puzzle.cells) m.set(posKey(c.position.row, c.position.col), c);
-    return m;
-  }, [puzzle]);
 
   const entryAt = useMemo(() => {
     const m = new Map<string, string>();
@@ -254,17 +158,14 @@ export function LiveCoopScreen({
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
 
-  const revealCell = useCallback((p: Position) => {
-    pzRef.current?.reveal(p.col * STRIDE, p.row * STRIDE, CELL, CELL);
-  }, []);
-
   const nav = useGridNavigation(puzzle, {
     onCellChange: isCompleted ? undefined : onCellChange,
     onFocusChange: isCompleted
       ? undefined
       : (position, direction) => {
+          boardRef.current?.cancelBeat();
           onLocalFocusChange(position, direction);
-          if (position) revealCell(position);
+          if (position) boardRef.current?.revealCell(position);
         },
     getZoomScale: () => 2,
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
@@ -364,36 +265,19 @@ export function LiveCoopScreen({
         </header>
       )}
 
-      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit="contain" padTop={isDesktop ? 12 : 104} padBottom={isDesktop ? 12 : bottomInset + BOARD_BOTTOM_GAP} padX={14} maxScale={2.6} edgeFade>
-        <div className={boardWrap}>
-          <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
-            {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {
-              const row = Math.floor(i / puzzle.width);
-              const col = i % puzzle.width;
-              const cell = byPos.get(posKey(row, col));
-              if (cell?.kind === 'definition') {
-                const sorted = [...cell.clues].sort((x, y) => Number(!exitsRight(x.arrow)) - Number(!exitsRight(y.arrow)));
-                const active = nav.highlightFor({ row, col }).currentArrow !== null;
-                return <DefCell key={i} clues={sorted.map((c) => c.text)} arrows={sorted.map((c) => c.arrow)} active={active} />;
-              }
-              if (cell?.kind === 'letter') {
-                const k = posKey(row, col);
-                return (
-                  <LetterSlot
-                    key={i}
-                    row={row}
-                    col={col}
-                    entry={entryAt.get(k) ?? ''}
-                    validated={validatedPositions.has(k)}
-                    highlight={nav.highlightFor({ row, col })}
-                    nav={nav}
-                    onKeyDown={handleKeyDown}
-                  />
-                );
-              }
-              return <div key={i} className={spacer} />;
-            })}
-          </div>
+      <PuzzleBoard
+        ref={boardRef}
+        puzzle={puzzle}
+        nav={nav}
+        validatedPositions={validatedPositions}
+        entryAt={entryAt}
+        className={viewportFill}
+        padTop={isDesktop ? 12 : 104}
+        padBottom={isDesktop ? 12 : bottomInset + BOARD_BOTTOM_GAP}
+        padX={14}
+        edgeFade
+        onKeyDown={handleKeyDown}
+        overlay={
           <CoopPresenceLayer
             puzzle={puzzle}
             subscribeToRemotePresence={subscribeToRemotePresence}
@@ -404,8 +288,8 @@ export function LiveCoopScreen({
             cellSize={CELL}
             gap={GAP}
           />
-        </div>
-      </PanZoom>
+        }
+      />
 
       <div className={bottomBar} ref={bottomRef}>
         {clue && clueOrdinal >= 0 ? (
@@ -416,8 +300,8 @@ export function LiveCoopScreen({
             total={orderedClues.length}
             onPrev={() => nav.cycleClue(-1)}
             onNext={() => nav.cycleClue(1)}
-            onZoomIn={() => pzRef.current?.zoomIn()}
-            onZoomOut={() => pzRef.current?.zoomOut()}
+            onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
+            onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
           />
         ) : null}
         {!isCompleted ? (

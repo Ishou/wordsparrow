@@ -126,10 +126,9 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.browser, ...globals.es2022, ...globals.node } },
     rules: { 'boundaries/dependencies': 'off', 'boundaries/no-unknown': 'off' },
   },
-  // Sanctioned DEV-only app→module bridges (ADR-0072): the gallery route and
-  // the /play + /home demo modules, all consuming the standalone design-system.
+  // Sanctioned DEV-only app→module bridges (ADR-0072): gallery, /play, /home, /v2, and PuzzleBoard all consuming the standalone design-system.
   {
-    files: ['src/ui/routes/design-system.tsx', 'src/ui/play/**', 'src/ui/home/**', 'src/ui/v2/**'],
+    files: ['src/ui/routes/design-system.tsx', 'src/ui/play/**', 'src/ui/home/**', 'src/ui/v2/**', 'src/ui/components/grid/PuzzleBoard.tsx'],
     rules: { 'boundaries/dependencies': 'off' },
   },
   // UI layer must not render raw Error.message — use messageForApiError() or route-level typed-error mapping.
