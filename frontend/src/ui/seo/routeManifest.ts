@@ -25,7 +25,7 @@ export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
     title: 'WordSparrow — mots fléchés français en ligne',
     description:
       'Jouez aux mots fléchés en français, en solo ou en multijoueur. Gratuit, sans inscription.',
-    ogImagePath: '/og-accueil.png',
+    ogImagePath: '/og-home.png',
   },
   {
     path: '/play',
@@ -38,8 +38,8 @@ export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
     title: 'Anciennes grilles — WordSparrow',
     description:
       'Toutes les grilles passées de WordSparrow, avec votre progression.',
-    // Reuses the Accueil OG image until a dedicated archive asset ships.
-    ogImagePath: '/og-accueil.png',
+    // Reuses the shared WordSparrow OG card.
+    ogImagePath: '/og-home.png',
   },
   {
     path: '/aide',
@@ -83,4 +83,4 @@ export const NOINDEX_PRERENDER_ROUTES: ReadonlyArray<PrerenderRoute> = [
   { path: '/compte', title: 'Mon compte — WordSparrow' },
 ];
 
-export const DEFAULT_OG_IMAGE = `${SITE_BASE_URL}/og-default.png`;
+export const DEFAULT_OG_IMAGE = `${SITE_BASE_URL}/og-home.png`;

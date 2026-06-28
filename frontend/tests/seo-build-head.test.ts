@@ -43,7 +43,7 @@ describe('buildHead', () => {
     const head = buildHead(baseInput);
     expect(head.meta).toContainEqual({
       property: 'og:image',
-      content: 'https://wordsparrow.io/og-default.png',
+      content: 'https://wordsparrow.io/og-home.png',
     });
   });
 
@@ -54,7 +54,7 @@ describe('buildHead', () => {
     expect(head.meta).toContainEqual({ name: 'twitter:description', content: baseInput.description });
     expect(head.meta).toContainEqual({
       name: 'twitter:image',
-      content: 'https://wordsparrow.io/og-default.png',
+      content: 'https://wordsparrow.io/og-home.png',
     });
   });
 
@@ -85,11 +85,11 @@ describe('buildHead', () => {
     // The default must NOT leak in when a per-route image is supplied.
     expect(head.meta).not.toContainEqual({
       property: 'og:image',
-      content: 'https://wordsparrow.io/og-default.png',
+      content: 'https://wordsparrow.io/og-home.png',
     });
     expect(head.meta).not.toContainEqual({
       name: 'twitter:image',
-      content: 'https://wordsparrow.io/og-default.png',
+      content: 'https://wordsparrow.io/og-home.png',
     });
   });
 });
