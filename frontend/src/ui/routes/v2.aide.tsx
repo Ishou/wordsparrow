@@ -1,5 +1,5 @@
 import { createRoute } from '@tanstack/react-router';
-// Sanctioned app→module bridge (ADR-0072); registered only in DEV until the v1→v2 cutover (ADR-0074).
+// Sanctioned app→module bridge (ADR-0072); registered only in DEV.
 import { AideScreen } from '@/ui/v2/AideScreen';
 import { Route as V2Route } from './v2';
 

@@ -9,8 +9,7 @@ export interface PhoneShellProps {
   readonly header?: ReactNode;
   // Highlights the matching desktop nav link (Accueil/Grilles); omit on pages with no top-nav home.
   readonly navActive?: 'accueil' | 'grilles';
-  // Desktop back target. On phone/tablet the `header` BackHeader carries this; on desktop the
-  // top chrome is the shared nav bar, so the page-level Retour is rendered in the content column.
+  // Desktop-only back target; phone/tablet uses the header's BackHeader (hidden at lg).
   readonly backTo?: LinkProps['to'];
 }
 
