@@ -30,10 +30,10 @@ it the production default without dropping live v1 features.
 | `/mentions-legales` | `/v2/mentions-legales` | ✅ covered |
 | `/join/$code` | `/v2/join/$code` | ✅ covered |
 | `/lobby/$lobbyId` | `/v2/lobby/$lobbyId` | ✅ covered |
-| `/compte` (account) | `/v2/reglages` (sign-in only) | ⚠️ partial |
-| `/aide` (help) | — | ❌ gap (v1 nav item) |
-| `/contribuer`, `/contribuer/pairs` | — | ❌ gap (v1 nav item, real feature) |
-| `/privacy` (EN privacy) | — | ❌ gap |
+| `/compte` (account) | `/v2/compte` (#1058) | ✅ ported |
+| `/aide` (help) | `/v2/aide` (#1056) | ✅ ported |
+| `/contribuer`, `/contribuer/pairs` | — | ⛔ fully gated (maintainer follow-up) |
+| `/privacy` (EN privacy) | — | redirect → `/confidentialite` |
 
 The gaps are live: `Contribuer` and `Aide` are primary items in the v1
 `AppHeader`; `/compte` is linked from `AvatarMenu` and `PrivacyNotice`;
@@ -42,47 +42,52 @@ The gaps are live: `Contribuer` and `Aide` are primary items in the v1
 
 ## Decision
 
-Make v2 the production default via a **redirect-first, expand-and-contract**
-cutover. v2 routes graduate to always-registered; v1 routes become redirects;
-v1 code is deleted only once nothing references it.
+Make v2 the production default by **promoting the v2 routes to the root path
+(dropping the `/v2` prefix) and removing v1** — `/v2` is not a permanent URL
+space, it was only the dev sandbox. So `/v2` → `/`, `/v2/play` → `/play`,
+`/v2/reglages` → `/reglages`, etc., and the v1 screens are deleted. Old v1 URLs
+whose path *changes* keep working via redirects (bookmark/SEO continuity); where
+v2 already reuses the v1 path name (`/grilles`, `/compte`, `/confidentialite`,
+`/mentions-legales`, `/finish`, `/join`, `/lobby`) no redirect is needed — v2
+simply takes the path once v1 is gone.
 
-### 1. Route disposition
+### 1. Route disposition (at root, after the prefix drop)
 
-- **Covered routes** — v1 path 301-style redirects to the v2 path
-  (`/grille → /v2/play`, `/grilles → /v2/grilles`, etc.). Existing bookmarks
-  and share-links keep working.
-- **`/compte`** — redirect to `/v2/reglages`. Réglages already hosts sign-in;
-  full account management (delete data, etc.) is tracked as a v2 réglages
-  follow-up, not a cutover blocker.
-- **`/privacy`** — redirect to `/v2/confidentialite` (single privacy page;
-  the EN variant is dropped, matching the tutoiement/French-first posture).
-- **`/aide`** — fold help into v2: add a "Nous écrire / Aide" entry already
-  present in `/v2/reglages`. Redirect `/aide → /v2/reglages`.
-- **`/contribuer`, `/contribuer/pairs`** — **NOT covered by v2 and a real
-  feature.** Two options, maintainer decides (see Open question):
-  - **(a) Carry forward unreskinned** — keep the v1 contribuer screens mounted
-    at `/contribuer` during the cutover (v1 shell), linked from the v2 menu, and
-    reskin in a later wave. Zero feature loss.
-  - **(b) Park** — redirect `/contribuer → /v2` and drop the nav entry until a
-    v2 contribuer is built. Feature temporarily removed.
-  Recommended: **(a)** — never drop a live feature in a visual cutover.
+- **Same-name paths** — v2 takes them directly: `/grilles`, `/compte`,
+  `/confidentialite`, `/mentions-legales`, `/finish`, `/join/$code`,
+  `/lobby/$lobbyId`.
+- **Renamed paths** — redirect the old v1 URL to the new root path:
+  `/accueil` (and v1 `/`) → `/` (v2 home), `/grille → /play`,
+  `/privacy → /confidentialite` (EN variant dropped — French-first/tutoiement).
+- **`/aide`, `/compte`** — already ported to v2 (#1056, #1058); they keep their
+  paths at root.
+- **`/contribuer`, `/contribuer/pairs`** — **fully gated for now**: not exposed
+  in v2 (no nav entry, route unregistered for normal users). The v1 contribuer
+  screens are kept in the tree on their v1 design; a follow-up un-gates them for
+  the **maintainer account only**. That follow-up needs identity to expose a
+  role in `whoami` (today `WhoAmIResult` is just `{userId, displayName}`).
 
 ### 2. Router change
 
-Remove the `import.meta.env.DEV` gate from the v2 subtree; register `/v2/*` in
-all environments. Move the index: the root index route renders the v2 home
-(or the root `/` redirects to `/v2`). v1 base routes become `redirect`
-loaders. The `multiplayer` flag still gates the lobby/join routes (ADR-0018).
+In `frontend/src/ui/router.ts`: drop the `import.meta.env.DEV` gate, remove the
+`/v2` parent route, and register the (ex-v2) screens as **root children** with
+their prefix removed. Delete the v1 base routes (keeping contribuer in the tree
+but unregistered). Rewrite every internal `/v2/...` link and `navigate({ to })`
+in the v2 components to the new root paths. The `multiplayer` flag still gates
+the lobby/join routes (ADR-0018).
 
 ### 3. Sequencing (expand-and-contract — CLAUDE.md)
 
-1. **Wave 1 — this ADR** (governance). Decide the contribuer disposition.
-2. **Wave 2 — flip + redirects.** Un-gate `/v2/*`, redirect v1 paths, root → v2.
-   v1 screen code stays in the tree (now unreachable except via carried-forward
-   contribuer). Ship dark/measure; this is the reversible step.
+1. **Wave 1 — this ADR** (governance). Contribuer disposition **decided**:
+   full-gate now, un-gate for the maintainer in a follow-up.
+2. **Wave 2 — promote + redirect.** Drop the `/v2` prefix (v2 → root), delete v1
+   routes, redirect the renamed v1 paths, rewrite internal `/v2/...` links.
+   Contribuer kept in the tree but unregistered. This is the reversible step
+   (router-only; reverting restores the `/v2` dev gate).
 3. **Wave 3 — contract.** Delete the now-dead v1 screens, `AppHeader`,
    `PrivacyNotice` (v1), v1-only components, and their routes/tests, once Wave 2
-   has soaked and nothing imports them.
+   has soaked and nothing imports them. Contribuer stays until its v2/maintainer
+   follow-up lands.
 
 ## Consequences
 
@@ -92,7 +97,7 @@ loaders. The `multiplayer` flag still gates the lobby/join routes (ADR-0018).
   ADR-0054); redirects must preserve search params (e.g. `/grille?date=`).
   Wave 2 must keep v1 code compiling until Wave 3 (expand-and-contract), so the
   tree briefly carries both designs.
-- **Reversible:** Wave 2 is a router-only change; reverting re-gates `/v2`.
-- **Open question (blocks Wave 2 scope):** contribuer disposition — carry
-  forward unreskinned (recommended) or park? The rest of the cutover is
-  unambiguous.
+- **Reversible:** Wave 2 is a router-only change; reverting restores the `/v2`
+  dev gate.
+- **Follow-up dependency:** un-gating contribuer for the maintainer needs a role
+  exposed in `whoami` (identity change) — out of scope for the cutover itself.
