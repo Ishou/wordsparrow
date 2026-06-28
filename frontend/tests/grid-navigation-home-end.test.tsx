@@ -79,6 +79,16 @@ describe('Grid keyboard interactions — Home / End word-boundary keys', () => {
     expect(document.activeElement).toBe(inputAt(container, 1, 3));
   });
 
+  it('Right from a down-only cell skips the definition cell to the next letter', () => {
+    const { container } = render(<Grid puzzle={TEST_PUZZLE} />);
+    const cell = inputAt(container, 0, 1)!;
+    click(cell); // only a down clue here → direction becomes 'down'
+    expect(document.activeElement).toBe(cell);
+    fireEvent.keyDown(cell, { key: 'ArrowRight' });
+    // (0,2) is a definition cell → skipped; lands on letter (0,3).
+    expect(document.activeElement).toBe(inputAt(container, 0, 3));
+  });
+
   // Home / End are no-ops (no crash) when no cell is focused.
   it('Home and End are no-ops when no cell is focused', () => {
     const { container } = render(<Grid puzzle={TEST_PUZZLE} />);
