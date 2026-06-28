@@ -38,7 +38,8 @@ dependencies {
     // Pin transitive Netty 4.2.x to 4.2.15.Final (current Ktor pin is .12).
     // Fixes a cluster of HTTP-request-smuggling, decompression-bomb, and
     // resource-exhaustion CVEs in netty-codec-http / -http2 / -compression
-    // and an epoll DoS in -transport-native-epoll. GHSA refs: v8h7-rr48-vmmv,
+    // and an epoll DoS in -transport-native-epoll, plus an fd-descriptor
+    // leak in -transport-native-kqueue (GHSA-w573-9ffj-6ff9). GHSA refs: v8h7-rr48-vmmv,
     // m4cv-j2px-7723, xxqh-mfjm-7mv9, 38f8-5428-x5cv, 57rv-r2g8-2cj3,
     // f6hv-jmp6-3vwv, rwm7-x88c-3g2p, mj4r-2hfc-f8p6.
     //
@@ -53,6 +54,7 @@ dependencies {
         implementation("io.netty:netty-codec-http2:4.2.15.Final")
         implementation("io.netty:netty-codec-compression:4.2.15.Final")
         implementation("io.netty:netty-transport-native-epoll:4.2.15.Final")
+        implementation("io.netty:netty-transport-native-kqueue:4.2.15.Final")
         implementation("com.fasterxml.jackson.core:jackson-core:2.22.0")
         implementation("tools.jackson.core:jackson-core:3.2.0")
     }
