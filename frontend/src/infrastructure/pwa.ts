@@ -13,14 +13,6 @@
 import { Workbox } from 'workbox-window';
 import { reportCaughtError } from '@/infrastructure/observability/otelTracer';
 
-// Window after `load` during which a `controlling` event is treated as
-// "F5 just landed on a deploy boundary" and the page reloads
-// immediately. After this window we assume the user is mid-session and
-// defer the reload to the next time the tab regains visibility — that
-// keeps a long-lived second tab from being yanked out from under the
-// user when another tab triggers an update.
-const FRESH_LOAD_RELOAD_WINDOW_MS = 3000;
-
 // timestamp of last chunk-mismatch reload; time-windowed per ADR-0026
 const CHUNK_RELOAD_AT = 'bliss.chunk-mismatch-reload-at';
 
@@ -62,7 +54,6 @@ export function registerServiceWorker(): void {
     // serve a stale SW and miss a deploy until the user does Ctrl+F5
     // — the symptom that motivated this module's last revision.
     const wb = new Workbox('/sw.js', { updateViaCache: 'none' });
-    const loadAt = performance.now();
     let refreshing = false;
     let staleVisibilityListener: (() => void) | null = null;
 
@@ -82,23 +73,9 @@ export function registerServiceWorker(): void {
       document.addEventListener('visibilitychange', staleVisibilityListener);
     };
 
-    // `controlling` fires when the controller for this client changes.
-    // For a brand-new first install (no previous controller),
-    // workbox-window suppresses it, so this only triggers on real
-    // updates.
-    //
-    // Two regimes:
-    // - Fresh load (within FRESH_LOAD_RELOAD_WINDOW_MS of `load`): the
-    //   user just refreshed; reload synchronously so they end on the
-    //   new build without a perceivable double-render and without
-    //   needing a hard refresh.
-    // - Mid-session: defer until the tab next becomes visible. This
-    //   avoids reloading a tab the user is actively typing into when
-    //   another tab races ahead to a new deploy.
+    // Real update (workbox suppresses the first install). Puzzle state lives in localStorage so reloading is safe (ADR-0026): reload a visible tab now so it lands on the new build; defer a hidden tab until it's next shown (a >3s SW install on mobile used to defer a visible tab forever, stranding it on the old build).
     wb.addEventListener('controlling', () => {
-      const elapsedMs = performance.now() - loadAt;
-      const visible = document.visibilityState === 'visible';
-      if (elapsedMs < FRESH_LOAD_RELOAD_WINDOW_MS && visible) {
+      if (document.visibilityState === 'visible') {
         reloadOnce();
         return;
       }
