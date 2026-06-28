@@ -130,8 +130,7 @@ const letterInput = css({
 });
 const letterInputOnActive = css({ color: 'white' });
 
-// Overlay bar — its measured height feeds PanZoom's padBottom so the focused cell stays above it.
-// No padding-top: the board already reserves BOARD_BOTTOM_GAP below itself; a panel top-pad would double the gutter.
+// Overlay bar (padBottom drives focus-reveal); no top-pad — board reserves BOARD_BOTTOM_GAP below itself.
 const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `0 ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { paddingBottom: '24px' } });
 // Compact hint chip, lives in the ClueRail label row (replacing the counter).
 const hintBtn = css({
