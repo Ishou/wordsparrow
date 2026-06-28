@@ -37,8 +37,8 @@ const DIST = resolve(import.meta.dirname, '../dist');
 // route's pendingComponent (skeleton) renders; we graft pass A's
 // <head> onto pass B's body.
 
-// ADR-0074: /play and /grilles use aria-busy; only home needs the skeleton-grafting pass.
-const PUZZLE_LOADING_ROUTES: ReadonlySet<string> = new Set(['/']);
+// Home + /play fetch the daily in a way that would bake the grid into static HTML (flicker); graft the head onto a hung-loader skeleton. /grilles has its own in-component aria-busy.
+const PUZZLE_LOADING_ROUTES: ReadonlySet<string> = new Set(['/', '/play']);
 
 // Hang auth/survey so AuthProvider stays in `loading` and the anon-redirect effect never fires.
 const AUTH_GATED_ROUTES: ReadonlySet<string> = new Set(
@@ -189,11 +189,10 @@ async function loadRoute(
       waitUntil: 'domcontentloaded',
       timeout: 30_000,
     });
-    // Wait for the route to settle. Fixture pass: head() fires after
-    // the loader resolves and updates <title>. Hang pass: the
-    // skeleton's imperative useLayoutEffect sets the title (head() never
-    // fires while the loader pends). Either way, title === expected
-    // signals the page is ready to dump.
+    // canonical link is a stronger ready-signal than title; pendingMs:0 lets title fire early.
+    if (puzzleStub === 'fixture') {
+      await page.waitForSelector('link[rel="canonical"]', { state: 'attached', timeout: 5_000 });
+    }
     await page.waitForFunction(
       (expected) => document.title === expected,
       route.title,
