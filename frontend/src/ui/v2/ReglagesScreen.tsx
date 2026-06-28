@@ -41,7 +41,7 @@ const avatar = css({
   fontSize: '20px',
 });
 const avatarAnon = css({ bg: 'ws.jade', color: 'ws.jadeInk' });
-const profileLink = css({ textDecoration: 'none', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: '#F6FAF7' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const profileLink = css({ textDecoration: 'none', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const profileName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const profileMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
 

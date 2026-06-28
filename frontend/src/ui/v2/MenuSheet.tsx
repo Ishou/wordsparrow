@@ -42,9 +42,11 @@ const grab = css({ display: 'block', width: '42px', height: '5px', borderRadius:
 // Generous drag target around the grab bar; touch-action:none so the vertical drag-to-dismiss isn't stolen by scroll (ADR-0016 amendment).
 const dragZone = css({ touchAction: 'none', cursor: 'grab', padding: '6px 0 2px', marginTop: '-6px', _active: { cursor: 'grabbing' }, lg: { display: 'none' } });
 
-const head = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 8px 12px', borderBottom: '1px solid #EEF3EC', marginBottom: '4px' });
-// The header is a link into Mon compte.
-const headLink = css({ textDecoration: 'none', cursor: 'pointer', paddingInline: '8px', paddingTop: '8px', borderTopRadius: '13px', transition: 'background-color 120ms', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-2px' } });
+// The header is a rounded link row into Mon compte, matching the menu items below it.
+const head = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', borderRadius: '13px' });
+const headLink = css({ textDecoration: 'none', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-2px' } });
+// Standalone separator so the rounded hover above never clips it.
+const headDivider = css({ display: 'block', height: '1px', bg: '#EEF3EC', margin: '6px 4px' });
 const headChevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
 const headAvatar = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', bg: 'ws.sakuraDark', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '18px' });
 const headName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
@@ -173,6 +175,8 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
                 <CaretRight size={18} weight="bold" aria-hidden="true" />
               </span>
             </Link>
+
+            <span className={headDivider} aria-hidden="true" />
 
             <nav aria-label="Menu">
               <ul className={list}>
