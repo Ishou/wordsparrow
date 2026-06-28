@@ -28,9 +28,9 @@ const nestScene = (
       </symbol>
     </defs>
     <use href="#gaNest" x="39" y="62" width="72" height="44" />
-    <use href="#gaBlossom" x="28" y="44" width="14" height="14" />
-    <use href="#gaBlossom" x="108" y="52" width="13" height="13" />
     <use href="#gaBird" x="52" y="30" width="46" height="46" />
+    <use href="#gaBlossom" x="41" y="76" width="14" height="14" />
+    <use href="#gaBlossom" x="96" y="77" width="13" height="13" />
   </svg>
 );
 

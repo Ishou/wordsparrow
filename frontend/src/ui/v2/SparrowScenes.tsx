@@ -31,10 +31,11 @@ export function sparrowCelebrationScene(): ReactElement {
   return (
     <svg width="148" height="120" viewBox="0 0 148 120" role="img" aria-label="Un moineau qui chante sur une branche fleurie">
       <path d="M16 96 q44 -10 116 -30" stroke="#9CCBB1" strokeWidth="4" fill="none" strokeLinecap="round" />
-      <circle cx="44" cy="86" r="5.5" fill="#F6C9D7" />
-      <circle cx="72" cy="78" r="6.5" fill="#EFB6CB" />
-      <circle cx="100" cy="70" r="5.5" fill="#F6C9D7" />
-      <circle cx="124" cy="62" r="4.5" fill="#EFB6CB" />
+      <path d="M44 89 v-4 M72 82 v-5 M100 75 v-5 M124 68 v-4" stroke="#9CCBB1" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="44" cy="83" r="5.5" fill="#F6C9D7" />
+      <circle cx="72" cy="74" r="6.5" fill="#EFB6CB" />
+      <circle cx="100" cy="67" r="5.5" fill="#F6C9D7" />
+      <circle cx="124" cy="61" r="4.5" fill="#EFB6CB" />
       <g transform="translate(56 18)">
         <path d="M22 50 C14 46 13 31 19 23 C26 14 38 13 46 18 C51 21 54 26 54 31 L64 28 L54 35 C54 44 46 51 36 51 C31 51 26 52 22 50 Z" fill="#D45D83" />
         <path d="M30 30 C39 29 46 34 47 42 C39 43 31 39 30 30 Z" fill="#BE4970" />
