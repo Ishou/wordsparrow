@@ -36,8 +36,7 @@ export function registerServiceWorker(): void {
   if (import.meta.env.DEV) return;
   // Preview mode runs MSW's own service worker at scope `/`. Registering
   // workbox here would race MSW for that scope: workbox's `controlling`
-  // event would fire on every page load, the fresh-load reload window
-  // would trigger `location.reload()`, and the preview would refresh
+  // event would fire on every page load and reload the visible tab immediately, and the preview would refresh
   // forever. Match `main.tsx`'s MSW gate exactly — skip whenever either
   // surface mock is on. Production sets both to `false` in `.env`.
   if (
@@ -73,7 +72,7 @@ export function registerServiceWorker(): void {
       document.addEventListener('visibilitychange', staleVisibilityListener);
     };
 
-    // Real update (workbox suppresses the first install). Puzzle state lives in localStorage so reloading is safe (ADR-0026): reload a visible tab now so it lands on the new build; defer a hidden tab until it's next shown (a >3s SW install on mobile used to defer a visible tab forever, stranding it on the old build).
+    // Real update (workbox suppresses the first install). Puzzle state lives in localStorage so reloading is safe (ADR-0026).
     wb.addEventListener('controlling', () => {
       if (document.visibilityState === 'visible') {
         reloadOnce();
