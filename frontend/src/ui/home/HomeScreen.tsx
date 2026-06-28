@@ -145,6 +145,9 @@ const dayDotBtn = css({ width: '34px', height: '34px', borderRadius: '50%', disp
 
 const WD_LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'] as const;
 
+// Time-neutral greeting shown during prerender + first client paint (before the real time-of-day greeting resolves post-mount).
+const NEUTRAL_GREETING = { hi: 'Bonjour', sub: 'Une nouvelle grille rien que pour toi.' } as const;
+
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -231,6 +234,9 @@ export function HomeScreen({
     return () => { cancelled = true; };
   }, [puzzleRepository, retry]);
 
+  // Time-of-day art reveals only once the daily fetch settles. The prerender (ADR-0072) hangs that fetch, so its HTML stays time-neutral deterministically — prerender == first client paint, no build-time-sky swap (createRoot, not hydrate).
+  const timeReady = daily.status !== 'loading';
+
   const { greeting, bucket, now: nowDate, dateLabel, week, range } = useMemo(() => {
     const now = new Date();
     const b = bucketForHour(now.getHours());
@@ -284,11 +290,11 @@ export function HomeScreen({
         <div id="main-content" tabIndex={-1} className={content}>
           <div className={hub}>
           <section className={hero}>
-            <HomeGreetingArt bucket={bucket} now={nowDate} className={heroArt} drape={34} />
+            <HomeGreetingArt bucket={bucket} now={nowDate} className={heroArt} drape={34} neutral={!timeReady} />
             <div className={heroBody}>
               <div className={heroGreeting}>
-                <h1 className={heroHi}>{greeting.hi}</h1>
-                <p className={heroSub}>{greeting.sub}</p>
+                <h1 className={heroHi}>{(timeReady ? greeting : NEUTRAL_GREETING).hi}</h1>
+                <p className={heroSub}>{(timeReady ? greeting : NEUTRAL_GREETING).sub}</p>
               </div>
               {streak.best >= 2 ? (
                 <div className={heroTop}>

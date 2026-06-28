@@ -71,6 +71,9 @@ interface BucketArt {
   readonly night?: boolean;
 }
 
+// Time-neutral sky: a soft jade-dawn gradient with no sun/moon/stars, so it reads at any hour.
+const NEUTRAL_ART: BucketArt = { sky: ['#CDEBDB', '#DCEFE1', '#E7F2EA'], skyMid: '54%' };
+
 function artFor(bucket: DayBucket): BucketArt {
   switch (bucket) {
     case 'matin':
@@ -244,17 +247,20 @@ export function HomeGreetingArt({
   now,
   className,
   drape,
+  neutral,
 }: {
   readonly bucket: DayBucket;
   readonly now?: Date;
   readonly className?: string;
   // parent must not set overflow: hidden, or the drape is clipped.
   readonly drape?: number;
+  // Render the time-neutral sky so prerender == first client paint (no time-of-day swap flash).
+  readonly neutral?: boolean;
 }): ReactElement {
   const rawId = useId();
   const p = `${rawId.replace(/:/g, '')}-`;
   const phase = useMemo(() => moonPhase(now ?? new Date()), [now]);
-  const art = artFor(bucket);
+  const art = neutral ? NEUTRAL_ART : artFor(bucket);
   const stops = art.sky;
   const gradient =
     stops.length === 3
@@ -262,18 +268,26 @@ export function HomeGreetingArt({
       : `linear-gradient(180deg, ${stops[0]}, ${stops[1]})`;
 
   return (
-    <div className={className ?? banner} style={{ backgroundImage: gradient }} aria-hidden="true">
+    <div
+      className={className ?? banner}
+      // Sky crossfades; reduced-motion users get the instant swap.
+      style={{ backgroundImage: gradient, transition: 'background-image 600ms ease' }}
+      aria-hidden="true"
+    >
       <svg
         viewBox="0 0 300 168"
         preserveAspectRatio="xMidYMax slice"
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: drape ? `calc(100% + ${drape}px)` : '100%', overflow: 'visible' }}
       >
         <Defs p={p} />
-        {art.night
-          ? STARS.map(([cx, cy, r], i) => <circle key={i} cx={cx} cy={cy} r={r} fill="#E9E2BD" />)
-          : null}
-        {art.sun ? <Sun t={art.sun.t} soft={art.sun.soft} dawn={art.sun.dawn} /> : null}
-        {art.moon ? <Moon t={art.moon.t} night={art.night} phase={phase} /> : null}
+        {/* Sun/moon/stars fade in after mount so the neutral→real reveal is gentle, not a flash. */}
+        <g style={{ opacity: neutral ? 0 : 1, transition: 'opacity 600ms ease' }}>
+          {art.night
+            ? STARS.map(([cx, cy, r], i) => <circle key={i} cx={cx} cy={cy} r={r} fill="#E9E2BD" />)
+            : null}
+          {art.sun ? <Sun t={art.sun.t} soft={art.sun.soft} dawn={art.sun.dawn} /> : null}
+          {art.moon ? <Moon t={art.moon.t} night={art.night} phase={phase} /> : null}
+        </g>
         <use href={`#${p}fg`} x="0" y="0" width="300" height="168" />
       </svg>
     </div>
