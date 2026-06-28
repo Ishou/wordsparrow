@@ -7,8 +7,8 @@ import type { PuzzleSolver } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Button, Cell, DefCell, ClueRail, Lockup, type CellState } from '@/design-system';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
+import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { SkipLink } from '@/ui/v2/SkipLink';
-import { PlayMenu } from './PlayMenu';
 import {
   useGridNavigation,
   type CellHighlight,
@@ -732,7 +732,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         <WinScreen time={timeLabel} onReplay={handleReplay} onDismiss={() => setWinDismissed(true)} />
       ) : null}
 
-      <PlayMenu open={menuOpen} onClose={() => setMenuOpen(false)} onRecommencer={handleReplay} />
+      <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <div className={bottomBar} ref={bottomRef}>
         {won ? (
