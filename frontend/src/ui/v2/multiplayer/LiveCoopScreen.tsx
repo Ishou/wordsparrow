@@ -6,6 +6,7 @@ import type { GameEvent, Unsubscribe } from '@/application/game';
 import type { Player, SessionId } from '@/domain/game';
 import { Cell, ClueRail, DefCell, Lockup, type CellState } from '@/design-system';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
+import { SkipLink } from '@/ui/v2/SkipLink';
 import {
   useGridNavigation,
   type CellHighlight,
@@ -325,7 +326,8 @@ export function LiveCoopScreen({
 
   return (
     <div className={stage}>
-    <main className={shell} lang="fr">
+    <SkipLink />
+    <main id="main-content" tabIndex={-1} className={shell} lang="fr">
       {isDesktop ? (
         <>
           <DesktopAppBar trailing={<LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />} />
