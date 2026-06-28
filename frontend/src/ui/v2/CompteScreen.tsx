@@ -12,7 +12,6 @@ import { EraseData } from './EraseData';
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 16px' });
 const stack = css({ display: 'flex', flexDirection: 'column', gap: '16px' });
 
-// Profile hero
 const hero = css({ display: 'flex', alignItems: 'center', gap: '15px', bg: 'white', borderRadius: '20px', padding: '18px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 12px 26px rgba(33,75,64,0.09)' });
 const avatar = css({ flex: 'none', width: '62px', height: '62px', borderRadius: '50%', bg: 'ws.sakuraDark', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px' });
 const avatarAnon = css({ bg: 'ws.jade', color: 'ws.jadeInk' });
@@ -22,7 +21,6 @@ const heroMeta = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'bold
 
 const iconBtn = css({ flex: 'none', width: '38px', height: '38px', borderRadius: '50%', border: 'none', bg: 'ws.sable', color: 'ws.jadeInk', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _hover: { bg: '#DED7BC' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
-// Inline name edit
 const editRow = css({ display: 'flex', gap: '8px', alignItems: 'center' });
 const nameInput = css({ flex: 1, minWidth: 0, height: '44px', borderRadius: '12px', border: '1.5px solid rgba(33,75,64,0.16)', bg: 'white', paddingInline: '14px', fontFamily: 'wsDisplay', fontSize: '18px', fontWeight: 'semibold', color: 'ws.jadeInk', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const saveBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '12px', border: 'none', bg: 'ws.sakuraDark', color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _disabled: { opacity: 0.45, cursor: 'not-allowed' } });
@@ -38,7 +36,6 @@ const rowLabel = css({ fontSize: '14.5px', fontWeight: 'bold', color: 'ws.jadeIn
 const rowSub = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '1px' });
 const dangerWrap = css({ marginTop: '6px' });
 
-// Sign-in (anon)
 const signInCard = css({ bg: 'white', borderRadius: '20px', padding: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 12px 26px rgba(33,75,64,0.09)', textAlign: 'center' });
 const signInLede = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'semibold', color: 'ws.khaki', marginTop: '8px', marginBottom: '16px' });
 const googleBtn = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', height: '50px', borderRadius: '14px', bg: 'ws.jadeInk', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', textDecoration: 'none', cursor: 'pointer', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
