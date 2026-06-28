@@ -364,7 +364,7 @@ export function LiveCoopScreen({
         </header>
       )}
 
-      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit={isDesktop ? 'contain' : 'height'} framePad={14} padTop={isDesktop ? 12 : 104} padBottom={isDesktop ? 12 : bottomInset + BOARD_BOTTOM_GAP} padX={14} maxScale={2.6} edgeFade>
+      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit="contain" padTop={isDesktop ? 12 : 104} padBottom={isDesktop ? 12 : bottomInset + BOARD_BOTTOM_GAP} padX={14} maxScale={2.6} edgeFade>
         <div className={boardWrap}>
           <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
             {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {

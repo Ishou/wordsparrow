@@ -23,8 +23,6 @@ export interface PanZoomProps {
   readonly padTop?: number;
   readonly padBottom?: number;
   readonly padX?: number;
-  // Frame inset (px) kept around the board at its fit/floor scale; it bleeds through when zoomed.
-  readonly framePad?: number;
   // Soft jade vignette so bleeding edge cells dissolve into the field (fenêtré).
   readonly edgeFade?: boolean;
   readonly className?: string;
@@ -54,7 +52,7 @@ const WHEEL_ZOOM_MAX = 0.3; // cap one event at ~±30% so a fast flick can't jum
 const PINCH_ZOOM_BOOST = 6; // ctrlKey wheel = trackpad pinch; its deltas are tiny
 
 export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
-  { contentWidth, contentHeight, minScale = 0.5, maxScale = 3, fit = 'contain', overscan = 1.08, padTop = 0, padBottom = 0, padX = 0, framePad = 0, edgeFade = false, className, children },
+  { contentWidth, contentHeight, minScale = 0.5, maxScale = 3, fit = 'contain', overscan = 1.08, padTop = 0, padBottom = 0, padX = 0, edgeFade = false, className, children },
   ref,
 ) {
   const vpRef = useRef<HTMLDivElement>(null);
@@ -182,9 +180,11 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   const containScale = useCallback(() => {
     const vp = vpRef.current;
     if (!vp) return minScale;
-    return Math.min((vp.clientWidth - 2 * framePad) / contentWidth, (vp.clientHeight - 2 * framePad) / contentHeight);
-  }, [contentWidth, contentHeight, minScale, framePad]);
-  const lowerBound = useCallback(() => Math.max(minScale, containScale()), [containScale, minScale]);
+    // Floor fits the whole board in the clear band (between header + clue-rail/keyboard) so unzoom shows every row, not the board crammed full-viewport behind the keyboard.
+    return Math.min((vp.clientWidth - 2 * padX) / contentWidth, (vp.clientHeight - padTop - padBottom) / contentHeight);
+  }, [contentWidth, contentHeight, minScale, padX, padTop, padBottom]);
+  // The whole-board fit IS the unzoom floor (interface: "fit scale becomes the zoom floor"); a higher minScale would cram the board past the clear band on small viewports.
+  const lowerBound = useCallback(() => containScale(), [containScale]);
 
   const clamp = useCallback(() => {
     const vp = vpRef.current;

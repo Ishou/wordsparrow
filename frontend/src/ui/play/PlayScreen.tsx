@@ -130,8 +130,8 @@ const letterInput = css({
 });
 const letterInputOnActive = css({ color: 'white' });
 
-// Overlay bar — its measured height feeds PanZoom's padBottom so the focused cell stays above it.
-const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { paddingBottom: '24px' } });
+// Overlay bar (padBottom drives focus-reveal); no top-pad — board reserves BOARD_BOTTOM_GAP below itself.
+const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `0 ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { paddingBottom: '24px' } });
 // Compact hint chip, lives in the ClueRail label row (replacing the counter).
 const hintBtn = css({
   display: 'inline-flex',
@@ -694,7 +694,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         </header>
       )}
 
-      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit={isDesktop ? 'contain' : 'height'} framePad={isDesktop ? 12 : 14} padTop={isDesktop ? 18 : 68} padBottom={isDesktop ? 6 : bottomInset + BOARD_BOTTOM_GAP} padX={isDesktop ? 24 : 14} maxScale={2.6} edgeFade>
+      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit="contain" padTop={isDesktop ? 18 : 68} padBottom={isDesktop ? 6 : bottomInset + BOARD_BOTTOM_GAP} padX={isDesktop ? 24 : 14} maxScale={2.6} edgeFade>
         <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
           {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {
             const row = Math.floor(i / puzzle.width);
