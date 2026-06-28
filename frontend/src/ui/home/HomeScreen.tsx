@@ -124,6 +124,8 @@ const joinInput = css({
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
   '&[aria-invalid="true"]': { borderColor: 'ws.sakuraDark' },
 });
+// Mask via CSS on a type=text input — type=password is what makes the browser offer password autofill on this (non-secret) join code.
+const joinMaskStyle = { WebkitTextSecurity: 'disc' } as CSSProperties;
 const joinEyeBtn = css({ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: '10px', bg: 'transparent', color: 'ws.khaki', cursor: 'pointer', _hover: { color: 'ws.jadeInk' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const joinGo = css({ flex: 'none', width: '48px', height: '48px', borderRadius: '13px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'ws.jade', color: 'ws.jadeInk', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: '#A9D8BE' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const joinErr = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '7px', textAlign: 'center' });
@@ -351,8 +353,9 @@ export function HomeScreen({
                       <input
                         ref={joinInputRef}
                         className={joinInput}
-                        type={joinRevealed ? 'text' : 'password'}
-                        autoComplete="one-time-code"
+                        style={joinRevealed ? undefined : joinMaskStyle}
+                        type="text"
+                        autoComplete="off"
                         autoCapitalize="characters"
                         autoCorrect="off"
                         spellCheck={false}
