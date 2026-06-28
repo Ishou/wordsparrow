@@ -45,8 +45,8 @@ A new table (the Flyway migration `V6__puzzle_progress.sql` is written in Wave
 
 ```sql
 CREATE TABLE puzzle_progress (
-    user_id    UUID        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    puzzle_id  TEXT        NOT NULL,
+    user_id    UUID        NOT NULL REFERENCES identity_users (user_id) ON DELETE CASCADE,
+    puzzle_id  UUID        NOT NULL,
     payload    JSONB       NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (user_id, puzzle_id)
@@ -104,8 +104,9 @@ data-minimization.
   enforces one row per `(user, puzzle)`, so no cross-user row exists to leak.
 - **Resource bounds:** the `payload` size is capped at **64 KiB** at the API
   edge → `413` over the cap; non-object payloads are rejected → `400`. A
-  per-session write rate limit applies to `PUT`. A `puzzle_id` cap per user
-  bounds table growth.
+  per-session write rate limit (60 writes per 60-second window) applies to
+  `PUT` → `429`. A per-user puzzle count cap (500 distinct puzzles) bounds
+  table growth → `403` on a first write when at the cap.
 - **PII:** the blob is grid progress only — no PII (satisfies ADR-0045).
   Account deletion cascades via the `ON DELETE CASCADE` FK; the existing
   `deleteMe` erasure path needs no change.
@@ -143,7 +144,7 @@ barrier and merges before any implementation.
 | Wave | Deliverable |
 |------|-------------|
 | 1 | This ADR + the schema-only PR on `identity/api/openapi.yaml` + the design spec. **Hard barrier.** |
-| 2 | identity backend: Flyway `V6__puzzle_progress.sql`, `ProgressRepository` port + CNPG adapter, get/put/list use cases behind session auth, API routes. |
+| 2 | identity backend: Flyway `V6__puzzle_progress.sql`, `ProgressRepository` port + CNPG adapter, get/put/list use cases behind session auth, API routes; all three resource-bound controls (payload cap, rate limit, puzzle count cap). |
 | 3 | frontend sync layer: batch-pull + merge on authed load, debounced push, `onAuthed` carry-over of anon progress; `localStorage` stays the anon + offline source of truth. |
 
 ## References
