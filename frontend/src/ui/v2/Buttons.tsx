@@ -64,7 +64,3 @@ export function PrimaryButton(props: V2ButtonProps) {
 export function SecondaryButton(props: V2ButtonProps) {
   return Button(secondaryCss, props);
 }
-
-// Class strings for callers that need to render the primary/secondary look on a non-button element (e.g. a Link or a whole-row tap target).
-export const primaryButtonClass = cx(base, primaryCss);
-export const secondaryButtonClass = cx(base, secondaryCss);
