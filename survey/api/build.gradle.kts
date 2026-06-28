@@ -27,6 +27,16 @@ application {
 }
 
 dependencies {
+    // Pin transitive Jackson 3.x to 3.2.0, mirroring the netty-based api modules.
+    // Flyway 12.8.1 drags in tools.jackson:jackson-bom:3.1.1 (jackson-core +
+    // jackson-databind 3.1.1); databind 3.1.1 has polymorphic-typing, @JsonView,
+    // and SSRF CVEs fixed in 3.1.4. GHSA refs: 5hh8-q8hv-fr38, 5jmj-h7xm-6q6v,
+    // 9fxm-vc8v-hj55, hgj6-7826-r7m5, j3rv-43j4-c7qm, rcqc-6cw3-h962, rmj7-2vxq-3g9f.
+    constraints {
+        implementation("tools.jackson.core:jackson-core:3.2.0")
+        implementation("tools.jackson.core:jackson-databind:3.2.0")
+    }
+
     // Survey bounded-context inner layers (ADR-0001 §1).
     implementation(project(":survey:domain"))
     implementation(project(":survey:application"))
