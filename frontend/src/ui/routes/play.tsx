@@ -1,4 +1,5 @@
 import { createRoute, useNavigate } from '@tanstack/react-router';
+import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
 // Sanctioned app→module bridge (ADR-0072).
 import { PlayScreen } from '@/ui/play/PlayScreen';
@@ -50,6 +51,33 @@ function PlayRouteComponent() {
   return <PlayScreen puzzle={puzzle} puzzleSolver={puzzleSolver} soloEntriesStore={soloEntriesStore} />;
 }
 
+const pendingCss = css({
+  flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontFamily: 'wsUi',
+  fontWeight: 'semibold',
+  fontSize: '14px',
+  color: 'ws.khaki',
+  opacity: 0.7,
+});
+
+const PLAY_TITLE = INDEXABLE_ROUTES.find((x) => x.path === '/play')!.title;
+
+// Non-grid placeholder during the daily loader; also the prerendered /play body, so the static HTML bakes no grid to flicker.
+function PlayPending() {
+  // head() runs only after the loader resolves; React 19 hoists this <title> so the prerender hang pass + crawlers see one.
+  return (
+    <PhoneShell>
+      <title>{PLAY_TITLE}</title>
+      <div className={pendingCss} role="status" aria-busy="true" aria-label="Chargement de la grille">
+        Chargement de la grille…
+      </div>
+    </PhoneShell>
+  );
+}
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const Route = createRoute({
@@ -63,6 +91,9 @@ export const Route = createRoute({
   }),
   loader: ({ context, deps }): Promise<Puzzle | null> => context.puzzleRepository.fetchDaily(deps.date),
   component: PlayRouteComponent,
+  pendingComponent: PlayPending,
+  // Show the placeholder immediately so first client render matches the prerendered body (no blank frame, no grid flash).
+  pendingMs: 0,
   errorComponent: PlayUnavailable,
   head: () => {
     const r = INDEXABLE_ROUTES.find((x) => x.path === '/play')!;
