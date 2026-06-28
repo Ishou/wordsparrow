@@ -270,8 +270,8 @@ export function HomeGreetingArt({
   return (
     <div
       className={className ?? banner}
-      // Sky crossfades; reduced-motion users get the instant swap.
-      style={{ backgroundImage: gradient, transition: 'background-image 600ms ease' }}
+      // Sky snaps; sun/moon/stars fade via the <g> opacity transition below.
+      style={{ backgroundImage: gradient }}
       aria-hidden="true"
     >
       <svg

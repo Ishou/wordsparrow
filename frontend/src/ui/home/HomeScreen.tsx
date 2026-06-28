@@ -234,7 +234,7 @@ export function HomeScreen({
     return () => { cancelled = true; };
   }, [puzzleRepository, retry]);
 
-  // Time-of-day art reveals only once the daily fetch settles. The prerender (ADR-0072) hangs that fetch, so its HTML stays time-neutral deterministically — prerender == first client paint, no build-time-sky swap (createRoot, not hydrate).
+  // Time-of-day art reveals only once the daily fetch settles. The prerender (ADR-0053) hangs that fetch, so its HTML stays time-neutral deterministically — prerender == first client paint, no build-time-sky swap (createRoot, not hydrate).
   const timeReady = daily.status !== 'loading';
 
   const { greeting, bucket, now: nowDate, dateLabel, week, range } = useMemo(() => {
