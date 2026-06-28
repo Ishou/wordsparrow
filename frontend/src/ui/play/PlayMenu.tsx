@@ -66,10 +66,10 @@ const srTitle = css({ position: 'absolute', width: '1px', height: '1px', padding
 
 const HOW_TO = [
   'Les cases sombres portent les définitions ; la flèche donne le sens du mot.',
-  'Touchez une case, puis tapez les lettres avec le clavier.',
+  'Touche une case, puis tape les lettres au clavier.',
   'Un mot juste se verrouille et se pose en sable.',
   '« Indice » révèle une lettre de la case active.',
-  'Pincez pour zoomer, ou utilisez les boutons − / + sous la grille.',
+  'Pince pour zoomer, ou utilise les boutons − / + sous la grille.',
 ];
 
 export interface PlayMenuProps {
@@ -170,7 +170,7 @@ export function PlayMenu({ open, onClose, onRecommencer }: PlayMenuProps) {
           <Dialog.Positioner className={centerPositioner}>
             <Dialog.Content className={card}>
               <Dialog.Title className={cardTitle}>Recommencer la grille ?</Dialog.Title>
-              <p className={confirmText}>Vos lettres saisies seront effacées. Cette action est irréversible.</p>
+              <p className={confirmText}>Tes lettres seront effacées. Cette action est irréversible.</p>
               <div className={cardActions}>
                 <Button variant="secondary" onClick={() => setConfirm(false)}>Annuler</Button>
                 <Button variant="primary" onClick={() => { setConfirm(false); onRecommencer(); }}>Recommencer</Button>

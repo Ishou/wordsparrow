@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { CaretLeft, SignOut } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
-import type { ArrowDirection, Cell as DomainCell, Position, Puzzle } from '@/domain';
+import type { Cell as DomainCell, Position, Puzzle } from '@/domain';
 import type { GameEvent, Unsubscribe } from '@/application/game';
 import type { Player, SessionId } from '@/domain/game';
-import { Cell, DefCell, Lockup, type CellState } from '@/design-system';
+import { Cell, ClueRail, DefCell, Lockup, type CellState } from '@/design-system';
 import {
   useGridNavigation,
   type CellHighlight,
   type GridNavigation,
 } from '@/ui/components/grid/useGridNavigation';
+import { orderClues } from '@/ui/components/grid/orderClues';
+import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
+import { CELL, GAP, STRIDE, BOARD_BOTTOM_GAP, posKey, exitsRight } from '@/ui/components/grid/playLayout';
+import { Keyboard } from '@/ui/play/Keyboard';
 import { usePresenceState } from '@/ui/components/grid/usePresenceState';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
@@ -18,19 +22,6 @@ import { LiveTimer } from './LiveTimer';
 import { PlayerStrip } from './PlayerStrip';
 
 // ADR-0072 v2 co-op IN_PROGRESS screen: shared grid + presence + timer + roster, wired like prod InGameView.
-
-const CELL = 56;
-const GAP = 5;
-const STRIDE = CELL + GAP;
-const BOARD_BOTTOM_GAP = 14;
-
-const KEY_ROWS = [
-  ['A', 'Z', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-  ['Q', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M'],
-  ['W', 'X', 'C', 'V', 'B', 'N'],
-] as const;
-
-const exitsRight = (a: ArrowDirection) => a === 'right' || a === 'right-down';
 
 const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marginInline: 'auto', height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column', bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)', fontFamily: 'wsUi' });
 const GUTTER = '14px';
@@ -60,7 +51,7 @@ const iconBtn = css({
   cursor: 'pointer',
   flex: 'none',
   _active: { background: 'rgba(33,75,64,0.08)' },
-  _focusVisible: { outline: '3px solid token(colors.ws.sakuraDark)', outlineOffset: '2px' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const headerSpacer = css({ flex: 1 });
 const viewportFill = css({ flex: '1', minHeight: 0 });
@@ -95,53 +86,6 @@ const letterInput = css({
 const letterInputOnActive = css({ color: 'white' });
 
 const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 4, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px` });
-const cluePanel = css({
-  bg: 'rgba(255,255,255,0.62)',
-  backdropFilter: 'blur(10px)',
-  border: '0.5px solid rgba(255,255,255,0.7)',
-  borderRadius: '14px',
-  padding: '10px 14px',
-  boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
-  fontFamily: 'wsClue',
-  fontSize: '15px',
-  fontWeight: 'bold',
-  color: 'ws.jadeInk',
-  textAlign: 'center',
-});
-const keyboard = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '7px',
-  alignItems: 'stretch',
-  width: '100%',
-  bg: 'rgba(255,255,255,0.62)',
-  backdropFilter: 'blur(10px)',
-  border: '0.5px solid rgba(255,255,255,0.7)',
-  borderRadius: '18px',
-  padding: '9px 10px',
-  boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
-  '& button': { flex: 'none', width: 'calc((100% - 45px) / 10)', minWidth: 0 },
-});
-const keyRow = css({ display: 'flex', gap: '5px', justifyContent: 'center' });
-const key = css({
-  height: '46px',
-  borderRadius: '10px',
-  border: 'none',
-  fontFamily: 'wsUi',
-  fontSize: '18px',
-  fontWeight: 'bold',
-  color: 'ws.jadeInk',
-  bgImage: 'linear-gradient(180deg, #FBFAF3, #EFEADB)',
-  boxShadow: '0 2px 0 0 #DCD6C5, 0 2px 4px -2px rgba(33,75,64,0.2)',
-  cursor: 'pointer',
-  _active: { transform: 'translateY(1px)', boxShadow: 'inset 0 1px 2px rgba(33,75,64,0.18)' },
-  _focusVisible: { outline: '3px solid token(colors.ws.sakuraDark)', outlineOffset: '2px' },
-});
-
-function posKey(row: number, col: number): string {
-  return `${row},${col}`;
-}
-
 function LetterSlot({
   row,
   col,
@@ -177,17 +121,7 @@ function LetterSlot({
       <Cell state={state} />
       <input
         ref={nav.registerCellRef}
-        type="search"
-        role="textbox"
-        inputMode="none"
-        autoComplete="off"
-        autoCapitalize="characters"
-        autoCorrect="off"
-        spellCheck={false}
-        enterKeyHint="next"
-        data-1p-ignore=""
-        data-lpignore="true"
-        data-form-type="other"
+        {...GRID_INPUT_GUARDS}
         aria-label={`Ligne ${row + 1}, colonne ${col + 1}`}
         defaultValue={entry}
         readOnly={validated}
@@ -336,9 +270,13 @@ export function LiveCoopScreen({
   }, [isCompleted, announcer]);
 
   const clue = nav.currentClue;
-  const clueText = clue
-    ? `${clue.clue.text} · ${(nav.currentClueIndex ?? 0) + 1}/${clue.cells.length}`
-    : null;
+  const orderedClues = useMemo(() => orderClues(puzzle), [puzzle]);
+  // Clue ordinal among all across-then-down clues — drives the rail counter, same as solo PlayScreen.
+  const clueOrdinal = useMemo(() => {
+    if (!clue) return -1;
+    const k = `${clue.definition.position.row}:${clue.definition.position.col}:${clue.clue.arrow}`;
+    return orderedClues.findIndex((c) => c.key === k);
+  }, [clue, orderedClues]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
@@ -414,24 +352,20 @@ export function LiveCoopScreen({
       </PanZoom>
 
       <div className={bottomBar} ref={bottomRef}>
-        {clueText ? <p className={cluePanel} role="status">{clueText}</p> : null}
+        {clue && clueOrdinal >= 0 ? (
+          <ClueRail
+            direction={clue.direction === 'across' ? 'horizontal' : 'vertical'}
+            clue={clue.clue.text}
+            index={clueOrdinal + 1}
+            total={orderedClues.length}
+            onPrev={() => nav.cycleClue(-1)}
+            onNext={() => nav.cycleClue(1)}
+            onZoomIn={() => pzRef.current?.zoomIn()}
+            onZoomOut={() => pzRef.current?.zoomOut()}
+          />
+        ) : null}
         {!isCompleted ? (
-          <div className={keyboard}>
-            {KEY_ROWS.map((rowKeys, r) => (
-              <div key={r} className={keyRow}>
-                {rowKeys.map((l) => (
-                  <button key={l} type="button" className={key} onClick={() => nav.enterLetter(l)} aria-label={l}>
-                    {l}
-                  </button>
-                ))}
-                {r === KEY_ROWS.length - 1 ? (
-                  <button type="button" className={cx(key, css({ width: 'calc((100% - 45px) / 10 * 2 + 5px) !important' }))} onClick={() => nav.eraseLetter()} aria-label="Effacer">
-                    ⌫
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
+          <Keyboard onLetter={(l) => nav.enterLetter(l)} onBackspace={() => nav.eraseLetter()} />
         ) : null}
       </div>
     </main>

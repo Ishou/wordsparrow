@@ -8,6 +8,8 @@ import { useToast } from '@/ui/components/primitives';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { PhoneShell } from '@/ui/v2/PhoneShell';
 import { BackHeader } from '@/ui/v2/BackHeader';
+import { SparrowState } from '@/ui/v2/SparrowState';
+import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { SalonScreen } from '@/ui/v2/multiplayer/SalonScreen';
 import { LiveCoopScreen } from '@/ui/v2/multiplayer/LiveCoopScreen';
 import { ResultatsScreen } from '@/ui/v2/multiplayer/ResultatsScreen';
@@ -25,8 +27,23 @@ const placeholder = css({
 
 function V2LobbyPlaceholder({ text }: { readonly text: string }) {
   return (
-    <PhoneShell header={<BackHeader to="/v2/home" />}>
+    <PhoneShell header={<BackHeader to="/v2" />}>
       <p className={placeholder} role="status">{text}</p>
+    </PhoneShell>
+  );
+}
+
+// getLobby rejection boundary — headerless SparrowState matching the 404 error pattern; CTA handles navigation
+function V2LobbyError() {
+  const navigate = useNavigate();
+  return (
+    <PhoneShell>
+      <SparrowState
+        scene={sparrowFlightScene()}
+        title="Partie introuvable"
+        body={"Cette partie n'existe plus ou le lien a expiré."}
+        cta={{ label: 'Accueil', onClick: () => void navigate({ to: '/v2' }) }}
+      />
     </PhoneShell>
   );
 }
@@ -50,7 +67,7 @@ function V2LobbyPage() {
   const onJoinDenied = useCallback(
     (message: string) => {
       showToast({ text: message, tone: 'error' });
-      void navigate({ to: '/v2/home', replace: true });
+      void navigate({ to: '/v2', replace: true });
     },
     [showToast, navigate],
   );
@@ -85,7 +102,7 @@ function V2LobbyPage() {
 
   const handleLeave = useCallback(() => {
     actions.leave();
-    void navigate({ to: '/v2/home' });
+    void navigate({ to: '/v2' });
   }, [actions, navigate]);
 
   const handleReplay = useCallback(() => {
@@ -104,7 +121,7 @@ function V2LobbyPage() {
 
   const handleHome = useCallback(() => {
     actions.leave();
-    void navigate({ to: '/v2/home' });
+    void navigate({ to: '/v2' });
   }, [actions, navigate]);
 
   if (!joinConfirmed || joinDenied != null) {
@@ -154,7 +171,7 @@ function V2LobbyPage() {
   // COMPLETED co-op finish — the frozen grid is left behind; Résultats is the destination.
   if (lobby.state === 'COMPLETED') {
     return (
-      <PhoneShell header={<BackHeader to="/v2/home" />}>
+      <PhoneShell header={<BackHeader to="/v2" />}>
         <ResultatsScreen
           durationMs={view.durationMs ?? 0}
           players={lobby.players}
@@ -176,5 +193,6 @@ export const Route = createRoute({
     // Asserted non-null: registered only when the multiplayer flag is on, so the composition root guarantees `lobbyClient`.
     context.lobbyClient!.getLobby(params.lobbyId as LobbyId),
   component: V2LobbyPage,
-  pendingComponent: () => <V2LobbyPlaceholder text="Chargement du salon…" />,
+  pendingComponent: () => <V2LobbyPlaceholder text="Chargement de la partie…" />,
+  errorComponent: V2LobbyError,
 });

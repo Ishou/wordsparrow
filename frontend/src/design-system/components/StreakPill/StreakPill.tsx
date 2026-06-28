@@ -15,7 +15,7 @@ const pill = css({
   border: '0.5px solid rgba(255,255,255,0.7)',
   color: 'ws.jadeInk',
   fontFamily: 'wsUi',
-  fontWeight: 'extrabold',
+  fontWeight: 'black',
   fontSize: '14px',
   paddingInline: '13px',
   paddingBlock: '7px',

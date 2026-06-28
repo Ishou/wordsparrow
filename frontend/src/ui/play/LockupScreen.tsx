@@ -39,7 +39,7 @@ function Stars() {
 
 export function LockupScreen() {
   return (
-    <div className={page}>
+    <div className={page} lang="fr">
       <div className={inner}>
         {/* MASTHEAD */}
         <div style={{ marginBottom: 36 }}>

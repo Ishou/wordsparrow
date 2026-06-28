@@ -148,7 +148,7 @@ function ProfileCard() {
       </span>
       <div>
         <div className={profileName}>{loading ? '…' : 'Invité'}</div>
-        <div className={profileMeta}>{loading ? '…' : 'Joueur invité'}</div>
+        <div className={profileMeta}>{loading ? '…' : 'Sans compte'}</div>
       </div>
     </div>
   );

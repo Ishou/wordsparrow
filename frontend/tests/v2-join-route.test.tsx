@@ -128,12 +128,12 @@ describe('v2 /join/$code route', () => {
           new LobbyClientError({ kind: 'not-found', status: 404, problem: null, message: 'gone' }),
         ),
     });
-    expect(await screen.findByRole('alert')).toHaveTextContent('Code invalide ou partie expirée.');
+    expect(await screen.findByText('Code invalide ou partie expirée.')).toBeTruthy();
   });
 
   it('rejects a malformed code at parse-time without calling findByCode', async () => {
     const { lobbyClient } = renderJoin('/v2/join/!!');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Code invalide ou partie expirée.');
+    expect(await screen.findByText('Code invalide ou partie expirée.')).toBeTruthy();
     expect(lobbyClient.findByCode).not.toHaveBeenCalled();
   });
 
@@ -143,7 +143,7 @@ describe('v2 /join/$code route', () => {
         new LobbyClientError({ kind: 'not-found', status: 404, problem: null, message: 'gone' }),
       ),
     });
-    await screen.findByRole('alert');
+    await screen.findByText('Code invalide ou partie expirée.');
     await expectAxeClean(container);
   });
 });

@@ -16,18 +16,17 @@ const layer = css({
   pointerEvents: 'none',
   zIndex: 2,
 });
+// color-mix (not element opacity) so the badge child stays fully opaque against the v2 light --player-color
 const wordTint = css({
   position: 'absolute',
   borderRadius: '9px',
-  background: 'var(--player-word-bg)',
-  opacity: 0.5,
+  background: 'color-mix(in srgb, var(--player-color) 32%, transparent)',
 });
 const activeRing = css({
   position: 'absolute',
   borderRadius: '9px',
   boxShadow: 'inset 0 0 0 2.5px var(--player-color)',
-  background: 'var(--player-active-bg)',
-  opacity: 0.65,
+  background: 'color-mix(in srgb, var(--player-color) 45%, transparent)',
 });
 const badge = css({
   position: 'absolute',

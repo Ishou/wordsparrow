@@ -19,7 +19,7 @@ const base = css({
   fontSize: '13px',
 });
 const byState = {
-  solved: css({ bg: 'ws.sakura', color: 'white' }),
+  solved: css({ bg: 'ws.sakuraDark', color: 'white' }),
   today: css({ bg: 'transparent', color: 'ws.jadeInk', border: '1.5px solid token(colors.ws.sakura)' }),
   unsolved: css({ bg: 'ws.sable', color: 'ws.khaki' }),
 } as const;

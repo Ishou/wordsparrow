@@ -92,7 +92,7 @@ describe('v2 réglages screen', () => {
     );
     expect(signIn.getAttribute('aria-disabled')).toBeNull();
     expect(screen.getByText('Invité')).toBeTruthy();
-    expect(screen.getByText('Joueur invité')).toBeTruthy();
+    expect(screen.getByText('Sans compte')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Se déconnecter' })).toBeNull();
   });
 

@@ -12,7 +12,6 @@ import { MenuScreen } from '@/ui/v2/MenuScreen';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { Route as V2Route } from '@/ui/routes/v2';
 import { Route as V2IndexRoute } from '@/ui/routes/v2.index';
-import { Route as HomeRoute } from '@/ui/routes/home';
 import { Route as V2MenuRoute } from '@/ui/routes/v2.menu';
 import { expectAxeClean } from '@/test/a11y';
 
@@ -118,8 +117,8 @@ describe('v2 menu sheet', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toBeTruthy();
-    expect(screen.getByText('Toi')).toBeTruthy();
-    expect(screen.getByText('Joueur invité · 🔥 série 6')).toBeTruthy();
+    expect(screen.getByText('Invité')).toBeTruthy();
+    expect(screen.getByText('🔥 série 6')).toBeTruthy();
     expect(screen.getByText('Mon compte')).toBeTruthy();
     expect(screen.getByText('Réglages')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Mode sombre' })).toBeTruthy();
@@ -194,11 +193,9 @@ describe('v2 menu sheet', () => {
 const pathOf = (route: { options: object }) => (route.options as { path?: string }).path;
 
 describe('v2 route wiring', () => {
-  it('maps /v2 (index) to home while keeping /v2/home as an alias', () => {
+  it('maps /v2 (index) to the single canonical home', () => {
     expect(pathOf(V2IndexRoute)).toBe('/');
-    expect(pathOf(HomeRoute)).toBe('home');
     expect(V2IndexRoute.options.getParentRoute?.()).toBe(V2Route);
-    expect(HomeRoute.options.getParentRoute?.()).toBe(V2Route);
   });
 
   it('registers /v2/menu under the v2 parent', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowsClockwise, Copy, SignOut } from '@phosphor-icons/react';
+import { ArrowsClockwise, Copy, Eye, EyeSlash, SignOut } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import type { ConnectionState } from '@/application/game';
 import {
@@ -8,7 +8,7 @@ import {
   type Pseudonym,
   type SessionId,
 } from '@/domain/game';
-import { playerColorVars, playerInitial } from '@/ui/lib/playerColor';
+import { PlayerAvatar } from './PlayerAvatar';
 import { PhoneShell } from '@/ui/v2/PhoneShell';
 import { BackHeader } from '@/ui/v2/BackHeader';
 
@@ -84,6 +84,24 @@ const codeText = css({
   color: 'ws.jadeInk',
   margin: 0,
 });
+// Masked codes use a slightly wider tracking so the dots read as a deliberate redaction, not glyphs.
+const codeMasked = css({ letterSpacing: '0.2em', color: 'ws.khaki', opacity: 0.7 });
+const revealButton = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flex: 'none',
+  width: '38px',
+  height: '38px',
+  borderRadius: '12px',
+  border: 'none',
+  cursor: 'pointer',
+  bg: 'rgba(255,255,255,0.7)',
+  color: 'ws.khaki',
+  transition: 'color 120ms ease-out, background-color 120ms ease-out',
+  _hover: { color: 'ws.jadeInk', bg: 'white' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+});
 
 const pillButton = css({
   display: 'inline-flex',
@@ -107,20 +125,6 @@ const copyFeedback = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bo
 
 const list = css({ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', padding: 0, margin: 0 });
 const playerRow = css({ display: 'flex', alignItems: 'center', gap: '11px' });
-const avatar = css({
-  flex: 'none',
-  width: '34px',
-  height: '34px',
-  borderRadius: '50%',
-  background: 'var(--player-color)',
-  color: 'ws.jadeInk',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontFamily: 'wsUi',
-  fontSize: '15px',
-  fontWeight: 'black',
-});
 const playerName = css({ fontFamily: 'wsUi', fontSize: '16px', fontWeight: 'bold', color: 'ws.jadeInk', minWidth: 0 });
 const badge = css({
   flex: 'none',
@@ -272,6 +276,7 @@ export function SalonScreen({
   const me = lobby.players.find((p) => p.sessionId === sessionId);
 
   const [justCopied, setJustCopied] = useState(false);
+  const [codeRevealed, setCodeRevealed] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current); }, []);
   const handleCopy = () => {
@@ -296,8 +301,8 @@ export function SalonScreen({
   );
 
   return (
-    <PhoneShell header={<BackHeader to="/v2/home" />}>
-      <h1 className={title}>Salon</h1>
+    <PhoneShell header={<BackHeader to="/v2" />}>
+      <h1 className={title}>Partie</h1>
       <p className={lead}>Invite tes amis, puis lance la grille ensemble.</p>
 
       {connectionState !== 'connected' ? (
@@ -310,7 +315,22 @@ export function SalonScreen({
         <section className={card} aria-label="Code de partie">
           <h2 className={cardTitle}>Code de partie</h2>
           <div className={codeRow}>
-            <p className={codeText}>{lobby.code}</p>
+            <p className={codeRevealed ? codeText : cx(codeText, codeMasked)}>
+              {codeRevealed ? lobby.code : '•'.repeat(lobby.code.length)}
+            </p>
+            <button
+              type="button"
+              className={revealButton}
+              onClick={() => setCodeRevealed((v) => !v)}
+              aria-pressed={codeRevealed}
+              aria-label={codeRevealed ? 'Masquer le code' : 'Afficher le code'}
+            >
+              {codeRevealed ? (
+                <EyeSlash size={20} weight="bold" aria-hidden="true" />
+              ) : (
+                <Eye size={20} weight="bold" aria-hidden="true" />
+              )}
+            </button>
           </div>
           <div className={cx(codeRow, css({ marginTop: '14px', flexWrap: 'wrap' }))}>
             <button type="button" className={pillButton} onClick={handleCopy}>
@@ -343,9 +363,7 @@ export function SalonScreen({
             const conn = connStateLabel(p.sessionId === sessionId ? connectionState : 'connected');
             return (
               <li key={p.sessionId} className={playerRow}>
-                <span className={avatar} style={playerColorVars(p.sessionId)} aria-hidden="true">
-                  {playerInitial(p.pseudonym)}
-                </span>
+                <PlayerAvatar sessionId={p.sessionId} pseudonym={p.pseudonym} size={34} />
                 <span className={playerName}>
                   {p.pseudonym}
                   {p.sessionId === sessionId ? ' (toi)' : ''}

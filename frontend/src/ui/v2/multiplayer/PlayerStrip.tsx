@@ -1,6 +1,6 @@
 import { css, cx } from 'styled-system/css';
 import type { Player, SessionId } from '@/domain/game';
-import { playerColorVars, playerInitial } from '@/ui/lib/playerColor';
+import { PlayerAvatar } from './PlayerAvatar';
 
 // ADR-0072 compact co-op roster: dumb — takes the player list + derived presence sets, renders an avatar + status dot per peer.
 
@@ -20,20 +20,6 @@ const chip = css({
   borderRadius: '999px',
   padding: '3px 9px 3px 3px',
   boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
-});
-const avatar = css({
-  flex: 'none',
-  width: '24px',
-  height: '24px',
-  borderRadius: '50%',
-  background: 'var(--player-color)',
-  color: 'ws.jadeInk',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontFamily: 'wsUi',
-  fontSize: '12px',
-  fontWeight: 'black',
 });
 const name = css({
   fontFamily: 'wsUi',
@@ -93,9 +79,7 @@ export function PlayerStrip({
           : statusFor(p.sessionId, typingSessionIds, idleSessionIds, disconnectingSessionIds);
         return (
           <li key={p.sessionId} className={chip}>
-            <span className={avatar} style={playerColorVars(p.sessionId)} aria-hidden="true">
-              {playerInitial(p.pseudonym)}
-            </span>
+            <PlayerAvatar sessionId={p.sessionId} pseudonym={p.pseudonym} size={24} />
             <span className={name}>
               {p.pseudonym}
               {isSelf ? ' (toi)' : ''}
