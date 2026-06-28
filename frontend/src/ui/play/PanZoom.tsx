@@ -413,7 +413,6 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      onLostPointerCapture={onPointerUp}
       onClickCapture={onClickCapture}
     >
       <div ref={stRef} className={stage} style={{ width: contentWidth, height: contentHeight }}>
