@@ -146,7 +146,6 @@ function ProfileCard() {
   }
 
   const loading = state.status === 'loading';
-  // Guest card routes to /compte (the dedicated sign-in page) like the burger menu, not straight to the OAuth redirect.
   return (
     <Link to="/compte" className={cx(profile, profileLink)}>
       <span className={avatar} aria-hidden="true">
