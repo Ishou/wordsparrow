@@ -72,7 +72,20 @@ function renderScreen(overrides: Partial<LiveCoopScreenProps> = {}) {
       <LiveCoopScreen {...props} />
     </AnnouncerProvider>,
   );
-  return { props, cellStream, presenceStream, ...utils };
+  const rerenderScreen = (next: Partial<LiveCoopScreenProps>) =>
+    utils.rerender(
+      <AnnouncerProvider>
+        <LiveCoopScreen {...props} {...next} />
+      </AnnouncerProvider>,
+    );
+  return { props, cellStream, presenceStream, rerenderScreen, ...utils };
+}
+
+function cellWrap(row: number, col: number): HTMLElement {
+  const input = letterInput(row, col);
+  const wrap = input.parentElement;
+  if (!wrap) throw new Error(`no cell wrapper at ${row},${col}`);
+  return wrap;
 }
 
 function letterInput(row: number, col: number): HTMLInputElement {
@@ -132,6 +145,23 @@ describe('v2 LiveCoopScreen', () => {
     renderScreen({ lockedPositions: [{ row: 0, column: 1 }] });
     expect(letterInput(0, 1).readOnly).toBe(true);
     expect(letterInput(0, 2).readOnly).toBe(false);
+  });
+
+  it('plays the solve beat (PuzzleBoard) when validatedPositions gains a cell', () => {
+    const { rerenderScreen } = renderScreen({ lockedPositions: [] });
+    // No beat on an already-empty board.
+    expect(cellWrap(0, 1).style.animationDelay).toBe('');
+    // A new server lock celebrates the freshly-solved cell — the same beat solo gets.
+    act(() => {
+      rerenderScreen({ lockedPositions: [{ row: 0, column: 1 }] });
+    });
+    expect(cellWrap(0, 1).style.animationDelay).not.toBe('');
+  });
+
+  it('does not celebrate already-locked cells on initial hydration (rejoin)', () => {
+    // A board mounted with a pre-locked cell (coop rejoin) must not flash the beat.
+    renderScreen({ lockedPositions: [{ row: 0, column: 1 }] });
+    expect(cellWrap(0, 1).style.animationDelay).toBe('');
   });
 
   it('wires the leave control', () => {
