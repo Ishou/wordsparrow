@@ -45,10 +45,7 @@ function PlayUnavailable() {
   );
 }
 
-// A thrown loader error is a transient failure (network blip, 5xx, an SW
-// status-0 fallthrough) — NOT the worker-not-ready 404, which the loader
-// maps to `null`. Showing "la grille se prépare" here would falsely tell
-// the player to come back at sunrise; offer a retry that re-runs the loader.
+// Thrown = transient failure (network/5xx/SW status-0), not the worker-not-ready 404 that maps to null.
 function PlayLoadError() {
   const router = useRouter();
   return (
