@@ -41,8 +41,8 @@ const viewport = css({
 // No permanent will-change: promote during gesture only so the browser re-paints crisply at rest.
 const stage = css({ position: 'absolute', top: 0, left: 0, transformOrigin: '0 0' });
 const fade = css({ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 'inherit', zIndex: 2 });
-// Distance (px) over which a cut-off side edge softens into the field.
-const EDGE_FADE_PX = 40;
+// Distance (px) over which a cut-off side edge softens into the field — kept narrow so the fade doesn't eat board width on a phone.
+const EDGE_FADE_PX = 18;
 
 const TAP_SLOP = 6;
 const STEP = 1.25;
