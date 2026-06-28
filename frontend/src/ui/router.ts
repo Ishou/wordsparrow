@@ -19,6 +19,7 @@ import { Route as V2MenuRoute } from './routes/v2.menu';
 import { Route as V2MentionsLegalesRoute } from './routes/v2.mentions-legales';
 import { Route as V2ConfidentialiteRoute } from './routes/v2.confidentialite';
 import { Route as V2ReglagesRoute } from './routes/v2.reglages';
+import { Route as V2AideRoute } from './routes/v2.aide';
 import { Route as V2GrillesRoute } from './routes/v2.grilles';
 import { Route as V2LobbyRoute } from './routes/v2.lobby.$lobbyId';
 import { Route as V2JoinRoute } from './routes/v2.join.$code';
@@ -64,6 +65,7 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
     V2MentionsLegalesRoute,
     V2ConfidentialiteRoute,
     V2ReglagesRoute,
+    V2AideRoute,
     V2GrillesRoute,
     ...(multiplayer ? [V2LobbyRoute, V2JoinRoute] : []),
   ];
