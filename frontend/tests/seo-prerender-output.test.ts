@@ -106,8 +106,7 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       }
     });
 
-    // ADR-0074: the v2 Aide screen ships its own section copy without an exported FAQ
-    // Q&A structure, so the FAQPage JSON-LD is deferred to a v2-SEO follow-up.
+    // ADR-0074: /aide ships its own copy without an exported FAQ Q&A, so FAQPage JSON-LD is a v2-SEO follow-up.
 
     it.each([
       ['aide', '/aide'],
@@ -183,9 +182,7 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       },
     );
 
-    // H1 keyword targeting: the v1 routes carried SEO-keyword H1s. The v2 screens
-    // (ADR-0074) use their own minimal headers ("Bonjour", "Aide"); re-introducing
-    // keyword-targeted H1s is a v2-SEO follow-up, not part of the routing cutover.
+    // ADR-0074: v2 screens use minimal headers ("Bonjour"/"Aide"); re-adding keyword-targeted H1s is a v2-SEO follow-up.
 
     // Guard against the "frozen tour on hard refresh" bug. The
     // prerender browser starts with empty localStorage; without the

@@ -26,18 +26,14 @@ import {
 // factory means `ui/` never instantiates `infrastructure/` directly
 // (ADR-0002 §7). The `multiplayer` flag (ADR-0018 §10) gates the lobby
 // route so it stays unreachable in environments where game-api is not
-// yet deployed.
-//
-// v2 is the production app (ADR-0074): screens mount at root under the pathless `AppLayoutRoute`; v1 contribuer stays on disk but unregistered.
+// yet deployed. v2 is the production app at root (ADR-0074); v1 contribuer stays on disk but unregistered.
 export interface CreateAppRouterOptions {
   readonly context: AppRouterContext;
   readonly multiplayer: boolean;
 }
 
 export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions) {
-  // Multiplayer-flag-gated routes (ADR-0018 §10): lobby + the `/join/$code`
-  // share-link landing both require the game-api adapter on the router context.
-  // Design-system + lockup screens (ADR-0072) stay dev-only.
+  // Multiplayer-flag-gated lobby/join need the game-api adapter (ADR-0018 §10); design-system + lockup stay dev-only (ADR-0072).
   const appChildren = [
     IndexRoute,
     MenuRoute,
