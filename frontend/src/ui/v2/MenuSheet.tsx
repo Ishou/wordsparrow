@@ -1,7 +1,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Dialog } from '@ark-ui/react/dialog';
 import { Portal } from '@ark-ui/react/portal';
-import { useNavigate, useRouteContext } from '@tanstack/react-router';
+import { Link, useNavigate, useRouteContext } from '@tanstack/react-router';
 import { User, Gear, CaretRight, SignOut, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { useAuth } from '@/ui/components/auth';
@@ -43,6 +43,9 @@ const grab = css({ display: 'block', width: '42px', height: '5px', borderRadius:
 const dragZone = css({ touchAction: 'none', cursor: 'grab', padding: '6px 0 2px', marginTop: '-6px', _active: { cursor: 'grabbing' }, lg: { display: 'none' } });
 
 const head = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 8px 12px', borderBottom: '1px solid #EEF3EC', marginBottom: '4px' });
+// The header is a link into Mon compte.
+const headLink = css({ textDecoration: 'none', cursor: 'pointer', paddingInline: '8px', paddingTop: '8px', borderTopRadius: '13px', transition: 'background-color 120ms', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-2px' } });
+const headChevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
 const headAvatar = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', bg: 'ws.sakuraDark', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '18px' });
 const headName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const headSub = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
@@ -158,7 +161,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
               <span aria-hidden="true" className={grab} />
             </div>
 
-            <div className={head}>
+            <Link to="/v2/compte" className={cx(head, headLink)} onClick={onClose}>
               <span className={headAvatar} aria-hidden="true">
                 {authed ? initial : <User size={22} weight="bold" />}
               </span>
@@ -166,7 +169,10 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
                 <div className={headName}>{displayName}</div>
                 <div className={headSub}>{subline}</div>
               </div>
-            </div>
+              <span className={headChevron}>
+                <CaretRight size={18} weight="bold" aria-hidden="true" />
+              </span>
+            </Link>
 
             <nav aria-label="Menu">
               <ul className={list}>
