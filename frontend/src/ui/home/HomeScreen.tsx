@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowRight, Eye, EyeSlash, List, UsersThree } from '@phosphor-icons/react';
+import { useNavigate } from '@tanstack/react-router';
+import { ArrowRight, Eye, EyeSlash, UsersThree } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
 import { extractLobbyCode, LOBBY_CODE_PATTERN } from '@/domain/game/lobbyCode';
@@ -8,8 +8,9 @@ import type { DailySummary, PuzzleRepository, WordsRepository } from '@/applicat
 import type { LobbyClient } from '@/application/game';
 import type { Pseudonym, SessionId } from '@/domain/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
-import { Lockup, Skeleton } from '@/design-system';
+import { Skeleton } from '@/design-system';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
+import { MobileTopBar } from '@/ui/v2/MobileTopBar';
 import { BottomNav } from '@/ui/v2/BottomNav';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { SkipLink } from '@/ui/v2/SkipLink';
@@ -78,12 +79,8 @@ const content = css({
   lg: { overflow: 'visible', padding: '0 36px 40px' },
 });
 
-// Phone/tablet header only — desktop uses the shared DesktopAppBar above the frame.
-const appBar = css({ flex: 'none', display: 'flex', alignItems: 'center', marginBottom: '24px', lg: { display: 'none' } });
 // Desktop hub: hero (left) + grilles (right) side by side, centred in the viewport. Passthrough on phone/tablet.
 const hub = css({ display: 'contents', lg: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 0.92fr)', columnGap: '36px', alignItems: 'start', alignContent: 'center', flex: 1, minHeight: 0 } });
-const menuBtn = css({ marginLeft: 'auto', flex: 'none', width: '44px', height: '44px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'rgba(255,255,255,0.62)', color: 'ws.jadeInk', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'rgba(255,255,255,0.82)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
-const brandLink = css({ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', borderRadius: '12px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '4px' } });
 
 const hero = css({ flex: 'none', bg: 'white', borderRadius: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
 // clipPath clips upward overflow (midday sun, night stars) while its -34 px bottom inset lets the branch drape over heroBody; zIndex 2 keeps it above.
@@ -275,20 +272,7 @@ export function HomeScreen({
       <div className={frame}>
         <DesktopAppBar active="accueil" streak={streak.cur} />
         <div id="main-content" tabIndex={-1} className={content}>
-          <header className={appBar}>
-            <Link to="/" className={brandLink} aria-label="Accueil">
-              <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
-            </Link>
-            <button
-              type="button"
-              className={menuBtn}
-              aria-label="Ouvrir le menu"
-              aria-haspopup="dialog"
-              onClick={() => setMenuOpen(true)}
-            >
-              <List size={22} weight="bold" aria-hidden="true" />
-            </button>
-          </header>
+          <MobileTopBar onMenuClick={() => setMenuOpen(true)} />
 
           <div className={hub}>
           <section className={hero}>
@@ -436,7 +420,7 @@ export function HomeScreen({
           </div>
         </div>
 
-        <BottomNav active="accueil" onAccountClick={() => setMenuOpen(true)} />
+        <BottomNav active="accueil" />
       </div>
 
       <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} streak={streak.cur} />

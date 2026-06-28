@@ -6,7 +6,7 @@ import type { DailySummary, PuzzleRepository } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Skeleton } from '@/design-system';
 import { PhoneShell } from './PhoneShell';
-import { BackHeader } from './BackHeader';
+import { MobileTopBar } from './MobileTopBar';
 import { SegmentedControl } from './SegmentedControl';
 import { GrillesEmptyState } from './GrillesEmptyState';
 import { BottomNav } from './BottomNav';
@@ -230,9 +230,9 @@ export function GrillesArchiveScreen({
   return (
     <>
     <PhoneShell
-      header={<BackHeader to="/" />}
+      header={<MobileTopBar onMenuClick={() => setMenuOpen(true)} />}
       navActive="grilles"
-      bottomNav={<BottomNav active="grilles" onAccountClick={() => setMenuOpen(true)} />}
+      bottomNav={<BottomNav active="grilles" />}
     >
       <h1 className={title}>Grilles</h1>
 
