@@ -14,6 +14,7 @@ import { orderClues } from '@/ui/components/grid/orderClues';
 import { CELL, STRIDE, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
 import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
 import { Keyboard } from './Keyboard';
+import { useTouchPrimary, useResumeBlurOnPwa } from '@/ui/components/keyboard';
 import { useWordAutoValidation } from '@/ui/components/grid/useWordAutoValidation';
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
 import { WinScreen } from './WinScreen';
@@ -134,6 +135,9 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const boardRef = useRef<PuzzleBoardHandle>(null);
+  const touchPrimary = useTouchPrimary();
+  // Pre-emptive blur on hide so reopening the PWA doesn't re-pop the OS keyboard (inputMode="none" is ignored on resume).
+  useResumeBlurOnPwa(touchPrimary);
   // Measured height of the overlay bottom bar — PanZoom reserves it so the focused cell stays above.
   const bottomRef = useRef<HTMLDivElement>(null);
   const [bottomInset, setBottomInset] = useState(280);
@@ -440,10 +444,11 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     if (won && userActedRef.current) setWonLive(true);
   }, [won]);
 
-  // Auto-focus the first unsolved cell on mount; safe because inputMode="none" suppresses the keyboard.
+  // Auto-focus the first unsolved cell on mount — desktop only. On touch devices a programmatic
+  // focus pops the native keyboard despite inputMode="none"; mobile players tap a cell to start.
   const didAutoFocusRef = useRef(false);
   useEffect(() => {
-    if (didAutoFocusRef.current || won || !lockedLoaded) return;
+    if (didAutoFocusRef.current || won || !lockedLoaded || touchPrimary) return;
     const cl = orderedClues.find((c) => c.cells.some((p) => !validatedPositions.has(posKey(p.row, p.col))));
     const target = cl?.cells.find((p) => !validatedPositions.has(posKey(p.row, p.col)));
     if (!cl || !target) return;
@@ -451,7 +456,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     inputAt(target.row, target.col)?.focus();
     // Toggle direction when the auto-focused clue is vertical (hook starts at 'across').
     if (!cl.across) nav.toggleDirection();
-  }, [orderedClues, validatedPositions, won, lockedLoaded, nav]);
+  }, [orderedClues, validatedPositions, won, lockedLoaded, nav, touchPrimary]);
 
   // Skip validated cells: adjacent move stays in direction (dead-end reverts), jump walks to first editable.
   const fRow = nav.localCursor?.position.row ?? -1;

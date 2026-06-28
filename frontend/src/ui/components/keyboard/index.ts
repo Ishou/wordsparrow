@@ -8,4 +8,5 @@ export {
 } from './DirectionArrowIcon';
 export { TabKeyIcon, type TabKeyIconProps, type TabDirection } from './TabKeyIcon';
 export { useTouchPrimary } from './useTouchPrimary';
+export { useResumeBlurOnPwa } from './useResumeBlurOnPwa';
 export { AZERTY_ROWS } from './azertyLayout';
