@@ -94,8 +94,7 @@ const headerSpacer = css({ flex: 1 });
 const brandLink = css({ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', borderRadius: '12px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '4px' } });
 const headerTimer = css({ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'wsMono', fontWeight: 'semibold', fontSize: '13.5px', color: 'ws.jadeInk', flex: 'none', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em', paddingInline: '2px' });
 const headerTimerIcon = css({ fontSize: '14px', opacity: 0.55, flex: 'none' });
-// Full-bleed: grid bleeds to the edges mid-pan; a gap only appears at the board's edges.
-// Desktop caps the viewport at the board's own width so it fills the space without a side-ocean.
+// Full-bleed mid-pan; desktop viewport capped at board width so wide boards don't clip.
 const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%', marginInline: 'auto' } });
 const DESKTOP_BOARD_PAD = 48;
 const boardGrid = css({ display: 'grid' });
