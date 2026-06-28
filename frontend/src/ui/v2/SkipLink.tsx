@@ -1,7 +1,6 @@
 import { css } from 'styled-system/css';
 
-// WCAG 2.4.1 (Bypass Blocks): the first focusable element on every v2 screen, letting keyboard users
-// jump past the nav bar straight to #main-content. Visually hidden until focused.
+// WCAG 2.4.1 – visually hidden until focused; jumps keyboard users past nav to #main-content.
 const skipLink = css({
   position: 'absolute',
   width: '1px',

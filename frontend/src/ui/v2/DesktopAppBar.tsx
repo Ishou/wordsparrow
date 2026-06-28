@@ -9,8 +9,7 @@ import { MenuSheet } from './MenuSheet';
 const bar = css({
   display: 'none',
   lg: {
-    // Sticky so it stays put while long pages (e.g. /grilles) scroll; the frosted band is full-bleed
-    // (100vw out of the 1140 frame) so it spans the whole width — a contained band looked odd.
+    // Sticky full-bleed (100vw via negative margins) so the frosted band spans the viewport; content capped inside.
     position: 'sticky',
     top: 0,
     zIndex: 50,

@@ -4,8 +4,7 @@ import { NotFoundScreen } from '@/ui/v2/NotFoundScreen';
 import { buildHead, SITE_BASE_URL } from '@/ui/seo';
 import { Route as RootRoute } from './__root';
 
-// The v2 surround is jade; align the document background so the macOS rubber-band/overscroll shows the
-// gradient top instead of the v1 cream (#FAF6EB). Scoped to /v2 (restored on leave) until the cutover.
+// Align html background to jade so macOS overscroll shows the v2 gradient, not the v1 cream; restored on leave.
 function V2Layout() {
   useEffect(() => {
     const html = document.documentElement;
