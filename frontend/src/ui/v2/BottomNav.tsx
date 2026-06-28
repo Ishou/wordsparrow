@@ -1,8 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 
-// Fixed full-bleed bar: escapes the tablet card's overflow so the frosted
-// surface touches both screen edges on phone and tablet; hidden from lg up.
+// position:fixed so the frosted bar is full-bleed on all widths; lg:hidden.
 const nav = css({
   position: 'fixed',
   left: 0,
