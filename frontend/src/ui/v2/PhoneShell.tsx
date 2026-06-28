@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { Link, type LinkProps } from '@tanstack/react-router';
+import { CaretLeft } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { DesktopAppBar } from './DesktopAppBar';
 
@@ -7,6 +9,9 @@ export interface PhoneShellProps {
   readonly header?: ReactNode;
   // Highlights the matching desktop nav link (Accueil/Grilles); omit on pages with no top-nav home.
   readonly navActive?: 'accueil' | 'grilles';
+  // Desktop back target. On phone/tablet the `header` BackHeader carries this; on desktop the
+  // top chrome is the shared nav bar, so the page-level Retour is rendered in the content column.
+  readonly backTo?: LinkProps['to'];
 }
 
 // ADR-0072 §2 — phone-width on phones; contained jade-surround card from tablet up.
@@ -54,6 +59,28 @@ const headerSlot = css({
   lg: { display: 'none' },
 });
 
+// Desktop-only page Retour (the mobile BackHeader is hidden at lg); pill matches BackHeader's.
+const deskBack = css({
+  display: 'none',
+  lg: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    marginBottom: '18px',
+    fontFamily: 'wsUi',
+    fontSize: '15px',
+    fontWeight: 'bold',
+    color: 'ws.jadeInk',
+    textDecoration: 'none',
+    borderRadius: '999px',
+    padding: '8px 14px 8px 10px',
+    bg: 'rgba(255,255,255,0.62)',
+    boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
+    _hover: { bg: 'rgba(255,255,255,0.82)' },
+    _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+  },
+});
+
 // The scrollable body owns the `<main>` landmark so v2 screens stay pure content bodies.
 const body = css({
   flex: 1,
@@ -64,13 +91,19 @@ const body = css({
   lg: { width: '100%', maxWidth: '680px', marginInline: 'auto', overflowY: 'visible', paddingTop: '26px', paddingBottom: '56px' },
 });
 
-export function PhoneShell({ children, header, navActive }: PhoneShellProps) {
+export function PhoneShell({ children, header, navActive, backTo }: PhoneShellProps) {
   return (
     <div className={shell} lang="fr">
       <div className={frame}>
         <DesktopAppBar active={navActive} />
         {header != null ? <div className={headerSlot}>{header}</div> : null}
         <main id="main-content" className={body}>
+          {backTo != null ? (
+            <Link to={backTo} className={deskBack}>
+              <CaretLeft size={16} weight="bold" aria-hidden="true" />
+              Retour
+            </Link>
+          ) : null}
           {children}
         </main>
       </div>

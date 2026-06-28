@@ -194,7 +194,7 @@ function CompteGroup() {
 
 export function ReglagesScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/v2" />}>
+    <PhoneShell header={<BackHeader to="/v2" />} backTo="/v2">
       <div className={stack}>
         <h1 className={title}>Réglages</h1>
 

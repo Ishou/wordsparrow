@@ -13,7 +13,6 @@ const title = css({
   margin: '0 0 4px',
 });
 const stack = css({ display: 'flex', flexDirection: 'column', gap: '14px' });
-const link = css({ color: 'ws.sakuraDark', fontWeight: 'bold', textDecoration: 'underline' });
 const kbd = css({
   display: 'inline-block',
   fontFamily: 'wsMono',
@@ -39,7 +38,7 @@ function Section({ heading, children }: { readonly heading: string; readonly chi
 
 export function AideScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/v2/reglages" />}>
+    <PhoneShell header={<BackHeader to="/v2/reglages" />} backTo="/v2/reglages">
       <article className={stack}>
         <header>
           <div className={eyebrow}>Besoin d&apos;un coup de main&nbsp;?</div>
@@ -67,14 +66,6 @@ export function AideScreen() {
         <Section heading="Jouer à plusieurs">
           Crée une partie à plusieurs depuis l&apos;accueil et partage le lien&nbsp;: tout le monde joue la même
           grille, en même temps.
-        </Section>
-
-        <Section heading="Nous contacter">
-          Une question, une idée, un souci&nbsp;? Écris-nous à{' '}
-          <a className={link} href="mailto:contact@wordsparrow.io">
-            contact@wordsparrow.io
-          </a>
-          .
         </Section>
       </article>
     </PhoneShell>
