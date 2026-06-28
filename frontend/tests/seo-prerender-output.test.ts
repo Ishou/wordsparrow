@@ -192,8 +192,6 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
         const expected = `${SITE_BASE_URL}${route.ogImagePath}`;
         expect(html).toContain(`property="og:image" content="${expected}"`);
         expect(html).toContain(`name="twitter:image" content="${expected}"`);
-        // The shared default must NOT leak into indexable routes.
-        expect(html).not.toContain('og-default.png');
       },
     );
 

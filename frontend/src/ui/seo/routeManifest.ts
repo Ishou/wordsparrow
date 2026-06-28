@@ -38,7 +38,7 @@ export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
     title: 'Anciennes grilles — WordSparrow',
     description:
       'Toutes les grilles passées de WordSparrow, avec votre progression.',
-    // Reuses the shared WordSparrow OG card.
+    // until a dedicated /grilles card ships
     ogImagePath: '/og-home.png',
   },
   {
