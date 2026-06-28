@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { css, cx } from 'styled-system/css';
 import { computeFrame } from './computeFrame';
 
@@ -28,7 +28,6 @@ export interface PanZoomProps {
   // Soft jade vignette so bleeding edge cells dissolve into the field (fenêtré).
   readonly edgeFade?: boolean;
   readonly className?: string;
-  readonly style?: CSSProperties;
   readonly children: ReactNode;
 }
 
@@ -55,7 +54,7 @@ const WHEEL_ZOOM_MAX = 0.3; // cap one event at ~±30% so a fast flick can't jum
 const PINCH_ZOOM_BOOST = 6; // ctrlKey wheel = trackpad pinch; its deltas are tiny
 
 export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
-  { contentWidth, contentHeight, minScale = 0.5, maxScale = 3, fit = 'contain', overscan = 1.08, padTop = 0, padBottom = 0, padX = 0, framePad = 0, edgeFade = false, className, style, children },
+  { contentWidth, contentHeight, minScale = 0.5, maxScale = 3, fit = 'contain', overscan = 1.08, padTop = 0, padBottom = 0, padX = 0, framePad = 0, edgeFade = false, className, children },
   ref,
 ) {
   const vpRef = useRef<HTMLDivElement>(null);
@@ -384,15 +383,37 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     }
   };
 
+  // A pointerup released outside the browser window never reaches the element; window listeners end the phantom drag.
+  useEffect(() => {
+    const drop = (e: PointerEvent) => {
+      if (!pointers.current.has(e.pointerId)) return;
+      pointers.current.delete(e.pointerId);
+      if (pointers.current.size < 2) pinchDist.current = 0;
+      if (pointers.current.size === 0) settle();
+    };
+    const clear = () => {
+      if (pointers.current.size === 0) return;
+      pointers.current.clear();
+      pinchDist.current = 0;
+      settle();
+    };
+    window.addEventListener('pointerup', drop);
+    window.addEventListener('blur', clear);
+    return () => {
+      window.removeEventListener('pointerup', drop);
+      window.removeEventListener('blur', clear);
+    };
+  }, [settle]);
+
   return (
     <div
       ref={vpRef}
       className={cx(viewport, className)}
-      style={style}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onLostPointerCapture={onPointerUp}
       onClickCapture={onClickCapture}
     >
       <div ref={stRef} className={stage} style={{ width: contentWidth, height: contentHeight }}>

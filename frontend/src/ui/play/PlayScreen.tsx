@@ -52,8 +52,8 @@ const shell = css({
     borderRadius: '28px',
     boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
   },
-  // Desktop: match the home frame width so the top bars align; the board itself is capped narrower below.
-  lg: { maxWidth: '1140px', height: '100dvh', borderRadius: 0, boxShadow: 'none' },
+  // Desktop: full-bleed play field so the board can zoom to the full window width (the app bar is full-bleed too).
+  lg: { maxWidth: 'none', height: '100dvh', borderRadius: 0, boxShadow: 'none' },
 });
 const GUTTER = '14px';
 // Overlay region: the grid bleeds behind it; pan-inset keeps the top reachable.
@@ -94,9 +94,8 @@ const headerSpacer = css({ flex: 1 });
 const brandLink = css({ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', borderRadius: '12px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '4px' } });
 const headerTimer = css({ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'wsMono', fontWeight: 'semibold', fontSize: '13.5px', color: 'ws.jadeInk', flex: 'none', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em', paddingInline: '2px' });
 const headerTimerIcon = css({ fontSize: '14px', opacity: 0.55, flex: 'none' });
-// Full-bleed mid-pan; desktop viewport capped at board width so wide boards don't clip.
-const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%', marginInline: 'auto' } });
-const DESKTOP_BOARD_PAD = 48;
+// Mobile bleeds full-field; desktop viewport is the clear band between the 72px app bar and the ~140px clue rail, so the grid fits inside it.
+const viewportFill = css({ flex: '1', minHeight: 0, lg: { position: 'absolute', top: '72px', left: 0, right: 0, bottom: '140px' } });
 const boardGrid = css({ display: 'grid' });
 const spacer = css({ borderRadius: '9px' });
 
@@ -132,7 +131,7 @@ const letterInput = css({
 const letterInputOnActive = css({ color: 'white' });
 
 // Overlay bar — its measured height feeds PanZoom's padBottom so the focused cell stays above it.
-const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { position: 'static', paddingBottom: '24px' } });
+const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { paddingBottom: '24px' } });
 // Compact hint chip, lives in the ClueRail label row (replacing the counter).
 const hintBtn = css({
   display: 'inline-flex',
@@ -698,7 +697,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         </header>
       )}
 
-      <PanZoom ref={pzRef} className={viewportFill} style={isDesktop ? { maxWidth: BOARD_W + 2 * DESKTOP_BOARD_PAD } : undefined} contentWidth={BOARD_W} contentHeight={BOARD_H} fit={isDesktop ? 'contain' : 'height'} framePad={isDesktop ? 6 : 14} padTop={isDesktop ? 6 : 68} padBottom={isDesktop ? 6 : bottomInset + BOARD_BOTTOM_GAP} padX={isDesktop ? 6 : 14} maxScale={2.6} edgeFade>
+      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit={isDesktop ? 'contain' : 'height'} framePad={isDesktop ? 12 : 14} padTop={isDesktop ? 18 : 68} padBottom={isDesktop ? 6 : bottomInset + BOARD_BOTTOM_GAP} padX={isDesktop ? 24 : 14} maxScale={2.6} edgeFade>
         <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
           {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {
             const row = Math.floor(i / puzzle.width);
