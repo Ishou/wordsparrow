@@ -8,7 +8,7 @@ const nav = css({
   right: 0,
   bottom: 0,
   zIndex: 40,
-  bg: 'rgba(255,255,255,0.72)',
+  bg: 'rgba(255,255,255,0.9)',
   backdropFilter: 'blur(14px)',
   borderTop: '0.5px solid rgba(33,75,64,0.10)',
   padding: '10px 28px calc(8px + env(safe-area-inset-bottom))',
@@ -25,10 +25,9 @@ const IDLE = 'var(--colors-ws-jade-ink)';
 
 export interface BottomNavProps {
   readonly active: 'accueil' | 'grilles';
-  readonly onAccountClick: () => void;
 }
 
-export function BottomNav({ active, onAccountClick }: BottomNavProps) {
+export function BottomNav({ active }: BottomNavProps) {
   const navigate = useNavigate();
   const accueil = active === 'accueil';
   const grilles = active === 'grilles';
@@ -51,10 +50,6 @@ export function BottomNav({ active, onAccountClick }: BottomNavProps) {
       >
         <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke={grilles ? ACTIVE : IDLE} strokeOpacity={grilles ? 1 : 0.5} strokeWidth="1.8" /><rect x="13.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke={grilles ? ACTIVE : IDLE} strokeOpacity={grilles ? 1 : 0.5} strokeWidth="1.8" /><rect x="4.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke={grilles ? ACTIVE : IDLE} strokeOpacity={grilles ? 1 : 0.5} strokeWidth="1.8" /><rect x="13.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke={grilles ? ACTIVE : IDLE} strokeOpacity={grilles ? 1 : 0.5} strokeWidth="1.8" /></svg>
         <span className={navLabel} style={grilles ? { color: ACTIVE } : { color: IDLE, opacity: 0.55 }}>Grilles</span>
-      </button>
-      <button type="button" className={navItem} aria-haspopup="dialog" onClick={onAccountClick}>
-        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8.4" r="3.6" stroke={IDLE} strokeOpacity="0.5" strokeWidth="1.8" /><path d="M5 19.5c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" stroke={IDLE} strokeOpacity="0.5" strokeWidth="1.8" strokeLinecap="round" /></svg>
-        <span className={navLabel} style={{ color: IDLE, opacity: 0.55 }}>Compte</span>
       </button>
     </nav>
   );
