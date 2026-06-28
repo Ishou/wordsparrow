@@ -65,12 +65,21 @@ describe('HomeGreetingArt', () => {
     expect(container.querySelector('svg use')).toBeTruthy();
   });
 
+  it('omits sun/moon/stars when neutral, regardless of bucket', () => {
+    const now = new Date(Date.UTC(2026, 5, 26, 23, 0, 0));
+    const neutral = render(<HomeGreetingArt bucket="nuit" now={now} neutral />);
+    const real = render(<HomeGreetingArt bucket="nuit" now={now} />);
+    // Neutral keeps only the shared foliage <use>; the celestial group renders nothing.
+    expect(neutral.container.querySelectorAll('svg > g > *').length).toBe(0);
+    expect(real.container.querySelectorAll('svg > g > *').length).toBeGreaterThan(0);
+  });
+
   it('draws stars only at night', () => {
     const now = new Date(Date.UTC(2026, 5, 26, 23, 0, 0));
     const night = render(<HomeGreetingArt bucket="nuit" now={now} />);
     const day = render(<HomeGreetingArt bucket="matin" now={now} />);
-    const nightCircles = night.container.querySelectorAll('svg > circle').length;
-    const dayCircles = day.container.querySelectorAll('svg > circle').length;
+    const nightCircles = night.container.querySelectorAll('svg > g > circle').length;
+    const dayCircles = day.container.querySelectorAll('svg > g > circle').length;
     expect(nightCircles).toBeGreaterThan(dayCircles);
   });
 
