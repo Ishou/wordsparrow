@@ -343,6 +343,11 @@ enableMocks()
         </StrictMode>,
       );
 
+    // The prerender bakes Ark dialog/menu portals at body level; createRoot only owns #root, so they survive as inert, duplicate-id overlays whose aria-controls shadow the real React portals and swallow menu/dialog clicks. Drop them before mounting.
+    document.querySelectorAll('[data-scope]').forEach((el) => {
+      if (!container.contains(el)) el.remove();
+    });
+
     // ADR-0072 §3 — render-gate: defer paint until brand faces are ready (1.2 s cap).
     if (typeof document !== 'undefined' && typeof document.fonts?.load === 'function') {
       const ready = Promise.all([
