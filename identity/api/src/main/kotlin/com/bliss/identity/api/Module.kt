@@ -90,6 +90,7 @@ fun Application.module(
         allowHost("localhost:5173", schemes = listOf("http"))
 
         // Ktor's CORS default covers GET/POST/HEAD/OPTIONS.
+        allowMethod(HttpMethod.Put)
         allowMethod(HttpMethod.Patch)
         allowMethod(HttpMethod.Delete)
 
