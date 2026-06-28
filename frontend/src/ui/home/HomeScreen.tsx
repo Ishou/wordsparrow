@@ -31,14 +31,15 @@ type DailyState =
 // v2 home (ADR-0072): dev-only sandbox; /accueil untouched; previous grids strip uses real summaries.
 
 const shell = css({
-  minHeight: '100dvh',
+  // Phone: cap to the viewport so the top bar + bottom nav pin and only `content` scrolls (app-shell); desktop reverts to document scroll.
+  height: '100dvh',
   bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   // Tablet: a contained app card on a calm jade surround. Desktop: full-bleed for the 2-col layout.
   md: { bgImage: 'none', bg: '#9CCBB1', justifyContent: 'center', padding: '40px 24px' },
-  lg: { bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0 },
+  lg: { height: 'auto', minHeight: '100dvh', bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0 },
 });
 // Phone: mobile column. Tablet: centred framed card. Desktop: a wide 2-column container.
 const frame = css({
@@ -67,13 +68,16 @@ const frame = css({
     overflow: 'visible',
   },
 });
+// Phone/tablet top-bar slot: flex:none above the scroll body so the bar stays pinned (mirrors PhoneShell's headerSlot).
+const topBarSlot = css({ flex: 'none', padding: 'calc(env(safe-area-inset-top) + 22px) 22px 0', lg: { display: 'none' } });
+
 const content = css({
   flex: 1,
   minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
-  // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it.
-  padding: 'calc(env(safe-area-inset-top) + 22px) 22px calc(64px + env(safe-area-inset-bottom))',
+  // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it; top spacing now lives in topBarSlot.
+  padding: '0 22px calc(64px + env(safe-area-inset-bottom))',
   overflowY: 'auto',
   // Desktop: top nav, then the two columns vertically centred in the remaining space.
   lg: { overflow: 'visible', padding: '0 36px 40px' },
@@ -271,9 +275,10 @@ export function HomeScreen({
       <SkipLink />
       <div className={frame}>
         <DesktopAppBar active="accueil" streak={streak.cur} />
-        <div id="main-content" tabIndex={-1} className={content}>
+        <div className={topBarSlot}>
           <MobileTopBar onMenuClick={() => setMenuOpen(true)} />
-
+        </div>
+        <div id="main-content" tabIndex={-1} className={content}>
           <div className={hub}>
           <section className={hero}>
             <HomeGreetingArt bucket={bucket} now={nowDate} className={heroArt} drape={34} />
