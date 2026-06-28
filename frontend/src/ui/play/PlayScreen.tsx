@@ -249,7 +249,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   // The board owns the solve beat; the firewall queues the advance here for the board to run when the beat ends.
   const pendingAdvanceRef = useRef<(() => void) | null>(null);
   const reduceMotionRef = useRef(false);
-  useEffect(() => {
+  useEffect(() => () => {
     if (rejectTimerRef.current) window.clearTimeout(rejectTimerRef.current);
   }, []);
   useEffect(() => {

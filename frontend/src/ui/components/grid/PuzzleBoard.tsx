@@ -149,12 +149,9 @@ export interface PuzzleBoardProps {
   readonly edgeFade?: boolean;
   // Per-cell keydown handler (solo wires its always-move backspace + tab tracking here).
   readonly onKeyDown?: (e: KeyboardEvent<HTMLInputElement>) => void;
-  // Gates the beat against async hydration: returns false while newly-appearing cells are a
-  // mount-time restore (solo resume / not-yet-user-acted), absorbed silently. Omit to always celebrate (coop's
-  // locks arrive synchronously on mount, so its diff only ever grows on a real server solve).
+  // Guards against celebrating async-restored cells on mount (solo resume); omit to always celebrate.
   readonly celebrateGuard?: () => boolean;
-  // Runs after a word's solve-beat halo completes (or immediately under reduced motion);
-  // solo wires its advance-to-next-word here. Omit to leave the beat purely decorative (coop).
+  // Called after the solve-beat halo completes; solo uses it to advance to the next word.
   readonly onBeatComplete?: (positions: ReadonlyArray<Position>) => void;
   // Overlay rendered over the board grid inside the same pan/zoom stage (coop presence).
   readonly overlay?: ReactNode;
