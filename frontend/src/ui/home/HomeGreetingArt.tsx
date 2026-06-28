@@ -200,14 +200,15 @@ function Defs({ p }: { readonly p: string }): ReactElement {
         <path d="M2 18 C10 15 16 9 13 1 C5 4 -1 10 2 18 Z" fill="#B7DDC8" />
         <path d="M3 16 L12 3" stroke="#8FB6A1" strokeWidth="0.8" opacity="0.7" />
       </symbol>
+      {/* Blossoms hug the branch crossing (local y≈30-40) so none dangle below it into open sky. */}
       <symbol id={`${p}cluster`} viewBox="0 0 64 64">
         <use href={`#${p}leaf`} x="44" y="14" width="14" height="14" />
         <use href={`#${p}bud`} x="6" y="28" width="13" height="13" />
-        <use href={`#${p}bud`} x="46" y="40" width="12" height="12" />
+        <use href={`#${p}bud`} x="42" y="24" width="11" height="11" />
         <use href={`#${p}bl`} x="14" y="16" width="24" height="24" />
         <use href={`#${p}bl`} x="32" y="10" width="20" height="20" />
-        <use href={`#${p}bl`} x="36" y="28" width="22" height="22" />
-        <use href={`#${p}bl`} x="20" y="32" width="18" height="18" />
+        <use href={`#${p}bl`} x="34" y="20" width="22" height="22" />
+        <use href={`#${p}bl`} x="20" y="24" width="18" height="18" />
       </symbol>
       <symbol id={`${p}fg`} viewBox="0 0 300 168">
         <g transform="translate(0,22) scale(0.7) rotate(22 0 140)">
