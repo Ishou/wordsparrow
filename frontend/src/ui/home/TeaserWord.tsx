@@ -56,7 +56,7 @@ const skipBtn = css({
   _active: { opacity: 1 },
 });
 // Docks our on-screen keyboard at the bottom (touch only) so the native soft keyboard never has to open.
-const kbDock = css({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1100, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '6px 10px calc(8px + env(safe-area-inset-bottom))' });
+const kbDock = css({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1100, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '6px 14px calc(8px + env(safe-area-inset-bottom))' });
 const kbInner = css({ width: '100%', maxWidth: '440px' });
 // Dismiss handle sits on the dock, above the keys (where a keyboard's collapse affordance belongs).
 const kbCollapse = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '46px', height: '24px', border: 'none', borderRadius: '999px', background: 'rgba(255,255,255,0.62)', backdropFilter: 'blur(10px)', boxShadow: '0 2px 12px rgba(33,75,64,0.14)', color: 'ws.jadeInk', cursor: 'pointer', _active: { opacity: 0.85 } });
