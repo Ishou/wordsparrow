@@ -10,7 +10,8 @@ import { SegmentedControl } from './SegmentedControl';
 import { GrillesEmptyState } from './GrillesEmptyState';
 
 type Status = 'done' | 'progress' | 'new';
-type Filter = 'all' | 'todo' | 'done';
+// Filters mirror the statuses one-to-one — to-do-oriented, no neutral "all".
+type Filter = Status;
 
 interface DayRow {
   readonly summary: DailySummary;
@@ -20,8 +21,8 @@ interface DayRow {
 }
 
 const FILTERS: ReadonlyArray<{ readonly id: Filter; readonly label: string }> = [
-  { id: 'all', label: 'Toutes' },
-  { id: 'todo', label: 'À finir' },
+  { id: 'new', label: 'À jouer' },
+  { id: 'progress', label: 'À finir' },
   { id: 'done', label: 'Terminées' },
 ];
 
@@ -162,7 +163,7 @@ export function GrillesArchiveScreen({
   readonly soloEntriesStore: SoloEntriesStore;
 }) {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<Filter>('new');
   const [summaries, setSummaries] = useState<ReadonlyArray<DailySummary>>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -217,10 +218,8 @@ export function GrillesArchiveScreen({
 
   const visible = useMemo(
     () =>
-      // "À finir" = started but not yet finished (in progress), not every unplayed grid.
-      rows.filter((r) =>
-        filter === 'all' ? true : filter === 'done' ? r.status === 'done' : r.status === 'progress',
-      ),
+      // Each filter maps to exactly one status: À jouer=new, À finir=progress, Terminées=done.
+      rows.filter((r) => r.status === filter),
     [rows, filter],
   );
 

@@ -9,15 +9,20 @@ import { MenuSheet } from './MenuSheet';
 const bar = css({
   display: 'none',
   lg: {
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    width: '100%',
-    paddingTop: '24px',
-    paddingInline: '36px',
-    flex: 'none',
+    // Sticky full-bleed (100vw via negative margins) so the frosted band spans the viewport; content capped inside.
+    position: 'sticky',
+    top: 0,
+    zIndex: 50,
+    display: 'block',
+    width: '100vw',
+    marginInline: 'calc(50% - 50vw)',
+    paddingBlock: '14px',
+    bg: 'rgba(231,242,236,0.72)',
+    backdropFilter: 'blur(12px)',
   },
 });
+// Caps the bar content at the frame width so the lockup/menu align with the page below.
+const barInner = css({ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', maxWidth: '1140px', marginInline: 'auto', paddingInline: '36px' });
 const brand = css({ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', borderRadius: '12px', cursor: 'pointer', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '4px' } });
 const nav = css({ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '26px' });
 const link = css({ fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'bold', color: 'ws.jadeInk', opacity: 0.6, background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 2px', borderRadius: '8px', _hover: { opacity: 1 }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
@@ -38,6 +43,7 @@ export function DesktopAppBar({ active, trailing, streak }: DesktopAppBarProps) 
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <header className={bar}>
+      <div className={barInner}>
       <Link to="/v2" className={brand} aria-label="Accueil">
         <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
       </Link>
@@ -64,6 +70,7 @@ export function DesktopAppBar({ active, trailing, streak }: DesktopAppBarProps) 
         <button type="button" className={menuBtn} aria-label="Ouvrir le menu" aria-haspopup="dialog" onClick={() => setMenuOpen(true)}>
           <List size={22} weight="bold" aria-hidden="true" />
         </button>
+      </div>
       </div>
       <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} streak={streak} />
     </header>

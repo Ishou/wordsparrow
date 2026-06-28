@@ -41,6 +41,7 @@ const avatar = css({
   fontSize: '20px',
 });
 const avatarAnon = css({ bg: 'ws.jade', color: 'ws.jadeInk' });
+const profileLink = css({ textDecoration: 'none', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const profileName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const profileMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
 
@@ -131,13 +132,16 @@ function ProfileCard() {
   const { state } = useAuth();
   if (state.status === 'authed') {
     return (
-      <div className={profile}>
+      <Link to="/v2/compte" className={cx(profile, profileLink)}>
         <span className={avatar} aria-hidden="true">{initialFor(state.whoami.displayName)}</span>
         <div>
           <div className={profileName}>{state.whoami.displayName}</div>
-          <div className={profileMeta}>Connecté</div>
+          <div className={profileMeta}>Voir mon compte</div>
         </div>
-      </div>
+        <span className={chevron}>
+          <CaretRight size={18} weight="bold" aria-hidden="true" />
+        </span>
+      </Link>
     );
   }
   const loading = state.status === 'loading';

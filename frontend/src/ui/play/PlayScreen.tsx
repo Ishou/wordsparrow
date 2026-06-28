@@ -7,6 +7,7 @@ import type { PuzzleSolver } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Button, Cell, DefCell, ClueRail, Lockup, type CellState } from '@/design-system';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
+import { SkipLink } from '@/ui/v2/SkipLink';
 import { PlayMenu } from './PlayMenu';
 import {
   useGridNavigation,
@@ -664,7 +665,8 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
 
   return (
     <div className={stage}>
-    <main className={shell} lang="fr">
+    <SkipLink />
+    <main id="main-content" tabIndex={-1} className={shell} lang="fr">
       {isDesktop ? (
         <DesktopAppBar
           trailing={

@@ -3,6 +3,7 @@ import { Link, type LinkProps } from '@tanstack/react-router';
 import { CaretLeft } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { DesktopAppBar } from './DesktopAppBar';
+import { SkipLink } from './SkipLink';
 
 export interface PhoneShellProps {
   readonly children: ReactNode;
@@ -93,10 +94,11 @@ const body = css({
 export function PhoneShell({ children, header, navActive, backTo }: PhoneShellProps) {
   return (
     <div className={shell} lang="fr">
+      <SkipLink />
       <div className={frame}>
         <DesktopAppBar active={navActive} />
         {header != null ? <div className={headerSlot}>{header}</div> : null}
-        <main id="main-content" className={body}>
+        <main id="main-content" tabIndex={-1} className={body}>
           {backTo != null ? (
             <Link to={backTo} className={deskBack}>
               <CaretLeft size={16} weight="bold" aria-hidden="true" />
