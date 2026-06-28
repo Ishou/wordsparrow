@@ -383,6 +383,28 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     }
   };
 
+  // A pointerup released outside the browser window never reaches the element; window listeners end the phantom drag.
+  useEffect(() => {
+    const drop = (e: PointerEvent) => {
+      if (!pointers.current.has(e.pointerId)) return;
+      pointers.current.delete(e.pointerId);
+      if (pointers.current.size < 2) pinchDist.current = 0;
+      if (pointers.current.size === 0) settle();
+    };
+    const clear = () => {
+      if (pointers.current.size === 0) return;
+      pointers.current.clear();
+      pinchDist.current = 0;
+      settle();
+    };
+    window.addEventListener('pointerup', drop);
+    window.addEventListener('blur', clear);
+    return () => {
+      window.removeEventListener('pointerup', drop);
+      window.removeEventListener('blur', clear);
+    };
+  }, [settle]);
+
   return (
     <div
       ref={vpRef}
@@ -391,6 +413,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onLostPointerCapture={onPointerUp}
       onClickCapture={onClickCapture}
     >
       <div ref={stRef} className={stage} style={{ width: contentWidth, height: contentHeight }}>
