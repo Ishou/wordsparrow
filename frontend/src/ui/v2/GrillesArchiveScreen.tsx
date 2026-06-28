@@ -63,10 +63,9 @@ const card = css({
   marginBottom: '10px',
   boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
   cursor: 'pointer',
-  transition: 'transform 120ms, box-shadow 120ms',
-  _hover: { transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(33,75,64,0.14)' },
-  _active: { transform: 'translateY(1px)' },
-  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+  transition: 'background-color 120ms',
+  _hover: { bg: 'ws.sable' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' },
 });
 
 const mid = css({ flex: 1, minWidth: 0 });
