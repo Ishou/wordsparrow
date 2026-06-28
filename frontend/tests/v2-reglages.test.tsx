@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AuthClient } from '@/application/auth';
 import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
-import { Route as V2Route } from '@/ui/routes/v2';
-import { Route as ReglagesRoute } from '@/ui/routes/v2.reglages';
+import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
+import { Route as ReglagesRoute } from '@/ui/routes/reglages';
 import { expectAxeClean } from '@/test/a11y';
 
 const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
@@ -24,10 +24,10 @@ function stubAuth(overrides: Partial<AuthClient> = {}): AuthClient {
 }
 
 function renderReglages(authClient: AuthClient) {
-  const routeTree = RootRoute.addChildren([V2Route.addChildren([ReglagesRoute])]);
+  const routeTree = RootRoute.addChildren([AppLayoutRoute.addChildren([ReglagesRoute])]);
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ['/v2/reglages'] }),
+    history: createMemoryHistory({ initialEntries: ['/reglages'] }),
     context: {
       authClient,
       getPseudonym: () => 'Lapin 1',
@@ -76,10 +76,10 @@ describe('v2 réglages screen', () => {
     renderReglages(stubAuth());
     await screen.findByRole('heading', { level: 1, name: 'Réglages' });
     expect(screen.getByRole('link', { name: 'Confidentialité' }).getAttribute('href')).toBe(
-      '/v2/confidentialite',
+      '/confidentialite',
     );
     expect(screen.getByRole('link', { name: 'Mentions légales' }).getAttribute('href')).toBe(
-      '/v2/mentions-legales',
+      '/mentions-legales',
     );
   });
 

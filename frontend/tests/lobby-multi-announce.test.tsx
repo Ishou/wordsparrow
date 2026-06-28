@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { multiAnnouncementFor, type MultiAnnounceContext } from '@/ui/routes/lobby.$lobbyId.lazy';
+import { multiAnnouncementFor, type MultiAnnounceContext } from '@/ui/components/lobby/lobbyEvents';
 import type { GameEvent } from '@/application/game';
 
 const baseCtx: MultiAnnounceContext = {

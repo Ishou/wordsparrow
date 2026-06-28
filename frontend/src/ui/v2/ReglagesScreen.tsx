@@ -132,7 +132,7 @@ function ProfileCard() {
   const { state } = useAuth();
   if (state.status === 'authed') {
     return (
-      <Link to="/v2/compte" className={cx(profile, profileLink)}>
+      <Link to="/compte" className={cx(profile, profileLink)}>
         <span className={avatar} aria-hidden="true">{initialFor(state.whoami.displayName)}</span>
         <div>
           <div className={profileName}>{state.whoami.displayName}</div>
@@ -198,7 +198,7 @@ function CompteGroup() {
 
 export function ReglagesScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/v2" />} backTo="/v2">
+    <PhoneShell header={<BackHeader to="/" />} backTo="/">
       <div className={stack}>
         <h1 className={title}>Réglages</h1>
 
@@ -209,15 +209,15 @@ export function ReglagesScreen() {
         <nav aria-label="Confidentialité &amp; légal">
           <div className={groupLabel}>Confidentialité &amp; légal</div>
           <ul className={listCard}>
-            <LinkRow icon={Lock} soft to="/v2/confidentialite">Confidentialité</LinkRow>
-            <LinkRow icon={FileText} soft to="/v2/mentions-legales" last>Mentions légales</LinkRow>
+            <LinkRow icon={Lock} soft to="/confidentialite">Confidentialité</LinkRow>
+            <LinkRow icon={FileText} soft to="/mentions-legales" last>Mentions légales</LinkRow>
           </ul>
         </nav>
 
         <nav aria-label="Aide">
           <div className={groupLabel}>Aide</div>
           <ul className={listCard}>
-            <LinkRow icon={Question} soft to="/v2/aide">Aide &amp; raccourcis</LinkRow>
+            <LinkRow icon={Question} soft to="/aide">Aide &amp; raccourcis</LinkRow>
             <MailRow icon={Envelope} href="mailto:contact@wordsparrow.io" last>Nous écrire</MailRow>
           </ul>
         </nav>

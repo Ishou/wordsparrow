@@ -28,10 +28,11 @@ export function renderSitemap(
 }
 
 // Path mapping: which file's git history represents this route.
-// '/' → accueil.tsx, '/grille' → grille.tsx, etc.
+// '/' → index.tsx, '/play' → play.tsx, etc. (ADR-0074: v2 promoted to root).
 const ROUTE_TO_FILE: Record<string, string> = {
-  '/': 'frontend/src/ui/routes/accueil.tsx',
-  '/grille': 'frontend/src/ui/routes/grille.tsx',
+  '/': 'frontend/src/ui/routes/index.tsx',
+  '/play': 'frontend/src/ui/routes/play.tsx',
+  '/grilles': 'frontend/src/ui/routes/grilles.tsx',
   '/aide': 'frontend/src/ui/routes/aide.tsx',
   '/mentions-legales': 'frontend/src/ui/routes/mentions-legales.tsx',
   '/confidentialite': 'frontend/src/ui/routes/confidentialite.tsx',

@@ -190,7 +190,7 @@ function SignInPrompt() {
 export function CompteScreen() {
   const { state } = useAuth();
   return (
-    <PhoneShell header={<BackHeader to="/v2/reglages" />} backTo="/v2/reglages">
+    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <h1 className={title}>Mon compte</h1>
       {state.status === 'loading' ? (
         <div className={stack}>

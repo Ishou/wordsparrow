@@ -79,7 +79,7 @@ export function EraseData() {
       return;
     }
     await refresh().catch(() => {});
-    void navigate({ to: '/v2' });
+    void navigate({ to: '/' });
   };
 
   return (

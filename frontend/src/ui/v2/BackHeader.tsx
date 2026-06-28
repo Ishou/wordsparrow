@@ -28,7 +28,7 @@ const back = css({
 // Desktop clusters Retour + Lockup on the left (like the play header); phone keeps the lockup pinned right.
 const spacer = css({ flex: 1, lg: { flex: '0 0 10px' } });
 
-export function BackHeader({ to = '/v2' }: BackHeaderProps = {}) {
+export function BackHeader({ to = '/' }: BackHeaderProps = {}) {
   return (
     <div className={row}>
       <Link to={to} className={back}>

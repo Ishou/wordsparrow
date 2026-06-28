@@ -38,7 +38,7 @@ function Section({ heading, children }: { readonly heading: string; readonly chi
 
 export function AideScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/v2/reglages" />} backTo="/v2/reglages">
+    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
           <div className={eyebrow}>Besoin d&apos;un coup de main&nbsp;?</div>

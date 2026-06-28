@@ -44,7 +44,7 @@ export function DesktopAppBar({ active, trailing, streak }: DesktopAppBarProps) 
   return (
     <header className={bar}>
       <div className={barInner}>
-      <Link to="/v2" className={brand} aria-label="Accueil">
+      <Link to="/" className={brand} aria-label="Accueil">
         <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
       </Link>
       <nav className={nav} aria-label="Navigation principale">
@@ -52,7 +52,7 @@ export function DesktopAppBar({ active, trailing, streak }: DesktopAppBarProps) 
           type="button"
           className={active === 'accueil' ? cx(link, linkActive) : link}
           aria-current={active === 'accueil' ? 'page' : undefined}
-          onClick={() => navigate({ to: '/v2' })}
+          onClick={() => navigate({ to: '/' })}
         >
           Accueil
         </button>
@@ -60,7 +60,7 @@ export function DesktopAppBar({ active, trailing, streak }: DesktopAppBarProps) 
           type="button"
           className={active === 'grilles' ? cx(link, linkActive) : link}
           aria-current={active === 'grilles' ? 'page' : undefined}
-          onClick={() => navigate({ to: '/v2/grilles' })}
+          onClick={() => navigate({ to: '/grilles' })}
         >
           Grilles
         </button>

@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AuthClient, GetMeResult } from '@/application/auth';
 import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
+import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
 import { Route as CompteRoute } from '@/ui/routes/compte';
 
 const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
@@ -26,7 +27,7 @@ function stubAuth(overrides: Partial<AuthClient> = {}): AuthClient {
 }
 
 function renderCompte(authClient: AuthClient) {
-  const routeTree = RootRoute.addChildren([CompteRoute]);
+  const routeTree = RootRoute.addChildren([AppLayoutRoute.addChildren([CompteRoute])]);
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: ['/compte'] }),
@@ -78,9 +79,11 @@ describe('/compte auth-hydration', () => {
       getMe: vi.fn().mockResolvedValue(me),
     });
     renderCompte(authClient);
+    // v2 CompteScreen renders read-mode once authed: the display name + the edit affordance, not the anon sign-in.
     await waitFor(() =>
-      expect(screen.getByRole('textbox', { name: /Pseudonyme/i })).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: /Modifier le pseudonyme/i })).toBeInTheDocument(),
     );
+    expect(screen.getAllByText('Lapin 472').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { level: 1, name: /Mon compte/i })).toBeInTheDocument();
   });
 });

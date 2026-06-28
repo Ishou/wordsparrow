@@ -11,7 +11,7 @@ export function NotFoundScreen() {
         scene={sparrowFlightScene('404')}
         title="Cette page s'est envolée"
         body={"On n'a rien trouvé ici. Reviens à l'accueil pour jouer."}
-        cta={{ label: 'Accueil', onClick: () => void navigate({ to: '/v2' }) }}
+        cta={{ label: 'Accueil', onClick: () => void navigate({ to: '/' }) }}
       />
     </PhoneShell>
   );

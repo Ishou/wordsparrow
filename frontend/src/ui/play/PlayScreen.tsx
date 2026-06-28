@@ -679,10 +679,10 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
       ) : (
         <header className={header}>
           <div className={headerBar}>
-            <button type="button" className={iconBtn} onClick={() => navigate({ to: '/v2' })} aria-label="Quitter la grille">
+            <button type="button" className={iconBtn} onClick={() => navigate({ to: '/' })} aria-label="Quitter la grille">
               <CaretLeft aria-hidden="true" weight="bold" />
             </button>
-            <Link to="/v2" className={brandLink} aria-label="Accueil">
+            <Link to="/" className={brandLink} aria-label="Accueil">
               <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
             </Link>
             <span className={headerSpacer} />

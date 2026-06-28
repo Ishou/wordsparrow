@@ -1,10 +1,11 @@
 import { createRoute, useNavigate } from '@tanstack/react-router';
 import type { Puzzle } from '@/domain';
-// Sanctioned app→module bridge (ADR-0072); registered only in DEV.
+// Sanctioned app→module bridge (ADR-0072).
 import { PlayScreen } from '@/ui/play/PlayScreen';
 import { PhoneShell } from '@/ui/v2/PhoneShell';
 import { SparrowState } from '@/ui/v2/SparrowState';
-import { Route as V2Route } from './v2';
+import { INDEXABLE_ROUTES, SITE_BASE_URL, breadcrumbJsonLd, gameJsonLd, indexableHead } from '@/ui/seo';
+import { Route as AppLayoutRoute } from './app-layout';
 
 // Rising sun on the horizon with a sparrow above — the daily "bientôt" state (mockups/error-states-v2.html #1).
 const sunriseScene = (
@@ -36,7 +37,7 @@ function PlayUnavailable() {
         scene={sunriseScene}
         title="Bientôt disponible"
         body="La grille du jour se prépare. Elle arrive au lever du soleil."
-        cta={{ label: 'Voir les grilles passées', onClick: () => void navigate({ to: '/v2/grilles' }) }}
+        cta={{ label: 'Voir les grilles passées', onClick: () => void navigate({ to: '/grilles' }) }}
       />
     </PhoneShell>
   );
@@ -52,7 +53,7 @@ function PlayRouteComponent() {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const Route = createRoute({
-  getParentRoute: () => V2Route,
+  getParentRoute: () => AppLayoutRoute,
   path: 'play',
   // `?date=YYYY-MM-DD` opens that day's grid; any other value resolves to "today".
   validateSearch: (search: Record<string, unknown>): { date?: string } =>
@@ -63,4 +64,28 @@ export const Route = createRoute({
   loader: ({ context, deps }): Promise<Puzzle | null> => context.puzzleRepository.fetchDaily(deps.date),
   component: PlayRouteComponent,
   errorComponent: PlayUnavailable,
+  head: () => {
+    const r = INDEXABLE_ROUTES.find((x) => x.path === '/play')!;
+    return {
+      ...indexableHead('/play'),
+      scripts: [
+        {
+          type: 'application/ld+json',
+          children: breadcrumbJsonLd([
+            { name: 'Accueil', item: `${SITE_BASE_URL}/` },
+            { name: r.title, item: `${SITE_BASE_URL}/play` },
+          ]),
+        },
+        {
+          type: 'application/ld+json',
+          children: gameJsonLd({
+            name: 'WordSparrow — mots fléchés du jour',
+            description:
+              'Grille de mots fléchés française quotidienne, jouable en ligne sans inscription.',
+            url: `${SITE_BASE_URL}/play`,
+          }),
+        },
+      ],
+    };
+  },
 });

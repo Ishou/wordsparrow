@@ -124,7 +124,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
 
   const goReglages = () => {
     onClose();
-    navigate({ to: '/v2/reglages' });
+    navigate({ to: '/reglages' });
   };
 
   const { state, refresh } = useAuth();
@@ -139,7 +139,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
     try {
       await authClient.logout();
       await refresh();
-      void navigate({ to: '/v2' });
+      void navigate({ to: '/' });
     } catch (cause) {
       console.warn('logout failed', cause);
     }
@@ -162,7 +162,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
               <span aria-hidden="true" className={grab} />
             </div>
 
-            <Link to="/v2/compte" className={cx(head, headLink)} onClick={onClose}>
+            <Link to="/compte" className={cx(head, headLink)} onClick={onClose}>
               <span className={headAvatar} aria-hidden="true">
                 {authed ? initial : <User size={22} weight="bold" />}
               </span>

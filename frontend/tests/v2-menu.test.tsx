@@ -10,9 +10,9 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import { MenuScreen } from '@/ui/v2/MenuScreen';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
-import { Route as V2Route } from '@/ui/routes/v2';
-import { Route as V2IndexRoute } from '@/ui/routes/v2.index';
-import { Route as V2MenuRoute } from '@/ui/routes/v2.menu';
+import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
+import { Route as IndexRoute } from '@/ui/routes/index';
+import { Route as MenuRoute } from '@/ui/routes/menu';
 import { expectAxeClean } from '@/test/a11y';
 
 // zag schedules dismiss/focus-trap listeners via rAF + setTimeout; drain both before firing close events.
@@ -54,12 +54,12 @@ function renderMenu() {
   const rootRoute = createRootRoute();
   const route = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/v2/menu',
+    path: '/menu',
     component: () => <MenuScreen />,
   });
   const router = createRouter({
     routeTree: rootRoute.addChildren([route]),
-    history: createMemoryHistory({ initialEntries: ['/v2/menu'] }),
+    history: createMemoryHistory({ initialEntries: ['/menu'] }),
   });
   return render(<RouterProvider router={router} />);
 }
@@ -84,10 +84,10 @@ describe('v2 menu screen', () => {
     await screen.findByRole('heading', { level: 1, name: 'Menu' });
 
     expect(screen.getByRole('link', { name: 'Mentions légales' }).getAttribute('href')).toBe(
-      '/v2/mentions-legales',
+      '/mentions-legales',
     );
     expect(screen.getByRole('link', { name: 'Confidentialité' }).getAttribute('href')).toBe(
-      '/v2/confidentialite',
+      '/confidentialite',
     );
   });
 
@@ -192,15 +192,15 @@ describe('v2 menu sheet', () => {
 // TanStack types `path` narrowly on the options union; read it via a cast.
 const pathOf = (route: { options: object }) => (route.options as { path?: string }).path;
 
-describe('v2 route wiring', () => {
-  it('maps /v2 (index) to the single canonical home', () => {
-    expect(pathOf(V2IndexRoute)).toBe('/');
-    expect(V2IndexRoute.options.getParentRoute?.()).toBe(V2Route);
+describe('route wiring', () => {
+  it('maps the index route to the root home path under the app layout', () => {
+    expect(pathOf(IndexRoute)).toBe('/');
+    expect(IndexRoute.options.getParentRoute?.()).toBe(AppLayoutRoute);
   });
 
-  it('registers /v2/menu under the v2 parent', () => {
-    expect(pathOf(V2MenuRoute)).toBe('menu');
-    expect(V2MenuRoute.options.getParentRoute?.()).toBe(V2Route);
-    expect(V2MenuRoute.options.component).toBe(MenuScreen);
+  it('registers /menu under the app layout', () => {
+    expect(pathOf(MenuRoute)).toBe('menu');
+    expect(MenuRoute.options.getParentRoute?.()).toBe(AppLayoutRoute);
+    expect(MenuRoute.options.component).toBe(MenuScreen);
   });
 });

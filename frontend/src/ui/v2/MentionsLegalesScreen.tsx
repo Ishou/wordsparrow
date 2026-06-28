@@ -19,7 +19,7 @@ const link = css({ color: 'ws.sakuraDark', fontWeight: 'bold', textDecoration: '
 
 export function MentionsLegalesScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/v2/reglages" />} backTo="/v2/reglages">
+    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
           <div className={eyebrow}>Informations légales</div>
@@ -70,7 +70,7 @@ export function MentionsLegalesScreen() {
           <h2 className={sectionHeading}>Données personnelles</h2>
           <p className={sectionBody}>
             Le traitement de tes données personnelles est décrit dans la{' '}
-            <Link className={link} to="/v2/confidentialite">
+            <Link className={link} to="/confidentialite">
               politique de confidentialité
             </Link>
             .
