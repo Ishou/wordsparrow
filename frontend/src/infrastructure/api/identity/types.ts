@@ -171,6 +171,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/users/me/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Batch-pull all of the current user's solo puzzle progress.
+         * @description Returns every stored puzzle-progress entry for the authenticated
+         *     player in one call — the grilles archive needs the full set on load,
+         *     not one round-trip per puzzle. Returns an empty `items` array when the
+         *     player has stored nothing; never 404.
+         */
+        get: operations["listProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/me/progress/{puzzleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pull the current user's progress for one puzzle.
+         * @description Returns the stored progress entry for one puzzle, or 404 when the
+         *     player has no row for it.
+         */
+        get: operations["getProgress"];
+        /**
+         * Push the current user's progress for one puzzle.
+         * @description Upserts the player's progress for one puzzle and returns the
+         *     server-stamped `updatedAt`. The server stores `payload` verbatim and
+         *     never parses it (ADR-0075). When `baseUpdatedAt` is present and does
+         *     not match the row's current `updatedAt`, the push is rejected with 409
+         *     so the client can re-pull, re-merge, and re-push (optimistic
+         *     concurrency).
+         */
+        put: operations["putProgress"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -203,6 +256,28 @@ export interface components {
             /** Format: uri */
             authorizeUrl: string;
         };
+        ProgressEntry: {
+            puzzleId: string;
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ProgressList: {
+            items: components["schemas"]["ProgressEntry"][];
+        };
+        ProgressUpdate: {
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            baseUpdatedAt?: string;
+        };
+        ProgressWriteResult: {
+            /** Format: date-time */
+            updatedAt: string;
+        };
         ProblemDetails: {
             /** Format: uri */
             type: string;
@@ -226,6 +301,8 @@ export interface components {
     parameters: {
         /** @description OIDC provider identifier. Currently `google` or `apple`. */
         ProviderPath: "google" | "apple";
+        /** @description Opaque grid puzzle identifier the progress is stored under. */
+        PuzzleIdPath: string;
     };
     requestBodies: never;
     headers: never;
@@ -463,6 +540,83 @@ export interface operations {
             };
             400: components["responses"]["ProblemDetails"];
             401: components["responses"]["ProblemDetails"];
+        };
+    };
+    listProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The authenticated user's full set of progress entries. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressList"];
+                };
+            };
+            401: components["responses"]["ProblemDetails"];
+        };
+    };
+    getProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque grid puzzle identifier the progress is stored under. */
+                puzzleId: components["parameters"]["PuzzleIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored progress entry for the requested puzzle. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressEntry"];
+                };
+            };
+            401: components["responses"]["ProblemDetails"];
+            404: components["responses"]["ProblemDetails"];
+        };
+    };
+    putProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque grid puzzle identifier the progress is stored under. */
+                puzzleId: components["parameters"]["PuzzleIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressUpdate"];
+            };
+        };
+        responses: {
+            /** @description Stored. Returns the server-stamped write time. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressWriteResult"];
+                };
+            };
+            400: components["responses"]["ProblemDetails"];
+            401: components["responses"]["ProblemDetails"];
+            409: components["responses"]["ProblemDetails"];
+            413: components["responses"]["ProblemDetails"];
         };
     };
 }
