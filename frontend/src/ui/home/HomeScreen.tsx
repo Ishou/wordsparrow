@@ -12,6 +12,7 @@ import { Lockup, Skeleton } from '@/design-system';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { SkipLink } from '@/ui/v2/SkipLink';
+import { PrimaryButton, SecondaryButton } from '@/ui/v2/Buttons';
 import { HomeGreetingArt, bucketForHour, greetingForBucket } from './HomeGreetingArt';
 import { TeaserWord } from './TeaserWord';
 import { useDelayedFlag } from '@/ui/lib/useDelayedFlag';
@@ -100,10 +101,8 @@ const teaser = css({ display: 'flex', justifyContent: 'center', marginBottom: '6
 const dailyBand = css({ minHeight: '51px', display: 'flex', flexDirection: 'column', justifyContent: 'center' });
 const heroEyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#543C00', marginBottom: '6px', textAlign: 'center' });
 const heroDate = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '27px', color: 'ws.jadeInk', lineHeight: '1.05', textAlign: 'center' });
-const playBtn = css({ width: '100%', height: '54px', marginTop: '20px', border: 'none', borderRadius: '15px', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '18px', letterSpacing: '0.01em', cursor: 'pointer', boxShadow: '0 8px 18px rgba(212,93,131,0.32)', transition: 'transform 120ms, box-shadow 120ms', _hover: { transform: 'translateY(-1px)', boxShadow: '0 12px 24px rgba(212,93,131,0.42)' }, _active: { transform: 'translateY(1px)', boxShadow: '0 4px 12px rgba(212,93,131,0.30)' }, _disabled: { bg: 'ws.khaki', opacity: 0.45, cursor: 'default', boxShadow: 'none', _hover: { transform: 'none', boxShadow: 'none' }, _active: { transform: 'none' } } });
-
-// Secondary co-op entry under the daily card; jade-tinted so it reads below the primary sakura CTA.
-const coopBtn = css({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', height: '50px', marginTop: '12px', border: 'none', borderRadius: '15px', bg: 'rgba(255,255,255,0.62)', color: 'ws.jadeInk', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', transition: 'transform 120ms, background-color 120ms, box-shadow 120ms', _hover: { bg: 'rgba(255,255,255,0.92)', transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(33,75,64,0.14)' }, _active: { transform: 'translateY(1px)' }, _disabled: { opacity: 0.55, cursor: 'default', _hover: { transform: 'none', boxShadow: 'none' }, _active: { transform: 'none' } }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const playBtn = css({ marginTop: '20px' });
+const coopBtn = css({ marginTop: '12px' });
 
 const joinRow = css({ display: 'flex', gap: '8px', marginTop: '10px' });
 const joinField = css({ position: 'relative', flex: 1, minWidth: 0 });
@@ -334,8 +333,7 @@ export function HomeScreen({
                   </>
                 )}
               </div>
-              <button
-                type="button"
+              <PrimaryButton
                 className={playBtn}
                 disabled={daily.status === 'loading' || daily.status === 'unavailable'}
                 onClick={() => {
@@ -350,11 +348,10 @@ export function HomeScreen({
                     : daily.status === 'unavailable'
                       ? 'Bientôt disponible'
                       : 'Réessayer'}
-              </button>
+              </PrimaryButton>
               {multiplayerOn ? (
                 <>
-                  <button
-                    type="button"
+                  <SecondaryButton
                     className={coopBtn}
                     onClick={handleCreateCoop}
                     disabled={coopPending}
@@ -362,7 +359,7 @@ export function HomeScreen({
                   >
                     <UsersThree size={20} weight="bold" aria-hidden="true" />
                     {coopPending ? 'Création…' : 'Jouer à plusieurs'}
-                  </button>
+                  </SecondaryButton>
                   <form className={joinRow} onSubmit={handleJoinCoop}>
                     <div className={joinField}>
                       <input

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { css, cx } from 'styled-system/css';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { CaretRight } from '@phosphor-icons/react';
+import { css } from 'styled-system/css';
 import type { DailySummary, PuzzleRepository } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Skeleton } from '@/design-system';
@@ -48,7 +49,11 @@ const monthLabel = css({
 });
 
 const list = css({ listStyle: 'none', margin: 0, padding: 0 });
+// The whole row is the tap target — a quiet chevron is the only affordance, so primaries are reserved for the empty state.
 const card = css({
+  width: '100%',
+  textAlign: 'left',
+  textDecoration: 'none',
   bg: 'white',
   borderRadius: '16px',
   padding: '13px 14px',
@@ -56,41 +61,19 @@ const card = css({
   alignItems: 'center',
   gap: '12px',
   marginBottom: '10px',
-  boxShadow: '0 1px 2px rgba(33,75,64,0.05)',
+  boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
+  cursor: 'pointer',
+  transition: 'background-color 120ms',
+  _hover: { bg: 'ws.sable' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' },
 });
-const dot = css({
-  width: '38px',
-  height: '38px',
-  borderRadius: '12px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '17px',
-  flex: 'none',
-});
-const dotDone = css({ bg: 'ws.sakuraDark', color: 'white' });
-const dotProg = css({ bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
-const dotNew = css({ bg: 'ws.sable', color: 'ws.khaki' });
 
 const mid = css({ flex: 1, minWidth: 0 });
 const dTitle = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk' });
 const dMeta = css({ fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '11.5px', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
 const bar = css({ height: '7px', borderRadius: '999px', bg: 'rgba(33,75,64,0.1)', overflow: 'hidden', marginTop: '7px' });
 const barFill = css({ display: 'block', height: '100%', borderRadius: '999px', bg: '#4F6E5C' });
-
-const cta = css({
-  flex: 'none',
-  border: 'none',
-  borderRadius: '11px',
-  padding: '9px 13px',
-  fontFamily: 'wsUi',
-  fontWeight: 'black',
-  fontSize: '12.5px',
-  cursor: 'pointer',
-  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
-});
-const ctaPrimary = css({ bg: 'ws.sakuraDark', color: 'white', boxShadow: '0 4px 10px rgba(212,93,131,0.3)' });
-const ctaGhost = css({ bg: 'ws.sable', color: 'ws.khaki' });
+const chevron = css({ flex: 'none', color: 'ws.khaki', opacity: 0.55 });
 
 const todayFlag = css({
   display: 'inline-block',
@@ -123,8 +106,6 @@ const moreBtn = css({
   _disabled: { opacity: 0.5, cursor: 'default' },
 });
 
-const SYMBOL: Record<Status, string> = { done: '✓', progress: '◔', new: '○' };
-
 // "Jeudi 26 juin" from a UTC ISO date.
 function longDateFr(iso: string): string {
   const s = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`));
@@ -149,7 +130,7 @@ function metaFor(row: DayRow): string {
   return 'Pas encore commencée';
 }
 
-function ctaLabel(status: Status): string {
+function actionLabel(status: Status): string {
   if (status === 'done') return 'Revoir';
   if (status === 'progress') return 'Reprendre';
   return 'Commencer';
@@ -243,10 +224,6 @@ export function GrillesArchiveScreen({
     setFloor(isoUtcDate(widened));
   };
 
-  const openDay = (row: DayRow) => {
-    navigate(row.today ? { to: '/play' } : { to: '/play', search: { date: row.summary.date } });
-  };
-
   return (
     <PhoneShell header={<BackHeader to="/" />} navActive="grilles">
       <h1 className={title}>Grilles</h1>
@@ -263,12 +240,11 @@ export function GrillesArchiveScreen({
         <ul className={list} aria-busy="true" aria-label="Chargement des grilles">
           {Array.from({ length: 5 }, (_, i) => (
             <li key={i} className={card}>
-              <Skeleton tone="onCard" width={38} height={38} radius={12} />
               <div className={mid}>
                 <Skeleton tone="onCard" width={170} height={14} />
                 <Skeleton tone="onCard" width={110} height={12} style={{ marginTop: '6px' }} />
               </div>
-              <Skeleton tone="onCard" width={84} height={34} radius={11} />
+              <Skeleton tone="onCard" width={18} height={18} radius={6} />
             </li>
           ))}
         </ul>
@@ -284,33 +260,27 @@ export function GrillesArchiveScreen({
                   const total = row.summary.totalLetterCells;
                   const pct = total > 0 ? Math.round((row.locked / total) * 100) : 0;
                   return (
-                    <li key={row.summary.id} className={card}>
-                      <span
-                        className={cx(dot, row.status === 'done' ? dotDone : row.status === 'progress' ? dotProg : dotNew)}
-                        aria-hidden="true"
+                    <li key={row.summary.id}>
+                      <Link
+                        to="/play"
+                        search={row.today ? undefined : { date: row.summary.date }}
+                        className={card}
+                        aria-label={`${actionLabel(row.status)} — ${longDateFr(row.summary.date)}`}
                       >
-                        {SYMBOL[row.status]}
-                      </span>
-                      <div className={mid}>
-                        <div className={dTitle}>
-                          {longDateFr(row.summary.date)} · n°{row.summary.gridNumber}
-                          {row.today ? <span className={todayFlag}>Aujourd&apos;hui</span> : null}
-                        </div>
-                        <div className={dMeta}>{metaFor(row)}</div>
-                        {row.status === 'progress' ? (
-                          <div className={bar}>
-                            <span className={barFill} style={{ width: `${pct}%` }} />
+                        <div className={mid}>
+                          <div className={dTitle}>
+                            {longDateFr(row.summary.date)} · n°{row.summary.gridNumber}
+                            {row.today ? <span className={todayFlag}>Aujourd&apos;hui</span> : null}
                           </div>
-                        ) : null}
-                      </div>
-                      <button
-                        type="button"
-                        className={cx(cta, row.status === 'done' ? ctaGhost : ctaPrimary)}
-                        onClick={() => openDay(row)}
-                        aria-label={`${ctaLabel(row.status)} — ${longDateFr(row.summary.date)}`}
-                      >
-                        {ctaLabel(row.status)}
-                      </button>
+                          <div className={dMeta}>{metaFor(row)}</div>
+                          {row.status === 'progress' ? (
+                            <div className={bar}>
+                              <span className={barFill} style={{ width: `${pct}%` }} />
+                            </div>
+                          ) : null}
+                        </div>
+                        <CaretRight className={chevron} size={18} weight="bold" aria-hidden="true" />
+                      </Link>
                     </li>
                   );
                 })}
