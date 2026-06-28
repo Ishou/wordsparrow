@@ -95,7 +95,9 @@ const brandLink = css({ display: 'inline-flex', alignItems: 'center', textDecora
 const headerTimer = css({ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'wsMono', fontWeight: 'semibold', fontSize: '13.5px', color: 'ws.jadeInk', flex: 'none', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em', paddingInline: '2px' });
 const headerTimerIcon = css({ fontSize: '14px', opacity: 0.55, flex: 'none' });
 // Full-bleed: grid bleeds to the edges mid-pan; a gap only appears at the board's edges.
-const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%', maxWidth: '760px', marginInline: 'auto' } });
+// Desktop caps the viewport at the board's own width so it fills the space without a side-ocean.
+const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%', marginInline: 'auto' } });
+const DESKTOP_BOARD_PAD = 48;
 const boardGrid = css({ display: 'grid' });
 const spacer = css({ borderRadius: '9px' });
 
@@ -697,7 +699,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         </header>
       )}
 
-      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit={isDesktop ? 'contain' : 'height'} framePad={14} padTop={isDesktop ? 12 : 68} padBottom={isDesktop ? 12 : bottomInset + BOARD_BOTTOM_GAP} padX={14} maxScale={2.6} edgeFade>
+      <PanZoom ref={pzRef} className={viewportFill} style={isDesktop ? { maxWidth: BOARD_W + 2 * DESKTOP_BOARD_PAD } : undefined} contentWidth={BOARD_W} contentHeight={BOARD_H} fit={isDesktop ? 'contain' : 'height'} framePad={isDesktop ? 6 : 14} padTop={isDesktop ? 6 : 68} padBottom={isDesktop ? 6 : bottomInset + BOARD_BOTTOM_GAP} padX={isDesktop ? 6 : 14} maxScale={2.6} edgeFade>
         <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
           {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {
             const row = Math.floor(i / puzzle.width);

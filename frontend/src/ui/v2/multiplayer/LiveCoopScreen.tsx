@@ -91,7 +91,9 @@ const iconBtn = css({
   lg: { width: '44px', height: '44px', background: 'rgba(255,255,255,0.62)', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', fontSize: '20px', _hover: { background: 'rgba(255,255,255,0.82)' } },
 });
 const headerSpacer = css({ flex: 1 });
-const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%', maxWidth: '760px', marginInline: 'auto' } });
+// Desktop caps the viewport at the board's own width so it fills the space without a side-ocean.
+const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%', marginInline: 'auto' } });
+const DESKTOP_BOARD_PAD = 48;
 const boardWrap = css({ position: 'relative', width: 'max-content' });
 const boardGrid = css({ display: 'grid', position: 'relative', zIndex: 1 });
 const spacer = css({ borderRadius: '9px' });
@@ -364,7 +366,7 @@ export function LiveCoopScreen({
         </header>
       )}
 
-      <PanZoom ref={pzRef} className={viewportFill} contentWidth={BOARD_W} contentHeight={BOARD_H} fit={isDesktop ? 'contain' : 'height'} framePad={14} padTop={isDesktop ? 12 : 104} padBottom={isDesktop ? 12 : bottomInset + BOARD_BOTTOM_GAP} padX={14} maxScale={2.6} edgeFade>
+      <PanZoom ref={pzRef} className={viewportFill} style={isDesktop ? { maxWidth: BOARD_W + 2 * DESKTOP_BOARD_PAD } : undefined} contentWidth={BOARD_W} contentHeight={BOARD_H} fit={isDesktop ? 'contain' : 'height'} framePad={isDesktop ? 6 : 14} padTop={isDesktop ? 6 : 104} padBottom={isDesktop ? 6 : bottomInset + BOARD_BOTTOM_GAP} padX={isDesktop ? 6 : 14} maxScale={2.6} edgeFade>
         <div className={boardWrap}>
           <div className={boardGrid} style={{ gridTemplateColumns: `repeat(${puzzle.width}, ${CELL}px)`, gridAutoRows: `${CELL}px`, gap: `${GAP}px` }}>
             {Array.from({ length: puzzle.height * puzzle.width }, (_, i) => {

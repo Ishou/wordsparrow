@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { css, cx } from 'styled-system/css';
 import { computeFrame } from './computeFrame';
 
@@ -28,6 +28,7 @@ export interface PanZoomProps {
   // Soft jade vignette so bleeding edge cells dissolve into the field (fenêtré).
   readonly edgeFade?: boolean;
   readonly className?: string;
+  readonly style?: CSSProperties;
   readonly children: ReactNode;
 }
 
@@ -54,7 +55,7 @@ const WHEEL_ZOOM_MAX = 0.3; // cap one event at ~±30% so a fast flick can't jum
 const PINCH_ZOOM_BOOST = 6; // ctrlKey wheel = trackpad pinch; its deltas are tiny
 
 export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
-  { contentWidth, contentHeight, minScale = 0.5, maxScale = 3, fit = 'contain', overscan = 1.08, padTop = 0, padBottom = 0, padX = 0, framePad = 0, edgeFade = false, className, children },
+  { contentWidth, contentHeight, minScale = 0.5, maxScale = 3, fit = 'contain', overscan = 1.08, padTop = 0, padBottom = 0, padX = 0, framePad = 0, edgeFade = false, className, style, children },
   ref,
 ) {
   const vpRef = useRef<HTMLDivElement>(null);
@@ -387,6 +388,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     <div
       ref={vpRef}
       className={cx(viewport, className)}
+      style={style}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
