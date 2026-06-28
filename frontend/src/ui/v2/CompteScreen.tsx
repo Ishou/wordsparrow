@@ -12,12 +12,12 @@ import { EraseData } from './EraseData';
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 16px' });
 const stack = css({ display: 'flex', flexDirection: 'column', gap: '16px' });
 
-const hero = css({ display: 'flex', alignItems: 'center', gap: '15px', bg: 'white', borderRadius: '20px', padding: '18px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 12px 26px rgba(33,75,64,0.09)' });
-const avatar = css({ flex: 'none', width: '62px', height: '62px', borderRadius: '50%', bg: 'ws.sakuraDark', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px' });
+const hero = css({ display: 'flex', alignItems: 'center', gap: '13px', bg: 'white', borderRadius: '18px', padding: '14px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
+const avatar = css({ flex: 'none', width: '48px', height: '48px', borderRadius: '50%', bg: 'ws.sakuraDark', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '20px' });
 const avatarAnon = css({ bg: 'ws.jade', color: 'ws.jadeInk' });
 const heroMain = css({ flex: 1, minWidth: 0 });
-const heroName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '20px', color: 'ws.jadeInk', lineHeight: '1.15', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
-const heroMeta = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '3px' });
+const heroName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk', lineHeight: '1.15', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
+const heroMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
 
 const iconBtn = css({ flex: 'none', width: '38px', height: '38px', borderRadius: '50%', border: 'none', bg: 'ws.sable', color: 'ws.jadeInk', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _hover: { bg: '#DED7BC' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
