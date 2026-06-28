@@ -50,7 +50,7 @@ export function createGridApiClient(options: GridApiClientOptions): Client<paths
   const client = createClient<paths>({
     baseUrl: options.baseUrl,
     fetch: options.fetch,
-    // No credentials: the grid API omits Access-Control-Allow-Credentials, so a credentialed request browser-blocks the public daily/sample/list endpoints (re-add per-call when grid CORS supports it).
+    // No credentials: the grid API omits Access-Control-Allow-Credentials, browser-blocking credentialed responses for public endpoints.
   });
   client.use({
     onRequest({ request }) {
