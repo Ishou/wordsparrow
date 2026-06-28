@@ -348,11 +348,10 @@ components:
       in: path
       name: puzzleId
       required: true
-      description: Opaque grid puzzle identifier the progress is stored under.
+      description: UUID v7 identifier of the puzzle the progress is stored under.
       schema:
         type: string
-        minLength: 1
-        maxLength: 128
+        format: uuid
 
   schemas:
     User:
@@ -400,7 +399,7 @@ components:
       type: object
       required: [puzzleId, payload, updatedAt]
       properties:
-        puzzleId: { type: string, minLength: 1, maxLength: 128 }
+        puzzleId: { type: string, format: uuid }
         # Opaque frontend SoloStore blob — identity never parses grid's cell shape (ADR-0075).
         payload: { type: object, additionalProperties: true }
         updatedAt: { type: string, format: date-time }
