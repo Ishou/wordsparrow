@@ -115,8 +115,6 @@ describe('registerServiceWorker — update strategy', () => {
   it('reloads a visible tab immediately even long after load (no time window)', () => {
     registerServiceWorker();
 
-    // A slow SW install (common on mobile) used to land here and defer
-    // forever while visible; a visible tab must now reload regardless.
     vi.advanceTimersByTime(5000);
     fireControlling();
     expect(reloadMock).toHaveBeenCalledTimes(1);
