@@ -22,8 +22,9 @@ const keyboard = css({
   padding: '9px 10px',
   boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
   '& button': { flex: 'none', width: 'calc((100% - 45px) / 10)', minWidth: 0 },
-  // Desktop uses the physical keyboard; the on-screen one is phone + tablet only.
-  lg: { display: 'none' },
+  // Hide only when there's a fine pointer (mouse → physical keyboard). A large touch tablet over the lg
+  // breakpoint keeps the on-screen keyboard — width alone would strand it with no way to type.
+  '@media (min-width: 1024px) and (pointer: fine)': { display: 'none' },
 });
 const keyRow = css({ display: 'flex', gap: '5px', justifyContent: 'center' });
 
