@@ -129,6 +129,10 @@ function initialFor(displayName: string): string {
 
 function ProfileCard() {
   const { state } = useAuth();
+  const { authClient } = useRouteContext({ from: '__root__' });
+  const [returnTo, setReturnTo] = useState('');
+  useEffect(() => setReturnTo(window.location.href), []);
+
   if (state.status === 'authed') {
     return (
       <Link to="/compte" className={cx(profile, profileLink)}>
@@ -143,55 +147,28 @@ function ProfileCard() {
       </Link>
     );
   }
+
   const loading = state.status === 'loading';
+  // Anchor required: browser must follow the 302 chain to accept Set-Cookie (button + location.assign breaks this).
+  const href = authClient && returnTo ? authClient.signInUrl('google', returnTo) : '#';
   return (
-    <div className={profile}>
+    <a
+      href={href}
+      aria-label="Se connecter avec Google"
+      aria-disabled={href === '#' ? true : undefined}
+      className={cx(profile, profileLink)}
+    >
       <span className={avatar} aria-hidden="true">
         <User size={24} weight="bold" />
       </span>
       <div>
         <div className={profileName}>{loading ? '…' : 'Invité'}</div>
-        <div className={profileMeta}>{loading ? '…' : 'Sans compte'}</div>
+        <div className={profileMeta}>{loading ? '…' : 'Se connecter avec Google'}</div>
       </div>
-    </div>
-  );
-}
-
-// Anchor required: browser must follow the 302 chain to accept Set-Cookie (button + location.assign breaks this).
-function SignInRow() {
-  const { authClient } = useRouteContext({ from: '__root__' });
-  const [returnTo, setReturnTo] = useState('');
-  useEffect(() => setReturnTo(window.location.href), []);
-  const href = authClient && returnTo ? authClient.signInUrl('google', returnTo) : '#';
-  const disabled = href === '#';
-  return (
-    <li>
-      <a
-        href={href}
-        aria-disabled={disabled ? true : undefined}
-        className={cx(rowActive, lastFlat)}
-      >
-        <Tile icon={GoogleLogo} />
-        <span className={label}>Se connecter avec Google</span>
-        <span className={chevron}>
-          <CaretRight size={16} weight="bold" aria-hidden="true" />
-        </span>
-      </a>
-    </li>
-  );
-}
-
-function CompteGroup() {
-  const { state } = useAuth();
-  // Sign-out now lives in the main menu; Réglages only offers sign-in, to guests.
-  if (state.status !== 'anon') return null;
-  return (
-    <nav aria-label="Compte">
-      <div className={groupLabel}>Compte</div>
-      <ul className={listCard}>
-        <SignInRow />
-      </ul>
-    </nav>
+      <span className={chevron}>
+        <GoogleLogo size={18} weight="bold" aria-hidden="true" />
+      </span>
+    </a>
   );
 }
 
@@ -202,8 +179,6 @@ export function ReglagesScreen() {
         <h1 className={title}>Réglages</h1>
 
         <ProfileCard />
-
-        <CompteGroup />
 
         <nav aria-label="Confidentialité &amp; légal">
           <div className={groupLabel}>Confidentialité &amp; légal</div>
