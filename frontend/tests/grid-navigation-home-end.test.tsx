@@ -68,8 +68,6 @@ describe('Grid keyboard interactions — Home / End word-boundary keys', () => {
     expect(document.activeElement).toBe(inputAt(container, 1, 4));
   });
 
-  // Arrow navigation jumps over validated (locked) cells in one press,
-  // landing on the next editable cell in the arrow's direction.
   it('ArrowRight skips a validated cell and lands on the next editable one', () => {
     // across-2 is (1,1)(1,2)(1,3)(1,4); lock (1,2).
     const { container } = render(<Grid puzzle={TEST_PUZZLE} validatedPositions={new Set(['1,2'])} />);
