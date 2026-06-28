@@ -68,15 +68,12 @@ const frame = css({
     overflow: 'visible',
   },
 });
-// Phone/tablet top-bar slot: flex:none above the scroll body so the bar stays pinned (mirrors PhoneShell's headerSlot).
-const topBarSlot = css({ flex: 'none', padding: 'calc(env(safe-area-inset-top) + 22px) 22px 0', lg: { display: 'none' } });
-
 const content = css({
   flex: 1,
   minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
-  // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it; top spacing now lives in topBarSlot.
+  // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it; top spacing lives in MobileTopBar.
   padding: '0 22px calc(64px + env(safe-area-inset-bottom))',
   overflowY: 'auto',
   // Desktop: top nav, then the two columns vertically centred in the remaining space.
@@ -126,6 +123,8 @@ const joinInput = css({
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
   '&[aria-invalid="true"]': { borderColor: 'ws.sakuraDark' },
 });
+// CSS masking (not type=password) so the field doesn't trigger the browser's password manager / save prompt.
+const joinMaskStyle = { WebkitTextSecurity: 'disc' } as CSSProperties;
 const joinEyeBtn = css({ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: '10px', bg: 'transparent', color: 'ws.khaki', cursor: 'pointer', _hover: { color: 'ws.jadeInk' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const joinGo = css({ flex: 'none', width: '48px', height: '48px', borderRadius: '13px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'ws.jade', color: 'ws.jadeInk', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: '#A9D8BE' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const joinErr = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '7px', textAlign: 'center' });
@@ -275,9 +274,7 @@ export function HomeScreen({
       <SkipLink />
       <div className={frame}>
         <DesktopAppBar active="accueil" streak={streak.cur} />
-        <div className={topBarSlot}>
-          <MobileTopBar onMenuClick={() => setMenuOpen(true)} />
-        </div>
+        <MobileTopBar onMenuClick={() => setMenuOpen(true)} />
         <div id="main-content" tabIndex={-1} className={content}>
           <div className={hub}>
           <section className={hero}>
@@ -352,7 +349,8 @@ export function HomeScreen({
                       <input
                         ref={joinInputRef}
                         className={joinInput}
-                        type={joinRevealed ? 'text' : 'password'}
+                        style={joinRevealed ? undefined : joinMaskStyle}
+                        type="text"
                         autoComplete="off"
                         autoCapitalize="characters"
                         autoCorrect="off"

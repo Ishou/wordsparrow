@@ -231,6 +231,7 @@ export function GrillesArchiveScreen({
     <>
     <PhoneShell
       header={<MobileTopBar onMenuClick={() => setMenuOpen(true)} />}
+      headerFlush
       navActive="grilles"
       bottomNav={<BottomNav active="grilles" />}
     >
