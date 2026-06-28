@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { CaretDown } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { Cell, DefCell, Skeleton } from '@/design-system';
+import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
+import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import type { SampleWord, WordsRepository } from '@/application';
 
 // Inline fallback so the hero never empties if the corpus fetch fails.
@@ -34,6 +37,12 @@ const input = css({
   cursor: 'pointer',
   appearance: 'none',
   WebkitAppearance: 'none',
+  // Match the play cell: no text selection / iOS magnifier on the capture input.
+  userSelect: 'none',
+  WebkitUserSelect: 'none',
+  WebkitTouchCallout: 'none',
+  '&::-webkit-search-cancel-button': { display: 'none' },
+  '&::-webkit-search-decoration': { display: 'none' },
 });
 // Reserved row below the word so the skip button appears without a layout shift.
 const skipRow = css({ height: '20px', display: 'flex', alignItems: 'center' });
@@ -52,6 +61,20 @@ const skipBtn = css({
   _hover: { opacity: 1 },
   _active: { opacity: 1 },
 });
+// Touch-only dismiss for the native soft keyboard — sakuraDark passes AA on white.
+const collapseBtn = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '28px',
+  height: '20px',
+  border: 'none',
+  borderRadius: '999px',
+  background: 'ws.sakuraDark',
+  color: '#fff',
+  cursor: 'pointer',
+  _active: { opacity: 0.85 },
+});
 
 function nextIndex(current: number, length: number): number {
   if (length <= 1) return 0;
@@ -67,6 +90,7 @@ export interface TeaserWordProps {
 }
 
 export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
+  const touchPrimary = useTouchPrimary();
   const [pool, setPool] = useState<ReadonlyArray<SampleWord>>(FALLBACK);
   const [loading, setLoading] = useState(wordsRepository != null);
   const [idx, setIdx] = useState(() => Math.floor(Math.random() * FALLBACK.length));
@@ -130,6 +154,10 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
     setSolved(false);
     setWrong(false);
     setErrored(false);
+  };
+  // Blur the active cell to drop the native soft keyboard (touch only).
+  const dismissKeyboard = () => {
+    if (focus !== null) refs.current[focus]?.blur();
   };
   // Skipping = giving up on the word, so it breaks the streak (a wrong guess alone doesn't).
   const skip = () => {
@@ -231,17 +259,15 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
                 ref={(el) => {
                   refs.current[i] = el;
                 }}
+                {...GRID_INPUT_GUARDS}
                 className={input}
                 // Always-empty capture input: Cell renders the letter so typing always overtypes.
                 value=""
                 maxLength={1}
                 // Roving tabindex: word is a single Tab stop; arrows/tap move between slots.
                 tabIndex={i === (focus ?? 0) ? 0 : -1}
+                // Override the grid's `inputMode: 'none'`: the teaser wants the native soft keyboard to pop.
                 inputMode="text"
-                autoComplete="off"
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
                 readOnly={solved}
                 aria-label={`${clue} — lettre ${i + 1} sur ${n}`}
                 onChange={(e) => handleChange(i, e.target.value)}
@@ -257,6 +283,17 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
         {errored ? (
           <button type="button" className={skipBtn} onClick={skip}>
             Passer ›
+          </button>
+        ) : touchPrimary && focus !== null ? (
+          <button
+            type="button"
+            className={collapseBtn}
+            aria-label="Masquer le clavier"
+            // preventDefault keeps the cell focused until our onClick blurs it explicitly.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={dismissKeyboard}
+          >
+            <CaretDown size={14} weight="bold" aria-hidden="true" />
           </button>
         ) : null}
       </div>
