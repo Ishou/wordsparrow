@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 
-// "Desktop" = a large screen AND a fine pointer (mouse). A large touch tablet over 1024px stays on the
-// touch layout (overlay bars + on-screen keyboard) — it has no physical keyboard, so the desktop chrome
-// that drops the on-screen keyboard would leave it unable to type. Initialised synchronously to avoid a
-// first-paint re-layout flicker.
+// "Desktop" requires both ≥1024px AND pointer:fine — a large touch tablet stays on the touch layout.
 const DESKTOP_QUERY = '(min-width: 1024px) and (pointer: fine)';
 export function useIsDesktop(): boolean {
   const [isDesktop, setIsDesktop] = useState(

@@ -46,8 +46,7 @@ const dlgActions = css({ display: 'flex', gap: '8px', marginTop: '16px' });
 const ghostBtn = css({ flex: 1, height: '44px', borderRadius: '12px', border: 'none', bg: 'ws.sable', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk', cursor: 'pointer', _hover: { bg: '#DED7BC' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const confirmBtn = css({ flex: 1, height: '44px', marginTop: 0, borderRadius: '12px', border: 'none', bg: 'ws.sakuraDark', color: 'white', _disabled: { opacity: 0.45, cursor: 'not-allowed' } });
 
-// Server-side data erasure (RGPD). Auth-only — guests have no server account, so the action is hidden.
-// Reuses the existing deleteMe endpoint; the type-your-pseudonym confirmation guards the irreversible call.
+// Auth-only RGPD erasure; guests have no server account.
 export function EraseData() {
   const { state, refresh } = useAuth();
   const { authClient } = useRouteContext({ from: '__root__' });
@@ -108,7 +107,7 @@ export function EraseData() {
                 aria-label="Confirmation du pseudonyme"
                 disabled={deleting}
               />
-              {failed ? <p className={errText}>La suppression a échoué. Réessaie.</p> : null}
+              {failed ? <p role="alert" className={errText}>La suppression a échoué. Réessaie.</p> : null}
               <div className={dlgActions}>
                 <button type="button" className={ghostBtn} onClick={close} disabled={deleting}>
                   Annuler
