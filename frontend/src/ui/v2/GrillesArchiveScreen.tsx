@@ -8,6 +8,8 @@ import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { SegmentedControl } from './SegmentedControl';
 import { GrillesEmptyState } from './GrillesEmptyState';
+import { BottomNav } from './BottomNav';
+import { MenuSheet } from './MenuSheet';
 
 type Status = 'done' | 'progress' | 'new';
 // Filters mirror the statuses one-to-one — to-do-oriented, no neutral "all".
@@ -163,6 +165,7 @@ export function GrillesArchiveScreen({
   readonly soloEntriesStore: SoloEntriesStore;
 }) {
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>('new');
   const [summaries, setSummaries] = useState<ReadonlyArray<DailySummary>>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -248,7 +251,12 @@ export function GrillesArchiveScreen({
   };
 
   return (
-    <PhoneShell header={<BackHeader to="/" />} navActive="grilles">
+    <>
+    <PhoneShell
+      header={<BackHeader to="/" />}
+      navActive="grilles"
+      bottomNav={<BottomNav active="grilles" onAccountClick={() => setMenuOpen(true)} />}
+    >
       <h1 className={title}>Grilles</h1>
 
       <SegmentedControl
@@ -326,5 +334,7 @@ export function GrillesArchiveScreen({
         </>
       )}
     </PhoneShell>
+    <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
+    </>
   );
 }

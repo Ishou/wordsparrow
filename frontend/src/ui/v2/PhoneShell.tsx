@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link, type LinkProps } from '@tanstack/react-router';
 import { CaretLeft } from '@phosphor-icons/react';
-import { css } from 'styled-system/css';
+import { css, cx } from 'styled-system/css';
 import { DesktopAppBar } from './DesktopAppBar';
 import { SkipLink } from './SkipLink';
 
@@ -12,6 +12,8 @@ export interface PhoneShellProps {
   readonly navActive?: 'accueil' | 'grilles';
   // Desktop-only back target; phone/tablet uses the header's BackHeader (hidden at lg).
   readonly backTo?: LinkProps['to'];
+  // Fixed full-bleed mobile bottom nav (home/grilles only); reserves body bottom inset when present.
+  readonly bottomNav?: ReactNode;
 }
 
 // ADR-0072 §2 — phone-width on phones; contained jade-surround card from tablet up.
@@ -91,14 +93,17 @@ const body = css({
   lg: { width: '100%', maxWidth: '680px', marginInline: 'auto', overflowY: 'visible', paddingTop: '26px', paddingBottom: '56px' },
 });
 
-export function PhoneShell({ children, header, navActive, backTo }: PhoneShellProps) {
+// Extra bottom inset so content clears the fixed BottomNav; reset at lg where the nav hides.
+const bodyWithNav = css({ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)', lg: { paddingBottom: '56px' } });
+
+export function PhoneShell({ children, header, navActive, backTo, bottomNav }: PhoneShellProps) {
   return (
     <div className={shell} lang="fr">
       <SkipLink />
       <div className={frame}>
         <DesktopAppBar active={navActive} />
         {header != null ? <div className={headerSlot}>{header}</div> : null}
-        <main id="main-content" tabIndex={-1} className={body}>
+        <main id="main-content" tabIndex={-1} className={bottomNav != null ? cx(body, bodyWithNav) : body}>
           {backTo != null ? (
             <Link to={backTo} className={deskBack}>
               <CaretLeft size={16} weight="bold" aria-hidden="true" />
@@ -107,6 +112,7 @@ export function PhoneShell({ children, header, navActive, backTo }: PhoneShellPr
           ) : null}
           {children}
         </main>
+        {bottomNav}
       </div>
     </div>
   );
