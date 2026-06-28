@@ -8,7 +8,9 @@ import {
   type ReactNode,
 } from 'react';
 import type { AuthClient, WhoAmIResult } from '@/application/auth';
+import type { ProgressSyncService } from '@/application/progress';
 import { isDefaultPseudonym } from '@/domain/session/pseudonym';
+import { useProgressSync } from './useProgressSync';
 
 // Phase 5 §Architecture — context state machine.
 // `loading` is the initial state until the first `whoami()` resolves.
@@ -44,7 +46,14 @@ export interface AuthProviderProps {
    * the next state change retries.
    */
   readonly onAuthed?: (anonSessionId: string) => Promise<void> | void;
+  readonly progressSyncService?: ProgressSyncService;
   readonly children: ReactNode;
+}
+
+// Inside the provider so it can read auth context; a no-op without a service.
+function ProgressSyncRunner({ service }: { service?: ProgressSyncService }) {
+  useProgressSync(service);
+  return null;
 }
 
 // Server default returned by the identity-api when a user signs in for
@@ -57,6 +66,7 @@ export function AuthProvider({
   getPseudonym,
   getLocalSessionId,
   onAuthed,
+  progressSyncService,
   children,
 }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
@@ -139,6 +149,7 @@ export function AuthProvider({
 
   return (
     <AuthContext.Provider value={{ state, status: state.status, refresh }}>
+      <ProgressSyncRunner service={progressSyncService} />
       {children}
     </AuthContext.Provider>
   );

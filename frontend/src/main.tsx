@@ -35,13 +35,17 @@ import {
 import {
   clearAllSoloEntriesForEverySession,
   clearSoloEntriesForPuzzle,
+  listSoloPuzzleIds,
   loadSoloEntries,
   loadSoloHintsUsed,
   loadSoloLockedCells,
+  loadSoloPayload,
   recordSoloHintUsed,
+  replaceSoloPayload,
   saveSoloLetter,
   saveSoloLockedCell,
 } from '@/infrastructure/session/localStorageSolo';
+import { createHttpProgressSyncClient } from '@/infrastructure/api/identity/HttpProgressSyncClient';
 import {
   clearTourSeen,
   getTourSeen,
@@ -53,6 +57,11 @@ import {
   type SoloEntriesStorage,
   type SoloEntriesStore,
 } from '@/application/solo/SoloEntriesStore';
+import {
+  createProgressSyncService,
+  createSyncingSoloEntriesStore,
+  type SoloProgressBlobStore,
+} from '@/application/progress';
 import type { TourSeenStore } from '@/application/tour/TourSeenStore';
 import type { SessionClient } from '@/application/session/SessionClient';
 import { registerServiceWorker } from '@/infrastructure/pwa';
@@ -215,7 +224,7 @@ enableMocks()
       recordHintUsed: recordSoloHintUsed,
       clearForPuzzle: clearSoloEntriesForPuzzle,
     };
-    const soloEntriesStore: SoloEntriesStore = createSoloEntriesStore({
+    const localSoloEntriesStore: SoloEntriesStore = createSoloEntriesStore({
       getSessionId: getOrCreateSessionId,
       storage: soloEntriesStorage,
     });
@@ -242,6 +251,22 @@ enableMocks()
     const identityApiBaseUrl =
       import.meta.env.VITE_IDENTITY_API_BASE_URL ?? 'https://auth.wordsparrow.io';
     const authClient = createHttpAuthClient({ baseUrl: identityApiBaseUrl });
+
+    // Cross-device solo-progress sync side-channel (ADR-0075).
+    const soloProgressBlobStore: SoloProgressBlobStore = {
+      loadPayload: loadSoloPayload,
+      replacePayload: replaceSoloPayload,
+      listPuzzleIds: listSoloPuzzleIds,
+    };
+    const progressSyncService = createProgressSyncService({
+      client: createHttpProgressSyncClient({ baseUrl: identityApiBaseUrl }),
+      blobStore: soloProgressBlobStore,
+      getSessionId: getOrCreateSessionId,
+    });
+    const soloEntriesStore: SoloEntriesStore = createSyncingSoloEntriesStore(
+      localSoloEntriesStore,
+      (puzzleId) => progressSyncService.schedulePush(puzzleId),
+    );
 
     const multiplayer = import.meta.env.VITE_FEATURE_MULTIPLAYER === 'true';
     // Survey-api adapter (ADR-0056).
@@ -311,14 +336,16 @@ enableMocks()
       tracker.trackPageView(url, document.title || undefined);
     });
 
-    // Multiplayer-gated so non-multiplayer bundles don't pull `lobbyClient`
-    // through here.
-    const onAuthed =
+    // On sign-in: carry anon progress up before lobby rebind (ADR-0075).
+    const rebindLobby =
       multiplayer && 'lobbyClient' in context
-        ? async (anonSessionId: string) => {
-            await context.lobbyClient.rebindLobbySessions(anonSessionId as SessionId);
-          }
+        ? (anonSessionId: string) =>
+            context.lobbyClient.rebindLobbySessions(anonSessionId as SessionId)
         : undefined;
+    const onAuthed = async (anonSessionId: string) => {
+      await progressSyncService.carryOver(anonSessionId);
+      if (rebindLobby) await rebindLobby(anonSessionId);
+    };
 
     // onCaughtError only: onUncaughtError would double-emit via the window.error handler.
     const mount = () =>
@@ -337,6 +364,7 @@ enableMocks()
             getPseudonym={getPseudonym}
             getLocalSessionId={getOrCreateSessionId}
             onAuthed={onAuthed}
+            progressSyncService={progressSyncService}
           >
             <App router={router} />
           </AuthProvider>
