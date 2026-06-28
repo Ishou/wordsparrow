@@ -1,5 +1,4 @@
-// The opaque per-puzzle blob synced to identity (ADR-0075). Mirrors the
-// localStorage `StoredPuzzle` shape verbatim — identity stores it without parsing.
+// Opaque per-puzzle blob shape synced to identity (ADR-0075).
 
 export interface SoloStoreEntry {
   readonly r: number;
@@ -26,9 +25,7 @@ export const EMPTY_PAYLOAD: SoloStorePayload = {
 
 const cellKey = (r: number, c: number): string => `${r},${c}`;
 
-// Narrows the opaque server `payload` ({ [k]: unknown }) to a SoloStorePayload,
-// dropping malformed members rather than throwing — a corrupt remote blob
-// degrades to whatever is well-formed, never crashes the sync.
+// Narrows an opaque server payload to SoloStorePayload; drops malformed members rather than throwing.
 export function coerceSoloStorePayload(raw: unknown): SoloStorePayload {
   if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return EMPTY_PAYLOAD;
   const obj = raw as Record<string, unknown>;

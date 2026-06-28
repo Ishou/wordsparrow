@@ -1,6 +1,4 @@
-// Wraps a SoloEntriesStore so each local mutation notifies the sync layer
-// (ADR-0075 Wave 3). Reads are untouched — the render path keeps hitting the
-// inner store with no added latency. `onMutate` is a no-op when unauthed.
+// Decorator that fires onMutate on each write so the sync layer can debounce pushes (ADR-0075).
 
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 

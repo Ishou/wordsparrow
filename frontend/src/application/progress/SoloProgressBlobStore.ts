@@ -1,6 +1,4 @@
-// Whole-blob local access for the sync layer (ADR-0075 §4). The cell-level
-// `SoloEntriesStore` can't read/replace a puzzle's full blob, which the merge
-// needs; this port gives that without disturbing the render-path store.
+// Whole-blob read/replace port for the sync merge layer (ADR-0075 §4).
 
 import type { SoloStorePayload } from './SoloStorePayload';
 

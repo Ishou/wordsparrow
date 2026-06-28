@@ -46,12 +46,6 @@ export interface AuthProviderProps {
    * the next state change retries.
    */
   readonly onAuthed?: (anonSessionId: string) => Promise<void> | void;
-  /**
-   * Cross-device solo-progress sync (ADR-0075 Wave 3). When provided, its
-   * batch-pull + merge runs on the authed transition and its debounce timers
-   * are disposed on unmount. Omitted in anon-only / test bundles, leaving the
-   * UX byte-for-byte unchanged.
-   */
   readonly progressSyncService?: ProgressSyncService;
   readonly children: ReactNode;
 }

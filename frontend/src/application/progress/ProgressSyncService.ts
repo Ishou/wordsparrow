@@ -1,7 +1,4 @@
-// Sync orchestrator (ADR-0075 Wave 3). Local `soloEntriesStore` stays the
-// render source + offline cache; this is a background side-channel that
-// reconciles local with the identity-owned blob when authed. Anon/offline is a
-// no-op — the orchestrator is only ever started from the authed state.
+// Sync orchestrator: background side-channel that reconciles local with the identity-owned blob when authed (ADR-0075).
 
 import { mergeProgress } from './mergeProgress';
 import type { ProgressSyncClient } from './ProgressSyncClient';

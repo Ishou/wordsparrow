@@ -1,5 +1,4 @@
-// HTTP adapter for the `ProgressSyncClient` port (ADR-0075 §3). Cookie-bearing
-// like HttpAuthClient: `credentials: 'include'` sends `__Secure-ws_session`.
+// HTTP adapter for the ProgressSyncClient port (ADR-0075 §3).
 import type {
   ProgressSyncClient,
   PushResult,

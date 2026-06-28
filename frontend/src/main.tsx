@@ -252,10 +252,7 @@ enableMocks()
       import.meta.env.VITE_IDENTITY_API_BASE_URL ?? 'https://auth.wordsparrow.io';
     const authClient = createHttpAuthClient({ baseUrl: identityApiBaseUrl });
 
-    // Cross-device solo-progress sync (ADR-0075 Wave 3). localStorage stays the
-    // anon + offline source of truth; this side-channel reconciles it with the
-    // identity-owned blob only once authed. The wrapped store fires a debounced
-    // push on each local mutation; reads are untouched (no render-path latency).
+    // Cross-device solo-progress sync side-channel (ADR-0075).
     const soloProgressBlobStore: SoloProgressBlobStore = {
       loadPayload: loadSoloPayload,
       replacePayload: replaceSoloPayload,
@@ -339,9 +336,7 @@ enableMocks()
       tracker.trackPageView(url, document.title || undefined);
     });
 
-    // On sign-in: carry the device's anon progress up so signing in never
-    // discards anon work (ADR-0075), then rebind lobby seats when multiplayer
-    // is on. Carry-over runs in every bundle; the lobby rebind is gated.
+    // On sign-in: carry anon progress up before lobby rebind (ADR-0075).
     const rebindLobby =
       multiplayer && 'lobbyClient' in context
         ? (anonSessionId: string) =>

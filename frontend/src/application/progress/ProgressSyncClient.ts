@@ -1,6 +1,4 @@
 // Application-layer port for the identity progress-sync endpoints (ADR-0075 §3).
-// ui/ and the orchestrator depend on this; the generated client stays in
-// infrastructure/.
 
 export interface RemoteProgressEntry {
   readonly puzzleId: string;

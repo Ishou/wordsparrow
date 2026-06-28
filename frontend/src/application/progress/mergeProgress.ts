@@ -1,7 +1,4 @@
-// Pure semantic merge of two solo-progress blobs (ADR-0075 §4). Whole-blob
-// last-writer-wins would drop the other device's letters, so the merge is
-// per-field: filled cells union (newer-blob wins a per-cell collision),
-// locked cells and hints are monotonic.
+// Pure semantic merge of two solo-progress blobs (ADR-0075 §4).
 
 import { cellKey, type SoloStoreLock, type SoloStorePayload } from './SoloStorePayload';
 
