@@ -19,6 +19,8 @@ class InMemoryPuzzleProgressRepository : ProgressRepository {
         puzzleId: PuzzleId,
     ): PuzzleProgress? = rows[userId to puzzleId]
 
+    override suspend fun countByUser(userId: UserId): Int = rows.keys.count { it.first == userId }
+
     override suspend fun upsert(
         progress: PuzzleProgress,
         expectedUpdatedAt: Instant?,

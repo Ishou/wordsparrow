@@ -46,6 +46,16 @@ class PostgresPuzzleProgressRepository(
             }
         }
 
+    override suspend fun countByUser(userId: UserId): Int =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(COUNT_BY_USER_SQL).use { stmt ->
+                    stmt.setObject(1, userId.value)
+                    stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
+                }
+            }
+        }
+
     // expectedUpdatedAt null ⇒ the ON CONFLICT WHERE never matches (NULL compare), so an existing row is left untouched and reported as Conflict; a fresh INSERT still succeeds.
     override suspend fun upsert(
         progress: PuzzleProgress,
@@ -92,6 +102,8 @@ class PostgresPuzzleProgressRepository(
             "SELECT puzzle_id, payload, updated_at FROM puzzle_progress WHERE user_id = ?"
         private const val SELECT_ONE_SQL =
             "SELECT puzzle_id, payload, updated_at FROM puzzle_progress WHERE user_id = ? AND puzzle_id = ?"
+        private const val COUNT_BY_USER_SQL =
+            "SELECT COUNT(*) FROM puzzle_progress WHERE user_id = ?"
         private const val UPSERT_SQL =
             "INSERT INTO puzzle_progress (user_id, puzzle_id, payload, updated_at) VALUES (?, ?, ?, ?) " +
                 "ON CONFLICT (user_id, puzzle_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = EXCLUDED.updated_at " +

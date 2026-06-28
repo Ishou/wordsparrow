@@ -12,8 +12,11 @@ import com.bliss.identity.api.module
 import com.bliss.identity.application.usecases.GetProgressUseCase
 import com.bliss.identity.application.usecases.ListProgressUseCase
 import com.bliss.identity.application.usecases.MAX_PAYLOAD_BYTES
+import com.bliss.identity.application.usecases.MAX_PUZZLES_PER_USER
 import com.bliss.identity.application.usecases.PutProgressUseCase
 import com.bliss.identity.application.usecases.WhoAmIUseCase
+import com.bliss.identity.domain.progress.PuzzleId
+import com.bliss.identity.domain.progress.PuzzleProgress
 import com.bliss.identity.domain.session.Session
 import com.bliss.identity.domain.session.SessionId
 import com.bliss.identity.domain.user.DisplayName
@@ -56,7 +59,7 @@ class ProgressRouteTest {
 
     private val repo = InMemoryPuzzleProgressRepository()
 
-    private fun newWiring(): Wiring {
+    private fun newWiring(progressRepo: InMemoryPuzzleProgressRepository = repo): Wiring {
         val users = InMemoryUserRepository()
         val sessions = InMemorySessionRepository()
         runBlocking {
@@ -66,9 +69,9 @@ class ProgressRouteTest {
         val whoAmI = WhoAmIUseCase(users, sessions, FixedClock(now), Duration.ofDays(7))
         return Wiring.forTesting(
             whoAmI = whoAmI,
-            listProgress = ListProgressUseCase(repo),
-            getProgress = GetProgressUseCase(repo),
-            putProgress = PutProgressUseCase(repo, FixedClock(now)),
+            listProgress = ListProgressUseCase(progressRepo),
+            getProgress = GetProgressUseCase(progressRepo),
+            putProgress = PutProgressUseCase(progressRepo, FixedClock(now)),
         )
     }
 
@@ -171,4 +174,37 @@ class ProgressRouteTest {
                 }
             assertThat(response.status).isEqualTo(HttpStatusCode.PayloadTooLarge)
         }
+
+    @Test
+    fun `put over the rate limit returns 429`() =
+        testApplication {
+            application { module(newWiring(), testConfig, PutRateLimiter(maxPerWindow = 0)) }
+            val response =
+                client.put("/v1/users/me/progress/$puzzleId") {
+                    cookie(SessionCookies.NAME, sessionId.value.toString())
+                    header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    setBody("{\"payload\":{}}")
+                }
+            assertThat(response.status).isEqualTo(HttpStatusCode.TooManyRequests)
+        }
+
+    @Test
+    fun `put when puzzle quota is exhausted returns 403`() {
+        val fullRepo = InMemoryPuzzleProgressRepository()
+        runBlocking {
+            repeat(MAX_PUZZLES_PER_USER) {
+                fullRepo.upsert(PuzzleProgress(userId, PuzzleId(UUID.randomUUID()), "{}", Instant.EPOCH), null)
+            }
+        }
+        testApplication {
+            application { module(newWiring(fullRepo), testConfig) }
+            val response =
+                client.put("/v1/users/me/progress/${UUID.randomUUID()}") {
+                    cookie(SessionCookies.NAME, sessionId.value.toString())
+                    header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    setBody("{\"payload\":{}}")
+                }
+            assertThat(response.status).isEqualTo(HttpStatusCode.Forbidden)
+        }
+    }
 }

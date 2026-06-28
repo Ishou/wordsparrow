@@ -27,4 +27,6 @@ interface ProgressRepository {
         progress: PuzzleProgress,
         expectedUpdatedAt: Instant?,
     ): UpsertOutcome
+
+    suspend fun countByUser(userId: UserId): Int
 }

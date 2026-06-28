@@ -6,6 +6,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import com.bliss.identity.application.usecases.MAX_PAYLOAD_BYTES
+import com.bliss.identity.application.usecases.MAX_PUZZLES_PER_USER
 import com.bliss.identity.application.usecases.PutProgressCommand
 import com.bliss.identity.application.usecases.PutProgressError
 import com.bliss.identity.application.usecases.PutProgressUseCase
@@ -93,5 +94,30 @@ class PutProgressUseCaseTest {
             assertThat(atCap.toByteArray().size).isEqualTo(MAX_PAYLOAD_BYTES)
             sut.useCase.execute(PutProgressCommand(userId, puzzleId, atCap, baseUpdatedAt = null))
             assertThat(sut.repo.find(userId, puzzleId)).isNotNull()
+        }
+
+    @Test
+    fun `first write when puzzle count is at the cap is QuotaExceeded`() =
+        runTest {
+            val sut = newCase()
+            repeat(MAX_PUZZLES_PER_USER) {
+                sut.useCase.execute(PutProgressCommand(userId, PuzzleId(UUID.randomUUID()), "{}", baseUpdatedAt = null))
+            }
+            assertFailure {
+                sut.useCase.execute(PutProgressCommand(userId, PuzzleId(UUID.randomUUID()), "{}", baseUpdatedAt = null))
+            }.isInstanceOf(PutProgressError.QuotaExceeded::class)
+        }
+
+    @Test
+    fun `update of existing puzzle at the cap is Written`() =
+        runTest {
+            val sut = newCase()
+            sut.useCase.execute(PutProgressCommand(userId, puzzleId, "{}", baseUpdatedAt = null))
+            repeat(MAX_PUZZLES_PER_USER - 1) {
+                sut.useCase.execute(PutProgressCommand(userId, PuzzleId(UUID.randomUUID()), "{}", baseUpdatedAt = null))
+            }
+            sut.clock.set(now.plusSeconds(1))
+            val at = sut.useCase.execute(PutProgressCommand(userId, puzzleId, "{\"a\":1}", baseUpdatedAt = now))
+            assertThat(at).isEqualTo(now.plusSeconds(1))
         }
 }

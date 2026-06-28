@@ -66,10 +66,19 @@ fun Route.getProgress(
 fun Route.putProgress(
     putProgress: PutProgressUseCase,
     whoAmI: WhoAmIUseCase,
+    rateLimiter: PutRateLimiter = PutRateLimiter(),
     json: Json = PROGRESS_JSON,
 ) {
     put("/v1/users/me/progress/{puzzleId}") {
         val auth = call.authenticated(whoAmI) ?: return@put
+        if (!rateLimiter.allow(auth.userId)) {
+            return@put call.problem(
+                json,
+                HttpStatusCode.TooManyRequests,
+                "rate_limit_exceeded",
+                "Too many PUT requests; retry after the current window expires.",
+            )
+        }
         val puzzleId = call.puzzleIdOrNull(json) ?: return@put
         val request =
             try {
@@ -123,6 +132,13 @@ fun Route.putProgress(
                         HttpStatusCode.Conflict,
                         "stale_base",
                         e.message ?: "baseUpdatedAt is stale; re-pull and re-merge.",
+                    )
+                is PutProgressError.QuotaExceeded ->
+                    call.problem(
+                        json,
+                        HttpStatusCode.Forbidden,
+                        "quota_exceeded",
+                        e.message ?: "Puzzle count cap reached.",
                     )
             }
         }

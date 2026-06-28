@@ -3,6 +3,7 @@ package com.bliss.identity.api
 import com.bliss.identity.api.auth.ReturnToValidator
 import com.bliss.identity.api.config.IdentityApiConfig
 import com.bliss.identity.api.dto.ProblemDetails
+import com.bliss.identity.api.routes.PutRateLimiter
 import com.bliss.identity.api.routes.appleCallback
 import com.bliss.identity.api.routes.deleteMe
 import com.bliss.identity.api.routes.getProgress
@@ -58,6 +59,7 @@ fun Application.module(
 fun Application.module(
     wiring: Wiring,
     config: IdentityApiConfig,
+    putRateLimiter: PutRateLimiter = PutRateLimiter(),
 ) {
     val returnToValidator = ReturnToValidator(config.allowedReturnOrigins)
 
@@ -175,7 +177,7 @@ fun Application.module(
         wiring.whoAmIOrNull?.let { whoAmI ->
             wiring.listProgressOrNull?.let { listProgress(it, whoAmI) }
             wiring.getProgressOrNull?.let { getProgress(it, whoAmI) }
-            wiring.putProgressOrNull?.let { putProgress(it, whoAmI) }
+            wiring.putProgressOrNull?.let { putProgress(it, whoAmI, putRateLimiter) }
         }
     }
 }
