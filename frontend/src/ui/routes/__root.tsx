@@ -11,6 +11,8 @@ import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { SurveyAnonStore, SurveyClient } from '@/application/survey';
 import type { TourSeenStore } from '@/application/tour/TourSeenStore';
 import type { Pseudonym, SessionId } from '@/domain/game';
+import { SparrowState } from '@/ui/v2/SparrowState';
+import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { AnnouncerProvider } from '@/ui/components/a11y/Announcer';
 import { Toast, ToastProvider } from '@/ui/components/primitives';
 
@@ -69,62 +71,26 @@ export interface AppRouterContext {
   readonly lobbyJoinCodeStash?: LobbyJoinCodeStash;
 }
 
+// v2 jade surround; self-contained (no router/auth hooks) so it renders even when the failure
+// is in the route tree. Reuses the sparrow scene + SparrowState for design consistency.
 const errorPageStyles = css({
   minHeight: '100dvh',
   display: 'flex',
-  flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: 'lg',
-  bg: 'bg',
-  color: 'fg',
-  fontFamily: 'body',
-  textAlign: 'center',
-});
-
-const errorTitleStyles = css({
-  fontSize: { base: 'xl', md: 'display' },
-  fontWeight: 'bold',
-  letterSpacing: '-0.02em',
-  margin: 0,
-});
-
-const errorMessageStyles = css({
-  marginTop: 'sm',
-  fontSize: 'body',
-  opacity: 0.8,
-});
-
-const errorActionStyles = css({
-  marginTop: 'lg',
-  paddingInline: 'lg',
-  paddingBlock: 'sm',
-  fontSize: 'body',
-  fontFamily: 'body',
-  fontWeight: 'semibold',
-  color: 'bg',
-  bg: 'accent',
-  borderRadius: 'md',
-  border: 'none',
-  cursor: 'pointer',
-  textDecoration: 'none',
-  _hover: { opacity: 0.9 },
+  bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
+  padding: '24px',
 });
 
 function RootErrorBoundary() {
   return (
-    <main id="main-content" tabIndex={-1} className={errorPageStyles}>
-      <h1 className={errorTitleStyles}>Une erreur est survenue.</h1>
-      <p className={errorMessageStyles}>Rechargez la page pour réessayer.</p>
-      <button
-        type="button"
-        className={errorActionStyles}
-        onClick={() => {
-          window.location.reload();
-        }}
-      >
-        Recharger la page
-      </button>
+    <main id="main-content" tabIndex={-1} className={errorPageStyles} lang="fr">
+      <SparrowState
+        scene={sparrowFlightScene()}
+        title="Une erreur est survenue"
+        body="Recharge la page pour réessayer."
+        cta={{ label: 'Recharger la page', onClick: () => window.location.reload() }}
+      />
     </main>
   );
 }
@@ -141,14 +107,13 @@ function RootNotFound() {
     return () => { document.title = previous; };
   }, []);
   return (
-    <main id="main-content" tabIndex={-1} className={errorPageStyles}>
-      <h1 className={errorTitleStyles}>Page introuvable.</h1>
-      <p className={errorMessageStyles}>
-        Cette page n&apos;existe pas ou a été déplacée.
-      </p>
-      <a href="/" className={errorActionStyles}>
-        Retour à l&apos;accueil
-      </a>
+    <main id="main-content" tabIndex={-1} className={errorPageStyles} lang="fr">
+      <SparrowState
+        scene={sparrowFlightScene('404')}
+        title="Page introuvable"
+        body="Cette page n'existe pas ou a été déplacée."
+        cta={{ label: "Retour à l'accueil", onClick: () => { window.location.href = '/'; } }}
+      />
     </main>
   );
 }
