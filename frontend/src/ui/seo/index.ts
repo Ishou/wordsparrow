@@ -7,7 +7,13 @@ export {
   type IndexableRoute,
   type PrerenderRoute,
 } from './routeManifest';
-export { buildHead, type BuildHeadInput } from './buildHead';
+export {
+  buildHead,
+  indexableHead,
+  indexableHeadWithBreadcrumb,
+  noindexHead,
+  type BuildHeadInput,
+} from './buildHead';
 export {
   faqPageJsonLd,
   breadcrumbJsonLd,

@@ -7,7 +7,8 @@
 // One source of truth for the canonical URL, OG tags, Twitter card,
 // and the optional `noindex` flag. Tested in seo-build-head.test.ts.
 
-import { DEFAULT_OG_IMAGE } from './routeManifest';
+import { DEFAULT_OG_IMAGE, INDEXABLE_ROUTES, SITE_BASE_URL } from './routeManifest';
+import { breadcrumbJsonLd } from './jsonLd';
 
 export interface BuildHeadInput {
   readonly title: string;
@@ -52,5 +53,42 @@ export function buildHead(input: BuildHeadInput): RouteHead {
   return {
     meta,
     links: [{ rel: 'canonical', href: canonical }],
+  };
+}
+
+// head() for an indexable route, sourced from the manifest by its root-relative path.
+export function indexableHead(path: string): RouteHead {
+  const route = INDEXABLE_ROUTES.find((r) => r.path === path);
+  if (!route) throw new Error(`No indexable route registered for ${path}`);
+  return buildHead({
+    title: route.title,
+    description: route.description,
+    canonical: `${SITE_BASE_URL}${path}`,
+    ogImage: `${SITE_BASE_URL}${route.ogImagePath}`,
+  });
+}
+
+// head() for a route that must not be indexed (account, lobby, join share-link).
+export function noindexHead(title: string, description: string): RouteHead {
+  return buildHead({ title, description, canonical: SITE_BASE_URL, noindex: true });
+}
+
+// indexableHead + a BreadcrumbList (Accueil → this route) for a non-home indexable child.
+export function indexableHeadWithBreadcrumb(path: string): RouteHead & {
+  readonly scripts: Array<{ type: string; children: string }>;
+} {
+  const route = INDEXABLE_ROUTES.find((r) => r.path === path);
+  if (!route) throw new Error(`No indexable route registered for ${path}`);
+  return {
+    ...indexableHead(path),
+    scripts: [
+      {
+        type: 'application/ld+json',
+        children: breadcrumbJsonLd([
+          { name: 'Accueil', item: `${SITE_BASE_URL}/` },
+          { name: route.title, item: `${SITE_BASE_URL}${path}` },
+        ]),
+      },
+    ],
   };
 }

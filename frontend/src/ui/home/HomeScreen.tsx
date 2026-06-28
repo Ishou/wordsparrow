@@ -192,7 +192,7 @@ export function HomeScreen({
     const { sessionId: ownerSessionId, pseudonym: ownerPseudonym } = getSession();
     lobbyClient
       .createLobby({ ownerSessionId, ownerPseudonym })
-      .then((created) => navigate({ to: '/v2/lobby/$lobbyId', params: { lobbyId: created.id } }))
+      .then((created) => navigate({ to: '/lobby/$lobbyId', params: { lobbyId: created.id } }))
       .catch(() => setCoopPending(false));
   };
 
@@ -207,7 +207,7 @@ export function HomeScreen({
       setJoinError('Code à 6 caractères (lettres et chiffres).');
       return;
     }
-    navigate({ to: '/v2/join/$code', params: { code } });
+    navigate({ to: '/join/$code', params: { code } });
   };
 
   // Fetched client-side so the teaser + strip paint at once; CTA gates on today's availability.
@@ -279,7 +279,7 @@ export function HomeScreen({
         <DesktopAppBar active="accueil" streak={streak.cur} />
         <div id="main-content" tabIndex={-1} className={content}>
           <header className={appBar}>
-            <Link to="/v2" className={brandLink} aria-label="Accueil">
+            <Link to="/" className={brandLink} aria-label="Accueil">
               <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
             </Link>
             <button
@@ -339,7 +339,7 @@ export function HomeScreen({
                 className={playBtn}
                 disabled={daily.status === 'loading' || daily.status === 'unavailable'}
                 onClick={() => {
-                  if (daily.status === 'ok') navigate({ to: '/v2/play' });
+                  if (daily.status === 'ok') navigate({ to: '/play' });
                   else if (daily.status === 'error') setRetry((n) => n + 1);
                 }}
               >
@@ -422,7 +422,7 @@ export function HomeScreen({
                           type="button"
                           className={dayDotBtn}
                           style={dayDotStyle(d.today, cell.solved)}
-                          onClick={() => navigate({ to: '/v2/play', search: { date: d.iso } })}
+                          onClick={() => navigate({ to: '/play', search: { date: d.iso } })}
                           aria-label={`${cell.label}${d.today ? " (aujourd'hui)" : ''}${cell.solved ? ' — terminée' : ''}`}
                         >
                           {d.num}
@@ -446,7 +446,7 @@ export function HomeScreen({
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11.2 12 5l8 6.2V19a1 1 0 0 1-1 1h-4.2v-5.2H9.2V20H5a1 1 0 0 1-1-1z" stroke="var(--colors-ws-sakura)" strokeWidth="1.9" strokeLinejoin="round" /></svg>
             <span className={navLabel} style={{ color: 'var(--colors-ws-sakura)' }}>Accueil</span>
           </button>
-          <button type="button" className={navItem} onClick={() => navigate({ to: '/v2/grilles' })}>
+          <button type="button" className={navItem} onClick={() => navigate({ to: '/grilles' })}>
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="4.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /><rect x="13.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke="var(--colors-ws-jade-ink)" strokeOpacity="0.5" strokeWidth="1.8" /></svg>
             <span className={navLabel} style={{ color: 'var(--colors-ws-jade-ink)', opacity: 0.55 }}>Grilles</span>
           </button>

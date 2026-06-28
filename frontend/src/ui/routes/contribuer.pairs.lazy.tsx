@@ -15,6 +15,7 @@ import type {
 import { useAuth } from '@/ui/components/auth';
 import { ContentPage } from '@/ui/components/layout';
 import { LockBanner, PairCard, SignInBanner, UndoBar, useCampaignStatus } from '@/ui/components/sondage';
+import type { AppRouterContext } from './__root';
 import { Route as ParentRoute } from './contribuer.pairs';
 
 const articleStyles = css({
@@ -111,7 +112,8 @@ const modeLinkStyles = css({
 const DIFFICULTE_PLACEHOLDER: LikertScore = 3;
 
 function ContribuerPairsPage() {
-  const ctx = ParentRoute.useRouteContext();
+  // Unregistered post-cutover (ADR-0074): the typed registry no longer carries this route, so read context via the app type.
+  const ctx = ParentRoute.useRouteContext() as AppRouterContext;
   const { state } = useAuth();
   const isAuth = state.status === 'authed';
   const surveyClient = ctx.surveyClient;
@@ -269,7 +271,7 @@ function ContribuerPairsPage() {
               </span>
             ) : null}
             <span aria-hidden="true">·</span>
-            <Link to="/contribuer" className={modeLinkStyles} data-testid="mode-switch-binary">
+            <Link to={'/contribuer' as '/'} className={modeLinkStyles} data-testid="mode-switch-binary">
               Mode binaire →
             </Link>
           </p>
@@ -322,6 +324,7 @@ function ContribuerPairsPage() {
   );
 }
 
-export const Route = createLazyRoute('/contribuer/pairs')({
+// Unregistered post-cutover (ADR-0074): id cast so the lazy half still resolves its eager parent.
+export const Route = createLazyRoute('/contribuer/pairs' as '/app')({
   component: ContribuerPairsPage,
 });

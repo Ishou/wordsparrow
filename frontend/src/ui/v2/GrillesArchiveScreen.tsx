@@ -244,11 +244,11 @@ export function GrillesArchiveScreen({
   };
 
   const openDay = (row: DayRow) => {
-    navigate(row.today ? { to: '/v2/play' } : { to: '/v2/play', search: { date: row.summary.date } });
+    navigate(row.today ? { to: '/play' } : { to: '/play', search: { date: row.summary.date } });
   };
 
   return (
-    <PhoneShell header={<BackHeader to="/v2" />} navActive="grilles">
+    <PhoneShell header={<BackHeader to="/" />} navActive="grilles">
       <h1 className={title}>Grilles</h1>
 
       <SegmentedControl
@@ -273,7 +273,7 @@ export function GrillesArchiveScreen({
           ))}
         </ul>
       ) : loading ? null : visible.length === 0 ? (
-        <GrillesEmptyState filter={filter} onPlay={() => navigate({ to: '/v2/play' })} />
+        <GrillesEmptyState filter={filter} onPlay={() => navigate({ to: '/play' })} />
       ) : (
         <>
           {months.map((m) => (

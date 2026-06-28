@@ -7,9 +7,9 @@ import { LobbyClientError, type GameClient, type LobbyClient } from '@/applicati
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { Lobby, LobbyId, Pseudonym, SessionId } from '@/domain/game';
 import { Route as RootRoute } from '@/ui/routes/__root';
-import { Route as V2Route } from '@/ui/routes/v2';
-import { Route as V2JoinRoute } from '@/ui/routes/v2.join.$code';
-import { Route as V2LobbyRoute } from '@/ui/routes/v2.lobby.$lobbyId';
+import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
+import { Route as JoinRoute } from '@/ui/routes/join.$code';
+import { Route as LobbyRoute } from '@/ui/routes/lobby.$lobbyId';
 
 const sessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const pseudonym = 'Joueur 1234' as Pseudonym;
@@ -79,7 +79,7 @@ function renderJoin(initialEntry: string, lobbyClientOverrides: Partial<LobbyCli
     listDailySummaries: () => Promise.resolve({ items: [], hasMore: false }),
   };
   const routeTree = RootRoute.addChildren([
-    V2Route.addChildren([V2JoinRoute, V2LobbyRoute]),
+    AppLayoutRoute.addChildren([JoinRoute, LobbyRoute]),
   ]);
   const router = createRouter({
     routeTree,
@@ -110,18 +110,18 @@ afterEach(() => {
 
 describe('v2 /join/$code route', () => {
   it('resolves the code, stashes it, and redirects to the lobby', async () => {
-    const { lobbyClient, stash, router } = renderJoin('/v2/join/A2B3C4');
+    const { lobbyClient, stash, router } = renderJoin('/join/A2B3C4');
     await waitFor(() => {
       expect(lobbyClient.findByCode).toHaveBeenCalledWith('A2B3C4');
     });
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe(`/v2/lobby/${lobbyId}`);
+      expect(router.state.location.pathname).toBe(`/lobby/${lobbyId}`);
     });
     expect(stash.read(lobbyId)).toBe('A2B3C4');
   });
 
   it('shows an error for a not-found code', async () => {
-    renderJoin('/v2/join/Z9Z9Z9', {
+    renderJoin('/join/Z9Z9Z9', {
       findByCode: vi
         .fn()
         .mockRejectedValue(
@@ -132,13 +132,13 @@ describe('v2 /join/$code route', () => {
   });
 
   it('rejects a malformed code at parse-time without calling findByCode', async () => {
-    const { lobbyClient } = renderJoin('/v2/join/!!');
+    const { lobbyClient } = renderJoin('/join/!!');
     expect(await screen.findByText('Code invalide ou partie expirée.')).toBeTruthy();
     expect(lobbyClient.findByCode).not.toHaveBeenCalled();
   });
 
   it('V2JoinError is axe-clean (ADR-0050)', async () => {
-    const { container } = renderJoin('/v2/join/Z9Z9Z9', {
+    const { container } = renderJoin('/join/Z9Z9Z9', {
       findByCode: vi.fn().mockRejectedValue(
         new LobbyClientError({ kind: 'not-found', status: 404, problem: null, message: 'gone' }),
       ),

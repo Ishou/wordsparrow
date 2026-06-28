@@ -147,7 +147,7 @@ function MenuSoon({
 
 export function MenuScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/v2" />}>
+    <PhoneShell header={<BackHeader to="/" />}>
       <h1 className={title}>Menu</h1>
       <p className={lead}>Ton profil, tes réglages et les infos de l&apos;app.</p>
 
@@ -166,10 +166,10 @@ export function MenuScreen() {
             <span className={togglePlaceholder} aria-hidden="true" />
           </li>
           <MenuSoon icon={Question}>Aide</MenuSoon>
-          <MenuLink to="/v2/mentions-legales" icon={FileText}>
+          <MenuLink to="/mentions-legales" icon={FileText}>
             Mentions légales
           </MenuLink>
-          <MenuLink to="/v2/confidentialite" icon={ShieldCheck}>
+          <MenuLink to="/confidentialite" icon={ShieldCheck}>
             Confidentialité
           </MenuLink>
         </ul>

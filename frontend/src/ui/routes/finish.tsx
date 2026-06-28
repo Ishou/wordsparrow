@@ -1,8 +1,8 @@
 import { createRoute, useNavigate } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
-// Sanctioned app→module bridge (ADR-0072); registered only in DEV.
+// Sanctioned app→module bridge (ADR-0072).
 import { WinScreen } from '@/ui/play/WinScreen';
-import { Route as V2Route } from './v2';
+import { Route as AppLayoutRoute } from './app-layout';
 
 // Phone-shaped jade field giving the absolute-positioned WinScreen overlay a positioned ancestor.
 const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marginInline: 'auto', height: '100dvh', overflow: 'hidden', bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)' });
@@ -16,13 +16,13 @@ function FinishScreen() {
   };
   return (
     <div className={shell} lang="fr">
-      <WinScreen time="04:12" onReplay={() => void navigate({ to: '/v2/play' })} onShare={share} onDismiss={() => void navigate({ to: '/v2/play' })} />
+      <WinScreen time="04:12" onReplay={() => void navigate({ to: '/play' })} onShare={share} onDismiss={() => void navigate({ to: '/play' })} />
     </div>
   );
 }
 
 export const Route = createRoute({
-  getParentRoute: () => V2Route,
+  getParentRoute: () => AppLayoutRoute,
   path: 'finish',
   component: FinishScreen,
 });

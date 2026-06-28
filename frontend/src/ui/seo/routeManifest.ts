@@ -28,7 +28,7 @@ export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
     ogImagePath: '/og-accueil.png',
   },
   {
-    path: '/grille',
+    path: '/play',
     title: 'Grille du jour — WordSparrow',
     description: 'Résolvez la grille de mots fléchés du jour, en français.',
     ogImagePath: '/og-grille.png',
@@ -67,7 +67,7 @@ export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
 // meta + Disallow in robots.txt. Path is the TanStack route pattern, not
 // a concrete URL — `$lobbyId` and `$code` are TanStack params.
 export const EXCLUDED_ROUTES: ReadonlyArray<string> = [
-  '/privacy',
+  '/compte',
   '/lobby/$lobbyId',
   '/join/$code',
 ];
@@ -79,10 +79,8 @@ export interface PrerenderRoute {
 
 // Noindex routes still prerendered so Cloudflare Pages serves the route's own shell, not the home shell.
 export const NOINDEX_PRERENDER_ROUTES: ReadonlyArray<PrerenderRoute> = [
-  { path: '/contribuer', title: 'Campagne — WordSparrow' },
-  { path: '/contribuer/pairs', title: 'Campagne par paires — WordSparrow' },
+  // /contribuer is unregistered post-cutover (ADR-0074).
   { path: '/compte', title: 'Mon compte — WordSparrow' },
-  { path: '/privacy', title: 'Privacy — WordSparrow' },
 ];
 
 export const DEFAULT_OG_IMAGE = `${SITE_BASE_URL}/og-default.png`;

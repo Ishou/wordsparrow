@@ -100,23 +100,18 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
     });
 
     it('does NOT embed Organization JSON-LD on non-homepage routes', () => {
-      for (const path of ['grille', 'aide', 'mentions-legales', 'confidentialite']) {
+      for (const path of ['play', 'aide', 'mentions-legales', 'confidentialite']) {
         const html = readFileSync(resolve(DIST, `${path}.html`), 'utf8');
         expect(html).not.toContain('"@type":"Organization"');
       }
     });
 
-    it('embeds a FAQPage with one Question per HELP_SECTIONS entry on /aide', () => {
-      const html = readFileSync(resolve(DIST, 'aide.html'), 'utf8');
-      expect(html).toContain('"@type":"FAQPage"');
-      // 5 HELP_SECTIONS entries → exactly 5 Question objects.
-      const questionMatches = html.match(/"@type":"Question"/g) ?? [];
-      expect(questionMatches).toHaveLength(5);
-    });
+    // ADR-0074: /aide ships its own copy without an exported FAQ Q&A, so it has no FAQPage JSON-LD.
 
     it.each([
       ['aide', '/aide'],
-      ['grille', '/grille'],
+      ['play', '/play'],
+      ['grilles', '/grilles'],
       ['mentions-legales', '/mentions-legales'],
       ['confidentialite', '/confidentialite'],
     ])('embeds BreadcrumbList JSON-LD on /%s', (dir) => {
@@ -129,8 +124,8 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       expect(html).not.toContain('"@type":"BreadcrumbList"');
     });
 
-    it('embeds Game JSON-LD on /grille', () => {
-      const html = readFileSync(resolve(DIST, 'grille.html'), 'utf8');
+    it('embeds Game JSON-LD on /play', () => {
+      const html = readFileSync(resolve(DIST, 'play.html'), 'utf8');
       expect(html).toContain('"@type":"Game"');
       expect(html).toContain('"genre":"Word puzzle"');
       expect(html).toContain('"gamePlatform":"Web browser"');
@@ -187,30 +182,7 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       },
     );
 
-    // H1 keyword targeting (sub-project #3 phase 1). Each indexable
-    // user-facing route must contain at least one H1 with French target
-    // keywords. Compliance routes (mentions-legales, confidentialite)
-    // keep their existing legal-page headings — not targets for SEO.
-    it('homepage H1 carries the "mots fléchés français" target phrase', () => {
-      const html = readFileSync(resolve(DIST, 'index.html'), 'utf8');
-      expect(html).toMatch(
-        /<h1\b[^>]*lang="fr"[^>]*>[\s\S]*?Mots fléchés français en ligne[\s\S]*?<\/h1>/,
-      );
-    });
-
-    it('grille H1 carries the "grille de mots fléchés du jour" target phrase', () => {
-      const html = readFileSync(resolve(DIST, 'grille.html'), 'utf8');
-      expect(html).toMatch(
-        /<h1\b[^>]*lang="fr"[^>]*>[\s\S]*?Grille de mots fléchés du jour[\s\S]*?<\/h1>/,
-      );
-    });
-
-    it('aide H1 carries the "comment jouer aux mots fléchés en ligne" target phrase', () => {
-      const html = readFileSync(resolve(DIST, 'aide.html'), 'utf8');
-      expect(html).toMatch(
-        /<h1\b[^>]*>[^<]*Comment jouer aux mots fléchés en ligne[^<]*<\/h1>/,
-      );
-    });
+    // ADR-0074: v2 screens use minimal headers ("Bonjour"/"Aide"), not keyword-targeted H1s.
 
     // Guard against the "frozen tour on hard refresh" bug. The
     // prerender browser starts with empty localStorage; without the

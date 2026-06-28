@@ -263,7 +263,8 @@ export function AppHeader({ activeNavId }: AppHeaderProps = {}) {
           return (
             <Link
               key={link.id}
-              to={link.href}
+              // `/contribuer` is unregistered post-cutover (ADR-0074); cast keeps this v1 header compiling.
+              to={link.href as '/'}
               className={cx(linkBaseStyles, isActive ? linkActiveStyles : undefined)}
               aria-current={isActive ? 'page' : undefined}
             >
@@ -282,7 +283,7 @@ export function AppHeader({ activeNavId }: AppHeaderProps = {}) {
                 id: link.id,
                 label: link.label,
                 onSelect: () => {
-                  void navigate({ to: link.href });
+                  void navigate({ to: link.href as '/' });
                 },
               }))}
             />

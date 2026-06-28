@@ -1,18 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { INDEXABLE_ROUTES, SITE_BASE_URL } from '@/ui/seo';
-import { Route as AccueilRoute } from '@/ui/routes/accueil';
-import { Route as GrilleRoute } from '@/ui/routes/grille';
+import { Route as IndexRoute } from '@/ui/routes/index';
+import { Route as PlayRoute } from '@/ui/routes/play';
 import { Route as GrillesRoute } from '@/ui/routes/grilles';
 import { Route as AideRoute } from '@/ui/routes/aide';
 import { Route as MentionsLegalesRoute } from '@/ui/routes/mentions-legales';
 import { Route as ConfidentialiteRoute } from '@/ui/routes/confidentialite';
-import { Route as PrivacyRoute } from '@/ui/routes/privacy';
+import { Route as CompteRoute } from '@/ui/routes/compte';
 import { Route as LobbyRoute } from '@/ui/routes/lobby.$lobbyId';
 import { Route as JoinRoute } from '@/ui/routes/join.$code';
 
 const ROUTE_BY_PATH: Record<string, { options: { head?: () => unknown } }> = {
-  '/': AccueilRoute as unknown as { options: { head?: () => unknown } },
-  '/grille': GrilleRoute as unknown as { options: { head?: () => unknown } },
+  // v2 is the production app (ADR-0074); the home path's head() lives on the index route.
+  '/': IndexRoute as unknown as { options: { head?: () => unknown } },
+  '/play': PlayRoute as unknown as { options: { head?: () => unknown } },
   '/grilles': GrillesRoute as unknown as { options: { head?: () => unknown } },
   '/aide': AideRoute as unknown as { options: { head?: () => unknown } },
   '/mentions-legales': MentionsLegalesRoute as unknown as { options: { head?: () => unknown } },
@@ -61,7 +62,7 @@ describe.each(INDEXABLE_ROUTES)('indexable route $path', (route) => {
 
 describe('excluded routes carry noindex', () => {
   const cases: Array<[string, { options: { head?: () => unknown } }]> = [
-    ['/privacy', PrivacyRoute as unknown as { options: { head?: () => unknown } }],
+    ['/compte', CompteRoute as unknown as { options: { head?: () => unknown } }],
     ['/lobby/$lobbyId', LobbyRoute as unknown as { options: { head?: () => unknown } }],
     ['/join/$code', JoinRoute as unknown as { options: { head?: () => unknown } }],
   ];

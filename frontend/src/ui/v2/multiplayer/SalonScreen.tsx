@@ -301,7 +301,7 @@ export function SalonScreen({
   );
 
   return (
-    <PhoneShell header={<BackHeader to="/v2" />}>
+    <PhoneShell header={<BackHeader to="/" />}>
       <h1 className={title}>Partie</h1>
       <p className={lead}>Invite tes amis, puis lance la grille ensemble.</p>
 
