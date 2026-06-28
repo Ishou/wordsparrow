@@ -68,6 +68,7 @@ ADR-0049  */api/src/**/nats/**                     JetStream cross-context event
 ADR-0049  */infrastructure/src/**/nats/**          JetStream consumer pattern
 ADR-0050  frontend/**                              A11y baseline: WCAG AA, axe-core via Playwright
 ADR-0053  frontend/src/**/prerender/**             Build-time SEO prerender
+ADR-0053  frontend/vite.config.ts                  SW navigateFallbackDenylist for post-Workbox flat prerendered routes
 ADR-0054  frontend/src/ui/**                       Page-shell primitive
 ADR-0055  game/**/persistence/**                   Multiplayer game persistence
 ADR-0056  survey/**                                Survey bounded context (RLHF clue rating; pairwise comparison task pulled from v2 deferral)
