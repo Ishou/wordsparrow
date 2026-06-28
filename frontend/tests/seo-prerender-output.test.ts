@@ -106,7 +106,7 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       }
     });
 
-    // ADR-0074: /aide ships its own copy without an exported FAQ Q&A, so FAQPage JSON-LD is a v2-SEO follow-up.
+    // ADR-0074: /aide ships its own copy without an exported FAQ Q&A, so it has no FAQPage JSON-LD.
 
     it.each([
       ['aide', '/aide'],
@@ -182,7 +182,7 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       },
     );
 
-    // ADR-0074: v2 screens use minimal headers ("Bonjour"/"Aide"); re-adding keyword-targeted H1s is a v2-SEO follow-up.
+    // ADR-0074: v2 screens use minimal headers ("Bonjour"/"Aide"), not keyword-targeted H1s.
 
     // Guard against the "frozen tour on hard refresh" bug. The
     // prerender browser starts with empty localStorage; without the
