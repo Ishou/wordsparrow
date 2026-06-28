@@ -15,6 +15,9 @@ const keyboard = css({
   gap: '6px',
   alignItems: 'stretch',
   width: '100%',
+  // Cap + centre here so the keypad renders identically whatever the wrapper (home dock vs play bottom bar).
+  maxWidth: '440px',
+  marginInline: 'auto',
   bg: 'rgba(255,255,255,0.62)',
   backdropFilter: 'blur(10px)',
   border: '0.5px solid rgba(255,255,255,0.7)',
@@ -29,6 +32,10 @@ const keyboard = css({
   '@media (min-width: 1024px) and (pointer: fine)': { display: 'none' },
 });
 const keyRow = css({ display: 'flex', gap: '4px', justifyContent: 'center' });
+// Last row: 6 letters stay centred via symmetric spacers; the backspace parks at the right edge.
+const lastRow = css({ display: 'flex', gap: '4px', alignItems: 'center' });
+const spacer = css({ flex: 1, minWidth: 0 });
+const spacerEnd = css({ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' });
 
 export interface KeyboardProps {
   readonly onLetter: (letter: string) => void;
@@ -38,14 +45,23 @@ export interface KeyboardProps {
 export function Keyboard({ onLetter, onBackspace }: KeyboardProps) {
   return (
     <div className={keyboard}>
-      {KEY_ROWS.map((rowKeys, r) => (
-        <div key={r} className={keyRow}>
-          {rowKeys.map((l) => (
-            <KeyboardKey key={l} type="letter" label={l} onPress={() => onLetter(l)} />
-          ))}
-          {r === KEY_ROWS.length - 1 ? <KeyboardKey type="backspace" onPress={onBackspace} /> : null}
-        </div>
-      ))}
+      {KEY_ROWS.map((rowKeys, r) => {
+        const letters = rowKeys.map((l) => (
+          <KeyboardKey key={l} type="letter" label={l} onPress={() => onLetter(l)} />
+        ));
+        if (r !== KEY_ROWS.length - 1) {
+          return <div key={r} className={keyRow}>{letters}</div>;
+        }
+        return (
+          <div key={r} className={lastRow}>
+            <span className={spacer} aria-hidden="true" />
+            {letters}
+            <span className={spacerEnd}>
+              <KeyboardKey type="backspace" onPress={onBackspace} />
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
