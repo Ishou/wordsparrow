@@ -20,8 +20,7 @@ export interface ProgressSyncServiceDeps {
 }
 
 export interface ProgressSyncService {
-  // Gates the debounced push path. Anon/offline keeps this false → no network,
-  // unchanged local-only behaviour. The authed hook flips it true.
+  // Anon/offline keeps this false → no network call; flipped true by the authed hook (ADR-0075).
   setEnabled(enabled: boolean): void;
   // Batch-pull, merge each into local, push the merged blob back. Authed only.
   pullAndMergeAll(): Promise<void>;

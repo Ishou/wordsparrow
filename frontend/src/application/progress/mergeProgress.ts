@@ -8,8 +8,7 @@ export interface TimestampedPayload {
   readonly updatedAt?: string;
 }
 
-// Returns true when `a` is the same age or newer than `b` — used so that on
-// a per-cell collision the blob whose updatedAt is greater keeps its letter.
+// Returns true when `a` is the same age or newer than `b`; missing timestamp loses collisions.
 function isAtLeastAsRecent(a?: string, b?: string): boolean {
   if (!a) return false;
   if (!b) return true;
