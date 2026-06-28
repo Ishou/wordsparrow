@@ -35,10 +35,9 @@ it the production default without dropping live v1 features.
 | `/contribuer`, `/contribuer/pairs` | — | ⛔ fully gated (maintainer follow-up) |
 | `/privacy` (EN privacy) | — | redirect → `/confidentialite` |
 
-The gaps are live: `Contribuer` and `Aide` are primary items in the v1
-`AppHeader`; `/compte` is linked from `AvatarMenu` and `PrivacyNotice`;
-`/privacy` is the English-language privacy page. v2's nav exposes only
-**Accueil** and **Grilles**.
+The remaining open gap is `Contribuer`/`Contribuer pairs` — a primary v1 nav item
+with no v2 equivalent yet, fully gated for normal users pending a maintainer-role
+follow-up. `/privacy` is covered by redirect to `/confidentialite`.
 
 ## Decision
 
