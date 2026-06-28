@@ -189,11 +189,7 @@ async function loadRoute(
       waitUntil: 'domcontentloaded',
       timeout: 30_000,
     });
-    // Wait for the route to settle. Fixture pass: head() fires after the
-    // loader resolves, so we wait for its canonical link — a stronger
-    // signal than <title>, which a route's pendingComponent may set early
-    // (pendingMs:0). Hang pass: the skeleton's imperative useLayoutEffect
-    // sets the title (head() never fires while the loader pends).
+    // canonical link is a stronger ready-signal than title; pendingMs:0 lets title fire early.
     if (puzzleStub === 'fixture') {
       await page.waitForSelector('link[rel="canonical"]', { state: 'attached', timeout: 5_000 });
     }
