@@ -257,6 +257,7 @@ export interface components {
             authorizeUrl: string;
         };
         ProgressEntry: {
+            /** Format: uuid */
             puzzleId: string;
             payload: {
                 [key: string]: unknown;
@@ -301,7 +302,7 @@ export interface components {
     parameters: {
         /** @description OIDC provider identifier. Currently `google` or `apple`. */
         ProviderPath: "google" | "apple";
-        /** @description Opaque grid puzzle identifier the progress is stored under. */
+        /** @description UUID v7 identifier of the puzzle the progress is stored under. */
         PuzzleIdPath: string;
     };
     requestBodies: never;
@@ -568,7 +569,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Opaque grid puzzle identifier the progress is stored under. */
+                /** @description UUID v7 identifier of the puzzle the progress is stored under. */
                 puzzleId: components["parameters"]["PuzzleIdPath"];
             };
             cookie?: never;
@@ -593,7 +594,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Opaque grid puzzle identifier the progress is stored under. */
+                /** @description UUID v7 identifier of the puzzle the progress is stored under. */
                 puzzleId: components["parameters"]["PuzzleIdPath"];
             };
             cookie?: never;
