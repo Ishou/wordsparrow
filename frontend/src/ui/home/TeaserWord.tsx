@@ -6,13 +6,6 @@ import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import type { SampleWord, WordsRepository } from '@/application';
 
-// Inline fallback so the hero never empties if the corpus fetch fails.
-const FALLBACK: ReadonlyArray<SampleWord> = [
-  { clue: 'Note', answer: 'SOL' },
-  { clue: 'Roi', answer: 'LION' },
-  { clue: 'Astre', answer: 'LUNE' },
-  { clue: 'Refus', answer: 'NON' },
-];
 
 const wrap = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' });
 const row = css({ display: 'flex', alignItems: 'center', gap: '4px' });
@@ -85,17 +78,18 @@ function nextIndex(current: number, length: number): number {
 export interface TeaserWordProps {
   // Reports the bonus streak (consecutive correct words) + the best so far.
   readonly onStreak?: (current: number, best: number) => void;
-  // Source of teaser pairs (ADR-0073). Absent in test fixtures → inline fallback.
+  // Source of teaser pairs (ADR-0073). Absent → the hero stays in its loading skeleton.
   readonly wordsRepository?: WordsRepository;
 }
 
 export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
   const touchPrimary = useTouchPrimary();
-  const [pool, setPool] = useState<ReadonlyArray<SampleWord>>(FALLBACK);
-  const [loading, setLoading] = useState(wordsRepository != null);
-  const [idx, setIdx] = useState(() => Math.floor(Math.random() * FALLBACK.length));
-  const { clue, answer } = pool[idx];
-  const target = answer.toUpperCase();
+  const [pool, setPool] = useState<ReadonlyArray<SampleWord>>([]);
+  // Always start in the skeleton; the prerender has no repository, so a hard-coded clue would flash before the real one loads.
+  const [loading, setLoading] = useState(true);
+  const [idx, setIdx] = useState(0);
+  const current: SampleWord | undefined = pool[idx];
+  const target = (current?.answer ?? '').toUpperCase();
   const n = target.length;
   // lettersRef is the sync source of truth for fast typists; `letters` mirrors it for render.
   const lettersRef = useRef<string[]>(Array(n).fill(''));
@@ -225,7 +219,7 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
     if (i > 0) refs.current[i - 1]?.focus();
   };
 
-  if (loading) {
+  if (loading || !current) {
     return (
       <div className={wrap} role="status" aria-busy="true" aria-label="Chargement du mot du jour">
         <div className={row}>
@@ -243,7 +237,7 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
     <div className={wrap}>
       <div className={row}>
         <div className={defBox}>
-          <DefCell clues={[clue]} arrow="right" validated={solved} />
+          <DefCell clues={[current.clue]} arrow="right" validated={solved} />
         </div>
         {Array.from({ length: n }, (_, i) => {
           // Focus wins over filled so a re-focused cell always shows the active ring.
@@ -269,7 +263,7 @@ export function TeaserWord({ onStreak, wordsRepository }: TeaserWordProps) {
                 // Override the grid's `inputMode: 'none'`: the teaser wants the native soft keyboard to pop.
                 inputMode="text"
                 readOnly={solved}
-                aria-label={`${clue} — lettre ${i + 1} sur ${n}`}
+                aria-label={`${current.clue} — lettre ${i + 1} sur ${n}`}
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 onFocus={() => setFocus(i)}
