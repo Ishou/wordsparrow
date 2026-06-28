@@ -148,6 +148,7 @@ ADR-0074  frontend/src/ui/routes/**                  Promote-to-root: ex-v2 rout
 ADR-0075  identity/api/openapi.yaml                  Cross-device solo progress sync: cookie-authed user-scoped /v1/users/me/progress (batch GET) + /v1/users/me/progress/{puzzleId} (GET/PUT); payload is an opaque SoloStore blob (no grid $ref); 409 optimistic-concurrency, 413 over 64 KiB cap; client-side semantic merge
 ADR-0075  identity/infrastructure/**                 V6__puzzle_progress table (user_id FK→users ON DELETE CASCADE, puzzle_id, payload JSONB, updated_at, PK (user_id, puzzle_id)); opaque per-puzzle blob, server never parses it (Wave 2)
 ADR-0075  frontend/src/infrastructure/session/**     Solo-progress sync layer over localStorageSolo: batch-pull + client-side semantic merge on authed load, debounced push, onAuthed anon carry-over (Wave 3)
+# ADR-0075: amendment 2026-06-28 (concrete resource-bound values: 64 KiB payload cap → 413, 60 writes/60-second window rate limit → 429, 500-puzzle count cap → 403); no new binding paths — controls land in identity/api/** above
 ```
 
 ## Adding entries
