@@ -1,8 +1,5 @@
 # syntax=docker/dockerfile:1
-# billing-api container image (ADR-0078, ADR-0007 §3). Multi-stage: JDK builder
-# produces the shadowJar; JRE runtime image runs it. Base images pinned to
-# digest per MANIFESTO; bump digest and tag together. Mirrors survey/api/Dockerfile
-# so the api services share the same build / runtime shape.
+# billing-api image (ADR-0078, ADR-0007 §3): multi-stage JDK→JRE; base images pinned to digest.
 
 # ---- Stage 1: build ------------------------------------------------------
 # eclipse-temurin:21.0.11_10-jdk-alpine-3.23
@@ -14,12 +11,7 @@ WORKDIR /workspace
 COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
 
-# settings.gradle.kts includes EVERY :grid:*, :game:*, :identity:*, :survey:*,
-# and :billing:* module; Gradle's configuration phase requires each project
-# directory (with its build.gradle.kts) to exist before any task can run, even
-# tasks that don't depend on it. Copying just the build script per project is
-# enough — sibling-context src/ is not needed because :billing:api:shadowJar has
-# no dependency on grid/, game/, identity/, or survey/.
+# Gradle config phase needs every project's build.gradle.kts present; src/ not needed for :billing:api.
 COPY grid/domain/build.gradle.kts grid/domain/
 COPY grid/application/build.gradle.kts grid/application/
 COPY grid/infrastructure/build.gradle.kts grid/infrastructure/
@@ -47,8 +39,7 @@ COPY billing/application/build.gradle.kts billing/application/
 COPY billing/infrastructure/build.gradle.kts billing/infrastructure/
 COPY billing/api/build.gradle.kts billing/api/
 
-# Source for the billing/ context only — shadowJar transitively pulls
-# :billing:domain, :billing:application, :billing:infrastructure.
+# Source for billing/ only; shadowJar transitively pulls domain, application, infrastructure.
 COPY billing/domain/src billing/domain/src
 COPY billing/application/src billing/application/src
 COPY billing/infrastructure/src billing/infrastructure/src
@@ -70,18 +61,13 @@ WORKDIR /app
 
 COPY --from=build /workspace/billing/api/build/libs/billing-api-*-all.jar /app/billing-api.jar
 
-# OpenTelemetry Java agent (ADR-0027). Auto-instruments Ktor + JDBC + the
-# Ktor HTTP client at JVM start without code imports. Activated via
-# JAVA_TOOL_OPTIONS in the chart's env values. Same pinned version as
-# the other api images.
+# OTel Java agent (ADR-0027): auto-instruments Ktor+JDBC at JVM start via JAVA_TOOL_OPTIONS.
 ADD --chmod=0644 \
     --checksum=sha256:bd01fea1304e8c8803fff827a0bdda02b2266742a85c62548053c6761474bb5b \
     https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.27.0/opentelemetry-javaagent.jar \
     /app/otel.jar
 
-# Run as non-root. K8s pod security context requires runAsNonRoot=true; without
-# an explicit USER here, kubelet refuses to start with
-# "container has runAsNonRoot and image will run as root".
+# Non-root: kubelet rejects pods where runAsNonRoot=true and image has no explicit USER.
 RUN addgroup --system --gid 1000 ktor \
  && adduser --system --uid 1000 --ingroup ktor --no-create-home --shell /sbin/nologin ktor \
  && chown -R 1000:1000 /app
@@ -90,15 +76,13 @@ USER 1000:1000
 # Port 8083 — grid/api owns 8080, game/api 8081, identity/api 8082, survey/api 7780.
 EXPOSE 8083
 
-# Container-level liveness probe. Kubernetes performs its own HTTP probe via
-# the Helm chart; this is good hygiene for `docker run` outside the cluster.
+# HEALTHCHECK for bare docker-run hygiene; Kubernetes uses the Helm chart's HTTP probe.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD wget -q -O - http://localhost:8083/v1/health || exit 1
 
 CMD ["java", "-jar", "/app/billing-api.jar"]
 
-# OCI Image Annotations: link the GHCR package back to source and surface
-# basic metadata (description, license) on the package page.
+# OCI annotations: source link and basic metadata for the GHCR package page.
 LABEL org.opencontainers.image.source="https://github.com/Ishou/bliss"
 LABEL org.opencontainers.image.description="WordSparrow Billing JVM API (Ktor REST)"
 LABEL org.opencontainers.image.licenses="FSL-1.1-MIT"
