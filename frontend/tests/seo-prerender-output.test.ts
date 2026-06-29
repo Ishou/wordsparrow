@@ -19,8 +19,7 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       expect(existsSync(expectedPath)).toBe(true);
     });
 
-    // Noindex routes (compte, reglages, menu, finish) get their own shell so a
-    // hard load / bookmark serves the route's HTML, not the home shell (no flash).
+    // Noindex routes get their own shell — hard load serves route HTML, not the home shell.
     it.each(NOINDEX_PRERENDER_ROUTES)('emits a noindex shell for $path', (route) => {
       const html = readFileSync(resolve(DIST, `${route.path.slice(1)}.html`), 'utf8');
       expect(html).toContain(`<title>${route.title}</title>`);
