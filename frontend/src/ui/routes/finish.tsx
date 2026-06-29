@@ -2,6 +2,7 @@ import { createRoute, useNavigate } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 // Sanctioned app→module bridge (ADR-0072).
 import { WinScreen } from '@/ui/play/WinScreen';
+import { noindexHead } from '@/ui/seo';
 import { Route as AppLayoutRoute } from './app-layout';
 
 // Phone-shaped jade field giving the absolute-positioned WinScreen overlay a positioned ancestor.
@@ -20,4 +21,5 @@ export const Route = createRoute({
   getParentRoute: () => AppLayoutRoute,
   path: 'finish',
   component: FinishScreen,
+  head: () => noindexHead('Partie terminée — WordSparrow', 'Tu as terminé la grille. Bravo !'),
 });

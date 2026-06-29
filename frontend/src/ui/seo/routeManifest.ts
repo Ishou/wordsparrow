@@ -81,6 +81,9 @@ export interface PrerenderRoute {
 export const NOINDEX_PRERENDER_ROUTES: ReadonlyArray<PrerenderRoute> = [
   // /contribuer is unregistered post-cutover (ADR-0074).
   { path: '/compte', title: 'Mon compte — WordSparrow' },
+  { path: '/reglages', title: 'Réglages — WordSparrow' },
+  { path: '/menu', title: 'Menu — WordSparrow' },
+  { path: '/finish', title: 'Partie terminée — WordSparrow' },
 ];
 
 export const DEFAULT_OG_IMAGE = `${SITE_BASE_URL}/og-home.png`;

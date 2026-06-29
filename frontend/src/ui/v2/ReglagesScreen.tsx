@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Lock, FileText, Envelope, CaretRight, Question, User } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { useAuth } from '@/ui/components/auth';
+import { Skeleton } from '@/design-system';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { SettingsRow } from './SettingsRow';
@@ -75,6 +76,21 @@ function initialFor(displayName: string): string {
 function ProfileCard() {
   const { state } = useAuth();
 
+  // Skeleton while whoami resolves so the subtext never flips guest→name on first paint.
+  if (state.status === 'loading') {
+    return (
+      <div className={cx(profile)} role="status" aria-busy="true" aria-label="Chargement du compte">
+        <span className={avatar} aria-hidden="true">
+          <User size={24} weight="bold" />
+        </span>
+        <div>
+          <Skeleton tone="onCard" width={120} height={16} radius={6} />
+          <Skeleton tone="onCard" width={80} height={11} radius={6} style={{ marginTop: '5px' }} />
+        </div>
+      </div>
+    );
+  }
+
   if (state.status === 'authed') {
     return (
       <Link to="/compte" className={cx(profile, profileLink)}>
@@ -90,15 +106,14 @@ function ProfileCard() {
     );
   }
 
-  const loading = state.status === 'loading';
   return (
     <Link to="/compte" className={cx(profile, profileLink)}>
       <span className={avatar} aria-hidden="true">
         <User size={24} weight="bold" />
       </span>
       <div>
-        <div className={profileName}>{loading ? '…' : 'Invité'}</div>
-        <div className={profileMeta}>{loading ? '…' : 'Sans compte'}</div>
+        <div className={profileName}>Invité</div>
+        <div className={profileMeta}>Sans compte</div>
       </div>
       <span className={chevron}>
         <CaretRight size={18} weight="bold" aria-hidden="true" />

@@ -48,6 +48,9 @@ const PRERENDERED_ROUTE_PATHS = [
   '/mentions-legales',
   '/confidentialite',
   '/compte',
+  '/reglages',
+  '/menu',
+  '/finish',
 ] as const;
 const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const PRERENDER_NAV_DENYLIST: RegExp[] = PRERENDERED_ROUTE_PATHS.map(

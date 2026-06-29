@@ -152,7 +152,14 @@ function AuthedCompte() {
             <div className={editRow}>
               <div className={heroMain}>
                 <div className={heroName}>{name}</div>
-                <div className={heroMeta}>{me ? `Membre depuis ${memberSince(me.createdAt)}` : 'Connecté'}</div>
+                {/* Skeleton until getMe lands so the subtext never flips Connecté→Membre depuis on first paint. */}
+                {me ? (
+                  <div className={heroMeta}>{`Membre depuis ${memberSince(me.createdAt)}`}</div>
+                ) : (
+                  <span className={heroMeta} role="status" aria-busy="true" aria-label="Chargement du compte" style={{ display: 'block' }}>
+                    <Skeleton tone="onCard" width={110} height={11} radius={6} />
+                  </span>
+                )}
               </div>
               <button type="button" className={iconBtn} onClick={startEdit} aria-label="Modifier le pseudonyme">
                 <PencilSimple size={18} weight="bold" aria-hidden="true" />
@@ -183,7 +190,11 @@ function AuthedCompte() {
       <nav aria-label="Connexion">
         <div className={groupLabel}>Connexion</div>
         <ul className={card}>
-          <SettingsRow icon={GoogleLogo} label="Google" sub={google ? 'Compte connecté' : 'Non connecté'} />
+          <SettingsRow
+            icon={GoogleLogo}
+            label="Google"
+            sub={me ? (google ? 'Compte connecté' : 'Non connecté') : <Skeleton tone="onCard" width={90} height={11} radius={6} />}
+          />
           <SettingsRow icon={SignOut} label="Se déconnecter" onClick={() => void logout()} last />
         </ul>
       </nav>
