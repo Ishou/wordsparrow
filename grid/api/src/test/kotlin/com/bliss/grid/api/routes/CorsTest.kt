@@ -19,14 +19,7 @@ import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import org.junit.jupiter.api.Test
 
-/**
- * Wire-path tests for CORS. The frontend at `https://wordsparrow.io` is
- * served from a separate origin from `https://api.wordsparrow.io`, so the
- * browser executes a CORS preflight on every cross-origin request. These
- * tests assert the allowlist matches the production reality (prod apex +
- * www + local Vite dev + the bliss-cb4.pages.dev preview host, ADR-0077)
- * and that nothing else slips through.
- */
+/** Wire-path tests for CORS — allowlist, credentialed preflight, and explicit header list (ADR-0077). */
 class CorsTest {
     private val validId = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b"
 
@@ -135,11 +128,7 @@ class CorsTest {
         testApplication {
             application { module() }
 
-            // ADR-0077 reverted ADR-0034's wildcard to an explicit list so the
-            // __Secure-ws_session cookie can ride /hints. The headers the frontend
-            // actually sends — Content-Type, X-Request-Id, OTel traceparent /
-            // tracestate — must come back in Access-Control-Allow-Headers, and the
-            // response must carry Allow-Credentials: true for the cookie path.
+            // ADR-0077: verifies the explicit-list headers and Allow-Credentials: true are echoed on preflight.
             val response =
                 client.options("/v1/puzzles/$validId/hints") {
                     headers {
@@ -170,9 +159,7 @@ class CorsTest {
         testApplication {
             application { module() }
 
-            // The ADR-0077 narrowing: a header the frontend never sends must NOT
-            // be echoed back. Ktor's CORS plugin omits the unlisted name from
-            // Access-Control-Allow-Headers, so the browser preflight for it fails.
+            // ADR-0077 explicit list: unlisted header must not appear in Access-Control-Allow-Headers.
             val response =
                 client.options("/v1/puzzles/$validId/hints") {
                     headers {
@@ -258,8 +245,7 @@ class CorsTest {
         testApplication {
             application { module() }
 
-            // Only the exact bliss-cb4.pages.dev host is allowlisted (ADR-0077); any
-            // other *.pages.dev preview must still fail the Origin check loudly.
+            // Only the exact bliss-cb4.pages.dev host is allowlisted; any other *.pages.dev must fail (ADR-0077).
             val response =
                 client.options("/v1/puzzles/$validId") {
                     headers {

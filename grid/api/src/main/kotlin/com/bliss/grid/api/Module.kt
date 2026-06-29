@@ -79,9 +79,7 @@ fun Application.module() {
         // it in `Access-Control-Allow-Methods` when explicit — mirrors
         // game/api Module.kt:70 so the configs read identically.
         allowMethod(HttpMethod.Post)
-        // DELETE /v1/sessions/{sessionId} is the GDPR erasure endpoint
-        // (ADR-0025 §5). Methods stay explicit — credentialed CORS forbids
-        // wildcard methods and the small set is the smaller attack surface.
+        // (ADR-0025 §5). Methods stay explicit — credentialed CORS forbids wildcard methods.
         allowMethod(HttpMethod.Delete)
 
         // Explicit header allowlist reverting ADR-0034's wildcard — the deliberate defense-in-depth narrowing ADR-0077 requires now that /hints is credentialed.
