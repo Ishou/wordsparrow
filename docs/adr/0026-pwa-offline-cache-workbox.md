@@ -154,11 +154,8 @@ automatically on a chunk mismatch.
   production build. A rollback must re-deploy the previous build artifact,
   not just revert a file — already the case under the manifesto's immutable
   deployment model.
-- `autoUpdate` means there is no user-visible "a new version is ready" moment.
-  If a future feature requires a coordinated client-side migration (e.g. a
-  breaking localStorage schema change), `registerType` must be changed to
-  `'prompt'` and a UI notification added. Acceptable: no such migration is
-  planned for v1.
+- Update delivery is now user-dependent: a player who dismisses the prompt
+  indefinitely stays on an old version until they accept or reload manually.
 - Two new packages enter the dependency tree. `workbox-*` is maintained by
   Google and is a transitive dependency of many major frameworks; the supply
   chain risk is low. `vite-plugin-pwa` is a single-maintainer library;

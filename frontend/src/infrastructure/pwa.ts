@@ -57,8 +57,7 @@ export function registerServiceWorker(onUpdateAvailable?: OnUpdateAvailable): vo
     // — the symptom that motivated this module's last revision.
     const wb = new Workbox('/sw.js', { updateViaCache: 'none' });
     let refreshing = false;
-    // Only a user-accepted update reloads; a background `controlling`
-    // (e.g. another tab updated) must not reload this tab unprompted.
+    // background controlling (another tab) must not reload this tab unprompted.
     let userAccepted = false;
 
     const reloadOnce = () => {
@@ -69,9 +68,7 @@ export function registerServiceWorker(onUpdateAvailable?: OnUpdateAvailable): vo
 
     installChunkMismatchGuard(wb, reloadOnce);
 
-    // Accept-action: tell the waiting SW to activate; the `controlling`
-    // listener below reloads once it takes over. Puzzle state lives in
-    // localStorage so reloading is safe (ADR-0026).
+    // messageSkipWaiting → controlling fires → reloadOnce. localStorage keeps puzzle state (ADR-0026).
     const apply = () => {
       userAccepted = true;
       void wb.messageSkipWaiting();
@@ -93,8 +90,7 @@ export function registerServiceWorker(onUpdateAvailable?: OnUpdateAvailable): vo
 
     wb.register()
       .then((registration) => {
-        // A SW that installed before this listener attached is already
-        // waiting on register — prompt for it too.
+        // prompt for a SW that was already waiting before this listener attached.
         if (registration?.waiting) promptUpdate();
       })
       .catch((err: unknown) => {

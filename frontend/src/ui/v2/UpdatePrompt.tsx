@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
 
-// Bridge between `main.tsx`'s service-worker registration callback and
-// this React banner without `ui/` importing `infrastructure/`: the
-// composition root fires `signalUpdateAvailable(apply)`, the mounted
-// `<UpdatePrompt>` subscribes. ADR-0026 (update prompt, not auto-reload).
+// Decouples infrastructure/ from ui/: composition root pushes updates in; component subscribes. See ADR-0026.
 type ApplyUpdate = () => void;
 let pendingApply: ApplyUpdate | null = null;
 let subscriber: ((apply: ApplyUpdate) => void) | null = null;

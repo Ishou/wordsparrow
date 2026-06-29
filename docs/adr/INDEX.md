@@ -47,6 +47,7 @@ ADR-0018  game/**                                  Game bounded context: HTTP + 
 ADR-0019  */api/asyncapi.yaml                      AsyncAPI 2.6, not 3.x
 ADR-0025  frontend/src/**/analytics/**             Matomo + RGPD posture
 ADR-0026  frontend/**/sw.*                         PWA offline cache via Workbox
+ADR-0026  frontend/src/ui/v2/UpdatePrompt.*        PWA update prompt (2026-06-29 amendment)
 ADR-0027  infra/observability/**                   SigNoz on ClickHouse
 ADR-0038  infra/observability/**                   k8s-infra subchart for per-pod/node metrics; OTLP exporter preset pins
 ADR-0030  infra/observability/templates/oauth2-proxy.yaml   oauth2-proxy htpasswd-only; session cookie for SigNoz SPA; no OIDC
