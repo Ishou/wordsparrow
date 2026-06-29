@@ -1,28 +1,12 @@
 import { css } from 'styled-system/css';
 import type { Player, SessionId } from '@/domain/game';
 import { sparrowCelebrationScene } from '@/ui/v2/SparrowScenes';
+import { formatClock } from '@/ui/play/formatClock';
 import { PlayerAvatar } from './PlayerAvatar';
 
 // ADR-0072 co-op finish: no scores — versus mode is a deferred follow-up.
 
-const HOUR_MS = 60 * 60 * 1000;
-const MINUTE_MS = 60 * 1000;
-const SECOND_MS = 1000;
-
-const twoDigit = new Intl.NumberFormat('fr-FR', {
-  minimumIntegerDigits: 2,
-  useGrouping: false,
-});
-
-function formatDuration(durationMs: number): string {
-  const ms = Math.max(0, durationMs);
-  const hours = Math.floor(ms / HOUR_MS);
-  const minutes = Math.floor((ms % HOUR_MS) / MINUTE_MS);
-  const seconds = Math.floor(ms / SECOND_MS) % 60;
-  const mm = twoDigit.format(minutes);
-  const ss = twoDigit.format(seconds);
-  return hours > 0 ? `${twoDigit.format(hours)}:${mm}:${ss}` : `${mm}:${ss}`;
-}
+const formatDuration = (durationMs: number): string => formatClock(durationMs / 1000);
 
 const wrap = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '24px 8px 8px' });
 const art = css({ display: 'flex', justifyContent: 'center', marginBottom: '12px' });

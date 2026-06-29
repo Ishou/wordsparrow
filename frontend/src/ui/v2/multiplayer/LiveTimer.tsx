@@ -1,27 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Timer } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
+import { formatClock } from '@/ui/play/formatClock';
 
 // ADR-0072 co-op timer: ticks against the server start instant, freezes at `frozenAtMs` (mirrors prod TimerPill).
 
 const SECOND_MS = 1000;
-const HOUR_MS = 60 * 60 * 1000;
-const MINUTE_MS = 60 * 1000;
 
-const twoDigit = new Intl.NumberFormat('fr-FR', {
-  minimumIntegerDigits: 2,
-  useGrouping: false,
-});
-
-function format(elapsedMs: number): string {
-  const ms = Math.max(0, elapsedMs);
-  const hours = Math.floor(ms / HOUR_MS);
-  const minutes = Math.floor((ms % HOUR_MS) / MINUTE_MS);
-  const seconds = Math.floor(ms / SECOND_MS) % 60;
-  const mm = twoDigit.format(minutes);
-  const ss = twoDigit.format(seconds);
-  return hours > 0 ? `${twoDigit.format(hours)}:${mm}:${ss}` : `${mm}:${ss}`;
-}
+const format = (elapsedMs: number): string => formatClock(elapsedMs / 1000);
 
 const pill = css({
   display: 'inline-flex',
