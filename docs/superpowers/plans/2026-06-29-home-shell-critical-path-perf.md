@@ -199,9 +199,14 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-### Task 3: Defer OTel init via dynamic import — FLAGGED (observability tradeoff)
+### Task 3: Defer OTel init via dynamic import — DROPPED (trace-coverage tradeoff rejected)
 
-> **Decision gate for the reviewer/maintainer:** this task makes `vendor-otel` (23 KiB) a lazy chunk loaded after mount. Tradeoff: the first router-loader fetches run before `FetchInstrumentation` patches `fetch`, so those initial fetch spans are lost; `DocumentLoadInstrumentation` still captures page-load timing. If losing initial-fetch spans is unacceptable, **skip this task** — the font + render-gate work carries most of the win. Implement only with maintainer assent.
+> **NOT IMPLEMENTED.** Maintainer decision (2026-06-29): losing the initial
+> router-loader fetch spans was judged not worth ~23 KiB. `initOtelTracer(...)`
+> remains a synchronous boot call in `main.tsx`. This task was shipped as a
+> no-op; the original flagged description is retained below for the record.
+>
+> **Original decision gate:** this task makes `vendor-otel` (23 KiB) a lazy chunk loaded after mount. Tradeoff: the first router-loader fetches run before `FetchInstrumentation` patches `fetch`, so those initial fetch spans are lost; `DocumentLoadInstrumentation` still captures page-load timing. If losing initial-fetch spans is unacceptable, **skip this task** — the font + render-gate work carries most of the win. Implement only with maintainer assent.
 
 **Files:**
 - Modify: `frontend/src/main.tsx` (remove static OTel import at lines 25-28; replace the synchronous `initOtelTracer(...)` at line 173 with a post-mount dynamic import)
@@ -366,7 +371,7 @@ Compare against the baseline (Performance 79 / FCP 3.0s / LCP 4.4s). Report the 
 
 - [ ] FCP/LCP improved vs baseline (deltas posted)
 - [ ] CLS still 0
-- [ ] OTel page-load trace still emits (Task 3, if included)
+- [x] OTel trace coverage unchanged (Task 3 DROPPED — OTel not deferred)
 - [ ] Wordmark swap is cold-load only; no UI-font flash
 - [ ] All frontend CI gates green
 

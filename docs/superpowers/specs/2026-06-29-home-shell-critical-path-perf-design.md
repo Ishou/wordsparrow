@@ -77,16 +77,21 @@ any such case in the PR rather than silently shipping it.
 
 Zero intended visual change on live routes.
 
-### Lever 2 — Defer OTel + Matomo off the boot path
+### Lever 2 — Defer Matomo off the boot path
 
-- Move `initOtelTracer(...)` and `createMatomoTracker(...)` out of synchronous
-  module-boot into a post-mount `requestIdleCallback` (with a `setTimeout`
-  fallback for browsers without it).
+> **OTel deferral DROPPED** (maintainer decision, 2026-06-29): lazy-loading
+> OTel would lose the initial router-loader fetch spans (fetch-instrumentation
+> patches after those fetches), and full trace coverage was judged worth more
+> than the ~23 KiB. Only Matomo is deferred. `initOtelTracer(...)` stays a
+> synchronous boot call. The OTel rows below are retained struck-through for
+> the record.
+
+- Move `createMatomoTracker(...)` out of synchronous module-boot into a
+  post-mount `requestIdleCallback` (with a `setTimeout` fallback for browsers
+  without it). _(OTel: ~~move `initOtelTracer(...)` too~~ — dropped.)_
 - Preserve existing no-op behaviour when env vars are unset (dev/preview).
-- **Verify** OTel still emits a page-load trace after deferral —
-  `DocumentLoadInstrumentation` reads buffered `PerformanceTiming`, so it should
-  still capture, but this must be confirmed live, not assumed (per the
-  "verify the extractor, not the producer" rule).
+- ~~**Verify** OTel still emits a page-load trace after deferral~~ — N/A, OTel
+  not deferred.
 
 No visual impact.
 
@@ -117,7 +122,8 @@ today; releasing sooner improves LCP regardless of font state.
 - A measurable FCP/LCP improvement (no hard number committed; report the actual
   deltas).
 - Frontend gates green: `pnpm typecheck`, `pnpm test`, `pnpm e2e`, `pnpm a11y`.
-- OTel page-load trace confirmed still emitting post-deferral.
+- ~~OTel page-load trace confirmed still emitting post-deferral.~~ N/A — OTel
+  deferral dropped (see Lever 2).
 - Diff within the 400-line cap (excl. generated); if it exceeds, invoke the
   standing cap-override with justification rather than splitting (single
   workstream).
@@ -128,5 +134,5 @@ today; releasing sooner improves LCP regardless of font state.
   grep guard above.
 - **Fredoka swap CLS** on the wordmark if fallback metrics differ. The wordmark
   is small and localized; expected sub-threshold, but the DoD gates on CLS 0.
-- **OTel deferral drops the document-load trace** if buffered timings aren't
-  available at idle time. Mitigated by the explicit verify step.
+- ~~**OTel deferral drops the document-load trace**~~ — risk removed; OTel
+  deferral dropped, full trace coverage retained.
