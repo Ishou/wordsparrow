@@ -30,6 +30,7 @@ export function setAuthed(whoami: WhoAmIResponse, full?: User): void {
         displayName: whoami.displayName,
         createdAt: '2026-05-01T10:00:00Z',
         providers: [],
+        role: whoami.role,
       },
   };
 }
