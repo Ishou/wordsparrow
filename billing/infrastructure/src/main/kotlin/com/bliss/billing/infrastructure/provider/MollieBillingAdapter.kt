@@ -98,7 +98,8 @@ class MollieBillingAdapter(
         val rawUserId = metadata[USER_ID_KEY] ?: return null
         val rawTier = metadata[TIER_KEY] ?: return null
         val userId = runCatching { UUID.fromString(rawUserId) }.getOrNull() ?: return null
-        return userId to Tier.of(rawTier)
+        val tier = runCatching { Tier.of(rawTier) }.getOrNull() ?: return null
+        return userId to tier
     }
 
     private companion object {
