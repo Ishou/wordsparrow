@@ -77,8 +77,8 @@ const content = css({
   // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it; top spacing lives in MobileTopBar.
   padding: '0 22px calc(64px + env(safe-area-inset-bottom))',
   overflowY: 'auto',
-  // Desktop: full-width scroller (scrollbar at the screen edge) under the pinned bar; the hub centres + caps itself, not the scroller.
-  lg: { overflowY: 'auto', padding: '0 0 40px' },
+  // Desktop: full-width scroller under the pinned bar; scrollbarGutter reserves the scrollbar's track so it never overlaps the centred hub.
+  lg: { overflowY: 'auto', padding: '0 0 40px', scrollbarGutter: 'stable' },
 });
 
 // Desktop hub: hero (left) + grilles (right) side by side, capped + centred in the viewport (matches the 1140 top-bar cap). Passthrough on phone/tablet.

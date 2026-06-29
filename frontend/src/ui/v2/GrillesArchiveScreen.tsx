@@ -43,7 +43,7 @@ const filterBar = css({ marginBottom: '18px' });
 // Desktop: the title + filter pin while the list scrolls; passthrough on phone/tablet (the PhoneShell body scrolls as one).
 const head = css({ lg: { flex: 'none' } });
 // Desktop: the list is its own scroll container filling the remaining height, so the outer page never scrolls (one scrollbar, on the list).
-const scrollArea = css({ lg: { flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '40px' } });
+const scrollArea = css({ lg: { flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '40px', scrollbarGutter: 'stable' } });
 
 const monthLabel = css({
   fontFamily: 'wsUi',

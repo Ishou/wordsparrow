@@ -94,8 +94,8 @@ const body = css({
   minHeight: 0,
   overflowY: 'auto',
   padding: '18px 22px calc(env(safe-area-inset-bottom) + 28px)',
-  // Desktop: full-width scroller so the scrollbar sits at the window edge (under the full-bleed bar); the reading column is centred inside.
-  lg: { paddingInline: 0, paddingTop: '26px', paddingBottom: '56px' },
+  // Desktop: full-width scroller; scrollbarGutter reserves the scrollbar's track so it never overlaps the centred content.
+  lg: { paddingInline: 0, paddingTop: '26px', paddingBottom: '56px', scrollbarGutter: 'stable' },
 });
 
 // Desktop centres the 680px reading column inside the full-width scroller; passthrough on phone/tablet.
