@@ -193,8 +193,11 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
     commit(next);
 
     if (next.every((c) => c !== '')) {
-      // !wasFull stops a re-edit of an already-full word re-firing the verify.
-      if (wasFull || !current) return;
+      // Re-typing an already-full word (e.g. fixing letters after a wrong guess) must not re-fire verify, but the cursor should still advance.
+      if (wasFull || !current) {
+        if (i < n - 1) refs.current[i + 1]?.focus();
+        return;
+      }
       const guess = next.join('');
       const seq = verifySeq.current;
       // Server-side check (ADR-0076); typing isn't blocked, and a result for a word the user already left is ignored.
