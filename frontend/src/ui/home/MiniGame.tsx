@@ -11,6 +11,8 @@ import type { SampleWord, WordsRepository } from '@/application';
 const BATCH_OPTS = { minLen: 3, maxLen: 6, count: 24 } as const;
 // Refetch this many words before the pool runs dry so the next word is already in hand.
 const REFETCH_AHEAD = 3;
+// Only reveal the "checking…" pulse once a server validation has been slow this long, so fast checks never flash it.
+const VALIDATING_DELAY_MS = 200;
 
 const wrap = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' });
 const row = css({ display: 'flex', alignItems: 'center', gap: '4px' });
@@ -20,6 +22,7 @@ const box = css({ position: 'relative', width: '42px', fontSize: '13px' });
 const defBox = css({ position: 'relative', width: '63px', fontSize: '19.5px' });
 const glow = css({ borderRadius: '9px', zIndex: 1, animation: 'wsSolveGlow 0.5s ease-out both' });
 const shake = css({ animation: 'wsShake 0.4s ease-in-out both' });
+const validatingPulse = css({ borderRadius: '9px', outline: '2px solid', outlineOffset: '-2px', animation: 'wsValidating 1.1s ease-in-out infinite' });
 const input = css({
   position: 'absolute',
   inset: 0,
@@ -99,6 +102,9 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
   const [focus, setFocus] = useState<number | null>(null);
   const [solved, setSolved] = useState(false);
   const [wrong, setWrong] = useState(false);
+  // Discreet "checking…" pulse while a slow server validation is in flight (gated by a short delay so fast checks never flash it).
+  const [validating, setValidating] = useState(false);
+  const validateTimer = useRef<number | null>(null);
   const [passerUnlocked, setPasserUnlocked] = useState(false);
   const streakRef = useRef(0);
   const bestRef = useRef(0);
@@ -138,7 +144,10 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
       refs.current[0]?.focus();
     }
   }, [idx]);
-  useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
+  useEffect(() => () => {
+    if (timer.current) window.clearTimeout(timer.current);
+    if (validateTimer.current) window.clearTimeout(validateTimer.current);
+  }, []);
 
   // Our on-screen keyboard docks at the bottom on touch while a cell is focused; tell the host so it can hide the bottom nav.
   const kbOpen = touchPrimary && focus !== null && !solved;
@@ -149,8 +158,17 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
     setLetters(next);
   };
 
+  const stopValidating = () => {
+    if (validateTimer.current) {
+      window.clearTimeout(validateTimer.current);
+      validateTimer.current = null;
+    }
+    setValidating(false);
+  };
+
   const rotate = (toIdx: number) => {
     if (timer.current) window.clearTimeout(timer.current);
+    stopValidating();
     verifySeq.current += 1; // any verify still in flight for the old word is now stale
     focusOnNext.current = true;
     commit(Array(pool[toIdx].answerLength).fill(''));
@@ -231,15 +249,22 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
       }
       const guess = next.join('');
       const seq = verifySeq.current;
+      // Arm the "checking…" pulse after a short delay; a fast result clears it before it ever shows.
+      if (validateTimer.current) window.clearTimeout(validateTimer.current);
+      validateTimer.current = window.setTimeout(() => {
+        if (seq === verifySeq.current && !solved) setValidating(true);
+      }, VALIDATING_DELAY_MS);
       // Server-side check (ADR-0076); typing isn't blocked, and a result for a word the user already left is ignored.
       void wordsRepository
         ?.verifySample(current.token, guess)
         .then((correct) => {
+          stopValidating();
           if (seq !== verifySeq.current || solved) return;
           if (correct) onCorrect(i);
           else onWrong();
         })
         .catch(() => {
+          stopValidating();
           if (seq === verifySeq.current && !solved) onWrong();
         });
     } else if (i < n - 1) {
@@ -289,9 +314,15 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
     );
   }
 
+  // Discreet "checking…" pulse on the word while a slow server validation is pending (suppressed once it resolves to solved/wrong).
+  const showPulse = validating && !solved && !wrong;
+
   return (
     <>
     <div className={wrap}>
+      <span role="status" aria-live="polite" className={css({ srOnly: true })}>
+        {showPulse ? 'Vérification du mot…' : ''}
+      </span>
       <div className={row}>
         <div className={defBox}>
           <DefCell clues={[current.clue]} arrow="right" validated={solved} />
@@ -310,7 +341,8 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
           return (
             <div
               key={i}
-              className={cx(box, solved && glow, wrong && shake)}
+              className={cx(box, solved && glow, wrong && shake, showPulse && validatingPulse)}
+              data-validating={showPulse ? 'true' : undefined}
               style={solved ? { animationDelay: `${i * 60}ms` } : undefined}
             >
               <Cell state={state} letter={letters[i]} />

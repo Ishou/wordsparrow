@@ -69,6 +69,39 @@ describe('MiniGame server verification (ADR-0076)', () => {
     expect(document.querySelectorAll('[data-cell-state="solved"]').length).toBe(0);
   });
 
+  it('shows a discreet validating pulse on the word while a slow check is pending, then clears it', async () => {
+    let resolveVerify: (correct: boolean) => void = () => {};
+    const verifySample = vi.fn().mockImplementation(
+      () => new Promise<boolean>((r) => { resolveVerify = r; }),
+    );
+    await renderWithWord(repo(verifySample));
+
+    typeWord('XYZW');
+
+    await waitFor(() => expect(verifySample).toHaveBeenCalledWith('tok-LUNE', 'XYZW'));
+    // The pulse arms behind a short delay, then marks every cell of the word.
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-validating="true"]').length).toBe(4);
+    });
+
+    await act(async () => {
+      resolveVerify(false);
+    });
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-validating="true"]').length).toBe(0);
+    });
+  });
+
+  it('never flashes the pulse when the check resolves quickly', async () => {
+    const verifySample = vi.fn().mockResolvedValue(false);
+    await renderWithWord(repo(verifySample));
+
+    typeWord('XYZW');
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Passer/ })).toBeTruthy());
+    expect(document.querySelectorAll('[data-validating="true"]').length).toBe(0);
+  });
+
   it('surfaces nothing as correct when verifySample rejects', async () => {
     const verifySample = vi.fn().mockRejectedValue(new Error('network'));
     await renderWithWord(repo(verifySample));

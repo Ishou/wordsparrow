@@ -305,6 +305,11 @@ export default defineConfig({
         '35%': { boxShadow: '0 0 0 3px rgba(212,93,131,0.55), 0 0 14px 3px rgba(212,93,131,0.45)' },
         '100%': { boxShadow: '0 0 0 0 rgba(212,93,131,0)' },
       },
+      // Jade breathing ring; animates outline so it never clobbers the cell's state ring.
+      wsValidating: {
+        '0%, 100%': { outlineColor: 'rgba(79,110,92,0.06)' },
+        '50%': { outlineColor: 'rgba(79,110,92,0.5)' },
+      },
       // Head-shake on a completed-but-wrong word.
       wsShake: {
         '0%, 100%': { transform: 'rotate(0deg)' },
