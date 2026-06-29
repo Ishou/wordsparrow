@@ -369,20 +369,10 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     boardRef.current?.panZoom?.frame(minCol * STRIDE, minRow * STRIDE, (maxCol - minCol) * STRIDE + CELL, (maxRow - minRow) * STRIDE + CELL);
   }, [clue]);
 
-  // /play backspace always moves: after an in-place erase, nudge focus to the previous cell.
+  // step-back is baked into eraseLetter; no focus nudge needed here.
   const playBackspace = useCallback(() => {
-    const cur = nav.localCursor;
-    const el = cur ? inputAt(cur.position.row, cur.position.col) : null;
-    const erasedInPlace = !!el && !el.readOnly && el.value !== '';
     nav.eraseLetter();
-    if (!cur || !erasedInPlace) return;
-    const cl = orderedClues.find(
-      (c) => c.across === (cur.direction === 'across') && c.cells.some((p) => p.row === cur.position.row && p.col === cur.position.col),
-    );
-    if (!cl) return;
-    const idx = cl.cells.findIndex((p) => p.row === cur.position.row && p.col === cur.position.col);
-    if (idx > 0) inputAt(cl.cells[idx - 1].row, cl.cells[idx - 1].col)?.focus();
-  }, [nav, orderedClues]);
+  }, [nav]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
