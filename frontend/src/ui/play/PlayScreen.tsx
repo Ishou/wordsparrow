@@ -369,7 +369,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     boardRef.current?.panZoom?.frame(minCol * STRIDE, minRow * STRIDE, (maxCol - minCol) * STRIDE + CELL, (maxRow - minRow) * STRIDE + CELL);
   }, [clue]);
 
-  // eraseLetter erases the letter and always steps back one cell (filled or empty), so backspace is uniform here.
+  // step-back is baked into eraseLetter; no focus nudge needed here.
   const playBackspace = useCallback(() => {
     nav.eraseLetter();
   }, [nav]);
