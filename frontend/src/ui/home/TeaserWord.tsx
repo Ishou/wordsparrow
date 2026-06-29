@@ -91,7 +91,7 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
   const [focus, setFocus] = useState<number | null>(null);
   const [solved, setSolved] = useState(false);
   const [wrong, setWrong] = useState(false);
-  const [errored, setErrored] = useState(false);
+  const [passerUnlocked, setPasserUnlocked] = useState(false);
   const streakRef = useRef(0);
   const bestRef = useRef(0);
   const refs = useRef<Array<HTMLInputElement | null>>([]);
@@ -145,7 +145,7 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
     setIdx(toIdx);
     setSolved(false);
     setWrong(false);
-    setErrored(false);
+    // passerUnlocked is intentionally NOT reset: once a wrong guess reveals Passer, it stays for the session.
   };
   // Blur the active cell to drop the native soft keyboard (touch only).
   const dismissKeyboard = () => {
@@ -183,7 +183,7 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
       // Wrong on completion: wobble + reveal Passer. The streak breaks on skip, not on a wrong guess; !wasFull stops a re-edit re-firing.
       if (timer.current) window.clearTimeout(timer.current);
       setWrong(true);
-      setErrored(true);
+      setPasserUnlocked(true);
       if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([0, 28, 38, 28]);
       timer.current = window.setTimeout(() => setWrong(false), 460);
     } else if (i < n - 1) {
@@ -273,7 +273,7 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
         })}
       </div>
       <div className={skipRow}>
-        {errored ? (
+        {passerUnlocked ? (
           <button type="button" className={skipBtn} onClick={skip}>
             Passer ›
           </button>
