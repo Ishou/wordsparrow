@@ -235,6 +235,8 @@ export interface components {
             providers: components["schemas"]["LinkedProvider"][];
             /** Format: date-time */
             createdAt: string;
+            /** @enum {string} */
+            role: "player" | "maintainer";
         };
         LinkedProvider: {
             /** @enum {string} */
@@ -251,6 +253,8 @@ export interface components {
             /** Format: uuid */
             userId: string;
             displayName: string;
+            /** @enum {string} */
+            role: "player" | "maintainer";
         };
         BeginLinkResponse: {
             /** Format: uri */

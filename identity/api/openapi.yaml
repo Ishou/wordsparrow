@@ -356,7 +356,7 @@ components:
   schemas:
     User:
       type: object
-      required: [id, displayName, providers, createdAt]
+      required: [id, displayName, providers, createdAt, role]
       properties:
         id: { type: string, format: uuid }
         displayName: { type: string, minLength: 1, maxLength: 30 }
@@ -364,6 +364,11 @@ components:
           type: array
           items: { $ref: '#/components/schemas/LinkedProvider' }
         createdAt: { type: string, format: date-time }
+        role:
+          type: string
+          enum: [player, maintainer]
+          x-enum-varnames: [PLAYER, MAINTAINER]
+          # Stored role of the authenticated caller; guest is the no-session state, never returned — ADR-0060.
 
     LinkedProvider:
       type: object
@@ -384,10 +389,15 @@ components:
 
     WhoAmIResponse:
       type: object
-      required: [userId, displayName]
+      required: [userId, displayName, role]
       properties:
         userId: { type: string, format: uuid }
         displayName: { type: string, minLength: 1, maxLength: 30 }
+        role:
+          type: string
+          enum: [player, maintainer]
+          x-enum-varnames: [PLAYER, MAINTAINER]
+          # Stored role of the authenticated caller; guest is the no-session state, never returned (whoami 401s anonymous) — ADR-0060.
 
     BeginLinkResponse:
       type: object
