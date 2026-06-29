@@ -92,6 +92,10 @@ ingress-nginx:
     # no proxy translates it; no need to trust X-Forwarded-* headers
     # (ingress-nginx default is use-forwarded-headers=false, which is
     # the safe posture when nothing in front terminates TLS for us).
+    config:
+      # Gzip every backend API JSON response (all services egress here); the frontend is already br-compressed by Cloudflare.
+      use-gzip: "true"
+      gzip-level: "5"
 
 external-dns:
   enabled: true
