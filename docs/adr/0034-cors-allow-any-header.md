@@ -169,3 +169,14 @@ paying for a defense-in-depth layer that adds no real protection.
 > is currently the case because the OTel browser SDK (ADR-0033) adds
 > `traceparent` / `tracestate` dynamically and our middleware stack
 > is the recurring-tax surface this ADR was written to address.
+
+> **Update (2026-06-29): grid gained auth — Follow-up #2 condition
+> triggered.** The `/v1/puzzles/{id}/hints` endpoint became
+> session-cookie-authed, which is the "if `wordsparrow.io` ever
+> introduces auth" case this ADR's Follow-up #2 reserved for a new
+> ADR. **ADR-0077** documents the resolution for grid-api: enable
+> credentialed CORS (`allowCredentials = true`) and revert grid's
+> headers to an **explicit `allowHeader(...)` list** — the
+> defense-in-depth narrowing this ADR said would return on gaining
+> auth. This ADR remains in force unchanged for **game-api**, which
+> has no auth.

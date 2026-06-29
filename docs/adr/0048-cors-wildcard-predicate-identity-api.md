@@ -115,3 +115,9 @@ Wildcarding Ktor is the consistent choice.
 
 ADR-0034 Follow-up #2 (the "reopen when auth comes" clause). ADR-0034 itself
 remains in force for grid-api and game-api.
+
+> **Update (2026-06-29):** grid-api gained a session-cookie-authed endpoint
+> and now adopts a credentialed-CORS posture too — see **ADR-0077**. Grid
+> mirrors the allowlist + `allowCredentials = true` shape established here,
+> but uses an *explicit* `allowHeader(...)` list rather than this ADR's
+> wildcard predicate (a deliberate narrowing; both are spec-legal).
