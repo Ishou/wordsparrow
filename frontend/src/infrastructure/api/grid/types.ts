@@ -711,7 +711,7 @@ export interface components {
              *     serverKey, normalize(answer)))` (ADR-0076). Deterministic and
              *     stateless; reveals nothing about the answer. The client submits
              *     it with a guess to `verifySampleWord`.
-             * @example 9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a
+             * @example n_in5p3l8-jPGUDFQ43RZzA2NPdxJgXFu5TanwZX4rI
              */
             token: string;
             /**
@@ -1071,7 +1071,7 @@ export interface operations {
                     /**
                      * @description The opaque verify handle from a `SampleWord.token`. An
                      *     empty or oversized token is rejected with a 400.
-                     * @example 9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a
+                     * @example n_in5p3l8-jPGUDFQ43RZzA2NPdxJgXFu5TanwZX4rI
                      */
                     token: string;
                     /**
