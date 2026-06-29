@@ -77,5 +77,33 @@ class HandleUserDeletedTest {
             assertThat(outcome).isEqualTo(HandleUserDeletedOutcome.Cancelled)
             assertThat(provider.cancelCalls).isEqualTo(listOf("sub_1"))
             assertThat(repository.findByUserId(userId)).isNull()
+            assertThat(publisher.events).hasSize(1)
+            assertThat(publisher.events.single().status).isEqualTo(SubscriptionStatus.CANCELED)
+        }
+
+    @Test
+    fun `skips provider cancel and erases a canceled subscription`() =
+        runTest {
+            repository.save(subscription(userId = userId, externalRef = "sub_1", status = SubscriptionStatus.CANCELED))
+
+            val outcome = useCase.execute(userId)
+
+            assertThat(outcome).isEqualTo(HandleUserDeletedOutcome.Cancelled)
+            assertThat(provider.cancelCalls).hasSize(0)
+            assertThat(repository.findByUserId(userId)).isNull()
+            assertThat(publisher.events).hasSize(0)
+        }
+
+    @Test
+    fun `skips provider cancel and erases an expired subscription`() =
+        runTest {
+            repository.save(subscription(userId = userId, externalRef = "sub_1", status = SubscriptionStatus.EXPIRED))
+
+            val outcome = useCase.execute(userId)
+
+            assertThat(outcome).isEqualTo(HandleUserDeletedOutcome.Cancelled)
+            assertThat(provider.cancelCalls).hasSize(0)
+            assertThat(repository.findByUserId(userId)).isNull()
+            assertThat(publisher.events).hasSize(0)
         }
 }

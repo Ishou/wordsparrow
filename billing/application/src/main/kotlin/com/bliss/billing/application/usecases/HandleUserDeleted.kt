@@ -34,6 +34,11 @@ class HandleUserDeleted(
     suspend fun execute(userId: UUID): HandleUserDeletedOutcome {
         val subscription = repository.findByUserId(userId) ?: return HandleUserDeletedOutcome.NoSubscription
 
+        if (subscription.status in setOf(SubscriptionStatus.CANCELED, SubscriptionStatus.EXPIRED)) {
+            repository.delete(userId)
+            return HandleUserDeletedOutcome.Cancelled
+        }
+
         val pending =
             if (subscription.status == SubscriptionStatus.PENDING_CANCELLATION) {
                 subscription
