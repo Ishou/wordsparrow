@@ -64,8 +64,14 @@ export interface PersistedFilledCell {
 // and clobbering locks earned via `onCellFilled` since the last render.
 const NO_INITIAL_FILL: ReadonlyArray<PersistedFilledCell> = [];
 
+// Only surface the "checking…" cue once a validate request has been slow this
+// long, so the common fast case never flashes it.
+const VALIDATING_DELAY_MS = 200;
+
 export interface WordAutoValidationState {
   readonly validated: ReadonlySet<string>;
+  // Cells of a completed word whose validate request is slow to respond — drives the discreet pulse.
+  readonly validating: ReadonlySet<string>;
   readonly onCellFilled: (position: Position, direction: 'across' | 'down') => void;
 }
 
@@ -182,6 +188,37 @@ export function useWordAutoValidation(
   // for the same word while one is on the wire.
   const inFlightRef = useRef(new Set<string>());
 
+  // Cells of slow-to-validate words; armed behind VALIDATING_DELAY_MS so fast
+  // checks never flash the pulse. Per-word timers let each word arm/clear on its own.
+  const [validating, setValidating] = useState<ReadonlySet<string>>(() => new Set());
+  const validateTimersRef = useRef(new Map<string, number>());
+  const addValidating = useCallback((keys: ReadonlyArray<string>) => {
+    setValidating((prev) => {
+      const next = new Set(prev);
+      for (const k of keys) next.add(k);
+      return next;
+    });
+  }, []);
+  const clearValidatingWord = useCallback((word: ReadonlyArray<Position>) => {
+    const wk = wordKey(word);
+    const timer = validateTimersRef.current.get(wk);
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      validateTimersRef.current.delete(wk);
+    }
+    const keys = word.map((p) => positionKey(p.row, p.col));
+    setValidating((prev) => {
+      if (!keys.some((k) => prev.has(k))) return prev;
+      const next = new Set(prev);
+      for (const k of keys) next.delete(k);
+      return next;
+    });
+  }, []);
+  useEffect(() => () => {
+    for (const t of validateTimersRef.current.values()) window.clearTimeout(t);
+    validateTimersRef.current.clear();
+  }, []);
+
   const onCellFilled = useCallback(
     (position: Position, direction: 'across' | 'down') => {
       // Both directions matter: typing the last letter of an across
@@ -248,7 +285,16 @@ export function useWordAutoValidation(
       }
 
       for (const word of fullyFilled) {
-        inFlightRef.current.add(wordKey(word));
+        const wk = wordKey(word);
+        inFlightRef.current.add(wk);
+        const keys = word.map((p) => positionKey(p.row, p.col));
+        validateTimersRef.current.set(
+          wk,
+          window.setTimeout(() => {
+            validateTimersRef.current.delete(wk);
+            addValidating(keys);
+          }, VALIDATING_DELAY_MS),
+        );
       }
       // Snapshot the letters as submitted; the .then() uses these to
       // re-pin DOM <input>s of newly-validated cells before the lock
@@ -298,11 +344,12 @@ export function useWordAutoValidation(
         .finally(() => {
           for (const word of fullyFilled) {
             inFlightRef.current.delete(wordKey(word));
+            clearValidatingWord(word);
           }
         });
     },
-    [puzzle, solver, validated],
+    [puzzle, solver, validated, addValidating, clearValidatingWord],
   );
 
-  return { validated, onCellFilled };
+  return { validated, validating, onCellFilled };
 }

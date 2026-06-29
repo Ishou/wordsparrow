@@ -26,6 +26,8 @@ const spacer = css({ borderRadius: '9px' });
 const cellWrap = css({ position: 'relative', cursor: 'pointer' });
 // Sakura halo bloomed around a freshly-solved word's cells during the solve beat.
 const cellGlow = css({ borderRadius: '13px', zIndex: 1, animation: 'wsSolveGlow 0.45s ease-out both' });
+// Discreet "checking with the server" ring on a completed word awaiting its verdict; outline (not box-shadow) so it never clobbers the cell's state ring.
+const cellValidating = css({ borderRadius: '9px', outline: '2px solid', outlineOffset: '-2px', animation: 'wsValidating 1.1s ease-in-out infinite' });
 // Quick rotational wobble on a completed-but-wrong word's cells ("not quite").
 const cellShake = css({ zIndex: 1, animation: 'wsShake 0.4s ease-in-out both' });
 const letterInput = css({
@@ -59,6 +61,7 @@ function LetterSlot({
   col,
   entry,
   validated,
+  validating,
   touchPrimary,
   highlight,
   nav,
@@ -71,6 +74,8 @@ function LetterSlot({
   readonly col: number;
   readonly entry: string;
   readonly validated: boolean;
+  // A completed word whose server validation is slow to respond — discreet jade ring until the verdict lands (gated upstream).
+  readonly validating?: boolean;
   // On touch the cell is read-only so no editing caret/selection appears; letters arrive from the on-screen keyboard.
   readonly touchPrimary: boolean;
   readonly highlight: CellHighlight;
@@ -93,10 +98,11 @@ function LetterSlot({
   return (
     // mousedown-preventDefault keeps pan-start on a cell from stealing focus.
     <div
-      className={cx(cellWrap, celebrateDelay !== undefined && cellGlow, rejectShake && cellShake)}
+      className={cx(cellWrap, celebrateDelay !== undefined && cellGlow, rejectShake && cellShake, validating && !validated && cellValidating)}
       style={celebrateDelay !== undefined ? { animationDelay: `${celebrateDelay}ms` } : undefined}
       data-row={row}
       data-col={col}
+      data-validating={validating && !validated ? 'true' : undefined}
       onClick={nav.handleClick}
       onMouseDown={(e) => e.preventDefault()}
     >
@@ -137,6 +143,11 @@ export interface PuzzleBoardProps {
   readonly nav: GridNavigation;
   // Solved/locked cells, keyed `row,col`. A new key in this set fires the solve beat.
   readonly validatedPositions: ReadonlySet<string>;
+  // "row,col" keys of a completed word whose server validation is in flight
+  // (delay-gated upstream). Renders the discreet jade pulse until the verdict
+  // lands — solo derives it from the auto-validation hook, coop from locally
+  // completed words not yet server-locked.
+  readonly validatingPositions?: ReadonlySet<string>;
   // Seed letters for the uncontrolled inputs, keyed `row,col`.
   readonly entryAt: ReadonlyMap<string, string>;
   // Definition cells whose every clue word is fully solved → lit "done" surface (solo only).
@@ -166,6 +177,7 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
     puzzle,
     nav,
     validatedPositions,
+    validatingPositions,
     entryAt,
     solvedDefCells,
     rejectingPositions,
@@ -318,6 +330,7 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
                   col={col}
                   entry={entryAt.get(k) ?? ''}
                   validated={validatedPositions.has(k)}
+                  validating={validatingPositions?.has(k) ?? false}
                   touchPrimary={touchPrimary}
                   highlight={nav.highlightFor({ row, col })}
                   nav={nav}

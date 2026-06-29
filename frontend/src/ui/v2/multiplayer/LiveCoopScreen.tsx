@@ -15,6 +15,7 @@ import { useAdvanceOnValidation } from '@/ui/components/grid/useAdvanceOnValidat
 import { Keyboard } from '@/ui/play/Keyboard';
 import { usePresenceState } from '@/ui/components/grid/usePresenceState';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
+import { useCoopValidating } from './useCoopValidating';
 import { CoopPresenceLayer } from './CoopPresenceLayer';
 import { LiveTimer } from './LiveTimer';
 import { PlayerStrip } from './PlayerStrip';
@@ -159,8 +160,18 @@ export function LiveCoopScreen({
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
 
+  // Discreet "checking…" pulse on a word the local player just completed, until the server locks it (or a safety window passes).
+  const { validating, noteLocalFill } = useCoopValidating(puzzle, validatedPositions);
+  const handleLocalCellChange = useCallback(
+    (row: number, col: number, letter: string | null) => {
+      onCellChange(row, col, letter);
+      if (letter) noteLocalFill(row, col);
+    },
+    [onCellChange, noteLocalFill],
+  );
+
   const nav = useGridNavigation(puzzle, {
-    onCellChange: isCompleted ? undefined : onCellChange,
+    onCellChange: isCompleted ? undefined : handleLocalCellChange,
     onFocusChange: isCompleted
       ? undefined
       : (position, direction) => {
@@ -274,6 +285,7 @@ export function LiveCoopScreen({
         puzzle={puzzle}
         nav={nav}
         validatedPositions={validatedPositions}
+        validatingPositions={validating}
         entryAt={entryAt}
         className={viewportFill}
         padTop={isDesktop ? 12 : 104}

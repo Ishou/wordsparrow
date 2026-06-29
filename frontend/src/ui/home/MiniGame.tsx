@@ -22,7 +22,7 @@ const box = css({ position: 'relative', width: '42px', fontSize: '13px' });
 const defBox = css({ position: 'relative', width: '63px', fontSize: '19.5px' });
 const glow = css({ borderRadius: '9px', zIndex: 1, animation: 'wsSolveGlow 0.5s ease-out both' });
 const shake = css({ animation: 'wsShake 0.4s ease-in-out both' });
-const validatingPulse = css({ borderRadius: '9px', animation: 'wsValidating 1.1s ease-in-out infinite' });
+const validatingPulse = css({ borderRadius: '9px', outline: '2px solid', outlineOffset: '-2px', animation: 'wsValidating 1.1s ease-in-out infinite' });
 const input = css({
   position: 'absolute',
   inset: 0,

@@ -75,6 +75,31 @@ describe('useWordAutoValidation', () => {
     expect(solver.validate).toHaveBeenCalledTimes(1);
   });
 
+  it('marks the word as validating while a slow check is pending, then clears it', async () => {
+    mountInput(0, 1, 'D');
+    mountInput(0, 2, 'E');
+    mountInput(0, 3, 'M');
+    mountInput(0, 4, 'O');
+    let resolveValidate: (r: ValidationResult) => void = () => {};
+    const solver: PuzzleSolver = {
+      validate: vi.fn().mockImplementation(() => new Promise<ValidationResult>((r) => { resolveValidate = r; })),
+      requestHint: vi.fn().mockRejectedValue(new Error('not used here')),
+    };
+    const { result } = renderHook(() => useWordAutoValidation(puzzle, solver));
+
+    act(() => {
+      result.current.onCellFilled({ row: 0, col: 4 }, 'across');
+    });
+    // Pulse arms behind the short delay and marks every cell of the word.
+    await waitFor(() => expect(result.current.validating.has('0,1')).toBe(true));
+    expect(result.current.validating.size).toBe(4);
+
+    await act(async () => {
+      resolveValidate({ solved: false, incorrectCells: [] });
+    });
+    await waitFor(() => expect(result.current.validating.size).toBe(0));
+  });
+
   it('does not lock when the server flags any cell of the word as incorrect', async () => {
     mountInput(0, 1, 'D');
     mountInput(0, 2, 'E');

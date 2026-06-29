@@ -488,6 +488,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         puzzle={puzzle}
         nav={nav}
         validatedPositions={validatedPositions}
+        validatingPositions={autoValidation.validating}
         entryAt={entryAt}
         solvedDefCells={solvedDefCells}
         rejectingPositions={rejecting}

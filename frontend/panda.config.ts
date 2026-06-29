@@ -307,10 +307,11 @@ export default defineConfig({
       },
       // Discreet "checking with the server" breathing ring on a completed word
       // whose validation is slow to respond — jade, low-contrast, distinct from
-      // the sakura solve-glow and the wrong-answer shake.
+      // the sakura solve-glow and the wrong-answer shake. Animates `outline`
+      // (not box-shadow) so it never clobbers a cell's focus/validated ring.
       wsValidating: {
-        '0%, 100%': { boxShadow: '0 0 0 0 rgba(79,110,92,0)' },
-        '50%': { boxShadow: '0 0 0 2px rgba(79,110,92,0.4)' },
+        '0%, 100%': { outlineColor: 'rgba(79,110,92,0.06)' },
+        '50%': { outlineColor: 'rgba(79,110,92,0.5)' },
       },
       // Head-shake on a completed-but-wrong word.
       wsShake: {
