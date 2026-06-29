@@ -71,3 +71,14 @@ jobs:
           file_glob: identity/api/openapi.yaml
           spectral_ruleset: .spectral.yaml
           fail_severity: warn
+
+      - name: Lint billing/api/openapi.yaml
+        # Same Spectral pin / posture as the steps above. Subscription billing
+        # REST surface (ADR-0078). The event contract at billing/api/asyncapi.yaml
+        # uses the AsyncAPI ruleset and is intentionally not linted here yet
+        # (same posture as game/api/asyncapi.yaml; no `asyncapi-lint` workflow in v1).
+        uses: stoplightio/spectral-action@6416fd018ae38e60136775066eb3e98172143141 # v0.8.13
+        with:
+          file_glob: billing/api/openapi.yaml
+          spectral_ruleset: .spectral.yaml
+          fail_severity: warn
