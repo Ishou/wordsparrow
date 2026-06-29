@@ -1,0 +1,72 @@
+package com.bliss.billing.api
+
+import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.isEqualTo
+import com.bliss.billing.api.config.BillingApiConfig
+import io.ktor.client.request.headers
+import io.ktor.client.request.options
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.testing.testApplication
+import org.junit.jupiter.api.Test
+
+class CorsTest {
+    private val testConfig =
+        BillingApiConfig(
+            port = 0,
+            identityBaseUrl = "https://auth.example",
+            allowedOrigins = listOf("https://wordsparrow.io"),
+            natsUrl = "nats://localhost:4222",
+        )
+
+    @Test
+    fun `preflight from wordsparrow_io returns credentials-allowed CORS headers`() =
+        testApplication {
+            application { installBillingCors(testConfig) }
+            val response =
+                client.options("/v1/entitlement") {
+                    headers {
+                        append(HttpHeaders.Origin, "https://wordsparrow.io")
+                        append(HttpHeaders.AccessControlRequestMethod, "GET")
+                    }
+                }
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.headers[HttpHeaders.AccessControlAllowOrigin] ?: "").isEqualTo("https://wordsparrow.io")
+            assertThat(response.headers[HttpHeaders.AccessControlAllowCredentials] ?: "").isEqualTo("true")
+        }
+
+    @Test
+    fun `preflight from disallowed origin omits CORS headers`() =
+        testApplication {
+            application { installBillingCors(testConfig) }
+            val response =
+                client.options("/v1/entitlement") {
+                    headers {
+                        append(HttpHeaders.Origin, "https://evil.example")
+                        append(HttpHeaders.AccessControlRequestMethod, "GET")
+                    }
+                }
+            assertThat(response.status).isEqualTo(HttpStatusCode.Forbidden)
+            assertThat(response.headers[HttpHeaders.AccessControlAllowOrigin]).isEqualTo(null)
+        }
+
+    @Test
+    fun `preflight allows arbitrary frontend headers via predicate wildcard`() =
+        testApplication {
+            application { installBillingCors(testConfig) }
+            val response =
+                client.options("/v1/entitlement") {
+                    headers {
+                        append(HttpHeaders.Origin, "https://wordsparrow.io")
+                        append(HttpHeaders.AccessControlRequestMethod, "GET")
+                        append(HttpHeaders.AccessControlRequestHeaders, "x-request-id,traceparent,tracestate")
+                    }
+                }
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val allowed = response.headers[HttpHeaders.AccessControlAllowHeaders] ?: ""
+            assertThat(allowed).contains("x-request-id")
+            assertThat(allowed).contains("traceparent")
+            assertThat(allowed).contains("tracestate")
+        }
+}
