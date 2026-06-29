@@ -80,7 +80,7 @@ const dismissButton = css({
 });
 
 export function UpdatePrompt() {
-  const [apply, setApply] = useState<ApplyUpdate | null>(pendingApply);
+  const [apply, setApply] = useState<ApplyUpdate | null>(() => pendingApply);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {

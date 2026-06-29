@@ -176,9 +176,7 @@ export default defineConfig({
     // grid API so the last-loaded puzzle stays playable offline. The
     // existing `manifest.webmanifest` is the source of truth — we set
     // `manifest: false` so the plugin does not generate a competing one.
-    // `registerType: 'prompt'` + `skipWaiting: false` keeps a freshly
-    // precached SW waiting; the `pwa.ts` adapter surfaces a dismissible
-    // "update available" prompt and only activates on user accept (ADR-0026).
+    // prompt mode + skipWaiting false: new SW waits for user accept via UpdatePrompt. See ADR-0026.
     VitePWA({
       registerType: 'prompt',
       injectRegister: false,
