@@ -15,6 +15,7 @@ import { SparrowState } from '@/ui/v2/SparrowState';
 import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { AnnouncerProvider } from '@/ui/components/a11y/Announcer';
 import { Toast, ToastProvider } from '@/ui/components/primitives';
+import { UpdatePrompt } from '@/ui/v2/UpdatePrompt';
 
 // Router context surface — every route loader receives this object as
 // `ctx.context`. The composition root (`main.tsx`) is the only place
@@ -125,6 +126,7 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
         <ToastProvider>
           <Outlet />
           <Toast />
+          <UpdatePrompt />
         </ToastProvider>
       </AnnouncerProvider>
     </>

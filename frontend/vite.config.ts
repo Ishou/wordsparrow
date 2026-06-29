@@ -176,11 +176,9 @@ export default defineConfig({
     // grid API so the last-loaded puzzle stays playable offline. The
     // existing `manifest.webmanifest` is the source of truth — we set
     // `manifest: false` so the plugin does not generate a competing one.
-    // `registerType: 'autoUpdate'` flips active SWs as soon as a new
-    // version is precached; the `pwa.ts` adapter wraps registration so
-    // the rest of the app stays unaware.
+    // prompt mode + skipWaiting false: new SW waits for user accept via UpdatePrompt. See ADR-0026.
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: false,
       filename: 'sw.js',
       manifest: false,
@@ -202,8 +200,8 @@ export default defineConfig({
           ...PRERENDER_NAV_DENYLIST,
         ],
         cleanupOutdatedCaches: true,
-        // skipWaiting+clientsClaim: see ADR-0026 for reload-on-update UX
-        skipWaiting: true,
+        // skipWaiting false → new SW waits for user accept; see ADR-0026 update-prompt UX
+        skipWaiting: false,
         clientsClaim: true,
         runtimeCaching: [
           {

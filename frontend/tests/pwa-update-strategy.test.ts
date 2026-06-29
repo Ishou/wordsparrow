@@ -2,9 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Capture handlers and the constructor options the SUT passes to Workbox.
 const controllingHandlers: Array<() => void> = [];
+const waitingHandlers: Array<() => void> = [];
 const constructorCalls: Array<{ scriptUrl: string; options?: unknown }> = [];
-const wbRegister = vi.fn(() => Promise.resolve());
+let registerResult: { waiting?: unknown } | undefined = {};
+const wbRegister = vi.fn(() => Promise.resolve(registerResult));
 const wbUpdate = vi.fn(() => Promise.resolve());
+const wbMessageSkipWaiting = vi.fn();
 
 // Vitest 4 narrowed `vi.fn().mockImplementation(arrow)` so the resulting
 // mock is no longer constructable (`new MockedFn(...)` throws "is not a
@@ -16,9 +19,11 @@ vi.mock('workbox-window', () => ({
     constructorCalls.push({ scriptUrl, options });
     this.addEventListener = (type: string, fn: () => void) => {
       if (type === 'controlling') controllingHandlers.push(fn);
+      if (type === 'waiting') waitingHandlers.push(fn);
     };
     this.register = wbRegister;
     this.update = wbUpdate;
+    this.messageSkipWaiting = wbMessageSkipWaiting;
   }),
 }));
 
@@ -27,12 +32,8 @@ import { registerServiceWorker } from '@/infrastructure/pwa';
 const fireControlling = () => {
   for (const fn of controllingHandlers) fn();
 };
-
-const setVisibility = (state: 'visible' | 'hidden') => {
-  Object.defineProperty(document, 'visibilityState', {
-    configurable: true,
-    get: () => state,
-  });
+const fireWaiting = () => {
+  for (const fn of waitingHandlers) fn();
 };
 
 describe('registerServiceWorker — update strategy', () => {
@@ -44,9 +45,12 @@ describe('registerServiceWorker — update strategy', () => {
 
   beforeEach(() => {
     controllingHandlers.length = 0;
+    waitingHandlers.length = 0;
     constructorCalls.length = 0;
+    registerResult = {};
     wbRegister.mockClear();
     wbUpdate.mockClear();
+    wbMessageSkipWaiting.mockClear();
     sessionStorage.clear();
 
     addedListeners.length = 0;
@@ -71,8 +75,6 @@ describe('registerServiceWorker — update strategy', () => {
       configurable: true,
       value: {},
     });
-
-    setVisibility('visible');
 
     // Production-like env so the early-returns don't short-circuit
     // registration.
@@ -104,54 +106,69 @@ describe('registerServiceWorker — update strategy', () => {
     expect(constructorCalls[0]!.options).toMatchObject({ updateViaCache: 'none' });
   });
 
-  it('reloads immediately when controlling fires while the tab is visible', () => {
-    registerServiceWorker();
+  it('fires the update-available callback when a new SW starts waiting', () => {
+    const onUpdate = vi.fn();
+    registerServiceWorker(onUpdate);
 
-    fireControlling();
+    fireWaiting();
 
-    expect(reloadMock).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it('reloads a visible tab immediately even long after load (no time window)', () => {
-    registerServiceWorker();
+  it('prompts only once even if waiting fires repeatedly', () => {
+    const onUpdate = vi.fn();
+    registerServiceWorker(onUpdate);
 
-    vi.advanceTimersByTime(5000);
-    fireControlling();
-    expect(reloadMock).toHaveBeenCalledTimes(1);
+    fireWaiting();
+    fireWaiting();
+
+    expect(onUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it('defers the reload while the tab is hidden until it is next shown', () => {
-    setVisibility('hidden');
-    registerServiceWorker();
+  it('prompts for a SW that was already waiting at register time', async () => {
+    registerResult = { waiting: {} };
+    const onUpdate = vi.fn();
+    registerServiceWorker(onUpdate);
 
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT reload when controlling fires before the user accepts', () => {
+    registerServiceWorker(vi.fn());
+
+    fireWaiting();
     fireControlling();
+
+    expect(wbMessageSkipWaiting).not.toHaveBeenCalled();
+    expect(reloadMock).not.toHaveBeenCalled();
+  });
+
+  it('activates the waiting SW and reloads once after the user accepts', () => {
+    let apply: (() => void) | undefined;
+    registerServiceWorker((a) => { apply = a; });
+
+    fireWaiting();
+    expect(apply).toBeTypeOf('function');
+    apply!();
+
+    expect(wbMessageSkipWaiting).toHaveBeenCalledTimes(1);
     expect(reloadMock).not.toHaveBeenCalled();
 
-    setVisibility('visible');
-    document.dispatchEvent(new Event('visibilitychange'));
+    fireControlling();
     expect(reloadMock).toHaveBeenCalledTimes(1);
   });
 
-  it('does not reload twice when controlling fires repeatedly', () => {
-    registerServiceWorker();
+  it('does not reload twice when controlling fires repeatedly after accept', () => {
+    let apply: (() => void) | undefined;
+    registerServiceWorker((a) => { apply = a; });
 
+    fireWaiting();
+    apply!();
     fireControlling();
     fireControlling();
-    fireControlling();
-
-    expect(reloadMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('arms only one deferred-reload listener even if controlling fires multiple times while hidden', () => {
-    setVisibility('hidden');
-    registerServiceWorker();
-
-    fireControlling();
-    fireControlling();
-
-    setVisibility('visible');
-    document.dispatchEvent(new Event('visibilitychange'));
-    document.dispatchEvent(new Event('visibilitychange'));
 
     expect(reloadMock).toHaveBeenCalledTimes(1);
   });
