@@ -178,14 +178,17 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     return m;
   }, [initialEntries]);
 
-  // Hint-revealed cells: locked + correct; `loaded` gates auto-focus until they're restored.
-  const [lockedHintCells, setLockedHintCells] = useState<ReadonlySet<string>>(() => new Set());
-  const [lockedLoaded, setLockedLoaded] = useState(false);
+  // Locked cells (hint-revealed + auto-validated words) seed synchronously from the store so validated cells never paint unvalidated first.
+  const loadLocked = useCallback(
+    (id: string) => new Set(soloEntriesStore.loadLockedCells(id).map((c) => posKey(c.row, c.column))),
+    [soloEntriesStore],
+  );
+  const [lockedHintCells, setLockedHintCells] = useState<ReadonlySet<string>>(() => loadLocked(puzzle.id));
+  const [lockedLoaded, setLockedLoaded] = useState(true);
   useEffect(() => {
-    const persisted = soloEntriesStore.loadLockedCells(puzzle.id);
-    setLockedHintCells(new Set(persisted.map((c) => posKey(c.row, c.column))));
+    setLockedHintCells(loadLocked(puzzle.id));
     setLockedLoaded(true);
-  }, [puzzle.id, soloEntriesStore]);
+  }, [puzzle.id, loadLocked]);
 
   // Gate the flatten ripple: only cells validated after a real interaction animate.
   const userActedRef = useRef(false);
