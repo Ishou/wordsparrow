@@ -1,10 +1,10 @@
-import { type ReactNode } from 'react';
-import { Link, type LinkProps } from '@tanstack/react-router';
-import { Lock, FileText, Envelope, CaretRight, Question, User, type Icon } from '@phosphor-icons/react';
+import { Link } from '@tanstack/react-router';
+import { Lock, FileText, Envelope, CaretRight, Question, User } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { useAuth } from '@/ui/components/auth';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
+import { SettingsRow } from './SettingsRow';
 
 const title = css({
   fontFamily: 'wsDisplay',
@@ -64,65 +64,9 @@ const listCard = css({
   boxShadow: '0 1px 2px rgba(33,75,64,0.05)',
 });
 
-const rowBase = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  width: '100%',
-  minHeight: '48px',
-  padding: '12px 14px',
-  textAlign: 'left' as const,
-  fontFamily: 'wsUi',
-  border: 'none',
-  borderBottom: '1px solid #EEF3EC',
-  background: 'transparent',
-};
-const rowActive = css({ ...rowBase, textDecoration: 'none', cursor: 'pointer', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' } });
-const lastFlat = css({ borderBottom: 'none' });
-
-const tile = css({ flex: 'none', width: '30px', height: '30px', borderRadius: '9px', bg: 'ws.jade', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'ws.jadeInk' });
-const tileSoft = css({ bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
-
-const label = css({ fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk' });
 const chevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
 
 const foot = css({ fontFamily: 'wsMono', fontSize: '11px', color: 'ws.khaki', opacity: 0.85, textAlign: 'center', paddingTop: '10px' });
-
-function Tile({ icon: I, soft }: { readonly icon: Icon; readonly soft?: boolean }) {
-  return (
-    <span className={soft ? cx(tile, tileSoft) : tile}>
-      <I size={16} weight="bold" aria-hidden="true" />
-    </span>
-  );
-}
-
-function LinkRow({ icon, soft, to, last, children }: { readonly icon: Icon; readonly soft?: boolean; readonly to: LinkProps['to']; readonly last?: boolean; readonly children: ReactNode }) {
-  return (
-    <li>
-      <Link to={to} className={last ? cx(rowActive, lastFlat) : rowActive}>
-        <Tile icon={icon} soft={soft} />
-        <span className={label}>{children}</span>
-        <span className={chevron}>
-          <CaretRight size={16} weight="bold" aria-hidden="true" />
-        </span>
-      </Link>
-    </li>
-  );
-}
-
-function MailRow({ icon, href, last, children }: { readonly icon: Icon; readonly href: string; readonly last?: boolean; readonly children: ReactNode }) {
-  return (
-    <li>
-      <a href={href} className={last ? cx(rowActive, lastFlat) : rowActive}>
-        <Tile icon={icon} />
-        <span className={label}>{children}</span>
-        <span className={chevron}>
-          <CaretRight size={16} weight="bold" aria-hidden="true" />
-        </span>
-      </a>
-    </li>
-  );
-}
 
 function initialFor(displayName: string): string {
   return ([...displayName][0] ?? '?').toLocaleUpperCase('fr-FR');
@@ -174,16 +118,16 @@ export function ReglagesScreen() {
         <nav aria-label="Confidentialité &amp; légal">
           <div className={groupLabel}>Confidentialité &amp; légal</div>
           <ul className={listCard}>
-            <LinkRow icon={Lock} soft to="/confidentialite">Confidentialité</LinkRow>
-            <LinkRow icon={FileText} soft to="/mentions-legales" last>Mentions légales</LinkRow>
+            <SettingsRow icon={Lock} tone="soft" to="/confidentialite" label="Confidentialité" />
+            <SettingsRow icon={FileText} tone="soft" to="/mentions-legales" label="Mentions légales" last />
           </ul>
         </nav>
 
         <nav aria-label="Aide">
           <div className={groupLabel}>Aide</div>
           <ul className={listCard}>
-            <LinkRow icon={Question} soft to="/aide">Aide &amp; raccourcis</LinkRow>
-            <MailRow icon={Envelope} href="mailto:contact@wordsparrow.io" last>Nous écrire</MailRow>
+            <SettingsRow icon={Question} tone="soft" to="/aide" label="Aide & raccourcis" />
+            <SettingsRow icon={Envelope} href="mailto:contact@wordsparrow.io" label="Nous écrire" last />
           </ul>
         </nav>
 
