@@ -16,8 +16,7 @@ interface PendingWord {
 
 export interface CoopValidatingState {
   readonly validating: ReadonlySet<string>;
-  // Call after the local player writes a letter; checks whether that cell just
-  // completed a word and, if so, arms the pulse for it.
+  // Arms the pulse when the filled cell completes a word.
   readonly noteLocalFill: (row: number, col: number) => void;
 }
 

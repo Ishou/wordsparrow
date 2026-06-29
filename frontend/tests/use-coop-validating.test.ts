@@ -3,8 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useCoopValidating } from '@/ui/v2/multiplayer/useCoopValidating';
 import type { Puzzle } from '@/domain';
 
-// 4-letter across word at (0,1)..(0,4); the hook reads cell values via
-// `document.querySelector`, same DOM contract as the solo auto-validation hook.
+// Hook reads cell values via document.querySelector; inputs must be in the DOM.
 const puzzle: Puzzle = {
   id: 'coop-validate-puzzle',
   title: 't',
