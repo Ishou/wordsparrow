@@ -15,6 +15,7 @@ import com.bliss.identity.application.usecases.WhoAmIUseCase
 import com.bliss.identity.domain.session.Session
 import com.bliss.identity.domain.session.SessionId
 import com.bliss.identity.domain.user.DisplayName
+import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
 import com.bliss.identity.infrastructure.persistence.InMemorySessionRepository
@@ -36,11 +37,11 @@ class WhoAmIRouteTest {
     private val userId = UserId(UUID.randomUUID())
     private val sessionId = SessionId(UUID.randomUUID())
 
-    private fun newWiring(): Wiring {
+    private fun newWiring(role: Role = Role.PLAYER): Wiring {
         val users = InMemoryUserRepository()
         val sessions = InMemorySessionRepository()
         runBlocking {
-            users.create(User(userId, DisplayName.of("Alice"), now, now))
+            users.create(User(userId, DisplayName.of("Alice"), now, now, role))
             sessions.create(Session(sessionId, userId, now, now, null))
         }
         val whoAmI = WhoAmIUseCase(users, sessions, FixedClock(now), Duration.ofDays(7))
@@ -90,9 +91,9 @@ class WhoAmIRouteTest {
         }
 
     @Test
-    fun `valid session returns 200 with userId and displayName`() =
+    fun `valid session returns 200 with userId displayName and player role`() =
         testApplication {
-            application { module(newWiring(), testConfig) }
+            application { module(newWiring(Role.PLAYER), testConfig) }
             val response =
                 client.get("/v1/auth/whoami") {
                     cookie(SessionCookies.NAME, sessionId.value.toString())
@@ -101,5 +102,18 @@ class WhoAmIRouteTest {
             val body = response.bodyAsText()
             assertThat(body).contains("\"userId\":\"${userId.value}\"")
             assertThat(body).contains("\"displayName\":\"Alice\"")
+            assertThat(body).contains("\"role\":\"player\"")
+        }
+
+    @Test
+    fun `valid session for a maintainer returns 200 with maintainer role`() =
+        testApplication {
+            application { module(newWiring(Role.MAINTAINER), testConfig) }
+            val response =
+                client.get("/v1/auth/whoami") {
+                    cookie(SessionCookies.NAME, sessionId.value.toString())
+                }
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.bodyAsText()).contains("\"role\":\"maintainer\"")
         }
 }

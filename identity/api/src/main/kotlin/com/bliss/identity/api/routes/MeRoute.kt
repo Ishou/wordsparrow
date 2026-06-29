@@ -130,6 +130,7 @@ private fun GetMeResult.toMeResponse(): MeResponse =
         id = userId.value.toString(),
         displayName = displayName.value,
         createdAt = createdAt.toString(),
+        role = role.wire,
         providers =
             linkedProviders.map { lp ->
                 LinkedProviderDto(

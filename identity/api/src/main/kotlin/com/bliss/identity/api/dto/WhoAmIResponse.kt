@@ -6,4 +6,5 @@ import kotlinx.serialization.Serializable
 data class WhoAmIResponse(
     val userId: String,
     val displayName: String,
+    val role: String,
 )

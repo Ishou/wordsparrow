@@ -4,6 +4,7 @@ import com.bliss.identity.application.ports.UserProviderRepository
 import com.bliss.identity.application.ports.UserRepository
 import com.bliss.identity.domain.provider.Provider
 import com.bliss.identity.domain.user.DisplayName
+import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
 import java.time.Instant
@@ -23,6 +24,7 @@ data class GetMeResult(
     val displayName: DisplayName,
     val createdAt: Instant,
     val lastSeenAt: Instant,
+    val role: Role,
     val linkedProviders: List<LinkedProviderView>,
 )
 
@@ -55,6 +57,7 @@ class GetMeUseCase(
             displayName = displayName,
             createdAt = createdAt,
             lastSeenAt = lastSeenAt,
+            role = role,
             linkedProviders = linkedProviders,
         )
 }

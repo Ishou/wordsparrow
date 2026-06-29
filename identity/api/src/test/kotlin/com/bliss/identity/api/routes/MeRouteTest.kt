@@ -18,6 +18,7 @@ import com.bliss.identity.domain.provider.UserProvider
 import com.bliss.identity.domain.session.Session
 import com.bliss.identity.domain.session.SessionId
 import com.bliss.identity.domain.user.DisplayName
+import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
 import com.bliss.identity.infrastructure.persistence.InMemorySessionRepository
@@ -50,12 +51,15 @@ class MeRouteTest {
             allowedReturnOrigins = listOf("https://wordsparrow.example"),
         )
 
-    private fun newWiring(linkGoogle: Boolean = false): Wiring {
+    private fun newWiring(
+        linkGoogle: Boolean = false,
+        role: Role = Role.PLAYER,
+    ): Wiring {
         val users = InMemoryUserRepository()
         val sessions = InMemorySessionRepository()
         val userProviders = InMemoryUserProviderRepository()
         runBlocking {
-            users.create(User(userId, DisplayName.of("Alice"), now, now))
+            users.create(User(userId, DisplayName.of("Alice"), now, now, role))
             sessions.create(Session(sessionId, userId, now, now, null))
             if (linkGoogle) {
                 userProviders.link(
@@ -97,6 +101,19 @@ class MeRouteTest {
             assertThat(body).contains("\"displayName\":\"Alice\"")
             assertThat(body).contains("\"createdAt\":\"$now\"")
             assertThat(body).contains("\"providers\":[]")
+            assertThat(body).contains("\"role\":\"player\"")
+        }
+
+    @Test
+    fun `valid session for a maintainer returns 200 with maintainer role`() =
+        testApplication {
+            application { module(newWiring(role = Role.MAINTAINER), testConfig) }
+            val response =
+                client.get("/v1/users/me") {
+                    cookie(SessionCookies.NAME, sessionId.value.toString())
+                }
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.bodyAsText()).contains("\"role\":\"maintainer\"")
         }
 
     @Test
