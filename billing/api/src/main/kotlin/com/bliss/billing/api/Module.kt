@@ -64,6 +64,7 @@ fun Application.billingApiModule(
 
     monitor.subscribe(ApplicationStopped) {
         wiring.closeNats()
+        wiring.closeIdentityClient()
     }
 
     routing {

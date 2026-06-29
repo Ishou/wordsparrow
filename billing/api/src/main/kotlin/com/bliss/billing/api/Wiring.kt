@@ -16,4 +16,5 @@ class Wiring(
     val ingestProviderEvent: IngestProviderEvent,
     val entitlementQuery: EntitlementQuery,
     val closeNats: () -> Unit = {},
+    val closeIdentityClient: () -> Unit = {},
 )

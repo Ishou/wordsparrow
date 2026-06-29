@@ -52,6 +52,7 @@ fun main() {
             ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds),
             entitlementQuery = EntitlementQuery(subscriptions),
             closeNats = { natsConn.close() },
+            closeIdentityClient = { identityClient.close() },
         )
 
     embeddedServer(CIO, port = config.port, host = "0.0.0.0") {
