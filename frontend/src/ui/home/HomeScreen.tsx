@@ -16,7 +16,7 @@ import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { SkipLink } from '@/ui/v2/SkipLink';
 import { PrimaryButton, SecondaryButton } from '@/ui/v2/Buttons';
 import { HomeGreetingArt, bucketForHour, greetingForBucket } from './HomeGreetingArt';
-import { TeaserWord } from './TeaserWord';
+import { MiniGame } from './MiniGame';
 import { useDelayedFlag } from '@/ui/lib/useDelayedFlag';
 
 type HomeSession = { readonly sessionId: SessionId; readonly pseudonym: Pseudonym };
@@ -92,11 +92,11 @@ const heroBody = css({ position: 'relative', zIndex: 1, padding: '12px 22px 22px
 const heroGreeting = css({ marginBottom: '12px' });
 const heroHi = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '23px', color: 'ws.jadeInk', lineHeight: '1.1' });
 const heroSub = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.8, marginTop: '2px' });
-// Reserved band above the teaser for the streak chip (right-aligned; only filled at streak ≥ 2).
+// Reserved band above the mini-game for the streak chip (right-aligned; only filled at streak ≥ 2).
 const heroTop = css({ height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '6px' });
 const streakChip = css({ display: 'inline-flex', alignItems: 'center', gap: '5px', bg: 'ws.sable', borderRadius: '999px', padding: '4px 10px', fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', boxShadow: '0 1px 2px rgba(33,75,64,0.08)' });
 const streakRecord = css({ opacity: 0.55, fontWeight: 'semibold' });
-const teaser = css({ display: 'flex', justifyContent: 'center', marginBottom: '6px' });
+const miniGame = css({ display: 'flex', justifyContent: 'center', marginBottom: '6px' });
 
 // Reserve 51 px so async resolution doesn't shift the card height (measured 589→640 jump without).
 const dailyBand = css({ minHeight: '51px', display: 'flex', flexDirection: 'column', justifyContent: 'center' });
@@ -190,8 +190,8 @@ export function HomeScreen({
   const navigate = useNavigate();
   const [streak, setStreak] = useState({ cur: 0, best: 0 });
   const [menuOpen, setMenuOpen] = useState(false);
-  // The teaser docks our on-screen keyboard over the bottom nav; hide the nav while it's up.
-  const [teaserTyping, setTeaserTyping] = useState(false);
+  // The mini-game docks our on-screen keyboard over the bottom nav; hide the nav while it's up.
+  const [miniGameTyping, setMiniGameTyping] = useState(false);
   const [coopPending, setCoopPending] = useState(false);
 
   const multiplayerOn = lobbyClient != null && getSession != null;
@@ -219,7 +219,7 @@ export function HomeScreen({
     navigate({ to: '/join/$code', params: { code } });
   };
 
-  // Fetched client-side so the teaser + strip paint at once; CTA gates on today's availability.
+  // Fetched client-side so the mini-game + strip paint at once; CTA gates on today's availability.
   const [daily, setDaily] = useState<DailyState>({ status: 'loading' });
   const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -309,11 +309,11 @@ export function HomeScreen({
                   </div>
                 </div>
               ) : null}
-              <div className={teaser}>
-                <TeaserWord
+              <div className={miniGame}>
+                <MiniGame
                   wordsRepository={wordsRepository}
                   onStreak={(cur, best) => setStreak({ cur, best })}
-                  onKeyboardToggle={setTeaserTyping}
+                  onKeyboardToggle={setMiniGameTyping}
                 />
               </div>
               <div className={dailyBand}>
@@ -441,7 +441,7 @@ export function HomeScreen({
           </div>
         </div>
 
-        {!teaserTyping ? <BottomNav active="accueil" /> : null}
+        {!miniGameTyping ? <BottomNav active="accueil" /> : null}
       </div>
 
       <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} streak={streak.cur} />
