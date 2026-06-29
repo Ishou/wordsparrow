@@ -62,11 +62,4 @@ class InMemoryMollieCustomerStore(
         userId: java.util.UUID,
         lazyCreate: suspend () -> String,
     ): String = saved[userId] ?: lazyCreate().also { saved[userId] = it }
-
-    override suspend fun save(
-        userId: java.util.UUID,
-        mollieCustomerId: String,
-    ) {
-        saved[userId] = mollieCustomerId
-    }
 }

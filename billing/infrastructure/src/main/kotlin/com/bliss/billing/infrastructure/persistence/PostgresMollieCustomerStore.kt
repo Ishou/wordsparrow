@@ -55,31 +55,11 @@ class PostgresMollieCustomerStore(
         }
     }
 
-    override suspend fun save(
-        userId: UUID,
-        mollieCustomerId: String,
-    ) {
-        withContext(Dispatchers.IO) {
-            val ts = now().truncatedTo(ChronoUnit.MICROS).atOffset(ZoneOffset.UTC)
-            dataSource.connection.use { conn ->
-                conn.prepareStatement(UPSERT_SQL).use { stmt ->
-                    stmt.setObject(1, userId)
-                    stmt.setString(2, mollieCustomerId)
-                    stmt.setObject(3, ts)
-                    stmt.executeUpdate()
-                }
-            }
-        }
-    }
-
     private companion object {
         const val SELECT_SQL = "SELECT mollie_customer_id FROM billing_customers WHERE user_id = ?"
         const val INSERT_OR_FIND_SQL =
             "INSERT INTO billing_customers (user_id, mollie_customer_id, created_at) " +
                 "VALUES (?, ?, ?) ON CONFLICT (user_id) DO NOTHING " +
                 "RETURNING mollie_customer_id"
-        const val UPSERT_SQL =
-            "INSERT INTO billing_customers (user_id, mollie_customer_id, created_at) " +
-                "VALUES (?, ?, ?) ON CONFLICT (user_id) DO UPDATE SET mollie_customer_id = EXCLUDED.mollie_customer_id"
     }
 }

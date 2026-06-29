@@ -11,9 +11,4 @@ interface MollieCustomerStore {
         userId: UUID,
         lazyCreate: suspend () -> String,
     ): String
-
-    suspend fun save(
-        userId: UUID,
-        mollieCustomerId: String,
-    )
 }
