@@ -241,8 +241,16 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
           <DefCell clues={[current.clue]} arrow="right" validated={solved} />
         </div>
         {Array.from({ length: n }, (_, i) => {
-          // Focus wins over filled so a re-focused cell always shows the active ring.
-          const state = solved ? 'solved' : focus === i ? 'active' : letters[i] ? 'filled' : 'empty';
+          // Focus wins over filled so a re-focused cell always shows the active ring; the rest of the word lights as activeWord (matches the grid's whole-word highlight).
+          const state = solved
+            ? 'solved'
+            : focus === i
+              ? 'active'
+              : focus !== null
+                ? 'activeWord'
+                : letters[i]
+                  ? 'filled'
+                  : 'empty';
           return (
             <div
               key={i}
