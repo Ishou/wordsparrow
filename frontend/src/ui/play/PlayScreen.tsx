@@ -18,7 +18,7 @@ import { useTouchPrimary, useResumeBlurOnPwa } from '@/ui/components/keyboard';
 import { useWordAutoValidation } from '@/ui/components/grid/useWordAutoValidation';
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
 import { WinScreen } from './WinScreen';
-import { formatClock } from './formatClock';
+import { formatClock } from '@/ui/lib/formatClock';
 import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
 const stage = css({

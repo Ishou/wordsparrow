@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Timer } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
-import { formatClock } from '@/ui/play/formatClock';
+import { formatClock } from '@/ui/lib/formatClock';
 
 // ADR-0072 co-op timer: ticks against the server start instant, freezes at `frozenAtMs` (mirrors prod TimerPill).
 

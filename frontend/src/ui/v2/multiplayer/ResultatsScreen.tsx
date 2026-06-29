@@ -1,7 +1,7 @@
 import { css } from 'styled-system/css';
 import type { Player, SessionId } from '@/domain/game';
 import { sparrowCelebrationScene } from '@/ui/v2/SparrowScenes';
-import { formatClock } from '@/ui/play/formatClock';
+import { formatClock } from '@/ui/lib/formatClock';
 import { PlayerAvatar } from './PlayerAvatar';
 
 // ADR-0072 co-op finish: no scores — versus mode is a deferred follow-up.
