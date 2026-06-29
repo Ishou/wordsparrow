@@ -418,6 +418,28 @@ Both `--set` flags are required:
   pattern, you must re-run this `helm upgrade` whenever the floating
   IP rotates.
 
+### Updates via CI (`deploy-platform` workflow)
+
+After the one-time install above, changes to `infra/platform/**` deploy
+through `.github/workflows/deploy-platform.yml` — dispatch it from the
+Actions tab (it is `workflow_dispatch` only; the platform chart bundles
+cluster-wide operators, so deploys stay deliberate rather than firing on
+every `main` push). It runs `helm dependency build` then `helm upgrade
+--install platform … --wait=legacy`. Do **not** hand-run `helm upgrade`
+from a workstation for routine changes — that path drifts silently and
+bypasses review.
+
+Two one-time settings the workflow reads (set them once in repo settings):
+
+- `KUBECONFIG_PROD` **secret** — shared with `deploy-api-k8s.yml`.
+- `LETSENCRYPT_EMAIL` **variable** — the ACME contact the ClusterIssuer
+  requires (kept out of git). Same value as the install-time `--set`.
+
+The workflow omits `publish-status-address` on purpose: the per-Ingress
+`external-dns.alpha.kubernetes.io/target` annotation below is the canonical
+mechanism, so the install-time belt-and-braces `--set` is not re-applied on
+every upgrade.
+
 ### Floating IP / DNS records
 
 > **Rule.** Every `Ingress` resource in this repo MUST carry

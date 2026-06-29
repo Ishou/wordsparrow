@@ -1,0 +1,60 @@
+name: Deploy Platform (k8s)
+
+# CD for the platform chart (cert-manager, ingress-nginx, external-dns, CNPG, hcloud-csi; ADR-0009 §3). workflow_dispatch only — prereqs + rationale in docs/deploy.md.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  # A cancelled mid-flight helm upgrade can strand the release in pending-upgrade.
+  group: deploy-platform-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy (platform)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: prod-platform
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v4.2.1
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_PROD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KUBECONFIG_DATA:-}" ]; then
+            echo "::error::KUBECONFIG_PROD secret is not set; see docs/deploy.md"
+            exit 1
+          fi
+          mkdir -p ~/.kube
+          printf '%s' "$KUBECONFIG_DATA" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Helm upgrade --install (platform chart)
+        env:
+          LETSENCRYPT_EMAIL: ${{ vars.LETSENCRYPT_EMAIL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${LETSENCRYPT_EMAIL:-}" ]; then
+            echo "::error::LETSENCRYPT_EMAIL variable is not set; see docs/deploy.md"
+            exit 1
+          fi
+          helm dependency build infra/platform/
+          # --wait=legacy: helm v4.2.1 'watcher' wait burns the full --timeout on each before-hook-creation hook deletion (cert-manager hooks here) — helm/helm#32214.
+          helm upgrade --install platform infra/platform/ \
+            -n platform --create-namespace \
+            -f infra/platform/values-prod.yaml \
+            --set clusterIssuer.letsencrypt.email="$LETSENCRYPT_EMAIL" \
+            --wait=legacy --timeout 15m
