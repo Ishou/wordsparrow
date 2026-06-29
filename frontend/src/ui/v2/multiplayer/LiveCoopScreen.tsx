@@ -11,6 +11,7 @@ import { useGridNavigation } from '@/ui/components/grid/useGridNavigation';
 import { orderClues } from '@/ui/components/grid/orderClues';
 import { CELL, GAP, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
 import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
+import { useAdvanceOnValidation } from '@/ui/components/grid/useAdvanceOnValidation';
 import { Keyboard } from '@/ui/play/Keyboard';
 import { usePresenceState } from '@/ui/components/grid/usePresenceState';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
@@ -210,6 +211,8 @@ export function LiveCoopScreen({
   }, [isCompleted, announcer]);
 
   const clue = nav.currentClue;
+  // Shared focus-advance firewall: a server `wordLocked` advances the cursor to the next word, same as solo.
+  const advance = useAdvanceOnValidation({ puzzle, nav, validatedPositions, currentClue: clue, completed: isCompleted });
   const orderedClues = useMemo(() => orderClues(puzzle), [puzzle]);
   // Clue ordinal among all across-then-down clues — drives the rail counter, same as solo PlayScreen.
   const clueOrdinal = useMemo(() => {
@@ -220,9 +223,10 @@ export function LiveCoopScreen({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Tab') advance.markJump(e.shiftKey ? -1 : 1);
       nav.handleKeyDown(e);
     },
-    [nav],
+    [nav, advance],
   );
 
   return (
@@ -277,6 +281,7 @@ export function LiveCoopScreen({
         padX={14}
         edgeFade
         onKeyDown={handleKeyDown}
+        onBeatComplete={advance.onBeatComplete}
         overlay={
           <CoopPresenceLayer
             puzzle={puzzle}

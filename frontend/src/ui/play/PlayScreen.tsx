@@ -2,17 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { CaretLeft, DotsThreeVertical, Lightbulb, Timer, Trophy } from '@phosphor-icons/react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
-import type { Cell as DomainCell, Position, Puzzle } from '@/domain';
+import type { Position, Puzzle } from '@/domain';
 import type { PuzzleSolver } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Button, ClueRail, Lockup } from '@/design-system';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { SkipLink } from '@/ui/v2/SkipLink';
-import { useGridNavigation, type Clue } from '@/ui/components/grid/useGridNavigation';
+import { useGridNavigation } from '@/ui/components/grid/useGridNavigation';
 import { orderClues } from '@/ui/components/grid/orderClues';
 import { CELL, STRIDE, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
 import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
+import { useAdvanceOnValidation, inputAt } from '@/ui/components/grid/useAdvanceOnValidation';
 import { Keyboard } from './Keyboard';
 import { useTouchPrimary, useResumeBlurOnPwa } from '@/ui/components/keyboard';
 import { useWordAutoValidation } from '@/ui/components/grid/useWordAutoValidation';
@@ -127,9 +128,6 @@ const hintError = css({
 // Post-win: bottom bar becomes a single re-entry to the celebration.
 const resultsBtn = css({ width: '100%', gap: '9px' });
 
-function inputAt(row: number, col: number): HTMLInputElement | null {
-  return document.querySelector<HTMLInputElement>(`input[data-cell-kind="letter"][data-row="${row}"][data-col="${col}"]`);
-}
 
 export interface PlayScreenProps {
   readonly puzzle: Puzzle;
@@ -160,12 +158,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   }, []);
 
   const isDesktop = useIsDesktop();
-
-  const byPos = useMemo(() => {
-    const m = new Map<string, DomainCell>();
-    for (const c of puzzle.cells) m.set(posKey(c.position.row, c.position.col), c);
-    return m;
-  }, [puzzle]);
 
   // Persisted letters: seed the uncontrolled inputs and the auto-validation rehydration.
   const initialEntries = useMemo(() => soloEntriesStore.load(puzzle.id), [soloEntriesStore, puzzle.id]);
@@ -200,10 +192,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const handleWordValidated = useCallback(
     (positions: ReadonlyArray<Position>) => {
       for (const p of positions) soloEntriesStore.lockCell(puzzle.id, p.row, p.col);
-      // Marks cells freshly validated so the focus firewall can trigger the solve beat.
-      const set = justValidatedRef.current ?? new Set<string>();
-      for (const p of positions) set.add(posKey(p.row, p.col));
-      justValidatedRef.current = set;
     },
     [soloEntriesStore, puzzle.id],
   );
@@ -259,11 +247,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   // Cells of a completed-but-wrong word that are currently wobbling.
   const [rejecting, setRejecting] = useState<ReadonlySet<string>>(() => new Set());
   const rejectTimerRef = useRef<number | null>(null);
-  // Cells validated this tick, consumed once by the focus firewall to gate the solve beat.
-  const justValidatedRef = useRef<Set<string> | null>(null);
-  const currentClueRef = useRef<Clue | null>(null);
-  // The board owns the solve beat; the firewall queues the advance here for the board to run when the beat ends.
-  const pendingAdvanceRef = useRef<(() => void) | null>(null);
   const reduceMotionRef = useRef(false);
   useEffect(() => () => {
     if (rejectTimerRef.current) window.clearTimeout(rejectTimerRef.current);
@@ -294,13 +277,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
   });
 
-  // The board fired the beat for a freshly-solved word; now advance to the next word (if the firewall queued it).
-  const handleBeatComplete = useCallback(() => {
-    const advance = pendingAdvanceRef.current;
-    pendingAdvanceRef.current = null;
-    advance?.();
-  }, []);
-
   const requestHint = useCallback(() => {
     const f = activeFocusRef.current;
     if (!f || validatedRef.current.has(posKey(f.row, f.col))) return;
@@ -308,11 +284,11 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     hint.request(f.row, f.col);
   }, [hint]);
 
-  // Tab direction + jump flag so the validated-cell skip can distinguish arrow moves from Tab/cycle.
-  const tabDirRef = useRef<1 | -1>(1);
-  const jumpPendingRef = useRef(false);
-  const cycleClueRef = useRef(nav.cycleClue);
-  cycleClueRef.current = nav.cycleClue;
+  const letterCount = useMemo(() => puzzle.cells.filter((c) => c.kind === 'letter').length, [puzzle]);
+  const won = letterCount > 0 && validatedPositions.size >= letterCount;
+
+  // Shared focus-advance firewall: after a word validates, move the cursor to the next word.
+  const advance = useAdvanceOnValidation({ puzzle, nav, validatedPositions, currentClue: nav.currentClue, completed: won });
 
   // Clues ordered across-then-down; drives the ClueRail counter and the focus firewall.
   const orderedClues = useMemo(() => orderClues(puzzle), [puzzle]);
@@ -335,7 +311,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   }, [orderedClues, validatedPositions]);
 
   const clue = nav.currentClue;
-  currentClueRef.current = clue;
   const clueOrdinal = useMemo(() => {
     if (!clue) return -1;
     const k = `${clue.definition.position.row}:${clue.definition.position.col}:${clue.clue.arrow}`;
@@ -357,8 +332,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const stepClue = useCallback(
     (dir: 1 | -1) => {
       boardRef.current?.cancelBeat(); // stepping the rail during the beat skips it
-      tabDirRef.current = dir;
-      jumpPendingRef.current = true;
+      advance.markJump(dir);
       if (nav.localCursor) {
         nav.cycleClue(dir);
         return;
@@ -369,7 +343,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
       const cell = target.cells.find((p) => !validatedRef.current.has(posKey(p.row, p.col))) ?? target.cells[0];
       inputAt(cell.row, cell.col)?.focus();
     },
-    [nav, orderedClues, displayOrdinal],
+    [nav, orderedClues, displayOrdinal, advance],
   );
 
   // Auto-frame the active clue when it changes; within-clue moves use per-cell reveal.
@@ -418,37 +392,12 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         return;
       }
       if (e.key === 'Tab') {
-        tabDirRef.current = e.shiftKey ? -1 : 1;
-        jumpPendingRef.current = true;
+        advance.markJump(e.shiftKey ? -1 : 1);
       }
       nav.handleKeyDown(e);
     },
-    [nav, playBackspace],
+    [nav, playBackspace, advance],
   );
-
-  // Walks along vec skipping validated cells; adjacent crosses gaps, jump stops at word boundary.
-  const findNextEditable = useCallback(
-    (from: Position, vec: { dr: number; dc: number }, validated: ReadonlySet<string>, adjacent: boolean): Position | null => {
-      if (vec.dr === 0 && vec.dc === 0) return null;
-      let r = from.row + vec.dr;
-      let c = from.col + vec.dc;
-      while (r >= 0 && r < puzzle.height && c >= 0 && c < puzzle.width) {
-        const cell = byPos.get(posKey(r, c));
-        if (!cell || cell.kind !== 'letter') {
-          if (!adjacent) break;
-        } else if (!validated.has(posKey(r, c))) {
-          return { row: r, col: c };
-        }
-        r += vec.dr;
-        c += vec.dc;
-      }
-      return null;
-    },
-    [byPos, puzzle.height, puzzle.width],
-  );
-
-  const letterCount = useMemo(() => puzzle.cells.filter((c) => c.kind === 'letter').length, [puzzle]);
-  const won = letterCount > 0 && validatedPositions.size >= letterCount;
 
   // userActedRef gates out the mount-time validation of persisted entries, so reviewing a done grid never celebrates.
   const [wonLive, setWonLive] = useState(false);
@@ -468,50 +417,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     // Toggle direction when the auto-focused clue is vertical (hook starts at 'across').
     if (!cl.across) nav.toggleDirection();
   }, [orderedClues, validatedPositions, won, lockedLoaded, nav, touchPrimary]);
-
-  // Skip validated cells: adjacent move stays in direction (dead-end reverts), jump walks to first editable.
-  const fRow = nav.localCursor?.position.row ?? -1;
-  const fCol = nav.localCursor?.position.col ?? -1;
-  const fDir = nav.localCursor?.direction ?? 'across';
-  const prevFocusRef = useRef<Position | null>(null);
-  useEffect(() => {
-    const wasJump = jumpPendingRef.current;
-    jumpPendingRef.current = false;
-    // Consume any words that validated this tick once (gates the solve beat).
-    const justValidated = justValidatedRef.current;
-    justValidatedRef.current = null;
-    const cur = fRow >= 0 ? { row: fRow, col: fCol } : null;
-    const prev = prevFocusRef.current;
-    prevFocusRef.current = cur;
-    if (!cur || !validatedPositions.has(posKey(cur.row, cur.col))) return;
-    const adjacent = !wasJump && !!prev && Math.abs(cur.row - prev.row) + Math.abs(cur.col - prev.col) === 1;
-    const vec =
-      adjacent && prev
-        ? { dr: cur.row - prev.row, dc: cur.col - prev.col }
-        : { dr: fDir === 'down' ? 1 : 0, dc: fDir === 'across' ? 1 : 0 };
-    const target = findNextEditable(cur, vec, validatedPositions, adjacent);
-    // Only advance if the WHOLE current word is solved; partial or wrong keeps focus.
-    const wordKeys = (currentClueRef.current?.cells ?? []).map((c) => posKey(c.position.row, c.position.col));
-    const fullySolved = wordKeys.length > 0 && wordKeys.every((k) => validatedPositions.has(k));
-    if (target && (fullySolved || wordKeys.includes(posKey(target.row, target.col)))) {
-      inputAt(target.row, target.col)?.focus();
-    } else if (adjacent && prev) {
-      inputAt(prev.row, prev.col)?.focus();
-    } else if (!adjacent && !won && fullySolved) {
-      const advance = () => {
-        jumpPendingRef.current = true;
-        cycleClueRef.current(tabDirRef.current);
-      };
-      // Celebrate only when THIS word just validated, not when tabbing onto an already-solved clue.
-      const celebrate = !!justValidated && wordKeys.some((k) => justValidated.has(k));
-      if (celebrate) {
-        // The board runs the beat (halo + haptic) off the validatedPositions diff, then calls onBeatComplete → this advance.
-        pendingAdvanceRef.current = advance;
-        return;
-      }
-      advance();
-    }
-  }, [fRow, fCol, fDir, validatedPositions, findNextEditable, won]);
 
   const handleReplay = useCallback(() => {
     soloEntriesStore.clearForPuzzle(puzzle.id);
@@ -593,7 +498,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         edgeFade
         onKeyDown={handleKeyDown}
         celebrateGuard={() => userActedRef.current}
-        onBeatComplete={handleBeatComplete}
+        onBeatComplete={advance.onBeatComplete}
       />
 
       {wonLive && !winDismissed ? (
