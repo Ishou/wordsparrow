@@ -326,3 +326,87 @@ describe('ProgressSyncService — reconcileOnAuth marker gate', () => {
     expect(client.pullAllCount).toBe(2);
   });
 });
+
+describe('ProgressSyncService — pullAndMergeOne (per-grid open)', () => {
+  it('is a no-op while disabled (anon/offline)', async () => {
+    const client = fakeClient({ pull: () => null });
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore(),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    await service.pullAndMergeOne(PUZZLE);
+    expect(client.pulls).toHaveLength(0);
+    expect(client.pushes).toHaveLength(0);
+  });
+
+  it('merges the remote blob into local for one puzzle', async () => {
+    const remote: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: payload({ entries: [{ r: 1, c: 1, l: 'B' }] }) as unknown as Record<string, unknown>,
+      updatedAt: T2,
+    };
+    const client = fakeClient({ pull: () => remote });
+    const blobStore = memBlobStore({
+      [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }),
+    });
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+    await service.pullAndMergeOne(PUZZLE);
+
+    expect(client.pulls).toEqual([PUZZLE]);
+    const merged = blobStore.loadPayload(SESSION, PUZZLE);
+    expect(merged.entries).toContainEqual({ r: 0, c: 0, l: 'A' });
+    expect(merged.entries).toContainEqual({ r: 1, c: 1, l: 'B' });
+    // Local added 'A', which the server lacked → push the union back.
+    expect(client.pushes).toHaveLength(1);
+    expect(client.pushes[0].baseUpdatedAt).toBe(T2);
+  });
+
+  it('does not push when local adds nothing the server lacks', async () => {
+    const same = payload({ entries: [{ r: 0, c: 0, l: 'A' }] });
+    const remote: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: same as unknown as Record<string, unknown>,
+      updatedAt: T2,
+    };
+    const client = fakeClient({ pull: () => remote });
+    const blobStore = memBlobStore({ [seedKey(SESSION, PUZZLE)]: same });
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+    await service.pullAndMergeOne(PUZZLE);
+    expect(client.pushes).toHaveLength(0);
+  });
+
+  it('pushes local up when the account has no remote blob yet', async () => {
+    const client = fakeClient({ pull: () => null });
+    const blobStore = memBlobStore({
+      [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }),
+    });
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+    await service.pullAndMergeOne(PUZZLE);
+    expect(client.pushes).toHaveLength(1);
+    expect(client.pushes[0].baseUpdatedAt).toBeUndefined();
+  });
+});

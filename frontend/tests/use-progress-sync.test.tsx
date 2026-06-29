@@ -37,6 +37,7 @@ function fakeService(): ProgressSyncService & {
       this.enabledCalls.push(next);
     },
     async pullAndMergeAll() {},
+    async pullAndMergeOne() {},
     async reconcileOnAuth(userId: string) {
       this.reconciledUsers.push(userId);
     },

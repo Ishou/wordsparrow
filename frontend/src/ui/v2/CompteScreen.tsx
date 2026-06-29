@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouteContext } from '@tanstack/react-router';
-import { Check, CircleNotch, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
+import { ArrowsClockwise, Check, CircleNotch, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { InvalidDisplayNameError, type GetMeResult } from '@/application/auth';
 import { useAuth } from '@/ui/components/auth';
@@ -36,6 +36,21 @@ const signInCard = css({ bg: 'white', borderRadius: '20px', padding: '22px', box
 const signInLede = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'semibold', color: 'ws.khaki', marginTop: '8px', marginBottom: '16px' });
 const googleBtn = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', height: '50px', borderRadius: '14px', bg: 'ws.jadeInk', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', textDecoration: 'none', cursor: 'pointer', transition: 'opacity 120ms', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const spin = css({ animation: 'wsSpin 0.7s linear infinite' });
+const srOnly = css({ srOnly: true });
+
+type SyncState = 'idle' | 'syncing' | 'done' | 'error';
+const SYNC_SUB: Record<SyncState, string> = {
+  idle: 'Récupère ta progression sur cet appareil',
+  syncing: 'Synchronisation…',
+  done: 'Ta progression est à jour',
+  error: 'Échec — réessaie',
+};
+const SYNC_ANNOUNCE: Record<SyncState, string> = {
+  idle: '',
+  syncing: 'Synchronisation en cours',
+  done: 'Synchronisation terminée',
+  error: 'La synchronisation a échoué',
+};
 
 function initialFor(name: string): string {
   return ([...name.trim()][0] ?? '?').toLocaleUpperCase('fr-FR');
@@ -47,8 +62,9 @@ function memberSince(iso: string): string {
 
 function AuthedCompte() {
   const { state, refresh } = useAuth();
-  const { authClient } = useRouteContext({ from: '__root__' });
+  const { authClient, progressSyncService } = useRouteContext({ from: '__root__' });
   const [me, setMe] = useState<GetMeResult | null>(null);
+  const [syncState, setSyncState] = useState<SyncState>('idle');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -96,6 +112,16 @@ function AuthedCompte() {
       console.warn('logout failed', cause);
     }
   };
+  const sync = async () => {
+    if (!progressSyncService || syncState === 'syncing') return;
+    setSyncState('syncing');
+    try {
+      await progressSyncService.pullAndMergeAll();
+      setSyncState('done');
+    } catch {
+      setSyncState('error');
+    }
+  };
 
   return (
     <div className={stack}>
@@ -136,6 +162,23 @@ function AuthedCompte() {
         </div>
       </section>
       {nameError ? <p className={errText} role="alert">{nameError}</p> : null}
+
+      {progressSyncService ? (
+        <nav aria-label="Progression">
+          <div className={groupLabel}>Progression</div>
+          <ul className={card}>
+            <SettingsRow
+              icon={ArrowsClockwise}
+              label="Synchroniser maintenant"
+              sub={SYNC_SUB[syncState]}
+              onClick={() => void sync()}
+              chevron={false}
+              last
+            />
+          </ul>
+          <p role="status" aria-live="polite" className={srOnly}>{SYNC_ANNOUNCE[syncState]}</p>
+        </nav>
+      ) : null}
 
       <nav aria-label="Connexion">
         <div className={groupLabel}>Connexion</div>

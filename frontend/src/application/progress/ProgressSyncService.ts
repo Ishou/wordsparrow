@@ -37,6 +37,8 @@ export interface ProgressSyncService {
   setEnabled(enabled: boolean): void;
   // Batch-pull, merge each into local, push only the blobs the server is missing or behind on.
   pullAndMergeAll(): Promise<void>;
+  // Pull+merge one puzzle on grid-open; push back only if local adds something. No-op when disabled.
+  pullAndMergeOne(puzzleId: string): Promise<void>;
   // Runs pullAndMergeAll once per account per device; no-op once this userId is reconciled.
   reconcileOnAuth(userId: string): Promise<void>;
   // Forgets the reconcile marker (sign-out) so a re-auth re-syncs.
@@ -136,6 +138,22 @@ export function createProgressSyncService(
     },
 
     pullAndMergeAll,
+
+    async pullAndMergeOne(puzzleId: string): Promise<void> {
+      if (!enabled) return;
+      const sessionId = getSessionId();
+      const remote = await client.pull(puzzleId);
+      const remotePayload = remote ? coerceSoloStorePayload(remote.payload) : EMPTY_PAYLOAD;
+      if (remote) baseUpdatedAt.set(puzzleId, remote.updatedAt);
+      const merged = mergeProgress(
+        { payload: blobStore.loadPayload(sessionId, puzzleId) },
+        { payload: remotePayload, updatedAt: remote?.updatedAt },
+      );
+      blobStore.replacePayload(sessionId, puzzleId, merged);
+      if (!remote || !payloadsEqual(merged, remotePayload)) {
+        await pushPuzzle(sessionId, puzzleId);
+      }
+    },
 
     async reconcileOnAuth(userId: string): Promise<void> {
       if (reconciledStore?.load() === userId) return;
