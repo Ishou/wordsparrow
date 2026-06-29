@@ -69,16 +69,20 @@ export function createMatomoTracker(config: MatomoTrackerConfig | null): MatomoT
   paq.push(['enableHeartBeatTimer', 15]);
   paq.push(['enableLinkTracking']);
 
-  // Inject the script async so it doesn't block the SPA boot.
-  const existing = document.querySelector(`script[data-matomo="${siteId}"]`);
-  if (!existing) {
+  // Defer matomo.js off the critical path; _paq buffers calls until it loads.
+  const injectScript = () => {
+    if (document.querySelector(`script[data-matomo="${siteId}"]`)) return;
     const script = document.createElement('script');
     script.async = true;
     script.defer = true;
     script.src = scriptUrl;
     script.dataset.matomo = siteId;
     document.head.appendChild(script);
-  }
+  };
+  const ric = (window as unknown as { requestIdleCallback?: (cb: () => void) => void })
+    .requestIdleCallback;
+  if (typeof ric === 'function') ric(injectScript);
+  else setTimeout(injectScript, 0);
 
   return {
     trackPageView(routeUrl, title) {

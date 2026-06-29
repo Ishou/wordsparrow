@@ -99,3 +99,4 @@ khaki-on-sable, white-on-sakura, and jade-ink-on-jade contrast are verified.
 - Easier: the redesign can be perfected in isolation + in Claude Design without
   risking the live app. Harder: two token sets and two component layers exist
   until migration, so contributors must know which layer they're in.
+- §3 tuned: render-gate waits on Nunito only (800ms cap); Fredoka uses `font-display:swap` so the wordmark swaps in on cold loads rather than blocking mount.
