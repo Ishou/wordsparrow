@@ -69,7 +69,6 @@ fun Route.words(
                         clue = it.clue,
                         answerLength = it.answerLength,
                         token = it.token,
-                        answer = it.answer,
                     )
                 }
         call.respond(sample)

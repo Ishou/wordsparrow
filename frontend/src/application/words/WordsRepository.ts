@@ -1,9 +1,8 @@
-// `answer` is the deprecated plaintext form (ADR-0076); validation goes through `token` + `verifySample`.
+// No plaintext answer (ADR-0076); validation goes through `token` + `verifySample`.
 export interface SampleWord {
   readonly clue: string;
   readonly answerLength: number;
   readonly token: string;
-  readonly answer?: string;
 }
 
 export interface SampleWordsOptions {

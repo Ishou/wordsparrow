@@ -114,14 +114,13 @@ export interface paths {
          * Sample random clue→answer pairs for the home teaser.
          * @description Returns a small, count-capped, random sample of `SampleWord` teaser
          *     clues drawn from the resident French corpus, for the `/home` teaser
-         *     mini-game (ADR-0073). Each entry carries the `clue`, the
+         *     mini-game (ADR-0073). Each entry carries exactly the `clue`, the
          *     `answerLength`, and an opaque `token`; the client checks a guess by
          *     submitting `{token, guess}` to `verifySampleWord` — **the token, not
-         *     a plaintext answer, is the validation path** (ADR-0076). The legacy
-         *     `answer` field is deprecated and retained only for backward
-         *     compatibility during the server-verify migration. The pool is a
-         *     random teaser sample, never the daily answer key, so it leaks no
-         *     daily solution (the daily path's no-leak posture is untouched).
+         *     a plaintext answer, is the validation path** (ADR-0076). No plaintext
+         *     answer leaves the server. The pool is a random teaser sample, never
+         *     the daily answer key, so it leaks no daily solution (the daily path's
+         *     no-leak posture is untouched).
          *
          *     Inputs are bounded server-side (ADR-0073 §4): `count` is clamped to
          *     the documented maximum, the length range is bounded, and
@@ -689,10 +688,8 @@ export interface components {
          * @description A single teaser clue for the home mini-game (ADR-0073, ADR-0076).
          *     Carries the `clue`, the `answerLength` (so the client renders the
          *     right number of cells), and an opaque `token` the client submits to
-         *     `verifySampleWord` to check a guess server-side. The plaintext answer
-         *     is no longer the validation path (ADR-0076): the legacy `answer`
-         *     field is deprecated and retained only for backward compatibility
-         *     during the server-verify migration.
+         *     `verifySampleWord` to check a guess server-side. No plaintext answer
+         *     is carried (ADR-0076): the token is the only validation path.
          */
         SampleWord: {
             /**
@@ -714,16 +711,6 @@ export interface components {
              * @example n_in5p3l8-jPGUDFQ43RZzA2NPdxJgXFu5TanwZX4rI
              */
             token: string;
-            /**
-             * @deprecated
-             * @description DEPRECATED (ADR-0076). The corpus word's folded surface form —
-             *     uppercase ASCII A–Z, per the `Word.text` invariant (ADR-0073 §1).
-             *     Retained only for backward compatibility during the server-verify
-             *     migration; it is no longer the validation path (use `token` +
-             *     `verifySampleWord`) and is removed once consumers have migrated.
-             * @example PARIS
-             */
-            answer?: string;
         };
         /**
          * @description Result of a teaser guess check (ADR-0076). `correct` is the server's

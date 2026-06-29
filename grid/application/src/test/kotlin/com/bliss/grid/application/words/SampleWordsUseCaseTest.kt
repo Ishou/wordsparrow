@@ -54,16 +54,16 @@ class SampleWordsUseCaseTest {
     ) = SampleWordsUseCase(FixtureWordRepository(words), Random(seed), FakeTokenMinter())
 
     @Test
-    fun `returns clue-answer pairs from the requested length range`() {
+    fun `samples clue-token pairs from the requested length range`() {
         val result = useCase().invoke(minLen = 3, maxLen = 6, count = 50)
 
-        assertThat(result.map { it.answer }).containsExactlyInAnyOrder(
-            "ROI",
-            "EAU",
-            "ROSE",
-            "TABLE",
-            "ARBRE",
-            "MAISON",
+        assertThat(result.map { it.token }).containsExactlyInAnyOrder(
+            "tok:ROI",
+            "tok:EAU",
+            "tok:ROSE",
+            "tok:TABLE",
+            "tok:ARBRE",
+            "tok:MAISON",
         )
         assertThat(result.all { it.clue.isNotBlank() }).isTrue()
     }
@@ -72,7 +72,7 @@ class SampleWordsUseCaseTest {
     fun `filters out words outside the requested length range`() {
         val result = useCase().invoke(minLen = 3, maxLen = 3, count = 50)
 
-        assertThat(result.map { it.answer }).containsExactlyInAnyOrder("ROI", "EAU")
+        assertThat(result.map { it.token }).containsExactlyInAnyOrder("tok:ROI", "tok:EAU")
     }
 
     @Test
@@ -86,7 +86,7 @@ class SampleWordsUseCaseTest {
         val result = useCase(words).invoke(minLen = 3, maxLen = 6, count = 50)
 
         assertThat(result).hasSize(2)
-        assertThat(result.map { it.answer }).containsExactlyInAnyOrder("COURT", "MANGE")
+        assertThat(result.map { it.token }).containsExactlyInAnyOrder("tok:COURT", "tok:MANGE")
     }
 
     @Test
@@ -119,14 +119,14 @@ class SampleWordsUseCaseTest {
     fun `clamps minLen and maxLen into the supported band`() {
         val result = useCase().invoke(minLen = 1, maxLen = 99, count = 50)
 
-        assertThat(result.all { it.answer.length in 3..6 }).isTrue()
-        assertThat(result.map { it.answer }).containsExactlyInAnyOrder(
-            "ROI",
-            "EAU",
-            "ROSE",
-            "TABLE",
-            "ARBRE",
-            "MAISON",
+        assertThat(result.all { it.answerLength in 3..6 }).isTrue()
+        assertThat(result.map { it.token }).containsExactlyInAnyOrder(
+            "tok:ROI",
+            "tok:EAU",
+            "tok:ROSE",
+            "tok:TABLE",
+            "tok:ARBRE",
+            "tok:MAISON",
         )
     }
 
@@ -155,12 +155,11 @@ class SampleWordsUseCaseTest {
     }
 
     @Test
-    fun `carries the answer letter count and a minted token per word`() {
+    fun `carries the answer letter count and a minted token but no plaintext answer`() {
         val result = useCase(listOf(Word(text = "ROI", definition = "souverain"))).invoke(3, 3, 50)
 
         assertThat(result).hasSize(1)
         assertThat(result.first().answerLength).isEqualTo(3)
         assertThat(result.first().token).isEqualTo("tok:ROI")
-        assertThat(result.first().answer).isEqualTo("ROI")
     }
 }

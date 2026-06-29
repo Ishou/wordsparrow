@@ -64,14 +64,14 @@ const sampleAnswerPool: ReadonlyArray<{ clue: string; answer: string }> = [
   { clue: 'Capitale de la France', answer: 'PARIS' },
   { clue: 'Oiseau qui jacasse', answer: 'PIE' },
 ];
+// No plaintext answer on the wire (ADR-0076): the mock ships only clue + answerLength + token.
 const sampleWordPool: ReadonlyArray<SampleWord> = sampleAnswerPool.map(({ clue, answer }) => ({
   clue,
   answerLength: answer.length,
   token: `mock-${answer}`,
-  answer,
 }));
 // Preview-only token→answer map so the verify handler can echo `{correct}` (the real server HMAC-checks).
-const sampleAnswerByToken = new Map(sampleWordPool.map((w) => [w.token, w.answer ?? '']));
+const sampleAnswerByToken = new Map(sampleAnswerPool.map(({ answer }) => [`mock-${answer}`, answer]));
 const normalizeGuess = (s: string) =>
   s
     .toUpperCase()

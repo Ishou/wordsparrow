@@ -39,13 +39,12 @@ class WordsRouteTest {
             assertThat(array.size).isLessThanOrEqualTo(5)
             array.forEach { element ->
                 val obj = element.jsonObject
-                val answer = obj["answer"]!!.jsonPrimitive.content
                 val clue = obj["clue"]!!.jsonPrimitive.content
                 val token = obj["token"]!!.jsonPrimitive.content
                 val answerLength = obj["answerLength"]!!.jsonPrimitive.content.toInt()
-                assertThat(answer.all { it in 'A'..'Z' }).isTrue()
-                assertThat(answer.length in 3..6).isTrue()
-                assertThat(answerLength).isEqualTo(answer.length)
+                // ADR-0076: the plaintext answer must never leave the server.
+                assertThat(obj.containsKey("answer")).isFalse()
+                assertThat(answerLength in 3..6).isTrue()
                 assertThat(token.isNotBlank()).isTrue()
                 assertThat(
                     token.all { it in 'A'..'Z' || it in 'a'..'z' || it in '0'..'9' || it == '-' || it == '_' },
@@ -55,28 +54,23 @@ class WordsRouteTest {
         }
 
     @Test
-    fun `verifies a correct guess against the minted token`() =
+    fun `never returns a plaintext answer in the sample response`() =
         testApplication {
             application { module() }
 
-            val sample =
+            val array =
                 Json
-                    .parseToJsonElement(client.get("/v1/words/sample?count=1").bodyAsText())
+                    .parseToJsonElement(client.get("/v1/words/sample?count=5").bodyAsText())
                     .jsonArray
-                    .first()
-                    .jsonObject
-            val token = sample["token"]!!.jsonPrimitive.content
-            val answer = sample["answer"]!!.jsonPrimitive.content
-
-            val response =
-                client.post("/v1/words/sample/verify") {
-                    contentType(ContentType.Application.Json)
-                    setBody("""{"token":"$token","guess":"$answer"}""")
-                }
-
-            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
-            val obj = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-            assertThat(obj["correct"]!!.jsonPrimitive.content).isEqualTo("true")
+            assertThat(array.isEmpty()).isFalse()
+            // ADR-0076: no entry carries `answer`; only clue + answerLength + token ship.
+            array.forEach {
+                val obj = it.jsonObject
+                assertThat(obj.containsKey("answer")).isFalse()
+                assertThat(obj.containsKey("clue")).isTrue()
+                assertThat(obj.containsKey("answerLength")).isTrue()
+                assertThat(obj.containsKey("token")).isTrue()
+            }
         }
 
     @Test
@@ -224,7 +218,7 @@ class WordsRouteTest {
         }
 
     @Test
-    fun `every answer respects the requested length band`() =
+    fun `every answerLength respects the requested length band`() =
         testApplication {
             application { module() }
 
@@ -235,8 +229,9 @@ class WordsRouteTest {
             assertThat(array.isEmpty()).isFalse()
             array.forEach {
                 assertThat(
-                    it.jsonObject["answer"]!!
-                        .jsonPrimitive.content.length,
+                    it.jsonObject["answerLength"]!!
+                        .jsonPrimitive.content
+                        .toInt(),
                 ).isEqualTo(4)
             }
         }
