@@ -383,13 +383,13 @@ enableMocks()
       if (!container.contains(el)) el.remove();
     });
 
-    // ADR-0072 §3 — render-gate: defer paint until brand faces are ready (1.2 s cap).
+    // ADR-0072 §3 — gate paint on the UI font (Nunito) only, 800ms cap; Fredoka wordmark swaps in.
     if (typeof document !== 'undefined' && typeof document.fonts?.load === 'function') {
-      const ready = Promise.all([
-        document.fonts.load('1em "Fredoka Variable"'),
-        document.fonts.load('1em "Nunito Variable"'),
-      ]).then(() => undefined).catch(() => undefined);
-      const cap = new Promise<void>((resolve) => setTimeout(resolve, 1200));
+      const ready = document.fonts
+        .load('1em "Nunito Variable"')
+        .then(() => undefined)
+        .catch(() => undefined);
+      const cap = new Promise<void>((resolve) => setTimeout(resolve, 800));
       void Promise.race([ready, cap]).then(mount);
     } else {
       mount();
