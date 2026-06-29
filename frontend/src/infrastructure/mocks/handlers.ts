@@ -50,9 +50,7 @@ type RevealCellHintRequest = components['schemas']['RevealCellHintRequest'];
 type PuzzleSummary = components['schemas']['PuzzleSummary'];
 type SampleWord = components['schemas']['SampleWord'];
 
-// Preview teaser pool (ADR-0073): short French clue→answer pairs, answers uppercase A–Z.
-// answerLength + a stand-in token mirror the server-verify shape (ADR-0076); the real
-// token is HMAC(serverKey, normalize(answer)), minted server-side in a later wave.
+// Preview teaser pool (ADR-0073): stand-in tokens for Wave 2 HMAC minting (ADR-0076).
 const sampleAnswerPool: ReadonlyArray<{ clue: string; answer: string }> = [
   { clue: 'Note de musique', answer: 'SOL' },
   { clue: 'Roi des animaux', answer: 'LION' },
