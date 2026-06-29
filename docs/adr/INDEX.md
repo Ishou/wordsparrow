@@ -150,6 +150,10 @@ ADR-0075  identity/api/openapi.yaml                  Cross-device solo progress 
 ADR-0075  identity/infrastructure/**                 V6__puzzle_progress table (user_id FK→users ON DELETE CASCADE, puzzle_id, payload JSONB, updated_at, PK (user_id, puzzle_id)); opaque per-puzzle blob, server never parses it (Wave 2)
 ADR-0075  frontend/src/infrastructure/session/**     Solo-progress sync layer over localStorageSolo: batch-pull + client-side semantic merge on authed load, debounced push, onAuthed anon carry-over (Wave 3)
 # ADR-0075: amendment 2026-06-28 (concrete resource-bound values: 64 KiB payload cap → 413, 60 writes/60-second window rate limit → 429, 500-puzzle count cap → 403); no new binding paths — controls land in identity/api/** above
+ADR-0076  grid/api/openapi.yaml                      Server-verified teaser answers: SampleWord gains answerLength + opaque token (HMAC-SHA256(serverKey, normalize(answer)), base64url); answer deprecated+optional (expand-and-contract). POST /v1/words/sample/verify {token, guess} → SampleVerifyResult{correct}, constant-time compare; no plaintext answer/reveal going forward
+ADR-0076  grid/api/src/**/Module.kt                  Sample handler mints token + answerLength; verify handler recomputes HMAC over normalized guess and constant-time-compares to token; serverKey injected as a k8s Secret (Wave 2)
+ADR-0076  frontend/src/infrastructure/api/grid/types.ts  Generated SampleWord (answerLength, token) + SampleVerifyResult types (drift gate)
+# ADR-0076: supersedes-in-part ADR-0073 §3 (plaintext teaser answer) — leak surfaced post-v2-cutover (ADR-0074); deterministic-token dictionary-mapping risk accepted over per-session salting (throwaway public-corpus teaser); leak fully closes at the contract wave (answer removed)
 ```
 
 ## Adding entries

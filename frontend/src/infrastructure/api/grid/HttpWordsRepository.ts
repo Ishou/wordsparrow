@@ -28,7 +28,8 @@ export function createHttpWordsRepository(
         const detail = error.detail ?? error.title ?? `HTTP ${response.status}`;
         throw new Error(`sample words fetch failed: ${detail}`);
       }
-      return data.map((w) => ({ clue: w.clue, answer: w.answer }));
+      // `answer` is deprecated+optional during the expand phase (ADR-0076).
+      return data.map((w) => ({ clue: w.clue, answer: w.answer ?? '' }));
     },
   };
 }
