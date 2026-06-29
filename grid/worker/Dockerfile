@@ -41,6 +41,7 @@ COPY survey/worker/build.gradle.kts survey/worker/
 # Same gotcha for the :billing:* modules introduced in ADR-0078.
 COPY billing/domain/build.gradle.kts billing/domain/
 COPY billing/application/build.gradle.kts billing/application/
+COPY billing/infrastructure/build.gradle.kts billing/infrastructure/
 
 COPY grid/domain/src grid/domain/src
 COPY grid/application/src grid/application/src
