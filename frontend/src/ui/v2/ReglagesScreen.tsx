@@ -12,7 +12,8 @@ const title = css({
   fontSize: '26px',
   lineHeight: '1.1',
   color: 'ws.jadeInk',
-  margin: '0 0 14px',
+  // title sits inside the 16px-gap stack; the gap alone provides spacing
+  margin: 0,
 });
 
 const stack = css({ display: 'flex', flexDirection: 'column', gap: '16px' });

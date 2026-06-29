@@ -2,7 +2,7 @@ import { css } from 'styled-system/css';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { EraseData } from './EraseData';
-import { contentCard, eyebrow, lede, sectionBody, sectionHeading } from './contentPage';
+import { contentCard, lede, sectionBody, sectionHeading } from './contentPage';
 
 const title = css({
   fontFamily: 'wsDisplay',
@@ -32,7 +32,6 @@ export function ConfidentialiteScreen() {
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
-          <div className={eyebrow}>Tes données</div>
           <h1 className={title}>Confidentialité</h1>
           <p className={lede}>
             On garde les choses simples : le minimum de données, jamais de revente, et tu gardes la
