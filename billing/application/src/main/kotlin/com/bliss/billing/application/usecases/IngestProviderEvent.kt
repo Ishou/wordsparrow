@@ -58,10 +58,10 @@ class IngestProviderEvent(
         state: ProviderSubscriptionState,
     ): IngestOutcome {
         if (state.status != SubscriptionStatus.ACTIVE) return IngestOutcome.Ignored
-        // The ledger makes the create atomic: a concurrent or redelivered first-payment webhook loses the race and never double-creates.
-        if (!ledger.recordIfAbsent(eventRef)) return IngestOutcome.Unchanged
         val created = provider.createSubscription(state.userId, eventRef, state.tier).toNewSubscription()
         repository.save(created)
+        // Ledger written after save: a Mollie or save failure leaves the key unclaimed so a webhook retry can re-enter.
+        if (!ledger.recordIfAbsent(eventRef)) return IngestOutcome.Unchanged
         emit(created)
         return IngestOutcome.Applied(created.entitlement())
     }

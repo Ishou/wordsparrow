@@ -21,6 +21,9 @@ class FakeBillingProvider : BillingProviderPort {
     /** The recurring subscription `createSubscription` returns; defaults to an active subscription keyed by a composite ref derived from the first-payment ref. */
     var subscriptionToCreate: ProviderSubscriptionState? = null
 
+    /** When true, the next `createSubscription` call throws and resets this flag, simulating a transient Mollie failure. */
+    var failCreateSubscriptionOnce = false
+
     fun seed(state: ProviderSubscriptionState) {
         states[state.externalRef] = state
     }
@@ -43,6 +46,10 @@ class FakeBillingProvider : BillingProviderPort {
         tier: Tier,
     ): ProviderSubscriptionState {
         createSubscriptionCalls.add(Triple(userId, firstPaymentRef, tier))
+        if (failCreateSubscriptionOnce) {
+            failCreateSubscriptionOnce = false
+            throw IllegalStateException("provider create-subscription failed (simulated)")
+        }
         return subscriptionToCreate
             ?: ProviderSubscriptionState(
                 externalRef = "cust:sub_$firstPaymentRef",

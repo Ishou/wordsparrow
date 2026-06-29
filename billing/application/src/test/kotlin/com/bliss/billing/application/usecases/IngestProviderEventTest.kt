@@ -80,7 +80,7 @@ class IngestProviderEventTest {
         }
 
     @Test
-    fun `does not create a second subscription when the event id was already processed`() =
+    fun `does not emit when a concurrent sibling already recorded the ledger`() =
         runTest {
             seedFirstPayment()
             ledger.recordIfAbsent("tr_1")
@@ -88,9 +88,26 @@ class IngestProviderEventTest {
             val outcome = useCase.execute("tr_1")
 
             assertThat(outcome).isEqualTo(IngestOutcome.Unchanged)
-            assertThat(provider.createSubscriptionCalls).isEmpty()
+            assertThat(publisher.events).isEmpty()
+        }
+
+    @Test
+    fun `retries subscription creation after a transient provider failure`() =
+        runTest {
+            seedFirstPayment()
+            provider.failCreateSubscriptionOnce = true
+
+            runCatching { useCase.execute("tr_1") }
+
+            // Ledger unclaimed after failure: retry can re-enter createFromFirstPayment
             assertThat(repository.findByUserId(userId)).isNull()
             assertThat(publisher.events).isEmpty()
+
+            val outcome = useCase.execute("tr_1")
+
+            assertThat(outcome).isInstanceOf(IngestOutcome.Applied::class)
+            assertThat(repository.findByUserId(userId)?.externalRef).isEqualTo(subscriptionRef)
+            assertThat(publisher.events).hasSize(1)
         }
 
     @Test
