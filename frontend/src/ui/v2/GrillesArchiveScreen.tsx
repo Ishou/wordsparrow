@@ -40,6 +40,11 @@ const title = css({
 
 const filterBar = css({ marginBottom: '18px' });
 
+// Desktop: the title + filter pin while the list scrolls; passthrough on phone/tablet (the PhoneShell body scrolls as one).
+const head = css({ lg: { flex: 'none' } });
+// Desktop: the list is its own scroll container filling the remaining height, so the outer page never scrolls (one scrollbar, on the list).
+const scrollArea = css({ lg: { flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '40px' } });
+
 const monthLabel = css({
   fontFamily: 'wsUi',
   fontSize: '11px',
@@ -234,17 +239,21 @@ export function GrillesArchiveScreen({
       headerFlush
       navActive="grilles"
       bottomNav={<BottomNav active="grilles" />}
+      fillBody
     >
-      <h1 className={title}>Grilles</h1>
+      <div className={head}>
+        <h1 className={title}>Grilles</h1>
 
-      <SegmentedControl
-        className={filterBar}
-        ariaLabel="Filtrer les grilles"
-        options={FILTERS}
-        value={filter}
-        onChange={setFilter}
-      />
+        <SegmentedControl
+          className={filterBar}
+          ariaLabel="Filtrer les grilles"
+          options={FILTERS}
+          value={filter}
+          onChange={setFilter}
+        />
+      </div>
 
+      <div className={scrollArea}>
       {showSkeleton ? (
         <ul className={list} aria-busy="true" aria-label="Chargement des grilles">
           {Array.from({ length: 5 }, (_, i) => (
@@ -304,6 +313,7 @@ export function GrillesArchiveScreen({
           ) : null}
         </>
       )}
+      </div>
     </PhoneShell>
     <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
     </>

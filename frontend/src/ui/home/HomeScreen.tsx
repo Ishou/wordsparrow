@@ -59,13 +59,14 @@ const frame = css({
     overflow: 'hidden',
     boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
   },
+  // Desktop: full-width so the top bar's full-bleed frost isn't clipped and the content scrollbar lands at the screen edge; the hub stays capped + centred inside.
   lg: {
-    maxWidth: '1140px',
+    maxWidth: 'none',
     minHeight: 0,
     borderRadius: 0,
     boxShadow: 'none',
     bgImage: 'none',
-    overflow: 'hidden',
+    overflow: 'visible',
   },
 });
 const content = css({
@@ -76,12 +77,12 @@ const content = css({
   // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it; top spacing lives in MobileTopBar.
   padding: '0 22px calc(64px + env(safe-area-inset-bottom))',
   overflowY: 'auto',
-  // Desktop: scroll the content region (not the document) under the pinned bar; the two columns centre in the remaining space.
-  lg: { overflowY: 'auto', padding: '0 36px 40px' },
+  // Desktop: full-width scroller (scrollbar at the screen edge) under the pinned bar; the hub centres + caps itself, not the scroller.
+  lg: { overflowY: 'auto', padding: '0 0 40px' },
 });
 
-// Desktop hub: hero (left) + grilles (right) side by side, centred in the viewport. Passthrough on phone/tablet.
-const hub = css({ display: 'contents', lg: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 0.92fr)', columnGap: '36px', alignItems: 'start', alignContent: 'center', flex: 1, minHeight: 0 } });
+// Desktop hub: hero (left) + grilles (right) side by side, capped + centred in the viewport (matches the 1140 top-bar cap). Passthrough on phone/tablet.
+const hub = css({ display: 'contents', lg: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 0.92fr)', columnGap: '36px', alignItems: 'start', alignContent: 'center', flex: 1, minHeight: 0, width: '100%', maxWidth: '1140px', marginInline: 'auto', paddingInline: '36px' } });
 
 const hero = css({ flex: 'none', bg: 'white', borderRadius: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
 // clipPath clips upward overflow (midday sun, night stars) while its -34 px bottom inset lets the branch drape over heroBody; zIndex 2 keeps it above.
