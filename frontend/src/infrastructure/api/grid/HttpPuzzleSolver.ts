@@ -67,6 +67,8 @@ export function createHttpPuzzleSolver(
         '/v1/puzzles/{puzzleId}/hints',
         {
           params: { path: { puzzleId } },
+          // credentials only here: /hints needs the identity session cookie; public reads stay anonymous/cacheable.
+          credentials: 'include',
           body: { row, column },
         },
       );
