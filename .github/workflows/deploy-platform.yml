@@ -1,29 +1,12 @@
 name: Deploy Platform (k8s)
 
-# Continuous delivery for the cluster-level platform chart (infra/platform/):
-# cert-manager, ingress-nginx, external-dns, CloudNativePG, hcloud-csi
-# (ADR-0009 §3). Until now this chart had no CD — changes to
-# infra/platform/** reached prod only via a manual `helm upgrade` from a
-# workstation, the exact anti-pattern flagged on PR #1129. This routes the
-# upgrade through CI instead.
-#
-# Trigger is `workflow_dispatch` ONLY (not push-on-main): the platform chart
-# bundles cluster-wide operators where a bad subchart bump can take down
-# ingress or cert issuance, so deploys are deliberate, not automatic. The
-# `prod-platform` GitHub Environment lets a required-reviewer rule gate them.
-#
-# PREREQUISITES (one-time, see docs/deploy.md):
-#   - `KUBECONFIG_PROD` repository secret — cluster kubeconfig with the
-#     rewritten public IP (already used by deploy-api-k8s.yml).
-#   - `LETSENCRYPT_EMAIL` repository variable — ACME contact for the
-#     Let's Encrypt ClusterIssuer (kept out of git; the chart requires it).
+# CD for the platform chart (cert-manager, ingress-nginx, external-dns, CNPG, hcloud-csi; ADR-0009 §3). workflow_dispatch only — prereqs + rationale in docs/deploy.md.
 
 on:
   workflow_dispatch:
 
 concurrency:
-  # Serialize platform deploys; never cancel a mid-flight helm upgrade
-  # (a cancelled upgrade can strand the release in pending-upgrade).
+  # A cancelled mid-flight helm upgrade can strand the release in pending-upgrade.
   group: deploy-platform-prod
   cancel-in-progress: false
 
@@ -34,7 +17,6 @@ jobs:
   deploy:
     name: deploy (platform)
     runs-on: ubuntu-latest
-    # Cold path covers helm dep build + ingress-nginx/cert-manager rollout.
     timeout-minutes: 20
     environment:
       name: prod-platform
