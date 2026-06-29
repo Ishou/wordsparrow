@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
-import { contentCard, eyebrow, lede, sectionBody, sectionHeading } from './contentPage';
+import { contentCard, lede, sectionBody, sectionHeading } from './contentPage';
 
 const title = css({
   fontFamily: 'wsDisplay',
@@ -22,7 +22,6 @@ export function MentionsLegalesScreen() {
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
-          <div className={eyebrow}>Informations légales</div>
           <h1 className={title}>Mentions légales</h1>
           <p className={lede}>
             L&apos;essentiel sur l&apos;éditeur du jeu, l&apos;hébergement et tes droits.
