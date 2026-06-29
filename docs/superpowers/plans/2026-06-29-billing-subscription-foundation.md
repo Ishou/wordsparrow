@@ -100,7 +100,14 @@ Locks in decomposition. Created across the waves below.
   resync + aging-alert emit).
 - `infra/platform/charts/billing/` — Deployment, CronJob, Service, NetworkPolicy,
   Secret refs; `docs/secrets.md` inventory entry.
-- `frontend/` — checkout entry behind a feature flag (flagged off).
+
+**Frontend foundation (W7)**
+- `frontend/src/infrastructure/api/billing/client.ts` — billing API client.
+- `frontend/src/application/billing/**` — entitlement store + `useEntitlement` /
+  `useCapability` / `useRole` hooks.
+- `frontend/src/ui/**` — `<RequireCapability>`/`<RequireRole>` guards, checkout
+  redirect + `/abonnement/merci` + `/abonnement` return routes, maintainer-gated
+  subscribe/cancel control. (Pricing/tier-selection page deferred with the offer.)
 
 ---
 
@@ -332,8 +339,8 @@ producer/consumer code.
 
 - **Blocking question:** identity `user.deleted` durability (sets prereq vs
   backstop-only).
-- **PR scope:** likely **3 PRs** (reconciliation worker + CronJob; Helm chart +
-  Secret + NetworkPolicy; flagged-off frontend checkout entry).
+- **PR scope:** likely **2 PRs** (reconciliation worker + CronJob; Helm chart +
+  Secret + NetworkPolicy). The frontend checkout entry moved to **W7**.
 - **Tasks (to expand):** `ReconcileSubscriptions` (list provider-active subs →
   cancel any with no live entitlement intent — the **event-independent
   backstop**; resync missed webhooks; **emit aging alert** for
@@ -341,9 +348,34 @@ producer/consumer code.
   NetworkPolicy for the NATS subject, Secret refs (`docs/secrets.md` entry —
   Mollie **test key first**, `BILLING_ALLOWED_USER_IDS` with the maintainer id);
   the JetStream **durable consumer** for `user.deleted` (or the prereq identity
-  change if W6's blocking question says fire-and-forget); frontend checkout entry
-  behind a feature flag (expiry-dated), **tutoiement** copy, hidden until flip —
-  and itself gated to the maintainer allowlist during the test phase.
+  change if W6's blocking question says fire-and-forget).
+
+### Wave 7 — Frontend foundation (offer-independent UI)
+
+- **Blocking:** needs W4c routes live (checkout / cancel / webhook) + entitlement
+  readable; whoami `role` (merged #1156). Runs after W4c (may overlap W5/W6).
+- **Scope:** the **offer-INDEPENDENT** subscription UI, so the maintainer-gated
+  test phase is clickable end-to-end. **Deferred with the offer:** the
+  pricing/tier-selection page, marketing/upsell copy, and the polished management
+  screen (invoice history) — built when prices/tiers are decided.
+- **PR scope:** ~2–3 PRs, each within eslint-boundaries layering (ADR-0002) and
+  the a11y baseline (ADR-0050); **tutoiement** copy throughout.
+- **Tasks (to expand):**
+  - `frontend/src/infrastructure/api/billing/client.ts` — typed client over the
+    generated `billing/types.ts`: `POST /v1/checkout-session`,
+    `POST /v1/subscription/cancel`, `GET /v1/entitlement`; `credentials: 'include'`
+    on these authed calls (ADR-0077).
+  - `frontend/src/application/billing/**` — entitlement port + store;
+    `useEntitlement()` (tier/status/capabilities from `/me` tier + `/v1/entitlement`),
+    `useCapability(cap)`, `useRole()` (guest|player|maintainer; 401/no-session →
+    guest).
+  - `frontend/src/ui/**` — `<RequireCapability>` / `<RequireRole>` render guards
+    (cosmetic; server still enforces); checkout initiation (redirect to
+    `checkoutUrl`); success/cancel **return routes** (`/abonnement/merci`,
+    `/abonnement`); a minimal **maintainer-gated** subscribe + cancel control
+    (visible only when `role === maintainer`) to exercise test mode.
+  - Tests: vitest + Testing Library, **MSW** mocking the billing API
+    (preview/test only); axe a11y on new routes; eslint-boundaries clean.
 
 ### Rollout phasing — test phase → promotion (ADR-0078 amendment 2026-06-29)
 
