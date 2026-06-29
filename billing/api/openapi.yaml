@@ -230,9 +230,6 @@ components:
 
     WebhookEvent:
       type: object
-      # Provider-opaque by design (ADR-0078): the full provider payload is
-      # parsed + authenticated in the adapter, not modeled on the wire. We
-      # require only a resource-reference id the adapter re-fetches by.
       additionalProperties: true
       description: |
         Provider webhook body. Intentionally models only the resource
@@ -281,8 +278,6 @@ components:
           type: string
           format: date-time
           nullable: true
-          # In `required` though nullable: the field is always on the wire;
-          # null is the explicit blank (no current period), ADR-0003 §6.
           description: |
             ISO-8601 instant the current paid period ends, or `null` when no
             current period applies.

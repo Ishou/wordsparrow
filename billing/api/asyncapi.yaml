@@ -100,8 +100,6 @@ components:
           type: string
           format: date-time
           nullable: true
-          # In `required` though nullable: always on the wire; null is the
-          # explicit blank (no current period), ADR-0003 §6.
           description: ISO-8601 instant the current paid period ends, or `null` when no current period applies.
           example: '2026-07-29T00:00:00Z'
         source:
