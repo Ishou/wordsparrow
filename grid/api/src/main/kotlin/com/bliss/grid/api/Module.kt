@@ -73,11 +73,7 @@ fun Application.module() {
         // Browsers block `https://wordsparrow.io` → `https://api.wordsparrow.io` without these headers; the allowlist below names every origin that may call grid.
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Options) // preflight
-        // POST /v1/puzzles/{id}/hints (PuzzleRoute.kt:226) and
-        // POST /v1/puzzles/{id}/validate (PuzzleRoute.kt:298). POST is
-        // technically a CORS-simple method, but Ktor's plugin only emits
-        // it in `Access-Control-Allow-Methods` when explicit — mirrors
-        // game/api Module.kt:70 so the configs read identically.
+        // POST is a CORS-simple method but Ktor only echoes it in Allow-Methods when allowMethod() is called explicitly.
         allowMethod(HttpMethod.Post)
         // (ADR-0025 §5). Methods stay explicit — credentialed CORS forbids wildcard methods.
         allowMethod(HttpMethod.Delete)
@@ -94,24 +90,14 @@ fun Application.module() {
         // Cloudflare Pages preview host — mirrors identity-api's allowlist (ADR-0048, confirmed for grid in ADR-0077 Wave 2).
         allowHost("bliss-cb4.pages.dev", schemes = listOf("https"))
 
-        // Local dev — Vite default port 5173 (frontend/package.json `dev`
-        // script does not override; frontend/vite.config.ts has no `server`
-        // block). If that ever changes, update this entry.
+        // Local dev — Vite default port 5173 (frontend/vite.config.ts has no server block override).
         allowHost("localhost:5173", schemes = listOf("http"))
 
         // Credentialed so the __Secure-ws_session cookie rides /hints — ADR-0077.
         allowCredentials = true
         maxAgeInSeconds = 86400 // cache preflight for 24h
 
-        // POST /v1/puzzles/{id}/hints + /validate send `Content-Type:
-        // application/json`, which the CORS spec classifies as non-simple.
-        // Ktor's CORS plugin defaults to rejecting actual (non-preflight)
-        // requests carrying a non-simple Content-Type with 403 + no
-        // `Access-Control-Allow-Origin`, even when both Origin and Method
-        // passed the preflight. The browser surfaces this as `blocked by
-        // CORS policy: No 'Access-Control-Allow-Origin' header is present
-        // on the requested resource.` — same gotcha game/api documents at
-        // Module.kt:93-102. CorsTest covers the regression.
+        // allowNonSimpleContentTypes: application/json is non-simple so Ktor would 403 the actual request without this flag.
         allowNonSimpleContentTypes = true
     }
 
