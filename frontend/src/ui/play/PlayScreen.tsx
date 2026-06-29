@@ -112,6 +112,17 @@ const hintBtn = css({
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const hintBulb = css({ color: 'ws.or' });
+// Inline hint error (e.g. 401 → "Connecte-toi…"); compact, matches the hint chip so the button no longer looks dead.
+const hintError = css({
+  alignSelf: 'center',
+  padding: '4px 11px',
+  borderRadius: '999px',
+  fontFamily: 'wsUi',
+  fontWeight: 'semibold',
+  fontSize: '12px',
+  color: 'ws.sakuraDark',
+  bg: '#FBEEF2',
+});
 // Post-win: bottom bar becomes a single re-entry to the celebration.
 const resultsBtn = css({ width: '100%', gap: '9px' });
 
@@ -599,6 +610,11 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
           </Button>
         ) : (
           <>
+            {hint.errorMessage ? (
+              <p className={hintError} role="alert">
+                {hint.errorMessage}
+              </p>
+            ) : null}
             {displayClue ? (
               <ClueRail
                 direction={displayClue.across ? 'horizontal' : 'vertical'}

@@ -83,6 +83,50 @@ describe('useHintRequest', () => {
     expect(result.current.errorMessage).toBe('Indices épuisés');
   });
 
+  it('surfaces the sign-in prompt on HintRequestError(auth-required)', async () => {
+    const solver = makeSolver();
+    (solver.requestHint as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new HintRequestError('auth-required', null, 'Authentification requise'),
+    );
+    const { result } = renderHook(() =>
+      useHintRequest(PUZZLE_ID, 3, solver),
+    );
+
+    await act(async () => {
+      result.current.request(3, 5);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.errorMessage).toBe(
+      'Connecte-toi pour utiliser les indices',
+    );
+    expect(result.current.exhausted).toBe(false);
+  });
+
+  it('clears the auth-required errorMessage after the linger interval', async () => {
+    vi.useFakeTimers();
+    const solver = makeSolver();
+    (solver.requestHint as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new HintRequestError('auth-required', null, 'Authentification requise'),
+    );
+    const { result } = renderHook(() =>
+      useHintRequest(PUZZLE_ID, 3, solver),
+    );
+
+    await act(async () => {
+      result.current.request(3, 5);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.errorMessage).not.toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(4_000);
+    });
+    expect(result.current.errorMessage).toBeNull();
+  });
+
   it('treats invalid-coord as a silent no-op without surfacing an error', async () => {
     const solver = makeSolver();
     (solver.requestHint as ReturnType<typeof vi.fn>).mockRejectedValue(
