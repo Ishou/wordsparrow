@@ -53,8 +53,9 @@ const PRERENDERED_ROUTE_PATHS = [
   '/finish',
 ] as const;
 const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// `(\?.*)?` keeps query-string URLs (e.g. /play?date=…) denylisted; without it the SW serves the home shell and flashes it.
 const PRERENDER_NAV_DENYLIST: RegExp[] = PRERENDERED_ROUTE_PATHS.map(
-  (p) => new RegExp(`^${escapeRegExp(p)}/?$`),
+  (p) => new RegExp(`^${escapeRegExp(p)}/?(\\?.*)?$`),
 );
 
 function preloadLatinBodyFont(): Plugin {

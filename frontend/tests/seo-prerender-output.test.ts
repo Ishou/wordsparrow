@@ -97,7 +97,9 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       ...INDEXABLE_ROUTES.map((r) => r.path).filter((p) => p !== '/'),
       ...NOINDEX_PRERENDER_ROUTES.map((r) => r.path),
     ];
-    it.each(PRERENDERED)('SW navigation denylist excludes %s', (path) => {
+    // A query string (e.g. /play?date=…) must stay denylisted too — else the SW serves the home shell and flashes it.
+    const PRERENDERED_WITH_QUERY = PRERENDERED.flatMap((p) => [p, `${p}?date=2026-06-29`]);
+    it.each(PRERENDERED_WITH_QUERY)('SW navigation denylist excludes %s', (path) => {
       const sw = readFileSync(resolve(DIST, 'sw.js'), 'utf8');
       const denylist = /createHandlerBoundToURL\("\/index\.html"\),\{denylist:\[([^\]]*)\]/.exec(sw);
       expect(denylist, 'NavigationRoute denylist not found in sw.js').not.toBeNull();
