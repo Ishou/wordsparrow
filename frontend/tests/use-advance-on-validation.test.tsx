@@ -35,8 +35,7 @@ interface Handles {
   readonly runBeat: () => void;
 }
 
-// Minimal screen-shaped harness: real grid nav + real letter inputs (so the hook's DOM focus works),
-// validatedPositions driven imperatively, and the board beat simulated by calling onBeatComplete.
+// Real nav + DOM inputs; validatedPositions driven imperatively; board beat simulated via onBeatComplete.
 function Harness({ completed = false, onReady }: { completed?: boolean; onReady: (h: Handles) => void }) {
   const [validated, setValidated] = useState<ReadonlySet<string>>(() => new Set());
   const nav = useGridNavigation(PUZZLE, {
