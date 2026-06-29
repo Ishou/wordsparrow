@@ -140,6 +140,23 @@ class MollieBillingAdapterTest {
         }
 
     @Test
+    fun `fetchByReference returns null when payment metadata has an invalid tier value`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.payments["tr_1"] =
+                MolliePayment(
+                    "tr_1",
+                    "paid",
+                    null,
+                    "cust_x",
+                    null,
+                    mapOf("userId" to userId.toString(), "tier" to "PREMIUM"),
+                )
+
+            assertThat(adapter(client, InMemoryMollieCustomerStore()).fetchByReference("tr_1")).isNull()
+        }
+
+    @Test
     fun `fetchByReference resolves a subscription composite to its authoritative state`() =
         runTest {
             val client = FakeMollieClient()
