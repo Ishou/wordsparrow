@@ -229,6 +229,22 @@ describe('Grid keyboard interactions', () => {
     expect(document.activeElement).toBe(target);
   });
 
+  it('Backspace on a filled non-first cell clears it and steps focus back', () => {
+    const { container } = render(<Grid puzzle={TEST_PUZZLE} />);
+    const first = inputAt(container, 1, 1)!;
+    const second = inputAt(container, 1, 2)!;
+    const third = inputAt(container, 1, 3)!;
+    click(first); // across-2, direction = across
+    typeChar(first, 'a'); // (1,1)=A, focus advances to (1,2)
+    typeChar(second, 'b'); // (1,2)=B, focus advances to (1,3)
+    // Step back onto the filled (1,2) without flipping direction (clicking it would select 'down').
+    fireEvent.keyDown(third, { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(second);
+    fireEvent.keyDown(second, { key: 'Backspace' });
+    expect(second.value).toBe('');
+    expect(document.activeElement).toBe(first);
+  });
+
   it('Backspace on an empty cell moves focus backward and clears that cell', () => {
     const { container } = render(<Grid puzzle={TEST_PUZZLE} />);
     const first = inputAt(container, 1, 1)!;

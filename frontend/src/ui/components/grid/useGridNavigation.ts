@@ -701,19 +701,22 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
   const eraseLetter = useCallback(() => {
     const { focused: f, direction: dir } = stateRef.current;
     if (!f) return;
+    const clue = lookup.clueAt(f.row, f.col, dir);
+    const idx = clue ? clue.cells.findIndex((c) => same(c.position, f)) : -1;
+    const prev = clue && idx > 0 ? clue.cells[idx - 1].position : null;
     const el = refs.current.get(key(f));
+    // Filled current cell: erase in place, then always step back one cell so
+    // backspace behaves identically whether the cell held a letter or not.
     if (el && el.value !== '' && !isCellValidatedRef.current?.(f.row, f.col)) {
       el.value = '';
       cellValuesRef.current.delete(key(f));
       bumpEntries();
       onCellChangeRef.current?.(f.row, f.col, null);
+      if (prev) focusCell(prev);
       return;
     }
-    const clue = lookup.clueAt(f.row, f.col, dir);
-    if (!clue) return;
-    const idx = clue.cells.findIndex((c) => same(c.position, f));
-    if (idx <= 0) return;
-    const prev = clue.cells[idx - 1].position;
+    // Empty current cell: step back and erase the previous cell (if unlocked).
+    if (!prev) return;
     const prevEl = refs.current.get(key(prev));
     if (prevEl && !isCellValidatedRef.current?.(prev.row, prev.col)) {
       const before = prevEl.value;
