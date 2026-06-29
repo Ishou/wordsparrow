@@ -162,37 +162,10 @@ export default defineConfig({
         xl: { value: '4rem' },
       },
       fonts: {
-        // Three-family stack per ADR-0043 §3 (supersedes ADR-0005 §5's
-        // single-typeface justification):
-        //
-        //   - `body`    → Outfit Variable (wght axis). Used everywhere
-        //                 the previous palette used Nunito — letter
-        //                 cells, lobby surfaces, body copy, buttons.
-        //   - `heading` → Fraunces Variable (opsz 9–144 + wght axis,
-        //                 roman + italic). Used for h1–h3, section
-        //                 eyebrows, and the wordmark — the `full` subset
-        //                 ships the `opsz` axis required for the wordmark's
-        //                 display sizing at `opsz 144` (ADR-0043 §4,
-        //                 deferred to PR 3).
-        //   - `mono`    → Lekton (unchanged). Def-cell clue text only.
-        //
-        // `"<Family> Variable fallback"` is a metrics-matched face
-        // emitted at build time by `FontaineTransform` (see
-        // `vite.config.ts`); it remaps the system fallback to each
-        // variable family's ascent / descent / line-gap / size-adjust,
-        // so the fallback text occupies the same pixels as the web
-        // font and there is no reflow when the woff2 swaps in. The
-        // remaining system-ui chain (sans for Outfit, serif for
-        // Fraunces) stays as a hard fallback if the build-time face is
-        // ever absent (dev, stale-cache PWA, or a fontaine miss).
-        body: { value: '"Outfit Variable", "Outfit Variable fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' },
-        heading: { value: '"Fraunces Variable", "Fraunces Variable fallback", Georgia, "Times New Roman", serif' },
-        // Monospace — used ONLY for def-cell clue text (Cell.tsx
-        // defText/defStackText). Lekton's constant glyph advance is what
-        // lets the offline `scripts/eval/clue_metrics.py` gate be a pure
-        // char-count predicate (no PIL/font-metric coupling). Letter-
-        // input cells, headings, lobby surfaces, and the
-        // CurrentCluePanel stay on the `body` (Outfit) token.
+        // ADR-0043 §3 dead v1 stack (Outfit/Fraunces/Lekton); reachable only from unregistered v1 routes (ADR-0074).
+        body: { value: '"Outfit Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' },
+        heading: { value: '"Fraunces Variable", Georgia, "Times New Roman", serif' },
+        // Lekton's constant advance lets clue_metrics.py use a pure char-count predicate.
         mono: { value: '"Lekton", ui-monospace, "SFMono-Regular", Menlo, "Cascadia Code", monospace' },
         // WordSparrow v2 (ADR-0072): Fredoka display, Nunito UI, Spline Sans Mono grid letters, Hanken Grotesk clues.
         wsDisplay: { value: '"Fredoka Variable", "Nunito Variable", system-ui, sans-serif' },

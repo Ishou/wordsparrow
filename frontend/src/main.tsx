@@ -73,13 +73,6 @@ import { registerServiceWorker } from '@/infrastructure/pwa';
 import { signalUpdateAvailable } from '@/ui/v2/UpdatePrompt';
 import { sessionStorageLobbyJoinCodeStash } from '@/infrastructure/session/sessionStorageLobbyJoinCode';
 import type { Pseudonym, SessionId } from '@/domain/game';
-// `fonts.css` is imported separately (rather than via `@import` from
-// `index.css`) so the `@font-face` rules reach the `fontaine` Vite
-// plugin's `transform` hook directly. CSS-side `@import` is resolved
-// after that hook runs, which would hide the rules from fontaine and
-// no metrics-matched fallback face would be generated. See
-// `vite.config.ts` and `src/ui/styles/fonts.css` for the rationale.
-import '@/ui/styles/fonts.css';
 // v2 (ADR-0072) faces, declared inline with font-display: block — see the file header.
 import '@/design-system/fonts.css';
 import '@/ui/styles/index.css';

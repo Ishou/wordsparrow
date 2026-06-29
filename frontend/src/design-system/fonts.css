@@ -1,4 +1,4 @@
-/* ADR-0072 §3 — v2 type stack; font-display:block + render-gate; inline @font-face for fontaine visibility. */
+/* ADR-0072 §3 — v2 type stack; font-display:block + render-gate prevent FOUT; inline @font-face in main.tsx (not @import) is intentional. */
 
 /* ── Fredoka Variable — display (wsDisplay) ── */
 @font-face {

@@ -15,7 +15,7 @@
 - **CLS must remain 0** in the final Lighthouse run. This is a hard gate.
 - **Branding intent preserved:** the main UI font (Nunito) must not flash; only the wordmark (Fredoka) may swap, cold-load only.
 - **Comments:** one line, non-obvious WHY only. No multi-line comment blocks in new code.
-- **Commit style:** conventional, bounded-context scope, `-s` (DCO). Type `perf(frontend-ui): …` or `chore(frontend): …`. End body with `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
+- **Commit style:** conventional, bounded-context scope, `-s` (DCO). Type must be in the commitlint allowlist `[feat, fix, chore, refactor, test, docs]` — use `chore(frontend-ui): …` / `chore(frontend-infra): …` (NOT `perf`, which the gate rejects). End body with `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
 - **Diff cap:** 400 lines excl. generated. If exceeded, invoke the standing cap-override with justification (single workstream) — do not split the PR.
 - **Baseline (already captured this session, clean-profile throttled mobile, wordsparrow.io):** Performance **79**, FCP **3.0s** (score 0.49), LCP **4.4s** (score 0.39), TBT 10ms, CLS 0. These are the numbers the final run is compared against.
 

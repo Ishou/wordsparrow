@@ -2,43 +2,10 @@ import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
-import { FontaineTransform } from 'fontaine';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // Vite + React 19 config for the Bliss frontend bounded context.
-// See ADR-0002 for the stack rationale.
-//
-// Two FOUT-mitigation pieces are wired here (originally introduced by
-// `fix/frontend-font-flicker`; three-family roster per ADR-0043 §3):
-//
-//   1. `FontaineTransform` rewrites every `@font-face` rule in
-//      `src/ui/styles/fonts.css` to add a sibling face named
-//      `"<Family> Variable fallback"` whose `size-adjust`,
-//      `ascent-override`, `descent-override`, and `line-gap-override`
-//      make the system fallback occupy the same pixels as the web
-//      font. Currently emits faces for Fraunces Variable (heading)
-//      and Outfit Variable (body); the plugin auto-detects families
-//      from the CSS, so adding/removing a family in `fonts.css` is
-//      all the wiring needed.
-//
-//   2. `preloadLatinBodyFont` scans the build's emitted assets after
-//      the bundle is rendered and injects a `<link rel="preload"
-//      as="font">` into `index.html` for the Latin subset of the
-//      body font (Outfit) — the family hit on every paint, and the
-//      `unicode-range` partition French and English visitors
-//      actually need. Vite hashes the asset filename per build, so
-//      the lookup happens at bundle time rather than being hard-coded.
-//      This kicks the woff2 fetch off in the preload scanner phase
-//      rather than waiting for CSS parse + `@font-face` discovery,
-//      shaving the visible-flicker window. Heading copy uses
-//      Fraunces and falls back via fontaine until that woff2 arrives;
-//      preloading body is the higher-leverage of the two on every
-//      route except `/` and `/grilles` where headings dominate above
-//      the fold.
-//
-// Both pieces are no-ops in dev (the dev server serves CSS/woff2
-// straight from `node_modules`); they only run during `vite build`.
+// See ADR-0002 for the stack rationale. v2 faces (ADR-0072) ship with font-display: block + a render-gate in main.tsx.
 
 // Prerendered routes are post-Workbox; denylist so navigations hit Cloudflare's per-route HTML — ADR-0053.
 const PRERENDERED_ROUTE_PATHS = [
@@ -57,44 +24,6 @@ const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\
 const PRERENDER_NAV_DENYLIST: RegExp[] = PRERENDERED_ROUTE_PATHS.map(
   (p) => new RegExp(`^${escapeRegExp(p)}/?(\\?.*)?$`),
 );
-
-function preloadLatinBodyFont(): Plugin {
-  return {
-    name: 'preload-latin-body-font',
-    apply: 'build',
-    enforce: 'post',
-    transformIndexHtml: {
-      order: 'post',
-      handler(html, ctx) {
-        const bundle = ctx.bundle;
-        if (!bundle) return html;
-        const latin = Object.keys(bundle).find(
-          (fileName) =>
-            fileName.includes('outfit-latin-wght-normal') &&
-            fileName.endsWith('.woff2'),
-        );
-        if (!latin) return html;
-        const href = `/${latin}`;
-        return {
-          html,
-          tags: [
-            {
-              tag: 'link',
-              attrs: {
-                rel: 'preload',
-                href,
-                as: 'font',
-                type: 'font/woff2',
-                crossorigin: '',
-              },
-              injectTo: 'head-prepend',
-            },
-          ],
-        };
-      },
-    },
-  };
-}
 
 // MSW preview handlers (see ADR-0007 §5) replay the spec's
 // `examples/` payloads so the preview SPA stays contract-conformant
@@ -128,52 +57,6 @@ function gridApiExamplesAsVirtualModule(): Plugin {
 export default defineConfig({
   plugins: [
     react(),
-    // Metrics-matched fallback face: rewrites the local
-    // `@font-face` rules in `src/ui/styles/fonts.css` so the system
-    // fallback renders at each web font's exact metrics before the
-    // woff2 arrives. Eliminates the reflow on swap.
-    //
-    // Fontaine auto-detects font families from the CSS — currently
-    // Fraunces Variable (heading) and Outfit Variable (body) per
-    // ADR-0043 §3. Lekton is monospace and only used inside def
-    // cells, which are sized rigidly by the grid algorithm; a
-    // fallback face for it would never visibly help, so it's not
-    // worth the extra emitted CSS.
-    //
-    // Fontaine only generates a fallback face when it has metrics for
-    // *both* the source family and the fallback family. The fallbacks
-    // listed here all have metrics in fontaine's bundled capsize
-    // database (`BlinkMacSystemFont`, `Segoe UI`, `Roboto`, `Arial`,
-    // `Georgia`, `Times New Roman`); generic CSS keywords like
-    // `system-ui` / `sans-serif` / `serif` have no metrics and would
-    // silently no-op, so they live only in the Panda font-stack
-    // tokens (see `panda.config.ts`) as the ultimate hard fallback
-    // when even the metrics-matched face can't load. Georgia + Times
-    // are listed alongside the sans fallbacks so fontaine can pick
-    // an appropriate metrics source for Fraunces (serif) without
-    // needing a per-family config.
-    FontaineTransform.vite({
-      fallbacks: [
-        'BlinkMacSystemFont',
-        'Segoe UI',
-        'Roboto',
-        'Arial',
-        'Georgia',
-        'Times New Roman',
-      ],
-      // Fontaine can read metrics from a relative `./` or `../` path
-      // (resolved against the importing CSS file) or from an absolute
-      // URL. The `@font-face` `src: url(...)` declarations in
-      // `src/ui/styles/fonts.css` use bare-module specifiers
-      // (`@fontsource-variable/fraunces/files/...`,
-      // `@fontsource-variable/outfit/files/...`) so Vite's asset
-      // pipeline can hash and emit them; fontaine doesn't know how
-      // to resolve those, so this hook maps the bare specifier to the
-      // package's location under `node_modules/` for the metrics read.
-      resolvePath: (id) =>
-        pathToFileURL(path.resolve(__dirname, 'node_modules', id)),
-    }),
-    preloadLatinBodyFont(),
     gridApiExamplesAsVirtualModule(),
     // PWA + offline cache. Workbox precaches the app shell so a reload
     // works without network, and applies a NetworkFirst strategy to the
