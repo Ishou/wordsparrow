@@ -40,8 +40,7 @@ const title = css({
 
 const filterBar = css({ marginBottom: '18px' });
 
-// Desktop: the title + filter pin while the list scrolls; passthrough on phone/tablet (the PhoneShell body scrolls as one).
-// paddingRight matches the list's, so the pinned tabs stay aligned with the cards above the scrollbar.
+// Desktop: the title + filter pin while list scrolls; paddingRight matches the list's so tabs stay aligned above the scrollbar.
 const head = css({ lg: { flex: 'none', paddingRight: '16px' } });
 // Desktop: the list is its own scroll container (one scrollbar, on the list); paddingRight keeps the cards from touching the scrollbar, which sits in the reserved gutter beyond it.
 const scrollArea = css({ lg: { flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '40px', paddingRight: '16px', scrollbarGutter: 'stable' } });
