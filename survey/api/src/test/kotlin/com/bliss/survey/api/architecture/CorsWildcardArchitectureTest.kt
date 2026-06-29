@@ -3,7 +3,7 @@ package com.bliss.survey.api.architecture
 import com.lemonappdev.konsist.api.Konsist
 import org.junit.jupiter.api.Test
 
-// Guards ADR-0048: api Modules pairing install(CORS) with allowCredentials = true MUST use allowHeaders { true }.
+// Guards ADR-0048: api Modules pairing install(CORS) with allowCredentials = true MUST use allowHeaders { true }, unless they cite ADR-0077's sanctioned explicit-list narrowing.
 class CorsWildcardArchitectureTest {
     @Test
     fun `credentialed CORS in api modules uses the wildcard headers predicate`() {
@@ -20,6 +20,7 @@ class CorsWildcardArchitectureTest {
             for ((label, body) in blocks) {
                 if (!body.contains("allowCredentials = true")) continue
                 if (containsWildcardHeadersPredicate(body)) continue
+                if (body.contains("ADR-0077")) continue // explicit-list narrowing the ADR sanctions
                 offenders.add("${file.path} ($label)")
             }
         }
@@ -29,7 +30,8 @@ class CorsWildcardArchitectureTest {
                 buildString {
                     appendLine(
                         "ADR-0048: credentialed CORS (allowCredentials = true) must use the wildcard predicate " +
-                            "`allowHeaders { true }`, not an explicit allowHeader(...) list. See ADR-0048.",
+                            "`allowHeaders { true }`, not an explicit allowHeader(...) list, unless the block " +
+                            "cites ADR-0077's sanctioned narrowing. See ADR-0048 / ADR-0077.",
                     )
                     appendLine("Offending file(s):")
                     offenders.forEach { appendLine("  - $it") }
