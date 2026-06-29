@@ -10,9 +10,7 @@ import {
   type SoloStorePayload,
 } from './SoloStorePayload';
 
-// Persists which account this device last reconciled. The batch sync runs once
-// per sign-in, not on every reload — the OAuth redirect lands as a plain
-// rehydrate, so an in-memory anon→authed transition can't tell them apart.
+// Persists which account this device last reconciled; see ADR-0075 for why in-memory isn't enough.
 export interface ReconciledUserStore {
   load(): string | null;
   save(userId: string): void;

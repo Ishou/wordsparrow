@@ -349,8 +349,7 @@ enableMocks()
       tracker.trackPageView(url, document.title || undefined);
     });
 
-    // On sign-in: rebind lobby seats. Solo progress carries up via the
-    // account-keyed reconcileOnAuth (ADR-0075), not a per-reload carryOver.
+    // On sign-in: rebind lobby seats only; solo progress reconciles via reconcileOnAuth (ADR-0075).
     const rebindLobby =
       multiplayer && 'lobbyClient' in context
         ? (anonSessionId: string) =>
