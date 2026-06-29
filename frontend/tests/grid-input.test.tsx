@@ -234,9 +234,9 @@ describe('Grid keyboard interactions', () => {
     const first = inputAt(container, 1, 1)!;
     const second = inputAt(container, 1, 2)!;
     const third = inputAt(container, 1, 3)!;
-    click(first); // across-2, direction = across
-    typeChar(first, 'a'); // (1,1)=A, focus advances to (1,2)
-    typeChar(second, 'b'); // (1,2)=B, focus advances to (1,3)
+    click(first);
+    typeChar(first, 'a');
+    typeChar(second, 'b');
     // Step back onto the filled (1,2) without flipping direction (clicking it would select 'down').
     fireEvent.keyDown(third, { key: 'ArrowLeft' });
     expect(document.activeElement).toBe(second);

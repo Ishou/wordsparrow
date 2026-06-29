@@ -705,8 +705,7 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
     const idx = clue ? clue.cells.findIndex((c) => same(c.position, f)) : -1;
     const prev = clue && idx > 0 ? clue.cells[idx - 1].position : null;
     const el = refs.current.get(key(f));
-    // Filled current cell: erase in place, then always step back one cell so
-    // backspace behaves identically whether the cell held a letter or not.
+    // Always step back after erasing so filled and empty cells behave identically.
     if (el && el.value !== '' && !isCellValidatedRef.current?.(f.row, f.col)) {
       el.value = '';
       cellValuesRef.current.delete(key(f));
