@@ -65,6 +65,7 @@ import {
 import type { TourSeenStore } from '@/application/tour/TourSeenStore';
 import type { SessionClient } from '@/application/session/SessionClient';
 import { registerServiceWorker } from '@/infrastructure/pwa';
+import { signalUpdateAvailable } from '@/ui/v2/UpdatePrompt';
 import { sessionStorageLobbyJoinCodeStash } from '@/infrastructure/session/sessionStorageLobbyJoinCode';
 import type { Pseudonym, SessionId } from '@/domain/game';
 // `fonts.css` is imported separately (rather than via `@import` from
@@ -388,5 +389,5 @@ enableMocks()
       mount();
     }
 
-    registerServiceWorker();
+    registerServiceWorker(signalUpdateAvailable);
   });

@@ -104,6 +104,35 @@ one at the same path.
 4. Skip when `VITE_USE_MOCK_API=true` (preview/MSW mode) to avoid overriding
    MSW's SW at scope `/`.
 
+## Amendment (2026-06-29): user-prompted update, not auto-reload
+
+The original decision used `registerType: 'autoUpdate'` with
+`skipWaiting: true` / `clientsClaim: true`: a freshly precached SW took
+over and `pwa.ts` reloaded the visible tab. In practice this interrupts
+a player mid-solve — the page refreshes from under them the moment a
+deploy lands.
+
+The reload-on-update UX is changed to **user-prompted update**:
+
+- `vite.config.ts`: `registerType: 'prompt'` and `skipWaiting: false`
+  (`clientsClaim: true` kept) — a new SW now **waits** instead of
+  taking over.
+- `pwa.ts`: on workbox's `waiting` event (and on an already-waiting SW
+  at register time), invoke an `onUpdateAvailable(apply)` callback. The
+  composition root (`main.tsx`) passes a callback that surfaces a small
+  dismissible "Nouvelle version disponible" banner (`UpdatePrompt`). The
+  banner's "Mettre à jour" action runs `apply`, which calls
+  `wb.messageSkipWaiting()`; the single `controlling` listener then
+  reloads **once**, guarded by a `userAccepted` flag so a background
+  `controlling` (another tab updating) never reloads this tab
+  unprompted. Dismiss (✕) hides the banner for the session; it
+  re-appears on the next `waiting` or a later load while still stale.
+
+The `vite:preloadError` vanished-chunk recovery reload and the
+`updateViaCache: 'none'` registration are unchanged — that crash-
+recovery path is separate from the update path and still reloads
+automatically on a chunk mismatch.
+
 ## Consequences
 
 ### Easier
@@ -112,9 +141,10 @@ one at the same path.
   the last-fetched puzzle is served from the runtime cache.
 - The precache manifest is automatically correct across builds — no manual
   maintenance, no stale-asset risk from hashed filenames.
-- `autoUpdate` means players on the previous version are silently upgraded on
-  the next page load, with no "Update available" prompt to design or
-  maintain.
+- Players are upgraded explicitly via the "Nouvelle version disponible"
+  prompt (see the 2026-06-29 amendment); the update never interrupts a
+  solve, and a coordinated client-side migration now has a natural
+  user-gated activation point.
 - MSW preview deployments are unaffected: the guard in `pwa.ts` prevents the
   workbox SW from competing with MSW at scope `/`.
 
