@@ -31,7 +31,7 @@ type DailyState =
 // v2 home (ADR-0072): dev-only sandbox; /accueil untouched; previous grids strip uses real summaries.
 
 const shell = css({
-  // Phone: cap to the viewport so the top bar + bottom nav pin and only `content` scrolls (app-shell); desktop reverts to document scroll.
+  // Cap to the viewport so the top bar + bottom nav pin and only `content` scrolls (app-shell), at every width.
   height: '100dvh',
   bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
   display: 'flex',
@@ -39,7 +39,7 @@ const shell = css({
   alignItems: 'center',
   // Tablet: a contained app card on a calm jade surround. Desktop: full-bleed for the 2-col layout.
   md: { bgImage: 'none', bg: '#9CCBB1', justifyContent: 'center', padding: '40px 24px' },
-  lg: { height: 'auto', minHeight: '100dvh', bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0 },
+  lg: { height: '100dvh', bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0 },
 });
 // Phone: mobile column. Tablet: centred framed card. Desktop: a wide 2-column container.
 const frame = css({
@@ -61,12 +61,11 @@ const frame = css({
   },
   lg: {
     maxWidth: '1140px',
-    height: 'auto',
-    minHeight: '100dvh',
+    minHeight: 0,
     borderRadius: 0,
     boxShadow: 'none',
     bgImage: 'none',
-    overflow: 'visible',
+    overflow: 'hidden',
   },
 });
 const content = css({
@@ -77,8 +76,8 @@ const content = css({
   // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it; top spacing lives in MobileTopBar.
   padding: '0 22px calc(64px + env(safe-area-inset-bottom))',
   overflowY: 'auto',
-  // Desktop: top nav, then the two columns vertically centred in the remaining space.
-  lg: { overflow: 'visible', padding: '0 36px 40px' },
+  // Desktop: scroll the content region (not the document) under the pinned bar; the two columns centre in the remaining space.
+  lg: { overflowY: 'auto', padding: '0 36px 40px' },
 });
 
 // Desktop hub: hero (left) + grilles (right) side by side, centred in the viewport. Passthrough on phone/tablet.
