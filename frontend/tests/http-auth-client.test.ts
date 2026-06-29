@@ -26,7 +26,7 @@ const userId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 
 describe('HttpAuthClient.whoami', () => {
   it('returns the authed identity on 200', async () => {
-    setAuthed({ userId, displayName: 'Lapin 472' });
+    setAuthed({ userId, displayName: 'Lapin 472', role: 'player' });
 
     const result = await makeClient().whoami();
 
@@ -45,7 +45,7 @@ describe('HttpAuthClient.whoami', () => {
 describe('HttpAuthClient.getMe', () => {
   it('returns the full user profile with `providers` preserved from the wire', async () => {
     setAuthed(
-      { userId, displayName: 'Lapin 472' },
+      { userId, displayName: 'Lapin 472', role: 'player' },
       {
         id: userId,
         displayName: 'Lapin 472',
@@ -53,6 +53,7 @@ describe('HttpAuthClient.getMe', () => {
         providers: [
           { provider: 'google', linkedAt: '2026-05-01T10:00:00Z', emailOptIn: true },
         ],
+        role: 'player',
       },
     );
 
@@ -77,7 +78,7 @@ describe('HttpAuthClient.getMe', () => {
 
 describe('HttpAuthClient.updateMe', () => {
   it('PATCHes the display name and resolves on 200', async () => {
-    setAuthed({ userId, displayName: 'Joueur' });
+    setAuthed({ userId, displayName: 'Joueur', role: 'player' });
 
     await makeClient().updateMe('Lapin 472');
 
@@ -86,7 +87,7 @@ describe('HttpAuthClient.updateMe', () => {
   });
 
   it('throws InvalidDisplayNameError with the RFC 7807 detail on 400', async () => {
-    setAuthed({ userId, displayName: 'Joueur' });
+    setAuthed({ userId, displayName: 'Joueur', role: 'player' });
 
     try {
       await makeClient().updateMe(''); // length < 1 → 400
@@ -100,7 +101,7 @@ describe('HttpAuthClient.updateMe', () => {
 
 describe('HttpAuthClient.deleteMe', () => {
   it('resolves on 204 and clears the session', async () => {
-    setAuthed({ userId, displayName: 'Lapin 472' });
+    setAuthed({ userId, displayName: 'Lapin 472', role: 'player' });
     const client = makeClient();
 
     await client.deleteMe();
@@ -111,7 +112,7 @@ describe('HttpAuthClient.deleteMe', () => {
 
 describe('HttpAuthClient.logout', () => {
   it('resolves on 204 and clears the session', async () => {
-    setAuthed({ userId, displayName: 'Lapin 472' });
+    setAuthed({ userId, displayName: 'Lapin 472', role: 'player' });
     const client = makeClient();
 
     await client.logout();
