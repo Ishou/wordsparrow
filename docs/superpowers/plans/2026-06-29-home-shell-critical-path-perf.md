@@ -97,7 +97,7 @@ Expected: PASS. If a component snapshot referencing an old font family breaks, t
 
 ```bash
 git add -A
-git commit -s -m "perf(frontend-ui): drop dead v1 font stack + Outfit preload
+git commit -s -m "chore(frontend-ui): drop dead v1 font stack + Outfit preload
 
 Fraunces/Outfit/Lekton (ADR-0043) are reachable only from unregistered
 v1 routes post-cutover (ADR-0074). Deleting fonts.css + the Outfit-only
@@ -188,7 +188,7 @@ Expected: PASS.
 
 ```bash
 git add frontend/src/infrastructure/analytics/matomoTracker.ts frontend/tests
-git commit -s -m "perf(frontend-infra): defer matomo.js download to idle
+git commit -s -m "chore(frontend-infra): defer matomo.js download to idle
 
 Inject the analytics script on requestIdleCallback (setTimeout fallback)
 so its 22 KiB download leaves the critical path. _paq config stays
@@ -264,7 +264,7 @@ cd frontend && pnpm typecheck && pnpm test
 ```
 ```bash
 git add frontend/src/main.tsx
-git commit -s -m "perf(frontend-infra): lazy-load OTel off the boot path
+git commit -s -m "chore(frontend-infra): lazy-load OTel off the boot path
 
 Dynamic-import the tracer at idle so vendor-otel (23 KiB) leaves the
 critical path. Initial fetch spans are traded for faster first paint;
@@ -327,7 +327,7 @@ cd frontend && pnpm typecheck && pnpm test
 ```
 ```bash
 git add frontend/src/design-system/fonts.css frontend/src/main.tsx docs/adr/0072-*.md
-git commit -s -m "perf(frontend-ui): tune render-gate to Nunito-only, 800ms cap
+git commit -s -m "chore(frontend-ui): tune render-gate to Nunito-only, 800ms cap
 
 Gate first paint on the UI font (Nunito) only and lower the cap
 1200->800ms; Fredoka (wordmark) switches to font-display:swap so it no
