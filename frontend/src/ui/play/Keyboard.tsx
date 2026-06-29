@@ -34,8 +34,7 @@ const keyRow = css({
   justifyContent: 'center',
   '& button': { flex: 'none', width: 'calc((100% - 36px) / 10)', minWidth: 0 },
 });
-// Last row: a real 10-col grid so the 6 letters sit centred (cols 3–8) while the backspace
-// fills exactly the L+M footprint (cols 9–10) flush to the right edge — no floating gap.
+// Last row: a real 10-col grid — 2 empty leading cells + 6 letters + backspace spanning cols 9–10.
 const lastRow = css({
   display: 'grid',
   gridTemplateColumns: 'repeat(10, 1fr)',
