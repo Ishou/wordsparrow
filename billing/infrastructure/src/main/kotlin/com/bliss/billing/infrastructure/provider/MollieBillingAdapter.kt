@@ -37,6 +37,41 @@ class MollieBillingAdapter(
         return CheckoutUrls(checkoutUrl = checkoutUrl, successUrl = config.successUrl, cancelUrl = config.cancelUrl)
     }
 
+    override suspend fun createSubscription(
+        userId: UUID,
+        firstPaymentRef: String,
+        tier: Tier,
+    ): ProviderSubscriptionState {
+        val ref = MollieReference.decode(firstPaymentRef)
+        require(ref is MollieReference.Payment) { "createSubscription expects a first-payment reference: $firstPaymentRef" }
+        val payment = requireNotNull(client.getPayment(ref.paymentId)) { "first payment $firstPaymentRef not found" }
+        val customerId = requireNotNull(payment.customerId) { "first payment ${payment.id} has no customer" }
+        val mandateId = requireNotNull(payment.mandateId) { "first payment ${payment.id} established no mandate" }
+        val subscription =
+            client.createSubscription(
+                customerId = customerId,
+                mandateId = mandateId,
+                amountValue = config.subscriptionAmount,
+                currency = config.currency,
+                interval = config.interval,
+                description = config.description,
+                webhookUrl = config.webhookUrl,
+                metadata = metadataOf(userId, tier),
+            )
+        val status =
+            checkNotNull(MollieStatusMapping.fromSubscriptionStatus(subscription.status)) {
+                "created subscription ${subscription.id} has non-actionable status ${subscription.status}"
+            }
+        return ProviderSubscriptionState(
+            externalRef = MollieReference.subscription(subscription.customerId, subscription.id),
+            userId = userId,
+            tier = tier,
+            status = status,
+            source = BillingSource.MOLLIE,
+            periodEnd = subscription.nextPaymentDate,
+        )
+    }
+
     override suspend fun fetchByReference(externalRef: String): ProviderSubscriptionState? =
         when (val ref = MollieReference.decode(externalRef)) {
             is MollieReference.Subscription ->

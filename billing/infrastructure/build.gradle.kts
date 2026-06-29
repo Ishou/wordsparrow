@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm")
+    kotlin("plugin.serialization") version "2.3.21"
 }
 
 kotlin {
@@ -18,6 +19,12 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:12.8.1")
     implementation("org.slf4j:slf4j-api:2.0.18")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+
+    // kotlinx-serialization — EntitlementChanged JSON payload on the NATS wire (ADR-0078).
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+
+    // NATS JetStream client — the EntitlementChanged cross-context publisher (ADR-0049, ADR-0078).
+    implementation("io.nats:jnats:2.25.3")
 
     // Official Mollie Java SDK (BSD-2-Clause); the billing provider adapter named in ADR-0078.
     implementation("com.mollie:mollie:1.8.14")

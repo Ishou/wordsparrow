@@ -8,6 +8,7 @@ import com.mollie.mollie.models.components.PaymentRequest
 import com.mollie.mollie.models.components.PaymentResponse
 import com.mollie.mollie.models.components.Security
 import com.mollie.mollie.models.components.SequenceType
+import com.mollie.mollie.models.components.SubscriptionRequest
 import com.mollie.mollie.models.components.SubscriptionResponse
 import com.mollie.mollie.models.errors.APIException
 import com.mollie.mollie.models.operations.GetPaymentRequest
@@ -90,6 +91,43 @@ class SdkMollieClient(
             }
         }
 
+    override suspend fun createSubscription(
+        customerId: String,
+        mandateId: String,
+        amountValue: String,
+        currency: String,
+        interval: String,
+        description: String,
+        webhookUrl: String,
+        metadata: Map<String, String>,
+    ): MollieSubscription =
+        withContext(Dispatchers.IO) {
+            val request =
+                SubscriptionRequest
+                    .builder()
+                    .amount(
+                        Amount
+                            .builder()
+                            .currency(currency)
+                            .value(amountValue)
+                            .build(),
+                    ).interval(interval)
+                    .description(description)
+                    .mandateId(mandateId)
+                    .webhookUrl(webhookUrl)
+                    .metadata(metadataOf(metadata))
+                    .build()
+            sdk
+                .subscriptions()
+                .create()
+                .customerId(customerId)
+                .subscriptionRequest(request)
+                .call()
+                .subscriptionResponse()
+                .orElseThrow { IllegalStateException("Mollie returned no subscription body") }
+                .toDto()
+        }
+
     override suspend fun getSubscription(
         customerId: String,
         subscriptionId: String,
@@ -135,6 +173,7 @@ class SdkMollieClient(
             customerId = customerId().orElse(null),
             subscriptionId = subscriptionId().toNullable(),
             metadata = metadata().toNullable()?.toStringMap() ?: emptyMap(),
+            mandateId = mandateId().toNullable(),
         )
 
     private fun SubscriptionResponse.toDto(): MollieSubscription =

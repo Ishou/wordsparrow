@@ -10,6 +10,8 @@ data class MolliePayment(
     val customerId: String?,
     val subscriptionId: String?,
     val metadata: Map<String, String>,
+    // The mandate a paid first payment established; the recurring subscription is created against it (ADR-0078).
+    val mandateId: String? = null,
 )
 
 /** Provider subscription snapshot, reduced to primitives at the SDK boundary (ADR-0078). */
@@ -42,6 +44,18 @@ interface MollieClient {
     ): MolliePayment
 
     suspend fun getPayment(paymentId: String): MolliePayment?
+
+    /** Create the recurring subscription against an existing mandate; the first payment must already be paid. */
+    suspend fun createSubscription(
+        customerId: String,
+        mandateId: String,
+        amountValue: String,
+        currency: String,
+        interval: String,
+        description: String,
+        webhookUrl: String,
+        metadata: Map<String, String>,
+    ): MollieSubscription
 
     suspend fun getSubscription(
         customerId: String,

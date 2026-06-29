@@ -85,4 +85,11 @@ class SubscriptionStatusTest {
     fun `fromWire rejects an unknown spelling`() {
         assertThrows<IllegalArgumentException> { SubscriptionStatus.fromWire("paused") }
     }
+
+    @Test
+    fun `isLive is true for every state except the terminal canceled and expired`() {
+        SubscriptionStatus.entries.forEach { status ->
+            assertThat(status.isLive()).isEqualTo(status != CANCELED && status != EXPIRED)
+        }
+    }
 }
