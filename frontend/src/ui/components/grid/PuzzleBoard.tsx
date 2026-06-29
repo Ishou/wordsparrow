@@ -143,10 +143,7 @@ export interface PuzzleBoardProps {
   readonly nav: GridNavigation;
   // Solved/locked cells, keyed `row,col`. A new key in this set fires the solve beat.
   readonly validatedPositions: ReadonlySet<string>;
-  // "row,col" keys of a completed word whose server validation is in flight
-  // (delay-gated upstream). Renders the discreet jade pulse until the verdict
-  // lands — solo derives it from the auto-validation hook, coop from locally
-  // completed words not yet server-locked.
+  // Delay-gated upstream; solo uses the auto-validation hook, coop uses locally-completed-not-yet-locked.
   readonly validatingPositions?: ReadonlySet<string>;
   // Seed letters for the uncontrolled inputs, keyed `row,col`.
   readonly entryAt: ReadonlyMap<string, string>;

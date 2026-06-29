@@ -64,8 +64,6 @@ export interface PersistedFilledCell {
 // and clobbering locks earned via `onCellFilled` since the last render.
 const NO_INITIAL_FILL: ReadonlyArray<PersistedFilledCell> = [];
 
-// Only surface the "checking…" cue once a validate request has been slow this
-// long, so the common fast case never flashes it.
 const VALIDATING_DELAY_MS = 200;
 
 export interface WordAutoValidationState {
@@ -188,8 +186,6 @@ export function useWordAutoValidation(
   // for the same word while one is on the wire.
   const inFlightRef = useRef(new Set<string>());
 
-  // Cells of slow-to-validate words; armed behind VALIDATING_DELAY_MS so fast
-  // checks never flash the pulse. Per-word timers let each word arm/clear on its own.
   const [validating, setValidating] = useState<ReadonlySet<string>>(() => new Set());
   const validateTimersRef = useRef(new Map<string, number>());
   const addValidating = useCallback((keys: ReadonlyArray<string>) => {

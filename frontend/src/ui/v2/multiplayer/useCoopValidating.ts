@@ -2,15 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { normalizeAnswerLetter, type Puzzle } from '@/domain';
 import { wordRange } from '@/ui/components/grid/wordRange';
 
-// Coop has no client-side validate call: the local player fills cells, the
-// server validates, and a correct word comes back as `wordLocked`. This hook
-// shows the same discreet "checking…" pulse as solo/minigame by tracking words
-// the local player just completed but the server hasn't locked yet.
-//
-//  - DELAY_MS: arm the pulse only after the lock has been this slow, so the
-//    common fast case never flashes it.
-//  - MAX_MS: a wrong word is never locked, so stop pulsing after this window
-//    rather than spinning forever.
+// Pulse tracks local completions not yet server-locked; armed behind DELAY_MS, capped at MAX_MS.
 const DELAY_MS = 200;
 const MAX_MS = 3500;
 

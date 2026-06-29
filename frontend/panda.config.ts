@@ -305,10 +305,7 @@ export default defineConfig({
         '35%': { boxShadow: '0 0 0 3px rgba(212,93,131,0.55), 0 0 14px 3px rgba(212,93,131,0.45)' },
         '100%': { boxShadow: '0 0 0 0 rgba(212,93,131,0)' },
       },
-      // Discreet "checking with the server" breathing ring on a completed word
-      // whose validation is slow to respond — jade, low-contrast, distinct from
-      // the sakura solve-glow and the wrong-answer shake. Animates `outline`
-      // (not box-shadow) so it never clobbers a cell's focus/validated ring.
+      // Jade breathing ring; animates outline so it never clobbers the cell's state ring.
       wsValidating: {
         '0%, 100%': { outlineColor: 'rgba(79,110,92,0.06)' },
         '50%': { outlineColor: 'rgba(79,110,92,0.5)' },
