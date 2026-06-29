@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouteContext } from '@tanstack/react-router';
-import { Check, CircleNotch, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
+import { CaretRight, Check, CircleNotch, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { InvalidDisplayNameError, type GetMeResult } from '@/application/auth';
 import { useAuth } from '@/ui/components/auth';
@@ -33,6 +33,7 @@ const row = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '10
 const rowBtn = css({ cursor: 'pointer', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' } });
 const tile = css({ flex: 'none', width: '34px', height: '34px', borderRadius: '10px', bg: 'ws.jade', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'ws.jadeInk' });
 const rowLabel = css({ fontSize: '14.5px', fontWeight: 'bold', color: 'ws.jadeInk' });
+const chevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
 const rowSub = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '1px' });
 const dangerWrap = css({ marginTop: '6px' });
 
@@ -154,6 +155,7 @@ function AuthedCompte() {
           <button type="button" className={cx(row, rowBtn)} onClick={() => void logout()} style={{ borderTop: '1px solid #EEF3EC' }}>
             <span className={tile}><SignOut size={18} weight="bold" aria-hidden="true" /></span>
             <span className={rowLabel}>Se déconnecter</span>
+            <span className={chevron}><CaretRight size={16} weight="bold" aria-hidden="true" /></span>
           </button>
         </div>
       </nav>
