@@ -287,6 +287,34 @@ export function clearAllSoloEntriesForEverySession(): void {
     }
     toDelete.forEach((k) => ls.removeItem(k));
     ls.removeItem(LEGACY_KEY);
+    ls.removeItem(RECONCILED_USER_KEY);
+  } catch {
+    // No-op.
+  }
+}
+
+const RECONCILED_USER_KEY = 'bliss.solo.reconciledUserId';
+
+/** Account this device last batch-reconciled (ADR-0075); gates the once-per-sign-in sync. */
+export function loadReconciledUserId(): string | null {
+  try {
+    return globalThis.localStorage?.getItem(RECONCILED_USER_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveReconciledUserId(userId: string): void {
+  try {
+    globalThis.localStorage?.setItem(RECONCILED_USER_KEY, userId);
+  } catch {
+    // No-op.
+  }
+}
+
+export function clearReconciledUserId(): void {
+  try {
+    globalThis.localStorage?.removeItem(RECONCILED_USER_KEY);
   } catch {
     // No-op.
   }

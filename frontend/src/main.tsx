@@ -34,8 +34,10 @@ import {
 } from '@/infrastructure/session/localStorageSession';
 import {
   clearAllSoloEntriesForEverySession,
+  clearReconciledUserId,
   clearSoloEntriesForPuzzle,
   listSoloPuzzleIds,
+  loadReconciledUserId,
   loadSoloElapsed,
   loadSoloEntries,
   loadSoloHintsUsed,
@@ -43,6 +45,7 @@ import {
   loadSoloPayload,
   recordSoloHintUsed,
   replaceSoloPayload,
+  saveReconciledUserId,
   saveSoloElapsed,
   saveSoloLetter,
   saveSoloLockedCell,
@@ -267,6 +270,11 @@ enableMocks()
       client: createHttpProgressSyncClient({ baseUrl: identityApiBaseUrl }),
       blobStore: soloProgressBlobStore,
       getSessionId: getOrCreateSessionId,
+      reconciledStore: {
+        load: loadReconciledUserId,
+        save: saveReconciledUserId,
+        clear: clearReconciledUserId,
+      },
     });
     const soloEntriesStore: SoloEntriesStore = createSyncingSoloEntriesStore(
       localSoloEntriesStore,
@@ -341,16 +349,17 @@ enableMocks()
       tracker.trackPageView(url, document.title || undefined);
     });
 
-    // On sign-in: carry anon progress up before lobby rebind (ADR-0075).
+    // On sign-in: rebind lobby seats only; solo progress reconciles via reconcileOnAuth (ADR-0075).
     const rebindLobby =
       multiplayer && 'lobbyClient' in context
         ? (anonSessionId: string) =>
             context.lobbyClient.rebindLobbySessions(anonSessionId as SessionId)
         : undefined;
-    const onAuthed = async (anonSessionId: string) => {
-      await progressSyncService.carryOver(anonSessionId);
-      if (rebindLobby) await rebindLobby(anonSessionId);
-    };
+    const onAuthed = rebindLobby
+      ? async (anonSessionId: string) => {
+          await rebindLobby(anonSessionId);
+        }
+      : undefined;
 
     // onCaughtError only: onUncaughtError would double-emit via the window.error handler.
     const mount = () =>

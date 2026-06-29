@@ -26,19 +26,24 @@ function fakeAuthClient(whoami: WhoAmIResult | null): AuthClient {
 
 function fakeService(): ProgressSyncService & {
   readonly enabledCalls: boolean[];
-  pullCount: number;
+  readonly reconciledUsers: string[];
+  resetCount: number;
 } {
   return {
     enabledCalls: [],
-    pullCount: 0,
+    reconciledUsers: [],
+    resetCount: 0,
     setEnabled(next: boolean) {
       this.enabledCalls.push(next);
     },
-    async pullAndMergeAll() {
-      this.pullCount += 1;
+    async pullAndMergeAll() {},
+    async reconcileOnAuth(userId: string) {
+      this.reconciledUsers.push(userId);
+    },
+    resetReconciled() {
+      this.resetCount += 1;
     },
     schedulePush() {},
-    async carryOver() {},
     dispose() {},
   };
 }
@@ -62,12 +67,12 @@ describe('useProgressSync', () => {
       </AuthProvider>,
     );
     await waitFor(() => expect(screen.getByTestId('ready')).toBeTruthy());
-    expect(service.pullCount).toBe(0);
+    expect(service.reconciledUsers).toHaveLength(0);
     // The gate is told to stay disabled.
     expect(service.enabledCalls).not.toContain(true);
   });
 
-  it('pulls + merges once and enables the gate when authed', async () => {
+  it('reconciles the signed-in account once and enables the gate when authed', async () => {
     const service = fakeService();
     render(
       <AuthProvider
@@ -77,7 +82,7 @@ describe('useProgressSync', () => {
         <Harness service={service} />
       </AuthProvider>,
     );
-    await waitFor(() => expect(service.pullCount).toBe(1));
+    await waitFor(() => expect(service.reconciledUsers).toEqual([USER_ID]));
     expect(service.enabledCalls).toContain(true);
   });
 });
