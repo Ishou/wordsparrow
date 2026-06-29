@@ -36,6 +36,7 @@ class SubscriptionTest {
     fun `requestCancellation is rejected from a non-live state`() {
         assertThrows<IllegalArgumentException> { subscription(SubscriptionStatus.EXPIRED).requestCancellation() }
         assertThrows<IllegalArgumentException> { subscription(SubscriptionStatus.CANCELED).requestCancellation() }
+        assertThrows<IllegalArgumentException> { subscription(SubscriptionStatus.PENDING_CANCELLATION).requestCancellation() }
     }
 
     @Test
@@ -96,6 +97,7 @@ class SubscriptionTest {
     @Test
     fun `renew is rejected on a canceled subscription`() {
         assertThrows<IllegalArgumentException> { subscription(SubscriptionStatus.CANCELED).renew(period) }
+        assertThrows<IllegalArgumentException> { subscription(SubscriptionStatus.PENDING_CANCELLATION).renew(period) }
     }
 
     @Test
