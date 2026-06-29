@@ -87,6 +87,7 @@ ADR-0059  survey/api/openapi.yaml                  /v1/campaign/current + 423 on
 ADR-0059  frontend/src/ui/components/sondage/**    LockBanner + useCampaignStatus + disabled cards
 ADR-0059  scripts/survey/backfill_campaigns.py     Historical campaign attribution from Modal logs
 ADR-0060  identity/**                              Identity user roles + UserRoleChanged event
+# ADR-0060: amendment 2026-06-29 (resolved guest|player|maintainer taxonomy) — guest is resolved at the edge (no session), NOT a stored role; player/maintainer stored unchanged (no migration, no UserRoleChanged wire change); whoami + /v1/users/me gain a `role` field (player|maintainer), whoami still 401s anonymous (consumers map no-session→guest); assignment surface unchanged (bootstrap-Job only). No new binding paths — changes land under identity/** above
 ADR-0061  survey/**/persistence/V11__*.sql          V11 migrate: drop survey_word_meta, collapse categorie (48→18 classes), add per-rating target_categories/target_sense/is_multisense/sub_tags
 ADR-0061  survey/**/text/GlossNormalizer.kt        Soft normalization rules for autocomplete + inventory dedup
 ADR-0061  survey/api/openapi.yaml                  GET /v1/lemma-meta/{mot} aggregates prior ratings; PUT /v1/lemma-meta removed; RatingRequest carries target_categories/target_sense/is_multisense/sub_tags; write path admits any authenticated rater (maintainer wins on resolution)
