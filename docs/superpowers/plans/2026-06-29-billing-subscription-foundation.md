@@ -328,12 +328,16 @@ producer/consumer code.
   in scope; `identity` consumer + `tier` added to `/me` (drift-regenerate
   identity types).
 - **Maintainer-gate (ADR-0078 rollout phasing):** the checkout and cancel
-  endpoints enforce a **maintainer user-id allowlist** (`BILLING_ALLOWED_USER_IDS`
-  config; non-allowlisted → `403`) during the test phase. A `requireAllowlisted`
-  primitive at the `billing/api` edge, session-derived `userId`, with a test
-  proving a non-allowlisted caller gets `403`. (Could key off the ADR-0060
-  `maintainer` role instead; the user-id allowlist is chosen for the test phase —
-  explicit, no role propagation into `billing`.)
+  endpoints enforce the **maintainer `role`** during the test phase — resolved
+  from the session via identity's `whoami` (which now returns `role`, ADR-0060
+  amendment #1156); non-maintainers → `403`. A `requireMaintainer` primitive at
+  the `billing/api` edge, session-derived, with a test proving a non-maintainer
+  caller gets `403`. This is the SERVER-SIDE enforcement; the W7 frontend hides
+  the UI for non-maintainers (cosmetic). The `BILLING_ALLOWED_USER_IDS`
+  user-id allowlist remains a documented fallback if billing access ever needs
+  to be decoupled from the global maintainer role. (The ADR-0078 rollout-phasing
+  text — which still names the allowlist as primary — is reconciled to
+  role-primary when W5 lands.)
 
 ### Wave 6 — Reconciliation backstop + rollout
 
