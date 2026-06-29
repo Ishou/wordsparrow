@@ -49,6 +49,7 @@ type ValidatePuzzleRequest = components['schemas']['ValidatePuzzleRequest'];
 type RevealCellHintRequest = components['schemas']['RevealCellHintRequest'];
 type PuzzleSummary = components['schemas']['PuzzleSummary'];
 type SampleWord = components['schemas']['SampleWord'];
+type SampleVerifyResult = components['schemas']['SampleVerifyResult'];
 
 // Preview teaser pool (ADR-0073): stand-in tokens for Wave 2 HMAC minting (ADR-0076).
 const sampleAnswerPool: ReadonlyArray<{ clue: string; answer: string }> = [
@@ -69,6 +70,14 @@ const sampleWordPool: ReadonlyArray<SampleWord> = sampleAnswerPool.map(({ clue, 
   token: `mock-${answer}`,
   answer,
 }));
+// Preview-only token→answer map so the verify handler can echo `{correct}` (the real server HMAC-checks).
+const sampleAnswerByToken = new Map(sampleWordPool.map((w) => [w.token, w.answer ?? '']));
+const normalizeGuess = (s: string) =>
+  s
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Z]/g, '');
 
 // Cast through `unknown` because Vite's JSON import returns the
 // inferred literal type; the cast is structurally validated at runtime
@@ -128,6 +137,19 @@ const gridHandlers = [
         w.answerLength >= Math.min(minLen, maxLen) && w.answerLength <= Math.max(minLen, maxLen),
     );
     return HttpResponse.json(inRange.slice(0, count) satisfies SampleWord[]);
+  }),
+  // POST /v1/words/sample/verify — preview parity for the server token check (ADR-0076); compares plaintext, mock-only.
+  http.post('*/v1/words/sample/verify', async ({ request }) => {
+    const { token, guess } = (await request.json()) as { token?: string; guess?: string };
+    if (!token || !guess) {
+      return HttpResponse.json(
+        { type: 'about:blank', title: 'Bad Request', status: 400, detail: 'missing token or guess' },
+        { status: 400 },
+      );
+    }
+    const answer = sampleAnswerByToken.get(token);
+    const correct = answer != null && normalizeGuess(guess) === answer;
+    return HttpResponse.json({ correct } satisfies SampleVerifyResult);
   }),
   // GET /v1/puzzles/daily/list — must precede the `/v1/puzzles/daily`
   // and `:puzzleId` handlers (MSW dispatches the first match). Builds a

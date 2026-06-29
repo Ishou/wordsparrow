@@ -28,8 +28,20 @@ export function createHttpWordsRepository(
         const detail = error.detail ?? error.title ?? `HTTP ${response.status}`;
         throw new Error(`sample words fetch failed: ${detail}`);
       }
-      // `answer` is deprecated+optional during the expand phase (ADR-0076).
-      return data.map((w) => ({ clue: w.clue, answer: w.answer ?? '' }));
+      // `answer` is deprecated+optional during the expand phase (ADR-0076); it is not the validation path.
+      return data.map((w) => ({
+        clue: w.clue,
+        answerLength: w.answerLength,
+        token: w.token,
+      }));
+    },
+
+    async verifySample(token: string, guess: string): Promise<boolean> {
+      const { data } = await client.POST('/v1/words/sample/verify', {
+        body: { token, guess },
+      });
+      // A malformed/transient response can't confirm a guess — treat anything but an explicit `true` as not correct.
+      return data?.correct === true;
     },
   };
 }

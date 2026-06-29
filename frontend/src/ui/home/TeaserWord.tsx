@@ -83,8 +83,8 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
   const [loading, setLoading] = useState(true);
   const [idx, setIdx] = useState(0);
   const current: SampleWord | undefined = pool[idx];
-  const target = (current?.answer ?? '').toUpperCase();
-  const n = target.length;
+  // The answer never reaches the client (ADR-0076); we render `answerLength` cells and verify via the server token.
+  const n = current?.answerLength ?? 0;
   // lettersRef is the sync source of truth for fast typists; `letters` mirrors it for render.
   const lettersRef = useRef<string[]>(Array(n).fill(''));
   const [letters, setLetters] = useState<string[]>(lettersRef.current);
@@ -97,6 +97,8 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
   const refs = useRef<Array<HTMLInputElement | null>>([]);
   const focusOnNext = useRef(false); // focus cell 0 only after a rotation, not on mount
   const timer = useRef<number | null>(null);
+  // Bumped on every rotate/skip so an in-flight verify result that resolves after the user moved on is ignored.
+  const verifySeq = useRef(0);
 
   useEffect(() => {
     if (!wordsRepository) return;
@@ -105,12 +107,12 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
       .fetchSampleWords({ minLen: 3, maxLen: 6, count: 24 })
       .then((words) => {
         if (cancelled) return;
-        const usable = words.filter((w) => /^[A-Z]+$/.test(w.answer.toUpperCase()));
+        const usable = words.filter((w) => w.answerLength > 0);
         if (usable.length > 0) {
           const newIdx = Math.floor(Math.random() * usable.length);
           setPool(usable);
           setIdx(newIdx);
-          lettersRef.current = Array(usable[newIdx].answer.length).fill('');
+          lettersRef.current = Array(usable[newIdx].answerLength).fill('');
           setLetters(lettersRef.current);
         }
         setLoading(false);
@@ -140,8 +142,9 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
 
   const rotate = (toIdx: number) => {
     if (timer.current) window.clearTimeout(timer.current);
+    verifySeq.current += 1; // any verify still in flight for the old word is now stale
     focusOnNext.current = true;
-    commit(Array(pool[toIdx].answer.length).fill(''));
+    commit(Array(pool[toIdx].answerLength).fill(''));
     setIdx(toIdx);
     setSolved(false);
     setWrong(false);
@@ -158,6 +161,28 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
     rotate(nextIndex(idx, pool.length));
   };
 
+  // Correct → celebrate, bump streak, rotate to a fresh clue.
+  const onCorrect = (i: number) => {
+    if (timer.current) window.clearTimeout(timer.current);
+    streakRef.current += 1;
+    bestRef.current = Math.max(bestRef.current, streakRef.current);
+    onStreak?.(streakRef.current, bestRef.current);
+    setSolved(true);
+    setWrong(false);
+    setFocus(null);
+    refs.current[i]?.blur();
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
+    timer.current = window.setTimeout(() => rotate(nextIndex(idx, pool.length)), 900);
+  };
+  // Wrong on completion: wobble + reveal Passer. The streak breaks on skip, not on a wrong guess.
+  const onWrong = () => {
+    if (timer.current) window.clearTimeout(timer.current);
+    setWrong(true);
+    setPasserUnlocked(true);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([0, 28, 38, 28]);
+    timer.current = window.setTimeout(() => setWrong(false), 460);
+  };
+
   const handleChange = (i: number, raw: string) => {
     if (solved) return; // typing stays live through the wobble (no input lock)
     const ch = (raw.replace(/[^a-zA-Z]/g, '').slice(-1) ?? '').toUpperCase();
@@ -167,25 +192,22 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
     next[i] = ch;
     commit(next);
 
-    if (next.join('') === target) {
-      // Correct → celebrate, bump streak, rotate to a fresh clue.
-      if (timer.current) window.clearTimeout(timer.current);
-      streakRef.current += 1;
-      bestRef.current = Math.max(bestRef.current, streakRef.current);
-      onStreak?.(streakRef.current, bestRef.current);
-      setSolved(true);
-      setWrong(false);
-      setFocus(null);
-      refs.current[i]?.blur();
-      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
-      timer.current = window.setTimeout(() => rotate(nextIndex(idx, pool.length)), 900);
-    } else if (next.every((c) => c !== '') && !wasFull) {
-      // Wrong on completion: wobble + reveal Passer. The streak breaks on skip, not on a wrong guess; !wasFull stops a re-edit re-firing.
-      if (timer.current) window.clearTimeout(timer.current);
-      setWrong(true);
-      setPasserUnlocked(true);
-      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([0, 28, 38, 28]);
-      timer.current = window.setTimeout(() => setWrong(false), 460);
+    if (next.every((c) => c !== '')) {
+      // !wasFull stops a re-edit of an already-full word re-firing the verify.
+      if (wasFull || !current) return;
+      const guess = next.join('');
+      const seq = verifySeq.current;
+      // Server-side check (ADR-0076); typing isn't blocked, and a result for a word the user already left is ignored.
+      void wordsRepository
+        ?.verifySample(current.token, guess)
+        .then((correct) => {
+          if (seq !== verifySeq.current || solved) return;
+          if (correct) onCorrect(i);
+          else onWrong();
+        })
+        .catch(() => {
+          if (seq === verifySeq.current && !solved) onWrong();
+        });
     } else if (i < n - 1) {
       refs.current[i + 1]?.focus();
     }

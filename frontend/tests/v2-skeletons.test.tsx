@@ -34,7 +34,9 @@ const stubPuzzle: Puzzle = {
   cells: [{ kind: 'letter', position: { row: 0, col: 0 }, entry: '' }],
 };
 
-const SAMPLE: ReadonlyArray<SampleWord> = [{ clue: 'Astre', answer: 'LUNE' }];
+const SAMPLE: ReadonlyArray<SampleWord> = [
+  { clue: 'Astre', answerLength: 4, token: 'tok-LUNE' },
+];
 
 const emptyPage: DailySummariesPage = { items: [], hasMore: false };
 
@@ -90,7 +92,10 @@ describe('Skeleton primitive', () => {
 describe('TeaserWord loading state', () => {
   it('shows skeletons in a busy region, then the real word once data lands', async () => {
     const d = deferred<ReadonlyArray<SampleWord>>();
-    const wordsRepository: WordsRepository = { fetchSampleWords: () => d.promise };
+    const wordsRepository: WordsRepository = {
+      fetchSampleWords: () => d.promise,
+      verifySample: vi.fn().mockResolvedValue(false),
+    };
 
     const { container } = render(<TeaserWord wordsRepository={wordsRepository} />);
 
@@ -122,6 +127,7 @@ describe('HomeScreen loading states', () => {
     };
     const wordsRepository: WordsRepository = {
       fetchSampleWords: vi.fn().mockResolvedValue(SAMPLE),
+      verifySample: vi.fn().mockResolvedValue(false),
     };
 
     const { container } = renderInRouter(

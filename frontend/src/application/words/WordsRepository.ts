@@ -1,7 +1,9 @@
-// `answer` is uppercase A–Z (ADR-0073 surface form invariant).
+// `answer` is the deprecated plaintext form (ADR-0076); validation goes through `token` + `verifySample`.
 export interface SampleWord {
   readonly clue: string;
-  readonly answer: string;
+  readonly answerLength: number;
+  readonly token: string;
+  readonly answer?: string;
 }
 
 export interface SampleWordsOptions {
@@ -13,4 +15,6 @@ export interface SampleWordsOptions {
 // Port for teaser words (ADR-0073); adapters live in infrastructure/.
 export interface WordsRepository {
   fetchSampleWords(opts?: SampleWordsOptions): Promise<ReadonlyArray<SampleWord>>;
+  // Server-side guess check (ADR-0076): the answer never leaves the server in plaintext.
+  verifySample(token: string, guess: string): Promise<boolean>;
 }
