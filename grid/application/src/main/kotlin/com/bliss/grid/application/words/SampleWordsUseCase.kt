@@ -32,7 +32,6 @@ class SampleWordsUseCase(
                     clue = pickClue(it),
                     answerLength = it.text.length,
                     token = tokenMinter.mint(it.text),
-                    answer = it.text,
                 )
             }.shuffled(random)
             .take(take)

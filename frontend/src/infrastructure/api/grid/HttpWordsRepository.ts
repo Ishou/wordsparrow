@@ -28,7 +28,7 @@ export function createHttpWordsRepository(
         const detail = error.detail ?? error.title ?? `HTTP ${response.status}`;
         throw new Error(`sample words fetch failed: ${detail}`);
       }
-      // `answer` is deprecated+optional during the expand phase (ADR-0076); it is not the validation path.
+      // No plaintext answer on the wire (ADR-0076 Wave 4); validation is via `token` + `verifySample`.
       return data.map((w) => ({
         clue: w.clue,
         answerLength: w.answerLength,
