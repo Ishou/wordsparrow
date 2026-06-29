@@ -179,6 +179,15 @@ host before shipping.
 - `CorsTest` for grid must assert the credentialed config (origin echo +
   `Access-Control-Allow-Credentials: true` + the explicit header set) in
   Wave 2.
+- Wave 2 must update or carve grid out of `CorsWildcardArchitectureTest.kt`
+  (`survey/api/src/test/…/architecture/`) before or alongside the CORS
+  config change. That guard uses `Konsist.scopeFromProject()` — it scans
+  every api module — and asserts every `allowCredentials = true` block also
+  uses `allowHeaders { true }`. Grid's explicit-list posture is the
+  ADR-0077 deliberate narrowing, not a violation; the guard does not yet
+  know that. The simplest fix is to skip files whose path contains
+  `grid/`, or relax the predicate to accept either form when the
+  ADR-0077 narrowing comment is present.
 
 ## Relationship to prior CORS ADRs
 
