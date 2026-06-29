@@ -112,7 +112,7 @@ const hintBtn = css({
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const hintBulb = css({ color: 'ws.or' });
-// Inline hint error (e.g. 401 → "Connecte-toi…"); compact, matches the hint chip so the button no longer looks dead.
+// Inline hint error (e.g. 401 → "Connecte-toi…"); compact pill style to match the hint chip.
 const hintError = css({
   alignSelf: 'center',
   padding: '4px 11px',
