@@ -80,7 +80,7 @@ export interface paths {
         /**
          * Resolve the current session cookie to a user.
          * @description Used by grid-api and game-api for downstream auth. Returns minimal
-         *     identity (userId + displayName) without PII. Returns 401 if no valid
+         *     identity (userId + displayName + role) without PII. Returns 401 if no valid
          *     session cookie is present.
          */
         get: operations["whoAmI"];
