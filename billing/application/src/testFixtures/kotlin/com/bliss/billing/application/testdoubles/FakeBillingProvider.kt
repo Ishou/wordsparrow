@@ -3,6 +3,8 @@ package com.bliss.billing.application.testdoubles
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.CheckoutUrls
 import com.bliss.billing.application.ports.ProviderSubscriptionState
+import com.bliss.billing.domain.BillingSource
+import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
 import java.util.UUID
 
@@ -12,8 +14,15 @@ class FakeBillingProvider : BillingProviderPort {
     private val cancelFailures = mutableSetOf<String>()
 
     val cancelCalls = mutableListOf<String>()
+    val createSubscriptionCalls = mutableListOf<Triple<UUID, String, Tier>>()
     var lastCheckout: Pair<UUID, Tier>? = null
     var checkoutUrls: CheckoutUrls = CheckoutUrls("https://checkout.test/abc", "https://app.test/merci", "https://app.test/abonnement")
+
+    /** The recurring subscription `createSubscription` returns; defaults to an active subscription keyed by a composite ref derived from the first-payment ref. */
+    var subscriptionToCreate: ProviderSubscriptionState? = null
+
+    /** When true, the next `createSubscription` call throws and resets this flag, simulating a transient Mollie failure. */
+    var failCreateSubscriptionOnce = false
 
     fun seed(state: ProviderSubscriptionState) {
         states[state.externalRef] = state
@@ -29,6 +38,27 @@ class FakeBillingProvider : BillingProviderPort {
     ): CheckoutUrls {
         lastCheckout = userId to tier
         return checkoutUrls
+    }
+
+    override suspend fun createSubscription(
+        userId: UUID,
+        firstPaymentRef: String,
+        tier: Tier,
+    ): ProviderSubscriptionState {
+        createSubscriptionCalls.add(Triple(userId, firstPaymentRef, tier))
+        if (failCreateSubscriptionOnce) {
+            failCreateSubscriptionOnce = false
+            throw IllegalStateException("provider create-subscription failed (simulated)")
+        }
+        return subscriptionToCreate
+            ?: ProviderSubscriptionState(
+                externalRef = "cust:sub_$firstPaymentRef",
+                userId = userId,
+                tier = tier,
+                status = SubscriptionStatus.ACTIVE,
+                source = BillingSource.MOLLIE,
+                periodEnd = null,
+            )
     }
 
     override suspend fun fetchByReference(externalRef: String): ProviderSubscriptionState? = states[externalRef]

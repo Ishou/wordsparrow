@@ -9,6 +9,9 @@ data class MollieConfig(
     val successUrl: String,
     val cancelUrl: String,
     val webhookUrl: String,
+    val subscriptionAmount: String = "0.00",
+    // Mollie recurring interval, e.g. "1 month" / "3 months" / "1 week".
+    val interval: String = "1 month",
 ) {
     companion object {
         private fun env(key: String): String? = System.getenv(key) ?: System.getProperty(key)
@@ -28,6 +31,8 @@ data class MollieConfig(
                 successUrl = successUrl,
                 cancelUrl = cancelUrl,
                 webhookUrl = webhookUrl,
+                subscriptionAmount = env("BILLING_SUBSCRIPTION_AMOUNT") ?: env("BILLING_CHECKOUT_AMOUNT") ?: "0.00",
+                interval = env("BILLING_SUBSCRIPTION_INTERVAL") ?: "1 month",
             )
         }
 

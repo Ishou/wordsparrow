@@ -30,6 +30,13 @@ interface BillingProviderPort {
         tier: Tier,
     ): CheckoutUrls
 
+    /** Create the recurring subscription from a paid first-payment context (the mandate it established); returns the authoritative state keyed by the new subscription's [ProviderSubscriptionState.externalRef] (ADR-0078). */
+    suspend fun createSubscription(
+        userId: UUID,
+        firstPaymentRef: String,
+        tier: Tier,
+    ): ProviderSubscriptionState
+
     /** Re-fetch the authoritative state by opaque reference; used to authenticate webhooks (re-fetch-by-id) and reconcile. Null when the provider has no such resource. */
     suspend fun fetchByReference(externalRef: String): ProviderSubscriptionState?
 

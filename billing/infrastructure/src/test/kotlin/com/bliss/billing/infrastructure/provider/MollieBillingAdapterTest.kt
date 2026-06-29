@@ -78,6 +78,38 @@ class MollieBillingAdapterTest {
         }
 
     @Test
+    fun `createSubscription creates the recurring subscription against the first payment mandate`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.payments["tr_1"] = MolliePayment("tr_1", "paid", null, "cust_x", null, metadata(), mandateId = "mdt_1")
+            val nextPayment = Instant.parse("2026-07-29T00:00:00Z")
+            client.nextSubscription = MollieSubscription("sub_y", "cust_x", "active", nextPayment, metadata())
+
+            val state = adapter(client, InMemoryMollieCustomerStore()).createSubscription(userId, "tr_1", tier)
+
+            assertThat(client.lastSubscriptionMandateId).isEqualTo("mdt_1")
+            assertThat(client.lastSubscriptionInterval).isEqualTo("1 month")
+            assertThat(state.externalRef).isEqualTo("cust_x:sub_y")
+            assertThat(state.userId).isEqualTo(userId)
+            assertThat(state.tier).isEqualTo(tier)
+            assertThat(state.status).isEqualTo(SubscriptionStatus.ACTIVE)
+            assertThat(state.source).isEqualTo(BillingSource.MOLLIE)
+            assertThat(state.periodEnd).isEqualTo(nextPayment)
+        }
+
+    @Test
+    fun `createSubscription fails when the first payment established no mandate`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.payments["tr_1"] = MolliePayment("tr_1", "paid", null, "cust_x", null, metadata(), mandateId = null)
+
+            val result = runCatching { adapter(client, InMemoryMollieCustomerStore()).createSubscription(userId, "tr_1", tier) }
+
+            assertThat(result.exceptionOrNull()).isNotNull().isInstanceOf(IllegalArgumentException::class)
+            assertThat(client.createdSubscriptions).isEmpty()
+        }
+
+    @Test
     fun `fetchByReference maps a paid first payment to an active state keyed by the payment id`() =
         runTest {
             val client = FakeMollieClient()
