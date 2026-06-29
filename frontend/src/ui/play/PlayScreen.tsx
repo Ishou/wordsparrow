@@ -18,6 +18,7 @@ import { useTouchPrimary, useResumeBlurOnPwa } from '@/ui/components/keyboard';
 import { useWordAutoValidation } from '@/ui/components/grid/useWordAutoValidation';
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
 import { WinScreen } from './WinScreen';
+import { formatClock } from '@/ui/lib/formatClock';
 import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
 const stage = css({
@@ -125,10 +126,6 @@ const hintError = css({
 });
 // Post-win: bottom bar becomes a single re-entry to the celebration.
 const resultsBtn = css({ width: '100%', gap: '9px' });
-
-function pad(n: number): string {
-  return n.toString().padStart(2, '0');
-}
 
 function inputAt(row: number, col: number): HTMLInputElement | null {
   return document.querySelector<HTMLInputElement>(`input[data-cell-kind="letter"][data-row="${row}"][data-col="${col}"]`);
@@ -521,7 +518,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     window.location.reload();
   }, [soloEntriesStore, puzzle.id]);
 
-  const timeLabel = `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}`;
+  const timeLabel = formatClock(seconds);
 
   useEffect(() => {
     if (won) return;
