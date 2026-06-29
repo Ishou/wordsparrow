@@ -217,7 +217,7 @@ describe('Grid keyboard interactions', () => {
     expect(document.activeElement).toBe(last);
   });
 
-  it('Backspace on a filled cell clears it without moving focus', () => {
+  it('Backspace on a filled first-cell-of-a-clue clears it without moving focus', () => {
     const { container } = render(<Grid puzzle={TEST_PUZZLE} />);
     const target = inputAt(container, 1, 2)!;
     click(target);

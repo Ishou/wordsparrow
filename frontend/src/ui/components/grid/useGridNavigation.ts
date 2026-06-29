@@ -714,7 +714,6 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
       if (prev) focusCell(prev);
       return;
     }
-    // Empty current cell: step back and erase the previous cell (if unlocked).
     if (!prev) return;
     const prevEl = refs.current.get(key(prev));
     if (prevEl && !isCellValidatedRef.current?.(prev.row, prev.col)) {
