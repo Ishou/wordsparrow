@@ -12,7 +12,7 @@ const title = css({
   fontSize: '26px',
   lineHeight: '1.1',
   color: 'ws.jadeInk',
-  // No bottom margin: the title sits inside the 16px-gap stack, so the gap alone spaces it (matches /compte).
+  // title sits inside the 16px-gap stack; the gap alone provides spacing
   margin: 0,
 });
 
