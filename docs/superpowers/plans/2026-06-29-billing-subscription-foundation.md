@@ -261,24 +261,36 @@ producer/consumer code.
 
 ### Wave 3 — Module scaffold + domain + application (TDD, no infra)
 
-- **Blocking question:** none (pure domain). Can start once W2 merges.
-- **PR scope:** `settings.gradle.kts` registration; `CLAUDE.md` bounded-contexts
-  row; `billing/domain` + `billing/application` with tests. Likely **2 PRs** to
-  stay under the cap (domain, then application/ports).
-- **Tasks (to expand):**
-  - `Tier` enum + `Capability` enum + **tier→capability mapping** (table test
-    over every tier; near-100% mutation).
+- **Blocking question:** none (pure domain). Started once W2 + schema-hardening
+  (#1151) merged.
+- **Split:** **W3a domain** then **W3b application** (one-way Konsist dep means
+  they are sequential, not parallel; domain merges first).
+- **W3a — domain (dispatched, branch `feat/billing-domain`):**
+  - `Tier` **value class** over a validated lowercase string (NOT a fixed enum —
+    the tier set is offer-driven/deferred); a `free` constant.
+  - `Capability` **enum = the controlled vocabulary** (ADR-0078, documented in
+    openapi.yaml) seeded with the candidate gates, each carrying a stable
+    kebab-case wire id. The tier→capability mapping is a TOTAL function that
+    currently returns **emptySet() for every tier** — the single place the offer
+    will later live, gate-agnostically.
   - `SubscriptionStatus` state machine incl. `pending_cancellation`; legal
-    transitions + illegal-transition rejection tests.
+    transitions + illegal-transition rejection tests; near-100% mutation.
+  - `BillingSource` enum (`MOLLIE` only now; PLAY/APPLE with their adapters).
   - `Subscription` aggregate (holds `externalRef`, `source`, `periodEnd`);
-    `Entitlement` derivation from `(status, tier)`.
+    `Entitlement` derivation from `(status, tier, periodEnd)`.
+  - `settings.gradle.kts` `include(":billing:domain")`; `billing/domain/build.gradle.kts`
+    mirroring `grid/domain`; **`CLAUDE.md` billing row touched** (add `worker`
+    layer) so `bounded-context-coherence` passes on the new `:billing:` prefix.
+  - Konsist `BillingArchitectureTest` (zero framework deps; no cross-context import).
+- **W3b — application (after W3a merges):**
   - Ports: `BillingProviderPort` (`createCheckout`, `parseEvent`, `cancel`),
     `SubscriptionRepository`, `EntitlementPublisher`.
-  - Use cases: `IngestProviderEvent` (idempotent apply; newer-version-wins),
-    `HandleUserDeleted` (→ `pending_cancellation` → cancel → erase),
-    `EntitlementQuery` (capability check). In-memory fakes for all ports.
-  - Konsist `BillingArchitectureTest` (no vendor SDK in domain/application; no
-    cross-context import).
+  - Use cases: `IngestProviderEvent` (idempotent apply; newer-version-wins);
+    `HandleUserDeleted` (→ `pending_cancellation` → cancel → erase);
+    `CancelSubscription` (user-initiated cancel for the `POST /v1/subscription/cancel`
+    endpoint added in #1151); `EntitlementQuery` (capability check). In-memory
+    fakes for all ports; the emitted `EntitlementChanged` carries `eventId`
+    (UUID v7, per #1151) for idempotent consumption.
 
 ### Wave 4 — Infrastructure (Mollie adapter, persistence, NATS)
 
@@ -287,10 +299,17 @@ producer/consumer code.
   NATS publisher + checkout/webhook Ktor routes).
 - **Tasks (to expand):** Flyway `V1__billing.sql` (subscriptions + idempotency +
   customer-map tables); `PostgresSubscriptionRepository` (testcontainer);
-  `MollieBillingAdapter` (hosted checkout; **webhook auth = HMAC verify or
-  re-fetch-by-id**; map Mollie events → domain events) with property-based
-  parse/idempotency tests + forged-signature/replay tests; `NatsEntitlementPublisher`;
-  Ktor routes with session-derived `userId`.
+  `MollieBillingAdapter` (hosted checkout; **Mollie classic webhook is
+  `application/x-www-form-urlencoded` `id=...` with NO signature → authenticate
+  by re-fetch-by-id**, per #1151; map Mollie events → domain events) with
+  property-based parse/idempotency tests + replay tests; `NatsEntitlementPublisher`
+  (stamps `eventId`); Ktor routes (checkout, **cancel**, webhook) with
+  session-derived `userId`; **webhook processes-then-200** (provider treats 2xx
+  as final delivery).
+- **Mollie test mode (ADR-0078 rollout phasing):** the adapter reads the Mollie
+  API key from a k8s Secret and defaults to the **test key (`test_…`)** — no real
+  charges — for the entire validation phase. The key is the only switch between
+  test and live; no code path differs.
 
 ### Wave 5 — Consumers + enforcement + `/me`
 
@@ -301,6 +320,13 @@ producer/consumer code.
   rejects without the capability); same for `game` *only if* a gated surface is
   in scope; `identity` consumer + `tier` added to `/me` (drift-regenerate
   identity types).
+- **Maintainer-gate (ADR-0078 rollout phasing):** the checkout and cancel
+  endpoints enforce a **maintainer user-id allowlist** (`BILLING_ALLOWED_USER_IDS`
+  config; non-allowlisted → `403`) during the test phase. A `requireAllowlisted`
+  primitive at the `billing/api` edge, session-derived `userId`, with a test
+  proving a non-allowlisted caller gets `403`. (Could key off the ADR-0060
+  `maintainer` role instead; the user-id allowlist is chosen for the test phase —
+  explicit, no role propagation into `billing`.)
 
 ### Wave 6 — Reconciliation backstop + rollout
 
@@ -312,10 +338,29 @@ producer/consumer code.
   cancel any with no live entitlement intent — the **event-independent
   backstop**; resync missed webhooks; **emit aging alert** for
   `pending_cancellation` > 24h via ADR-0032); Helm `billing` chart with CronJob,
-  NetworkPolicy for the NATS subject, Secret refs (`docs/secrets.md` entry); the
-  JetStream **durable consumer** for `user.deleted` (or the prereq identity
+  NetworkPolicy for the NATS subject, Secret refs (`docs/secrets.md` entry —
+  Mollie **test key first**, `BILLING_ALLOWED_USER_IDS` with the maintainer id);
+  the JetStream **durable consumer** for `user.deleted` (or the prereq identity
   change if W6's blocking question says fire-and-forget); frontend checkout entry
-  behind a feature flag (expiry-dated), **tutoiement** copy, hidden until flip.
+  behind a feature flag (expiry-dated), **tutoiement** copy, hidden until flip —
+  and itself gated to the maintainer allowlist during the test phase.
+
+### Rollout phasing — test phase → promotion (ADR-0078 amendment 2026-06-29)
+
+The foundation ships dark and is validated before real money/customers:
+
+- **Test phase (default).** Provider runs in **test mode** (Mollie `test_…`
+  key — no real charges). The subscription flow (checkout, cancel, frontend
+  entry) is gated to a **maintainer user-id allowlist** (`BILLING_ALLOWED_USER_IDS`).
+  Validate end-to-end: checkout → hosted page → webhook → entitlement → cancel,
+  plus the deletion-cancellation invariant and the reconciliation backstop.
+- **Promotion to GA (two reversible flips, no code change).** (1) Swap the Mollie
+  Secret from `test_…` to the live key; (2) lift the allowlist gate so all
+  authenticated users can subscribe. Each is independently reversible.
+- **Gates the maintainer must clear before promotion** (external, tracked on
+  ADR-0078): Mollie DPA / EU data-residency in writing; accountant confirms
+  provider invoice retention satisfies Code de commerce; a clean end-to-end test
+  run in test mode.
 
 ---
 

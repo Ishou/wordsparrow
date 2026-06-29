@@ -89,6 +89,28 @@ retention (Code de commerce ~10y, LPF ~6y, EU OSS 10y) is satisfied by the
 entitlement projection is safe to delete on erasure. Confirm with the accountant
 that provider retention satisfies the Code de commerce obligation.
 
+### Rollout phasing (maintainer-gated test phase → promotion)
+The foundation ships dark and is validated end-to-end before any real customer
+or real money is involved:
+
+- **Test phase (default).** The adapter runs against the provider's **test
+  mode** (Mollie test API key `test_…`; no real charges). Access to the
+  subscription flow — the checkout and cancel endpoints and the frontend entry —
+  is **gated to an explicit maintainer user-id allowlist** (config:
+  `BILLING_ALLOWED_USER_IDS`, mirroring ADR-0060's `MAINTAINER_USER_IDS`
+  posture; non-allowlisted callers get `403`). This is a tightening of the
+  dark-launch flag, not a new authz surface: it restricts who can reach an
+  already-flag-gated feature. The allowlist could equivalently key off the
+  ADR-0060 `maintainer` role; the user-id allowlist is chosen for the test phase
+  because it is the most explicit and needs no role propagation into `billing`.
+- **Promotion (deliberate, reversible).** Going GA is two flips, each
+  independently reversible: (1) swap the provider key from `test_…` to the live
+  key (k8s Secret), and (2) lift the allowlist gate so all authenticated users
+  can subscribe. Both are flag/secret changes, not code changes.
+
+The maintainer-gate threat posture is trivial: it can only *deny* access; the
+risk is in the *promotion* (loosening), which is a conscious operator action.
+
 ## Consequences
 - **Easier:** one reusable, gate-agnostic entitlement primitive; a swappable
   provider; Play/Apple billing sources slot in without rework; the offer can be

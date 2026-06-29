@@ -167,6 +167,7 @@ ADR-0078  billing/**/usecases/HandleUserDeleted.kt   Deletion-cancellation invar
 ADR-0078  billing/worker/**                          Reconciliation CronJob: event-independent backstop (cancel provider-active subs with no live entitlement intent) + aging alert (ADR-0032)
 ADR-0078  infra/platform/charts/billing/**           Billing chart: Deployment + CronJob + NetworkPolicy-guarded NATS subject + provider API-key/webhook-secret as k8s Secrets
 # ADR-0078: no card data (PCI SAQ A) — hosted checkout only; provider is system-of-record for PII/invoices; our projection is opaque refs + entitlement, erasable on GDPR deletion (statutory retention lives at the provider). EURL-is-merchant ⇒ direct PSP, not Merchant-of-Record. Deferred: pricing/offer, Play/Apple adapters
+# ADR-0078: amendment 2026-06-29 (rollout phasing) — ships dark in provider TEST mode (Mollie test_ key), subscription flow gated to a maintainer user-id allowlist (BILLING_ALLOWED_USER_IDS, mirrors ADR-0060); promotion to GA = swap to live key + lift allowlist, both reversible flag/secret flips, no code change. No new binding paths — gate + config land under billing/** above
 ```
 
 ## Adding entries
