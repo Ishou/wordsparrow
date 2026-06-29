@@ -160,6 +160,13 @@ ADR-0077  survey/api/src/test/**/architecture/CorsWildcardArchitectureTest.kt  U
 ADR-0077  frontend/src/infrastructure/api/grid/client.ts  Send credentials: 'include' only on the authed hint POST; public puzzle GET/sample/validate stay uncredentialed so CDN-cacheable fetches keep their cache key (Wave 2)
 ADR-0077  frontend/src/ui/play/PlayScreen.tsx        Render hint.errorMessage (currently computed, never displayed) so a 401 shows "Connecte-toi pour utiliser les indices" instead of a dead button (Wave 2)
 # ADR-0077: threat model — SameSite=Lax (SessionCookies.kt:30) + mandatory JSON-preflight mitigate cross-site CSRF on /hints; no explicit CSRF token (low-value, budget-idempotent reveal). Wave-2 confirmations: add bliss-cb4.pages.dev to grid allowlist? + grid-api prod host must be a wordsparrow.io subdomain for the cookie to be in-scope
+ADR-0078  billing/**                                 New billing bounded context: subscription entitlement foundation; hexagonal, no cross-context imports; anti-corruption BillingProviderPort (Mollie initial adapter)
+ADR-0078  billing/api/openapi.yaml                   Edges: POST /checkout-session (session-derived userId), POST /webhook (authenticate every callback — signature or re-fetch-by-id), GET /entitlement
+ADR-0078  billing/api/asyncapi.yaml                  EntitlementChanged on wordsparrow.user.entitlement-changed; event-driven cache, server-side enforcement (mirrors ADR-0060)
+ADR-0078  billing/**/usecases/HandleUserDeleted.kt   Deletion-cancellation invariant: pending_cancellation → durable JetStream consumer → idempotent cancel → never lose externalRef before confirmed cancel
+ADR-0078  billing/worker/**                          Reconciliation CronJob: event-independent backstop (cancel provider-active subs with no live entitlement intent) + aging alert (ADR-0032)
+ADR-0078  infra/platform/charts/billing/**           Billing chart: Deployment + CronJob + NetworkPolicy-guarded NATS subject + provider API-key/webhook-secret as k8s Secrets
+# ADR-0078: no card data (PCI SAQ A) — hosted checkout only; provider is system-of-record for PII/invoices; our projection is opaque refs + entitlement, erasable on GDPR deletion (statutory retention lives at the provider). EURL-is-merchant ⇒ direct PSP, not Merchant-of-Record. Deferred: pricing/offer, Play/Apple adapters
 ```
 
 ## Adding entries
