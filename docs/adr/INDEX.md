@@ -135,7 +135,7 @@ ADR-0071  renovate.json                              Renovate cooldown aligned t
 ADR-0072  frontend/src/design-system/**              WordSparrow design system v2 (jade/sakura/khaki); standalone module, app-isolated via eslint-boundaries; atoms → composites
 ADR-0072  frontend/panda.config.ts                   v2 token set (`ws.*`) added namespaced, coexisting with ADR-0043's current tokens (no edits to existing tokens)
 ADR-0072  frontend/src/ui/routes/design-system.tsx   Dev-only gallery route rendering every v2 component + variant (no Storybook); also the design-sync synth-entry surface
-ADR-0072  frontend/src/main.tsx                       §3 render-gate: defers ReactDOM.render until v2 fonts load (or 1.2 s cap); governs font-display: block rationale
+ADR-0072  frontend/src/main.tsx                       §3 render-gate: defers ReactDOM.render until Nunito loads (or 800 ms cap); UI fonts use font-display: block, Fredoka wordmark uses swap
 # ADR-0072: amendment 2026-06-27 (§3 font-loading strategy): font-display: block + render-gate in main.tsx amends ADR-0008 rejected verdict for block; binding paths above cover implementation
 # ADR-0072: supersedes ADR-0043 for palette + typography (visual identity); ADR-0043's light-only theme + semantic-token-layering decisions still apply. Migration of the live app to v2 is a tracked follow-up (now ADR-0074).
 ADR-0073  grid/api/openapi.yaml                      GET /v1/words/sample (minLen/maxLen/count) → SampleWord{clue,answer}; count + length-range capped server-side; random teaser pool, NOT the daily answer key
