@@ -23,10 +23,7 @@ class ProviderCancelFailed(
     cause: Throwable,
 ) : RuntimeException("Provider cancel failed: ${cause.message}", cause)
 
-/**
- * The deletion-cancellation invariant (ADR-0078): on `user.deleted`, move to pending_cancellation
- * WITHOUT dropping the externalRef, cancel at the provider, and erase the projection only once cancel confirms.
- */
+/** Deletion-cancellation invariant (ADR-0078). */
 class HandleUserDeleted(
     private val provider: BillingProviderPort,
     private val repository: SubscriptionRepository,
@@ -53,7 +50,6 @@ class HandleUserDeleted(
         }
 
         val cancelled = pending.confirmCanceled()
-        repository.delete(userId)
         publisher.publish(
             EntitlementChanged(
                 eventId = eventIds.newEventId(),
@@ -65,6 +61,7 @@ class HandleUserDeleted(
                 changedAt = clock.now(),
             ),
         )
+        repository.delete(userId)
         return HandleUserDeletedOutcome.Cancelled
     }
 }
