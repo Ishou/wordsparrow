@@ -16,6 +16,8 @@ export interface PhoneShellProps {
   readonly headerFlush?: boolean;
   // Fixed full-bleed mobile bottom nav (home/grilles only); reserves body bottom inset when present.
   readonly bottomNav?: ReactNode;
+  // Desktop-only: body fills the viewport and delegates scrolling to an inner flex:1 child (e.g. the grilles list), instead of scrolling itself.
+  readonly fillBody?: boolean;
 }
 
 // ADR-0072 §2 — phone-width on phones; contained jade-surround card from tablet up.
@@ -53,8 +55,8 @@ const frame = css({
     overflow: 'hidden',
     boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
   },
-  // Desktop: a fixed-height flex column filling the shell so the app bar pins and only the body scrolls; width matches home so the top bar aligns.
-  lg: { flex: 1, maxWidth: '1140px', minHeight: 0, marginInline: 'auto', borderRadius: 0, overflow: 'hidden', boxShadow: 'none', bgImage: 'none' },
+  // Desktop: a full-width fixed-height flex column so the bar's full-bleed frost isn't clipped and the body scrollbar lands at the screen edge; content is centred by barInner/inner, not the frame.
+  lg: { flex: 1, maxWidth: 'none', minHeight: 0, marginInline: 0, borderRadius: 0, overflow: 'visible', boxShadow: 'none', bgImage: 'none' },
 });
 
 // Phone/tablet back-header; desktop shows the shared nav bar instead.
@@ -103,16 +105,19 @@ const inner = css({ display: 'contents', lg: { display: 'block', width: '100%', 
 const bodyWithNav = css({ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)', lg: { paddingBottom: '56px' } });
 // A self-spacing header (MobileTopBar) owns the top gap, so the body must not add its own.
 const bodyFlushTop = css({ paddingTop: 0, lg: { paddingTop: '26px' } });
+// Desktop: body stops scrolling and becomes a flex column so an inner flex:1 child owns the scroll; bottom inset moves onto that child.
+const bodyFill = css({ lg: { overflowY: 'hidden', display: 'flex', flexDirection: 'column', paddingBottom: 0 } });
+const innerFill = css({ lg: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 } });
 
-export function PhoneShell({ children, header, navActive, backTo, headerFlush, bottomNav }: PhoneShellProps) {
+export function PhoneShell({ children, header, navActive, backTo, headerFlush, bottomNav, fillBody }: PhoneShellProps) {
   return (
     <div className={shell} lang="fr">
       <SkipLink />
       <div className={frame}>
         <DesktopAppBar active={navActive} />
         {header != null ? (headerFlush ? header : <div className={headerSlot}>{header}</div>) : null}
-        <main id="main-content" tabIndex={-1} className={cx(body, bottomNav != null && bodyWithNav, headerFlush && bodyFlushTop)}>
-          <div className={inner}>
+        <main id="main-content" tabIndex={-1} className={cx(body, bottomNav != null && bodyWithNav, headerFlush && bodyFlushTop, fillBody && bodyFill)}>
+          <div className={cx(inner, fillBody && innerFill)}>
             {backTo != null ? (
               <Link to={backTo} className={deskBack}>
                 <CaretLeft size={16} weight="bold" aria-hidden="true" />
