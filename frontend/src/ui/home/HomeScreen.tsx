@@ -162,9 +162,12 @@ function longDateFr(iso: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-// Solved day: sakura fill; today: sakura ring; unplayed past: white dot.
-function dayDotStyle(today: boolean, solved: boolean): CSSProperties {
-  if (solved) return { background: 'var(--colors-ws-sakura-dark)', color: 'white', border: today ? '2px solid var(--colors-ws-sakura-dark)' : undefined };
+type DayStatus = 'solved' | 'started' | 'none';
+
+// Solved: sakura fill; started: blush fill + sakura ring; today: sakura ring; untouched past: white dot.
+function dayDotStyle(today: boolean, status: DayStatus): CSSProperties {
+  if (status === 'solved') return { background: 'var(--colors-ws-sakura-dark)', color: 'white', border: today ? '2px solid var(--colors-ws-sakura-dark)' : undefined };
+  if (status === 'started') return { background: 'var(--colors-ws-sakura-blush)', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' };
   if (today) return { background: 'transparent', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' };
   return { background: 'white', color: 'var(--colors-ws-khaki)' };
 }
@@ -269,11 +272,13 @@ export function HomeScreen({
     const byDate = new Map(history.map((s) => [s.date, s]));
     return week.map((d) => {
       const summary = byDate.get(d.iso);
-      const solved =
-        summary != null &&
-        summary.totalLetterCells > 0 &&
-        soloEntriesStore.loadLockedCells(summary.id).length >= summary.totalLetterCells;
-      return { ...d, available: summary != null, label: longDateFr(d.iso), solved };
+      const lockedCount = summary != null ? soloEntriesStore.loadLockedCells(summary.id).length : 0;
+      const solved = summary != null && summary.totalLetterCells > 0 && lockedCount >= summary.totalLetterCells;
+      // Started = touched (any entry or locked cell) but not finished — distinguishes resumable grids from untouched ones.
+      const started =
+        !solved && summary != null && (lockedCount > 0 || soloEntriesStore.load(summary.id).length > 0);
+      const status: DayStatus = solved ? 'solved' : started ? 'started' : 'none';
+      return { ...d, available: summary != null, label: longDateFr(d.iso), status };
     });
   }, [week, history, soloEntriesStore]);
 
@@ -415,14 +420,14 @@ export function HomeScreen({
                         <button
                           type="button"
                           className={dayDotBtn}
-                          style={dayDotStyle(d.today, cell.solved)}
+                          style={dayDotStyle(d.today, cell.status)}
                           onClick={() => navigate({ to: '/play', search: { date: d.iso } })}
-                          aria-label={`${cell.label}${d.today ? " (aujourd'hui)" : ''}${cell.solved ? ' — terminée' : ''}`}
+                          aria-label={`${cell.label}${d.today ? " (aujourd'hui)" : ''}${cell.status === 'solved' ? ' — terminée' : cell.status === 'started' ? ' — commencée' : ''}`}
                         >
                           {d.num}
                         </button>
                       ) : (
-                        <span className={dayDot} style={dayDotStyle(d.today, cell?.solved ?? false)}>
+                        <span className={dayDot} style={dayDotStyle(d.today, cell?.status ?? 'none')}>
                           {d.num}
                         </span>
                       )}
