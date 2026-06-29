@@ -16,6 +16,7 @@ fun Route.whoAmI(whoAmI: WhoAmIUseCase) {
             WhoAmIResponse(
                 userId = result.userId.value.toString(),
                 displayName = result.displayName.value,
+                role = result.role.wire,
             ),
         )
     }

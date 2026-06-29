@@ -15,6 +15,7 @@ import com.bliss.identity.domain.provider.Provider
 import com.bliss.identity.domain.provider.Subject
 import com.bliss.identity.domain.provider.UserProvider
 import com.bliss.identity.domain.user.DisplayName
+import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
 import com.bliss.identity.infrastructure.persistence.InMemoryUserProviderRepository
@@ -128,6 +129,7 @@ class GetMeUseCaseTest {
                     displayName = DisplayName.of("Bob"),
                     createdAt = now.minusSeconds(3600),
                     lastSeenAt = now.minusSeconds(60),
+                    role = Role.PLAYER,
                     linkedProviders = emptyList(),
                 ),
             )

@@ -11,6 +11,7 @@ import com.bliss.identity.application.usecases.WhoAmIUseCase
 import com.bliss.identity.domain.session.Session
 import com.bliss.identity.domain.session.SessionId
 import com.bliss.identity.domain.user.DisplayName
+import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
 import com.bliss.identity.infrastructure.persistence.InMemorySessionRepository
@@ -92,7 +93,7 @@ class WhoAmIUseCaseTest {
             val exactlyAtLimit = now.minus(sessionMaxAge)
             seedUserAndSession(users, sessions, createdAt = exactlyAtLimit)
             val result = sut.execute(WhoAmIQuery(sessionId))
-            assertThat(result).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice")))
+            assertThat(result).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice"), Role.PLAYER))
         }
 
     @Test
@@ -101,7 +102,7 @@ class WhoAmIUseCaseTest {
             val (sut, users, sessions) = newCase()
             seedUserAndSession(users, sessions)
             val result = sut.execute(WhoAmIQuery(sessionId))
-            assertThat(result).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice")))
+            assertThat(result).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice"), Role.PLAYER))
         }
 
     @Test
