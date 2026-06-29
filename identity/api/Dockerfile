@@ -43,6 +43,7 @@ COPY survey/api/build.gradle.kts survey/api/
 COPY survey/worker/build.gradle.kts survey/worker/
 # Same gotcha for the :billing:* modules introduced in ADR-0078.
 COPY billing/domain/build.gradle.kts billing/domain/
+COPY billing/application/build.gradle.kts billing/application/
 
 # Source for the identity/ context only — shadowJar transitively pulls
 # :identity:domain, :identity:application, :identity:infrastructure.
