@@ -17,10 +17,7 @@ import org.openapitools.jackson.nullable.JsonNullable
 import java.time.LocalDate
 import java.time.ZoneOffset
 
-/**
- * Sole place the Mollie SDK is imported (ADR-0078). Every call is blocking, so it runs on the IO
- * dispatcher; responses are flattened to the [MollieClient] primitives before returning.
- */
+/** Sole Mollie SDK import (ADR-0078): blocking calls run on IO dispatcher, responses flattened to [MollieClient] primitives. */
 class SdkMollieClient(
     private val sdk: Client,
 ) : MollieClient {

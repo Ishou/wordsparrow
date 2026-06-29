@@ -8,11 +8,7 @@ import com.bliss.billing.domain.Tier
 import org.slf4j.LoggerFactory
 import java.util.UUID
 
-/**
- * Mollie implementation of [BillingProviderPort] (ADR-0078): hosted SAQ-A checkout, no card data;
- * the provider stays system-of-record for PII. userId/tier ride in Mollie metadata so an
- * authenticated webhook can be re-fetched by id and projected back to a local entitlement.
- */
+/** Mollie [BillingProviderPort] implementation (ADR-0078): hosted SAQ-A checkout, re-fetch-by-id webhook auth. */
 class MollieBillingAdapter(
     private val client: MollieClient,
     private val customerStore: MollieCustomerStore,

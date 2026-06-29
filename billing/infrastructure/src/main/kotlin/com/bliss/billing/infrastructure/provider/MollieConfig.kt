@@ -1,10 +1,6 @@
 package com.bliss.billing.infrastructure.provider
 
-/**
- * Mollie adapter configuration. The API key (`test_…` vs `live_…`) is the only switch between the
- * test and live provider; no code path differs (ADR-0078 rollout phasing). Secrets are injected at
- * runtime, never in code.
- */
+/** Mollie adapter configuration: API key (`test_…`/`live_…`) is the sole test-vs-live switch; no code path differs (ADR-0078). */
 data class MollieConfig(
     val apiKey: String,
     val currency: String,

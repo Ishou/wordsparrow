@@ -26,10 +26,7 @@ class MollieResourceGoneException(
     message: String,
 ) : RuntimeException(message)
 
-/**
- * Thin seam over the Mollie SDK: tests mock this interface (never the adapter logic), and the only
- * Mollie SDK import in the codebase lives in its production implementation (ADR-0078).
- */
+/** Thin SDK seam: tests mock this interface, not the adapter; only Mollie SDK import lives in its impl (ADR-0078). */
 interface MollieClient {
     suspend fun createCustomer(userReference: String): String
 
