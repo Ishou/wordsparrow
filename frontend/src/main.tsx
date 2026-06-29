@@ -292,7 +292,7 @@ enableMocks()
         tracker.trackEvent(category, action, name, value);
       },
     };
-    const baseContext = { authClient, getPseudonym, surveyClient, surveyAnonStore: surveyAnonRatedStore, analytics };
+    const baseContext = { authClient, getPseudonym, surveyClient, surveyAnonStore: surveyAnonRatedStore, analytics, progressSyncService };
     const context = multiplayer
       ? (() => {
           const gameApiBaseUrl = import.meta.env.VITE_GAME_API_BASE_URL;

@@ -7,6 +7,7 @@ import type { AuthClient } from '@/application/auth';
 import type { GameClient, LobbyClient } from '@/application/game';
 import type { LobbyJoinCodeStash } from '@/application/session/LobbyJoinCodeStash';
 import type { SessionClient } from '@/application/session/SessionClient';
+import type { ProgressSyncService } from '@/application/progress';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { SurveyAnonStore, SurveyClient } from '@/application/survey';
 import type { TourSeenStore } from '@/application/tour/TourSeenStore';
@@ -45,6 +46,8 @@ export interface AppRouterContext {
   readonly wordsRepository?: WordsRepository;
   readonly sessionClient: SessionClient;
   readonly soloEntriesStore: SoloEntriesStore;
+  // Solo-progress sync side-channel (ADR-0075); optional so Vitest fixtures can omit it.
+  readonly progressSyncService?: ProgressSyncService;
   readonly tourSeenStore: TourSeenStore;
   // Phase 5 — identity-api adapter + a thin getter over the anon
   // localStorage pseudonym. Wired in `main.tsx`; `ui/` consumers read

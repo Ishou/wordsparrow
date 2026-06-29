@@ -105,7 +105,12 @@ export const Route = createRoute({
   loaderDeps: ({ search }) => ({
     date: typeof search.date === 'string' && ISO_DATE.test(search.date) ? search.date : undefined,
   }),
-  loader: ({ context, deps }): Promise<Puzzle | null> => context.puzzleRepository.fetchDaily(deps.date),
+  loader: async ({ context, deps }): Promise<Puzzle | null> => {
+    const puzzle = await context.puzzleRepository.fetchDaily(deps.date);
+    // Pull this grid's cross-device progress before render so the uncontrolled grid reads the merge (ADR-0075).
+    if (puzzle) await context.progressSyncService?.pullAndMergeOne(puzzle.id).catch(() => {});
+    return puzzle;
+  },
   component: PlayRouteComponent,
   pendingComponent: PlayPending,
   // Show the placeholder immediately so first client render matches the prerendered body (no blank frame, no grid flash).
