@@ -6,6 +6,12 @@ import java.util.UUID
 interface MollieCustomerStore {
     suspend fun findCustomerId(userId: UUID): String?
 
+    /** Atomic find-or-create: calls [lazyCreate] at most once and returns the id that wins the conflict. */
+    suspend fun findOrCreate(
+        userId: UUID,
+        lazyCreate: suspend () -> String,
+    ): String
+
     suspend fun save(
         userId: UUID,
         mollieCustomerId: String,
