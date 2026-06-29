@@ -42,7 +42,7 @@ class WordsRouteTest {
                 val clue = obj["clue"]!!.jsonPrimitive.content
                 val token = obj["token"]!!.jsonPrimitive.content
                 val answerLength = obj["answerLength"]!!.jsonPrimitive.content.toInt()
-                // ADR-0076 Wave 4: the plaintext answer must never leave the server.
+                // ADR-0076: the plaintext answer must never leave the server.
                 assertThat(obj.containsKey("answer")).isFalse()
                 assertThat(answerLength in 3..6).isTrue()
                 assertThat(token.isNotBlank()).isTrue()
@@ -63,7 +63,7 @@ class WordsRouteTest {
                     .parseToJsonElement(client.get("/v1/words/sample?count=5").bodyAsText())
                     .jsonArray
             assertThat(array.isEmpty()).isFalse()
-            // ADR-0076 Wave 4: no entry carries `answer`; only clue + answerLength + token ship.
+            // ADR-0076: no entry carries `answer`; only clue + answerLength + token ship.
             array.forEach {
                 val obj = it.jsonObject
                 assertThat(obj.containsKey("answer")).isFalse()
