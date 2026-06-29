@@ -47,12 +47,20 @@ class InfrastructureArchitectureTest {
             }
     }
 
+    // The Mollie SDK is the ADR-0078 provider adapter, allowed in infrastructure but confined to the SdkMollieClient seam.
+    @Test
+    fun `only the mollie client seam imports the mollie sdk`() {
+        infrastructureScope.files
+            .filter { it.name != "SdkMollieClient" }
+            .assertFalse {
+                it.hasImport { import -> import.name.startsWith("com.mollie") || import.name.startsWith("be.woutschoovaerts") }
+            }
+    }
+
     @Test
     fun `infrastructure has no banned vendor sdk imports`() {
         val forbiddenPrefixes =
             listOf(
-                "com.mollie",
-                "be.woutschoovaerts",
                 "com.anthropic",
                 "software.amazon",
                 "com.amazonaws",

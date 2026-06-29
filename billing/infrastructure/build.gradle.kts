@@ -19,6 +19,9 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.18")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
+    // Official Mollie Java SDK (BSD-2-Clause); the billing provider adapter named in ADR-0078.
+    implementation("com.mollie:mollie:1.8.14")
+
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
