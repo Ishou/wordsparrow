@@ -130,7 +130,8 @@ export interface PlayScreenProps {
 }
 
 export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScreenProps) {
-  const [seconds, setSeconds] = useState(0);
+  // Resume from the persisted elapsed time (synced across devices via the progress blob) instead of restarting at 0.
+  const [seconds, setSeconds] = useState(() => soloEntriesStore.loadElapsed(puzzle.id));
   const [winDismissed, setWinDismissed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -513,6 +514,24 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     const id = window.setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => window.clearInterval(id);
   }, [won]);
+
+  // Latest tick, so the coalesced writers read it without re-subscribing every second.
+  const secondsRef = useRef(seconds);
+  secondsRef.current = seconds;
+  // Coalesce localStorage writes: every 5s while running, plus on hide/unmount so a reload resumes the time.
+  useEffect(() => {
+    const persist = () => soloEntriesStore.saveElapsed(puzzle.id, secondsRef.current);
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') persist();
+    };
+    const id = won ? undefined : window.setInterval(persist, 5000);
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      if (id !== undefined) window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onHide);
+      persist();
+    };
+  }, [soloEntriesStore, puzzle.id, won]);
 
   return (
     <div className={stage}>

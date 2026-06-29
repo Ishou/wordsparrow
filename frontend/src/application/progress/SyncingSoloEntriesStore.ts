@@ -10,6 +10,7 @@ export function createSyncingSoloEntriesStore(
     load: (puzzleId) => inner.load(puzzleId),
     loadLockedCells: (puzzleId) => inner.loadLockedCells(puzzleId),
     loadHintsUsed: (puzzleId) => inner.loadHintsUsed(puzzleId),
+    loadElapsed: (puzzleId) => inner.loadElapsed(puzzleId),
     save: (puzzleId, row, column, letter) => {
       inner.save(puzzleId, row, column, letter);
       onMutate(puzzleId);
@@ -20,6 +21,10 @@ export function createSyncingSoloEntriesStore(
     },
     recordHintUsed: (puzzleId) => {
       inner.recordHintUsed(puzzleId);
+      onMutate(puzzleId);
+    },
+    saveElapsed: (puzzleId, seconds) => {
+      inner.saveElapsed(puzzleId, seconds);
       onMutate(puzzleId);
     },
     clearForPuzzle: (puzzleId) => {

@@ -21,6 +21,7 @@ interface StoredPuzzle {
   entries: StoredEntry[];
   lockedCells?: StoredLock[];
   hintsUsed?: number;
+  elapsedSeconds?: number;
 }
 
 // Per-puzzle bucket. Legacy shape (PR #242) was `StoredEntry[]` — kept on
@@ -74,12 +75,13 @@ function writeStore(sessionId: string, store: SoloStore): void {
 
 function readBucket(store: SoloStore, puzzleId: string): StoredPuzzle {
   const raw = store[puzzleId];
-  if (!raw) return { entries: [], lockedCells: [], hintsUsed: 0 };
-  if (Array.isArray(raw)) return { entries: raw, lockedCells: [], hintsUsed: 0 };
+  if (!raw) return { entries: [], lockedCells: [], hintsUsed: 0, elapsedSeconds: 0 };
+  if (Array.isArray(raw)) return { entries: raw, lockedCells: [], hintsUsed: 0, elapsedSeconds: 0 };
   return {
     entries: raw.entries ?? [],
     lockedCells: raw.lockedCells ?? [],
     hintsUsed: raw.hintsUsed ?? 0,
+    elapsedSeconds: raw.elapsedSeconds ?? 0,
   };
 }
 
@@ -91,7 +93,8 @@ function persistBucket(
   if (
     bucket.entries.length === 0 &&
     (bucket.lockedCells ?? []).length === 0 &&
-    (bucket.hintsUsed ?? 0) === 0
+    (bucket.hintsUsed ?? 0) === 0 &&
+    (bucket.elapsedSeconds ?? 0) === 0
   ) {
     delete store[puzzleId];
   } else {
@@ -131,6 +134,7 @@ export function saveSoloLetter(
     entries: next,
     lockedCells: bucket.lockedCells,
     hintsUsed: bucket.hintsUsed,
+    elapsedSeconds: bucket.elapsedSeconds,
   });
   writeStore(sessionId, store);
 }
@@ -163,6 +167,7 @@ export function saveSoloLockedCell(
     entries: bucket.entries,
     lockedCells: [...existing, { r: row, c: column }],
     hintsUsed: bucket.hintsUsed,
+    elapsedSeconds: bucket.elapsedSeconds,
   });
   writeStore(sessionId, store);
 }
@@ -182,6 +187,32 @@ export function recordSoloHintUsed(sessionId: string, puzzleId: string): void {
     entries: bucket.entries,
     lockedCells: bucket.lockedCells,
     hintsUsed: (bucket.hintsUsed ?? 0) + 1,
+    elapsedSeconds: bucket.elapsedSeconds,
+  });
+  writeStore(sessionId, store);
+}
+
+export function loadSoloElapsed(sessionId: string, puzzleId: string): number {
+  const bucket = readBucket(readStore(sessionId), puzzleId);
+  const v = bucket.elapsedSeconds;
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0;
+}
+
+export function saveSoloElapsed(
+  sessionId: string,
+  puzzleId: string,
+  seconds: number,
+): void {
+  const safe = typeof seconds === 'number' && Number.isFinite(seconds) && seconds >= 0
+    ? Math.floor(seconds)
+    : 0;
+  const store = readStore(sessionId);
+  const bucket = readBucket(store, puzzleId);
+  persistBucket(store, puzzleId, {
+    entries: bucket.entries,
+    lockedCells: bucket.lockedCells,
+    hintsUsed: bucket.hintsUsed,
+    elapsedSeconds: safe,
   });
   writeStore(sessionId, store);
 }
@@ -214,6 +245,12 @@ export function loadSoloPayload(sessionId: string, puzzleId: string): SoloStoreP
       .map((e) => ({ r: e.r, c: e.c })),
     hintsUsed:
       typeof bucket.hintsUsed === 'number' && bucket.hintsUsed >= 0 ? bucket.hintsUsed : 0,
+    elapsedSeconds:
+      typeof bucket.elapsedSeconds === 'number' &&
+      Number.isFinite(bucket.elapsedSeconds) &&
+      bucket.elapsedSeconds >= 0
+        ? bucket.elapsedSeconds
+        : 0,
   };
 }
 
@@ -228,6 +265,7 @@ export function replaceSoloPayload(
     entries: payload.entries.map((e) => ({ r: e.r, c: e.c, l: e.l })),
     lockedCells: payload.lockedCells.map((e) => ({ r: e.r, c: e.c })),
     hintsUsed: payload.hintsUsed,
+    elapsedSeconds: payload.elapsedSeconds,
   });
   writeStore(sessionId, store);
 }

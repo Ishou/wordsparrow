@@ -5,6 +5,7 @@ import type { ProgressSyncClient } from './ProgressSyncClient';
 import type { SoloProgressBlobStore } from './SoloProgressBlobStore';
 import {
   coerceSoloStorePayload,
+  EMPTY_PAYLOAD,
   type SoloStorePayload,
 } from './SoloStorePayload';
 
@@ -65,7 +66,7 @@ export function createProgressSyncService(
       const remote = await client.pull(puzzleId);
       const remotePayload: SoloStorePayload = remote
         ? coerceSoloStorePayload(remote.payload)
-        : { entries: [], lockedCells: [], hintsUsed: 0 };
+        : EMPTY_PAYLOAD;
       if (remote) baseUpdatedAt.set(puzzleId, remote.updatedAt);
       else baseUpdatedAt.delete(puzzleId);
       const currentLocal = blobStore.loadPayload(sessionId, puzzleId);

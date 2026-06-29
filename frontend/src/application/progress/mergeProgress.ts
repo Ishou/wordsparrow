@@ -45,5 +45,7 @@ export function mergeProgress(
     entries: [...byCell.values()],
     lockedCells,
     hintsUsed: Math.max(local.payload.hintsUsed, remote.payload.hintsUsed),
+    // Total time is monotonic; two devices both counting ⇒ keep the larger.
+    elapsedSeconds: Math.max(local.payload.elapsedSeconds, remote.payload.elapsedSeconds),
   };
 }
