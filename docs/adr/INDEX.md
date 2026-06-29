@@ -154,6 +154,11 @@ ADR-0076  grid/api/openapi.yaml                      Server-verified teaser answ
 ADR-0076  grid/api/src/**/Module.kt                  Sample handler mints token + answerLength; verify handler recomputes HMAC over normalized guess and constant-time-compares to token; serverKey injected as a k8s Secret (Wave 2)
 ADR-0076  frontend/src/infrastructure/api/grid/types.ts  Generated SampleWord (answerLength, token) + SampleVerifyResult types (drift gate)
 # ADR-0076: supersedes-in-part ADR-0073 §3 (plaintext teaser answer) — leak surfaced post-v2-cutover (ADR-0074); deterministic-token dictionary-mapping risk accepted over per-session salting (throwaway public-corpus teaser); leak fully closes at the contract wave (answer removed)
+ADR-0077  grid/api/src/**/Module.kt                  Credentialed CORS for the session-authed hint endpoint: allowCredentials true; revert headers from allowHeaders { true } to explicit allowHeader(Content-Type, X-Request-Id, traceparent, tracestate); host allowlist UNCHANGED (Wave 2). Triggers ADR-0034 Follow-up #2; mirrors ADR-0048 posture with an explicit list, not the wildcard predicate
+ADR-0077  grid/api/src/test/**/CorsTest.kt           Assert credentialed config: origin echo + Access-Control-Allow-Credentials true + explicit header set (Wave 2)
+ADR-0077  frontend/src/infrastructure/api/grid/client.ts  Send credentials: 'include' only on the authed hint POST; public puzzle GET/sample/validate stay uncredentialed so CDN-cacheable fetches keep their cache key (Wave 2)
+ADR-0077  frontend/src/ui/play/PlayScreen.tsx        Render hint.errorMessage (currently computed, never displayed) so a 401 shows "Connecte-toi pour utiliser les indices" instead of a dead button (Wave 2)
+# ADR-0077: threat model — SameSite=Lax (SessionCookies.kt:30) + mandatory JSON-preflight mitigate cross-site CSRF on /hints; no explicit CSRF token (low-value, budget-idempotent reveal). Wave-2 confirmations: add bliss-cb4.pages.dev to grid allowlist? + grid-api prod host must be a wordsparrow.io subdomain for the cookie to be in-scope
 ```
 
 ## Adding entries
