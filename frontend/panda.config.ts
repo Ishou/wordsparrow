@@ -305,6 +305,13 @@ export default defineConfig({
         '35%': { boxShadow: '0 0 0 3px rgba(212,93,131,0.55), 0 0 14px 3px rgba(212,93,131,0.45)' },
         '100%': { boxShadow: '0 0 0 0 rgba(212,93,131,0)' },
       },
+      // Discreet "checking with the server" breathing ring on a completed word
+      // whose validation is slow to respond — jade, low-contrast, distinct from
+      // the sakura solve-glow and the wrong-answer shake.
+      wsValidating: {
+        '0%, 100%': { boxShadow: '0 0 0 0 rgba(79,110,92,0)' },
+        '50%': { boxShadow: '0 0 0 2px rgba(79,110,92,0.4)' },
+      },
       // Head-shake on a completed-but-wrong word.
       wsShake: {
         '0%, 100%': { transform: 'rotate(0deg)' },
