@@ -20,7 +20,7 @@ export interface PhoneShellProps {
 
 // ADR-0072 §2 — phone-width on phones; contained jade-surround card from tablet up.
 const shell = css({
-  // Phone: cap to the viewport so the header pins and only the body scrolls (app-shell); desktop reverts to document scroll.
+  // Cap to the viewport so the header pins and only the body scrolls (app-shell), at every width.
   height: '100dvh',
   bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
   display: 'flex',
@@ -33,8 +33,8 @@ const shell = css({
     justifyContent: 'center',
     padding: '40px 24px',
   },
-  // Desktop: drop the surround — full-bleed gradient with a top bar + contained content, matching home/play.
-  lg: { height: 'auto', minHeight: '100dvh', bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0, alignItems: 'stretch' },
+  // Desktop: drop the surround — full-bleed gradient with a pinned top bar + scrollable content, matching home/play.
+  lg: { height: '100dvh', bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0, alignItems: 'stretch' },
 });
 
 const frame = css({
@@ -53,8 +53,8 @@ const frame = css({
     overflow: 'hidden',
     boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
   },
-  // Desktop: match the home frame width so the top bar aligns; content is capped narrower in the body.
-  lg: { flex: 1, maxWidth: '1140px', height: 'auto', minHeight: '100dvh', marginInline: 'auto', borderRadius: 0, overflow: 'visible', boxShadow: 'none', bgImage: 'none' },
+  // Desktop: a fixed-height flex column filling the shell so the app bar pins and only the body scrolls; width matches home so the top bar aligns.
+  lg: { flex: 1, maxWidth: '1140px', minHeight: 0, marginInline: 'auto', borderRadius: 0, overflow: 'hidden', boxShadow: 'none', bgImage: 'none' },
 });
 
 // Phone/tablet back-header; desktop shows the shared nav bar instead.
@@ -92,9 +92,12 @@ const body = css({
   minHeight: 0,
   overflowY: 'auto',
   padding: '18px 22px calc(env(safe-area-inset-bottom) + 28px)',
-  // Desktop: a contained, centred reading column on the full-bleed gradient.
-  lg: { width: '100%', maxWidth: '680px', marginInline: 'auto', overflowY: 'visible', paddingTop: '26px', paddingBottom: '56px' },
+  // Desktop: full-width scroller so the scrollbar sits at the window edge (under the full-bleed bar); the reading column is centred inside.
+  lg: { paddingInline: 0, paddingTop: '26px', paddingBottom: '56px' },
 });
+
+// Desktop centres the 680px reading column inside the full-width scroller; passthrough on phone/tablet.
+const inner = css({ display: 'contents', lg: { display: 'block', width: '100%', maxWidth: '680px', marginInline: 'auto', paddingInline: '36px' } });
 
 // Extra bottom inset so content clears the fixed BottomNav; reset at lg where the nav hides.
 const bodyWithNav = css({ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)', lg: { paddingBottom: '56px' } });
@@ -109,13 +112,15 @@ export function PhoneShell({ children, header, navActive, backTo, headerFlush, b
         <DesktopAppBar active={navActive} />
         {header != null ? (headerFlush ? header : <div className={headerSlot}>{header}</div>) : null}
         <main id="main-content" tabIndex={-1} className={cx(body, bottomNav != null && bodyWithNav, headerFlush && bodyFlushTop)}>
-          {backTo != null ? (
-            <Link to={backTo} className={deskBack}>
-              <CaretLeft size={16} weight="bold" aria-hidden="true" />
-              Retour
-            </Link>
-          ) : null}
-          {children}
+          <div className={inner}>
+            {backTo != null ? (
+              <Link to={backTo} className={deskBack}>
+                <CaretLeft size={16} weight="bold" aria-hidden="true" />
+                Retour
+              </Link>
+            ) : null}
+            {children}
+          </div>
         </main>
         {bottomNav}
       </div>
