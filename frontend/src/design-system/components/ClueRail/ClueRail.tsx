@@ -83,9 +83,9 @@ export function ClueRail({ direction, clue, index, total, onPrev, onNext, onZoom
         </div>
       </div>
       <div className={mainRow}>
-        <button type="button" className={stepper} onClick={onPrev} disabled={index <= 1} aria-label="Indice précédent"><CaretLeft aria-hidden="true" weight="bold" /></button>
+        <button type="button" className={stepper} onClick={onPrev} disabled={!onPrev || total <= 1} aria-label="Indice précédent"><CaretLeft aria-hidden="true" weight="bold" /></button>
         <div className={clueText}>{clue}</div>
-        <button type="button" className={stepper} onClick={onNext} disabled={index >= total} aria-label="Indice suivant"><CaretRight aria-hidden="true" weight="bold" /></button>
+        <button type="button" className={stepper} onClick={onNext} disabled={!onNext || total <= 1} aria-label="Indice suivant"><CaretRight aria-hidden="true" weight="bold" /></button>
       </div>
     </div>
   );

@@ -19,9 +19,24 @@ describe('ClueRail', () => {
     await expectAxeClean(container);
   });
 
-  it('disables prev on the first clue and next on the last', () => {
-    render(<ClueRail direction="vertical" clue="Note" index={1} total={1} />);
+  it('disables both steppers when there is a single clue', () => {
+    render(<ClueRail direction="vertical" clue="Note" index={1} total={1} onPrev={vi.fn()} onNext={vi.fn()} />);
     expect((screen.getByLabelText('Indice précédent') as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByLabelText('Indice suivant') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('keeps both steppers enabled at the bounds so they cycle', () => {
+    const onPrev = vi.fn();
+    const onNext = vi.fn();
+    // First clue: prev must still fire (wraps to the last) — not disabled.
+    const { rerender } = render(<ClueRail direction="vertical" clue="A" index={1} total={18} onPrev={onPrev} onNext={onNext} />);
+    expect((screen.getByLabelText('Indice précédent') as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByLabelText('Indice précédent'));
+    expect(onPrev).toHaveBeenCalledOnce();
+    // Last clue: next must still fire (wraps to the first).
+    rerender(<ClueRail direction="vertical" clue="A" index={18} total={18} onPrev={onPrev} onNext={onNext} />);
+    expect((screen.getByLabelText('Indice suivant') as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByLabelText('Indice suivant'));
+    expect(onNext).toHaveBeenCalledOnce();
   });
 });
