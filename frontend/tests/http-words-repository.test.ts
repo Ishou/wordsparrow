@@ -5,7 +5,7 @@ const json = (body: unknown, status = 200, type = 'application/json') =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': type } });
 
 describe('HttpWordsRepository — fetchSampleWords', () => {
-  it('maps answerLength + token and never surfaces a plaintext answer (ADR-0076 Wave 4)', async () => {
+  it('maps answerLength + token and never surfaces a plaintext answer', async () => {
     const fetchSpy = vi.fn().mockResolvedValue(
       json([{ clue: 'Astre', answerLength: 4, token: 'tok-LUNE', answer: 'LUNE' }]),
     );

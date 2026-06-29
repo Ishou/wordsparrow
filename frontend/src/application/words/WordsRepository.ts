@@ -1,4 +1,4 @@
-// No plaintext answer (ADR-0076 Wave 4); validation goes through `token` + `verifySample`.
+// No plaintext answer (ADR-0076); validation goes through `token` + `verifySample`.
 export interface SampleWord {
   readonly clue: string;
   readonly answerLength: number;

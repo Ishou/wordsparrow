@@ -64,7 +64,7 @@ const sampleAnswerPool: ReadonlyArray<{ clue: string; answer: string }> = [
   { clue: 'Capitale de la France', answer: 'PARIS' },
   { clue: 'Oiseau qui jacasse', answer: 'PIE' },
 ];
-// No plaintext answer on the wire (ADR-0076 Wave 4): the mock ships only clue + answerLength + token.
+// No plaintext answer on the wire (ADR-0076): the mock ships only clue + answerLength + token.
 const sampleWordPool: ReadonlyArray<SampleWord> = sampleAnswerPool.map(({ clue, answer }) => ({
   clue,
   answerLength: answer.length,
