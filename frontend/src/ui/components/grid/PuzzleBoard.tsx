@@ -14,6 +14,7 @@ import type { Cell as DomainCell, Position, Puzzle } from '@/domain';
 import { Cell, DefCell, type CellState } from '@/design-system';
 import { type CellHighlight, type GridNavigation } from './useGridNavigation';
 import { GRID_INPUT_GUARDS } from './gridInputGuards';
+import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import { CELL, GAP, STRIDE, posKey, exitsRight } from './playLayout';
 import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
 
@@ -58,6 +59,7 @@ function LetterSlot({
   col,
   entry,
   validated,
+  touchPrimary,
   highlight,
   nav,
   onKeyDown,
@@ -69,6 +71,8 @@ function LetterSlot({
   readonly col: number;
   readonly entry: string;
   readonly validated: boolean;
+  // On touch the cell is read-only so no editing caret/selection appears; letters arrive from the on-screen keyboard.
+  readonly touchPrimary: boolean;
   readonly highlight: CellHighlight;
   readonly nav: GridNavigation;
   readonly onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
@@ -102,7 +106,7 @@ function LetterSlot({
         {...GRID_INPUT_GUARDS}
         aria-label={`Ligne ${row + 1}, colonne ${col + 1}`}
         defaultValue={entry}
-        readOnly={validated}
+        readOnly={validated || touchPrimary}
         aria-readonly={validated || undefined}
         tabIndex={validated ? -1 : undefined}
         className={cx(letterInput, state === 'active' && letterInputOnActive)}
@@ -179,6 +183,7 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
   ref,
 ) {
   const pzRef = useRef<PanZoomHandle>(null);
+  const touchPrimary = useTouchPrimary();
 
   const BOARD_W = puzzle.width * CELL + (puzzle.width - 1) * GAP;
   const BOARD_H = puzzle.height * CELL + (puzzle.height - 1) * GAP;
@@ -313,6 +318,7 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
                   col={col}
                   entry={entryAt.get(k) ?? ''}
                   validated={validatedPositions.has(k)}
+                  touchPrimary={touchPrimary}
                   highlight={nav.highlightFor({ row, col })}
                   nav={nav}
                   onKeyDown={onKeyDown ?? nav.handleKeyDown}
