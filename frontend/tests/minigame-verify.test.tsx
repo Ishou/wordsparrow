@@ -1,7 +1,7 @@
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { SampleWord, WordsRepository } from '@/application';
-import { TeaserWord } from '@/ui/home/TeaserWord';
+import { MiniGame } from '@/ui/home/MiniGame';
 
 const SAMPLE: ReadonlyArray<SampleWord> = [{ clue: 'Astre', answerLength: 4, token: 'tok-LUNE' }];
 
@@ -10,7 +10,7 @@ function repo(verify: WordsRepository['verifySample']): WordsRepository {
 }
 
 async function renderWithWord(wordsRepository: WordsRepository) {
-  render(<TeaserWord wordsRepository={wordsRepository} />);
+  render(<MiniGame wordsRepository={wordsRepository} />);
   await waitFor(() => {
     expect(screen.queryByLabelText('Chargement du mot du jour')).toBeNull();
   });
@@ -22,7 +22,7 @@ function cells(): HTMLInputElement[] {
   );
 }
 
-// The teaser cells are uncontrolled (ADR-0002 §4): a letter arrives via onChange.
+// The mini-game cells are uncontrolled (ADR-0002 §4): a letter arrives via onChange.
 function typeWord(word: string) {
   const inputs = cells();
   act(() => inputs[0].focus());
@@ -33,7 +33,7 @@ function typeWord(word: string) {
   }
 }
 
-describe('TeaserWord server verification (ADR-0076)', () => {
+describe('MiniGame server verification (ADR-0076)', () => {
   it('renders answerLength cells without a plaintext answer', async () => {
     await renderWithWord(repo(vi.fn().mockResolvedValue(false)));
     expect(cells()).toHaveLength(4);

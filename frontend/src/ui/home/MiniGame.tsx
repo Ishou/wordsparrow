@@ -8,9 +8,13 @@ import { Keyboard } from '@/ui/play/Keyboard';
 import type { SampleWord, WordsRepository } from '@/application';
 
 
+const BATCH_OPTS = { minLen: 3, maxLen: 6, count: 24 } as const;
+// Refetch this many words before the pool runs dry so the next word is already in hand.
+const REFETCH_AHEAD = 3;
+
 const wrap = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' });
 const row = css({ display: 'flex', alignItems: 'center', gap: '4px' });
-// 42px wide + font-size 13px → Cell/DefCell renders at teaser size.
+// 42px wide + font-size 13px → Cell/DefCell renders at minigame size.
 const box = css({ position: 'relative', width: '42px', fontSize: '13px' });
 // The clue is a standalone word (not a uniform grid), so the def cell reads at 1.5× the letters.
 const defBox = css({ position: 'relative', width: '63px', fontSize: '19.5px' });
@@ -61,22 +65,26 @@ const kbInner = css({ width: '100%', maxWidth: '440px' });
 // Dismiss handle sits on the dock, above the keys (where a keyboard's collapse affordance belongs).
 const kbCollapse = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '46px', height: '24px', border: 'none', borderRadius: '999px', background: 'rgba(255,255,255,0.62)', backdropFilter: 'blur(10px)', boxShadow: '0 2px 12px rgba(33,75,64,0.14)', color: 'ws.jadeInk', cursor: 'pointer', _active: { opacity: 0.85 } });
 
-function nextIndex(current: number, length: number): number {
-  if (length <= 1) return 0;
-  const j = Math.floor(Math.random() * length);
-  return j === current ? (j + 1) % length : j;
+// Fisher–Yates: each batch is walked in order, so every word shows once before any repeat.
+function shuffle(words: ReadonlyArray<SampleWord>): SampleWord[] {
+  const a = [...words];
+  for (let i = a.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
-export interface TeaserWordProps {
+export interface MiniGameProps {
   // Reports the bonus streak (consecutive correct words) + the best so far.
   readonly onStreak?: (current: number, best: number) => void;
-  // Source of teaser pairs (ADR-0073). Absent → the hero stays in its loading skeleton.
+  // Source of mini-game pairs (ADR-0073). Absent → the hero stays in its loading skeleton.
   readonly wordsRepository?: WordsRepository;
   // Signals when the on-screen keyboard is docked so the host can hide the bottom nav it would overlap.
   readonly onKeyboardToggle?: (open: boolean) => void;
 }
 
-export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: TeaserWordProps) {
+export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGameProps) {
   const touchPrimary = useTouchPrimary();
   const [pool, setPool] = useState<ReadonlyArray<SampleWord>>([]);
   // Always start in the skeleton; the prerender has no repository, so a hard-coded clue would flash before the real one loads.
@@ -99,20 +107,21 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
   const timer = useRef<number | null>(null);
   // Bumped on every rotate/skip so an in-flight verify result that resolves after the user moved on is ignored.
   const verifySeq = useRef(0);
+  // One refetch at a time: guards against overlapping fetches when several words are consumed quickly.
+  const refetching = useRef(false);
 
   useEffect(() => {
     if (!wordsRepository) return;
     let cancelled = false;
     wordsRepository
-      .fetchSampleWords({ minLen: 3, maxLen: 6, count: 24 })
+      .fetchSampleWords(BATCH_OPTS)
       .then((words) => {
         if (cancelled) return;
-        const usable = words.filter((w) => w.answerLength > 0);
+        const usable = shuffle(words.filter((w) => w.answerLength > 0));
         if (usable.length > 0) {
-          const newIdx = Math.floor(Math.random() * usable.length);
           setPool(usable);
-          setIdx(newIdx);
-          lettersRef.current = Array(usable[newIdx].answerLength).fill('');
+          setIdx(0);
+          lettersRef.current = Array(usable[0].answerLength).fill('');
           setLetters(lettersRef.current);
         }
         setLoading(false);
@@ -150,6 +159,28 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
     setWrong(false);
     // passerUnlocked is intentionally NOT reset: once a wrong guess reveals Passer, it stays for the session.
   };
+
+  // Queue a fresh shuffled batch when the pool nears exhaustion so the game never runs out; a failure just retries later.
+  const refetchAhead = (nextIdx: number) => {
+    if (!wordsRepository || refetching.current) return;
+    if (pool.length - nextIdx > REFETCH_AHEAD) return;
+    refetching.current = true;
+    wordsRepository
+      .fetchSampleWords(BATCH_OPTS)
+      .then((words) => {
+        const usable = shuffle(words.filter((w) => w.answerLength > 0));
+        if (usable.length > 0) setPool((prev) => [...prev, ...usable]);
+      })
+      .catch(() => {})
+      .finally(() => { refetching.current = false; });
+  };
+
+  // Walk the shuffled pool in order so every word shows before any repeat; wrap only if a refetch hasn't landed yet.
+  const advance = () => {
+    const nextIdx = idx + 1 < pool.length ? idx + 1 : 0;
+    refetchAhead(nextIdx);
+    rotate(nextIdx);
+  };
   // Blur the active cell to drop the native soft keyboard (touch only).
   const dismissKeyboard = () => {
     if (focus !== null) refs.current[focus]?.blur();
@@ -158,7 +189,7 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
   const skip = () => {
     streakRef.current = 0;
     onStreak?.(0, bestRef.current);
-    rotate(nextIndex(idx, pool.length));
+    advance();
   };
 
   // Correct → celebrate, bump streak, rotate to a fresh clue.
@@ -172,7 +203,7 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
     setFocus(null);
     refs.current[i]?.blur();
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
-    timer.current = window.setTimeout(() => rotate(nextIndex(idx, pool.length)), 900);
+    timer.current = window.setTimeout(advance, 900);
   };
   // Wrong on completion: wobble + reveal Passer. The streak breaks on skip, not on a wrong guess.
   const onWrong = () => {

@@ -19,7 +19,7 @@ import type {
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Skeleton } from '@/design-system';
 import { HomeScreen } from '@/ui/home/HomeScreen';
-import { TeaserWord } from '@/ui/home/TeaserWord';
+import { MiniGame } from '@/ui/home/MiniGame';
 import { expectAxeClean } from '@/test/a11y';
 
 const stubPuzzle: Puzzle = {
@@ -89,7 +89,7 @@ describe('Skeleton primitive', () => {
   });
 });
 
-describe('TeaserWord loading state', () => {
+describe('MiniGame loading state', () => {
   it('shows skeletons in a busy region, then the real word once data lands', async () => {
     const d = deferred<ReadonlyArray<SampleWord>>();
     const wordsRepository: WordsRepository = {
@@ -97,7 +97,7 @@ describe('TeaserWord loading state', () => {
       verifySample: vi.fn().mockResolvedValue(false),
     };
 
-    const { container } = render(<TeaserWord wordsRepository={wordsRepository} />);
+    const { container } = render(<MiniGame wordsRepository={wordsRepository} />);
 
     const busy = screen.getByLabelText('Chargement du mot du jour');
     expect(busy.getAttribute('aria-busy')).toBe('true');
