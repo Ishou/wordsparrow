@@ -70,10 +70,7 @@ fun Application.module() {
     Database.start()
 
     install(CORS) {
-        // Browsers block `https://wordsparrow.io` → `https://api.wordsparrow.io`
-        // without these headers. Preview deploys do NOT call this API (per
-        // ADR-0007 §5 — they use MSW mocks); only prod-served frontends and
-        // local dev need allowance here.
+        // Browsers block `https://wordsparrow.io` → `https://api.wordsparrow.io` without these headers; the allowlist below names every origin that may call grid.
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Options) // preflight
         // POST /v1/puzzles/{id}/hints (PuzzleRoute.kt:226) and
@@ -83,40 +80,29 @@ fun Application.module() {
         // game/api Module.kt:70 so the configs read identically.
         allowMethod(HttpMethod.Post)
         // DELETE /v1/sessions/{sessionId} is the GDPR erasure endpoint
-        // (ADR-0025 §5). Methods stay explicit (vs. the wildcard used
-        // for headers in ADR-0034) because the set is small and the
-        // security trade-off differs — wildcard methods would silently
-        // allow PUT/PATCH on what is a read-leaning API.
+        // (ADR-0025 §5). Methods stay explicit — credentialed CORS forbids
+        // wildcard methods and the small set is the smaller attack surface.
         allowMethod(HttpMethod.Delete)
 
-        // Headers: wildcard allow per ADR-0034. The previous explicit
-        // allowlist accumulated three production incidents in two
-        // months — DELETE for GDPR (PR #259), X-Request-Id for
-        // correlation IDs (PR #267), traceparent / tracestate for the
-        // OTel SDK (PR-F.2) — each one a contributor adding an outbound
-        // header that middleware silently attaches to every fetch and
-        // forgetting the CORS plugin needs to be told. The defense-in-
-        // depth `allowHeader` gave us was small (no credentials, public
-        // read API, backends ignore unknown headers), the operational
-        // tax was large. Origin allowlist + per-IP rate limit at ingress
-        // remain the actual security perimeter. ADR-0034 has the full
-        // trade-off + the conditions under which this would be revisited
-        // (most prominently: gaining auth would force a return to the
-        // explicit list because credentialed CORS is incompatible with
-        // wildcard headers).
-        allowHeaders { true }
+        // Explicit header allowlist reverting ADR-0034's wildcard — the deliberate defense-in-depth narrowing ADR-0077 requires now that /hints is credentialed.
+        allowHeader(HttpHeaders.ContentType) // hint/validate POSTs send application/json
+        allowHeader("X-Request-Id") // correlation ID the grid client sets in onRequest
+        allowHeader("traceparent") // OTel browser SDK (ADR-0033) attaches these per fetch
+        allowHeader("tracestate")
 
         // Production frontends (Cloudflare Pages serving wordsparrow.io).
         allowHost("wordsparrow.io", schemes = listOf("https"))
         allowHost("www.wordsparrow.io", schemes = listOf("https"))
+        // Cloudflare Pages preview host — mirrors identity-api's allowlist (ADR-0048, confirmed for grid in ADR-0077 Wave 2).
+        allowHost("bliss-cb4.pages.dev", schemes = listOf("https"))
 
         // Local dev — Vite default port 5173 (frontend/package.json `dev`
         // script does not override; frontend/vite.config.ts has no `server`
         // block). If that ever changes, update this entry.
         allowHost("localhost:5173", schemes = listOf("http"))
 
-        // No credentials = no cookies. The API is read-only public for now.
-        allowCredentials = false
+        // Credentialed so the __Secure-ws_session cookie rides /hints — ADR-0077.
+        allowCredentials = true
         maxAgeInSeconds = 86400 // cache preflight for 24h
 
         // POST /v1/puzzles/{id}/hints + /validate send `Content-Type:

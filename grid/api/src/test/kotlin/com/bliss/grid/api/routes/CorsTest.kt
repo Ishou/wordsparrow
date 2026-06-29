@@ -2,6 +2,7 @@ package com.bliss.grid.api.routes
 
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.doesNotContain
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
@@ -23,9 +24,8 @@ import org.junit.jupiter.api.Test
  * served from a separate origin from `https://api.wordsparrow.io`, so the
  * browser executes a CORS preflight on every cross-origin request. These
  * tests assert the allowlist matches the production reality (prod apex +
- * www + local Vite dev) and that nothing else slips through — preview
- * deploys are deliberately excluded because they mock the API via MSW
- * (ADR-0007 §5).
+ * www + local Vite dev + the bliss-cb4.pages.dev preview host, ADR-0077)
+ * and that nothing else slips through.
  */
 class CorsTest {
     private val validId = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b"
@@ -53,6 +53,9 @@ class CorsTest {
                 .isNotNull()
             assertThat(response.headers[HttpHeaders.AccessControlAllowMethods]!!)
                 .contains("OPTIONS")
+            // Credentialed CORS so the session cookie reaches /hints (ADR-0077).
+            assertThat(response.headers[HttpHeaders.AccessControlAllowCredentials])
+                .isEqualTo("true")
             // 24h cache, per Module.kt config.
             assertThat(response.headers[HttpHeaders.AccessControlMaxAge])
                 .isEqualTo("86400")
@@ -128,20 +131,15 @@ class CorsTest {
         }
 
     @Test
-    fun `preflight allows arbitrary headers (ADR-0034 wildcard)`() =
+    fun `credentialed preflight allows the enumerated headers (ADR-0077)`() =
         testApplication {
             application { module() }
 
-            // ADR-0034 trades the explicit `allowHeader` list for a
-            // wildcard predicate so middleware-added cross-cutting
-            // headers (X-Request-Id, X-Session-Id, OTel `traceparent` /
-            // `tracestate` / `baggage`, future CSRF, etc.) all pass
-            // without a registry edit. This single test exercises the
-            // historical incident set in one preflight: any header the
-            // browser asks about must come back in
-            // `Access-Control-Allow-Headers`. A regression that
-            // accidentally re-narrows the allowlist will fail here
-            // before it lands in prod.
+            // ADR-0077 reverted ADR-0034's wildcard to an explicit list so the
+            // __Secure-ws_session cookie can ride /hints. The headers the frontend
+            // actually sends — Content-Type, X-Request-Id, OTel traceparent /
+            // tracestate — must come back in Access-Control-Allow-Headers, and the
+            // response must carry Allow-Credentials: true for the cookie path.
             val response =
                 client.options("/v1/puzzles/$validId/hints") {
                     headers {
@@ -149,7 +147,7 @@ class CorsTest {
                         append(HttpHeaders.AccessControlRequestMethod, "POST")
                         append(
                             HttpHeaders.AccessControlRequestHeaders,
-                            "Content-Type, X-Session-Id, X-Request-Id, traceparent, tracestate, baggage, X-Foo-Future",
+                            "Content-Type, X-Request-Id, traceparent, tracestate",
                         )
                     }
                 }
@@ -157,19 +155,54 @@ class CorsTest {
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
             assertThat(response.headers[HttpHeaders.AccessControlAllowOrigin])
                 .isEqualTo("https://wordsparrow.io")
+            assertThat(response.headers[HttpHeaders.AccessControlAllowCredentials])
+                .isEqualTo("true")
             val allowHeaders =
                 response.headers[HttpHeaders.AccessControlAllowHeaders].orEmpty().lowercase()
-            // Each header the codebase has historically tripped over.
-            assertThat(allowHeaders).contains("x-session-id")
+            assertThat(allowHeaders).contains("content-type")
             assertThat(allowHeaders).contains("x-request-id")
             assertThat(allowHeaders).contains("traceparent")
             assertThat(allowHeaders).contains("tracestate")
-            assertThat(allowHeaders).contains("baggage")
-            // The wildcard's whole point: a header the codebase has
-            // never seen before still passes. Future-us shipping a
-            // new middleware-added header doesn't have to remember
-            // anything.
-            assertThat(allowHeaders).contains("x-foo-future")
+        }
+
+    @Test
+    fun `credentialed preflight rejects a header outside the explicit allowlist`() =
+        testApplication {
+            application { module() }
+
+            // The ADR-0077 narrowing: a header the frontend never sends must NOT
+            // be echoed back. Ktor's CORS plugin omits the unlisted name from
+            // Access-Control-Allow-Headers, so the browser preflight for it fails.
+            val response =
+                client.options("/v1/puzzles/$validId/hints") {
+                    headers {
+                        append(HttpHeaders.Origin, "https://wordsparrow.io")
+                        append(HttpHeaders.AccessControlRequestMethod, "POST")
+                        append(HttpHeaders.AccessControlRequestHeaders, "X-Foo-Future")
+                    }
+                }
+
+            val allowHeaders =
+                response.headers[HttpHeaders.AccessControlAllowHeaders].orEmpty().lowercase()
+            assertThat(allowHeaders).doesNotContain("x-foo-future")
+        }
+
+    @Test
+    fun `preflight from Cloudflare Pages preview host is allowed`() =
+        testApplication {
+            application { module() }
+
+            // bliss-cb4.pages.dev mirrors identity-api's allowlist (ADR-0048 / ADR-0077 Wave 2).
+            val response =
+                client.options("/v1/puzzles/$validId") {
+                    headers {
+                        append(HttpHeaders.Origin, "https://bliss-cb4.pages.dev")
+                        append(HttpHeaders.AccessControlRequestMethod, "GET")
+                    }
+                }
+
+            assertThat(response.headers[HttpHeaders.AccessControlAllowOrigin])
+                .isEqualTo("https://bliss-cb4.pages.dev")
         }
 
     @Test
@@ -221,13 +254,12 @@ class CorsTest {
         }
 
     @Test
-    fun `Cloudflare Pages preview origin is NOT in the allowlist`() =
+    fun `an arbitrary pages dev preview origin is NOT in the allowlist`() =
         testApplication {
             application { module() }
 
-            // Previews are frontend-only via MSW per ADR-0007 §5; if a preview
-            // ever started hitting the real API we'd want it to fail loud
-            // instead of silently working in some environments.
+            // Only the exact bliss-cb4.pages.dev host is allowlisted (ADR-0077); any
+            // other *.pages.dev preview must still fail the Origin check loudly.
             val response =
                 client.options("/v1/puzzles/$validId") {
                     headers {
