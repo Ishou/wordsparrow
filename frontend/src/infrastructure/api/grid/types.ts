@@ -689,7 +689,7 @@ export interface components {
          *     Carries the `clue`, the `answerLength` (so the client renders the
          *     right number of cells), and an opaque `token` the client submits to
          *     `verifySampleWord` to check a guess server-side. No plaintext answer
-         *     is carried (ADR-0076 Wave 4): the token is the only validation path.
+         *     is carried (ADR-0076): the token is the only validation path.
          */
         SampleWord: {
             /**
