@@ -19,6 +19,13 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       expect(existsSync(expectedPath)).toBe(true);
     });
 
+    // Noindex routes get their own shell — hard load serves route HTML, not the home shell.
+    it.each(NOINDEX_PRERENDER_ROUTES)('emits a noindex shell for $path', (route) => {
+      const html = readFileSync(resolve(DIST, `${route.path.slice(1)}.html`), 'utf8');
+      expect(html).toContain(`<title>${route.title}</title>`);
+      expect(html).toContain('content="noindex,follow"');
+    });
+
     it.each(INDEXABLE_ROUTES)('embeds the route title in dist/$path', (route) => {
       const file =
         route.path === '/'

@@ -14,6 +14,9 @@
 /confidentialite/    /confidentialite    308
 /privacy/            /privacy            308
 /compte/             /compte             308
+/reglages/           /reglages           308
+/menu/               /menu               308
+/finish/             /finish             308
 
 # /sondage → /contribuer: server-side 308s because SPA fallback is gone (ADR-0004)
 /sondage/pairs/      /contribuer/pairs   308
@@ -24,11 +27,3 @@
 # lobby/join: 200 rewrite (no prerendered file) — client resolves param (ADR-0026)
 /lobby/*             /                   200
 /join/*              /                   200
-
-# client-only routes (no prerendered .html) — 200 rewrite so a hard load / bookmark resolves client-side instead of 404 (ADR-0004)
-/reglages            /                   200
-/reglages/           /                   200
-/menu                /                   200
-/menu/               /                   200
-/finish              /                   200
-/finish/             /                   200

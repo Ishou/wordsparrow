@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { NOINDEX_PRERENDER_ROUTES } from '@/ui/seo';
 
 // asserts /sondage → /contribuer 308s in public/_redirects (ADR-0004)
 const REDIRECTS = readFileSync(
@@ -45,5 +46,23 @@ describe('legacy sondage redirects (_redirects)', () => {
     expect(pairsIdx).toBeGreaterThanOrEqual(0);
     expect(bareIdx).toBeGreaterThanOrEqual(0);
     expect(pairsIdx).toBeLessThan(bareIdx);
+  });
+});
+
+describe('prerendered-shell coherence (_redirects)', () => {
+  // A prerendered route with a `/ 200` rewrite serves the home shell on hard load → home flash.
+  it.each(NOINDEX_PRERENDER_ROUTES)('does NOT rewrite $path to the home shell', (route) => {
+    expect(ruleFor(route.path)).not.toEqual({ target: '/', status: '200' });
+    expect(ruleFor(`${route.path}/`)).not.toEqual({ target: '/', status: '200' });
+  });
+
+  it.each(NOINDEX_PRERENDER_ROUTES)('redirects the trailing-slash form of $path to the bare route', (route) => {
+    expect(ruleFor(`${route.path}/`)).toEqual({ target: route.path, status: '308' });
+  });
+
+  // lobby/join are dynamic param routes with no prerendered file; they MUST keep the SPA-fallback rewrite.
+  it('keeps the SPA-fallback rewrite for dynamic lobby/join routes', () => {
+    expect(ruleFor('/lobby/*')).toEqual({ target: '/', status: '200' });
+    expect(ruleFor('/join/*')).toEqual({ target: '/', status: '200' });
   });
 });
