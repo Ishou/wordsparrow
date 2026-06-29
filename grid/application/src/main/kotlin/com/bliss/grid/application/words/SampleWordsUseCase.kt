@@ -8,6 +8,7 @@ import kotlin.random.Random
 class SampleWordsUseCase(
     private val wordRepository: WordRepository,
     private val random: Random,
+    private val tokenMinter: AnswerTokenMinter,
 ) {
     operator fun invoke(
         minLen: Int,
@@ -26,8 +27,14 @@ class SampleWordsUseCase(
         }
 
         return byLemma.values
-            .map { SampleWord(clue = pickClue(it), answer = it.text) }
-            .shuffled(random)
+            .map {
+                SampleWord(
+                    clue = pickClue(it),
+                    answerLength = it.text.length,
+                    token = tokenMinter.mint(it.text),
+                    answer = it.text,
+                )
+            }.shuffled(random)
             .take(take)
     }
 

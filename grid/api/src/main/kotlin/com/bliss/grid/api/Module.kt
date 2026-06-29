@@ -20,6 +20,7 @@ import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.application.words.SampleWordsUseCase
+import com.bliss.grid.application.words.VerifySampleWordUseCase
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.infrastructure.analytics.MatomoAnalyticsAdapter
 import com.bliss.grid.infrastructure.analytics.NoopAnalyticsAdapter
@@ -36,6 +37,7 @@ import com.bliss.grid.infrastructure.persistence.PostgresClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.PostgresHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.PostgresHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.PostgresPuzzleRepository
+import com.bliss.grid.infrastructure.words.HmacAnswerTokenMinter
 import io.ktor.client.HttpClient
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -164,7 +166,12 @@ fun Application.module() {
 
     val wordRepository = CsvWordRepository.frenchFromClasspath()
     val generatePuzzle = GeneratePuzzleUseCase(wordRepository, defaultPuzzleConstraints())
-    val sampleWords = SampleWordsUseCase(wordRepository, Random.Default)
+    // ADR-0076: prod injects GRID_TEASER_TOKEN_KEY via a k8s Secret; dev falls back to a fixed key.
+    val teaserTokenKey =
+        System.getenv("GRID_TEASER_TOKEN_KEY")?.takeIf { it.isNotBlank() } ?: DEV_TEASER_TOKEN_KEY
+    val tokenMinter = HmacAnswerTokenMinter(teaserTokenKey)
+    val sampleWords = SampleWordsUseCase(wordRepository, Random.Default, tokenMinter)
+    val verifySampleWord = VerifySampleWordUseCase(tokenMinter)
 
     // Pick adapters on the live DataSource: production has DATABASE_URL set
     // (Helm chart guarantees it) and gets the durable Postgres path. Local
@@ -284,9 +291,12 @@ fun Application.module() {
             dailyPuzzleSelector = dailyPuzzleSelector,
         )
         deleteSession(deleteSession)
-        words(sampleWords)
+        words(sampleWords, verifySampleWord)
     }
 }
+
+// Dev/local/test fallback HMAC key (ADR-0076); prod overrides via GRID_TEASER_TOKEN_KEY Secret.
+private const val DEV_TEASER_TOKEN_KEY = "wordsparrow-teaser-dev-key"
 
 private val analyticsLogger = LoggerFactory.getLogger("com.bliss.grid.api.analytics")
 

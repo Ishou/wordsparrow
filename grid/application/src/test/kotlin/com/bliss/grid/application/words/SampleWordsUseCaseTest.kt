@@ -28,6 +28,15 @@ private class FixtureWordRepository(
     override fun containsLemma(text: String): Boolean = words.any { it.lemma == text.trim().uppercase() }
 }
 
+private class FakeTokenMinter : AnswerTokenMinter {
+    override fun mint(answer: String): String = "tok:$answer"
+
+    override fun verify(
+        token: String,
+        guess: String,
+    ): Boolean = token == "tok:$guess"
+}
+
 class SampleWordsUseCaseTest {
     private val corpus =
         listOf(
@@ -42,7 +51,7 @@ class SampleWordsUseCaseTest {
     private fun useCase(
         words: List<Word> = corpus,
         seed: Long = 42L,
-    ) = SampleWordsUseCase(FixtureWordRepository(words), Random(seed))
+    ) = SampleWordsUseCase(FixtureWordRepository(words), Random(seed), FakeTokenMinter())
 
     @Test
     fun `returns clue-answer pairs from the requested length range`() {
@@ -143,5 +152,15 @@ class SampleWordsUseCaseTest {
 
         assertThat(result).hasSize(1)
         assertThat(result.first().clue in setOf("souverain", "piece d'echecs")).isTrue()
+    }
+
+    @Test
+    fun `carries the answer letter count and a minted token per word`() {
+        val result = useCase(listOf(Word(text = "ROI", definition = "souverain"))).invoke(3, 3, 50)
+
+        assertThat(result).hasSize(1)
+        assertThat(result.first().answerLength).isEqualTo(3)
+        assertThat(result.first().token).isEqualTo("tok:ROI")
+        assertThat(result.first().answer).isEqualTo("ROI")
     }
 }

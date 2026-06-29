@@ -43,7 +43,9 @@ created with `kubectl create secret` per ADR-0009 §10. The recipe lands
 in `docs/deploy.md` alongside the cluster bring-up PR.
 
 - `wordsparrow-api-env` — env vars the API reads at startup. Referenced
-  by `values.envFromSecret`.
+  by `values.envFromSecret`. Carries `GRID_TEASER_TOKEN_KEY` (ADR-0076),
+  the HMAC key for server-verified teaser tokens — generate once with
+  `openssl rand -hex 32`. Absent, the API falls back to a dev key.
 - `cnpg-backup-creds` — Hetzner Object Storage credentials for CNPG.
   Referenced by the backup block when `postgres.backups.enabled=true`.
 
