@@ -52,8 +52,9 @@ channels:
       description: |
         Emitted whenever a user's entitlement changes (created, renewed,
         canceled, pending_cancellation). Consumers SHOULD treat the event as
-        last-write-wins keyed by `userId` and apply newer `changedAt` over
-        older cached state.
+        last-write-wins keyed by `userId`, applying newer `changedAt` over older
+        cached state, and dedupe by `eventId` (delivery is at-least-once, so the
+        same event may arrive more than once).
       tags:
         - { name: entitlement }
       message:
@@ -72,13 +73,28 @@ components:
   schemas:
     EntitlementChangedPayload:
       type: object
-      required: [userId, tier, status, periodEnd, source, changedAt]
+      required: [eventId, userId, tier, status, periodEnd, source, changedAt]
       description: |
         Entitlement transition for one user. `periodEnd` is always on the wire
         and `null` when no current period applies — absence and `null` are
         distinct per ADR-0003 §6. `tier`/`status` are open strings (not enums):
         the offer is config-driven and deferred (ADR-0078).
+
+        v1 assumes a SINGLE entitlement source per user (Mollie). When a second
+        source lands (Play/Apple) a user could hold subscriptions from more than
+        one source; the cross-source resolution rule (which source wins, how
+        events from different sources reconcile) is NOT defined here and MUST be
+        settled in an ADR-0078 amendment before the second adapter ships —
+        last-write-wins by `changedAt` is safe only within a single source.
       properties:
+        eventId:
+          type: string
+          format: uuid
+          description: |
+            UUID v7 of this emission (ADR-0003 §6). Stable per event so
+            consumers dedupe idempotently under at-least-once delivery; distinct
+            from `userId`.
+          example: 0190e3b1-2c3d-7e4f-8a1b-2c3d4e5f6a7b
         userId:
           type: string
           format: uuid

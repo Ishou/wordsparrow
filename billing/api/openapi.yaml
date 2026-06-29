@@ -47,6 +47,10 @@ tags:
       Read access to the caller's current entitlement projection (tier,
       status, capabilities). Server-side enforcement lives in the consuming
       contexts; this read is for the caller's own state.
+  - name: subscription
+    description: |
+      Manage the caller's existing subscription (cancel). Updating the payment
+      method is deferred (no hosted portal on the initial provider, ADR-0078).
   - name: webhook
     description: |
       Public provider callback. The body is provider-opaque on this surface;
@@ -102,6 +106,86 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '409':
+          description: |
+            The caller already has an active subscription. Opening a second
+            checkout session risks a duplicate provider subscription and double
+            billing; cancel or manage the existing one instead. RFC 7807;
+            `type` is `https://bliss.example/errors/already-subscribed`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: |
+            Too many checkout-session attempts in the window. RFC 7807;
+            `type` is `https://bliss.example/errors/rate-limited`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: |
+            The payment provider is unavailable, so no checkout session could be
+            created; the caller may retry later. RFC 7807;
+            `type` is `https://bliss.example/errors/provider-unavailable`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /v1/subscription/cancel:
+    post:
+      operationId: cancelSubscription
+      summary: Cancel the caller's active subscription.
+      description: |
+        Cancels the authenticated caller's active subscription at the provider.
+        The caller is identified by the `__Secure-ws_session` cookie; `userId`
+        is resolved server-side. Cancellation stops future renewals; whether
+        access continues until `periodEnd` is a domain/provider decision
+        reflected in the returned status (no refund/proration is implied here).
+
+        Updating the payment method is intentionally NOT part of v1 — the
+        initial provider (Mollie) has no hosted management portal and a mandate
+        refresh is a provider-specific flow to design later (ADR-0078 deferral).
+      tags: [subscription]
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: |
+            Cancellation accepted. Body is the caller's updated entitlement
+            projection (status reflects the cancellation; `periodEnd` is
+            retained while a paid period remains).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitlementView'
+        '401':
+          description: |
+            No valid `__Secure-ws_session` cookie. RFC 7807;
+            `type` is `https://bliss.example/errors/auth-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: |
+            The caller has no active subscription to cancel. RFC 7807;
+            `type` is `https://bliss.example/errors/no-active-subscription`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: |
+            The payment provider is unavailable, so the cancellation could not
+            be confirmed; the caller may retry later. RFC 7807;
+            `type` is `https://bliss.example/errors/provider-unavailable`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 
   /v1/webhook:
     post:
@@ -109,29 +193,32 @@ paths:
       summary: Receive a provider webhook callback.
       description: |
         Public, unauthenticated-at-the-edge endpoint for provider callbacks.
-        The body is provider-opaque on this surface: the contract models only
-        a resource-reference `id`; the real provider payload shape is parsed in
-        the adapter, NOT here (ADR-0078 — provider shapes never leak past
-        infrastructure). The adapter authenticates every callback (verify the
-        provider signature where one exists, else re-fetch the resource by
-        `id`) before trusting it — an unauthenticated body never grants
-        entitlement.
+        The body is provider-opaque on this surface: the contract models only a
+        resource-reference `id`, sent as `application/x-www-form-urlencoded`
+        (the initial provider, Mollie, posts `id=...` with no signature header);
+        the real provider payload shape is parsed in the adapter, NOT here
+        (ADR-0078 — provider shapes never leak past infrastructure). The adapter
+        authenticates every callback (verify the provider signature where one
+        exists, else re-fetch the resource by `id`) before trusting it — an
+        unauthenticated body never grants entitlement.
 
-        Returns 200 with an empty body on accept; the adapter processes the
-        event asynchronously.
+        The adapter authenticates, applies, and durably records the event
+        BEFORE returning 200: the provider treats any 2xx as final delivery and
+        will not retry, so the work must complete (or be durably enqueued)
+        before the acknowledgement, never after it.
       tags: [webhook]
       requestBody:
         required: true
         content:
-          application/json:
+          application/x-www-form-urlencoded:
             schema:
               $ref: '#/components/schemas/WebhookEvent'
       responses:
         '200':
           description: |
-            Callback accepted for processing. Empty body. The provider treats
-            any 2xx as delivered; authentication and parsing happen in the
-            adapter behind this acknowledgement.
+            Callback authenticated, applied, and durably recorded. Empty body.
+            Returned only after the event is safely persisted, since the
+            provider treats any 2xx as final delivery and will not retry.
         '400':
           description: |
             Body is missing or unparseable (no resource reference `id`).
@@ -288,6 +375,12 @@ components:
             Capabilities the caller currently holds, derived from
             `(status, tier)`. Consumers gate on these, never on `tier` directly
             (ADR-0078). Empty array when the caller holds no gated capability.
+
+            Identifiers are a CONTROLLED vocabulary (kebab-case) owned by the
+            billing domain `Capability` type and shared verbatim with consuming
+            contexts — not free-form strings. A capability is added by extending
+            that shared type; emitting an unregistered identifier is a
+            producer/consumer contract bug, not a new capability.
           items:
             type: string
             minLength: 1
