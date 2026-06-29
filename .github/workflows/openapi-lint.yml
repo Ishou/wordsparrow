@@ -71,3 +71,11 @@ jobs:
           file_glob: identity/api/openapi.yaml
           spectral_ruleset: .spectral.yaml
           fail_severity: warn
+
+      - name: Lint billing/api/openapi.yaml
+        # Same pin/posture as above; asyncapi.yaml deferred (no asyncapi-lint workflow, ADR-0078).
+        uses: stoplightio/spectral-action@6416fd018ae38e60136775066eb3e98172143141 # v0.8.13
+        with:
+          file_glob: billing/api/openapi.yaml
+          spectral_ruleset: .spectral.yaml
+          fail_severity: warn

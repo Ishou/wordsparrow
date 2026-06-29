@@ -24,6 +24,7 @@
 |-------------|---------------------------------------------|--------------------------------------------------------------------------------|-----------------------------------------------------------------|
 | `grid/`     | `domain/` `application/` `infrastructure/` `api/` `worker/` | Kotlin 2.3.21 + Ktor on JDK 21; Postgres via CNPG + Flyway                     | `grid/api/openapi.yaml`                                         |
 | `game/`     | `domain/` `application/` `infrastructure/` `api/`           | Kotlin/JVM + Ktor REST + WebSocket (ADR-0018)                                  | `game/api/openapi.yaml` + `game/api/asyncapi.yaml` (ADR-0019)   |
+| `billing/`  | `domain/` `application/` `infrastructure/` `api/`           | Kotlin/JVM + Ktor; Postgres via CNPG + Flyway; Mollie adapter (ADR-0078)       | `billing/api/openapi.yaml` + `billing/api/asyncapi.yaml`         |
 | `frontend/` | `domain/` `application/` `infrastructure/` `ui/`            | Vite + React 19 + TS + Panda CSS + Ark UI + TanStack Router + OTel (ADR-0002)  | consumes both; types generated from the YAMLs                   |
 
 Hexagonal: `domain/` depends on nothing; `application/` defines ports;

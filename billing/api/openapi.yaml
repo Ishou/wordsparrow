@@ -1,0 +1,327 @@
+# Billing bounded-context HTTP contract.
+#
+# Hand-written OpenAPI 3.1 per ADR-0003 §1 (source of truth, not generated
+# from controller annotations). Wire conventions per ADR-0003 §6: UUID v7 ids,
+# ISO-8601 instants with offset, camelCase, RFC 7807 errors, string enums.
+# Context ratified by ADR-0078 (subscription entitlement foundation).
+#
+# v1 surface: hosted-checkout entry, the provider webhook, and the
+# entitlement read. Tier and status are open strings, not enums: the free/paid
+# offer is deliberately deferred (ADR-0078) — adding a tier is a config change,
+# not a wire-breaking schema change.
+openapi: 3.1.0
+info:
+  title: Bliss Billing API
+  version: 1.0.0
+  summary: Subscription checkout, provider webhook, and entitlement read.
+  description: |
+    The Billing bounded context owns subscription lifecycle and a gate-agnostic
+    entitlement projection (ADR-0078). v1 exposes a hosted-checkout entry, the
+    provider webhook callback, and a read of the caller's current entitlement.
+
+    No card data ever crosses this surface (PCI SAQ A): checkout is a redirect
+    to the provider's hosted page. See `docs/adr/0003-cross-language-api-contract.md`
+    for wire conventions and `docs/adr/0078-billing-subscription-context.md` for
+    the entitlement architecture and threat model.
+  contact:
+    name: Bliss maintainers
+    url: https://github.com/Ishou/bliss
+    email: noreply@bliss.example
+  license:
+    name: FSL-1.1-MIT
+    url: https://github.com/Ishou/bliss/blob/main/LICENSE
+
+servers:
+  - url: https://api.bliss.example/billing
+    description: Placeholder; the URL stabilizes when the billing chart lands
+      (hosting decision deferred per ADR-0003 §Notes).
+
+tags:
+  - name: checkout
+    description: |
+      Hosted-checkout entry. Starts a provider checkout session for the
+      authenticated caller; `userId` is derived from the session, never the
+      request body (no subscribe-as-another-user, ADR-0078 threat model).
+  - name: entitlement
+    description: |
+      Read access to the caller's current entitlement projection (tier,
+      status, capabilities). Server-side enforcement lives in the consuming
+      contexts; this read is for the caller's own state.
+  - name: webhook
+    description: |
+      Public provider callback. The body is provider-opaque on this surface;
+      the adapter authenticates every callback (signature verify or
+      re-fetch-by-id) and parses the real shape (ADR-0078).
+
+paths:
+  /v1/checkout-session:
+    post:
+      operationId: createCheckoutSession
+      summary: Start a hosted provider checkout session.
+      description: |
+        Creates a provider checkout session for the requested `tier` and
+        returns the hosted-checkout redirect plus the success / cancel return
+        URLs. The caller is identified by the `__Secure-ws_session` cookie;
+        `userId` is resolved server-side and is NEVER read from the request
+        body (no subscribe-as-another-user / IDOR, ADR-0078 threat model).
+
+        No card data crosses this surface — the returned `checkoutUrl` is the
+        provider's hosted page (PCI SAQ A).
+      tags: [checkout]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutSessionRequest'
+      responses:
+        '201':
+          description: |
+            Checkout session created. Body carries the hosted-checkout URL the
+            client redirects to, plus the success and cancel return URLs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
+        '400':
+          description: |
+            Request is malformed — missing or unknown `tier`. RFC 7807 body;
+            `type` is `https://bliss.example/errors/invalid-checkout-request`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: |
+            No valid `__Secure-ws_session` cookie. The session is missing,
+            unparseable, or revoked. RFC 7807;
+            `type` is `https://bliss.example/errors/auth-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /v1/webhook:
+    post:
+      operationId: receiveProviderWebhook
+      summary: Receive a provider webhook callback.
+      description: |
+        Public, unauthenticated-at-the-edge endpoint for provider callbacks.
+        The body is provider-opaque on this surface: the contract models only
+        a resource-reference `id`; the real provider payload shape is parsed in
+        the adapter, NOT here (ADR-0078 — provider shapes never leak past
+        infrastructure). The adapter authenticates every callback (verify the
+        provider signature where one exists, else re-fetch the resource by
+        `id`) before trusting it — an unauthenticated body never grants
+        entitlement.
+
+        Returns 200 with an empty body on accept; the adapter processes the
+        event asynchronously.
+      tags: [webhook]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookEvent'
+      responses:
+        '200':
+          description: |
+            Callback accepted for processing. Empty body. The provider treats
+            any 2xx as delivered; authentication and parsing happen in the
+            adapter behind this acknowledgement.
+        '400':
+          description: |
+            Body is missing or unparseable (no resource reference `id`).
+            RFC 7807; `type` is
+            `https://bliss.example/errors/invalid-webhook-body`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /v1/entitlement:
+    get:
+      operationId: getEntitlement
+      summary: Read the caller's current entitlement.
+      description: |
+        Returns the authenticated caller's entitlement projection — the stored
+        `tier`, subscription `status`, the current-period end (when one
+        applies), and the resolved `capabilities`. The caller is identified by
+        the `__Secure-ws_session` cookie; `userId` is resolved server-side.
+
+        Consumers gate on `capabilities`, not `tier` (ADR-0078): adding a tier
+        is a mapping change, not a contract change.
+      tags: [entitlement]
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Entitlement resolved for the authenticated caller.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitlementView'
+        '401':
+          description: |
+            No valid `__Secure-ws_session` cookie. RFC 7807;
+            `type` is `https://bliss.example/errors/auth-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Secure-ws_session
+      description: |
+        Identity-api session cookie. The server verifies it against
+        identity-api's whoami endpoint and resolves the calling user's
+        `userId`. Missing or revoked cookies produce a 401
+        `auth-required` response on protected operations.
+
+  schemas:
+    CheckoutSessionRequest:
+      type: object
+      description: |
+        Request body for `POST /v1/checkout-session`. Carries only the target
+        `tier`; `userId` is session-derived and intentionally NOT part of the
+        body (ADR-0078 threat model).
+      required: [tier]
+      properties:
+        tier:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: |
+            Target subscription tier. Open string, not an enum: the tier set is
+            config-driven and deliberately deferred (ADR-0078). An unknown tier
+            is rejected with a 400.
+          example: supporter
+
+    CheckoutSessionResponse:
+      type: object
+      description: |
+        Response body for `POST /v1/checkout-session` on a 201. The client
+        redirects the browser to `checkoutUrl`; the provider returns the user
+        to `successUrl` or `cancelUrl` after the hosted-checkout flow.
+      required: [checkoutUrl, successUrl, cancelUrl]
+      properties:
+        checkoutUrl:
+          type: string
+          format: uri
+          description: Provider-hosted checkout page to redirect the browser to.
+          example: https://checkout.provider.example/s/abc123
+        successUrl:
+          type: string
+          format: uri
+          description: Return URL the provider sends the user to on success.
+          example: https://wordsparrow.io/abonnement/merci
+        cancelUrl:
+          type: string
+          format: uri
+          description: Return URL the provider sends the user to on cancel.
+          example: https://wordsparrow.io/abonnement
+
+    WebhookEvent:
+      type: object
+      additionalProperties: true
+      description: |
+        Provider webhook body. Intentionally models only the resource
+        reference `id`; the real provider shape is parsed in the adapter, which
+        authenticates every callback (signature verify or re-fetch-by-id)
+        before trusting it.
+      required: [id]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: |
+            Opaque provider resource reference. The adapter re-fetches the
+            resource by this id to authenticate the callback rather than
+            trusting the body.
+          example: tr_WDqYK6vllg
+
+    EntitlementView:
+      type: object
+      description: |
+        The caller's entitlement projection. `periodEnd` is always present on
+        the wire and `null` when no current period applies (e.g. free tier or
+        a never-subscribed user) — absence and `null` are distinct per
+        ADR-0003 §6. Consumers gate on `capabilities`, not `tier`.
+      required: [tier, status, periodEnd, capabilities]
+      properties:
+        tier:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: |
+            Stored subscription tier. Open string, not an enum: the tier set is
+            config-driven and deferred (ADR-0078).
+          example: free
+        status:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: |
+            Subscription status (e.g. active, pending_cancellation, canceled).
+            Open string, not an enum, for the same forward-compatibility reason
+            as `tier`.
+          example: active
+        periodEnd:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            ISO-8601 instant the current paid period ends, or `null` when no
+            current period applies.
+          example: '2026-07-29T00:00:00Z'
+        capabilities:
+          type: array
+          description: |
+            Capabilities the caller currently holds, derived from
+            `(status, tier)`. Consumers gate on these, never on `tier` directly
+            (ADR-0078). Empty array when the caller holds no gated capability.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+          example: [daily-archive, no-ads]
+
+    Problem:
+      type: object
+      description: |
+        RFC 7807 error envelope (ADR-0003 §6). Additional members per
+        RFC 7807 §3.2 may appear; clients tolerate them.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: |
+            Stable URI for the error class. Clients route on `type`, never on
+            `title` or `detail`.
+          example: https://bliss.example/errors/auth-required
+        title:
+          type: string
+          description: Short, human-readable summary of the error class.
+          example: Authentication required
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+          description: HTTP status code, repeated for clients that lose it.
+          example: 401
+        detail:
+          type: string
+          description: Human-readable explanation specific to this occurrence.
+        instance:
+          type: string
+          format: uri-reference
+          description: URI reference identifying the specific occurrence.
