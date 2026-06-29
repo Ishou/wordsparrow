@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouteContext } from '@tanstack/react-router';
-import { CaretRight, Check, CircleNotch, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
+import { Check, CircleNotch, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { InvalidDisplayNameError, type GetMeResult } from '@/application/auth';
 import { useAuth } from '@/ui/components/auth';
@@ -8,6 +8,7 @@ import { Skeleton } from '@/design-system';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { EraseData } from './EraseData';
+import { SettingsRow } from './SettingsRow';
 
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 16px' });
 const stack = css({ display: 'flex', flexDirection: 'column', gap: '16px' });
@@ -28,13 +29,7 @@ const cancelBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadiu
 const errText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '8px' });
 
 const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#543C00', margin: '0 6px 7px' });
-const card = css({ bg: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
-const row = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', minHeight: '52px', padding: '12px 14px', fontFamily: 'wsUi', border: 'none', background: 'transparent', textAlign: 'left' });
-const rowBtn = css({ cursor: 'pointer', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' } });
-const tile = css({ flex: 'none', width: '34px', height: '34px', borderRadius: '10px', bg: 'ws.jade', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'ws.jadeInk' });
-const rowLabel = css({ fontSize: '14.5px', fontWeight: 'bold', color: 'ws.jadeInk' });
-const chevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
-const rowSub = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '1px' });
+const card = css({ listStyle: 'none', margin: 0, padding: 0, bg: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
 const dangerWrap = css({ marginTop: '6px' });
 
 const signInCard = css({ bg: 'white', borderRadius: '20px', padding: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 12px 26px rgba(33,75,64,0.09)', textAlign: 'center' });
@@ -144,20 +139,10 @@ function AuthedCompte() {
 
       <nav aria-label="Connexion">
         <div className={groupLabel}>Connexion</div>
-        <div className={card}>
-          <div className={row}>
-            <span className={tile}><GoogleLogo size={18} weight="bold" aria-hidden="true" /></span>
-            <span>
-              <span className={rowLabel}>Google</span>
-              <span className={rowSub} style={{ display: 'block' }}>{google ? 'Compte connecté' : 'Non connecté'}</span>
-            </span>
-          </div>
-          <button type="button" className={cx(row, rowBtn)} onClick={() => void logout()} style={{ borderTop: '1px solid #EEF3EC' }}>
-            <span className={tile}><SignOut size={18} weight="bold" aria-hidden="true" /></span>
-            <span className={rowLabel}>Se déconnecter</span>
-            <span className={chevron}><CaretRight size={16} weight="bold" aria-hidden="true" /></span>
-          </button>
-        </div>
+        <ul className={card}>
+          <SettingsRow icon={GoogleLogo} label="Google" sub={google ? 'Compte connecté' : 'Non connecté'} />
+          <SettingsRow icon={SignOut} label="Se déconnecter" onClick={() => void logout()} last />
+        </ul>
       </nav>
 
       <nav aria-label="Données" className={dangerWrap}>
