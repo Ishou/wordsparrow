@@ -269,7 +269,8 @@ export function TeaserWord({ onStreak, wordsRepository, onKeyboardToggle }: Teas
                 maxLength={1}
                 // Roving tabindex: word is a single Tab stop; arrows/tap move between slots.
                 tabIndex={i === (focus ?? 0) ? 0 : -1}
-                readOnly={solved}
+                // Read-only on touch removes the editing caret/selection; letters come from the on-screen keyboard.
+                readOnly={solved || touchPrimary}
                 aria-label={`${current.clue} — lettre ${i + 1} sur ${n}`}
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}

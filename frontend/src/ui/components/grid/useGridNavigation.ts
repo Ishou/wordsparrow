@@ -448,9 +448,8 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
       if (isPanningRef.current?.() === true) return;
       const p = posOf(event.currentTarget);
       if (!p) return;
-      // readOnly input on mobile dismisses the soft keyboard — skip to keep the prior mutable cell focused.
-      const inputEl = refs.current.get(key(p));
-      if (inputEl?.readOnly) return;
+      // Skip only locked (validated) cells; touch makes every input read-only for caret suppression, which must not block selection.
+      if (isCellValidatedRef.current?.(p.row, p.col)) return;
       // Read repeat-click state from `lastClickedRef` (NOT from `focused`):
       // iOS soft-keyboard hide/reshow can interleave focus changes
       // between two same-cell clicks even with sticky `focused`. The
@@ -658,7 +657,8 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
       const letter = stripDiacritics(char);
       if (letter.length !== 1 || !LETTER_RE.test(letter)) return;
       const el = refs.current.get(key(f));
-      if (el && !el.readOnly) {
+      // Locked cells never mutate; touch read-only must still accept the on-screen keyboard, so gate on validation, not el.readOnly.
+      if (el && !isCellValidatedRef.current?.(f.row, f.col)) {
         const before = el.value;
         el.value = letter;
         if (before !== letter) {
@@ -702,7 +702,7 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
     const { focused: f, direction: dir } = stateRef.current;
     if (!f) return;
     const el = refs.current.get(key(f));
-    if (el && el.value !== '' && !el.readOnly) {
+    if (el && el.value !== '' && !isCellValidatedRef.current?.(f.row, f.col)) {
       el.value = '';
       cellValuesRef.current.delete(key(f));
       bumpEntries();
@@ -715,7 +715,7 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
     if (idx <= 0) return;
     const prev = clue.cells[idx - 1].position;
     const prevEl = refs.current.get(key(prev));
-    if (prevEl && !prevEl.readOnly) {
+    if (prevEl && !isCellValidatedRef.current?.(prev.row, prev.col)) {
       const before = prevEl.value;
       prevEl.value = '';
       if (before !== '') {
