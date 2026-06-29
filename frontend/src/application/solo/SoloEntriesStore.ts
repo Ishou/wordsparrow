@@ -22,6 +22,9 @@ export interface SoloEntriesStore {
   // `hintsAllowed - loadHintsUsed(puzzleId)`.
   loadHintsUsed(puzzleId: string): number;
   recordHintUsed(puzzleId: string): void;
+  // Elapsed play time in seconds (0 when none) so a reload resumes instead of restarting.
+  loadElapsed(puzzleId: string): number;
+  saveElapsed(puzzleId: string, seconds: number): void;
   clearForPuzzle(puzzleId: string): void;
 }
 
@@ -44,6 +47,8 @@ export interface SoloEntriesStorage {
   lockCell(sessionId: string, puzzleId: string, row: number, column: number): void;
   loadHintsUsed(sessionId: string, puzzleId: string): number;
   recordHintUsed(sessionId: string, puzzleId: string): void;
+  loadElapsed(sessionId: string, puzzleId: string): number;
+  saveElapsed(sessionId: string, puzzleId: string, seconds: number): void;
   clearForPuzzle(sessionId: string, puzzleId: string): void;
 }
 
@@ -59,6 +64,8 @@ export function createSoloEntriesStore(deps: SoloEntriesStoreDeps): SoloEntriesS
       storage.lockCell(getSessionId(), puzzleId, row, column),
     loadHintsUsed: (puzzleId) => storage.loadHintsUsed(getSessionId(), puzzleId),
     recordHintUsed: (puzzleId) => storage.recordHintUsed(getSessionId(), puzzleId),
+    loadElapsed: (puzzleId) => storage.loadElapsed(getSessionId(), puzzleId),
+    saveElapsed: (puzzleId, seconds) => storage.saveElapsed(getSessionId(), puzzleId, seconds),
     clearForPuzzle: (puzzleId) => storage.clearForPuzzle(getSessionId(), puzzleId),
   };
 }

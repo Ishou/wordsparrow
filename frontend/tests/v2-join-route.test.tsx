@@ -36,6 +36,8 @@ const emptyStore: SoloEntriesStore = {
   lockCell: () => {},
   loadHintsUsed: () => 0,
   recordHintUsed: () => {},
+  loadElapsed: () => 0,
+  saveElapsed: () => {},
   clearForPuzzle: () => {},
 };
 const stubGameClient: GameClient = {

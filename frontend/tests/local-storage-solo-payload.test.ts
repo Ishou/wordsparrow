@@ -21,6 +21,7 @@ describe('localStorageSolo blob accessors (ADR-0075 sync)', () => {
       entries: [],
       lockedCells: [],
       hintsUsed: 0,
+      elapsedSeconds: 0,
     });
   });
 
@@ -30,6 +31,7 @@ describe('localStorageSolo blob accessors (ADR-0075 sync)', () => {
       entries: [{ r: 0, c: 0, l: 'A' }],
       lockedCells: [{ r: 1, c: 1 }],
       hintsUsed: 2,
+      elapsedSeconds: 137,
     };
     replaceSoloPayload(SESSION, PUZZLE_A, blob);
     expect(loadSoloPayload(SESSION, PUZZLE_A)).toEqual(blob);
@@ -45,7 +47,34 @@ describe('localStorageSolo blob accessors (ADR-0075 sync)', () => {
       entries: [{ r: 2, c: 3, l: 'Z' }],
       lockedCells: [{ r: 2, c: 3 }],
       hintsUsed: 1,
+      elapsedSeconds: 0,
     });
+  });
+
+  it('round-trips elapsed seconds and survives other cell writes', async () => {
+    const { saveSoloElapsed, loadSoloElapsed, saveSoloLetter, loadSoloPayload } =
+      await loadFresh();
+    saveSoloElapsed(SESSION, PUZZLE_A, 95);
+    expect(loadSoloElapsed(SESSION, PUZZLE_A)).toBe(95);
+    // A subsequent letter write must not drop the persisted elapsed time.
+    saveSoloLetter(SESSION, PUZZLE_A, 0, 0, 'A');
+    expect(loadSoloPayload(SESSION, PUZZLE_A).elapsedSeconds).toBe(95);
+  });
+
+  it('persists elapsed time even when no letters are stored yet', async () => {
+    const { saveSoloElapsed, listSoloPuzzleIds, loadSoloElapsed } = await loadFresh();
+    saveSoloElapsed(SESSION, PUZZLE_A, 12);
+    expect(listSoloPuzzleIds(SESSION)).toEqual([PUZZLE_A]);
+    expect(loadSoloElapsed(SESSION, PUZZLE_A)).toBe(12);
+  });
+
+  it('coerces malformed stored elapsed to 0', async () => {
+    const { loadSoloElapsed } = await loadFresh();
+    window.localStorage.setItem(
+      `bliss.solo.entries.${SESSION}`,
+      JSON.stringify({ [PUZZLE_A]: { entries: [], elapsedSeconds: -5 } }),
+    );
+    expect(loadSoloElapsed(SESSION, PUZZLE_A)).toBe(0);
   });
 
   it('listSoloPuzzleIds enumerates puzzles with stored progress', async () => {
@@ -58,7 +87,12 @@ describe('localStorageSolo blob accessors (ADR-0075 sync)', () => {
   it('clears the bucket when an empty payload is written', async () => {
     const { saveSoloLetter, replaceSoloPayload, listSoloPuzzleIds } = await loadFresh();
     saveSoloLetter(SESSION, PUZZLE_A, 0, 0, 'A');
-    replaceSoloPayload(SESSION, PUZZLE_A, { entries: [], lockedCells: [], hintsUsed: 0 });
+    replaceSoloPayload(SESSION, PUZZLE_A, {
+      entries: [],
+      lockedCells: [],
+      hintsUsed: 0,
+      elapsedSeconds: 0,
+    });
     expect(listSoloPuzzleIds(SESSION)).toEqual([]);
   });
 });

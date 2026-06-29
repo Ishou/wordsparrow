@@ -35,6 +35,8 @@ const soloStore: SoloEntriesStore = {
   lockCell: () => {},
   loadHintsUsed: () => 0,
   recordHintUsed: () => {},
+  loadElapsed: () => 0,
+  saveElapsed: () => {},
   clearForPuzzle: () => {},
 } as unknown as SoloEntriesStore;
 

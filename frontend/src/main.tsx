@@ -36,12 +36,14 @@ import {
   clearAllSoloEntriesForEverySession,
   clearSoloEntriesForPuzzle,
   listSoloPuzzleIds,
+  loadSoloElapsed,
   loadSoloEntries,
   loadSoloHintsUsed,
   loadSoloLockedCells,
   loadSoloPayload,
   recordSoloHintUsed,
   replaceSoloPayload,
+  saveSoloElapsed,
   saveSoloLetter,
   saveSoloLockedCell,
 } from '@/infrastructure/session/localStorageSolo';
@@ -222,6 +224,8 @@ enableMocks()
       lockCell: saveSoloLockedCell,
       loadHintsUsed: loadSoloHintsUsed,
       recordHintUsed: recordSoloHintUsed,
+      loadElapsed: loadSoloElapsed,
+      saveElapsed: saveSoloElapsed,
       clearForPuzzle: clearSoloEntriesForPuzzle,
     };
     const localSoloEntriesStore: SoloEntriesStore = createSoloEntriesStore({

@@ -6,10 +6,15 @@ function memStore(): SoloEntriesStore {
   const entries = new Map<string, SoloEntry[]>();
   const locked = new Map<string, SoloLockedCell[]>();
   const hints = new Map<string, number>();
+  const elapsed = new Map<string, number>();
   return {
     load: (puzzleId) => entries.get(puzzleId) ?? [],
     loadLockedCells: (puzzleId) => locked.get(puzzleId) ?? [],
     loadHintsUsed: (puzzleId) => hints.get(puzzleId) ?? 0,
+    loadElapsed: (puzzleId) => elapsed.get(puzzleId) ?? 0,
+    saveElapsed: (puzzleId, seconds) => {
+      elapsed.set(puzzleId, seconds);
+    },
     save: (puzzleId, row, column, letter) => {
       const prev = entries.get(puzzleId) ?? [];
       const filtered = prev.filter((e) => !(e.row === row && e.column === column));
@@ -25,6 +30,7 @@ function memStore(): SoloEntriesStore {
       entries.delete(puzzleId);
       locked.delete(puzzleId);
       hints.delete(puzzleId);
+      elapsed.delete(puzzleId);
     },
   };
 }
@@ -46,10 +52,13 @@ describe('createSyncingSoloEntriesStore', () => {
     store.recordHintUsed(PUZZLE);
     expect(inner.loadHintsUsed(PUZZLE)).toBe(1);
 
+    store.saveElapsed(PUZZLE, 42);
+    expect(inner.loadElapsed(PUZZLE)).toBe(42);
+
     store.clearForPuzzle(PUZZLE);
     expect(inner.load(PUZZLE)).toEqual([]);
 
-    expect(onMutate).toHaveBeenCalledTimes(4);
+    expect(onMutate).toHaveBeenCalledTimes(5);
     expect(onMutate).toHaveBeenNthCalledWith(1, PUZZLE);
   });
 
@@ -61,6 +70,7 @@ describe('createSyncingSoloEntriesStore', () => {
     store.load(PUZZLE);
     store.loadLockedCells(PUZZLE);
     store.loadHintsUsed(PUZZLE);
+    store.loadElapsed(PUZZLE);
 
     expect(onMutate).not.toHaveBeenCalled();
   });

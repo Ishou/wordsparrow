@@ -6,7 +6,7 @@ const T1 = '2026-06-28T10:00:00.000Z';
 const T2 = '2026-06-28T11:00:00.000Z';
 
 function payload(p: Partial<SoloStorePayload>): SoloStorePayload {
-  return { entries: [], lockedCells: [], hintsUsed: 0, ...p };
+  return { entries: [], lockedCells: [], hintsUsed: 0, elapsedSeconds: 0, ...p };
 }
 
 // Sort by cell key so set-union order is irrelevant to assertions.
@@ -121,6 +121,32 @@ describe('mergeProgress — hints used (max)', () => {
       { payload: EMPTY_PAYLOAD, updatedAt: T2 },
     );
     expect(merged.hintsUsed).toBe(0);
+  });
+});
+
+describe('mergeProgress — elapsed seconds (max)', () => {
+  it('takes the larger elapsed time across devices', () => {
+    const merged = mergeProgress(
+      { payload: payload({ elapsedSeconds: 120 }), updatedAt: T2 },
+      { payload: payload({ elapsedSeconds: 305 }), updatedAt: T1 },
+    );
+    expect(merged.elapsedSeconds).toBe(305);
+  });
+
+  it('keeps the only non-zero side when the other is fresh (disjoint)', () => {
+    const merged = mergeProgress(
+      { payload: payload({ elapsedSeconds: 88 }), updatedAt: T1 },
+      { payload: EMPTY_PAYLOAD, updatedAt: T2 },
+    );
+    expect(merged.elapsedSeconds).toBe(88);
+  });
+
+  it('is 0 when neither side has elapsed time', () => {
+    const merged = mergeProgress(
+      { payload: EMPTY_PAYLOAD, updatedAt: T1 },
+      { payload: EMPTY_PAYLOAD, updatedAt: T2 },
+    );
+    expect(merged.elapsedSeconds).toBe(0);
   });
 });
 

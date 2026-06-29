@@ -54,6 +54,8 @@ function renderCompte(authClient: AuthClient) {
         lockCell: () => {},
         loadHintsUsed: () => 0,
         recordHintUsed: () => {},
+        loadElapsed: () => 0,
+        saveElapsed: () => {},
         clearForPuzzle: () => {},
       },
       tourSeenStore: { get: () => true, set: () => {}, clear: () => {} },

@@ -15,12 +15,15 @@ export interface SoloStorePayload {
   readonly entries: ReadonlyArray<SoloStoreEntry>;
   readonly lockedCells: ReadonlyArray<SoloStoreLock>;
   readonly hintsUsed: number;
+  // Total seconds spent on the puzzle; monotonic across devices (merge takes max).
+  readonly elapsedSeconds: number;
 }
 
 export const EMPTY_PAYLOAD: SoloStorePayload = {
   entries: [],
   lockedCells: [],
   hintsUsed: 0,
+  elapsedSeconds: 0,
 };
 
 const cellKey = (r: number, c: number): string => `${r},${c}`;
@@ -51,7 +54,13 @@ export function coerceSoloStorePayload(raw: unknown): SoloStorePayload {
     : [];
   const hintsUsed =
     typeof obj.hintsUsed === 'number' && obj.hintsUsed >= 0 ? obj.hintsUsed : 0;
-  return { entries, lockedCells, hintsUsed };
+  const elapsedSeconds =
+    typeof obj.elapsedSeconds === 'number' &&
+    Number.isFinite(obj.elapsedSeconds) &&
+    obj.elapsedSeconds >= 0
+      ? obj.elapsedSeconds
+      : 0;
+  return { entries, lockedCells, hintsUsed, elapsedSeconds };
 }
 
 export { cellKey };
