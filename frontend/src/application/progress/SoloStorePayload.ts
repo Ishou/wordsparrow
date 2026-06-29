@@ -63,4 +63,23 @@ export function coerceSoloStorePayload(raw: unknown): SoloStorePayload {
   return { entries, lockedCells, hintsUsed, elapsedSeconds };
 }
 
+// Order-independent semantic equality — lets the sync layer skip a no-op push.
+export function payloadsEqual(a: SoloStorePayload, b: SoloStorePayload): boolean {
+  if (a.hintsUsed !== b.hintsUsed || a.elapsedSeconds !== b.elapsedSeconds) return false;
+  if (a.entries.length !== b.entries.length || a.lockedCells.length !== b.lockedCells.length) {
+    return false;
+  }
+  const letters = new Map<string, string>();
+  for (const e of a.entries) letters.set(cellKey(e.r, e.c), e.l);
+  for (const e of b.entries) {
+    if (letters.get(cellKey(e.r, e.c)) !== e.l) return false;
+  }
+  const locks = new Set<string>();
+  for (const lock of a.lockedCells) locks.add(cellKey(lock.r, lock.c));
+  for (const lock of b.lockedCells) {
+    if (!locks.has(cellKey(lock.r, lock.c))) return false;
+  }
+  return true;
+}
+
 export { cellKey };

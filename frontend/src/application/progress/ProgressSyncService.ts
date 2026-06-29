@@ -6,8 +6,18 @@ import type { SoloProgressBlobStore } from './SoloProgressBlobStore';
 import {
   coerceSoloStorePayload,
   EMPTY_PAYLOAD,
+  payloadsEqual,
   type SoloStorePayload,
 } from './SoloStorePayload';
+
+// Persists which account this device last reconciled. The batch sync runs once
+// per sign-in, not on every reload — the OAuth redirect lands as a plain
+// rehydrate, so an in-memory anon→authed transition can't tell them apart.
+export interface ReconciledUserStore {
+  load(): string | null;
+  save(userId: string): void;
+  clear(): void;
+}
 
 export interface ProgressSyncServiceDeps {
   readonly client: ProgressSyncClient;
@@ -15,35 +25,45 @@ export interface ProgressSyncServiceDeps {
   readonly getSessionId: () => string;
   readonly debounceMs?: number;
   readonly maxConflictRetries?: number;
-  // Injectable timers so tests drive the debounce deterministically.
+  readonly reconciledStore?: ReconciledUserStore;
+  // Gap between successive batch pushes; keeps a many-puzzle sync under the ingress rps cap.
+  readonly pushPaceMs?: number;
+  // Injectable timers so tests drive the debounce/pacing deterministically.
   readonly setTimeout?: (fn: () => void, ms: number) => ReturnType<typeof setTimeout>;
   readonly clearTimeout?: (handle: ReturnType<typeof setTimeout>) => void;
+  readonly delay?: (ms: number) => Promise<void>;
 }
 
 export interface ProgressSyncService {
   // Anon/offline keeps this false → no network call; flipped true by the authed hook (ADR-0075).
   setEnabled(enabled: boolean): void;
-  // Batch-pull, merge each into local, push the merged blob back. Authed only.
+  // Batch-pull, merge each into local, push only the blobs the server is missing or behind on.
   pullAndMergeAll(): Promise<void>;
+  // Runs pullAndMergeAll once per account per device; no-op once this userId is reconciled.
+  reconcileOnAuth(userId: string): Promise<void>;
+  // Forgets the reconcile marker (sign-out) so a re-auth re-syncs.
+  resetReconciled(): void;
   // Debounced single-puzzle push after a local mutation; no-op when disabled.
   schedulePush(puzzleId: string): void;
-  // Push every local puzzle now (anon→authed carry-over).
-  carryOver(anonSessionId: string): Promise<void>;
   // Cancels pending debounce timers (e.g. on sign-out / unmount).
   dispose(): void;
 }
 
 const DEFAULT_DEBOUNCE_MS = 1500;
 const DEFAULT_MAX_CONFLICT_RETRIES = 3;
+const DEFAULT_PUSH_PACE_MS = 250;
 
 export function createProgressSyncService(
   deps: ProgressSyncServiceDeps,
 ): ProgressSyncService {
-  const { client, blobStore, getSessionId } = deps;
+  const { client, blobStore, getSessionId, reconciledStore } = deps;
   const debounceMs = deps.debounceMs ?? DEFAULT_DEBOUNCE_MS;
   const maxRetries = deps.maxConflictRetries ?? DEFAULT_MAX_CONFLICT_RETRIES;
+  const pushPaceMs = deps.pushPaceMs ?? DEFAULT_PUSH_PACE_MS;
   const schedule = deps.setTimeout ?? ((fn, ms) => setTimeout(fn, ms));
   const cancel = deps.clearTimeout ?? ((h) => clearTimeout(h));
+  const delay =
+    deps.delay ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
   // Last server-stamped updatedAt seen per puzzle, used as `baseUpdatedAt`.
   const baseUpdatedAt = new Map<string, string>();
@@ -79,34 +99,54 @@ export function createProgressSyncService(
     }
   }
 
+  // Pushes sequentially with a gap between each so a big batch can't burst past the ingress rps cap.
+  async function pushPaced(sessionId: string, puzzleIds: readonly string[]): Promise<void> {
+    for (let i = 0; i < puzzleIds.length; i += 1) {
+      if (i > 0 && pushPaceMs > 0) await delay(pushPaceMs);
+      await pushPuzzle(sessionId, puzzleIds[i]);
+    }
+  }
+
+  async function pullAndMergeAll(): Promise<void> {
+    const sessionId = getSessionId();
+    const remoteEntries = await client.pullAll();
+    const seen = new Set<string>();
+    const toPush: string[] = [];
+    for (const remote of remoteEntries) {
+      seen.add(remote.puzzleId);
+      baseUpdatedAt.set(remote.puzzleId, remote.updatedAt);
+      const localPayload = blobStore.loadPayload(sessionId, remote.puzzleId);
+      const remotePayload = coerceSoloStorePayload(remote.payload);
+      const merged = mergeProgress(
+        { payload: localPayload },
+        { payload: remotePayload, updatedAt: remote.updatedAt },
+      );
+      blobStore.replacePayload(sessionId, remote.puzzleId, merged);
+      // Skip the push when local added nothing the server lacks — the no-op storm.
+      if (!payloadsEqual(merged, remotePayload)) toPush.push(remote.puzzleId);
+    }
+    // Local-only puzzles the account never saw: push them up so the union holds.
+    for (const puzzleId of blobStore.listPuzzleIds(sessionId)) {
+      if (!seen.has(puzzleId)) toPush.push(puzzleId);
+    }
+    await pushPaced(sessionId, toPush);
+  }
+
   return {
     setEnabled(next: boolean): void {
       enabled = next;
     },
 
-    async pullAndMergeAll(): Promise<void> {
-      const sessionId = getSessionId();
-      const remoteEntries = await client.pullAll();
-      const seen = new Set<string>();
-      for (const remote of remoteEntries) {
-        seen.add(remote.puzzleId);
-        baseUpdatedAt.set(remote.puzzleId, remote.updatedAt);
-        const localPayload = blobStore.loadPayload(sessionId, remote.puzzleId);
-        const merged = mergeProgress(
-          { payload: localPayload },
-          { payload: coerceSoloStorePayload(remote.payload), updatedAt: remote.updatedAt },
-        );
-        blobStore.replacePayload(sessionId, remote.puzzleId, merged);
-      }
-      // Local-only puzzles the account never saw: push them up so the union holds.
-      for (const puzzleId of blobStore.listPuzzleIds(sessionId)) {
-        if (seen.has(puzzleId)) continue;
-        await pushPuzzle(sessionId, puzzleId);
-      }
-      // Push the merged blobs back so the server reflects the union.
-      for (const puzzleId of seen) {
-        await pushPuzzle(sessionId, puzzleId);
-      }
+    pullAndMergeAll,
+
+    async reconcileOnAuth(userId: string): Promise<void> {
+      if (reconciledStore?.load() === userId) return;
+      await pullAndMergeAll();
+      reconciledStore?.save(userId);
+    },
+
+    resetReconciled(): void {
+      reconciledStore?.clear();
     },
 
     schedulePush(puzzleId: string): void {
@@ -118,12 +158,6 @@ export function createProgressSyncService(
         void pushPuzzle(getSessionId(), puzzleId);
       }, debounceMs);
       timers.set(puzzleId, handle);
-    },
-
-    async carryOver(anonSessionId: string): Promise<void> {
-      for (const puzzleId of blobStore.listPuzzleIds(anonSessionId)) {
-        await pushPuzzle(anonSessionId, puzzleId);
-      }
     },
 
     dispose(): void {

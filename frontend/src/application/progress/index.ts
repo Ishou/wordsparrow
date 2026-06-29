@@ -1,6 +1,7 @@
 export {
   coerceSoloStorePayload,
   EMPTY_PAYLOAD,
+  payloadsEqual,
   type SoloStoreEntry,
   type SoloStoreLock,
   type SoloStorePayload,
@@ -16,5 +17,6 @@ export {
   createProgressSyncService,
   type ProgressSyncService,
   type ProgressSyncServiceDeps,
+  type ReconciledUserStore,
 } from './ProgressSyncService';
 export { createSyncingSoloEntriesStore } from './SyncingSoloEntriesStore';

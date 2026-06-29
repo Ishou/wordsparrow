@@ -3,10 +3,24 @@ import {
   createProgressSyncService,
   type ProgressSyncClient,
   type PushResult,
+  type ReconciledUserStore,
   type RemoteProgressEntry,
   type SoloProgressBlobStore,
   type SoloStorePayload,
 } from '@/application/progress';
+
+function memReconciledStore(initial: string | null = null): ReconciledUserStore {
+  let value = initial;
+  return {
+    load: () => value,
+    save: (id) => {
+      value = id;
+    },
+    clear: () => {
+      value = null;
+    },
+  };
+}
 
 const SESSION = 'anon-session-1';
 const PUZZLE = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
@@ -129,9 +143,10 @@ describe('ProgressSyncService — 409 conflict re-pull/re-merge/re-push', () => 
       blobStore,
       getSessionId: () => SESSION,
       debounceMs: 0,
+      pushPaceMs: 0,
     });
     service.setEnabled(true);
-    await service.carryOver(SESSION); // direct push path, exercises the conflict loop
+    await service.pullAndMergeAll(); // local-only push path, exercises the conflict loop
 
     expect(client.pulls).toEqual([PUZZLE]);
     expect(client.pushes).toHaveLength(2);
@@ -193,9 +208,9 @@ describe('ProgressSyncService — pullAndMergeAll', () => {
   });
 });
 
-describe('ProgressSyncService — carryOver', () => {
-  it('pushes every local anon puzzle up on sign-in', async () => {
-    const client = fakeClient({});
+describe('ProgressSyncService — pullAndMergeAll pushes every local-only puzzle', () => {
+  it('carries up all puzzles the account never saw', async () => {
+    const client = fakeClient({ pullAll: [] });
     const other = '0190e3a4-7a2c-7c9e-8f1a-000000000002';
     const blobStore = memBlobStore({
       [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }),
@@ -206,8 +221,108 @@ describe('ProgressSyncService — carryOver', () => {
       blobStore,
       getSessionId: () => SESSION,
       debounceMs: 0,
+      pushPaceMs: 0,
     });
-    await service.carryOver(SESSION);
+    await service.pullAndMergeAll();
     expect(client.pushes.map((p) => p.puzzleId).sort()).toEqual([other, PUZZLE].sort());
+  });
+});
+
+describe('ProgressSyncService — dirty-check skips no-op pushes', () => {
+  it('does not push a remote puzzle whose merge equals the server blob', async () => {
+    const same = payload({ entries: [{ r: 0, c: 0, l: 'A' }], hintsUsed: 1 });
+    const remoteEntry: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: same as unknown as Record<string, unknown>,
+      updatedAt: T1,
+    };
+    const client = fakeClient({ pullAll: [remoteEntry] });
+    const blobStore = memBlobStore({ [seedKey(SESSION, PUZZLE)]: same });
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    await service.pullAndMergeAll();
+    expect(client.pushes).toHaveLength(0);
+  });
+});
+
+describe('ProgressSyncService — paces batch pushes', () => {
+  it('delays between successive pushes to stay under the ingress rate limit', async () => {
+    const client = fakeClient({ pullAll: [] });
+    const p2 = '0190e3a4-7a2c-7c9e-8f1a-000000000002';
+    const blobStore = memBlobStore({
+      [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }),
+      [seedKey(SESSION, p2)]: payload({ entries: [{ r: 1, c: 1, l: 'B' }] }),
+    });
+    const delay = vi.fn(async () => {});
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 250,
+      delay,
+    });
+    await service.pullAndMergeAll();
+    expect(client.pushes).toHaveLength(2);
+    // One inter-push gap for two pushes; none before the first.
+    expect(delay).toHaveBeenCalledTimes(1);
+    expect(delay).toHaveBeenCalledWith(250);
+  });
+});
+
+describe('ProgressSyncService — reconcileOnAuth marker gate', () => {
+  it('reconciles once per account on a device, then no-ops on reload', async () => {
+    const client = fakeClient({ pullAll: [] });
+    const store = memReconciledStore();
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore(),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+      reconciledStore: store,
+    });
+    await service.reconcileOnAuth('user-A');
+    await service.reconcileOnAuth('user-A');
+    expect(client.pullAllCount).toBe(1);
+    expect(store.load()).toBe('user-A');
+  });
+
+  it('reconciles again for a different account (account switch)', async () => {
+    const client = fakeClient({ pullAll: [] });
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore(),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+      reconciledStore: memReconciledStore('user-A'),
+    });
+    await service.reconcileOnAuth('user-A'); // already marked → skip
+    await service.reconcileOnAuth('user-B'); // new account → run
+    expect(client.pullAllCount).toBe(1);
+  });
+
+  it('re-reconciles after resetReconciled (re-sign-in)', async () => {
+    const client = fakeClient({ pullAll: [] });
+    const store = memReconciledStore();
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore(),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+      reconciledStore: store,
+    });
+    await service.reconcileOnAuth('user-A');
+    service.resetReconciled();
+    expect(store.load()).toBeNull();
+    await service.reconcileOnAuth('user-A');
+    expect(client.pullAllCount).toBe(2);
   });
 });
