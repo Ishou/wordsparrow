@@ -60,6 +60,15 @@ word. No new table, no migration, no seed job, no per-request LLM call.
 
 ### 3. Plaintext answer, because the teaser validates client-side
 
+> **Superseded in part by [ADR-0076](./0076-server-verified-teaser-answers.md).**
+> Once the teaser shipped to production via the v2 cutover (ADR-0074), the
+> plaintext answer became a Network-tab cheat. ADR-0076 replaces client-side
+> validation with a server-verify endpoint (opaque HMAC token + `POST
+> /v1/words/sample/verify`); no plaintext answer leaves the server going
+> forward. The migration is expand-and-contract, so the `answer` field below
+> survives (deprecated, optional) through the schema wave and is removed at
+> the contract wave.
+
 The endpoint returns the answer word in plaintext. This is a deliberate
 departure from the daily-puzzle posture, justified by the teaser's nature:
 

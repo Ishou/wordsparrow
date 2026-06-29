@@ -112,13 +112,16 @@ export interface paths {
         };
         /**
          * Sample random clue→answer pairs for the home teaser.
-         * @description Returns a small, count-capped, random sample of `SampleWord`
-         *     clue→answer pairs drawn from the resident French corpus, for the
-         *     dev-only `/home` teaser mini-game (ADR-0073). The teaser validates
-         *     client-side, so this endpoint returns the `answer` in **plaintext**
-         *     — a deliberate, ADR-0073-blessed exception to the daily-puzzle
-         *     no-leak posture (ADR-0073 §3): these are a random teaser pool, never the
-         *     daily answer key, so exposing them leaks no daily solution.
+         * @description Returns a small, count-capped, random sample of `SampleWord` teaser
+         *     clues drawn from the resident French corpus, for the `/home` teaser
+         *     mini-game (ADR-0073). Each entry carries the `clue`, the
+         *     `answerLength`, and an opaque `token`; the client checks a guess by
+         *     submitting `{token, guess}` to `verifySampleWord` — **the token, not
+         *     a plaintext answer, is the validation path** (ADR-0076). The legacy
+         *     `answer` field is deprecated and retained only for backward
+         *     compatibility during the server-verify migration. The pool is a
+         *     random teaser sample, never the daily answer key, so it leaks no
+         *     daily solution (the daily path's no-leak posture is untouched).
          *
          *     Inputs are bounded server-side (ADR-0073 §4): `count` is clamped to
          *     the documented maximum, the length range is bounded, and
@@ -128,6 +131,36 @@ export interface paths {
         get: operations["sampleWords"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/words/sample/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a home-teaser guess against an opaque answer token.
+         * @description Verifies a player's guess for a `sampleWords` teaser clue without the
+         *     answer ever leaving the server in plaintext (ADR-0076). The client
+         *     submits the `token` it received from `sampleWords` together with the
+         *     player's full word attempt; the server recomputes
+         *     `HMAC-SHA256(serverKey, normalize(guess))`, base64url-encodes it, and
+         *     constant-time-compares it to `token`, returning only `{correct}`.
+         *
+         *     No plaintext answer is returned — a correct guess already equals the
+         *     canonical answer (uppercase ASCII A–Z, ADR-0073 §1) and there is no
+         *     reveal path. The check is stateless: the token is deterministic, so
+         *     no session or stored state is consulted.
+         */
+        post: operations["verifySampleWord"];
         delete?: never;
         options?: never;
         head?: never;
@@ -653,9 +686,13 @@ export interface components {
             instance?: string;
         };
         /**
-         * @description A single clue→answer pair for the home teaser (ADR-0073). Both
-         *     fields are always present; the `answer` ships in plaintext because
-         *     the teaser validates client-side (see `sampleWords`).
+         * @description A single teaser clue for the home mini-game (ADR-0073, ADR-0076).
+         *     Carries the `clue`, the `answerLength` (so the client renders the
+         *     right number of cells), and an opaque `token` the client submits to
+         *     `verifySampleWord` to check a guess server-side. The plaintext answer
+         *     is no longer the validation path (ADR-0076): the legacy `answer`
+         *     field is deprecated and retained only for backward compatibility
+         *     during the server-verify migration.
          */
         SampleWord: {
             /**
@@ -664,11 +701,43 @@ export interface components {
              */
             clue: string;
             /**
-             * @description The corpus word's folded surface form — uppercase ASCII A–Z, per
-             *     the `Word.text` invariant (ADR-0073 §1).
+             * @description The answer's letter count, so the client renders the right number
+             *     of cells without seeing the answer.
+             * @example 5
+             */
+            answerLength: number;
+            /**
+             * @description Opaque verify handle for the answer — `base64url(HMAC-SHA256(
+             *     serverKey, normalize(answer)))` (ADR-0076). Deterministic and
+             *     stateless; reveals nothing about the answer. The client submits
+             *     it with a guess to `verifySampleWord`.
+             * @example 9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a
+             */
+            token: string;
+            /**
+             * @deprecated
+             * @description DEPRECATED (ADR-0076). The corpus word's folded surface form —
+             *     uppercase ASCII A–Z, per the `Word.text` invariant (ADR-0073 §1).
+             *     Retained only for backward compatibility during the server-verify
+             *     migration; it is no longer the validation path (use `token` +
+             *     `verifySampleWord`) and is removed once consumers have migrated.
              * @example PARIS
              */
-            answer: string;
+            answer?: string;
+        };
+        /**
+         * @description Result of a teaser guess check (ADR-0076). `correct` is the server's
+         *     constant-time comparison of `HMAC(serverKey, normalize(guess))`
+         *     against the submitted `token`. No plaintext answer is ever returned —
+         *     a correct guess already equals the canonical answer, and there is no
+         *     reveal path.
+         */
+        SampleVerifyResult: {
+            /**
+             * @description True when the guess matches the token's answer.
+             * @example true
+             */
+            correct: boolean;
         };
     };
     responses: never;
@@ -978,6 +1047,59 @@ export interface operations {
              *     `count` is non-integer or less than 1, or `minLen` exceeds
              *     `maxLen`. (`count` values above the server ceiling are clamped,
              *     not rejected.)
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    verifySampleWord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description The opaque verify handle from a `SampleWord.token`. An
+                     *     empty or oversized token is rejected with a 400.
+                     * @example 9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a
+                     */
+                    token: string;
+                    /**
+                     * @description The player's full word attempt. Normalized server-side
+                     *     the same way the answer was before tokenization; an empty
+                     *     or oversized guess is rejected with a 400.
+                     * @example PARIS
+                     */
+                    guess: string;
+                };
+            };
+        };
+        responses: {
+            /**
+             * @description Guess checked. `correct` is true when the guess matches the
+             *     token's answer; no plaintext answer is returned.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SampleVerifyResult"];
+                };
+            };
+            /**
+             * @description Request body is malformed — missing, empty, or oversized `token`
+             *     or `guess`. RFC 7807 body.
              */
             400: {
                 headers: {

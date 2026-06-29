@@ -51,7 +51,9 @@ type PuzzleSummary = components['schemas']['PuzzleSummary'];
 type SampleWord = components['schemas']['SampleWord'];
 
 // Preview teaser pool (ADR-0073): short French clue→answer pairs, answers uppercase A–Z.
-const sampleWordPool: ReadonlyArray<SampleWord> = [
+// answerLength + a stand-in token mirror the server-verify shape (ADR-0076); the real
+// token is HMAC(serverKey, normalize(answer)), minted server-side in a later wave.
+const sampleAnswerPool: ReadonlyArray<{ clue: string; answer: string }> = [
   { clue: 'Note de musique', answer: 'SOL' },
   { clue: 'Roi des animaux', answer: 'LION' },
   { clue: "Cinquième mois de l'année", answer: 'MAI' },
@@ -63,6 +65,12 @@ const sampleWordPool: ReadonlyArray<SampleWord> = [
   { clue: 'Capitale de la France', answer: 'PARIS' },
   { clue: 'Oiseau qui jacasse', answer: 'PIE' },
 ];
+const sampleWordPool: ReadonlyArray<SampleWord> = sampleAnswerPool.map(({ clue, answer }) => ({
+  clue,
+  answerLength: answer.length,
+  token: `mock-${answer}`,
+  answer,
+}));
 
 // Cast through `unknown` because Vite's JSON import returns the
 // inferred literal type; the cast is structurally validated at runtime
@@ -118,7 +126,8 @@ const gridHandlers = [
     const maxLen = Math.min(Math.max(Number(url.searchParams.get('maxLen') ?? 6), 3), 6);
     const count = Math.min(Math.max(Number(url.searchParams.get('count') ?? 8), 1), 50);
     const inRange = sampleWordPool.filter(
-      (w) => w.answer.length >= Math.min(minLen, maxLen) && w.answer.length <= Math.max(minLen, maxLen),
+      (w) =>
+        w.answerLength >= Math.min(minLen, maxLen) && w.answerLength <= Math.max(minLen, maxLen),
     );
     return HttpResponse.json(inRange.slice(0, count) satisfies SampleWord[]);
   }),
