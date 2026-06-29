@@ -31,6 +31,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/subscription/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel the caller's active subscription.
+         * @description Cancels the authenticated caller's active subscription at the provider.
+         *     The caller is identified by the `__Secure-ws_session` cookie; `userId`
+         *     is resolved server-side. Cancellation stops future renewals; whether
+         *     access continues until `periodEnd` is a domain/provider decision
+         *     reflected in the returned status (no refund/proration is implied here).
+         *
+         *     Updating the payment method is intentionally NOT part of v1 — the
+         *     initial provider (Mollie) has no hosted management portal and a mandate
+         *     refresh is a provider-specific flow to design later (ADR-0078 deferral).
+         */
+        post: operations["cancelSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/webhook": {
         parameters: {
             query?: never;
@@ -43,16 +71,19 @@ export interface paths {
         /**
          * Receive a provider webhook callback.
          * @description Public, unauthenticated-at-the-edge endpoint for provider callbacks.
-         *     The body is provider-opaque on this surface: the contract models only
-         *     a resource-reference `id`; the real provider payload shape is parsed in
-         *     the adapter, NOT here (ADR-0078 — provider shapes never leak past
-         *     infrastructure). The adapter authenticates every callback (verify the
-         *     provider signature where one exists, else re-fetch the resource by
-         *     `id`) before trusting it — an unauthenticated body never grants
-         *     entitlement.
+         *     The body is provider-opaque on this surface: the contract models only a
+         *     resource-reference `id`, sent as `application/x-www-form-urlencoded`
+         *     (the initial provider, Mollie, posts `id=...` with no signature header);
+         *     the real provider payload shape is parsed in the adapter, NOT here
+         *     (ADR-0078 — provider shapes never leak past infrastructure). The adapter
+         *     authenticates every callback (verify the provider signature where one
+         *     exists, else re-fetch the resource by `id`) before trusting it — an
+         *     unauthenticated body never grants entitlement.
          *
-         *     Returns 200 with an empty body on accept; the adapter processes the
-         *     event asynchronously.
+         *     The adapter authenticates, applies, and durably records the event
+         *     BEFORE returning 200: the provider treats any 2xx as final delivery and
+         *     will not retry, so the work must complete (or be durably enqueued)
+         *     before the acknowledgement, never after it.
          */
         post: operations["receiveProviderWebhook"];
         delete?: never;
@@ -178,6 +209,12 @@ export interface components {
              * @description Capabilities the caller currently holds, derived from
              *     `(status, tier)`. Consumers gate on these, never on `tier` directly
              *     (ADR-0078). Empty array when the caller holds no gated capability.
+             *
+             *     Identifiers are a CONTROLLED vocabulary (kebab-case) owned by the
+             *     billing domain `Capability` type and shared verbatim with consuming
+             *     contexts — not free-form strings. A capability is added by extending
+             *     that shared type; emitting an unregistered identifier is a
+             *     producer/consumer contract bug, not a new capability.
              * @example [
              *       "daily-archive",
              *       "no-ads"
@@ -274,6 +311,106 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /**
+             * @description The caller already has an active subscription. Opening a second
+             *     checkout session risks a duplicate provider subscription and double
+             *     billing; cancel or manage the existing one instead. RFC 7807;
+             *     `type` is `https://bliss.example/errors/already-subscribed`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description Too many checkout-session attempts in the window. RFC 7807;
+             *     `type` is `https://bliss.example/errors/rate-limited`.
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The payment provider is unavailable, so no checkout session could be
+             *     created; the caller may retry later. RFC 7807;
+             *     `type` is `https://bliss.example/errors/provider-unavailable`.
+             */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description Cancellation accepted. Body is the caller's updated entitlement
+             *     projection (status reflects the cancellation; `periodEnd` is
+             *     retained while a paid period remains).
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitlementView"];
+                };
+            };
+            /**
+             * @description No valid `__Secure-ws_session` cookie. RFC 7807;
+             *     `type` is `https://bliss.example/errors/auth-required`.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The caller has no active subscription to cancel. RFC 7807;
+             *     `type` is `https://bliss.example/errors/no-active-subscription`.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The payment provider is unavailable, so the cancellation could not
+             *     be confirmed; the caller may retry later. RFC 7807;
+             *     `type` is `https://bliss.example/errors/provider-unavailable`.
+             */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     receiveProviderWebhook: {
@@ -285,14 +422,14 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WebhookEvent"];
+                "application/x-www-form-urlencoded": components["schemas"]["WebhookEvent"];
             };
         };
         responses: {
             /**
-             * @description Callback accepted for processing. Empty body. The provider treats
-             *     any 2xx as delivered; authentication and parsing happen in the
-             *     adapter behind this acknowledgement.
+             * @description Callback authenticated, applied, and durably recorded. Empty body.
+             *     Returned only after the event is safely persisted, since the
+             *     provider treats any 2xx as final delivery and will not retry.
              */
             200: {
                 headers: {
