@@ -392,6 +392,20 @@ describe('ProgressSyncService — pullAndMergeOne (per-grid open)', () => {
     expect(client.pushes).toHaveLength(0);
   });
 
+  it('is a no-op when both local and remote have no progress', async () => {
+    const client = fakeClient({ pull: () => null });
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore(),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+    await service.pullAndMergeOne(PUZZLE);
+    expect(client.pushes).toHaveLength(0);
+  });
+
   it('pushes local up when the account has no remote blob yet', async () => {
     const client = fakeClient({ pull: () => null });
     const blobStore = memBlobStore({

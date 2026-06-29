@@ -150,7 +150,7 @@ export function createProgressSyncService(
         { payload: remotePayload, updatedAt: remote?.updatedAt },
       );
       blobStore.replacePayload(sessionId, puzzleId, merged);
-      if (!remote || !payloadsEqual(merged, remotePayload)) {
+      if (!payloadsEqual(merged, remotePayload)) {
         await pushPuzzle(sessionId, puzzleId);
       }
     },
