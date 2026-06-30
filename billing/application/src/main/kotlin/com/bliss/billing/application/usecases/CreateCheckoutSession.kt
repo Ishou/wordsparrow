@@ -8,11 +8,13 @@ import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 
 sealed interface CreateCheckoutSessionOutcome {
-    data class Success(val urls: CheckoutUrls) : CreateCheckoutSessionOutcome
+    data class Success(
+        val urls: CheckoutUrls,
+    ) : CreateCheckoutSessionOutcome
+
     data object AlreadySubscribed : CreateCheckoutSessionOutcome
 }
 
-/** POST /v1/checkout-session: guard against a live subscription, then delegate to the provider. Surfaces `AlreadySubscribed` or throws `ProviderUnavailable`. */
 class CreateCheckoutSession(
     private val provider: BillingProviderPort,
     private val repository: SubscriptionRepository,
