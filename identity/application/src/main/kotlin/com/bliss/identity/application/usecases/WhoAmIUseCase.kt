@@ -4,9 +4,11 @@ import com.bliss.identity.application.ports.Clock
 import com.bliss.identity.application.ports.SessionRepository
 import com.bliss.identity.application.ports.UserRepository
 import com.bliss.identity.domain.session.SessionId
+import com.bliss.identity.domain.user.Capability
 import com.bliss.identity.domain.user.DisplayName
 import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.UserId
+import com.bliss.identity.domain.user.capabilitiesFor
 import java.time.Duration
 
 data class WhoAmIQuery(
@@ -17,6 +19,7 @@ data class WhoAmIResult(
     val userId: UserId,
     val displayName: DisplayName,
     val role: Role,
+    val capabilities: Set<Capability>,
 )
 
 class WhoAmIUseCase(
@@ -41,6 +44,6 @@ class WhoAmIUseCase(
         val user =
             users.findById(session.userId)
                 ?: throw WhoAmIError.OrphanedSession()
-        return WhoAmIResult(user.id, user.displayName, user.role)
+        return WhoAmIResult(user.id, user.displayName, user.role, capabilitiesFor(user.role))
     }
 }

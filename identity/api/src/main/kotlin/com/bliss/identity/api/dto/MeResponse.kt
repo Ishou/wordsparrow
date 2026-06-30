@@ -9,6 +9,7 @@ data class MeResponse(
     val providers: List<LinkedProviderDto>,
     val createdAt: String,
     val role: String,
+    val capabilities: List<String>,
 )
 
 @Serializable

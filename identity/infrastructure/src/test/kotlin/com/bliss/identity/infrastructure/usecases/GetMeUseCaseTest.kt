@@ -14,6 +14,7 @@ import com.bliss.identity.application.usecases.GetMeUseCase
 import com.bliss.identity.domain.provider.Provider
 import com.bliss.identity.domain.provider.Subject
 import com.bliss.identity.domain.provider.UserProvider
+import com.bliss.identity.domain.user.Capability
 import com.bliss.identity.domain.user.DisplayName
 import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
@@ -130,8 +131,18 @@ class GetMeUseCaseTest {
                     createdAt = now.minusSeconds(3600),
                     lastSeenAt = now.minusSeconds(60),
                     role = Role.PLAYER,
+                    capabilities = emptySet(),
                     linkedProviders = emptyList(),
                 ),
             )
+        }
+
+    @Test
+    fun `maintainer result carries the billing subscribe capability`() =
+        runTest {
+            val (sut, users, _) = newCase()
+            users.create(User(userId, DisplayName.of("Alice"), now, now, Role.MAINTAINER))
+            val result = sut.execute(GetMeQuery(userId))
+            assertThat(result.capabilities).isEqualTo(setOf(Capability.BILLING_SUBSCRIBE))
         }
 }

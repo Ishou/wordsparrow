@@ -131,6 +131,7 @@ private fun GetMeResult.toMeResponse(): MeResponse =
         displayName = displayName.value,
         createdAt = createdAt.toString(),
         role = role.wire,
+        capabilities = capabilities.map { it.wire }.sorted(),
         providers =
             linkedProviders.map { lp ->
                 LinkedProviderDto(
