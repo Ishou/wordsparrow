@@ -329,7 +329,7 @@ fun Route.puzzles(
         if (HINT_CAPABILITY !in cached.capabilities) {
             call.respondProblem(
                 status = HttpStatusCode.Forbidden,
-                title = "Forbidden",
+                title = "Accès refusé",
                 type = FORBIDDEN_TYPE,
                 detail = "Les indices nécessitent un compte joueur.",
             )
