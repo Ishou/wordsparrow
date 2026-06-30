@@ -1,5 +1,4 @@
-// HTTP adapter for the billing-api surface (ADR-0078). Contract-typed via
-// openapi-fetch against `./types.ts` (ADR-0003 §3).
+// HTTP adapter (ADR-0078); contract-typed via openapi-fetch against ./types.ts.
 import createClient, { type ClientOptions } from 'openapi-fetch';
 import { uuidv7 } from 'uuidv7';
 

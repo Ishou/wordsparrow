@@ -9,8 +9,7 @@ export interface SubscriptionState {
   readonly refetch: () => void;
 }
 
-// Reads billing subscription STATUS for the manage-subscription UI only;
-// authorization/capabilities come from identity, never from here (ADR-0078).
+// Subscription STATUS for the manage UI only; capabilities come from identity (ADR-0078).
 export function useSubscription(client: BillingClient): SubscriptionState {
   const [subscription, setSubscription] = useState<SubscriptionView | null>(null);
   const [loading, setLoading] = useState(true);

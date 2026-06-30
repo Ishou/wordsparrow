@@ -1,5 +1,4 @@
-// Application-layer port for the billing-api surface (ADR-0078). Billing owns
-// subscription STATUS only; capabilities live on identity (ADR-0060/0078).
+// Application-layer port (ADR-0078); subscription status only, capabilities on identity.
 
 // Open strings, not enums: the tier/status sets are config-driven and
 // deliberately deferred (ADR-0078).
@@ -39,8 +38,7 @@ export class BillingError extends Error {
   }
 }
 
-// Cookie-bearing calls require `__Secure-ws_session`; the adapter sets
-// `credentials: 'include'` per call (ADR-0077).
+// Cookie-bearing; adapter sets credentials:'include' per ADR-0077.
 export interface BillingClient {
   createCheckoutSession(tier: BillingTier): Promise<CheckoutSession>;
   cancelSubscription(): Promise<SubscriptionView>;
