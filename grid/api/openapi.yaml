@@ -33,8 +33,11 @@ tags:
     description: |
       Per-puzzle hint mechanism. Spends one credit to reveal every letter of
       the word the cursor is in, identified by `(row, column)` plus its
-      `direction` axis. Capped by `Puzzle.hintsAllowed` to prevent draining
-      the full solution.
+      `direction` axis. The budget regenerates server-side: 1 credit every 10
+      minutes, capped at `Puzzle.hintsAllowed`. `secondsUntilNextHint` carries
+      the countdown to the next regenerated credit (null when the budget is
+      full). The regen countdown is a timing integer only — it adds no
+      canonical letters to the wire (ADR-0076).
   - name: puzzles
     description: Read access and validation for mots-fléchés puzzles.
   - name: sessions
@@ -410,13 +413,25 @@ paths:
         the budget is exhausted the server responds with 429 and the client
         UI SHOULD disable the affordance.
 
-        Whole-word reveal extends the per-letter hint exception under
-        ADR-0076: hints are the accepted carve-out from answers-off-the-wire,
-        and revealing all letters of one budgeted word stays within it.
-        Brute-force resistance is unchanged: `Puzzle.hintsAllowed` still caps
-        total reveals, every call still spends one credit, and draining the
-        grid still requires `hintsAllowed` calls bounded by edge rate
-        limiting.
+        Whole-word reveal: each answered call returns every letter of the one
+        focused word. This is the puzzle's deliberate, authenticated,
+        per-(puzzle, user) hint affordance — gameplay pacing, not an
+        answer-leak control. The daily answers-off-the-wire posture (letter
+        omission on the puzzle GET) is independent and unchanged by the hint
+        budget.
+
+        The budget regenerates server-side: it starts at `Puzzle.hintsAllowed`,
+        refills 1 credit every 10 minutes, and is capped at
+        `Puzzle.hintsAllowed` (credits never accrue beyond the cap). Each
+        answered call spends one credit; at zero the server responds 429 and
+        the client SHOULD disable the affordance. Because credits regenerate, a
+        player can reveal more than `Puzzle.hintsAllowed` words over real time —
+        fully draining a grid would take many hours and only affects that
+        player's own puzzle, so it is an accepted non-issue: the budget paces
+        help, it does not bound a leak. The response carries
+        `secondsUntilNextHint`, the countdown to the next regenerated credit
+        (null when the budget is full) — a timing integer that adds no
+        canonical letters to the wire.
 
         Player identity on the wire is the `__Secure-ws_session` cookie
         issued by identity-api. The server verifies the cookie against
@@ -674,7 +689,7 @@ components:
     Puzzle:
       type: object
       description: A complete mots-fléchés puzzle ready to render and play.
-      required: [id, title, language, width, height, cells, clues, hintsAllowed, hintsRemaining, createdAt]
+      required: [id, title, language, width, height, cells, clues, hintsAllowed, hintsRemaining, secondsUntilNextHint, createdAt]
       properties:
         id:
           $ref: '#/components/schemas/PuzzleId'
@@ -762,6 +777,15 @@ components:
             verified, this is `hintsAllowed - hintsUsed` for the resolved
             `userId`.
           example: 2
+        secondsUntilNextHint:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: >-
+            Secondes avant la régénération du prochain indice ; null si le
+            quota d'indices est plein (et toujours null pour un appelant
+            anonyme).
+          example: 420
         createdAt:
           type: string
           format: date-time
@@ -1022,7 +1046,7 @@ components:
         every cell of the revealed word with its canonical letter, plus the
         remaining hint budget. One hint is spent per call regardless of word
         length.
-      required: [cells, hintsRemaining]
+      required: [cells, hintsRemaining, secondsUntilNextHint]
       properties:
         cells:
           type: array
@@ -1051,6 +1075,15 @@ components:
             Hints left after this call. 0 means the next call returns 429 with
             type https://bliss.example/errors/hint-budget-exhausted.
           example: 2
+        secondsUntilNextHint:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: >-
+            Secondes avant la régénération du prochain indice ; null si le
+            quota d'indices est plein (et toujours null pour un appelant
+            anonyme).
+          example: 420
 
     ValidatePuzzleRequest:
       type: object

@@ -186,13 +186,25 @@ export interface paths {
          *     the budget is exhausted the server responds with 429 and the client
          *     UI SHOULD disable the affordance.
          *
-         *     Whole-word reveal extends the per-letter hint exception under
-         *     ADR-0076: hints are the accepted carve-out from answers-off-the-wire,
-         *     and revealing all letters of one budgeted word stays within it.
-         *     Brute-force resistance is unchanged: `Puzzle.hintsAllowed` still caps
-         *     total reveals, every call still spends one credit, and draining the
-         *     grid still requires `hintsAllowed` calls bounded by edge rate
-         *     limiting.
+         *     Whole-word reveal: each answered call returns every letter of the one
+         *     focused word. This is the puzzle's deliberate, authenticated,
+         *     per-(puzzle, user) hint affordance — gameplay pacing, not an
+         *     answer-leak control. The daily answers-off-the-wire posture (letter
+         *     omission on the puzzle GET) is independent and unchanged by the hint
+         *     budget.
+         *
+         *     The budget regenerates server-side: it starts at `Puzzle.hintsAllowed`,
+         *     refills 1 credit every 10 minutes, and is capped at
+         *     `Puzzle.hintsAllowed` (credits never accrue beyond the cap). Each
+         *     answered call spends one credit; at zero the server responds 429 and
+         *     the client SHOULD disable the affordance. Because credits regenerate, a
+         *     player can reveal more than `Puzzle.hintsAllowed` words over real time —
+         *     fully draining a grid would take many hours and only affects that
+         *     player's own puzzle, so it is an accepted non-issue: the budget paces
+         *     help, it does not bound a leak. The response carries
+         *     `secondsUntilNextHint`, the countdown to the next regenerated credit
+         *     (null when the budget is full) — a timing integer that adds no
+         *     canonical letters to the wire.
          *
          *     Player identity on the wire is the `__Secure-ws_session` cookie
          *     issued by identity-api. The server verifies the cookie against
@@ -355,6 +367,11 @@ export interface components {
              * @example 2
              */
             hintsRemaining: number;
+            /**
+             * @description Secondes avant la régénération du prochain indice ; null si le quota d'indices est plein (et toujours null pour un appelant anonyme).
+             * @example 420
+             */
+            secondsUntilNextHint: number | null;
             /**
              * Format: date-time
              * @description ISO-8601 instant with timezone offset.
@@ -593,6 +610,11 @@ export interface components {
              * @example 2
              */
             hintsRemaining: number;
+            /**
+             * @description Secondes avant la régénération du prochain indice ; null si le quota d'indices est plein (et toujours null pour un appelant anonyme).
+             * @example 420
+             */
+            secondsUntilNextHint: number | null;
         };
         /**
          * @description Request body for `POST /v1/puzzles/{puzzleId}/validate`. Carries the
