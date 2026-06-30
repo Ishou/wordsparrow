@@ -365,7 +365,7 @@ export interface components {
              * @description Secondes avant la régénération du prochain indice ; null si le quota d'indices est plein (et toujours null pour un appelant anonyme).
              * @example 420
              */
-            secondsUntilNextHint?: number | null;
+            secondsUntilNextHint: number | null;
             /**
              * Format: date-time
              * @description ISO-8601 instant with timezone offset.
@@ -608,7 +608,7 @@ export interface components {
              * @description Secondes avant la régénération du prochain indice ; null si le quota d'indices est plein (et toujours null pour un appelant anonyme).
              * @example 420
              */
-            secondsUntilNextHint?: number | null;
+            secondsUntilNextHint: number | null;
         };
         /**
          * @description Request body for `POST /v1/puzzles/{puzzleId}/validate`. Carries the
