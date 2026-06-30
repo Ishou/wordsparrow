@@ -683,7 +683,7 @@ components:
     Puzzle:
       type: object
       description: A complete mots-fléchés puzzle ready to render and play.
-      required: [id, title, language, width, height, cells, clues, hintsAllowed, hintsRemaining, createdAt]
+      required: [id, title, language, width, height, cells, clues, hintsAllowed, hintsRemaining, secondsUntilNextHint, createdAt]
       properties:
         id:
           $ref: '#/components/schemas/PuzzleId'
@@ -1040,7 +1040,7 @@ components:
         every cell of the revealed word with its canonical letter, plus the
         remaining hint budget. One hint is spent per call regardless of word
         length.
-      required: [cells, hintsRemaining]
+      required: [cells, hintsRemaining, secondsUntilNextHint]
       properties:
         cells:
           type: array
