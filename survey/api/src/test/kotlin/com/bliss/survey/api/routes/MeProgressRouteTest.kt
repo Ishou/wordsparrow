@@ -5,7 +5,6 @@ import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import com.bliss.survey.api.WIRE_JSON
 import com.bliss.survey.api.auth.SESSION_COOKIE_NAME
-import com.bliss.survey.api.auth.SessionMiddleware
 import com.bliss.survey.application.ports.UserProgress
 import com.bliss.survey.application.ports.UserProgressRepository
 import com.bliss.survey.domain.model.UserId
@@ -25,23 +24,39 @@ import java.util.UUID
 class MeProgressRouteTest {
     private val userUuid = UUID.fromString("33333333-3333-7333-8333-333333333333")
 
+    // ADR-0079: contribuer is maintainer-only; non-maintainer callers are denied 403.
     @Test
-    fun `anon caller gets 401 problem details`() =
+    fun `anonymous - 403 forbidden`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { meProgressRoute(EmptyProgressRepo()) }
             }
             val resp = client.get("/v1/me/progress")
-            assertThat(resp.status).isEqualTo(HttpStatusCode.Unauthorized)
-            assertThat(resp.bodyAsText()).contains("sign-in required")
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
         }
 
     @Test
-    fun `auth caller gets 200 with itemsRated zero defaults`() =
+    fun `player - 403 forbidden`() =
         testApplication {
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession()
+                install(ContentNegotiation) { json() }
+                routing { meProgressRoute(EmptyProgressRepo()) }
+            }
+            val resp =
+                client.get("/v1/me/progress") {
+                    cookie(SESSION_COOKIE_NAME, PLAYER_COOKIE)
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
+        }
+
+    @Test
+    fun `maintainer - gets 200 with itemsRated zero defaults`() =
+        testApplication {
+            application {
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { meProgressRoute(EmptyProgressRepo()) }
             }
@@ -58,7 +73,7 @@ class MeProgressRouteTest {
         }
 
     @Test
-    fun `auth caller gets populated progress`() =
+    fun `maintainer - gets populated progress`() =
         testApplication {
             val state =
                 UserProgress(
@@ -68,7 +83,7 @@ class MeProgressRouteTest {
                     lastRatedAt = Instant.parse("2026-05-25T10:30:00Z"),
                 )
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json() }
                 routing { meProgressRoute(StubProgressRepo(state)) }
             }

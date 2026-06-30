@@ -2,6 +2,7 @@ package com.bliss.survey.api.routes
 
 import com.bliss.survey.api.auth.UserIdKey
 import com.bliss.survey.api.dto.ItemPairDto
+import com.bliss.survey.api.requireContribuer
 import com.bliss.survey.application.usecases.GetNextPairUseCase
 import com.bliss.survey.domain.model.ItemId
 import com.bliss.survey.domain.model.ItemPair
@@ -15,6 +16,7 @@ import java.util.UUID
 // GET /v1/items/pairs/next — auth-optional; excluded= query for client-side dedup (ADR-0056 amendment 2026-05-28).
 fun Route.getNextPairRoute(useCase: GetNextPairUseCase) {
     get("/v1/items/pairs/next") {
+        if (!call.requireContribuer()) return@get
         val userId = call.attributes.getOrNull(UserIdKey)?.let { UserId(it) }
         val excluded =
             call.request.queryParameters["excluded"]

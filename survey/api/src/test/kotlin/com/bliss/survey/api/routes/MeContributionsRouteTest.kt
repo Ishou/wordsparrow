@@ -2,10 +2,8 @@ package com.bliss.survey.api.routes
 
 import assertk.assertThat
 import assertk.assertions.contains
-import assertk.assertions.doesNotContain
 import assertk.assertions.isEqualTo
 import com.bliss.survey.api.auth.SESSION_COOKIE_NAME
-import com.bliss.survey.api.auth.SessionMiddleware
 import com.bliss.survey.application.ports.ProposedContribution
 import com.bliss.survey.application.ports.SurveyItemRepository
 import com.bliss.survey.domain.model.Categorie
@@ -57,26 +55,39 @@ class MeContributionsRouteTest {
             kCoverage = 2,
         )
 
+    // ADR-0079: contribuer is maintainer-only; non-maintainer callers are denied 403.
     @Test
-    fun `anon caller gets 401 problem details`() =
+    fun `anonymous - 403 forbidden`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { meContributionsRoute(ContribsEmptyItemRepo()) }
             }
             val resp = client.get("/v1/me/contributions")
-            assertThat(resp.status).isEqualTo(HttpStatusCode.Unauthorized)
-            val body = resp.bodyAsText()
-            assertThat(body).contains("sign-in required")
-            assertThat(body).doesNotContain("\"detail\":null")
-            assertThat(body).doesNotContain("\"instance\":null")
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
         }
 
     @Test
-    fun `auth caller gets 200 with contributions array`() =
+    fun `player - 403 forbidden`() =
         testApplication {
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession()
+                install(ContentNegotiation) { json() }
+                routing { meContributionsRoute(ContribsEmptyItemRepo()) }
+            }
+            val resp =
+                client.get("/v1/me/contributions") {
+                    cookie(SESSION_COOKIE_NAME, PLAYER_COOKIE)
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
+        }
+
+    @Test
+    fun `maintainer - gets 200 with contributions array`() =
+        testApplication {
+            application {
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json() }
                 routing { meContributionsRoute(ContribsStubItemRepo(listOf(proposed))) }
             }
@@ -93,10 +104,10 @@ class MeContributionsRouteTest {
         }
 
     @Test
-    fun `auth caller with no contributions gets empty array`() =
+    fun `maintainer - with no contributions gets empty array`() =
         testApplication {
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json() }
                 routing { meContributionsRoute(ContribsEmptyItemRepo()) }
             }

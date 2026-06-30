@@ -15,13 +15,14 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 class SessionMiddlewareTest {
+    private val fixedUser = UUID.fromString("01234567-89ab-7cde-89ab-0123456789ab")
+    private val maintainer = SessionPrincipal(fixedUser, setOf(CONTRIBUER_CAPABILITY))
+
     @Test
-    fun `no cookie - userId attribute is null and request proceeds`() =
+    fun `no cookie - principal attributes are absent and request proceeds`() =
         testApplication {
             application {
-                install(SessionMiddleware) {
-                    verifyCookie = { null }
-                }
+                install(SessionMiddleware) { verifySession = { null } }
                 routing {
                     get("/probe") {
                         val u = call.attributes.getOrNull(UserIdKey)
@@ -35,32 +36,28 @@ class SessionMiddlewareTest {
         }
 
     @Test
-    fun `valid cookie - userId attribute is set`() =
+    fun `valid cookie - userId and capabilities attributes are set`() =
         testApplication {
-            val fixedUser = UUID.fromString("01234567-89ab-7cde-89ab-0123456789ab")
             application {
-                install(SessionMiddleware) {
-                    verifyCookie = { c -> if (c == "valid-token") fixedUser else null }
-                }
+                install(SessionMiddleware) { verifySession = { c -> if (c == "valid-token") maintainer else null } }
                 routing {
                     get("/probe") {
                         val u = call.attributes.getOrNull(UserIdKey)
-                        call.respondText(text = u?.toString() ?: "anon", status = HttpStatusCode.OK)
+                        val caps = call.attributes.getOrNull(CapabilitiesKey).orEmpty()
+                        call.respondText(text = "$u:${CONTRIBUER_CAPABILITY in caps}", status = HttpStatusCode.OK)
                     }
                 }
             }
             val resp = client.get("/probe") { cookie(SESSION_COOKIE_NAME, "valid-token") }
             assertThat(resp.status).isEqualTo(HttpStatusCode.OK)
-            assertThat(resp.bodyAsText()).isEqualTo(fixedUser.toString())
+            assertThat(resp.bodyAsText()).isEqualTo("$fixedUser:true")
         }
 
     @Test
-    fun `invalid cookie - userId attribute null (no 401)`() =
+    fun `invalid cookie - attributes absent (no 401)`() =
         testApplication {
             application {
-                install(SessionMiddleware) {
-                    verifyCookie = { null }
-                }
+                install(SessionMiddleware) { verifySession = { null } }
                 routing {
                     get("/probe") {
                         val u = call.attributes.getOrNull(UserIdKey)

@@ -6,6 +6,7 @@ import com.bliss.survey.api.dto.CorrectifRejection
 import com.bliss.survey.api.dto.ProblemDetails
 import com.bliss.survey.api.dto.RatingRequest
 import com.bliss.survey.api.dto.RatingResponse
+import com.bliss.survey.api.requireContribuer
 import com.bliss.survey.api.respondProblem
 import com.bliss.survey.application.usecases.CorrectifInput
 import com.bliss.survey.application.usecases.SubmitRatingCommand
@@ -30,6 +31,7 @@ import java.util.UUID
 // POST /v1/items/{itemId}/rating — auth-optional; anon + correctif rejected 401 before use-case.
 fun Route.submitRatingRoute(execute: suspend (SubmitRatingCommand) -> SubmitRatingResult) {
     post("/v1/items/{itemId}/rating") {
+        if (!call.requireContribuer()) return@post
         val itemUuid =
             runCatching { UUID.fromString(call.parameters["itemId"]) }.getOrNull()
                 ?: return@post call.respondProblem(

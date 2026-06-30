@@ -3,6 +3,7 @@ package com.bliss.survey.api.routes
 import com.bliss.survey.api.auth.UserIdKey
 import com.bliss.survey.api.dto.PreferencesPatch
 import com.bliss.survey.api.dto.ProblemDetails
+import com.bliss.survey.api.requireContribuer
 import com.bliss.survey.api.respondProblem
 import com.bliss.survey.application.ports.ProposedByRepository
 import com.bliss.survey.domain.model.UserId
@@ -15,6 +16,7 @@ import io.ktor.server.routing.patch
 // PATCH /v1/me/preferences — auth-required opt-out toggle on rater-proposed items.
 fun Route.mePreferencesRoute(proposedBy: ProposedByRepository) {
     patch("/v1/me/preferences") {
+        if (!call.requireContribuer()) return@patch
         val userId =
             call.attributes.getOrNull(UserIdKey)
                 ?: return@patch call.respondProblem(

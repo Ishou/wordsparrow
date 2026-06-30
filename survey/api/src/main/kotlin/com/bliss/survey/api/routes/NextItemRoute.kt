@@ -2,6 +2,7 @@ package com.bliss.survey.api.routes
 
 import com.bliss.survey.api.auth.UserIdKey
 import com.bliss.survey.api.dto.ItemDto
+import com.bliss.survey.api.requireContribuer
 import com.bliss.survey.application.usecases.GetNextItemUseCase
 import com.bliss.survey.domain.model.ItemId
 import com.bliss.survey.domain.model.SurveyItem
@@ -15,6 +16,7 @@ import java.util.UUID
 // GET /v1/items/next — auth-optional; excluded= query for client-side dedup (ADR-0056).
 fun Route.nextItemRoute(useCase: GetNextItemUseCase) {
     get("/v1/items/next") {
+        if (!call.requireContribuer()) return@get
         val userId = call.attributes.getOrNull(UserIdKey)?.let { UserId(it) }
         val excluded =
             call.request.queryParameters["excluded"]

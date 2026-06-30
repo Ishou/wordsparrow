@@ -5,7 +5,6 @@ import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import com.bliss.survey.api.WIRE_JSON
 import com.bliss.survey.api.auth.SESSION_COOKIE_NAME
-import com.bliss.survey.api.auth.SessionMiddleware
 import com.bliss.survey.application.usecases.UndoActionResult
 import com.bliss.survey.domain.model.UserId
 import io.ktor.client.request.cookie
@@ -27,14 +26,16 @@ class UndoActionRouteTest {
     private val userUuid = UUID.fromString("33333333-3333-7333-8333-333333333333")
 
     @Test
-    fun `undone - 204 no content`() =
+    fun `maintainer - undone - 204 no content`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { undoActionRoute { _, _ -> UndoActionResult.Undone } }
             }
             val resp =
                 client.post("/v1/actions/undo") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody("{\"token\":\"undo-tok\"}")
                 }
@@ -42,14 +43,16 @@ class UndoActionRouteTest {
         }
 
     @Test
-    fun `not found - 404 problem details`() =
+    fun `maintainer - not found - 404 problem details`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { undoActionRoute { _, _ -> UndoActionResult.NotFound } }
             }
             val resp =
                 client.post("/v1/actions/undo") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody("{\"token\":\"unknown\"}")
                 }
@@ -58,14 +61,16 @@ class UndoActionRouteTest {
         }
 
     @Test
-    fun `expired - 410 gone`() =
+    fun `maintainer - expired - 410 gone`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { undoActionRoute { _, _ -> UndoActionResult.Expired } }
             }
             val resp =
                 client.post("/v1/actions/undo") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody("{\"token\":\"stale-tok\"}")
                 }
@@ -74,10 +79,11 @@ class UndoActionRouteTest {
         }
 
     @Test
-    fun `token read from body not path`() =
+    fun `maintainer - token read from body not path`() =
         testApplication {
             var seenToken: String? = null
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing {
                     undoActionRoute { token, _ ->
@@ -87,6 +93,7 @@ class UndoActionRouteTest {
                 }
             }
             client.post("/v1/actions/undo") {
+                cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                 contentType(ContentType.Application.Json)
                 setBody("{\"token\":\"body-token\"}")
             }
@@ -94,11 +101,11 @@ class UndoActionRouteTest {
         }
 
     @Test
-    fun `session user id forwarded to use case`() =
+    fun `maintainer - session user id forwarded to use case`() =
         testApplication {
             var seenUser: UserId? = null
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing {
                     undoActionRoute { _, userId ->
@@ -113,5 +120,40 @@ class UndoActionRouteTest {
                 setBody("{\"token\":\"body-token\"}")
             }
             assertThat(seenUser).isEqualTo(UserId(userUuid))
+        }
+
+    // ADR-0079: contribuer is maintainer-only; non-maintainer callers are denied 403.
+    @Test
+    fun `player - 403 forbidden`() =
+        testApplication {
+            application {
+                installCapabilitySession()
+                install(ContentNegotiation) { json(WIRE_JSON) }
+                routing { undoActionRoute { _, _ -> UndoActionResult.Undone } }
+            }
+            val resp =
+                client.post("/v1/actions/undo") {
+                    cookie(SESSION_COOKIE_NAME, PLAYER_COOKIE)
+                    contentType(ContentType.Application.Json)
+                    setBody("{\"token\":\"undo-tok\"}")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
+            assertThat(resp.bodyAsText()).contains("réservée aux mainteneurs")
+        }
+
+    @Test
+    fun `anonymous - 403 forbidden`() =
+        testApplication {
+            application {
+                installCapabilitySession()
+                install(ContentNegotiation) { json(WIRE_JSON) }
+                routing { undoActionRoute { _, _ -> UndoActionResult.Undone } }
+            }
+            val resp =
+                client.post("/v1/actions/undo") {
+                    contentType(ContentType.Application.Json)
+                    setBody("{\"token\":\"undo-tok\"}")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
         }
 }
