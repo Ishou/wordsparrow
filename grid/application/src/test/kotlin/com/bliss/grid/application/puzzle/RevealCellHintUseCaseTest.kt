@@ -1,6 +1,7 @@
 package com.bliss.grid.application.puzzle
 
 import assertk.assertThat
+import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import com.bliss.grid.domain.model.Column
@@ -9,6 +10,7 @@ import com.bliss.grid.domain.model.Grid
 import com.bliss.grid.domain.model.Position
 import com.bliss.grid.domain.model.Row
 import com.bliss.grid.domain.model.Word
+import com.bliss.grid.domain.model.WordAxis
 import com.bliss.grid.domain.model.WordPlacement
 import org.junit.jupiter.api.Test
 import java.lang.reflect.Proxy
@@ -20,19 +22,44 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class RevealCellHintUseCaseTest {
     @Test
-    fun `Granted echoes the canonical letter and decrements remaining budget`() {
+    fun `Granted reveals every letter of the word and decrements remaining budget`() {
         val (puzzleId, userId) = ids()
-        // Sample puzzle: "OR" at clue (0,0) going RIGHT → letters at (0,1)='O', (0,2)='R'.
+        // Sample puzzle: "OR" at clue (0,0) going RIGHT -> letters at (0,1)='O', (0,2)='R'.
         val outcome =
             RevealCellHintUseCase(fakePuzzleStore(puzzleId), fakeHintUsage())
-                .execute(STUB_CONN, puzzleId, userId, row = 0, column = 1)
+                .execute(STUB_CONN, puzzleId, userId, row = 0, column = 1, axis = WordAxis.HORIZONTAL)
 
         assertThat(outcome).isInstanceOf(RevealCellHintOutcome.Granted::class)
         val granted = outcome as RevealCellHintOutcome.Granted
-        assertThat(granted.row).isEqualTo(0)
-        assertThat(granted.column).isEqualTo(1)
-        assertThat(granted.letter).isEqualTo('O')
+        assertThat(granted.cells).containsExactlyInAnyOrder(
+            RevealedCell(0, 1, 'O'),
+            RevealedCell(0, 2, 'R'),
+        )
         assertThat(granted.hintsRemaining).isEqualTo(2)
+    }
+
+    @Test
+    fun `Granted resolves the word from a non-anchor cursor cell`() {
+        val (puzzleId, userId) = ids()
+        // Cursor on (0,2)='R', the last letter -> still reveals the whole word.
+        val outcome =
+            RevealCellHintUseCase(fakePuzzleStore(puzzleId), fakeHintUsage())
+                .execute(STUB_CONN, puzzleId, userId, row = 0, column = 2, axis = WordAxis.HORIZONTAL)
+
+        val granted = outcome as RevealCellHintOutcome.Granted
+        assertThat(granted.cells).containsExactlyInAnyOrder(
+            RevealedCell(0, 1, 'O'),
+            RevealedCell(0, 2, 'R'),
+        )
+    }
+
+    @Test
+    fun `spends exactly one budget unit regardless of word length`() {
+        val (puzzleId, userId) = ids()
+        val budget = fakeHintUsage()
+        RevealCellHintUseCase(fakePuzzleStore(puzzleId), budget)
+            .execute(STUB_CONN, puzzleId, userId, row = 0, column = 1, axis = WordAxis.HORIZONTAL)
+        assertThat(budget.peek(puzzleId, userId)).isEqualTo(1)
     }
 
     @Test
@@ -40,7 +67,7 @@ class RevealCellHintUseCaseTest {
         val (puzzleId, userId) = ids()
         val outcome =
             RevealCellHintUseCase(fakePuzzleStore(), fakeHintUsage())
-                .execute(STUB_CONN, puzzleId, userId, row = 0, column = 1)
+                .execute(STUB_CONN, puzzleId, userId, row = 0, column = 1, axis = WordAxis.HORIZONTAL)
         assertThat(outcome).isInstanceOf(RevealCellHintOutcome.PuzzleNotFound::class)
     }
 
@@ -50,9 +77,21 @@ class RevealCellHintUseCaseTest {
         val budget = fakeHintUsage()
         val outcome =
             RevealCellHintUseCase(fakePuzzleStore(puzzleId), budget)
-                .execute(STUB_CONN, puzzleId, userId, row = 99, column = 0)
+                .execute(STUB_CONN, puzzleId, userId, row = 99, column = 0, axis = WordAxis.HORIZONTAL)
         assertThat(outcome).isInstanceOf(RevealCellHintOutcome.InvalidCoord::class)
         // Budget MUST NOT decrement on a coordinate validation failure.
+        assertThat(budget.peek(puzzleId, userId)).isEqualTo(0)
+    }
+
+    @Test
+    fun `InvalidCoord when no word covers the cell on the requested axis`() {
+        val (puzzleId, userId) = ids()
+        val budget = fakeHintUsage()
+        // "OR" is horizontal; there is no vertical word through (0,1).
+        val outcome =
+            RevealCellHintUseCase(fakePuzzleStore(puzzleId), budget)
+                .execute(STUB_CONN, puzzleId, userId, row = 0, column = 1, axis = WordAxis.VERTICAL)
+        assertThat(outcome).isInstanceOf(RevealCellHintOutcome.InvalidCoord::class)
         assertThat(budget.peek(puzzleId, userId)).isEqualTo(0)
     }
 
@@ -63,7 +102,7 @@ class RevealCellHintUseCaseTest {
         // (0, 0) is the clue cell for the sample puzzle's "OR" placement.
         val outcome =
             RevealCellHintUseCase(fakePuzzleStore(puzzleId), budget)
-                .execute(STUB_CONN, puzzleId, userId, row = 0, column = 0)
+                .execute(STUB_CONN, puzzleId, userId, row = 0, column = 0, axis = WordAxis.HORIZONTAL)
         assertThat(outcome).isInstanceOf(RevealCellHintOutcome.InvalidCoord::class)
         assertThat(budget.peek(puzzleId, userId)).isEqualTo(0)
     }
@@ -75,7 +114,7 @@ class RevealCellHintUseCaseTest {
         // Sample 3x3 grid only fills row 0; (1, 1) has no cell entry.
         val outcome =
             RevealCellHintUseCase(fakePuzzleStore(puzzleId), budget)
-                .execute(STUB_CONN, puzzleId, userId, row = 1, column = 1)
+                .execute(STUB_CONN, puzzleId, userId, row = 1, column = 1, axis = WordAxis.HORIZONTAL)
         assertThat(outcome).isInstanceOf(RevealCellHintOutcome.InvalidCoord::class)
         assertThat(budget.peek(puzzleId, userId)).isEqualTo(0)
     }
@@ -84,8 +123,8 @@ class RevealCellHintUseCaseTest {
     fun `BudgetExhausted on the 4th call with default cap of 3`() {
         val (puzzleId, userId) = ids()
         val useCase = RevealCellHintUseCase(fakePuzzleStore(puzzleId), fakeHintUsage())
-        repeat(3) { useCase.execute(STUB_CONN, puzzleId, userId, row = 0, column = 1) }
-        val outcome = useCase.execute(STUB_CONN, puzzleId, userId, row = 0, column = 1)
+        repeat(3) { useCase.execute(STUB_CONN, puzzleId, userId, row = 0, column = 1, axis = WordAxis.HORIZONTAL) }
+        val outcome = useCase.execute(STUB_CONN, puzzleId, userId, row = 0, column = 1, axis = WordAxis.HORIZONTAL)
         assertThat(outcome).isInstanceOf(RevealCellHintOutcome.BudgetExhausted::class)
     }
 
@@ -104,11 +143,7 @@ class RevealCellHintUseCaseTest {
         }
     }
 
-    /**
-     * Test double exposing a peek hatch so coord-rejection tests can assert
-     * the budget did NOT advance. Production `HintUsageRepository` has no
-     * such method by design (the route doesn't need a non-spending read).
-     */
+    /** Test double exposing a non-spending peek so coord-rejection tests can assert the budget did NOT advance. */
     private interface PeekableHintUsage : HintUsageRepository {
         fun peek(
             puzzleId: UUID,

@@ -66,18 +66,21 @@ class HintsRouteTest {
     }
 
     @Test
-    fun `responds 200 with the canonical letter and decremented budget`() =
+    fun `responds 200 with the revealed word cells and decremented budget`() =
         testApplication {
             mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
-            val (row, column) = bootstrapAndPickLetterCell(client)
+            val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
-            val response = revealCell(client, row, column)
+            val response = revealCell(client, row, column, direction)
 
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
             val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-            assertThat(body["row"]!!.jsonPrimitive.content.toInt()).isEqualTo(row)
-            assertThat(body["column"]!!.jsonPrimitive.content.toInt()).isEqualTo(column)
-            assertThat(body["letter"]!!.jsonPrimitive.content).matches(Regex("^[A-Z]$"))
+            val cells = body["cells"]!!.jsonArray
+            // At least the cursor cell is revealed; every cell carries a single uppercase letter.
+            assertThat(cells.isNotEmpty()).isEqualTo(true)
+            for (element in cells) {
+                assertThat(element.jsonObject["letter"]!!.jsonPrimitive.content).matches(Regex("^[A-Z]$"))
+            }
             // Default hintsAllowed = 3; we just spent one.
             assertThat(body["hintsRemaining"]!!.jsonPrimitive.content.toInt()).isEqualTo(2)
         }
@@ -101,12 +104,11 @@ class HintsRouteTest {
     @Test
     fun `responds 401 auth-required when verifyFresh returns null even though verify cached a positive`() =
         testApplication {
-            // verify (cached) returns a WhoAmI but verifyFresh returns null — session was revoked
-            // between read and write. The under-lock fresh check catches it.
+            // verifyFresh returns null (session revoked between read and write); the under-lock fresh check catches it.
             mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse"), fresh = null))
-            val (row, column) = bootstrapAndPickLetterCell(client)
+            val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
-            val response = revealCell(client, row, column)
+            val response = revealCell(client, row, column, direction)
 
             assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
             assertThat(response.bodyAsText()).contains("auth-required")
@@ -140,13 +142,13 @@ class HintsRouteTest {
     fun `invalid-coord does not decrement the budget`() =
         testApplication {
             mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
-            val (row, column) = bootstrapAndPickLetterCell(client)
+            val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
             // Burn an out-of-bounds reveal; budget must stay at 3.
             revealCell(client, row = 999, column = 999)
 
             // First valid reveal should still see hintsRemaining = 2.
-            val response = revealCell(client, row, column)
+            val response = revealCell(client, row, column, direction)
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
             val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
             assertThat(body["hintsRemaining"]!!.jsonPrimitive.content.toInt()).isEqualTo(2)
@@ -162,7 +164,7 @@ class HintsRouteTest {
                 client.post("/v1/puzzles/$unknownId/hints") {
                     cookie("__Secure-ws_session", cookieValue)
                     headers { append(HttpHeaders.ContentType, ContentType.Application.Json.toString()) }
-                    setBody("""{"row":0,"column":0}""")
+                    setBody("""{"row":0,"column":0,"direction":"across"}""")
                 }
 
             assertThat(response.status).isEqualTo(HttpStatusCode.NotFound)
@@ -173,13 +175,13 @@ class HintsRouteTest {
     fun `responds 429 hint-budget-exhausted after 3 spends with default cap`() =
         testApplication {
             mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
-            val (row, column) = bootstrapAndPickLetterCell(client)
+            val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
             repeat(3) {
-                val ok = revealCell(client, row, column)
+                val ok = revealCell(client, row, column, direction)
                 assertThat(ok.status).isEqualTo(HttpStatusCode.OK)
             }
-            val exhausted = revealCell(client, row, column)
+            val exhausted = revealCell(client, row, column, direction)
             assertThat(exhausted.status).isEqualTo(HttpStatusCode.TooManyRequests)
             assertThat(exhausted.bodyAsText()).contains("hint-budget-exhausted")
         }
@@ -188,10 +190,10 @@ class HintsRouteTest {
     fun `GET puzzle with cookie embeds hintsRemaining reflecting prior spends`() =
         testApplication {
             mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
-            val (row, column) = bootstrapAndPickLetterCell(client)
+            val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
             // Spend one hint.
-            revealCell(client, row, column)
+            revealCell(client, row, column, direction)
 
             val getResponse =
                 client.get("/v1/puzzles/$puzzleId") {
@@ -200,6 +202,25 @@ class HintsRouteTest {
             val body = Json.parseToJsonElement(getResponse.bodyAsText()).jsonObject
             assertThat(body["hintsAllowed"]!!.jsonPrimitive.content.toInt()).isEqualTo(3)
             assertThat(body["hintsRemaining"]!!.jsonPrimitive.content.toInt()).isEqualTo(2)
+        }
+
+    @Test
+    fun `invalid direction value returns 400 without decrementing budget`() =
+        testApplication {
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            val (row, column, _) = bootstrapAndPickLetterCell(client)
+
+            val response = revealCell(client, row, column, "diagonal")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.BadRequest)
+            assertThat(response.bodyAsText()).contains("invalid-coord")
+            // Budget must be untouched — direction check fires before use-case call.
+            val getResp =
+                client.get("/v1/puzzles/$puzzleId") {
+                    cookie("__Secure-ws_session", cookieValue)
+                }
+            val body = Json.parseToJsonElement(getResp.bodyAsText()).jsonObject
+            assertThat(body["hintsRemaining"]!!.jsonPrimitive.content.toInt()).isEqualTo(3)
         }
 
     @Test
@@ -216,24 +237,30 @@ class HintsRouteTest {
         client: HttpClient,
         row: Int,
         column: Int,
+        direction: String = "across",
     ): HttpResponse =
         client.post("/v1/puzzles/$puzzleId/hints") {
             cookie("__Secure-ws_session", cookieValue)
             headers { append(HttpHeaders.ContentType, ContentType.Application.Json.toString()) }
-            setBody("""{"row":$row,"column":$column}""")
+            setBody("""{"row":$row,"column":$column,"direction":"$direction"}""")
         }
 
-    private suspend fun bootstrapAndPickLetterCell(client: HttpClient): Pair<Int, Int> = bootstrapAndPickCell(client, "letter")
+    /** A letter cell of the first clue, paired with that clue's wire direction so the hint resolves a word. */
+    private suspend fun bootstrapAndPickLetterCell(client: HttpClient): Triple<Int, Int, String> {
+        val body = Json.parseToJsonElement(client.get("/v1/puzzles/$puzzleId").bodyAsText()).jsonObject
+        val firstClue = body["clues"]!!.jsonArray.first().jsonObject
+        val start = firstClue["start"]!!.jsonObject
+        return Triple(
+            start["row"]!!.jsonPrimitive.content.toInt(),
+            start["column"]!!.jsonPrimitive.content.toInt(),
+            firstClue["direction"]!!.jsonPrimitive.content,
+        )
+    }
 
-    private suspend fun bootstrapAndPickClueCell(client: HttpClient): Pair<Int, Int> = bootstrapAndPickCell(client, "definition")
-
-    private suspend fun bootstrapAndPickCell(
-        client: HttpClient,
-        kind: String,
-    ): Pair<Int, Int> {
+    private suspend fun bootstrapAndPickClueCell(client: HttpClient): Pair<Int, Int> {
         val response = client.get("/v1/puzzles/$puzzleId")
         val cells = Json.parseToJsonElement(response.bodyAsText()).jsonObject["cells"]!!.jsonArray
-        return firstCellOfKind(cells, kind)
+        return firstCellOfKind(cells, "definition")
     }
 
     private fun firstCellOfKind(

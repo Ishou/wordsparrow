@@ -18,16 +18,12 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
 
-/**
- * Wire-path tests for `POST /v1/puzzles/{puzzleId}/validate` via Ktor
- * `testApplication`. Each test bootstraps the puzzle by calling GET first
- * (the in-memory store gets populated on first GET, like in production).
- */
+/** Wire-path tests for `POST /v1/puzzles/{puzzleId}/validate`; each test bootstraps via GET (store populates on first GET, like prod). */
 class ValidateRouteTest {
     private val puzzleId = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b"
 
     @Test
-    fun `responds 200 with solved=false and incorrectCells covering every letter slot when body is empty`() =
+    fun `responds 200 with solved=false when body is empty`() =
         testApplication {
             application { module() }
             client.get("/v1/puzzles/$puzzleId")

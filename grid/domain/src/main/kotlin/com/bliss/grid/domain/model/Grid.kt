@@ -6,6 +6,16 @@ class Grid internal constructor(
     val cells: Map<Position, Cell>,
     val placements: List<WordPlacement>,
 ) {
+    /** The word reading along [axis] whose letters cover [position], or null — a cell is in at most one word per axis. */
+    fun placementCovering(
+        position: Position,
+        axis: WordAxis,
+    ): WordPlacement? =
+        placements.firstOrNull { placement ->
+            placement.direction.axis == axis &&
+                placement.letterPositions().any { (pos, _) -> pos == position }
+        }
+
     companion object {
         fun fromPlacements(
             width: Int,

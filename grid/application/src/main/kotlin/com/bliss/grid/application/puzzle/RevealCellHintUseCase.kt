@@ -3,13 +3,13 @@ package com.bliss.grid.application.puzzle
 import com.bliss.grid.application.analytics.AnalyticsEventSink
 import com.bliss.grid.domain.analytics.AnalyticsEvent
 import com.bliss.grid.domain.model.Column
-import com.bliss.grid.domain.model.LetterCell
 import com.bliss.grid.domain.model.Position
 import com.bliss.grid.domain.model.Row
+import com.bliss.grid.domain.model.WordAxis
 import java.sql.Connection
 import java.util.UUID
 
-/** Spends one hint to reveal the solution letter at a cell; must be invoked inside [HintWriteCoordinator.withUserLock]. */
+/** Spends one hint to reveal the whole word at the cursor cell along [axis]; must run inside [HintWriteCoordinator.withUserLock]. */
 class RevealCellHintUseCase(
     private val puzzleRepository: PuzzleRepository,
     private val hintUsageRepository: HintUsageRepository,
@@ -21,6 +21,7 @@ class RevealCellHintUseCase(
         userId: UUID,
         row: Int,
         column: Int,
+        axis: WordAxis,
     ): RevealCellHintOutcome {
         val puzzle = puzzleRepository.get(puzzleId) ?: return RevealCellHintOutcome.PuzzleNotFound
 
@@ -31,12 +32,11 @@ class RevealCellHintUseCase(
             )
         }
         val position = Position(Row(row), Column(column))
-        val cell = grid.cells[position]
-        if (cell !is LetterCell) {
-            return RevealCellHintOutcome.InvalidCoord(
-                "($row, $column) does not point at a letter cell",
-            )
-        }
+        val placement =
+            grid.placementCovering(position, axis)
+                ?: return RevealCellHintOutcome.InvalidCoord(
+                    "no $axis word covers ($row, $column)",
+                )
 
         val usedAfter =
             hintUsageRepository.trySpend(conn, puzzleId, userId, puzzle.hintsAllowed)
@@ -49,21 +49,28 @@ class RevealCellHintUseCase(
             ),
             userId,
         )
+        val cells =
+            placement.letterPositions().map { (pos, letter) ->
+                RevealedCell(pos.row.value, pos.column.value, letter)
+            }
         return RevealCellHintOutcome.Granted(
-            row = row,
-            column = column,
-            letter = cell.letter,
+            cells = cells,
             hintsRemaining = puzzle.hintsAllowed - usedAfter,
         )
     }
 }
 
+/** One revealed letter cell of a hinted word. */
+data class RevealedCell(
+    val row: Int,
+    val column: Int,
+    val letter: Char,
+)
+
 sealed class RevealCellHintOutcome {
-    /** Hint granted; [letter] is the solution at (row, column), [hintsRemaining] is the budget remaining after this spend. */
+    /** Hint granted; [cells] is every letter of the revealed word, [hintsRemaining] is the budget left after this single spend. */
     data class Granted(
-        val row: Int,
-        val column: Int,
-        val letter: Char,
+        val cells: List<RevealedCell>,
         val hintsRemaining: Int,
     ) : RevealCellHintOutcome()
 
@@ -73,7 +80,7 @@ sealed class RevealCellHintOutcome {
     /** Per-(puzzle, user) cap reached. Maps to 429 hint-budget-exhausted. */
     data object BudgetExhausted : RevealCellHintOutcome()
 
-    /** `(row, column)` out of bounds or not a letter cell. Maps to 400 invalid-coord. */
+    /** `(row, column)` out of bounds, or no word covers it on the requested axis. Maps to 400 invalid-coord. */
     data class InvalidCoord(
         val reason: String,
     ) : RevealCellHintOutcome()
