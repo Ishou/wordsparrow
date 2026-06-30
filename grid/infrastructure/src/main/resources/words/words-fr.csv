@@ -1983,10 +1983,10 @@ aimé,fr,4,2760720,0.742985,Chéri,grammalecte,MPL-2.0,aimé
 aimée,fr,5,659250,0.8054478,Chérie,grammalecte,MPL-2.0,aimé
 aimées,fr,6,111690,0.8541782,Chéries,grammalecte,MPL-2.0,aimer
 aimés,fr,5,267464,0.8177097,Chéris,grammalecte,MPL-2.0,aimer
-ainé,fr,4,158736,0.7928441,L'aîné,grammalecte,MPL-2.0,ainé
-ainée,fr,5,45580,0.8357066,L'aîné,grammalecte,MPL-2.0,ainé
-ainées,fr,6,3778,0.87572217,L'aîné,grammalecte,MPL-2.0,ainé
-ainés,fr,5,21828,0.8414941,L'aîné,grammalecte,MPL-2.0,ainé
+ainé,fr,4,158736,0.7928441,,grammalecte,MPL-2.0,ainé
+ainée,fr,5,45580,0.8357066,,grammalecte,MPL-2.0,ainé
+ainées,fr,6,3778,0.87572217,,grammalecte,MPL-2.0,ainé
+ainés,fr,5,21828,0.8414941,,grammalecte,MPL-2.0,ainé
 aire,fr,4,2738435,0.7431946,Espace,grammalecte,MPL-2.0,aire
 aires,fr,5,1087258,0.797294,Espaces,grammalecte,MPL-2.0,aire
 aisance,fr,7,1787938,0.847351,Confort,grammalecte,MPL-2.0,aisance
@@ -35238,7 +35238,7 @@ rencontrez,fr,10,46821,0.9324512,Faites connaissance,grammalecte,MPL-2.0,rencont
 rencontriez,fr,11,12556,0.9477765,Faisiez connaissance,grammalecte,MPL-2.0,rencontrer
 rencontrons,fr,11,345427,0.935816,Faisons connaissance,grammalecte,MPL-2.0,rencontrer
 rencontrât,fr,10,50460,0.9321505,Fît connaissance,grammalecte,MPL-2.0,rencontrer
-rencontrè,fr,9,291,0.93277234,Font connaissance,grammalecte,MPL-2.0,rencontrer
+rencontrè,fr,9,291,0.93277234,,grammalecte,MPL-2.0,rencontrer
 rencontré,fr,9,4062874,0.88198715,Fait connaissance,grammalecte,MPL-2.0,rencontrer
 rencontrée,fr,10,713795,0.9178127,Faite connaissance,grammalecte,MPL-2.0,rencontrer
 rencontrées,fr,11,1138957,0.92857224,Faites connaissance,grammalecte,MPL-2.0,rencontrer
@@ -46522,7 +46522,7 @@ ici,fr,3,0,,En ce lieu,bliss,CC0-1.0,ici
 jeu,fr,3,0,,Activité ludique,bliss,CC0-1.0,jeu
 kit,fr,3,0,,Ensemble à monter,bliss,CC0-1.0,kit
 lac,fr,3,0,,Étendue d'eau intérieure,bliss,CC0-1.0,lac
-las,fr,3,0,,Las et fatigué,bliss,CC0-1.0,las
+las,fr,3,0,,,bliss,CC0-1.0,las
 lie,fr,3,0,,Dépôt au fond du fût,bliss,CC0-1.0,lie
 lin,fr,3,0,,Plante textile,bliss,CC0-1.0,lin
 lis,fr,3,0,,Fleur royale,bliss,CC0-1.0,lis
@@ -75955,7 +75955,7 @@ abaissement,fr,11,2070162,,,grammalecte,MPL-2.0,abaissement
 abaissè,fr,7,0,,Rend plus bas,grammalecte,MPL-2.0,abaisser
 abandonnataire,fr,14,389,,,grammalecte,MPL-2.0,abandonnataire
 abandonnismes,fr,13,0,,,grammalecte,MPL-2.0,abandonnisme
-abandonnè,fr,9,143,,Laissent,grammalecte,MPL-2.0,abandonner
+abandonnè,fr,9,143,,,grammalecte,MPL-2.0,abandonner
 abattes,fr,7,272,,Fauches,grammalecte,MPL-2.0,abattre
 abattiez,fr,8,389,,Fauchiez,grammalecte,MPL-2.0,abattre
 abattras,fr,8,400,,Faucheras,grammalecte,MPL-2.0,abattre
@@ -76119,7 +76119,7 @@ absolutisés,fr,11,680,,,grammalecte,MPL-2.0,absolutiser
 absolutoire,fr,11,10448,,,grammalecte,MPL-2.0,absolutoire
 absorberas,fr,10,3,,Intègreras,grammalecte,MPL-2.0,absorber
 absorbiez,fr,9,201,,Intégriez,grammalecte,MPL-2.0,absorber
-absorbè,fr,7,0,,Intègrent,grammalecte,MPL-2.0,absorber
+absorbè,fr,7,0,,,grammalecte,MPL-2.0,absorber
 absorptivités,fr,13,2,,,grammalecte,MPL-2.0,absorptivité
 abstenaient,fr,11,38163,,,grammalecte,MPL-2.0,abstenir
 abstenais,fr,9,3624,,,grammalecte,MPL-2.0,abstenir
@@ -76147,7 +76147,7 @@ abstracteur,fr,11,6113,,,grammalecte,MPL-2.0,abstracteur
 abstractif,fr,10,9569,,,grammalecte,MPL-2.0,abstractif
 abstractifs,fr,11,1827,,,grammalecte,MPL-2.0,abstractif
 abstractive,fr,11,25108,,,grammalecte,MPL-2.0,abstractif
-abusè,fr,5,0,,Maltraitent,grammalecte,MPL-2.0,abuser
+abusè,fr,5,0,,,grammalecte,MPL-2.0,abuser
 abyssinien,fr,10,6345,,,grammalecte,MPL-2.0,abyssinien
 abyssiniens,fr,11,4459,,,grammalecte,MPL-2.0,abyssinien
 abâtardi,fr,8,19165,,,grammalecte,MPL-2.0,abâtardir
@@ -76375,7 +76375,7 @@ acculturative,fr,13,758,,,grammalecte,MPL-2.0,acculturatif
 acculturatives,fr,14,377,,,grammalecte,MPL-2.0,acculturatif
 accumulerais,fr,12,340,,Amasserais,grammalecte,MPL-2.0,accumuler
 accumulerons,fr,12,788,,Amasserons,grammalecte,MPL-2.0,accumuler
-accumulè,fr,8,0,,Amassent,grammalecte,MPL-2.0,accumuler
+accumulè,fr,8,0,,,grammalecte,MPL-2.0,accumuler
 accusatoire,fr,11,25790,,,grammalecte,MPL-2.0,accusatoire
 accusè,fr,6,80,,Met en cause,grammalecte,MPL-2.0,accuser
 accèderai,fr,9,2,,Atteindrai,grammalecte,MPL-2.0,accéder
@@ -76423,7 +76423,7 @@ acharnions,fr,10,736,,,grammalecte,MPL-2.0,acharner
 acharnons,fr,9,1324,,,grammalecte,MPL-2.0,acharner
 acharnè,fr,7,0,,,grammalecte,MPL-2.0,acharner
 acheminerais,fr,12,201,,Conduirais,grammalecte,MPL-2.0,acheminer
-acheminè,fr,8,0,,Conduisent,grammalecte,MPL-2.0,acheminer
+acheminè,fr,8,0,,,grammalecte,MPL-2.0,acheminer
 achetè,fr,6,3,,,grammalecte,MPL-2.0,acheter
 acheuléen,fr,9,16540,,,grammalecte,MPL-2.0,acheuléen
 acheuléenne,fr,11,17835,,,grammalecte,MPL-2.0,acheuléen
@@ -76890,7 +76890,7 @@ agglutinés,fr,10,67560,,,grammalecte,MPL-2.0,agglutiner
 aggravais,fr,9,149,,Empirais,grammalecte,MPL-2.0,aggraver
 aggraveras,fr,10,0,,Empireras,grammalecte,MPL-2.0,aggraver
 aggraviez,fr,9,195,,Empiriez,grammalecte,MPL-2.0,aggraver
-aggravè,fr,7,0,,Empirent,grammalecte,MPL-2.0,aggraver
+aggravè,fr,7,0,,,grammalecte,MPL-2.0,aggraver
 agiras,fr,6,3338,,Interviendras,grammalecte,MPL-2.0,agir
 agiterais,fr,9,91,,,grammalecte,MPL-2.0,agiter
 agiteras,fr,8,160,,,grammalecte,MPL-2.0,agiter
@@ -76984,7 +76984,7 @@ ahurissant,fr,10,26211,,,grammalecte,MPL-2.0,ahurissant
 ahurissante,fr,11,21754,,,grammalecte,MPL-2.0,ahurissant
 ahurissants,fr,11,7137,,,grammalecte,MPL-2.0,ahurissant
 ahurissements,fr,13,756,,,grammalecte,MPL-2.0,ahurissement
-aidè,fr,4,83,,Prêtent main forte,grammalecte,MPL-2.0,aider
+aidè,fr,4,83,,,grammalecte,MPL-2.0,aider
 aigrir,fr,6,134962,,,grammalecte,MPL-2.0,aigrir
 aigrira,fr,7,2655,,,grammalecte,MPL-2.0,aigrir
 aigrirai,fr,8,0,,,grammalecte,MPL-2.0,aigrir
@@ -77033,7 +77033,7 @@ ajusterai,fr,9,115,,Réglerai,grammalecte,MPL-2.0,ajuster
 ajusterais,fr,10,2,,Réglerais,grammalecte,MPL-2.0,ajuster
 ajusteras,fr,9,2,,Régleras,grammalecte,MPL-2.0,ajuster
 ajustiez,fr,8,182,,Régliez,grammalecte,MPL-2.0,ajuster
-ajustè,fr,6,0,,Règlent,grammalecte,MPL-2.0,ajuster
+ajustè,fr,6,0,,,grammalecte,MPL-2.0,ajuster
 alangui,fr,7,15053,,,grammalecte,MPL-2.0,alanguir
 alanguie,fr,8,20530,,,grammalecte,MPL-2.0,alanguir
 alanguies,fr,9,8752,,,grammalecte,MPL-2.0,alanguir
@@ -77385,7 +77385,7 @@ altérabilités,fr,13,0,,,grammalecte,MPL-2.0,altérabilité
 altérerai,fr,9,153,,Changerai,grammalecte,MPL-2.0,altérer
 altéreras,fr,9,1,,Changeras,grammalecte,MPL-2.0,altérer
 altériez,fr,8,275,,Changiez,grammalecte,MPL-2.0,altérer
-altérè,fr,6,0,,Changent,grammalecte,MPL-2.0,altérer
+altérè,fr,6,0,,,grammalecte,MPL-2.0,altérer
 aluminothermies,fr,15,0,,,grammalecte,MPL-2.0,aluminothermie
 amagnétique,fr,11,2722,,,grammalecte,MPL-2.0,amagnétique
 amaigri,fr,7,81325,,,grammalecte,MPL-2.0,amaigrir
@@ -77519,7 +77519,7 @@ amenuisé,fr,8,18195,,,grammalecte,MPL-2.0,amenuiser
 amenuisée,fr,9,14487,,,grammalecte,MPL-2.0,amenuiser
 amenuisées,fr,10,7379,,,grammalecte,MPL-2.0,amenuiser
 amenuisés,fr,9,7390,,,grammalecte,MPL-2.0,amenuiser
-amenè,fr,5,305,,Conduisent,grammalecte,MPL-2.0,amener
+amenè,fr,5,305,,,grammalecte,MPL-2.0,amener
 ameublement,fr,11,446583,,Décor intérieur,grammalecte,MPL-2.0,ameublement
 ameubli,fr,7,30106,,,grammalecte,MPL-2.0,ameublir
 ameublie,fr,8,22348,,,grammalecte,MPL-2.0,ameublir
@@ -77650,7 +77650,7 @@ amorceras,fr,9,0,,Lanceras,grammalecte,MPL-2.0,amorcer
 amorcerez,fr,9,178,,Lancerez,grammalecte,MPL-2.0,amorcer
 amorcez,fr,7,579,,Lancez,grammalecte,MPL-2.0,amorcer
 amorciez,fr,8,0,,Lanciez,grammalecte,MPL-2.0,amorcer
-amorcè,fr,6,0,,Lancent,grammalecte,MPL-2.0,amorcer
+amorcè,fr,6,0,,,grammalecte,MPL-2.0,amorcer
 amortirai,fr,9,3,,Atténuerai,grammalecte,MPL-2.0,amortir
 amortirais,fr,10,0,,Atténuerais,grammalecte,MPL-2.0,amortir
 amortiras,fr,9,0,,Atténueras,grammalecte,MPL-2.0,amortir
@@ -77865,7 +77865,7 @@ animalisations,fr,14,164,,,grammalecte,MPL-2.0,animalisation
 animerais,fr,9,99,,Donnerais vie,grammalecte,MPL-2.0,animer
 animeras,fr,8,61,,Donneras vie,grammalecte,MPL-2.0,animer
 animiez,fr,7,563,,Donniez vie,grammalecte,MPL-2.0,animer
-animè,fr,5,2,,Donnent vie,grammalecte,MPL-2.0,animer
+animè,fr,5,2,,,grammalecte,MPL-2.0,animer
 ankylosant,fr,10,1453,,,grammalecte,MPL-2.0,ankylosant
 ankylosante,fr,11,13634,,,grammalecte,MPL-2.0,ankylosant
 ankylosants,fr,11,123,,,grammalecte,MPL-2.0,ankylosant
@@ -77904,7 +77904,7 @@ annihilé,fr,8,52637,,,grammalecte,MPL-2.0,annihiler
 annihilée,fr,9,43070,,,grammalecte,MPL-2.0,annihiler
 annihilées,fr,10,15194,,,grammalecte,MPL-2.0,annihiler
 annihilés,fr,9,22819,,,grammalecte,MPL-2.0,annihiler
-annoncè,fr,7,75,,Font savoir,grammalecte,MPL-2.0,annoncer
+annoncè,fr,7,75,,,grammalecte,MPL-2.0,annoncer
 annualisations,fr,14,0,,,grammalecte,MPL-2.0,annualisation
 annulabilités,fr,13,206,,,grammalecte,MPL-2.0,annulabilité
 annulaient,fr,10,14804,,,grammalecte,MPL-2.0,annuler
@@ -78093,7 +78093,7 @@ apaisez,fr,7,2159,,Calmez,grammalecte,MPL-2.0,apaiser
 apaisiez,fr,8,348,,Calmiez,grammalecte,MPL-2.0,apaiser
 apaisions,fr,9,237,,Calmions,grammalecte,MPL-2.0,apaiser
 apaisons,fr,8,731,,Calmons,grammalecte,MPL-2.0,apaiser
-apaisè,fr,6,0,,Calment,grammalecte,MPL-2.0,apaiser
+apaisè,fr,6,0,,,grammalecte,MPL-2.0,apaiser
 apaisé,fr,6,202145,,Calmé,grammalecte,MPL-2.0,apaiser
 apaisée,fr,7,188086,,Calmée,grammalecte,MPL-2.0,apaiser
 apaisées,fr,8,73003,,Calmées,grammalecte,MPL-2.0,apaiser
@@ -78325,7 +78325,7 @@ appointée,fr,9,13827,,,grammalecte,MPL-2.0,appointer
 appointées,fr,10,14997,,,grammalecte,MPL-2.0,appointer
 appointés,fr,9,51806,,,grammalecte,MPL-2.0,appointer
 appontement,fr,11,46806,,,grammalecte,MPL-2.0,appontement
-apportè,fr,7,84,,Amènent,grammalecte,MPL-2.0,apporter
+apportè,fr,7,84,,,grammalecte,MPL-2.0,apporter
 apposais,fr,8,321,,,grammalecte,MPL-2.0,apposer
 apposerais,fr,10,5,,,grammalecte,MPL-2.0,apposer
 apposeras,fr,9,0,,,grammalecte,MPL-2.0,apposer
@@ -78373,7 +78373,7 @@ appropriez,fr,10,1398,,S'accaparez,grammalecte,MPL-2.0,approprier
 appropriiez,fr,11,100,,S'accapariez,grammalecte,MPL-2.0,approprier
 appropriions,fr,12,202,,S'accaparions,grammalecte,MPL-2.0,approprier
 approprions,fr,11,3221,,S'accaparons,grammalecte,MPL-2.0,approprier
-appropriè,fr,9,146,,S'accaparent,grammalecte,MPL-2.0,approprier
+appropriè,fr,9,146,,,grammalecte,MPL-2.0,approprier
 approprié,fr,9,1375013,,,grammalecte,MPL-2.0,approprier
 appropriée,fr,10,1151951,,,grammalecte,MPL-2.0,approprier
 appropriées,fr,11,950341,,,grammalecte,MPL-2.0,approprier
@@ -78828,7 +78828,7 @@ assassinions,fr,12,163,,Tuions,grammalecte,MPL-2.0,assassiner
 assassinè,fr,9,1,,Tue,grammalecte,MPL-2.0,assassiner
 assemblements,fr,13,557,,,grammalecte,MPL-2.0,assemblement
 assemblerais,fr,12,86,,Monterais,grammalecte,MPL-2.0,assembler
-assemblè,fr,8,161,,Montent,grammalecte,MPL-2.0,assembler
+assemblè,fr,8,161,,,grammalecte,MPL-2.0,assembler
 assermentaient,fr,14,1,,,grammalecte,MPL-2.0,assermenter
 assermentais,fr,12,0,,,grammalecte,MPL-2.0,assermenter
 assermentait,fr,12,138,,,grammalecte,MPL-2.0,assermenter
@@ -78873,7 +78873,7 @@ assimilatif,fr,11,851,,,grammalecte,MPL-2.0,assimilatif
 assimilatifs,fr,12,430,,,grammalecte,MPL-2.0,assimilatif
 assimilatives,fr,13,366,,,grammalecte,MPL-2.0,assimilatif
 assimilerais,fr,12,589,,Intégrerais,grammalecte,MPL-2.0,assimiler
-assimilè,fr,8,0,,Intègrent,grammalecte,MPL-2.0,assimiler
+assimilè,fr,8,0,,,grammalecte,MPL-2.0,assimiler
 assistè,fr,7,300,,,grammalecte,MPL-2.0,assister
 assiègera,fr,9,106,,,grammalecte,MPL-2.0,assiéger
 assiègerai,fr,10,0,,,grammalecte,MPL-2.0,assiéger
@@ -80124,7 +80124,7 @@ barricadés,fr,10,18267,,,grammalecte,MPL-2.0,barricader
 barriez,fr,7,114,,Obstruiez,grammalecte,MPL-2.0,barrer
 barrions,fr,8,367,,Obstruions,grammalecte,MPL-2.0,barrer
 barrons,fr,7,1079,,Obstruons,grammalecte,MPL-2.0,barrer
-barrè,fr,5,1,,Obstruent,grammalecte,MPL-2.0,barrer
+barrè,fr,5,1,,,grammalecte,MPL-2.0,barrer
 barrémien,fr,9,2680,,,grammalecte,MPL-2.0,barrémien
 barrémienne,fr,11,1182,,,grammalecte,MPL-2.0,barrémien
 barrémiens,fr,10,1942,,,grammalecte,MPL-2.0,barrémien
@@ -80135,7 +80135,7 @@ basculeras,fr,10,0,,Changeras de position,grammalecte,MPL-2.0,basculer
 basculerez,fr,10,0,,Changerez de position,grammalecte,MPL-2.0,basculer
 basculez,fr,8,521,,Changez de position,grammalecte,MPL-2.0,basculer
 basculiez,fr,9,1,,Changiez de position,grammalecte,MPL-2.0,basculer
-basculè,fr,7,0,,Changent de position,grammalecte,MPL-2.0,basculer
+basculè,fr,7,0,,,grammalecte,MPL-2.0,basculer
 baserais,fr,8,206,,Implanterais,grammalecte,MPL-2.0,baser
 baseras,fr,7,0,,Implanteras,grammalecte,MPL-2.0,baser
 baserez,fr,7,439,,Implanterez,grammalecte,MPL-2.0,baser
@@ -80144,7 +80144,7 @@ basidiomycète,fr,13,447,,,grammalecte,MPL-2.0,basidiomycète
 basiez,fr,6,209,,Implantiez,grammalecte,MPL-2.0,baser
 basse,fr,5,5974719,,,grammalecte,MPL-2.0,bas
 basses,fr,6,2619384,,,grammalecte,MPL-2.0,bas
-basè,fr,4,156,,Implantent,grammalecte,MPL-2.0,baser
+basè,fr,4,156,,,grammalecte,MPL-2.0,baser
 bataillais,fr,10,550,,,grammalecte,MPL-2.0,batailler
 bataillait,fr,10,7922,,,grammalecte,MPL-2.0,batailler
 bataillant,fr,10,9011,,,grammalecte,MPL-2.0,batailler
@@ -80456,7 +80456,7 @@ bloquais,fr,8,508,,Interdisais,grammalecte,MPL-2.0,bloquer
 bloquerais,fr,10,54,,Interdirais,grammalecte,MPL-2.0,bloquer
 bloqueras,fr,9,6,,Interdiras,grammalecte,MPL-2.0,bloquer
 bloquiez,fr,8,57,,Interdisiez,grammalecte,MPL-2.0,bloquer
-bloquè,fr,6,0,,Interdisent,grammalecte,MPL-2.0,bloquer
+bloquè,fr,6,0,,,grammalecte,MPL-2.0,bloquer
 blotti,fr,6,51126,,,grammalecte,MPL-2.0,blottir
 blottie,fr,7,36073,,,grammalecte,MPL-2.0,blottir
 blotties,fr,8,12043,,,grammalecte,MPL-2.0,blottir
@@ -80479,7 +80479,7 @@ blottissements,fr,14,94,,,grammalecte,MPL-2.0,blottissement
 blottissez,fr,10,66,,,grammalecte,MPL-2.0,blottir
 blottissons,fr,11,290,,,grammalecte,MPL-2.0,blottir
 blâmeras,fr,8,428,,Rechercheras un coupable,grammalecte,MPL-2.0,blâmer
-blâmè,fr,5,2,,Recherchent un coupable,grammalecte,MPL-2.0,blâmer
+blâmè,fr,5,2,,,grammalecte,MPL-2.0,blâmer
 blépharospasmes,fr,15,383,,,grammalecte,MPL-2.0,blépharospasme
 blés,fr,4,1335439,,,grammalecte,MPL-2.0,blé
 bodhisattva,fr,11,15505,,,grammalecte,MPL-2.0,bodhisattva
@@ -80582,7 +80582,7 @@ bordez,fr,6,1003,,Limitez,grammalecte,MPL-2.0,border
 bordiez,fr,7,0,,Limitiez,grammalecte,MPL-2.0,border
 bordions,fr,8,430,,Limitions,grammalecte,MPL-2.0,border
 bordons,fr,7,504,,Limitons,grammalecte,MPL-2.0,border
-bordè,fr,5,0,,Limitent,grammalecte,MPL-2.0,border
+bordè,fr,5,0,,,grammalecte,MPL-2.0,border
 bores,fr,5,3504,,,grammalecte,MPL-2.0,bore
 borneras,fr,8,397,,,grammalecte,MPL-2.0,borner
 bornè,fr,5,99,,,grammalecte,MPL-2.0,borner
@@ -81005,7 +81005,7 @@ brontosaure,fr,11,1389,,,grammalecte,MPL-2.0,brontosaure
 brouillaminis,fr,13,176,,,grammalecte,MPL-2.0,brouillamini
 brouillerais,fr,12,564,,Troublerais,grammalecte,MPL-2.0,brouiller
 brouillerie,fr,11,36457,,,grammalecte,MPL-2.0,brouillerie
-brouillè,fr,8,0,,Troublent,grammalecte,MPL-2.0,brouiller
+brouillè,fr,8,0,,,grammalecte,MPL-2.0,brouiller
 broussaille,fr,11,60654,,,grammalecte,MPL-2.0,broussaille
 broyiez,fr,7,3,,,grammalecte,MPL-2.0,broyer
 broyions,fr,8,114,,,grammalecte,MPL-2.0,broyer
@@ -81102,7 +81102,7 @@ bénissantes,fr,11,1101,,,grammalecte,MPL-2.0,bénissant
 bénissants,fr,10,398,,,grammalecte,MPL-2.0,bénissant
 bénéficierais,fr,13,505,,Tirerais profit,grammalecte,MPL-2.0,bénéficier
 bénéficieras,fr,12,343,,Tireras profit,grammalecte,MPL-2.0,bénéficier
-bénéficiè,fr,9,0,,Tirent profit,grammalecte,MPL-2.0,bénéficier
+bénéficiè,fr,9,0,,,grammalecte,MPL-2.0,bénéficier
 bêtabloquante,fr,13,0,,,grammalecte,MPL-2.0,bêtabloquant
 bêtabloquantes,fr,14,0,,,grammalecte,MPL-2.0,bêtabloquant
 bêtalactamine,fr,13,502,,,grammalecte,MPL-2.0,bêtalactamine
@@ -81420,7 +81420,7 @@ capitalisée,fr,11,29655,,,grammalecte,MPL-2.0,capitaliser
 capitalisés,fr,11,52353,,,grammalecte,MPL-2.0,capitaliser
 capituleraient,fr,14,900,,Déposeraient les armes,grammalecte,MPL-2.0,capituler
 capitulerais,fr,12,173,,Déposerais les armes,grammalecte,MPL-2.0,capituler
-capitulè,fr,8,0,,Déposent les armes,grammalecte,MPL-2.0,capituler
+capitulè,fr,8,0,,,grammalecte,MPL-2.0,capituler
 caprifications,fr,14,0,,,grammalecte,MPL-2.0,caprification
 caprifiguiers,fr,13,704,,,grammalecte,MPL-2.0,caprifiguier
 caps,fr,4,137430,,,grammalecte,MPL-2.0,cap
@@ -81647,7 +81647,7 @@ castramétations,fr,15,241,,,grammalecte,MPL-2.0,castramétation
 castrateur,fr,10,13439,,,grammalecte,MPL-2.0,castrateur
 castrateurs,fr,11,1921,,,grammalecte,MPL-2.0,castrateur
 castratrice,fr,11,17278,,,grammalecte,MPL-2.0,castrateur
-casè,fr,4,0,,Logent,grammalecte,MPL-2.0,caser
+casè,fr,4,0,,,grammalecte,MPL-2.0,caser
 casé,fr,4,18362,,Logé,grammalecte,MPL-2.0,caser
 casée,fr,5,5299,,Logée,grammalecte,MPL-2.0,caser
 casées,fr,6,3332,,Logées,grammalecte,MPL-2.0,caser
@@ -81951,7 +81951,7 @@ certifieraient,fr,14,918,,Attesteraient,grammalecte,MPL-2.0,certifier
 certifierais,fr,12,225,,Attesterais,grammalecte,MPL-2.0,certifier
 certifieras,fr,11,0,,Attesteras,grammalecte,MPL-2.0,certifier
 certifierons,fr,12,146,,Attesterons,grammalecte,MPL-2.0,certifier
-certifiè,fr,8,0,,Attestent,grammalecte,MPL-2.0,certifier
+certifiè,fr,8,0,,,grammalecte,MPL-2.0,certifier
 cervicalgie,fr,11,2310,,,grammalecte,MPL-2.0,cervicalgie
 cervicarthroses,fr,15,368,,,grammalecte,MPL-2.0,cervicarthrose
 cessè,fr,5,332,,Arrête,grammalecte,MPL-2.0,cesser
@@ -83244,7 +83244,7 @@ commanditè,fr,10,0,,,grammalecte,MPL-2.0,commanditer
 commandité,fr,10,43451,,,grammalecte,MPL-2.0,commanditer
 commanditée,fr,11,18969,,,grammalecte,MPL-2.0,commanditer
 commandités,fr,11,29340,,,grammalecte,MPL-2.0,commanditer
-commandè,fr,8,1,,Donnent des ordres,grammalecte,MPL-2.0,commander
+commandè,fr,8,1,,,grammalecte,MPL-2.0,commander
 commensalismes,fr,14,3,,,grammalecte,MPL-2.0,commensalisme
 commensalités,fr,13,209,,,grammalecte,MPL-2.0,commensalité
 commentatrices,fr,14,568,,,grammalecte,MPL-2.0,commentateur
@@ -83265,7 +83265,7 @@ commercialismes,fr,15,0,,,grammalecte,MPL-2.0,commercialisme
 commercialisons,fr,15,511,,,grammalecte,MPL-2.0,commercialiser
 commercialisè,fr,13,0,,,grammalecte,MPL-2.0,commercialiser
 commercialités,fr,14,0,,,grammalecte,MPL-2.0,commercialité
-commercè,fr,8,106,,Échangent,grammalecte,MPL-2.0,commercer
+commercè,fr,8,106,,,grammalecte,MPL-2.0,commercer
 commerçable,fr,11,5160,,,grammalecte,MPL-2.0,commerçable
 comminutif,fr,10,671,,,grammalecte,MPL-2.0,comminutif
 comminutifs,fr,11,203,,,grammalecte,MPL-2.0,comminutif
@@ -83935,7 +83935,7 @@ conjecturerons,fr,14,249,,Avancerons une hypothèse,grammalecte,MPL-2.0,conjectu
 conjectureront,fr,14,43,,Avanceront une hypothèse,grammalecte,MPL-2.0,conjecturer
 conjecturiez,fr,12,44,,Avanciez une hypothèse,grammalecte,MPL-2.0,conjecturer
 conjecturions,fr,13,314,,Avancions une hypothèse,grammalecte,MPL-2.0,conjecturer
-conjecturè,fr,10,0,,Avancent une hypothèse,grammalecte,MPL-2.0,conjecturer
+conjecturè,fr,10,0,,,grammalecte,MPL-2.0,conjecturer
 conjoncteur,fr,11,11008,,,grammalecte,MPL-2.0,conjoncteur
 conjonctif,fr,10,624285,,,grammalecte,MPL-2.0,conjonctif
 conjonctifs,fr,11,76007,,,grammalecte,MPL-2.0,conjonctif
@@ -84029,7 +84029,7 @@ conseillers,fr,11,4006074,,,grammalecte,MPL-2.0,conseiller
 conseilleur,fr,11,6128,,,grammalecte,MPL-2.0,conseilleur
 conseilleuse,fr,12,275,,,grammalecte,MPL-2.0,conseilleur
 conseilleuses,fr,13,1,,,grammalecte,MPL-2.0,conseilleur
-conseillè,fr,9,65,,Guident,grammalecte,MPL-2.0,conseiller
+conseillè,fr,9,65,,,grammalecte,MPL-2.0,conseiller
 conseillère,fr,11,144910,,,grammalecte,MPL-2.0,conseiller
 consensuel,fr,10,89460,,,grammalecte,MPL-2.0,consensuel
 consensuels,fr,11,26571,,,grammalecte,MPL-2.0,consensuel
@@ -84038,7 +84038,7 @@ consentants,fr,11,24698,,,grammalecte,MPL-2.0,consentant
 conservable,fr,11,2702,,,grammalecte,MPL-2.0,conservable
 conservatif,fr,11,12577,,,grammalecte,MPL-2.0,conservatif
 conserverie,fr,11,58845,,,grammalecte,MPL-2.0,conserverie
-conservè,fr,8,214,,Gardent,grammalecte,MPL-2.0,conserver
+conservè,fr,8,214,,,grammalecte,MPL-2.0,conserver
 considèrerai,fr,12,907,,Tiendrai compte de,grammalecte,MPL-2.0,considérer
 considèreraient,fr,15,867,,Tiendraient compte de,grammalecte,MPL-2.0,considérer
 considèrerais,fr,13,465,,Tiendrais compte de,grammalecte,MPL-2.0,considérer
@@ -84056,7 +84056,7 @@ consisterais,fr,12,1,,Serais formé de,grammalecte,MPL-2.0,consister
 consisterons,fr,12,1,,Serons formé de,grammalecte,MPL-2.0,consister
 consistez,fr,9,0,,Êtes formé de,grammalecte,MPL-2.0,consister
 consistiez,fr,10,0,,Étiez formé de,grammalecte,MPL-2.0,consister
-consistè,fr,8,0,,Sont formé de,grammalecte,MPL-2.0,consister
+consistè,fr,8,0,,,grammalecte,MPL-2.0,consister
 consoliderai,fr,12,327,,,grammalecte,MPL-2.0,consolider
 consoliderais,fr,13,0,,,grammalecte,MPL-2.0,consolider
 consolideras,fr,12,0,,,grammalecte,MPL-2.0,consolider
@@ -84152,7 +84152,7 @@ consternés,fr,10,98735,,,grammalecte,MPL-2.0,consterner
 constituerais,fr,13,852,,Formerais,grammalecte,MPL-2.0,constituer
 constitueras,fr,12,583,,Formeras,grammalecte,MPL-2.0,constituer
 constitutif,fr,11,684651,,Fondamental,grammalecte,MPL-2.0,constitutif
-constituè,fr,9,73,,Forment,grammalecte,MPL-2.0,constituer
+constituè,fr,9,73,,,grammalecte,MPL-2.0,constituer
 constrictif,fr,11,2450,,,grammalecte,MPL-2.0,constrictif
 constrictifs,fr,12,754,,,grammalecte,MPL-2.0,constrictif
 constructivités,fr,15,0,,,grammalecte,MPL-2.0,constructivité
@@ -84766,7 +84766,7 @@ converseraient,fr,14,311,,Échangeraient des idées,grammalecte,MPL-2.0,converse
 converserais,fr,12,0,,Échangerais des idées,grammalecte,MPL-2.0,converser
 converserait,fr,12,455,,Échangerait des idées,grammalecte,MPL-2.0,converser
 converserons,fr,12,620,,Échangerons des idées,grammalecte,MPL-2.0,converser
-conversè,fr,8,0,,Échangent des idées,grammalecte,MPL-2.0,converser
+conversè,fr,8,0,,,grammalecte,MPL-2.0,converser
 convertibilités,fr,15,438,,,grammalecte,MPL-2.0,convertibilité
 convertible,fr,11,86599,,,grammalecte,MPL-2.0,convertible
 convertissables,fr,15,943,,,grammalecte,MPL-2.0,convertissable
@@ -84956,7 +84956,7 @@ correspondras,fr,13,78,,,grammalecte,MPL-2.0,correspondre
 correspondrons,fr,14,703,,,grammalecte,MPL-2.0,correspondre
 corresponds,fr,11,34722,,,grammalecte,MPL-2.0,correspondre
 correspondu,fr,11,136737,,,grammalecte,MPL-2.0,correspondre
-corrigè,fr,7,0,,Amendent,grammalecte,MPL-2.0,corriger
+corrigè,fr,7,0,,,grammalecte,MPL-2.0,corriger
 corroborais,fr,11,0,,,grammalecte,MPL-2.0,corroborer
 corroborations,fr,14,715,,,grammalecte,MPL-2.0,corroboration
 corroborerai,fr,12,0,,,grammalecte,MPL-2.0,corroborer
@@ -85042,7 +85042,7 @@ coulissements,fr,13,460,,,grammalecte,MPL-2.0,coulissement
 coulombien,fr,10,4426,,,grammalecte,MPL-2.0,coulombien
 coulombiens,fr,11,922,,,grammalecte,MPL-2.0,coulombien
 coulè,fr,5,42,,,grammalecte,MPL-2.0,couler
-coupè,fr,5,2,,Tranchent,grammalecte,MPL-2.0,couper
+coupè,fr,5,2,,,grammalecte,MPL-2.0,couper
 courantologies,fr,14,1,,,grammalecte,MPL-2.0,courantologie
 courbaient,fr,10,22562,,,grammalecte,MPL-2.0,courber
 courbais,fr,8,1246,,,grammalecte,MPL-2.0,courber
@@ -85140,7 +85140,7 @@ coïnciderez,fr,11,0,,Tomberez au même moment,grammalecte,MPL-2.0,coïncider
 coïnciderons,fr,12,91,,Tomberons au même moment,grammalecte,MPL-2.0,coïncider
 coïncidez,fr,9,0,,Tombez au même moment,grammalecte,MPL-2.0,coïncider
 coïncidiez,fr,10,0,,Tombiez au même moment,grammalecte,MPL-2.0,coïncider
-coïncidè,fr,8,0,,Tombent au même moment,grammalecte,MPL-2.0,coïncider
+coïncidè,fr,8,0,,,grammalecte,MPL-2.0,coïncider
 cramponnais,fr,11,2438,,,grammalecte,MPL-2.0,cramponner
 cramponnait,fr,11,19392,,,grammalecte,MPL-2.0,cramponner
 cramponnant,fr,11,21006,,,grammalecte,MPL-2.0,cramponner
@@ -85235,7 +85235,7 @@ crocodilien,fr,11,1478,,,grammalecte,MPL-2.0,crocodilien
 crocodilienne,fr,13,270,,,grammalecte,MPL-2.0,crocodilien
 crocodiliennes,fr,14,162,,,grammalecte,MPL-2.0,crocodilien
 croisiériste,fr,12,403,,,grammalecte,MPL-2.0,croisiériste
-croisè,fr,6,1,,Se rencontrent,grammalecte,MPL-2.0,croiser
+croisè,fr,6,1,,,grammalecte,MPL-2.0,croiser
 croitra,fr,7,1034,,,grammalecte,MPL-2.0,croitre
 croitrai,fr,8,2,,,grammalecte,MPL-2.0,croitre
 croitraient,fr,11,112,,,grammalecte,MPL-2.0,croitre
@@ -85367,7 +85367,7 @@ créolisations,fr,13,630,,,grammalecte,MPL-2.0,créolisation
 créolistiques,fr,13,0,,,grammalecte,MPL-2.0,créolistique
 crépitement,fr,11,54623,,,grammalecte,MPL-2.0,crépitement
 crétinisations,fr,14,0,,,grammalecte,MPL-2.0,crétinisation
-créè,fr,4,1,,Font exister,grammalecte,MPL-2.0,créer
+créè,fr,4,1,,,grammalecte,MPL-2.0,créer
 crûe,fr,4,1001,,,grammalecte,MPL-2.0,croître
 crûes,fr,5,782,,,grammalecte,MPL-2.0,croître
 crûs,fr,4,8535,,,grammalecte,MPL-2.0,croître
@@ -85483,7 +85483,7 @@ célébrante,fr,10,1973,,,grammalecte,MPL-2.0,célébrant
 célébrantes,fr,11,1058,,,grammalecte,MPL-2.0,célébrant
 célébrants,fr,10,7886,,,grammalecte,MPL-2.0,célébrant
 célébrissimes,fr,13,908,,,grammalecte,MPL-2.0,célébrissime
-célébrè,fr,7,1,,Fêtent,grammalecte,MPL-2.0,célébrer
+célébrè,fr,7,1,,,grammalecte,MPL-2.0,célébrer
 cénobitique,fr,11,19615,,,grammalecte,MPL-2.0,cénobitique
 céphalisations,fr,14,0,,,grammalecte,MPL-2.0,céphalisation
 céphalophore,fr,12,982,,,grammalecte,MPL-2.0,céphalophore
@@ -86220,7 +86220,7 @@ diphtérique,fr,11,119723,,,grammalecte,MPL-2.0,diphtérique
 directivismes,fr,13,0,,,grammalecte,MPL-2.0,directivisme
 directorial,fr,11,66512,,,grammalecte,MPL-2.0,directorial
 dires,fr,5,563530,,,grammalecte,MPL-2.0,dire
-dirigè,fr,6,145,,Guident,grammalecte,MPL-2.0,diriger
+dirigè,fr,6,145,,,grammalecte,MPL-2.0,diriger
 discarthroses,fr,13,212,,,grammalecte,MPL-2.0,discarthrose
 discernable,fr,11,61903,,,grammalecte,MPL-2.0,discernable
 discerneraient,fr,14,823,,,grammalecte,MPL-2.0,discerner
@@ -86502,13 +86502,13 @@ disparus,fr,8,140119,,,grammalecte,MPL-2.0,disparaître
 dispatching,fr,11,17862,,,grammalecte,MPL-2.0,dispatching
 dispendieux,fr,11,326800,,,grammalecte,MPL-2.0,dispendieux
 dispensable,fr,11,10305,,,grammalecte,MPL-2.0,dispensable
-dispensè,fr,8,0,,Distribuent,grammalecte,MPL-2.0,dispenser
+dispensè,fr,8,0,,,grammalecte,MPL-2.0,dispenser
 dispersable,fr,11,1075,,,grammalecte,MPL-2.0,dispersable
 dispersements,fr,13,0,,,grammalecte,MPL-2.0,dispersement
 disperserais,fr,12,113,,Éparpillerais,grammalecte,MPL-2.0,disperser
 disperserons,fr,12,761,,Éparpillerons,grammalecte,MPL-2.0,disperser
-dispersè,fr,8,1,,Éparpillent,grammalecte,MPL-2.0,disperser
-disposè,fr,7,2,,Placent,grammalecte,MPL-2.0,disposer
+dispersè,fr,8,1,,,grammalecte,MPL-2.0,disperser
+disposè,fr,7,2,,,grammalecte,MPL-2.0,disposer
 disproportionne,fr,15,351,,,grammalecte,MPL-2.0,disproportionner
 disproportionnè,fr,15,0,,,grammalecte,MPL-2.0,disproportionner
 disputè,fr,7,0,,,grammalecte,MPL-2.0,disputer
@@ -86556,7 +86556,7 @@ dissimilations,fr,14,944,,,grammalecte,MPL-2.0,dissimilation
 dissimulatrices,fr,15,662,,,grammalecte,MPL-2.0,dissimulateur
 dissimuleras,fr,12,80,,Cacheras,grammalecte,MPL-2.0,dissimuler
 dissimulerez,fr,12,854,,Cacherez,grammalecte,MPL-2.0,dissimuler
-dissimulè,fr,9,0,,Cachent,grammalecte,MPL-2.0,dissimuler
+dissimulè,fr,9,0,,,grammalecte,MPL-2.0,dissimuler
 dissipateur,fr,11,43296,,,grammalecte,MPL-2.0,dissipateur
 dissipatif,fr,10,4912,,,grammalecte,MPL-2.0,dissipatif
 dissipatifs,fr,11,5048,,,grammalecte,MPL-2.0,dissipatif
@@ -86809,7 +86809,7 @@ divinisées,fr,10,11902,,,grammalecte,MPL-2.0,diviniser
 divinisés,fr,9,33838,,,grammalecte,MPL-2.0,diviniser
 divisibilités,fr,13,358,,,grammalecte,MPL-2.0,divisibilité
 divisionnismes,fr,14,0,,,grammalecte,MPL-2.0,divisionnisme
-divisè,fr,6,63,,Partagent,grammalecte,MPL-2.0,diviser
+divisè,fr,6,63,,,grammalecte,MPL-2.0,diviser
 divortialités,fr,13,0,,,grammalecte,MPL-2.0,divortialité
 divulgateur,fr,11,2802,,,grammalecte,MPL-2.0,divulgateur
 divulgatrice,fr,12,492,,,grammalecte,MPL-2.0,divulgateur
@@ -87015,7 +87015,7 @@ dupiez,fr,6,170,,Trompiez,grammalecte,MPL-2.0,duper
 dupions,fr,7,0,,Trompions,grammalecte,MPL-2.0,duper
 duplicateur,fr,11,11686,,,grammalecte,MPL-2.0,duplicateur
 dupons,fr,6,300,,Trompons,grammalecte,MPL-2.0,duper
-dupè,fr,4,0,,Trompent,grammalecte,MPL-2.0,duper
+dupè,fr,4,0,,,grammalecte,MPL-2.0,duper
 dupées,fr,6,3183,,Trompées,grammalecte,MPL-2.0,duper
 durais,fr,6,1053,,,grammalecte,MPL-2.0,durer
 durci,fr,5,162928,,,grammalecte,MPL-2.0,durcir
@@ -87550,7 +87550,7 @@ déchanté,fr,8,5099,,,grammalecte,MPL-2.0,déchanter
 déchargeoir,fr,11,3380,,,grammalecte,MPL-2.0,déchargeoir
 déchargerais,fr,12,323,,Relâcherais,grammalecte,MPL-2.0,décharger
 déchargerons,fr,12,520,,Relâcherons,grammalecte,MPL-2.0,décharger
-déchargè,fr,8,0,,Relâchent,grammalecte,MPL-2.0,décharger
+déchargè,fr,8,0,,,grammalecte,MPL-2.0,décharger
 décharnements,fr,13,148,,,grammalecte,MPL-2.0,décharnement
 déchaumeur,fr,10,209,,,grammalecte,MPL-2.0,déchaumeur
 déchaumeurs,fr,11,185,,,grammalecte,MPL-2.0,déchaumeur
@@ -87662,7 +87662,7 @@ déciampères,fr,11,0,,,grammalecte,MPL-2.0,ampère
 décicalorie,fr,11,0,,,grammalecte,MPL-2.0,calorie
 décicalories,fr,12,0,,,grammalecte,MPL-2.0,calorie
 décidabilités,fr,13,0,,,grammalecte,MPL-2.0,décidabilité
-décidè,fr,6,300,,Tranchent,grammalecte,MPL-2.0,décider
+décidè,fr,6,300,,,grammalecte,MPL-2.0,décider
 décimalisations,fr,15,0,,,grammalecte,MPL-2.0,décimalisation
 décimole,fr,8,1,,,grammalecte,MPL-2.0,mole
 décimoles,fr,9,0,,,grammalecte,MPL-2.0,mole
@@ -88098,7 +88098,7 @@ décortiquè,fr,10,0,,,grammalecte,MPL-2.0,décortiquer
 décortiqué,fr,10,57369,,,grammalecte,MPL-2.0,décortiquer
 décortiquée,fr,11,14890,,,grammalecte,MPL-2.0,décortiquer
 décortiqués,fr,11,19895,,,grammalecte,MPL-2.0,décortiquer
-décorè,fr,6,0,,Ornent,grammalecte,MPL-2.0,décorer
+décorè,fr,6,0,,,grammalecte,MPL-2.0,décorer
 décos,fr,5,6548,,Ornementations,grammalecte,MPL-2.0,déco
 découlais,fr,9,0,,,grammalecte,MPL-2.0,découler
 découlerai,fr,10,0,,,grammalecte,MPL-2.0,découler
@@ -88127,7 +88127,7 @@ décourages,fr,10,1680,,Abats,grammalecte,MPL-2.0,décourager
 découragez,fr,10,7691,,Abattez,grammalecte,MPL-2.0,décourager
 découragiez,fr,11,475,,Abattiez,grammalecte,MPL-2.0,décourager
 découragions,fr,12,557,,Abattions,grammalecte,MPL-2.0,décourager
-découragè,fr,9,0,,Abattent,grammalecte,MPL-2.0,décourager
+découragè,fr,9,0,,,grammalecte,MPL-2.0,décourager
 découragé,fr,9,376501,,Abattu,grammalecte,MPL-2.0,décourager
 découragée,fr,10,111114,,Abattue,grammalecte,MPL-2.0,décourager
 découragées,fr,11,42411,,Abattues,grammalecte,MPL-2.0,décourager
@@ -88889,7 +88889,7 @@ dégénératif,fr,11,18219,,,grammalecte,MPL-2.0,dégénératif
 dégénérerai,fr,11,0,,Tomberai en décadence,grammalecte,MPL-2.0,dégénérer
 dégénérerais,fr,12,2,,Tomberais en décadence,grammalecte,MPL-2.0,dégénérer
 dégénérerons,fr,12,115,,Tomberons en décadence,grammalecte,MPL-2.0,dégénérer
-dégénérè,fr,8,0,,Tombent en décadence,grammalecte,MPL-2.0,dégénérer
+dégénérè,fr,8,0,,,grammalecte,MPL-2.0,dégénérer
 déification,fr,11,55561,,,grammalecte,MPL-2.0,déification
 déjeuneraient,fr,13,434,,,grammalecte,MPL-2.0,déjeuner
 déjeuners,fr,9,81761,,,grammalecte,MPL-2.0,déjeuner
@@ -88931,12 +88931,12 @@ délimiterais,fr,12,0,,Tracerais une frontière,grammalecte,MPL-2.0,délimiter
 délimiteras,fr,11,0,,Traceras une frontière,grammalecte,MPL-2.0,délimiter
 délimiterez,fr,11,0,,Tracerez une frontière,grammalecte,MPL-2.0,délimiter
 délimitiez,fr,10,1,,Traciez une frontière,grammalecte,MPL-2.0,délimiter
-délimitè,fr,8,0,,Tracent une frontière,grammalecte,MPL-2.0,délimiter
+délimitè,fr,8,0,,,grammalecte,MPL-2.0,délimiter
 délinquance,fr,11,633458,,,grammalecte,MPL-2.0,délinquance
 délinéament,fr,11,608,,,grammalecte,MPL-2.0,délinéament
 délinéation,fr,11,8803,,,grammalecte,MPL-2.0,délinéation
 délitescences,fr,13,246,,,grammalecte,MPL-2.0,délitescence
-délivrè,fr,7,1,,Portent,grammalecte,MPL-2.0,délivrer
+délivrè,fr,7,1,,,grammalecte,MPL-2.0,délivrer
 déliè,fr,5,79,,,grammalecte,MPL-2.0,délier
 délocalisable,fr,13,637,,,grammalecte,MPL-2.0,délocalisable
 délocalisaient,fr,14,176,,,grammalecte,MPL-2.0,délocaliser
@@ -89957,7 +89957,7 @@ déposséderons,fr,13,111,,,grammalecte,MPL-2.0,déposséder
 déposséderont,fr,13,486,,,grammalecte,MPL-2.0,déposséder
 dépossédions,fr,12,125,,,grammalecte,MPL-2.0,déposséder
 dépossédè,fr,9,0,,,grammalecte,MPL-2.0,déposséder
-déposè,fr,6,42,,Laissent,grammalecte,MPL-2.0,déposer
+déposè,fr,6,42,,,grammalecte,MPL-2.0,déposer
 dépouillerais,fr,13,688,,Enlèverais,grammalecte,MPL-2.0,dépouiller
 dépouilleras,fr,12,509,,Enlèveras,grammalecte,MPL-2.0,dépouiller
 dépouilleur,fr,11,978,,,grammalecte,MPL-2.0,dépouilleur
@@ -91321,7 +91321,7 @@ désinvestissez,fr,14,0,,,grammalecte,MPL-2.0,désinvestir
 désinvestissons,fr,15,0,,,grammalecte,MPL-2.0,désinvestir
 désionisations,fr,14,0,,,grammalecte,MPL-2.0,désionisation
 désirabilités,fr,13,796,,,grammalecte,MPL-2.0,désirabilité
-désirè,fr,6,95,,Ont envie,grammalecte,MPL-2.0,désirer
+désirè,fr,6,95,,,grammalecte,MPL-2.0,désirer
 désistaient,fr,11,2097,,,grammalecte,MPL-2.0,désister
 désistais,fr,9,231,,,grammalecte,MPL-2.0,désister
 désistait,fr,9,7937,,,grammalecte,MPL-2.0,désister
@@ -91668,7 +91668,7 @@ détaillants,fr,11,227367,,,grammalecte,MPL-2.0,détaillant
 détailleraient,fr,14,266,,Préciseraient,grammalecte,MPL-2.0,détailler
 détaillerais,fr,12,362,,Préciserais,grammalecte,MPL-2.0,détailler
 détailleras,fr,11,0,,Préciseras,grammalecte,MPL-2.0,détailler
-détaillè,fr,8,157,,Précisent,grammalecte,MPL-2.0,détailler
+détaillè,fr,8,157,,,grammalecte,MPL-2.0,détailler
 détectabilités,fr,14,0,,,grammalecte,MPL-2.0,détectabilité
 détecterai,fr,10,2,,,grammalecte,MPL-2.0,détecter
 détecteraient,fr,13,334,,,grammalecte,MPL-2.0,détecter
@@ -91707,7 +91707,7 @@ déteintes,fr,9,1864,,,grammalecte,MPL-2.0,déteindre
 déteints,fr,8,4713,,,grammalecte,MPL-2.0,déteindre
 détermineras,fr,12,339,,Fixeras,grammalecte,MPL-2.0,déterminer
 déterminité,fr,11,20791,,,grammalecte,MPL-2.0,déterminité
-déterminè,fr,9,139,,Fixent,grammalecte,MPL-2.0,déterminer
+déterminè,fr,9,139,,,grammalecte,MPL-2.0,déterminer
 détestaient,fr,11,70300,,,grammalecte,MPL-2.0,détester
 détestais,fr,9,27023,,,grammalecte,MPL-2.0,détester
 détestait,fr,9,242547,,,grammalecte,MPL-2.0,détester
@@ -92084,7 +92084,7 @@ eaux,fr,4,17402491,,,grammalecte,MPL-2.0,eau
 eczémateuse,fr,11,10057,,,grammalecte,MPL-2.0,eczémateux
 eczémateux,fr,10,10296,,,grammalecte,MPL-2.0,eczémateux
 eczématisations,fr,15,336,,,grammalecte,MPL-2.0,eczématisation
-effacè,fr,6,1,,Rayons,grammalecte,MPL-2.0,effacer
+effacè,fr,6,1,,,grammalecte,MPL-2.0,effacer
 effarouchais,fr,12,6,,,grammalecte,MPL-2.0,effaroucher
 effaroucherai,fr,13,3,,,grammalecte,MPL-2.0,effaroucher
 effaroucherais,fr,14,1,,,grammalecte,MPL-2.0,effaroucher
@@ -92179,7 +92179,7 @@ effleurissant,fr,13,984,,,grammalecte,MPL-2.0,effleurir
 effleurisse,fr,11,1,,,grammalecte,MPL-2.0,effleurir
 effleurissez,fr,12,0,,,grammalecte,MPL-2.0,effleurir
 effleurissons,fr,13,0,,,grammalecte,MPL-2.0,effleurir
-effleurè,fr,8,0,,Touchent légèrement,grammalecte,MPL-2.0,effleurer
+effleurè,fr,8,0,,,grammalecte,MPL-2.0,effleurer
 effondrais,fr,10,670,,,grammalecte,MPL-2.0,effondrer
 effondrait,fr,10,45200,,,grammalecte,MPL-2.0,effondrer
 effondrant,fr,10,13424,,,grammalecte,MPL-2.0,effondrer
@@ -92443,7 +92443,7 @@ emmagasineront,fr,14,567,,Stockeront,grammalecte,MPL-2.0,emmagasiner
 emmagasiniez,fr,12,0,,Stockiez,grammalecte,MPL-2.0,emmagasiner
 emmagasinions,fr,13,86,,Stockions,grammalecte,MPL-2.0,emmagasiner
 emmagasinons,fr,12,405,,Stockons,grammalecte,MPL-2.0,emmagasiner
-emmagasinè,fr,10,0,,Stockent,grammalecte,MPL-2.0,emmagasiner
+emmagasinè,fr,10,0,,,grammalecte,MPL-2.0,emmagasiner
 emmaillotages,fr,13,0,,,grammalecte,MPL-2.0,emmaillotage
 emmaillotaient,fr,14,386,,,grammalecte,MPL-2.0,emmailloter
 emmaillotais,fr,12,3,,,grammalecte,MPL-2.0,emmailloter
@@ -92468,7 +92468,7 @@ emmaillotè,fr,10,0,,,grammalecte,MPL-2.0,emmailloter
 emmailloté,fr,10,16793,,,grammalecte,MPL-2.0,emmailloter
 emmaillotée,fr,11,6235,,,grammalecte,MPL-2.0,emmailloter
 emmaillotés,fr,11,6211,,,grammalecte,MPL-2.0,emmailloter
-emmenè,fr,6,41,,Conduisent,grammalecte,MPL-2.0,emmener
+emmenè,fr,6,41,,,grammalecte,MPL-2.0,emmener
 emmerdement,fr,11,1440,,,grammalecte,MPL-2.0,emmerdement
 emmitouflaient,fr,14,140,,,grammalecte,MPL-2.0,emmitoufler
 emmitouflais,fr,12,2,,,grammalecte,MPL-2.0,emmitoufler
@@ -92603,7 +92603,7 @@ emplisse,fr,8,3435,,,grammalecte,MPL-2.0,emplir
 emplissez,fr,9,2254,,,grammalecte,MPL-2.0,emplir
 emplissons,fr,10,782,,,grammalecte,MPL-2.0,emplir
 employabilités,fr,14,0,,,grammalecte,MPL-2.0,employabilité
-employè,fr,7,345,,Recrutent et engage,grammalecte,MPL-2.0,employer
+employè,fr,7,345,,,grammalecte,MPL-2.0,employer
 empoignais,fr,10,588,,,grammalecte,MPL-2.0,empoigner
 empoignait,fr,10,10588,,,grammalecte,MPL-2.0,empoigner
 empoignant,fr,10,17093,,,grammalecte,MPL-2.0,empoigner
@@ -92644,7 +92644,7 @@ empoisonnez,fr,11,2358,,Intoxiquez,grammalecte,MPL-2.0,empoisonner
 empoisonniez,fr,12,119,,Intoxiquiez,grammalecte,MPL-2.0,empoisonner
 empoisonnions,fr,13,181,,Intoxiquions,grammalecte,MPL-2.0,empoisonner
 empoisonnons,fr,12,838,,Intoxiquons,grammalecte,MPL-2.0,empoisonner
-empoisonnè,fr,10,1,,Intoxiquent,grammalecte,MPL-2.0,empoisonner
+empoisonnè,fr,10,1,,,grammalecte,MPL-2.0,empoisonner
 empoisonné,fr,10,398380,,Intoxiqué,grammalecte,MPL-2.0,empoisonner
 empoisonnée,fr,11,182565,,Intoxiquée,grammalecte,MPL-2.0,empoisonner
 empoisonnés,fr,11,139151,,Intoxiqués,grammalecte,MPL-2.0,empoisonner
@@ -93148,7 +93148,7 @@ endommagerez,fr,12,0,,Détériorerez,grammalecte,MPL-2.0,endommager
 endommagerons,fr,13,0,,Détériorerons,grammalecte,MPL-2.0,endommager
 endommagiez,fr,11,0,,Détérioriez,grammalecte,MPL-2.0,endommager
 endommagions,fr,12,1,,Détériorions,grammalecte,MPL-2.0,endommager
-endommagè,fr,9,0,,Détériorent,grammalecte,MPL-2.0,endommager
+endommagè,fr,9,0,,,grammalecte,MPL-2.0,endommager
 endométrite,fr,11,28681,,,grammalecte,MPL-2.0,endométrite
 endophtalmies,fr,13,351,,,grammalecte,MPL-2.0,endophtalmie
 endormaient,fr,11,21684,,,grammalecte,MPL-2.0,endormir
@@ -93628,7 +93628,7 @@ ennoblisse,fr,10,1629,,,grammalecte,MPL-2.0,ennoblir
 ennoblissements,fr,15,939,,,grammalecte,MPL-2.0,ennoblissement
 ennoblissez,fr,11,497,,,grammalecte,MPL-2.0,ennoblir
 ennoblissons,fr,12,232,,,grammalecte,MPL-2.0,ennoblir
-ennuyè,fr,6,0,,Lassent,grammalecte,MPL-2.0,ennuyer
+ennuyè,fr,6,0,,,grammalecte,MPL-2.0,ennuyer
 enorgueilli,fr,11,18656,,,grammalecte,MPL-2.0,enorgueillir
 enorgueillirai,fr,14,451,,,grammalecte,MPL-2.0,enorgueillir
 enorgueillirais,fr,15,279,,,grammalecte,MPL-2.0,enorgueillir
@@ -93958,7 +93958,7 @@ entortillé,fr,10,28694,,,grammalecte,MPL-2.0,entortiller
 entortillée,fr,11,34601,,,grammalecte,MPL-2.0,entortiller
 entortillés,fr,11,17012,,,grammalecte,MPL-2.0,entortiller
 entourloupe,fr,11,2218,,,grammalecte,MPL-2.0,entourloupe
-entourè,fr,7,0,,Cernent,grammalecte,MPL-2.0,entourer
+entourè,fr,7,0,,,grammalecte,MPL-2.0,entourer
 entraidait,fr,10,1058,,,grammalecte,MPL-2.0,entraider
 entraidant,fr,10,2879,,,grammalecte,MPL-2.0,entraider
 entraide,fr,8,407864,,,grammalecte,MPL-2.0,entraider
@@ -94053,7 +94053,7 @@ entraînable,fr,11,1692,,,grammalecte,MPL-2.0,entraînable
 entraînante,fr,11,100547,,,grammalecte,MPL-2.0,entraînant
 entraînants,fr,11,15822,,,grammalecte,MPL-2.0,entraînant
 entraînerais,fr,12,956,,Guiderais et dirigerais,grammalecte,MPL-2.0,entraîner
-entraînè,fr,8,41,,Guident et dirige,grammalecte,MPL-2.0,entraîner
+entraînè,fr,8,41,,,grammalecte,MPL-2.0,entraîner
 entrebâillaient,fr,15,325,,,grammalecte,MPL-2.0,entrebâiller
 entrebâillais,fr,13,0,,,grammalecte,MPL-2.0,entrebâiller
 entrebâille,fr,11,2457,,,grammalecte,MPL-2.0,entrebâiller
@@ -94723,8 +94723,8 @@ esquisserais,fr,12,74,,Tracerais,grammalecte,MPL-2.0,esquisser
 esquisseras,fr,11,0,,Traceras,grammalecte,MPL-2.0,esquisser
 esquisserez,fr,11,0,,Tracerez,grammalecte,MPL-2.0,esquisser
 esquisseront,fr,12,935,,Traceront,grammalecte,MPL-2.0,esquisser
-esquissè,fr,8,0,,Tracent,grammalecte,MPL-2.0,esquisser
-essayè,fr,6,164,,Tentent,grammalecte,MPL-2.0,essayer
+esquissè,fr,8,0,,,grammalecte,MPL-2.0,esquisser
+essayè,fr,6,164,,,grammalecte,MPL-2.0,essayer
 essentialisais,fr,14,0,,,grammalecte,MPL-2.0,essentialiser
 essentialisait,fr,14,0,,,grammalecte,MPL-2.0,essentialiser
 essentialisant,fr,14,454,,,grammalecte,MPL-2.0,essentialiser
@@ -94956,7 +94956,7 @@ exalitre,fr,8,3,,Mesure liquide,grammalecte,MPL-2.0,litre
 exalitres,fr,9,0,,Mesures liquides,grammalecte,MPL-2.0,litre
 exalteras,fr,9,0,,Élèveras,grammalecte,MPL-2.0,exalter
 exaltiez,fr,8,496,,Éleviez,grammalecte,MPL-2.0,exalter
-exaltè,fr,6,0,,Élèvent,grammalecte,MPL-2.0,exalter
+exaltè,fr,6,0,,,grammalecte,MPL-2.0,exalter
 examinatrices,fr,13,982,,,grammalecte,MPL-2.0,examinateur
 examinè,fr,7,1,,,grammalecte,MPL-2.0,examiner
 examole,fr,7,1,,,grammalecte,MPL-2.0,mole
@@ -95119,7 +95119,7 @@ exemplifiè,fr,10,0,,,grammalecte,MPL-2.0,exemplifier
 exemplifié,fr,10,4404,,,grammalecte,MPL-2.0,exemplifier
 exemplifiée,fr,11,4971,,,grammalecte,MPL-2.0,exemplifier
 exemplifiés,fr,11,1598,,,grammalecte,MPL-2.0,exemplifier
-exercè,fr,6,60,,Pratiquent,grammalecte,MPL-2.0,exercer
+exercè,fr,6,60,,,grammalecte,MPL-2.0,exercer
 exfiltrations,fr,13,202,,,grammalecte,MPL-2.0,exfiltration
 exfoliation,fr,11,46779,,,grammalecte,MPL-2.0,exfoliation
 exhaussais,fr,10,0,,,grammalecte,MPL-2.0,exhausser
@@ -95151,7 +95151,7 @@ exigè,fr,5,60,,,grammalecte,MPL-2.0,exiger
 exigüe,fr,6,96,,,grammalecte,MPL-2.0,exigu
 exigües,fr,7,21,,,grammalecte,MPL-2.0,exigu
 existentiel,fr,11,235270,,Essentiel,grammalecte,MPL-2.0,existentiel
-existè,fr,6,52,,Sont,grammalecte,MPL-2.0,exister
+existè,fr,6,52,,,grammalecte,MPL-2.0,exister
 exits,fr,5,2211,,,grammalecte,MPL-2.0,exit
 exophtalmie,fr,11,43250,,,grammalecte,MPL-2.0,exophtalmie
 exorbitant,fr,10,293637,,,grammalecte,MPL-2.0,exorbitant
@@ -95248,7 +95248,7 @@ exploiterais,fr,12,107,,Tirerais profit,grammalecte,MPL-2.0,exploiter
 exploiteur,fr,10,54815,,,grammalecte,MPL-2.0,exploiteur
 exploiteurs,fr,11,158833,,,grammalecte,MPL-2.0,exploiteur
 exploiteuse,fr,11,16123,,,grammalecte,MPL-2.0,exploiteur
-exploitè,fr,8,0,,Tirent profit,grammalecte,MPL-2.0,exploiter
+exploitè,fr,8,0,,,grammalecte,MPL-2.0,exploiter
 exploreraient,fr,13,792,,,grammalecte,MPL-2.0,explorer
 exploreras,fr,10,0,,,grammalecte,MPL-2.0,explorer
 exploriez,fr,9,187,,,grammalecte,MPL-2.0,explorer
@@ -95448,7 +95448,7 @@ extériorisè,fr,11,0,,,grammalecte,MPL-2.0,extérioriser
 extériorisé,fr,11,25868,,,grammalecte,MPL-2.0,extérioriser
 exécutive,fr,9,279920,,,grammalecte,MPL-2.0,exécutif
 exécutives,fr,10,59941,,,grammalecte,MPL-2.0,exécutif
-exécutè,fr,7,0,,Font,grammalecte,MPL-2.0,exécuter
+exécutè,fr,7,0,,,grammalecte,MPL-2.0,exécuter
 fabricateur,fr,11,22391,,,grammalecte,MPL-2.0,fabricateur
 fabricatrices,fr,13,820,,,grammalecte,MPL-2.0,fabricateur
 fabriquerais,fr,12,411,,,grammalecte,MPL-2.0,fabriquer
@@ -96007,7 +96007,7 @@ flottabilités,fr,13,135,,,grammalecte,MPL-2.0,flottabilité
 flotteras,fr,9,168,,Planeras,grammalecte,MPL-2.0,flotter
 flottez,fr,7,972,,Planez,grammalecte,MPL-2.0,flotter
 flottiez,fr,8,246,,Planiez,grammalecte,MPL-2.0,flotter
-flottè,fr,6,0,,Planent,grammalecte,MPL-2.0,flotter
+flottè,fr,6,0,,,grammalecte,MPL-2.0,flotter
 fluidifiant,fr,11,1922,,,grammalecte,MPL-2.0,fluidifiant
 fluidifiantes,fr,13,513,,,grammalecte,MPL-2.0,fluidifiant
 fluidifications,fr,15,0,,,grammalecte,MPL-2.0,fluidification
@@ -96144,7 +96144,7 @@ fonctionnerez,fr,13,96,,Marcherez,grammalecte,MPL-2.0,fonctionner
 fonctionnerons,fr,14,219,,Marcherons,grammalecte,MPL-2.0,fonctionner
 fonctionniez,fr,12,0,,Marchiez,grammalecte,MPL-2.0,fonctionner
 fonctionnions,fr,13,630,,Marchions,grammalecte,MPL-2.0,fonctionner
-fonctionnè,fr,10,0,,Marchent,grammalecte,MPL-2.0,fonctionner
+fonctionnè,fr,10,0,,,grammalecte,MPL-2.0,fonctionner
 fondamentalités,fr,15,0,,,grammalecte,MPL-2.0,fondamentalité
 fondante,fr,8,113487,,,grammalecte,MPL-2.0,fondant
 fondantes,fr,9,17070,,,grammalecte,MPL-2.0,fondant
@@ -96224,7 +96224,7 @@ fortifiante,fr,11,40592,,,grammalecte,MPL-2.0,fortifiant
 fortifiants,fr,11,21285,,,grammalecte,MPL-2.0,fortifiant
 fortifierais,fr,12,325,,Rendrais plus solide,grammalecte,MPL-2.0,fortifier
 fortifiè,fr,8,50,,Rend plus solide,grammalecte,MPL-2.0,fortifier
-forè,fr,4,91,,Percent,grammalecte,MPL-2.0,forer
+forè,fr,4,91,,,grammalecte,MPL-2.0,forer
 fossilifère,fr,11,83900,,,grammalecte,MPL-2.0,fossilifère
 fossilisations,fr,14,726,,,grammalecte,MPL-2.0,fossilisation
 foudroie,fr,8,21057,,,grammalecte,MPL-2.0,foudroyer
@@ -96257,7 +96257,7 @@ fouilleraient,fr,13,800,,Sondage,grammalecte,MPL-2.0,fouiller
 fouilliez,fr,9,206,,Sondage,grammalecte,MPL-2.0,fouiller
 fouillè,fr,7,0,,Sondage,grammalecte,MPL-2.0,fouiller
 foulon,fr,6,68916,,,grammalecte,MPL-2.0,foulon
-foulè,fr,5,0,,Piétinent,grammalecte,MPL-2.0,fouler
+foulè,fr,5,0,,,grammalecte,MPL-2.0,fouler
 fourbi,fr,6,13597,,,grammalecte,MPL-2.0,fourbir
 fourbie,fr,7,2572,,,grammalecte,MPL-2.0,fourbir
 fourbies,fr,8,3209,,,grammalecte,MPL-2.0,fourbir
@@ -97738,7 +97738,7 @@ guerroyées,fr,10,0,,,grammalecte,MPL-2.0,guerroyer
 guerroyés,fr,9,196,,,grammalecte,MPL-2.0,guerroyer
 guidiez,fr,7,705,,Montriez la voie,grammalecte,MPL-2.0,guider
 guidon,fr,6,90184,,,grammalecte,MPL-2.0,guidon
-guidè,fr,5,0,,Montrent la voie,grammalecte,MPL-2.0,guider
+guidè,fr,5,0,,,grammalecte,MPL-2.0,guider
 guillocheur,fr,11,1052,,,grammalecte,MPL-2.0,guillocheur
 guillocheuse,fr,12,0,,,grammalecte,MPL-2.0,guillocheur
 guillocheuses,fr,13,2,,,grammalecte,MPL-2.0,guillocheur
@@ -97876,7 +97876,7 @@ générerez,fr,9,0,,Produirez,grammalecte,MPL-2.0,générer
 générez,fr,7,291,,Produisez,grammalecte,MPL-2.0,générer
 génériez,fr,8,0,,Produisiez,grammalecte,MPL-2.0,générer
 générions,fr,9,118,,Produisions,grammalecte,MPL-2.0,générer
-générè,fr,6,0,,Produisent,grammalecte,MPL-2.0,générer
+générè,fr,6,0,,,grammalecte,MPL-2.0,générer
 généticien,fr,10,29517,,,grammalecte,MPL-2.0,généticien
 généticiennes,fr,13,136,,,grammalecte,MPL-2.0,généticien
 généticiens,fr,11,48870,,,grammalecte,MPL-2.0,généticien
@@ -97963,7 +97963,7 @@ gérions,fr,7,671,,Conduisions,grammalecte,MPL-2.0,gérer
 gérons,fr,6,3188,,Conduisons,grammalecte,MPL-2.0,gérer
 gérontocraties,fr,14,557,,,grammalecte,MPL-2.0,gérontocratie
 gérontologies,fr,13,0,,,grammalecte,MPL-2.0,gérontologie
-gérè,fr,4,1,,Conduisent,grammalecte,MPL-2.0,gérer
+gérè,fr,4,1,,,grammalecte,MPL-2.0,gérer
 gêneras,fr,7,371,,,grammalecte,MPL-2.0,gêner
 gêniez,fr,6,755,,,grammalecte,MPL-2.0,gêner
 gênons,fr,6,2450,,,grammalecte,MPL-2.0,gêner
@@ -98072,7 +98072,7 @@ harmonisè,fr,9,0,,,grammalecte,MPL-2.0,harmoniser
 harts,fr,5,7949,,,grammalecte,MPL-2.0,hart
 harzburgite,fr,11,1546,,,grammalecte,MPL-2.0,harzburgite
 hasarderas,fr,10,0,,Tenteras,grammalecte,MPL-2.0,hasarder
-hasardè,fr,7,0,,Tentent,grammalecte,MPL-2.0,hasarder
+hasardè,fr,7,0,,,grammalecte,MPL-2.0,hasarder
 hausseras,fr,9,49,,Augmenteras,grammalecte,MPL-2.0,hausser
 haussiez,fr,8,251,,Augmentiez,grammalecte,MPL-2.0,hausser
 haussè,fr,6,0,,Augmente,grammalecte,MPL-2.0,hausser
@@ -98141,7 +98141,7 @@ herpétologies,fr,13,0,,,grammalecte,MPL-2.0,herpétologie
 herpétologiques,fr,15,653,,,grammalecte,MPL-2.0,herpétologique
 herpétologistes,fr,15,408,,,grammalecte,MPL-2.0,herpétologiste
 heuristique,fr,11,97869,,Approche approximative,grammalecte,MPL-2.0,heuristique
-heurtè,fr,6,0,,Entrent en collision,grammalecte,MPL-2.0,heurter
+heurtè,fr,6,0,,,grammalecte,MPL-2.0,heurter
 hexachlorures,fr,13,170,,,grammalecte,MPL-2.0,hexachlorure
 hexadécimal,fr,11,4877,,,grammalecte,MPL-2.0,hexadécimal
 hexadécimales,fr,13,461,,,grammalecte,MPL-2.0,hexadécimal
@@ -98811,7 +98811,7 @@ idéologisés,fr,11,1429,,,grammalecte,MPL-2.0,idéologiser
 ignifugations,fr,13,0,,,grammalecte,MPL-2.0,ignifugation
 ignipunctures,fr,13,199,,,grammalecte,MPL-2.0,ignipuncture
 ignominieux,fr,11,52318,,,grammalecte,MPL-2.0,ignominieux
-ignorè,fr,6,0,,Font abstraction,grammalecte,MPL-2.0,ignorer
+ignorè,fr,6,0,,,grammalecte,MPL-2.0,ignorer
 illimitations,fr,13,99,,,grammalecte,MPL-2.0,illimitation
 illisibilités,fr,13,106,,,grammalecte,MPL-2.0,illisibilité
 illuminais,fr,10,179,,,grammalecte,MPL-2.0,illuminer
@@ -98901,7 +98901,7 @@ imbriqué,fr,8,28212,,,grammalecte,MPL-2.0,imbriquer
 imbriquée,fr,9,34140,,,grammalecte,MPL-2.0,imbriquer
 imbriquées,fr,10,127782,,,grammalecte,MPL-2.0,imbriquer
 imbriqués,fr,9,97019,,,grammalecte,MPL-2.0,imbriquer
-imitè,fr,5,0,,Copient,grammalecte,MPL-2.0,imiter
+imitè,fr,5,0,,,grammalecte,MPL-2.0,imiter
 immanentismes,fr,13,94,,,grammalecte,MPL-2.0,immanentisme
 immangeable,fr,11,12178,,,grammalecte,MPL-2.0,immangeable
 immanquable,fr,11,48043,,,grammalecte,MPL-2.0,immanquable
@@ -99396,7 +99396,7 @@ inciterai,fr,9,145,,Pousserai à agir,grammalecte,MPL-2.0,inciter
 inciterais,fr,10,5,,Pousserais à agir,grammalecte,MPL-2.0,inciter
 inciteras,fr,9,2,,Pousseras à agir,grammalecte,MPL-2.0,inciter
 incitiez,fr,8,182,,Poussiez à agir,grammalecte,MPL-2.0,inciter
-incitè,fr,6,0,,Poussent à agir,grammalecte,MPL-2.0,inciter
+incitè,fr,6,0,,,grammalecte,MPL-2.0,inciter
 inclassable,fr,11,36454,,,grammalecte,MPL-2.0,inclassable
 inclinè,fr,7,0,,,grammalecte,MPL-2.0,incliner
 incluais,fr,8,361,,,grammalecte,MPL-2.0,inclure
@@ -99456,7 +99456,7 @@ incorporeras,fr,12,1,,Intègreras,grammalecte,MPL-2.0,incorporer
 incorporerez,fr,12,908,,Intégrerez,grammalecte,MPL-2.0,incorporer
 incorporerons,fr,13,559,,Intégrerons,grammalecte,MPL-2.0,incorporer
 incorporions,fr,12,498,,Intégrions,grammalecte,MPL-2.0,incorporer
-incorporè,fr,9,0,,Intègrent,grammalecte,MPL-2.0,incorporer
+incorporè,fr,9,0,,,grammalecte,MPL-2.0,incorporer
 incorporéités,fr,13,0,,,grammalecte,MPL-2.0,incorporéité
 incriminerai,fr,12,129,,Accuserai,grammalecte,MPL-2.0,incriminer
 incrimineraient,fr,15,223,,Accuseraient,grammalecte,MPL-2.0,incriminer
@@ -99542,7 +99542,7 @@ indignions,fr,10,408,,,grammalecte,MPL-2.0,indigner
 indignons,fr,9,2338,,,grammalecte,MPL-2.0,indigner
 indignè,fr,7,8,,,grammalecte,MPL-2.0,indigner
 indigéniste,fr,11,20126,,,grammalecte,MPL-2.0,indigéniste
-indiquè,fr,7,107,,Montrent,grammalecte,MPL-2.0,indiquer
+indiquè,fr,7,107,,,grammalecte,MPL-2.0,indiquer
 indisposais,fr,11,1,,,grammalecte,MPL-2.0,indisposer
 indisposait,fr,11,11862,,,grammalecte,MPL-2.0,indisposer
 indisposant,fr,11,3625,,,grammalecte,MPL-2.0,indisposer
@@ -99719,11 +99719,11 @@ infirmative,fr,11,862,,,grammalecte,MPL-2.0,infirmatif
 infirmerai,fr,10,2,,Contredirai,grammalecte,MPL-2.0,infirmer
 infirmeras,fr,10,1,,Contrediras,grammalecte,MPL-2.0,infirmer
 infirmez,fr,8,300,,Contredisez,grammalecte,MPL-2.0,infirmer
-infirmè,fr,7,0,,Contredisent,grammalecte,MPL-2.0,infirmer
+infirmè,fr,7,0,,,grammalecte,MPL-2.0,infirmer
 inflammabilités,fr,15,0,,,grammalecte,MPL-2.0,inflammabilité
 inflationnaires,fr,15,623,,,grammalecte,MPL-2.0,inflationnaire
 inflexibilités,fr,14,468,,,grammalecte,MPL-2.0,inflexibilité
-infligè,fr,7,0,,Causent,grammalecte,MPL-2.0,infliger
+infligè,fr,7,0,,,grammalecte,MPL-2.0,infliger
 influais,fr,8,60,,Agissais sur,grammalecte,MPL-2.0,influer
 influencerai,fr,12,41,,,grammalecte,MPL-2.0,influencer
 influencerais,fr,13,1,,,grammalecte,MPL-2.0,influencer
@@ -99982,7 +99982,7 @@ insensibilisè,fr,13,0,,,grammalecte,MPL-2.0,insensibiliser
 insensibilisées,fr,15,536,,,grammalecte,MPL-2.0,insensibiliser
 insinueraient,fr,13,816,,Laisseraient entendre,grammalecte,MPL-2.0,insinuer
 insinueras,fr,10,0,,Laisseras entendre,grammalecte,MPL-2.0,insinuer
-insinuè,fr,7,0,,Laissent entendre,grammalecte,MPL-2.0,insinuer
+insinuè,fr,7,0,,,grammalecte,MPL-2.0,insinuer
 insistè,fr,7,159,,,grammalecte,MPL-2.0,insister
 insociabilités,fr,14,0,,,grammalecte,MPL-2.0,insociabilité
 insolubilisais,fr,14,0,,,grammalecte,MPL-2.0,insolubiliser
@@ -100040,7 +100040,7 @@ inspectè,fr,8,0,,,grammalecte,MPL-2.0,inspecter
 inspirè,fr,7,1,,,grammalecte,MPL-2.0,inspirer
 installatrice,fr,13,255,,,grammalecte,MPL-2.0,installateur
 installatrices,fr,14,3,,,grammalecte,MPL-2.0,installateur
-installè,fr,8,72,,Posent,grammalecte,MPL-2.0,installer
+installè,fr,8,72,,,grammalecte,MPL-2.0,installer
 instantané,fr,10,400690,,,grammalecte,MPL-2.0,instantané
 instantanée,fr,11,538399,,,grammalecte,MPL-2.0,instantané
 instantanéistes,fr,15,149,,,grammalecte,MPL-2.0,instantanéiste
@@ -100102,7 +100102,7 @@ insufflées,fr,10,2815,,,grammalecte,MPL-2.0,insuffler
 insufflés,fr,9,5151,,,grammalecte,MPL-2.0,insuffler
 insulinique,fr,11,17270,,,grammalecte,MPL-2.0,insulinique
 insulteras,fr,10,47,,Blâmeras,grammalecte,MPL-2.0,insulter
-insultè,fr,7,0,,Blâment,grammalecte,MPL-2.0,insulter
+insultè,fr,7,0,,,grammalecte,MPL-2.0,insulter
 insupportaient,fr,14,178,,,grammalecte,MPL-2.0,insupporter
 insupportais,fr,12,0,,,grammalecte,MPL-2.0,insupporter
 insupportait,fr,12,948,,,grammalecte,MPL-2.0,insupporter
@@ -100189,7 +100189,7 @@ inséminatrices,fr,14,1,,,grammalecte,MPL-2.0,inséminateur
 inséparabilités,fr,15,0,,,grammalecte,MPL-2.0,inséparabilité
 inséparable,fr,11,909928,,,grammalecte,MPL-2.0,inséparable
 inséreras,fr,9,0,,Placeras,grammalecte,MPL-2.0,insérer
-insérè,fr,6,0,,Placent,grammalecte,MPL-2.0,insérer
+insérè,fr,6,0,,,grammalecte,MPL-2.0,insérer
 intangibilités,fr,14,0,,,grammalecte,MPL-2.0,intangibilité
 intellectualisè,fr,15,0,,,grammalecte,MPL-2.0,intellectualiser
 intelligent,fr,11,1789465,,,grammalecte,MPL-2.0,intelligent
@@ -100527,7 +100527,7 @@ interprétantes,fr,14,625,,,grammalecte,MPL-2.0,interprétant
 interprétariats,fr,15,0,,,grammalecte,MPL-2.0,interprétariat
 interprétatrice,fr,15,993,,,grammalecte,MPL-2.0,interprétateur
 interpréteras,fr,13,57,,Joueras un rôle,grammalecte,MPL-2.0,interpréter
-interprétè,fr,10,2,,Jouent un rôle,grammalecte,MPL-2.0,interpréter
+interprétè,fr,10,2,,,grammalecte,MPL-2.0,interpréter
 interpénètre,fr,12,489,,,grammalecte,MPL-2.0,interpénétrer
 interpénètrera,fr,14,0,,,grammalecte,MPL-2.0,interpénétrer
 interpénètrerai,fr,15,0,,,grammalecte,MPL-2.0,interpénétrer
@@ -100637,7 +100637,7 @@ intimideras,fr,11,0,,Feras peur,grammalecte,MPL-2.0,intimider
 intimiderons,fr,12,105,,Ferons peur,grammalecte,MPL-2.0,intimider
 intimidiez,fr,10,0,,Faisiez peur,grammalecte,MPL-2.0,intimider
 intimidions,fr,11,0,,Faisions peur,grammalecte,MPL-2.0,intimider
-intimidè,fr,8,0,,Font peur,grammalecte,MPL-2.0,intimider
+intimidè,fr,8,0,,,grammalecte,MPL-2.0,intimider
 intitulais,fr,10,644,,,grammalecte,MPL-2.0,intituler
 intitulait,fr,10,96249,,,grammalecte,MPL-2.0,intituler
 intitulant,fr,10,33977,,,grammalecte,MPL-2.0,intituler
@@ -100873,7 +100873,7 @@ inventoriez,fr,11,410,,Dressez la liste,grammalecte,MPL-2.0,inventorier
 inventoriiez,fr,12,0,,Dressiez la liste,grammalecte,MPL-2.0,inventorier
 inventoriions,fr,13,0,,Dressions la liste,grammalecte,MPL-2.0,inventorier
 inventorions,fr,12,401,,Dressons la liste,grammalecte,MPL-2.0,inventorier
-inventoriè,fr,10,0,,Dressent la liste,grammalecte,MPL-2.0,inventorier
+inventoriè,fr,10,0,,,grammalecte,MPL-2.0,inventorier
 inventorié,fr,10,54310,,,grammalecte,MPL-2.0,inventorier
 inventoriée,fr,11,19233,,,grammalecte,MPL-2.0,inventorier
 inventoriés,fr,11,84730,,,grammalecte,MPL-2.0,inventorier
@@ -100938,7 +100938,7 @@ irritantes,fr,10,156085,,,grammalecte,MPL-2.0,irritant
 irritants,fr,9,122956,,,grammalecte,MPL-2.0,irritant
 irriteras,fr,9,169,,Agaceras,grammalecte,MPL-2.0,irriter
 irritiez,fr,8,272,,Agaciez,grammalecte,MPL-2.0,irriter
-irritè,fr,6,0,,Agacent,grammalecte,MPL-2.0,irriter
+irritè,fr,6,0,,,grammalecte,MPL-2.0,irriter
 irrécusable,fr,11,260918,,Incontestable,grammalecte,MPL-2.0,irrécusable
 irréfléchi,fr,10,114578,,,grammalecte,MPL-2.0,irréfléchi
 irréfléchie,fr,11,130074,,,grammalecte,MPL-2.0,irréfléchi
@@ -101139,7 +101139,7 @@ jurassienne,fr,11,68893,,,grammalecte,MPL-2.0,jurassien
 jurassiens,fr,10,31066,,,grammalecte,MPL-2.0,jurassien
 juridicisations,fr,15,0,,,grammalecte,MPL-2.0,juridicisation
 juron,fr,5,47856,,,grammalecte,MPL-2.0,juron
-jurè,fr,4,72,,Prêtent serment,grammalecte,MPL-2.0,jurer
+jurè,fr,4,72,,,grammalecte,MPL-2.0,jurer
 jusnaturalismes,fr,15,212,,,grammalecte,MPL-2.0,jusnaturalisme
 justiciabilités,fr,15,0,,,grammalecte,MPL-2.0,justiciabilité
 justiciable,fr,11,289436,,,grammalecte,MPL-2.0,justiciable
@@ -101608,7 +101608,7 @@ luthéranismes,fr,13,0,,,grammalecte,MPL-2.0,luthéranisme
 luthérien,fr,9,149245,,,grammalecte,MPL-2.0,luthérien
 luthérienne,fr,11,215940,,,grammalecte,MPL-2.0,luthérien
 luthériens,fr,10,248947,,,grammalecte,MPL-2.0,luthérien
-luttè,fr,5,1,,Combattent,grammalecte,MPL-2.0,lutter
+luttè,fr,5,1,,,grammalecte,MPL-2.0,lutter
 lutéinisations,fr,14,0,,,grammalecte,MPL-2.0,lutéinisation
 lycanthrope,fr,11,3715,,,grammalecte,MPL-2.0,lycanthrope
 lycanthropies,fr,13,160,,,grammalecte,MPL-2.0,lycanthropie
@@ -102189,7 +102189,7 @@ masquez,fr,7,3181,,Cachez,grammalecte,MPL-2.0,masquer
 masquiez,fr,8,50,,Cachiez,grammalecte,MPL-2.0,masquer
 masquions,fr,9,170,,Cachions,grammalecte,MPL-2.0,masquer
 masquons,fr,8,937,,Cachons,grammalecte,MPL-2.0,masquer
-masquè,fr,6,2,,Cachent,grammalecte,MPL-2.0,masquer
+masquè,fr,6,2,,,grammalecte,MPL-2.0,masquer
 masqué,fr,6,360768,,Caché,grammalecte,MPL-2.0,masquer
 masquée,fr,7,247992,,Cachée,grammalecte,MPL-2.0,masquer
 masquées,fr,8,110491,,Cachées,grammalecte,MPL-2.0,masquer
@@ -102375,7 +102375,7 @@ mentonniers,fr,11,4314,,,grammalecte,MPL-2.0,mentonnier
 mentonnière,fr,11,16055,,,grammalecte,MPL-2.0,mentonnier
 menue,fr,5,179469,,,grammalecte,MPL-2.0,menu
 menues,fr,6,311662,,,grammalecte,MPL-2.0,menu
-menè,fr,4,78,,Guident,grammalecte,MPL-2.0,mener
+menè,fr,4,78,,,grammalecte,MPL-2.0,mener
 mercantilismes,fr,14,374,,,grammalecte,MPL-2.0,mercantilisme
 merchandisings,fr,14,0,,,grammalecte,MPL-2.0,merchandising
 mercuriel,fr,9,143184,,,grammalecte,MPL-2.0,mercuriel
@@ -103836,7 +103836,7 @@ nauséabonds,fr,11,13746,,,grammalecte,MPL-2.0,nauséabond
 naviculaire,fr,11,30860,,,grammalecte,MPL-2.0,naviculaire
 navigabilités,fr,13,2,,,grammalecte,MPL-2.0,navigabilité
 navigatrices,fr,12,712,,,grammalecte,MPL-2.0,navigateur
-naviguè,fr,7,0,,Traversent,grammalecte,MPL-2.0,naviguer
+naviguè,fr,7,0,,,grammalecte,MPL-2.0,naviguer
 nazifications,fr,13,0,,,grammalecte,MPL-2.0,nazification
 nazismes,fr,8,280,,,grammalecte,MPL-2.0,nazisme
 naîtrai,fr,7,1242,,Viendrai au monde,grammalecte,MPL-2.0,naître
@@ -104057,7 +104057,7 @@ nuancerez,fr,9,0,,Modulerez,grammalecte,MPL-2.0,nuancer
 nuancez,fr,7,211,,Modulez,grammalecte,MPL-2.0,nuancer
 nuanciez,fr,8,0,,Moduliez,grammalecte,MPL-2.0,nuancer
 nuancions,fr,9,0,,Modulions,grammalecte,MPL-2.0,nuancer
-nuancè,fr,6,0,,Modulent,grammalecte,MPL-2.0,nuancer
+nuancè,fr,6,0,,,grammalecte,MPL-2.0,nuancer
 nuançais,fr,8,3,,Modulais,grammalecte,MPL-2.0,nuancer
 nuançons,fr,8,449,,Modulons,grammalecte,MPL-2.0,nuancer
 nucléarisations,fr,15,0,,,grammalecte,MPL-2.0,nucléarisation
@@ -104366,7 +104366,7 @@ occasionnerons,fr,14,119,,Causerons,grammalecte,MPL-2.0,occasionner
 occasionniez,fr,12,0,,Causiez,grammalecte,MPL-2.0,occasionner
 occasionnions,fr,13,0,,Causions,grammalecte,MPL-2.0,occasionner
 occasionnons,fr,12,184,,Causons,grammalecte,MPL-2.0,occasionner
-occasionnè,fr,10,0,,Causent,grammalecte,MPL-2.0,occasionner
+occasionnè,fr,10,0,,,grammalecte,MPL-2.0,occasionner
 occidentalisais,fr,15,0,,,grammalecte,MPL-2.0,occidentaliser
 occidentalisait,fr,15,149,,,grammalecte,MPL-2.0,occidentaliser
 occidentalisent,fr,15,738,,,grammalecte,MPL-2.0,occidentaliser
@@ -104672,7 +104672,7 @@ ordonnancés,fr,11,23203,,,grammalecte,MPL-2.0,ordonnancer
 ordonnançaient,fr,14,666,,,grammalecte,MPL-2.0,ordonnancer
 ordonnançais,fr,12,0,,,grammalecte,MPL-2.0,ordonnancer
 ordonnançons,fr,12,0,,,grammalecte,MPL-2.0,ordonnancer
-ordonnè,fr,7,73,,Classent,grammalecte,MPL-2.0,ordonner
+ordonnè,fr,7,73,,,grammalecte,MPL-2.0,ordonner
 ordos,fr,5,989,,,grammalecte,MPL-2.0,ordo
 ordovicien,fr,10,7860,,,grammalecte,MPL-2.0,ordovicien
 ordoviciens,fr,11,8243,,,grammalecte,MPL-2.0,ordovicien
@@ -104731,7 +104731,7 @@ ornions,fr,7,509,,Décorions,grammalecte,MPL-2.0,orner
 ornithologies,fr,13,3,,,grammalecte,MPL-2.0,ornithologie
 ornithoptères,fr,13,850,,,grammalecte,MPL-2.0,ornithoptère
 ornons,fr,6,1444,,Décorons,grammalecte,MPL-2.0,orner
-ornè,fr,4,2,,Décorent,grammalecte,MPL-2.0,orner
+ornè,fr,4,2,,,grammalecte,MPL-2.0,orner
 orphéoniste,fr,11,596,,,grammalecte,MPL-2.0,orphéoniste
 orra,fr,4,4997,,Écoutera attentivement,grammalecte,MPL-2.0,ouïr
 orrai,fr,5,974,,Écouterai attentivement,grammalecte,MPL-2.0,ouïr
@@ -105379,7 +105379,7 @@ passionnez,fr,10,2840,,Animez,grammalecte,MPL-2.0,passionner
 passionniez,fr,11,157,,Animiez,grammalecte,MPL-2.0,passionner
 passionnions,fr,12,542,,Animions,grammalecte,MPL-2.0,passionner
 passionnons,fr,11,1197,,Animons,grammalecte,MPL-2.0,passionner
-passionnè,fr,9,0,,Animent,grammalecte,MPL-2.0,passionner
+passionnè,fr,9,0,,,grammalecte,MPL-2.0,passionner
 passionné,fr,9,18810,,Animé,grammalecte,MPL-2.0,passionner
 passionnée,fr,10,18810,,Animée,grammalecte,MPL-2.0,passionner
 passionnées,fr,11,18810,,Animées,grammalecte,MPL-2.0,passionner
@@ -105808,7 +105808,7 @@ persécuterons,fr,13,275,,Harcèlerons,grammalecte,MPL-2.0,persécuter
 persécutif,fr,10,5020,,,grammalecte,MPL-2.0,persécutif
 persécutifs,fr,11,1745,,,grammalecte,MPL-2.0,persécutif
 persécutive,fr,11,6551,,,grammalecte,MPL-2.0,persécutif
-persécutè,fr,9,0,,Harcèlent,grammalecte,MPL-2.0,persécuter
+persécutè,fr,9,0,,,grammalecte,MPL-2.0,persécuter
 persévèrerai,fr,12,0,,,grammalecte,MPL-2.0,persévérer
 persévèreraient,fr,15,48,,,grammalecte,MPL-2.0,persévérer
 persévèrerais,fr,13,0,,,grammalecte,MPL-2.0,persévérer
@@ -105876,7 +105876,7 @@ petawattheures,fr,14,0,,,grammalecte,MPL-2.0,wattheure
 petawatts,fr,9,0,,Unités de puissance,grammalecte,MPL-2.0,watt
 peupleras,fr,9,56,,Habiteras,grammalecte,MPL-2.0,peupler
 peupliez,fr,8,60,,Habitiez,grammalecte,MPL-2.0,peupler
-peuplè,fr,6,157,,Habitent,grammalecte,MPL-2.0,peupler
+peuplè,fr,6,157,,,grammalecte,MPL-2.0,peupler
 phagocytoses,fr,12,617,,,grammalecte,MPL-2.0,phagocytose
 phagédénismes,fr,13,528,,,grammalecte,MPL-2.0,phagédénisme
 phalangette,fr,11,25032,,,grammalecte,MPL-2.0,phalangette
@@ -106688,7 +106688,7 @@ portraiturons,fr,13,0,,,grammalecte,MPL-2.0,portraiturer
 portraiturè,fr,11,0,,,grammalecte,MPL-2.0,portraiturer
 portraituré,fr,11,8003,,,grammalecte,MPL-2.0,portraiturer
 portraiturées,fr,13,721,,,grammalecte,MPL-2.0,portraiturer
-portè,fr,5,822,,Conduisent,grammalecte,MPL-2.0,porter
+portè,fr,5,822,,,grammalecte,MPL-2.0,porter
 positionnais,fr,12,191,,Plaçais,grammalecte,MPL-2.0,positionner
 positionnel,fr,11,11907,,,grammalecte,MPL-2.0,positionnel
 positionnerai,fr,13,5,,Placerai,grammalecte,MPL-2.0,positionner
@@ -106702,7 +106702,7 @@ positionneurs,fr,13,870,,,grammalecte,MPL-2.0,positionneur
 positionniez,fr,12,0,,Placiez,grammalecte,MPL-2.0,positionner
 positionnions,fr,13,41,,Placions,grammalecte,MPL-2.0,positionner
 positionnons,fr,12,575,,Plaçons,grammalecte,MPL-2.0,positionner
-positionnè,fr,10,0,,Placent,grammalecte,MPL-2.0,positionner
+positionnè,fr,10,0,,,grammalecte,MPL-2.0,positionner
 posologique,fr,11,5499,,,grammalecte,MPL-2.0,posologique
 possesseuses,fr,12,0,,Détentrices,grammalecte,MPL-2.0,possesseur
 possessivités,fr,13,0,,,grammalecte,MPL-2.0,possessivité
@@ -106747,7 +106747,7 @@ postulation,fr,11,49293,,,grammalecte,MPL-2.0,postulation
 postulatrice,fr,12,3,,,grammalecte,MPL-2.0,postulateur
 postulatrices,fr,13,0,,,grammalecte,MPL-2.0,postulateur
 postériorités,fr,13,265,,,grammalecte,MPL-2.0,postériorité
-posè,fr,4,97,,Placent,grammalecte,MPL-2.0,poser
+posè,fr,4,97,,,grammalecte,MPL-2.0,poser
 potabilisations,fr,15,0,,,grammalecte,MPL-2.0,potabilisation
 potamochère,fr,11,1819,,,grammalecte,MPL-2.0,potamochère
 potentialisais,fr,14,0,,,grammalecte,MPL-2.0,potentialiser
@@ -106846,7 +106846,7 @@ pourvoyeuse,fr,11,45147,,,grammalecte,MPL-2.0,pourvoyeur
 poussas,fr,7,467,,Exerças une force,grammalecte,MPL-2.0,poussa
 poussepousses,fr,13,92,,,grammalecte,MPL-2.0,poussepousse
 poussiéreux,fr,11,110015,,,grammalecte,MPL-2.0,poussiéreux
-poussè,fr,6,98,,Exercent une force,grammalecte,MPL-2.0,pousser
+poussè,fr,6,98,,,grammalecte,MPL-2.0,pousser
 pouvoirs,fr,8,12678927,,Êtres capables,grammalecte,MPL-2.0,pouvoir
 poux,fr,4,243841,,,grammalecte,MPL-2.0,pou
 poïkilocytoses,fr,14,0,,,grammalecte,MPL-2.0,poïkilocytose
@@ -107066,7 +107066,7 @@ profilées,fr,9,19845,,,grammalecte,MPL-2.0,profiler
 profilés,fr,8,19449,,,grammalecte,MPL-2.0,profiler
 profitabilités,fr,14,268,,,grammalecte,MPL-2.0,profitabilité
 profiterole,fr,11,161,,,grammalecte,MPL-2.0,profiterole
-profitè,fr,7,58,,Tirent avantage,grammalecte,MPL-2.0,profiter
+profitè,fr,7,58,,,grammalecte,MPL-2.0,profiter
 profès,fr,6,68941,,,grammalecte,MPL-2.0,profès
 profération,fr,11,21149,,,grammalecte,MPL-2.0,profération
 progestatif,fr,11,9130,,,grammalecte,MPL-2.0,progestatif
@@ -107109,7 +107109,7 @@ progressè,fr,9,0,,,grammalecte,MPL-2.0,progresser
 progéniteur,fr,11,7029,,,grammalecte,MPL-2.0,progéniteur
 progénitrice,fr,12,379,,,grammalecte,MPL-2.0,progéniteur
 projetterais,fr,12,240,,Lancerais vers l'avant,grammalecte,MPL-2.0,projeter
-projetè,fr,7,1,,Lancent vers l'avant,grammalecte,MPL-2.0,projeter
+projetè,fr,7,1,,,grammalecte,MPL-2.0,projeter
 proleptique,fr,11,6251,,,grammalecte,MPL-2.0,proleptique
 prolifère,fr,9,26344,,,grammalecte,MPL-2.0,proliférer
 prolifèrent,fr,11,81336,,,grammalecte,MPL-2.0,proliférer
@@ -107164,7 +107164,7 @@ prolétarisions,fr,14,0,,,grammalecte,MPL-2.0,prolétariser
 prolétarisons,fr,13,0,,,grammalecte,MPL-2.0,prolétariser
 prolétarisè,fr,11,0,,,grammalecte,MPL-2.0,prolétariser
 prolétarisé,fr,11,4485,,,grammalecte,MPL-2.0,prolétariser
-promenè,fr,7,0,,Conduisent,grammalecte,MPL-2.0,promener
+promenè,fr,7,0,,,grammalecte,MPL-2.0,promener
 promeus,fr,7,601,,,grammalecte,MPL-2.0,promouvoir
 promeuves,fr,9,168,,,grammalecte,MPL-2.0,promouvoir
 promiscuité,fr,11,260318,,,grammalecte,MPL-2.0,promiscuité
@@ -107956,7 +107956,7 @@ présentatif,fr,11,18237,,,grammalecte,MPL-2.0,présentatif
 présentiel,fr,10,6232,,,grammalecte,MPL-2.0,présentiel
 présentielles,fr,13,407,,,grammalecte,MPL-2.0,présentiel
 présentiels,fr,11,487,,,grammalecte,MPL-2.0,présentiel
-présentè,fr,8,379,,Étalent,grammalecte,MPL-2.0,présenter
+présentè,fr,8,379,,,grammalecte,MPL-2.0,présenter
 présentéismes,fr,13,0,,,grammalecte,MPL-2.0,présentéisme
 préserverais,fr,12,202,,,grammalecte,MPL-2.0,préserver
 préservè,fr,8,0,,,grammalecte,MPL-2.0,préserver
@@ -108222,7 +108222,7 @@ pugilistiques,fr,13,889,,,grammalecte,MPL-2.0,pugilistique
 puiez,fr,5,136,,Jeune,grammalecte,MPL-2.0,puer
 puions,fr,6,368,,Jeune,grammalecte,MPL-2.0,puer
 puissè,fr,6,1426,,Autorité,grammalecte,MPL-2.0,pouvoir
-puisè,fr,5,0,,Tirent,grammalecte,MPL-2.0,puiser
+puisè,fr,5,0,,,grammalecte,MPL-2.0,puiser
 pullulaient,fr,11,42739,,,grammalecte,MPL-2.0,pulluler
 pullulais,fr,9,0,,,grammalecte,MPL-2.0,pulluler
 pullulait,fr,9,8309,,,grammalecte,MPL-2.0,pulluler
@@ -108340,7 +108340,7 @@ pècheront,fr,9,111,,Fauteront,grammalecte,MPL-2.0,pécher
 pèserais,fr,8,454,,,grammalecte,MPL-2.0,peser
 pèseras,fr,7,463,,,grammalecte,MPL-2.0,peser
 pèses,fr,5,3244,,,grammalecte,MPL-2.0,peser
-péchè,fr,5,4,,Fautent,grammalecte,MPL-2.0,pécher
+péchè,fr,5,4,,,grammalecte,MPL-2.0,pécher
 pédagogiste,fr,11,1474,,,grammalecte,MPL-2.0,pédagogiste
 pédantesque,fr,11,68816,,,grammalecte,MPL-2.0,pédantesque
 pédiatrique,fr,11,38476,,,grammalecte,MPL-2.0,pédiatrique
@@ -108550,7 +108550,7 @@ pêchers,fr,7,94395,,,grammalecte,MPL-2.0,pêcher
 pêchez,fr,6,1217,,Fautez,grammalecte,MPL-2.0,pêcher
 pêchiez,fr,7,124,,Fautiez,grammalecte,MPL-2.0,pêcher
 pêchons,fr,7,364,,Fautons,grammalecte,MPL-2.0,pêcher
-pêchè,fr,5,122,,Fautent,grammalecte,MPL-2.0,pêcher
+pêchè,fr,5,122,,,grammalecte,MPL-2.0,pêcher
 pœcilitique,fr,11,1494,,,grammalecte,MPL-2.0,pœcilitique
 quadragésimaux,fr,14,128,,,grammalecte,MPL-2.0,quadragésimal
 quadricycle,fr,11,1834,,,grammalecte,MPL-2.0,quadricycle
@@ -109393,7 +109393,7 @@ rattrapé,fr,8,98784,,,grammalecte,MPL-2.0,rattraper
 rattrapée,fr,9,23641,,,grammalecte,MPL-2.0,rattraper
 rattrapées,fr,10,6193,,,grammalecte,MPL-2.0,rattraper
 rattrapés,fr,9,23599,,,grammalecte,MPL-2.0,rattraper
-ratè,fr,4,5,,Manquent,grammalecte,MPL-2.0,rater
+ratè,fr,4,5,,,grammalecte,MPL-2.0,rater
 ravageaient,fr,11,56651,,,grammalecte,MPL-2.0,ravager
 ravageais,fr,9,297,,,grammalecte,MPL-2.0,ravager
 ravageait,fr,9,56619,,,grammalecte,MPL-2.0,ravager
@@ -109719,7 +109719,7 @@ recomposerons,fr,13,273,,Réarrangerons,grammalecte,MPL-2.0,recomposer
 recomposeront,fr,13,960,,Réarrangeront,grammalecte,MPL-2.0,recomposer
 recomposiez,fr,11,0,,Réarrangiez,grammalecte,MPL-2.0,recomposer
 recomposions,fr,12,138,,Réarrangions,grammalecte,MPL-2.0,recomposer
-recomposè,fr,9,0,,Réarrangent,grammalecte,MPL-2.0,recomposer
+recomposè,fr,9,0,,,grammalecte,MPL-2.0,recomposer
 recompressions,fr,14,229,,,grammalecte,MPL-2.0,recompression
 reconcentraient,fr,15,0,,,grammalecte,MPL-2.0,reconcentrer
 reconcentrais,fr,13,0,,,grammalecte,MPL-2.0,reconcentrer
@@ -110418,7 +110418,7 @@ rehaussais,fr,10,46,,Élevais,grammalecte,MPL-2.0,rehausser
 rehausserais,fr,12,112,,Élèverais,grammalecte,MPL-2.0,rehausser
 rehausserons,fr,12,46,,Élèverons,grammalecte,MPL-2.0,rehausser
 rehaussiez,fr,10,0,,Éleviez,grammalecte,MPL-2.0,rehausser
-rehaussè,fr,8,0,,Élèvent,grammalecte,MPL-2.0,rehausser
+rehaussè,fr,8,0,,,grammalecte,MPL-2.0,rehausser
 rejailli,fr,8,22651,,,grammalecte,MPL-2.0,rejaillir
 rejaillir,fr,9,101036,,,grammalecte,MPL-2.0,rejaillir
 rejaillira,fr,10,16061,,,grammalecte,MPL-2.0,rejaillir
@@ -110708,7 +110708,7 @@ remportè,fr,8,0,,,grammalecte,MPL-2.0,remporter
 remueras,fr,8,374,,Agiteras,grammalecte,MPL-2.0,remuer
 remuiez,fr,7,111,,Agitiez,grammalecte,MPL-2.0,remuer
 remuions,fr,8,398,,Agitions,grammalecte,MPL-2.0,remuer
-remuè,fr,5,0,,Agitent,grammalecte,MPL-2.0,remuer
+remuè,fr,5,0,,,grammalecte,MPL-2.0,remuer
 remédiais,fr,9,210,,Apportais une solution,grammalecte,MPL-2.0,remédier
 remédiation,fr,11,19406,,,grammalecte,MPL-2.0,remédiation
 remédieras,fr,10,1,,Apporteras une solution,grammalecte,MPL-2.0,remédier
@@ -110896,7 +110896,7 @@ renumérotations,fr,15,9,,,grammalecte,MPL-2.0,renumérotation
 renversable,fr,11,4317,,,grammalecte,MPL-2.0,renversable
 renversante,fr,11,12707,,,grammalecte,MPL-2.0,renversant
 renversants,fr,11,1873,,,grammalecte,MPL-2.0,renversant
-renversè,fr,8,0,,Changent de direction,grammalecte,MPL-2.0,renverser
+renversè,fr,8,0,,,grammalecte,MPL-2.0,renverser
 rené,fr,4,18375,,Revécu,grammalecte,MPL-2.0,renaître
 renée,fr,5,8819,,Revécue,grammalecte,MPL-2.0,renaître
 renées,fr,6,7487,,Revécues,grammalecte,MPL-2.0,renaître
@@ -112574,7 +112574,7 @@ récuseras,fr,9,98,,,grammalecte,MPL-2.0,récuser
 récuses,fr,7,850,,,grammalecte,MPL-2.0,récuser
 récusiez,fr,8,288,,,grammalecte,MPL-2.0,récuser
 récusè,fr,6,2,,,grammalecte,MPL-2.0,récuser
-rédigè,fr,6,0,,Écrivent,grammalecte,MPL-2.0,rédiger
+rédigè,fr,6,0,,,grammalecte,MPL-2.0,rédiger
 rédintégrations,fr,15,184,,,grammalecte,MPL-2.0,rédintégration
 réductibilités,fr,14,0,,,grammalecte,MPL-2.0,réductibilité
 réduira,fr,7,204895,,,grammalecte,MPL-2.0,réduire
@@ -112793,7 +112793,7 @@ réfutabilités,fr,13,0,,,grammalecte,MPL-2.0,réfutabilité
 réfuteras,fr,9,45,,Contrediras,grammalecte,MPL-2.0,réfuter
 réfutes,fr,7,662,,Contredis,grammalecte,MPL-2.0,réfuter
 réfutiez,fr,8,308,,Contredisiez,grammalecte,MPL-2.0,réfuter
-réfutè,fr,6,0,,Contredisent,grammalecte,MPL-2.0,réfuter
+réfutè,fr,6,0,,,grammalecte,MPL-2.0,réfuter
 réfèreraient,fr,12,164,,Orienteraient,grammalecte,MPL-2.0,référer
 réfèrerais,fr,10,2,,Orienterais,grammalecte,MPL-2.0,référer
 réfèreras,fr,9,0,,Orienteras,grammalecte,MPL-2.0,référer
@@ -112843,9 +112843,9 @@ réglementerons,fr,14,1,,,grammalecte,MPL-2.0,réglementer
 réglementiez,fr,12,1,,Contrôliez et dirigiez,grammalecte,MPL-2.0,réglementer
 réglementions,fr,13,242,,Contrôlions et dirigions,grammalecte,MPL-2.0,réglementer
 réglementons,fr,12,332,,Contrôlons et dirigeons,grammalecte,MPL-2.0,réglementer
-réglementè,fr,10,0,,Contrôlent et dirige,grammalecte,MPL-2.0,réglementer
+réglementè,fr,10,0,,,grammalecte,MPL-2.0,réglementer
 réglè,fr,5,391,,Apporte une solution,grammalecte,MPL-2.0,régler
-régnè,fr,5,49,,Exercent son autorité,grammalecte,MPL-2.0,régner
+régnè,fr,5,49,,,grammalecte,MPL-2.0,régner
 régressais,fr,10,101,,,grammalecte,MPL-2.0,régresser
 régressait,fr,10,6039,,,grammalecte,MPL-2.0,régresser
 régressant,fr,10,10815,,,grammalecte,MPL-2.0,régresser
@@ -113046,7 +113046,7 @@ réinstalleront,fr,14,498,,Placeront à nouveau,grammalecte,MPL-2.0,réinstaller
 réinstalliez,fr,12,1,,Placiez à nouveau,grammalecte,MPL-2.0,réinstaller
 réinstallions,fr,13,0,,Placions à nouveau,grammalecte,MPL-2.0,réinstaller
 réinstallons,fr,12,194,,Plaçons à nouveau,grammalecte,MPL-2.0,réinstaller
-réinstallè,fr,10,0,,Placent à nouveau,grammalecte,MPL-2.0,réinstaller
+réinstallè,fr,10,0,,,grammalecte,MPL-2.0,réinstaller
 réinstauraient,fr,14,1,,,grammalecte,MPL-2.0,réinstaurer
 réinstaurais,fr,12,0,,,grammalecte,MPL-2.0,réinstaurer
 réinstaurait,fr,12,267,,,grammalecte,MPL-2.0,réinstaurer
@@ -113355,7 +113355,7 @@ réprimandé,fr,10,40529,,,grammalecte,MPL-2.0,réprimander
 réprimandée,fr,11,5933,,,grammalecte,MPL-2.0,réprimander
 réprimandés,fr,11,13036,,,grammalecte,MPL-2.0,réprimander
 réprimeras,fr,10,50,,Feras cesser,grammalecte,MPL-2.0,réprimer
-réprimè,fr,7,0,,Font cesser,grammalecte,MPL-2.0,réprimer
+réprimè,fr,7,0,,,grammalecte,MPL-2.0,réprimer
 réprobateur,fr,11,22489,,,grammalecte,MPL-2.0,réprobateur
 réprouvais,fr,10,1326,,,grammalecte,MPL-2.0,réprouver
 réprouvait,fr,10,42433,,,grammalecte,MPL-2.0,réprouver
@@ -113794,7 +113794,7 @@ rôdez,fr,5,328,,Errez,grammalecte,MPL-2.0,rôder
 rôdiez,fr,6,125,,Erriez,grammalecte,MPL-2.0,rôder
 rôdions,fr,7,578,,Errions,grammalecte,MPL-2.0,rôder
 rôdons,fr,6,353,,Errons,grammalecte,MPL-2.0,rôder
-rôdè,fr,4,0,,Errent,grammalecte,MPL-2.0,rôder
+rôdè,fr,4,0,,,grammalecte,MPL-2.0,rôder
 rôdé,fr,4,16049,,Erré,grammalecte,MPL-2.0,rôder
 rôtira,fr,6,945,,,grammalecte,MPL-2.0,rôtir
 rôtirai,fr,7,122,,,grammalecte,MPL-2.0,rôtir
@@ -114222,7 +114222,7 @@ seigneuriages,fr,13,231,,,grammalecte,MPL-2.0,seigneuriage
 seldjoukide,fr,11,9158,,,grammalecte,MPL-2.0,seldjoukide
 semais,fr,6,3253,,Diffusais,grammalecte,MPL-2.0,semer
 sembleras,fr,9,206,,Auras l'air,grammalecte,MPL-2.0,sembler
-semblè,fr,6,337,,Ont l'air,grammalecte,MPL-2.0,sembler
+semblè,fr,6,337,,,grammalecte,MPL-2.0,sembler
 semestriel,fr,10,80642,,,grammalecte,MPL-2.0,semestriel
 semestriels,fr,11,61931,,,grammalecte,MPL-2.0,semestriel
 semiez,fr,6,1009,,Diffusiez,grammalecte,MPL-2.0,semer
@@ -114403,7 +114403,7 @@ situationnismes,fr,15,0,,,grammalecte,MPL-2.0,situationnisme
 situeras,fr,8,0,,Placeras,grammalecte,MPL-2.0,situer
 situerez,fr,8,278,,Placerez,grammalecte,MPL-2.0,situer
 situiez,fr,7,431,,Placiez,grammalecte,MPL-2.0,situer
-situè,fr,5,2,,Placent,grammalecte,MPL-2.0,situer
+situè,fr,5,2,,,grammalecte,MPL-2.0,situer
 siègerai,fr,8,0,,Prendrai place,grammalecte,MPL-2.0,siéger
 siègerais,fr,9,0,,Prendrais place,grammalecte,MPL-2.0,siéger
 siègeras,fr,8,0,,Prendras place,grammalecte,MPL-2.0,siéger
@@ -114440,7 +114440,7 @@ soldez,fr,6,332,,Soudez,grammalecte,MPL-2.0,solder
 soldiez,fr,7,136,,Soudiez,grammalecte,MPL-2.0,solder
 soldions,fr,8,246,,Soudions,grammalecte,MPL-2.0,solder
 soldons,fr,7,549,,Soudons,grammalecte,MPL-2.0,solder
-soldè,fr,5,0,,Soudent,grammalecte,MPL-2.0,solder
+soldè,fr,5,0,,,grammalecte,MPL-2.0,solder
 solennisais,fr,11,0,,,grammalecte,MPL-2.0,solenniser
 solennisait,fr,11,2540,,,grammalecte,MPL-2.0,solenniser
 solennisant,fr,11,1554,,,grammalecte,MPL-2.0,solenniser
@@ -114513,7 +114513,7 @@ solidifiées,fr,11,20798,,,grammalecte,MPL-2.0,solidifier
 solidifiés,fr,10,17221,,,grammalecte,MPL-2.0,solidifier
 solifluxion,fr,11,25386,,,grammalecte,MPL-2.0,solifluxion
 solliciteras,fr,12,85,,Rechercheras,grammalecte,MPL-2.0,solliciter
-sollicitè,fr,9,80,,Recherchent,grammalecte,MPL-2.0,solliciter
+sollicitè,fr,9,80,,,grammalecte,MPL-2.0,solliciter
 sols,fr,4,5076620,,,grammalecte,MPL-2.0,sol
 solsticial,fr,10,6284,,,grammalecte,MPL-2.0,solsticial
 solsticiale,fr,11,5440,,,grammalecte,MPL-2.0,solsticial
@@ -114597,7 +114597,7 @@ sombreras,fr,9,162,,Plongeras,grammalecte,MPL-2.0,sombrer
 sombrerez,fr,9,178,,Plongerez,grammalecte,MPL-2.0,sombrer
 sombrez,fr,7,509,,Plongez,grammalecte,MPL-2.0,sombrer
 sombriez,fr,8,1,,Plongiez,grammalecte,MPL-2.0,sombrer
-sombrè,fr,6,0,,Plongent,grammalecte,MPL-2.0,sombrer
+sombrè,fr,6,0,,,grammalecte,MPL-2.0,sombrer
 sommeillais,fr,11,2654,,,grammalecte,MPL-2.0,sommeiller
 sommeillait,fr,11,50130,,,grammalecte,MPL-2.0,sommeiller
 sommeillant,fr,11,15715,,,grammalecte,MPL-2.0,sommeiller
@@ -114661,7 +114661,7 @@ soudez,fr,6,568,,Assemblez,grammalecte,MPL-2.0,souder
 soudiez,fr,7,1,,Assembliez,grammalecte,MPL-2.0,souder
 soudions,fr,8,65,,Assemblions,grammalecte,MPL-2.0,souder
 soudons,fr,7,600,,Assemblons,grammalecte,MPL-2.0,souder
-soudè,fr,5,0,,Assemblent,grammalecte,MPL-2.0,souder
+soudè,fr,5,0,,,grammalecte,MPL-2.0,souder
 soufflement,fr,11,3037,,,grammalecte,MPL-2.0,soufflement
 souffletaient,fr,13,990,,,grammalecte,MPL-2.0,souffleter
 souffletais,fr,11,3,,,grammalecte,MPL-2.0,souffleter
@@ -114752,7 +114752,7 @@ soupez,fr,6,1090,,,grammalecte,MPL-2.0,souper
 soupiez,fr,7,436,,,grammalecte,MPL-2.0,souper
 soupçonneras,fr,12,104,,Douteras,grammalecte,MPL-2.0,soupçonner
 soupçonnerons,fr,13,916,,Douterons,grammalecte,MPL-2.0,soupçonner
-soupçonnè,fr,9,0,,Doutent,grammalecte,MPL-2.0,soupçonner
+soupçonnè,fr,9,0,,,grammalecte,MPL-2.0,soupçonner
 soupè,fr,5,371,,,grammalecte,MPL-2.0,souper
 souquenille,fr,11,8275,,,grammalecte,MPL-2.0,souquenille
 sourcilier,fr,10,8745,,,grammalecte,MPL-2.0,sourcilier
@@ -114994,7 +114994,7 @@ stigmatisè,fr,10,0,,,grammalecte,MPL-2.0,stigmatiser
 stimulateur,fr,11,26864,,,grammalecte,MPL-2.0,stimulateur
 stimulerais,fr,11,0,,Pousserais,grammalecte,MPL-2.0,stimuler
 stimuleras,fr,10,0,,Pousseras,grammalecte,MPL-2.0,stimuler
-stimulè,fr,7,0,,Poussent,grammalecte,MPL-2.0,stimuler
+stimulè,fr,7,0,,,grammalecte,MPL-2.0,stimuler
 stipuleras,fr,10,1,,Imposeras,grammalecte,MPL-2.0,stipuler
 stipulè,fr,7,353,,Impose,grammalecte,MPL-2.0,stipuler
 stolonifère,fr,11,3223,,,grammalecte,MPL-2.0,stolonifère
@@ -115267,7 +115267,7 @@ subordonneras,fr,13,0,,Placeras sous autorité,grammalecte,MPL-2.0,subordonner
 subordonnerez,fr,13,301,,Placerez sous autorité,grammalecte,MPL-2.0,subordonner
 subordonnerons,fr,14,543,,Placerons sous autorité,grammalecte,MPL-2.0,subordonner
 subordonniez,fr,12,235,,Placiez sous autorité,grammalecte,MPL-2.0,subordonner
-subordonnè,fr,10,0,,Placent sous autorité,grammalecte,MPL-2.0,subordonner
+subordonnè,fr,10,0,,,grammalecte,MPL-2.0,subordonner
 subornation,fr,11,35666,,,grammalecte,MPL-2.0,subornation
 subrogatoires,fr,13,820,,,grammalecte,MPL-2.0,subrogatoire
 subrécargue,fr,11,22536,,,grammalecte,MPL-2.0,subrécargue
@@ -116205,7 +116205,7 @@ surveilles,fr,10,3457,,Contrôles,grammalecte,MPL-2.0,surveiller
 surveillez,fr,10,7314,,Contrôlez,grammalecte,MPL-2.0,surveiller
 surveilliez,fr,11,784,,Contrôliez,grammalecte,MPL-2.0,surveiller
 surveillons,fr,11,4993,,Contrôlons,grammalecte,MPL-2.0,surveiller
-surveillè,fr,9,0,,Contrôlent,grammalecte,MPL-2.0,surveiller
+surveillè,fr,9,0,,,grammalecte,MPL-2.0,surveiller
 surveillé,fr,9,301512,,Contrôlé,grammalecte,MPL-2.0,surveiller
 surveillée,fr,10,371843,,Contrôlée,grammalecte,MPL-2.0,surveiller
 surveillées,fr,11,130427,,Contrôlées,grammalecte,MPL-2.0,surveiller
@@ -116469,7 +116469,7 @@ ségrégatif,fr,10,7907,,,grammalecte,MPL-2.0,ségrégatif
 ségrégatifs,fr,11,4778,,,grammalecte,MPL-2.0,ségrégatif
 ségrégative,fr,11,9348,,,grammalecte,MPL-2.0,ségrégatif
 séjournerais,fr,12,438,,Resterais,grammalecte,MPL-2.0,séjourner
-séjournè,fr,8,0,,Restent,grammalecte,MPL-2.0,séjourner
+séjournè,fr,8,0,,,grammalecte,MPL-2.0,séjourner
 sélectionnables,fr,15,976,,,grammalecte,MPL-2.0,sélectionnable
 sélectionnais,fr,13,266,,,grammalecte,MPL-2.0,sélectionner
 sélectionne,fr,11,55273,,,grammalecte,MPL-2.0,sélectionner
@@ -117282,7 +117282,7 @@ tourmenteur,fr,11,7862,,,grammalecte,MPL-2.0,tourmenteur
 tourmenteuse,fr,12,555,,,grammalecte,MPL-2.0,tourmenteur
 tourmenteuses,fr,13,303,,,grammalecte,MPL-2.0,tourmenteur
 tourmentions,fr,12,448,,Harcelions,grammalecte,MPL-2.0,tourmenter
-tourmentè,fr,9,0,,Harcèlent,grammalecte,MPL-2.0,tourmenter
+tourmentè,fr,9,0,,,grammalecte,MPL-2.0,tourmenter
 tournaient,fr,10,266655,,Viraient,grammalecte,MPL-2.0,tourner
 tournais,fr,8,35162,,Virais,grammalecte,MPL-2.0,tourner
 tournait,fr,8,627051,,Virait,grammalecte,MPL-2.0,tourner
@@ -117444,7 +117444,7 @@ tranchefilé,fr,11,1,,,grammalecte,MPL-2.0,tranchefiler
 tranchefilée,fr,12,0,,,grammalecte,MPL-2.0,tranchefiler
 tranchefilées,fr,13,1,,,grammalecte,MPL-2.0,tranchefiler
 tranchefilés,fr,12,0,,,grammalecte,MPL-2.0,tranchefiler
-tranchè,fr,7,2,,Coupent,grammalecte,MPL-2.0,trancher
+tranchè,fr,7,2,,,grammalecte,MPL-2.0,trancher
 tranquillisais,fr,14,281,,,grammalecte,MPL-2.0,tranquilliser
 tranquilliserai,fr,15,216,,,grammalecte,MPL-2.0,tranquilliser
 tranquilliseras,fr,15,0,,,grammalecte,MPL-2.0,tranquilliser
@@ -117531,7 +117531,7 @@ transformes,fr,11,6101,,Changes,grammalecte,MPL-2.0,transformer
 transformez,fr,11,5869,,Changez,grammalecte,MPL-2.0,transformer
 transformiez,fr,12,902,,Changiez,grammalecte,MPL-2.0,transformer
 transformismes,fr,14,267,,,grammalecte,MPL-2.0,transformisme
-transformè,fr,10,2,,Changent,grammalecte,MPL-2.0,transformer
+transformè,fr,10,2,,,grammalecte,MPL-2.0,transformer
 transformé,fr,10,2014608,,Changé,grammalecte,MPL-2.0,transformer
 transformés,fr,11,851498,,Changés,grammalecte,MPL-2.0,transformer
 transfuseur,fr,11,3663,,,grammalecte,MPL-2.0,transfuseur
@@ -117777,7 +117777,7 @@ transplantè,fr,11,0,,,grammalecte,MPL-2.0,transplanter
 transplanté,fr,11,95997,,,grammalecte,MPL-2.0,transplanter
 transpolitiques,fr,15,237,,,grammalecte,MPL-2.0,transpolitique
 transporteras,fr,13,621,,Véhiculeras,grammalecte,MPL-2.0,transporter
-transportè,fr,10,55,,Véhiculent,grammalecte,MPL-2.0,transporter
+transportè,fr,10,55,,,grammalecte,MPL-2.0,transporter
 transposerai,fr,12,436,,,grammalecte,MPL-2.0,transposer
 transposeraient,fr,15,368,,,grammalecte,MPL-2.0,transposer
 transposerais,fr,13,135,,,grammalecte,MPL-2.0,transposer
@@ -118042,7 +118042,7 @@ triterpénique,fr,13,441,,,grammalecte,MPL-2.0,triterpénique
 trithérapie,fr,11,6247,,,grammalecte,MPL-2.0,trithérapie
 triturateur,fr,11,2055,,,grammalecte,MPL-2.0,triturateur
 trivialisations,fr,15,3,,,grammalecte,MPL-2.0,trivialisation
-triè,fr,4,0,,Classent,grammalecte,MPL-2.0,trier
+triè,fr,4,0,,,grammalecte,MPL-2.0,trier
 trombinoscopes,fr,14,144,,,grammalecte,MPL-2.0,trombinoscope
 trompè,fr,6,329,,,grammalecte,MPL-2.0,tromper
 tronconique,fr,11,42936,,,grammalecte,MPL-2.0,tronconique
@@ -118077,7 +118077,7 @@ trottinions,fr,11,1,,,grammalecte,MPL-2.0,trottiner
 trottinons,fr,10,72,,,grammalecte,MPL-2.0,trottiner
 trottinè,fr,8,0,,,grammalecte,MPL-2.0,trottiner
 trottiné,fr,8,674,,,grammalecte,MPL-2.0,trottiner
-troublè,fr,7,83,,Agitent,grammalecte,MPL-2.0,troubler
+troublè,fr,7,83,,,grammalecte,MPL-2.0,troubler
 trouvè,fr,6,1591,,Découvre,grammalecte,MPL-2.0,trouver
 trufficultures,fr,14,0,,,grammalecte,MPL-2.0,trufficulture
 trypanosome,fr,11,26415,,,grammalecte,MPL-2.0,trypanosome
@@ -118563,7 +118563,7 @@ urinez,fr,6,214,,Faites pipi,grammalecte,MPL-2.0,uriner
 uriniez,fr,7,0,,Faisiez pipi,grammalecte,MPL-2.0,uriner
 urinions,fr,8,45,,Faisions pipi,grammalecte,MPL-2.0,uriner
 urinons,fr,7,103,,Faisons pipi,grammalecte,MPL-2.0,uriner
-urinè,fr,5,0,,Font pipi,grammalecte,MPL-2.0,uriner
+urinè,fr,5,0,,,grammalecte,MPL-2.0,uriner
 urinée,fr,6,1837,,Faite pipi,grammalecte,MPL-2.0,uriner
 urinées,fr,7,573,,Faites pipi,grammalecte,MPL-2.0,uriner
 urinés,fr,6,632,,Faits pipi,grammalecte,MPL-2.0,uriner
@@ -118717,7 +118717,7 @@ variez,fr,6,2900,,Changez,grammalecte,MPL-2.0,varier
 variiez,fr,7,0,,Changiez,grammalecte,MPL-2.0,varier
 variions,fr,8,191,,Changions,grammalecte,MPL-2.0,varier
 variolisations,fr,14,142,,,grammalecte,MPL-2.0,variolisation
-variè,fr,5,710,,Changent,grammalecte,MPL-2.0,varier
+variè,fr,5,710,,,grammalecte,MPL-2.0,varier
 varsovien,fr,9,4808,,,grammalecte,MPL-2.0,varsovien
 varsovienne,fr,11,5094,,,grammalecte,MPL-2.0,varsovien
 varsoviens,fr,10,2667,,,grammalecte,MPL-2.0,varsovien
@@ -119083,7 +119083,7 @@ virtualisé,fr,10,2572,,,grammalecte,MPL-2.0,virtualiser
 virtualisée,fr,11,1150,,,grammalecte,MPL-2.0,virtualiser
 virtualisées,fr,12,541,,,grammalecte,MPL-2.0,virtualiser
 virtualisés,fr,11,782,,,grammalecte,MPL-2.0,virtualiser
-virè,fr,4,0,,Changent de direction,grammalecte,MPL-2.0,virer
+virè,fr,4,0,,,grammalecte,MPL-2.0,virer
 viscoréductions,fr,15,0,,,grammalecte,MPL-2.0,viscoréduction
 viscéralgie,fr,11,483,,,grammalecte,MPL-2.0,viscéralgie
 viserais,fr,8,365,,Pointerais,grammalecte,MPL-2.0,viser
@@ -119441,7 +119441,7 @@ véliplanchiste,fr,14,897,,,grammalecte,MPL-2.0,véliplanchiste
 vélocimétries,fr,13,0,,,grammalecte,MPL-2.0,vélocimétrie
 vénéréologies,fr,13,0,,,grammalecte,MPL-2.0,vénéréologie
 vérifiabilités,fr,14,3,,,grammalecte,MPL-2.0,vérifiabilité
-vérifiè,fr,7,0,,Contrôlent,grammalecte,MPL-2.0,vérifier
+vérifiè,fr,7,0,,,grammalecte,MPL-2.0,vérifier
 vérisimilitudes,fr,15,155,,,grammalecte,MPL-2.0,vérisimilitude
 vésicatoire,fr,11,147370,,,grammalecte,MPL-2.0,vésicatoire
 vésiculaire,fr,11,137278,,,grammalecte,MPL-2.0,vésiculaire
@@ -119966,7 +119966,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 écouliez,fr,8,156,,Faisiez passer,grammalecte,MPL-2.0,écouler
 écoulions,fr,9,706,,Faisions passer,grammalecte,MPL-2.0,écouler
 écoulons,fr,8,1468,,Faisons passer,grammalecte,MPL-2.0,écouler
-écoulè,fr,6,319,,Font passer,grammalecte,MPL-2.0,écouler
+écoulè,fr,6,319,,,grammalecte,MPL-2.0,écouler
 écoulé,fr,6,931015,,Fait passer,grammalecte,MPL-2.0,écouler
 écoulée,fr,7,539263,,Faite passer,grammalecte,MPL-2.0,écouler
 écoulées,fr,8,432441,,Faites passer,grammalecte,MPL-2.0,écouler
@@ -120058,7 +120058,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 écrasiez,fr,8,791,,Piliez,grammalecte,MPL-2.0,écraser
 écrasions,fr,9,1489,,Pilions,grammalecte,MPL-2.0,écraser
 écrasons,fr,8,3409,,Pilons,grammalecte,MPL-2.0,écraser
-écrasè,fr,6,0,,Pilent,grammalecte,MPL-2.0,écraser
+écrasè,fr,6,0,,,grammalecte,MPL-2.0,écraser
 écrasé,fr,6,630134,,Pilé,grammalecte,MPL-2.0,écraser
 écrasée,fr,7,332974,,Pilée,grammalecte,MPL-2.0,écraser
 écrasées,fr,8,163618,,Pilées,grammalecte,MPL-2.0,écraser
@@ -120114,7 +120114,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 édifiiez,fr,8,223,,Éleviez,grammalecte,MPL-2.0,édifier
 édifiions,fr,9,243,,Élevions,grammalecte,MPL-2.0,édifier
 édifions,fr,8,3399,,Élevons,grammalecte,MPL-2.0,édifier
-édifiè,fr,6,0,,Élèvent,grammalecte,MPL-2.0,édifier
+édifiè,fr,6,0,,,grammalecte,MPL-2.0,édifier
 édifié,fr,6,473676,,Élevé,grammalecte,MPL-2.0,édifier
 édifiée,fr,7,262884,,Élevée,grammalecte,MPL-2.0,édifier
 édifiées,fr,8,147156,,Élevées,grammalecte,MPL-2.0,édifier
@@ -120464,7 +120464,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 émigriez,fr,8,0,,Quittiez son pays,grammalecte,MPL-2.0,émigrer
 émigrions,fr,9,173,,Quittions son pays,grammalecte,MPL-2.0,émigrer
 émigrons,fr,8,523,,Quittons son pays,grammalecte,MPL-2.0,émigrer
-émigrè,fr,6,64,,Quittent son pays,grammalecte,MPL-2.0,émigrer
+émigrè,fr,6,64,,,grammalecte,MPL-2.0,émigrer
 émotionnant,fr,11,1603,,,grammalecte,MPL-2.0,émotionnant
 émotionnants,fr,12,946,,,grammalecte,MPL-2.0,émotionnant
 émotionnel,fr,10,275864,,,grammalecte,MPL-2.0,émotionnel
@@ -120626,7 +120626,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 épanouissais,fr,12,744,,,grammalecte,MPL-2.0,épanouir
 épanouissants,fr,13,769,,,grammalecte,MPL-2.0,épanouissant
 épanouissons,fr,12,193,,,grammalecte,MPL-2.0,épanouir
-épargnè,fr,7,2,,Conservent,grammalecte,MPL-2.0,épargner
+épargnè,fr,7,2,,,grammalecte,MPL-2.0,épargner
 éparpillais,fr,11,278,,,grammalecte,MPL-2.0,éparpiller
 éparpillait,fr,11,13329,,,grammalecte,MPL-2.0,éparpiller
 éparpillant,fr,11,24221,,,grammalecte,MPL-2.0,éparpiller
@@ -120764,7 +120764,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 épouvantée,fr,10,96923,,,grammalecte,MPL-2.0,épouvanter
 épouvantées,fr,11,22943,,,grammalecte,MPL-2.0,épouvanter
 épouvantés,fr,10,126421,,,grammalecte,MPL-2.0,épouvanter
-éprouvè,fr,7,79,,Subissent,grammalecte,MPL-2.0,éprouver
+éprouvè,fr,7,79,,,grammalecte,MPL-2.0,éprouver
 épuiseras,fr,9,152,,,grammalecte,MPL-2.0,épuiser
 épuisiez,fr,8,416,,,grammalecte,MPL-2.0,épuiser
 épuisè,fr,6,0,,,grammalecte,MPL-2.0,épuiser
@@ -120888,7 +120888,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 ériges,fr,6,1922,,Dresses,grammalecte,MPL-2.0,ériger
 érigez,fr,6,3284,,Dressez,grammalecte,MPL-2.0,ériger
 érigiez,fr,7,273,,Dressiez,grammalecte,MPL-2.0,ériger
-érigè,fr,5,1,,Dressent,grammalecte,MPL-2.0,ériger
+érigè,fr,5,1,,,grammalecte,MPL-2.0,ériger
 érotomaniaques,fr,14,715,,,grammalecte,MPL-2.0,érotomaniaque
 érythrocyte,fr,11,3997,,,grammalecte,MPL-2.0,érythrocyte
 érythromycines,fr,14,0,,,grammalecte,MPL-2.0,érythromycine
@@ -121050,7 +121050,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 étranglerons,fr,12,231,,Serrerons,grammalecte,MPL-2.0,étrangler
 étrangleront,fr,12,746,,Serreront,grammalecte,MPL-2.0,étrangler
 étrangliez,fr,10,47,,Serriez,grammalecte,MPL-2.0,étrangler
-étranglè,fr,8,0,,Serrent,grammalecte,MPL-2.0,étrangler
+étranglè,fr,8,0,,,grammalecte,MPL-2.0,étrangler
 étreignais,fr,10,1335,,,grammalecte,MPL-2.0,étreindre
 étreignait,fr,10,46066,,,grammalecte,MPL-2.0,étreindre
 étreignant,fr,10,27173,,,grammalecte,MPL-2.0,étreindre
@@ -121094,7 +121094,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 étrésillonné,fr,12,427,,,grammalecte,MPL-2.0,étrésillonner
 étrésillonnée,fr,13,440,,,grammalecte,MPL-2.0,étrésillonner
 étrésillonnés,fr,13,990,,,grammalecte,MPL-2.0,étrésillonner
-étudiè,fr,6,764,,S'appliquent à apprendre,grammalecte,MPL-2.0,étudier
+étudiè,fr,6,764,,,grammalecte,MPL-2.0,étudier
 étés,fr,4,241831,,,grammalecte,MPL-2.0,été
 évacuais,fr,8,311,,,grammalecte,MPL-2.0,évacuer
 évacuateur,fr,10,19703,,,grammalecte,MPL-2.0,évacuateur
@@ -121144,7 +121144,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 évaporerons,fr,11,0,,Disperserons,grammalecte,MPL-2.0,évaporer
 évapores,fr,8,254,,Disperses,grammalecte,MPL-2.0,évaporer
 évaporiez,fr,9,0,,Dispersiez,grammalecte,MPL-2.0,évaporer
-évaporè,fr,7,0,,Dispersent,grammalecte,MPL-2.0,évaporer
+évaporè,fr,7,0,,,grammalecte,MPL-2.0,évaporer
 éveillè,fr,7,0,,Rend conscient,grammalecte,MPL-2.0,éveiller
 éventration,fr,11,24890,,,grammalecte,MPL-2.0,éventration
 éventrement,fr,11,4400,,,grammalecte,MPL-2.0,éventrement
@@ -121172,7 +121172,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 évoluions,fr,9,1538,,Changions,grammalecte,MPL-2.0,évoluer
 évoluons,fr,8,7873,,Changeons,grammalecte,MPL-2.0,évoluer
 évolutionnismes,fr,15,842,,,grammalecte,MPL-2.0,évolutionnisme
-évoluè,fr,6,0,,Changent,grammalecte,MPL-2.0,évoluer
+évoluè,fr,6,0,,,grammalecte,MPL-2.0,évoluer
 évolué,fr,6,985105,,Changé,grammalecte,MPL-2.0,évoluer
 évoqueras,fr,9,141,,Rappelleras,grammalecte,MPL-2.0,évoquer
 évoquè,fr,6,0,,Rappelle,grammalecte,MPL-2.0,évoquer
@@ -121180,7 +121180,7 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 évènementielles,fr,15,231,,,grammalecte,MPL-2.0,évènementiel
 évènementiels,fr,13,82,,,grammalecte,MPL-2.0,évènementiel
 êtas,fr,4,4,,,grammalecte,MPL-2.0,êta
-êtres,fr,5,8702124,,Forme d’être,grammalecte,MPL-2.0,être
+êtres,fr,5,8702124,,,grammalecte,MPL-2.0,être
 îles,fr,4,6560386,,,grammalecte,MPL-2.0,île
 ôtais,fr,5,2640,,Enlevais,grammalecte,MPL-2.0,ôter
 ôteras,fr,6,1796,,Enlèveras,grammalecte,MPL-2.0,ôter
