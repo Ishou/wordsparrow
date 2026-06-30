@@ -129,19 +129,36 @@ learn billing exists.
 - **Threat model for the new consumer / authz path.** `SubscriptionChanged` now
   drives a capability grant for the first time, so it is a trust boundary, not
   just an operational dependency:
-  - **Publish authority:** only `billing` may publish on
-    `wordsparrow.user.subscription-changed` — enforced at the NATS-subject level
-    via the same publish-permission ACL pattern as `survey`'s `UserRoleChanged`
-    subject (no shared credential lets another context, or a compromised
-    frontend, publish on it).
-  - **`changedAt` is server-stamped by billing**, never client-suppliable — the
-    consumer trusts it only because billing is the sole authorized publisher;
-    a forged or replayed event with a future `changedAt` would otherwise be able
-    to evict a legitimate later state under last-write-wins.
-  - **Blast radius if the consumer is compromised:** it can only apply tier
-    values it receives — it cannot *originate* a tier change, so compromise
-    grants no more than replaying/reordering events already validated by
-    billing (bounded by `userId` + `changedAt`, not an arbitrary self-grant).
+  - **Publish authority is currently a pod-network boundary, not a per-subject
+    ACL.** ADR-0049's auth model is "anonymous on the cluster network" for
+    alpha — `infra/nats/templates/networkpolicy.yaml` admits all five
+    bounded-context API pods (`identity`, `game`, `grid`, `survey`, `billing`)
+    on the NATS port, and there is no subject-level publish restriction in the
+    chart. `billing` is the *intended* sole publisher of
+    `wordsparrow.user.subscription-changed` by convention, but any of the
+    other four contexts' pods — or a compromise of one of them — can
+    currently publish on that subject too. ADR-0049's deferred "per-service
+    NATS accounts + JWT signing" hardening is what would turn this into an
+    enforced boundary; until that ships, this consumer accepts the same
+    pod-network trust level as every other NATS subject in the cluster, which
+    is materially weaker than the implicit assumption other capability
+    sources (HTTP session principal) carry.
+  - **`changedAt` is server-stamped by billing** under the intended
+    convention, but is **not cryptographically tied to a verified publisher**
+    given the boundary above — a compromised peer context could publish a
+    `subscription-changed` event with an attacker-chosen `changedAt`/tier.
+    Last-write-wins on `changedAt` bounds this to "the forged event wins if
+    its `changedAt` is newer," not to "only billing's events are accepted."
+  - **Blast radius if a peer context (not billing) is compromised:** unlike
+    an HTTP-session-principal compromise, a compromised peer pod can
+    *originate* a tier change for this subject today — there is no
+    in-cluster control stopping it from publishing a forged
+    `SubscriptionChanged` granting `grilles:all`/`grilles:generate` to an
+    arbitrary `userId`. This is the actual current risk, not a hypothetical;
+    closing it requires the ADR-0049 auth hardening (or an interim
+    subject-level NetworkPolicy/sidecar restriction scoped to `billing` only)
+    as a prerequisite to treating this consumer as a hardened trust boundary.
+    Tracked as a follow-up, not assumed solved by this ADR.
   - **Out-of-order delivery beyond last-write-wins:** a `changedAt` older than
     the persisted value is dropped (already specified above); this also covers
     redelivery after consumer restart, since JetStream redelivery can re-present
@@ -160,6 +177,11 @@ learn billing exists.
     cluster, ADR-0049). This is the same class of issue as billing's
     `user.deleted` consumer-bootstrap gap — provision the durable consumer with
     the context, do not leave it implicit.
+  - **`subscription-changed` publish authority is pod-network-wide, not
+    per-subject**, until ADR-0049's deferred auth hardening ships — see the
+    threat model above. A compromised peer-context pod can today forge a
+    capability-granting event; closing this is a prerequisite, not a
+    nice-to-have, before this consumer should be treated as fully trustworthy.
   - The **one-off month** and the **gift-a-month** surface are **deferred**
     pending a one-time-payment flow (distinct from the subscriptions API).
   - **Price** (`2 €` / `20 €`) and the **capability names** (`grilles:all`,
