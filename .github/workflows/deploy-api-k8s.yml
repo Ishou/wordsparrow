@@ -3,11 +3,13 @@ name: Deploy API (k8s)
 # Implements ADR-0009 §8 step 5: continuous delivery of the WordSparrow
 # services to the Hetzner k3s cluster (FSN1, 1 CP + 1 worker, ADR-0009 §2).
 #
-# The workflow is a matrix that fans out over the {grid, game, identity}
-# bounded contexts:
+# The workflow is a matrix that fans out over the {grid, game, identity,
+# survey, billing} bounded contexts:
 #   - wordsparrow-api          → grid/api/deploy/chart,     api.wordsparrow.io
 #   - wordsparrow-game-api     → game/api/deploy/chart,     game.wordsparrow.io
 #   - wordsparrow-identity-api → identity/api/deploy/chart, auth.wordsparrow.io
+#   - wordsparrow-survey-api   → survey/api/deploy/chart,   survey.wordsparrow.io
+#   - wordsparrow-billing-api  → billing/api/deploy/chart,  billing.wordsparrow.io
 #
 # Triggered by `Build and Push Image` (build-and-push-image.yml) on every
 # successful main push: each matrix row of the build workflow uploads
@@ -45,11 +47,13 @@ name: Deploy API (k8s)
 #                                                  creds + COOKIE_DOMAIN +
 #                                                  ALLOWED_RETURN_ORIGINS;
 #                                                  bootstrap recipe in PR 4.5e)
+#       - `bliss-billing-api-env` (billing)       (ADR-0078; carries MOLLIE_API_KEY, test_… during the test phase)
 #   - The GHCR packages are PUBLIC (one-time visibility flip per
 #     build-and-push-image.yml's header):
 #       - bliss/wordsparrow-api          (already public)
 #       - bliss/wordsparrow-game-api     (already public)
 #       - bliss/wordsparrow-identity-api (NEW — must be flipped after first push)
+#       - bliss/wordsparrow-billing-api  (NEW — must be flipped after first push)
 
 on:
   workflow_run:
@@ -68,6 +72,7 @@ on:
           - game
           - identity
           - survey
+          - billing
         default: grid
       digest:
         description: 'Image digest to deploy, format "sha256:..." (manual rollback / redeploy).'
@@ -199,6 +204,17 @@ jobs:
             db-release-name: wordsparrow-survey-api-pg
             db-chart-path: survey/api/deploy/db-chart/
             db-values-file: survey/api/deploy/db-chart/values-prod.yaml
+          # billing-api (ADR-0078); chart-split mirrors identity. Pre-merge gates: bootstrap `bliss-billing-api-env` (MOLLIE_API_KEY) + flip GHCR visibility, else first run fails at wait-for-postgres or ImagePullBackOff (docs/deploy.md).
+          - context: billing
+            release-name: wordsparrow-billing-api
+            chart-path: billing/api/deploy/chart/
+            values-file: billing/api/deploy/chart/values-prod.yaml
+            digest-artifact: image-digest-billing
+            worker-digest-artifact: ""
+            health-url: https://billing.wordsparrow.io/v1/health
+            db-release-name: wordsparrow-billing-api-pg
+            db-chart-path: billing/api/deploy/db-chart/
+            db-values-file: billing/api/deploy/db-chart/values-prod.yaml
     environment:
       # Per-context environment so each appears separately in the GitHub
       # Environments UI and required-reviewer rules can be applied

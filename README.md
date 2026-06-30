@@ -91,6 +91,8 @@ flowchart LR
   end
   subgraph ctx_billing["billing"]
     billing["billing-api"]
+    billingDB[("billing pg")]
+    billing --> billingDB
   end
   cluepipeline["clue AI pipeline (Modal)"]
   mollie["Mollie (payment provider)"]
@@ -108,7 +110,7 @@ flowchart LR
   billing -->|hosted checkout / webhooks| mollie
   classDef data fill:#c8945633,stroke:#a87538;
   classDef external fill:#b8554022,stroke:#b85540;
-  class gridDB,gameDB,identityDB,surveyDB data;
+  class gridDB,gameDB,identityDB,surveyDB,billingDB data;
   class cluepipeline,mollie external;
   style Edge fill:#5a655a1f,stroke:#8b9488;
   style Messaging fill:#a875381f,stroke:#c89456;

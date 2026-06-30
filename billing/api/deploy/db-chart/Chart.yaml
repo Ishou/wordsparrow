@@ -1,0 +1,8 @@
+apiVersion: v2
+name: bliss-billing-api-pg
+description: "CNPG Postgres cluster for the billing-api bounded context"
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+# Independent of the api chart's lifecycle so a failed api deploy's auto-rollback can't tear down the Cluster mid-bootstrap (ADR-0055 amendment).
+dependencies: []
