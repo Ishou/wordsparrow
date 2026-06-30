@@ -336,9 +336,8 @@ export interface components {
             /**
              * @description High-level answer classes the rater assigns to this definition.
              *     An editable multi-select, pre-filled client-side from the item's
-             *     single machine `categorie` prior but freely overridden. Any
-             *     authenticated rater may set it; anonymous submissions including
-             *     this field return 401. When several raters annotate the same
+             *     single machine `categorie` prior but freely overridden.
+             *     Contribuer-gated. When several raters annotate the same
              *     definition, maintainer ratings take precedence on resolution.
              *     Omitted when the rater does not annotate categories.
              */
@@ -347,13 +346,13 @@ export interface components {
              * @description Single freeform sense gloss this clue targets. Must not repeat
              *     the lemma; server soft-normalizes for autocomplete dedup, stores
              *     the original spelling. Omitted when sense is not annotated
-             *     or `isMultisense` is true. Authenticated callers only.
+             *     or `isMultisense` is true. Contribuer-gated.
              */
             targetSense?: string;
             /**
              * @description Calembour marker: the clue deliberately plays on several senses
              *     at once. When true, `targetSense` is optional — the senses are
-             *     not enumerated. Authenticated callers only.
+             *     not enumerated. Contribuer-gated.
              * @default false
              */
             isMultisense: boolean;
@@ -361,7 +360,7 @@ export interface components {
              * @description Free-form sub-domain refinement tags for this definition — finer
              *     than `targetCategories` (e.g. felin, capitale, note de musique).
              *     Per-rating. Server soft-normalizes for autocomplete dedup, stores
-             *     the original spelling. Authenticated callers only. Omitted when
+             *     the original spelling. Contribuer-gated. Omitted when
              *     not annotated.
              */
             subTags?: string[];
@@ -555,7 +554,6 @@ export interface operations {
                 };
             };
             400: components["responses"]["ProblemDetails"];
-            401: components["responses"]["ProblemDetails"];
             403: components["responses"]["ProblemDetails"];
             404: components["responses"]["ProblemDetails"];
             /** @description Auth caller already rated this item. */

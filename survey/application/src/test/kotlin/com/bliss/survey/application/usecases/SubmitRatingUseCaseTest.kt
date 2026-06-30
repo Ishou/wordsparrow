@@ -122,29 +122,6 @@ class SubmitRatingUseCaseTest {
     )
 
     @Test
-    fun `anon happy path stores rating with anon submitter`() =
-        runTest {
-            val (uc, items, ratings, _, _) = newUseCase()
-            val parent = seedItem(items)
-            val r =
-                uc.execute(
-                    SubmitRatingCommand(
-                        itemId = parent.id,
-                        userId = null,
-                        qualite = 4,
-                        difficulte = 2,
-                        flag = null,
-                        correctif = null,
-                        latencyMs = 1200,
-                    ),
-                )
-            assertThat(r).isInstanceOf(SubmitRatingResult.Accepted::class)
-            check(r is SubmitRatingResult.Accepted)
-            assertThat(r.rating.submittedAs).isEqualTo(SubmittedAs.ANON)
-            assertThat(ratings.ratings.size).isEqualTo(1)
-        }
-
-    @Test
     fun `auth duplicate returns AlreadyExists`() =
         runTest {
             val (uc, items, ratings, _, _) = newUseCase()
@@ -159,26 +136,6 @@ class SubmitRatingUseCaseTest {
         }
 
     @Test
-    fun `anon plus correctif is forbidden`() =
-        runTest {
-            val (uc, items, _, _, _) = newUseCase()
-            val parent = seedItem(items)
-            val r =
-                uc.execute(
-                    SubmitRatingCommand(
-                        itemId = parent.id,
-                        userId = null,
-                        qualite = 3,
-                        difficulte = 3,
-                        flag = null,
-                        correctif = CorrectifInput("Une meilleure definition", Style.DEFINITION_DIRECTE, null),
-                        latencyMs = 1000,
-                    ),
-                )
-            assertThat(r).isEqualTo(SubmitRatingResult.AnonCorrectifForbidden)
-        }
-
-    @Test
     fun `item not found returns ItemNotFound`() =
         runTest {
             val (uc, _, _, _, _) = newUseCase()
@@ -186,7 +143,7 @@ class SubmitRatingUseCaseTest {
                 uc.execute(
                     SubmitRatingCommand(
                         itemId = ItemId(UUID.randomUUID()),
-                        userId = null,
+                        userId = UserId(UUID.randomUUID()),
                         qualite = 3,
                         difficulte = 3,
                         flag = null,
@@ -195,27 +152,6 @@ class SubmitRatingUseCaseTest {
                     ),
                 )
             assertThat(r).isEqualTo(SubmitRatingResult.ItemNotFound)
-        }
-
-    @Test
-    fun `anon plus meta is forbidden`() =
-        runTest {
-            val (uc, items, _, _, _) = newUseCase()
-            val parent = seedItem(items)
-            val r =
-                uc.execute(
-                    SubmitRatingCommand(
-                        itemId = parent.id,
-                        userId = null,
-                        qualite = 3,
-                        difficulte = 3,
-                        flag = null,
-                        correctif = null,
-                        latencyMs = 1000,
-                        subTags = listOf("felin"),
-                    ),
-                )
-            assertThat(r).isEqualTo(SubmitRatingResult.AnonMetaForbidden)
         }
 
     @Test

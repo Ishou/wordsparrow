@@ -108,27 +108,6 @@ fun Route.submitRatingRoute(execute: suspend (SubmitRatingCommand) -> SubmitRati
             is SubmitRatingResult.AlreadyExists ->
                 call.respond(HttpStatusCode.Conflict, result.existing.toResponse())
 
-            SubmitRatingResult.AnonCorrectifForbidden ->
-                call.respondProblem(
-                    HttpStatusCode.Unauthorized,
-                    ProblemDetails(
-                        type = "about:blank",
-                        title = "sign-in required",
-                        status = HttpStatusCode.Unauthorized.value,
-                    ),
-                )
-
-            SubmitRatingResult.AnonMetaForbidden ->
-                call.respondProblem(
-                    HttpStatusCode.Unauthorized,
-                    ProblemDetails(
-                        type = "about:blank",
-                        title = "sign-in required",
-                        status = HttpStatusCode.Unauthorized.value,
-                        detail = "Annotating meta (categories, sense, sub-tags) requires signing in (ADR-0061).",
-                    ),
-                )
-
             is SubmitRatingResult.CorrectifRejected -> {
                 val rejection =
                     CorrectifRejection(
