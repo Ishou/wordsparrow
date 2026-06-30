@@ -121,12 +121,12 @@ export function AbonnementScreen({ client }: { readonly client: BillingClient })
 
       <div className={actionsStyles}>
         {canSubscribe && !hasActiveAccess(subscription) ? (
-          <Button type="button" onClick={onSubscribe} disabled={pending}>
+          <Button type="button" onClick={onSubscribe} disabled={pending || loading}>
             S'abonner (test)
           </Button>
         ) : null}
         {canCancel(subscription) ? (
-          <Button type="button" variant="secondary" onClick={onCancel} disabled={pending}>
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={pending || loading}>
             Résilier
           </Button>
         ) : null}
