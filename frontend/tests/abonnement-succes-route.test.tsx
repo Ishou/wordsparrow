@@ -1,19 +1,29 @@
 import { act, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AuthClient, WhoAmIResult } from '@/application/auth';
 import type { BillingClient, SubscriptionView } from '@/application/billing';
+import { AuthProvider } from '@/ui/components/auth';
 
-// Stub the router's `<Link>` so the polling assertions run under fake timers without a router transition.
+// PhoneShell pulls router + root-context primitives (DesktopAppBar → MenuSheet); stub them so screens render without a full router.
+let routeContext: Record<string, unknown> = {};
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>();
   return {
     ...actual,
-    Link: ({ to, children }: { to: string; children: ReactNode }) => <a href={to}>{children}</a>,
+    Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
+      <a href={String(to)} className={className}>
+        {children}
+      </a>
+    ),
+    useNavigate: () => vi.fn(),
+    useRouteContext: () => routeContext,
   };
 });
 
-const { CheckoutSuccessScreen } = await import('@/ui/routes/abonnement.succes');
+const { CheckoutSuccessScreen, AbonnementSuccesScreen } = await import('@/ui/v2/AbonnementSuccesScreen');
 
+const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 const PENDING_VIEW: SubscriptionView = { tier: 'premium', status: 'pending', periodEnd: null };
 const ACTIVE_VIEW: SubscriptionView = {
   tier: 'premium',
@@ -29,22 +39,52 @@ function fakeBillingClient(getSubscription: BillingClient['getSubscription']): B
   };
 }
 
-beforeEach(() => {
-  vi.useFakeTimers();
-});
+function fakeAuthClient(whoami: WhoAmIResult | null): AuthClient {
+  return {
+    whoami: vi.fn().mockResolvedValue(whoami),
+    getMe: vi.fn(),
+    updateMe: vi.fn(),
+    deleteMe: vi.fn(),
+    logout: vi.fn(),
+    signInUrl: (provider, returnTo) => `https://auth.test/${provider}?return_to=${returnTo}`,
+  };
+}
 
-afterEach(() => {
-  vi.runOnlyPendingTimers();
-  vi.useRealTimers();
-});
+const SUBSCRIBER: WhoAmIResult = {
+  userId: USER_ID,
+  displayName: 'Lapin 472',
+  role: 'maintainer',
+  capabilities: ['billing:subscribe'],
+};
 
-describe('CheckoutSuccessScreen', () => {
+function withAuth(whoami: WhoAmIResult | null) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <AuthProvider authClient={fakeAuthClient(whoami)} getPseudonym={() => 'Renard 423'}>
+        {children}
+      </AuthProvider>
+    );
+  };
+}
+
+describe('CheckoutSuccessScreen polling', () => {
+  beforeEach(() => {
+    routeContext = {};
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+  });
+
   it('polls then shows the active state once the webhook confirms the subscription', async () => {
     const getSubscription = vi
       .fn<BillingClient['getSubscription']>()
       .mockResolvedValueOnce(PENDING_VIEW)
       .mockResolvedValue(ACTIVE_VIEW);
-    render(<CheckoutSuccessScreen client={fakeBillingClient(getSubscription)} />);
+    render(<CheckoutSuccessScreen client={fakeBillingClient(getSubscription)} />, {
+      wrapper: withAuth(SUBSCRIBER),
+    });
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
@@ -60,7 +100,9 @@ describe('CheckoutSuccessScreen', () => {
 
   it('shows the neutral timeout message after the polling cap with no active status', async () => {
     const getSubscription = vi.fn<BillingClient['getSubscription']>().mockResolvedValue(PENDING_VIEW);
-    render(<CheckoutSuccessScreen client={fakeBillingClient(getSubscription)} />);
+    render(<CheckoutSuccessScreen client={fakeBillingClient(getSubscription)} />, {
+      wrapper: withAuth(SUBSCRIBER),
+    });
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10000);
@@ -72,7 +114,9 @@ describe('CheckoutSuccessScreen', () => {
 
   it('stops polling once active without ticking through the whole cap', async () => {
     const getSubscription = vi.fn<BillingClient['getSubscription']>().mockResolvedValue(ACTIVE_VIEW);
-    render(<CheckoutSuccessScreen client={fakeBillingClient(getSubscription)} />);
+    render(<CheckoutSuccessScreen client={fakeBillingClient(getSubscription)} />, {
+      wrapper: withAuth(SUBSCRIBER),
+    });
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
@@ -83,5 +127,28 @@ describe('CheckoutSuccessScreen', () => {
       await vi.advanceTimersByTimeAsync(10000);
     });
     expect(getSubscription).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AbonnementSuccesScreen capability gate', () => {
+  beforeEach(() => {
+    routeContext = {};
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+  });
+
+  it('renders the confirmation screen for an authed user with billing:subscribe', async () => {
+    routeContext = { billingClient: fakeBillingClient(vi.fn().mockResolvedValue(PENDING_VIEW)) };
+    render(<AbonnementSuccesScreen />, { wrapper: withAuth(SUBSCRIBER) });
+
+    // Content unique to the loaded screen (the heading is shared with the loading state).
+    expect(await screen.findByText(/confirmation en cours/i)).toBeInTheDocument();
+  });
+
+  it('renders the standard 404 for an anonymous visitor', async () => {
+    routeContext = { billingClient: fakeBillingClient(vi.fn().mockResolvedValue(PENDING_VIEW)) };
+    render(<AbonnementSuccesScreen />, { wrapper: withAuth(null) });
+
+    expect(await screen.findByText("Cette page s'est envolée")).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Abonnement' })).toBeNull();
   });
 });
