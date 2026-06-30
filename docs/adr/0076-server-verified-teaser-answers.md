@@ -88,6 +88,39 @@ so the migration is expand-and-contract per CLAUDE.md.
 - **Wave 4 (contract):** remove `answer` from `SampleWord`; the backend stops
   sending it. The leak fully closes only at this wave.
 
+## Amendment — puzzle hint mechanism and binary validate posture (2026-06-30)
+
+### 7. Puzzle hints are the sanctioned carve-out from the answers-off-the-wire posture
+
+This ADR establishes that the server never returns a plaintext answer in the
+teaser path. The puzzle grid path (`/v1/puzzles/{id}/hints`) is the **one
+explicitly sanctioned exception**: a hint reveals canonical solution letters
+for gameplay purposes, not to leak the daily answer.
+
+The carve-out holds because:
+- Hint delivery is **budgeted**: `Puzzle.hintsAllowed` caps total reveals per
+  puzzle; draining the grid requires `hintsAllowed` calls and is bounded by
+  edge rate limiting.
+- Hints are **opt-in**: the player spends a scarce credit; revealed letters
+  are a feature, not an unintended leak.
+- The **daily answer key** posture (PR #218) is separate and untouched; this
+  carve-out applies only to the puzzle hint endpoint.
+
+### 8. Whole-word reveal is the accepted hint shape
+
+`POST /v1/puzzles/{id}/hints` reveals every letter of the word at the cursor's
+`(row, column)` + `direction`, returning `cells: [{ row, column, letter }]`.
+One credit is spent per call regardless of word length. This is the final
+accepted shape; per-letter reveal (one cell per call) is superseded.
+
+### 9. `ValidatePuzzleResult` is intentionally a binary oracle
+
+`POST /v1/puzzles/{id}/validate` returns `{ solved: boolean }` and **nothing
+else**. No positional data (no `incorrectCells`, no per-word or per-cell
+feedback). The response cannot be used to locate or reconstruct any part of
+the solution. This tightens the puzzle's answer-off-the-wire posture: one bit
+per call, full-grid validation only.
+
 ## Consequences
 
 ### Easier
