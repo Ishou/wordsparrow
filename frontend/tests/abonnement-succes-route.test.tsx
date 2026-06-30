@@ -140,8 +140,8 @@ describe('AbonnementSuccesScreen capability gate', () => {
     routeContext = { billingClient: fakeBillingClient(vi.fn().mockResolvedValue(PENDING_VIEW)) };
     render(<AbonnementSuccesScreen />, { wrapper: withAuth(SUBSCRIBER) });
 
-    // Content unique to the loaded screen (the heading is shared with the loading state).
     expect(await screen.findByText(/confirmation en cours/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Abonnement' })).toBeInTheDocument();
   });
 
   it('renders the standard 404 for an anonymous visitor', async () => {
@@ -149,6 +149,21 @@ describe('AbonnementSuccesScreen capability gate', () => {
     render(<AbonnementSuccesScreen />, { wrapper: withAuth(null) });
 
     expect(await screen.findByText("Cette page s'est envolée")).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Abonnement' })).toBeNull();
+  });
+
+  it('shows a neutral loading state with no page title while the session resolves', async () => {
+    const authClient = fakeAuthClient(null);
+    authClient.whoami = vi.fn().mockReturnValue(new Promise<WhoAmIResult | null>(() => {}));
+    routeContext = { billingClient: fakeBillingClient(vi.fn().mockResolvedValue(PENDING_VIEW)) };
+    render(
+      <AuthProvider authClient={authClient} getPseudonym={() => 'Renard 423'}>
+        <AbonnementSuccesScreen />
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByText('Chargement…')).toBeInTheDocument();
+    // No page identity while loading: a `denied` resolve must not flash the "Abonnement" title before the 404.
     expect(screen.queryByRole('heading', { level: 1, name: 'Abonnement' })).toBeNull();
   });
 });

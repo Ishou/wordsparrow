@@ -7,6 +7,7 @@ import { useSubscription } from '@/ui/components/billing';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { NotFoundScreen } from './NotFoundScreen';
+import { GateLoadingScreen } from './GateLoadingScreen';
 import { useBillingGate } from './useBillingGate';
 
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 12px' });
@@ -138,15 +139,7 @@ export function AbonnementManage({ client }: { readonly client: BillingClient })
 export function AbonnementScreen() {
   const gate = useBillingGate();
   const { billingClient } = useRouteContext({ from: '__root__' });
-  if (gate === 'loading') {
-    return (
-      <GateShell>
-        <p className={statusCard} role="status">
-          Chargement…
-        </p>
-      </GateShell>
-    );
-  }
+  if (gate === 'loading') return <GateLoadingScreen />;
   if (gate === 'denied') return <NotFoundScreen />;
   if (!billingClient) {
     return (

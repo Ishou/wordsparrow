@@ -3,6 +3,7 @@ import { css } from 'styled-system/css';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { NotFoundScreen } from './NotFoundScreen';
+import { GateLoadingScreen } from './GateLoadingScreen';
 import { useBillingGate } from './useBillingGate';
 
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 16px' });
@@ -31,16 +32,7 @@ export function CheckoutCancelScreen() {
 
 export function AbonnementAnnuleScreen() {
   const gate = useBillingGate();
-  if (gate === 'loading') {
-    return (
-      <PhoneShell header={<BackHeader to="/menu" />} backTo="/menu">
-        <h1 className={title}>Paiement annulé</h1>
-        <p className={statusCard} role="status">
-          Chargement…
-        </p>
-      </PhoneShell>
-    );
-  }
+  if (gate === 'loading') return <GateLoadingScreen />;
   if (gate === 'denied') return <NotFoundScreen />;
   return <CheckoutCancelScreen />;
 }

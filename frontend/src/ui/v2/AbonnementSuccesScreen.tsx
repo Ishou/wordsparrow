@@ -6,6 +6,7 @@ import type { BillingClient, SubscriptionView } from '@/application/billing';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { NotFoundScreen } from './NotFoundScreen';
+import { GateLoadingScreen } from './GateLoadingScreen';
 import { useBillingGate } from './useBillingGate';
 
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 16px' });
@@ -94,15 +95,7 @@ export function CheckoutSuccessScreen({ client }: { readonly client: BillingClie
 export function AbonnementSuccesScreen() {
   const gate = useBillingGate();
   const { billingClient } = useRouteContext({ from: '__root__' });
-  if (gate === 'loading') {
-    return (
-      <SuccesShell>
-        <p className={statusCard} role="status">
-          Chargement…
-        </p>
-      </SuccesShell>
-    );
-  }
+  if (gate === 'loading') return <GateLoadingScreen />;
   if (gate === 'denied') return <NotFoundScreen />;
   if (!billingClient) {
     return (
