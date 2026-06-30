@@ -194,6 +194,12 @@ export interface paths {
          *     grid still requires `hintsAllowed` calls bounded by edge rate
          *     limiting.
          *
+         *     The budget regenerates server-side: 1 credit every 10 minutes, capped
+         *     at `Puzzle.hintsAllowed`. The response carries `secondsUntilNextHint`,
+         *     the countdown to the next regenerated credit (null when the budget is
+         *     full); it is a timing integer only and adds no canonical letters to the
+         *     wire (ADR-0076).
+         *
          *     Player identity on the wire is the `__Secure-ws_session` cookie
          *     issued by identity-api. The server verifies the cookie against
          *     identity-api's whoami endpoint and keys a per-(puzzle, user) hint
@@ -355,6 +361,11 @@ export interface components {
              * @example 2
              */
             hintsRemaining: number;
+            /**
+             * @description Secondes avant la régénération du prochain indice ; null si le quota d'indices est plein (et toujours null pour un appelant anonyme).
+             * @example 420
+             */
+            secondsUntilNextHint?: number | null;
             /**
              * Format: date-time
              * @description ISO-8601 instant with timezone offset.
@@ -593,6 +604,11 @@ export interface components {
              * @example 2
              */
             hintsRemaining: number;
+            /**
+             * @description Secondes avant la régénération du prochain indice ; null si le quota d'indices est plein (et toujours null pour un appelant anonyme).
+             * @example 420
+             */
+            secondsUntilNextHint?: number | null;
         };
         /**
          * @description Request body for `POST /v1/puzzles/{puzzleId}/validate`. Carries the
