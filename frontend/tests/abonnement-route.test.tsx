@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthClient, WhoAmIResult } from '@/application/auth';
-import type { BillingClient, SubscriptionView } from '@/application/billing';
+import type { BillingClient } from '@/application/billing';
 import { BillingError } from '@/application/billing';
 import { AuthProvider } from '@/ui/components/auth';
 
@@ -22,16 +22,9 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   };
 });
 
-const { AbonnementManage, AbonnementScreen } = await import('@/ui/v2/AbonnementScreen');
+const { AbonnementOffer, AbonnementScreen } = await import('@/ui/v2/AbonnementScreen');
 
 const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
-
-const FREE_VIEW: SubscriptionView = { tier: 'free', status: 'none', periodEnd: null };
-const ACTIVE_VIEW: SubscriptionView = {
-  tier: 'premium',
-  status: 'active',
-  periodEnd: '2026-08-01T00:00:00Z',
-};
 
 function fakeAuthClient(whoami: WhoAmIResult | null): AuthClient {
   return {
@@ -46,22 +39,30 @@ function fakeAuthClient(whoami: WhoAmIResult | null): AuthClient {
 
 function fakeBillingClient(overrides: Partial<BillingClient> = {}): BillingClient {
   return {
-    getSubscription: vi.fn().mockResolvedValue(FREE_VIEW),
+    getSubscription: vi.fn().mockResolvedValue({ tier: 'free', status: 'none', periodEnd: null }),
     createCheckoutSession: vi.fn().mockResolvedValue({
-      checkoutUrl: 'https://checkout.mollie.test/session/abc',
+      checkoutUrl: 'https://checkout.test/session/abc',
       successUrl: 'https://wordsparrow.io/abonnement/merci',
       cancelUrl: 'https://wordsparrow.io/abonnement',
     }),
-    cancelSubscription: vi.fn().mockResolvedValue(FREE_VIEW),
+    cancelSubscription: vi.fn(),
     ...overrides,
   };
 }
 
-const SUBSCRIBER: WhoAmIResult = {
+// Eligible-to-subscribe (test phase): billing:subscribe but no paid tier-derived capability.
+const ELIGIBLE: WhoAmIResult = {
   userId: USER_ID,
   displayName: 'Lapin 472',
   role: 'maintainer',
   capabilities: ['billing:subscribe'],
+};
+// Already subscribed: holds grilles:all (ADR-0080 tier-derived), so useSubscriber() is true.
+const SUBSCRIBED: WhoAmIResult = {
+  userId: USER_ID,
+  displayName: 'Lapin 472',
+  role: 'maintainer',
+  capabilities: ['billing:subscribe', 'grilles:all'],
 };
 const PLAYER: WhoAmIResult = {
   userId: USER_ID,
@@ -91,109 +92,114 @@ afterEach(() => {
   Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
 });
 
-describe('AbonnementManage', () => {
-  it('renders the active subscription status from the billing client', async () => {
-    const client = fakeBillingClient({ getSubscription: vi.fn().mockResolvedValue(ACTIVE_VIEW) });
-    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
+describe('AbonnementOffer', () => {
+  it('renders both the Accès complet and Gratuit cards with their prices', () => {
+    render(<AbonnementOffer client={fakeBillingClient()} />, { wrapper: withAuth(ELIGIBLE) });
 
-    await waitFor(() => expect(screen.getByText(/Premium — actif/)).toBeInTheDocument());
-    expect(client.getSubscription).toHaveBeenCalled();
+    expect(screen.getByRole('region', { name: 'Accès complet' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Gratuit' })).toBeInTheDocument();
+    expect(screen.getByText('2 €')).toBeInTheDocument();
+    expect(screen.getByText('20 €')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Paiement sécurisé · sans engagement · résiliable à tout moment/),
+    ).toBeInTheDocument();
   });
 
-  it('renders the free offer when there is no active subscription', async () => {
-    render(<AbonnementManage client={fakeBillingClient()} />, { wrapper: withAuth(SUBSCRIBER) });
+  it('toggles the selected cadence between mensuel and annuel', () => {
+    render(<AbonnementOffer client={fakeBillingClient()} />, { wrapper: withAuth(ELIGIBLE) });
 
-    await waitFor(() =>
-      expect(screen.getByText("Tu joues avec l'offre gratuite.")).toBeInTheDocument(),
-    );
+    const mensuel = screen.getByRole('radio', { name: /Mensuel/ });
+    const annuel = screen.getByRole('radio', { name: /Annuel/ });
+    expect(mensuel).toHaveAttribute('aria-checked', 'true');
+    expect(annuel).toHaveAttribute('aria-checked', 'false');
+
+    fireEvent.click(annuel);
+    expect(annuel).toHaveAttribute('aria-checked', 'true');
+    expect(mensuel).toHaveAttribute('aria-checked', 'false');
   });
 
-  it('hides the subscribe CTA when a subscription is already active', async () => {
-    const client = fakeBillingClient({ getSubscription: vi.fn().mockResolvedValue(ACTIVE_VIEW) });
-    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
+  it('arrow-right moves the cadence selection forward and shifts the tabbable radio', () => {
+    render(<AbonnementOffer client={fakeBillingClient()} />, { wrapper: withAuth(ELIGIBLE) });
 
-    await waitFor(() => expect(screen.getByText(/Premium — actif/)).toBeInTheDocument());
-    expect(screen.queryByRole('button', { name: /S'abonner/ })).toBeNull();
+    const mensuel = screen.getByRole('radio', { name: /Mensuel/ });
+    act(() => {
+      mensuel.focus();
+      fireEvent.keyDown(mensuel, { key: 'ArrowRight' });
+    });
+
+    const annuel = screen.getByRole('radio', { name: /Annuel/ });
+    expect(annuel).toHaveAttribute('aria-checked', 'true');
+    expect(annuel).toHaveAttribute('tabindex', '0');
+    expect(mensuel).toHaveAttribute('aria-checked', 'false');
+    expect(mensuel).toHaveAttribute('tabindex', '-1');
   });
 
-  it('starts a premium checkout and hands off to the provider URL on subscribe', async () => {
+  it('arrow-left wraps the cadence selection from the first to the last option', () => {
+    render(<AbonnementOffer client={fakeBillingClient()} />, { wrapper: withAuth(ELIGIBLE) });
+
+    const mensuel = screen.getByRole('radio', { name: /Mensuel/ });
+    act(() => {
+      mensuel.focus();
+      fireEvent.keyDown(mensuel, { key: 'ArrowLeft' });
+    });
+
+    expect(screen.getByRole('radio', { name: /Annuel/ })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('starts a checkout for the subscriber tier and hands off to the provider URL', async () => {
     const assign = vi.fn();
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { href: 'http://localhost/abonnement', origin: 'http://localhost', assign },
     });
     const client = fakeBillingClient();
-    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
+    render(<AbonnementOffer client={client} />, { wrapper: withAuth(ELIGIBLE) });
 
-    const button = await screen.findByRole('button', { name: /S'abonner/ });
+    fireEvent.click(screen.getByRole('radio', { name: /Annuel/ }));
+    const button = screen.getByRole('button', { name: /S'abonner/ });
     await act(async () => {
       fireEvent.click(button);
     });
 
-    await waitFor(() => expect(client.createCheckoutSession).toHaveBeenCalledWith('premium'));
-    expect(assign).toHaveBeenCalledWith('https://checkout.mollie.test/session/abc');
+    await waitFor(() => expect(client.createCheckoutSession).toHaveBeenCalledWith('subscriber'));
+    expect(assign).toHaveBeenCalledWith('https://checkout.test/session/abc');
   });
 
   it('shows an inline message when checkout fails with a BillingError', async () => {
     const client = fakeBillingClient({
       createCheckoutSession: vi.fn().mockRejectedValue(new BillingError('provider-unavailable', 503)),
     });
-    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
+    render(<AbonnementOffer client={client} />, { wrapper: withAuth(ELIGIBLE) });
 
-    const button = await screen.findByRole('button', { name: /S'abonner/ });
     await act(async () => {
-      fireEvent.click(button);
+      fireEvent.click(screen.getByRole('button', { name: /S'abonner/ }));
     });
 
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(/service de paiement/i),
-    );
-  });
-
-  it('cancels an active subscription then refetches the status', async () => {
-    const getSubscription = vi.fn().mockResolvedValueOnce(ACTIVE_VIEW).mockResolvedValue(FREE_VIEW);
-    const client = fakeBillingClient({ getSubscription });
-    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
-
-    const button = await screen.findByRole('button', { name: 'Résilier' });
-    await act(async () => {
-      fireEvent.click(button);
-    });
-
-    await waitFor(() => expect(client.cancelSubscription).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(screen.getByText("Tu joues avec l'offre gratuite.")).toBeInTheDocument(),
-    );
-    expect(getSubscription).toHaveBeenCalledTimes(2);
-  });
-
-  it('disables Résilier while the subscription is reloading', async () => {
-    // Second fetch never resolves: loading stays true while subscription is still the stale ACTIVE view.
-    const getSubscription = vi
-      .fn<BillingClient['getSubscription']>()
-      .mockResolvedValueOnce(ACTIVE_VIEW)
-      .mockReturnValueOnce(new Promise<SubscriptionView>(() => {}));
-    const client = fakeBillingClient({ getSubscription });
-    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
-
-    const button = await screen.findByRole('button', { name: 'Résilier' });
-    await act(async () => {
-      fireEvent.click(button);
-    });
-
-    await waitFor(() => expect(client.cancelSubscription).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Résilier' })).toBeDisabled());
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/service de paiement/i));
   });
 });
 
-describe('AbonnementScreen capability gate', () => {
-  it('renders the screen for an authed user with billing:subscribe', async () => {
+describe('AbonnementScreen', () => {
+  it('renders the offer with a subscribe CTA for an eligible user', async () => {
     routeContext = { billingClient: fakeBillingClient() };
-    render(<AbonnementScreen />, { wrapper: withAuth(SUBSCRIBER) });
+    render(<AbonnementScreen />, { wrapper: withAuth(ELIGIBLE) });
 
-    expect(await screen.findByText("Tu joues avec l'offre gratuite.")).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Joue toutes les grilles' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /S'abonner/ })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Abonnement' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Gratuit' })).toBeInTheDocument();
+  });
+
+  it('shows the subscribed state with a Réglages link and no CTA when already subscribed', async () => {
+    routeContext = { billingClient: fakeBillingClient() };
+    render(<AbonnementScreen />, { wrapper: withAuth(SUBSCRIBED) });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Tu es abonné·e' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Aller aux Réglages' })).toHaveAttribute('href', '/reglages');
+    expect(screen.queryByRole('button', { name: /S'abonner/ })).toBeNull();
   });
 
   it('renders the standard 404 for an anonymous visitor', async () => {
@@ -201,7 +207,7 @@ describe('AbonnementScreen capability gate', () => {
     render(<AbonnementScreen />, { wrapper: withAuth(null) });
 
     expect(await screen.findByText("Cette page s'est envolée")).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 1, name: 'Abonnement' })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Joue toutes les grilles' })).toBeNull();
   });
 
   it('renders the standard 404 for an authed user without the capability', async () => {
@@ -209,7 +215,7 @@ describe('AbonnementScreen capability gate', () => {
     render(<AbonnementScreen />, { wrapper: withAuth(PLAYER) });
 
     expect(await screen.findByText("Cette page s'est envolée")).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 1, name: 'Abonnement' })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Joue toutes les grilles' })).toBeNull();
   });
 
   it('shows a neutral loading state with no page title while the session resolves', async () => {
@@ -223,7 +229,6 @@ describe('AbonnementScreen capability gate', () => {
     );
 
     expect(await screen.findByText('Chargement…')).toBeInTheDocument();
-    // No page identity while loading: a `denied` resolve must not flash the "Abonnement" title before the 404.
-    expect(screen.queryByRole('heading', { level: 1, name: 'Abonnement' })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
   });
 });

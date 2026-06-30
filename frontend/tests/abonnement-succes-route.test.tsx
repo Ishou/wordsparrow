@@ -24,9 +24,9 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 const { CheckoutSuccessScreen, AbonnementSuccesScreen } = await import('@/ui/v2/AbonnementSuccesScreen');
 
 const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
-const PENDING_VIEW: SubscriptionView = { tier: 'premium', status: 'pending', periodEnd: null };
+const PENDING_VIEW: SubscriptionView = { tier: 'subscriber', status: 'pending', periodEnd: null };
 const ACTIVE_VIEW: SubscriptionView = {
-  tier: 'premium',
+  tier: 'subscriber',
   status: 'active',
   periodEnd: '2026-08-01T00:00:00Z',
 };
