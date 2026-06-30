@@ -1,4 +1,4 @@
-# ADR-0080: Daily puzzle unique identity (regeneration-safe)
+# ADR-0081: Daily puzzle unique identity (regeneration-safe)
 
 ## Status
 Accepted
