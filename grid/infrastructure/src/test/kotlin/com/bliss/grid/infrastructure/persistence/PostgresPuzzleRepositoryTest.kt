@@ -26,6 +26,7 @@ import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -143,6 +144,79 @@ class PostgresPuzzleRepositoryTest {
         assertThat(placement.cluePosition.row.value).isEqualTo(0)
         assertThat(placement.cluePosition.column.value).isEqualTo(0)
     }
+
+    @Test
+    fun `getCurrentForDate returns the most recently created row for the date`() {
+        val date = LocalDate.parse("2026-05-09")
+        repo.insertDaily(UUID.randomUUID(), date, storedAt("2026-05-09T00:00:00Z", sampleGrid()))
+        val newerId = UUID.randomUUID()
+        repo.insertDaily(newerId, date, storedAt("2026-05-09T06:00:00Z", wideGrid()))
+
+        val current = repo.getCurrentForDate(date)
+
+        assertThat(current).isNotNull()
+        assertThat(current!!.puzzleId).isEqualTo(newerId)
+        assertThat(current.puzzle.grid.width).isEqualTo(6)
+    }
+
+    @Test
+    fun `getCurrentForDate returns null for a date with no row`() {
+        assertThat(repo.getCurrentForDate(LocalDate.parse("2026-05-09"))).isNull()
+    }
+
+    @Test
+    fun `insertDaily appends a fresh row rather than overwriting the prior one`() {
+        val date = LocalDate.parse("2026-05-09")
+        val firstId = UUID.randomUUID()
+        val secondId = UUID.randomUUID()
+        repo.insertDaily(firstId, date, storedAt("2026-05-09T00:00:00Z", sampleGrid()))
+        repo.insertDaily(secondId, date, storedAt("2026-05-09T06:00:00Z", sampleGrid()))
+
+        // Both rows persist immutably; the prior id stays readable even after regeneration.
+        assertThat(repo.get(firstId)).isNotNull()
+        assertThat(repo.get(secondId)).isNotNull()
+    }
+
+    @Test
+    fun `findCurrentSummariesByDates returns the latest summary per date`() {
+        val d9 = LocalDate.parse("2026-05-09")
+        val d10 = LocalDate.parse("2026-05-10")
+        repo.insertDaily(UUID.randomUUID(), d9, storedAt("2026-05-09T00:00:00Z", sampleGrid()))
+        val latestD9 = UUID.randomUUID()
+        repo.insertDaily(latestD9, d9, storedAt("2026-05-09T06:00:00Z", sampleGrid()))
+        repo.insertDaily(UUID.randomUUID(), d10, storedAt("2026-05-10T00:00:00Z", sampleGrid()))
+
+        val byDate = repo.findCurrentSummariesByDates(listOf(d9, d10)).associateBy { it.puzzleDate }
+
+        assertThat(byDate).hasSize(2)
+        assertThat(byDate[d9]!!.puzzleId).isEqualTo(latestD9)
+        assertThat(byDate[d10]).isNotNull()
+    }
+
+    @Test
+    fun `on-demand rows carry a null puzzle_date and are absent from date resolution`() {
+        repo.getOrCompute(UUID.randomUUID()) { storedAt("2026-05-09T00:00:00Z", sampleGrid()) }
+        assertThat(repo.getCurrentForDate(LocalDate.parse("2026-05-09"))).isNull()
+    }
+
+    private fun storedAt(
+        createdAt: String,
+        grid: Grid,
+    ): StoredPuzzle = StoredPuzzle(grid, "Grille du jour", "fr", 3, Instant.parse(createdAt))
+
+    private fun wideGrid(): Grid =
+        Grid.fromPlacements(
+            width = 6,
+            height = 5,
+            placements =
+                listOf(
+                    WordPlacement(
+                        Word(text = "PARIS", definition = "Capitale"),
+                        Position(Row(0), Column(0)),
+                        Direction.RIGHT,
+                    ),
+                ),
+        )
 
     private fun sampleGrid(): Grid =
         Grid.fromPlacements(

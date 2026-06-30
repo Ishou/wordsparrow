@@ -112,10 +112,9 @@ fun Route.puzzles(
                 }
             }
 
-        val puzzleId = dailyPuzzleSelector.puzzleIdForDate(date)
-        // Pure read of the persisted daily row (ADR-0042); Dispatchers.IO keeps JDBC off the event loop.
-        val stored = withContext(Dispatchers.IO) { puzzleRepository.get(puzzleId) }
-        if (stored == null) {
+        // Resolve the date to its most-recently-created row (ADR-0081); Dispatchers.IO keeps JDBC off the event loop.
+        val current = withContext(Dispatchers.IO) { puzzleRepository.getCurrentForDate(date) }
+        if (current == null) {
             call.respondProblem(
                 status = HttpStatusCode.NotFound,
                 title = "Aucune grille du jour disponible",
@@ -124,6 +123,8 @@ fun Route.puzzles(
             )
             return@get
         }
+        val puzzleId = current.puzzleId
+        val stored = current.puzzle
         val difficulty = DifficultyDto.fromWire(dailyPuzzleSelector.difficultyForDate(date))
         val rawGridNumber = dailyPuzzleSelector.gridNumberForDate(date)
         val gridNumber = if (rawGridNumber >= 1) rawGridNumber else null

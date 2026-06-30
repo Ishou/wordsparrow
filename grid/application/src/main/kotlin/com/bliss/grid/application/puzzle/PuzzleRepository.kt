@@ -3,6 +3,7 @@ package com.bliss.grid.application.puzzle
 import com.bliss.grid.domain.model.Grid
 import com.bliss.grid.domain.model.LetterCell
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -36,6 +37,30 @@ interface PuzzleRepository {
         factory: () -> StoredPuzzle?,
     ): StoredPuzzle?
 
+    /** Most-recently-created daily row for [date], or `null` if none exists yet (ADR-0081). */
+    fun getCurrentForDate(date: LocalDate): StoredDailyPuzzle? = null
+
+    /** Appends a fresh daily row stamped with [puzzleDate]; regeneration never overwrites the prior row (ADR-0081). */
+    fun insertDaily(
+        puzzleId: UUID,
+        puzzleDate: LocalDate,
+        stored: StoredPuzzle,
+    ) {
+        // Adapters without a daily-date index degrade to id-only storage; date-resolving adapters override.
+        getOrCompute(puzzleId) { stored }
+    }
+
+    /** Latest summary per date in [dates] (ADR-0081); dates with no current row are silently absent. */
+    fun findCurrentSummariesByDates(dates: List<LocalDate>): List<StoredSummary> =
+        dates.mapNotNull { date ->
+            val current = getCurrentForDate(date) ?: return@mapNotNull null
+            StoredSummary(
+                puzzleId = current.puzzleId,
+                totalLetterCells = current.puzzle.totalLetterCells,
+                puzzleDate = date,
+            )
+        }
+
     /** Missing ids (no row or NULL total_letter_cells) are silently absent from the result. */
     fun findSummariesByIds(puzzleIds: List<UUID>): List<StoredSummary> =
         puzzleIds.mapNotNull { id ->
@@ -44,10 +69,17 @@ interface PuzzleRepository {
         }
 }
 
-/** Thin projection used by the archive list endpoint. */
+/** Resolved current daily row: the wire id paired with its server-private snapshot (ADR-0081). */
+data class StoredDailyPuzzle(
+    val puzzleId: UUID,
+    val puzzle: StoredPuzzle,
+)
+
+/** Thin projection used by the archive list endpoint; [puzzleDate] is set only by date-keyed lookups (ADR-0081). */
 data class StoredSummary(
     val puzzleId: UUID,
     val totalLetterCells: Int,
+    val puzzleDate: LocalDate? = null,
 )
 
 /** Server-private snapshot (Grid letters never serialised); totalLetterCells denormalised for archive queries. */

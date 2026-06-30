@@ -40,6 +40,19 @@ class DailyPuzzleSelector(
 ) {
     fun puzzleIdForDate(date: LocalDate): UUID = deterministicUuidV7(date)
 
+    /**
+     * Mints a non-deterministic UUID v7 for a fresh daily generation (ADR-0081):
+     * [nowEpochMs] becomes the 48-bit timestamp, the payload is random, so each
+     * regeneration of a date gets a distinct id that cannot collide with stored
+     * progress keyed on the prior id.
+     */
+    fun freshDailyId(nowEpochMs: Long): UUID =
+        assembleUuidV7(
+            tsMs = nowEpochMs,
+            randA = Random.Default.nextInt(0x1000),
+            randB = Random.Default.nextLong() and 0x3FFFFFFFFFFFFFFFL,
+        )
+
     fun gridNumberForDate(date: LocalDate): Int = (date.toEpochDay() - launchEpochDay).toInt() + 1
 
     /**
@@ -56,10 +69,19 @@ class DailyPuzzleSelector(
     private fun deterministicUuidV7(date: LocalDate): UUID {
         val tsMs = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         val seeded = Random(date.toEpochDay())
-        val randA = seeded.nextInt(0x1000) // 12 bits
-        // 62 bits below the variant: clear top 2 bits.
-        val randB = seeded.nextLong() and 0x3FFFFFFFFFFFFFFFL
+        return assembleUuidV7(
+            tsMs = tsMs,
+            randA = seeded.nextInt(0x1000), // 12 bits
+            // 62 bits below the variant: clear top 2 bits.
+            randB = seeded.nextLong() and 0x3FFFFFFFFFFFFFFFL,
+        )
+    }
 
+    private fun assembleUuidV7(
+        tsMs: Long,
+        randA: Int,
+        randB: Long,
+    ): UUID {
         // UUID v7 layout (RFC 9562 §5.7):
         //   bits 0..47  = unix-ms timestamp
         //   bits 48..51 = version (0b0111 = 7)

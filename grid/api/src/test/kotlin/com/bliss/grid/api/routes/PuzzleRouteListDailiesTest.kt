@@ -44,6 +44,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.util.UUID
 
 class PuzzleRouteListDailiesTest {
     private val today = LocalDate.parse("2026-05-16")
@@ -163,8 +164,7 @@ class PuzzleRouteListDailiesTest {
 
         var d = seed.start
         while (!d.isAfter(seed.endInclusive)) {
-            val id = selector.puzzleIdForDate(d)
-            puzzleRepo.getOrCompute(id) { stubStoredPuzzle() }
+            puzzleRepo.insertDaily(UUID.randomUUID(), d, stubStoredPuzzle())
             d = d.plusDays(1)
         }
 

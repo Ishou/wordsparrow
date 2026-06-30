@@ -29,7 +29,7 @@ class EnsureUpcomingDailiesUseCaseTest {
         val repo = TrackingPuzzleRepository()
         for (offset in 0 until 7) {
             val date = today.plusDays(offset.toLong())
-            repo.put(selector.puzzleIdForDate(date), newStoredPuzzle())
+            repo.seedDaily(date, newStoredPuzzle())
         }
         val port = RecordingPort(grids = { _ -> successfulGrid() })
         val useCase = newUseCase(repo, port)
@@ -41,7 +41,7 @@ class EnsureUpcomingDailiesUseCaseTest {
         assertThat(summary.failedDates).isEmpty()
         assertThat(summary.skippedDates).isEmpty()
         assertThat(port.calls).isEmpty()
-        assertThat(repo.getOrComputeCalls).isEmpty()
+        assertThat(repo.insertedDates).isEmpty()
     }
 
     @Test
@@ -60,9 +60,7 @@ class EnsureUpcomingDailiesUseCaseTest {
         val seenSeeds = port.calls.map { it.seed }
         val expectedSeeds = expectedDates.map { it.toEpochDay() * 1_000_000_000L }
         assertThat(seenSeeds).containsExactly(*expectedSeeds.toTypedArray())
-        val writtenIds = repo.getOrComputeCalls.toList()
-        val expectedIds = expectedDates.map { selector.puzzleIdForDate(it) }
-        assertThat(writtenIds).containsExactly(*expectedIds.toTypedArray())
+        assertThat(repo.insertedDates).containsExactly(*expectedDates.toTypedArray())
     }
 
     @Test
@@ -89,7 +87,7 @@ class EnsureUpcomingDailiesUseCaseTest {
         assertThat(summary.generatedDates).containsExactly(today, today.plusDays(1))
         // 2 successes (today, today+1) + 20 exhausted attempts on day 3; day 4..7 never call the port.
         assertThat(port.calls).hasSize(22)
-        assertThat(repo.getOrComputeCalls).hasSize(2)
+        assertThat(repo.insertedDates).hasSize(2)
     }
 
     @Test
@@ -165,7 +163,7 @@ class EnsureUpcomingDailiesUseCaseTest {
 
         assertThat(summary.failedDates).containsExactly(today)
         assertThat(summary.skippedDates).containsExactly(today.plusDays(1))
-        assertThat(repo.getOrComputeCalls).isEmpty()
+        assertThat(repo.insertedDates).isEmpty()
     }
 
     private fun newUseCase(
@@ -203,13 +201,14 @@ class EnsureUpcomingDailiesUseCaseTest {
 
     private class TrackingPuzzleRepository : PuzzleRepository {
         private val store = ConcurrentHashMap<UUID, StoredPuzzle>()
-        val getOrComputeCalls = mutableListOf<UUID>()
+        private val byDate = ConcurrentHashMap<LocalDate, MutableList<UUID>>()
+        val insertedDates = mutableListOf<LocalDate>()
 
-        fun put(
-            id: UUID,
+        fun seedDaily(
+            date: LocalDate,
             value: StoredPuzzle,
         ) {
-            store[id] = value
+            putDated(UUID.randomUUID(), date, value)
         }
 
         override fun get(puzzleId: UUID): StoredPuzzle? = store[puzzleId]
@@ -219,8 +218,30 @@ class EnsureUpcomingDailiesUseCaseTest {
             factory: () -> StoredPuzzle?,
         ): StoredPuzzle? {
             val produced = factory() ?: return null
-            getOrComputeCalls += puzzleId
             return store.computeIfAbsent(puzzleId) { produced }
+        }
+
+        override fun getCurrentForDate(date: LocalDate): StoredDailyPuzzle? {
+            val id = byDate[date]?.lastOrNull() ?: return null
+            return store[id]?.let { StoredDailyPuzzle(id, it) }
+        }
+
+        override fun insertDaily(
+            puzzleId: UUID,
+            puzzleDate: LocalDate,
+            stored: StoredPuzzle,
+        ) {
+            putDated(puzzleId, puzzleDate, stored)
+            insertedDates += puzzleDate
+        }
+
+        private fun putDated(
+            id: UUID,
+            date: LocalDate,
+            value: StoredPuzzle,
+        ) {
+            store[id] = value
+            byDate.compute(date) { _, existing -> (existing ?: mutableListOf()).apply { add(id) } }
         }
     }
 

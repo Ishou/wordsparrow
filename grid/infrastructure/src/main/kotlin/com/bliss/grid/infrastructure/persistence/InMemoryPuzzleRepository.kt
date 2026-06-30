@@ -1,7 +1,9 @@
 package com.bliss.grid.infrastructure.persistence
 
 import com.bliss.grid.application.puzzle.PuzzleRepository
+import com.bliss.grid.application.puzzle.StoredDailyPuzzle
 import com.bliss.grid.application.puzzle.StoredPuzzle
+import java.time.LocalDate
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -19,7 +21,27 @@ import java.util.concurrent.ConcurrentHashMap
 class InMemoryPuzzleRepository : PuzzleRepository {
     private val store = ConcurrentHashMap<UUID, StoredPuzzle>()
 
+    // Insertion order is the in-memory stand-in for created_at; the last id wins (ADR-0081).
+    private val dailyByDate = ConcurrentHashMap<LocalDate, MutableList<UUID>>()
+
     override fun get(puzzleId: UUID): StoredPuzzle? = store[puzzleId]
+
+    override fun getCurrentForDate(date: LocalDate): StoredDailyPuzzle? {
+        val id = dailyByDate[date]?.lastOrNull() ?: return null
+        val stored = store[id] ?: return null
+        return StoredDailyPuzzle(puzzleId = id, puzzle = stored)
+    }
+
+    override fun insertDaily(
+        puzzleId: UUID,
+        puzzleDate: LocalDate,
+        stored: StoredPuzzle,
+    ) {
+        store[puzzleId] = stored
+        dailyByDate.compute(puzzleDate) { _, existing ->
+            (existing ?: mutableListOf()).apply { add(puzzleId) }
+        }
+    }
 
     override fun getOrCompute(
         puzzleId: UUID,
