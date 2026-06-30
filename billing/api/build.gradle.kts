@@ -37,10 +37,10 @@ dependencies {
     implementation(project(":billing:application"))
     implementation(project(":billing:infrastructure"))
 
-    // UUID v7 generator for the EventIdGenerator port wired in Main.kt.
+    // UUID v7 generator for the EventIdGenerator port.
     implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
 
-    // NATS JetStream client — Main.kt holds the EntitlementChanged publisher's JetStream (ADR-0049, ADR-0078).
+    // NATS JetStream client (ADR-0049, ADR-0078).
     implementation("io.nats:jnats:2.25.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 

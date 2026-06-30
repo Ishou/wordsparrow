@@ -41,7 +41,7 @@ class ApiArchitectureTest {
 
     @Test
     fun `routes package does not import infrastructure adapter classes`() {
-        // Routes depend on ports + use cases + domain only; adapters are wired in Main.kt.
+        // Routes depend on ports + use cases + domain only; infrastructure adapters must not be imported here.
         apiScope.files
             .withPackage("com.bliss.billing.api.routes..")
             .assertFalse { file ->
