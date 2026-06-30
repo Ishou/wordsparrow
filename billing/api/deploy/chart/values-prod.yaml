@@ -3,6 +3,8 @@
 # Pins K8s name to release name so CD's kubectl rollout status resolves without chart-name arithmetic.
 fullnameOverride: "wordsparrow-billing-api"
 
+# Single replica for the test-phase dark-launch (ADR-0078); over base 2 to stop over-committing the 3-node cluster — restore HA when billing goes GA.
+replicaCount: 1
 image:
   # Fail-fast guard: helm aborts if digest is empty (see _helpers.tpl).
   requireDigest: true
