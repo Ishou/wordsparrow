@@ -5,7 +5,24 @@ import type { AuthClient, WhoAmIResult } from '@/application/auth';
 import type { BillingClient, SubscriptionView } from '@/application/billing';
 import { BillingError } from '@/application/billing';
 import { AuthProvider } from '@/ui/components/auth';
-import { AbonnementScreen } from '@/ui/routes/abonnement';
+
+// PhoneShell pulls router + root-context primitives (DesktopAppBar → MenuSheet); stub them so screens render without a full router.
+let routeContext: Record<string, unknown> = {};
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>();
+  return {
+    ...actual,
+    Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
+      <a href={String(to)} className={className}>
+        {children}
+      </a>
+    ),
+    useNavigate: () => vi.fn(),
+    useRouteContext: () => routeContext,
+  };
+});
+
+const { AbonnementManage, AbonnementScreen } = await import('@/ui/v2/AbonnementScreen');
 
 const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 
@@ -53,20 +70,20 @@ const PLAYER: WhoAmIResult = {
   capabilities: [],
 };
 
-function renderScreen(opts: { whoami: WhoAmIResult | null; client: BillingClient }) {
-  function Wrapper({ children }: { children: ReactNode }) {
+function withAuth(whoami: WhoAmIResult | null) {
+  return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <AuthProvider authClient={fakeAuthClient(opts.whoami)} getPseudonym={() => 'Renard 423'}>
+      <AuthProvider authClient={fakeAuthClient(whoami)} getPseudonym={() => 'Renard 423'}>
         {children}
       </AuthProvider>
     );
-  }
-  return render(<AbonnementScreen client={opts.client} />, { wrapper: Wrapper });
+  };
 }
 
 const originalLocation = window.location;
 
 beforeEach(() => {
+  routeContext = {};
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
 });
 
@@ -74,38 +91,26 @@ afterEach(() => {
   Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
 });
 
-describe('AbonnementScreen', () => {
+describe('AbonnementManage', () => {
   it('renders the active subscription status from the billing client', async () => {
     const client = fakeBillingClient({ getSubscription: vi.fn().mockResolvedValue(ACTIVE_VIEW) });
-    renderScreen({ whoami: PLAYER, client });
+    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
     await waitFor(() => expect(screen.getByText(/Premium — actif/)).toBeInTheDocument());
     expect(client.getSubscription).toHaveBeenCalled();
   });
 
   it('renders the free offer when there is no active subscription', async () => {
-    renderScreen({ whoami: PLAYER, client: fakeBillingClient() });
+    render(<AbonnementManage client={fakeBillingClient()} />, { wrapper: withAuth(SUBSCRIBER) });
 
     await waitFor(() =>
       expect(screen.getByText("Tu joues avec l'offre gratuite.")).toBeInTheDocument(),
     );
-  });
-
-  it('shows the subscribe CTA only with the billing:subscribe capability', async () => {
-    const { unmount } = renderScreen({ whoami: SUBSCRIBER, client: fakeBillingClient() });
-    expect(await screen.findByRole('button', { name: /S'abonner/ })).toBeInTheDocument();
-    unmount();
-
-    renderScreen({ whoami: PLAYER, client: fakeBillingClient() });
-    await waitFor(() =>
-      expect(screen.getByText("Tu joues avec l'offre gratuite.")).toBeInTheDocument(),
-    );
-    expect(screen.queryByRole('button', { name: /S'abonner/ })).toBeNull();
   });
 
   it('hides the subscribe CTA when a subscription is already active', async () => {
     const client = fakeBillingClient({ getSubscription: vi.fn().mockResolvedValue(ACTIVE_VIEW) });
-    renderScreen({ whoami: SUBSCRIBER, client });
+    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
     await waitFor(() => expect(screen.getByText(/Premium — actif/)).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: /S'abonner/ })).toBeNull();
@@ -118,7 +123,7 @@ describe('AbonnementScreen', () => {
       value: { href: 'http://localhost/abonnement', origin: 'http://localhost', assign },
     });
     const client = fakeBillingClient();
-    renderScreen({ whoami: SUBSCRIBER, client });
+    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
     const button = await screen.findByRole('button', { name: /S'abonner/ });
     await act(async () => {
@@ -133,7 +138,7 @@ describe('AbonnementScreen', () => {
     const client = fakeBillingClient({
       createCheckoutSession: vi.fn().mockRejectedValue(new BillingError('provider-unavailable', 503)),
     });
-    renderScreen({ whoami: SUBSCRIBER, client });
+    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
     const button = await screen.findByRole('button', { name: /S'abonner/ });
     await act(async () => {
@@ -146,12 +151,9 @@ describe('AbonnementScreen', () => {
   });
 
   it('cancels an active subscription then refetches the status', async () => {
-    const getSubscription = vi
-      .fn()
-      .mockResolvedValueOnce(ACTIVE_VIEW)
-      .mockResolvedValue(FREE_VIEW);
+    const getSubscription = vi.fn().mockResolvedValueOnce(ACTIVE_VIEW).mockResolvedValue(FREE_VIEW);
     const client = fakeBillingClient({ getSubscription });
-    renderScreen({ whoami: SUBSCRIBER, client });
+    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
     const button = await screen.findByRole('button', { name: 'Résilier' });
     await act(async () => {
@@ -172,7 +174,7 @@ describe('AbonnementScreen', () => {
       .mockResolvedValueOnce(ACTIVE_VIEW)
       .mockReturnValueOnce(new Promise<SubscriptionView>(() => {}));
     const client = fakeBillingClient({ getSubscription });
-    renderScreen({ whoami: SUBSCRIBER, client });
+    render(<AbonnementManage client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
     const button = await screen.findByRole('button', { name: 'Résilier' });
     await act(async () => {
@@ -181,5 +183,45 @@ describe('AbonnementScreen', () => {
 
     await waitFor(() => expect(client.cancelSubscription).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByRole('button', { name: 'Résilier' })).toBeDisabled());
+  });
+});
+
+describe('AbonnementScreen capability gate', () => {
+  it('renders the screen for an authed user with billing:subscribe', async () => {
+    routeContext = { billingClient: fakeBillingClient() };
+    render(<AbonnementScreen />, { wrapper: withAuth(SUBSCRIBER) });
+
+    // Content unique to the loaded screen (the heading is shared with the loading state).
+    expect(await screen.findByText("Tu joues avec l'offre gratuite.")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /S'abonner/ })).toBeInTheDocument();
+  });
+
+  it('renders the standard 404 for an anonymous visitor', async () => {
+    routeContext = { billingClient: fakeBillingClient() };
+    render(<AbonnementScreen />, { wrapper: withAuth(null) });
+
+    expect(await screen.findByText("Cette page s'est envolée")).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Abonnement' })).toBeNull();
+  });
+
+  it('renders the standard 404 for an authed user without the capability', async () => {
+    routeContext = { billingClient: fakeBillingClient() };
+    render(<AbonnementScreen />, { wrapper: withAuth(PLAYER) });
+
+    expect(await screen.findByText("Cette page s'est envolée")).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Abonnement' })).toBeNull();
+  });
+
+  it('shows a loading state while the session resolves', async () => {
+    const authClient = fakeAuthClient(null);
+    authClient.whoami = vi.fn().mockReturnValue(new Promise<WhoAmIResult | null>(() => {}));
+    routeContext = { billingClient: fakeBillingClient() };
+    render(
+      <AuthProvider authClient={authClient} getPseudonym={() => 'Renard 423'}>
+        <AbonnementScreen />
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByText('Chargement…')).toBeInTheDocument();
   });
 });
