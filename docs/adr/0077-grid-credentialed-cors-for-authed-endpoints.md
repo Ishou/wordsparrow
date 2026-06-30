@@ -87,10 +87,9 @@ ADR-0001 §7 governance gate.
    widen which origins receive CORS headers. `allowMethod` and
    `allowNonSimpleContentTypes = true` stay as-is.
 
-   **Open question for Wave 2 (do not decide here):** identity-api's
-   allowlist includes a Cloudflare Pages preview host
-   (ADR-0048); grid's does not. Whether to add it to grid for parity is a
-   Wave-2 confirmation, not decided in this ADR.
+   identity-api's allowlist no longer includes a Cloudflare Pages preview
+   host (ADR-0048); neither does grid's. The Wave-2 parity question is
+   moot.
 
 2. **Frontend (`client.ts` / `HttpPuzzleSolver.ts`).** Send
    `credentials: 'include'` **only on the authed hint POST** — not on the
