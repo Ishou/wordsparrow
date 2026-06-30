@@ -11,7 +11,6 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.patch
 
-// PATCH /v1/me/preferences — auth-required opt-out toggle on rater-proposed items.
 fun Route.mePreferencesRoute(proposedBy: ProposedByRepository) {
     patch("/v1/me/preferences") {
         if (!call.requireContribuer()) return@patch

@@ -19,7 +19,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import java.util.UUID
 
-// POST /v1/ratings/pair — auth-optional; verdict dispatch handled by the use case (ADR-0056 amendment 2026-05-28).
+// POST /v1/ratings/pair — contribuer-gated (ADR-0079); verdict dispatch handled by the use case (ADR-0056 amendment 2026-05-28).
 fun Route.submitPairRatingRoute(execute: suspend (SubmitPairRatingCommand) -> SubmitPairRatingResult) {
     post("/v1/ratings/pair") {
         if (!call.requireContribuer()) return@post

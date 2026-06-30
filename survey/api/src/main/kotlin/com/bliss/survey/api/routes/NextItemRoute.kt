@@ -13,7 +13,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import java.util.UUID
 
-// GET /v1/items/next — auth-optional; excluded= query for client-side dedup (ADR-0056).
+// GET /v1/items/next — contribuer-gated (ADR-0079); excluded= query for client-side dedup (ADR-0056).
 fun Route.nextItemRoute(useCase: GetNextItemUseCase) {
     get("/v1/items/next") {
         if (!call.requireContribuer()) return@get

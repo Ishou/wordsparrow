@@ -10,7 +10,6 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
-// GET /v1/me/contributions — auth-required listing of rater-proposed items.
 fun Route.meContributionsRoute(items: SurveyItemRepository) {
     get("/v1/me/contributions") {
         if (!call.requireContribuer()) return@get

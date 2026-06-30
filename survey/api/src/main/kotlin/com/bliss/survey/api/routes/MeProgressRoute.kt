@@ -10,7 +10,6 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
-// GET /v1/me/progress — auth-required (ADR-0056 §5).
 fun Route.meProgressRoute(progress: UserProgressRepository) {
     get("/v1/me/progress") {
         if (!call.requireContribuer()) return@get
