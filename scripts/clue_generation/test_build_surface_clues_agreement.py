@@ -1,0 +1,79 @@
+"""Surface-tier number-agreement gate.
+
+The wordsparrow.io regression: `posè` (freq 97) and `réprimè` (freq 0) are
+literary subject-inversion forms grammalecte tags `ipre 1isg` — singular, but
+`1isg` is absent from morphology_index.PERSON_TOKENS. The inflater therefore
+drops the person constraint and inflates the head verb person-unconstrained,
+returning the first `ipre` paradigm row (a plural). Net: a plural clue
+(`Placent`, `Font cesser`) on a singular answer.
+
+`classify_inflection` re-checks the inflated head's number against the
+surface's and emits `agreement-mismatch` so build_surface_clues drops the row.
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "eval"))
+
+from build_surface_clues import (  # noqa: E402
+    _head_verb_numbers,
+    _verb_number,
+    classify_inflection,
+)
+from morphology_index import MorphologyIndex  # noqa: E402
+
+
+def _add(idx: MorphologyIndex, lemma: str, surface: str, tags: str) -> None:
+    ts = frozenset(tags.split())
+    idx.by_lemma.setdefault(lemma, []).append((surface, ts))
+    idx.by_form.setdefault(surface, []).append((lemma, ts))
+
+
+def _placer_index() -> MorphologyIndex:
+    """Mirror grammalecte's emission for placer: the `placent` (3pl) row is
+    reached first when the person constraint is dropped, reproducing the bug."""
+    idx = MorphologyIndex()
+    _add(idx, "placer", "placer", "v1__tnq__a infi")
+    _add(idx, "placer", "placent", "v1__tnq__a ipre 3pl")
+    _add(idx, "placer", "place", "v1__tnq__a ipre 1sg 2sg 3sg")
+    return idx
+
+
+def test_verb_number_maps_inversion_person_to_singular() -> None:
+    assert _verb_number({"ipre", "1isg"}) == "sg"
+    assert _verb_number({"ipre", "3pl"}) == "pl"
+    assert _verb_number({"nom", "mas", "inv"}) is None
+
+
+def test_singular_inversion_surface_with_plural_clue_is_dropped() -> None:
+    """`posè` (ipre 1isg, singular) with the placer clue inflates to the plural
+    head `Placent` — must be flagged `agreement-mismatch`, not shipped."""
+    idx = _placer_index()
+    surface_tags = {"ipre", "1isg", "v1_itxq__a"}
+    clue, status = classify_inflection("Placer", surface_tags, idx)
+    assert _head_verb_numbers(clue, idx) == {"pl"}
+    assert status == "agreement-mismatch", (clue, status)
+
+
+def test_homograph_head_with_achievable_number_is_kept() -> None:
+    """`sommes` reads as être-1pl (pl) AND sommer-2sg (sg). A 1pl surface whose
+    head inflates to `Sommes` must NOT be flagged — the plural reading agrees."""
+    idx = MorphologyIndex()
+    _add(idx, "être", "être", "v3___nq__a infi")
+    _add(idx, "être", "sommes", "v3___nq__a ipre 1pl")
+    _add(idx, "sommer", "sommes", "v1__t___zz ipre 2sg")
+    surface_tags = {"ipre", "1pl", "v3___nq__a"}
+    _clue, status = classify_inflection("Être", surface_tags, idx)
+    assert status == "inflected", status
+
+
+def test_singular_surface_with_singular_clue_is_kept() -> None:
+    """Control: a 3sg surface inflates to the singular head `place` — numbers
+    agree, so the row ships as a normal `inflected` clue."""
+    idx = _placer_index()
+    surface_tags = {"ipre", "3sg", "v1_itxq__a"}
+    _clue, status = classify_inflection("Placer", surface_tags, idx)
+    assert status == "inflected", status

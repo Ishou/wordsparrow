@@ -23,22 +23,82 @@ inflection_status values:
                               infinitive on a finite-tense surface reads as
                               a tense disagreement (extraire/soustraire are
                               defective at passé simple in grammalecte).
+  - "agreement-mismatch"    : inflated clue head's number disagrees with the
+                              surface's number (singular inversion form posè
+                              inflated to plural head Placent). Routed to
+                              dropped — a plural clue on a singular answer.
   - "head-pos-mismatch"     : no clue head matches surface POS
   - "no-target-pos"         : surface POS not in {nom, adj, verbe}
   - "no-owner"              : no (lemma, pos) candidate has a clue in corpus
 """
 from __future__ import annotations
-import argparse, csv, os, sys
+import argparse, csv, os, re, sys
 from collections import defaultdict
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO / "scripts" / "eval"))
 from morphology_index import MorphologyIndex, _classify, normalize_tag  # noqa: E402
-from inflect_clue import inflect_clue  # noqa: E402  (pre-head adj heuristic baked in)
+from inflect_clue import _FUNCTION_WORDS, inflect_clue  # noqa: E402
 from clue_metrics import MAX_CLUE_CHARS, fits_single_cell  # noqa: E402
 
 POS_PRECEDENCE = {"nom": 0, "adj": 1, "adv": 2, "verbe": 3}
+
+_NUMBER_TOK_RE = re.compile(r"[\wÀ-ÿŒœŸ]+", re.UNICODE)
+# Finite-verb person tags, incl. the inversion persons PERSON_TOKENS omits.
+_PERSON_TAGS = {"1sg", "2sg", "3sg", "1pl", "2pl", "3pl", "1isg", "2isg", "3isg"}
+
+
+def _verb_number(tags) -> str | None:
+    """Map a grammalecte tag set to grammatical number. The inversion persons
+    `1isg/2isg/3isg` are singular but absent from PERSON_TOKENS — exactly why
+    the inflater dropped the person constraint and produced a plural head."""
+    t = set(tags)
+    if t & {"1sg", "2sg", "3sg", "1isg", "2isg", "3isg", "sg"}:
+        return "sg"
+    if t & {"1pl", "2pl", "3pl", "pl"}:
+        return "pl"
+    return None
+
+
+def _head_verb_numbers(text: str, index: MorphologyIndex) -> set[str]:
+    """Numbers the inflated clue's head (first finite-verb token) can take,
+    across all of that token's finite-verb readings. Returning the full set
+    (not the first hit) avoids homograph false positives — `Sommes` reads as
+    être-1pl (pl) AND sommer-2sg (sg); the head agrees as long as the surface
+    number is achievable by some reading."""
+    for tok in _NUMBER_TOK_RE.findall(text):
+        # Negation/function words (`ne`, `plus`) carry spurious verb readings.
+        if tok.lower() in _FUNCTION_WORDS:
+            continue
+        numbers = {
+            _verb_number(tags)
+            for _lemma, tags in index.lookup_form(tok.lower())
+            if tags & _PERSON_TAGS
+        }
+        numbers.discard(None)
+        if numbers:
+            return numbers
+    return set()
+
+
+def classify_inflection(
+    source_clue: str, surface_tags: set[str], index: MorphologyIndex,
+) -> tuple[str, str]:
+    """Inflate the head, then gate finite-verb surfaces on clue↔surface number
+    agreement. Returns (clue_text, status). A finite-verb clue whose head
+    cannot take the surface's number becomes `agreement-mismatch`
+    (posè→Placent, réprimè→Font cesser). Scoped to surfaces carrying a person
+    tag (finite verbs) so participles and noun/adj number quirks don't
+    false-positive."""
+    res = inflect_clue(source_clue, surface_tags, index)
+    status = res.flag or "inflected"
+    if status in ("inflected", "identity") and (surface_tags & _PERSON_TAGS):
+        surf_n = _verb_number(surface_tags)
+        head_numbers = _head_verb_numbers(res.text, index)
+        if surf_n and head_numbers and surf_n not in head_numbers:
+            return res.text, "agreement-mismatch"
+    return res.text, status
 
 
 def lemma_pos_freq(lexique: Path) -> dict[tuple[str, str], int]:
@@ -159,9 +219,7 @@ def main() -> None:
                 status = "verbatim"
             else:
                 norm_tags = {normalize_tag(t) for t in winner_tags}
-                res = inflect_clue(source_clue, norm_tags, index)
-                clue = res.text
-                status = res.flag or "inflected"
+                clue, status = classify_inflection(source_clue, norm_tags, index)
 
             # Char-cap + wrap gate. Inflation can lengthen ("Récit imaginaire"
             # → "Récits imaginaires" gains 2 chars), so we re-check
@@ -201,9 +259,10 @@ def main() -> None:
         # targets (extraire/soustraire at passé simple) cannot safely fall back
         # to the lemma-form infinitive — shipping would re-introduce the
         # `tira → "Extraire"` tense-disagreement bug.
+        # `agreement-mismatch`: inflated head number disagrees with the surface.
         skipped = r.get("inflection_status") in (
             "pp-only-skipped", "pp-reflexive-skipped",
-            "no-inflection-finite",
+            "no-inflection-finite", "agreement-mismatch",
         )
         if skipped or s < args.threshold:
             dropped.append(r)
