@@ -312,6 +312,19 @@ export interface operations {
                 };
             };
             /**
+             * @description Authenticated caller is not a maintainer. This route is
+             *     maintainer-gated during the ADR-0078 test phase. RFC 7807;
+             *     `type` is `https://bliss.example/errors/forbidden`.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
              * @description The caller already has an active subscription. Opening a second
              *     checkout session risks a duplicate provider subscription and double
              *     billing; cancel or manage the existing one instead. RFC 7807;
@@ -379,6 +392,19 @@ export interface operations {
              *     `type` is `https://bliss.example/errors/auth-required`.
              */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description Authenticated caller is not a maintainer. This route is
+             *     maintainer-gated during the ADR-0078 test phase. RFC 7807;
+             *     `type` is `https://bliss.example/errors/forbidden`.
+             */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
