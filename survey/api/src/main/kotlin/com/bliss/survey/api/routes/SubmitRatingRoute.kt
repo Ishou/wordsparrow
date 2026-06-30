@@ -28,7 +28,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import java.util.UUID
 
-// POST /v1/items/{itemId}/rating — auth-optional; anon + correctif rejected 401 before use-case.
 fun Route.submitRatingRoute(execute: suspend (SubmitRatingCommand) -> SubmitRatingResult) {
     post("/v1/items/{itemId}/rating") {
         if (!call.requireContribuer()) return@post
