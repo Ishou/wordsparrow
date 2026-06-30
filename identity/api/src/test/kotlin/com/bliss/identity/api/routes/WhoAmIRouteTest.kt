@@ -103,6 +103,7 @@ class WhoAmIRouteTest {
             assertThat(body).contains("\"userId\":\"${userId.value}\"")
             assertThat(body).contains("\"displayName\":\"Alice\"")
             assertThat(body).contains("\"role\":\"player\"")
+            assertThat(body).contains("\"capabilities\":[]")
         }
 
     @Test
@@ -114,6 +115,8 @@ class WhoAmIRouteTest {
                     cookie(SessionCookies.NAME, sessionId.value.toString())
                 }
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
-            assertThat(response.bodyAsText()).contains("\"role\":\"maintainer\"")
+            val body = response.bodyAsText()
+            assertThat(body).contains("\"role\":\"maintainer\"")
+            assertThat(body).contains("\"capabilities\":[\"billing:subscribe\"]")
         }
 }

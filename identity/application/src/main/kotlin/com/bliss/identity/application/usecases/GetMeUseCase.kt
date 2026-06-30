@@ -3,10 +3,12 @@ package com.bliss.identity.application.usecases
 import com.bliss.identity.application.ports.UserProviderRepository
 import com.bliss.identity.application.ports.UserRepository
 import com.bliss.identity.domain.provider.Provider
+import com.bliss.identity.domain.user.Capability
 import com.bliss.identity.domain.user.DisplayName
 import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
+import com.bliss.identity.domain.user.capabilitiesFor
 import java.time.Instant
 
 data class GetMeQuery(
@@ -25,6 +27,7 @@ data class GetMeResult(
     val createdAt: Instant,
     val lastSeenAt: Instant,
     val role: Role,
+    val capabilities: Set<Capability>,
     val linkedProviders: List<LinkedProviderView>,
 )
 
@@ -58,6 +61,7 @@ class GetMeUseCase(
             createdAt = createdAt,
             lastSeenAt = lastSeenAt,
             role = role,
+            capabilities = capabilitiesFor(role),
             linkedProviders = linkedProviders,
         )
 }

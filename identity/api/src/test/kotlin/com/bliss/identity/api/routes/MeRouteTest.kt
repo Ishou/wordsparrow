@@ -102,6 +102,7 @@ class MeRouteTest {
             assertThat(body).contains("\"createdAt\":\"$now\"")
             assertThat(body).contains("\"providers\":[]")
             assertThat(body).contains("\"role\":\"player\"")
+            assertThat(body).contains("\"capabilities\":[]")
         }
 
     @Test
@@ -113,7 +114,9 @@ class MeRouteTest {
                     cookie(SessionCookies.NAME, sessionId.value.toString())
                 }
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
-            assertThat(response.bodyAsText()).contains("\"role\":\"maintainer\"")
+            val body = response.bodyAsText()
+            assertThat(body).contains("\"role\":\"maintainer\"")
+            assertThat(body).contains("\"capabilities\":[\"billing:subscribe\"]")
         }
 
     @Test
