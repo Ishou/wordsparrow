@@ -49,7 +49,7 @@ const linkStyles = css({
   textDecoration: 'underline',
 });
 
-// Active (or pending_cancellation) means access is granted; matches the manage screen's predicate.
+// Active (or pending_cancellation) means access is granted.
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(['active', 'pending_cancellation']);
 function hasActiveAccess(subscription: SubscriptionView | null): boolean {
   return subscription !== null && ACTIVE_STATUSES.has(subscription.status);
