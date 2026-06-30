@@ -9,19 +9,20 @@
 # (channel-as-resource) in ways that complicate codegen here (ADR-0019).
 #
 # This is a NATS domain-event subject (ADR-0049 posture), modelled on
-# identity's UserRoleChanged (ADR-0060): billing emits EntitlementChanged;
-# grid/game/identity consume and cache it for server-side enforcement.
+# identity's UserRoleChanged (ADR-0060): billing emits SubscriptionChanged;
+# identity consumes it and derives capabilities (ADR-0078 amendment).
 asyncapi: 2.6.0
 info:
   title: Bliss Billing Events API
   version: 0.1.0
   description: |
     Domain events emitted by the billing/ bounded context (ADR-0078). billing
-    publishes `EntitlementChanged` whenever a user's entitlement transitions
-    (subscription created, renewed, canceled, or moved to
-    pending_cancellation). Consumers (grid/game/identity) cache the latest
-    entitlement per user and enforce gates server-side; the frontend reads
-    `tier` from `/me` for cosmetic UI only.
+    publishes `SubscriptionChanged` whenever a user's subscription transitions
+    (created, renewed, canceled, or moved to pending_cancellation). billing
+    knows only `userId` and subscription state — never capabilities. identity
+    consumes this event and maps `(role + subscription) → capabilities`
+    (ADR-0078 / ADR-0060 amendments); the frontend reads capabilities from
+    identity's `/me`, never billing.
 
     The subject is internal (NetworkPolicy-guarded per ADR-0078) and carries no
     secrets. Mirrors the `UserRoleChanged` propagation shape (ADR-0060) over the
@@ -30,7 +31,7 @@ info:
   license: { name: FSL-1.1-MIT, url: https://github.com/Ishou/bliss/blob/main/LICENSE }
 
 tags:
-  - { name: entitlement, description: Entitlement-change propagation for server-side gating. }
+  - { name: subscription, description: Subscription-state propagation; identity derives capabilities from it. }
 
 servers:
   production:
@@ -41,46 +42,47 @@ servers:
 defaultContentType: application/json
 
 channels:
-  wordsparrow.user.entitlement-changed:
+  wordsparrow.user.subscription-changed:
     description: |
-      NATS subject carrying `EntitlementChanged` events. Published by billing
-      on every entitlement transition; consumed by grid/game/identity, which
-      cache the latest state per user and enforce gates server-side.
+      NATS subject carrying `SubscriptionChanged` events. Published by billing
+      on every subscription transition; consumed by identity, which maps
+      `(role + subscription) → capabilities` and enforces gates server-side.
     subscribe:
-      operationId: publishEntitlementChanged
-      summary: An entitlement transition was emitted by billing.
+      operationId: publishSubscriptionChanged
+      summary: A subscription transition was emitted by billing.
       description: |
-        Emitted whenever a user's entitlement changes (created, renewed,
+        Emitted whenever a user's subscription changes (created, renewed,
         canceled, pending_cancellation). Consumers SHOULD treat the event as
         last-write-wins keyed by `userId`, applying newer `changedAt` over older
         cached state, and dedupe by `eventId` (delivery is at-least-once, so the
         same event may arrive more than once).
       tags:
-        - { name: entitlement }
+        - { name: subscription }
       message:
-        $ref: '#/components/messages/EntitlementChanged'
+        $ref: '#/components/messages/SubscriptionChanged'
 
 components:
   messages:
-    EntitlementChanged:
-      name: entitlementChanged
-      title: Entitlement changed
-      summary: A user's entitlement transitioned; consumers update cached state.
+    SubscriptionChanged:
+      name: subscriptionChanged
+      title: Subscription changed
+      summary: A user's subscription transitioned; identity re-derives capabilities.
       contentType: application/json
       payload:
-        $ref: '#/components/schemas/EntitlementChangedPayload'
+        $ref: '#/components/schemas/SubscriptionChangedPayload'
 
   schemas:
-    EntitlementChangedPayload:
+    SubscriptionChangedPayload:
       type: object
       required: [eventId, userId, tier, status, periodEnd, source, changedAt]
       description: |
-        Entitlement transition for one user. `periodEnd` is always on the wire
-        and `null` when no current period applies — absence and `null` are
-        distinct per ADR-0003 §6. `tier`/`status` are open strings (not enums):
-        the offer is config-driven and deferred (ADR-0078).
+        Subscription transition for one user; carries NO capabilities (identity
+        derives those). `periodEnd` is always on the wire and `null` when no
+        current period applies — absence and `null` are distinct per ADR-0003
+        §6. `tier`/`status` are open strings (not enums): the offer is
+        config-driven and deferred (ADR-0078).
 
-        v1 assumes a SINGLE entitlement source per user (Mollie). When a second
+        v1 assumes a SINGLE subscription source per user (Mollie). When a second
         source lands (Play/Apple) a user could hold subscriptions from more than
         one source; the cross-source resolution rule (which source wins, how
         events from different sources reconcile) is NOT defined here and MUST be
@@ -98,7 +100,7 @@ components:
         userId:
           type: string
           format: uuid
-          description: UUID v7 of the user whose entitlement changed (ADR-0003 §6).
+          description: UUID v7 of the user whose subscription changed (ADR-0003 §6).
           example: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b
         tier:
           type: string

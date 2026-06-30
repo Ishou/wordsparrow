@@ -92,7 +92,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/entitlement": {
+    "/v1/subscription": {
         parameters: {
             query?: never;
             header?: never;
@@ -100,16 +100,17 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read the caller's current entitlement.
-         * @description Returns the authenticated caller's entitlement projection — the stored
-         *     `tier`, subscription `status`, the current-period end (when one
-         *     applies), and the resolved `capabilities`. The caller is identified by
+         * Read the caller's own subscription status.
+         * @description Returns the authenticated caller's subscription status — the stored
+         *     `tier`, subscription `status`, and the current-period end (when one
+         *     applies) — for the manage-subscription UI. The caller is identified by
          *     the `__Secure-ws_session` cookie; `userId` is resolved server-side.
          *
-         *     Consumers gate on `capabilities`, not `tier` (ADR-0078): adding a tier
-         *     is a mapping change, not a contract change.
+         *     Carries no capabilities: identity owns authorization and derives
+         *     capabilities from `(role + subscription)` (ADR-0078 / ADR-0060
+         *     amendments).
          */
-        get: operations["getEntitlement"];
+        get: operations["getSubscription"];
         put?: never;
         post?: never;
         delete?: never;
@@ -179,12 +180,13 @@ export interface components {
             [key: string]: unknown;
         };
         /**
-         * @description The caller's entitlement projection. `periodEnd` is always present on
-         *     the wire and `null` when no current period applies (e.g. free tier or
-         *     a never-subscribed user) — absence and `null` are distinct per
-         *     ADR-0003 §6. Consumers gate on `capabilities`, not `tier`.
+         * @description The caller's own subscription status. Carries no capabilities — identity
+         *     owns those (ADR-0078 / ADR-0060 amendments). `periodEnd` is always
+         *     present on the wire and `null` when no current period applies (e.g. free
+         *     tier or a never-subscribed user) — absence and `null` are distinct per
+         *     ADR-0003 §6.
          */
-        EntitlementView: {
+        SubscriptionView: {
             /**
              * @description Stored subscription tier. Open string, not an enum: the tier set is
              *     config-driven and deferred (ADR-0078).
@@ -205,22 +207,6 @@ export interface components {
              * @example 2026-07-29T00:00:00Z
              */
             periodEnd: string | null;
-            /**
-             * @description Capabilities the caller currently holds, derived from
-             *     `(status, tier)`. Consumers gate on these, never on `tier` directly
-             *     (ADR-0078). Empty array when the caller holds no gated capability.
-             *
-             *     Identifiers are a CONTROLLED vocabulary (kebab-case) owned by the
-             *     billing domain `Capability` type and shared verbatim with consuming
-             *     contexts — not free-form strings. A capability is added by extending
-             *     that shared type; emitting an unregistered identifier is a
-             *     producer/consumer contract bug, not a new capability.
-             * @example [
-             *       "daily-archive",
-             *       "no-ads"
-             *     ]
-             */
-            capabilities: string[];
         };
         /**
          * @description RFC 7807 error envelope (ADR-0003 §6). Additional members per
@@ -312,8 +298,8 @@ export interface operations {
                 };
             };
             /**
-             * @description Authenticated caller is not a maintainer. This route is
-             *     maintainer-gated during the ADR-0078 test phase. RFC 7807;
+             * @description Authenticated caller lacks the `billing:subscribe` capability this
+             *     endpoint requires (ADR-0078 / ADR-0060 amendments). RFC 7807;
              *     `type` is `https://bliss.example/errors/forbidden`.
              */
             403: {
@@ -375,16 +361,16 @@ export interface operations {
         requestBody?: never;
         responses: {
             /**
-             * @description Cancellation accepted. Body is the caller's updated entitlement
-             *     projection (status reflects the cancellation; `periodEnd` is
-             *     retained while a paid period remains).
+             * @description Cancellation accepted. Body is the caller's updated subscription
+             *     (status reflects the cancellation; `periodEnd` is retained while a
+             *     paid period remains).
              */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EntitlementView"];
+                    "application/json": components["schemas"]["SubscriptionView"];
                 };
             };
             /**
@@ -400,8 +386,8 @@ export interface operations {
                 };
             };
             /**
-             * @description Authenticated caller is not a maintainer. This route is
-             *     maintainer-gated during the ADR-0078 test phase. RFC 7807;
+             * @description Authenticated caller lacks the `billing:subscribe` capability this
+             *     endpoint requires (ADR-0078 / ADR-0060 amendments). RFC 7807;
              *     `type` is `https://bliss.example/errors/forbidden`.
              */
             403: {
@@ -478,7 +464,7 @@ export interface operations {
             };
         };
     };
-    getEntitlement: {
+    getSubscription: {
         parameters: {
             query?: never;
             header?: never;
@@ -487,13 +473,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Entitlement resolved for the authenticated caller. */
+            /** @description Subscription resolved for the authenticated caller. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EntitlementView"];
+                    "application/json": components["schemas"]["SubscriptionView"];
                 };
             };
             /**
