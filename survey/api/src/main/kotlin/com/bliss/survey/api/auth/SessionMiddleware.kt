@@ -15,9 +15,7 @@ const val CONTRIBUER_CAPABILITY: String = "contribuer"
 data class SessionPrincipal(
     val userId: UUID,
     val capabilities: Set<String>,
-) {
-    fun hasCapability(capability: String): Boolean = capability in capabilities
-}
+)
 
 // Absent on anonymous requests; guarded routes respond 401 themselves (ADR-0056 §5).
 val UserIdKey: AttributeKey<UUID> = AttributeKey("survey.userId")
