@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Link, useRouteContext } from '@tanstack/react-router';
 import { css, cx } from 'styled-system/css';
 import { Check, ShieldCheck } from '@phosphor-icons/react';
@@ -103,12 +103,51 @@ function Feature({ label }: { readonly label: string }) {
 }
 
 function CadenceSelector({ value, onChange }: { readonly value: Cadence; readonly onChange: (cadence: Cadence) => void }) {
+  const buttonsRef = useRef<Array<HTMLButtonElement | null>>([]);
+  const activeIndex = CADENCES.findIndex((option) => option.id === value);
+
+  function focusIndex(next: number): void {
+    const clamped = Math.max(0, Math.min(CADENCES.length - 1, next));
+    buttonsRef.current[clamped]?.focus();
+  }
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number): void {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const nextIndex = index === 0 ? CADENCES.length - 1 : index - 1;
+      onChange(CADENCES[nextIndex].id);
+      focusIndex(nextIndex);
+      return;
+    }
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      const nextIndex = index === CADENCES.length - 1 ? 0 : index + 1;
+      onChange(CADENCES[nextIndex].id);
+      focusIndex(nextIndex);
+      return;
+    }
+    if (event.key === ' ' || event.key === 'Enter') {
+      event.preventDefault();
+      onChange(CADENCES[index].id);
+    }
+  }
+
   return (
     <div className={selector} role="radiogroup" aria-label="Formule">
-      {CADENCES.map((option) => {
+      {CADENCES.map((option, index) => {
         const on = option.id === value;
         return (
-          <button key={option.id} type="button" role="radio" aria-checked={on} className={on ? cx(optRow, optRowOn) : optRow} onClick={() => onChange(option.id)}>
+          <button
+            key={option.id}
+            ref={(el) => { buttonsRef.current[index] = el; }}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            tabIndex={index === activeIndex ? 0 : -1}
+            className={on ? cx(optRow, optRowOn) : optRow}
+            onClick={() => onChange(option.id)}
+            onKeyDown={(event) => onKeyDown(event, index)}
+          >
             <span className={on ? cx(radio, radioOn) : radio}>{on ? <Check size={12} weight="bold" aria-hidden="true" /> : null}</span>
             <span className={optMid}>
               <span className={optLabel}>{option.label}</span>
