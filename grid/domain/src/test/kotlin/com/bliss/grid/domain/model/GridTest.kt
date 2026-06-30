@@ -31,9 +31,7 @@ class GridTest {
 
     @Test
     fun `intersecting placements share the crossing letter`() {
-        // CHAT horizontal at (1,0): letters at (1,1)=C (1,2)=H (1,3)=A (1,4)=T
-        // HIBOU vertical clue at (0,2): letters at (1,2)=H (2,2)=I (3,2)=B (4,2)=O (5,2)=U
-        // (1,2) is the crossing 'H'.
+        // CHAT (horizontal) and HIBOU (vertical) both cover (1,2), which must hold the same crossing 'H'.
         val horizontal =
             WordPlacement(
                 Word("CHAT", "felin"),

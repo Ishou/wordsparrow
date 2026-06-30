@@ -143,11 +143,7 @@ class RevealCellHintUseCaseTest {
         }
     }
 
-    /**
-     * Test double exposing a peek hatch so coord-rejection tests can assert
-     * the budget did NOT advance. Production `HintUsageRepository` has no
-     * such method by design (the route doesn't need a non-spending read).
-     */
+    /** Test double exposing a non-spending peek so coord-rejection tests can assert the budget did NOT advance. */
     private interface PeekableHintUsage : HintUsageRepository {
         fun peek(
             puzzleId: UUID,
