@@ -132,8 +132,9 @@ paths:
       operationId: whoAmI
       summary: Resolve the current session cookie to a user.
       description: |
-        Used by grid-api and game-api for downstream auth. Returns minimal
-        identity (userId + displayName + role) without PII. Returns 401 if no valid
+        Returns minimal identity (userId + displayName + role + capabilities) for the
+        session. Used by grid-api and game-api for downstream auth; consumers gate on
+        capabilities + userId only (ADR-0060 amendment). Returns 401 when no valid
         session cookie is present.
       tags: [auth]
       security:
@@ -356,7 +357,7 @@ components:
   schemas:
     User:
       type: object
-      required: [id, displayName, providers, createdAt, role]
+      required: [id, displayName, providers, createdAt, role, capabilities]
       properties:
         id: { type: string, format: uuid }
         displayName: { type: string, minLength: 1, maxLength: 30 }
@@ -369,6 +370,10 @@ components:
           enum: [player, maintainer]
           x-enum-varnames: [PLAYER, MAINTAINER]
           # Stored role of the authenticated caller; guest is the no-session state, never returned — ADR-0060.
+        capabilities:
+          type: array
+          items: { type: string, minLength: 1, maxLength: 128 }
+          # Capabilities the caller holds, derived from role + subscription; identity is the authorization authority — ADR-0060 amendment.
 
     LinkedProvider:
       type: object
@@ -389,7 +394,7 @@ components:
 
     WhoAmIResponse:
       type: object
-      required: [userId, displayName, role]
+      required: [userId, displayName, role, capabilities]
       properties:
         userId: { type: string, format: uuid }
         displayName: { type: string, minLength: 1, maxLength: 30 }
@@ -398,6 +403,10 @@ components:
           enum: [player, maintainer]
           x-enum-varnames: [PLAYER, MAINTAINER]
           # Stored role of the authenticated caller; guest is the no-session state, never returned (whoami 401s anonymous) — ADR-0060.
+        capabilities:
+          type: array
+          items: { type: string, minLength: 1, maxLength: 128 }
+          # Capabilities the caller holds, derived from role + subscription; identity is the authorization authority — ADR-0060 amendment.
 
     BeginLinkResponse:
       type: object

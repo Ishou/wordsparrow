@@ -79,8 +79,9 @@ export interface paths {
         };
         /**
          * Resolve the current session cookie to a user.
-         * @description Used by grid-api and game-api for downstream auth. Returns minimal
-         *     identity (userId + displayName + role) without PII. Returns 401 if no valid
+         * @description Returns minimal identity (userId + displayName + role + capabilities) for the
+         *     session. Used by grid-api and game-api for downstream auth; consumers gate on
+         *     capabilities + userId only (ADR-0060 amendment). Returns 401 when no valid
          *     session cookie is present.
          */
         get: operations["whoAmI"];
@@ -237,6 +238,7 @@ export interface components {
             createdAt: string;
             /** @enum {string} */
             role: "player" | "maintainer";
+            capabilities: string[];
         };
         LinkedProvider: {
             /** @enum {string} */
@@ -255,6 +257,7 @@ export interface components {
             displayName: string;
             /** @enum {string} */
             role: "player" | "maintainer";
+            capabilities: string[];
         };
         BeginLinkResponse: {
             /** Format: uri */
