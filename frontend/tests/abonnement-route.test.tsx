@@ -118,6 +118,34 @@ describe('AbonnementOffer', () => {
     expect(mensuel).toHaveAttribute('aria-checked', 'false');
   });
 
+  it('arrow-right moves the cadence selection forward and shifts the tabbable radio', () => {
+    render(<AbonnementOffer client={fakeBillingClient()} />, { wrapper: withAuth(ELIGIBLE) });
+
+    const mensuel = screen.getByRole('radio', { name: /Mensuel/ });
+    act(() => {
+      mensuel.focus();
+      fireEvent.keyDown(mensuel, { key: 'ArrowRight' });
+    });
+
+    const annuel = screen.getByRole('radio', { name: /Annuel/ });
+    expect(annuel).toHaveAttribute('aria-checked', 'true');
+    expect(annuel).toHaveAttribute('tabindex', '0');
+    expect(mensuel).toHaveAttribute('aria-checked', 'false');
+    expect(mensuel).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('arrow-left wraps the cadence selection from the first to the last option', () => {
+    render(<AbonnementOffer client={fakeBillingClient()} />, { wrapper: withAuth(ELIGIBLE) });
+
+    const mensuel = screen.getByRole('radio', { name: /Mensuel/ });
+    act(() => {
+      mensuel.focus();
+      fireEvent.keyDown(mensuel, { key: 'ArrowLeft' });
+    });
+
+    expect(screen.getByRole('radio', { name: /Annuel/ })).toHaveAttribute('aria-checked', 'true');
+  });
+
   it('starts a checkout for the subscriber tier and hands off to the provider URL', async () => {
     const assign = vi.fn();
     Object.defineProperty(window, 'location', {
