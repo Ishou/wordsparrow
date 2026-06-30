@@ -51,10 +51,7 @@ class ValidatePuzzleUseCase(
     }
 }
 
-/**
- * Plain Kotlin shape for a submitted cell. The route layer parses the wire
- * `FilledCellDto` into this; the use case stays free of wire types.
- */
+/** Plain Kotlin shape for a submitted cell; keeps the use case free of wire types. */
 data class FilledCellInput(
     val row: Int,
     val column: Int,
@@ -70,11 +67,7 @@ sealed class ValidatePuzzleOutcome {
     /** No puzzle in the store for this id. Maps to 404 puzzle-not-found. */
     data object PuzzleNotFound : ValidatePuzzleOutcome()
 
-    /**
-     * Request body invalid — out-of-range position, non-letter cell target,
-     * malformed letter, or duplicate (row, column). Maps to
-     * 400 invalid-validate-request.
-     */
+    /** Out-of-range position, non-letter target, malformed letter, or duplicate cell. Maps to 400 invalid-validate-request. */
     data class RequestInvalid(
         val reason: String,
     ) : ValidatePuzzleOutcome()

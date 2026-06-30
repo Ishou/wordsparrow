@@ -140,8 +140,7 @@ class GridTest {
 
     @Test
     fun `placementCovering resolves the right word per axis at a crossing cell`() {
-        // CHAT horizontal at (1,0): (1,2)='H'. HIBOU vertical clue at (0,2): (1,2)='H'.
-        // (1,2) belongs to both words; the axis disambiguates.
+        // (1,2)='H' belongs to both CHAT (horizontal) and HIBOU (vertical); the axis disambiguates.
         val horizontal = WordPlacement(Word("CHAT", "felin"), Position(Row(1), Column(0)), Direction.RIGHT)
         val vertical = WordPlacement(Word("HIBOU", "rapace"), Position(Row(0), Column(2)), Direction.DOWN)
         val grid = Grid.fromPlacements(width = 6, height = 6, placements = listOf(horizontal, vertical))
