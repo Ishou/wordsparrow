@@ -1,0 +1,43 @@
+# Production overrides — Hetzner k3s cluster (ADR-0009 §2).
+# Billing has no in-memory state (ADR-0078), so replicaCount stays at the
+# chart default (2) for horizontal scaling.
+
+# Pin the K8s resource name to the release name so the CD workflow's
+# `kubectl rollout status deployment/wordsparrow-billing-api` line resolves
+# without per-context name arithmetic. Without this, helm's default fullname
+# is `<release>-<chart>` = `wordsparrow-billing-api-bliss-billing-api`.
+fullnameOverride: "wordsparrow-billing-api"
+
+image:
+  # Fail-fast guard: helm aborts if digest is empty (see _helpers.tpl).
+  requireDigest: true
+  # Set by the CD workflow per push (ADR-0009 §8 step 5). Format "sha256:...".
+  digest: ""
+database:
+  # CNPG cluster lives in the sibling `wordsparrow-billing-api-pg` Helm release
+  # (chart `billing/api/deploy/db-chart/`, deployed first by the workflow).
+  enabled: true
+checkout:
+  # Frontend return paths (sibling frontend PR adds the routes).
+  successUrl: "https://wordsparrow.io/abonnement/succes"
+  cancelUrl: "https://wordsparrow.io/abonnement/annule"
+  # Public billing host Mollie POSTs delivery notifications to.
+  webhookUrl: "https://billing.wordsparrow.io/v1/webhook"
+ingress:
+  host: "billing.wordsparrow.io"
+  tlsSecretName: "bliss-billing-api-tls"
+  # Issuer + external-dns provider installed by cluster bring-up (ADR-0009 §3).
+  # `external-dns.alpha.kubernetes.io/target` pins the public Hetzner floating
+  # IP (ADR-0012) — same pattern as identity/api + survey/api.
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    external-dns.alpha.kubernetes.io/hostname: "billing.wordsparrow.io"
+    external-dns.alpha.kubernetes.io/target: "116.202.180.82"
+    # Per-IP rate limiting at the ingress (leaky-bucket). Billing is a
+    # checkout + webhook REST surface — generous-but-bounded, parity with identity.
+    nginx.ingress.kubernetes.io/limit-rps: "5"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    nginx.ingress.kubernetes.io/limit-connections: "30"
+# Bootstrapped via `kubectl create secret generic bliss-billing-api-env ...`
+# (ADR-0009 §10). Carries MOLLIE_API_KEY (test_… during the ADR-0078 test phase).
+envFromSecret: "bliss-billing-api-env"

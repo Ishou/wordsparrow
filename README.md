@@ -37,6 +37,9 @@ Bounded contexts, each hexagonally layered
 - **`identity/`** — Kotlin/JVM. Player OIDC and session tokens
   ([ADR-0044](./docs/adr/0044-identity-bounded-context-for-player-oidc.md),
   [ADR-0047](./docs/adr/0047-token-endpoint-exchange-threat-model.md)).
+- **`billing/`** — Kotlin/JVM. Subscription entitlement and checkout
+  via [Mollie](https://www.mollie.com) as the payment provider
+  ([ADR-0078](./docs/adr/0078-billing-subscription-context.md)).
 - **`frontend/`** — Vite + React 19 + TypeScript + Panda CSS +
   TanStack Router. Player UI, deployed as a static bundle to
   Cloudflare Pages ([ADR-0002](./docs/adr/0002-frontend-stack.md)).
@@ -86,26 +89,34 @@ flowchart LR
     surveyDB[("survey pg")]
     survey --> surveyDB
   end
+  subgraph ctx_billing["billing"]
+    billing["billing-api"]
+  end
   cluepipeline["clue AI pipeline (Modal)"]
+  mollie["Mollie (payment provider)"]
   certmanager -->|TLS certs| ingress
   ingress --> grid
   ingress --> game
   ingress --> identity
   ingress --> survey
+  ingress --> billing
   grid -->|publishes| nats
   identity -->|publishes| nats
+  billing -->|publishes| nats
   nats -->|consumed by| game
   survey -. manual export .-> cluepipeline
+  billing -->|hosted checkout / webhooks| mollie
   classDef data fill:#c8945633,stroke:#a87538;
   classDef external fill:#b8554022,stroke:#b85540;
   class gridDB,gameDB,identityDB,surveyDB data;
-  class cluepipeline external;
+  class cluepipeline,mollie external;
   style Edge fill:#5a655a1f,stroke:#8b9488;
   style Messaging fill:#a875381f,stroke:#c89456;
   style ctx_grid fill:#6a93581f,stroke:#6a9358;
   style ctx_game fill:#6a93581f,stroke:#6a9358;
   style ctx_identity fill:#6a93581f,stroke:#6a9358;
   style ctx_survey fill:#6a93581f,stroke:#6a9358;
+  style ctx_billing fill:#6a93581f,stroke:#6a9358;
   classDef default stroke:#6b7fd7,stroke-width:1.5px;
 ```
 <p align="center"><sub><b>Figure 1.</b> In-cluster topology grouped by bounded context — each box is one context's API and database. Dashed edges are manual or leave the cluster.</sub></p>
@@ -207,6 +218,7 @@ flowchart LR
     game["game-api"]
     identity["identity-api"]
     survey["survey-api"]
+    billing["billing-api"]
     nats["NATS JetStream"]
     k8smetrics["k8s pod / node metrics"]
   end
@@ -233,6 +245,7 @@ flowchart LR
   game -->|otel| collector
   identity -->|otel| collector
   survey -->|otel| collector
+  billing -->|otel| collector
   nats -->|metrics| collector
   k8smetrics -->|metrics| collector
   collector -->|ingest| signoz

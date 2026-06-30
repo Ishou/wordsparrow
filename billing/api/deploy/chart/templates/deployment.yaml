@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bliss-billing-api.fullname" . }}
+  labels: {{- include "bliss-billing-api.labels" . | nindent 4 }}
+spec:
+  # Subscriptions live in Postgres and the user.deleted consumer is a durable
+  # JetStream consumer (ADR-0078) — no in-memory state, scales horizontally.
+  # Default 2 for prod-grade availability; values-local drops to 1.
+  replicas: {{ .Values.replicaCount | default 2 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels: {{- include "bliss-billing-api.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "bliss-billing-api.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "bliss-billing-api.serviceAccountName" . }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 30
+      {{- if .Values.database.enabled }}
+      # Block the api container until the CNPG `-rw` Service accepts
+      # connections; the Cluster CRD is owned by a sibling Helm release
+      # (`bliss-billing-api-pg`, chart `billing/api/deploy/db-chart/`) the
+      # deploy workflow installs first. Without this, Flyway's TCP connect
+      # hangs, the startup probe sees `connection refused`, and Helm times out.
+      #
+      # `-U billing -d billing` are NOT optional: the container runs as UID
+      # 1000 with no `/etc/passwd` entry, so libpq's `getpwuid(1000)` returns
+      # NULL and pg_isready exits before any TCP attempt unless user + db are
+      # explicit. The `billing` user + database are created by the db-chart.
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.database.waitImage | quote }}
+          imagePullPolicy: IfNotPresent
+          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until pg_isready -h {{ .Values.database.clusterName }}-rw -p 5432 -U billing -d billing; do
+                echo "wait-for-postgres: not ready yet"
+                sleep 2
+              done
+              echo "wait-for-postgres: ready"
+      {{- end }}
+      containers:
+        - name: api
+          image: {{ include "bliss-billing-api.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - {name: http, containerPort: {{ .Values.service.port }}, protocol: TCP}
+          env:
+            {{- if .Values.database.enabled }}
+            # BILLING_DATABASE_URL from CNPG's auto-generated `<clusterName>-app`
+            # Secret (key: `uri`). The Cluster lives in a sibling Helm release
+            # (`bliss-billing-api-pg`); the Secret name is deterministic from
+            # `clusterName`. BillingDatabase reads BILLING_DATABASE_URL (requireUrl=true).
+            - name: BILLING_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.clusterName }}-app
+                  key: uri
+            {{- end }}
+            # Mollie return + webhook URLs. Required at boot by MollieConfig.fromEnv.
+            - name: BILLING_CHECKOUT_SUCCESS_URL
+              value: {{ required "checkout.successUrl is required (see values-prod.yaml / values-local.yaml)" .Values.checkout.successUrl | quote }}
+            - name: BILLING_CHECKOUT_CANCEL_URL
+              value: {{ required "checkout.cancelUrl is required (see values-prod.yaml / values-local.yaml)" .Values.checkout.cancelUrl | quote }}
+            - name: BILLING_WEBHOOK_URL
+              value: {{ required "checkout.webhookUrl is required (see values-prod.yaml / values-local.yaml)" .Values.checkout.webhookUrl | quote }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.envFromSecret }}
+          envFrom:
+            # Operator-supplied secret carrying MOLLIE_API_KEY (test_… / live_…),
+            # bootstrapped per ADR-0009 §10 via `kubectl create secret`.
+            - secretRef: {name: {{ . }}}
+          {{- end }}
+          {{- with .Values.probes.startup }}
+          startupProbe:
+            httpGet: {path: {{ .path }}, port: http}
+            periodSeconds: {{ .periodSeconds | default 5 }}
+            timeoutSeconds: {{ .timeoutSeconds | default 3 }}
+            failureThreshold: {{ .failureThreshold | default 30 }}
+          {{- end }}
+          livenessProbe:
+            httpGet: {path: {{ .Values.probes.liveness.path }}, port: http}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds | default 15 }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold | default 3 }}
+          readinessProbe:
+            httpGet: {path: {{ .Values.probes.readiness.path }}, port: http}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds | default 10 }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds | default 3 }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold | default 2 }}
+          {{- with .Values.resources }}
+          resources: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          # readOnlyRootFilesystem requires a writable /tmp (JVM PerfData etc).
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: tmp, emptyDir: {}}

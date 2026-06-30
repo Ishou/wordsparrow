@@ -35,6 +35,8 @@ name: Build and Push Image
 #   - bliss/wordsparrow-worker        (already public)
 #   - bliss/wordsparrow-identity-api  (NEW — first main push will create it;
 #                                      flip after PR 4.5d merges)
+#   - bliss/wordsparrow-billing-api   (NEW — first main push will create it;
+#                                      flip after this PR merges)
 
 on:
   push:
@@ -63,6 +65,10 @@ on:
       - 'survey/application/**'
       - 'survey/infrastructure/**'
       - 'survey/worker/**'
+      - 'billing/api/**'
+      - 'billing/domain/**'
+      - 'billing/application/**'
+      - 'billing/infrastructure/**'
       - 'gradle/**'
       - 'gradlew'
       - 'settings.gradle.kts'
@@ -88,6 +94,10 @@ on:
       - 'survey/application/**'
       - 'survey/infrastructure/**'
       - 'survey/worker/**'
+      - 'billing/api/**'
+      - 'billing/domain/**'
+      - 'billing/application/**'
+      - 'billing/infrastructure/**'
       - 'gradle/**'
       - 'gradlew'
       - 'settings.gradle.kts'
@@ -136,6 +146,13 @@ jobs:
             dockerfile: survey/api/Dockerfile
             image-name: wordsparrow-survey-api
             digest-artifact: image-digest-survey
+          # billing-api (ADR-0078). Postgres-backed; the chart at
+          # billing/api/deploy/chart/ mirrors identity (replicas: 2, sibling
+          # CNPG db-chart). Mollie adapter; webhook ingress on billing subdomain.
+          - context: billing
+            dockerfile: billing/api/Dockerfile
+            image-name: wordsparrow-billing-api
+            digest-artifact: image-digest-billing
           # ADR-0042: :grid:worker daily-puzzle pre-generation CLI shipped as a
           # CronJob (grid/api/deploy/chart/templates/cronjob-ensure-dailies.yaml).
           # Separate image so the worker can be tagged + rolled independently
@@ -280,6 +297,9 @@ jobs:
           - context: survey
             image-name: wordsparrow-survey-api
             digest-artifact: image-digest-survey
+          - context: billing
+            image-name: wordsparrow-billing-api
+            digest-artifact: image-digest-billing
           - context: grid-worker
             image-name: wordsparrow-worker
             digest-artifact: image-digest-grid-worker

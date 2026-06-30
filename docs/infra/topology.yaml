@@ -8,6 +8,7 @@ services:
   - { id: game,        label: game-api,       chart: bliss-game-api,      group: APIs }
   - { id: identity,    label: identity-api,   chart: bliss-identity-api,  group: APIs }
   - { id: survey,      label: survey-api,     chart: bliss-survey-api,    group: APIs }
+  - { id: billing,     label: billing-api,    chart: bliss-billing-api,   group: APIs }
   - { id: nats,        label: NATS JetStream, chart: bliss-nats,          group: Messaging }
   - { id: signoz,      label: SigNoz,         chart: observability,       group: Observability }
   - { id: matomo,      label: Matomo,         chart: matomo,              group: Observability }
@@ -22,16 +23,20 @@ cloud:
 # Cluster-topology edges (request-protocol detail lives in flow_edges); cluster_external lists non-cluster nodes.
 cluster_external:
   - { id: cluepipeline, label: clue AI pipeline (Modal) }
+  - { id: mollie,       label: Mollie (payment provider) }
 cluster_edges:
   - { from: certmanager, to: ingress, label: TLS certs }
   - { from: ingress,  to: grid }
   - { from: ingress,  to: game }
   - { from: ingress,  to: identity }
   - { from: ingress,  to: survey }
+  - { from: ingress,  to: billing }
   - { from: grid,     to: nats, label: publishes }
   - { from: identity, to: nats, label: publishes }
+  - { from: billing,  to: nats, label: publishes }
   - { from: nats,     to: game, label: consumed by }
   - { from: survey,   to: cluepipeline, label: manual export, style: dashed }
+  - { from: billing,  to: mollie, label: hosted checkout / webhooks }
 
 # Request/event flow diagram: ordered runtime hops. `browser` is a literal.
 flow_edges:
@@ -57,6 +62,7 @@ observability:
     - { id: game,        label: game-api,               group: Sources }
     - { id: identity,    label: identity-api,           group: Sources }
     - { id: survey,      label: survey-api,             group: Sources }
+    - { id: billing,     label: billing-api,            group: Sources }
     - { id: nats,        label: NATS JetStream,         group: Sources }
     - { id: k8smetrics,  label: k8s pod / node metrics, group: Sources }
     - { id: otlpingress, label: otlp.wordsparrow.io,    group: Ingest }
@@ -75,6 +81,7 @@ observability:
     - { from: game,        to: collector,   label: otel }
     - { from: identity,    to: collector,   label: otel }
     - { from: survey,      to: collector,   label: otel }
+    - { from: billing,     to: collector,   label: otel }
     - { from: nats,        to: collector,   label: metrics }
     - { from: k8smetrics,  to: collector,   label: metrics }
     - { from: collector,   to: signoz,      label: ingest }
