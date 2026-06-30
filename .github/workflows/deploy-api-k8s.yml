@@ -229,15 +229,22 @@ jobs:
         # On workflow_run, every row runs (both contexts deploy after a
         # successful main build). Sets RUN_ROW=true|false in $GITHUB_ENV;
         # every subsequent step gates on `env.RUN_ROW == 'true'`.
+        # billing auto-deploy is gated behind vars.BILLING_DEPLOY_ENABLED until its prerequisites (MOLLIE_API_KEY secret + GHCR access) exist — ADR-0078 ship-dark.
         env:
           EVENT_NAME: ${{ github.event_name }}
           DISPATCH_CONTEXT: ${{ inputs.context }}
           ROW_CONTEXT: ${{ matrix.context }}
+          BILLING_DEPLOY_ENABLED: ${{ vars.BILLING_DEPLOY_ENABLED }}
         run: |
           set -euo pipefail
           if [ "$EVENT_NAME" = "workflow_dispatch" ] \
              && [ "$DISPATCH_CONTEXT" != "$ROW_CONTEXT" ]; then
             echo "Dispatch target is '$DISPATCH_CONTEXT'; skipping '$ROW_CONTEXT' row."
+            echo "RUN_ROW=false" >> "$GITHUB_ENV"
+          elif [ "$EVENT_NAME" != "workflow_dispatch" ] \
+             && [ "$ROW_CONTEXT" = "billing" ] \
+             && [ "${BILLING_DEPLOY_ENABLED:-}" != "true" ]; then
+            echo "billing auto-deploy gated off (set repo var BILLING_DEPLOY_ENABLED=true once the MOLLIE_API_KEY secret + GHCR access are in place — ADR-0078 ship-dark)."
             echo "RUN_ROW=false" >> "$GITHUB_ENV"
           else
             echo "RUN_ROW=true" >> "$GITHUB_ENV"
