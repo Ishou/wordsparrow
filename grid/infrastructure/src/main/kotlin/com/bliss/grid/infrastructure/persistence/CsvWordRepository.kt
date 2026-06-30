@@ -206,16 +206,19 @@ class CsvWordRepository(
                         // emit them).
                         val byText = HashMap<String, Word>(mainWords.size + overlay.size)
                         for (w in mainWords) {
+                            val base = byText[w.text]
                             val themed = overlay[w.text]
                             byText[w.text] =
-                                if (themed != null) {
-                                    Word(
-                                        text = w.text,
-                                        clues = w.clues + themed.clues,
-                                        lemma = w.lemma,
-                                    )
-                                } else {
-                                    w
+                                when {
+                                    // mainWords is freq-desc; first-seen highest-freq variant wins, else accent-folded homographs clobber it
+                                    base != null -> base.copy(clues = base.clues + w.clues)
+                                    themed != null ->
+                                        Word(
+                                            text = w.text,
+                                            clues = w.clues + themed.clues,
+                                            lemma = w.lemma,
+                                        )
+                                    else -> w
                                 }
                         }
                         for ((text, themedWord) in overlay) {
