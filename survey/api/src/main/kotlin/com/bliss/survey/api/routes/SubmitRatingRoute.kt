@@ -44,19 +44,7 @@ fun Route.submitRatingRoute(execute: suspend (SubmitRatingCommand) -> SubmitRati
                 )
 
         val body = call.receive<RatingRequest>()
-        val userId = call.attributes.getOrNull(UserIdKey)?.let { UserId(it) }
-
-        if (userId == null && body.correctif != null) {
-            return@post call.respondProblem(
-                HttpStatusCode.Unauthorized,
-                ProblemDetails(
-                    type = "about:blank",
-                    title = "sign-in required",
-                    status = HttpStatusCode.Unauthorized.value,
-                    detail = "Proposing a clue correction requires signing in.",
-                ),
-            )
-        }
+        val userId = UserId(call.attributes[UserIdKey])
 
         val flag = body.flag?.let { runCatching { FlagReason.valueOf(it.uppercase()) }.getOrNull() }
         val correctifStyle = body.correctif?.let { runCatching { Style.valueOf(it.style.uppercase()) }.getOrNull() }

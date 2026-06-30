@@ -39,9 +39,8 @@ export interface paths {
         /**
          * Get the next unrated item for the caller.
          * @description Pulls one survey item the caller has not yet rated, applying tier-
-         *     stratified weighted sampling and K-coverage prioritisation. Auth
-         *     optional: signed-in callers are dedup'd server-side; anonymous
-         *     callers may provide `excluded` to perform client-side dedup.
+         *     stratified weighted sampling and K-coverage prioritisation.
+         *     Contribuer-gated; server-side dedup applied via the caller's session.
          */
         get: operations["getNextItem"];
         put?: never;
@@ -63,14 +62,12 @@ export interface paths {
         put?: never;
         /**
          * Submit a rating for an item.
-         * @description Server assigns `submittedAs` based on session presence. For auth
-         *     callers, the partial unique index on (itemId, userId) makes this
-         *     idempotent — a repeat submission returns 409 with the existing
-         *     rating. For anon callers, every submit creates a new row (no
-         *     server-side dedup). Anonymous callers including a `correctif` or
-         *     any meta annotation (`targetCategories`, `targetSense`,
-         *     `isMultisense`, `subTags`) are rejected with 401 — corpus
-         *     contributions and sense/category annotation both require sign-in.
+         * @description Submit a rating for an item. Contribuer-gated. The partial unique
+         *     index on (itemId, userId) makes this idempotent — a repeat
+         *     submission returns 409 with the existing rating. Corpus
+         *     contributions (`correctif`) and sense/category annotations
+         *     (`targetCategories`, `targetSense`, `isMultisense`, `subTags`)
+         *     require the `contribuer` capability.
          */
         post: operations["submitRating"];
         delete?: never;
@@ -89,8 +86,9 @@ export interface paths {
         /**
          * Get the next unrated pair (same mot) for pairwise rating.
          * @description Pulls two distinct survey items for the same `mot`, both unrated by
-         *     the caller. Same auth/dedup rules as `/v1/items/next`. Returns 204
-         *     when no mot has at least two unrated candidates available.
+         *     the caller. Contribuer-gated; server-side dedup applied via the
+         *     caller's session. Returns 204 when no mot has at least two unrated
+         *     candidates available.
          */
         get: operations["getNextPair"];
         put?: never;
@@ -143,8 +141,7 @@ export interface paths {
          * Undo the action identified by a capability token.
          * @description Reverses every write a submit produced, using the capability token
          *     returned as `undoToken`. The token travels in the body, never the URL.
-         *     Anon actions authorize on possession; authed actions additionally bind
-         *     to the session user. Undoable while the campaign is open and for an 8 s
+         *     Contribuer-gated. Undoable while the campaign is open and for an 8 s
          *     close grace; 410 once the grace elapses.
          */
         post: operations["undoAction"];
@@ -221,8 +218,8 @@ export interface paths {
          *     past ratings of this lemma. Both `priorSenses` and `priorSubTags`
          *     are machine-grown from rating history — there is no separate
          *     curation surface. Powers the rating-card autocomplete dropdowns.
-         *     Open auth (no PII, vocabulary-only). Both arrays are always
-         *     returned — empty when the lemma has not been rated yet.
+         *     Contribuer-gated. Both arrays are always returned — empty when the
+         *     lemma has not been rated yet.
          */
         get: operations["getLemmaMeta"];
         put?: never;
@@ -504,7 +501,7 @@ export interface operations {
     getNextItem: {
         parameters: {
             query?: {
-                /** @description Comma-separated list of `itemId`s the anonymous caller has already rated locally. Ignored when the caller is authenticated. */
+                /** @description Comma-separated list of `itemId`s to exclude from sampling. Redundant — all callers are contribuer-gated and dedup'd server-side. */
                 excluded?: string;
             };
             header?: never;
@@ -593,7 +590,7 @@ export interface operations {
     getNextPair: {
         parameters: {
             query?: {
-                /** @description Comma-separated list of `itemId`s the anonymous caller has already rated locally. Ignored when the caller is authenticated. */
+                /** @description Comma-separated list of `itemId`s to exclude from sampling. Redundant — all callers are contribuer-gated and dedup'd server-side. */
                 excluded?: string;
             };
             header?: never;
@@ -725,7 +722,6 @@ export interface operations {
                     "application/json": components["schemas"]["ProgressResponse"];
                 };
             };
-            401: components["responses"]["ProblemDetails"];
             403: components["responses"]["ProblemDetails"];
         };
     };
@@ -747,7 +743,6 @@ export interface operations {
                     "application/json": components["schemas"]["ContributionItem"][];
                 };
             };
-            401: components["responses"]["ProblemDetails"];
             403: components["responses"]["ProblemDetails"];
         };
     };
@@ -772,7 +767,6 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["ProblemDetails"];
-            401: components["responses"]["ProblemDetails"];
             403: components["responses"]["ProblemDetails"];
         };
     };
