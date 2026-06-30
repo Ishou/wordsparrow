@@ -131,7 +131,7 @@ describe('AbonnementSection résiliation flow', () => {
     render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
     fireEvent.click(await screen.findByRole('button', { name: /Résilier l'abonnement/ }));
-    expect(screen.getByRole('dialog', { name: 'Résilier ton abonnement' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Résilier ton abonnement ?' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Oui, résilier' }));
 

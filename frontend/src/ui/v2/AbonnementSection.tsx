@@ -4,6 +4,7 @@ import { Sparkle } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { BillingError, type BillingClient, type SubscriptionView } from '@/application/billing';
 import { useSubscription } from '@/ui/components/billing';
+import { Dialog, DialogDescription } from '@/ui/components/primitives';
 import { useBillingGate } from './useBillingGate';
 
 type Etat = 'free' | 'actif' | 'pending' | 'expire';
@@ -31,13 +32,7 @@ const inlineError = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'b
 const primaryLink = css({ display: 'block', width: '100%', textAlign: 'center', textDecoration: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', padding: '13px', borderRadius: '13px', boxShadow: '0 8px 18px rgba(190,73,112,0.30)' });
 const loadingRow = css({ padding: '16px 15px', fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85 });
 
-// fixed cancel confirmation dialog --------------------------------------
-// Above PhoneShell's sticky DesktopAppBar (z-50) so the confirmation overlays the chrome.
-const scrim = css({ position: 'fixed', inset: 0, zIndex: 100, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out' });
-const dialogPos = css({ position: 'fixed', inset: 0, zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' });
-const dialog = css({ width: '100%', maxWidth: '360px', bg: 'white', borderRadius: '20px', padding: '20px 18px', boxShadow: '0 18px 40px rgba(20,40,34,0.28)', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'center', animation: 'wsFade 180ms ease-out' });
-const dTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '18px', color: 'ws.jadeInk', margin: 0 });
-const dText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, lineHeight: '1.45' });
+// cancel confirmation dialog buttons -------------------------------------
 const dConfirm = css({ width: '100%', border: '1.6px solid token(colors.ws.sakuraDark)', bg: 'transparent', color: 'ws.sakuraDark', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14.5px', padding: '12px', borderRadius: '13px', cursor: 'pointer', _disabled: { opacity: 0.6, cursor: 'default' } });
 const dKeep = css({ width: '100%', border: 'none', bg: 'transparent', color: 'ws.khaki', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', padding: '6px', cursor: 'pointer' });
 
@@ -190,29 +185,23 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
       </div>
 
       {confirming ? (
-        <>
-          <button type="button" className={scrim} aria-label="Fermer" onClick={() => setConfirming(false)} />
-          <div className={dialogPos}>
-            <div className={dialog} role="dialog" aria-modal="true" aria-label="Résilier ton abonnement">
-              <h2 className={dTitle}>Résilier ton abonnement ?</h2>
-              <p className={dText}>
-                Tu gardes l&apos;accès jusqu&apos;à la fin de la période en cours. Rien ne te sera
-                plus prélevé ensuite — tu pourras te réabonner quand tu veux.
-              </p>
-              {cancelError !== null ? (
-                <p className={inlineError} role="alert">
-                  {cancelError}
-                </p>
-              ) : null}
-              <button type="button" className={dConfirm} disabled={canceling} onClick={() => void confirmCancel()}>
-                {canceling ? 'Résiliation…' : 'Oui, résilier'}
-              </button>
-              <button type="button" className={dKeep} onClick={() => setConfirming(false)}>
-                Annuler
-              </button>
-            </div>
-          </div>
-        </>
+        <Dialog open onClose={() => setConfirming(false)} title="Résilier ton abonnement ?">
+          <DialogDescription>
+            Tu gardes l&apos;accès jusqu&apos;à la fin de la période en cours. Rien ne te sera
+            plus prélevé ensuite — tu pourras te réabonner quand tu veux.
+          </DialogDescription>
+          {cancelError !== null ? (
+            <p className={inlineError} role="alert">
+              {cancelError}
+            </p>
+          ) : null}
+          <button type="button" className={dConfirm} disabled={canceling} onClick={() => void confirmCancel()}>
+            {canceling ? 'Résiliation…' : 'Oui, résilier'}
+          </button>
+          <button type="button" className={dKeep} onClick={() => setConfirming(false)}>
+            Annuler
+          </button>
+        </Dialog>
       ) : null}
     </nav>
   );
