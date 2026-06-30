@@ -58,6 +58,7 @@ describe('createHttpBillingClient', () => {
   const errorCases = [
     ['auth-required', 401, http.get(`${BASE}/v1/entitlement`, () => problem(401, 'auth-required')), () => makeClient().getEntitlement()],
     ['forbidden', 403, http.post(`${BASE}/v1/checkout-session`, () => problem(403, 'forbidden')), checkout],
+    ['invalid-checkout-request', 400, http.post(`${BASE}/v1/checkout-session`, () => problem(400, 'invalid-checkout-request')), checkout],
     ['already-subscribed', 409, http.post(`${BASE}/v1/checkout-session`, () => problem(409, 'already-subscribed')), checkout],
     ['rate-limited', 429, http.post(`${BASE}/v1/checkout-session`, () => problem(429, 'rate-limited')), checkout],
     ['no-active-subscription', 404, http.post(`${BASE}/v1/subscription/cancel`, () => problem(404, 'no-active-subscription')), () => makeClient().cancelSubscription()],
