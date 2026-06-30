@@ -137,4 +137,37 @@ class GridTest {
         assertThat(grid.height).isEqualTo(3)
         assertThat(grid.cells).isEqualTo(emptyMap<Position, Cell>())
     }
+
+    @Test
+    fun `placementCovering resolves the right word per axis at a crossing cell`() {
+        // CHAT horizontal at (1,0): (1,2)='H'. HIBOU vertical clue at (0,2): (1,2)='H'.
+        // (1,2) belongs to both words; the axis disambiguates.
+        val horizontal = WordPlacement(Word("CHAT", "felin"), Position(Row(1), Column(0)), Direction.RIGHT)
+        val vertical = WordPlacement(Word("HIBOU", "rapace"), Position(Row(0), Column(2)), Direction.DOWN)
+        val grid = Grid.fromPlacements(width = 6, height = 6, placements = listOf(horizontal, vertical))
+
+        val crossing = Position(Row(1), Column(2))
+        assertThat(grid.placementCovering(crossing, WordAxis.HORIZONTAL)).isEqualTo(horizontal)
+        assertThat(grid.placementCovering(crossing, WordAxis.VERTICAL)).isEqualTo(vertical)
+    }
+
+    @Test
+    fun `placementCovering resolves a non-anchor cell of the word`() {
+        val horizontal = WordPlacement(Word("CHAT", "felin"), Position(Row(1), Column(0)), Direction.RIGHT)
+        val grid = Grid.fromPlacements(width = 6, height = 6, placements = listOf(horizontal))
+
+        // (1,4)='T' is the last letter, not the anchor — still resolves the word.
+        assertThat(grid.placementCovering(Position(Row(1), Column(4)), WordAxis.HORIZONTAL)).isEqualTo(horizontal)
+    }
+
+    @Test
+    fun `placementCovering returns null when no word covers the cell on that axis`() {
+        val horizontal = WordPlacement(Word("CHAT", "felin"), Position(Row(1), Column(0)), Direction.RIGHT)
+        val grid = Grid.fromPlacements(width = 6, height = 6, placements = listOf(horizontal))
+
+        // (1,1) is on the horizontal word but there is no vertical word there.
+        assertThat(grid.placementCovering(Position(Row(1), Column(1)), WordAxis.VERTICAL)).isEqualTo(null)
+        // (3,3) is an empty cell on both axes.
+        assertThat(grid.placementCovering(Position(Row(3), Column(3)), WordAxis.HORIZONTAL)).isEqualTo(null)
+    }
 }

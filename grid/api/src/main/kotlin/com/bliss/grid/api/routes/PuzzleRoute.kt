@@ -1,12 +1,12 @@
 package com.bliss.grid.api.routes
 
-import com.bliss.grid.api.dto.CellDto
 import com.bliss.grid.api.dto.DifficultyDto
 import com.bliss.grid.api.dto.ListDailyPuzzlesResponseDto
 import com.bliss.grid.api.dto.ProblemDetails
 import com.bliss.grid.api.dto.PuzzleSummaryDto
 import com.bliss.grid.api.dto.RevealCellHintRequest
 import com.bliss.grid.api.dto.RevealCellHintResult
+import com.bliss.grid.api.dto.RevealedCellDto
 import com.bliss.grid.api.dto.ValidatePuzzleRequest
 import com.bliss.grid.api.dto.ValidatePuzzleResult
 import com.bliss.grid.api.mapper.GridToPuzzleMapper
@@ -23,6 +23,7 @@ import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.ValidatePuzzleOutcome
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
 import com.bliss.grid.domain.generation.ClueCooldownRepository
+import com.bliss.grid.domain.model.WordAxis
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
@@ -335,6 +336,17 @@ fun Route.puzzles(
                 return@post
             }
 
+        val axis = wordAxisOf(body.direction)
+        if (axis == null) {
+            call.respondProblem(
+                status = HttpStatusCode.BadRequest,
+                title = "Coordonnées invalides",
+                type = INVALID_COORD_TYPE,
+                detail = "direction must be 'across' or 'down'; got '${body.direction}'",
+            )
+            return@post
+        }
+
         val outcome =
             hintWriteCoordinator.withUserLock(cached.userId) { conn ->
                 val fresh = cookieVerifier.verifyFresh(rawCookie)
@@ -342,7 +354,7 @@ fun Route.puzzles(
                     RevealCellHintOutcome.SessionRevoked
                 } else {
                     withContext(Dispatchers.IO) {
-                        revealCellHint.execute(conn, puzzleId, fresh.userId, body.row, body.column)
+                        revealCellHint.execute(conn, puzzleId, fresh.userId, body.row, body.column, axis)
                     }
                 }
             }
@@ -351,9 +363,10 @@ fun Route.puzzles(
             is RevealCellHintOutcome.Granted ->
                 call.respond(
                     RevealCellHintResult(
-                        row = outcome.row,
-                        column = outcome.column,
-                        letter = outcome.letter.toString(),
+                        cells =
+                            outcome.cells.map {
+                                RevealedCellDto(row = it.row, column = it.column, letter = it.letter.toString())
+                            },
                         hintsRemaining = outcome.hintsRemaining,
                     ),
                 )
@@ -417,15 +430,7 @@ fun Route.puzzles(
         val inputs = body.filledCells.map { FilledCellInput(it.row, it.column, it.letter) }
         when (val outcome = withContext(Dispatchers.IO) { validatePuzzle.execute(puzzleId, inputs) }) {
             is ValidatePuzzleOutcome.Result ->
-                call.respond(
-                    ValidatePuzzleResult(
-                        solved = outcome.solved,
-                        incorrectCells =
-                            outcome.incorrectCells.map {
-                                CellDto.PositionDto(row = it.row.value, column = it.column.value)
-                            },
-                    ),
-                )
+                call.respond(ValidatePuzzleResult(solved = outcome.solved))
             is ValidatePuzzleOutcome.PuzzleNotFound ->
                 call.respondProblem(
                     status = HttpStatusCode.NotFound,
@@ -508,6 +513,14 @@ private fun parseOptionalDate(
         )
     }
 }
+
+// Inverse of GridToPuzzleMapper.toApiClueDirection: the wire Direction axis maps onto the domain word axis.
+private fun wordAxisOf(direction: String): WordAxis? =
+    when (direction) {
+        "across" -> WordAxis.HORIZONTAL
+        "down" -> WordAxis.VERTICAL
+        else -> null
+    }
 
 private fun parseUuid(raw: String): UUID? =
     try {
