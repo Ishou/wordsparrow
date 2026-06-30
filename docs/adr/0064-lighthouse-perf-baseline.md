@@ -78,7 +78,7 @@ manifesto check. The ratchet PR amends this ADR's §3.
 | Trigger                              | Audited host                       |
 |--------------------------------------|------------------------------------|
 | `push` to `main` (post-deploy)       | `https://wordsparrow.io`           |
-| `pull_request` (post-preview-deploy) | `<hash>.bliss-cb4.pages.dev`        |
+| `pull_request` (post-preview-deploy) | Cloudflare Pages preview URL        |
 | `workflow_dispatch`                  | URL input (defaults to prod)       |
 | `schedule` (nightly 04:00 UTC)       | `https://wordsparrow.io`           |
 

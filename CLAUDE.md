@@ -13,7 +13,7 @@
 
 - "Bliss" is the working codename; the product is **WordSparrow**
   (ADR-0005), a French *mots fléchés* puzzle game.
-- Live: <https://bliss-cb4.pages.dev>. Status: sandbox / pre-alpha.
+- Live: <https://wordsparrow.io>. Status: sandbox / pre-alpha.
 - Single-maintainer + a fleet of AI agents working in parallel
   (ADR-0001). Most operational rules below exist because they make
   that fleet tractable.

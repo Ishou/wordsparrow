@@ -86,7 +86,6 @@ fun Application.module(
     install(CORS) {
         allowHost("wordsparrow.io", schemes = listOf("https"))
         allowHost("www.wordsparrow.io", schemes = listOf("https"))
-        allowHost("bliss-cb4.pages.dev", schemes = listOf("https"))
         allowHost("localhost:5173", schemes = listOf("http"))
 
         // Ktor's CORS default covers GET/POST/HEAD/OPTIONS.

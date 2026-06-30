@@ -3,7 +3,7 @@ name: Deploy Frontend
 # Implements ADR-0004 §3 (GitHub Actions → Cloudflare Pages, Direct Upload).
 #
 # - push to main      -> production deploy (wordsparrow.io)
-# - pull_request      -> preview deploy at <hash>.bliss-cb4.pages.dev,
+# - pull_request      -> preview deploy at the Cloudflare Pages preview URL,
 #                        commented on the PR by cloudflare/pages-action.
 #
 # Drafts are skipped to match the ADR-0001 §6a workflow's behavior and

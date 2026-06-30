@@ -63,8 +63,6 @@ jobs:
             case "$HANDOFF_URL" in
               https://wordsparrow.io|https://wordsparrow.io/)
                 ;;
-              https://*.bliss-cb4.pages.dev|https://*.bliss-cb4.pages.dev/)
-                ;;
               *)
                 echo "::error::Refusing to audit unexpected URL: $HANDOFF_URL"
                 exit 1
@@ -76,8 +74,6 @@ jobs:
           elif [ "$EVENT" = "workflow_dispatch" ]; then
             case "$DISPATCH_URL" in
               https://wordsparrow.io|https://wordsparrow.io/)
-                ;;
-              https://*.bliss-cb4.pages.dev|https://*.bliss-cb4.pages.dev/)
                 ;;
               *)
                 echo "::error::Refusing to audit unexpected URL: $DISPATCH_URL"

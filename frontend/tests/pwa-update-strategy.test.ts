@@ -218,7 +218,7 @@ describe('registerServiceWorker — update strategy', () => {
   // would race MSW for that scope; the resulting `controlling` event
   // would fire reloadOnce() inside the fresh-load window, triggering an
   // infinite reload loop on every preview URL (regression caught on
-  // https://11593b5f.bliss-cb4.pages.dev/ — page refreshed every ~1.5 s).
+  // https://11593b5f.preview.pages.dev/ — page refreshed every ~1.5 s).
   it('skips registration when VITE_MOCK_GRID_API is true', () => {
     vi.stubEnv('VITE_MOCK_GRID_API', 'true');
     registerServiceWorker();

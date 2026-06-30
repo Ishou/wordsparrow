@@ -88,7 +88,7 @@ ADR-0001 §7 governance gate.
    `allowNonSimpleContentTypes = true` stay as-is.
 
    **Open question for Wave 2 (do not decide here):** identity-api's
-   allowlist includes the Cloudflare Pages preview host `bliss-cb4.pages.dev`
+   allowlist includes a Cloudflare Pages preview host
    (ADR-0048); grid's does not. Whether to add it to grid for parity is a
    Wave-2 confirmation, not decided in this ADR.
 
