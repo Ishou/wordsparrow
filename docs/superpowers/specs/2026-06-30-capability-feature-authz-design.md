@@ -1,6 +1,6 @@
 # Capability-based feature authorization (design)
 
-> Status: draft for review · 2026-06-30 · scope: **uniform capability gating of
+> Status: ratified · 2026-06-30 · scope: **uniform capability gating of
 > the role-differentiating features** (hint, contribuer, billing). Ratified by
 > ADR-0079; extends ADR-0060; relates to ADR-0078.
 
