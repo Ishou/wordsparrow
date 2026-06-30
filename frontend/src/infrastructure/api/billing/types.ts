@@ -298,9 +298,10 @@ export interface operations {
                 };
             };
             /**
-             * @description Authenticated caller is not a maintainer. This route is
-             *     maintainer-gated during the ADR-0078 test phase. RFC 7807;
-             *     `type` is `https://bliss.example/errors/forbidden`.
+             * @description Authenticated caller lacks the `billing:subscribe` capability. This
+             *     endpoint requires the `billing:subscribe` capability (ADR-0078 /
+             *     ADR-0060 amendments); identity grants it to maintainers during the
+             *     test phase. RFC 7807; `type` is `https://bliss.example/errors/forbidden`.
              */
             403: {
                 headers: {
@@ -386,9 +387,10 @@ export interface operations {
                 };
             };
             /**
-             * @description Authenticated caller is not a maintainer. This route is
-             *     maintainer-gated during the ADR-0078 test phase. RFC 7807;
-             *     `type` is `https://bliss.example/errors/forbidden`.
+             * @description Authenticated caller lacks the `billing:subscribe` capability. This
+             *     endpoint requires the `billing:subscribe` capability (ADR-0078 /
+             *     ADR-0060 amendments); identity grants it to maintainers during the
+             *     test phase. RFC 7807; `type` is `https://bliss.example/errors/forbidden`.
              */
             403: {
                 headers: {
