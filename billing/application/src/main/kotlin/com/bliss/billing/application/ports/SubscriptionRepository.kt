@@ -3,7 +3,7 @@ package com.bliss.billing.application.ports
 import com.bliss.billing.domain.Subscription
 import java.util.UUID
 
-/** Persistence port for the local entitlement projection (provider stays system-of-record for PII/invoices, ADR-0078). v1 holds one subscription per user. */
+/** Persistence port for the local subscription projection (provider stays system-of-record for PII/invoices, ADR-0078). v1 holds one subscription per user. */
 interface SubscriptionRepository {
     suspend fun findByUserId(userId: UUID): Subscription?
 

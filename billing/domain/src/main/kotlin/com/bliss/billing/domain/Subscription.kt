@@ -32,5 +32,5 @@ data class Subscription(
             copy(status = status.transition(SubscriptionStatus.ACTIVE), periodEnd = newPeriodEnd)
         }
 
-    fun entitlement(): Entitlement = Entitlement.from(this)
+    fun statusView(): SubscriptionStatusView = SubscriptionStatusView.from(this)
 }

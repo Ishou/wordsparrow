@@ -44,8 +44,8 @@ class IdentityClient(
         if (response.status != HttpStatusCode.OK) return null
         val body = response.body<WhoAmIDto>()
         val userId = runCatching { UUID.fromString(body.userId) }.getOrNull() ?: return null
-        // Absent role => non-maintainer; the gate only denies, so an unknown role never escalates (ADR-0078).
-        return SessionPrincipal(userId = userId, role = body.role ?: "player")
+        // Absent capabilities => empty set; the gate only denies, so a missing capability never escalates (ADR-0078).
+        return SessionPrincipal(userId = userId, capabilities = body.capabilities?.toSet() ?: emptySet())
     }
 
     fun close() {
@@ -57,5 +57,5 @@ class IdentityClient(
 internal data class WhoAmIDto(
     val userId: String,
     val displayName: String? = null,
-    val role: String? = null,
+    val capabilities: List<String>? = null,
 )

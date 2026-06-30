@@ -2,19 +2,19 @@ package com.bliss.billing.application.usecases
 
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.Clock
-import com.bliss.billing.application.ports.EntitlementChanged
-import com.bliss.billing.application.ports.EntitlementPublisher
 import com.bliss.billing.application.ports.EventIdGenerator
+import com.bliss.billing.application.ports.SubscriptionChanged
+import com.bliss.billing.application.ports.SubscriptionPublisher
 import com.bliss.billing.application.ports.SubscriptionRepository
-import com.bliss.billing.domain.Entitlement
 import com.bliss.billing.domain.SubscriptionStatus
+import com.bliss.billing.domain.SubscriptionStatusView
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 
 sealed interface CancelSubscriptionOutcome {
     /** Cancelled at the provider; the projection now reflects `canceled`. */
     data class Cancelled(
-        val entitlement: Entitlement,
+        val subscriptionView: SubscriptionStatusView,
     ) : CancelSubscriptionOutcome
 
     /** The caller has nothing cancellable; the route maps this to 404. */
@@ -26,11 +26,11 @@ class ProviderUnavailable(
     cause: Throwable,
 ) : RuntimeException("Provider unavailable: ${cause.message}", cause)
 
-/** User-initiated cancel for `POST /v1/subscription/cancel`: cancel at the provider, reflect `canceled` locally (keep the row), and return the updated entitlement. */
+/** User-initiated cancel for `POST /v1/subscription/cancel`: cancel at the provider, reflect `canceled` locally (keep the row), and return the updated subscription view. */
 class CancelSubscription(
     private val provider: BillingProviderPort,
     private val repository: SubscriptionRepository,
-    private val publisher: EntitlementPublisher,
+    private val publisher: SubscriptionPublisher,
     private val clock: Clock,
     private val eventIds: EventIdGenerator,
 ) {
@@ -56,7 +56,7 @@ class CancelSubscription(
         val cancelled = pending.confirmCanceled()
         repository.save(cancelled)
         publisher.publish(
-            EntitlementChanged(
+            SubscriptionChanged(
                 eventId = eventIds.newEventId(),
                 userId = cancelled.userId,
                 tier = cancelled.tier,
@@ -66,7 +66,7 @@ class CancelSubscription(
                 changedAt = clock.now(),
             ),
         )
-        return CancelSubscriptionOutcome.Cancelled(cancelled.entitlement())
+        return CancelSubscriptionOutcome.Cancelled(cancelled.statusView())
     }
 
     private companion object {

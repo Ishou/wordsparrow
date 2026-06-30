@@ -2,9 +2,9 @@ package com.bliss.billing.application.usecases
 
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.Clock
-import com.bliss.billing.application.ports.EntitlementChanged
-import com.bliss.billing.application.ports.EntitlementPublisher
 import com.bliss.billing.application.ports.EventIdGenerator
+import com.bliss.billing.application.ports.SubscriptionChanged
+import com.bliss.billing.application.ports.SubscriptionPublisher
 import com.bliss.billing.application.ports.SubscriptionRepository
 import com.bliss.billing.domain.SubscriptionStatus
 import java.util.UUID
@@ -27,7 +27,7 @@ class ProviderCancelFailed(
 class HandleUserDeleted(
     private val provider: BillingProviderPort,
     private val repository: SubscriptionRepository,
-    private val publisher: EntitlementPublisher,
+    private val publisher: SubscriptionPublisher,
     private val clock: Clock,
     private val eventIds: EventIdGenerator,
 ) {
@@ -56,7 +56,7 @@ class HandleUserDeleted(
 
         val cancelled = pending.confirmCanceled()
         publisher.publish(
-            EntitlementChanged(
+            SubscriptionChanged(
                 eventId = eventIds.newEventId(),
                 userId = cancelled.userId,
                 tier = cancelled.tier,

@@ -11,7 +11,7 @@ enum class SubscriptionStatus(
     PENDING_CANCELLATION("pending_cancellation"),
     ;
 
-    /** A live entitlement intent still exists locally (everything but the terminal CANCELED/EXPIRED); gates a new first-payment create and the reconciliation backstop. */
+    /** A live subscription intent still exists locally (everything but the terminal CANCELED/EXPIRED); gates a new first-payment create and the reconciliation backstop. */
     fun isLive(): Boolean = this != CANCELED && this != EXPIRED
 
     fun canTransitionTo(target: SubscriptionStatus): Boolean = target in allowedTransitions

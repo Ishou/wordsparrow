@@ -10,7 +10,7 @@ import com.bliss.billing.application.testdoubles.FakeBillingProvider
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
 import com.bliss.billing.application.testdoubles.FixedClock
 import com.bliss.billing.application.testdoubles.InMemoryProcessedEventLedger
-import com.bliss.billing.application.testdoubles.RecordingEntitlementPublisher
+import com.bliss.billing.application.testdoubles.RecordingSubscriptionPublisher
 import com.bliss.billing.application.testdoubles.SequentialEventIdGenerator
 import com.bliss.billing.application.usecases.IngestProviderEvent
 import com.bliss.billing.domain.BillingSource
@@ -88,7 +88,7 @@ class WebhookRouteTest {
             IngestProviderEvent(
                 provider,
                 repo,
-                RecordingEntitlementPublisher(),
+                RecordingSubscriptionPublisher(),
                 InMemoryProcessedEventLedger(),
                 FixedClock(java.time.Instant.parse("2026-06-30T00:00:00Z")),
                 SequentialEventIdGenerator(),

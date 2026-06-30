@@ -9,7 +9,7 @@ import assertk.assertions.isNull
 import com.bliss.billing.application.testdoubles.FakeBillingProvider
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
 import com.bliss.billing.application.testdoubles.FixedClock
-import com.bliss.billing.application.testdoubles.RecordingEntitlementPublisher
+import com.bliss.billing.application.testdoubles.RecordingSubscriptionPublisher
 import com.bliss.billing.application.testdoubles.SequentialEventIdGenerator
 import com.bliss.billing.domain.SubscriptionStatus
 import kotlinx.coroutines.test.runTest
@@ -19,7 +19,7 @@ import java.util.UUID
 class HandleUserDeletedTest {
     private val provider = FakeBillingProvider()
     private val repository = FakeSubscriptionRepository()
-    private val publisher = RecordingEntitlementPublisher()
+    private val publisher = RecordingSubscriptionPublisher()
     private val clock = FixedClock(FIXED_NOW)
     private val eventIds = SequentialEventIdGenerator()
     private val useCase = HandleUserDeleted(provider, repository, publisher, clock, eventIds)

@@ -1,8 +1,9 @@
 package com.bliss.billing.api.routes
 
 import com.bliss.billing.api.ProblemTypes
+import com.bliss.billing.api.auth.SUBSCRIBE_CAPABILITY
 import com.bliss.billing.api.mapper.toView
-import com.bliss.billing.api.requireMaintainer
+import com.bliss.billing.api.requireCapability
 import com.bliss.billing.api.respondProblem
 import com.bliss.billing.application.usecases.CancelSubscription
 import com.bliss.billing.application.usecases.CancelSubscriptionOutcome
@@ -12,10 +13,10 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 
-// POST /v1/subscription/cancel — authed + maintainer-gated; cancels the caller's own subscription (userId session-derived).
+// POST /v1/subscription/cancel — authed + billing:subscribe-gated; cancels the caller's own subscription (userId session-derived).
 fun Route.cancelSubscriptionRoute(cancel: CancelSubscription) {
     post("/v1/subscription/cancel") {
-        val principal = call.requireMaintainer() ?: return@post
+        val principal = call.requireCapability(SUBSCRIBE_CAPABILITY) ?: return@post
 
         val outcome =
             try {
@@ -29,7 +30,7 @@ fun Route.cancelSubscriptionRoute(cancel: CancelSubscription) {
             }
 
         when (outcome) {
-            is CancelSubscriptionOutcome.Cancelled -> call.respond(HttpStatusCode.OK, outcome.entitlement.toView())
+            is CancelSubscriptionOutcome.Cancelled -> call.respond(HttpStatusCode.OK, outcome.subscriptionView.toView())
             CancelSubscriptionOutcome.NoActiveSubscription ->
                 call.respondProblem(
                     HttpStatusCode.NotFound,

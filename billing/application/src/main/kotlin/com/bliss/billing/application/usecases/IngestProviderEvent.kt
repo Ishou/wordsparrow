@@ -2,20 +2,20 @@ package com.bliss.billing.application.usecases
 
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.Clock
-import com.bliss.billing.application.ports.EntitlementChanged
-import com.bliss.billing.application.ports.EntitlementPublisher
 import com.bliss.billing.application.ports.EventIdGenerator
 import com.bliss.billing.application.ports.ProcessedEventLedger
 import com.bliss.billing.application.ports.ProviderSubscriptionState
+import com.bliss.billing.application.ports.SubscriptionChanged
+import com.bliss.billing.application.ports.SubscriptionPublisher
 import com.bliss.billing.application.ports.SubscriptionRepository
-import com.bliss.billing.domain.Entitlement
 import com.bliss.billing.domain.Subscription
 import com.bliss.billing.domain.SubscriptionStatus
+import com.bliss.billing.domain.SubscriptionStatusView
 
 sealed interface IngestOutcome {
-    /** The state was applied and an EntitlementChanged published. */
+    /** The state was applied and a SubscriptionChanged published. */
     data class Applied(
-        val entitlement: Entitlement,
+        val subscriptionView: SubscriptionStatusView,
     ) : IngestOutcome
 
     /** Authoritative state matched the stored projection; no change, no re-publish (idempotent redelivery). */
@@ -29,7 +29,7 @@ sealed interface IngestOutcome {
 class IngestProviderEvent(
     private val provider: BillingProviderPort,
     private val repository: SubscriptionRepository,
-    private val publisher: EntitlementPublisher,
+    private val publisher: SubscriptionPublisher,
     private val ledger: ProcessedEventLedger,
     private val clock: Clock,
     private val eventIds: EventIdGenerator,
@@ -50,7 +50,7 @@ class IngestProviderEvent(
         if (next == stored) return IngestOutcome.Unchanged
         repository.save(next)
         emit(next)
-        return IngestOutcome.Applied(next.entitlement())
+        return IngestOutcome.Applied(next.statusView())
     }
 
     private suspend fun createFromFirstPayment(
@@ -63,12 +63,12 @@ class IngestProviderEvent(
         // Ledger written after save: a Mollie or save failure leaves the key unclaimed so a webhook retry can re-enter.
         if (!ledger.recordIfAbsent(eventRef)) return IngestOutcome.Unchanged
         emit(created)
-        return IngestOutcome.Applied(created.entitlement())
+        return IngestOutcome.Applied(created.statusView())
     }
 
     private suspend fun emit(subscription: Subscription) {
         publisher.publish(
-            EntitlementChanged(
+            SubscriptionChanged(
                 eventId = eventIds.newEventId(),
                 userId = subscription.userId,
                 tier = subscription.tier,

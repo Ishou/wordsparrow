@@ -2,7 +2,7 @@ package com.bliss.billing.infrastructure.nats
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import com.bliss.billing.application.ports.EntitlementChanged
+import com.bliss.billing.application.ports.SubscriptionChanged
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
@@ -19,7 +19,7 @@ import java.lang.reflect.Proxy
 import java.time.Instant
 import java.util.UUID
 
-class NatsEntitlementPublisherTest {
+class NatsSubscriptionPublisherTest {
     private data class PublishCall(
         val subject: String,
         val body: ByteArray,
@@ -45,7 +45,7 @@ class NatsEntitlementPublisherTest {
     }
 
     private fun event(periodEnd: Instant? = Instant.parse("2026-07-29T00:00:00Z")) =
-        EntitlementChanged(
+        SubscriptionChanged(
             eventId = UUID.fromString("0190e3b1-2c3d-7e4f-8a1b-2c3d4e5f6a7b"),
             userId = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b"),
             tier = Tier.of("supporter"),
@@ -56,19 +56,19 @@ class NatsEntitlementPublisherTest {
         )
 
     @Test
-    fun `publishes the entitlement event to the contract subject`() =
+    fun `publishes the subscription event to the contract subject`() =
         runTest {
             val captured = mutableListOf<PublishCall>()
-            NatsEntitlementPublisher(stubJetStream(captured)).publish(event())
+            NatsSubscriptionPublisher(stubJetStream(captured)).publish(event())
 
-            assertThat(captured.single().subject).isEqualTo("wordsparrow.user.entitlement-changed")
+            assertThat(captured.single().subject).isEqualTo("wordsparrow.user.subscription-changed")
         }
 
     @Test
     fun `serializes every contract field including the event id and changed at`() =
         runTest {
             val captured = mutableListOf<PublishCall>()
-            NatsEntitlementPublisher(stubJetStream(captured)).publish(event())
+            NatsSubscriptionPublisher(stubJetStream(captured)).publish(event())
 
             val json = Json.parseToJsonElement(String(captured.single().body, Charsets.UTF_8)) as JsonObject
             assertThat(json["eventId"]!!.jsonPrimitive.content).isEqualTo("0190e3b1-2c3d-7e4f-8a1b-2c3d4e5f6a7b")
@@ -84,7 +84,7 @@ class NatsEntitlementPublisherTest {
     fun `keeps period end on the wire as json null when absent`() =
         runTest {
             val captured = mutableListOf<PublishCall>()
-            NatsEntitlementPublisher(stubJetStream(captured)).publish(event(periodEnd = null))
+            NatsSubscriptionPublisher(stubJetStream(captured)).publish(event(periodEnd = null))
 
             val json = Json.parseToJsonElement(String(captured.single().body, Charsets.UTF_8)) as JsonObject
             assertThat(json["periodEnd"]).isEqualTo(JsonPrimitive(null))

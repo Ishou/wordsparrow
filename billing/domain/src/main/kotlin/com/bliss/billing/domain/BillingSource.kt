@@ -1,6 +1,6 @@
 package com.bliss.billing.domain
 
-/** Source that produced an entitlement, source-tagged from day one (ADR-0078). PLAY/APPLE land with their adapters (YAGNI until then). */
+/** Source that produced a subscription, source-tagged from day one (ADR-0078). PLAY/APPLE land with their adapters (YAGNI until then). */
 enum class BillingSource(
     val wire: String,
 ) {
