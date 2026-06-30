@@ -490,7 +490,7 @@ components:
         correctif:
           type: object
           description: |
-            Clue correction. Authenticated callers only. When `pos` is set and
+            Clue correction. Contribuer-gated. When `pos` is set and
             `text` equals the original clue, the original item's POS is patched
             in place; when `text` differs, a new rater-proposed item carries the
             corrected text and `pos` (defaulting to the parent's POS when absent).
@@ -559,8 +559,8 @@ components:
         itemId:         { type: string, format: uuid }
         submittedAs:
           type: string
-          enum: [auth, anon]
-          x-enum-varnames: [AUTH, ANON]
+          enum: [auth]
+          x-enum-varnames: [AUTH]
         proposedItemId: { type: string, format: uuid, nullable: true, description: "UUID of the queued correctif item; null when no correctif was submitted." }
         campaignId:     { type: string, format: uuid, description: "Campaign whose lifecycle window this rating landed in. Stamped by the server at insert time." }
         undoToken:

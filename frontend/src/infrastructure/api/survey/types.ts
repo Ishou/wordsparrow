@@ -323,7 +323,7 @@ export interface components {
             /** @enum {string} */
             flag?: "hors_sujet" | "auto_reference" | "erreur_sens" | "autre";
             /**
-             * @description Clue correction. Authenticated callers only. When `pos` is set and
+             * @description Clue correction. Contribuer-gated. When `pos` is set and
              *     `text` equals the original clue, the original item's POS is patched
              *     in place; when `text` differs, a new rater-proposed item carries the
              *     corrected text and `pos` (defaulting to the parent's POS when absent).
@@ -376,7 +376,7 @@ export interface components {
             /** Format: uuid */
             itemId: string;
             /** @enum {string} */
-            submittedAs: "auth" | "anon";
+            submittedAs: "auth";
             /**
              * Format: uuid
              * @description UUID of the queued correctif item; null when no correctif was submitted.
