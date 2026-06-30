@@ -2,6 +2,8 @@
 export interface WhoAmIResult {
   readonly userId: string;
   readonly displayName: string;
+  // Optional so under-specified fixtures stay valid; the wire always carries it.
+  readonly role?: 'player' | 'maintainer';
 }
 
 export interface LinkedProvider {
