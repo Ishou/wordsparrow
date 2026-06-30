@@ -7,6 +7,7 @@ import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PuzzleRepository
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
+import com.bliss.grid.application.puzzle.StoredDailyPuzzle
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
@@ -47,6 +48,11 @@ class PuzzleRouteDispatcherTest {
                 ): StoredPuzzle? {
                     repoThread.compareAndSet(null, Thread.currentThread().name)
                     return delegate.getOrCompute(puzzleId, factory)
+                }
+
+                override fun getCurrentForDate(date: java.time.LocalDate): StoredDailyPuzzle? {
+                    repoThread.compareAndSet(null, Thread.currentThread().name)
+                    return delegate.getCurrentForDate(date)
                 }
             }
 

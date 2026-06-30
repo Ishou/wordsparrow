@@ -29,15 +29,14 @@ class ListDailyPuzzlesUseCase(
                     d = d.minusDays(1)
                 }
             }
-        val ids = dates.map { dailyPuzzleSelector.puzzleIdForDate(it) }
-        val summariesById: Map<UUID, StoredSummary> =
-            puzzleRepository.findSummariesByIds(ids).associateBy { it.puzzleId }
+        val summariesByDate =
+            puzzleRepository.findCurrentSummariesByDates(dates).associateBy { it.puzzleDate }
 
         val mapped =
-            dates.zip(ids).mapNotNull { (date, id) ->
-                val summary = summariesById[id] ?: return@mapNotNull null
+            dates.mapNotNull { date ->
+                val summary = summariesByDate[date] ?: return@mapNotNull null
                 Item(
-                    id = id,
+                    id = summary.puzzleId,
                     date = date,
                     gridNumber = dailyPuzzleSelector.gridNumberForDate(date),
                     difficulty = null,

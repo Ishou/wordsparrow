@@ -171,14 +171,14 @@ class ListDailyPuzzlesUseCaseTest {
     private fun seedRows(range: ClosedRange<LocalDate>) {
         var d = range.start
         while (!d.isAfter(range.endInclusive)) {
-            val id = selector.puzzleIdForDate(d)
-            repo.getOrCompute(id) { sampleStoredPuzzle() }
+            repo.insertDaily(UUID.randomUUID(), d, sampleStoredPuzzle())
             d = d.plusDays(1)
         }
     }
 
     private class FakePuzzleRepository : PuzzleRepository {
         private val store = ConcurrentHashMap<UUID, StoredPuzzle>()
+        private val byDate = ConcurrentHashMap<LocalDate, MutableList<UUID>>()
 
         override fun get(puzzleId: UUID): StoredPuzzle? = store[puzzleId]
 
@@ -189,6 +189,20 @@ class ListDailyPuzzlesUseCaseTest {
             store[puzzleId]?.let { return it }
             val produced = factory() ?: return null
             return store.putIfAbsent(puzzleId, produced) ?: produced
+        }
+
+        override fun getCurrentForDate(date: LocalDate): StoredDailyPuzzle? {
+            val id = byDate[date]?.lastOrNull() ?: return null
+            return store[id]?.let { StoredDailyPuzzle(id, it) }
+        }
+
+        override fun insertDaily(
+            puzzleId: UUID,
+            puzzleDate: LocalDate,
+            stored: StoredPuzzle,
+        ) {
+            store[puzzleId] = stored
+            byDate.compute(puzzleDate) { _, existing -> (existing ?: mutableListOf()).apply { add(puzzleId) } }
         }
     }
 

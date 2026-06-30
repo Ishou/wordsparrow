@@ -10,22 +10,32 @@ import assertk.assertions.isTrue
 import assertk.assertions.startsWith
 import com.bliss.grid.api.dto.PuzzleResponse
 import com.bliss.grid.api.module
-import com.bliss.grid.application.puzzle.DailyPuzzleSelector
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PUZZLE_HEIGHT
 import com.bliss.grid.application.puzzle.PUZZLE_WIDTH
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
+import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.WordRepository
+import com.bliss.grid.domain.model.Column
+import com.bliss.grid.domain.model.Direction
+import com.bliss.grid.domain.model.Grid
+import com.bliss.grid.domain.model.Position
+import com.bliss.grid.domain.model.Row
 import com.bliss.grid.domain.model.Word
+import com.bliss.grid.domain.model.WordPlacement
 import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.decodeFromString
@@ -35,7 +45,9 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
+import java.time.Instant
 import java.time.LocalDate
+import java.util.UUID
 
 /** Wire-path tests for `GET /v1/puzzles/{puzzleId}` via Ktor [testApplication]. */
 class PuzzleRouteTest {
@@ -206,17 +218,12 @@ class PuzzleRouteTest {
             assertThat(json.containsKey("gridNumber")).isEqualTo(false)
         }
 
-    // Pre-warm: GET /{daily-id} first so InMemoryPuzzleRepository has a row for the daily endpoint.
-    private val daily20260509Id: String =
-        DailyPuzzleSelector().puzzleIdForDate(LocalDate.parse("2026-05-09")).toString()
-    private val dailyPrelaunchId: String =
-        DailyPuzzleSelector().puzzleIdForDate(LocalDate.parse("2025-12-31")).toString()
+    private val dailyDate: LocalDate = LocalDate.parse("2026-05-09")
 
     @Test
     fun `daily endpoint responds 200 with populated difficulty and gridNumber`() =
         testApplication {
-            application { module() }
-            client.get("/v1/puzzles/$daily20260509Id")
+            application { dailyRouteWith { it.insertDaily(UUID.randomUUID(), dailyDate, storedDailyPuzzle()) } }
 
             val response = client.get("/v1/puzzles/daily?date=2026-05-09")
 
@@ -232,8 +239,9 @@ class PuzzleRouteTest {
     @Test
     fun `daily endpoint returns a 15x12 landscape grid`() =
         testApplication {
-            application { module() }
-            client.get("/v1/puzzles/$daily20260509Id")
+            application {
+                dailyRouteWith { it.insertDaily(UUID.randomUUID(), dailyDate, storedDailyPuzzle(width = 15, height = 12)) }
+            }
 
             val response = client.get("/v1/puzzles/daily?date=2026-05-09")
 
@@ -246,13 +254,30 @@ class PuzzleRouteTest {
     @Test
     fun `daily endpoint returns the same puzzle id for the same date`() =
         testApplication {
-            application { module() }
-            client.get("/v1/puzzles/$daily20260509Id")
+            application { dailyRouteWith { it.insertDaily(UUID.randomUUID(), dailyDate, storedDailyPuzzle()) } }
 
             val first = Json.parseToJsonElement(client.get("/v1/puzzles/daily?date=2026-05-09").bodyAsText()).jsonObject
             val second = Json.parseToJsonElement(client.get("/v1/puzzles/daily?date=2026-05-09").bodyAsText()).jsonObject
 
             assertThat(first["id"]!!.jsonPrimitive.content).isEqualTo(second["id"]!!.jsonPrimitive.content)
+        }
+
+    @Test
+    fun `daily endpoint resolves a regenerated date to the most recently created row`() =
+        testApplication {
+            application {
+                dailyRouteWith { repo ->
+                    repo.insertDaily(UUID.randomUUID(), dailyDate, storedDailyPuzzle(width = 7, height = 7))
+                    repo.insertDaily(UUID.randomUUID(), dailyDate, storedDailyPuzzle(width = 9, height = 9))
+                }
+            }
+
+            val response = client.get("/v1/puzzles/daily?date=2026-05-09")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            // The second insert wins; the resolver points at the newest row, not the first.
+            assertThat(json["width"]!!.jsonPrimitive.content.toInt()).isEqualTo(9)
         }
 
     @Test
@@ -271,8 +296,8 @@ class PuzzleRouteTest {
     @Test
     fun `daily endpoint omits gridNumber for a pre-launch date`() =
         testApplication {
-            application { module() }
-            client.get("/v1/puzzles/$dailyPrelaunchId")
+            val preLaunch = LocalDate.parse("2025-12-31")
+            application { dailyRouteWith { it.insertDaily(UUID.randomUUID(), preLaunch, storedDailyPuzzle()) } }
 
             val response = client.get("/v1/puzzles/daily?date=2025-12-31")
 
@@ -280,6 +305,53 @@ class PuzzleRouteTest {
             val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject
             assertThat(json.containsKey("gridNumber")).isEqualTo(false)
         }
+
+    private fun storedDailyPuzzle(
+        width: Int = 15,
+        height: Int = 12,
+    ): StoredPuzzle {
+        val word = Word(text = "ABCDE", definition = "test")
+        val placement =
+            WordPlacement(
+                word = word,
+                cluePosition = Position(Row(0), Column(0)),
+                direction = Direction.DOWN_RIGHT,
+                chosenClue = word.clues.first(),
+            )
+        return StoredPuzzle(
+            grid = Grid.fromPlacements(width = width, height = height, placements = listOf(placement)),
+            title = "Grille du jour",
+            language = "fr",
+            hintsAllowed = 3,
+            createdAt = Instant.parse("2026-05-09T00:00:00Z"),
+        )
+    }
+
+    private fun Application.dailyRouteWith(seed: (InMemoryPuzzleRepository) -> Unit) {
+        install(ContentNegotiation) {
+            json(
+                Json {
+                    ignoreUnknownKeys = true
+                    explicitNulls = false
+                },
+            )
+        }
+        val repo = InMemoryPuzzleRepository()
+        seed(repo)
+        val gen = GeneratePuzzleUseCase(EmptyWordRepository, defaultPuzzleConstraints())
+        val hintRepo = InMemoryHintUsageRepository()
+        routing {
+            puzzles(
+                loadOrGenerate = LoadOrGeneratePuzzleUseCase(repo, gen),
+                revealCellHint = RevealCellHintUseCase(repo, hintRepo),
+                validatePuzzle = ValidatePuzzleUseCase(repo),
+                puzzleRepository = repo,
+                hintUsageRepository = hintRepo,
+                hintWriteCoordinator = InMemoryHintWriteCoordinator(),
+                cookieVerifier = FakeCookieVerifier(),
+            )
+        }
+    }
 
     @Test
     fun `daily endpoint responds 404 with RFC 7807 problem when no row is persisted`() =

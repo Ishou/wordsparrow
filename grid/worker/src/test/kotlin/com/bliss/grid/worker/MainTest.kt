@@ -7,9 +7,9 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
-import com.bliss.grid.application.puzzle.DailyPuzzleSelector
 import com.bliss.grid.application.puzzle.GridGenerationPort
 import com.bliss.grid.application.puzzle.PuzzleRepository
+import com.bliss.grid.application.puzzle.StoredDailyPuzzle
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.domain.generation.ClueCooldownPolicy
 import com.bliss.grid.domain.generation.ClueCooldownRepository
@@ -48,11 +48,10 @@ class MainTest {
 
     @Test
     fun `executeAndExit returns 0 when every day is already persisted`() {
-        val selector = DailyPuzzleSelector()
         val repo = PreseededRepo()
         for (offset in 0 until 7) {
             val date = today.plusDays(offset.toLong())
-            repo.put(selector.puzzleIdForDate(date), newStoredPuzzle())
+            repo.seedDaily(date, newStoredPuzzle())
         }
 
         val exit = executeAndExit(repo, NoopCooldownRepo(), ExplodingPort, today = today)
@@ -111,12 +110,15 @@ class MainTest {
 
     private class PreseededRepo : PuzzleRepository {
         private val store = HashMap<UUID, StoredPuzzle>()
+        private val byDate = HashMap<LocalDate, MutableList<UUID>>()
 
-        fun put(
-            id: UUID,
+        fun seedDaily(
+            date: LocalDate,
             value: StoredPuzzle,
         ) {
+            val id = UUID.randomUUID()
             store[id] = value
+            byDate.getOrPut(date) { mutableListOf() }.add(id)
         }
 
         override fun get(puzzleId: UUID): StoredPuzzle? = store[puzzleId]
@@ -128,6 +130,11 @@ class MainTest {
             store[puzzleId]?.let { return it }
             val produced = factory() ?: return null
             return store.computeIfAbsent(puzzleId) { produced }
+        }
+
+        override fun getCurrentForDate(date: LocalDate): StoredDailyPuzzle? {
+            val id = byDate[date]?.lastOrNull() ?: return null
+            return store[id]?.let { StoredDailyPuzzle(id, it) }
         }
     }
 

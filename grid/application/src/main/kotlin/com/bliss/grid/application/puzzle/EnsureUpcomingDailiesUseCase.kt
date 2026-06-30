@@ -43,9 +43,8 @@ class EnsureUpcomingDailiesUseCase(
                 skippedDates += date
                 continue
             }
-            val puzzleId = dailyPuzzleSelector.puzzleIdForDate(date)
-            if (puzzleRepository.get(puzzleId) != null) {
-                log.info("daily_already_persisted date={} puzzle_id={}", date, puzzleId)
+            if (puzzleRepository.getCurrentForDate(date) != null) {
+                log.info("daily_already_persisted date={}", date)
                 persistedDates += date
                 continue
             }
@@ -54,9 +53,8 @@ class EnsureUpcomingDailiesUseCase(
             val elapsedMs = clock.millis() - started
             if (grid == null) {
                 log.warn(
-                    "daily_generation_exhausted date={} puzzle_id={} attempts={} elapsed_ms={}",
+                    "daily_generation_exhausted date={} attempts={} elapsed_ms={}",
                     date,
-                    puzzleId,
                     attempts,
                     elapsedMs,
                 )
@@ -64,7 +62,7 @@ class EnsureUpcomingDailiesUseCase(
                 stopped = true
                 continue
             }
-            persistGenerated(puzzleId, grid)
+            val puzzleId = persistGenerated(date, grid)
             log.info(
                 "daily_generated date={} puzzle_id={} attempts={} elapsed_ms={}",
                 date,
@@ -104,26 +102,32 @@ class EnsureUpcomingDailiesUseCase(
     }
 
     private fun persistGenerated(
-        puzzleId: UUID,
+        date: LocalDate,
         grid: Grid,
-    ) {
-        puzzleRepository.getOrCompute(puzzleId) {
-            cooldownRepository?.let { cooldown ->
-                val usedClues = grid.placements.map { ClueId(it.word.text, it.chosenClue.text) }
-                cooldown.recordGeneration(
-                    bucketId = ClueCooldownRepository.DAILY_SCOPE_ID,
-                    usedClues = usedClues,
-                    rollMaxInclusive = cooldownMax,
-                )
-            }
-            StoredPuzzle(
-                grid = grid,
-                title = title,
-                language = language,
-                hintsAllowed = hintsAllowed,
-                createdAt = clock.instant(),
+    ): UUID {
+        // Fresh v7 per generation so a regenerated date never collides with progress keyed on the prior id (ADR-0081).
+        val puzzleId = dailyPuzzleSelector.freshDailyId(clock.millis())
+        cooldownRepository?.let { cooldown ->
+            val usedClues = grid.placements.map { ClueId(it.word.text, it.chosenClue.text) }
+            cooldown.recordGeneration(
+                bucketId = ClueCooldownRepository.DAILY_SCOPE_ID,
+                usedClues = usedClues,
+                rollMaxInclusive = cooldownMax,
             )
         }
+        puzzleRepository.insertDaily(
+            puzzleId = puzzleId,
+            puzzleDate = date,
+            stored =
+                StoredPuzzle(
+                    grid = grid,
+                    title = title,
+                    language = language,
+                    hintsAllowed = hintsAllowed,
+                    createdAt = clock.instant(),
+                ),
+        )
+        return puzzleId
     }
 
     /** Outer stride = innerAttempts so each outer attempt owns a disjoint inner-seed block; 1e9 day stride dwarfs any reasonable outer*inner. */
