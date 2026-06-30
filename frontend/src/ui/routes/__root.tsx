@@ -69,7 +69,7 @@ export interface AppRouterContext {
   readonly surveyAnonStore?: SurveyAnonStore;
   // Analytics port (ADR-0025). Optional; defaults to a no-op in tests.
   readonly analytics?: AnalyticsPort;
-  // Billing-api adapter (ADR-0078). Optional so route-level Vitest fixtures can omit it; the /abonnement route guards on its presence.
+  // Billing-api adapter (ADR-0078). Optional so route-level Vitest fixtures can omit it.
   readonly billingClient?: BillingClient;
   // ADR-0027: per-tab one-shot stash that the `/join/$code` route and
   // the Accueil "Rejoindre" submit populate, and the lobby route's
