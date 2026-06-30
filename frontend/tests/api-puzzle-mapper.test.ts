@@ -8,6 +8,7 @@ const baseHeader: Omit<ApiPuzzle, 'width' | 'height' | 'cells'> = {
   title: 't', language: 'fr',
   hintsAllowed: 3,
   hintsRemaining: 3,
+  secondsUntilNextHint: null,
   createdAt: '2026-04-24T15:30:00Z',
   clues: [],
 };
