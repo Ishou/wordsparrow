@@ -45,7 +45,12 @@ Daily puzzle identity becomes **unique per generation**, with the date acting
 as a lookup key resolved to the current row:
 
 - **Fresh id per generation.** Each daily generation inserts a **new random
-  UUID**. The id is no longer derived from the date.
+  UUID v7** (ADR-0003 §6), generated the same way as the existing on-demand
+  path: `Generators.timeBasedEpochGenerator()`
+  (`grid/api/src/main/kotlin/com/bliss/grid/api/mapper/GridToPuzzleMapper.kt:36`),
+  backed by the `com.fasterxml.uuid:java-uuid-generator` dependency already
+  declared in `grid/api/build.gradle.kts`. The id is no longer derived from
+  the date.
 - **Date carried as a column.** The `puzzles` table gains a nullable
   `puzzle_date` column plus an index; daily rows set it, the on-demand
   (non-daily) path leaves it null.
