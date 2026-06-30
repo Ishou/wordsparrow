@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import {
   RouterProvider,
   createMemoryHistory,
+  createRoute,
   createRouter,
 } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -17,7 +18,14 @@ import type {
 import { surveyAnonRatedStore } from '@/infrastructure/session/localStorageSurveyAnon';
 import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
-import { Route as ContribuerRoute } from '@/ui/routes/contribuer';
+import { ContribuerPage } from '@/ui/routes/contribuer.lazy';
+
+// Render the inner screen directly (same '/contribuer' route id) to exercise the rating loop without the maintainer gate.
+const InnerContribuerRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: '/contribuer',
+  component: ContribuerPage,
+});
 
 const sampleItem: SurveyItem = {
   itemId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
@@ -38,6 +46,14 @@ const ratingResult: RatingResult = {
   submittedAs: 'anon',
   proposedItemId: null,
   undoToken: 'tok_sample_123',
+};
+
+// Authed maintainer session for the auth-path assertions.
+const MAINTAINER_WHOAMI = {
+  userId: '0190e3a4-7a2c-7c9e-8f1a-1234567890ab',
+  displayName: 'Lapin 472',
+  role: 'maintainer' as const,
+  capabilities: ['contribuer'] as const,
 };
 
 function stubAuth(): AuthClient {
@@ -94,7 +110,7 @@ function renderContribuer(opts: {
   const surveyClient = opts.surveyClient ?? stubSurveyClient();
   const analytics = opts.analytics ?? stubAnalytics();
   const anonStore = opts.surveyAnonStore ?? surveyAnonRatedStore;
-  const routeTree = RootRoute.addChildren([ContribuerRoute]);
+  const routeTree = RootRoute.addChildren([InnerContribuerRoute]);
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: ['/contribuer'] }),
@@ -232,10 +248,7 @@ describe('Contribuer route', () => {
   it('keeps the sign-in banner hidden once the visitor resolves as authed', async () => {
     const authClient: AuthClient = {
       ...stubAuth(),
-      whoami: vi.fn().mockResolvedValue({
-        userId: '0190e3a4-7a2c-7c9e-8f1a-1234567890ab',
-        displayName: 'Lapin 472',
-      }),
+      whoami: vi.fn().mockResolvedValue(MAINTAINER_WHOAMI),
     };
     renderContribuer({ authClient });
     await waitFor(() => expect(screen.getByTestId('rating-card')).toBeInTheDocument());
@@ -326,10 +339,7 @@ describe('Contribuer route', () => {
   it('auth visit still passes anon store items so pre-auth ratings (user_id=NULL on server) are deduped', async () => {
     const authClient: AuthClient = {
       ...stubAuth(),
-      whoami: vi.fn().mockResolvedValue({
-        userId: '0190e3a4-7a2c-7c9e-8f1a-1234567890ab',
-        displayName: 'Lapin 472',
-      }),
+      whoami: vi.fn().mockResolvedValue(MAINTAINER_WHOAMI),
     };
     const preAuthRatedId = '0190e3a4-7a2c-7c9e-8f1a-aaaaaaaaaaaa';
     localStorage.setItem('survey.anon.rated_ids', JSON.stringify([preAuthRatedId]));
@@ -345,10 +355,7 @@ describe('Contribuer route', () => {
   it('CORRIGER on authenticated user submits qualite=3 with correctif, fires correctif_proposed, advances to next item', async () => {
     const authClient: AuthClient = {
       ...stubAuth(),
-      whoami: vi.fn().mockResolvedValue({
-        userId: '0190e3a4-7a2c-7c9e-8f1a-1234567890ab',
-        displayName: 'Lapin 472',
-      }),
+      whoami: vi.fn().mockResolvedValue(MAINTAINER_WHOAMI),
     };
     const second: SurveyItem = { ...sampleItem, itemId: '0190e3a4-7a2c-7c9e-8f1a-cafecafecafe', mot: 'NEXT' };
     const getNextItem = vi
@@ -394,10 +401,7 @@ describe('Contribuer route', () => {
   it('CORRIGER shows the toast and increments the enriched counter on success', async () => {
     const authClient: AuthClient = {
       ...stubAuth(),
-      whoami: vi.fn().mockResolvedValue({
-        userId: '0190e3a4-7a2c-7c9e-8f1a-1234567890ab',
-        displayName: 'Lapin 472',
-      }),
+      whoami: vi.fn().mockResolvedValue(MAINTAINER_WHOAMI),
     };
     const surveyClient = stubSurveyClient();
     renderContribuer({ authClient, surveyClient });
@@ -470,10 +474,7 @@ describe('Contribuer route', () => {
   it('CorrectifRejectedError from server shows filter id and reason in the error banner', async () => {
     const authClient: AuthClient = {
       ...stubAuth(),
-      whoami: vi.fn().mockResolvedValue({
-        userId: '0190e3a4-7a2c-7c9e-8f1a-1234567890ab',
-        displayName: 'Lapin 472',
-      }),
+      whoami: vi.fn().mockResolvedValue(MAINTAINER_WHOAMI),
     };
     const rejection = Object.assign(new Error('rejected'), {
       name: 'CorrectifRejectedError',
@@ -507,10 +508,7 @@ describe('Contribuer route', () => {
   it('auth verdict strips targetSense that repeats the lemma before submission (ADR-0061 §2)', async () => {
     const authClient: AuthClient = {
       ...stubAuth(),
-      whoami: vi.fn().mockResolvedValue({
-        userId: '0190e3a4-7a2c-7c9e-8f1a-1234567890ab',
-        displayName: 'Lapin 472',
-      }),
+      whoami: vi.fn().mockResolvedValue(MAINTAINER_WHOAMI),
     };
     const surveyClient = stubSurveyClient();
     renderContribuer({ authClient, surveyClient });
@@ -534,10 +532,7 @@ describe('Contribuer route', () => {
   it('auth SKIP excludes skipped ids on the next getNextItem call without touching surveyAnonStore', async () => {
     const authClient: AuthClient = {
       ...stubAuth(),
-      whoami: vi.fn().mockResolvedValue({
-        userId: '0190e3a4-7a2c-7c9e-8f1a-1234567890ab',
-        displayName: 'Lapin 472',
-      }),
+      whoami: vi.fn().mockResolvedValue(MAINTAINER_WHOAMI),
     };
     const second: SurveyItem = { ...sampleItem, itemId: '0190e3a4-7a2c-7c9e-8f1a-cafecafecafe', mot: 'NEXT' };
     const getNextItem = vi

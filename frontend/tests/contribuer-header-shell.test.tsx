@@ -1,12 +1,19 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router';
+import { RouterProvider, createMemoryHistory, createRoute, createRouter } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthClient } from '@/application/auth';
 import type { SurveyClient, SurveyItem } from '@/application/survey';
 import { surveyAnonRatedStore } from '@/infrastructure/session/localStorageSurveyAnon';
 import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
-import { Route as ContribuerRoute } from '@/ui/routes/contribuer';
+import { ContribuerPage } from '@/ui/routes/contribuer.lazy';
+
+// Render the inner screen directly (same '/contribuer' route id) to exercise the header shell without the maintainer gate.
+const InnerContribuerRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: '/contribuer',
+  component: ContribuerPage,
+});
 
 const sampleItem: SurveyItem = {
   itemId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
@@ -60,7 +67,7 @@ function stubSurveyClient(): SurveyClient {
 function renderContribuer() {
   const authClient = stubAuth();
   const surveyClient = stubSurveyClient();
-  const routeTree = RootRoute.addChildren([ContribuerRoute]);
+  const routeTree = RootRoute.addChildren([InnerContribuerRoute]);
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: ['/contribuer'] }),
