@@ -3,6 +3,7 @@ package com.bliss.billing.infrastructure.provider
 import com.mollie.mollie.Client
 import com.mollie.mollie.models.components.Amount
 import com.mollie.mollie.models.components.EntityCustomer
+import com.mollie.mollie.models.components.ListSubscriptionResponse
 import com.mollie.mollie.models.components.Metadata
 import com.mollie.mollie.models.components.PaymentRequest
 import com.mollie.mollie.models.components.PaymentResponse
@@ -12,6 +13,7 @@ import com.mollie.mollie.models.components.SubscriptionRequest
 import com.mollie.mollie.models.components.SubscriptionResponse
 import com.mollie.mollie.models.errors.APIException
 import com.mollie.mollie.models.operations.GetPaymentRequest
+import com.mollie.mollie.models.operations.ListAllSubscriptionsRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.openapitools.jackson.nullable.JsonNullable
@@ -146,6 +148,24 @@ class SdkMollieClient(
             }
         }
 
+    override suspend fun listAllSubscriptions(): List<MollieSubscription> =
+        withContext(Dispatchers.IO) {
+            sdk
+                .subscriptions()
+                .all()
+                .request(ListAllSubscriptionsRequest.builder().build())
+                .callAsIterable()
+                .asSequence()
+                .flatMap { page ->
+                    page
+                        .`object`()
+                        .map { it.embedded().subscriptions().orElse(emptyList()) }
+                        .orElse(emptyList())
+                        .asSequence()
+                }.map { it.toDto() }
+                .toList()
+        }
+
     override suspend fun cancelSubscription(
         customerId: String,
         subscriptionId: String,
@@ -177,6 +197,18 @@ class SdkMollieClient(
         )
 
     private fun SubscriptionResponse.toDto(): MollieSubscription =
+        MollieSubscription(
+            id = id(),
+            customerId = customerId(),
+            status = status().value(),
+            nextPaymentDate =
+                nextPaymentDate().toNullable()?.let {
+                    LocalDate.parse(it).atStartOfDay(ZoneOffset.UTC).toInstant()
+                },
+            metadata = metadata().orElse(null)?.toStringMap() ?: emptyMap(),
+        )
+
+    private fun ListSubscriptionResponse.toDto(): MollieSubscription =
         MollieSubscription(
             id = id(),
             customerId = customerId(),

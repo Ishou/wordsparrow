@@ -15,6 +15,7 @@ class FakeMollieClient : MollieClient {
     var lastPaymentAmount: String? = null
 
     val createdSubscriptions = mutableListOf<MollieSubscription>()
+    var allSubscriptions: List<MollieSubscription> = emptyList()
     var nextSubscription: MollieSubscription = MollieSubscription("sub_created", "cust_created", "active", null, emptyMap())
     var lastSubscriptionMandateId: String? = null
     var lastSubscriptionInterval: String? = null
@@ -65,6 +66,8 @@ class FakeMollieClient : MollieClient {
         customerId: String,
         subscriptionId: String,
     ): MollieSubscription? = subscriptions[subscriptionId]
+
+    override suspend fun listAllSubscriptions(): List<MollieSubscription> = allSubscriptions
 
     override suspend fun cancelSubscription(
         customerId: String,

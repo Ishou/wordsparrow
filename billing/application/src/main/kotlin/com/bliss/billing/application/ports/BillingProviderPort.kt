@@ -23,6 +23,12 @@ data class ProviderSubscriptionState(
     val periodEnd: Instant?,
 )
 
+/** Lean provider-side handle enumerated by the reconciliation backstop; only the opaque [externalRef] is load-bearing, [userId] aids log correlation (ADR-0078). */
+data class ProviderSubscriptionRef(
+    val externalRef: String,
+    val userId: UUID?,
+)
+
 /** Anti-corruption port over the payment provider; only infrastructure knows a provider exists, and provider payload shapes never leak past it (ADR-0078). */
 interface BillingProviderPort {
     suspend fun createCheckout(
@@ -42,4 +48,7 @@ interface BillingProviderPort {
 
     /** Cancel at the provider. Idempotent: cancelling an already-cancelled subscription is a no-op (ADR-0078 deletion-cancellation invariant). */
     suspend fun cancel(externalRef: String)
+
+    /** Enumerate every subscription the provider still considers active; the reconciliation backstop cancels any with no live local intent (ADR-0078). */
+    suspend fun listActiveSubscriptions(): List<ProviderSubscriptionRef>
 }

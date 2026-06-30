@@ -8,6 +8,7 @@ import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.CheckoutUrls
 import com.bliss.billing.application.ports.Clock
 import com.bliss.billing.application.ports.EventIdGenerator
+import com.bliss.billing.application.ports.ProviderSubscriptionRef
 import com.bliss.billing.application.ports.ProviderSubscriptionState
 import com.bliss.billing.application.ports.SubscriptionChanged
 import com.bliss.billing.application.ports.SubscriptionPublisher
@@ -271,6 +272,8 @@ class UserDeletedConsumerTest {
             cancelCalls += externalRef
             if (externalRef in failRefs) throw RuntimeException("provider down")
         }
+
+        override suspend fun listActiveSubscriptions(): List<ProviderSubscriptionRef> = emptyList()
     }
 
     private class InMemorySubscriptions : SubscriptionRepository {
@@ -290,6 +293,9 @@ class UserDeletedConsumerTest {
         }
 
         override suspend fun listActive(): List<Subscription> = byUser.values.toList()
+
+        override suspend fun listPendingCancellationBefore(cutoff: Instant): List<Subscription> =
+            byUser.values.filter { it.status == SubscriptionStatus.PENDING_CANCELLATION }
     }
 
     private class RecordingPublisher : SubscriptionPublisher {
