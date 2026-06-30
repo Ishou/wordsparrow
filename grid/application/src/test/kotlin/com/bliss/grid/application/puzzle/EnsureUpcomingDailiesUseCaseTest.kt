@@ -45,6 +45,23 @@ class EnsureUpcomingDailiesUseCaseTest {
     }
 
     @Test
+    fun `force regenerate appends a fresh row for an already-persisted date and current resolves to it`() {
+        val repo = TrackingPuzzleRepository()
+        val originalId = repo.seedDaily(today, newStoredPuzzle())
+        val port = RecordingPort(grids = { _ -> successfulGrid() })
+        val useCase = newUseCase(repo, port, windowDays = 1)
+
+        val summary = useCase.execute(today, force = true)
+
+        assertThat(summary.generatedDates).containsExactly(today)
+        assertThat(summary.persistedDates).isEmpty()
+        assertThat(repo.insertedDates).containsExactly(today)
+        assertThat(port.calls).hasSize(1)
+        val current = repo.getCurrentForDate(today)
+        assertThat(current?.puzzleId == originalId).isEqualTo(false)
+    }
+
+    @Test
     fun `seven days needing generation succeed on first attempt and persist in date order`() {
         val repo = TrackingPuzzleRepository()
         val port = RecordingPort(grids = { _ -> successfulGrid() })
@@ -207,8 +224,10 @@ class EnsureUpcomingDailiesUseCaseTest {
         fun seedDaily(
             date: LocalDate,
             value: StoredPuzzle,
-        ) {
-            putDated(UUID.randomUUID(), date, value)
+        ): UUID {
+            val id = UUID.randomUUID()
+            putDated(id, date, value)
+            return id
         }
 
         override fun get(puzzleId: UUID): StoredPuzzle? = store[puzzleId]

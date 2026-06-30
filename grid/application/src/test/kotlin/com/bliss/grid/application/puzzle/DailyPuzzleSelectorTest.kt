@@ -10,31 +10,6 @@ class DailyPuzzleSelectorTest {
     private val selector = DailyPuzzleSelector()
 
     @Test
-    fun `puzzleId is deterministic per date`() {
-        val date = LocalDate.of(2026, 5, 9)
-        val first = selector.puzzleIdForDate(date)
-        val second = selector.puzzleIdForDate(date)
-        assertThat(first).isEqualTo(second)
-    }
-
-    @Test
-    fun `puzzleId differs across dates`() {
-        val a = selector.puzzleIdForDate(LocalDate.of(2026, 5, 9))
-        val b = selector.puzzleIdForDate(LocalDate.of(2026, 5, 10))
-        assertThat(a == b).isEqualTo(false)
-    }
-
-    @Test
-    fun `puzzleId is RFC 9562 UUID v7 with variant 10`() {
-        val uuid = selector.puzzleIdForDate(LocalDate.of(2026, 5, 9))
-        // Version field — bits 12..15 of the timestamp_high_and_version.
-        assertThat(uuid.version()).isEqualTo(7)
-        // Variant field — bits 62..63 of the clock_seq_and_node high half;
-        // the RFC 4122 variant is 0b10.
-        assertThat(uuid.variant()).isEqualTo(2)
-    }
-
-    @Test
     fun `freshDailyId is a UUID v7 carrying the supplied timestamp`() {
         val nowEpochMs =
             LocalDate

@@ -28,7 +28,11 @@ class EnsureUpcomingDailiesUseCase(
 ) {
     private val log = LoggerFactory.getLogger(EnsureUpcomingDailiesUseCase::class.java)
 
-    fun execute(today: LocalDate): Summary {
+    // force appends a fresh row even when a current one exists, so a corrected corpus replaces a stale daily (ADR-0081).
+    fun execute(
+        today: LocalDate,
+        force: Boolean = false,
+    ): Summary {
         val persistedDates = mutableListOf<LocalDate>()
         val generatedDates = mutableListOf<LocalDate>()
         val failedDates = mutableListOf<LocalDate>()
@@ -43,7 +47,7 @@ class EnsureUpcomingDailiesUseCase(
                 skippedDates += date
                 continue
             }
-            if (puzzleRepository.getCurrentForDate(date) != null) {
+            if (!force && puzzleRepository.getCurrentForDate(date) != null) {
                 log.info("daily_already_persisted date={}", date)
                 persistedDates += date
                 continue

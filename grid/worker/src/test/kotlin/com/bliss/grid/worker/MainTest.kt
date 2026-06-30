@@ -68,6 +68,21 @@ class MainTest {
     }
 
     @Test
+    fun `executeAndExit with force regenerates even already-persisted days`() {
+        val repo = PreseededRepo()
+        for (offset in 0 until 7) {
+            repo.seedDaily(today.plusDays(offset.toLong()), newStoredPuzzle())
+        }
+
+        val exit = executeAndExit(repo, NoopCooldownRepo(), SuccessfulPort, today = today, force = true)
+
+        assertThat(exit).isEqualTo(0)
+        val summary = appender.list.single { it.formattedMessage.contains("event=ensure_upcoming_dailies_summary") }
+        assertThat(summary.formattedMessage).contains("persisted_count=0")
+        assertThat(summary.formattedMessage).contains("generated_count=7")
+    }
+
+    @Test
     fun `executeAndExit returns 1 and logs failed plus skipped dates when first day fails`() {
         val repo = PreseededRepo()
         val failingPort =
@@ -148,6 +163,25 @@ class MainTest {
         ): Long = 0L
 
         override fun deleteBySession(bucketId: UUID): Int = 0
+    }
+
+    private object SuccessfulPort : GridGenerationPort {
+        override fun generate(
+            randomSeed: Long,
+            cooldownPolicy: ClueCooldownPolicy,
+            attempts: Int,
+            perAttemptTimeoutMs: Long,
+        ): Grid {
+            val word = Word(text = "ABCDE", definition = "test")
+            val placement =
+                WordPlacement(
+                    word = word,
+                    cluePosition = Position(Row(0), Column(0)),
+                    direction = Direction.DOWN_RIGHT,
+                    chosenClue = word.clues.first(),
+                )
+            return Grid.fromPlacements(width = 5, height = 5, placements = listOf(placement))
+        }
     }
 
     private object ExplodingPort : GridGenerationPort {
