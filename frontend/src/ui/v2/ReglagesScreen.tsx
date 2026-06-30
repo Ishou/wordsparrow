@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useRouteContext } from '@tanstack/react-router';
 import { Lock, FileText, Envelope, CaretRight, Question, User } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { useAuth } from '@/ui/components/auth';
@@ -6,6 +6,7 @@ import { Skeleton } from '@/design-system';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { SettingsRow } from './SettingsRow';
+import { AbonnementSection } from './AbonnementSection';
 
 const title = css({
   fontFamily: 'wsDisplay',
@@ -123,12 +124,15 @@ function ProfileCard() {
 }
 
 export function ReglagesScreen() {
+  const { billingClient } = useRouteContext({ from: '__root__' });
   return (
     <PhoneShell header={<BackHeader to="/" />} backTo="/">
       <div className={stack}>
         <h1 className={title}>Réglages</h1>
 
         <ProfileCard />
+
+        {billingClient ? <AbonnementSection client={billingClient} /> : null}
 
         <nav aria-label="Confidentialité &amp; légal">
           <div className={groupLabel}>Confidentialité &amp; légal</div>

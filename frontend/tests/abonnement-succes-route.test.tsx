@@ -94,7 +94,7 @@ describe('CheckoutSuccessScreen polling', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2000);
     });
-    expect(screen.getByText(/abonnement est actif/i)).toBeInTheDocument();
+    expect(screen.getByText(/te voilà abonné·e/i)).toBeInTheDocument();
     expect(getSubscription).toHaveBeenCalledTimes(2);
   });
 
@@ -121,7 +121,7 @@ describe('CheckoutSuccessScreen polling', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(screen.getByText(/abonnement est actif/i)).toBeInTheDocument();
+    expect(screen.getByText(/te voilà abonné·e/i)).toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10000);
