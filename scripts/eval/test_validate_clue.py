@@ -17,7 +17,14 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from validate_clue import _find_head, _find_pleonasm, validate_lemma_clue  # noqa: E402
+from morphology_index import MorphologyIndex  # noqa: E402
+from validate_clue import (  # noqa: E402
+    _find_head,
+    _find_lemma_family_leak,
+    _find_pleonasm,
+    _strip_accents,
+    validate_lemma_clue,
+)
 
 
 class _StubIndex:
@@ -66,6 +73,36 @@ def test_short_clue_passes_length_gate() -> None:
 ])
 def test_find_head_skips_function_words(clue: str, expected_head: str) -> None:
     assert _find_head(clue) == expected_head
+
+
+# --- diacritic-folded self-reference gate -----------------------------------
+
+
+def _ainé_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    for surface, tags in [
+        ("ainé", "mas adj sg nom"),
+        ("ainée", "adj fem sg nom"),
+        ("ainés", "mas adj pl nom"),
+        ("ainées", "adj fem pl nom"),
+    ]:
+        ts = frozenset(tags.split())
+        idx.by_lemma.setdefault("ainé", []).append((surface, ts))
+        idx.by_form.setdefault(surface, []).append(("ainé", ts))
+    return idx
+
+
+def test_strip_accents_folds_diacritics() -> None:
+    assert _strip_accents("aîné") == "aine"
+    assert _strip_accents("ainé") == "aine"
+
+
+def test_self_reference_matches_across_diacritics() -> None:
+    assert _find_lemma_family_leak("L'aîné", "ainé", _ainé_index()) is not None
+
+
+def test_self_reference_still_clean_for_unrelated_clue() -> None:
+    assert _find_lemma_family_leak("Cours d'eau", "ainé", _ainé_index()) is None
 
 
 # --- pleonasm gate ----------------------------------------------------------
