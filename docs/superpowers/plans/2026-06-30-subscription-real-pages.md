@@ -5,26 +5,26 @@
 > merge → next wave). Steps use checkbox (`- [ ]`) syntax. Within a wave, follow
 > TDD for domain/application logic: failing test first, then implementation.
 
-**Goal:** Turn the approved subscription mockups (DEV-gated, on branch
-`worktree-feat+subscription-user-path-mockups`) into production: ratify the offer
-(W1, this PR), wire subscription-derived entitlement end-to-end (W2), then port
-the refined mockup components to real routes (W3–W6).
+**Goal:** Build the offer ADR-0080 proposes into production: ratify the offer
+(W1, this PR), wire subscription-derived entitlement end-to-end (W2), then build
+the consumer-facing surfaces directly from the ADR's decisions (W3–W6).
 
-**Architecture:** The UI build is largely **porting the refined mockup
-components** under `frontend/src/ui/v2/mockups/*` to production — swap fixtures
+**Architecture:** The UI build implements ADR-0080's offer/entitlement decisions
+directly against the existing screens (`frontend/src/ui/v2/*`) — swap fixtures
 for the real billing client (`createHttpBillingClient`, `useSubscription`) and
-the new `useSubscriber()` / capability hooks, and register at real routes. The
-entitlement axis (W2) extends ADR-0079's capability interface with `(role + tier)`.
+the new `useSubscriber()` / capability hooks, and register at real routes. No
+mockup gallery exists in this repo to port from; if a wave needs a more detailed
+visual reference than the ADR's copy/framing decisions, author a design spec
+under `docs/superpowers/specs/` first. The entitlement axis (W2) extends
+ADR-0079's capability interface with `(role + tier)`.
 
 **Tech Stack:** Kotlin 2.3.21 + Ktor (identity, grid: domain/application/
 infrastructure/api), kotlinx-serialization, NATS JetStream, Testcontainers,
 Konsist; Vite + React 19 + TS + Panda CSS + Ark UI (frontend); Vitest + Playwright.
 
-**Spec:** `docs/superpowers/specs/2026-06-30-subscription-user-path-mockups-design.md`
-(read its "As-built (2026-06-30)" section).
 **ADR:** `docs/adr/0080-subscription-offer-and-derived-entitlement.md` (offer +
-entitlement decisions; entitlement shape is settled — tier-derived capabilities
-only, whoami capabilities-only, manage labels from the billing subscription view).
+entitlement decisions; price + capability names are FLAGGED for maintainer
+confirmation; the entitlement-exposure shape is settled).
 
 ## Global constraints
 
@@ -39,8 +39,9 @@ only, whoami capabilities-only, manage labels from the billing subscription view
 - No `println` / `console.log`; structured logs only. Comments: one line,
   non-obvious *why* only; no multi-line blocks.
 - **Server is the source of truth** (ADR-0078/0079); frontend gates are cosmetic.
-- **Screenshot-verify against the mockup is the DoD for every UI wave** — render
-  under `pnpm dev`, compare each surface × state against the mockup gallery.
+- **Screenshot-verify against ADR-0080's decisions is the DoD for every UI
+  wave** — render under `pnpm dev`, compare each surface × state against the
+  ADR's offer/framing decisions (no mockup gallery exists in this repo).
 - Per-wave **ADR pre-read**: run `scripts/adr-context.sh <paths>` and inline the
   output into the implementer prompt before writing code.
 
@@ -158,8 +159,9 @@ restart.
 (« Accès complet » / « l'abonnement »), 2 €/20 € mensuel-annuel toggle, neutral
 factual framing, wired to `createCheckoutSession`.
 
-**Port from:** `frontend/src/ui/v2/mockups/OfferPage.tsx` (two-card, as-built),
-`AbonnementMockups.tsx`, `fixtures.ts`.
+**Build from:** ADR-0080's offer decision (two-card « Accès complet » /
+« l'abonnement », 2 €/20 € toggle, neutral factual framing) — no mockup
+gallery exists in this repo to port from.
 **Files:**
 - Rework: `frontend/src/ui/v2/AbonnementScreen.tsx` (route `frontend/src/ui/routes/abonnement.tsx`).
 - Wire: `frontend/src/application/billing/BillingClient.ts` /
@@ -171,8 +173,8 @@ factual framing, wired to `createCheckoutSession`.
   `frontend/tests/abonnement-route.test.tsx` / `abonnement-succes-route.test.tsx`
   use the `'premium'` string. Rename every such occurrence to the `subscriber`
   tier id when this wave reworks the screen — no `'premium'` string survives.
-**DoD:** screenshot-verify against the mockup OfferPage; no real charge (test
-mode); grep confirms `'premium'` is gone from `frontend/`.
+**DoD:** screenshot-verify against ADR-0080's offer decision; no real charge
+(test mode); grep confirms `'premium'` is gone from `frontend/`.
 
 ---
 
@@ -181,7 +183,8 @@ mode); grep confirms `'premium'` is gone from `frontend/`.
 **Goal:** post-checkout confirmation + a "Ton abonnement" section in réglages
 with cancel, wired to `useSubscription` / cancel.
 
-**Port from:** `mockups/MerciScreen.tsx`, `mockups/ManagePanel.tsx`.
+**Build from:** ADR-0080's offer decision — no mockup gallery exists in this
+repo to port from.
 **Files:**
 - Rework: `frontend/src/ui/v2/AbonnementSuccesScreen.tsx`
   (route `abonnement.succes.tsx`) → the « Te voilà abonné·e ! » confirmation.
@@ -191,8 +194,8 @@ with cancel, wired to `useSubscription` / cancel.
   `SubscriptionView { tier, status, periodEnd }`, ADR-0078); cancel dialog →
   `frontend/src/ui/v2/AbonnementAnnuleScreen.tsx` / cancel client call; render the
   `pending_cancellation` state ("Ton accès reste actif jusqu'au …" + "Réactiver").
-**DoD:** screenshot-verify each state (actif / pending_cancellation) against the
-ManagePanel mockup. **Labels come from the billing `SubscriptionView`, not
+**DoD:** screenshot-verify each state (actif / pending_cancellation) against
+ADR-0080's manage-panel decision. **Labels come from the billing `SubscriptionView`, not
 whoami** (authz vs display are separate concerns, ADR-0080); ambient gating uses
 `useSubscriber`.
 
@@ -203,8 +206,8 @@ whoami** (authz vs display are separate concerns, ADR-0080); ambient gating uses
 **Goal:** locked-grid markers + gating dialog + ambient upsell, gated on
 `useSubscriber`; **grid server-side enforcement** of the gating rule.
 
-**Port from:** `mockups/ArchiveLockedMock.tsx`, `mockups/AbonnementSheet.tsx`,
-`mockups/UpsellEntries.tsx`.
+**Build from:** ADR-0080's gating rule (locked = older than 7 days AND not
+started) — no mockup gallery exists in this repo to port from.
 **Files:**
 - `frontend/src/ui/v2/GrillesArchiveScreen.tsx` — cadenas badge on locked cards
   (locked = older than 7 days AND not started), archive upsell banner when free.
@@ -227,9 +230,13 @@ gate stripped.
 **Goal:** the "où va ton argent" transparency panel (incl. *fait par une seule
 personne*, *pas de pub*) and the gentle end-of-subscription screen.
 
-**Port from:** `mockups/ExploratoryMockups.tsx` (Section E).
+**Build from:** ADR-0080's offer decision (transparency framing + the gentle
+end-of-subscription posture) — no mockup gallery exists in this repo to
+port from; author a design spec under `docs/superpowers/specs/` first if a more
+detailed visual reference is needed.
 **Files:** new components under `frontend/src/ui/v2/` + wiring into the relevant
 surface (réglages / end-of-sub). Inline copy, tutoiement.
-**DoD:** screenshot-verify against the Section-E mockups.
+**DoD:** screenshot-verify against ADR-0080's transparency + end-of-subscription
+decisions.
 **Note:** the **gift-a-month** surface from Section E is **DEFERRED** with the
 one-off-payment flow — do not build it in this wave.

@@ -17,12 +17,12 @@ ADR-0079 then made identity the single authorization authority and was explicit
 that **subscription-TIER access (free vs paid grilles) is a separate axis,
 out of scope** for it — to be ratified here.
 
-The offer was designed via DEV-gated mockups (refined 2026-06-30, spec at
-`docs/superpowers/specs/2026-06-30-subscription-user-path-mockups-design.md`),
-iterated live with the maintainer under the ethical-pricing posture
-(round prices, no pressure framing, the game stays free). This ADR ratifies that
-offer and decides the **subscription-derived entitlement** wiring so the
-production surfaces can be built (the "real subscription pages" workstream).
+This ADR proposes the offer under the ethical-pricing posture (round prices, no
+pressure framing, the game stays free) and decides the **subscription-derived
+entitlement** wiring so the production surfaces can be built (the "real
+subscription pages" workstream). The offer below is this ADR's own proposal —
+no design-mockup branch or spec exists in this repo to ratify it against; price
+and capability names remain flagged for maintainer confirmation below.
 
 Three facts shape the entitlement decision:
 - identity already owns capabilities and serializes `role` + `capabilities` on
@@ -125,6 +125,27 @@ learn billing exists.
   capability read from the session principal (mirror the billing / survey / grid
   capability-source pattern: read from identity `whoami`, **absent capability ⇒
   deny**, no cross-context import). Frontend gates are **cosmetic**.
+
+- **Threat model for the new consumer / authz path.** `SubscriptionChanged` now
+  drives a capability grant for the first time, so it is a trust boundary, not
+  just an operational dependency:
+  - **Publish authority:** only `billing` may publish on
+    `wordsparrow.user.subscription-changed` — enforced at the NATS-subject level
+    via the same publish-permission ACL pattern as `survey`'s `UserRoleChanged`
+    subject (no shared credential lets another context, or a compromised
+    frontend, publish on it).
+  - **`changedAt` is server-stamped by billing**, never client-suppliable — the
+    consumer trusts it only because billing is the sole authorized publisher;
+    a forged or replayed event with a future `changedAt` would otherwise be able
+    to evict a legitimate later state under last-write-wins.
+  - **Blast radius if the consumer is compromised:** it can only apply tier
+    values it receives — it cannot *originate* a tier change, so compromise
+    grants no more than replaying/reordering events already validated by
+    billing (bounded by `userId` + `changedAt`, not an arbitrary self-grant).
+  - **Out-of-order delivery beyond last-write-wins:** a `changedAt` older than
+    the persisted value is dropped (already specified above); this also covers
+    redelivery after consumer restart, since JetStream redelivery can re-present
+    an already-applied event.
 
 ## Consequences
 
