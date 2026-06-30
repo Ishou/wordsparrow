@@ -2,6 +2,7 @@ package com.bliss.billing.infrastructure.provider
 
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.CheckoutUrls
+import com.bliss.billing.application.ports.ProviderSubscriptionRef
 import com.bliss.billing.application.ports.ProviderSubscriptionState
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.Tier
@@ -89,6 +90,20 @@ class MollieBillingAdapter(
             log.info("mollie_cancel_noop external_ref={} reason={}", externalRef, e.message)
         }
     }
+
+    override suspend fun listActiveSubscriptions(): List<ProviderSubscriptionRef> =
+        client
+            .listAllSubscriptions()
+            .filter { MollieStatusMapping.fromSubscriptionStatus(it.status)?.isLive() == true }
+            .map {
+                ProviderSubscriptionRef(
+                    externalRef = MollieReference.subscription(it.customerId, it.id),
+                    userId = userIdFrom(it.metadata),
+                )
+            }
+
+    private fun userIdFrom(metadata: Map<String, String>): UUID? =
+        metadata[USER_ID_KEY]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
     private fun MolliePayment.toState(): ProviderSubscriptionState? {
         val mapped = MollieStatusMapping.fromPaymentStatus(status) ?: return null

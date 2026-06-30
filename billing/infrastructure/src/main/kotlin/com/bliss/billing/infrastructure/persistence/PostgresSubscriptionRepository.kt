@@ -81,6 +81,18 @@ class PostgresSubscriptionRepository(
             }
         }
 
+    override suspend fun listPendingCancellationBefore(cutoff: Instant): List<Subscription> =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(SELECT_AGING_PENDING_SQL).use { stmt ->
+                    stmt.setObject(1, cutoff.atOffset(ZoneOffset.UTC))
+                    stmt.executeQuery().use { rs ->
+                        buildList { while (rs.next()) add(rs.toSubscription()) }
+                    }
+                }
+            }
+        }
+
     private fun ResultSet.toSubscription(): Subscription =
         Subscription(
             userId = getObject("user_id", UUID::class.java),
@@ -101,6 +113,10 @@ class PostgresSubscriptionRepository(
         // listActive mirrors the projection's live set: every state except the terminal CANCELED/EXPIRED (ADR-0078 reconciliation backstop).
         private const val SELECT_ACTIVE_SQL =
             "SELECT $COLUMNS FROM billing_subscriptions WHERE status NOT IN ('canceled', 'expired')"
+
+        // Aging deletion tombstones: pending_cancellation rows the backstop alerts on (ADR-0078, ADR-0032).
+        private const val SELECT_AGING_PENDING_SQL =
+            "SELECT $COLUMNS FROM billing_subscriptions WHERE status = 'pending_cancellation' AND updated_at < ?"
         private const val DELETE_SQL =
             "DELETE FROM billing_subscriptions WHERE user_id = ?"
         private const val UPSERT_SQL =

@@ -46,6 +46,7 @@ COPY billing/domain/build.gradle.kts billing/domain/
 COPY billing/application/build.gradle.kts billing/application/
 COPY billing/infrastructure/build.gradle.kts billing/infrastructure/
 COPY billing/api/build.gradle.kts billing/api/
+COPY billing/worker/build.gradle.kts billing/worker/
 
 # Source for the identity/ context only — shadowJar transitively pulls
 # :identity:domain, :identity:application, :identity:infrastructure.

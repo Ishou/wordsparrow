@@ -62,6 +62,9 @@ interface MollieClient {
         subscriptionId: String,
     ): MollieSubscription?
 
+    /** Every subscription across the organization (auto-paginated); the reconciliation backstop filters these by provider status. */
+    suspend fun listAllSubscriptions(): List<MollieSubscription>
+
     /** Cancel at the provider. Throws [MollieResourceGoneException] when the subscription is already gone/cancelled. */
     suspend fun cancelSubscription(
         customerId: String,

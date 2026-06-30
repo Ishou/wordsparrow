@@ -1,5 +1,8 @@
 # syntax=docker/dockerfile:1
-# billing-api image (ADR-0078, ADR-0007 §3): multi-stage JDK→JRE; base images pinned to digest.
+# billing-worker container image (ADR-0078). Multi-stage: JDK builder produces
+# the application-plugin install layout (bin/ launcher + lib/*.jar); JRE
+# runtime image runs it. The chart's CronJob invokes /app/bin/billing-worker
+# --reconcile. Base images pinned to digest per MANIFESTO; bump digest and tag together.
 
 # ---- Stage 1: build ------------------------------------------------------
 # eclipse-temurin:21.0.11_10-jdk-alpine-3.23
@@ -10,43 +13,43 @@ WORKDIR /workspace
 # Build scripts first so source-only edits keep the dep-resolve layer cached.
 COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
-
-# Gradle config phase needs every project's build.gradle.kts present; src/ not needed for :billing:api.
 COPY grid/domain/build.gradle.kts grid/domain/
 COPY grid/application/build.gradle.kts grid/application/
 COPY grid/infrastructure/build.gradle.kts grid/infrastructure/
 COPY grid/api/build.gradle.kts grid/api/
 COPY grid/worker/build.gradle.kts grid/worker/
-
+# settings.gradle.kts includes sibling modules; Gradle's configuration step
+# requires those project directories to exist before any task can run.
+# :billing:worker:installDist has no dependency on the other contexts, so the
+# build script alone is enough; their src/ is intentionally not copied.
 COPY game/domain/build.gradle.kts game/domain/
 COPY game/application/build.gradle.kts game/application/
 COPY game/infrastructure/build.gradle.kts game/infrastructure/
 COPY game/api/build.gradle.kts game/api/
-
 COPY identity/domain/build.gradle.kts identity/domain/
 COPY identity/application/build.gradle.kts identity/application/
 COPY identity/infrastructure/build.gradle.kts identity/infrastructure/
 COPY identity/api/build.gradle.kts identity/api/
-
 COPY survey/domain/build.gradle.kts survey/domain/
 COPY survey/application/build.gradle.kts survey/application/
 COPY survey/infrastructure/build.gradle.kts survey/infrastructure/
 COPY survey/api/build.gradle.kts survey/api/
 COPY survey/worker/build.gradle.kts survey/worker/
-
 COPY billing/domain/build.gradle.kts billing/domain/
 COPY billing/application/build.gradle.kts billing/application/
 COPY billing/infrastructure/build.gradle.kts billing/infrastructure/
 COPY billing/api/build.gradle.kts billing/api/
 COPY billing/worker/build.gradle.kts billing/worker/
 
-# Source for billing/ only; shadowJar transitively pulls domain, application, infrastructure.
 COPY billing/domain/src billing/domain/src
 COPY billing/application/src billing/application/src
 COPY billing/infrastructure/src billing/infrastructure/src
-COPY billing/api/src billing/api/src
+COPY billing/worker/src billing/worker/src
 
-RUN chmod +x gradlew && ./gradlew :billing:api:shadowJar --no-daemon --stacktrace
+# `installDist` lays out bin/ + lib/ under build/install/billing-worker/
+# (applicationName = "billing-worker" in build.gradle.kts). The application
+# plugin's launcher script wires the CLASSPATH; no shadowJar is needed.
+RUN chmod +x gradlew && ./gradlew :billing:worker:installDist --no-daemon --stacktrace
 
 # ---- Stage 2: runtime ----------------------------------------------------
 # eclipse-temurin:21.0.11_10-jre-alpine-3.23
@@ -55,35 +58,32 @@ FROM eclipse-temurin:21.0.11_10-jre-alpine-3.23@sha256:704db3c40204a44f471191446
 # upgrade openssl past the pinned base digest for current Alpine security patches; drop after a base-image bump
 RUN apk add --no-cache --upgrade openssl libssl3 libcrypto3
 
-# wget is needed by HEALTHCHECK; declare explicitly to survive base-image swaps.
-RUN apk add --no-cache wget
-
 WORKDIR /app
 
-COPY --from=build /workspace/billing/api/build/libs/billing-api-*-all.jar /app/billing-api.jar
+# applicationName is set to "billing-worker" in build.gradle.kts so installDist
+# emits the launcher directly as bin/billing-worker — no symlink needed.
+COPY --from=build /workspace/billing/worker/build/install/billing-worker/ /app/
 
-# OTel Java agent (ADR-0027): auto-instruments Ktor+JDBC at JVM start via JAVA_TOOL_OPTIONS.
+# OpenTelemetry Java agent (ADR-0027). Activated via JAVA_TOOL_OPTIONS in
+# values.yaml; the agent instruments JDBC + HTTP calls.
 ADD --chmod=0644 \
     --checksum=sha256:bd01fea1304e8c8803fff827a0bdda02b2266742a85c62548053c6761474bb5b \
     https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.27.0/opentelemetry-javaagent.jar \
     /app/otel.jar
 
-# Non-root: kubelet rejects pods where runAsNonRoot=true and image has no explicit USER.
+# Run as non-root. K8s pod security context requires runAsNonRoot=true (see chart's
+# values.yaml); without an explicit USER here, kubelet refused to start with
+# "container has runAsNonRoot and image will run as root".
 RUN addgroup --system --gid 1000 ktor \
  && adduser --system --uid 1000 --ingroup ktor --no-create-home --shell /sbin/nologin ktor \
  && chown -R 1000:1000 /app
 USER 1000:1000
 
-# Port 8083 — grid/api owns 8080, game/api 8081, identity/api 8082, survey/api 7780.
-EXPOSE 8083
+ENTRYPOINT ["/app/bin/billing-worker"]
+CMD ["--help"]
 
-# HEALTHCHECK for bare docker-run hygiene; Kubernetes uses the Helm chart's HTTP probe.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD wget -q -O - http://localhost:8083/v1/health || exit 1
-
-CMD ["java", "-jar", "/app/billing-api.jar"]
-
-# OCI annotations: source link and basic metadata for the GHCR package page.
+# OCI Image Annotations: link the GHCR package back to source and surface
+# basic metadata (description, license) on the package page.
 LABEL org.opencontainers.image.source="https://github.com/Ishou/bliss"
-LABEL org.opencontainers.image.description="WordSparrow Billing JVM API (Ktor REST)"
+LABEL org.opencontainers.image.description="WordSparrow billing reconciliation worker (subscription backstop CLI)"
 LABEL org.opencontainers.image.licenses="FSL-1.1-MIT"

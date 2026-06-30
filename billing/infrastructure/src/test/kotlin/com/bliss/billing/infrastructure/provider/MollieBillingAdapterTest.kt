@@ -241,4 +241,25 @@ class MollieBillingAdapterTest {
 
             assertThat(client.cancelCalls).isEmpty()
         }
+
+    @Test
+    fun `listActiveSubscriptions keeps live provider statuses and drops terminal ones`() =
+        runTest {
+            val client =
+                FakeMollieClient().apply {
+                    allSubscriptions =
+                        listOf(
+                            MollieSubscription("sub_a", "cust_1", "active", null, metadata()),
+                            MollieSubscription("sub_b", "cust_2", "suspended", null, metadata()),
+                            MollieSubscription("sub_c", "cust_3", "canceled", null, metadata()),
+                            MollieSubscription("sub_d", "cust_4", "completed", null, metadata()),
+                            MollieSubscription("sub_e", "cust_5", "pending", null, metadata()),
+                        )
+                }
+
+            val refs = adapter(client, InMemoryMollieCustomerStore()).listActiveSubscriptions()
+
+            assertThat(refs.map { it.externalRef }).containsExactly("cust_1:sub_a", "cust_2:sub_b")
+            assertThat(refs.first().userId).isEqualTo(userId)
+        }
 }

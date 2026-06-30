@@ -2,6 +2,7 @@ package com.bliss.billing.application.testdoubles
 
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.CheckoutUrls
+import com.bliss.billing.application.ports.ProviderSubscriptionRef
 import com.bliss.billing.application.ports.ProviderSubscriptionState
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.SubscriptionStatus
@@ -12,6 +13,9 @@ import java.util.UUID
 class FakeBillingProvider : BillingProviderPort {
     private val states = LinkedHashMap<String, ProviderSubscriptionState>()
     private val cancelFailures = mutableSetOf<String>()
+
+    /** Subscriptions the provider still considers active, enumerated by the reconciliation backstop. */
+    val activeSubscriptions = mutableListOf<ProviderSubscriptionRef>()
 
     val cancelCalls = mutableListOf<String>()
     val createSubscriptionCalls = mutableListOf<Triple<UUID, String, Tier>>()
@@ -74,4 +78,6 @@ class FakeBillingProvider : BillingProviderPort {
         if (externalRef in cancelFailures) throw IllegalStateException("provider cancel failed for $externalRef")
         cancelCalls.add(externalRef)
     }
+
+    override suspend fun listActiveSubscriptions(): List<ProviderSubscriptionRef> = activeSubscriptions.toList()
 }

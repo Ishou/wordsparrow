@@ -2,6 +2,7 @@ package com.bliss.billing.infrastructure.persistence
 
 import assertk.assertThat
 import assertk.assertions.containsExactlyInAnyOrder
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.bliss.billing.domain.BillingSource
@@ -145,6 +146,18 @@ class PostgresSubscriptionRepositoryTest {
             listOf(active, pastDue, pendingCancellation, canceled, expired).forEach { repo.save(it) }
             assertThat(repo.listActive().map { it.userId })
                 .containsExactlyInAnyOrder(active.userId, pastDue.userId, pendingCancellation.userId)
+        }
+
+    @Test
+    fun `listPendingCancellationBefore returns only aging pending cancellation rows`() =
+        runTest {
+            val pending = sub(status = SubscriptionStatus.PENDING_CANCELLATION)
+            val active = sub(status = SubscriptionStatus.ACTIVE)
+            listOf(pending, active).forEach { repo.save(it) }
+
+            assertThat(repo.listPendingCancellationBefore(now.plusSeconds(1)).map { it.userId })
+                .containsExactlyInAnyOrder(pending.userId)
+            assertThat(repo.listPendingCancellationBefore(now.minusSeconds(1))).isEmpty()
         }
 
     @Test
