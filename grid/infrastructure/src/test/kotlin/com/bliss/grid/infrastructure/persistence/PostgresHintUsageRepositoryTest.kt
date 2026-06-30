@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThanOrEqualTo
 import assertk.assertions.isNull
+import com.bliss.grid.application.puzzle.HintBudgetCalculator
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.domain.model.Column
 import com.bliss.grid.domain.model.Direction
@@ -25,6 +26,7 @@ import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.Connection
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
@@ -34,6 +36,9 @@ class PostgresHintUsageRepositoryTest {
     private lateinit var dataSource: HikariDataSource
     private lateinit var puzzles: PostgresPuzzleRepository
     private lateinit var hintUsage: PostgresHintUsageRepository
+
+    private val now = Instant.parse("2026-06-30T12:00:00Z")
+    private val ten = Duration.ofMinutes(10)
 
     @BeforeAll
     fun startPostgres() {
@@ -72,67 +77,68 @@ class PostgresHintUsageRepositoryTest {
     }
 
     @Test
-    fun `trySpend below cap returns increasing hints_used`() {
+    fun `budgetFor on a fresh puzzle and user reports a full bucket`() {
+        val (puzzleId, userId) = setup()
+        assertThat(hintUsage.budgetFor(puzzleId, userId, 3, ten, now))
+            .isEqualTo(HintBudgetCalculator.View(3, null))
+    }
+
+    @Test
+    fun `three spends drain the bucket to zero then the fourth returns null`() {
         val (puzzleId, userId) = setup()
         withConnection { conn ->
-            assertThat(hintUsage.trySpend(conn, puzzleId, userId, hintsAllowed = 3)).isEqualTo(1)
-            assertThat(hintUsage.trySpend(conn, puzzleId, userId, hintsAllowed = 3)).isEqualTo(2)
-            assertThat(hintUsage.trySpend(conn, puzzleId, userId, hintsAllowed = 3)).isEqualTo(3)
+            assertThat(hintUsage.trySpend(conn, puzzleId, userId, 3, ten, now))
+                .isEqualTo(HintBudgetCalculator.View(2, 600))
+            assertThat(hintUsage.trySpend(conn, puzzleId, userId, 3, ten, now))
+                .isEqualTo(HintBudgetCalculator.View(1, 600))
+            assertThat(hintUsage.trySpend(conn, puzzleId, userId, 3, ten, now))
+                .isEqualTo(HintBudgetCalculator.View(0, 600))
+            assertThat(hintUsage.trySpend(conn, puzzleId, userId, 3, ten, now)).isNull()
         }
     }
 
     @Test
-    fun `trySpend at cap returns null without changing the row`() {
+    fun `one token regenerates after the interval elapses`() {
         val (puzzleId, userId) = setup()
         withConnection { conn ->
-            repeat(3) { hintUsage.trySpend(conn, puzzleId, userId, hintsAllowed = 3) }
-            assertThat(hintUsage.trySpend(conn, puzzleId, userId, hintsAllowed = 3)).isNull()
-            assertThat(hintUsage.trySpend(conn, puzzleId, userId, hintsAllowed = 3)).isNull()
+            repeat(3) { hintUsage.trySpend(conn, puzzleId, userId, 3, ten, now) }
+        }
+        val later = now.plusSeconds(600)
+        assertThat(hintUsage.budgetFor(puzzleId, userId, 3, ten, later))
+            .isEqualTo(HintBudgetCalculator.View(1, 600))
+        withConnection { conn ->
+            assertThat(hintUsage.trySpend(conn, puzzleId, userId, 3, ten, later))
+                .isEqualTo(HintBudgetCalculator.View(0, 600))
         }
     }
 
     @Test
-    fun `trySpend keeps separate counters per user`() {
+    fun `trySpend keeps separate buckets per user`() {
         val (puzzleId, _) = setup()
         val userA = UUID.randomUUID()
         val userB = UUID.randomUUID()
         withConnection { conn ->
-            assertThat(hintUsage.trySpend(conn, puzzleId, userA, hintsAllowed = 3)).isEqualTo(1)
-            assertThat(hintUsage.trySpend(conn, puzzleId, userA, hintsAllowed = 3)).isEqualTo(2)
-            assertThat(hintUsage.trySpend(conn, puzzleId, userB, hintsAllowed = 3)).isEqualTo(1)
+            assertThat(hintUsage.trySpend(conn, puzzleId, userA, 3, ten, now)?.tokensRemaining).isEqualTo(2)
+            assertThat(hintUsage.trySpend(conn, puzzleId, userA, 3, ten, now)?.tokensRemaining).isEqualTo(1)
+            assertThat(hintUsage.trySpend(conn, puzzleId, userB, 3, ten, now)?.tokensRemaining).isEqualTo(2)
         }
     }
 
     @Test
-    fun `trySpend with hintsAllowed=0 returns null without inserting`() {
+    fun `trySpend with capacity zero returns null without inserting`() {
         val (puzzleId, userId) = setup()
         withConnection { conn ->
-            assertThat(hintUsage.trySpend(conn, puzzleId, userId, hintsAllowed = 0)).isNull()
+            assertThat(hintUsage.trySpend(conn, puzzleId, userId, 0, ten, now)).isNull()
         }
-        assertThat(hintUsage.usedFor(puzzleId, userId)).isEqualTo(0)
-    }
-
-    @Test
-    fun `usedFor returns zero when there is no row`() {
-        val (puzzleId, userId) = setup()
-        assertThat(hintUsage.usedFor(puzzleId, userId)).isEqualTo(0)
-    }
-
-    @Test
-    fun `usedFor returns the current hints_used after a spend`() {
-        val (puzzleId, userId) = setup()
-        withConnection { conn ->
-            hintUsage.trySpend(conn, puzzleId, userId, hintsAllowed = 3)
-            hintUsage.trySpend(conn, puzzleId, userId, hintsAllowed = 3)
-        }
-        assertThat(hintUsage.usedFor(puzzleId, userId)).isEqualTo(2)
+        assertThat(hintUsage.budgetFor(puzzleId, userId, 0, ten, now))
+            .isEqualTo(HintBudgetCalculator.View(0, null))
     }
 
     @Test
     fun `deleteByUser blocks while another transaction holds the user advisory lock`() {
         val (puzzleId, userId) = setup()
         withConnection { conn ->
-            hintUsage.trySpend(conn, puzzleId, userId, hintsAllowed = 3)
+            hintUsage.trySpend(conn, puzzleId, userId, 3, ten, now)
         }
         val holdMillis = 500L
         val holderReleased = java.util.concurrent.CountDownLatch(1)
@@ -167,12 +173,14 @@ class PostgresHintUsageRepositoryTest {
         val (puzzleId, userA) = setup()
         val userB = UUID.randomUUID()
         withConnection { conn ->
-            hintUsage.trySpend(conn, puzzleId, userA, hintsAllowed = 3)
-            hintUsage.trySpend(conn, puzzleId, userB, hintsAllowed = 3)
+            hintUsage.trySpend(conn, puzzleId, userA, 3, ten, now)
+            hintUsage.trySpend(conn, puzzleId, userB, 3, ten, now)
         }
         assertThat(hintUsage.deleteByUser(userA)).isEqualTo(1)
-        assertThat(hintUsage.usedFor(puzzleId, userA)).isEqualTo(0)
-        assertThat(hintUsage.usedFor(puzzleId, userB)).isEqualTo(1)
+        // userA's row is gone so budgetFor reads a full bucket again; userB's spend persists.
+        assertThat(hintUsage.budgetFor(puzzleId, userA, 3, ten, now))
+            .isEqualTo(HintBudgetCalculator.View(3, null))
+        assertThat(hintUsage.budgetFor(puzzleId, userB, 3, ten, now).tokensRemaining).isEqualTo(2)
         // Idempotent: second call deletes nothing.
         assertThat(hintUsage.deleteByUser(userA)).isEqualTo(0)
     }

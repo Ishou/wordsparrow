@@ -1,23 +1,30 @@
 package com.bliss.grid.application.puzzle
 
 import java.sql.Connection
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
-/** Per-(puzzle, user) hint counter; each user has an independent spend bucket even on a shared puzzleId URL. */
+/** Per-(puzzle, user) regenerating token bucket; each user has an independent budget even on a shared puzzleId URL. */
 interface HintUsageRepository {
-    /** Atomic spend; returns new hints_used on success or null when cap reached (maps to 429). Must be called on the advisory-locked [conn]. */
+    /** Atomic spend on the caller's advisory-locked [conn]; returns the post-spend budget view, or null when empty (maps to 429). */
     fun trySpend(
         conn: Connection,
         puzzleId: UUID,
         userId: UUID,
-        hintsAllowed: Int,
-    ): Int?
+        capacity: Int,
+        interval: Duration,
+        now: Instant,
+    ): HintBudgetCalculator.View?
 
-    /** Returns `hints_used` for ([puzzleId], [userId]), or 0 if no row exists. Used by the read path to embed `hintsRemaining`. */
-    fun usedFor(
+    /** Read-only budget for ([puzzleId], [userId]) on its own connection; an absent row reads as a full bucket. */
+    fun budgetFor(
         puzzleId: UUID,
         userId: UUID,
-    ): Int
+        capacity: Int,
+        interval: Duration,
+        now: Instant,
+    ): HintBudgetCalculator.View
 
     /** GDPR Article 17; removes all hint rows for [userId] across puzzles. Returns rows deleted. Idempotent. */
     fun deleteByUser(userId: UUID): Int
