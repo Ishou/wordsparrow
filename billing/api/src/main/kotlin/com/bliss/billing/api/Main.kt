@@ -22,7 +22,7 @@ import io.ktor.server.engine.embeddedServer
 import io.nats.client.Nats
 import java.time.Instant
 
-// Production entry-point; tests use Application.billingApiModule(wiring, config) directly.
+// Production entry-point.
 fun main() {
     val config = BillingApiConfig.load()
     val mollieConfig = MollieConfig.fromEnv()
