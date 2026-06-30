@@ -129,7 +129,7 @@ class SubscriptionChangedConsumerTest {
             assertThat(subscriptions.find(userId)?.tier).isEqualTo(SubscriptionTier.SUBSCRIBER)
 
             // a newer cancelled event drops the user back to free.
-            publish("subscriber", "cancelled", now.plusSeconds(60))
+            publish("subscriber", "canceled", now.plusSeconds(60))
             awaitTier(subscriptions, SubscriptionTier.FREE)
             assertThat(whoAmI.execute(WhoAmIQuery(sessionId)).capabilities)
                 .containsExactlyInAnyOrder(Capability.HINT)

@@ -70,7 +70,7 @@ class ApplySubscriptionChangeUseCaseTest {
         runTest {
             val (sut, _, subscriptions) = newCase()
             sut.execute(change("subscriber", "active", now))
-            val outcome = sut.execute(change("free", "cancelled", now))
+            val outcome = sut.execute(change("free", "canceled", now))
             assertThat(outcome).isInstanceOf(SubscriptionChangeOutcome.Stale::class)
             assertThat(subscriptions.find(userId)?.tier).isEqualTo(SubscriptionTier.SUBSCRIBER)
         }
@@ -80,7 +80,7 @@ class ApplySubscriptionChangeUseCaseTest {
         runTest {
             val (sut, _, subscriptions) = newCase()
             sut.execute(change("subscriber", "active", now))
-            val outcome = sut.execute(change("subscriber", "cancelled", now.plusSeconds(60)))
+            val outcome = sut.execute(change("subscriber", "canceled", now.plusSeconds(60)))
             assertThat(outcome).isEqualTo(SubscriptionChangeOutcome.Applied(SubscriptionTier.FREE))
             assertThat(subscriptions.find(userId)?.tier).isEqualTo(SubscriptionTier.FREE)
         }

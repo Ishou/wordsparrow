@@ -45,6 +45,7 @@ class ApplySubscriptionChangeUseCase(
 
     private companion object {
         // A terminated subscription drops the user to free regardless of the event's tier field (ADR-0080).
-        val TERMINAL_STATUSES = setOf("cancelled", "expired")
+        // "canceled" (one l) matches billing's wire spelling — SubscriptionStatus.CANCELED.wire.
+        val TERMINAL_STATUSES = setOf("canceled", "expired")
     }
 }
