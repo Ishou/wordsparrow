@@ -21,9 +21,7 @@ spec:
     - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
-          # Host-isolated (billing.wordsparrow.io), so routes at `/`. This
-          # exposes the public `/v1/webhook` Mollie calls; its only auth is the
-          # service's re-fetch-by-id of the referenced Mollie resource (ADR-0078).
+          # Routes at /; the public /v1/webhook is guarded by Mollie resource re-fetch (ADR-0078).
           - path: /
             pathType: Prefix
             backend:

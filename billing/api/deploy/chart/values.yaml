@@ -6,29 +6,19 @@ image:
   digest: ""
   tag: "0.1.0"
   pullPolicy: IfNotPresent
-  # Overridden to true in values-prod.yaml so helm install/upgrade aborts
-  # when CD forgot to inject the digest.
+  # Overridden to true in prod so helm aborts when the CD workflow omits the digest.
   requireDigest: false
-# Billing keeps no in-memory state (subscriptions in Postgres, ADR-0078);
-# the user.deleted consumer is a durable JetStream consumer so replicas
-# share one delivery. Default 2; values-local drops to 1.
+# No in-memory state (ADR-0078); durable JetStream consumer, scales horizontally.
 replicaCount: 2
 resources:
   requests: {cpu: 100m, memory: 256Mi}
   limits: {cpu: 1000m, memory: 512Mi}
 database:
-  # Wires BILLING_DATABASE_URL from the sibling CNPG cluster (chart
-  # `billing/api/deploy/db-chart/`, Helm release `wordsparrow-billing-api-pg`)
-  # and the wait-for-postgres init container. Off by default so local-dev
-  # `helm install` against k3d boots without a Cluster; prod turns this on.
+  # Off by default; prod enables DB wiring (BILLING_DATABASE_URL + wait-for-postgres init container).
   enabled: false
-  # CNPG cluster name. Equals the db chart's Helm release name; the
-  # operator-managed `<clusterName>-app` Secret and `<clusterName>-rw`
-  # Service names resolve from this.
+  # Helm release name of the db-chart; -app Secret and -rw Service names derive from it.
   clusterName: "wordsparrow-billing-api-pg"
-  # Image used by the wait-for-postgres init container. Duplicated from
-  # db-chart/values.yaml so the init container reuses the node-cached
-  # CNPG postgres image without depending on db-chart at render time.
+  # Duplicated from db-chart/values.yaml so the init container reuses the node-cached CNPG image without a chart dep.
   waitImage: "ghcr.io/cloudnative-pg/postgresql:18.4-system-bookworm@sha256:8707614e5941638307d173469b293db1b50e36454d321a03ca402ca2a58c79ad"
 service:
   type: ClusterIP
@@ -73,18 +63,14 @@ probes:
     periodSeconds: 5
     timeoutSeconds: 3
     failureThreshold: 30
-# Mollie checkout return + webhook URLs. Required by MollieConfig.fromEnv at
-# boot; set per env (prod -> frontend host + billing host, local -> localhost).
-# MOLLIE_API_KEY is NOT here — it is a secret supplied via envFromSecret.
+# Checkout return + webhook URLs; set per env. MOLLIE_API_KEY is NOT here — supplied via envFromSecret.
 checkout:
   successUrl: ""
   cancelUrl: ""
   webhookUrl: ""
-# Inline env vars. Prefer envFromSecret for anything sensitive (MOLLIE_API_KEY).
-# OpenJDK MaxRAMPercentage default 25 -> ~128 MB on 512Mi; 75% -> ~384 MB heap.
+# Env vars; MOLLIE_API_KEY goes via envFromSecret. MaxRAMPercentage 75 → ~384 MB heap on 512Mi.
 env:
-  # `-javaagent:/app/otel.jar` activates the OpenTelemetry Java agent baked
-  # into the runtime image (Dockerfile §"Stage 2"). ADR-0027.
+  # OTel Java agent baked into the runtime image (ADR-0027).
   - name: JAVA_TOOL_OPTIONS
     value: "-javaagent:/app/otel.jar -XX:MaxRAMPercentage=75.0"
   # Pin prod port; Main.kt default is 8083.
@@ -102,9 +88,7 @@ env:
     value: "parentbased_traceidratio"
   - name: OTEL_TRACES_SAMPLER_ARG
     value: "1.0"
-  # NATS JetStream URL for the SubscriptionChanged publisher and the durable
-  # user.deleted consumer (ADR-0049). `bliss-nats` is the cluster-internal
-  # Service installed by the wordsparrow-nats chart in the `wordsparrow` namespace.
+  # NATS JetStream (ADR-0049): bliss-nats cluster-internal Service in the wordsparrow namespace.
   - name: NATS_URL
     value: "nats://bliss-nats.wordsparrow:4222"
   # Identity-api base URL for session-cookie verification (billing:subscribe gate).
@@ -113,7 +97,5 @@ env:
   # Mollie checkout currency; amount/description/interval default in MollieConfig.
   - name: BILLING_CHECKOUT_CURRENCY
     value: "EUR"
-# Name of a Kubernetes Secret to envFrom into the pod. ADR-0009 §10:
-# bootstrapped via `kubectl create secret`, never committed. Carries
-# MOLLIE_API_KEY (test_… / live_…). Bootstrap recipe lands with the prod cutover.
+# Kubernetes Secret to envFrom; carries MOLLIE_API_KEY. Bootstrapped per ADR-0009 §10.
 envFromSecret: ""

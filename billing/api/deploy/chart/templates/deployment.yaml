@@ -4,9 +4,7 @@ metadata:
   name: {{ include "bliss-billing-api.fullname" . }}
   labels: {{- include "bliss-billing-api.labels" . | nindent 4 }}
 spec:
-  # Subscriptions live in Postgres and the user.deleted consumer is a durable
-  # JetStream consumer (ADR-0078) — no in-memory state, scales horizontally.
-  # Default 2 for prod-grade availability; values-local drops to 1.
+  # No in-memory state (ADR-0078); scales horizontally.
   replicas: {{ .Values.replicaCount | default 2 }}
   strategy:
     type: RollingUpdate
@@ -23,16 +21,7 @@ spec:
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       terminationGracePeriodSeconds: 30
       {{- if .Values.database.enabled }}
-      # Block the api container until the CNPG `-rw` Service accepts
-      # connections; the Cluster CRD is owned by a sibling Helm release
-      # (`bliss-billing-api-pg`, chart `billing/api/deploy/db-chart/`) the
-      # deploy workflow installs first. Without this, Flyway's TCP connect
-      # hangs, the startup probe sees `connection refused`, and Helm times out.
-      #
-      # `-U billing -d billing` are NOT optional: the container runs as UID
-      # 1000 with no `/etc/passwd` entry, so libpq's `getpwuid(1000)` returns
-      # NULL and pg_isready exits before any TCP attempt unless user + db are
-      # explicit. The `billing` user + database are created by the db-chart.
+      # Flyway hangs without this; explicit -U/-d needed when UID 1000 has no /etc/passwd entry (CNPG image).
       initContainers:
         - name: wait-for-postgres
           image: {{ .Values.database.waitImage | quote }}
@@ -57,10 +46,7 @@ spec:
             - {name: http, containerPort: {{ .Values.service.port }}, protocol: TCP}
           env:
             {{- if .Values.database.enabled }}
-            # BILLING_DATABASE_URL from CNPG's auto-generated `<clusterName>-app`
-            # Secret (key: `uri`). The Cluster lives in a sibling Helm release
-            # (`bliss-billing-api-pg`); the Secret name is deterministic from
-            # `clusterName`. BillingDatabase reads BILLING_DATABASE_URL (requireUrl=true).
+            # BILLING_DATABASE_URL from CNPG's <clusterName>-app Secret (uri key); BillingDatabase reads it (requireUrl=true).
             - name: BILLING_DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -79,8 +65,7 @@ spec:
             {{- end }}
           {{- with .Values.envFromSecret }}
           envFrom:
-            # Operator-supplied secret carrying MOLLIE_API_KEY (test_… / live_…),
-            # bootstrapped per ADR-0009 §10 via `kubectl create secret`.
+            # Secret carries MOLLIE_API_KEY; bootstrapped per ADR-0009 §10.
             - secretRef: {name: {{ . }}}
           {{- end }}
           {{- with .Values.probes.startup }}

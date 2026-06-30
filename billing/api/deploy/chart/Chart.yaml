@@ -6,12 +6,5 @@ type: application
 version: 0.1.0
 # App version. Overridden per-deploy by the CD workflow (ADR-0009 §4).
 appVersion: "0.1.0"
-# Cluster operators (cert-manager, ingress-nginx, external-dns) are
-# cluster-installed once via the bring-up workstream (ADR-0009 §3), not
-# pulled in as subchart dependencies here. The CNPG `Cluster` that backs
-# this api lives in a separate Helm chart at `billing/api/deploy/db-chart/`
-# (chart `bliss-billing-api-pg`, release `wordsparrow-billing-api-pg`) —
-# different lifecycle from the api Deployment (long-lived infra vs rolling
-# app). Same chart-split pattern as identity/survey; the db-chart lands in
-# a follow-up PR.
+# CNPG db-chart lives in a sibling Helm release; cluster operators are cluster-installed per ADR-0009 §3.
 dependencies: []

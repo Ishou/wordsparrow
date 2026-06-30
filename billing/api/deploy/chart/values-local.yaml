@@ -3,8 +3,7 @@ replicaCount: 1
 image:
   digest: ""
   tag: "0.1.0"
-  # Never so a locally-built `bliss-billing-api:0.1.0` (loaded into k3d via
-  # `k3d image import`) wins over any GHCR pull attempt.
+  # Never so k3d image import wins over GHCR pull.
   pullPolicy: Never
 # No limits locally — k3d node is small; JVM honours UseContainerSupport.
 resources: {}
