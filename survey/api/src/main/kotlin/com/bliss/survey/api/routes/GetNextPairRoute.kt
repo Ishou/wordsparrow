@@ -17,7 +17,7 @@ import java.util.UUID
 fun Route.getNextPairRoute(useCase: GetNextPairUseCase) {
     get("/v1/items/pairs/next") {
         if (!call.requireContribuer()) return@get
-        val userId = call.attributes.getOrNull(UserIdKey)?.let { UserId(it) }
+        val userId = UserId(call.attributes[UserIdKey])
         val excluded =
             call.request.queryParameters["excluded"]
                 ?.split(",")

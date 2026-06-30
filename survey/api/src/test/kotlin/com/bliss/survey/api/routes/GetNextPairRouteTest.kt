@@ -154,13 +154,13 @@ private class StubPairRepo(
     ) {}
 
     override suspend fun pickUnratedForUser(
-        userId: UserId?,
+        userId: UserId,
         tier: Tier,
         exclude: Set<ItemId>,
     ): SurveyItem? = null
 
     override suspend fun pickPairForUser(
-        userId: UserId?,
+        userId: UserId,
         exclude: Set<ItemId>,
     ): ItemPair? {
         if (recordExclude) lastExclude = exclude

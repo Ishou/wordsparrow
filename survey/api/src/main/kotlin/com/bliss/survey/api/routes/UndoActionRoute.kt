@@ -14,11 +14,11 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 
-fun Route.undoActionRoute(undoAction: suspend (token: String, userId: UserId?) -> UndoActionResult) {
+fun Route.undoActionRoute(undoAction: suspend (token: String, userId: UserId) -> UndoActionResult) {
     post("/v1/actions/undo") {
         if (!call.requireContribuer()) return@post
         val body = call.receive<UndoActionRequest>()
-        val userId = call.attributes.getOrNull(UserIdKey)?.let { UserId(it) }
+        val userId = UserId(call.attributes[UserIdKey])
         when (undoAction(body.token, userId)) {
             UndoActionResult.Undone -> call.respond(HttpStatusCode.NoContent)
 

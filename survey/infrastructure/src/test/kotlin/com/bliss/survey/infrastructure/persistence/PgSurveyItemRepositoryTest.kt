@@ -144,7 +144,7 @@ class PgSurveyItemRepositoryTest {
     @Test
     fun `pickUnratedForUser returns null when no items match`() =
         runTest {
-            val pick = items.pickUnratedForUser(null, Tier.MID, exclude = emptySet())
+            val pick = items.pickUnratedForUser(UserId(UUID.randomUUID()), Tier.MID, exclude = emptySet())
             assertThat(pick).isNull()
         }
 
@@ -157,7 +157,7 @@ class PgSurveyItemRepositoryTest {
             items.insert(onceRated)
             // give onceRated a single rating
             ratings.insert(authRating(onceRated.id, UserId(UUID.randomUUID())))
-            val picked = items.pickUnratedForUser(null, Tier.MID, exclude = emptySet())
+            val picked = items.pickUnratedForUser(UserId(UUID.randomUUID()), Tier.MID, exclude = emptySet())
             assertThat(picked?.id).isEqualTo(unrated.id)
         }
 
@@ -168,7 +168,7 @@ class PgSurveyItemRepositoryTest {
             val b = sampleItem(mot = "B")
             items.insert(a)
             items.insert(b)
-            val picked = items.pickUnratedForUser(null, Tier.MID, exclude = setOf(a.id))
+            val picked = items.pickUnratedForUser(UserId(UUID.randomUUID()), Tier.MID, exclude = setOf(a.id))
             assertThat(picked?.id).isEqualTo(b.id)
         }
 
@@ -201,7 +201,7 @@ class PgSurveyItemRepositoryTest {
         }
 
     @Test
-    fun `pickUnratedForUser anon caller is unchanged by the content dedup`() =
+    fun `pickUnratedForUser caller with no prior ratings sees the reincarnated item`() =
         runTest {
             val someoneElse = UserId(UUID.randomUUID())
             val rated = sampleItem(mot = "PAIN")
@@ -210,8 +210,8 @@ class PgSurveyItemRepositoryTest {
             items.retire(rated.id, now)
             val reincarnation = rated.copy(id = ItemId(UUID.randomUUID()), retiredAt = null)
             items.insert(reincarnation)
-            // Anon caller: K=0 path matches reincarnation (no rating on its item_id) regardless of content history.
-            val picked = items.pickUnratedForUser(null, Tier.MID, exclude = emptySet())
+            // A fresh caller (no ratings) picks the reincarnation; only someoneElse's history blocks it for them.
+            val picked = items.pickUnratedForUser(UserId(UUID.randomUUID()), Tier.MID, exclude = emptySet())
             assertThat(picked?.id).isEqualTo(reincarnation.id)
         }
 

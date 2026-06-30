@@ -62,19 +62,19 @@ class PgSurveyItemRepository(
         }
 
     override suspend fun pickUnratedForUser(
-        userId: UserId?,
+        userId: UserId,
         tier: Tier,
         exclude: Set<ItemId>,
     ): SurveyItem? =
         withContext(Dispatchers.IO) {
             withTxConnection(dataSource) { conn ->
                 for (k in 0..2) {
-                    val pickQuery = buildPickQuery(userId != null, exclude.size)
+                    val pickQuery = buildPickQuery(exclude.size)
                     conn.prepareStatement(pickQuery).use { stmt ->
                         var idx = 1
                         stmt.setString(idx++, tier.name.lowercase())
                         for (id in exclude) stmt.setObject(idx++, id.value)
-                        if (userId != null) stmt.setObject(idx++, userId.value)
+                        stmt.setObject(idx++, userId.value)
                         stmt.setInt(idx, k)
                         stmt.executeQuery().use { rs ->
                             if (rs.next()) return@withContext rs.toSurveyItem()
@@ -86,14 +86,12 @@ class PgSurveyItemRepository(
         }
 
     override suspend fun pickPairForUser(
-        userId: UserId?,
+        userId: UserId,
         exclude: Set<ItemId>,
     ): ItemPair? =
         withContext(Dispatchers.IO) {
             withTxConnection(dataSource) { conn ->
-                if (userId != null) {
-                    pickAnchorPair(conn, userId, exclude)?.let { return@withContext it }
-                }
+                pickAnchorPair(conn, userId, exclude)?.let { return@withContext it }
                 val group = pickEligibleGroup(conn, userId, exclude) ?: return@withContext null
                 pickTwoItemsForGroup(conn, group, userId, exclude)
             }
@@ -186,17 +184,15 @@ class PgSurveyItemRepository(
 
     private fun pickEligibleGroup(
         conn: java.sql.Connection,
-        userId: UserId?,
+        userId: UserId,
         exclude: Set<ItemId>,
     ): EligibleGroup? {
-        val sql = buildEligibleGroupQuery(userId != null, exclude.size)
+        val sql = buildEligibleGroupQuery(exclude.size)
         conn.prepareStatement(sql).use { stmt ->
             var idx = 1
             for (id in exclude) stmt.setObject(idx++, id.value)
-            if (userId != null) {
-                stmt.setObject(idx++, userId.value)
-                stmt.setObject(idx, userId.value)
-            }
+            stmt.setObject(idx++, userId.value)
+            stmt.setObject(idx, userId.value)
             stmt.executeQuery().use { rs ->
                 return if (rs.next()) {
                     EligibleGroup(rs.getString("mot"), rs.getString("style"), rs.getString("categorie"))
@@ -210,20 +206,18 @@ class PgSurveyItemRepository(
     private fun pickTwoItemsForGroup(
         conn: java.sql.Connection,
         group: EligibleGroup,
-        userId: UserId?,
+        userId: UserId,
         exclude: Set<ItemId>,
     ): ItemPair? {
-        val sql = buildTwoItemsForGroupQuery(userId != null, exclude.size)
+        val sql = buildTwoItemsForGroupQuery(exclude.size)
         conn.prepareStatement(sql).use { stmt ->
             var idx = 1
             stmt.setString(idx++, group.mot)
             stmt.setString(idx++, group.style)
             stmt.setString(idx++, group.categorie)
             for (id in exclude) stmt.setObject(idx++, id.value)
-            if (userId != null) {
-                stmt.setObject(idx++, userId.value)
-                stmt.setObject(idx, userId.value)
-            }
+            stmt.setObject(idx++, userId.value)
+            stmt.setObject(idx, userId.value)
             stmt.executeQuery().use { rs ->
                 val picks = mutableListOf<SurveyItem>()
                 while (rs.next() && picks.size < 2) picks += rs.toSurveyItem()
@@ -233,27 +227,20 @@ class PgSurveyItemRepository(
         }
     }
 
-    private fun buildEligibleGroupQuery(
-        hasUserId: Boolean,
-        excludeSize: Int,
-    ): String {
+    private fun buildEligibleGroupQuery(excludeSize: Int): String {
         val excludeClause =
             if (excludeSize > 0) "AND si.item_id NOT IN (${List(excludeSize) { "?" }.joinToString(",")})" else ""
         val antiRated =
-            if (hasUserId) {
-                """
-                AND NOT EXISTS (
-                    SELECT 1 FROM ratings r WHERE r.item_id = si.item_id AND r.user_id = ?
-                )
-                AND NOT EXISTS (
-                    SELECT 1 FROM pair_ratings pr
-                     WHERE (pr.left_item_id = si.item_id OR pr.right_item_id = si.item_id)
-                       AND pr.user_id = ?
-                )
-                """.trimIndent()
-            } else {
-                ""
-            }
+            """
+            AND NOT EXISTS (
+                SELECT 1 FROM ratings r WHERE r.item_id = si.item_id AND r.user_id = ?
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM pair_ratings pr
+                 WHERE (pr.left_item_id = si.item_id OR pr.right_item_id = si.item_id)
+                   AND pr.user_id = ?
+            )
+            """.trimIndent()
         return """
             SELECT si.mot, si.style, si.categorie FROM survey_items si
              WHERE si.retired_at IS NULL
@@ -265,27 +252,20 @@ class PgSurveyItemRepository(
             """.trimIndent()
     }
 
-    private fun buildTwoItemsForGroupQuery(
-        hasUserId: Boolean,
-        excludeSize: Int,
-    ): String {
+    private fun buildTwoItemsForGroupQuery(excludeSize: Int): String {
         val excludeClause =
             if (excludeSize > 0) "AND si.item_id NOT IN (${List(excludeSize) { "?" }.joinToString(",")})" else ""
         val antiRated =
-            if (hasUserId) {
-                """
-                AND NOT EXISTS (
-                    SELECT 1 FROM ratings r WHERE r.item_id = si.item_id AND r.user_id = ?
-                )
-                AND NOT EXISTS (
-                    SELECT 1 FROM pair_ratings pr
-                     WHERE (pr.left_item_id = si.item_id OR pr.right_item_id = si.item_id)
-                       AND pr.user_id = ?
-                )
-                """.trimIndent()
-            } else {
-                ""
-            }
+            """
+            AND NOT EXISTS (
+                SELECT 1 FROM ratings r WHERE r.item_id = si.item_id AND r.user_id = ?
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM pair_ratings pr
+                 WHERE (pr.left_item_id = si.item_id OR pr.right_item_id = si.item_id)
+                   AND pr.user_id = ?
+            )
+            """.trimIndent()
         return """
             SELECT si.* FROM survey_items si
              WHERE si.retired_at IS NULL AND si.mot = ? AND si.style = ? AND si.categorie = ?
@@ -443,27 +423,20 @@ class PgSurveyItemRepository(
             trainingWeight = getDouble("training_weight"),
         )
 
-    private fun buildPickQuery(
-        hasUserId: Boolean,
-        excludeSize: Int,
-    ): String {
+    private fun buildPickQuery(excludeSize: Int): String {
         val excludeClause =
             if (excludeSize > 0) "AND si.item_id NOT IN (${List(excludeSize) { "?" }.joinToString(",")})" else ""
         // Dedup by (mot, definition) not item_id: a regenerated identical clue under a new id is still the same logical rating to the user.
         val antiExistsClause =
-            if (hasUserId) {
-                """
-                AND NOT EXISTS (
-                    SELECT 1 FROM ratings r
-                      JOIN survey_items si2 ON si2.item_id = r.item_id
-                     WHERE r.user_id = ?
-                       AND si2.mot = si.mot
-                       AND si2.definition = si.definition
-                )
-                """.trimIndent()
-            } else {
-                ""
-            }
+            """
+            AND NOT EXISTS (
+                SELECT 1 FROM ratings r
+                  JOIN survey_items si2 ON si2.item_id = r.item_id
+                 WHERE r.user_id = ?
+                   AND si2.mot = si.mot
+                   AND si2.definition = si.definition
+            )
+            """.trimIndent()
         return """
             SELECT si.* FROM survey_items si
              WHERE si.tier = ? AND si.retired_at IS NULL

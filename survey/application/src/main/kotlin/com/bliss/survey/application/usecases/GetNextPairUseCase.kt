@@ -9,7 +9,7 @@ class GetNextPairUseCase(
     private val itemRepo: SurveyItemRepository,
 ) {
     suspend fun execute(
-        forUser: UserId?,
+        forUser: UserId,
         locallyExcluded: Set<ItemId>,
     ): ItemPair? = itemRepo.pickPairForUser(forUser, locallyExcluded)
 }

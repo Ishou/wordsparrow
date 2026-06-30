@@ -80,7 +80,7 @@ class InMemorySurveyItemRepository : SurveyItemRepository {
     }
 
     override suspend fun pickUnratedForUser(
-        userId: UserId?,
+        userId: UserId,
         tier: Tier,
         exclude: Set<ItemId>,
     ): SurveyItem? =
@@ -89,15 +89,14 @@ class InMemorySurveyItemRepository : SurveyItemRepository {
             .firstOrNull()
 
     override suspend fun pickPairForUser(
-        userId: UserId?,
+        userId: UserId,
         exclude: Set<ItemId>,
     ): ItemPair? = anchorPairForUser(userId, exclude) ?: fallbackPairForUser(userId, exclude)
 
     private fun anchorPairForUser(
-        userId: UserId?,
+        userId: UserId,
         exclude: Set<ItemId>,
     ): ItemPair? {
-        if (userId == null) return null
         val rated = ratedByUser[userId].orEmpty()
         val knownGood = knownGoodByUser[userId].orEmpty()
         val pairRated = pairRatedByUser[userId].orEmpty()
@@ -118,11 +117,11 @@ class InMemorySurveyItemRepository : SurveyItemRepository {
     }
 
     private fun fallbackPairForUser(
-        userId: UserId?,
+        userId: UserId,
         exclude: Set<ItemId>,
     ): ItemPair? {
-        val rated = userId?.let { ratedByUser[it] }.orEmpty()
-        val pairRated = userId?.let { pairRatedByUser[it] }.orEmpty()
+        val rated = ratedByUser[userId].orEmpty()
+        val pairRated = pairRatedByUser[userId].orEmpty()
         val eligible =
             items.values.filter {
                 it.id !in retired && it.id !in exclude && it.id !in rated

@@ -24,7 +24,7 @@ class Wiring(
     val submitRating: suspend (SubmitRatingCommand) -> SubmitRatingResult,
     val getNextPair: GetNextPairUseCase,
     val submitPairRating: suspend (SubmitPairRatingCommand) -> SubmitPairRatingResult,
-    val undoAction: suspend (String, UserId?) -> UndoActionResult,
+    val undoAction: suspend (String, UserId) -> UndoActionResult,
     val getCurrentCampaign: GetCurrentCampaignUseCase,
     val getLemmaMeta: GetLemmaMetaUseCase,
     val items: SurveyItemRepository,

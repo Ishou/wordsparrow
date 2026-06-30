@@ -37,7 +37,7 @@ class UndoActionUseCase(
 ) {
     suspend fun execute(
         token: String,
-        sessionUserId: UserId?,
+        sessionUserId: UserId,
     ): UndoActionResult {
         val action = actions.findByTokenHash(sha256(token)) ?: return UndoActionResult.NotFound
         // Fast-path only; the authoritative single-redemption gate is the conditional markUndone inside the tx.

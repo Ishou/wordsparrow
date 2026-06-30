@@ -13,7 +13,7 @@ class GetNextItemUseCase(
     private val randomFactory: RandomFactory,
 ) {
     suspend fun execute(
-        forUser: UserId?,
+        forUser: UserId,
         locallyExcluded: Set<ItemId>,
     ): SurveyItem? {
         val populated =

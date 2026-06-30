@@ -49,7 +49,7 @@ class GetNextPairUseCaseTest {
             repo.insert(a)
             repo.insert(b)
             val uc = GetNextPairUseCase(repo)
-            val pair = uc.execute(forUser = null, locallyExcluded = emptySet())
+            val pair = uc.execute(forUser = UserId(UUID.randomUUID()), locallyExcluded = emptySet())
             assertThat(pair).isNotNull()
             assertThat(pair!!.mot).isEqualTo("POMME")
         }
@@ -61,7 +61,7 @@ class GetNextPairUseCaseTest {
             repo.insert(item("POMME", "a"))
             repo.insert(item("CHIEN", "a"))
             val uc = GetNextPairUseCase(repo)
-            val pair = uc.execute(forUser = null, locallyExcluded = emptySet())
+            val pair = uc.execute(forUser = UserId(UUID.randomUUID()), locallyExcluded = emptySet())
             assertThat(pair).isNull()
         }
 
@@ -74,7 +74,7 @@ class GetNextPairUseCaseTest {
             repo.insert(a)
             repo.insert(b)
             val uc = GetNextPairUseCase(repo)
-            val pair = uc.execute(forUser = null, locallyExcluded = setOf(a.id))
+            val pair = uc.execute(forUser = UserId(UUID.randomUUID()), locallyExcluded = setOf(a.id))
             assertThat(pair).isNull()
         }
 

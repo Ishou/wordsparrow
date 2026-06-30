@@ -11,6 +11,7 @@ import com.bliss.survey.domain.model.Source
 import com.bliss.survey.domain.model.Style
 import com.bliss.survey.domain.model.SurveyItem
 import com.bliss.survey.domain.model.Tier
+import com.bliss.survey.domain.model.UserId
 import com.bliss.survey.domain.routing.StratifiedSampler
 import com.bliss.survey.domain.routing.TierWeights
 import kotlinx.coroutines.test.runTest
@@ -54,7 +55,7 @@ class GetNextItemUseCaseTest {
                     sampler = StratifiedSampler(TierWeights.DEFAULT),
                     randomFactory = { Random(42L) },
                 )
-            val pick = uc.execute(forUser = null, locallyExcluded = emptySet())
+            val pick = uc.execute(forUser = UserId(UUID.randomUUID()), locallyExcluded = emptySet())
             assertThat(pick).isNotNull()
         }
 
@@ -70,7 +71,7 @@ class GetNextItemUseCaseTest {
                     sampler = StratifiedSampler(TierWeights.DEFAULT),
                     randomFactory = { Random(42L) },
                 )
-            val pick = uc.execute(forUser = null, locallyExcluded = setOf(mid.id))
+            val pick = uc.execute(forUser = UserId(UUID.randomUUID()), locallyExcluded = setOf(mid.id))
             assertThat(pick).isNull()
         }
 
@@ -86,7 +87,7 @@ class GetNextItemUseCaseTest {
                     randomFactory = { Random(0L) },
                 )
             repeat(8) {
-                val pick = uc.execute(forUser = null, locallyExcluded = emptySet())
+                val pick = uc.execute(forUser = UserId(UUID.randomUUID()), locallyExcluded = emptySet())
                 assertThat(pick).isNotNull()
             }
         }
@@ -101,7 +102,7 @@ class GetNextItemUseCaseTest {
                     sampler = StratifiedSampler(TierWeights.DEFAULT),
                     randomFactory = { Random(42L) },
                 )
-            val pick = uc.execute(forUser = null, locallyExcluded = emptySet())
+            val pick = uc.execute(forUser = UserId(UUID.randomUUID()), locallyExcluded = emptySet())
             assertThat(pick).isEqualTo(null)
         }
 }

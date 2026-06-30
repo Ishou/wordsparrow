@@ -125,7 +125,7 @@ class PgPairRatingRepositoryTest {
             val b = sampleItem(definition = "def b")
             items.insert(a)
             items.insert(b)
-            val pair = items.pickPairForUser(null, exclude = emptySet())
+            val pair = items.pickPairForUser(UserId(UUID.randomUUID()), exclude = emptySet())
             assertThat(pair).isNotNull()
             check(pair is ItemPair)
             assertThat(pair.mot).isEqualTo("POMME")
@@ -136,7 +136,7 @@ class PgPairRatingRepositoryTest {
     fun `pickPairForUser excludes mots with only one candidate`() =
         runTest {
             items.insert(sampleItem(definition = "alone"))
-            assertThat(items.pickPairForUser(null, exclude = emptySet())).isEqualTo(null)
+            assertThat(items.pickPairForUser(UserId(UUID.randomUUID()), exclude = emptySet())).isEqualTo(null)
         }
 
     @Test

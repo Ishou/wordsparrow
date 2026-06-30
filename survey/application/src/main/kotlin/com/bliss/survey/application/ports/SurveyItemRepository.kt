@@ -28,14 +28,14 @@ interface SurveyItemRepository {
     )
 
     suspend fun pickUnratedForUser(
-        userId: UserId?,
+        userId: UserId,
         tier: Tier,
         exclude: Set<ItemId>,
     ): SurveyItem?
 
     // null when no mot has ≥ 2 unrated candidates for the caller in either binary or pair mode
     suspend fun pickPairForUser(
-        userId: UserId?,
+        userId: UserId,
         exclude: Set<ItemId>,
     ): ItemPair?
 
