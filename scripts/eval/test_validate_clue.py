@@ -76,8 +76,6 @@ def test_find_head_skips_function_words(clue: str, expected_head: str) -> None:
 
 
 # --- diacritic-folded self-reference gate -----------------------------------
-# Regression: unaccented rows `ainé`/`ainée` (lemma `ainé`) shipped `L'aîné` —
-# the gate compared `aîné` (circumflex) diacritic-sensitively against `ainé`.
 
 
 def _ainé_index() -> MorphologyIndex:

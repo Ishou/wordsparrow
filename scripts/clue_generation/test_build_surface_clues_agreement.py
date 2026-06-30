@@ -1,15 +1,4 @@
-"""Surface-tier number-agreement gate.
-
-The wordsparrow.io regression: `posè` (freq 97) and `réprimè` (freq 0) are
-literary subject-inversion forms grammalecte tags `ipre 1isg` — singular, but
-`1isg` is absent from morphology_index.PERSON_TOKENS. The inflater therefore
-drops the person constraint and inflates the head verb person-unconstrained,
-returning the first `ipre` paradigm row (a plural). Net: a plural clue
-(`Placent`, `Font cesser`) on a singular answer.
-
-`classify_inflection` re-checks the inflated head's number against the
-surface's and emits `agreement-mismatch` so build_surface_clues drops the row.
-"""
+"""Surface-tier number-agreement gate: guards against literary inversion-form verbs (tagged `1isg/2isg/3isg`, absent from PERSON_TOKENS) inflating to a person-unconstrained, wrong-number head."""
 from __future__ import annotations
 
 import sys

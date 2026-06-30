@@ -123,8 +123,7 @@ def _find_lemma_family_leak(
       impur → 'Matière impure'   ('impure' is fem-sg of impur)
       asseoir → "Faire s'asseoir" ('asseoir' is the lemma itself)
 
-    Comparison is diacritic-folded so an unaccented answer variant `ainé`
-    is caught by the accented clue `L'aîné` (the wordsparrow.io regression).
+    Comparison is diacritic-folded so accented and unaccented lemma variants match.
     """
     target = target_lemma.lower().strip()
     if not target:

@@ -50,9 +50,7 @@ _PERSON_TAGS = {"1sg", "2sg", "3sg", "1pl", "2pl", "3pl", "1isg", "2isg", "3isg"
 
 
 def _verb_number(tags) -> str | None:
-    """Map a grammalecte tag set to grammatical number. The inversion persons
-    `1isg/2isg/3isg` are singular but absent from PERSON_TOKENS — exactly why
-    the inflater dropped the person constraint and produced a plural head."""
+    """Map a grammalecte tag set to grammatical number, including the inversion persons PERSON_TOKENS omits."""
     t = set(tags)
     if t & {"1sg", "2sg", "3sg", "1isg", "2isg", "3isg", "sg"}:
         return "sg"
@@ -62,11 +60,7 @@ def _verb_number(tags) -> str | None:
 
 
 def _head_verb_numbers(text: str, index: MorphologyIndex) -> set[str]:
-    """Numbers the inflated clue's head (first finite-verb token) can take,
-    across all of that token's finite-verb readings. Returning the full set
-    (not the first hit) avoids homograph false positives — `Sommes` reads as
-    être-1pl (pl) AND sommer-2sg (sg); the head agrees as long as the surface
-    number is achievable by some reading."""
+    """Numbers the inflated clue's head can take across all finite-verb readings, to avoid homograph false positives."""
     for tok in _NUMBER_TOK_RE.findall(text):
         # Negation/function words (`ne`, `plus`) carry spurious verb readings.
         if tok.lower() in _FUNCTION_WORDS:
@@ -85,12 +79,7 @@ def _head_verb_numbers(text: str, index: MorphologyIndex) -> set[str]:
 def classify_inflection(
     source_clue: str, surface_tags: set[str], index: MorphologyIndex,
 ) -> tuple[str, str]:
-    """Inflate the head, then gate finite-verb surfaces on clue↔surface number
-    agreement. Returns (clue_text, status). A finite-verb clue whose head
-    cannot take the surface's number becomes `agreement-mismatch`
-    (posè→Placent, réprimè→Font cesser). Scoped to surfaces carrying a person
-    tag (finite verbs) so participles and noun/adj number quirks don't
-    false-positive."""
+    """Inflate the head, then flag finite-verb surfaces whose inflated head number disagrees with the surface's as `agreement-mismatch`."""
     res = inflect_clue(source_clue, surface_tags, index)
     status = res.flag or "inflected"
     if status in ("inflected", "identity") and (surface_tags & _PERSON_TAGS):

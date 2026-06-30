@@ -1,21 +1,4 @@
-"""Regression: the shipped words-fr.csv must not contain clue/answer number
-disagreements or diacritic-folded self-references.
-
-The wordsparrow.io grid #181 bug shipped four bad rows:
-  posè → 'Placent', réprimè → 'Font cesser'  (plural clue on singular answer)
-  ainé/ainée/... → "L'aîné"                  (self-referential, accent-blind)
-
-This guards the merged-but-not-rebuilt artifact (a hand-edit or stale CSV that
-skips the surface-build gate `build_surface_clues.classify_inflection` and the
-diacritic self-reference gate `validate_clue._find_lemma_family_leak`).
-
-Needs the grammalecte lexique; skips gracefully when GRAMMALECTE_LEX is unset
-and the default path is absent (e.g. CI without the lexique), like the other
-runtime guards.
-
-If this fires, re-run build_surface_clues.py + merge_clues_into_wordlist.py,
-or blank the offending rows' clue field.
-"""
+"""Regression guard: the shipped words-fr.csv must not contain clue/answer number disagreements or diacritic-folded self-references (skips gracefully without the grammalecte lexique)."""
 from __future__ import annotations
 
 import csv
