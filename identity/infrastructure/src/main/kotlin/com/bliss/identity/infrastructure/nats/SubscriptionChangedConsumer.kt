@@ -19,7 +19,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
-/** Identity's first inbound consumer (ADR-0080): create-or-bind the durable so it never hits billing's SUB-90017 bind failure. */
+/** Identity's first inbound consumer (ADR-0080). Binds to the pre-created durable; lifecycle owned by the chart's bootstrap Job. */
 class SubscriptionChangedConsumer(
     private val nats: Connection,
     private val applyChange: ApplySubscriptionChangeUseCase,
@@ -47,8 +47,7 @@ class SubscriptionChangedConsumer(
             if (existing != null && existing.isActive) return existing
             val sub =
                 try {
-                    // Provision the durable first, then bind — a never-provisioned consumer can't fail at runtime.
-                    SubscriptionChangedConsumerConfig.ensureConsumer(nats)
+                    // bind(true) lets the server supply the deliverSubject; api stays up if consumer is absent.
                     nats.jetStream().subscribe(
                         SubscriptionChangedConsumerConfig.SUBJECT,
                         PushSubscribeOptions

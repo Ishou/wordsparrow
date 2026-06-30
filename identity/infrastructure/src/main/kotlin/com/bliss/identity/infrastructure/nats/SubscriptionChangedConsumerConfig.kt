@@ -25,8 +25,8 @@ object SubscriptionChangedConsumerConfig {
             .deliverSubject(DELIVER_SUBJECT)
             .build()
 
-    /** Create-or-update the durable so bind never hits SUB-90017 (unlike billing's bind-only user.deleted consumer). */
-    fun ensureConsumer(nats: Connection) {
+    /** Create-or-update the durable; idempotent across helm upgrades. Invoked by the chart's bootstrap Job only. */
+    fun bootstrap(nats: Connection) {
         nats.jetStreamManagement().addOrUpdateConsumer(STREAM_NAME, consumerConfiguration())
     }
 }

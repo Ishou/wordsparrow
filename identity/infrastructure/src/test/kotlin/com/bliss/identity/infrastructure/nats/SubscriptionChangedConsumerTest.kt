@@ -113,6 +113,7 @@ class SubscriptionChangedConsumerTest {
             sessions.create(Session(sessionId, userId, now, now, null))
             val apply = ApplySubscriptionChangeUseCase(users, subscriptions)
             val whoAmI = WhoAmIUseCase(users, sessions, FixedClock(now), Duration.ofDays(7), subscriptions)
+            SubscriptionChangedConsumerConfig.bootstrap(nats)
             val consumer = SubscriptionChangedConsumer(nats, apply, scope, pollWait = Duration.ofMillis(200))
             consumer.start()
 

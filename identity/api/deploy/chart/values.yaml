@@ -111,3 +111,8 @@ maintainerRoleBootstrap:
   enabled: false
   # Comma-separated identity user UUIDs. Empty -> Job runs and no-ops.
   userIds: ""
+# Provisions the SubscriptionChanged durable consumer on helm upgrade (ADR-0049,
+# ADR-0080) — configure-in-cluster, not provisioned from the api process. On by
+# default: the consumer can't bind without it.
+subscriptionConsumerBootstrap:
+  enabled: true
