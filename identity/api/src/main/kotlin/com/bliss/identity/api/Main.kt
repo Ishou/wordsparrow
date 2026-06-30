@@ -7,6 +7,7 @@ import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.UserId
 import com.bliss.identity.infrastructure.events.NatsConnectionFactory
 import com.bliss.identity.infrastructure.events.NatsUserRoleChangedBroadcaster
+import com.bliss.identity.infrastructure.nats.SubscriptionChangedConsumerConfig
 import com.bliss.identity.infrastructure.persistence.IdentityDatabase
 import com.bliss.identity.infrastructure.persistence.PostgresUserRepository
 import com.bliss.identity.infrastructure.time.SystemClock
@@ -22,6 +23,9 @@ private val log = LoggerFactory.getLogger("identity-api")
 fun main(args: Array<String>) {
     if (args.firstOrNull() == "--set-maintainer-roles") {
         exitProcess(runSetMaintainerRoles())
+    }
+    if (args.firstOrNull() == "--bootstrap-subscription-consumer") {
+        exitProcess(runBootstrapSubscriptionConsumer())
     }
 
     val config = IdentityApiConfig.fromEnv()
@@ -78,6 +82,26 @@ private fun runSetMaintainerRoles(): Int {
         0
     } catch (e: Throwable) {
         log.error("event=role_bootstrap_failed reason={}", e.message, e)
+        1
+    } finally {
+        connection.close()
+    }
+}
+
+// Configure-in-cluster (ADR-0049/ADR-0080): provisions the durable consumer; chart's post-install,post-upgrade Job only.
+private fun runBootstrapSubscriptionConsumer(): Int {
+    val natsUrl = System.getenv("NATS_URL") ?: error("NATS_URL env var is required")
+    val (connection, _) = NatsConnectionFactory(natsUrl).connect()
+    return try {
+        SubscriptionChangedConsumerConfig.bootstrap(connection)
+        log.info(
+            "event=subscription_consumer_bootstrap_done stream={} durable={}",
+            SubscriptionChangedConsumerConfig.STREAM_NAME,
+            SubscriptionChangedConsumerConfig.DURABLE_NAME,
+        )
+        0
+    } catch (e: Throwable) {
+        log.error("event=subscription_consumer_bootstrap_failed reason={}", e.message, e)
         1
     } finally {
         connection.close()

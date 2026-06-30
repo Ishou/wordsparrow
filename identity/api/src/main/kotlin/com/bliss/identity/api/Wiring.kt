@@ -6,6 +6,7 @@ import com.bliss.identity.application.ports.OidcProviderConfig
 import com.bliss.identity.application.ports.OidcResponseMode
 import com.bliss.identity.application.ports.UserDeletedBroadcaster
 import com.bliss.identity.application.ports.UserRenamedBroadcaster
+import com.bliss.identity.application.usecases.ApplySubscriptionChangeUseCase
 import com.bliss.identity.application.usecases.BeginOidcLoginUseCase
 import com.bliss.identity.application.usecases.CompleteOidcLoginUseCase
 import com.bliss.identity.application.usecases.CompleteProviderLinkUseCase
@@ -30,6 +31,7 @@ import com.bliss.identity.infrastructure.oidc.StaticOidcProviderConfigSource
 import com.bliss.identity.infrastructure.persistence.PostgresAuthAttemptRepository
 import com.bliss.identity.infrastructure.persistence.PostgresPuzzleProgressRepository
 import com.bliss.identity.infrastructure.persistence.PostgresSessionRepository
+import com.bliss.identity.infrastructure.persistence.PostgresSubscriptionTierRepository
 import com.bliss.identity.infrastructure.persistence.PostgresUserProviderRepository
 import com.bliss.identity.infrastructure.persistence.PostgresUserRepository
 import com.bliss.identity.infrastructure.time.SystemClock
@@ -54,6 +56,7 @@ class Wiring private constructor(
     private val _getProgress: GetProgressUseCase?,
     private val _putProgress: PutProgressUseCase?,
     private val _callbackDispatcher: CallbackDispatcher?,
+    private val _applySubscriptionChange: ApplySubscriptionChangeUseCase?,
 ) {
     val beginOidcLogin: BeginOidcLoginUseCase get() = require(_beginOidcLogin, "BeginOidcLoginUseCase")
     val completeOidcLogin: CompleteOidcLoginUseCase get() = require(_completeOidcLogin, "CompleteOidcLoginUseCase")
@@ -67,6 +70,7 @@ class Wiring private constructor(
     val getProgress: GetProgressUseCase get() = require(_getProgress, "GetProgressUseCase")
     val putProgress: PutProgressUseCase get() = require(_putProgress, "PutProgressUseCase")
     val callbackDispatcher: CallbackDispatcher get() = require(_callbackDispatcher, "CallbackDispatcher")
+    val applySubscriptionChange: ApplySubscriptionChangeUseCase get() = require(_applySubscriptionChange, "ApplySubscriptionChangeUseCase")
 
     // Nullable peek accessors so Module.kt can mount only the routes whose use case is wired,
     // letting tests supply a slim Wiring.forTesting(...) for the route under test.
@@ -103,6 +107,7 @@ class Wiring private constructor(
             val sessions = PostgresSessionRepository(dataSource)
             val attempts = PostgresAuthAttemptRepository(dataSource)
             val progress = PostgresPuzzleProgressRepository(dataSource)
+            val subscriptions = PostgresSubscriptionTierRepository(dataSource)
 
             val providerConfigs =
                 mapOf(
@@ -194,15 +199,16 @@ class Wiring private constructor(
                     ),
                 _completeOidcLogin = completeOidcLoginUseCase,
                 _completeProviderLink = completeProviderLinkUseCase,
-                _whoAmI = WhoAmIUseCase(users, sessions, clock, config.sessionMaxAge),
+                _whoAmI = WhoAmIUseCase(users, sessions, clock, config.sessionMaxAge, subscriptions),
                 _logout = LogoutUseCase(sessions, clock),
-                _getMe = GetMeUseCase(users, userProviders),
+                _getMe = GetMeUseCase(users, userProviders, subscriptions),
                 _updateMe = UpdateMeUseCase(users, renamedBroadcaster, clock),
                 _deleteUser = DeleteUserUseCase(users, deletedBroadcaster, clock),
                 _listProgress = ListProgressUseCase(progress),
                 _getProgress = GetProgressUseCase(progress),
                 _putProgress = PutProgressUseCase(progress, clock),
                 _callbackDispatcher = callbackDispatcher,
+                _applySubscriptionChange = ApplySubscriptionChangeUseCase(users, subscriptions),
             )
         }
 
@@ -219,6 +225,7 @@ class Wiring private constructor(
             getProgress: GetProgressUseCase? = null,
             putProgress: PutProgressUseCase? = null,
             callbackDispatcher: CallbackDispatcher? = null,
+            applySubscriptionChange: ApplySubscriptionChangeUseCase? = null,
         ): Wiring =
             Wiring(
                 _beginOidcLogin = beginOidcLogin,
@@ -233,6 +240,7 @@ class Wiring private constructor(
                 _getProgress = getProgress,
                 _putProgress = putProgress,
                 _callbackDispatcher = callbackDispatcher,
+                _applySubscriptionChange = applySubscriptionChange,
             )
     }
 }

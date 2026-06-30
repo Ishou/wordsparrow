@@ -38,11 +38,12 @@ class IdentityDatabaseTest {
                                     .toSortedSet()
                             }
                     }
-                assertThat(tables.size).isEqualTo(4)
+                assertThat(tables.size).isEqualTo(5)
                 assertThat(tables.contains("identity_users")).isEqualTo(true)
                 assertThat(tables.contains("identity_user_providers")).isEqualTo(true)
                 assertThat(tables.contains("identity_sessions")).isEqualTo(true)
                 assertThat(tables.contains("identity_auth_attempts")).isEqualTo(true)
+                assertThat(tables.contains("identity_user_subscription")).isEqualTo(true)
             } finally {
                 db.stop()
                 System.clearProperty("IDENTITY_DATABASE_URL")

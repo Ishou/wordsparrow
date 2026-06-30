@@ -2,6 +2,7 @@ package com.bliss.identity.application.usecases
 
 import com.bliss.identity.application.ports.Clock
 import com.bliss.identity.application.ports.SessionRepository
+import com.bliss.identity.application.ports.SubscriptionTierRepository
 import com.bliss.identity.application.ports.UserRepository
 import com.bliss.identity.domain.session.SessionId
 import com.bliss.identity.domain.user.Capability
@@ -27,6 +28,7 @@ class WhoAmIUseCase(
     private val sessions: SessionRepository,
     private val clock: Clock,
     private val sessionMaxAge: Duration,
+    private val subscriptions: SubscriptionTierRepository = SubscriptionTierRepository.empty(),
 ) {
     init {
         require(!sessionMaxAge.isNegative && !sessionMaxAge.isZero) {
@@ -44,6 +46,7 @@ class WhoAmIUseCase(
         val user =
             users.findById(session.userId)
                 ?: throw WhoAmIError.OrphanedSession()
-        return WhoAmIResult(user.id, user.displayName, user.role, capabilitiesFor(user.role))
+        val tier = subscriptions.find(user.id)?.tier
+        return WhoAmIResult(user.id, user.displayName, user.role, capabilitiesFor(user.role, tier))
     }
 }
