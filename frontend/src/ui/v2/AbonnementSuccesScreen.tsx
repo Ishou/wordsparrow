@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useRouteContext } from '@tanstack/react-router';
 import { CircleNotch } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
+import { SparrowMark } from '@/design-system';
 import type { BillingClient, SubscriptionView } from '@/application/billing';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
@@ -14,6 +15,14 @@ const statusCard = css({ display: 'flex', alignItems: 'center', gap: '10px', bg:
 const spin = css({ flexShrink: 0, animation: 'wsSpin 0.7s linear infinite', color: 'ws.jade' });
 // ws.sakuraDark (not ws.sakura) clears WCAG AA for coloured text — known palette gotcha.
 const linkStyle = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.sakuraDark', textDecoration: 'underline' });
+
+const merci = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '14px', paddingTop: '12px' });
+const merciMark = css({ marginBottom: '2px' });
+const merciKicker = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'ws.sakuraDark' });
+const merciTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.12', color: 'ws.jadeInk', margin: 0 });
+const merciText = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, lineHeight: '1.45', maxWidth: '280px' });
+const merciCta = css({ display: 'block', width: '100%', maxWidth: '300px', textAlign: 'center', textDecoration: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', padding: '14px', borderRadius: '14px', boxShadow: '0 8px 18px rgba(190,73,112,0.34)', marginTop: '4px' });
+const merciSub = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.8 });
 
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(['active', 'pending_cancellation']);
 function hasActiveAccess(subscription: SubscriptionView | null): boolean {
@@ -29,9 +38,28 @@ type ConfirmPhase = 'confirming' | 'active' | 'timeout';
 function SuccesShell({ children }: { readonly children: ReactNode }) {
   return (
     <PhoneShell header={<BackHeader to="/menu" />} backTo="/menu">
-      <h1 className={title}>Abonnement</h1>
       {children}
     </PhoneShell>
+  );
+}
+
+// The post-checkout confirmation, shown once the webhook flips the subscription active.
+function MerciConfirmation() {
+  return (
+    <div className={merci}>
+      <div className={merciMark}>
+        <SparrowMark size={84} colorway="sakura" tile="jade" />
+      </div>
+      <span className={merciKicker}>Abonnement activé</span>
+      <h1 className={merciTitle}>Te voilà abonné·e !</h1>
+      <p className={merciText}>
+        Toutes les grilles sont à toi, et tu peux en générer de nouvelles quand tu veux.
+      </p>
+      <Link to="/play" className={merciCta}>
+        Jouer une grille
+      </Link>
+      <span className={merciSub}>Un reçu t&apos;a été envoyé par e-mail.</span>
+    </div>
   );
 }
 
@@ -68,13 +96,18 @@ export function CheckoutSuccessScreen({ client }: { readonly client: BillingClie
     };
   }, [client]);
 
+  if (phase === 'active') {
+    return (
+      <SuccesShell>
+        <MerciConfirmation />
+      </SuccesShell>
+    );
+  }
+
   return (
     <SuccesShell>
-      {phase === 'active' ? (
-        <p className={statusCard} role="status">
-          Ton abonnement est actif — merci ! Tu débloques toutes les grilles et la génération.
-        </p>
-      ) : phase === 'timeout' ? (
+      <h1 className={title}>Abonnement</h1>
+      {phase === 'timeout' ? (
         <p className={statusCard} role="status">
           La confirmation prend plus de temps que prévu. Aucune action n'est nécessaire : ton accès
           s'activera dès que le paiement sera confirmé.
@@ -100,6 +133,7 @@ export function AbonnementSuccesScreen() {
   if (!billingClient) {
     return (
       <SuccesShell>
+        <h1 className={title}>Abonnement</h1>
         <p className={statusCard} role="status">
           L'abonnement n'est pas disponible pour le moment.
         </p>
