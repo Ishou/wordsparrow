@@ -4,6 +4,12 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+
+// secondsUntilNextHint is `required` + nullable in openapi.yaml, but the wire Json runs explicitNulls=false (drops Kotlin nulls); a JsonElement holding JsonNull is a present value so the required key always ships.
+internal fun Int?.toSecondsUntilNextHintWire(): JsonElement = this?.let { JsonPrimitive(it) } ?: JsonNull
 
 @Serializable
 enum class DifficultyDto(
@@ -45,6 +51,7 @@ data class PuzzleResponse(
     val clues: List<ClueDto>,
     val hintsAllowed: Int,
     val hintsRemaining: Int,
+    val secondsUntilNextHint: JsonElement,
     val createdAt: String,
     val difficulty: DifficultyDto? = null,
     val gridNumber: Int? = null,

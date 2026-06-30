@@ -7,6 +7,8 @@ import com.bliss.grid.domain.model.Position
 import com.bliss.grid.domain.model.Row
 import com.bliss.grid.domain.model.WordAxis
 import java.sql.Connection
+import java.time.Clock
+import java.time.Duration
 import java.util.UUID
 
 /** Spends one hint to reveal the whole word at the cursor cell along [axis]; must run inside [HintWriteCoordinator.withUserLock]. */
@@ -14,6 +16,7 @@ class RevealCellHintUseCase(
     private val puzzleRepository: PuzzleRepository,
     private val hintUsageRepository: HintUsageRepository,
     private val analyticsEventSink: AnalyticsEventSink = AnalyticsEventSink.Noop,
+    private val clock: Clock = Clock.systemUTC(),
 ) {
     fun execute(
         conn: Connection,
@@ -38,14 +41,20 @@ class RevealCellHintUseCase(
                     "no $axis word covers ($row, $column)",
                 )
 
-        val usedAfter =
-            hintUsageRepository.trySpend(conn, puzzleId, userId, puzzle.hintsAllowed)
-                ?: return RevealCellHintOutcome.BudgetExhausted
+        val view =
+            hintUsageRepository.trySpend(
+                conn,
+                puzzleId,
+                userId,
+                puzzle.hintsAllowed,
+                HINT_REFILL_INTERVAL,
+                clock.instant(),
+            ) ?: return RevealCellHintOutcome.BudgetExhausted
 
         analyticsEventSink.record(
             AnalyticsEvent.HintUsed(
                 gridSize = "${grid.width}x${grid.height}",
-                hintsUsedSoFar = usedAfter,
+                hintsUsedSoFar = puzzle.hintsAllowed - view.tokensRemaining,
             ),
             userId,
         )
@@ -55,8 +64,14 @@ class RevealCellHintUseCase(
             }
         return RevealCellHintOutcome.Granted(
             cells = cells,
-            hintsRemaining = puzzle.hintsAllowed - usedAfter,
+            hintsRemaining = view.tokensRemaining,
+            secondsUntilNextHint = view.secondsUntilNextHint,
         )
+    }
+
+    companion object {
+        /** One hint credit regenerates every 10 minutes; the route reuses this for read-path budget views. */
+        val HINT_REFILL_INTERVAL: Duration = Duration.ofMinutes(10)
     }
 }
 
@@ -68,10 +83,11 @@ data class RevealedCell(
 )
 
 sealed class RevealCellHintOutcome {
-    /** Hint granted; [cells] is every letter of the revealed word, [hintsRemaining] is the budget left after this single spend. */
+    /** Hint granted; [cells] is every letter of the revealed word, [hintsRemaining] is the budget left, [secondsUntilNextHint] the regen countdown (null when full). */
     data class Granted(
         val cells: List<RevealedCell>,
         val hintsRemaining: Int,
+        val secondsUntilNextHint: Long?,
     ) : RevealCellHintOutcome()
 
     /** No puzzle in the store for this id. Maps to 404 puzzle-not-found. */

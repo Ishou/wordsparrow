@@ -264,8 +264,9 @@ fun Application.module() {
             cooldownRepository = cooldownRepository,
             cooldownMax = cooldownMax,
         )
+    val clock = java.time.Clock.systemUTC()
     val revealCellHint =
-        RevealCellHintUseCase(puzzleRepository, hintUsageRepository, analyticsEventSink = analyticsEventSink)
+        RevealCellHintUseCase(puzzleRepository, hintUsageRepository, analyticsEventSink = analyticsEventSink, clock = clock)
     val validatePuzzle = ValidatePuzzleUseCase(puzzleRepository)
     val deleteSession = DeleteSessionUseCase(cooldownRepository)
     val dailyPuzzleSelector = DailyPuzzleSelector()
@@ -287,6 +288,7 @@ fun Application.module() {
             cookieVerifier = cookieVerifier,
             listDailyPuzzles = listDailyPuzzles,
             dailyPuzzleSelector = dailyPuzzleSelector,
+            clock = clock,
         )
         deleteSession(deleteSession)
         words(sampleWords, verifySampleWord)

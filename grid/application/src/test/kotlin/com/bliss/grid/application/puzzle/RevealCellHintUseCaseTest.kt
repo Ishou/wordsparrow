@@ -15,10 +15,12 @@ import com.bliss.grid.domain.model.WordPlacement
 import org.junit.jupiter.api.Test
 import java.lang.reflect.Proxy
 import java.sql.Connection
+import java.time.Clock
+import java.time.Duration
 import java.time.Instant
+import java.time.ZoneOffset
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 
 class RevealCellHintUseCaseTest {
     @Test
@@ -120,6 +122,29 @@ class RevealCellHintUseCaseTest {
     }
 
     @Test
+    fun `Granted carries the regen countdown and drains to zero before exhaustion`() {
+        val (puzzleId, userId) = ids()
+        val clock = Clock.fixed(Instant.parse("2026-06-30T12:00:00Z"), ZoneOffset.UTC)
+        val useCase = RevealCellHintUseCase(fakePuzzleStore(puzzleId), fakeHintUsage(), clock = clock)
+
+        val first =
+            useCase.execute(STUB_CONN, puzzleId, userId, row = 0, column = 1, axis = WordAxis.HORIZONTAL)
+                as RevealCellHintOutcome.Granted
+        assertThat(first.hintsRemaining).isEqualTo(2)
+        assertThat(first.secondsUntilNextHint).isEqualTo(600L)
+
+        useCase.execute(STUB_CONN, puzzleId, userId, row = 0, column = 1, axis = WordAxis.HORIZONTAL)
+        val third =
+            useCase.execute(STUB_CONN, puzzleId, userId, row = 0, column = 1, axis = WordAxis.HORIZONTAL)
+                as RevealCellHintOutcome.Granted
+        assertThat(third.hintsRemaining).isEqualTo(0)
+        assertThat(third.secondsUntilNextHint).isEqualTo(600L)
+
+        val fourth = useCase.execute(STUB_CONN, puzzleId, userId, row = 0, column = 1, axis = WordAxis.HORIZONTAL)
+        assertThat(fourth).isInstanceOf(RevealCellHintOutcome.BudgetExhausted::class)
+    }
+
+    @Test
     fun `BudgetExhausted on the 4th call with default cap of 3`() {
         val (puzzleId, userId) = ids()
         val useCase = RevealCellHintUseCase(fakePuzzleStore(puzzleId), fakeHintUsage())
@@ -152,37 +177,48 @@ class RevealCellHintUseCaseTest {
     }
 
     private fun fakeHintUsage(): PeekableHintUsage {
-        val counters = ConcurrentHashMap<Pair<UUID, UUID>, AtomicInteger>()
+        val states = ConcurrentHashMap<Pair<UUID, UUID>, HintBudgetCalculator.State>()
         return object : PeekableHintUsage {
             override fun trySpend(
                 conn: Connection,
                 puzzleId: UUID,
                 userId: UUID,
-                hintsAllowed: Int,
-            ): Int? {
-                val counter = counters.computeIfAbsent(puzzleId to userId) { AtomicInteger(0) }
-                while (true) {
-                    val current = counter.get()
-                    if (current >= hintsAllowed) return null
-                    if (counter.compareAndSet(current, current + 1)) return current + 1
+                capacity: Int,
+                interval: Duration,
+                now: Instant,
+            ): HintBudgetCalculator.View? {
+                var spent: HintBudgetCalculator.State? = null
+                states.compute(puzzleId to userId) { _, existing ->
+                    val current = existing ?: HintBudgetCalculator.State(capacity, null)
+                    val next = HintBudgetCalculator.spend(current, now, capacity, interval)
+                    spent = next
+                    next ?: current
                 }
+                val next = spent ?: return null
+                return HintBudgetCalculator.view(next, now, capacity, interval)
             }
 
-            override fun usedFor(
+            override fun budgetFor(
                 puzzleId: UUID,
                 userId: UUID,
-            ): Int = counters[puzzleId to userId]?.get() ?: 0
+                capacity: Int,
+                interval: Duration,
+                now: Instant,
+            ): HintBudgetCalculator.View {
+                val state = states[puzzleId to userId] ?: HintBudgetCalculator.State(capacity, null)
+                return HintBudgetCalculator.view(state, now, capacity, interval)
+            }
 
             override fun deleteByUser(userId: UUID): Int {
-                val keys = counters.keys.filter { it.second == userId }
-                keys.forEach { counters.remove(it) }
+                val keys = states.keys.filter { it.second == userId }
+                keys.forEach { states.remove(it) }
                 return keys.size
             }
 
             override fun peek(
                 puzzleId: UUID,
                 userId: UUID,
-            ): Int = counters[puzzleId to userId]?.get() ?: 0
+            ): Int = SAMPLE_CAPACITY - (states[puzzleId to userId]?.tokens ?: SAMPLE_CAPACITY)
         }
     }
 
@@ -208,6 +244,8 @@ class RevealCellHintUseCaseTest {
         )
 
     private companion object {
+        private const val SAMPLE_CAPACITY = 3
+
         private val STUB_CONN: Connection =
             Proxy.newProxyInstance(
                 Connection::class.java.classLoader,
