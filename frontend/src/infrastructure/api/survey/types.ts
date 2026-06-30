@@ -497,6 +497,7 @@ export interface operations {
                     "application/json": components["schemas"]["Campaign"];
                 };
             };
+            403: components["responses"]["ProblemDetails"];
             503: components["responses"]["ProblemDetails"];
         };
     };
@@ -528,6 +529,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            403: components["responses"]["ProblemDetails"];
             503: components["responses"]["ProblemDetails"];
         };
     };
@@ -557,6 +559,7 @@ export interface operations {
             };
             400: components["responses"]["ProblemDetails"];
             401: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
             404: components["responses"]["ProblemDetails"];
             /** @description Auth caller already rated this item. */
             409: {
@@ -615,6 +618,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            403: components["responses"]["ProblemDetails"];
             503: components["responses"]["ProblemDetails"];
         };
     };
@@ -648,6 +652,7 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
             404: components["responses"]["ProblemDetails"];
             409: components["responses"]["ProblemDetails"];
             /** @description No open campaign — the sondage is locked. */
@@ -681,6 +686,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            403: components["responses"]["ProblemDetails"];
             /** @description Token unknown, not yours, or already undone. */
             404: {
                 headers: {
@@ -720,6 +726,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
         };
     };
     getMyContributions: {
@@ -741,6 +748,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
         };
     };
     patchMyPreferences: {
@@ -765,6 +773,7 @@ export interface operations {
             };
             400: components["responses"]["ProblemDetails"];
             401: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
         };
     };
     getLemmaMeta: {
@@ -788,6 +797,7 @@ export interface operations {
                     "application/json": components["schemas"]["LemmaMeta"];
                 };
             };
+            403: components["responses"]["ProblemDetails"];
             503: components["responses"]["ProblemDetails"];
         };
     };
