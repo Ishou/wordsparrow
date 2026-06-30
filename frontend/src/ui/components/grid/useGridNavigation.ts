@@ -244,11 +244,7 @@ export interface UseGridNavigationOptions {
   // cleared. Solo callers omit this; multiplayer callers wire it to the
   // WebSocket cellUpdate broadcast (Wave H · PR #19, see ADR-0018).
   readonly onCellChange?: (row: number, col: number, letter: string | null) => void;
-  // Fires after a letter is written into a cell (post-normalization).
-  // Per-word callers (minigame, coop) read this to detect "word just
-  // completed its last letter" and run their tighter feedback loop; solo
-  // omits it and validates the whole grid once it is full. Not fired on
-  // cell clears.
+  // Fires when a letter is placed; per-word callers (minigame, coop) detect word completion — solo omits this and validates the whole grid instead.
   readonly onCellFilled?: (
     position: Position,
     direction: 'across' | 'down',
