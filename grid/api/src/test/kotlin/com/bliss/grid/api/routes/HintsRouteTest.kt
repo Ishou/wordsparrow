@@ -104,8 +104,7 @@ class HintsRouteTest {
     @Test
     fun `responds 401 auth-required when verifyFresh returns null even though verify cached a positive`() =
         testApplication {
-            // verify (cached) returns a WhoAmI but verifyFresh returns null — session was revoked
-            // between read and write. The under-lock fresh check catches it.
+            // verifyFresh returns null (session revoked between read and write); the under-lock fresh check catches it.
             mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse"), fresh = null))
             val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
