@@ -94,7 +94,7 @@ class WhoAmIUseCaseTest {
             val exactlyAtLimit = now.minus(sessionMaxAge)
             seedUserAndSession(users, sessions, createdAt = exactlyAtLimit)
             val result = sut.execute(WhoAmIQuery(sessionId))
-            assertThat(result).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice"), Role.PLAYER, emptySet()))
+            assertThat(result).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice"), Role.PLAYER, setOf(Capability.HINT)))
         }
 
     @Test
@@ -103,7 +103,7 @@ class WhoAmIUseCaseTest {
             val (sut, users, sessions) = newCase()
             seedUserAndSession(users, sessions)
             val result = sut.execute(WhoAmIQuery(sessionId))
-            assertThat(result).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice"), Role.PLAYER, emptySet()))
+            assertThat(result).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice"), Role.PLAYER, setOf(Capability.HINT)))
         }
 
     @Test
@@ -113,16 +113,17 @@ class WhoAmIUseCaseTest {
             users.create(User(userId, DisplayName.of("Alice"), now.minusSeconds(60), now.minusSeconds(60), Role.MAINTAINER))
             sessions.create(Session(sessionId, userId, now.minusSeconds(60), now.minusSeconds(60), null))
             val result = sut.execute(WhoAmIQuery(sessionId))
-            assertThat(result.capabilities).isEqualTo(setOf(Capability.BILLING_SUBSCRIBE))
+            assertThat(result.capabilities)
+                .isEqualTo(setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE))
         }
 
     @Test
-    fun `player session carries no capabilities`() =
+    fun `player session carries only the hint capability`() =
         runTest {
             val (sut, users, sessions) = newCase()
             seedUserAndSession(users, sessions)
             val result = sut.execute(WhoAmIQuery(sessionId))
-            assertThat(result.capabilities).isEqualTo(emptySet())
+            assertThat(result.capabilities).isEqualTo(setOf(Capability.HINT))
         }
 
     @Test

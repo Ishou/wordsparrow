@@ -102,7 +102,7 @@ class MeRouteTest {
             assertThat(body).contains("\"createdAt\":\"$now\"")
             assertThat(body).contains("\"providers\":[]")
             assertThat(body).contains("\"role\":\"player\"")
-            assertThat(body).contains("\"capabilities\":[]")
+            assertThat(body).contains("\"capabilities\":[\"hint\"]")
         }
 
     @Test
@@ -116,7 +116,7 @@ class MeRouteTest {
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
             val body = response.bodyAsText()
             assertThat(body).contains("\"role\":\"maintainer\"")
-            assertThat(body).contains("\"capabilities\":[\"billing:subscribe\"]")
+            assertThat(body).contains("\"capabilities\":[\"billing:subscribe\",\"contribuer\",\"hint\"]")
         }
 
     @Test
