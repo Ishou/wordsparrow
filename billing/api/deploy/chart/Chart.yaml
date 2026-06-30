@@ -1,0 +1,10 @@
+apiVersion: v2
+name: bliss-billing-api
+description: "WordSparrow billing backend (Ktor REST + Mollie + CNPG)"
+type: application
+# Chart version. Bump when chart shape changes.
+version: 0.1.0
+# App version. Overridden per-deploy by the CD workflow (ADR-0009 §4).
+appVersion: "0.1.0"
+# CNPG db-chart lives in a sibling Helm release; cluster operators are cluster-installed per ADR-0009 §3.
+dependencies: []

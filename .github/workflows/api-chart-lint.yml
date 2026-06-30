@@ -1,7 +1,7 @@
 name: API Chart Lint
 
 # Tier-1 pre-merge gate for per-context API Helm charts at
-# <context>/api/deploy/chart/ (grid/, game/, identity/) — counterpart
+# <context>/api/deploy/chart/ (grid/, game/, identity/, survey/, billing/) — counterpart
 # to helm-lint.yml (which lints the infra/platform/ umbrella chart
 # only). Catches:
 #   - chart structure / template syntax bugs (`helm lint`),
@@ -94,6 +94,11 @@ jobs:
             release: wordsparrow-survey-api-pg
             hasProdValues: true
             localValuesFile: values.yaml
+          # billing-api chart (ADR-0078); mirrors identity — api chart + sibling CNPG db-chart, MOLLIE_API_KEY via envFromSecret never in values.
+          - path: billing/api/deploy/chart
+            release: wordsparrow-billing-api
+            hasProdValues: true
+            localValuesFile: values-local.yaml
           # NATS JetStream chart (ADR-0049). Sits under `infra/nats/` rather
           # than `<ctx>/api/deploy/` because it is shared infrastructure with
           # no owning bounded context. Ships values.yaml (local defaults) +

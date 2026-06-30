@@ -1,0 +1,21 @@
+# Local overrides — k3d cluster (ADR-0009 §5, scripts/local-cluster.sh).
+replicaCount: 1
+image:
+  digest: ""
+  tag: "0.1.0"
+  # Never so k3d image import wins over GHCR pull.
+  pullPolicy: Never
+# No limits locally — k3d node is small; JVM honours UseContainerSupport.
+resources: {}
+checkout:
+  successUrl: "http://localhost/abonnement/succes"
+  cancelUrl: "http://localhost/abonnement/annule"
+  webhookUrl: "http://localhost/v1/webhook"
+ingress:
+  enabled: true
+  host: "localhost"
+  tlsSecretName: "bliss-billing-api-tls"
+  annotations:
+    cert-manager.io/cluster-issuer: "selfsigned"
+# Carries MOLLIE_API_KEY (test_…).
+envFromSecret: "bliss-billing-api-env"

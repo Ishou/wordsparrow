@@ -1,0 +1,100 @@
+# Shared defaults. Per-env files override what differs.
+image:
+  # GHCR image built by the sibling image-build pipeline.
+  repository: ghcr.io/ishou/bliss/wordsparrow-billing-api
+  # Required by manifesto ("pin to digest"). Empty -> tag fallback. Format "sha256:...".
+  digest: ""
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+  # Overridden to true in prod so helm aborts when the CD workflow omits the digest.
+  requireDigest: false
+# No in-memory state (ADR-0078); durable JetStream consumer, scales horizontally.
+replicaCount: 2
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits: {cpu: 1000m, memory: 512Mi}
+database:
+  # Off by default; prod enables DB wiring (BILLING_DATABASE_URL + wait-for-postgres init container).
+  enabled: false
+  # Helm release name of the db-chart; -app Secret and -rw Service names derive from it.
+  clusterName: "wordsparrow-billing-api-pg"
+  # Duplicated from db-chart/values.yaml so the init container reuses the node-cached CNPG image without a chart dep.
+  waitImage: "ghcr.io/cloudnative-pg/postgresql:18.4-system-bookworm@sha256:8707614e5941638307d173469b293db1b50e36454d321a03ca402ca2a58c79ad"
+service:
+  type: ClusterIP
+  # 8083 matches Main.kt default and the BILLING_PORT env below (grid 8080, game 8081, identity 8082, survey 7780).
+  port: 8083
+ingress:
+  enabled: true
+  className: nginx
+  # REQUIRED per env (billing.wordsparrow.io prod, localhost local).
+  host: ""
+  # TLS Secret name created by cert-manager from the ingress annotation.
+  tlsSecretName: ""
+  # Env files set cert-manager and external-dns annotations here.
+  annotations: {}
+serviceAccount:
+  create: true
+  name: ""
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: {drop: [ALL]}
+probes:
+  liveness:
+    path: "/v1/health"
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    path: "/v1/health"
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 2
+  # 30 × 5 s = 150 s startup budget covers Flyway migration + Ktor boot.
+  startup:
+    path: "/v1/health"
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 30
+# Checkout return + webhook URLs; set per env. MOLLIE_API_KEY is NOT here — supplied via envFromSecret.
+checkout:
+  successUrl: ""
+  cancelUrl: ""
+  webhookUrl: ""
+# Env vars; MOLLIE_API_KEY goes via envFromSecret. MaxRAMPercentage 75 → ~384 MB heap on 512Mi.
+env:
+  # OTel Java agent baked into the runtime image (ADR-0027).
+  - name: JAVA_TOOL_OPTIONS
+    value: "-javaagent:/app/otel.jar -XX:MaxRAMPercentage=75.0"
+  # Pin prod port; Main.kt default is 8083.
+  - name: BILLING_PORT
+    value: "8083"
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: "http://observability-signoz-otel-collector.observability:4317"
+  - name: OTEL_EXPORTER_OTLP_PROTOCOL
+    value: "grpc"
+  - name: OTEL_SERVICE_NAME
+    value: "billing-api"
+  - name: OTEL_RESOURCE_ATTRIBUTES
+    value: "bounded_context=billing"
+  - name: OTEL_TRACES_SAMPLER
+    value: "parentbased_traceidratio"
+  - name: OTEL_TRACES_SAMPLER_ARG
+    value: "1.0"
+  # NATS JetStream (ADR-0049): bliss-nats cluster-internal Service in the wordsparrow namespace.
+  - name: NATS_URL
+    value: "nats://bliss-nats.wordsparrow:4222"
+  # Identity-api base URL for session-cookie verification (billing:subscribe gate).
+  - name: IDENTITY_API_URL
+    value: "http://wordsparrow-identity-api.wordsparrow:8082"
+  # Mollie checkout currency; amount/description/interval default in MollieConfig.
+  - name: BILLING_CHECKOUT_CURRENCY
+    value: "EUR"
+# Kubernetes Secret to envFrom; carries MOLLIE_API_KEY. Bootstrapped per ADR-0009 §10.
+envFromSecret: ""

@@ -1,0 +1,33 @@
+# Production overrides — Hetzner k3s cluster (ADR-0009 §2); no in-memory state (ADR-0078).
+
+# Pins K8s name to release name so CD's kubectl rollout status resolves without chart-name arithmetic.
+fullnameOverride: "wordsparrow-billing-api"
+
+image:
+  # Fail-fast guard: helm aborts if digest is empty (see _helpers.tpl).
+  requireDigest: true
+  # Set by the CD workflow per push (ADR-0009 §8 step 5). Format "sha256:...".
+  digest: ""
+database:
+  # CNPG cluster in sibling Helm release wordsparrow-billing-api-pg; deployed first by the workflow.
+  enabled: true
+checkout:
+  # Frontend return paths (sibling frontend PR adds the routes).
+  successUrl: "https://wordsparrow.io/abonnement/succes"
+  cancelUrl: "https://wordsparrow.io/abonnement/annule"
+  # Public billing host Mollie POSTs delivery notifications to.
+  webhookUrl: "https://billing.wordsparrow.io/v1/webhook"
+ingress:
+  host: "billing.wordsparrow.io"
+  tlsSecretName: "bliss-billing-api-tls"
+  # Cluster-installed per ADR-0009 §3; target pins Hetzner floating IP (ADR-0012).
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    external-dns.alpha.kubernetes.io/hostname: "billing.wordsparrow.io"
+    external-dns.alpha.kubernetes.io/target: "116.202.180.82"
+    # Per-IP leaky-bucket rate limiting; parity with identity.
+    nginx.ingress.kubernetes.io/limit-rps: "5"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    nginx.ingress.kubernetes.io/limit-connections: "30"
+# Bootstrapped per ADR-0009 §10; carries MOLLIE_API_KEY (test_… during ADR-0078 test phase).
+envFromSecret: "bliss-billing-api-env"
