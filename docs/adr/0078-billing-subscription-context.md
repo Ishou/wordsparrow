@@ -124,3 +124,44 @@ risk is in the *promotion* (loosening), which is a conscious operator action.
   adapter: SDK vs REST) and identity's `user.deleted` durability (W6: prereq
   change vs backstop-only) — and Mollie's EU data-residency must be obtained in
   writing before the sovereignty claim is locked.
+
+## Amendment 2026-06-30: capabilities move to identity; billing emits subscription state
+
+### Context
+The original decision had `billing` own the tier→capability mapping and emit
+`EntitlementChanged` carrying capabilities. That couples the payment context to
+the product feature catalogue (every offer change touches billing) and forces
+each consumer to merge two authz sources (identity roles + billing capabilities).
+
+### Decision
+A clean separation of concerns, with **identity as the single authorization
+authority**:
+
+- **billing knows only `userId` and subscriptions — never capabilities.** It
+  emits **`SubscriptionChanged(userId, tier, status)`** (renamed from
+  `EntitlementChanged`; no capabilities on the wire) on
+  `wordsparrow.user.subscription-changed`. `GET /v1/entitlement` becomes
+  **`GET /v1/subscription`** (the caller's own subscription status, for the
+  manage-subscription UI). `Capability` and `capabilitiesFor` are **removed**
+  from `billing/domain`.
+- **identity owns capabilities** (see ADR-0060 amendment): it consumes
+  `SubscriptionChanged`, maps `(role + subscription) → capabilities`, and exposes
+  them. `billing` does not consume capabilities to *own* them.
+- **The test-phase access gate becomes the `billing:subscribe` capability**
+  (option (a)), replacing the `BILLING_ALLOWED_USER_IDS` allowlist / maintainer-
+  role gate from the 2026-06-29 amendment. identity grants `billing:subscribe`
+  to the maintainer during the test phase. billing's checkout/cancel endpoints
+  **check that one permission for endpoint access** (read from the session/
+  whoami) — billing *checks* a permission like any protected endpoint, it does
+  not *own* or derive capability logic. Promotion lifts the gate by identity
+  granting `billing:subscribe` more broadly (no billing code change).
+
+### Consequences
+- billing stays a pure money/subscription context; the offer/feature catalogue
+  never touches it. Consumers (grid/game/frontend) gate on capabilities from
+  identity alone and never learn billing exists.
+- Supersedes the parts of the 2026-06-29 amendment that put the gate in billing
+  as a user-id allowlist / role check, and the original "billing owns the
+  tier→capability mapping / emits capabilities" decision. The deletion-
+  cancellation invariant, hosted-checkout/SAQ-A posture, retention, and
+  multi-source design are unchanged.
