@@ -9,8 +9,8 @@ import com.bliss.identity.application.usecases.WhoAmIQuery
 import com.bliss.identity.application.usecases.WhoAmIResult
 import com.bliss.identity.application.usecases.WhoAmIUseCase
 import com.bliss.identity.domain.session.Session
-import com.bliss.identity.domain.user.Capability
 import com.bliss.identity.domain.session.SessionId
+import com.bliss.identity.domain.user.Capability
 import com.bliss.identity.domain.user.DisplayName
 import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
