@@ -59,8 +59,10 @@ export function AideScreen() {
         </Section>
 
         <Section heading="Validation et indices">
-          Chaque mot se valide tout seul quand ses lettres sont toutes correctes — la case se verrouille.
-          Si tu bloques, demande un indice via le bouton dédié dans le bandeau (nombre limité par grille).
+          En solo, rien ne se valide au fil de la saisie&nbsp;: une fois toutes les cases remplies, ta grille
+          est vérifiée d&apos;un coup et tu sais si elle est juste ou non. Si tu bloques, demande un indice via
+          le bouton dédié dans le bandeau&nbsp;: il révèle le mot entier sur lequel tu es (nombre limité par
+          grille).
         </Section>
 
         <Section heading="Jouer à plusieurs">

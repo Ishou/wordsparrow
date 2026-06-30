@@ -77,7 +77,7 @@ export function buildSoloTourSteps({
       type: 'tooltip',
       title: 'Coup de pouce',
       description:
-        "Bloqué·e sur un mot ? Le bouton d'indice révèle la première lettre du mot actuel — un nombre limité par grille.",
+        "Bloqué·e sur un mot ? Le bouton d'indice révèle le mot entier sur lequel tu es — un nombre limité par grille.",
       target: () => queryFirst(HINT_BUTTON_SELECTOR),
       placement: 'bottom',
       arrow: true,
@@ -106,7 +106,7 @@ export function buildSoloTourSteps({
     type: 'tooltip',
     title: 'Aperçu et validation',
     description:
-      "L'aperçu de la grille suit votre avancée — les cases validées s'y colorent. Chaque mot est validé automatiquement quand vous le complétez, pas besoin de confirmer.",
+      "L'aperçu de la grille suit ton avancée et montre les cases déjà remplies. En solo, rien ne se valide au fil de la saisie : une fois la grille complète, elle est vérifiée d'un coup, juste ou non.",
     target: () => queryFirst(MINIMAP_SELECTOR),
     placement: 'top',
     arrow: true,
