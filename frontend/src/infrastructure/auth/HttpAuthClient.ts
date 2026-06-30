@@ -30,7 +30,12 @@ export function createHttpAuthClient(
         const detail = error.detail ?? error.title ?? `HTTP ${response.status}`;
         throw new Error(`whoami failed: ${detail}`);
       }
-      return { userId: data.userId, displayName: data.displayName };
+      return {
+        userId: data.userId,
+        displayName: data.displayName,
+        role: data.role,
+        capabilities: data.capabilities,
+      };
     },
 
     async getMe(): Promise<GetMeResult> {

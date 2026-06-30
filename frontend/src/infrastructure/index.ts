@@ -50,6 +50,10 @@ export {
   type HttpAuthClientOptions,
 } from './auth/HttpAuthClient';
 export {
+  createHttpBillingClient,
+  type HttpBillingClientOptions,
+} from './api/billing/client';
+export {
   createHttpSurveyClient,
   SignInRequiredError,
   CorrectifRejectedError,
