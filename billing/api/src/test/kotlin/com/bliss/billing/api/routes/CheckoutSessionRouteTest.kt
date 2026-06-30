@@ -9,6 +9,7 @@ import com.bliss.billing.api.auth.SessionMiddleware
 import com.bliss.billing.api.auth.SessionPrincipal
 import com.bliss.billing.application.testdoubles.FakeBillingProvider
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
+import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.Subscription
 import com.bliss.billing.domain.SubscriptionStatus
@@ -38,7 +39,7 @@ class CheckoutSessionRouteTest {
     fun `maintainer gets 201 with checkout urls`() =
         testApplication {
             val provider = FakeBillingProvider()
-            install(maintainer, provider, FakeSubscriptionRepository())
+            install(maintainer, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -53,7 +54,7 @@ class CheckoutSessionRouteTest {
     @Test
     fun `player is rejected with 403 forbidden`() =
         testApplication {
-            install(player, FakeBillingProvider(), FakeSubscriptionRepository())
+            install(player, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -67,7 +68,7 @@ class CheckoutSessionRouteTest {
     @Test
     fun `anonymous caller is rejected with 401`() =
         testApplication {
-            install(null, FakeBillingProvider(), FakeSubscriptionRepository())
+            install(null, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
             val resp =
                 client.post("/v1/checkout-session") {
                     contentType(ContentType.Application.Json)
@@ -84,7 +85,7 @@ class CheckoutSessionRouteTest {
             repo.save(
                 Subscription(userId, Tier.of("supporter"), SubscriptionStatus.ACTIVE, BillingSource.MOLLIE, "cust:sub_1", null),
             )
-            install(maintainer, FakeBillingProvider(), repo)
+            install(maintainer, CreateCheckoutSession(FakeBillingProvider(), repo))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -96,9 +97,24 @@ class CheckoutSessionRouteTest {
         }
 
     @Test
+    fun `provider unavailable yields 503`() =
+        testApplication {
+            val provider = FakeBillingProvider().apply { failCheckoutOnce = true }
+            install(maintainer, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
+            val resp =
+                client.post("/v1/checkout-session") {
+                    cookie(SESSION_COOKIE_NAME, "valid")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"tier":"supporter"}""")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.ServiceUnavailable)
+            assertThat(resp.bodyAsText()).contains("errors/provider-unavailable")
+        }
+
+    @Test
     fun `blank tier yields 400`() =
         testApplication {
-            install(maintainer, FakeBillingProvider(), FakeSubscriptionRepository())
+            install(maintainer, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -111,11 +127,10 @@ class CheckoutSessionRouteTest {
 
     private fun ApplicationTestBuilder.install(
         principal: SessionPrincipal?,
-        provider: FakeBillingProvider,
-        repo: FakeSubscriptionRepository,
+        useCase: CreateCheckoutSession,
     ) = application {
         install(SessionMiddleware) { verifySession = { principal } }
         install(ContentNegotiation) { json(WIRE_JSON) }
-        routing { checkoutSessionRoute(provider, repo) }
+        routing { checkoutSessionRoute(useCase) }
     }
 }

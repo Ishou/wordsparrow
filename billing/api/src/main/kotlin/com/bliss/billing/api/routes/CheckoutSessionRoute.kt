@@ -5,39 +5,26 @@ import com.bliss.billing.api.dto.CheckoutSessionRequest
 import com.bliss.billing.api.dto.CheckoutSessionResponse
 import com.bliss.billing.api.requireMaintainer
 import com.bliss.billing.api.respondProblem
-import com.bliss.billing.application.ports.BillingProviderPort
-import com.bliss.billing.application.ports.SubscriptionRepository
+import com.bliss.billing.application.usecases.CreateCheckoutSession
+import com.bliss.billing.application.usecases.CreateCheckoutSessionOutcome
+import com.bliss.billing.application.usecases.ProviderUnavailable
 import com.bliss.billing.domain.Tier
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
-import kotlin.coroutines.cancellation.CancellationException
 
 // POST /v1/checkout-session — authed + maintainer-gated; userId is session-derived, never the body (ADR-0078 IDOR guard).
-fun Route.checkoutSessionRoute(
-    provider: BillingProviderPort,
-    repository: SubscriptionRepository,
-) {
+fun Route.checkoutSessionRoute(createCheckoutSession: CreateCheckoutSession) {
     post("/v1/checkout-session") {
         val principal = call.requireMaintainer() ?: return@post
         val tier = call.parseTier() ?: return@post
 
-        if (repository.findByUserId(principal.userId)?.status?.isLive() == true) {
-            return@post call.respondProblem(
-                HttpStatusCode.Conflict,
-                ProblemTypes.ALREADY_SUBSCRIBED,
-                "the caller already has an active subscription",
-            )
-        }
-
-        val urls =
+        val outcome =
             try {
-                provider.createCheckout(principal.userId, tier)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
+                createCheckoutSession.execute(principal.userId, tier)
+            } catch (e: ProviderUnavailable) {
                 return@post call.respondProblem(
                     HttpStatusCode.ServiceUnavailable,
                     ProblemTypes.PROVIDER_UNAVAILABLE,
@@ -45,10 +32,23 @@ fun Route.checkoutSessionRoute(
                 )
             }
 
-        call.respond(
-            HttpStatusCode.Created,
-            CheckoutSessionResponse(checkoutUrl = urls.checkoutUrl, successUrl = urls.successUrl, cancelUrl = urls.cancelUrl),
-        )
+        when (outcome) {
+            CreateCheckoutSessionOutcome.AlreadySubscribed ->
+                call.respondProblem(
+                    HttpStatusCode.Conflict,
+                    ProblemTypes.ALREADY_SUBSCRIBED,
+                    "the caller already has an active subscription",
+                )
+            is CreateCheckoutSessionOutcome.Success ->
+                call.respond(
+                    HttpStatusCode.Created,
+                    CheckoutSessionResponse(
+                        checkoutUrl = outcome.urls.checkoutUrl,
+                        successUrl = outcome.urls.successUrl,
+                        cancelUrl = outcome.urls.cancelUrl,
+                    ),
+                )
+        }
     }
 }
 

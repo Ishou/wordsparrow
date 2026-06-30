@@ -69,7 +69,7 @@ fun Application.billingApiModule(
 
     routing {
         healthRoute()
-        checkoutSessionRoute(wiring.provider, wiring.subscriptions)
+        checkoutSessionRoute(wiring.createCheckoutSession)
         cancelSubscriptionRoute(wiring.cancelSubscription)
         webhookRoute(wiring.ingestProviderEvent)
         entitlementRoute(wiring.entitlementQuery)

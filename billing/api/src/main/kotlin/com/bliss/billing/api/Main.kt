@@ -5,6 +5,7 @@ import com.bliss.billing.api.identity.IdentityClient
 import com.bliss.billing.application.ports.Clock
 import com.bliss.billing.application.ports.EventIdGenerator
 import com.bliss.billing.application.usecases.CancelSubscription
+import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.application.usecases.EntitlementQuery
 import com.bliss.billing.application.usecases.IngestProviderEvent
 import com.bliss.billing.infrastructure.nats.NatsEntitlementPublisher
@@ -46,8 +47,7 @@ fun main() {
     val wiring =
         Wiring(
             verifySession = { cookie -> identityClient.verifySession(cookie) },
-            provider = provider,
-            subscriptions = subscriptions,
+            createCheckoutSession = CreateCheckoutSession(provider, subscriptions),
             cancelSubscription = CancelSubscription(provider, subscriptions, publisher, clock, eventIds),
             ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds),
             entitlementQuery = EntitlementQuery(subscriptions),
