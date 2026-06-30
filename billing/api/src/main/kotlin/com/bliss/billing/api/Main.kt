@@ -7,8 +7,11 @@ import com.bliss.billing.application.ports.EventIdGenerator
 import com.bliss.billing.application.usecases.CancelSubscription
 import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.application.usecases.EntitlementQuery
+import com.bliss.billing.application.usecases.HandleUserDeleted
 import com.bliss.billing.application.usecases.IngestProviderEvent
+import com.bliss.billing.infrastructure.nats.MaxDeliveriesDlqRepublisher
 import com.bliss.billing.infrastructure.nats.NatsEntitlementPublisher
+import com.bliss.billing.infrastructure.nats.UserDeletedConsumer
 import com.bliss.billing.infrastructure.persistence.BillingDatabase
 import com.bliss.billing.infrastructure.persistence.PostgresMollieCustomerStore
 import com.bliss.billing.infrastructure.persistence.PostgresProcessedEventLedger
@@ -20,6 +23,8 @@ import com.fasterxml.uuid.Generators
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.embeddedServer
 import io.nats.client.Nats
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import java.time.Instant
 
 // Production entry-point.
@@ -42,6 +47,20 @@ fun main() {
     val clock = Clock { Instant.now() }
     val eventIds = EventIdGenerator { Generators.timeBasedEpochGenerator().generate() }
 
+    // ADR-0049 — start the user.deleted consumer before Ktor serves so redelivery-on-boot events drive the cancellation invariant (ADR-0078).
+    val handleUserDeleted = HandleUserDeleted(provider, subscriptions, publisher, clock, eventIds)
+    val consumerScope = CoroutineScope(SupervisorJob())
+    val userDeletedConsumer = UserDeletedConsumer(natsConn, handleUserDeleted, consumerScope)
+    userDeletedConsumer.start()
+    val dlqRepublisher =
+        MaxDeliveriesDlqRepublisher(
+            connection = natsConn,
+            jetStreamManagement = natsConn.jetStreamManagement(),
+            streamName = MaxDeliveriesDlqRepublisher.USER_EVENTS_STREAM,
+            consumerNames = listOf(UserDeletedConsumer.DURABLE_NAME),
+        )
+    dlqRepublisher.start()
+
     val identityClient = IdentityClient(config.identityBaseUrl)
 
     val wiring =
@@ -51,7 +70,11 @@ fun main() {
             cancelSubscription = CancelSubscription(provider, subscriptions, publisher, clock, eventIds),
             ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds),
             entitlementQuery = EntitlementQuery(subscriptions),
-            closeNats = { natsConn.close() },
+            closeNats = {
+                dlqRepublisher.close()
+                userDeletedConsumer.stop()
+                natsConn.close()
+            },
             closeIdentityClient = { identityClient.close() },
         )
 
