@@ -6,20 +6,7 @@ import com.bliss.grid.domain.model.Position
 import com.bliss.grid.domain.model.Row
 import java.util.UUID
 
-/**
- * Verifies a filled grid against the canonical solution stored for the
- * puzzleId, returning a pure binary verdict (no positional data on the wire).
- *
- * Flow:
- *  1. Resolve the puzzle in the store — `PuzzleNotFound` if never GET-ed.
- *  2. Validate request body — bounds, single uppercase A-Z, point at letter
- *     cells, no duplicate (row, column).
- *  3. Walk every letter cell in the puzzle's grid; `solved` is true iff each
- *     is filled and matches the canonical letter.
- *
- * ADR-0076: the response is a binary oracle, carrying no positional data, so
- * it cannot be used to locate or reconstruct any part of the solution.
- */
+/** Binary oracle: returns `solved` iff every letter cell is filled and matches the solution; ADR-0076. */
 class ValidatePuzzleUseCase(
     private val puzzleRepository: PuzzleRepository,
 ) {

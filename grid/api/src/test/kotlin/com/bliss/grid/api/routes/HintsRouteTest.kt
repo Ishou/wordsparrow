@@ -206,6 +206,25 @@ class HintsRouteTest {
         }
 
     @Test
+    fun `invalid direction value returns 400 without decrementing budget`() =
+        testApplication {
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            val (row, column, _) = bootstrapAndPickLetterCell(client)
+
+            val response = revealCell(client, row, column, "diagonal")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.BadRequest)
+            assertThat(response.bodyAsText()).contains("invalid-coord")
+            // Budget must be untouched — direction check fires before use-case call.
+            val getResp =
+                client.get("/v1/puzzles/$puzzleId") {
+                    cookie("__Secure-ws_session", cookieValue)
+                }
+            val body = Json.parseToJsonElement(getResp.bodyAsText()).jsonObject
+            assertThat(body["hintsRemaining"]!!.jsonPrimitive.content.toInt()).isEqualTo(3)
+        }
+
+    @Test
     fun `GET puzzle without cookie reports hintsRemaining equal to hintsAllowed`() =
         testApplication {
             mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
