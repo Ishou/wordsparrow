@@ -83,6 +83,15 @@ Vitest + Playwright; openapi-typescript codegen.
 
 ## Wave 2 — grid backend (`grid/application`, `grid/infrastructure`, `grid/api`)
 
+- [ ] **Blocking precondition:** ADR-0076 §7 question resolved — either an
+  ADR-0076 amendment is merged, or a maintainer comment on the Wave 1 PR
+  explicitly accepts the spec's "gameplay gating, not an answer-leak
+  control" framing as sufficient. See spec "Risks / open edges" and Wave 1
+  PR's "ADR-0076 compatibility" section (open as of Wave 1 merge — the PR
+  body flagged §7 names this exact endpoint as relying on a one-way
+  lifetime cap, which the regenerating bucket removes). Do not start Task
+  2.1 until this is checked off.
+
 **Branch:** `feat/grid-hint-regen-backend` · **Scope:** `feat(grid-application):` / `feat(grid-infrastructure):`
 **Gate:** `ci` (Gradle build, tests, Spotless, Konsist).
 **Pre-read:** `scripts/adr-context.sh grid/application/puzzle/HintUsageRepository.kt grid/api/src/main/resources/db/migration/ grid/api/routes/PuzzleRoute.kt`
@@ -319,7 +328,8 @@ Vitest + Playwright; openapi-typescript codegen.
   `spotlessApply`.
 - [ ] **Step 8:** Commit: `feat(grid-application): hint reveal + read path expose regen countdown`
 
-**Wave 2 done when:** `ci` green, §6a LGTM, merged.
+**Wave 2 done when:** ADR-0076 §7 blocking precondition checked off, `ci`
+green, §6a LGTM, merged.
 
 ---
 
@@ -409,7 +419,10 @@ LGTM, merged. Rollout complete.
   injection); `secondsUntilNextHint` wire → 1.1 + 2.4; migration expand-and-contract
   (keep `hints_used`) → 2.2; anonymous = full/null → 2.4 Step 5; single discreet
   cooldown when `tokens < cap`, disabled at 0 → 3.3; minigame/coop untouched →
-  Global Constraints + no files touched there; ADR-0076 (no letters) → 1.1 Step 3.
+  Global Constraints + no files touched there; ADR-0076 (no letters added to
+  the wire) → 1.1 Step 3 — the separate question of whether the regenerating
+  budget model itself needs an ADR-0076 amendment is **open**, not settled by
+  Wave 1; see the Wave 2 blocking precondition above.
 - **Dropped touchpoints** (first-spend note, Aide/tour copy) intentionally absent
   — matches the spec's 1+3-collapsed-to-one-discreet-timer decision.
 - **Type consistency:** `HintBudgetCalculator.View(tokensRemaining, secondsUntilNextHint: Long?)`

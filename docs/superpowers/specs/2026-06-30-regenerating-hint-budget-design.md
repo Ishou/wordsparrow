@@ -202,12 +202,18 @@ Each wave is fully reviewed and merged before the next starts.
   ever becomes per-puzzle/non-3, the backfill must read it. Acceptable today
   (single global default); noted so it isn't silently wrong later.
 - **Contract step:** dropping `hints_used` is a later migration, not this one.
-- **Not an answer-leak control — no ADR amendment required:** the hint budget is
-  **gameplay gating** (it paces how fast a player can ask for help), not a
-  security boundary. ADR-0076 is the separate **home-teaser anti-scrape** ADR; it
-  does not govern the daily-puzzle hint endpoint. The daily answers-off-the-wire
-  posture is the GET letter-omission (PR #218), which the hint endpoint does not
-  touch at any budget. A regenerating bucket lets a patient player reveal more
-  than `hintsAllowed` words over real time, but only on their **own** puzzle and
-  only over many hours — that leaks nothing to other users and is an accepted
-  non-issue. No ADR amendment is needed for Wave 2's `trySpend`/`budgetFor`.
+- **Not an answer-leak control, but ADR-0076 §7 is open — not settled:** the
+  hint budget is **gameplay gating** (it paces how fast a player can ask for
+  help), not a security boundary, and ADR-0076 is the separate **home-teaser
+  anti-scrape** ADR. The daily answers-off-the-wire posture is the GET
+  letter-omission (PR #218), which the hint endpoint does not touch at any
+  budget. A regenerating bucket lets a patient player reveal more than
+  `hintsAllowed` words over real time, but only on their **own** puzzle and
+  only over many hours. That said, ADR-0076 §7 names this exact endpoint
+  (`/v1/puzzles/{id}/hints`) as "the one explicitly sanctioned exception" and
+  bases the carve-out on `Puzzle.hintsAllowed` being a one-way, lifetime cap —
+  language this design's regenerating bucket directly contradicts. This spec's
+  "gameplay gating, not a security boundary" framing is this PR's position,
+  not a settled resolution of that conflict — it needs explicit maintainer
+  sign-off, or a §7 amendment, **before Wave 2** implements `trySpend`/
+  `budgetFor`. See the Wave 2 blocking precondition in the plan.
