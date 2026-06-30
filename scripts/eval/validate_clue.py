@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import csv
 import re
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -103,6 +104,13 @@ def _find_head(clue: str) -> str:
     return ""
 
 
+def _strip_accents(s: str) -> str:
+    """Diacritic-fold for accent-insensitive matching (aîné ≡ ainé)."""
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
+    )
+
+
 def _find_lemma_family_leak(
     clue: str,
     target_lemma: str,
@@ -114,18 +122,20 @@ def _find_lemma_family_leak(
     Catches non-head self-references like:
       impur → 'Matière impure'   ('impure' is fem-sg of impur)
       asseoir → "Faire s'asseoir" ('asseoir' is the lemma itself)
+
+    Comparison is diacritic-folded so an unaccented answer variant `ainé`
+    is caught by the accented clue `L'aîné` (the wordsparrow.io regression).
     """
     target = target_lemma.lower().strip()
     if not target:
         return None
-    family = {target}
+    family = {_strip_accents(target)}
     for surface, _tags in index.by_lemma.get(target, []):
-        family.add(surface)
+        family.add(_strip_accents(surface.lower()))
     if len(family) <= 1:
         return None
     for tok in _TOKEN_RE.findall(clue):
-        tl = tok.lower()
-        if tl in family:
+        if _strip_accents(tok.lower()) in family:
             return tok
     return None
 
