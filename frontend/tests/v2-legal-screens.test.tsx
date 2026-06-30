@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { MentionsLegalesScreen } from '@/ui/v2/MentionsLegalesScreen';
 import { ConfidentialiteScreen } from '@/ui/v2/ConfidentialiteScreen';
+import { ConditionsAbonnementScreen } from '@/ui/v2/ConditionsAbonnementScreen';
 import { expectAxeClean } from '@/test/a11y';
 
 function renderInRouter(node: ReactNode, path: string) {
@@ -53,6 +54,29 @@ describe('v2 legal screens', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Cookies' })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: 'Tes droits' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Gérer mes préférences' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Retour/ })).toHaveAttribute('href', '/v2/reglages');
+    expect(container.querySelector('main#main-content')).toBeTruthy();
+
+    await expectAxeClean(container);
+  });
+
+  it("conditions d'abonnement: draft banner + key clauses, a11y clean", async () => {
+    const { container } = renderInRouter(
+      <ConditionsAbonnementScreen />,
+      '/v2/conditions-abonnement',
+    );
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: "Conditions d'abonnement" }),
+    ).toBeTruthy();
+    expect(screen.getByText(/Brouillon — en cours de validation/)).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Le vendeur' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: "L'abonnement" })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Prix' })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Paiement et reconduction' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Droit de rétractation' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Retour/ })).toHaveAttribute('href', '/v2/reglages');
     expect(container.querySelector('main#main-content')).toBeTruthy();
 
