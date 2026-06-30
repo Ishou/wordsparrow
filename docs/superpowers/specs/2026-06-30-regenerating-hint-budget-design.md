@@ -113,13 +113,16 @@ Replace the monotonic counter with a token bucket per `(puzzle, user)`:
 
 `grid/api/openapi.yaml`:
 
-- Add `secondsUntilNextHint: integer` (nullable / omitted-when-full) to:
+- Add `secondsUntilNextHint: integer` (**`required` + `nullable: true`** — always
+  present on the wire, `null` when the bucket is full and for anonymous callers;
+  ADR-0003 §6, precedent `GameSession.completedAt`) to:
   - the puzzle read response (alongside `hintsRemaining`), and
   - `RevealCellHintResult` (so the client gets a fresh countdown right after a
     spend).
-- One-line description note: regeneration is server-clock; `null`/absent means
-  the bucket is full.
-- No letters added anywhere — ADR-0076 posture unchanged.
+- One-line description note: regeneration is server-clock; `null` means the
+  bucket is full.
+- No letters added anywhere — the daily answers-off-the-wire posture (GET letter
+  omission, PR #218) is untouched by the hint budget.
 
 ### C. Migration (expand-and-contract)
 
@@ -199,13 +202,12 @@ Each wave is fully reviewed and merged before the next starts.
   ever becomes per-puzzle/non-3, the backfill must read it. Acceptable today
   (single global default); noted so it isn't silently wrong later.
 - **Contract step:** dropping `hints_used` is a later migration, not this one.
-- **ADR-0076 §7 carve-out rationale:** §7 sanctions whole-word hint reveal
-  *because* the budget was a one-way lifetime cap — "draining the grid
-  requires `hintsAllowed` calls" — bounding total leaked letters per puzzle.
-  A token bucket that regenerates indefinitely removes that lifetime ceiling:
-  a sufficiently patient player can eventually drain the grid via hints alone.
-  This needs an ADR-0076 amendment (re-justify the carve-out under the
-  unbounded-over-time model, or add a mitigating lifetime ceiling) **before
-  Wave 2** implements `trySpend`/`budgetFor`. Not resolved by Wave 1 — Wave 1
-  only ships the wire field (`secondsUntilNextHint`, unused server-side); no
-  regen logic exists yet for the carve-out's rationale to apply against.
+- **Not an answer-leak control — no ADR amendment required:** the hint budget is
+  **gameplay gating** (it paces how fast a player can ask for help), not a
+  security boundary. ADR-0076 is the separate **home-teaser anti-scrape** ADR; it
+  does not govern the daily-puzzle hint endpoint. The daily answers-off-the-wire
+  posture is the GET letter-omission (PR #218), which the hint endpoint does not
+  touch at any budget. A regenerating bucket lets a patient player reveal more
+  than `hintsAllowed` words over real time, but only on their **own** puzzle and
+  only over many hours — that leaks nothing to other users and is an accepted
+  non-issue. No ADR amendment is needed for Wave 2's `trySpend`/`budgetFor`.
