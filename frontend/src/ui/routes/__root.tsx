@@ -4,6 +4,7 @@ import { css } from 'styled-system/css';
 import type { PuzzleRepository, PuzzleSolver, WordsRepository } from '@/application';
 import type { AnalyticsPort } from '@/application/analytics';
 import type { AuthClient } from '@/application/auth';
+import type { BillingClient } from '@/application/billing';
 import type { GameClient, LobbyClient } from '@/application/game';
 import type { LobbyJoinCodeStash } from '@/application/session/LobbyJoinCodeStash';
 import type { SessionClient } from '@/application/session/SessionClient';
@@ -68,6 +69,8 @@ export interface AppRouterContext {
   readonly surveyAnonStore?: SurveyAnonStore;
   // Analytics port (ADR-0025). Optional; defaults to a no-op in tests.
   readonly analytics?: AnalyticsPort;
+  // Billing-api adapter (ADR-0078). Optional so route-level Vitest fixtures can omit it; the /abonnement route guards on its presence.
+  readonly billingClient?: BillingClient;
   // ADR-0027: per-tab one-shot stash that the `/join/$code` route and
   // the Accueil "Rejoindre" submit populate, and the lobby route's
   // WS-open consumes. Optional alongside the multiplayer adapters

@@ -7,6 +7,7 @@ import { App } from '@/ui/App';
 import { createAppRouter } from '@/ui/router';
 import {
   createHttpAuthClient,
+  createHttpBillingClient,
   createHttpLobbyClient,
   createHttpPuzzleRepository,
   createHttpPuzzleSolver,
@@ -279,13 +280,17 @@ enableMocks()
     const surveyApiBaseUrl =
       import.meta.env.VITE_SURVEY_API_BASE_URL ?? 'https://survey.wordsparrow.io';
     const surveyClient = createHttpSurveyClient({ baseUrl: surveyApiBaseUrl });
+    // Billing-api adapter (ADR-0078). Same default-to-prod-host idiom as identity/survey.
+    const billingApiBaseUrl =
+      import.meta.env.VITE_BILLING_API_BASE_URL ?? 'https://billing.wordsparrow.io';
+    const billingClient = createHttpBillingClient({ baseUrl: billingApiBaseUrl });
     // Analytics port (ADR-0025).
     const analytics = {
       trackEvent: (category: string, action: string, name?: string, value?: number) => {
         tracker.trackEvent(category, action, name, value);
       },
     };
-    const baseContext = { authClient, getPseudonym, surveyClient, surveyAnonStore: surveyAnonRatedStore, analytics, progressSyncService };
+    const baseContext = { authClient, getPseudonym, surveyClient, surveyAnonStore: surveyAnonRatedStore, analytics, progressSyncService, billingClient };
     const context = multiplayer
       ? (() => {
           const gameApiBaseUrl = import.meta.env.VITE_GAME_API_BASE_URL;
