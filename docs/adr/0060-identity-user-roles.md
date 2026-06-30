@@ -79,3 +79,43 @@ HTTP edge — `whoami` returns only `userId` + `displayName`.
   from the session round-trip it already makes, instead of caching
   `UserRoleChanged` or maintaining a separate allowlist.
 - Unchanged: stored enum, migration state, and the `UserRoleChanged` contract.
+
+## Amendment 2026-06-30: identity is the authorization authority (owns capabilities)
+
+### Context
+Subscriptions (ADR-0078) introduce *what features a user has*. Rather than let
+billing own a feature catalogue, or each consumer merge role + subscription,
+identity — already the authz hub (auth + roles) — becomes the single place that
+answers *"what can this user do."*
+
+### Decision
+- **identity owns capabilities** alongside roles. It **consumes
+  `SubscriptionChanged`** from billing (ADR-0078 amendment) — a NATS event,
+  contract-coupling only — and derives a per-user **capability set** from
+  `(role + subscription)`. This is identity acting as the authorization
+  decision-point: aggregating facts to produce permissions. Consuming a
+  subscription signal is identity *doing its job*, not a layering inversion.
+- **`whoami` and `/v1/users/me` gain a `capabilities` array.** identity also
+  emits a capability-change event for backend consumers (grid/game), mirroring
+  the `UserRoleChanged` posture. Consumers gate on **capabilities + `userId`
+  only** — they never learn billing or subscriptions exist.
+- **Capability sources:** *role-derived* (e.g. maintainer → `billing:subscribe`,
+  available now from role alone) and *subscription-derived* (tier → feature
+  capabilities, deferred with the offer — currently empty). The test-phase
+  `billing:subscribe` capability is role-derived, so it needs no subscription
+  data.
+- billing checks the `billing:subscribe` capability for its own endpoint access
+  (ADR-0078 amendment, option (a)); it remains capability-blind otherwise.
+
+### Threat model (delta)
+- identity now consumes a billing event; payload carries no secrets, internal
+  subject. A user reading their own capabilities is low-risk (their own
+  attribute). Server-side enforcement stays in each consumer; capabilities are
+  an input, never the enforcement itself.
+
+### Consequences
+- Single authorization authority: one source (identity) answers role +
+  capabilities; billing stays pure; consumers have one authz dependency.
+- identity grows to own product authz *policy* (the tier→capability mapping). If
+  that ever gets complex, the escape hatch is a dedicated `entitlements` context
+  depending on billing + identity — but identity is the right pragmatic home now.
