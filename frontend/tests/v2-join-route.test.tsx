@@ -26,7 +26,7 @@ const lobby: Lobby & { readonly id: LobbyId } = {
 };
 
 const stubPuzzleSolver: PuzzleSolver = {
-  validate: () => Promise.resolve({ solved: false, incorrectCells: [] }),
+  validate: () => Promise.resolve({ solved: false }),
   requestHint: () => Promise.reject(new Error('not used')),
 };
 const emptyStore: SoloEntriesStore = {

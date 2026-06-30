@@ -6,9 +6,10 @@ export type {
 } from './PuzzleRepository';
 export type {
   FilledCellInput,
+  HintDirection,
   HintErrorKind,
   HintResult,
-  IncorrectCell,
+  RevealedWordCell,
   PuzzleSolver,
   ValidationResult,
 } from './PuzzleSolver';

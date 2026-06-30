@@ -1,14 +1,6 @@
-// Application-layer port for the two server-authoritative puzzle
-// operations introduced in PR #218: full-grid validation and the
-// per-puzzle hint budget. Concrete adapters live in `infrastructure/`
-// and are wired into the router context by the composition root, so
-// `ui/` depends on this port (not the HTTP client) per ADR-0002 §7.
-//
-// The position field name follows the wire (`column`, not the domain's
-// abbreviated `col`) — the adapter forwards directly with no rename, and
-// the result mirrors the OpenAPI `Position` shape so we don't introduce
-// an extra translation hop in the hot validation path.
+// Application-layer port for whole-grid validation and the per-puzzle hint budget; concrete adapters live in `infrastructure/` (ADR-0002 §7).
 
+// The position field name follows the wire (`column`, not the domain's `col`) so the adapter forwards with no rename.
 export interface FilledCellInput {
   readonly row: number;
   readonly column: number;
@@ -16,24 +8,24 @@ export interface FilledCellInput {
   readonly letter: string;
 }
 
-export interface IncorrectCell {
-  readonly row: number;
-  readonly column: number;
-}
-
+// Whole-grid binary verdict (ADR-0076 §§7–9): no positional data, so it cannot locate or reconstruct the solution.
 export interface ValidationResult {
   readonly solved: boolean;
-  /** Includes both wrong-letter AND unfilled cells; empty iff `solved`. */
-  readonly incorrectCells: ReadonlyArray<IncorrectCell>;
+}
+
+// Axis of the active entry, matching the wire `Direction` enum.
+export type HintDirection = 'across' | 'down';
+
+export interface RevealedWordCell {
+  readonly row: number;
+  readonly column: number;
+  /** Canonical solution letter at this cell — single uppercase A–Z. */
+  readonly letter: string;
 }
 
 export interface HintResult {
-  /** Echo of the requested row (zero-indexed). */
-  readonly row: number;
-  /** Echo of the requested column (zero-indexed). */
-  readonly column: number;
-  /** Canonical solution letter at `(row, column)` — single uppercase A–Z. */
-  readonly letter: string;
+  /** Every letter cell of the revealed word, each with its canonical letter. */
+  readonly cells: ReadonlyArray<RevealedWordCell>;
   /** Remaining budget after this call; `0` means the next call 429s. */
   readonly hintsRemaining: number;
 }
@@ -69,9 +61,15 @@ export interface PuzzleSolver {
   ): Promise<ValidationResult>;
 
   /**
-   * Spend one hint credit to reveal the canonical letter at `(row, column)`.
-   * Throws `HintRequestError` on every documented 4xx (budget-exhausted,
-   * invalid-coord) and on transient/network failures.
+   * Spend one hint credit to reveal the whole word the cursor sits in —
+   * the entry covering `(row, column)` along `direction`. Throws
+   * `HintRequestError` on every documented 4xx (budget-exhausted,
+   * invalid-coord, auth-required) and on transient/network failures.
    */
-  requestHint(puzzleId: string, row: number, column: number): Promise<HintResult>;
+  requestHint(
+    puzzleId: string,
+    row: number,
+    column: number,
+    direction: HintDirection,
+  ): Promise<HintResult>;
 }

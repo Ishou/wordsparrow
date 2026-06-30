@@ -2,86 +2,57 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   normalizeAnswerLetter,
   type LetterCell,
+  type Position,
   type Puzzle,
 } from '@/domain';
-import type {
-  FilledCellInput,
-  PuzzleSolver,
-} from '@/application';
+import type { FilledCellInput, PuzzleSolver } from '@/application';
 
-// Server-backed validation for the solo `Vérifier` flow. Replaces the
-// pre-#218 word-level local validator: the canonical solution no longer
-// travels on the wire (`LetterCell.letter` was stripped in PR #218), so
-// the only authoritative answer is `POST /v1/puzzles/{id}/validate`.
-//
-// Behavior:
-//   * `verify()` reads each letter cell's value from the DOM (the
-//     uncontrolled-input contract per ADR-0002 §4 means we never lift
-//     keystrokes into React state), normalizes via
-//     `normalizeAnswerLetter`, drops blanks, and POSTs the rest.
-//   * On `solved: true` every letter position moves into `validated` —
-//     the route's `isComplete` guard flips, the `Vérifier` button
-//     disables, and cells lock via the existing `validatedPositions`
-//     prop on `<Grid>`.
-//   * On `incorrectCells` the listed positions go into `errors` and
-//     are cleared 200 ms later (matches the existing shake duration).
-//     The server lumps wrong-letter and unfilled-letter into a single
-//     set; we render both as the same error shake — the player's
-//     mental model is "this attempt isn't right yet".
-//   * Reset on puzzle reference change (route loader returns a fresh
-//     `Puzzle` after `router.invalidate()`).
-
-const ERROR_REVERT_MS = 200;
+// Whole-grid binary validation for solo (ADR-0076 §§7–9): checks only once every cell is filled, reads `solved` only, never marks individual cells.
 
 const positionKey = (row: number, col: number): string => `${row},${col}`;
 
+export const GRID_NOT_SOLVED_MESSAGE =
+  "Pas encore — ta grille n'est pas tout à fait juste";
+
 export interface PuzzleValidationState {
   readonly validated: ReadonlySet<string>;
-  readonly errors: ReadonlySet<string>;
-  readonly announce: string;
-  readonly verify: () => void;
+  readonly failMessage: string | null;
   readonly pending: boolean;
-  readonly totalLetterCells: number;
+  // Call after any cell write or hint reveal; checks the full-grid transition.
+  readonly onGridChanged: () => void;
 }
 
 export function usePuzzleValidation(
   puzzle: Puzzle,
   solver: PuzzleSolver,
+  // Fired once when the grid validates, with every letter position, so the route can lock + persist them.
+  onSolved?: (positions: ReadonlyArray<Position>) => void,
 ): PuzzleValidationState {
   const [validated, setValidated] = useState<ReadonlySet<string>>(() => new Set());
-  const [errors, setErrors] = useState<ReadonlySet<string>>(() => new Set());
-  const [announce, setAnnounce] = useState<string>('');
-  const [pending, setPending] = useState<boolean>(false);
+  const [failMessage, setFailMessage] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   const letterCells = useMemo<readonly LetterCell[]>(
     () => puzzle.cells.filter((c): c is LetterCell => c.kind === 'letter'),
     [puzzle.cells],
   );
 
-  // Reset on puzzle swap. Reference identity is enough — the loader
-  // returns a fresh `Puzzle` object on `router.invalidate()`.
+  const onSolvedRef = useRef(onSolved);
+  onSolvedRef.current = onSolved;
+  // Bumped per POST and per puzzle swap so a stale verdict can't resurrect a cleared pill.
+  const requestSeqRef = useRef(0);
+  // Dedupes identical full-grid submissions so refilling the same letters doesn't re-POST.
+  const lastSubmittedRef = useRef<string | null>(null);
+
   useEffect(() => {
     setValidated(new Set());
-    setErrors(new Set());
-    setAnnounce('');
+    setFailMessage(null);
+    setPending(false);
+    lastSubmittedRef.current = null;
+    requestSeqRef.current += 1;
   }, [puzzle]);
 
-  const errorTimerRef = useRef<number | null>(null);
-  // Track in-flight requests so a stale reply (e.g. user pressed
-  // Vérifier twice) cannot resurrect cleared errors.
-  const requestSeqRef = useRef(0);
-
-  // Cleanup on unmount.
-  useEffect(() => {
-    return () => {
-      if (errorTimerRef.current !== null) {
-        window.clearTimeout(errorTimerRef.current);
-        errorTimerRef.current = null;
-      }
-    };
-  }, []);
-
-  const verify = useCallback(() => {
+  const onGridChanged = useCallback(() => {
     const filled: FilledCellInput[] = [];
     for (const cell of letterCells) {
       const input = document.querySelector<HTMLInputElement>(
@@ -89,12 +60,21 @@ export function usePuzzleValidation(
       );
       const normalized = normalizeAnswerLetter(input?.value ?? '');
       if (!normalized) continue;
-      filled.push({
-        row: cell.position.row,
-        column: cell.position.col,
-        letter: normalized,
-      });
+      filled.push({ row: cell.position.row, column: cell.position.col, letter: normalized });
     }
+
+    if (letterCells.length === 0 || filled.length !== letterCells.length) {
+      // Editing again: invalidate any in-flight verdict and drop the transient pill.
+      requestSeqRef.current += 1;
+      lastSubmittedRef.current = null;
+      setPending(false);
+      setFailMessage(null);
+      return;
+    }
+
+    const submittedKey = filled.map((c) => `${c.row},${c.column},${c.letter}`).join('|');
+    if (submittedKey === lastSubmittedRef.current) return;
+    lastSubmittedRef.current = submittedKey;
 
     const seq = ++requestSeqRef.current;
     setPending(true);
@@ -108,51 +88,17 @@ export function usePuzzleValidation(
             next.add(positionKey(cell.position.row, cell.position.col));
           }
           setValidated(next);
-          setErrors(new Set());
-          setAnnounce('Grille terminée');
+          setFailMessage(null);
+          onSolvedRef.current?.(
+            letterCells.map((c) => ({ row: c.position.row, col: c.position.col })),
+          );
           return;
         }
-        const nextErrors = new Set<string>();
-        for (const pos of result.incorrectCells) {
-          nextErrors.add(positionKey(pos.row, pos.column));
-        }
-        setErrors(nextErrors);
-        // Lock cells the user submitted that did NOT come back in
-        // incorrectCells — those are correct. Without this, Vérifier
-        // shakes the wrong cells and leaves the typed-correctly cells
-        // in a neutral state, which is what the user sees as "the
-        // word I typed correctly is still not green". The merge with
-        // `prev` preserves anything previously locked (auto-validation
-        // from useWordAutoValidation, an earlier Vérifier, etc.).
-        setValidated((prev) => {
-          let changed = false;
-          const next = new Set(prev);
-          for (const cell of filled) {
-            const key = positionKey(cell.row, cell.column);
-            if (nextErrors.has(key)) continue;
-            if (!next.has(key)) {
-              next.add(key);
-              changed = true;
-            }
-          }
-          return changed ? next : prev;
-        });
-        setAnnounce(
-          nextErrors.size === 1
-            ? '1 case à corriger'
-            : `${nextErrors.size} cases à corriger`,
-        );
-        if (errorTimerRef.current !== null) {
-          window.clearTimeout(errorTimerRef.current);
-        }
-        errorTimerRef.current = window.setTimeout(() => {
-          errorTimerRef.current = null;
-          setErrors(new Set());
-        }, ERROR_REVERT_MS);
+        setFailMessage(GRID_NOT_SOLVED_MESSAGE);
       })
       .catch(() => {
         if (seq !== requestSeqRef.current) return;
-        setAnnounce('Vérification impossible');
+        lastSubmittedRef.current = null;
       })
       .finally(() => {
         if (seq !== requestSeqRef.current) return;
@@ -160,12 +106,5 @@ export function usePuzzleValidation(
       });
   }, [letterCells, puzzle.id, solver]);
 
-  return {
-    validated,
-    errors,
-    announce,
-    verify,
-    pending,
-    totalLetterCells: letterCells.length,
-  };
+  return { validated, failMessage, pending, onGridChanged };
 }

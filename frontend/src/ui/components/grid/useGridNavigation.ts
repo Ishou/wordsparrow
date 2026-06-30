@@ -245,11 +245,10 @@ export interface UseGridNavigationOptions {
   // WebSocket cellUpdate broadcast (Wave H · PR #19, see ADR-0018).
   readonly onCellChange?: (row: number, col: number, letter: string | null) => void;
   // Fires after a letter is written into a cell (post-normalization).
-  // Solo's auto-validation hook reads this to detect "word just completed
-  // its last letter", call POST /v1/puzzles/:id/validate, and lock the
-  // word's cells if every letter was correct. Multiplayer callers omit
-  // this — the server drives validation and broadcasts `wordLocked`. Not
-  // fired on cell clears (auto-validation has nothing to do with deletes).
+  // Per-word callers (minigame, coop) read this to detect "word just
+  // completed its last letter" and run their tighter feedback loop; solo
+  // omits it and validates the whole grid once it is full. Not fired on
+  // cell clears.
   readonly onCellFilled?: (
     position: Position,
     direction: 'across' | 'down',
@@ -909,12 +908,7 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
         bumpEntries();
         onCellChangeRef.current?.(p.row, p.col, letter);
       }
-      // Auto-validation seam: announce that a letter was placed at
-      // (p, dir). The hook's consumer (solo route's
-      // `useWordAutoValidation`) decides whether the fill closed a word.
-      // Fired on every keystroke that lands a letter, even when the
-      // letter was already the same — re-typing the last letter of a
-      // correct word should still trigger the lock check.
+      // Fill seam for per-word callers; fired on every keystroke that lands a letter, even a same-letter re-type.
       onCellFilledRef.current?.(p, dir);
       const clue = lookup.clueAt(p.row, p.col, dir);
       if (!clue) return;

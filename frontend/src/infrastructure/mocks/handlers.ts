@@ -101,6 +101,30 @@ for (const cell of puzzleFixtureJson.cells as readonly FixtureLetterCell[]) {
 }
 const fixtureLetterCellCount = fixtureLetterByPosition.size;
 
+// Resolve the whole word covering (row, column) along the axis — mirrors the server's placement lookup for preview parity.
+function resolveFixtureWord(
+  row: number,
+  column: number,
+  direction: 'across' | 'down',
+): ReadonlyArray<{ row: number; column: number; letter: string }> | null {
+  const dr = direction === 'down' ? 1 : 0;
+  const dc = direction === 'across' ? 1 : 0;
+  if (!fixtureLetterByPosition.has(`${row},${column}`)) return null;
+  let r = row;
+  let c = column;
+  while (fixtureLetterByPosition.has(`${r - dr},${c - dc}`)) {
+    r -= dr;
+    c -= dc;
+  }
+  const cells: { row: number; column: number; letter: string }[] = [];
+  while (fixtureLetterByPosition.has(`${r},${c}`)) {
+    cells.push({ row: r, column: c, letter: fixtureLetterByPosition.get(`${r},${c}`)! });
+    r += dr;
+    c += dc;
+  }
+  return cells;
+}
+
 // Per-puzzle hint counter. Resets on module reload (preview only). The
 // real server scopes this per (puzzle, player); for MSW we only need
 // the budget-exhaustion transition.
@@ -210,18 +234,12 @@ const gridHandlers = [
     return HttpResponse.json({ ...puzzleFixture, id: puzzleId });
   }),
 
-  // POST /v1/puzzles/{id}/hints — preview parity. Looks up the canonical
-  // letter at (row, column) in the fixture, decrements a per-puzzle
-  // counter seeded from `puzzleFixture.hintsAllowed`; once it hits zero
-  // the next call returns a 429 problem+json, mirroring the real
-  // server's `hint-budget-exhausted` shape. Coordinates that don't map
-  // to a fixture letter cell return a 400 `invalid-coord` and the
-  // budget is left untouched.
+  // POST /v1/puzzles/{id}/hints — preview parity: resolve the word at (row, column, direction), decrement the per-puzzle budget, 429 when exhausted, 400 on a non-letter coord.
   http.post('*/v1/puzzles/:puzzleId/hints', async ({ params, request }) => {
     const puzzleId = String(params.puzzleId);
     const body = (await request.json()) as RevealCellHintRequest;
-    const expected = fixtureLetterByPosition.get(`${body.row},${body.column}`);
-    if (!expected) {
+    const word = resolveFixtureWord(body.row, body.column, body.direction);
+    if (!word) {
       return HttpResponse.json(HINT_PROBLEM_INVALID_COORD, {
         status: 400,
         headers: { 'content-type': 'application/problem+json' },
@@ -237,38 +255,25 @@ const gridHandlers = [
     }
     const next = remaining - 1;
     hintsRemainingByPuzzle.set(puzzleId, next);
-    return HttpResponse.json({
-      row: body.row,
-      column: body.column,
-      letter: expected,
-      hintsRemaining: next,
-    });
+    return HttpResponse.json({ cells: word, hintsRemaining: next });
   }),
 
-  // POST /v1/puzzles/{id}/validate — preview parity. Compares the
-  // submitted letters against the fixture's canonical letters; reports
-  // every wrong-letter AND every unfilled letter cell as `incorrectCells`.
-  // The real server runs the same comparison server-side; for preview we
-  // borrow the JSON's `letter` field to avoid shipping a separate answer
-  // sheet.
+  // POST /v1/puzzles/{id}/validate — preview parity: a pure binary verdict (ADR-0076 §§7–9), no positional data on the wire.
   http.post('*/v1/puzzles/:puzzleId/validate', async ({ request }) => {
     const body = (await request.json()) as ValidatePuzzleRequest;
     const submitted = new Map<string, string>();
     for (const cell of body.filledCells ?? []) {
       submitted.set(`${cell.row},${cell.column}`, cell.letter);
     }
-    const incorrect: Position[] = [];
+    let allCorrect = true;
     for (const [key, expected] of fixtureLetterByPosition) {
-      const got = submitted.get(key);
-      if (got !== expected) {
-        const [row, column] = key.split(',').map(Number);
-        incorrect.push({ row, column });
+      if (submitted.get(key) !== expected) {
+        allCorrect = false;
+        break;
       }
     }
     return HttpResponse.json({
-      solved:
-        incorrect.length === 0 && submitted.size === fixtureLetterCellCount,
-      incorrectCells: incorrect,
+      solved: allCorrect && submitted.size === fixtureLetterCellCount,
     });
   }),
 ];

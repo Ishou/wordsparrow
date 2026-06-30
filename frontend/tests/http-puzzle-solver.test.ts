@@ -11,10 +11,8 @@ const json = (body: unknown, status = 200, type = 'application/json') =>
 const PUZZLE_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 
 describe('HttpPuzzleSolver — validate', () => {
-  it('POSTs filledCells against /v1/puzzles/{id}/validate and unwraps the result', async () => {
-    const fetchSpy = vi.fn().mockResolvedValue(
-      json({ solved: false, incorrectCells: [{ row: 1, column: 2 }] }),
-    );
+  it('POSTs filledCells against /v1/puzzles/{id}/validate and unwraps the binary verdict', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(json({ solved: false }));
     const solver = createHttpPuzzleSolver({
       baseUrl: 'https://api.example.test',
       fetch: fetchSpy,
@@ -37,10 +35,7 @@ describe('HttpPuzzleSolver — validate', () => {
         { row: 0, column: 3, letter: 'G' },
       ],
     });
-    expect(result).toEqual({
-      solved: false,
-      incorrectCells: [{ row: 1, column: 2 }],
-    });
+    expect(result).toEqual({ solved: false });
   });
 
   it('rejects with the RFC 7807 detail on a 400 problem body', async () => {
@@ -66,24 +61,29 @@ describe('HttpPuzzleSolver — validate', () => {
 });
 
 describe('HttpPuzzleSolver — requestHint', () => {
-  it('POSTs the (row, column) to /v1/puzzles/{id}/hints and unwraps the letter', async () => {
+  it('POSTs the (row, column, direction) to /v1/puzzles/{id}/hints and unwraps the revealed word', async () => {
+    const cells = [
+      { row: 3, column: 5, letter: 'P' },
+      { row: 3, column: 6, letter: 'A' },
+      { row: 3, column: 7, letter: 'S' },
+    ];
     const fetchSpy = vi.fn().mockResolvedValue(
-      json({ row: 3, column: 5, letter: 'P', hintsRemaining: 2 }),
+      json({ cells, hintsRemaining: 2 }),
     );
     const solver = createHttpPuzzleSolver({
       baseUrl: 'https://api.example.test',
       fetch: fetchSpy,
     });
 
-    const result = await solver.requestHint(PUZZLE_ID, 3, 5);
+    const result = await solver.requestHint(PUZZLE_ID, 3, 5, 'across');
 
     const call = fetchSpy.mock.calls[0][0];
     const url = call instanceof Request ? call.url : String(call);
     const init = call instanceof Request ? call : fetchSpy.mock.calls[0][1];
     expect(url).toBe(`https://api.example.test/v1/puzzles/${PUZZLE_ID}/hints`);
     const body = await (init as Request).clone().text();
-    expect(JSON.parse(body)).toEqual({ row: 3, column: 5 });
-    expect(result).toEqual({ row: 3, column: 5, letter: 'P', hintsRemaining: 2 });
+    expect(JSON.parse(body)).toEqual({ row: 3, column: 5, direction: 'across' });
+    expect(result).toEqual({ cells, hintsRemaining: 2 });
   });
 
   it('throws HintRequestError(budget-exhausted) on 429', async () => {
@@ -103,7 +103,7 @@ describe('HttpPuzzleSolver — requestHint', () => {
       ),
     });
     try {
-      await solver.requestHint(PUZZLE_ID, 3, 5);
+      await solver.requestHint(PUZZLE_ID, 3, 5, 'across');
       expect.fail('expected HintRequestError to throw');
     } catch (err) {
       expect(err).toBeInstanceOf(HintRequestError);
@@ -130,7 +130,7 @@ describe('HttpPuzzleSolver — requestHint', () => {
       ),
     });
     try {
-      await solver.requestHint(PUZZLE_ID, 99, 99);
+      await solver.requestHint(PUZZLE_ID, 99, 99, 'across');
       expect.fail('expected HintRequestError to throw');
     } catch (err) {
       expect(err).toBeInstanceOf(HintRequestError);
@@ -140,14 +140,14 @@ describe('HttpPuzzleSolver — requestHint', () => {
 
   it('does not send credentials (grid CORS omits ACA-Credentials, which would browser-block the public endpoints)', async () => {
     const fetchSpy = vi.fn().mockResolvedValue(
-      json({ row: 0, column: 0, letter: 'A', hintsRemaining: 1 }),
+      json({ cells: [{ row: 0, column: 0, letter: 'A' }], hintsRemaining: 1 }),
     );
     const solver = createHttpPuzzleSolver({
       baseUrl: 'https://api.example.test',
       fetch: fetchSpy,
     });
 
-    await solver.requestHint(PUZZLE_ID, 0, 0);
+    await solver.requestHint(PUZZLE_ID, 0, 0, 'across');
 
     const call = fetchSpy.mock.calls[0][0];
     const init = call instanceof Request ? call : fetchSpy.mock.calls[0][1];
@@ -171,7 +171,7 @@ describe('HttpPuzzleSolver — requestHint', () => {
       ),
     });
     try {
-      await solver.requestHint(PUZZLE_ID, 3, 5);
+      await solver.requestHint(PUZZLE_ID, 3, 5, 'across');
       expect.fail('expected HintRequestError to throw');
     } catch (err) {
       expect(err).toBeInstanceOf(HintRequestError);
@@ -191,7 +191,7 @@ describe('HttpPuzzleSolver — requestHint', () => {
       ),
     });
     try {
-      await solver.requestHint(PUZZLE_ID, 3, 5);
+      await solver.requestHint(PUZZLE_ID, 3, 5, 'across');
       expect.fail('expected HintRequestError to throw');
     } catch (err) {
       expect(err).toBeInstanceOf(HintRequestError);
