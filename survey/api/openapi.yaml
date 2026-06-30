@@ -2,20 +2,15 @@ openapi: 3.1.0
 info:
   title: WordSparrow Survey API
   version: 0.2.0
-  summary: Auth-optional rating + corpus-contribution surface for clue RLHF.
+  summary: Contribuer-gated rating + corpus-contribution surface for clue RLHF (ADR-0079).
   description: |
-    Backend for the `/sondage` route. Anonymous and authenticated visitors
-    rate candidate clues (qualité, difficulté, optional flag). Authenticated
-    visitors can additionally submit a `correctif` (alternative clue) which
-    enters the corpus as an anonymous candidate.
+    Backend for the `/sondage` route. All non-health endpoints require the
+    `contribuer` capability (ADR-0079); anonymous and non-maintainer callers
+    receive 403. The `__Secure-ws_session` cookie is verified via identity-api
+    (30 s cache, ADR-0044 pattern); capabilities are sourced from identity's
+    whoami response (absent ⇒ empty set ⇒ deny).
 
-    Auth resolution: the API attempts to read `__Secure-ws_session` and
-    verifies via identity-api (30 s cache, ADR-0044 pattern). Auth is
-    optional on `/v1/items/*`; required on `/v1/me/*`. Anonymous callers
-    receive 401 if they include a `correctif` (corpus contributions require
-    sign-in).
-
-    See ADR-0056 and `docs/superpowers/specs/2026-05-25-survey-module-design.md`.
+    See ADR-0056, ADR-0079, and `docs/superpowers/specs/2026-05-25-survey-module-design.md`.
   contact:
     name: Bliss maintainers
     url: https://github.com/Ishou/bliss

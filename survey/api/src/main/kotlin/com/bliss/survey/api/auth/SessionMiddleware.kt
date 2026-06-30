@@ -17,7 +17,7 @@ data class SessionPrincipal(
     val capabilities: Set<String>,
 )
 
-// Absent on anonymous requests; guarded routes respond 401 themselves (ADR-0056 §5).
+// Absent on anonymous requests; always set when CapabilitiesKey is set — only access after requireContribuer() (ADR-0079).
 val UserIdKey: AttributeKey<UUID> = AttributeKey("survey.userId")
 
 // Absent on anonymous requests; the contribuer guard reads it and denies when the capability is missing (ADR-0079).
