@@ -1,0 +1,20 @@
+cluster:
+  # CNPG Cluster instances. Prod=3 (HA, ADR-0009 §3); local=1.
+  instances: 1
+  # PostgreSQL image pinned by tag AND digest, kept in lockstep with the other contexts' db-charts so all move PG majors in the same operator window.
+  imageName: "ghcr.io/cloudnative-pg/postgresql:18.4-system-bookworm@sha256:8707614e5941638307d173469b293db1b50e36454d321a03ca402ca2a58c79ad"
+  storage:
+    size: 10Gi
+    # Empty = cluster default. Prod "hcloud-volumes"; local "local-path".
+    storageClass: ""
+  # The api Deployment's wait-for-postgres init container runs `pg_isready -U billing -d billing`; both names must match here or readiness spins forever.
+  bootstrap: {database: billing, owner: billing}
+backups:
+  # Off by default. Prod turns this on; local stays off.
+  enabled: false
+  # S3-compatible bucket. ADR-0010 §1: "<project>-cnpg-backups".
+  bucket: ""
+  # S3 endpoint URL. Hetzner OS FSN1 in prod (ADR-0010 §2).
+  endpoint: ""
+  # CNPG retention policy notation (e.g. "30d").
+  retentionPolicy: "30d"
