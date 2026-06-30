@@ -29,8 +29,7 @@ export function useHintRequest(
   initialHintsRemaining: number,
   solver: PuzzleSolver,
   onReveal?: (cells: ReadonlyArray<RevealedWordCell>) => void,
-  // Fired when a hint succeeds so the route can persist the running
-  // tally via `soloEntriesStore.recordHintUsed`.
+  // Fired when a hint succeeds so the route can persist the running tally via `soloEntriesStore.recordHintUsed`.
   onHintConsumed?: () => void,
 ): HintRequestState {
   const seed = Math.max(0, initialHintsRemaining);

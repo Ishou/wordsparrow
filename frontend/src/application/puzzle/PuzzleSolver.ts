@@ -60,12 +60,7 @@ export interface PuzzleSolver {
     filledCells: ReadonlyArray<FilledCellInput>,
   ): Promise<ValidationResult>;
 
-  /**
-   * Spend one hint credit to reveal the whole word the cursor sits in —
-   * the entry covering `(row, column)` along `direction`. Throws
-   * `HintRequestError` on every documented 4xx (budget-exhausted,
-   * invalid-coord, auth-required) and on transient/network failures.
-   */
+  /** Reveal the whole word at `(row, column, direction)`; throws `HintRequestError` on every documented 4xx and on transient failures. */
   requestHint(
     puzzleId: string,
     row: number,

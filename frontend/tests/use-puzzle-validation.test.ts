@@ -7,9 +7,7 @@ import {
 import type { Position, Puzzle } from '@/domain';
 import type { PuzzleSolver, ValidationResult } from '@/application';
 
-// Minimal puzzle: three letter cells in a row, one block. The hook reads
-// cell values from the DOM via the `data-cell-kind` selector — we mount
-// real `<input>` elements per test (ADR-0002 §4 uncontrolled inputs).
+// Minimal puzzle: three letter cells; the hook reads cell values from the DOM (ADR-0002 §4 uncontrolled inputs), so tests mount real `<input>` elements.
 const puzzle: Puzzle = {
   id: 'test-puzzle',
   title: 't',
