@@ -17,8 +17,11 @@ import com.bliss.identity.domain.provider.UserProvider
 import com.bliss.identity.domain.user.Capability
 import com.bliss.identity.domain.user.DisplayName
 import com.bliss.identity.domain.user.Role
+import com.bliss.identity.domain.user.SubscriptionTier
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
+import com.bliss.identity.domain.user.UserSubscription
+import com.bliss.identity.infrastructure.persistence.InMemorySubscriptionTierRepository
 import com.bliss.identity.infrastructure.persistence.InMemoryUserProviderRepository
 import com.bliss.identity.infrastructure.persistence.InMemoryUserRepository
 import kotlinx.coroutines.test.runTest
@@ -145,5 +148,19 @@ class GetMeUseCaseTest {
             val result = sut.execute(GetMeQuery(userId))
             assertThat(result.capabilities)
                 .isEqualTo(setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE))
+        }
+
+    @Test
+    fun `subscriber tier adds grilles capabilities to a player result`() =
+        runTest {
+            val users = InMemoryUserRepository()
+            val providers = InMemoryUserProviderRepository()
+            val subscriptions = InMemorySubscriptionTierRepository()
+            users.create(User(userId, DisplayName.of("Alice"), now, now))
+            subscriptions.upsert(UserSubscription(userId, SubscriptionTier.SUBSCRIBER, now))
+            val sut = GetMeUseCase(users, providers, subscriptions)
+            val result = sut.execute(GetMeQuery(userId))
+            assertThat(result.capabilities)
+                .containsExactlyInAnyOrder(Capability.HINT, Capability.GRILLES_ALL, Capability.GRILLES_GENERATE)
         }
 }

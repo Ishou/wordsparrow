@@ -7,12 +7,25 @@ enum class Capability(
     HINT("hint"),
     CONTRIBUER("contribuer"),
     BILLING_SUBSCRIBE("billing:subscribe"),
+    GRILLES_ALL("grilles:all"),
+    GRILLES_GENERATE("grilles:generate"),
 }
 
-// Role-derived only (ADR-0079 guest/player/maintainer matrix); null role == unauthenticated guest.
-fun capabilitiesFor(role: Role?): Set<Capability> =
+// Entitlement = role-derived caps (ADR-0079) plus tier-derived caps (ADR-0080); null role == guest, null/free tier adds nothing.
+fun capabilitiesFor(
+    role: Role?,
+    tier: SubscriptionTier? = null,
+): Set<Capability> = roleCapabilities(role) + tierCapabilities(tier)
+
+private fun roleCapabilities(role: Role?): Set<Capability> =
     when (role) {
         null -> emptySet()
         Role.PLAYER -> setOf(Capability.HINT)
         Role.MAINTAINER -> setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE)
+    }
+
+private fun tierCapabilities(tier: SubscriptionTier?): Set<Capability> =
+    when (tier) {
+        SubscriptionTier.SUBSCRIBER -> setOf(Capability.GRILLES_ALL, Capability.GRILLES_GENERATE)
+        null, SubscriptionTier.FREE -> emptySet()
     }

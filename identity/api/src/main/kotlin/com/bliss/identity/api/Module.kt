@@ -18,6 +18,7 @@ import com.bliss.identity.api.routes.patchMe
 import com.bliss.identity.api.routes.putProgress
 import com.bliss.identity.api.routes.whoAmI
 import com.bliss.identity.infrastructure.events.NatsConnectionFactory
+import com.bliss.identity.infrastructure.nats.SubscriptionChangedConsumer
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -36,6 +37,8 @@ import io.ktor.server.plugins.defaultheaders.DefaultHeaders
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.routing
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import org.slf4j.event.Level
 import java.util.UUID
@@ -49,8 +52,18 @@ fun Application.module(
     natsUrl: String,
 ) {
     val (natsConnection, jetStream) = NatsConnectionFactory(natsUrl).connect()
-    monitor.subscribe(ApplicationStopped) { natsConnection.close() }
-    module(Wiring.forProduction(config, dataSource, httpClientEngine, jetStream), config)
+    val wiring = Wiring.forProduction(config, dataSource, httpClientEngine, jetStream)
+
+    // ADR-0049 — start before serving so redelivery-on-boot subscription events are captured.
+    val consumerScope = CoroutineScope(SupervisorJob())
+    val subscriptionConsumer = SubscriptionChangedConsumer(natsConnection, wiring.applySubscriptionChange, consumerScope)
+    subscriptionConsumer.start()
+
+    monitor.subscribe(ApplicationStopped) {
+        subscriptionConsumer.stop()
+        natsConnection.close()
+    }
+    module(wiring, config)
 }
 
 // Wires Ktor plugins + routes for the identity bounded context (ADR-0044).

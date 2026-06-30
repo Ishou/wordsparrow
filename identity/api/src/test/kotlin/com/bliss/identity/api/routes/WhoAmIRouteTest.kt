@@ -2,6 +2,7 @@ package com.bliss.identity.api.routes
 
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.doesNotContain
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.startsWith
@@ -16,9 +17,12 @@ import com.bliss.identity.domain.session.Session
 import com.bliss.identity.domain.session.SessionId
 import com.bliss.identity.domain.user.DisplayName
 import com.bliss.identity.domain.user.Role
+import com.bliss.identity.domain.user.SubscriptionTier
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
+import com.bliss.identity.domain.user.UserSubscription
 import com.bliss.identity.infrastructure.persistence.InMemorySessionRepository
+import com.bliss.identity.infrastructure.persistence.InMemorySubscriptionTierRepository
 import com.bliss.identity.infrastructure.persistence.InMemoryUserRepository
 import com.bliss.identity.infrastructure.testdoubles.FixedClock
 import io.ktor.client.request.cookie
@@ -37,14 +41,19 @@ class WhoAmIRouteTest {
     private val userId = UserId(UUID.randomUUID())
     private val sessionId = SessionId(UUID.randomUUID())
 
-    private fun newWiring(role: Role = Role.PLAYER): Wiring {
+    private fun newWiring(
+        role: Role = Role.PLAYER,
+        tier: SubscriptionTier? = null,
+    ): Wiring {
         val users = InMemoryUserRepository()
         val sessions = InMemorySessionRepository()
+        val subscriptions = InMemorySubscriptionTierRepository()
         runBlocking {
             users.create(User(userId, DisplayName.of("Alice"), now, now, role))
             sessions.create(Session(sessionId, userId, now, now, null))
+            if (tier != null) subscriptions.upsert(UserSubscription(userId, tier, now))
         }
-        val whoAmI = WhoAmIUseCase(users, sessions, FixedClock(now), Duration.ofDays(7))
+        val whoAmI = WhoAmIUseCase(users, sessions, FixedClock(now), Duration.ofDays(7), subscriptions)
         return Wiring.forTesting(whoAmI = whoAmI)
     }
 
@@ -118,5 +127,19 @@ class WhoAmIRouteTest {
             val body = response.bodyAsText()
             assertThat(body).contains("\"role\":\"maintainer\"")
             assertThat(body).contains("\"capabilities\":[\"billing:subscribe\",\"contribuer\",\"hint\"]")
+        }
+
+    @Test
+    fun `subscriber player returns the grilles capabilities and no tier field`() =
+        testApplication {
+            application { module(newWiring(Role.PLAYER, SubscriptionTier.SUBSCRIBER), testConfig) }
+            val response =
+                client.get("/v1/auth/whoami") {
+                    cookie(SessionCookies.NAME, sessionId.value.toString())
+                }
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val body = response.bodyAsText()
+            assertThat(body).contains("\"capabilities\":[\"grilles:all\",\"grilles:generate\",\"hint\"]")
+            assertThat(body).doesNotContain("tier")
         }
 }
