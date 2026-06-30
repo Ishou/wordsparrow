@@ -1,5 +1,5 @@
 cluster:
-  # CNPG Cluster instances. Prod=3 (HA, ADR-0009 §3); local=1.
+  # CNPG Cluster instances. Default 1 (local); see values-prod.yaml for the prod override.
   instances: 1
   # PostgreSQL image pinned by tag AND digest, kept in lockstep with the other contexts' db-charts so all move PG majors in the same operator window.
   imageName: "ghcr.io/cloudnative-pg/postgresql:18.4-system-bookworm@sha256:8707614e5941638307d173469b293db1b50e36454d321a03ca402ca2a58c79ad"

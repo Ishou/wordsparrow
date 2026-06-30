@@ -1,7 +1,7 @@
 # Production overrides — Hetzner k3s cluster (ADR-0009 §2).
 cluster:
-  # HA per ADR-0009 §3.
-  instances: 3
+  # Single instance is intentional for the test-phase dark-launch (ADR-0078) on this node pool; bump to HA (2–3, ADR-0009 §3) when billing goes GA and the cluster has headroom.
+  instances: 1
   storage: {size: 20Gi, storageClass: "hcloud-volumes"}
 backups:
   enabled: true
