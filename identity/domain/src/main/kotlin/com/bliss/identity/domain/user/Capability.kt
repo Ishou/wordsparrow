@@ -4,12 +4,15 @@ package com.bliss.identity.domain.user
 enum class Capability(
     val wire: String,
 ) {
+    HINT("hint"),
+    CONTRIBUER("contribuer"),
     BILLING_SUBSCRIBE("billing:subscribe"),
 }
 
-// Role-derived only; subscription-derived capabilities are deferred with the offer (ADR-0060 amendment).
-fun capabilitiesFor(role: Role): Set<Capability> =
+// Role-derived only (ADR-0079 guest/player/maintainer matrix); null role == unauthenticated guest.
+fun capabilitiesFor(role: Role?): Set<Capability> =
     when (role) {
-        Role.MAINTAINER -> setOf(Capability.BILLING_SUBSCRIBE)
-        Role.PLAYER -> emptySet()
+        null -> emptySet()
+        Role.PLAYER -> setOf(Capability.HINT)
+        Role.MAINTAINER -> setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE)
     }

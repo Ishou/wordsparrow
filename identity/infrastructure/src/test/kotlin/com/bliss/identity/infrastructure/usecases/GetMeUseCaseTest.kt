@@ -131,7 +131,7 @@ class GetMeUseCaseTest {
                     createdAt = now.minusSeconds(3600),
                     lastSeenAt = now.minusSeconds(60),
                     role = Role.PLAYER,
-                    capabilities = emptySet(),
+                    capabilities = setOf(Capability.HINT),
                     linkedProviders = emptyList(),
                 ),
             )
@@ -143,6 +143,7 @@ class GetMeUseCaseTest {
             val (sut, users, _) = newCase()
             users.create(User(userId, DisplayName.of("Alice"), now, now, Role.MAINTAINER))
             val result = sut.execute(GetMeQuery(userId))
-            assertThat(result.capabilities).isEqualTo(setOf(Capability.BILLING_SUBSCRIBE))
+            assertThat(result.capabilities)
+                .isEqualTo(setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE))
         }
 }
