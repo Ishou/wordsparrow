@@ -176,18 +176,23 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Spend a hint to reveal the canonical letter at a cell.
-         * @description Per-puzzle hint mechanism. The client submits a `(row, column)`
-         *     coordinate inside the puzzle; the server returns the canonical
-         *     solution letter at that cell and decrements the puzzle's hint
-         *     budget. Each answered call costs one hint; once the budget is
-         *     exhausted the server responds with 429 and the client UI SHOULD
-         *     disable the affordance.
+         * Spend a hint to reveal every letter of the focused word.
+         * @description Per-puzzle hint mechanism. The client submits the cursor's
+         *     `(row, column)` coordinate plus the `direction` axis of the word it
+         *     is editing; the server resolves the single word covering that cell
+         *     along that axis and returns every cell of that word with its
+         *     canonical solution letter, then decrements the puzzle's hint budget.
+         *     Each answered call costs one hint regardless of word length; once
+         *     the budget is exhausted the server responds with 429 and the client
+         *     UI SHOULD disable the affordance.
          *
-         *     One letter per call, by design: `Puzzle.hintsAllowed` caps total
-         *     reveals so unauthenticated clients cannot drain a grid in a single
-         *     request. Brute-forcing the full solution still requires
-         *     `hintsAllowed` calls and is bounded by edge rate limiting.
+         *     Whole-word reveal extends the per-letter hint exception under
+         *     ADR-0076: hints are the accepted carve-out from answers-off-the-wire,
+         *     and revealing all letters of one budgeted word stays within it.
+         *     Brute-force resistance is unchanged: `Puzzle.hintsAllowed` still caps
+         *     total reveals, every call still spends one credit, and draining the
+         *     grid still requires `hintsAllowed` calls bounded by edge rate
+         *     limiting.
          *
          *     Player identity on the wire is the `__Secure-ws_session` cookie
          *     issued by identity-api. The server verifies the cookie against
@@ -216,13 +221,11 @@ export interface paths {
         put?: never;
         /**
          * Verify a filled grid against the canonical solution.
-         * @description Compares submitted cells against the server's canonical solution.
-         *     Returns whether the grid is solved and, if not, the positions of
-         *     mismatched or unfilled cells — never the canonical letter. The
-         *     response cannot be used to reconstruct the solution in a single
-         *     call; brute-force letter extraction would require
-         *     `O(width × height × 26)` legal calls and is mitigated by edge rate
-         *     limiting (ops concern, out of scope for this schema).
+         * @description Compares submitted cells against the server's canonical solution and
+         *     returns a single binary verdict: solved or not. The response carries
+         *     no positional data at all — not even which cells are wrong — so it
+         *     cannot be used to locate or reconstruct any part of the solution. It
+         *     is a pure oracle: one bit per call.
          *
          *     Stateless: any client holding a `puzzleId` may call. Cleared cells
          *     are absent from the request — do NOT send `letter: null`.
@@ -514,24 +517,27 @@ export interface components {
             text: string;
         };
         /**
-         * @description Request body for `POST /v1/puzzles/{puzzleId}/hints`. Identifies
-         *     the cell whose canonical letter the caller wants to reveal.
-         *     `(row, column)` MUST point at a `letter`-kind cell within the
-         *     puzzle bounds; pointing at a definition or block cell, or out of
-         *     bounds, is a 400 `invalid-coord` and does NOT decrement the
-         *     budget.
+         * @description Request body for `POST /v1/puzzles/{puzzleId}/hints`. Identifies the
+         *     word the caller wants to reveal via the cursor's `(row, column)` plus
+         *     its `direction` axis: the pair resolves to exactly one word, since a
+         *     cell belongs to at most one across and one down entry. `(row, column)`
+         *     is the player's current cursor cell — any cell of the word, not
+         *     necessarily the first — and MUST point at a `letter`-kind cell within
+         *     the puzzle bounds; pointing at a definition or block cell, or out of
+         *     bounds, is a 400 `invalid-coord` and does NOT decrement the budget.
          */
         RevealCellHintRequest: {
             /**
-             * @description Zero-indexed row of the cell to reveal.
+             * @description Zero-indexed row of the cursor cell.
              * @example 3
              */
             row: number;
             /**
-             * @description Zero-indexed column of the cell to reveal.
+             * @description Zero-indexed column of the cursor cell.
              * @example 5
              */
             column: number;
+            direction: components["schemas"]["Direction"];
         };
         /**
          * @description Response body for `DELETE /v1/sessions/{sessionId}` on a 200.
@@ -547,31 +553,43 @@ export interface components {
             deleted: number;
         };
         /**
-         * @description Response body for `POST /v1/puzzles/{puzzleId}/hints` on a 200.
-         *     Echoes the requested coordinate alongside the canonical letter so
-         *     the client can correlate the response with the cell to update
-         *     even if multiple reveals are in flight.
+         * @description Response body for POST /v1/puzzles/{puzzleId}/hints on a 200. Returns
+         *     every cell of the revealed word with its canonical letter, plus the
+         *     remaining hint budget. One hint is spent per call regardless of word
+         *     length.
          */
         RevealCellHintResult: {
             /**
-             * @description Echo of the request's `row`.
-             * @example 3
+             * @description Every letter cell of the revealed word, in order, each with its canonical solution letter.
+             * @example [
+             *       {
+             *         "row": 3,
+             *         "column": 5,
+             *         "letter": "P"
+             *       },
+             *       {
+             *         "row": 3,
+             *         "column": 6,
+             *         "letter": "A"
+             *       },
+             *       {
+             *         "row": 3,
+             *         "column": 7,
+             *         "letter": "S"
+             *       }
+             *     ]
              */
-            row: number;
+            cells: {
+                /** @description Zero-indexed row of the cell. */
+                row: number;
+                /** @description Zero-indexed column of the cell. */
+                column: number;
+                /** @description Canonical solution letter at this cell, single uppercase A-Z. Diacritics normalized server-side. */
+                letter: string;
+            }[];
             /**
-             * @description Echo of the request's `column`.
-             * @example 5
-             */
-            column: number;
-            /**
-             * @description Canonical solution letter at `(row, column)`, single uppercase
-             *     A-Z code point. Diacritics are normalized server-side.
-             * @example P
-             */
-            letter: string;
-            /**
-             * @description Hints left after this call. `0` means the next call will return
-             *     a 429 with `type` `https://bliss.example/errors/hint-budget-exhausted`.
+             * @description Hints left after this call. 0 means the next call returns 429 with
+             *     type https://bliss.example/errors/hint-budget-exhausted.
              * @example 2
              */
             hintsRemaining: number;
@@ -627,9 +645,9 @@ export interface components {
             letter: string;
         };
         /**
-         * @description Validation outcome. The server intentionally returns positions only,
-         *     never the canonical letter, so the response cannot be used to
-         *     reconstruct the solution in a single call.
+         * @description Validation outcome: a pure binary verdict. The response carries no
+         *     positional data at all — not even which cells are wrong — so it cannot
+         *     be used to locate or reconstruct any part of the solution.
          */
         ValidatePuzzleResult: {
             /**
@@ -638,21 +656,6 @@ export interface components {
              * @example false
              */
             solved: boolean;
-            /**
-             * @description Positions where the submitted letter is wrong OR the letter cell
-             *     was not filled by the client. Empty iff `solved` is true.
-             * @example [
-             *       {
-             *         "row": 4,
-             *         "column": 1
-             *       },
-             *       {
-             *         "row": 6,
-             *         "column": 9
-             *       }
-             *     ]
-             */
-            incorrectCells: components["schemas"]["Position"][];
         };
         /**
          * @description RFC 7807 error envelope (ADR-0003 §6). Additional members per
@@ -1115,8 +1118,8 @@ export interface operations {
         };
         responses: {
             /**
-             * @description Hint consumed. Body reports the canonical letter at the
-             *     requested cell and the remaining budget for this
+             * @description Hint consumed. Body reports every cell of the resolved word with
+             *     its canonical letter and the remaining budget for this
              *     `(puzzle, player)`.
              */
             200: {
@@ -1202,9 +1205,8 @@ export interface operations {
         };
         responses: {
             /**
-             * @description Validation completed. `incorrectCells` is empty iff `solved` is
-             *     true. Cells the client did not fill appear in `incorrectCells`
-             *     alongside cells whose submitted letter is wrong.
+             * @description Validation completed. The body carries only `solved` — a binary
+             *     verdict with no positional data.
              */
             200: {
                 headers: {
