@@ -94,7 +94,9 @@ jobs:
             release: wordsparrow-survey-api-pg
             hasProdValues: true
             localValuesFile: values.yaml
-          # billing-api chart (ADR-0078). Mollie webhook ingress; MOLLIE_API_KEY via envFromSecret.
+          # billing-api chart (ADR-0078). Mirrors identity-api: api chart +
+          # sibling CNPG db-chart split. Mollie webhook ingress; MOLLIE_API_KEY
+          # via envFromSecret, never in values.
           - path: billing/api/deploy/chart
             release: wordsparrow-billing-api
             hasProdValues: true

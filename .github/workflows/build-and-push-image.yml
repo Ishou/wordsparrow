@@ -35,7 +35,8 @@ name: Build and Push Image
 #   - bliss/wordsparrow-worker        (already public)
 #   - bliss/wordsparrow-identity-api  (NEW — first main push will create it;
 #                                      flip after PR 4.5d merges)
-#   - bliss/wordsparrow-billing-api   (NEW — first main push will create it; flip after PR #1180 merges)
+#   - bliss/wordsparrow-billing-api   (NEW — first main push will create it;
+#                                      flip after this PR merges)
 
 on:
   push:
@@ -145,7 +146,9 @@ jobs:
             dockerfile: survey/api/Dockerfile
             image-name: wordsparrow-survey-api
             digest-artifact: image-digest-survey
-          # billing-api (ADR-0078). Postgres-backed; Mollie adapter; webhook ingress on billing subdomain.
+          # billing-api (ADR-0078). Postgres-backed; the chart at
+          # billing/api/deploy/chart/ mirrors identity (replicas: 2, sibling
+          # CNPG db-chart). Mollie adapter; webhook ingress on billing subdomain.
           - context: billing
             dockerfile: billing/api/Dockerfile
             image-name: wordsparrow-billing-api
