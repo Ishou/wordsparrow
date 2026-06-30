@@ -1,35 +1,14 @@
 package com.bliss.grid.application.puzzle
 
 import java.time.LocalDate
-import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.random.Random
 
 /**
- * Maps a calendar date to (puzzleId, gridNumber, difficulty) for the
- * daily-grid endpoint.
- *
- * The puzzleId is a UUID v7 whose 48-bit timestamp is the date's UTC
- * midnight epoch-ms; the version + variant bits are set per RFC 4122,
- * and the random portions are seeded by the date so the id is fully
- * deterministic for that date. Determinism matters for two reasons:
- *
- *  1. The server's `LoadOrGeneratePuzzleUseCase` is keyed by puzzleId.
- *     Same date → same id → same stored grid, so hint/validate calls
- *     keyed by id from the daily endpoint stay consistent.
- *  2. Two clients hitting `/v1/puzzles/daily` on the same day end up on
- *     the same lobby code's underlying grid (a multiplayer prerequisite
- *     a later PR builds on).
- *
- * `gridNumber` is the day count since [LAUNCH_EPOCH_DAY] inclusive — so
- * day 1 = launch day, day 2 = the next day, etc. Past dates produce
- * positive numbers when later than the anchor; pre-launch dates are
- * permitted and yield non-positive numbers (the route layer can choose
- * to reject them; this class stays pure).
- *
- * `difficulty` is hardcoded to `facile` in v1. A later PR will replace
- * this with heuristics over the generated grid (word density, average
- * answer length, etc.).
+ * Mints daily-grid identity facets: a fresh-per-generation [freshDailyId]
+ * (ADR-0081), plus the date-derived [gridNumberForDate] and
+ * [difficultyForDate]. Identity is no longer a pure function of the date —
+ * the date->row resolver lives in [PuzzleRepository.getCurrentForDate].
  */
 class DailyPuzzleSelector(
     // Launch-day anchor — `2026-01-01` was the first ship date of the
@@ -38,8 +17,6 @@ class DailyPuzzleSelector(
     // shared on social media; expand-and-contract migration if needed).
     private val launchEpochDay: Long = LAUNCH_EPOCH_DAY,
 ) {
-    fun puzzleIdForDate(date: LocalDate): UUID = deterministicUuidV7(date)
-
     /**
      * Mints a non-deterministic UUID v7 for a fresh daily generation (ADR-0081):
      * [nowEpochMs] becomes the 48-bit timestamp, the payload is random, so each
@@ -65,17 +42,6 @@ class DailyPuzzleSelector(
     fun difficultyForDate(
         @Suppress("UNUSED_PARAMETER") date: LocalDate,
     ): String = "facile"
-
-    private fun deterministicUuidV7(date: LocalDate): UUID {
-        val tsMs = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-        val seeded = Random(date.toEpochDay())
-        return assembleUuidV7(
-            tsMs = tsMs,
-            randA = seeded.nextInt(0x1000), // 12 bits
-            // 62 bits below the variant: clear top 2 bits.
-            randB = seeded.nextLong() and 0x3FFFFFFFFFFFFFFFL,
-        )
-    }
 
     private fun assembleUuidV7(
         tsMs: Long,
