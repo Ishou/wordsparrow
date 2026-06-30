@@ -1,7 +1,6 @@
 // Application-layer port (ADR-0078); subscription status only, capabilities on identity.
 
-// Open strings, not enums: the tier/status sets are config-driven and
-// deliberately deferred (ADR-0078).
+// Open strings, not enums: tier/status are config-driven and deliberately deferred (ADR-0078).
 export type BillingTier = string;
 export type SubscriptionStatus = string;
 
