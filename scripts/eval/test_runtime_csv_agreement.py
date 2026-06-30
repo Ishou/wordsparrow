@@ -27,10 +27,7 @@ def _lexique() -> Path | None:
 
 
 def _surface_number(word: str, lemma: str, index: MorphologyIndex) -> str | None:
-    """Number of the surface's finite-verb reading UNDER its owning lemma, or
-    None when the row's lemma is not a finite verb. Scoping to the row's lemma
-    avoids homograph false positives — the plural noun `actes` (lemma `acte`)
-    also parses as the verb `acter` (2sg), but the row is a noun."""
+    """Finite-verb number scoped to the row's own lemma, avoiding homograph false positives like noun `actes` vs verb `acter`."""
     target = lemma.lower().strip()
     tags: set[str] = set()
     for l, t in index.lookup_form(word.lower()):

@@ -22,8 +22,7 @@ def _add(idx: MorphologyIndex, lemma: str, surface: str, tags: str) -> None:
 
 
 def _placer_index() -> MorphologyIndex:
-    """Mirror grammalecte's emission for placer: the `placent` (3pl) row is
-    reached first when the person constraint is dropped, reproducing the bug."""
+    """Mirrors grammalecte's placer emission order, where `placent` (3pl) is reached first once the person constraint is dropped."""
     idx = MorphologyIndex()
     _add(idx, "placer", "placer", "v1__tnq__a infi")
     _add(idx, "placer", "placent", "v1__tnq__a ipre 3pl")
@@ -38,8 +37,7 @@ def test_verb_number_maps_inversion_person_to_singular() -> None:
 
 
 def test_singular_inversion_surface_with_plural_clue_is_dropped() -> None:
-    """`posè` (ipre 1isg, singular) with the placer clue inflates to the plural
-    head `Placent` — must be flagged `agreement-mismatch`, not shipped."""
+    """`posè` (ipre 1isg, singular) would inflate the placer clue's head to the plural `Placent`."""
     idx = _placer_index()
     surface_tags = {"ipre", "1isg", "v1_itxq__a"}
     clue, status = classify_inflection("Placer", surface_tags, idx)
@@ -48,8 +46,6 @@ def test_singular_inversion_surface_with_plural_clue_is_dropped() -> None:
 
 
 def test_homograph_head_with_achievable_number_is_kept() -> None:
-    """`sommes` reads as être-1pl (pl) AND sommer-2sg (sg). A 1pl surface whose
-    head inflates to `Sommes` must NOT be flagged — the plural reading agrees."""
     idx = MorphologyIndex()
     _add(idx, "être", "être", "v3___nq__a infi")
     _add(idx, "être", "sommes", "v3___nq__a ipre 1pl")
@@ -60,8 +56,6 @@ def test_homograph_head_with_achievable_number_is_kept() -> None:
 
 
 def test_singular_surface_with_singular_clue_is_kept() -> None:
-    """Control: a 3sg surface inflates to the singular head `place` — numbers
-    agree, so the row ships as a normal `inflected` clue."""
     idx = _placer_index()
     surface_tags = {"ipre", "3sg", "v1_itxq__a"}
     _clue, status = classify_inflection("Placer", surface_tags, idx)

@@ -98,8 +98,6 @@ def test_strip_accents_folds_diacritics() -> None:
 
 
 def test_self_reference_matches_across_diacritics() -> None:
-    """Accented clue token `aîné` must be flagged against unaccented answer
-    lemma family `ainé` — same word, diacritic variant."""
     assert _find_lemma_family_leak("L'aîné", "ainé", _ainé_index()) is not None
 
 
