@@ -2,6 +2,9 @@
 export interface WhoAmIResult {
   readonly userId: string;
   readonly displayName: string;
+  // Authorization lives on identity: role + capabilities are derived server-side from (role + subscription) per ADR-0060/0078.
+  readonly role?: 'player' | 'maintainer';
+  readonly capabilities?: readonly string[];
 }
 
 export interface LinkedProvider {

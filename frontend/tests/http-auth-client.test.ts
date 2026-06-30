@@ -30,7 +30,7 @@ describe('HttpAuthClient.whoami', () => {
 
     const result = await makeClient().whoami();
 
-    expect(result).toEqual({ userId, displayName: 'Lapin 472' });
+    expect(result).toEqual({ userId, displayName: 'Lapin 472', role: 'player', capabilities: [] });
   });
 
   it('returns null on 401 (anon session)', async () => {
