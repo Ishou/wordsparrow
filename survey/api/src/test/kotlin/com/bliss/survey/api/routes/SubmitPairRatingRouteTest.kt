@@ -69,7 +69,7 @@ class SubmitPairRatingRouteTest {
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing {
                     submitPairRatingRoute { cmd: SubmitPairRatingCommand ->
-                        capturedUserId = cmd.userId?.value
+                        capturedUserId = cmd.userId.value
                         recorded
                     }
                 }

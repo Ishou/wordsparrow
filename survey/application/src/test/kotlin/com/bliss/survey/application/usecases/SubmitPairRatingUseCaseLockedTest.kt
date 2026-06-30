@@ -179,7 +179,7 @@ class SubmitPairRatingUseCaseLockedTest {
             setup.items.insert(a)
             setup.items.insert(b)
             setup.uc.execute(
-                SubmitPairRatingCommand(a.id, b.id, null, PairVerdict.BOTH_BAD, 3, 1200),
+                SubmitPairRatingCommand(a.id, b.id, UserId(UUID.randomUUID()), PairVerdict.BOTH_BAD, 3, 1200),
             )
             assertThat(setup.ratings.ratings).hasSize(2)
             assertThat(setup.ratings.ratings.all { it.campaignId == c.id }).isEqualTo(true)

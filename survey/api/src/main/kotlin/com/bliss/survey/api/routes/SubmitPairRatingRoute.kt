@@ -80,7 +80,7 @@ fun Route.submitPairRatingRoute(execute: suspend (SubmitPairRatingCommand) -> Su
             )
         }
 
-        val userId = call.attributes.getOrNull(UserIdKey)?.let { UserId(it) }
+        val userId = UserId(call.attributes[UserIdKey])
         val cmd =
             SubmitPairRatingCommand(
                 leftItemId = ItemId(leftUuid),
