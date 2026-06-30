@@ -78,4 +78,18 @@ describe('AbonnementAnnuleScreen capability gate', () => {
     expect(await screen.findByText("Cette page s'est envolée")).toBeInTheDocument();
     expect(screen.queryByText("Aucun montant n'a été débité.")).toBeNull();
   });
+
+  it('shows a neutral loading state with no page title while the session resolves', async () => {
+    const authClient = fakeAuthClient(null);
+    authClient.whoami = vi.fn().mockReturnValue(new Promise<WhoAmIResult | null>(() => {}));
+    render(
+      <AuthProvider authClient={authClient} getPseudonym={() => 'Renard 423'}>
+        <AbonnementAnnuleScreen />
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByText('Chargement…')).toBeInTheDocument();
+    // No page identity while loading: a `denied` resolve must not flash the "Paiement annulé" title before the 404.
+    expect(screen.queryByRole('heading', { level: 1, name: 'Paiement annulé' })).toBeNull();
+  });
 });
