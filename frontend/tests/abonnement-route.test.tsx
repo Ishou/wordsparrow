@@ -164,4 +164,22 @@ describe('AbonnementScreen', () => {
     );
     expect(getSubscription).toHaveBeenCalledTimes(2);
   });
+
+  it('disables Résilier while the subscription is reloading', async () => {
+    // Second fetch never resolves: loading stays true while subscription is still the stale ACTIVE view.
+    const getSubscription = vi
+      .fn<BillingClient['getSubscription']>()
+      .mockResolvedValueOnce(ACTIVE_VIEW)
+      .mockReturnValueOnce(new Promise<SubscriptionView>(() => {}));
+    const client = fakeBillingClient({ getSubscription });
+    renderScreen({ whoami: SUBSCRIBER, client });
+
+    const button = await screen.findByRole('button', { name: 'Résilier' });
+    await act(async () => {
+      fireEvent.click(button);
+    });
+
+    await waitFor(() => expect(client.cancelSubscription).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Résilier' })).toBeDisabled());
+  });
 });
