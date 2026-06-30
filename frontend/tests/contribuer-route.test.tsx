@@ -20,7 +20,7 @@ import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { ContribuerPage } from '@/ui/routes/contribuer.lazy';
 
-// Render the inner screen directly (same '/contribuer' route id) to exercise the rating loop without the maintainer gate; the gate is covered in contribuer-gate.test.tsx.
+// Render the inner screen directly (same '/contribuer' route id) to exercise the rating loop without the maintainer gate.
 const InnerContribuerRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: '/contribuer',
@@ -48,7 +48,7 @@ const ratingResult: RatingResult = {
   undoToken: 'tok_sample_123',
 };
 
-// Authed maintainer session for the auth-path assertions; the maintainer-only gate itself is covered in contribuer-gate.test.tsx.
+// Authed maintainer session for the auth-path assertions.
 const MAINTAINER_WHOAMI = {
   userId: '0190e3a4-7a2c-7c9e-8f1a-1234567890ab',
   displayName: 'Lapin 472',

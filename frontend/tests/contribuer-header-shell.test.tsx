@@ -8,7 +8,7 @@ import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { ContribuerPage } from '@/ui/routes/contribuer.lazy';
 
-// Render the inner screen directly (same '/contribuer' route id) to exercise the header shell without the maintainer gate (covered in contribuer-gate.test.tsx).
+// Render the inner screen directly (same '/contribuer' route id) to exercise the header shell without the maintainer gate.
 const InnerContribuerRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: '/contribuer',
