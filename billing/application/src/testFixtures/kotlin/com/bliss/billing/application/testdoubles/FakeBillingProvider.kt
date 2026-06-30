@@ -21,6 +21,9 @@ class FakeBillingProvider : BillingProviderPort {
     /** The recurring subscription `createSubscription` returns; defaults to an active subscription keyed by a composite ref derived from the first-payment ref. */
     var subscriptionToCreate: ProviderSubscriptionState? = null
 
+    /** When true, the next `createCheckout` call throws and resets this flag, simulating a transient Mollie failure. */
+    var failCheckoutOnce = false
+
     /** When true, the next `createSubscription` call throws and resets this flag, simulating a transient Mollie failure. */
     var failCreateSubscriptionOnce = false
 
@@ -37,6 +40,10 @@ class FakeBillingProvider : BillingProviderPort {
         tier: Tier,
     ): CheckoutUrls {
         lastCheckout = userId to tier
+        if (failCheckoutOnce) {
+            failCheckoutOnce = false
+            throw IllegalStateException("provider checkout failed (simulated)")
+        }
         return checkoutUrls
     }
 

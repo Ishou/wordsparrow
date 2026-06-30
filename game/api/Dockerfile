@@ -46,6 +46,7 @@ COPY survey/worker/build.gradle.kts survey/worker/
 COPY billing/domain/build.gradle.kts billing/domain/
 COPY billing/application/build.gradle.kts billing/application/
 COPY billing/infrastructure/build.gradle.kts billing/infrastructure/
+COPY billing/api/build.gradle.kts billing/api/
 
 # Source for the game/ context only — shadowJar transitively pulls
 # :game:domain, :game:application, :game:infrastructure.

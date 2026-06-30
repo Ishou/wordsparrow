@@ -106,6 +106,15 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '403':
+          description: |
+            Authenticated caller is not a maintainer. This route is
+            maintainer-gated during the ADR-0078 test phase. RFC 7807;
+            `type` is `https://bliss.example/errors/forbidden`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '409':
           description: |
             The caller already has an active subscription. Opening a second
@@ -165,6 +174,15 @@ paths:
           description: |
             No valid `__Secure-ws_session` cookie. RFC 7807;
             `type` is `https://bliss.example/errors/auth-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: |
+            Authenticated caller is not a maintainer. This route is
+            maintainer-gated during the ADR-0078 test phase. RFC 7807;
+            `type` is `https://bliss.example/errors/forbidden`.
           content:
             application/problem+json:
               schema:
