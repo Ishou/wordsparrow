@@ -3,26 +3,30 @@
 # Hand-written OpenAPI 3.1 per ADR-0003 §1 (source of truth, not generated
 # from controller annotations). Wire conventions per ADR-0003 §6: UUID v7 ids,
 # ISO-8601 instants with offset, camelCase, RFC 7807 errors, string enums.
-# Context ratified by ADR-0078 (subscription entitlement foundation).
+# Context ratified by ADR-0078 (subscription foundation). billing knows only
+# userId + subscription state, never capabilities — identity owns those
+# (ADR-0078 / ADR-0060 amendments).
 #
-# v1 surface: hosted-checkout entry, the provider webhook, and the
-# entitlement read. Tier and status are open strings, not enums: the free/paid
+# v1 surface: hosted-checkout entry, the provider webhook, and the caller's
+# subscription read. Tier and status are open strings, not enums: the free/paid
 # offer is deliberately deferred (ADR-0078) — adding a tier is a config change,
 # not a wire-breaking schema change.
 openapi: 3.1.0
 info:
   title: Bliss Billing API
   version: 1.0.0
-  summary: Subscription checkout, provider webhook, and entitlement read.
+  summary: Subscription checkout, provider webhook, and subscription read.
   description: |
-    The Billing bounded context owns subscription lifecycle and a gate-agnostic
-    entitlement projection (ADR-0078). v1 exposes a hosted-checkout entry, the
-    provider webhook callback, and a read of the caller's current entitlement.
+    The Billing bounded context owns subscription lifecycle and exposes the
+    caller's own subscription status (ADR-0078). It knows only `userId` and
+    subscription state — never capabilities, which identity owns (ADR-0078 /
+    ADR-0060 amendments). v1 exposes a hosted-checkout entry, the provider
+    webhook callback, and a read of the caller's current subscription.
 
     No card data ever crosses this surface (PCI SAQ A): checkout is a redirect
     to the provider's hosted page. See `docs/adr/0003-cross-language-api-contract.md`
     for wire conventions and `docs/adr/0078-billing-subscription-context.md` for
-    the entitlement architecture and threat model.
+    the subscription architecture and threat model.
   contact:
     name: Bliss maintainers
     url: https://github.com/Ishou/bliss
@@ -42,14 +46,11 @@ tags:
       Hosted-checkout entry. Starts a provider checkout session for the
       authenticated caller; `userId` is derived from the session, never the
       request body (no subscribe-as-another-user, ADR-0078 threat model).
-  - name: entitlement
-    description: |
-      Read access to the caller's current entitlement projection (tier,
-      status, capabilities). Server-side enforcement lives in the consuming
-      contexts; this read is for the caller's own state.
   - name: subscription
     description: |
-      Manage the caller's existing subscription (cancel). Updating the payment
+      Read and manage the caller's own subscription (status read, cancel) for
+      the manage-subscription UI. billing carries no capabilities — identity
+      derives those (ADR-0078 / ADR-0060 amendments). Updating the payment
       method is deferred (no hosted portal on the initial provider, ADR-0078).
   - name: webhook
     description: |
@@ -163,13 +164,13 @@ paths:
       responses:
         '200':
           description: |
-            Cancellation accepted. Body is the caller's updated entitlement
-            projection (status reflects the cancellation; `periodEnd` is
-            retained while a paid period remains).
+            Cancellation accepted. Body is the caller's updated subscription
+            (status reflects the cancellation; `periodEnd` is retained while a
+            paid period remains).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EntitlementView'
+                $ref: '#/components/schemas/SubscriptionView'
         '401':
           description: |
             No valid `__Secure-ws_session` cookie. RFC 7807;
@@ -247,28 +248,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
-  /v1/entitlement:
+  /v1/subscription:
     get:
-      operationId: getEntitlement
-      summary: Read the caller's current entitlement.
+      operationId: getSubscription
+      summary: Read the caller's own subscription status.
       description: |
-        Returns the authenticated caller's entitlement projection — the stored
-        `tier`, subscription `status`, the current-period end (when one
-        applies), and the resolved `capabilities`. The caller is identified by
+        Returns the authenticated caller's subscription status — the stored
+        `tier`, subscription `status`, and the current-period end (when one
+        applies) — for the manage-subscription UI. The caller is identified by
         the `__Secure-ws_session` cookie; `userId` is resolved server-side.
 
-        Consumers gate on `capabilities`, not `tier` (ADR-0078): adding a tier
-        is a mapping change, not a contract change.
-      tags: [entitlement]
+        Carries no capabilities: identity owns authorization and derives
+        capabilities from `(role + subscription)` (ADR-0078 / ADR-0060
+        amendments).
+      tags: [subscription]
       security:
         - sessionCookie: []
       responses:
         '200':
-          description: Entitlement resolved for the authenticated caller.
+          description: Subscription resolved for the authenticated caller.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EntitlementView'
+                $ref: '#/components/schemas/SubscriptionView'
         '401':
           description: |
             No valid `__Secure-ws_session` cookie. RFC 7807;
@@ -353,14 +355,15 @@ components:
             trusting the body.
           example: tr_WDqYK6vllg
 
-    EntitlementView:
+    SubscriptionView:
       type: object
       description: |
-        The caller's entitlement projection. `periodEnd` is always present on
-        the wire and `null` when no current period applies (e.g. free tier or
-        a never-subscribed user) — absence and `null` are distinct per
-        ADR-0003 §6. Consumers gate on `capabilities`, not `tier`.
-      required: [tier, status, periodEnd, capabilities]
+        The caller's own subscription status. Carries no capabilities — identity
+        owns those (ADR-0078 / ADR-0060 amendments). `periodEnd` is always
+        present on the wire and `null` when no current period applies (e.g. free
+        tier or a never-subscribed user) — absence and `null` are distinct per
+        ADR-0003 §6.
+      required: [tier, status, periodEnd]
       properties:
         tier:
           type: string
@@ -387,23 +390,6 @@ components:
             ISO-8601 instant the current paid period ends, or `null` when no
             current period applies.
           example: '2026-07-29T00:00:00Z'
-        capabilities:
-          type: array
-          description: |
-            Capabilities the caller currently holds, derived from
-            `(status, tier)`. Consumers gate on these, never on `tier` directly
-            (ADR-0078). Empty array when the caller holds no gated capability.
-
-            Identifiers are a CONTROLLED vocabulary (kebab-case) owned by the
-            billing domain `Capability` type and shared verbatim with consuming
-            contexts — not free-form strings. A capability is added by extending
-            that shared type; emitting an unregistered identifier is a
-            producer/consumer contract bug, not a new capability.
-          items:
-            type: string
-            minLength: 1
-            maxLength: 128
-          example: [daily-archive, no-ads]
 
     Problem:
       type: object

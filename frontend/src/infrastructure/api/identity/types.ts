@@ -237,6 +237,7 @@ export interface components {
             createdAt: string;
             /** @enum {string} */
             role: "player" | "maintainer";
+            capabilities: string[];
         };
         LinkedProvider: {
             /** @enum {string} */
@@ -255,6 +256,7 @@ export interface components {
             displayName: string;
             /** @enum {string} */
             role: "player" | "maintainer";
+            capabilities: string[];
         };
         BeginLinkResponse: {
             /** Format: uri */
