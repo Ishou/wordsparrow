@@ -43,7 +43,7 @@ export function buildSoloTourSteps({
       type: 'dialog',
       title: 'Bienvenue',
       description:
-        'Quelques secondes pour découvrir comment jouer aux mots fléchés. Vous pouvez passer le tour à tout moment.',
+        'Quelques secondes pour découvrir comment jouer aux mots fléchés. Tu peux passer le tour à tout moment.',
       placement: 'center',
       backdrop: true,
       actions: [{ label: 'Suivant', action: 'next' }],
@@ -63,7 +63,7 @@ export function buildSoloTourSteps({
     {
       id: 'arrows',
       type: 'tooltip',
-      title: 'Suivez les flèches',
+      title: 'Suis les flèches',
       description:
         'Une petite flèche indique la direction et la première case de la réponse — → pour les mots horizontaux, ↓ pour les verticaux.',
       target: () => queryFirst(DEFINITION_CELL_SELECTOR),
