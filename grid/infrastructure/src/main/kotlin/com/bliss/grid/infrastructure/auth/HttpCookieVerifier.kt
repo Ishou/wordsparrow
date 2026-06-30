@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap
 private data class WhoAmIResponse(
     val userId: String,
     val displayName: String,
+    val capabilities: List<String>? = null,
 )
 
 /** Calls identity-api's `/v1/auth/whoami`; caches authed and anon outcomes; fails closed on errors without caching. */
@@ -83,7 +84,13 @@ class HttpCookieVerifier(
                 HttpStatusCode.OK -> {
                     val body = response.body<String>()
                     val parsed = json.decodeFromString(WhoAmIResponse.serializer(), body)
-                    val result = WhoAmI(UUID.fromString(parsed.userId), parsed.displayName)
+                    // Absent capabilities => empty set; the gate only denies, so a missing field never escalates (ADR-0079 §6).
+                    val result =
+                        WhoAmI(
+                            UUID.fromString(parsed.userId),
+                            parsed.displayName,
+                            parsed.capabilities?.toSet() ?: emptySet(),
+                        )
                     // verifyFresh also populates the cache so a following verify() can hit it.
                     cache[cookie] = Entry(result, current.plus(cacheTtl))
                     result

@@ -68,7 +68,7 @@ class HintsRouteTest {
     @Test
     fun `responds 200 with the revealed word cells and decremented budget`() =
         testApplication {
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint"))))
             val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
             val response = revealCell(client, row, column, direction)
@@ -88,7 +88,7 @@ class HintsRouteTest {
     @Test
     fun `responds 401 auth-required when the cookie is missing`() =
         testApplication {
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint"))))
 
             val response =
                 client.post("/v1/puzzles/$puzzleId/hints") {
@@ -102,10 +102,22 @@ class HintsRouteTest {
         }
 
     @Test
+    fun `responds 403 forbidden when the session lacks the hint capability`() =
+        testApplication {
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Sans indice", emptySet())))
+
+            val response = revealCell(client, row = 0, column = 0)
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.Forbidden)
+            assertThat(response.headers["Content-Type"]!!).startsWith("application/problem+json")
+            assertThat(response.bodyAsText()).contains("forbidden")
+        }
+
+    @Test
     fun `responds 401 auth-required when verifyFresh returns null even though verify cached a positive`() =
         testApplication {
             // verifyFresh returns null (session revoked between read and write); the under-lock fresh check catches it.
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse"), fresh = null))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint")), fresh = null))
             val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
             val response = revealCell(client, row, column, direction)
@@ -117,7 +129,7 @@ class HintsRouteTest {
     @Test
     fun `responds 400 invalid-coord when row is out of grid bounds`() =
         testApplication {
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint"))))
             client.get("/v1/puzzles/$puzzleId")
 
             val response = revealCell(client, row = 999, column = 0)
@@ -129,7 +141,7 @@ class HintsRouteTest {
     @Test
     fun `responds 400 invalid-coord when coordinate points at a clue cell`() =
         testApplication {
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint"))))
             val (clueRow, clueColumn) = bootstrapAndPickClueCell(client)
 
             val response = revealCell(client, clueRow, clueColumn)
@@ -141,7 +153,7 @@ class HintsRouteTest {
     @Test
     fun `invalid-coord does not decrement the budget`() =
         testApplication {
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint"))))
             val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
             // Burn an out-of-bounds reveal; budget must stay at 3.
@@ -157,7 +169,7 @@ class HintsRouteTest {
     @Test
     fun `responds 404 puzzle-not-found when puzzleId is unknown`() =
         testApplication {
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint"))))
             val unknownId = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a99"
 
             val response =
@@ -174,7 +186,7 @@ class HintsRouteTest {
     @Test
     fun `responds 429 hint-budget-exhausted after 3 spends with default cap`() =
         testApplication {
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint"))))
             val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
             repeat(3) {
@@ -189,7 +201,7 @@ class HintsRouteTest {
     @Test
     fun `GET puzzle with cookie embeds hintsRemaining reflecting prior spends`() =
         testApplication {
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint"))))
             val (row, column, direction) = bootstrapAndPickLetterCell(client)
 
             // Spend one hint.
@@ -207,7 +219,7 @@ class HintsRouteTest {
     @Test
     fun `invalid direction value returns 400 without decrementing budget`() =
         testApplication {
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint"))))
             val (row, column, _) = bootstrapAndPickLetterCell(client)
 
             val response = revealCell(client, row, column, "diagonal")
@@ -226,7 +238,7 @@ class HintsRouteTest {
     @Test
     fun `GET puzzle without cookie reports hintsRemaining equal to hintsAllowed`() =
         testApplication {
-            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse")))
+            mountWith(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", setOf("hint"))))
             val getResponse = client.get("/v1/puzzles/$puzzleId")
             val body = Json.parseToJsonElement(getResponse.bodyAsText()).jsonObject
             assertThat(body["hintsAllowed"]!!.jsonPrimitive.content.toInt()).isEqualTo(3)

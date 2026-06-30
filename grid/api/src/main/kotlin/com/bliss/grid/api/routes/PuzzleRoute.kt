@@ -71,8 +71,11 @@ private const val HINT_BUDGET_EXHAUSTED_TYPE: String =
     "https://bliss.example/errors/hint-budget-exhausted"
 private const val AUTH_REQUIRED_TYPE: String =
     "https://bliss.example/errors/auth-required"
+private const val FORBIDDEN_TYPE: String =
+    "https://bliss.example/errors/forbidden"
 
 private const val SESSION_COOKIE_NAME: String = "__Secure-ws_session"
+private const val HINT_CAPABILITY: String = "hint"
 
 /** Grid bounded-context HTTP surface (ADR-0003 §4): puzzle GET/daily-GET, hint POST (authed-only), validate POST. */
 fun Route.puzzles(
@@ -322,6 +325,16 @@ fun Route.puzzles(
                 )
                 return@post
             }
+
+        if (HINT_CAPABILITY !in cached.capabilities) {
+            call.respondProblem(
+                status = HttpStatusCode.Forbidden,
+                title = "Accès refusé",
+                type = FORBIDDEN_TYPE,
+                detail = "Les indices nécessitent un compte joueur.",
+            )
+            return@post
+        }
 
         val body =
             try {
