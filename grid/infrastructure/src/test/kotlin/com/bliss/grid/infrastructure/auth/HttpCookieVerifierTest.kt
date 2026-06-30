@@ -47,9 +47,26 @@ class HttpCookieVerifierTest {
             assertThat(first).isNotNull()
             assertThat(first!!.userId).isEqualTo(UUID.fromString(sampleUserId))
             assertThat(first.displayName).isEqualTo("Marmotte 900")
+            // Absent capabilities field deserialises to an empty set (fail-closed; ADR-0079 §6).
+            assertThat(first.capabilities).isEqualTo(emptySet<String>())
             assertThat(second).isEqualTo(first)
             // Second call must hit the cache, not the wire.
             assertThat(calls.get()).isEqualTo(1)
+        }
+
+    @Test
+    fun `200 response parses the capabilities into the principal`() =
+        runTest {
+            val calls = AtomicInteger()
+            val body = """{"userId":"$sampleUserId","displayName":"Marmotte 900","capabilities":["hint"]}"""
+            val http =
+                client(calls) { _ -> { respond(body, HttpStatusCode.OK, jsonHeaders) } }
+            val verifier = HttpCookieVerifier(http, baseUrl)
+
+            val result = verifier.verify("cookie-value")
+
+            assertThat(result).isNotNull()
+            assertThat(result!!.capabilities).isEqualTo(setOf("hint"))
         }
 
     @Test
