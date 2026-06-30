@@ -33,6 +33,7 @@ import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -47,7 +48,15 @@ class HintsRouteTest {
 
     private fun io.ktor.server.testing.ApplicationTestBuilder.mountWith(verifier: FakeCookieVerifier) {
         application {
-            install(ContentNegotiation) { json() }
+            // Mirror Module.kt's explicitNulls=false so the test exercises the real wire serialization of the required, nullable secondsUntilNextHint.
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        explicitNulls = false
+                    },
+                )
+            }
             val puzzleRepo = InMemoryPuzzleRepository()
             val hintUsageRepo = InMemoryHintUsageRepository()
             val gen = GeneratePuzzleUseCase(CsvWordRepository.frenchFromClasspath(), defaultPuzzleConstraints())
@@ -83,6 +92,8 @@ class HintsRouteTest {
             }
             // Default hintsAllowed = 3; we just spent one.
             assertThat(body["hintsRemaining"]!!.jsonPrimitive.content.toInt()).isEqualTo(2)
+            // First spend anchors the bucket now, so the next credit is one full 10-minute interval away.
+            assertThat(body["secondsUntilNextHint"]!!.jsonPrimitive.content.toInt()).isEqualTo(600)
         }
 
     @Test
@@ -243,6 +254,8 @@ class HintsRouteTest {
             val body = Json.parseToJsonElement(getResponse.bodyAsText()).jsonObject
             assertThat(body["hintsAllowed"]!!.jsonPrimitive.content.toInt()).isEqualTo(3)
             assertThat(body["hintsRemaining"]!!.jsonPrimitive.content.toInt()).isEqualTo(3)
+            // A full bucket carries no countdown (anonymous callers always read full).
+            assertThat(body["secondsUntilNextHint"]).isEqualTo(JsonNull)
         }
 
     private suspend fun revealCell(

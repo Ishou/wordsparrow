@@ -1,7 +1,11 @@
 package com.bliss.grid.infrastructure.persistence
 
+import com.bliss.grid.application.puzzle.HintBudgetCalculator
 import com.bliss.grid.application.puzzle.HintUsageRepository
 import java.sql.Connection
+import java.sql.Timestamp
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 import javax.sql.DataSource
 
@@ -13,28 +17,48 @@ class PostgresHintUsageRepository(
         conn: Connection,
         puzzleId: UUID,
         userId: UUID,
-        hintsAllowed: Int,
-    ): Int? =
-        conn.prepareStatement(SPEND_SQL).use { stmt ->
+        capacity: Int,
+        interval: Duration,
+        now: Instant,
+    ): HintBudgetCalculator.View? {
+        val state = readState(conn, puzzleId, userId, capacity)
+        val next = HintBudgetCalculator.spend(state, now, capacity, interval) ?: return null
+        conn.prepareStatement(UPSERT_SQL).use { stmt ->
             stmt.setObject(1, puzzleId)
             stmt.setObject(2, userId)
-            stmt.setInt(3, hintsAllowed)
-            stmt.setInt(4, hintsAllowed)
-            stmt.executeQuery().use { rs ->
-                if (rs.next()) rs.getInt("hints_used") else null
-            }
+            stmt.setInt(3, next.tokens)
+            stmt.setTimestamp(4, Timestamp.from(next.anchor ?: now))
+            stmt.setTimestamp(5, Timestamp.from(now))
+            stmt.executeUpdate()
         }
+        return HintBudgetCalculator.view(next, now, capacity, interval)
+    }
 
-    override fun usedFor(
+    override fun budgetFor(
         puzzleId: UUID,
         userId: UUID,
-    ): Int =
+        capacity: Int,
+        interval: Duration,
+        now: Instant,
+    ): HintBudgetCalculator.View =
         dataSource.connection.use { conn ->
-            conn.prepareStatement(USED_FOR_SQL).use { stmt ->
-                stmt.setObject(1, puzzleId)
-                stmt.setObject(2, userId)
-                stmt.executeQuery().use { rs ->
-                    if (rs.next()) rs.getInt(1) else 0
+            HintBudgetCalculator.view(readState(conn, puzzleId, userId, capacity), now, capacity, interval)
+        }
+
+    private fun readState(
+        conn: Connection,
+        puzzleId: UUID,
+        userId: UUID,
+        capacity: Int,
+    ): HintBudgetCalculator.State =
+        conn.prepareStatement(SELECT_SQL).use { stmt ->
+            stmt.setObject(1, puzzleId)
+            stmt.setObject(2, userId)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) {
+                    HintBudgetCalculator.State(rs.getInt("tokens_remaining"), rs.getTimestamp("refill_anchor").toInstant())
+                } else {
+                    HintBudgetCalculator.State(capacity, null)
                 }
             }
         }
@@ -64,19 +88,18 @@ class PostgresHintUsageRepository(
         }
 
     companion object {
-        private const val SPEND_SQL =
-            """
-            INSERT INTO puzzle_hint_usage (puzzle_id, user_id, hints_used)
-            SELECT ?, ?, 1 WHERE ? > 0
-            ON CONFLICT (puzzle_id, user_id) DO UPDATE
-                SET hints_used = puzzle_hint_usage.hints_used + 1,
-                    updated_at = now()
-                WHERE puzzle_hint_usage.hints_used < ?
-            RETURNING hints_used
-            """
+        private const val SELECT_SQL =
+            "SELECT tokens_remaining, refill_anchor FROM puzzle_hint_usage WHERE puzzle_id = ? AND user_id = ?"
 
-        private const val USED_FOR_SQL =
-            "SELECT hints_used FROM puzzle_hint_usage WHERE puzzle_id = ? AND user_id = ?"
+        private const val UPSERT_SQL =
+            """
+            INSERT INTO puzzle_hint_usage (puzzle_id, user_id, tokens_remaining, refill_anchor, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT (puzzle_id, user_id) DO UPDATE
+                SET tokens_remaining = EXCLUDED.tokens_remaining,
+                    refill_anchor    = EXCLUDED.refill_anchor,
+                    updated_at       = EXCLUDED.updated_at
+            """
 
         private const val DELETE_BY_USER_SQL =
             "DELETE FROM puzzle_hint_usage WHERE user_id = ?"

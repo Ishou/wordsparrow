@@ -19,6 +19,8 @@ import com.bliss.grid.domain.model.Position
 import com.bliss.grid.domain.model.Row
 import com.bliss.grid.domain.model.Word
 import com.bliss.grid.domain.model.WordPlacement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.UUID
@@ -131,6 +133,8 @@ class GridToPuzzleMapperTest {
         val withDefaults = mapper.toApi(grid, UUID.randomUUID(), Instant.now(), hintsAllowed = 3)
         assertThat(withDefaults.difficulty).isNull()
         assertThat(withDefaults.gridNumber).isNull()
+        // A full budget maps to JSON null (the required key still ships, never Kotlin null / absent).
+        assertThat(withDefaults.secondsUntilNextHint).isEqualTo(JsonNull)
 
         val withValues =
             mapper.toApi(
@@ -138,11 +142,13 @@ class GridToPuzzleMapperTest {
                 puzzleId = UUID.randomUUID(),
                 createdAt = Instant.now(),
                 hintsAllowed = 3,
+                secondsUntilNextHint = 420,
                 difficulty = DifficultyDto.FACILE,
                 gridNumber = 142,
             )
         assertThat(withValues.difficulty).isEqualTo(DifficultyDto.FACILE)
         assertThat(withValues.gridNumber).isEqualTo(142)
+        assertThat(withValues.secondsUntilNextHint).isEqualTo(JsonPrimitive(420))
     }
 
     @Test

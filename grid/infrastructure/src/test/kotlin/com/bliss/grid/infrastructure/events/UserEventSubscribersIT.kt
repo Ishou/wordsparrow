@@ -115,20 +115,23 @@ class UserEventSubscribersIT {
         val puzzleId = seedPuzzle()
         val deletedUser = UUID.randomUUID()
         val survivor = UUID.randomUUID()
+        val now = Instant.parse("2026-06-30T12:00:00Z")
+        val ten = Duration.ofMinutes(10)
         dataSource.connection.use { conn ->
             conn.autoCommit = false
-            hintUsage.trySpend(conn, puzzleId, deletedUser, hintsAllowed = 3)
-            hintUsage.trySpend(conn, puzzleId, survivor, hintsAllowed = 3)
+            hintUsage.trySpend(conn, puzzleId, deletedUser, 3, ten, now)
+            hintUsage.trySpend(conn, puzzleId, survivor, 3, ten, now)
             conn.commit()
         }
 
         publishUserDeleted(deletedUser)
 
+        // Erased row reads back as a full bucket (3 tokens); the survivor keeps its single spend (2 left).
         waitUntil(Duration.ofSeconds(2)) {
-            hintUsage.usedFor(puzzleId, deletedUser) == 0
+            hintUsage.budgetFor(puzzleId, deletedUser, 3, ten, now).tokensRemaining == 3
         }
-        assertThat(hintUsage.usedFor(puzzleId, deletedUser)).isEqualTo(0)
-        assertThat(hintUsage.usedFor(puzzleId, survivor)).isEqualTo(1)
+        assertThat(hintUsage.budgetFor(puzzleId, deletedUser, 3, ten, now).tokensRemaining).isEqualTo(3)
+        assertThat(hintUsage.budgetFor(puzzleId, survivor, 3, ten, now).tokensRemaining).isEqualTo(2)
     }
 
     private fun publishUserDeleted(userId: UUID) {

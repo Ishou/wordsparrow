@@ -9,10 +9,12 @@ import com.bliss.grid.api.dto.RevealCellHintResult
 import com.bliss.grid.api.dto.RevealedCellDto
 import com.bliss.grid.api.dto.ValidatePuzzleRequest
 import com.bliss.grid.api.dto.ValidatePuzzleResult
+import com.bliss.grid.api.dto.toSecondsUntilNextHintWire
 import com.bliss.grid.api.mapper.GridToPuzzleMapper
 import com.bliss.grid.application.auth.CookieVerifier
 import com.bliss.grid.application.puzzle.DailyPuzzleSelector
 import com.bliss.grid.application.puzzle.FilledCellInput
+import com.bliss.grid.application.puzzle.HintBudgetCalculator
 import com.bliss.grid.application.puzzle.HintUsageRepository
 import com.bliss.grid.application.puzzle.HintWriteCoordinator
 import com.bliss.grid.application.puzzle.ListDailyPuzzlesUseCase
@@ -38,6 +40,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeParseException
@@ -128,13 +131,14 @@ fun Route.puzzles(
         val difficulty = DifficultyDto.fromWire(dailyPuzzleSelector.difficultyForDate(date))
         val rawGridNumber = dailyPuzzleSelector.gridNumberForDate(date)
         val gridNumber = if (rawGridNumber >= 1) rawGridNumber else null
-        val hintsRemaining =
-            remainingHintsFor(
+        val budget =
+            hintBudgetFor(
                 cookieVerifier = cookieVerifier,
                 hintUsageRepository = hintUsageRepository,
                 rawCookie = call.request.cookies[SESSION_COOKIE_NAME],
                 puzzleId = puzzleId,
                 hintsAllowed = stored.hintsAllowed,
+                now = clock.instant(),
             )
         call.respond(
             mapper.toApi(
@@ -142,7 +146,8 @@ fun Route.puzzles(
                 puzzleId = puzzleId,
                 createdAt = stored.createdAt,
                 hintsAllowed = stored.hintsAllowed,
-                hintsRemaining = hintsRemaining,
+                hintsRemaining = budget.tokensRemaining,
+                secondsUntilNextHint = budget.secondsUntilNextHint?.toInt(),
                 title = stored.title,
                 language = stored.language,
                 difficulty = difficulty,
@@ -281,13 +286,14 @@ fun Route.puzzles(
             )
             return@get
         }
-        val hintsRemaining =
-            remainingHintsFor(
+        val budget =
+            hintBudgetFor(
                 cookieVerifier = cookieVerifier,
                 hintUsageRepository = hintUsageRepository,
                 rawCookie = call.request.cookies[SESSION_COOKIE_NAME],
                 puzzleId = puzzleId,
                 hintsAllowed = stored.hintsAllowed,
+                now = clock.instant(),
             )
         call.respond(
             mapper.toApi(
@@ -295,7 +301,8 @@ fun Route.puzzles(
                 puzzleId = puzzleId,
                 createdAt = stored.createdAt,
                 hintsAllowed = stored.hintsAllowed,
-                hintsRemaining = hintsRemaining,
+                hintsRemaining = budget.tokensRemaining,
+                secondsUntilNextHint = budget.secondsUntilNextHint?.toInt(),
                 title = stored.title,
                 language = stored.language,
             ),
@@ -382,6 +389,7 @@ fun Route.puzzles(
                                 RevealedCellDto(row = it.row, column = it.column, letter = it.letter.toString())
                             },
                         hintsRemaining = outcome.hintsRemaining,
+                        secondsUntilNextHint = outcome.secondsUntilNextHint?.toInt().toSecondsUntilNextHintWire(),
                     ),
                 )
             is RevealCellHintOutcome.PuzzleNotFound ->
@@ -463,16 +471,25 @@ fun Route.puzzles(
     }
 }
 
-private suspend fun remainingHintsFor(
+private suspend fun hintBudgetFor(
     cookieVerifier: CookieVerifier,
     hintUsageRepository: HintUsageRepository,
     rawCookie: String?,
     puzzleId: UUID,
     hintsAllowed: Int,
-): Int {
-    val who = cookieVerifier.verify(rawCookie) ?: return hintsAllowed
-    val used = withContext(Dispatchers.IO) { hintUsageRepository.usedFor(puzzleId, who.userId) }
-    return (hintsAllowed - used).coerceAtLeast(0)
+    now: Instant,
+): HintBudgetCalculator.View {
+    // Anonymous callers never persist a bucket, so they always read a full one with no countdown.
+    val who = cookieVerifier.verify(rawCookie) ?: return HintBudgetCalculator.View(hintsAllowed, null)
+    return withContext(Dispatchers.IO) {
+        hintUsageRepository.budgetFor(
+            puzzleId,
+            who.userId,
+            hintsAllowed,
+            RevealCellHintUseCase.HINT_REFILL_INTERVAL,
+            now,
+        )
+    }
 }
 
 private sealed interface DimensionParse {
