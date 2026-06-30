@@ -89,6 +89,33 @@ guest / player / maintainer — instead of three different gating idioms.
    the cost; **absent capabilities ⇒ empty set ⇒ deny** — the parse never
    escalates a missing field into a granted permission.
 
+## Threat model
+
+**Assets:** hint access (grid), `contribuer` write surface (survey).
+
+**Threat actors:** unauthenticated guests and authenticated players attempting
+to access maintainer-only surfaces (`contribuer`).
+
+**Attack vectors and mitigations:**
+
+- **Capability parse failure → privilege escalation:** an absent or malformed
+  `capabilities` field on the `whoami` response deserialises to an empty set and
+  the capability check denies — the parse cannot escalate a missing field into a
+  granted permission (§6).
+- **Frontend gate bypass:** server enforces capabilities independently;
+  frontend gates are cosmetic and not the authority (§5). A caller that strips
+  the frontend gate still hits a server-side capability check.
+- **Capability forgery:** capabilities originate from identity's
+  `/v1/auth/whoami`, not from the caller; no client-supplied capability field is
+  accepted — the consumer reads capabilities from the session principal it
+  fetched, not from request input.
+- **Session replay / stale grant:** the 30 s TTL on each context's
+  session-verification cache (§6) bounds the window during which a revoked or
+  downgraded session can still pass a capability check.
+
+**Out of scope:** subscription-TIER privilege escalation (ADR-0078); identity
+authentication flows (ADR-0044, ADR-0060).
+
 ## Consequences
 
 - **Easier:** the access policy lives in one function (`capabilitiesFor`); an
