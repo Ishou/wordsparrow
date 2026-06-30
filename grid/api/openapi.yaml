@@ -33,8 +33,11 @@ tags:
     description: |
       Per-puzzle hint mechanism. Spends one credit to reveal every letter of
       the word the cursor is in, identified by `(row, column)` plus its
-      `direction` axis. Capped by `Puzzle.hintsAllowed` to prevent draining
-      the full solution.
+      `direction` axis. The budget regenerates server-side: 1 credit every 10
+      minutes, capped at `Puzzle.hintsAllowed`. `secondsUntilNextHint` carries
+      the countdown to the next regenerated credit (null when the budget is
+      full). The regen countdown is a timing integer only — it adds no
+      canonical letters to the wire (ADR-0076).
   - name: puzzles
     description: Read access and validation for mots-fléchés puzzles.
   - name: sessions
@@ -418,6 +421,12 @@ paths:
         grid still requires `hintsAllowed` calls bounded by edge rate
         limiting.
 
+        The budget regenerates server-side: 1 credit every 10 minutes, capped
+        at `Puzzle.hintsAllowed`. The response carries `secondsUntilNextHint`,
+        the countdown to the next regenerated credit (null when the budget is
+        full); it is a timing integer only and adds no canonical letters to the
+        wire (ADR-0076).
+
         Player identity on the wire is the `__Secure-ws_session` cookie
         issued by identity-api. The server verifies the cookie against
         identity-api's whoami endpoint and keys a per-(puzzle, user) hint
@@ -762,6 +771,15 @@ components:
             verified, this is `hintsAllowed - hintsUsed` for the resolved
             `userId`.
           example: 2
+        secondsUntilNextHint:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: >-
+            Secondes avant la régénération du prochain indice ; null si le
+            quota d'indices est plein (et toujours null pour un appelant
+            anonyme).
+          example: 420
         createdAt:
           type: string
           format: date-time
@@ -1051,6 +1069,15 @@ components:
             Hints left after this call. 0 means the next call returns 429 with
             type https://bliss.example/errors/hint-budget-exhausted.
           example: 2
+        secondsUntilNextHint:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: >-
+            Secondes avant la régénération du prochain indice ; null si le
+            quota d'indices est plein (et toujours null pour un appelant
+            anonyme).
+          example: 420
 
     ValidatePuzzleRequest:
       type: object
