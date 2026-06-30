@@ -1,6 +1,8 @@
 package com.bliss.billing.api.identity
 
 import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import io.ktor.client.engine.mock.MockEngine
@@ -17,23 +19,27 @@ class IdentityClientTest {
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, "application/json")
 
     @Test
-    fun `resolves principal with role from whoami`() =
+    fun `resolves principal with capabilities from whoami`() =
         runTest {
             val engine =
-                MockEngine { respond("""{"userId":"$userId","displayName":"Ada","role":"maintainer"}""", HttpStatusCode.OK, jsonHeaders) }
+                MockEngine {
+                    respond(
+                        """{"userId":"$userId","displayName":"Ada","capabilities":["billing:subscribe"]}""",
+                        HttpStatusCode.OK,
+                        jsonHeaders,
+                    )
+                }
             val principal = IdentityClient("https://auth.example", engine).verifySession("cookie")
             assertThat(principal?.userId).isEqualTo(userId)
-            assertThat(principal?.role).isEqualTo("maintainer")
-            assertThat(principal?.isMaintainer).isEqualTo(true)
+            assertThat(principal?.capabilities ?: emptySet()).contains("billing:subscribe")
         }
 
     @Test
-    fun `absent role defaults to non-maintainer player`() =
+    fun `absent capabilities default to an empty set`() =
         runTest {
             val engine = MockEngine { respond("""{"userId":"$userId","displayName":"Ada"}""", HttpStatusCode.OK, jsonHeaders) }
             val principal = IdentityClient("https://auth.example", engine).verifySession("cookie")
-            assertThat(principal?.role).isEqualTo("player")
-            assertThat(principal?.isMaintainer).isEqualTo(false)
+            assertThat(principal?.capabilities ?: setOf("x")).isEmpty()
         }
 
     @Test

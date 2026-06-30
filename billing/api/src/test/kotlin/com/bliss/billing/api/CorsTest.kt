@@ -25,7 +25,7 @@ class CorsTest {
         testApplication {
             application { installBillingCors(testConfig) }
             val response =
-                client.options("/v1/entitlement") {
+                client.options("/v1/subscription") {
                     headers {
                         append(HttpHeaders.Origin, "https://wordsparrow.io")
                         append(HttpHeaders.AccessControlRequestMethod, "GET")
@@ -41,7 +41,7 @@ class CorsTest {
         testApplication {
             application { installBillingCors(testConfig) }
             val response =
-                client.options("/v1/entitlement") {
+                client.options("/v1/subscription") {
                     headers {
                         append(HttpHeaders.Origin, "https://evil.example")
                         append(HttpHeaders.AccessControlRequestMethod, "GET")
@@ -56,7 +56,7 @@ class CorsTest {
         testApplication {
             application { installBillingCors(testConfig) }
             val response =
-                client.options("/v1/entitlement") {
+                client.options("/v1/subscription") {
                     headers {
                         append(HttpHeaders.Origin, "https://wordsparrow.io")
                         append(HttpHeaders.AccessControlRequestMethod, "GET")

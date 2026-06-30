@@ -1,9 +1,10 @@
 package com.bliss.billing.api.routes
 
 import com.bliss.billing.api.ProblemTypes
+import com.bliss.billing.api.auth.SUBSCRIBE_CAPABILITY
 import com.bliss.billing.api.dto.CheckoutSessionRequest
 import com.bliss.billing.api.dto.CheckoutSessionResponse
-import com.bliss.billing.api.requireMaintainer
+import com.bliss.billing.api.requireCapability
 import com.bliss.billing.api.respondProblem
 import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.application.usecases.CreateCheckoutSessionOutcome
@@ -15,10 +16,10 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 
-// POST /v1/checkout-session — authed + maintainer-gated; userId is session-derived, never the body (ADR-0078 IDOR guard).
+// POST /v1/checkout-session — authed + billing:subscribe-gated; userId is session-derived, never the body (ADR-0078 IDOR guard).
 fun Route.checkoutSessionRoute(createCheckoutSession: CreateCheckoutSession) {
     post("/v1/checkout-session") {
-        val principal = call.requireMaintainer() ?: return@post
+        val principal = call.requireCapability(SUBSCRIBE_CAPABILITY) ?: return@post
         val tier = call.parseTier() ?: return@post
 
         val outcome =

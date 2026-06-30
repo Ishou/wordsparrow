@@ -5,8 +5,8 @@ import com.bliss.billing.api.config.BillingApiConfig
 import com.bliss.billing.api.dto.ProblemDetails
 import com.bliss.billing.api.routes.cancelSubscriptionRoute
 import com.bliss.billing.api.routes.checkoutSessionRoute
-import com.bliss.billing.api.routes.entitlementRoute
 import com.bliss.billing.api.routes.healthRoute
+import com.bliss.billing.api.routes.subscriptionRoute
 import com.bliss.billing.api.routes.webhookRoute
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
@@ -72,11 +72,11 @@ fun Application.billingApiModule(
         checkoutSessionRoute(wiring.createCheckoutSession)
         cancelSubscriptionRoute(wiring.cancelSubscription)
         webhookRoute(wiring.ingestProviderEvent)
-        entitlementRoute(wiring.entitlementQuery)
+        subscriptionRoute(wiring.subscriptionQuery)
     }
 }
 
-// encodeDefaults keeps required defaulted fields (capabilities: []) on the wire; explicitNulls keeps periodEnd: null distinct from absence (ADR-0003 §6).
+// explicitNulls keeps periodEnd: null distinct from absence; encodeDefaults keeps any defaulted required field on the wire (ADR-0003 §6).
 internal val WIRE_JSON: Json =
     Json {
         prettyPrint = false

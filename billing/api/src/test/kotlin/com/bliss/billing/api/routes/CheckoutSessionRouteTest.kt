@@ -5,6 +5,7 @@ import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import com.bliss.billing.api.WIRE_JSON
 import com.bliss.billing.api.auth.SESSION_COOKIE_NAME
+import com.bliss.billing.api.auth.SUBSCRIBE_CAPABILITY
 import com.bliss.billing.api.auth.SessionMiddleware
 import com.bliss.billing.api.auth.SessionPrincipal
 import com.bliss.billing.application.testdoubles.FakeBillingProvider
@@ -32,14 +33,14 @@ import java.util.UUID
 
 class CheckoutSessionRouteTest {
     private val userId = UUID.fromString("11111111-1111-7111-8111-111111111111")
-    private val maintainer = SessionPrincipal(userId, "maintainer")
-    private val player = SessionPrincipal(userId, "player")
+    private val subscriber = SessionPrincipal(userId, setOf(SUBSCRIBE_CAPABILITY))
+    private val withoutCapability = SessionPrincipal(userId, emptySet())
 
     @Test
-    fun `maintainer gets 201 with checkout urls`() =
+    fun `caller with billing subscribe gets 201 with checkout urls`() =
         testApplication {
             val provider = FakeBillingProvider()
-            install(maintainer, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
+            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -52,9 +53,9 @@ class CheckoutSessionRouteTest {
         }
 
     @Test
-    fun `player is rejected with 403 forbidden`() =
+    fun `caller without billing subscribe is rejected with 403`() =
         testApplication {
-            install(player, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
+            install(withoutCapability, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -85,7 +86,7 @@ class CheckoutSessionRouteTest {
             repo.save(
                 Subscription(userId, Tier.of("supporter"), SubscriptionStatus.ACTIVE, BillingSource.MOLLIE, "cust:sub_1", null),
             )
-            install(maintainer, CreateCheckoutSession(FakeBillingProvider(), repo))
+            install(subscriber, CreateCheckoutSession(FakeBillingProvider(), repo))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -100,7 +101,7 @@ class CheckoutSessionRouteTest {
     fun `provider unavailable yields 503`() =
         testApplication {
             val provider = FakeBillingProvider().apply { failCheckoutOnce = true }
-            install(maintainer, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
+            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -114,7 +115,7 @@ class CheckoutSessionRouteTest {
     @Test
     fun `blank tier yields 400`() =
         testApplication {
-            install(maintainer, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
+            install(subscriber, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")

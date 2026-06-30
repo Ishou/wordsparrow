@@ -6,11 +6,11 @@ import com.bliss.billing.application.ports.Clock
 import com.bliss.billing.application.ports.EventIdGenerator
 import com.bliss.billing.application.usecases.CancelSubscription
 import com.bliss.billing.application.usecases.CreateCheckoutSession
-import com.bliss.billing.application.usecases.EntitlementQuery
 import com.bliss.billing.application.usecases.HandleUserDeleted
 import com.bliss.billing.application.usecases.IngestProviderEvent
+import com.bliss.billing.application.usecases.SubscriptionQuery
 import com.bliss.billing.infrastructure.nats.MaxDeliveriesDlqRepublisher
-import com.bliss.billing.infrastructure.nats.NatsEntitlementPublisher
+import com.bliss.billing.infrastructure.nats.NatsSubscriptionPublisher
 import com.bliss.billing.infrastructure.nats.UserDeletedConsumer
 import com.bliss.billing.infrastructure.persistence.BillingDatabase
 import com.bliss.billing.infrastructure.persistence.PostgresMollieCustomerStore
@@ -40,9 +40,9 @@ fun main() {
     val customerStore = PostgresMollieCustomerStore(dataSource)
     val provider = MollieBillingAdapter(SdkMollieClient(mollieConfig), customerStore, mollieConfig)
 
-    // ADR-0049 — connect to NATS before Ktor serves so the EntitlementChanged publisher is ready on first request.
+    // ADR-0049 — connect to NATS before Ktor serves so the SubscriptionChanged publisher is ready on first request.
     val natsConn = Nats.connect(config.natsUrl)
-    val publisher = NatsEntitlementPublisher(natsConn.jetStream())
+    val publisher = NatsSubscriptionPublisher(natsConn.jetStream())
 
     val clock = Clock { Instant.now() }
     val eventIds = EventIdGenerator { Generators.timeBasedEpochGenerator().generate() }
@@ -69,7 +69,7 @@ fun main() {
             createCheckoutSession = CreateCheckoutSession(provider, subscriptions),
             cancelSubscription = CancelSubscription(provider, subscriptions, publisher, clock, eventIds),
             ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds),
-            entitlementQuery = EntitlementQuery(subscriptions),
+            subscriptionQuery = SubscriptionQuery(subscriptions),
             closeNats = {
                 dlqRepublisher.close()
                 userDeletedConsumer.stop()

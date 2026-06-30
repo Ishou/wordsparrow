@@ -35,7 +35,7 @@ internal suspend fun ApplicationCall.respondProblem(
     status = status,
 )
 
-// Resolves the authed caller or responds 401; for self-scoped reads (entitlement) any authenticated caller passes.
+// Resolves the authed caller or responds 401; for self-scoped reads (subscription) any authenticated caller passes.
 internal suspend fun ApplicationCall.requireSession(): SessionPrincipal? {
     val principal = attributes.getOrNull(PrincipalKey)
     if (principal == null) {
@@ -44,11 +44,11 @@ internal suspend fun ApplicationCall.requireSession(): SessionPrincipal? {
     return principal
 }
 
-// The maintainer gate (ADR-0078 test phase): 401 when anonymous, 403 when authed but not maintainer. Only ever denies.
-internal suspend fun ApplicationCall.requireMaintainer(): SessionPrincipal? {
+// The capability gate (ADR-0078 amendment): 401 when anonymous, 403 when authed but lacking the capability. Only ever denies.
+internal suspend fun ApplicationCall.requireCapability(capability: String): SessionPrincipal? {
     val principal = requireSession() ?: return null
-    if (!principal.isMaintainer) {
-        respondProblem(HttpStatusCode.Forbidden, ProblemTypes.FORBIDDEN, "maintainer access required")
+    if (!principal.hasCapability(capability)) {
+        respondProblem(HttpStatusCode.Forbidden, ProblemTypes.FORBIDDEN, "missing required capability")
         return null
     }
     return principal

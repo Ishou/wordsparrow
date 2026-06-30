@@ -7,10 +7,10 @@ import assertk.assertions.isNull
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.CheckoutUrls
 import com.bliss.billing.application.ports.Clock
-import com.bliss.billing.application.ports.EntitlementChanged
-import com.bliss.billing.application.ports.EntitlementPublisher
 import com.bliss.billing.application.ports.EventIdGenerator
 import com.bliss.billing.application.ports.ProviderSubscriptionState
+import com.bliss.billing.application.ports.SubscriptionChanged
+import com.bliss.billing.application.ports.SubscriptionPublisher
 import com.bliss.billing.application.ports.SubscriptionRepository
 import com.bliss.billing.application.usecases.HandleUserDeleted
 import com.bliss.billing.domain.BillingSource
@@ -292,10 +292,10 @@ class UserDeletedConsumerTest {
         override suspend fun listActive(): List<Subscription> = byUser.values.toList()
     }
 
-    private class RecordingPublisher : EntitlementPublisher {
-        val events = CopyOnWriteArrayList<EntitlementChanged>()
+    private class RecordingPublisher : SubscriptionPublisher {
+        val events = CopyOnWriteArrayList<SubscriptionChanged>()
 
-        override suspend fun publish(event: EntitlementChanged) {
+        override suspend fun publish(event: SubscriptionChanged) {
             events += event
         }
     }

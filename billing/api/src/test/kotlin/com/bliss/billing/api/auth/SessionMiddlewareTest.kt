@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 class SessionMiddlewareTest {
-    private val maintainer = SessionPrincipal(UUID.fromString("01234567-89ab-7cde-89ab-0123456789ab"), "maintainer")
+    private val subscriber = SessionPrincipal(UUID.fromString("01234567-89ab-7cde-89ab-0123456789ab"), setOf(SUBSCRIBE_CAPABILITY))
 
     @Test
     fun `no cookie - principal attribute is null and request proceeds`() =
@@ -25,7 +25,7 @@ class SessionMiddlewareTest {
                 routing {
                     get("/probe") {
                         val p = call.attributes.getOrNull(PrincipalKey)
-                        call.respondText(text = p?.role ?: "anon", status = HttpStatusCode.OK)
+                        call.respondText(text = p?.userId?.toString() ?: "anon", status = HttpStatusCode.OK)
                     }
                 }
             }
@@ -35,20 +35,20 @@ class SessionMiddlewareTest {
         }
 
     @Test
-    fun `valid cookie - principal with role is set`() =
+    fun `valid cookie - principal with capabilities is set`() =
         testApplication {
             application {
-                install(SessionMiddleware) { verifySession = { c -> if (c == "valid-token") maintainer else null } }
+                install(SessionMiddleware) { verifySession = { c -> if (c == "valid-token") subscriber else null } }
                 routing {
                     get("/probe") {
                         val p = call.attributes.getOrNull(PrincipalKey)
-                        call.respondText(text = "${p?.userId}:${p?.role}", status = HttpStatusCode.OK)
+                        call.respondText(text = "${p?.userId}:${p?.hasCapability(SUBSCRIBE_CAPABILITY)}", status = HttpStatusCode.OK)
                     }
                 }
             }
             val resp = client.get("/probe") { cookie(SESSION_COOKIE_NAME, "valid-token") }
             assertThat(resp.status).isEqualTo(HttpStatusCode.OK)
-            assertThat(resp.bodyAsText()).isEqualTo("${maintainer.userId}:maintainer")
+            assertThat(resp.bodyAsText()).isEqualTo("${subscriber.userId}:true")
         }
 
     @Test
@@ -59,7 +59,7 @@ class SessionMiddlewareTest {
                 routing {
                     get("/probe") {
                         val p = call.attributes.getOrNull(PrincipalKey)
-                        call.respondText(text = p?.role ?: "anon", status = HttpStatusCode.OK)
+                        call.respondText(text = p?.userId?.toString() ?: "anon", status = HttpStatusCode.OK)
                     }
                 }
             }

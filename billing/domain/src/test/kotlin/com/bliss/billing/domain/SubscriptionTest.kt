@@ -101,8 +101,8 @@ class SubscriptionTest {
     }
 
     @Test
-    fun `entitlement projects the current state`() {
+    fun `statusView projects the current state`() {
         val active = subscription(SubscriptionStatus.ACTIVE)
-        assertThat(active.entitlement()).isEqualTo(Entitlement.from(active))
+        assertThat(active.statusView()).isEqualTo(SubscriptionStatusView.from(active))
     }
 }

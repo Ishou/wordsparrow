@@ -8,7 +8,7 @@ import assertk.assertions.isNotNull
 import com.bliss.billing.application.testdoubles.FakeBillingProvider
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
 import com.bliss.billing.application.testdoubles.FixedClock
-import com.bliss.billing.application.testdoubles.RecordingEntitlementPublisher
+import com.bliss.billing.application.testdoubles.RecordingSubscriptionPublisher
 import com.bliss.billing.application.testdoubles.SequentialEventIdGenerator
 import com.bliss.billing.domain.SubscriptionStatus
 import kotlinx.coroutines.test.runTest
@@ -18,7 +18,7 @@ import java.util.UUID
 class CancelSubscriptionTest {
     private val provider = FakeBillingProvider()
     private val repository = FakeSubscriptionRepository()
-    private val publisher = RecordingEntitlementPublisher()
+    private val publisher = RecordingSubscriptionPublisher()
     private val clock = FixedClock(FIXED_NOW)
     private val eventIds = SequentialEventIdGenerator()
     private val useCase = CancelSubscription(provider, repository, publisher, clock, eventIds)
@@ -34,7 +34,7 @@ class CancelSubscriptionTest {
 
             assertThat(outcome).isInstanceOf(CancelSubscriptionOutcome.Cancelled::class)
             val cancelled = outcome as CancelSubscriptionOutcome.Cancelled
-            assertThat(cancelled.entitlement.status).isEqualTo(SubscriptionStatus.CANCELED)
+            assertThat(cancelled.subscriptionView.status).isEqualTo(SubscriptionStatus.CANCELED)
             assertThat(provider.cancelCalls).isEqualTo(listOf("sub_1"))
             val survivor = repository.findByUserId(userId)
             assertThat(survivor).isNotNull()
