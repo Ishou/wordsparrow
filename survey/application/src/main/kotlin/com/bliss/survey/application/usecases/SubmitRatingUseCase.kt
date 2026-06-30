@@ -47,10 +47,6 @@ sealed interface SubmitRatingResult {
         val reason: String,
     ) : SubmitRatingResult
 
-    data object AnonCorrectifForbidden : SubmitRatingResult
-
-    data object AnonMetaForbidden : SubmitRatingResult
-
     data object ItemNotFound : SubmitRatingResult
 
     data object Locked : SubmitRatingResult
@@ -64,7 +60,7 @@ data class CorrectifInput(
 
 data class SubmitRatingCommand(
     val itemId: ItemId,
-    val userId: UserId?,
+    val userId: UserId,
     val qualite: Int,
     val difficulte: Int,
     val flag: FlagReason?,
@@ -95,22 +91,14 @@ class SubmitRatingUseCase(
         val now = clock.now()
         val parent = items.findById(cmd.itemId) ?: return SubmitRatingResult.ItemNotFound
 
-        if (cmd.userId == null && cmd.correctif != null) return SubmitRatingResult.AnonCorrectifForbidden
-        val hasMeta =
-            cmd.targetCategories.isNotEmpty() || cmd.targetSense != null || cmd.isMultisense || cmd.subTags.isNotEmpty()
-        if (cmd.userId == null && hasMeta) return SubmitRatingResult.AnonMetaForbidden
-
-        if (cmd.userId != null) {
-            ratings.findAuthRating(cmd.itemId, cmd.userId)?.let {
-                return SubmitRatingResult.AlreadyExists(it)
-            }
+        ratings.findAuthRating(cmd.itemId, cmd.userId)?.let {
+            return SubmitRatingResult.AlreadyExists(it)
         }
 
         // Build the (possibly null) text-correctif item OUTSIDE the transaction so a filter Reject never opens one.
         var newItem: SurveyItem? = null
         var patchedPos: Pos? = null
         if (cmd.correctif != null) {
-            requireNotNull(cmd.userId) { "userId must be non-null when correctif is provided" }
             val (text, claimed, requestedPos) = cmd.correctif
             val textChanged = text.trim() != parent.definition.trim()
             if (!textChanged) {
@@ -141,7 +129,7 @@ class SubmitRatingUseCase(
         }
 
         val token = tokens.newToken()
-        val priorLastRatedAt = if (cmd.userId != null) progress.get(cmd.userId)?.lastRatedAt else null
+        val priorLastRatedAt = progress.get(cmd.userId)?.lastRatedAt
 
         val rating =
             tx.inTransaction {
@@ -161,7 +149,7 @@ class SubmitRatingUseCase(
                     val stored = items.insertIfAbsent(newItem)
                     proposedItemId = stored.id
                     if (stored.id == newItem.id) createdItemId = stored.id
-                    proposedBy.insert(stored.id, cmd.userId!!, optedOut = false)
+                    proposedBy.insert(stored.id, cmd.userId, optedOut = false)
                     recompute.forItem(stored.id, cmd.userId)
                 }
 
@@ -170,7 +158,7 @@ class SubmitRatingUseCase(
                         id = RatingId(ids.next()),
                         itemId = cmd.itemId,
                         userId = cmd.userId,
-                        submittedAs = if (cmd.userId != null) SubmittedAs.AUTH else SubmittedAs.ANON,
+                        submittedAs = SubmittedAs.AUTH,
                         qualite = cmd.qualite,
                         difficulte = cmd.difficulte,
                         flag = cmd.flag,
@@ -205,7 +193,7 @@ class SubmitRatingUseCase(
                     ratings.insert(autoGood)
                     createdRatingIds += autoGood.id
                 }
-                if (cmd.userId != null) progress.incrementItemsRated(cmd.userId, now)
+                progress.incrementItemsRated(cmd.userId, now)
 
                 actions.insert(
                     SurveyAction(

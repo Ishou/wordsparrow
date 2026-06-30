@@ -27,9 +27,9 @@ class CachedSessionVerifierTest {
             val clock = MutableClock(now)
             val verifier = CachedSessionVerifier(client, ttl = Duration.ofSeconds(30), clock = clock::now)
 
-            assertThat(verifier.verify("c1")).isEqualTo(userId)
-            assertThat(verifier.verify("c1")).isEqualTo(userId)
-            assertThat(verifier.verify("c1")).isEqualTo(userId)
+            assertThat(verifier.verify("c1")?.userId).isEqualTo(userId)
+            assertThat(verifier.verify("c1")?.userId).isEqualTo(userId)
+            assertThat(verifier.verify("c1")?.userId).isEqualTo(userId)
             assertThat(calls.get()).isEqualTo(1)
             client.close()
         }
@@ -41,8 +41,8 @@ class CachedSessionVerifierTest {
             val client = clientThatCountsAndReturns(calls, userId)
             val now = Instant.parse("2026-05-25T12:00:00Z")
             val verifier = CachedSessionVerifier(client, ttl = Duration.ofSeconds(30)) { now }
-            assertThat(verifier.verify("c1")).isEqualTo(userId)
-            assertThat(verifier.verify("c2")).isEqualTo(userId)
+            assertThat(verifier.verify("c1")?.userId).isEqualTo(userId)
+            assertThat(verifier.verify("c2")?.userId).isEqualTo(userId)
             assertThat(calls.get()).isEqualTo(2)
             client.close()
         }
@@ -56,13 +56,13 @@ class CachedSessionVerifierTest {
             val clock = MutableClock(start)
             val verifier = CachedSessionVerifier(client, ttl = Duration.ofSeconds(30), clock = clock::now)
 
-            assertThat(verifier.verify("c1")).isEqualTo(userId)
+            assertThat(verifier.verify("c1")?.userId).isEqualTo(userId)
             clock.advance(Duration.ofSeconds(15))
-            assertThat(verifier.verify("c1")).isEqualTo(userId)
+            assertThat(verifier.verify("c1")?.userId).isEqualTo(userId)
             assertThat(calls.get()).isEqualTo(1)
             // beyond TTL, the entry expires; another HTTP call is made
             clock.advance(Duration.ofSeconds(20))
-            assertThat(verifier.verify("c1")).isEqualTo(userId)
+            assertThat(verifier.verify("c1")?.userId).isEqualTo(userId)
             assertThat(calls.get()).isEqualTo(2)
             client.close()
         }
@@ -96,6 +96,27 @@ class CachedSessionVerifierTest {
             assertThat(verifier.verify("bad")).isNull()
             assertThat(verifier.verify("bad")).isNull()
             assertThat(calls.get()).isEqualTo(1)
+            client.close()
+        }
+
+    @Test
+    fun `cached session carries the capabilities from the whoami response`() =
+        runTest {
+            val client =
+                IdentityClient(
+                    baseUrl = "https://identity.example",
+                    engine =
+                        MockEngine { _ ->
+                            respond(
+                                content = """{"userId":"$userId","capabilities":["contribuer"]}""",
+                                status = HttpStatusCode.OK,
+                                headers = headersOf("Content-Type", ContentType.Application.Json.toString()),
+                            )
+                        },
+                )
+            val verifier = CachedSessionVerifier(client, ttl = Duration.ofSeconds(30)) { Instant.parse("2026-05-25T12:00:00Z") }
+            assertThat(verifier.verify("c1")?.capabilities).isEqualTo(setOf("contribuer"))
+            assertThat(verifier.verify("c1")?.capabilities).isEqualTo(setOf("contribuer"))
             client.close()
         }
 

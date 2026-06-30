@@ -140,7 +140,7 @@ class SubmitPairRatingUseCaseTest {
             items.insert(a)
             items.insert(b)
             uc.execute(
-                SubmitPairRatingCommand(a.id, b.id, null, PairVerdict.RIGHT_WINS, 2, 1100),
+                SubmitPairRatingCommand(a.id, b.id, UserId(UUID.randomUUID()), PairVerdict.RIGHT_WINS, 2, 1100),
             )
             assertThat(pairRatings.rows.single().verdict).isEqualTo(PreferenceVerdict.RIGHT_WINS)
         }
@@ -173,11 +173,11 @@ class SubmitPairRatingUseCaseTest {
             items.insert(a)
             items.insert(b)
             uc.execute(
-                SubmitPairRatingCommand(a.id, b.id, null, PairVerdict.BOTH_BAD, 4, 2000),
+                SubmitPairRatingCommand(a.id, b.id, UserId(UUID.randomUUID()), PairVerdict.BOTH_BAD, 4, 2000),
             )
             assertThat(ratings.ratings).hasSize(2)
             assertThat(ratings.ratings.map { it.qualite }.toSet()).isEqualTo(setOf(1))
-            assertThat(ratings.ratings.map { it.submittedAs }.toSet()).isEqualTo(setOf(SubmittedAs.ANON))
+            assertThat(ratings.ratings.map { it.submittedAs }.toSet()).isEqualTo(setOf(SubmittedAs.AUTH))
         }
 
     @Test
@@ -209,7 +209,7 @@ class SubmitPairRatingUseCaseTest {
                     SubmitPairRatingCommand(
                         leftItemId = ItemId(UUID.randomUUID()),
                         rightItemId = b.id,
-                        userId = null,
+                        userId = UserId(UUID.randomUUID()),
                         verdict = PairVerdict.LEFT_WINS,
                         difficulte = 3,
                         latencyMs = 1000,
@@ -228,7 +228,7 @@ class SubmitPairRatingUseCaseTest {
             items.insert(b)
             val result =
                 uc.execute(
-                    SubmitPairRatingCommand(a.id, b.id, null, PairVerdict.LEFT_WINS, 3, 1000),
+                    SubmitPairRatingCommand(a.id, b.id, UserId(UUID.randomUUID()), PairVerdict.LEFT_WINS, 3, 1000),
                 )
             assertThat(result).isEqualTo(SubmitPairRatingResult.PairMotMismatch)
         }
@@ -241,7 +241,7 @@ class SubmitPairRatingUseCaseTest {
             items.insert(a)
             val result =
                 uc.execute(
-                    SubmitPairRatingCommand(a.id, a.id, null, PairVerdict.LEFT_WINS, 3, 1000),
+                    SubmitPairRatingCommand(a.id, a.id, UserId(UUID.randomUUID()), PairVerdict.LEFT_WINS, 3, 1000),
                 )
             assertThat(result).isEqualTo(SubmitPairRatingResult.SameItem)
         }

@@ -3,6 +3,7 @@ package com.bliss.survey.api.routes
 import com.bliss.survey.api.auth.UserIdKey
 import com.bliss.survey.api.dto.ProblemDetails
 import com.bliss.survey.api.dto.UndoActionRequest
+import com.bliss.survey.api.requireContribuer
 import com.bliss.survey.api.respondProblem
 import com.bliss.survey.application.usecases.UndoActionResult
 import com.bliss.survey.application.usecases.UndoActionUseCase
@@ -13,11 +14,11 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 
-// POST /v1/actions/undo — capability token in the body; auth-optional (ADR-0059).
-fun Route.undoActionRoute(undoAction: suspend (token: String, userId: UserId?) -> UndoActionResult) {
+fun Route.undoActionRoute(undoAction: suspend (token: String, userId: UserId) -> UndoActionResult) {
     post("/v1/actions/undo") {
+        if (!call.requireContribuer()) return@post
         val body = call.receive<UndoActionRequest>()
-        val userId = call.attributes.getOrNull(UserIdKey)?.let { UserId(it) }
+        val userId = UserId(call.attributes[UserIdKey])
         when (undoAction(body.token, userId)) {
             UndoActionResult.Undone -> call.respond(HttpStatusCode.NoContent)
 

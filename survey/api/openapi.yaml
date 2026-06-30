@@ -2,20 +2,15 @@ openapi: 3.1.0
 info:
   title: WordSparrow Survey API
   version: 0.2.0
-  summary: Auth-optional rating + corpus-contribution surface for clue RLHF.
+  summary: Contribuer-gated rating + corpus-contribution surface for clue RLHF (ADR-0079).
   description: |
-    Backend for the `/sondage` route. Anonymous and authenticated visitors
-    rate candidate clues (qualité, difficulté, optional flag). Authenticated
-    visitors can additionally submit a `correctif` (alternative clue) which
-    enters the corpus as an anonymous candidate.
+    Backend for the `/sondage` route. All non-health endpoints require the
+    `contribuer` capability (ADR-0079); anonymous and non-maintainer callers
+    receive 403. The `__Secure-ws_session` cookie is verified via identity-api
+    (30 s cache, ADR-0044 pattern); capabilities are sourced from identity's
+    whoami response (absent ⇒ empty set ⇒ deny).
 
-    Auth resolution: the API attempts to read `__Secure-ws_session` and
-    verifies via identity-api (30 s cache, ADR-0044 pattern). Auth is
-    optional on `/v1/items/*`; required on `/v1/me/*`. Anonymous callers
-    receive 401 if they include a `correctif` (corpus contributions require
-    sign-in).
-
-    See ADR-0056 and `docs/superpowers/specs/2026-05-25-survey-module-design.md`.
+    See ADR-0056, ADR-0079, and `docs/superpowers/specs/2026-05-25-survey-module-design.md`.
   contact:
     name: Bliss maintainers
     url: https://github.com/Ishou/bliss
@@ -59,6 +54,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Campaign' }
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
         '503':
           $ref: '#/components/responses/ProblemDetails'
 
@@ -68,15 +65,14 @@ paths:
       summary: Get the next unrated item for the caller.
       description: |
         Pulls one survey item the caller has not yet rated, applying tier-
-        stratified weighted sampling and K-coverage prioritisation. Auth
-        optional: signed-in callers are dedup'd server-side; anonymous
-        callers may provide `excluded` to perform client-side dedup.
+        stratified weighted sampling and K-coverage prioritisation.
+        Contribuer-gated; server-side dedup applied via the caller's session.
       tags: [items]
       parameters:
         - in: query
           name: excluded
           required: false
-          description: Comma-separated list of `itemId`s the anonymous caller has already rated locally. Ignored when the caller is authenticated.
+          description: Comma-separated list of `itemId`s to exclude from sampling. Redundant — all callers are contribuer-gated and dedup'd server-side.
           schema:
             type: string
       responses:
@@ -87,6 +83,8 @@ paths:
               schema: { $ref: '#/components/schemas/Item' }
         '204':
           description: Pool exhausted — no unrated items remain for this caller.
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
         '503':
           $ref: '#/components/responses/ProblemDetails'
 
@@ -95,14 +93,12 @@ paths:
       operationId: submitRating
       summary: Submit a rating for an item.
       description: |
-        Server assigns `submittedAs` based on session presence. For auth
-        callers, the partial unique index on (itemId, userId) makes this
-        idempotent — a repeat submission returns 409 with the existing
-        rating. For anon callers, every submit creates a new row (no
-        server-side dedup). Anonymous callers including a `correctif` or
-        any meta annotation (`targetCategories`, `targetSense`,
-        `isMultisense`, `subTags`) are rejected with 401 — corpus
-        contributions and sense/category annotation both require sign-in.
+        Submit a rating for an item. Contribuer-gated. The partial unique
+        index on (itemId, userId) makes this idempotent — a repeat
+        submission returns 409 with the existing rating. Corpus
+        contributions (`correctif`) and sense/category annotations
+        (`targetCategories`, `targetSense`, `isMultisense`, `subTags`)
+        require the `contribuer` capability.
       tags: [items]
       parameters:
         - in: path
@@ -121,7 +117,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RatingResponse' }
         '400': { $ref: '#/components/responses/ProblemDetails' }
-        '401': { $ref: '#/components/responses/ProblemDetails' }
+        '403': { $ref: '#/components/responses/ProblemDetails' }
         '404': { $ref: '#/components/responses/ProblemDetails' }
         '409':
           description: Auth caller already rated this item.
@@ -145,14 +141,15 @@ paths:
       summary: Get the next unrated pair (same mot) for pairwise rating.
       description: |
         Pulls two distinct survey items for the same `mot`, both unrated by
-        the caller. Same auth/dedup rules as `/v1/items/next`. Returns 204
-        when no mot has at least two unrated candidates available.
+        the caller. Contribuer-gated; server-side dedup applied via the
+        caller's session. Returns 204 when no mot has at least two unrated
+        candidates available.
       tags: [items]
       parameters:
         - in: query
           name: excluded
           required: false
-          description: Comma-separated list of `itemId`s the anonymous caller has already rated locally. Ignored when the caller is authenticated.
+          description: Comma-separated list of `itemId`s to exclude from sampling. Redundant — all callers are contribuer-gated and dedup'd server-side.
           schema:
             type: string
       responses:
@@ -163,6 +160,8 @@ paths:
               schema: { $ref: '#/components/schemas/ItemPair' }
         '204':
           description: No mot has two unrated candidates available.
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
         '503':
           $ref: '#/components/responses/ProblemDetails'
 
@@ -196,6 +195,7 @@ paths:
         '204':
           description: SKIP verdict — no rows written, no body returned.
         '400': { $ref: '#/components/responses/ProblemDetails' }
+        '403': { $ref: '#/components/responses/ProblemDetails' }
         '404': { $ref: '#/components/responses/ProblemDetails' }
         '409': { $ref: '#/components/responses/ProblemDetails' }
         '423':
@@ -211,8 +211,7 @@ paths:
       description: |
         Reverses every write a submit produced, using the capability token
         returned as `undoToken`. The token travels in the body, never the URL.
-        Anon actions authorize on possession; authed actions additionally bind
-        to the session user. Undoable while the campaign is open and for an 8 s
+        Contribuer-gated. Undoable while the campaign is open and for an 8 s
         close grace; 410 once the grace elapses.
       tags: [items]
       requestBody:
@@ -224,6 +223,8 @@ paths:
       responses:
         '204':
           description: Action reversed.
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
         '404':
           description: Token unknown, not yours, or already undone.
           content:
@@ -250,7 +251,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProgressResponse' }
-        '401': { $ref: '#/components/responses/ProblemDetails' }
+        '403': { $ref: '#/components/responses/ProblemDetails' }
 
   /v1/me/contributions:
     get:
@@ -267,7 +268,7 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/ContributionItem' }
-        '401': { $ref: '#/components/responses/ProblemDetails' }
+        '403': { $ref: '#/components/responses/ProblemDetails' }
 
   /v1/me/preferences:
     patch:
@@ -286,7 +287,7 @@ paths:
         '204':
           description: Preferences updated.
         '400': { $ref: '#/components/responses/ProblemDetails' }
-        '401': { $ref: '#/components/responses/ProblemDetails' }
+        '403': { $ref: '#/components/responses/ProblemDetails' }
 
   /v1/lemma-meta/{mot}:
     get:
@@ -297,8 +298,8 @@ paths:
         past ratings of this lemma. Both `priorSenses` and `priorSubTags`
         are machine-grown from rating history — there is no separate
         curation surface. Powers the rating-card autocomplete dropdowns.
-        Open auth (no PII, vocabulary-only). Both arrays are always
-        returned — empty when the lemma has not been rated yet.
+        Contribuer-gated. Both arrays are always returned — empty when the
+        lemma has not been rated yet.
       tags: [lemma-meta]
       parameters:
         - in: path
@@ -316,6 +317,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LemmaMeta' }
+        '403':
+          $ref: '#/components/responses/ProblemDetails'
         '503':
           $ref: '#/components/responses/ProblemDetails'
 
@@ -487,7 +490,7 @@ components:
         correctif:
           type: object
           description: |
-            Clue correction. Authenticated callers only. When `pos` is set and
+            Clue correction. Contribuer-gated. When `pos` is set and
             `text` equals the original clue, the original item's POS is patched
             in place; when `text` differs, a new rater-proposed item carries the
             corrected text and `pos` (defaulting to the parent's POS when absent).
@@ -501,9 +504,8 @@ components:
           description: |
             High-level answer classes the rater assigns to this definition.
             An editable multi-select, pre-filled client-side from the item's
-            single machine `categorie` prior but freely overridden. Any
-            authenticated rater may set it; anonymous submissions including
-            this field return 401. When several raters annotate the same
+            single machine `categorie` prior but freely overridden.
+            Contribuer-gated. When several raters annotate the same
             definition, maintainer ratings take precedence on resolution.
             Omitted when the rater does not annotate categories.
           items: { $ref: '#/components/schemas/Categorie' }
@@ -515,7 +517,7 @@ components:
             Single freeform sense gloss this clue targets. Must not repeat
             the lemma; server soft-normalizes for autocomplete dedup, stores
             the original spelling. Omitted when sense is not annotated
-            or `isMultisense` is true. Authenticated callers only.
+            or `isMultisense` is true. Contribuer-gated.
           minLength: 1
           maxLength: 80
         isMultisense:
@@ -524,14 +526,14 @@ components:
           description: |
             Calembour marker: the clue deliberately plays on several senses
             at once. When true, `targetSense` is optional — the senses are
-            not enumerated. Authenticated callers only.
+            not enumerated. Contribuer-gated.
         subTags:
           type: array
           description: |
             Free-form sub-domain refinement tags for this definition — finer
             than `targetCategories` (e.g. felin, capitale, note de musique).
             Per-rating. Server soft-normalizes for autocomplete dedup, stores
-            the original spelling. Authenticated callers only. Omitted when
+            the original spelling. Contribuer-gated. Omitted when
             not annotated.
           items:
             type: string
@@ -557,8 +559,8 @@ components:
         itemId:         { type: string, format: uuid }
         submittedAs:
           type: string
-          enum: [auth, anon]
-          x-enum-varnames: [AUTH, ANON]
+          enum: [auth]
+          x-enum-varnames: [AUTH]
         proposedItemId: { type: string, format: uuid, nullable: true, description: "UUID of the queued correctif item; null when no correctif was submitted." }
         campaignId:     { type: string, format: uuid, description: "Campaign whose lifecycle window this rating landed in. Stamped by the server at insert time." }
         undoToken:

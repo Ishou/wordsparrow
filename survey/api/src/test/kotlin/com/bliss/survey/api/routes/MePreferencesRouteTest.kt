@@ -4,7 +4,6 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import com.bliss.survey.api.auth.SESSION_COOKIE_NAME
-import com.bliss.survey.api.auth.SessionMiddleware
 import com.bliss.survey.application.ports.ProposedByRepository
 import com.bliss.survey.domain.model.ItemId
 import com.bliss.survey.domain.model.UserId
@@ -25,10 +24,12 @@ import java.util.UUID
 class MePreferencesRouteTest {
     private val userUuid = UUID.fromString("33333333-3333-7333-8333-333333333333")
 
+    // ADR-0079: contribuer is maintainer-only; non-maintainer callers are denied 403.
     @Test
-    fun `anon caller gets 401`() =
+    fun `anonymous - 403 forbidden`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { mePreferencesRoute(RecordingRepo()) }
             }
@@ -37,15 +38,32 @@ class MePreferencesRouteTest {
                     contentType(ContentType.Application.Json)
                     setBody("""{"deleteProposedOnErasure":true}""")
                 }
-            assertThat(resp.status).isEqualTo(HttpStatusCode.Unauthorized)
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
         }
 
     @Test
-    fun `auth caller 204 and opt-out persists`() =
+    fun `player - 403 forbidden`() =
+        testApplication {
+            application {
+                installCapabilitySession()
+                install(ContentNegotiation) { json() }
+                routing { mePreferencesRoute(RecordingRepo()) }
+            }
+            val resp =
+                client.patch("/v1/me/preferences") {
+                    cookie(SESSION_COOKIE_NAME, PLAYER_COOKIE)
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"deleteProposedOnErasure":true}""")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
+        }
+
+    @Test
+    fun `maintainer - 204 and opt-out persists`() =
         testApplication {
             val repo = RecordingRepo()
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json() }
                 routing { mePreferencesRoute(repo) }
             }
@@ -62,11 +80,11 @@ class MePreferencesRouteTest {
         }
 
     @Test
-    fun `auth caller can flip opt-out off`() =
+    fun `maintainer - can flip opt-out off`() =
         testApplication {
             val repo = RecordingRepo()
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json() }
                 routing { mePreferencesRoute(repo) }
             }

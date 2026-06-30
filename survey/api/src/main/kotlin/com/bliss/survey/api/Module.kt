@@ -83,7 +83,7 @@ fun Application.surveyApiModule(
     }
 
     install(SessionMiddleware) {
-        verifyCookie = wiring.verifyCookie
+        verifySession = wiring.verifySession
     }
 
     monitor.subscribe(ApplicationStopped) {

@@ -2,6 +2,7 @@ package com.bliss.survey.api.routes
 
 import com.bliss.survey.api.dto.CampaignResponse
 import com.bliss.survey.api.dto.ProblemDetails
+import com.bliss.survey.api.requireContribuer
 import com.bliss.survey.api.respondProblem
 import com.bliss.survey.application.usecases.GetCurrentCampaignUseCase
 import com.bliss.survey.domain.model.Campaign
@@ -13,6 +14,7 @@ import io.ktor.server.routing.get
 // GET /v1/campaign/current — returns the lock state for the frontend (ADR-0059).
 fun Route.getCurrentCampaignRoute(fetch: suspend () -> Campaign?) {
     get("/v1/campaign/current") {
+        if (!call.requireContribuer()) return@get
         val campaign = fetch()
         if (campaign == null) {
             call.respondProblem(

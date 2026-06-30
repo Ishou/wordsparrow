@@ -6,6 +6,7 @@ import com.bliss.survey.api.dto.CorrectifRejection
 import com.bliss.survey.api.dto.ProblemDetails
 import com.bliss.survey.api.dto.RatingRequest
 import com.bliss.survey.api.dto.RatingResponse
+import com.bliss.survey.api.requireContribuer
 import com.bliss.survey.api.respondProblem
 import com.bliss.survey.application.usecases.CorrectifInput
 import com.bliss.survey.application.usecases.SubmitRatingCommand
@@ -27,9 +28,9 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import java.util.UUID
 
-// POST /v1/items/{itemId}/rating — auth-optional; anon + correctif rejected 401 before use-case.
 fun Route.submitRatingRoute(execute: suspend (SubmitRatingCommand) -> SubmitRatingResult) {
     post("/v1/items/{itemId}/rating") {
+        if (!call.requireContribuer()) return@post
         val itemUuid =
             runCatching { UUID.fromString(call.parameters["itemId"]) }.getOrNull()
                 ?: return@post call.respondProblem(
@@ -43,19 +44,7 @@ fun Route.submitRatingRoute(execute: suspend (SubmitRatingCommand) -> SubmitRati
                 )
 
         val body = call.receive<RatingRequest>()
-        val userId = call.attributes.getOrNull(UserIdKey)?.let { UserId(it) }
-
-        if (userId == null && body.correctif != null) {
-            return@post call.respondProblem(
-                HttpStatusCode.Unauthorized,
-                ProblemDetails(
-                    type = "about:blank",
-                    title = "sign-in required",
-                    status = HttpStatusCode.Unauthorized.value,
-                    detail = "Proposing a clue correction requires signing in.",
-                ),
-            )
-        }
+        val userId = UserId(call.attributes[UserIdKey])
 
         val flag = body.flag?.let { runCatching { FlagReason.valueOf(it.uppercase()) }.getOrNull() }
         val correctifStyle = body.correctif?.let { runCatching { Style.valueOf(it.style.uppercase()) }.getOrNull() }
@@ -118,27 +107,6 @@ fun Route.submitRatingRoute(execute: suspend (SubmitRatingCommand) -> SubmitRati
 
             is SubmitRatingResult.AlreadyExists ->
                 call.respond(HttpStatusCode.Conflict, result.existing.toResponse())
-
-            SubmitRatingResult.AnonCorrectifForbidden ->
-                call.respondProblem(
-                    HttpStatusCode.Unauthorized,
-                    ProblemDetails(
-                        type = "about:blank",
-                        title = "sign-in required",
-                        status = HttpStatusCode.Unauthorized.value,
-                    ),
-                )
-
-            SubmitRatingResult.AnonMetaForbidden ->
-                call.respondProblem(
-                    HttpStatusCode.Unauthorized,
-                    ProblemDetails(
-                        type = "about:blank",
-                        title = "sign-in required",
-                        status = HttpStatusCode.Unauthorized.value,
-                        detail = "Annotating meta (categories, sense, sub-tags) requires signing in (ADR-0061).",
-                    ),
-                )
 
             is SubmitRatingResult.CorrectifRejected -> {
                 val rejection =

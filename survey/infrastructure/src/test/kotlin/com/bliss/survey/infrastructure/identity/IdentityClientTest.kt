@@ -33,11 +33,46 @@ class IdentityClientTest {
                 }
             val client = IdentityClient(baseUrl = "https://identity.example", engine = engine)
             val resolved = client.verifySession("session-cookie-value")
-            assertThat(resolved).isEqualTo(userId)
+            assertThat(resolved?.userId).isEqualTo(userId)
+            assertThat(resolved?.capabilities).isEqualTo(emptySet())
             assertThat(capturedCookies.size).isEqualTo(1)
             assertThat(capturedCookies[0]).isNotNull()
             assertThat(capturedCookies[0]!!.contains("__Secure-ws_session=session-cookie-value")).isEqualTo(true)
             assertThat(capturedPaths).isEqualTo(listOf("/v1/auth/whoami"))
+            client.close()
+        }
+
+    @Test
+    fun `verifySession parses capabilities from the whoami response`() =
+        runTest {
+            val engine =
+                MockEngine { _ ->
+                    respond(
+                        content = """{"userId":"$userId","displayName":"Alice","capabilities":["hint","contribuer","billing:subscribe"]}""",
+                        status = HttpStatusCode.OK,
+                        headers = headersOf("Content-Type", ContentType.Application.Json.toString()),
+                    )
+                }
+            val client = IdentityClient(baseUrl = "https://identity.example", engine = engine)
+            val resolved = client.verifySession("maintainer-cookie")
+            assertThat(resolved?.userId).isEqualTo(userId)
+            assertThat(resolved?.capabilities).isEqualTo(setOf("hint", "contribuer", "billing:subscribe"))
+            client.close()
+        }
+
+    @Test
+    fun `verifySession defaults to empty capabilities when the field is absent`() =
+        runTest {
+            val engine =
+                MockEngine { _ ->
+                    respond(
+                        content = """{"userId":"$userId","displayName":"Alice"}""",
+                        status = HttpStatusCode.OK,
+                        headers = headersOf("Content-Type", ContentType.Application.Json.toString()),
+                    )
+                }
+            val client = IdentityClient(baseUrl = "https://identity.example", engine = engine)
+            assertThat(client.verifySession("player-cookie")?.capabilities).isEqualTo(emptySet())
             client.close()
         }
 

@@ -286,10 +286,10 @@ class UndoActionUseCaseTest {
         }
 
     @Test
-    fun `anon action undone without a session`() =
+    fun `anon action undone by an authed contribuer`() =
         runTest {
             val f = newFixture(campaignOpen = true, anon = true)
-            assertThat(f.useCase.execute("tok", sessionUserId = null)).isEqualTo(UndoActionResult.Undone)
+            assertThat(f.useCase.execute("tok", sessionUserId = f.userId)).isEqualTo(UndoActionResult.Undone)
         }
 
     @Test

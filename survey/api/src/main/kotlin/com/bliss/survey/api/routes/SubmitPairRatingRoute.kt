@@ -4,6 +4,7 @@ import com.bliss.survey.api.auth.UserIdKey
 import com.bliss.survey.api.dto.PairRatingRequest
 import com.bliss.survey.api.dto.PairRatingResponse
 import com.bliss.survey.api.dto.ProblemDetails
+import com.bliss.survey.api.requireContribuer
 import com.bliss.survey.api.respondProblem
 import com.bliss.survey.application.usecases.SubmitPairRatingCommand
 import com.bliss.survey.application.usecases.SubmitPairRatingResult
@@ -18,9 +19,10 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import java.util.UUID
 
-// POST /v1/ratings/pair — auth-optional; verdict dispatch handled by the use case (ADR-0056 amendment 2026-05-28).
+// POST /v1/ratings/pair — contribuer-gated (ADR-0079); verdict dispatch handled by the use case (ADR-0056 amendment 2026-05-28).
 fun Route.submitPairRatingRoute(execute: suspend (SubmitPairRatingCommand) -> SubmitPairRatingResult) {
     post("/v1/ratings/pair") {
+        if (!call.requireContribuer()) return@post
         val body = call.receive<PairRatingRequest>()
         val leftUuid =
             runCatching { UUID.fromString(body.leftItemId) }.getOrNull()
@@ -78,7 +80,7 @@ fun Route.submitPairRatingRoute(execute: suspend (SubmitPairRatingCommand) -> Su
             )
         }
 
-        val userId = call.attributes.getOrNull(UserIdKey)?.let { UserId(it) }
+        val userId = UserId(call.attributes[UserIdKey])
         val cmd =
             SubmitPairRatingCommand(
                 leftItemId = ItemId(leftUuid),

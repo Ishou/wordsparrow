@@ -2,8 +2,7 @@ package com.bliss.survey.api.routes
 
 import com.bliss.survey.api.auth.UserIdKey
 import com.bliss.survey.api.dto.ContributionItem
-import com.bliss.survey.api.dto.ProblemDetails
-import com.bliss.survey.api.respondProblem
+import com.bliss.survey.api.requireContribuer
 import com.bliss.survey.application.ports.SurveyItemRepository
 import com.bliss.survey.domain.model.UserId
 import io.ktor.http.HttpStatusCode
@@ -11,19 +10,10 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
-// GET /v1/me/contributions — auth-required listing of rater-proposed items.
 fun Route.meContributionsRoute(items: SurveyItemRepository) {
     get("/v1/me/contributions") {
-        val userId =
-            call.attributes.getOrNull(UserIdKey)
-                ?: return@get call.respondProblem(
-                    HttpStatusCode.Unauthorized,
-                    ProblemDetails(
-                        type = "about:blank",
-                        title = "sign-in required",
-                        status = HttpStatusCode.Unauthorized.value,
-                    ),
-                )
+        if (!call.requireContribuer()) return@get
+        val userId = call.attributes[UserIdKey]
         val list = items.listProposedByUser(UserId(userId))
         call.respond(
             HttpStatusCode.OK,

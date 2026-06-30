@@ -3,6 +3,7 @@ package com.bliss.survey.api.routes
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
+import com.bliss.survey.api.auth.SESSION_COOKIE_NAME
 import com.bliss.survey.application.ports.ProposedContribution
 import com.bliss.survey.application.ports.RandomFactory
 import com.bliss.survey.application.ports.SurveyItemRepository
@@ -19,6 +20,7 @@ import com.bliss.survey.domain.model.UserId
 import com.bliss.survey.domain.routing.KCoveragePolicy
 import com.bliss.survey.domain.routing.StratifiedSampler
 import com.bliss.survey.domain.routing.TierWeights
+import io.ktor.client.request.cookie
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
@@ -53,15 +55,16 @@ class NextItemRouteTest {
         )
 
     @Test
-    fun `200 returns item shape when pool has a pick`() =
+    fun `maintainer - 200 returns item shape when pool has a pick`() =
         testApplication {
             val repo = StubItemRepo(listOf(fixedItem))
             val useCase = GetNextItemUseCase(repo, StratifiedSampler(TierWeights.DEFAULT), RandomFactory { Random(0) })
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { nextItemRoute(useCase) }
             }
-            val resp = client.get("/v1/items/next")
+            val resp = client.get("/v1/items/next") { cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE) }
             assertThat(resp.status).isEqualTo(HttpStatusCode.OK)
             val body = resp.bodyAsText()
             assertThat(body).contains("\"itemId\":\"11111111-1111-7111-8111-111111111111\"")
@@ -71,29 +74,62 @@ class NextItemRouteTest {
         }
 
     @Test
-    fun `204 when pool is empty`() =
+    fun `maintainer - 204 when pool is empty`() =
         testApplication {
             val repo = StubItemRepo(emptyList())
             val useCase = GetNextItemUseCase(repo, StratifiedSampler(TierWeights.DEFAULT), RandomFactory { Random(0) })
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { nextItemRoute(useCase) }
             }
-            val resp = client.get("/v1/items/next")
+            val resp = client.get("/v1/items/next") { cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE) }
             assertThat(resp.status).isEqualTo(HttpStatusCode.NoContent)
         }
 
     @Test
-    fun `excluded query param filters out items`() =
+    fun `maintainer - excluded query param filters out items`() =
         testApplication {
             val repo = StubItemRepo(listOf(fixedItem))
             val useCase = GetNextItemUseCase(repo, StratifiedSampler(TierWeights.DEFAULT), RandomFactory { Random(0) })
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { nextItemRoute(useCase) }
             }
-            val resp = client.get("/v1/items/next?excluded=${fixedItem.id.value}")
+            val resp =
+                client.get("/v1/items/next?excluded=${fixedItem.id.value}") { cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE) }
             assertThat(resp.status).isEqualTo(HttpStatusCode.NoContent)
+        }
+
+    // ADR-0079: contribuer is maintainer-only; a player (no `contribuer` cap) is denied.
+    @Test
+    fun `player - 403 forbidden`() =
+        testApplication {
+            val useCase =
+                GetNextItemUseCase(StubItemRepo(listOf(fixedItem)), StratifiedSampler(TierWeights.DEFAULT), RandomFactory { Random(0) })
+            application {
+                installCapabilitySession()
+                install(ContentNegotiation) { json() }
+                routing { nextItemRoute(useCase) }
+            }
+            val resp = client.get("/v1/items/next") { cookie(SESSION_COOKIE_NAME, PLAYER_COOKIE) }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
+            assertThat(resp.bodyAsText()).contains("réservée aux mainteneurs")
+        }
+
+    @Test
+    fun `anonymous - 403 forbidden`() =
+        testApplication {
+            val useCase =
+                GetNextItemUseCase(StubItemRepo(listOf(fixedItem)), StratifiedSampler(TierWeights.DEFAULT), RandomFactory { Random(0) })
+            application {
+                installCapabilitySession()
+                install(ContentNegotiation) { json() }
+                routing { nextItemRoute(useCase) }
+            }
+            val resp = client.get("/v1/items/next")
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
         }
 }
 
@@ -118,13 +154,13 @@ private class StubItemRepo(
     ) {}
 
     override suspend fun pickUnratedForUser(
-        userId: UserId?,
+        userId: UserId,
         tier: Tier,
         exclude: Set<ItemId>,
     ): SurveyItem? = items.firstOrNull { it.tier == tier && it.id !in exclude }
 
     override suspend fun pickPairForUser(
-        userId: UserId?,
+        userId: UserId,
         exclude: Set<ItemId>,
     ): ItemPair? = null
 

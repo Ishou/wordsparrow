@@ -6,7 +6,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import com.bliss.survey.api.WIRE_JSON
 import com.bliss.survey.api.auth.SESSION_COOKIE_NAME
-import com.bliss.survey.api.auth.SessionMiddleware
 import com.bliss.survey.application.usecases.SubmitPairRatingCommand
 import com.bliss.survey.application.usecases.SubmitPairRatingResult
 import com.bliss.survey.domain.model.CampaignId
@@ -42,15 +41,18 @@ class SubmitPairRatingRouteTest {
     ): String =
         "{\"leftItemId\":\"$left\",\"rightItemId\":\"$right\",\"verdict\":\"$verdict\",\"difficulte\":$difficulte,\"latencyMs\":$latency}"
 
+    // ADR-0079: the contribuer endpoints are maintainer-only; the route tests below authenticate as a maintainer.
     @Test
-    fun `anon LEFT_WINS - 201 with campaignId`() =
+    fun `maintainer LEFT_WINS - 201 with campaignId`() =
         testApplication {
             application {
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { submitPairRatingRoute { recorded } }
             }
             val resp =
                 client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
@@ -59,22 +61,22 @@ class SubmitPairRatingRouteTest {
         }
 
     @Test
-    fun `auth happy path forwards user attribute`() =
+    fun `maintainer happy path forwards user attribute`() =
         testApplication {
             var capturedUserId: UUID? = null
             application {
-                install(SessionMiddleware) { verifyCookie = { userId } }
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing {
                     submitPairRatingRoute { cmd: SubmitPairRatingCommand ->
-                        capturedUserId = cmd.userId?.value
+                        capturedUserId = cmd.userId.value
                         recorded
                     }
                 }
             }
             val resp =
                 client.post("/v1/ratings/pair") {
-                    cookie(SESSION_COOKIE_NAME, "valid-token")
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(verdict = "BOTH_GOOD"))
                 }
@@ -83,14 +85,57 @@ class SubmitPairRatingRouteTest {
         }
 
     @Test
+    fun `player - 403 forbidden`() =
+        testApplication {
+            var called = false
+            application {
+                installCapabilitySession(userId)
+                install(ContentNegotiation) { json(WIRE_JSON) }
+                routing {
+                    submitPairRatingRoute {
+                        called = true
+                        recorded
+                    }
+                }
+            }
+            val resp =
+                client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, PLAYER_COOKIE)
+                    contentType(ContentType.Application.Json)
+                    setBody(jsonBody())
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
+            assertThat(resp.bodyAsText()).contains("réservée aux mainteneurs")
+            assertThat(called).isEqualTo(false)
+        }
+
+    @Test
+    fun `anonymous - 403 forbidden`() =
+        testApplication {
+            application {
+                installCapabilitySession(userId)
+                install(ContentNegotiation) { json(WIRE_JSON) }
+                routing { submitPairRatingRoute { recorded } }
+            }
+            val resp =
+                client.post("/v1/ratings/pair") {
+                    contentType(ContentType.Application.Json)
+                    setBody(jsonBody())
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
+        }
+
+    @Test
     fun `SKIP also returns 204`() =
         testApplication {
             application {
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { submitPairRatingRoute { SubmitPairRatingResult.Skipped } }
             }
             val resp =
                 client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(verdict = "SKIP"))
                 }
@@ -101,11 +146,13 @@ class SubmitPairRatingRouteTest {
     fun `duplicate pair - 409 conflict`() =
         testApplication {
             application {
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { submitPairRatingRoute { SubmitPairRatingResult.AlreadyExists } }
             }
             val resp =
                 client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
@@ -116,11 +163,13 @@ class SubmitPairRatingRouteTest {
     fun `item not found - 404 problem`() =
         testApplication {
             application {
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { submitPairRatingRoute { SubmitPairRatingResult.ItemNotFound } }
             }
             val resp =
                 client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
@@ -131,11 +180,13 @@ class SubmitPairRatingRouteTest {
     fun `mot mismatch - 400 problem`() =
         testApplication {
             application {
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { submitPairRatingRoute { SubmitPairRatingResult.PairMotMismatch } }
             }
             val resp =
                 client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
@@ -148,6 +199,7 @@ class SubmitPairRatingRouteTest {
         testApplication {
             var called = false
             application {
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing {
                     submitPairRatingRoute {
@@ -158,6 +210,7 @@ class SubmitPairRatingRouteTest {
             }
             val resp =
                 client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(left = "not-a-uuid"))
                 }
@@ -170,6 +223,7 @@ class SubmitPairRatingRouteTest {
         testApplication {
             var called = false
             application {
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing {
                     submitPairRatingRoute {
@@ -180,6 +234,7 @@ class SubmitPairRatingRouteTest {
             }
             val resp =
                 client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(verdict = "MAYBE"))
                 }
@@ -191,11 +246,13 @@ class SubmitPairRatingRouteTest {
     fun `difficulte out of range - 400`() =
         testApplication {
             application {
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { submitPairRatingRoute { recorded } }
             }
             val resp =
                 client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(difficulte = 9))
                 }
@@ -206,11 +263,13 @@ class SubmitPairRatingRouteTest {
     fun `latency negative - 400`() =
         testApplication {
             application {
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { submitPairRatingRoute { recorded } }
             }
             val resp =
                 client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(latency = -1))
                 }
@@ -227,11 +286,13 @@ class SubmitPairRatingRouteTest {
     fun `returns 423 when the use case returns Locked`() =
         testApplication {
             application {
+                installCapabilitySession(userId)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { submitPairRatingRoute { SubmitPairRatingResult.Locked } }
             }
             val resp =
                 client.post("/v1/ratings/pair") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }

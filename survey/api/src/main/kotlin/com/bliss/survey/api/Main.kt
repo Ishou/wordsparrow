@@ -1,5 +1,6 @@
 package com.bliss.survey.api
 
+import com.bliss.survey.api.auth.SessionPrincipal
 import com.bliss.survey.api.config.SurveyApiConfig
 import com.bliss.survey.application.filters.FilterPipeline
 import com.bliss.survey.application.ports.Clock
@@ -132,7 +133,9 @@ fun main() {
 
     val wiring =
         Wiring(
-            verifyCookie = { cookie -> sessionVerifier.verify(cookie) },
+            verifySession = { cookie ->
+                sessionVerifier.verify(cookie)?.let { SessionPrincipal(it.userId, it.capabilities) }
+            },
             getNextItem = getNextItem,
             submitRating = { cmd -> submitRating.execute(cmd) },
             getNextPair = getNextPair,

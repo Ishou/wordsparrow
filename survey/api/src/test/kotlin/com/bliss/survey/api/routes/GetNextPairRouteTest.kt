@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
+import com.bliss.survey.api.auth.SESSION_COOKIE_NAME
 import com.bliss.survey.application.ports.ProposedContribution
 import com.bliss.survey.application.ports.SurveyItemRepository
 import com.bliss.survey.application.usecases.GetNextPairUseCase
@@ -17,6 +18,7 @@ import com.bliss.survey.domain.model.SurveyItem
 import com.bliss.survey.domain.model.Tier
 import com.bliss.survey.domain.model.UserId
 import com.bliss.survey.domain.routing.KCoveragePolicy
+import io.ktor.client.request.cookie
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
@@ -56,15 +58,16 @@ class GetNextPairRouteTest {
         )
 
     @Test
-    fun `200 returns the pair when available`() =
+    fun `maintainer - 200 returns the pair when available`() =
         testApplication {
             val repo = StubPairRepo(ItemPair("POMME", left, right))
             val useCase = GetNextPairUseCase(repo)
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { getNextPairRoute(useCase) }
             }
-            val resp = client.get("/v1/items/pairs/next")
+            val resp = client.get("/v1/items/pairs/next") { cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE) }
             assertThat(resp.status).isEqualTo(HttpStatusCode.OK)
             val body = resp.bodyAsText()
             assertThat(body).contains("\"mot\":\"POMME\"")
@@ -73,28 +76,58 @@ class GetNextPairRouteTest {
         }
 
     @Test
-    fun `204 when no pair is available`() =
+    fun `maintainer - 204 when no pair is available`() =
         testApplication {
             val useCase = GetNextPairUseCase(StubPairRepo(null))
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { getNextPairRoute(useCase) }
             }
-            val resp = client.get("/v1/items/pairs/next")
+            val resp = client.get("/v1/items/pairs/next") { cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE) }
             assertThat(resp.status).isEqualTo(HttpStatusCode.NoContent)
         }
 
     @Test
-    fun `excluded query is forwarded to the use case`() =
+    fun `maintainer - excluded query is forwarded to the use case`() =
         testApplication {
             val repo = StubPairRepo(null, recordExclude = true)
             val useCase = GetNextPairUseCase(repo)
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { getNextPairRoute(useCase) }
             }
-            client.get("/v1/items/pairs/next?excluded=${left.id.value}")
+            client.get("/v1/items/pairs/next?excluded=${left.id.value}") { cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE) }
             assertThat(repo.lastExclude.contains(left.id)).isTrue()
+        }
+
+    // ADR-0079: contribuer is maintainer-only; non-maintainer callers are denied 403.
+    @Test
+    fun `player - 403 forbidden`() =
+        testApplication {
+            val useCase = GetNextPairUseCase(StubPairRepo(ItemPair("POMME", left, right)))
+            application {
+                installCapabilitySession()
+                install(ContentNegotiation) { json() }
+                routing { getNextPairRoute(useCase) }
+            }
+            val resp = client.get("/v1/items/pairs/next") { cookie(SESSION_COOKIE_NAME, PLAYER_COOKIE) }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
+            assertThat(resp.bodyAsText()).contains("réservée aux mainteneurs")
+        }
+
+    @Test
+    fun `anonymous - 403 forbidden`() =
+        testApplication {
+            val useCase = GetNextPairUseCase(StubPairRepo(ItemPair("POMME", left, right)))
+            application {
+                installCapabilitySession()
+                install(ContentNegotiation) { json() }
+                routing { getNextPairRoute(useCase) }
+            }
+            val resp = client.get("/v1/items/pairs/next")
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
         }
 }
 
@@ -121,13 +154,13 @@ private class StubPairRepo(
     ) {}
 
     override suspend fun pickUnratedForUser(
-        userId: UserId?,
+        userId: UserId,
         tier: Tier,
         exclude: Set<ItemId>,
     ): SurveyItem? = null
 
     override suspend fun pickPairForUser(
-        userId: UserId?,
+        userId: UserId,
         exclude: Set<ItemId>,
     ): ItemPair? {
         if (recordExclude) lastExclude = exclude

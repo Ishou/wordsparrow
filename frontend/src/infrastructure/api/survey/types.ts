@@ -39,9 +39,8 @@ export interface paths {
         /**
          * Get the next unrated item for the caller.
          * @description Pulls one survey item the caller has not yet rated, applying tier-
-         *     stratified weighted sampling and K-coverage prioritisation. Auth
-         *     optional: signed-in callers are dedup'd server-side; anonymous
-         *     callers may provide `excluded` to perform client-side dedup.
+         *     stratified weighted sampling and K-coverage prioritisation.
+         *     Contribuer-gated; server-side dedup applied via the caller's session.
          */
         get: operations["getNextItem"];
         put?: never;
@@ -63,14 +62,12 @@ export interface paths {
         put?: never;
         /**
          * Submit a rating for an item.
-         * @description Server assigns `submittedAs` based on session presence. For auth
-         *     callers, the partial unique index on (itemId, userId) makes this
-         *     idempotent — a repeat submission returns 409 with the existing
-         *     rating. For anon callers, every submit creates a new row (no
-         *     server-side dedup). Anonymous callers including a `correctif` or
-         *     any meta annotation (`targetCategories`, `targetSense`,
-         *     `isMultisense`, `subTags`) are rejected with 401 — corpus
-         *     contributions and sense/category annotation both require sign-in.
+         * @description Submit a rating for an item. Contribuer-gated. The partial unique
+         *     index on (itemId, userId) makes this idempotent — a repeat
+         *     submission returns 409 with the existing rating. Corpus
+         *     contributions (`correctif`) and sense/category annotations
+         *     (`targetCategories`, `targetSense`, `isMultisense`, `subTags`)
+         *     require the `contribuer` capability.
          */
         post: operations["submitRating"];
         delete?: never;
@@ -89,8 +86,9 @@ export interface paths {
         /**
          * Get the next unrated pair (same mot) for pairwise rating.
          * @description Pulls two distinct survey items for the same `mot`, both unrated by
-         *     the caller. Same auth/dedup rules as `/v1/items/next`. Returns 204
-         *     when no mot has at least two unrated candidates available.
+         *     the caller. Contribuer-gated; server-side dedup applied via the
+         *     caller's session. Returns 204 when no mot has at least two unrated
+         *     candidates available.
          */
         get: operations["getNextPair"];
         put?: never;
@@ -143,8 +141,7 @@ export interface paths {
          * Undo the action identified by a capability token.
          * @description Reverses every write a submit produced, using the capability token
          *     returned as `undoToken`. The token travels in the body, never the URL.
-         *     Anon actions authorize on possession; authed actions additionally bind
-         *     to the session user. Undoable while the campaign is open and for an 8 s
+         *     Contribuer-gated. Undoable while the campaign is open and for an 8 s
          *     close grace; 410 once the grace elapses.
          */
         post: operations["undoAction"];
@@ -221,8 +218,8 @@ export interface paths {
          *     past ratings of this lemma. Both `priorSenses` and `priorSubTags`
          *     are machine-grown from rating history — there is no separate
          *     curation surface. Powers the rating-card autocomplete dropdowns.
-         *     Open auth (no PII, vocabulary-only). Both arrays are always
-         *     returned — empty when the lemma has not been rated yet.
+         *     Contribuer-gated. Both arrays are always returned — empty when the
+         *     lemma has not been rated yet.
          */
         get: operations["getLemmaMeta"];
         put?: never;
@@ -326,7 +323,7 @@ export interface components {
             /** @enum {string} */
             flag?: "hors_sujet" | "auto_reference" | "erreur_sens" | "autre";
             /**
-             * @description Clue correction. Authenticated callers only. When `pos` is set and
+             * @description Clue correction. Contribuer-gated. When `pos` is set and
              *     `text` equals the original clue, the original item's POS is patched
              *     in place; when `text` differs, a new rater-proposed item carries the
              *     corrected text and `pos` (defaulting to the parent's POS when absent).
@@ -339,9 +336,8 @@ export interface components {
             /**
              * @description High-level answer classes the rater assigns to this definition.
              *     An editable multi-select, pre-filled client-side from the item's
-             *     single machine `categorie` prior but freely overridden. Any
-             *     authenticated rater may set it; anonymous submissions including
-             *     this field return 401. When several raters annotate the same
+             *     single machine `categorie` prior but freely overridden.
+             *     Contribuer-gated. When several raters annotate the same
              *     definition, maintainer ratings take precedence on resolution.
              *     Omitted when the rater does not annotate categories.
              */
@@ -350,13 +346,13 @@ export interface components {
              * @description Single freeform sense gloss this clue targets. Must not repeat
              *     the lemma; server soft-normalizes for autocomplete dedup, stores
              *     the original spelling. Omitted when sense is not annotated
-             *     or `isMultisense` is true. Authenticated callers only.
+             *     or `isMultisense` is true. Contribuer-gated.
              */
             targetSense?: string;
             /**
              * @description Calembour marker: the clue deliberately plays on several senses
              *     at once. When true, `targetSense` is optional — the senses are
-             *     not enumerated. Authenticated callers only.
+             *     not enumerated. Contribuer-gated.
              * @default false
              */
             isMultisense: boolean;
@@ -364,7 +360,7 @@ export interface components {
              * @description Free-form sub-domain refinement tags for this definition — finer
              *     than `targetCategories` (e.g. felin, capitale, note de musique).
              *     Per-rating. Server soft-normalizes for autocomplete dedup, stores
-             *     the original spelling. Authenticated callers only. Omitted when
+             *     the original spelling. Contribuer-gated. Omitted when
              *     not annotated.
              */
             subTags?: string[];
@@ -380,7 +376,7 @@ export interface components {
             /** Format: uuid */
             itemId: string;
             /** @enum {string} */
-            submittedAs: "auth" | "anon";
+            submittedAs: "auth";
             /**
              * Format: uuid
              * @description UUID of the queued correctif item; null when no correctif was submitted.
@@ -497,13 +493,14 @@ export interface operations {
                     "application/json": components["schemas"]["Campaign"];
                 };
             };
+            403: components["responses"]["ProblemDetails"];
             503: components["responses"]["ProblemDetails"];
         };
     };
     getNextItem: {
         parameters: {
             query?: {
-                /** @description Comma-separated list of `itemId`s the anonymous caller has already rated locally. Ignored when the caller is authenticated. */
+                /** @description Comma-separated list of `itemId`s to exclude from sampling. Redundant — all callers are contribuer-gated and dedup'd server-side. */
                 excluded?: string;
             };
             header?: never;
@@ -528,6 +525,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            403: components["responses"]["ProblemDetails"];
             503: components["responses"]["ProblemDetails"];
         };
     };
@@ -556,7 +554,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["ProblemDetails"];
-            401: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
             404: components["responses"]["ProblemDetails"];
             /** @description Auth caller already rated this item. */
             409: {
@@ -590,7 +588,7 @@ export interface operations {
     getNextPair: {
         parameters: {
             query?: {
-                /** @description Comma-separated list of `itemId`s the anonymous caller has already rated locally. Ignored when the caller is authenticated. */
+                /** @description Comma-separated list of `itemId`s to exclude from sampling. Redundant — all callers are contribuer-gated and dedup'd server-side. */
                 excluded?: string;
             };
             header?: never;
@@ -615,6 +613,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            403: components["responses"]["ProblemDetails"];
             503: components["responses"]["ProblemDetails"];
         };
     };
@@ -648,6 +647,7 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
             404: components["responses"]["ProblemDetails"];
             409: components["responses"]["ProblemDetails"];
             /** @description No open campaign — the sondage is locked. */
@@ -681,6 +681,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            403: components["responses"]["ProblemDetails"];
             /** @description Token unknown, not yours, or already undone. */
             404: {
                 headers: {
@@ -719,7 +720,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProgressResponse"];
                 };
             };
-            401: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
         };
     };
     getMyContributions: {
@@ -740,7 +741,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContributionItem"][];
                 };
             };
-            401: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
         };
     };
     patchMyPreferences: {
@@ -764,7 +765,7 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["ProblemDetails"];
-            401: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
         };
     };
     getLemmaMeta: {
@@ -788,6 +789,7 @@ export interface operations {
                     "application/json": components["schemas"]["LemmaMeta"];
                 };
             };
+            403: components["responses"]["ProblemDetails"];
             503: components["responses"]["ProblemDetails"];
         };
     };

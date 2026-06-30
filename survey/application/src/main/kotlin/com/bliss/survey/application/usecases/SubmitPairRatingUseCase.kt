@@ -49,7 +49,7 @@ sealed interface SubmitPairRatingResult {
 data class SubmitPairRatingCommand(
     val leftItemId: ItemId,
     val rightItemId: ItemId,
-    val userId: UserId?,
+    val userId: UserId,
     val verdict: PairVerdict,
     val difficulte: Int,
     val latencyMs: Int,
@@ -77,7 +77,7 @@ class SubmitPairRatingUseCase(
         if (left.mot != right.mot) return SubmitPairRatingResult.PairMotMismatch
 
         val now = clock.now()
-        val submittedAs = if (cmd.userId != null) SubmittedAs.AUTH else SubmittedAs.ANON
+        val submittedAs = SubmittedAs.AUTH
 
         return when (cmd.verdict) {
             PairVerdict.LEFT_WINS, PairVerdict.RIGHT_WINS -> insertPreference(cmd, now, openCampaign)
@@ -111,11 +111,11 @@ class SubmitPairRatingUseCase(
                 campaignId = openCampaign.id,
             )
         val token = tokens.newToken()
-        val priorLastRatedAt = if (cmd.userId != null) progress.get(cmd.userId)?.lastRatedAt else null
+        val priorLastRatedAt = progress.get(cmd.userId)?.lastRatedAt
         val inserted =
             tx.inTransaction {
                 if (!pairRatings.insert(row)) return@inTransaction false
-                if (cmd.userId != null) progress.incrementItemsRated(cmd.userId, now)
+                progress.incrementItemsRated(cmd.userId, now)
                 actions.insert(
                     SurveyAction(
                         id = ActionId(ids.next()),
@@ -149,11 +149,9 @@ class SubmitPairRatingUseCase(
         now: java.time.Instant,
         openCampaign: Campaign,
     ): SubmitPairRatingResult {
-        // Skip the BOTH_* path if the auth caller already rated either side in binary mode.
-        if (cmd.userId != null) {
-            ratings.findAuthRating(left.id, cmd.userId)?.let { return SubmitPairRatingResult.AlreadyExists }
-            ratings.findAuthRating(right.id, cmd.userId)?.let { return SubmitPairRatingResult.AlreadyExists }
-        }
+        // Skip the BOTH_* path if the caller already rated either side in binary mode.
+        ratings.findAuthRating(left.id, cmd.userId)?.let { return SubmitPairRatingResult.AlreadyExists }
+        ratings.findAuthRating(right.id, cmd.userId)?.let { return SubmitPairRatingResult.AlreadyExists }
         val rows =
             listOf(left.id, right.id).map { itemId ->
                 Rating(
@@ -171,13 +169,11 @@ class SubmitPairRatingUseCase(
                 )
             }
         val token = tokens.newToken()
-        val priorLastRatedAt = if (cmd.userId != null) progress.get(cmd.userId)?.lastRatedAt else null
+        val priorLastRatedAt = progress.get(cmd.userId)?.lastRatedAt
         tx.inTransaction {
             for (r in rows) ratings.insert(r)
-            if (cmd.userId != null) {
-                progress.incrementItemsRated(cmd.userId, now)
-                progress.incrementItemsRated(cmd.userId, now)
-            }
+            progress.incrementItemsRated(cmd.userId, now)
+            progress.incrementItemsRated(cmd.userId, now)
             actions.insert(
                 SurveyAction(
                     id = ActionId(ids.next()),

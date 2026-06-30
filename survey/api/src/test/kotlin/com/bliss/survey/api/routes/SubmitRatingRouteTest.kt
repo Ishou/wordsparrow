@@ -6,7 +6,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import com.bliss.survey.api.WIRE_JSON
 import com.bliss.survey.api.auth.SESSION_COOKIE_NAME
-import com.bliss.survey.api.auth.SessionMiddleware
 import com.bliss.survey.application.usecases.SubmitRatingCommand
 import com.bliss.survey.application.usecases.SubmitRatingResult
 import com.bliss.survey.domain.model.CampaignId
@@ -77,37 +76,40 @@ class SubmitRatingRouteTest {
             append("\"latencyMs\":$latency}")
         }
 
+    // ADR-0079: the contribuer endpoints are maintainer-only; the route tests below authenticate as a maintainer.
     @Test
-    fun `anon happy path - 201 created`() =
+    fun `maintainer happy path - 201 created`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json(WIRE_JSON) }
-                routing { submitRatingRoute { SubmitRatingResult.Accepted(acceptedAnon, undoToken = "undo-tok") } }
+                routing { submitRatingRoute { SubmitRatingResult.Accepted(acceptedAuth, undoToken = "undo-tok") } }
             }
             val resp =
                 client.post("/v1/items/$itemUuid/rating") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
             assertThat(resp.status).isEqualTo(HttpStatusCode.Created)
             val body = resp.bodyAsText()
-            assertThat(body).contains("\"submittedAs\":\"anon\"")
+            assertThat(body).contains("\"submittedAs\":\"auth\"")
             assertThat(body).contains("\"ratingId\":\"$ratingUuid\"")
             // required-nullable: must appear as null, not be absent (ADR-0003 §6)
             assertThat(body).contains("\"proposedItemId\":null")
         }
 
     @Test
-    fun `auth happy path - 201 with user attribute resolved`() =
+    fun `maintainer happy path - 201 with user attribute resolved`() =
         testApplication {
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json() }
                 routing { submitRatingRoute { SubmitRatingResult.Accepted(acceptedAuth, undoToken = "undo-tok") } }
             }
             val resp =
                 client.post("/v1/items/$itemUuid/rating") {
-                    cookie(SESSION_COOKIE_NAME, "valid-token")
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(flag = "hors_sujet"))
                 }
@@ -115,11 +117,13 @@ class SubmitRatingRouteTest {
             assertThat(resp.bodyAsText()).contains("\"submittedAs\":\"auth\"")
         }
 
+    // ADR-0079: an anonymous caller is denied by the contribuer gate before the use case runs.
     @Test
-    fun `anon plus correctif rejected with 401 before use case is called`() =
+    fun `anonymous - 403 before use case is called`() =
         testApplication {
             var called = false
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing {
                     submitRatingRoute { _: SubmitRatingCommand ->
@@ -133,21 +137,46 @@ class SubmitRatingRouteTest {
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(correctif = "an alternate"))
                 }
-            assertThat(resp.status).isEqualTo(HttpStatusCode.Unauthorized)
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
+            assertThat(resp.bodyAsText()).contains("réservée aux mainteneurs")
             assertThat(called).isEqualTo(false)
         }
 
     @Test
-    fun `auth duplicate - 409 with existing rating`() =
+    fun `player - 403 forbidden`() =
+        testApplication {
+            var called = false
+            application {
+                installCapabilitySession()
+                install(ContentNegotiation) { json() }
+                routing {
+                    submitRatingRoute { _: SubmitRatingCommand ->
+                        called = true
+                        SubmitRatingResult.Accepted(acceptedAnon, undoToken = "undo-tok")
+                    }
+                }
+            }
+            val resp =
+                client.post("/v1/items/$itemUuid/rating") {
+                    cookie(SESSION_COOKIE_NAME, PLAYER_COOKIE)
+                    contentType(ContentType.Application.Json)
+                    setBody(jsonBody())
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Forbidden)
+            assertThat(called).isEqualTo(false)
+        }
+
+    @Test
+    fun `maintainer duplicate - 409 with existing rating`() =
         testApplication {
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json() }
                 routing { submitRatingRoute { SubmitRatingResult.AlreadyExists(acceptedAuth) } }
             }
             val resp =
                 client.post("/v1/items/$itemUuid/rating") {
-                    cookie(SESSION_COOKIE_NAME, "valid-token")
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
@@ -159,11 +188,13 @@ class SubmitRatingRouteTest {
     fun `item missing - 404 problem details`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { submitRatingRoute { SubmitRatingResult.ItemNotFound } }
             }
             val resp =
                 client.post("/v1/items/$itemUuid/rating") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
@@ -175,7 +206,7 @@ class SubmitRatingRouteTest {
     fun `correctif filter rejection - 422 with filterId and reason`() =
         testApplication {
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json() }
                 routing {
                     submitRatingRoute {
@@ -185,7 +216,7 @@ class SubmitRatingRouteTest {
             }
             val resp =
                 client.post("/v1/items/$itemUuid/rating") {
-                    cookie(SESSION_COOKIE_NAME, "valid-token")
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(correctif = "alt"))
                 }
@@ -199,11 +230,13 @@ class SubmitRatingRouteTest {
     fun `invalid item id path - 400 problem details`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json() }
                 routing { submitRatingRoute { SubmitRatingResult.Accepted(acceptedAnon, undoToken = "undo-tok") } }
             }
             val resp =
                 client.post("/v1/items/not-a-uuid/rating") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
@@ -215,13 +248,13 @@ class SubmitRatingRouteTest {
     fun `invalid pos in correctif - 400 problem details`() =
         testApplication {
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { submitRatingRoute { SubmitRatingResult.Accepted(acceptedAuth, undoToken = "undo-tok") } }
             }
             val resp =
                 client.post("/v1/items/$itemUuid/rating") {
-                    cookie(SESSION_COOKIE_NAME, "valid-token")
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(correctif = "better clue", correctifPos = "not_a_pos"))
                 }
@@ -233,7 +266,7 @@ class SubmitRatingRouteTest {
     fun `valid pos in correctif passes validation`() =
         testApplication {
             application {
-                install(SessionMiddleware) { verifyCookie = { userUuid } }
+                installCapabilitySession(userUuid)
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing {
                     submitRatingRoute { cmd ->
@@ -244,7 +277,7 @@ class SubmitRatingRouteTest {
             }
             val resp =
                 client.post("/v1/items/$itemUuid/rating") {
-                    cookie(SESSION_COOKIE_NAME, "valid-token")
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody(correctif = "better clue", correctifPos = "polyvalent"))
                 }
@@ -260,11 +293,13 @@ class SubmitRatingRouteTest {
     fun `returns 423 when the use case returns Locked`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing { submitRatingRoute { SubmitRatingResult.Locked } }
             }
             val resp =
                 client.post("/v1/items/$itemUuid/rating") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
@@ -276,11 +311,13 @@ class SubmitRatingRouteTest {
     fun `201 response includes campaignId`() =
         testApplication {
             application {
+                installCapabilitySession()
                 install(ContentNegotiation) { json(WIRE_JSON) }
-                routing { submitRatingRoute { SubmitRatingResult.Accepted(acceptedAnon, undoToken = "undo-tok") } }
+                routing { submitRatingRoute { SubmitRatingResult.Accepted(acceptedAuth, undoToken = "undo-tok") } }
             }
             val resp =
                 client.post("/v1/items/$itemUuid/rating") {
+                    cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE)
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
