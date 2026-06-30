@@ -6,7 +6,7 @@ import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.application.usecases.EntitlementQuery
 import com.bliss.billing.application.usecases.IngestProviderEvent
 
-// Hand-rolled DI graph; Module.kt consumes this, Main.kt wires adapters, tests stub directly.
+// Hand-rolled DI graph; no framework injection.
 class Wiring(
     val verifySession: suspend (String) -> SessionPrincipal?,
     val createCheckoutSession: CreateCheckoutSession,
