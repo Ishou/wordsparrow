@@ -1,7 +1,6 @@
 // Application-layer port for the billing-api surface (ADR-0078).
 
-// Open strings, not enums: the tier/status sets are config-driven and
-// deliberately deferred (ADR-0078). Consumers gate on `capabilities`.
+// Open strings, not enums: tier/status are config-driven and deferred (ADR-0078).
 export type BillingTier = string;
 export type SubscriptionStatus = string;
 
@@ -20,6 +19,7 @@ export interface CheckoutSession {
 
 export type BillingErrorKind =
   | 'auth-required'
+  | 'forbidden'
   | 'invalid-checkout-request'
   | 'already-subscribed'
   | 'no-active-subscription'
@@ -38,8 +38,7 @@ export class BillingError extends Error {
   }
 }
 
-// Cookie-bearing calls require `__Secure-ws_session`; the adapter sets
-// `credentials: 'include'` per call (ADR-0077).
+// ADR-0077: credentials:'include' required; `__Secure-ws_session` is SameSite=Strict.
 export interface BillingClient {
   createCheckoutSession(tier: BillingTier): Promise<CheckoutSession>;
   cancelSubscription(): Promise<Entitlement>;

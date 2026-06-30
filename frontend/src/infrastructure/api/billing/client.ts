@@ -1,5 +1,4 @@
-// HTTP adapter for the billing-api surface (ADR-0078). Contract-typed via
-// openapi-fetch against `./types.ts` (ADR-0003 §3).
+// HTTP adapter for billing-api (ADR-0078); openapi-fetch over ./types.ts (ADR-0003 §3).
 import createClient, { type ClientOptions } from 'openapi-fetch';
 import { uuidv7 } from 'uuidv7';
 
@@ -10,6 +9,7 @@ import type { components, paths } from './types';
 const ERROR_KIND_BY_STATUS: Readonly<Record<number, BillingErrorKind>> = {
   400: 'invalid-checkout-request',
   401: 'auth-required',
+  403: 'forbidden',
   404: 'no-active-subscription',
   409: 'already-subscribed',
   429: 'rate-limited',
