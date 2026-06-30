@@ -5,6 +5,12 @@ import { HintRequestError, type PuzzleSolver } from '@/application';
 
 const PUZZLE_ID = 'puzzle-x';
 
+const WORD = [
+  { row: 3, column: 5, letter: 'P' },
+  { row: 3, column: 6, letter: 'A' },
+  { row: 3, column: 7, letter: 'S' },
+];
+
 function makeSolver(): PuzzleSolver {
   return {
     validate: vi.fn().mockRejectedValue(new Error('not used here')),
@@ -12,41 +18,36 @@ function makeSolver(): PuzzleSolver {
   };
 }
 
-describe('useHintRequest', () => {
+describe('useHintRequest — whole-word reveal', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('writes hintsRemaining and lastResult on a successful reveal', async () => {
+  it('sends the active direction and writes hintsRemaining + the revealed word', async () => {
     const solver = makeSolver();
     (solver.requestHint as ReturnType<typeof vi.fn>).mockResolvedValue({
-      row: 3,
-      column: 5,
-      letter: 'P',
+      cells: WORD,
       hintsRemaining: 2,
     });
-    const { result } = renderHook(() =>
-      useHintRequest(PUZZLE_ID, 3, solver),
-    );
+    const { result } = renderHook(() => useHintRequest(PUZZLE_ID, 3, solver));
 
     await act(async () => {
-      result.current.request(3, 5);
+      result.current.request(3, 5, 'across');
       await Promise.resolve();
       await Promise.resolve();
     });
 
+    expect(solver.requestHint).toHaveBeenCalledWith(PUZZLE_ID, 3, 5, 'across');
     expect(result.current.hintsRemaining).toBe(2);
-    expect(result.current.lastResult).toEqual({ row: 3, column: 5, letter: 'P' });
+    expect(result.current.lastResult).toEqual({ cells: WORD });
     expect(result.current.exhausted).toBe(false);
     expect(result.current.errorMessage).toBeNull();
   });
 
-  it('fires the onReveal callback so the parent can apply the letter', async () => {
+  it('fires onReveal with every revealed cell so the parent can write the whole word', async () => {
     const solver = makeSolver();
     (solver.requestHint as ReturnType<typeof vi.fn>).mockResolvedValue({
-      row: 3,
-      column: 5,
-      letter: 'P',
+      cells: WORD,
       hintsRemaining: 2,
     });
     const onReveal = vi.fn();
@@ -55,12 +56,12 @@ describe('useHintRequest', () => {
     );
 
     await act(async () => {
-      result.current.request(3, 5);
+      result.current.request(3, 5, 'down');
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    expect(onReveal).toHaveBeenCalledWith(3, 5, 'P');
+    expect(onReveal).toHaveBeenCalledWith(WORD);
   });
 
   it('flips exhausted on HintRequestError(budget-exhausted)', async () => {
@@ -68,12 +69,10 @@ describe('useHintRequest', () => {
     (solver.requestHint as ReturnType<typeof vi.fn>).mockRejectedValue(
       new HintRequestError('budget-exhausted', 0, 'Indices épuisés'),
     );
-    const { result } = renderHook(() =>
-      useHintRequest(PUZZLE_ID, 3, solver),
-    );
+    const { result } = renderHook(() => useHintRequest(PUZZLE_ID, 3, solver));
 
     await act(async () => {
-      result.current.request(3, 5);
+      result.current.request(3, 5, 'across');
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -88,12 +87,10 @@ describe('useHintRequest', () => {
     (solver.requestHint as ReturnType<typeof vi.fn>).mockRejectedValue(
       new HintRequestError('auth-required', null, 'Authentification requise'),
     );
-    const { result } = renderHook(() =>
-      useHintRequest(PUZZLE_ID, 3, solver),
-    );
+    const { result } = renderHook(() => useHintRequest(PUZZLE_ID, 3, solver));
 
     await act(async () => {
-      result.current.request(3, 5);
+      result.current.request(3, 5, 'across');
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -110,12 +107,10 @@ describe('useHintRequest', () => {
     (solver.requestHint as ReturnType<typeof vi.fn>).mockRejectedValue(
       new HintRequestError('auth-required', null, 'Authentification requise'),
     );
-    const { result } = renderHook(() =>
-      useHintRequest(PUZZLE_ID, 3, solver),
-    );
+    const { result } = renderHook(() => useHintRequest(PUZZLE_ID, 3, solver));
 
     await act(async () => {
-      result.current.request(3, 5);
+      result.current.request(3, 5, 'across');
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -132,12 +127,10 @@ describe('useHintRequest', () => {
     (solver.requestHint as ReturnType<typeof vi.fn>).mockRejectedValue(
       new HintRequestError('invalid-coord', null, 'out of bounds'),
     );
-    const { result } = renderHook(() =>
-      useHintRequest(PUZZLE_ID, 3, solver),
-    );
+    const { result } = renderHook(() => useHintRequest(PUZZLE_ID, 3, solver));
 
     await act(async () => {
-      result.current.request(99, 99);
+      result.current.request(99, 99, 'across');
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -151,17 +144,13 @@ describe('useHintRequest', () => {
     vi.useFakeTimers();
     const solver = makeSolver();
     (solver.requestHint as ReturnType<typeof vi.fn>).mockResolvedValue({
-      row: 0,
-      column: 0,
-      letter: 'A',
+      cells: [{ row: 0, column: 0, letter: 'A' }],
       hintsRemaining: 2,
     });
-    const { result } = renderHook(() =>
-      useHintRequest(PUZZLE_ID, 3, solver),
-    );
+    const { result } = renderHook(() => useHintRequest(PUZZLE_ID, 3, solver));
 
     await act(async () => {
-      result.current.request(0, 0);
+      result.current.request(0, 0, 'across');
       await Promise.resolve();
       await Promise.resolve();
     });

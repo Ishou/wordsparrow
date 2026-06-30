@@ -192,7 +192,7 @@ function renderStatus({
   }
   if (lastResult) {
     return {
-      text: `Lettre révélée : ${lastResult.letter}`,
+      text: 'Mot révélé',
       className: statusSuccessStyles,
     };
   }

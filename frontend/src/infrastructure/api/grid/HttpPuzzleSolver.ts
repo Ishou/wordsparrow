@@ -1,6 +1,7 @@
 import {
   HintRequestError,
   type FilledCellInput,
+  type HintDirection,
   type HintResult,
   type PuzzleSolver,
   type ValidationResult,
@@ -49,19 +50,14 @@ export function createHttpPuzzleSolver(
           error?.detail ?? error?.title ?? `HTTP ${response.status}`;
         throw new Error(`puzzle validate failed: ${detail}`);
       }
-      return {
-        solved: data.solved,
-        incorrectCells: data.incorrectCells.map((p) => ({
-          row: p.row,
-          column: p.column,
-        })),
-      };
+      return { solved: data.solved };
     },
 
     async requestHint(
       puzzleId: string,
       row: number,
       column: number,
+      direction: HintDirection,
     ): Promise<HintResult> {
       const { data, error, response } = await client.POST(
         '/v1/puzzles/{puzzleId}/hints',
@@ -69,7 +65,7 @@ export function createHttpPuzzleSolver(
           params: { path: { puzzleId } },
           // credentials only here: /hints needs the identity session cookie; public reads stay anonymous/cacheable.
           credentials: 'include',
-          body: { row, column },
+          body: { row, column, direction },
         },
       );
       if (error || !data) {
@@ -89,9 +85,11 @@ export function createHttpPuzzleSolver(
         throw new HintRequestError('transient', null, detail);
       }
       return {
-        row: data.row,
-        column: data.column,
-        letter: data.letter,
+        cells: data.cells.map((c) => ({
+          row: c.row,
+          column: c.column,
+          letter: c.letter,
+        })),
         hintsRemaining: data.hintsRemaining,
       };
     },

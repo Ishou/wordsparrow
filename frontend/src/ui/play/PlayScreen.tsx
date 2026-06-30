@@ -3,20 +3,20 @@ import { CaretLeft, DotsThreeVertical, Lightbulb, Timer, Trophy } from '@phospho
 import { Link, useNavigate } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import type { Position, Puzzle } from '@/domain';
-import type { PuzzleSolver } from '@/application';
+import type { PuzzleSolver, RevealedWordCell } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Button, ClueRail, Lockup } from '@/design-system';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { SkipLink } from '@/ui/v2/SkipLink';
-import { useGridNavigation } from '@/ui/components/grid/useGridNavigation';
+import { useGridNavigation, type Direction } from '@/ui/components/grid/useGridNavigation';
 import { orderClues } from '@/ui/components/grid/orderClues';
 import { CELL, STRIDE, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
 import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
 import { useAdvanceOnValidation, inputAt } from '@/ui/components/grid/useAdvanceOnValidation';
 import { Keyboard } from './Keyboard';
 import { useTouchPrimary, useResumeBlurOnPwa } from '@/ui/components/keyboard';
-import { useWordAutoValidation } from '@/ui/components/grid/useWordAutoValidation';
+import { usePuzzleValidation } from '@/ui/components/grid/usePuzzleValidation';
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
 import { WinScreen } from './WinScreen';
 import { formatClock } from '@/ui/lib/formatClock';
@@ -125,6 +125,20 @@ const hintError = css({
   color: 'ws.sakuraDark',
   bg: '#FBEEF2',
 });
+// Transient, non-cell-specific binary verdict (ADR-0076): no cell highlight, just a polite "not yet" line.
+const failPill = css({
+  alignSelf: 'center',
+  textAlign: 'center',
+  padding: '6px 14px',
+  borderRadius: '999px',
+  fontFamily: 'wsUi',
+  fontWeight: 'semibold',
+  fontSize: '13px',
+  color: 'ws.jadeInk',
+  bg: 'rgba(255,255,255,0.78)',
+  border: '0.5px solid rgba(255,255,255,0.7)',
+  boxShadow: '0 2px 12px rgba(33,75,64,0.12)',
+});
 // Post-win: bottom bar becomes a single re-entry to the celebration.
 const resultsBtn = css({ width: '100%', gap: '9px' });
 
@@ -181,51 +195,47 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
 
   // Gate the flatten ripple: only cells validated after a real interaction animate.
   const userActedRef = useRef(false);
-  const handleCellChange = useCallback(
-    (row: number, col: number, letter: string | null) => {
-      userActedRef.current = true;
-      soloEntriesStore.save(puzzle.id, row, col, letter);
-    },
-    [soloEntriesStore, puzzle.id],
-  );
 
-  const handleWordValidated = useCallback(
+  // On a solved verdict, lock every cell so Accueil's "Grille du jour" reads it as done and it syncs across devices (ADR-0075).
+  const handleSolved = useCallback(
     (positions: ReadonlyArray<Position>) => {
       for (const p of positions) soloEntriesStore.lockCell(puzzle.id, p.row, p.col);
     },
     [soloEntriesStore, puzzle.id],
   );
 
-  // Wrong word: wobble + haptic; reduced motion skips the wobble.
-  const handleWordRejected = useCallback((positions: ReadonlyArray<Position>) => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([0, 28, 38, 28]);
-    if (reduceMotionRef.current) return;
-    setRejecting(new Set(positions.map((p) => posKey(p.row, p.col))));
-    if (rejectTimerRef.current) window.clearTimeout(rejectTimerRef.current);
-    rejectTimerRef.current = window.setTimeout(() => setRejecting(new Set()), 460);
-  }, []);
+  const validation = usePuzzleValidation(puzzle, puzzleSolver, handleSolved);
+  const checkGrid = validation.onGridChanged;
 
-  const autoValidation = useWordAutoValidation(puzzle, puzzleSolver, initialEntries, handleWordValidated, handleWordRejected);
+  const handleCellChange = useCallback(
+    (row: number, col: number, letter: string | null) => {
+      userActedRef.current = true;
+      soloEntriesStore.save(puzzle.id, row, col, letter);
+      checkGrid();
+    },
+    [soloEntriesStore, puzzle.id, checkGrid],
+  );
 
   const handleHintReveal = useCallback(
-    (row: number, column: number, letter: string) => {
-      const input = document.querySelector<HTMLInputElement>(
-        `input[data-cell-kind="letter"][data-row="${row}"][data-col="${column}"]`,
-      );
-      if (input) input.value = letter;
-      soloEntriesStore.save(puzzle.id, row, column, letter);
-      soloEntriesStore.lockCell(puzzle.id, row, column);
+    (cells: ReadonlyArray<RevealedWordCell>) => {
+      for (const cell of cells) {
+        const input = document.querySelector<HTMLInputElement>(
+          `input[data-cell-kind="letter"][data-row="${cell.row}"][data-col="${cell.column}"]`,
+        );
+        if (input) input.value = cell.letter;
+        soloEntriesStore.save(puzzle.id, cell.row, cell.column, cell.letter);
+        soloEntriesStore.lockCell(puzzle.id, cell.row, cell.column);
+      }
       setLockedHintCells((prev) => {
-        const k = posKey(row, column);
-        if (prev.has(k)) return prev;
         const next = new Set(prev);
-        next.add(k);
+        for (const cell of cells) next.add(posKey(cell.row, cell.column));
         return next;
       });
-      // Triggers full-word solve beat when a hint fills the last cell.
-      autoValidation.onCellFilled({ row, col: column }, 'across');
+      userActedRef.current = true;
+      // A hint that fills the last cell triggers the whole-grid binary check.
+      checkGrid();
     },
-    [soloEntriesStore, puzzle.id, autoValidation],
+    [soloEntriesStore, puzzle.id, checkGrid],
   );
 
   const handleHintConsumed = useCallback(() => soloEntriesStore.recordHintUsed(puzzle.id), [soloEntriesStore, puzzle.id]);
@@ -233,43 +243,28 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
   const hint = useHintRequest(puzzle.id, puzzle.hintsRemaining, puzzleSolver, handleHintReveal, handleHintConsumed);
 
   const validatedPositions = useMemo<ReadonlySet<string>>(() => {
-    if (lockedHintCells.size === 0) return autoValidation.validated;
-    if (autoValidation.validated.size === 0) return lockedHintCells;
-    const merged = new Set<string>(autoValidation.validated);
+    if (lockedHintCells.size === 0) return validation.validated;
+    if (validation.validated.size === 0) return lockedHintCells;
+    const merged = new Set<string>(validation.validated);
     for (const k of lockedHintCells) merged.add(k);
     return merged;
-  }, [autoValidation.validated, lockedHintCells]);
+  }, [validation.validated, lockedHintCells]);
 
   // Stable ref so callbacks always read the latest validated set.
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
 
-  // Cells of a completed-but-wrong word that are currently wobbling.
-  const [rejecting, setRejecting] = useState<ReadonlySet<string>>(() => new Set());
-  const rejectTimerRef = useRef<number | null>(null);
-  const reduceMotionRef = useRef(false);
-  useEffect(() => () => {
-    if (rejectTimerRef.current) window.clearTimeout(rejectTimerRef.current);
-  }, []);
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    reduceMotionRef.current = mq.matches;
-    const onChange = () => { reduceMotionRef.current = mq.matches; };
-    mq.addEventListener?.('change', onChange);
-    return () => mq.removeEventListener?.('change', onChange);
-  }, []);
-
-  // Last focused cell — survives blur so the out-of-grid hint button can read it.
+  // Last focused cell + its axis — survive blur so the out-of-grid hint button can resolve the active word.
   const activeFocusRef = useRef<Position | null>(null);
+  const activeDirectionRef = useRef<Direction>('across');
 
   const nav = useGridNavigation(puzzle, {
     onCellChange: handleCellChange,
-    onCellFilled: autoValidation.onCellFilled,
-    onFocusChange: (position) => {
+    onFocusChange: (position, direction) => {
       if (!position) return;
       boardRef.current?.cancelBeat(); // a user tap during the beat skips it (no-op otherwise)
       activeFocusRef.current = position;
+      if (direction) activeDirectionRef.current = direction;
       boardRef.current?.revealCell(position);
     },
     // Force the zoom guard on so PanZoom.reveal() handles scroll avoidance instead of the browser.
@@ -281,7 +276,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     const f = activeFocusRef.current;
     if (!f || validatedRef.current.has(posKey(f.row, f.col))) return;
     userActedRef.current = true;
-    hint.request(f.row, f.col);
+    hint.request(f.row, f.col, activeDirectionRef.current);
   }, [hint]);
 
   const letterCount = useMemo(() => puzzle.cells.filter((c) => c.kind === 'letter').length, [puzzle]);
@@ -317,9 +312,9 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
     return orderedClues.findIndex((c) => c.key === k);
   }, [clue, orderedClues]);
 
-  // Rail stays mounted: shows live clue on focus, last clue on blur, first unsolved on load.
+  // Rail stays mounted: shows live clue on focus, last clue on blur, first unfilled on load.
   const [lastOrdinal, setLastOrdinal] = useState(() => {
-    const i = orderedClues.findIndex((c) => c.cells.some((p) => !autoValidation.validated.has(posKey(p.row, p.col))));
+    const i = orderedClues.findIndex((c) => c.cells.some((p) => !entryAt.has(posKey(p.row, p.col))));
     return i < 0 ? 0 : i;
   });
   useEffect(() => {
@@ -478,10 +473,8 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
         puzzle={puzzle}
         nav={nav}
         validatedPositions={validatedPositions}
-        validatingPositions={autoValidation.validating}
         entryAt={entryAt}
         solvedDefCells={solvedDefCells}
-        rejectingPositions={rejecting}
         className={viewportFill}
         padTop={isDesktop ? 18 : 68}
         padBottom={isDesktop ? 6 : bottomInset + BOARD_BOTTOM_GAP}
@@ -509,6 +502,11 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
             {hint.errorMessage ? (
               <p className={hintError} role="alert">
                 {hint.errorMessage}
+              </p>
+            ) : null}
+            {validation.failMessage ? (
+              <p className={failPill} role="status" aria-live="polite">
+                {validation.failMessage}
               </p>
             ) : null}
             {displayClue ? (

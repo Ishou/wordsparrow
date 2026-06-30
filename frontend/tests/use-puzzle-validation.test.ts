@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { usePuzzleValidation } from '@/ui/components/grid/usePuzzleValidation';
-import type { Puzzle } from '@/domain';
+import {
+  usePuzzleValidation,
+  GRID_NOT_SOLVED_MESSAGE,
+} from '@/ui/components/grid/usePuzzleValidation';
+import type { Position, Puzzle } from '@/domain';
 import type { PuzzleSolver, ValidationResult } from '@/application';
 
-// Minimal puzzle: three letter cells in a row, one block. The hook
-// reads cell values directly from the DOM via the `data-cell-kind`
-// selector — we mount real `<input>` elements per test.
+// Minimal puzzle: three letter cells; the hook reads cell values from the DOM (ADR-0002 §4 uncontrolled inputs), so tests mount real `<input>` elements.
 const puzzle: Puzzle = {
   id: 'test-puzzle',
   title: 't',
@@ -40,7 +41,7 @@ function makeSolver(result: ValidationResult): PuzzleSolver {
   };
 }
 
-describe('usePuzzleValidation', () => {
+describe('usePuzzleValidation — whole-grid binary', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
   });
@@ -49,118 +50,115 @@ describe('usePuzzleValidation', () => {
     vi.useRealTimers();
   });
 
-  it('sends only filled cells to the solver, normalized to A–Z', async () => {
-    mountInput(0, 1, 'é');
+  it('does not validate while any cell is still empty (no per-word checks)', async () => {
+    mountInput(0, 1, 'A');
     mountInput(0, 2, '');
-    mountInput(0, 3, 'B');
-    const solver = makeSolver({ solved: false, incorrectCells: [] });
+    mountInput(0, 3, 'C');
+    const solver = makeSolver({ solved: false });
     const { result } = renderHook(() => usePuzzleValidation(puzzle, solver));
 
     await act(async () => {
-      result.current.verify();
+      result.current.onGridChanged();
+      await Promise.resolve();
     });
 
-    expect(solver.validate).toHaveBeenCalledWith('test-puzzle', [
-      { row: 0, column: 1, letter: 'E' },
-      { row: 0, column: 3, letter: 'B' },
-    ]);
+    expect(solver.validate).not.toHaveBeenCalled();
+    expect(result.current.failMessage).toBeNull();
   });
 
-  it('marks every letter cell validated when the server reports solved', async () => {
+  it('fires exactly one validate call when the last cell is filled, sending only filled letters normalized', async () => {
+    const a = mountInput(0, 1, 'é');
+    mountInput(0, 2, 'B');
+    const last = mountInput(0, 3, '');
+    const solver = makeSolver({ solved: false });
+    const { result } = renderHook(() => usePuzzleValidation(puzzle, solver));
+
+    await act(async () => {
+      result.current.onGridChanged();
+      await Promise.resolve();
+    });
+    expect(solver.validate).not.toHaveBeenCalled();
+
+    last.value = 'C';
+    await act(async () => {
+      result.current.onGridChanged();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(solver.validate).toHaveBeenCalledTimes(1);
+    expect(solver.validate).toHaveBeenCalledWith('test-puzzle', [
+      { row: 0, column: 1, letter: 'E' },
+      { row: 0, column: 2, letter: 'B' },
+      { row: 0, column: 3, letter: 'C' },
+    ]);
+    void a;
+  });
+
+  it('marks every letter cell validated and reports the positions via onSolved when solved', async () => {
     mountInput(0, 1, 'A');
     mountInput(0, 2, 'B');
     mountInput(0, 3, 'C');
-    const solver = makeSolver({ solved: true, incorrectCells: [] });
-    const { result } = renderHook(() => usePuzzleValidation(puzzle, solver));
+    const solver = makeSolver({ solved: true });
+    const onSolved = vi.fn<(positions: ReadonlyArray<Position>) => void>();
+    const { result } = renderHook(() =>
+      usePuzzleValidation(puzzle, solver, onSolved),
+    );
 
     await act(async () => {
-      result.current.verify();
+      result.current.onGridChanged();
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(result.current.validated.size).toBe(3);
     expect(result.current.validated.has('0,1')).toBe(true);
-    expect(result.current.validated.has('0,2')).toBe(true);
     expect(result.current.validated.has('0,3')).toBe(true);
-    expect(result.current.announce).toBe('Grille terminée');
+    expect(result.current.failMessage).toBeNull();
+    expect(onSolved).toHaveBeenCalledWith([
+      { row: 0, col: 1 },
+      { row: 0, col: 2 },
+      { row: 0, col: 3 },
+    ]);
   });
 
-  it('flags incorrect cells and clears them after the shake interval', async () => {
-    vi.useFakeTimers();
+  it('shows the binary "not yet" pill on solved:false and marks no specific cell wrong', async () => {
     mountInput(0, 1, 'A');
     mountInput(0, 2, 'X');
     mountInput(0, 3, 'C');
-    const solver = makeSolver({
-      solved: false,
-      incorrectCells: [{ row: 0, column: 2 }],
-    });
+    const solver = makeSolver({ solved: false });
     const { result } = renderHook(() => usePuzzleValidation(puzzle, solver));
 
     await act(async () => {
-      result.current.verify();
-      // flush the validate Promise.
+      result.current.onGridChanged();
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    expect(result.current.errors.has('0,2')).toBe(true);
-    // The other typed-correctly cells are now marked validated alongside
-    // the error, instead of staying neutral — so a partial-grid Vérifier
-    // both shakes the wrong cells AND locks the right ones.
-    expect(result.current.validated.has('0,1')).toBe(true);
-    expect(result.current.validated.has('0,3')).toBe(true);
-    expect(result.current.validated.has('0,2')).toBe(false);
-
-    await act(async () => {
-      vi.advanceTimersByTime(250);
-    });
-
-    expect(result.current.errors.size).toBe(0);
-    // Validation set persists past the error-shake interval — locks are
-    // permanent, errors are transient.
-    expect(result.current.validated.has('0,1')).toBe(true);
+    expect(result.current.failMessage).toBe(GRID_NOT_SOLVED_MESSAGE);
+    expect(result.current.validated.size).toBe(0);
   });
 
-  it('locks the correctly-typed cells in green even when the rest of the grid is wrong', async () => {
-    // The user-reported "Vérifier shakes the whole grid except the word I
-    // typed correctly, but that word is still not green". The grid validate
-    // endpoint reports every wrong-letter AND every unfilled letter cell as
-    // `incorrectCells`. Cells absent from that list are correct — Vérifier
-    // must mark them validated regardless of whether the WHOLE grid is solved.
-    mountInput(0, 1, 'A'); // correct
-    mountInput(0, 2, 'B'); // correct
-    mountInput(0, 3, 'X'); // wrong
-    const solver = makeSolver({
-      solved: false,
-      incorrectCells: [{ row: 0, column: 3 }],
-    });
-    const { result } = renderHook(() => usePuzzleValidation(puzzle, solver));
-
-    await act(async () => {
-      result.current.verify();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.validated.has('0,1')).toBe(true);
-    expect(result.current.validated.has('0,2')).toBe(true);
-    expect(result.current.validated.has('0,3')).toBe(false);
-    expect(result.current.errors.has('0,3')).toBe(true);
-  });
-
-  it('announces an unrecoverable failure on a network error', async () => {
+  it('clears the transient pill when the player edits the grid back to incomplete', async () => {
     mountInput(0, 1, 'A');
-    const solver: PuzzleSolver = {
-      validate: vi.fn().mockRejectedValue(new Error('boom')),
-      requestHint: vi.fn(),
-    };
+    mountInput(0, 2, 'X');
+    const last = mountInput(0, 3, 'C');
+    const solver = makeSolver({ solved: false });
     const { result } = renderHook(() => usePuzzleValidation(puzzle, solver));
 
     await act(async () => {
-      result.current.verify();
+      result.current.onGridChanged();
       await Promise.resolve();
       await Promise.resolve();
     });
+    expect(result.current.failMessage).toBe(GRID_NOT_SOLVED_MESSAGE);
 
-    expect(result.current.announce).toBe('Vérification impossible');
+    last.value = '';
+    await act(async () => {
+      result.current.onGridChanged();
+      await Promise.resolve();
+    });
+
+    expect(result.current.failMessage).toBeNull();
   });
 });

@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   HintRequestError,
+  type HintDirection,
   type PuzzleSolver,
+  type RevealedWordCell,
 } from '@/application';
 
 // Seeds from `Puzzle.hintsRemaining`; server overwrites on each POST; 429 flips exhausted; resets on puzzle change.
 
 const RESULT_LINGER_MS = 4_000;
 
+// A successful reveal returns the whole focused word (ADR-0076 §§7–9).
 export interface HintLastResult {
-  readonly row: number;
-  readonly column: number;
-  readonly letter: string;
+  readonly cells: ReadonlyArray<RevealedWordCell>;
 }
 
 export interface HintRequestState {
@@ -20,16 +21,15 @@ export interface HintRequestState {
   readonly pending: boolean;
   readonly lastResult: HintLastResult | null;
   readonly errorMessage: string | null;
-  readonly request: (row: number, column: number) => void;
+  readonly request: (row: number, column: number, direction: HintDirection) => void;
 }
 
 export function useHintRequest(
   puzzleId: string,
   initialHintsRemaining: number,
   solver: PuzzleSolver,
-  onReveal?: (row: number, column: number, letter: string) => void,
-  // Fired when a hint succeeds so the route can persist the running
-  // tally via `soloEntriesStore.recordHintUsed`.
+  onReveal?: (cells: ReadonlyArray<RevealedWordCell>) => void,
+  // Fired when a hint succeeds so the route can persist the running tally via `soloEntriesStore.recordHintUsed`.
   onHintConsumed?: () => void,
 ): HintRequestState {
   const seed = Math.max(0, initialHintsRemaining);
@@ -87,24 +87,20 @@ export function useHintRequest(
   }, []);
 
   const request = useCallback(
-    (row: number, column: number) => {
+    (row: number, column: number, direction: HintDirection) => {
       if (pending || exhausted) return;
       const seq = ++requestSeqRef.current;
       setPending(true);
       setErrorMessage(null);
       void solver
-        .requestHint(puzzleId, row, column)
+        .requestHint(puzzleId, row, column, direction)
         .then((result) => {
           if (seq !== requestSeqRef.current) return;
           setHintsRemaining(result.hintsRemaining);
-          setLastResult({
-            row: result.row,
-            column: result.column,
-            letter: result.letter,
-          });
+          setLastResult({ cells: result.cells });
           if (result.hintsRemaining <= 0) setExhausted(true);
           onHintConsumedRef.current?.();
-          onRevealRef.current?.(result.row, result.column, result.letter);
+          onRevealRef.current?.(result.cells);
           scheduleLinger();
         })
         .catch((err: unknown) => {

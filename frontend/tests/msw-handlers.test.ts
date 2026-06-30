@@ -60,12 +60,17 @@ describe('MSW preview handlers', () => {
       fetch(`http://localhost/v1/puzzles/${puzzleId}/hints`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ row, column }),
+        body: JSON.stringify({ row, column, direction: 'across' }),
       });
 
     const r1 = await post(letterCells[0]!.row, letterCells[0]!.column);
     expect(r1.status).toBe(200);
-    expect(await r1.json()).toMatchObject({ hintsRemaining: 2 });
+    const r1Body = (await r1.json()) as {
+      cells: ReadonlyArray<{ row: number; column: number; letter: string }>;
+      hintsRemaining: number;
+    };
+    expect(r1Body.hintsRemaining).toBe(2);
+    expect(r1Body.cells.length).toBeGreaterThan(0);
 
     const r2 = await post(letterCells[1]!.row, letterCells[1]!.column);
     expect(r2.status).toBe(200);
@@ -88,7 +93,7 @@ describe('MSW preview handlers', () => {
     const response = await fetch(`http://localhost/v1/puzzles/${puzzleId}/hints`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ row: 999, column: 999 }),
+      body: JSON.stringify({ row: 999, column: 999, direction: 'across' }),
     });
     expect(response.status).toBe(400);
     expect(response.headers.get('content-type')).toContain('application/problem+json');
@@ -97,24 +102,20 @@ describe('MSW preview handlers', () => {
     });
   });
 
-  it('POST /v1/puzzles/:puzzleId/validate reports incorrect cells against the fixture', async () => {
+  it('POST /v1/puzzles/:puzzleId/validate returns a binary verdict with no positional data', async () => {
     const puzzleId = '99999999-aaaa-bbbb-cccc-dddddddddddd';
     const response = await fetch(
       `http://localhost/v1/puzzles/${puzzleId}/validate`,
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        // Intentionally empty: every fixture letter cell is "unfilled"
-        // and therefore reported as incorrect; `solved` must be false.
+        // Intentionally empty: an unfilled grid is not solved.
         body: JSON.stringify({ filledCells: [] }),
       },
     );
     expect(response.status).toBe(200);
-    const body = (await response.json()) as {
-      solved: boolean;
-      incorrectCells: ReadonlyArray<{ row: number; column: number }>;
-    };
+    const body = (await response.json()) as Record<string, unknown>;
     expect(body.solved).toBe(false);
-    expect(body.incorrectCells.length).toBeGreaterThan(0);
+    expect(body).not.toHaveProperty('incorrectCells');
   });
 });

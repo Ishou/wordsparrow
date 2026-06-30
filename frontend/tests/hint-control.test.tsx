@@ -92,9 +92,16 @@ describe('HintControl', () => {
     ).toBeDisabled();
   });
 
-  it('renders a success status pill with the revealed letter', () => {
-    renderWith({ lastResult: { row: 2, column: 4, letter: 'P' } });
-    expect(screen.getByRole('status')).toHaveTextContent('Lettre révélée : P');
+  it('renders a success status pill after a whole-word reveal', () => {
+    renderWith({
+      lastResult: {
+        cells: [
+          { row: 2, column: 4, letter: 'P' },
+          { row: 2, column: 5, letter: 'A' },
+        ],
+      },
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Mot révélé');
   });
 
   it('renders the error message when supplied', () => {
