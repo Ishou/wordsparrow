@@ -8,21 +8,17 @@ import java.util.UUID
 
 /**
  * Verifies a filled grid against the canonical solution stored for the
- * puzzleId, returning a position-only diff (never the canonical letter).
+ * puzzleId, returning a pure binary verdict (no positional data on the wire).
  *
  * Flow:
  *  1. Resolve the puzzle in the store — `PuzzleNotFound` if never GET-ed.
  *  2. Validate request body — bounds, single uppercase A-Z, point at letter
  *     cells, no duplicate (row, column).
- *  3. Walk every letter cell in the puzzle's grid; mark mismatches and
- *     unfilled positions.
- *  4. `solved = incorrectCells.isEmpty()`.
+ *  3. Walk every letter cell in the puzzle's grid; `solved` is true iff each
+ *     is filled and matches the canonical letter.
  *
- * The response intentionally omits the canonical letter at a wrong cell —
- * the client knows what it submitted, so it learns "this letter is wrong"
- * but not "the right letter is X". Brute-force letter extraction would
- * require `O(width × height × 26)` legal calls; that's mitigated at the
- * edge via rate limiting (ops concern, not in this contract).
+ * ADR-0076: the response is a binary oracle, carrying no positional data, so
+ * it cannot be used to locate or reconstruct any part of the solution.
  */
 class ValidatePuzzleUseCase(
     private val puzzleRepository: PuzzleRepository,
@@ -60,20 +56,11 @@ class ValidatePuzzleUseCase(
             }
         }
 
-        val incorrect = mutableListOf<Position>()
-        for ((pos, cell) in grid.cells) {
-            if (cell !is LetterCell) continue
-            val submitted = byPosition[pos]
-            if (submitted == null || submitted != cell.letter) {
-                incorrect += pos
+        val solved =
+            grid.cells.all { (pos, cell) ->
+                cell !is LetterCell || byPosition[pos] == cell.letter
             }
-        }
-        // Stable ordering for deterministic responses.
-        incorrect.sortWith(compareBy({ it.row.value }, { it.column.value }))
-        return ValidatePuzzleOutcome.Result(
-            solved = incorrect.isEmpty(),
-            incorrectCells = incorrect.toList(),
-        )
+        return ValidatePuzzleOutcome.Result(solved = solved)
     }
 }
 
@@ -88,14 +75,9 @@ data class FilledCellInput(
 )
 
 sealed class ValidatePuzzleOutcome {
-    /**
-     * Validation completed. [incorrectCells] is empty iff [solved] is true.
-     * Cells not filled by the client appear in [incorrectCells] alongside
-     * cells whose submitted letter is wrong.
-     */
+    /** Validation completed. [solved] is true iff every letter cell is filled and correct. */
     data class Result(
         val solved: Boolean,
-        val incorrectCells: List<Position>,
     ) : ValidatePuzzleOutcome()
 
     /** No puzzle in the store for this id. Maps to 404 puzzle-not-found. */

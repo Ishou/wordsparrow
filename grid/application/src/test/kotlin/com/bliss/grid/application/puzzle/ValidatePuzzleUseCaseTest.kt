@@ -1,8 +1,6 @@
 package com.bliss.grid.application.puzzle
 
 import assertk.assertThat
-import assertk.assertions.containsExactlyInAnyOrder
-import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import com.bliss.grid.domain.model.Column
@@ -33,7 +31,7 @@ class ValidatePuzzleUseCaseTest {
         )
 
     @Test
-    fun `solved=true and incorrectCells empty when every letter is correct`() {
+    fun `solved=true when every letter is correct`() {
         val (puzzleId, store) = stored()
         // OR is placed at (0,1)='O' and (0,2)='R' (clue at (0,0), Direction.RIGHT).
         val outcome =
@@ -47,24 +45,18 @@ class ValidatePuzzleUseCaseTest {
         assertThat(outcome).isInstanceOf(ValidatePuzzleOutcome.Result::class)
         val result = outcome as ValidatePuzzleOutcome.Result
         assertThat(result.solved).isEqualTo(true)
-        assertThat(result.incorrectCells).isEmpty()
     }
 
     @Test
-    fun `unfilled cells appear in incorrectCells - solved=false`() {
+    fun `solved=false when cells are unfilled`() {
         val (puzzleId, store) = stored()
         val outcome = ValidatePuzzleUseCase(store).execute(puzzleId, emptyList())
         val result = outcome as ValidatePuzzleOutcome.Result
         assertThat(result.solved).isEqualTo(false)
-        assertThat(result.incorrectCells)
-            .containsExactlyInAnyOrder(
-                Position(Row(0), Column(1)),
-                Position(Row(0), Column(2)),
-            )
     }
 
     @Test
-    fun `wrong letter at correct position is marked incorrect - canonical letter not leaked`() {
+    fun `solved=false when a letter is wrong - canonical letter not leaked`() {
         val (puzzleId, store) = stored()
         val outcome =
             ValidatePuzzleUseCase(store).execute(
@@ -76,7 +68,6 @@ class ValidatePuzzleUseCaseTest {
             )
         val result = outcome as ValidatePuzzleOutcome.Result
         assertThat(result.solved).isEqualTo(false)
-        assertThat(result.incorrectCells).containsExactlyInAnyOrder(Position(Row(0), Column(2)))
     }
 
     @Test
