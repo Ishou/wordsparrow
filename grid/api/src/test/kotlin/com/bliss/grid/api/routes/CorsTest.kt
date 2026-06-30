@@ -175,24 +175,6 @@ class CorsTest {
         }
 
     @Test
-    fun `preflight from Cloudflare Pages preview host is allowed`() =
-        testApplication {
-            application { module() }
-
-            // bliss-cb4.pages.dev mirrors identity-api's allowlist (ADR-0048 / ADR-0077 Wave 2).
-            val response =
-                client.options("/v1/puzzles/$validId") {
-                    headers {
-                        append(HttpHeaders.Origin, "https://bliss-cb4.pages.dev")
-                        append(HttpHeaders.AccessControlRequestMethod, "GET")
-                    }
-                }
-
-            assertThat(response.headers[HttpHeaders.AccessControlAllowOrigin])
-                .isEqualTo("https://bliss-cb4.pages.dev")
-        }
-
-    @Test
     fun `preflight allows DELETE for the session erasure endpoint`() =
         testApplication {
             application { module() }
@@ -245,7 +227,7 @@ class CorsTest {
         testApplication {
             application { module() }
 
-            // Only the exact bliss-cb4.pages.dev host is allowlisted; any other *.pages.dev must fail (ADR-0077).
+            // No *.pages.dev host is allowlisted; any Cloudflare Pages preview origin must fail (ADR-0077).
             val response =
                 client.options("/v1/puzzles/$validId") {
                     headers {

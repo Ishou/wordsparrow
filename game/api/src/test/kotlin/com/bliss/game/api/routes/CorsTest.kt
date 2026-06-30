@@ -162,23 +162,6 @@ class CorsTest {
         }
 
     @Test
-    fun `preflight from Cloudflare Pages preview origin is allowed`() =
-        testApplication {
-            application { module() }
-
-            val response =
-                client.options("/v1/lobbies/$anyLobbyId") {
-                    headers {
-                        append(HttpHeaders.Origin, "https://bliss-cb4.pages.dev")
-                        append(HttpHeaders.AccessControlRequestMethod, "GET")
-                    }
-                }
-
-            assertThat(response.headers[HttpHeaders.AccessControlAllowOrigin])
-                .isEqualTo("https://bliss-cb4.pages.dev")
-        }
-
-    @Test
     fun `preflight advertises credentials for cookie-authed endpoints`() =
         testApplication {
             application { module() }

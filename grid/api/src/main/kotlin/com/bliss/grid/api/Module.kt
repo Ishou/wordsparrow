@@ -89,8 +89,6 @@ fun Application.module() {
         // Production frontends (Cloudflare Pages serving wordsparrow.io).
         allowHost("wordsparrow.io", schemes = listOf("https"))
         allowHost("www.wordsparrow.io", schemes = listOf("https"))
-        // Cloudflare Pages preview host — mirrors identity-api's allowlist (ADR-0048, confirmed for grid in ADR-0077 Wave 2).
-        allowHost("bliss-cb4.pages.dev", schemes = listOf("https"))
 
         // Local dev — Vite default port 5173 (frontend/vite.config.ts has no server block override).
         allowHost("localhost:5173", schemes = listOf("http"))

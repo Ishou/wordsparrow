@@ -99,8 +99,6 @@ fun Application.module() {
         // Production frontends (Cloudflare Pages serving wordsparrow.io).
         allowHost("wordsparrow.io", schemes = listOf("https"))
         allowHost("www.wordsparrow.io", schemes = listOf("https"))
-        // Cloudflare Pages preview origin — also served the production bundle pre-domain-cut.
-        allowHost("bliss-cb4.pages.dev", schemes = listOf("https"))
 
         // Local dev — Vite default port 5173 (mirrors grid/api).
         allowHost("localhost:5173", schemes = listOf("http"))

@@ -61,7 +61,7 @@ on identity-api.
 The security perimeter for credentialed-CORS requests on identity-api rests on:
 
 1. **Strict origin allowlist** — only `wordsparrow.io`, `www.wordsparrow.io`,
-   `bliss-cb4.pages.dev`, and `localhost:5173` are allowed. Cross-origin
+   and `localhost:5173` are allowed. Cross-origin
    requests from any other origin fail at the Origin check before headers are
    evaluated.
 2. **Per-IP rate limit at ingress** — nginx-ingress `limit-rps` bounds DoS via

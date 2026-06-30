@@ -1714,7 +1714,6 @@ async unbindLobbySessions(anonPseudonym) {
 install(CORS) {
     allowHost("wordsparrow.io", schemes = listOf("https"))
     allowHost("www.wordsparrow.io", schemes = listOf("https"))
-    allowHost("bliss-cb4.pages.dev", schemes = listOf("https"))
     allowHost("localhost:5173", schemes = listOf("http"))
 
     allowMethod(HttpMethod.Patch)

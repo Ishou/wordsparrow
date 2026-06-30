@@ -103,7 +103,7 @@ ADR-0062  frontend/src/ui/components/sondage/labels.ts       POS label map drops
 ADR-0063  scripts/clue_generation/*judge*          Learned clue-quality judge: CamemBERT-probe shadow pre-filter at filter_8 ahead of human rating; human stays reward signal
 ADR-0063  scripts/clue_generation/pipeline_v2/judge.py  Judge pre-filter insertion point; shadow mode (score + log, accept all) until enforcement flip
 ADR-0064  frontend/lighthouserc.cjs                Lighthouse perf/best-practices/SEO assertions; a11y category disabled (axe canonical per ADR-0050)
-ADR-0064  .github/workflows/lighthouse.yml         Lighthouse perf baseline workflow; workflow_run on Deploy Frontend; audits <hash>.bliss-cb4.pages.dev preview or wordsparrow.io
+ADR-0064  .github/workflows/lighthouse.yml         Lighthouse perf baseline workflow; workflow_run on Deploy Frontend; audits the Cloudflare Pages preview URL or wordsparrow.io
 ADR-0064  .github/workflows/deploy-frontend.yml    Emits lighthouse-handoff artifact consumed by lighthouse.yml
 ADR-0065  .github/workflows/build-and-push-image.yml  Trivy image-CVE scan (CRITICAL-only, SARIF)
 ADR-0065  .github/workflows/trivy-config.yml       Trivy IaC misconfig scan (infra/, terraform/, Dockerfiles)
@@ -162,7 +162,7 @@ ADR-0077  grid/api/src/test/**/CorsTest.kt           Assert credentialed config:
 ADR-0077  survey/api/src/test/**/architecture/CorsWildcardArchitectureTest.kt  Update to exempt grid's deliberate explicit-list posture from the "credentialed CORS must use wildcard predicate" rule (Wave 2)
 ADR-0077  frontend/src/infrastructure/api/grid/client.ts  Send credentials: 'include' only on the authed hint POST; public puzzle GET/sample/validate stay uncredentialed so CDN-cacheable fetches keep their cache key (Wave 2)
 ADR-0077  frontend/src/ui/play/PlayScreen.tsx        Render hint.errorMessage (currently computed, never displayed) so a 401 shows "Connecte-toi pour utiliser les indices" instead of a dead button (Wave 2)
-# ADR-0077: threat model — SameSite=Lax (SessionCookies.kt:30) + mandatory JSON-preflight mitigate cross-site CSRF on /hints; no explicit CSRF token (low-value, budget-idempotent reveal). Wave-2 confirmations: add bliss-cb4.pages.dev to grid allowlist? + grid-api prod host must be a wordsparrow.io subdomain for the cookie to be in-scope
+# ADR-0077: threat model — SameSite=Lax (SessionCookies.kt:30) + mandatory JSON-preflight mitigate cross-site CSRF on /hints; no explicit CSRF token (low-value, budget-idempotent reveal). Wave-2 confirmations: grid-api prod host must be a wordsparrow.io subdomain for the cookie to be in-scope
 ADR-0078  billing/**                                 New billing bounded context: subscription entitlement foundation; hexagonal, no cross-context imports; anti-corruption BillingProviderPort (Mollie initial adapter)
 ADR-0078  billing/api/openapi.yaml                   Edges: POST /checkout-session (session-derived userId), POST /webhook (authenticate every callback — signature or re-fetch-by-id), GET /entitlement
 ADR-0078  billing/api/asyncapi.yaml                  EntitlementChanged on wordsparrow.user.entitlement-changed; event-driven cache, server-side enforcement (mirrors ADR-0060)

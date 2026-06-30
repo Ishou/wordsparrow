@@ -443,8 +443,8 @@ The "two-weight rule" referenced there was never an ADR rule.
   (this ADR doesn't backdate prior ADRs); new docs use "WordSparrow".
 - The PWA install banner, browser tab title, mobile home-screen icon
   text all flip to "WordSparrow" once the implementation workstream
-  lands. The Cloudflare Pages preview URLs (`bliss-cb4.pages.dev`)
-  stay until the rename + custom-domain workstreams.
+  lands. The Cloudflare Pages preview URLs stay until the rename +
+  custom-domain workstreams.
 - License copyright (`Copyright 2026 ISHO IT EURL`) is unaffected.
   Trademark on "WordSparrow" is its own decision (deferred to a
   separate workstream alongside revenue planning).
