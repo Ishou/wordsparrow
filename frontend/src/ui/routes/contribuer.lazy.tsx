@@ -12,6 +12,8 @@ import { ContentPage } from '@/ui/components/layout';
 import { useToast } from '@/ui/components/primitives';
 import type { RatingMeta, Verdict } from '@/ui/components/sondage';
 import { LockBanner, RatingCard, SignInBanner, UndoBar, useCampaignStatus } from '@/ui/components/sondage';
+import { NotFoundScreen } from '@/ui/v2/NotFoundScreen';
+import { useCapabilityGate } from '@/ui/v2/useCapabilityGate';
 import type { AppRouterContext } from './__root';
 import { Route as ParentRoute } from './contribuer';
 
@@ -123,7 +125,7 @@ const alertStyles = css({
   margin: 0,
 });
 
-function ContribuerPage() {
+export function ContribuerPage() {
   // Unregistered post-cutover (ADR-0074): the typed registry no longer carries this route, so read context via the app type.
   const ctx = ParentRoute.useRouteContext() as AppRouterContext;
   const { state } = useAuth();
@@ -442,7 +444,21 @@ function ContribuerPage() {
   );
 }
 
+// Maintainer-only surface (ADR-0079): the gate is render-only; survey routes enforce server-side.
+export function ContribuerScreen() {
+  const gate = useCapabilityGate('contribuer');
+  if (gate === 'loading') {
+    return (
+      <ContentPage>
+        <p className={statusStyles} role="status">Chargement…</p>
+      </ContentPage>
+    );
+  }
+  if (gate === 'denied') return <NotFoundScreen />;
+  return <ContribuerPage />;
+}
+
 // Unregistered post-cutover (ADR-0074): id cast so the lazy half still resolves its eager parent.
 export const Route = createLazyRoute('/contribuer' as '/app')({
-  component: ContribuerPage,
+  component: ContribuerScreen,
 });
