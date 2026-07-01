@@ -146,9 +146,7 @@ class LobbiesRouteTest {
             val client = jsonClient()
             val invalidCreateUri = "https://bliss.example/errors/invalid-lobby-create-request"
 
-            // Non-UUID sessionId fails SessionId init, mapped to 400 before hosting is gated.
-            // (The request-body pseudonym is no longer validated at this edge: the owner
-            // pseudonym now comes from the authenticated whoami, not the request, ADR-0083.)
+            // Non-UUID sessionId still 400s before the pseudonym check, which is now server-derived (ADR-0083).
             val badSession = client.post("/v1/lobbies") { jsonBody(CreateLobbyRequestDto("not-a-uuid", ownerPseudonym)) }
             assertProblem(badSession, HttpStatusCode.BadRequest, invalidCreateUri)
         }
@@ -377,8 +375,7 @@ class LobbiesRouteTest {
         val createLobby = CreateLobbyUseCase(repo, clock)
         val sessionManager = SessionManager()
         application {
-            // Server serializes with the production REST_JSON (explicitNulls + encodeDefaults,
-            // ADR-0003 §6) so wire-contract assertions like `game: null` present hold.
+            // Uses production REST_JSON so encodeDefaults/explicitNulls wire-contract assertions hold (ADR-0003 §6).
             install(ServerContentNegotiation) { json(com.bliss.game.api.REST_JSON) }
             routing {
                 lobbies(
