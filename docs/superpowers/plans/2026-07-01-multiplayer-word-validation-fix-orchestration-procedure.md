@@ -164,17 +164,27 @@ Validate: `npx -y @stoplight/spectral-cli lint grid/api/openapi.yaml`. Commit
    verify the deny actually works and does not shadow `/validate`. Decide in-PR;
    document the choice in the PR body + threat-model note. Whichever: a browser
    hitting `api.wordsparrow.io/.../validate-word` MUST get 401/404, never a verdict.
-4. **Token Secret bootstrap (in-cluster, CI-only).** Add a Helm
-   `post-install,post-upgrade` Job to grid's chart mirroring
+4. **Token Secret bootstrap (in-cluster, CI-only) — BOOT-SAFETY IS PARAMOUNT.**
+   Add a Helm `post-install,post-upgrade` Job to grid's chart mirroring
    `infra/nats/templates/stream-bootstrap-job.yaml`: idempotently create Secret
    `word-validate-token` (key `token`) with `openssl rand -hex 32` IF ABSENT
-   (never rotate an existing one). grid Deployment reads `WORD_VALIDATE_SERVICE_TOKEN`
-   from `secretKeyRef {name: word-validate-token, key: token}`. Update
-   `docs/infra/topology.yaml` + `make diagrams` if the chart adds a
-   diagram-relevant resource. If this Job/Secret wiring is uncertain, SHIP THE
-   ROUTE + TOKEN CHECK anyway (degrade-closed: no Secret → env unset → 401) and
-   ESCALATE the Secret bootstrap as a flagged follow-up — do not block the whole
-   rollout on infra polish.
+   (never rotate an existing one; the Job needs an RBAC Role+RoleBinding to
+   get/create that one Secret, like the NATS bootstrap).
+   **grid Deployment reads `WORD_VALIDATE_SERVICE_TOKEN` via an OPTIONAL
+   `secretKeyRef {name: word-validate-token, key: token, optional: true}`** so the
+   pod ALWAYS boots even if the Secret does not exist yet. This is non-negotiable:
+   a hard (non-optional) secretKeyRef would put grid into CreateContainerConfigError
+   and take down ALL of grid-api if the Job hasn't run — that is a far worse
+   outcome than co-op staying unlocked. **Degrade-closed:** env unset →
+   validate-word returns 401 → co-op stays unlocked (== current prod, never
+   worse, never leaks). The feature self-activates once the Secret exists and the
+   pods roll. Update `docs/infra/topology.yaml` + `make diagrams` if the chart
+   adds a diagram-relevant resource. In the PR body, flag the deploy/Secret
+   activation clearly for the maintainer. If ANY part of the Job/RBAC/Secret
+   wiring is uncertain or you cannot verify it renders (`helm template`), SHIP
+   THE ROUTE + TOKEN CHECK + OPTIONAL ENV ONLY and leave the Job as a flagged
+   follow-up in the PR body — never ship a chart change you cannot `helm template`
+   clean, and never block the whole rollout on infra polish.
 5. Tests: use-case unit tests (correct/incorrect/partial word), route test for
    401-without-token and 200-with-token.
 Commit `feat(grid): internal validate-word endpoint + service-token gate (ADR-0084)`.
@@ -204,8 +214,13 @@ Commit `feat(grid): internal validate-word endpoint + service-token gate (ADR-00
    `correct` throws `UpstreamMalformed`). This is the contract test whose absence
    let #1170 break co-op silently — it is REQUIRED by ADR-0084.
 4. Chart: `game/api/deploy/chart` reads `WORD_VALIDATE_SERVICE_TOKEN` from the
-   SAME `word-validate-token` Secret (`secretKeyRef`). `GRID_BASE_URL` already
-   points at the internal ClusterIP — confirm validate-word uses that base.
+   SAME `word-validate-token` Secret via an **OPTIONAL**
+   `secretKeyRef {name: word-validate-token, key: token, optional: true}` (same
+   boot-safety rule as grid P2 item 4 — game must ALWAYS boot even if the Secret
+   is absent; env unset just means validate-word calls 401 and co-op stays
+   unlocked). `GRID_BASE_URL` already points at the internal ClusterIP — confirm
+   validate-word uses that base. Do not add the Job here (grid owns it); game
+   only consumes the Secret.
 5. Keep `FakeWordValidator` in tests updated to the new port method.
 Commit `fix(game): per-word validate-word restores co-op locking (ADR-0084)`.
 
