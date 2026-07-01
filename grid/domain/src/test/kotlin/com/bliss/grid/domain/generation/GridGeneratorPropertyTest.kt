@@ -14,7 +14,7 @@ class GridGeneratorPropertyTest {
     private val generator = GridGenerator(ListWordRepository(SMALL_FRENCH_WORDS))
 
     @Test
-    fun `every generated grid passes interlocking check`() {
+    fun `every generated grid has no orphan cell - each letter is in at least one word`() {
         runBlocking {
             checkAll(
                 PropTestConfig(iterations = 20),
@@ -23,9 +23,9 @@ class GridGeneratorPropertyTest {
             ) { width, height ->
                 val grid = generator.generate(GridConstraints(width, height))
                 if (grid != null) {
-                    val uncrossed = GridValidator.uncrossedCells(grid)
-                    check(uncrossed.isEmpty()) {
-                        "uncrossed cells $uncrossed for ${width}x$height"
+                    val orphans = GridValidator.uncrossedCells(grid)
+                    check(orphans.isEmpty()) {
+                        "orphan (unfillable) cells $orphans for ${width}x$height"
                     }
                 }
             }

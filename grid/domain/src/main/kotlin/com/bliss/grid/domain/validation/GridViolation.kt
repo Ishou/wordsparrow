@@ -41,10 +41,9 @@ sealed interface GridViolation {
     ) : GridViolation
 
     /**
-     * A letter cell that does not satisfy the interlocking rule:
-     * - interior cells (row > 0 and col > 0) must be in both a horizontal
-     *   and a vertical word
-     * - edge cells (row == 0 or col == 0) must be in at least one
+     * A letter cell in NO word — unfillable (no clue can reach it). Every letter
+     * cell must be in at least one word; a cell in exactly one word (sandwiched by
+     * black/border on the other axis) is valid half-checked mots fléchés.
      */
     data class UncrossedCell(
         val position: Position,

@@ -252,10 +252,60 @@ internal object BlackCellLayout {
             // B.B/B.B horizontally) crowd the clue text and never appear
             // in printed mots fléchés.
             if (formsClamp(cells, r, c)) return false
+            // Check 6: the white cells must stay a single connected region — this
+            // black must not seal off an isolated pocket (a "closed block").
+            if (disconnectsWhite(cells)) return false
             return true
         } finally {
             cells.set(r, c, prior)
         }
+    }
+
+    /**
+     * True iff the WHITE cells no longer form one 4-connected region — some
+     * white cell is walled off by black cells / the border (a "closed block").
+     * A flood-fill from any white cell must reach every white cell.
+     */
+    internal fun disconnectsWhite(cells: CellArray): Boolean {
+        val w = cells.width
+        val h = cells.height
+        var start = -1
+        var total = 0
+        for (r in 0 until h) {
+            for (c in 0 until w) {
+                if (!cells.isBlack(r, c)) {
+                    total++
+                    if (start < 0) start = r * w + c
+                }
+            }
+        }
+        if (total == 0) return false
+        val seen = BooleanArray(w * h)
+        val stack = ArrayDeque<Int>()
+        stack.addLast(start)
+        seen[start] = true
+        var reached = 0
+
+        fun visit(
+            nidx: Int,
+            reachable: Boolean,
+        ) {
+            if (reachable && !seen[nidx]) {
+                seen[nidx] = true
+                stack.addLast(nidx)
+            }
+        }
+        while (stack.isNotEmpty()) {
+            val idx = stack.removeLast()
+            reached++
+            val r = idx / w
+            val c = idx % w
+            visit(idx - w, r > 0 && !cells.isBlack(r - 1, c))
+            visit(idx + w, r < h - 1 && !cells.isBlack(r + 1, c))
+            visit(idx - 1, c > 0 && !cells.isBlack(r, c - 1))
+            visit(idx + 1, c < w - 1 && !cells.isBlack(r, c + 1))
+        }
+        return reached < total
     }
 
     /**

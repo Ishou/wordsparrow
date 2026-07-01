@@ -55,6 +55,7 @@ ADR-0030  infra/observability/values.yaml                   oauth2Proxy.image.ta
 ADR-0033  frontend/src/**/otel/**                  Frontend OTel public ingest; emits traceparent/tracestate
 ADR-0033  frontend/src/infrastructure/api/**       Browser SDK adds traceparent to every cross-origin fetch
 ADR-0034  */api/src/**/Module.kt                   CORS: allowHeaders { true } (wildcard predicate)
+ADR-0039  grid/domain/src/main/kotlin/com/bliss/grid/domain/generation/**  Bitmask-CSP generator: black-cell layout invariants — functional blacks, no 3-run/clamp, and white-cell connectivity (canPlaceBlack Check 6: a placement must not split white into a disconnected pocket / closed block). Interlocking is half-checked: a letter cell needs ≥1 word (sandwiched cells valid); GridValidator.uncrossedCells flags only cells in no word (2026-07-01 amendment)
 ADR-0042  */worker/src/**/pre*generation/**        Daily puzzle pre-gen worker (k8s CronJob)
 ADR-0044  identity/**                              Identity bounded context for player OIDC
 ADR-0044  */api/src/**/persistence/*Database.kt    CNPG libpq URI → toJdbcUrl(); never pass raw uri to Hikari

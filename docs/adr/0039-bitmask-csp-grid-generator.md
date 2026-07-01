@@ -140,3 +140,23 @@ benchmark shows the backtrack depth as the next bottleneck.
 - `AttemptOutcome` and `GenerationMetrics` (added to `GeneratePuzzleUseCase`) surface
   per-attempt backtrack counts and timing for observability; ADR-0015's pipeline had
   no equivalent instrumentation.
+
+### Amendment (2026-07-01): white-cell connectivity + half-checked interlocking
+
+Empirical measurement (see `GridConnectivityReproTest`) found the generator
+produced a **closed block** — white cells split into a disconnected pocket by
+black cells / the border — in ~11-14% of 15x12 grids, on both the current and
+pre-scrub corpora (a long-standing latent defect, not a corpus regression).
+`BlackCellLayout.canPlaceBlack` gains **Check 6**: a black placement is rejected
+if it disconnects the white cells into more than one 4-connected region. Every
+placement path (density sprinkle, run-capping, perturbation) routes through
+`canPlaceBlack`, so this structurally forbids closed blocks (0% after the guard,
+generation success ~95%, unchanged).
+
+Interlocking is **half-checked**, not fully-checked: a letter cell in exactly one
+word — sandwiched by black/border on the other axis — is valid mots fléchés,
+interior or edge. `GridValidator.uncrossedCells` is relaxed accordingly to flag
+only cells in *no* word (unfillable). The prior "interior cells must cross both"
+rule was stricter than the genre requires and was never enforced during
+generation; keeping it invited a footgun (enabling `enforceInterlocking` would
+have rejected ~15% of valid grids).

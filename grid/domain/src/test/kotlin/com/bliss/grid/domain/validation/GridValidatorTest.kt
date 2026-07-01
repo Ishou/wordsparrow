@@ -163,8 +163,9 @@ class GridValidatorTest {
     }
 
     @Test
-    fun `uncrossed interior cell is reported`() {
-        // Only horizontal words, no vertical — interior cells at (1,1+) are uncrossed
+    fun `a sandwiched interior cell in one word is valid`() {
+        // Only horizontal words: interior cells (1,1),(1,2) are in the horizontal
+        // word with black/border above and below — valid half-checked mots fléchés.
         val placements =
             listOf(
                 WordPlacement(Word("OR", "x"), Position(Row(0), Column(0)), Direction.RIGHT),
@@ -172,11 +173,7 @@ class GridValidatorTest {
             )
         val grid = Grid.fromPlacements(width = 4, height = 3, placements = placements)
 
-        val uncrossed = GridValidator.uncrossedCells(grid)
-        // Interior cells (row > 0 and col > 0) without vertical coverage are violations
-        assertThat(uncrossed).contains(
-            GridViolation.UncrossedCell(Position(Row(1), Column(1)), inHorizontal = true, inVertical = false),
-        )
+        assertThat(GridValidator.uncrossedCells(grid)).isEmpty()
     }
 
     @Test
@@ -191,7 +188,7 @@ class GridValidatorTest {
     }
 
     @Test
-    fun `partially interlocked grid reports uncrossed interior cells`() {
+    fun `partially interlocked grid is valid - every cell is in at least one word`() {
         // Horizontal CHAT at (1,0)→RIGHT: clue(1,0), C(1,1) H(1,2) A(1,3) T(1,4)
         // Vertical HAS at (0,2)→DOWN: clue(0,2), H(1,2) A(2,2) S(3,2)
         // Vertical ACE at (0,3)→DOWN: clue(0,3), A(1,3) C(2,3) E(3,3)
@@ -221,14 +218,9 @@ class GridValidatorTest {
                     ),
             )
 
-        val uncrossed = GridValidator.uncrossedCells(grid)
-        // C(1,1) is crossed (CHAT horizontal + COW vertical) — OK
-        // H(1,2) is crossed — OK
-        // A(1,3) is crossed — OK
-        // T(1,4) is crossed — OK
-        // O(2,1), W(3,1), A(2,2), S(3,2), C(2,3), E(3,3), A(2,4), S(3,4) — vertical only, interior → uncrossed
-        // So there ARE uncrossed cells. But the key cells (1,1) through (1,4) are properly crossed.
-        assertThat(uncrossed.map { it.position }).contains(Position(Row(2), Column(1)))
+        // Every letter cell is in at least one word — the single-axis cells
+        // (O(2,1), W(3,1), A(2,2)…) are valid sandwiched cells, not violations.
+        assertThat(GridValidator.uncrossedCells(grid)).isEmpty()
     }
 
     @Test
