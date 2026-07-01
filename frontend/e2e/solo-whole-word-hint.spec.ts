@@ -87,6 +87,12 @@ test('a hint reveals the whole focused word, locks it, and spends one budget uni
   const locked = await lockedCells(page);
   expect(locked).toEqual(WORD.map((c) => ({ row: c.row, col: c.col, value: c.letter })));
 
+  // Spending below cap surfaces the discreet regen cooldown, announced politely.
+  const cooldown = page.getByTestId('hint-cooldown');
+  await expect(cooldown).toBeVisible();
+  await expect(cooldown).toHaveAttribute('role', 'status');
+  await expect(cooldown).toHaveAttribute('aria-live', 'polite');
+
   // A cell outside the word stays editable (no whole-grid lock).
   await expect(page.locator('input[data-row="0"][data-col="1"]')).not.toHaveAttribute('aria-readonly', 'true');
 });
