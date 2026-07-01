@@ -10,6 +10,8 @@ data class MeResponse(
     val createdAt: String,
     val role: String,
     val capabilities: List<String>,
+    // Canonical IdP email (ADR-0082); /me is the only surface that exposes it. Absent when not yet captured.
+    val email: String? = null,
 )
 
 @Serializable

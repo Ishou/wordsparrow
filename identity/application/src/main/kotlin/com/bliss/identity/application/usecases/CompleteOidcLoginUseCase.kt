@@ -25,6 +25,8 @@ private val DEFAULT_DISPLAY_NAME = DisplayName.of("Joueur")
 data class CompleteOidcLoginCommand(
     val state: String,
     val code: String,
+    // Apple's first-sign-in `user` field email; used only when the signed id_token omits `email` (ADR-0082).
+    val emailHint: String? = null,
 )
 
 data class CompleteOidcLoginResult(
@@ -98,10 +100,13 @@ class CompleteOidcLoginUseCase(
         // in a single transaction. The attempt has already been consumed, so a partial failure
         // strands the user (their attempt is gone, their record is half-written, and they can't
         // retry). The in-memory adapter masks this because it never throws.
+        // Signed id_token email wins; Apple's unsigned first-sign-in `user` field only fills the gap (ADR-0082).
+        val email = verified.email ?: command.emailHint
         val existingLink = userProviders.findByProviderAndSubject(attempt.provider, verified.subject)
         val user: User =
             if (existingLink != null) {
                 users.updateLastSeenAt(existingLink.userId, now)
+                if (email != null) users.updateEmail(existingLink.userId, email)
                 users.findById(existingLink.userId)
                     ?: throw CompleteOidcLoginError.OrphanedLink(existingLink.userId)
             } else {
@@ -111,6 +116,7 @@ class CompleteOidcLoginUseCase(
                         displayName = DEFAULT_DISPLAY_NAME,
                         createdAt = now,
                         lastSeenAt = now,
+                        email = email,
                     )
                 users.create(created)
                 userProviders.link(

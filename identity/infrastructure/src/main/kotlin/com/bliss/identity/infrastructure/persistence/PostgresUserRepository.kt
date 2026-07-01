@@ -32,6 +32,7 @@ class PostgresUserRepository(
                     stmt.setObject(3, user.createdAt.truncatedTo(ChronoUnit.MICROS).atOffset(ZoneOffset.UTC))
                     stmt.setObject(4, user.lastSeenAt.truncatedTo(ChronoUnit.MICROS).atOffset(ZoneOffset.UTC))
                     stmt.setString(5, user.role.wire)
+                    stmt.setString(6, user.email)
                     stmt.executeUpdate()
                 }
             }
@@ -89,6 +90,20 @@ class PostgresUserRepository(
             }
         }
 
+    override suspend fun updateEmail(
+        id: UserId,
+        email: String,
+    ): Unit =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(UPDATE_EMAIL_SQL).use { stmt ->
+                    stmt.setString(1, email)
+                    stmt.setObject(2, id.value)
+                    stmt.executeUpdate()
+                }
+            }
+        }
+
     override suspend fun delete(id: UserId): Unit =
         withContext(Dispatchers.IO) {
             dataSource.connection.use { conn ->
@@ -107,20 +122,23 @@ class PostgresUserRepository(
             createdAt = getObject("created_at", OffsetDateTime::class.java).toInstant(),
             lastSeenAt = getObject("last_seen_at", OffsetDateTime::class.java).toInstant(),
             role = Role.fromWire(getString("role")),
+            email = getString("email"),
         )
 
     companion object {
         private const val INSERT_SQL =
-            "INSERT INTO identity_users (user_id, display_name, created_at, last_seen_at, role) " +
-                "VALUES (?, ?, ?, ?, ?) ON CONFLICT (user_id) DO NOTHING"
+            "INSERT INTO identity_users (user_id, display_name, created_at, last_seen_at, role, email) " +
+                "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (user_id) DO NOTHING"
         private const val SELECT_SQL =
-            "SELECT user_id, display_name, created_at, last_seen_at, role FROM identity_users WHERE user_id = ?"
+            "SELECT user_id, display_name, created_at, last_seen_at, role, email FROM identity_users WHERE user_id = ?"
         private const val UPDATE_LAST_SEEN_SQL =
             "UPDATE identity_users SET last_seen_at = ? WHERE user_id = ?"
         private const val UPDATE_DISPLAY_NAME_SQL =
             "UPDATE identity_users SET display_name = ? WHERE user_id = ?"
         private const val UPDATE_ROLE_SQL =
             "UPDATE identity_users SET role = ? WHERE user_id = ?"
+        private const val UPDATE_EMAIL_SQL =
+            "UPDATE identity_users SET email = ? WHERE user_id = ?"
         private const val DELETE_SQL = "DELETE FROM identity_users WHERE user_id = ?"
     }
 }

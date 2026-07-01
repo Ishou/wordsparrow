@@ -150,6 +150,7 @@ class AppleCallbackRouteTest {
                 codeExchanger = codeExchanger,
                 verifier = verifier,
                 configSource = configSource,
+                users = users,
                 userProviders = userProviders,
                 clock = clock,
             )
@@ -247,6 +248,9 @@ class AppleCallbackRouteTest {
             val session = cookies.firstOrNull { it.name == SessionCookies.NAME }
             assertThat(session).isNotNull()
             assertThat(session!!.value).isEqualTo(newSessionId.toString())
+            // Apple's first-sign-in `user` field email is captured when the id_token omits it (ADR-0082).
+            val created = runBlocking { fx.users.findById(UserId(newUserId)) }
+            assertThat(created?.email).isEqualTo("x@y.example")
         }
 
     @Test

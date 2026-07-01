@@ -38,6 +38,13 @@ class FakeUserRepository : UserRepository {
         byId[id]?.let { byId[id] = it.copy(role = role) }
     }
 
+    override suspend fun updateEmail(
+        id: UserId,
+        email: String,
+    ) {
+        byId[id]?.let { byId[id] = it.copy(email = email) }
+    }
+
     override suspend fun delete(id: UserId) {
         byId.remove(id)
     }

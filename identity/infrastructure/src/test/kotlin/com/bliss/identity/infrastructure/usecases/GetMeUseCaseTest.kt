@@ -136,8 +136,26 @@ class GetMeUseCaseTest {
                     role = Role.PLAYER,
                     capabilities = setOf(Capability.HINT),
                     linkedProviders = emptyList(),
+                    email = null,
                 ),
             )
+        }
+
+    @Test
+    fun `email is exposed in the result when the user has one`() =
+        runTest {
+            val (sut, users, _) = newCase()
+            users.create(User(userId, DisplayName.of("Alice"), now, now, email = "alice@example.com"))
+            val result = sut.execute(GetMeQuery(userId))
+            assertThat(result.email).isEqualTo("alice@example.com")
+        }
+
+    @Test
+    fun `email is null when the user has none`() =
+        runTest {
+            val (sut, users, _) = newCase()
+            seedUser(users)
+            assertThat(sut.execute(GetMeQuery(userId)).email).isEqualTo(null)
         }
 
     @Test

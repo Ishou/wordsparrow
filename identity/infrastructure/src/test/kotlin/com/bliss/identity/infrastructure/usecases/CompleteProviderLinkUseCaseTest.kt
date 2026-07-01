@@ -28,10 +28,13 @@ import com.bliss.identity.domain.oidc.OidcVerifier
 import com.bliss.identity.domain.provider.Provider
 import com.bliss.identity.domain.provider.Subject
 import com.bliss.identity.domain.provider.UserProvider
+import com.bliss.identity.domain.user.DisplayName
+import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
 import com.bliss.identity.infrastructure.oidc.StaticOidcProviderConfigSource
 import com.bliss.identity.infrastructure.persistence.InMemoryAuthAttemptRepository
 import com.bliss.identity.infrastructure.persistence.InMemoryUserProviderRepository
+import com.bliss.identity.infrastructure.persistence.InMemoryUserRepository
 import com.bliss.identity.infrastructure.testdoubles.FixedClock
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
@@ -99,11 +102,13 @@ class CompleteProviderLinkUseCaseTest {
 
     private data class Bundle(
         val userProviders: InMemoryUserProviderRepository,
+        val users: InMemoryUserRepository,
     )
 
     private fun newUseCase(
         attempts: InMemoryAuthAttemptRepository = InMemoryAuthAttemptRepository(),
         userProviders: InMemoryUserProviderRepository = InMemoryUserProviderRepository(),
+        users: InMemoryUserRepository = InMemoryUserRepository(),
         codeExchanger: OidcCodeExchanger = happyExchanger,
         verifier: OidcVerifier = happyVerifier(),
         clock: FixedClock = FixedClock(now),
@@ -113,6 +118,7 @@ class CompleteProviderLinkUseCaseTest {
             codeExchanger = codeExchanger,
             verifier = verifier,
             configSource = StaticOidcProviderConfigSource(mapOf(Provider.GOOGLE to googleConfig)),
+            users = users,
             userProviders = userProviders,
             clock = clock,
         )
@@ -120,6 +126,7 @@ class CompleteProviderLinkUseCaseTest {
     private fun newCase(
         attempts: InMemoryAuthAttemptRepository = InMemoryAuthAttemptRepository(),
         userProviders: InMemoryUserProviderRepository = InMemoryUserProviderRepository(),
+        users: InMemoryUserRepository = InMemoryUserRepository(),
         codeExchanger: OidcCodeExchanger = happyExchanger,
         verifier: OidcVerifier = happyVerifier(),
         clock: FixedClock = FixedClock(now),
@@ -128,11 +135,12 @@ class CompleteProviderLinkUseCaseTest {
             newUseCase(
                 attempts = attempts,
                 userProviders = userProviders,
+                users = users,
                 codeExchanger = codeExchanger,
                 verifier = verifier,
                 clock = clock,
             )
-        return Pair(sut, Bundle(userProviders = userProviders))
+        return Pair(sut, Bundle(userProviders = userProviders, users = users))
     }
 
     @Test
@@ -182,6 +190,39 @@ class CompleteProviderLinkUseCaseTest {
             assertThat(link).isNotNull()
             assertThat(link!!.userId).isEqualTo(linkUserId)
             assertThat(attempts.findByState(state)).isNull()
+        }
+
+    @Test
+    fun `linking refreshes the user email from the verified id token`() =
+        runTest {
+            val attempts = InMemoryAuthAttemptRepository()
+            attempts.create(linkAttempt())
+            val users =
+                InMemoryUserRepository().apply {
+                    create(
+                        User(
+                            id = linkUserId,
+                            displayName = DisplayName.of("Existing"),
+                            createdAt = now.minusSeconds(86_400),
+                            lastSeenAt = now.minusSeconds(86_400),
+                        ),
+                    )
+                }
+            val verifier =
+                OidcVerifier { _, provider: OidcProvider ->
+                    OidcIdToken(
+                        subject = Subject.of("google-sub-link-1"),
+                        issuer = provider.issuer,
+                        audience = provider.audience,
+                        issuedAt = now.minusSeconds(10),
+                        expiresAt = now.plusSeconds(3600),
+                        nonce = null,
+                        email = "linked@example.com",
+                    )
+                }
+            val (sut, bundle) = newCase(attempts = attempts, users = users, verifier = verifier)
+            sut.execute(CompleteProviderLinkCommand(state.value, "code-1"))
+            assertThat(bundle.users.findById(linkUserId)!!.email).isEqualTo("linked@example.com")
         }
 
     @Test

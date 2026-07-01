@@ -31,6 +31,7 @@ data class GetMeResult(
     val role: Role,
     val capabilities: Set<Capability>,
     val linkedProviders: List<LinkedProviderView>,
+    val email: String? = null,
 )
 
 sealed class GetMeError(
@@ -70,5 +71,6 @@ class GetMeUseCase(
             role = role,
             capabilities = capabilitiesFor(role, tier),
             linkedProviders = linkedProviders,
+            email = email,
         )
 }

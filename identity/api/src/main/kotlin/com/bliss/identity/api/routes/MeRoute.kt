@@ -132,6 +132,7 @@ private fun GetMeResult.toMeResponse(): MeResponse =
         createdAt = createdAt.toString(),
         role = role.wire,
         capabilities = capabilities.map { it.wire }.sorted(),
+        email = email,
         providers =
             linkedProviders.map { lp ->
                 LinkedProviderDto(

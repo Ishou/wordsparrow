@@ -177,6 +177,7 @@ class Wiring private constructor(
                     codeExchanger,
                     verifier,
                     configSource,
+                    users,
                     userProviders,
                     clock,
                 )

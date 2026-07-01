@@ -30,6 +30,7 @@ class CallbackDispatcher(
     suspend fun dispatch(
         state: String,
         code: String,
+        emailHint: String? = null,
     ): Result {
         val attempt =
             try {
@@ -38,10 +39,10 @@ class CallbackDispatcher(
                 null
             }
         return if (attempt?.linkToUserId == null) {
-            val r = completeOidcLogin.execute(CompleteOidcLoginCommand(state = state, code = code))
+            val r = completeOidcLogin.execute(CompleteOidcLoginCommand(state = state, code = code, emailHint = emailHint))
             Result.LoggedIn(sessionId = r.sessionId, returnTo = r.returnTo)
         } else {
-            val r = completeProviderLink.execute(CompleteProviderLinkCommand(state = state, code = code))
+            val r = completeProviderLink.execute(CompleteProviderLinkCommand(state = state, code = code, emailHint = emailHint))
             Result.Linked(returnTo = r.returnTo)
         }
     }

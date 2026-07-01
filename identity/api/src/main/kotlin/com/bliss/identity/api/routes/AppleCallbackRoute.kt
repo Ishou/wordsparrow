@@ -14,14 +14,30 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger("com.bliss.identity.api.routes.AppleCallbackRoute")
 
+// Apple sends `user` (name + email JSON) only on first sign-in; we read email as a fallback for the
+// signed id_token email claim (ADR-0082). Unsigned, so it never overrides the verified token email.
+private fun parseAppleUserEmail(
+    json: Json,
+    raw: String,
+): String? =
+    try {
+        json
+            .parseToJsonElement(raw)
+            .jsonObject["email"]
+            ?.jsonPrimitive
+            ?.content
+    } catch (_: Exception) {
+        null
+    }
+
 // POST /v1/auth/apple/callback - ADR-0044. Apple uses response_mode=form_post,
 // so code + state arrive as application/x-www-form-urlencoded body params.
-// Apple may also include a `user` JSON field on first sign-in (name/email) -
-// it is intentionally ignored per ADR-0045 (no PII retention beyond sub).
 fun Route.appleCallback(
     dispatcher: CallbackDispatcher,
     config: IdentityApiConfig,
@@ -52,9 +68,11 @@ fun Route.appleCallback(
                 "state form parameter is required.",
             )
 
+        val emailHint = params["user"]?.let { parseAppleUserEmail(json, it) }
+
         val result =
             try {
-                dispatcher.dispatch(state = state, code = code)
+                dispatcher.dispatch(state = state, code = code, emailHint = emailHint)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: CompleteOidcLoginError) {

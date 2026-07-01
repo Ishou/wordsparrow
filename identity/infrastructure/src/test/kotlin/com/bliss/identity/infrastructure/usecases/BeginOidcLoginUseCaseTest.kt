@@ -79,7 +79,8 @@ class BeginOidcLoginUseCaseTest {
             assertThat(result.authorizeUrl).startsWith(googleConfig.authorizeUrl + "?")
             assertThat(result.authorizeUrl).contains("response_type=code")
             assertThat(result.authorizeUrl).contains("client_id=google-client")
-            assertThat(result.authorizeUrl).contains("scope=openid")
+            // URLEncoder renders the space in "openid email" as '+' (ADR-0082).
+            assertThat(result.authorizeUrl).contains("scope=openid+email")
             assertThat(result.authorizeUrl).contains("state=${state.value}")
             assertThat(result.authorizeUrl).contains("code_challenge=${pkce.challenge()}")
             assertThat(result.authorizeUrl).contains("code_challenge_method=S256")
@@ -92,6 +93,7 @@ class BeginOidcLoginUseCaseTest {
             val result = useCase().execute(BeginOidcLoginCommand(Provider.APPLE, "https://wordsparrow.example/return"))
             assertThat(result.authorizeUrl).startsWith(appleConfig.authorizeUrl + "?")
             assertThat(result.authorizeUrl).contains("response_mode=form_post")
+            assertThat(result.authorizeUrl).contains("scope=openid+email")
         }
 
     @Test

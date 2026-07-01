@@ -4,10 +4,9 @@ import com.bliss.identity.domain.provider.Subject
 import java.time.Instant
 
 /**
- * The subset of ID-token claims we keep after verification. We deliberately
- * do not retain `email`, `name`, `picture`, or any other PII-bearing claim,
- * even when the IdP returns them (Apple sometimes does despite scope=openid).
- * See ADR-0045.
+ * The subset of ID-token claims we keep after verification. `email` is retained
+ * for legal invoicing (ADR-0082, superseding ADR-0045); `name` and `picture`
+ * remain dropped. `email` is nullable — a provider may omit it on a given sign-in.
  */
 data class OidcIdToken(
     val subject: Subject,
@@ -16,4 +15,5 @@ data class OidcIdToken(
     val issuedAt: Instant,
     val expiresAt: Instant,
     val nonce: String?,
+    val email: String? = null,
 )
