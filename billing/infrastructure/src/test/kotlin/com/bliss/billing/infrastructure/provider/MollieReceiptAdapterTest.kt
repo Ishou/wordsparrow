@@ -70,6 +70,34 @@ class MollieReceiptAdapterTest {
         }
 
     @Test
+    fun `converts a zero-fraction-digit currency amount to minor units`() =
+        runTest {
+            client.customerPayments =
+                MolliePaymentPage(
+                    payments = listOf(record(amountValue = "200", currency = "JPY")),
+                    nextCursor = null,
+                )
+
+            val receipt = adapter.listReceipts(userId, cursor = null, limit = 20).receipts.single()
+
+            assertThat(receipt.amountMinorUnits).isEqualTo(200)
+        }
+
+    @Test
+    fun `converts a three-fraction-digit currency amount to minor units`() =
+        runTest {
+            client.customerPayments =
+                MolliePaymentPage(
+                    payments = listOf(record(amountValue = "2.500", currency = "BHD")),
+                    nextCursor = null,
+                )
+
+            val receipt = adapter.listReceipts(userId, cursor = null, limit = 20).receipts.single()
+
+            assertThat(receipt.amountMinorUnits).isEqualTo(2500)
+        }
+
+    @Test
     fun `falls back to createdAt when the payment has no paidAt`() =
         runTest {
             client.customerPayments =
