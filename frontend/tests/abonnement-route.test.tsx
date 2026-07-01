@@ -146,7 +146,7 @@ describe('AbonnementOffer', () => {
     expect(screen.getByRole('radio', { name: /Annuel/ })).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('starts a checkout for the subscriber tier and hands off to the provider URL', async () => {
+  it('starts an annual checkout and hands off to the provider URL when Annuel is selected', async () => {
     const assign = vi.fn();
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -161,7 +161,24 @@ describe('AbonnementOffer', () => {
       fireEvent.click(button);
     });
 
-    await waitFor(() => expect(client.createCheckoutSession).toHaveBeenCalledWith('subscriber'));
+    await waitFor(() => expect(client.createCheckoutSession).toHaveBeenCalledWith('subscriber', 'yearly'));
+    expect(assign).toHaveBeenCalledWith('https://checkout.test/session/abc');
+  });
+
+  it('starts a monthly checkout with the default Mensuel cadence', async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: 'http://localhost/abonnement', origin: 'http://localhost', assign },
+    });
+    const client = fakeBillingClient();
+    render(<AbonnementOffer client={client} />, { wrapper: withAuth(ELIGIBLE) });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /S'abonner/ }));
+    });
+
+    await waitFor(() => expect(client.createCheckoutSession).toHaveBeenCalledWith('subscriber', 'monthly'));
     expect(assign).toHaveBeenCalledWith('https://checkout.test/session/abc');
   });
 

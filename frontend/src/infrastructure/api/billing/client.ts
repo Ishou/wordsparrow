@@ -45,10 +45,10 @@ export function createHttpBillingClient(options: HttpBillingClientOptions): Bill
   });
 
   return {
-    async createCheckoutSession(tier) {
+    async createCheckoutSession(tier, cadence) {
       const { data, error, response } = await client.POST('/v1/checkout-session', {
         credentials: 'include',
-        body: { tier },
+        body: { tier, cadence },
       });
       if (error || !data) throw billingError(response.status, error?.detail ?? error?.title);
       return {
