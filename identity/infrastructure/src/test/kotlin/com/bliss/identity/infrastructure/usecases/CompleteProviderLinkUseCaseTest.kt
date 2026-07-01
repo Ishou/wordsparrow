@@ -253,6 +253,53 @@ class CompleteProviderLinkUseCaseTest {
         }
 
     @Test
+    fun `link conflict does not overwrite the linking user's email`() =
+        runTest {
+            val attempts = InMemoryAuthAttemptRepository()
+            attempts.create(linkAttempt())
+            val otherUserId = UserId(UUID.fromString("01890c5e-0000-7000-8000-00000000cc10"))
+            val userProviders =
+                InMemoryUserProviderRepository().apply {
+                    link(
+                        UserProvider(
+                            userId = otherUserId,
+                            provider = Provider.GOOGLE,
+                            subject = Subject.of("google-sub-link-1"),
+                            emailAtLink = null,
+                            linkedAt = now.minusSeconds(86_400),
+                        ),
+                    )
+                }
+            val users =
+                InMemoryUserRepository().apply {
+                    create(
+                        User(
+                            id = linkUserId,
+                            displayName = DisplayName.of("Existing"),
+                            createdAt = now.minusSeconds(86_400),
+                            lastSeenAt = now.minusSeconds(86_400),
+                        ),
+                    )
+                }
+            val verifier =
+                OidcVerifier { _, provider: OidcProvider ->
+                    OidcIdToken(
+                        subject = Subject.of("google-sub-link-1"),
+                        issuer = provider.issuer,
+                        audience = provider.audience,
+                        issuedAt = now.minusSeconds(10),
+                        expiresAt = now.plusSeconds(3600),
+                        nonce = null,
+                        email = "stranger@example.com",
+                    )
+                }
+            val sut = newUseCase(attempts = attempts, userProviders = userProviders, users = users, verifier = verifier)
+            assertFailure { sut.execute(CompleteProviderLinkCommand(state.value, "code-1")) }
+                .isInstanceOf(CompleteProviderLinkError.LinkConflict::class)
+            assertThat(users.findById(linkUserId)!!.email).isNull()
+        }
+
+    @Test
     fun `CancellationException from code exchanger propagates unwrapped`() =
         runTest {
             val attempts = InMemoryAuthAttemptRepository()

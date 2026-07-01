@@ -89,7 +89,6 @@ class CompleteProviderLinkUseCase(
         // retry). The in-memory adapter masks this because it never throws.
         // Signed id_token email wins; Apple's unsigned first-sign-in `user` field only fills the gap (ADR-0082).
         val email = verified.email ?: command.emailHint
-        if (email != null) users.updateEmail(linkToUserId, email)
         val existingLink = userProviders.findByProviderAndSubject(attempt.provider, verified.subject)
         if (existingLink != null) {
             if (existingLink.userId != linkToUserId) {
@@ -98,6 +97,7 @@ class CompleteProviderLinkUseCase(
             // Same user already linked to this provider - idempotent no-op.
             return CompleteProviderLinkResult(userId = linkToUserId, returnTo = attempt.returnTo)
         }
+        if (email != null) users.updateEmail(linkToUserId, email)
         userProviders.link(
             UserProvider(
                 userId = linkToUserId,
