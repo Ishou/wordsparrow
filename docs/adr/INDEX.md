@@ -197,6 +197,13 @@ ADR-0083  game/application/**/auth/CookieVerifier.kt     WhoAmI carries `capabil
 ADR-0083  game/application/**/usecases/LobbyUseCases.kt  Host quota: authed player = 1 WAITING lobby (findWaitingByOwnerUser, reopen existing); `multiplayer:host-unlimited` ⇒ unlimited
 ADR-0083  game/api/**/routes/LobbiesRoute.kt             Guest = 0: anon `POST /v1/lobbies` returns 401 (hosting requires sign-in); joining stays open to everyone
 # ADR-0083: Multiplayer hosting entitlement — extends ADR-0080 into game; guest 0 / player 1 open lobby / subscriber unlimited; join open to all; server-side enforced in game (unlike cosmetic solo grid gating). guest=0/player=1 ship now, subscriber=∞ dormant until billing GA
+ADR-0084  grid/api/openapi.yaml                          New internal `POST /v1/puzzles/{id}/validate-word` → `{correct}`; client-facing `/validate` stays binary (ADR-0076 §9 unchanged)
+ADR-0084  grid/api/**/routes/PuzzleRoute.kt              validate-word route: single-word `{correct}`; service-token gate + internal-only exposure (not on the public ingress)
+ADR-0084  grid/application/**/puzzle/ValidatePuzzleUseCase.kt  Word-scoped validation reuse: `correct` iff every submitted cell matches solution; no positional data leaked
+ADR-0084  game/infrastructure/**/HttpWordValidator.kt    Call validate-word per candidate word with `X-Service-Token`; response DTO is `{correct}`; wire-shape contract test REQUIRED (the gap that let #1170 break co-op silently)
+ADR-0084  game/application/**/usecases/LobbyUseCases.kt  Validator failure must be observable (logged/metered), not a silent swallow — a total lock outage must never again be invisible
+ADR-0084  frontend/src/ui/v2/multiplayer/useCoopValidating.ts  Co-op pulse timeout → reject → `rejectingPositions` → shake (backend sends no wrong-word event by design)
+# ADR-0084: Internal service-authenticated word validation for multiplayer locking — restores co-op word-locking broken by ADR-0076's binary `/validate` (#1170 dropped `incorrectCells`, game-api still required it → swallowed parse failure → nothing locked). Dedicated internal `validate-word` (token + not-publicly-routed); solo never regains per-cell feedback. HTTP not NATS (ADR-0049). Extends ADR-0076.
 ```
 
 ## Adding entries
