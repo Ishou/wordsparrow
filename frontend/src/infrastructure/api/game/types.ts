@@ -605,6 +605,11 @@ export interface components {
          */
         CreateLobbyRequest: {
             ownerSessionId: components["schemas"]["SessionId"];
+            /**
+             * @description Accepted for wire-compatibility but unused server-side (ADR-0083):
+             *     the authed create path derives the owner's display name from the
+             *     verified session instead.
+             */
             ownerPseudonym: components["schemas"]["Pseudonym"];
             /**
              * @description Optional human-friendly label for the lobby. Surfaced on the
@@ -723,11 +728,9 @@ export interface operations {
                 };
             };
             /**
-             * @description Request body is malformed. RFC 7807. Variants:
+             * @description Request body is malformed. RFC 7807. Variant:
              *     - `ownerSessionId` is not a UUID v7
              *       (`type` = `https://bliss.example/errors/invalid-lobby-create-request`).
-             *     - `ownerPseudonym` violates length / whitespace rules
-             *       (same `type`).
              */
             400: {
                 headers: {
