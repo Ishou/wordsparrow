@@ -50,9 +50,8 @@ export function HintCooldown({
 
   const remaining = Math.max(0, secondsUntilNextHint);
   const progress = Math.min(1, Math.max(0, (intervalSeconds - remaining) / intervalSeconds));
-  const minutes = Math.floor(remaining / 60);
-  const seconds = remaining % 60;
-  const label = `Prochain indice dans ${minutes} min ${seconds} s, ${hintsRemaining} sur ${hintsAllowed}`;
+  // Excludes the ticking `remaining` value so the live region announces once per state, not once per second (ADR-0050 §6).
+  const label = `Indice en recharge, ${hintsRemaining} sur ${hintsAllowed}`;
 
   return (
     <span
