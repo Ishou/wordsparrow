@@ -203,8 +203,9 @@ internal object BlackCellLayout {
 
     /**
      * Predicate gating every black-cell placement. Spec §4.3:
-     *  - **Check 1**: every adjacent white run (in the affected axis)
-     *    remains ≥ minLen.
+     *  - **Check 1**: no adjacent white cell is orphaned — each stays in ≥ 1
+     *    word (≥ minLen on at least one axis). Single-axis (sandwiched) cells
+     *    are allowed — half-checked mots fléchés (ADR-0039 amendment).
      *  - **Check 2**: the new black is itself functional.
      *  - **Check 3**: no existing neighbouring black becomes dead as a
      *    side effect of this placement.
@@ -224,16 +225,27 @@ internal object BlackCellLayout {
         val prior = cells.get(r, c)
         cells.set(r, c, CellArray.BLACK)
         try {
-            // Check 1: adjacent white runs in the affected axis remain long enough.
+            // Check 1: no adjacent white cell may be orphaned — it must stay in at
+            // least ONE word. A length-1 run on the black's axis is a valid single-axis
+            // (sandwiched) cell in half-checked mots fléchés; reject only if the
+            // neighbour drops below minLen on BOTH axes (in no word at all).
             for (cc in intArrayOf(c - 1, c + 1)) {
                 if (cc !in 0 until cells.width) continue
                 if (cells.isBlack(r, cc)) continue
-                if (runLengthHorizontal(cells, r, cc) < minLen) return false
+                if (runLengthHorizontal(cells, r, cc) < minLen &&
+                    runLengthVertical(cells, r, cc) < minLen
+                ) {
+                    return false
+                }
             }
             for (rr in intArrayOf(r - 1, r + 1)) {
                 if (rr !in 0 until cells.height) continue
                 if (cells.isBlack(rr, c)) continue
-                if (runLengthVertical(cells, rr, c) < minLen) return false
+                if (runLengthVertical(cells, rr, c) < minLen &&
+                    runLengthHorizontal(cells, rr, c) < minLen
+                ) {
+                    return false
+                }
             }
             // Check 2: the new black must itself be functional.
             if (!isFunctional(cells, r, c, minLen)) return false
