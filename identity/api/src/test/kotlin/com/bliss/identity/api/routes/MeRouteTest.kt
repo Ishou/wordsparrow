@@ -54,12 +54,13 @@ class MeRouteTest {
     private fun newWiring(
         linkGoogle: Boolean = false,
         role: Role = Role.PLAYER,
+        email: String? = null,
     ): Wiring {
         val users = InMemoryUserRepository()
         val sessions = InMemorySessionRepository()
         val userProviders = InMemoryUserProviderRepository()
         runBlocking {
-            users.create(User(userId, DisplayName.of("Alice"), now, now, role))
+            users.create(User(userId, DisplayName.of("Alice"), now, now, role, email))
             sessions.create(Session(sessionId, userId, now, now, null))
             if (linkGoogle) {
                 userProviders.link(
@@ -131,7 +132,18 @@ class MeRouteTest {
             val body = response.bodyAsText()
             assertThat(body).contains("\"provider\":\"google\"")
             assertThat(body).contains("\"linkedAt\":\"$linkedAt\"")
-            assertThat(body).contains("\"emailOptIn\":true")
             assertThat(body).doesNotContain("\"providers\":[]")
+        }
+
+    @Test
+    fun `valid session exposes the player email on the me response`() =
+        testApplication {
+            application { module(newWiring(email = "alice@example.com"), testConfig) }
+            val response =
+                client.get("/v1/users/me") {
+                    cookie(SessionCookies.NAME, sessionId.value.toString())
+                }
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.bodyAsText()).contains("\"email\":\"alice@example.com\"")
         }
 }

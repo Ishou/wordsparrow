@@ -33,5 +33,11 @@ interface UserRepository {
         role: Role,
     )
 
+    /** Refresh the canonical email from the IdP (ADR-0082). No-op if [id] does not exist. */
+    suspend fun updateEmail(
+        id: UserId,
+        email: String,
+    )
+
     suspend fun delete(id: UserId)
 }

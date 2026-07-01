@@ -149,6 +149,7 @@ class GoogleCallbackRouteTest {
                 codeExchanger = codeExchanger,
                 verifier = verifier,
                 configSource = configSource,
+                users = users,
                 userProviders = userProviders,
                 clock = clock,
             )

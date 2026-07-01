@@ -63,7 +63,6 @@ fun Route.patchMe(
                 UpdateMeCommand(
                     userId = auth.userId,
                     displayName = request.displayName,
-                    emailOptIn = request.emailOptIn,
                 ),
             )
         } catch (e: CancellationException) {
@@ -132,12 +131,12 @@ private fun GetMeResult.toMeResponse(): MeResponse =
         createdAt = createdAt.toString(),
         role = role.wire,
         capabilities = capabilities.map { it.wire }.sorted(),
+        email = email,
         providers =
             linkedProviders.map { lp ->
                 LinkedProviderDto(
                     provider = lp.provider.toWire(),
                     linkedAt = lp.linkedAt.toString(),
-                    emailOptIn = lp.emailOptIn,
                 )
             },
     )

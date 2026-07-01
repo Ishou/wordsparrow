@@ -8,4 +8,6 @@ data class User(
     val createdAt: Instant,
     val lastSeenAt: Instant,
     val role: Role = Role.PLAYER,
+    // Canonical player email from the IdP, retained for legal invoicing (ADR-0082); null until captured.
+    val email: String? = null,
 )

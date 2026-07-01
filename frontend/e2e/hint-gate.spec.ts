@@ -10,7 +10,7 @@ const ME_PAYLOAD = {
   id: AUTHED_USER.userId,
   displayName: AUTHED_USER.displayName,
   createdAt: '2026-05-01T10:00:00.000Z',
-  providers: [{ provider: 'google', linkedAt: '2026-05-17T10:00:00.000Z', emailOptIn: false }],
+  providers: [{ provider: 'google', linkedAt: '2026-05-17T10:00:00.000Z' }],
 };
 
 const FIXTURE_PATH = path.join(

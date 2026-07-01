@@ -14,7 +14,7 @@ const ME: GetMeResult = {
   id: USER_ID,
   displayName: 'Lapin 472',
   createdAt: '2026-01-01T00:00:00Z',
-  providers: [{ provider: 'google', linkedAt: '2026-01-01T00:00:00Z', emailOptIn: false }],
+  providers: [{ provider: 'google', linkedAt: '2026-01-01T00:00:00Z' }],
 };
 
 const ACTIVE_VIEW: SubscriptionView = { tier: 'subscriber', status: 'active', periodEnd: '2026-08-01T00:00:00Z' };

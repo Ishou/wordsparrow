@@ -6,6 +6,7 @@ import com.bliss.identity.application.ports.OidcCodeExchanger
 import com.bliss.identity.application.ports.OidcExchangeError
 import com.bliss.identity.application.ports.OidcProviderConfigSource
 import com.bliss.identity.application.ports.UserProviderRepository
+import com.bliss.identity.application.ports.UserRepository
 import com.bliss.identity.domain.auth.State
 import com.bliss.identity.domain.oidc.OidcProvider
 import com.bliss.identity.domain.oidc.OidcVerifier
@@ -16,6 +17,8 @@ import kotlin.coroutines.cancellation.CancellationException
 data class CompleteProviderLinkCommand(
     val state: String,
     val code: String,
+    // Apple's first-sign-in `user` field email; used only when the signed id_token omits `email` (ADR-0082).
+    val emailHint: String? = null,
 )
 
 data class CompleteProviderLinkResult(
@@ -28,6 +31,7 @@ class CompleteProviderLinkUseCase(
     private val codeExchanger: OidcCodeExchanger,
     private val verifier: OidcVerifier,
     private val configSource: OidcProviderConfigSource,
+    private val users: UserRepository,
     private val userProviders: UserProviderRepository,
     private val clock: Clock,
 ) {
@@ -83,6 +87,8 @@ class CompleteProviderLinkUseCase(
         // in a single transaction. The attempt has already been consumed, so a partial failure
         // strands the user (their attempt is gone, their link is not written, and they can't
         // retry). The in-memory adapter masks this because it never throws.
+        // Signed id_token email wins; Apple's unsigned first-sign-in `user` field only fills the gap (ADR-0082).
+        val email = verified.email ?: command.emailHint
         val existingLink = userProviders.findByProviderAndSubject(attempt.provider, verified.subject)
         if (existingLink != null) {
             if (existingLink.userId != linkToUserId) {
@@ -91,6 +97,7 @@ class CompleteProviderLinkUseCase(
             // Same user already linked to this provider - idempotent no-op.
             return CompleteProviderLinkResult(userId = linkToUserId, returnTo = attempt.returnTo)
         }
+        if (email != null) users.updateEmail(linkToUserId, email)
         userProviders.link(
             UserProvider(
                 userId = linkToUserId,

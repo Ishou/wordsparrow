@@ -110,16 +110,6 @@ class UpdateMeUseCaseTest {
         }
 
     @Test
-    fun `emailOptIn field is accepted without error - no-op in v1`() =
-        runTest {
-            val sut = newCase()
-            seedUser(sut.users)
-            sut.useCase.execute(UpdateMeCommand(userId, null, emailOptIn = true))
-            assertThat(sut.users.findById(userId)?.displayName).isEqualTo(DisplayName.of("Alice"))
-            assertThat(sut.broadcaster.captured()).isEmpty()
-        }
-
-    @Test
     fun `broadcaster that swallows internally does not surface errors from execute`() =
         runTest {
             val users = InMemoryUserRepository()

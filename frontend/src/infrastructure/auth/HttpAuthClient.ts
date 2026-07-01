@@ -53,7 +53,6 @@ export function createHttpAuthClient(
         providers: data.providers.map((p) => ({
           provider: p.provider,
           linkedAt: p.linkedAt,
-          emailOptIn: p.emailOptIn,
         })),
       };
     },

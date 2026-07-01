@@ -78,17 +78,20 @@ class CompleteOidcLoginUseCaseTest {
     private val happyExchanger: OidcCodeExchanger =
         OidcCodeExchanger { _, _, _, _ -> OidcExchangeResult(idToken = "raw-id-token") }
 
-    private fun happyVerifier(subject: String = "google-sub-1") =
-        OidcVerifier { _, provider: OidcProvider ->
-            OidcIdToken(
-                subject = Subject.of(subject),
-                issuer = provider.issuer,
-                audience = provider.audience,
-                issuedAt = now.minusSeconds(10),
-                expiresAt = now.plusSeconds(3600),
-                nonce = null,
-            )
-        }
+    private fun happyVerifier(
+        subject: String = "google-sub-1",
+        email: String? = null,
+    ) = OidcVerifier { _, provider: OidcProvider ->
+        OidcIdToken(
+            subject = Subject.of(subject),
+            issuer = provider.issuer,
+            audience = provider.audience,
+            issuedAt = now.minusSeconds(10),
+            expiresAt = now.plusSeconds(3600),
+            nonce = null,
+            email = email,
+        )
+    }
 
     private data class RepositoriesBundle(
         val attempts: InMemoryAuthAttemptRepository,
@@ -228,6 +231,79 @@ class CompleteOidcLoginUseCaseTest {
             assertThat(result.userId).isEqualTo(existingUserId)
             assertThat(result.sessionId).isEqualTo(SessionId(newSessionId))
             assertThat(bundle.users.findById(existingUserId)!!.lastSeenAt).isEqualTo(now)
+        }
+
+    @Test
+    fun `first-time sign-in persists the verified email on the user`() =
+        runTest {
+            val attempts = InMemoryAuthAttemptRepository()
+            attempts.create(attempt())
+            val (sut, bundle) = newUseCase(attempts = attempts, verifier = happyVerifier(email = "player@example.com"))
+            sut.execute(CompleteOidcLoginCommand(state.value, "code-1"))
+            assertThat(bundle.users.findById(UserId(newUserId))!!.email).isEqualTo("player@example.com")
+        }
+
+    @Test
+    fun `Apple first-sign-in email hint is persisted when the id token omits email`() =
+        runTest {
+            val attempts = InMemoryAuthAttemptRepository()
+            attempts.create(attempt())
+            val (sut, bundle) = newUseCase(attempts = attempts, verifier = happyVerifier(email = null))
+            sut.execute(CompleteOidcLoginCommand(state.value, "code-1", emailHint = "relay@privaterelay.appleid.com"))
+            assertThat(bundle.users.findById(UserId(newUserId))!!.email).isEqualTo("relay@privaterelay.appleid.com")
+        }
+
+    @Test
+    fun `verified id token email wins over the hint`() =
+        runTest {
+            val attempts = InMemoryAuthAttemptRepository()
+            attempts.create(attempt())
+            val (sut, bundle) = newUseCase(attempts = attempts, verifier = happyVerifier(email = "signed@example.com"))
+            sut.execute(CompleteOidcLoginCommand(state.value, "code-1", emailHint = "unsigned@example.com"))
+            assertThat(bundle.users.findById(UserId(newUserId))!!.email).isEqualTo("signed@example.com")
+        }
+
+    @Test
+    fun `returning sign-in refreshes the email to the latest IdP value`() =
+        runTest {
+            val attempts = InMemoryAuthAttemptRepository()
+            attempts.create(attempt())
+            val existingUserId = UserId(UUID.fromString("01890c5e-0000-7000-8000-00000000dd01"))
+            val userRepo =
+                InMemoryUserRepository().apply {
+                    create(
+                        User(
+                            id = existingUserId,
+                            displayName = DisplayName.of("Existing"),
+                            createdAt = now.minusSeconds(86_400),
+                            lastSeenAt = now.minusSeconds(86_400),
+                            email = "old@example.com",
+                        ),
+                    )
+                }
+            val linkRepo =
+                InMemoryUserProviderRepository().apply {
+                    link(
+                        UserProvider(
+                            userId = existingUserId,
+                            provider = Provider.GOOGLE,
+                            subject = Subject.of("google-sub-1"),
+                            emailAtLink = null,
+                            linkedAt = now.minusSeconds(86_400),
+                        ),
+                    )
+                }
+            val (sut, bundle) =
+                newUseCase(
+                    attempts = attempts,
+                    users = userRepo,
+                    userProviders = linkRepo,
+                    verifier = happyVerifier(email = "new@example.com"),
+                    userIds = emptyList(),
+                    sessionIds = listOf(newSessionId),
+                )
+            sut.execute(CompleteOidcLoginCommand(state.value, "code-1"))
+            assertThat(bundle.users.findById(existingUserId)!!.email).isEqualTo("new@example.com")
         }
 
     @Test

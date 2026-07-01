@@ -129,6 +129,48 @@ class PostgresUserRepositoryTest {
         }
 
     @Test
+    fun `create persists email and findById reads it back`() =
+        runTest {
+            val u = user().copy(email = "player@example.com")
+            repo.create(u)
+            assertThat(repo.findById(u.id)?.email).isEqualTo("player@example.com")
+        }
+
+    @Test
+    fun `email is null when the column was never set`() =
+        runTest {
+            val u = user()
+            repo.create(u)
+            assertThat(repo.findById(u.id)?.email).isNull()
+        }
+
+    @Test
+    fun `updateEmail refreshes the stored email`() =
+        runTest {
+            val u = user().copy(email = "old@example.com")
+            repo.create(u)
+            repo.updateEmail(u.id, "new@example.com")
+            assertThat(repo.findById(u.id)?.email).isEqualTo("new@example.com")
+        }
+
+    @Test
+    fun `updateEmail is a no-op for an unknown user`() =
+        runTest {
+            val unknownId = UserId(UUID.randomUUID())
+            repo.updateEmail(unknownId, "ghost@example.com")
+            assertThat(repo.findById(unknownId)).isNull()
+        }
+
+    @Test
+    fun `deleting a user erases the stored email (RGPD)`() =
+        runTest {
+            val u = user().copy(email = "erase-me@example.com")
+            repo.create(u)
+            repo.delete(u.id)
+            assertThat(repo.findById(u.id)).isNull()
+        }
+
+    @Test
     fun `delete is a no-op for an unknown user`() =
         runTest {
             repo.delete(UserId(UUID.randomUUID()))

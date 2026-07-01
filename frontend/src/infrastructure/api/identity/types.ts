@@ -141,7 +141,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Update display name and/or email-opt-in.
+         * Update the display name.
          * @description Partial update — only the fields present in the body are changed.
          *     `displayName` is deduplicated by appending a numeric suffix if already
          *     taken (per ADR-0045 §2).
@@ -239,17 +239,17 @@ export interface components {
             /** @enum {string} */
             role: "player" | "maintainer";
             capabilities: string[];
+            /** Format: email */
+            email?: string;
         };
         LinkedProvider: {
             /** @enum {string} */
             provider: "google" | "apple";
             /** Format: date-time */
             linkedAt: string;
-            emailOptIn: boolean;
         };
         UserUpdate: {
             displayName?: string;
-            emailOptIn?: boolean;
         };
         WhoAmIResponse: {
             /** Format: uuid */

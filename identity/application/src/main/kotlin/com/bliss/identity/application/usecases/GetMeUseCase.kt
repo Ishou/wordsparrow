@@ -20,7 +20,6 @@ data class GetMeQuery(
 data class LinkedProviderView(
     val provider: Provider,
     val linkedAt: Instant,
-    val emailOptIn: Boolean,
 )
 
 data class GetMeResult(
@@ -31,6 +30,7 @@ data class GetMeResult(
     val role: Role,
     val capabilities: Set<Capability>,
     val linkedProviders: List<LinkedProviderView>,
+    val email: String? = null,
 )
 
 sealed class GetMeError(
@@ -51,7 +51,6 @@ class GetMeUseCase(
                 LinkedProviderView(
                     provider = up.provider,
                     linkedAt = up.linkedAt,
-                    emailOptIn = up.emailAtLink != null,
                 )
             }
         val tier = subscriptions.find(query.userId)?.tier
@@ -70,5 +69,6 @@ class GetMeUseCase(
             role = role,
             capabilities = capabilitiesFor(role, tier),
             linkedProviders = linkedProviders,
+            email = email,
         )
 }

@@ -60,9 +60,8 @@ class BeginOidcLoginUseCase(
                 "response_type" to "code",
                 "client_id" to config.clientId,
                 "redirect_uri" to config.redirectUri,
-                // `openid` only — by design (ADR-0045): no `email`, no `profile`, no `name`.
-                // Changing this requires superseding ADR-0045.
-                "scope" to "openid",
+                // `openid email` (ADR-0082, supersedes ADR-0045): verified email backs invoicing; Apple returns it in the id_token or the first-sign-in "user" field.
+                "scope" to "openid email",
                 "state" to attempt.state.value,
                 "code_challenge" to attempt.pkceVerifier.challenge(),
                 "code_challenge_method" to "S256",

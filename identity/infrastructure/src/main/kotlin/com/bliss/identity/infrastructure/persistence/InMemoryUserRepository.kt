@@ -38,6 +38,13 @@ class InMemoryUserRepository : UserRepository {
         byId.computeIfPresent(id) { _, existing -> existing.copy(role = role) }
     }
 
+    override suspend fun updateEmail(
+        id: UserId,
+        email: String,
+    ) {
+        byId.computeIfPresent(id) { _, existing -> existing.copy(email = email) }
+    }
+
     override suspend fun delete(id: UserId) {
         byId.remove(id)
     }

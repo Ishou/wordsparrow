@@ -56,6 +56,7 @@ class JoseOidcVerifierTest {
             iat: Instant = Instant.now().minusSeconds(10),
             exp: Instant = Instant.now().plusSeconds(3600),
             nonce: String? = null,
+            email: String? = null,
             kid: String = KID,
         ): String {
             val builder =
@@ -67,6 +68,7 @@ class JoseOidcVerifierTest {
                     .issueTime(Date.from(iat))
                     .expirationTime(Date.from(exp))
             if (nonce != null) builder.claim("nonce", nonce)
+            if (email != null) builder.claim("email", email)
             val header = JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build()
             val jwt = SignedJWT(header, builder.build())
             jwt.sign(signer)
@@ -90,6 +92,22 @@ class JoseOidcVerifierTest {
             assertThat(token.issuer).isEqualTo(ISS)
             assertThat(token.audience).isEqualTo(AUD)
             assertThat(token.nonce).isEqualTo(nonce)
+        }
+
+    @Test
+    fun `email claim is retained when present`() =
+        runTest {
+            val raw = signedJwt(email = "player@example.com")
+            val token = makeVerifier().verify(raw, provider)
+            assertThat(token.email).isEqualTo("player@example.com")
+        }
+
+    @Test
+    fun `email is null when not present in token`() =
+        runTest {
+            val raw = signedJwt()
+            val token = makeVerifier().verify(raw, provider)
+            assertThat(token.email).isNull()
         }
 
     @Test

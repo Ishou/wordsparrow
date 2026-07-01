@@ -100,6 +100,7 @@ class JoseOidcVerifier(
             issuedAt = iat,
             expiresAt = exp,
             nonce = claims.getStringClaim("nonce"),
+            email = claims.getStringClaim("email"),
         )
     }
 

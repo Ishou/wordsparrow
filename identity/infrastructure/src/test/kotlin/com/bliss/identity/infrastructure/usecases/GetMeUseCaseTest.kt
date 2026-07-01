@@ -65,44 +65,6 @@ class GetMeUseCaseTest {
         }
 
     @Test
-    fun `emailOptIn is true when emailAtLink is non-null`() =
-        runTest {
-            val (sut, users, providers) = newCase()
-            seedUser(users)
-            providers.link(
-                UserProvider(
-                    userId = userId,
-                    provider = Provider.GOOGLE,
-                    subject = Subject.of("google-sub"),
-                    emailAtLink = "alice@example.com",
-                    linkedAt = now,
-                ),
-            )
-            val result = sut.execute(GetMeQuery(userId))
-            assertThat(result.linkedProviders).hasSize(1)
-            assertThat(result.linkedProviders[0].emailOptIn).isEqualTo(true)
-        }
-
-    @Test
-    fun `emailOptIn is false when emailAtLink is null`() =
-        runTest {
-            val (sut, users, providers) = newCase()
-            seedUser(users)
-            providers.link(
-                UserProvider(
-                    userId = userId,
-                    provider = Provider.APPLE,
-                    subject = Subject.of("apple-sub"),
-                    emailAtLink = null,
-                    linkedAt = now,
-                ),
-            )
-            val result = sut.execute(GetMeQuery(userId))
-            assertThat(result.linkedProviders).hasSize(1)
-            assertThat(result.linkedProviders[0].emailOptIn).isEqualTo(false)
-        }
-
-    @Test
     fun `multiple linked providers are all returned`() =
         runTest {
             val (sut, users, providers) = newCase()
@@ -136,8 +98,26 @@ class GetMeUseCaseTest {
                     role = Role.PLAYER,
                     capabilities = setOf(Capability.HINT),
                     linkedProviders = emptyList(),
+                    email = null,
                 ),
             )
+        }
+
+    @Test
+    fun `email is exposed in the result when the user has one`() =
+        runTest {
+            val (sut, users, _) = newCase()
+            users.create(User(userId, DisplayName.of("Alice"), now, now, email = "alice@example.com"))
+            val result = sut.execute(GetMeQuery(userId))
+            assertThat(result.email).isEqualTo("alice@example.com")
+        }
+
+    @Test
+    fun `email is null when the user has none`() =
+        runTest {
+            val (sut, users, _) = newCase()
+            seedUser(users)
+            assertThat(sut.execute(GetMeQuery(userId)).email).isEqualTo(null)
         }
 
     @Test
