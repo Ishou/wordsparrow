@@ -41,8 +41,7 @@ describe('useBackDismiss', () => {
     const { rerender } = renderHook(({ active }) => useBackDismiss(active, onDismiss), {
       initialProps: { active: true },
     });
-    // A menu item navigated forward: the URL changed. The router may retain our sentinel
-    // flag in history.state, so a state-only check would wrongly pop and undo the navigation.
+    // Router may retain __backDismiss in state across a forward push; guard on URL, not state.
     window.history.pushState({ __backDismiss: true }, '', '/reglages');
     rerender({ active: false });
 
