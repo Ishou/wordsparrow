@@ -59,7 +59,7 @@ ADR-0042  */worker/src/**/pre*generation/**        Daily puzzle pre-gen worker (
 ADR-0044  identity/**                              Identity bounded context for player OIDC
 ADR-0044  */api/src/**/persistence/*Database.kt    CNPG libpq URI → toJdbcUrl(); never pass raw uri to Hikari
 ADR-0044  */api/src/**/SessionMiddleware.kt        Session cookie verification via identity-api
-ADR-0045  identity/**                              Player-identity data minimization (RGPD)
+ADR-0045  identity/**                              Player-identity data minimization (RGPD) — SUPERSEDED by ADR-0082 for OAuth scope + email retention (rest of stance holds)
 ADR-0046  identity/api/build.gradle.kts            Nimbus JOSE JWT pinned dependency
 ADR-0047  identity/api/src/**/token/**            Token endpoint exchange threat model
 ADR-0048  */api/src/**/Module.kt                   CORS wildcard for credentialed contexts (mirrors identity)
@@ -184,6 +184,12 @@ ADR-0081  grid/application/src/main/kotlin/com/bliss/grid/application/puzzle/** 
 ADR-0081  grid/api/src/main/kotlin/com/bliss/grid/api/routes/PuzzleRoute.kt  Daily GET (/v1/puzzles/daily ~line 111) resolves the date to its current row instead of computing the deterministic id; 404 unchanged when no row for the date (Wave 3b/3c)
 ADR-0081  grid/*/src/main/resources/db/migration/**  Migration adds nullable puzzle_date column + index to puzzles; daily rows set it, on-demand path leaves it null; expand-and-contract, regeneration appends a new row (newest wins), no delete/update — preserves the immutable-puzzle design
 # ADR-0081: regeneration-safe daily identity — fresh random UUID v7 per generation so a regenerated grid gets uncorrupted state (hint usage / progress / ADR-0075 sync blobs are keyed by puzzleId). No frontend change needed; superseded rows accumulate (GC deferred)
+ADR-0082  identity/application/**/usecases/BeginOidcLoginUseCase.kt  Request `email` scope: Google `openid email`, Apple `email` (supersedes ADR-0045 openid-only). No name/profile/picture
+ADR-0082  identity/domain/**/oidc/OidcIdToken.kt    Retain the `email` claim (was dropped by ADR-0045); Apple path also captures email from the first-sign-in `user` field
+ADR-0082  identity/**/usecases/CompleteOidcLoginUseCase.kt  Persist the verified email (was emailAtLink=null); recommended model = canonical nullable users.email set/refreshed at sign-in + link
+ADR-0082  identity/api/openapi.yaml                  /v1/users/me gains nullable `email`; /v1/auth/whoami MAY carry it; emailOptIn opt-in machinery retired (email is by-necessity, not consent)
+ADR-0082  billing/infrastructure/**/provider/MollieBillingAdapter.kt  Pass caller email (read from identity whoami) to Mollie createCustomer for invoices/receipts; billing STORES no email (narrows ADR-0078 no-PII to pass-through only)
+# ADR-0082: RGPD basis = performance of contract / legal obligation (invoicing), purpose-limited to billing/receipts/recovery; erasure unchanged (email on users row, ON DELETE CASCADE + UserDeleted); still no name/picture/IP. Supersedes ADR-0045 OAuth-scope + email-retention parts. Transparency (confidentialité + CGV + DPA/records-of-processing) updates required — accountant/DPO angle
 ```
 
 ## Adding entries
