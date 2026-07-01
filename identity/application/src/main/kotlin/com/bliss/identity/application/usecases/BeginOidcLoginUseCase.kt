@@ -60,8 +60,7 @@ class BeginOidcLoginUseCase(
                 "response_type" to "code",
                 "client_id" to config.clientId,
                 "redirect_uri" to config.redirectUri,
-                // `openid email` (ADR-0082, superseding ADR-0045): the verified email backs legal invoicing.
-                // Apple returns email in the id_token and its first-sign-in `user` field under this scope.
+                // `openid email` (ADR-0082, supersedes ADR-0045): verified email backs invoicing; Apple returns it in the id_token or the first-sign-in "user" field.
                 "scope" to "openid email",
                 "state" to attempt.state.value,
                 "code_challenge" to attempt.pkceVerifier.challenge(),
