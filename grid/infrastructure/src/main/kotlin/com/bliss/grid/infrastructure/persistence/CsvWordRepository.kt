@@ -164,8 +164,8 @@ class CsvWordRepository(
             // main CSV. Each overlay is `(theme, classpath-path)` — the CSV
             // there carries the same schema as the main words file, but every
             // word listed gets stamped with the overlay's theme. Curated rows
-            // are the source of truth; if a word appears in two overlays
-            // (shouldn't happen in well-formed data), the LATER overlay wins.
+            // are the source of truth; a word in two overlays (e.g. AG in
+            // chem + sigle) keeps a themed clue from each (see loadThemeOverlays).
             val overlay = loadThemeOverlays(themedOverlayPaths)
 
             val stream =
@@ -266,7 +266,14 @@ class CsvWordRepository(
                                         clues = themedClues,
                                         lemma = w.lemma,
                                     )
-                                out[withTheme.text] = withTheme
+                                // Merge, don't overwrite — a surface in two overlays (e.g. AG) must keep a themed clue from each.
+                                val existing = out[withTheme.text]
+                                out[withTheme.text] =
+                                    if (existing != null) {
+                                        existing.copy(clues = existing.clues + withTheme.clues)
+                                    } else {
+                                        withTheme
+                                    }
                             }
                         }
                     }
