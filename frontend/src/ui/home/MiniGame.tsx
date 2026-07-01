@@ -5,6 +5,7 @@ import { Cell, DefCell, Skeleton } from '@/design-system';
 import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import { Keyboard } from '@/ui/play/Keyboard';
+import { useBackDismiss } from '@/ui/lib/useBackDismiss';
 import type { SampleWord, WordsRepository } from '@/application';
 
 
@@ -203,6 +204,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
   const dismissKeyboard = () => {
     if (focus !== null) refs.current[focus]?.blur();
   };
+  useBackDismiss(kbOpen, dismissKeyboard);
   // Skipping = giving up on the word, so it breaks the streak (a wrong guess alone doesn't).
   const skip = () => {
     streakRef.current = 0;

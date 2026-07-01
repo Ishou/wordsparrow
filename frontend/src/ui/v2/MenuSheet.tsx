@@ -5,6 +5,7 @@ import { Link, useNavigate, useRouteContext } from '@tanstack/react-router';
 import { User, Gear, CaretRight, SignOut, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { useAuth } from '@/ui/components/auth';
+import { useBackDismiss } from '@/ui/lib/useBackDismiss';
 
 // Desktop uses a lighter scrim — the menu is a small anchored dropdown, not a full takeover.
 const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out', '&[data-state="closed"]': { animation: 'wsFadeOut 180ms ease-out forwards' }, lg: { bg: 'rgba(15,33,28,0.16)' } });
@@ -94,6 +95,7 @@ export interface MenuSheetProps {
 
 export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
   const navigate = useNavigate();
+  useBackDismiss(open, onClose);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [closing, setClosing] = useState(false);
