@@ -4,11 +4,13 @@ import { ArrowsClockwise, Check, CircleNotch, GoogleLogo, PencilSimple, SignOut,
 import { css, cx } from 'styled-system/css';
 import { InvalidDisplayNameError, type GetMeResult } from '@/application/auth';
 import { useAuth } from '@/ui/components/auth';
+import { useSubscriber } from '@/ui/components/billing';
 import { Skeleton } from '@/design-system';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { EraseData } from './EraseData';
 import { SettingsRow } from './SettingsRow';
+import { AbonnementSection } from './AbonnementSection';
 
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 16px' });
 const stack = css({ display: 'flex', flexDirection: 'column', gap: '16px' });
@@ -55,14 +57,11 @@ const SYNC_ANNOUNCE: Record<SyncState, string> = {
 function initialFor(name: string): string {
   return ([...name.trim()][0] ?? '?').toLocaleUpperCase('fr-FR');
 }
-function memberSince(iso: string): string {
-  const s = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso));
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 function AuthedCompte() {
   const { state, refresh } = useAuth();
-  const { authClient, progressSyncService } = useRouteContext({ from: '__root__' });
+  const { authClient, progressSyncService, billingClient } = useRouteContext({ from: '__root__' });
+  const subscriber = useSubscriber();
   const [me, setMe] = useState<GetMeResult | null>(null);
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [editing, setEditing] = useState(false);
@@ -152,14 +151,8 @@ function AuthedCompte() {
             <div className={editRow}>
               <div className={heroMain}>
                 <div className={heroName}>{name}</div>
-                {/* Skeleton until getMe lands so the subtext never flips Connecté→Membre depuis on first paint. */}
-                {me ? (
-                  <div className={heroMeta}>{`Membre depuis ${memberSince(me.createdAt)}`}</div>
-                ) : (
-                  <span className={heroMeta} role="status" aria-busy="true" aria-label="Chargement du compte" style={{ display: 'block' }}>
-                    <Skeleton tone="onCard" width={110} height={11} radius={6} />
-                  </span>
-                )}
+                {/* Subscriber flag is synchronous from the identity session (ADR-0080); no skeleton needed. */}
+                <div className={heroMeta}>{subscriber ? 'Connecté · Abonné·e' : 'Connecté'}</div>
               </div>
               <button type="button" className={iconBtn} onClick={startEdit} aria-label="Modifier le pseudonyme">
                 <PencilSimple size={18} weight="bold" aria-hidden="true" />
@@ -169,6 +162,8 @@ function AuthedCompte() {
         </div>
       </section>
       {nameError ? <p className={errText} role="alert">{nameError}</p> : null}
+
+      {billingClient ? <AbonnementSection client={billingClient} /> : null}
 
       {progressSyncService ? (
         <nav aria-label="Progression">

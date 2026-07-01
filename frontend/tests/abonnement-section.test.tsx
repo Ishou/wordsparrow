@@ -108,12 +108,14 @@ describe('AbonnementSection états', () => {
     expect(screen.getByRole('link', { name: 'Me réabonner' }).getAttribute('href')).toBe('/abonnement');
   });
 
-  it('renders the free état when there is no active subscription', async () => {
+  it('renders the never-subscribed free état neutrally, without an ended badge', async () => {
     const reject = vi.fn().mockRejectedValue(new BillingError('no-active-subscription', 404));
     render(<AbonnementSection client={fakeBillingClient(reject)} />, { wrapper: withAuth(SUBSCRIBER) });
 
-    expect(await screen.findByText('Sans abonnement')).toBeInTheDocument();
-    expect(screen.getByText('Version gratuite')).toBeInTheDocument();
+    expect(await screen.findByText('Version gratuite')).toBeInTheDocument();
+    // never-subscribed shows no ended badge; "Terminé" is reserved for a genuinely lapsed subscription.
+    expect(screen.queryByText('Terminé')).toBeNull();
+    expect(screen.queryByText('Sans abonnement')).toBeNull();
     expect(screen.getByRole('link', { name: /Découvre l'abonnement/ }).getAttribute('href')).toBe('/abonnement');
   });
 });

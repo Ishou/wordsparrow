@@ -18,7 +18,7 @@ const tierLine = css({ display: 'flex', alignItems: 'center', gap: '8px', flexWr
 const tierName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const periodLine = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9 });
 
-const pill = css({ fontFamily: 'wsUi', fontSize: '9.5px', fontWeight: 'black', letterSpacing: '0.04em', textTransform: 'uppercase', borderRadius: '999px', padding: '3px 8px' });
+const pill = css({ display: 'inline-flex', alignItems: 'center', lineHeight: 1, fontFamily: 'wsUi', fontSize: '9.5px', fontWeight: 'black', letterSpacing: '0.04em', textTransform: 'uppercase', borderRadius: '999px', padding: '4px 8px' });
 const pillActif = css({ color: 'ws.clueSurface', bg: 'ws.jade' });
 const pillPending = css({ color: '#5A4B12', bg: 'ws.or' });
 const pillMuted = css({ color: 'ws.khaki', bg: 'rgba(33,75,64,0.08)' });
@@ -67,11 +67,12 @@ function periodLabelFor(etat: Etat, periodEnd: string | null): string | null {
   return null;
 }
 
+// Only an actually-ended subscription gets a badge; never-subscribed stays a neutral, unbadged "Version gratuite".
 function StatusPill({ etat }: { readonly etat: Etat }) {
   if (etat === 'actif') return <span className={cx(pill, pillActif)}>Actif</span>;
   if (etat === 'pending') return <span className={cx(pill, pillPending)}>Résiliation programmée</span>;
   if (etat === 'expire') return <span className={cx(pill, pillMuted)}>Terminé</span>;
-  return <span className={cx(pill, pillMuted)}>Sans abonnement</span>;
+  return null;
 }
 
 function cancelErrorMessage(error: unknown): string {
