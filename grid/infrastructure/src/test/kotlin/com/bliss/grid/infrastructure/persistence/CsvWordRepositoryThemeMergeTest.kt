@@ -16,8 +16,7 @@ class CsvWordRepositoryThemeMergeTest {
                 ),
             )
         val ag = repo.findByLength(2).single { it.text == "AG" }
-        // Both overlays' clues survive (was: the later overlay overwrote the earlier),
-        // each carrying its own theme so per-theme caps apply by the chosen clue.
+        // Both overlays' clues survive (was: later overlay clobbered the earlier).
         assertThat(ag.clues.map { it.text }).containsExactlyInAnyOrder("Argent", "Assemblée générale")
         assertThat(ag.clues.map { it.theme }).containsExactlyInAnyOrder("chem", "sigle")
     }

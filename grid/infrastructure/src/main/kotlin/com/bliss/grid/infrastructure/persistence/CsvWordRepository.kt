@@ -266,9 +266,7 @@ class CsvWordRepository(
                                         clues = themedClues,
                                         lemma = w.lemma,
                                     )
-                                // Merge, don't overwrite: a surface in two overlays (e.g. AG in
-                                // chem + sigle) must keep BOTH themed clues so pickClue can honour
-                                // each theme's cap by the chosen clue.
+                                // Merge, don't overwrite — a surface in two overlays (e.g. AG) must keep a themed clue from each.
                                 val existing = out[withTheme.text]
                                 out[withTheme.text] =
                                     if (existing != null) {
