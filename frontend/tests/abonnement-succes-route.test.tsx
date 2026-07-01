@@ -90,6 +90,10 @@ describe('CheckoutSuccessScreen polling', () => {
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(screen.getByText(/confirmation en cours/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /revenir à mon abonnement/i })).toHaveAttribute(
+      'href',
+      '/abonnement',
+    );
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2000);
@@ -110,6 +114,7 @@ describe('CheckoutSuccessScreen polling', () => {
 
     expect(screen.getByText(/plus de temps que prévu/i)).toBeInTheDocument();
     expect(getSubscription).toHaveBeenCalledTimes(5);
+    expect(screen.getByRole('link', { name: /retour à mon compte/i })).toHaveAttribute('href', '/compte');
   });
 
   it('stops polling once active without ticking through the whole cap', async () => {
