@@ -122,6 +122,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's own payment receipts.
+         * @description Returns the authenticated caller's payment receipts, newest-first, for
+         *     a receipts list on `/compte` mirroring the manage-subscription panel
+         *     — this PR's own proposal, not yet a ratified ADR-0080 decision. The
+         *     caller is identified by the `__Secure-ws_session` cookie; `userId` is
+         *     resolved server-side.
+         *
+         *     These are the payment provider's records surfaced as opaque references
+         *     (ADR-0078): the provider (Mollie) is the system-of-record for the
+         *     underlying invoice and its PII. This surface carries only the
+         *     non-identifying facts needed to render a list — when a payment
+         *     happened, how much, its status, and a link to the provider's hosted
+         *     receipt. It NEVER carries email, customer name, address, or card data;
+         *     those never leave the provider.
+         *
+         *     A subscriber accrues one receipt per billing cycle for as long as they
+         *     stay subscribed, so the list is unbounded over a long enough
+         *     subscription. Paginated cursor-first per ADR-0003 §6: pass `cursor`
+         *     (the previous response's `nextCursor`) to fetch the next page.
+         */
+        get: operations["listReceipts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -225,6 +262,75 @@ export interface components {
              * @example 2026-07-29T00:00:00Z
              */
             periodEnd: string | null;
+        };
+        /**
+         * @description One page of the caller's own payment receipts, newest-first.
+         *     `receipts` is always present on the wire and is an empty
+         *     array when the caller has never paid, or when this is the last page
+         *     — absence and an empty list are distinct per ADR-0003 §6. Cursor
+         *     pagination per ADR-0003 §6: pass `nextCursor` as the next request's
+         *     `cursor` to fetch the following page.
+         */
+        ReceiptsView: {
+            /**
+             * @description Up to `limit` receipts (default 20, max 100), sorted newest-first
+             *     by `paidAt`. Empty for a caller who has never made a payment, or
+             *     when there are no more receipts after `cursor`.
+             */
+            receipts: components["schemas"]["Receipt"][];
+            /**
+             * @description Opaque cursor for the next page, or `null` when this is the last
+             *     page. Always present on the wire; `null` is the explicit
+             *     "no more pages" value — absence and `null` are distinct per
+             *     ADR-0003 §6.
+             * @example eyJwYWlkQXQiOiIyMDI2LTA1LTI5VDE0OjAzOjAwWiJ9
+             */
+            nextCursor: string | null;
+        };
+        /**
+         * @description A single payment receipt: the provider's record surfaced as an opaque
+         *     reference (ADR-0078). The provider (Mollie) is the system-of-record for
+         *     the underlying invoice and its PII; this shape carries ONLY the
+         *     non-identifying facts needed to render a list. It NEVER carries email,
+         *     customer name, address, or card data — those never leave the provider.
+         */
+        Receipt: {
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant the payment was recorded by the provider.
+             * @example 2026-06-29T14:03:00Z
+             */
+            paidAt: string;
+            /**
+             * @description Amount charged, in integer minor units (cents) per ADR-0003 §6 —
+             *     `200` for 2.00 EUR. The provider represents money as a decimal
+             *     string; the billing adapter converts to minor units before this
+             *     leaves the server. Paired with `currency`.
+             * @example 200
+             */
+            amountMinorUnits: number;
+            /**
+             * @description ISO 4217 currency code for `amountMinorUnits`.
+             * @example EUR
+             */
+            currency: string;
+            /**
+             * @description Payment status (e.g. paid, pending, failed, refunded). Open string,
+             *     not an enum, for the same forward-compatibility reason as the
+             *     subscription's `tier`/`status`: the provider's status set is
+             *     config-driven and may grow without a wire-breaking change.
+             * @example paid
+             */
+            status: string;
+            /**
+             * Format: uri
+             * @description Link to the provider's hosted receipt / PDF for this payment, or
+             *     `null` when the provider exposes none for it. Always present on the
+             *     wire; `null` is the explicit "no hosted receipt" value — absence and
+             *     `null` are distinct per ADR-0003 §6.
+             * @example https://www.mollie.com/receipt/tr_WDqYK6vllg
+             */
+            receiptUrl: string | null;
         };
         /**
          * @description RFC 7807 error envelope (ADR-0003 §6). Additional members per
@@ -499,6 +605,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubscriptionView"];
+                };
+            };
+            /**
+             * @description No valid `__Secure-ws_session` cookie. RFC 7807;
+             *     `type` is `https://bliss.example/errors/auth-required`.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listReceipts: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque pagination cursor from a previous response's `nextCursor`.
+                 *     Omit to fetch the first page.
+                 */
+                cursor?: string;
+                /** @description Max receipts to return. Defaults to 20; clamped to 100. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description Receipts resolved for the authenticated caller. The page is sorted
+             *     newest-first and may be empty (a caller who never paid, or the
+             *     last page of a longer history).
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptsView"];
                 };
             };
             /**
