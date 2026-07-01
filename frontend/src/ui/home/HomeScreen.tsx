@@ -248,9 +248,10 @@ export function HomeScreen({
     const now = new Date();
     const b = bucketForHour(now.getHours());
     const g = greetingForBucket(b);
-    const dl = capitalize(new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(now));
     // Last 7 UTC days ending today (today last). ISO keys match the summaries.
     const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    // Headline date reads in UTC to match the served puzzle + strip; local time rolls it a day early east of UTC.
+    const dl = capitalize(new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(todayUtc));
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(todayUtc);
       d.setUTCDate(todayUtc.getUTCDate() - (6 - i));
