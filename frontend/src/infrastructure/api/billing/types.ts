@@ -128,7 +128,7 @@ export interface components {
     schemas: {
         /**
          * @description Request body for `POST /v1/checkout-session`. Carries the target `tier`
-         *     and the billing `cadence` (monthly or yearly); `userId` is
+         *     and, optionally, the billing `cadence` (monthly or yearly); `userId` is
          *     session-derived and intentionally NOT part of the body (ADR-0078 threat
          *     model).
          */
@@ -144,13 +144,16 @@ export interface components {
              * @description Billing cadence the caller chose: `monthly` or `yearly` (ADR-0080,
              *     2 €/mois · 20 €/an). The client picks only the cadence, never the
              *     amount — the concrete price and the provider billing interval are
-             *     selected server-side from the cadence (ADR-0078: no client-supplied
-             *     amounts crossing this surface). An unknown value is rejected with a
-             *     400.
+             *     selected server-side from the cadence. Optional for this expand
+             *     phase (ADR-0078: no client-supplied amounts crossing this surface;
+             *     CLAUDE.md expand-and-contract): the frontend cadence-selection
+             *     consumer has not landed yet, so existing callers omit it and the
+             *     server defaults to `monthly`. Will move to `required` once that
+             *     consumer PR ships. An unknown value is rejected with a 400.
              * @example monthly
              * @enum {string}
              */
-            cadence: "monthly" | "yearly";
+            cadence?: "monthly" | "yearly";
         };
         /**
          * @description Response body for `POST /v1/checkout-session` on a 201. The client
