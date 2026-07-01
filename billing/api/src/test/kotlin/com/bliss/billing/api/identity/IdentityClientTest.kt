@@ -83,4 +83,11 @@ class IdentityClientTest {
             val engine = MockEngine { respond("", HttpStatusCode.OK) }
             assertThat(IdentityClient("https://auth.example", engine).fetchEmail(null)).isNull()
         }
+
+    @Test
+    fun `identity network fault yields null email instead of propagating`() =
+        runTest {
+            val engine = MockEngine { throw java.io.IOException("connection reset") }
+            assertThat(IdentityClient("https://auth.example", engine).fetchEmail("cookie")).isNull()
+        }
 }
