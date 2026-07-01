@@ -140,7 +140,6 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
   };
 
   const goReglages = () => {
-    onClose();
     navigate({ to: '/reglages' });
   };
 
@@ -179,7 +178,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
               <span aria-hidden="true" className={grab} />
             </div>
 
-            <Link to="/compte" className={cx(head, headLink)} onClick={onClose}>
+            <Link to="/compte" className={cx(head, headLink)}>
               <span className={headAvatar} aria-hidden="true">
                 {authed ? initial : <User size={22} weight="bold" />}
               </span>
