@@ -21,6 +21,13 @@ describe('apiPuzzleToDomain', () => {
     expect(apiPuzzleToDomain(api).hintsAllowed).toBe(3);
   });
 
+  it('propagates secondsUntilNextHint from the wire onto the domain Puzzle', () => {
+    const api: ApiPuzzle = {
+      ...baseHeader, secondsUntilNextHint: 420, width: 1, height: 1, cells: [],
+    };
+    expect(apiPuzzleToDomain(api).secondsUntilNextHint).toBe(420);
+  });
+
   it('renames column→col, lifts letters/blocks/single-clue defs, omits `answer` when blank', () => {
     const api: ApiPuzzle = {
       ...baseHeader, width: 4, height: 1,

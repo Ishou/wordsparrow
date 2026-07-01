@@ -18,6 +18,7 @@ import { Keyboard } from './Keyboard';
 import { useTouchPrimary, useResumeBlurOnPwa } from '@/ui/components/keyboard';
 import { usePuzzleValidation } from '@/ui/components/grid/usePuzzleValidation';
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
+import { HintCooldown } from '@/ui/components/grid/HintCooldown';
 import { WinScreen } from './WinScreen';
 import { formatClock } from '@/ui/lib/formatClock';
 import { useIsDesktop } from '@/ui/lib/useIsDesktop';
@@ -114,6 +115,8 @@ const hintBtn = css({
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const hintBulb = css({ color: 'ws.or' });
+// Keeps the cooldown ring snug against the hint chip in the ClueRail trailing slot.
+const hintTrailing = css({ display: 'inline-flex', alignItems: 'center', gap: '7px' });
 // Inline hint error (e.g. 401 → "Connecte-toi…"); compact pill style to match the hint chip.
 const hintError = css({
   alignSelf: 'center',
@@ -240,7 +243,14 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
 
   const handleHintConsumed = useCallback(() => soloEntriesStore.recordHintUsed(puzzle.id), [soloEntriesStore, puzzle.id]);
 
-  const hint = useHintRequest(puzzle.id, puzzle.hintsRemaining, puzzleSolver, handleHintReveal, handleHintConsumed);
+  const hint = useHintRequest(
+    puzzle.id,
+    puzzle.hintsRemaining,
+    puzzleSolver,
+    handleHintReveal,
+    handleHintConsumed,
+    puzzle.secondsUntilNextHint ?? null,
+  );
 
   const validatedPositions = useMemo<ReadonlySet<string>>(() => {
     if (lockedHintCells.size === 0) return validation.validated;
@@ -520,16 +530,23 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
                 onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
                 onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
                 trailing={
-                  <button
-                    type="button"
-                    className={hintBtn}
-                    onClick={requestHint}
-                    disabled={hint.exhausted || hint.pending}
-                    aria-label={`Indice — ${hint.hintsRemaining} restants`}
-                  >
-                    <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
-                    Indice · {hint.hintsRemaining}
-                  </button>
+                  <span className={hintTrailing}>
+                    <button
+                      type="button"
+                      className={hintBtn}
+                      onClick={requestHint}
+                      disabled={hint.pending || (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)}
+                      aria-label={`Indice — ${hint.hintsRemaining} restants`}
+                    >
+                      <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
+                      Indice · {hint.hintsRemaining}
+                    </button>
+                    <HintCooldown
+                      hintsRemaining={hint.hintsRemaining}
+                      hintsAllowed={puzzle.hintsAllowed}
+                      secondsUntilNextHint={hint.secondsUntilNextHint}
+                    />
+                  </span>
                 }
               />
             ) : null}
