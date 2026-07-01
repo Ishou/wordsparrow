@@ -31,6 +31,11 @@ from morphology_index import (
     extract_inflection_target,
 )
 
+# Moods that carry a grammatical person. A verb form in one of these must be
+# matched to the surface's exact person — never inflated to "whatever row
+# matches first". `infi`/`ppre`/`ppas` are person-less and relax freely.
+_FINITE_MOODS = MOOD_TOKENS - {"infi", "ppre", "ppas"}
+
 # Pre-head adjectives in French — a small closed set that conventionally
 # precedes the noun (petit oiseau, vieille femme, bel arbre). When a clue
 # starts with one of these, the actual head is later in the token stream;
@@ -210,13 +215,16 @@ def _decompose_targets(target: set[str]) -> list[set[str]]:
                 if trial != target:
                     candidates.append(trial)
 
-    # As a last resort, try with mood-only (drop person constraint). We do
-    # NOT fall back to an empty target: that would match the lemma's first
-    # row (typically the infinitive / mas-sg), which is a silent identity
-    # rather than a real conjugation, and would defeat the `no-inflection`
-    # signal callers rely on.
-    for m in [m for m in _MOOD_PREFERENCE if m in moods]:
-        candidates.append(rest | {m})
+    # As a last resort, try with mood-only (drop person constraint) — but ONLY
+    # when the target had no person to begin with (non-finite / nominal). For a
+    # finite verb carrying a person, dropping it lets the index return an
+    # arbitrary-person form ("whatever row matches first" — the posè→Placent
+    # class of bug). Exact or skip. We also never fall back to an empty target:
+    # that would match the lemma's first row (typically the infinitive / mas-sg),
+    # a silent identity that defeats the `no-inflection` signal callers rely on.
+    if not persons:
+        for m in [m for m in _MOOD_PREFERENCE if m in moods]:
+            candidates.append(rest | {m})
 
     # Dedup while preserving order.
     seen: list[set[str]] = []
@@ -247,6 +255,16 @@ def inflect_clue(
     target = extract_inflection_target(surface_tags)
     if not target:
         return InflectionResult(_capitalize_first(clue), "no-target-pos")
+
+    # Exact-or-skip on person: a finite-verb surface must carry a person we can
+    # match. If the surface's person was unrepresentable — the literary inversion
+    # persons `Nisg` grammalecte emits for `posè-je`, which `PERSON_TOKENS` omits
+    # and `extract_inflection_target` therefore drops — the target loses its
+    # person and the matcher would otherwise return an arbitrary-person head
+    # (grid #181: `posè → Placent`). Skip instead of guessing.
+    if (target_pos == "verbe" and (target & _FINITE_MOODS)
+            and not (target & PERSON_TOKENS)):
+        return InflectionResult(_capitalize_first(clue), "no-inflection-finite")
 
     tokens = _TOKEN_RE.findall(clue)
     if not tokens:

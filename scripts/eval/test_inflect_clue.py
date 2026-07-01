@@ -584,3 +584,66 @@ def test_adj_nom_ambiguous_agrees_not_cohead_inflated() -> None:
     res = inflect_clue("Dévouement total", {"nom", "fem", "pl"}, idx)
     assert res.flag == ""
     assert res.text == "Dévouements totaux"
+
+
+# ---------------------------------------------------------------------------
+# Exact-or-skip on person (grid #181: `posè → Placent`). A finite-verb surface
+# whose person can't be matched exactly must SKIP, never fall through to
+# "whatever row matches first" and emit an arbitrary-person head.
+# ---------------------------------------------------------------------------
+
+
+def _placer_index() -> MorphologyIndex:
+    """`placer` paradigm with the 3pl row FIRST, so a person-less lookup would
+    return the plural `placent` — reproducing the incident's arbitrary pick."""
+    idx = MorphologyIndex()
+    _add(idx, "placer", "placent", "v1__t___zz ipre 3pl")
+    _add(idx, "placer", "placer", "v1__t___zz infi")
+    _add(idx, "placer", "place", "v1__t___zz ipre spre 1sg 3sg")
+    _add(idx, "placer", "places", "v1__t___zz ipre 2sg")
+    _add(idx, "placer", "plaçons", "v1__t___zz ipre 1pl")
+    return idx
+
+
+def test_inversion_person_surface_skips_instead_of_arbitrary_plural() -> None:
+    """The grid #181 regression. `posè` (answer POSE) is a literary inversion
+    form tagged `1isg`, which `PERSON_TOKENS` omits; `extract_inflection_target`
+    drops the person, leaving a person-less finite target `{ipre}`. Pre-fix the
+    inflater matched the first `ipre` row (`placent`) and shipped `Placent` — a
+    plural clue on a singular answer. Post-fix: a finite target with no matchable
+    person skips."""
+    idx = _placer_index()
+    res = inflect_clue("Placer", {"v1__t___zz", "ipre", "1isg"}, idx)
+    assert res.text != "Placent"
+    assert res.flag == "no-inflection-finite"
+
+
+def test_finite_person_still_matches_exactly() -> None:
+    """Exactness cuts both ways: a real 3pl surface still inflates to `Placent`,
+    a real 2sg surface to `Places`. Skip is only for the unmatchable case."""
+    idx = _placer_index()
+    assert inflect_clue("Placer", {"v1__t___zz", "ipre", "3pl"}, idx).text == "Placent"
+    assert inflect_clue("Placer", {"v1__t___zz", "ipre", "2sg"}, idx).text == "Places"
+
+
+def test_finite_person_unproducible_by_head_skips() -> None:
+    """General exact-or-skip: the surface is an unambiguous 2sg, but the clue
+    head `finir` is defective at 2sg here (only 3pl present). No person-dropping
+    fallback may fire — skip rather than emit the 3pl form."""
+    idx = MorphologyIndex()
+    _add(idx, "finir", "finissent", "v2__t___zz ipre 3pl")
+    _add(idx, "finir", "finir", "v2__t___zz infi")
+    res = inflect_clue("Finir", {"v2__t___zz", "ipre", "2sg"}, idx)
+    assert res.text != "Finissent"
+    assert res.flag == "no-inflection-finite"
+
+
+def test_decompose_preserves_person_for_finite_targets() -> None:
+    """`_decompose_targets` must never yield a person-less trial when the target
+    carries a person (that trial is what let the index pick an arbitrary person).
+    Person-less targets (ppas / nominal) still get the mood-only relaxation."""
+    finite = _decompose_targets({"ipre", "3sg"})
+    assert all(t & {"1sg", "2sg", "3sg", "1pl", "2pl", "3pl"} for t in finite)
+    assert {"ipre"} not in finite  # no person-less trial for a person-carrying target
+    # A person-less target still exercises the mood-only relaxation branch.
+    assert {"ipre"} in _decompose_targets({"ipre"})

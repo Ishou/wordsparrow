@@ -8,7 +8,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "eval"))
 
 from build_surface_clues import (  # noqa: E402
-    _head_verb_numbers,
     _verb_number,
     classify_inflection,
 )
@@ -36,13 +35,17 @@ def test_verb_number_maps_inversion_person_to_singular() -> None:
     assert _verb_number({"nom", "mas", "inv"}) is None
 
 
-def test_singular_inversion_surface_with_plural_clue_is_dropped() -> None:
-    """`posè` (ipre 1isg, singular) would inflate the placer clue's head to the plural `Placent`."""
+def test_singular_inversion_surface_is_skipped_at_inflater() -> None:
+    """`posè` (ipre 1isg) has no person `PERSON_TOKENS` can match, so the inflater
+    now SKIPS it (`no-inflection-finite`) at the root rather than emitting the
+    arbitrary plural `Placent` that the downstream agreement gate had to catch.
+    The gate below (`test_homograph...`) stays as defense-in-depth for other
+    number mismatches, but the inversion class never reaches it now."""
     idx = _placer_index()
     surface_tags = {"ipre", "1isg", "v1_itxq__a"}
     clue, status = classify_inflection("Placer", surface_tags, idx)
-    assert _head_verb_numbers(clue, idx) == {"pl"}
-    assert status == "agreement-mismatch", (clue, status)
+    assert status == "no-inflection-finite", (clue, status)
+    assert clue == "Placer"  # verbatim citation form, not the arbitrary plural
 
 
 def test_homograph_head_with_achievable_number_is_kept() -> None:
