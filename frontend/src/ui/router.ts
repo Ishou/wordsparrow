@@ -13,6 +13,7 @@ import { Route as CompteRoute } from './routes/compte';
 import { Route as AbonnementRoute } from './routes/abonnement';
 import { Route as AbonnementSuccesRoute } from './routes/abonnement.succes';
 import { Route as AbonnementAnnuleRoute } from './routes/abonnement.annule';
+import { Route as AbonnementTransparenceRoute } from './routes/abonnement.transparence';
 import { Route as ConfidentialiteRoute } from './routes/confidentialite';
 import { Route as MentionsLegalesRoute } from './routes/mentions-legales';
 import { Route as LobbyRoute } from './routes/lobby.$lobbyId';
@@ -49,6 +50,7 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
     AbonnementRoute,
     AbonnementSuccesRoute,
     AbonnementAnnuleRoute,
+    AbonnementTransparenceRoute,
     ConfidentialiteRoute,
     MentionsLegalesRoute,
     AccueilRedirectRoute,

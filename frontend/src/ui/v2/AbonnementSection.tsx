@@ -161,10 +161,11 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
             {etat === 'expire' ? (
               <div className={actionPad}>
                 <p className={note}>
-                  Ton abonnement est terminé. Tu gardes la grille du jour et les 7 derniers jours.
+                  Ton abonnement s&apos;est terminé — la grille du jour, les 7 derniers jours et tes
+                  grilles commencées restent à toi. Reviens quand tu veux, sans pression.
                 </p>
                 <Link to="/abonnement" className={primaryLink}>
-                  Se réabonner
+                  Me réabonner
                 </Link>
               </div>
             ) : null}

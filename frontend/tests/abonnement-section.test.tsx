@@ -97,13 +97,15 @@ describe('AbonnementSection états', () => {
     expect(screen.queryByRole('button', { name: /Résilier l'abonnement/ })).toBeNull();
   });
 
-  it('renders the expiré état with a re-subscribe link', async () => {
+  it('renders the gentle expiré état keeping started grids, no pressure, and a re-subscribe link', async () => {
     const client = fakeBillingClient(vi.fn().mockResolvedValue(CANCELED_VIEW));
     render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
     expect(await screen.findByText('Terminé')).toBeInTheDocument();
-    expect(screen.getByText(/Ton abonnement est terminé/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Se réabonner' }).getAttribute('href')).toBe('/abonnement');
+    expect(screen.getByText(/Ton abonnement s'est terminé/)).toBeInTheDocument();
+    expect(screen.getByText(/tes\s+grilles commencées restent à toi/)).toBeInTheDocument();
+    expect(screen.getByText(/sans pression/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Me réabonner' }).getAttribute('href')).toBe('/abonnement');
   });
 
   it('renders the free état when there is no active subscription', async () => {
