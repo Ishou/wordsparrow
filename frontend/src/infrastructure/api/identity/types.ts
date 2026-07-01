@@ -239,6 +239,8 @@ export interface components {
             /** @enum {string} */
             role: "player" | "maintainer";
             capabilities: string[];
+            /** Format: email */
+            email?: string;
         };
         LinkedProvider: {
             /** @enum {string} */
