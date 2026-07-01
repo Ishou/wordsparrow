@@ -18,6 +18,9 @@ import { HomeScreen } from '@/ui/home/HomeScreen';
 const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 
 const SUBSCRIBER: WhoAmIResult = { userId: USER_ID, displayName: 'Lapin 472', role: 'player', capabilities: ['grilles:all'] };
+// Subscribe-eligible free player: can reach /abonnement, so promo surfaces apply.
+const CAN_SUBSCRIBE: WhoAmIResult = { userId: USER_ID, displayName: 'Lapin 472', role: 'player', capabilities: ['billing:subscribe'] };
+// Test-phase free player: no billing:subscribe → /abonnement is 404, so no promo surfaces.
 const FREE: WhoAmIResult = { userId: USER_ID, displayName: 'Lapin 472', role: 'player', capabilities: [] };
 
 function authClientFor(whoami: WhoAmIResult): AuthClient {
@@ -121,13 +124,26 @@ describe('archive paywall markers (ADR-0080 W5a)', () => {
     expect(screen.queryByText('Débloque toutes les grilles')).toBeNull();
   });
 
-  it('locks only the old, unstarted grid for a free player', async () => {
+  it('shows no locks, no banner for a free player without billing:subscribe', async () => {
     renderArchive(FREE);
+
+    // Test-phase free player: the archive looks exactly as it did pre-subscription.
+    await screen.findByText(/n°201/);
+    expect(screen.queryByRole('button', { name: /réservée à l'abonnement/i })).toBeNull();
+    expect(screen.queryByText('Débloque toutes les grilles')).toBeNull();
+    // All three grids stay playable — none locked (n°201 would lock only for a subscribe-eligible player).
+    expect(screen.getAllByRole('link', { name: /Commencer/i })).toHaveLength(3);
+  });
+
+  it('locks only the old, unstarted grid for a subscribe-eligible player', async () => {
+    renderArchive(CAN_SUBSCRIBE);
 
     const locked = await screen.findByRole('button', { name: /réservée à l'abonnement/i });
     // The lock lands on n°201 (old + unstarted), not the recent or the already-started grid.
     expect(within(locked).getByText(/n°201/)).toBeTruthy();
     expect(screen.getByText("Réservée à l'abonnement")).toBeTruthy();
+    // Single marker only: the redundant inline « Abonnés » badge was removed, leaving the subtext + right-side lock icon.
+    expect(within(locked).queryByText('Abonnés')).toBeNull();
 
     // Exactly one lock; the recent grid and the old-but-started grid stay playable.
     expect(screen.getAllByRole('button', { name: /réservée à l'abonnement/i })).toHaveLength(1);
@@ -135,8 +151,8 @@ describe('archive paywall markers (ADR-0080 W5a)', () => {
     expect(playable).toHaveLength(2);
   });
 
-  it('shows the upsell banner only for a free player', async () => {
-    const { unmount } = renderArchive(FREE);
+  it('shows the upsell banner only for a subscribe-eligible player', async () => {
+    const { unmount } = renderArchive(CAN_SUBSCRIBE);
     expect(await screen.findByText('Débloque toutes les grilles')).toBeTruthy();
     unmount();
 
@@ -146,7 +162,7 @@ describe('archive paywall markers (ADR-0080 W5a)', () => {
   });
 
   it('opens the gating sheet instead of navigating when a locked grid is tapped', async () => {
-    const { router } = renderArchive(FREE);
+    const { router } = renderArchive(CAN_SUBSCRIBE);
 
     const locked = await screen.findByRole('button', { name: /réservée à l'abonnement/i });
     fireEvent.click(locked);
@@ -158,7 +174,7 @@ describe('archive paywall markers (ADR-0080 W5a)', () => {
   });
 
   it('links the sheet CTA to the offer page', async () => {
-    renderArchive(FREE);
+    renderArchive(CAN_SUBSCRIBE);
     fireEvent.click(await screen.findByRole('button', { name: /réservée à l'abonnement/i }));
 
     const dialog = await screen.findByRole('dialog');
@@ -168,10 +184,16 @@ describe('archive paywall markers (ADR-0080 W5a)', () => {
 });
 
 describe('home upsell teaser (ADR-0080 W5a)', () => {
-  it('renders the teaser for a free player', async () => {
-    renderHome(FREE);
+  it('renders the teaser for a subscribe-eligible player', async () => {
+    renderHome(CAN_SUBSCRIBE);
     expect(await screen.findByText('Débloque toutes les grilles')).toBeTruthy();
     expect(screen.getByText('Abonne-toi et joue sans limite')).toBeTruthy();
+  });
+
+  it('hides the teaser for a free player without billing:subscribe', async () => {
+    renderHome(FREE);
+    await screen.findByRole('button', { name: /Bientôt disponible|Jouer|Chargement/i });
+    await waitFor(() => expect(screen.queryByText('Débloque toutes les grilles')).toBeNull());
   });
 
   it('hides the teaser for a subscriber', async () => {

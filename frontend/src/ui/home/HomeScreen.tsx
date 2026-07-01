@@ -9,7 +9,7 @@ import type { LobbyClient } from '@/application/game';
 import type { Pseudonym, SessionId } from '@/domain/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Skeleton } from '@/design-system';
-import { useSubscriber } from '@/ui/components/billing';
+import { useCanSubscribe } from '@/ui/components/billing';
 import { HomeTeaser } from '@/ui/v2/UpsellEntries';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { MobileTopBar } from '@/ui/v2/MobileTopBar';
@@ -191,7 +191,7 @@ export function HomeScreen({
   readonly getSession?: () => HomeSession;
 }) {
   const navigate = useNavigate();
-  const subscriber = useSubscriber();
+  const canSubscribe = useCanSubscribe();
   const [streak, setStreak] = useState({ cur: 0, best: 0 });
   const [menuOpen, setMenuOpen] = useState(false);
   // The mini-game docks our on-screen keyboard over the bottom nav; hide the nav while it's up.
@@ -441,7 +441,7 @@ export function HomeScreen({
                 })}
               </div>
             </div>
-            {!subscriber ? (
+            {canSubscribe ? (
               <div className={teaserWrap}>
                 <HomeTeaser />
               </div>
