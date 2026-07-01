@@ -207,7 +207,8 @@ export function HomeScreen({
   // Hosting is entitlement-gated server-side (ADR-0083): guests get 401. Prompt sign-in before the call so they don't hit a silent failure; joining stays open.
   const handleCreateCoop = () => {
     if (!multiplayerOn || coopPending) return;
-    if (auth?.state.status !== 'authed') {
+    // Gate on confirmed 'anon' only, not 'loading' — a returning authed player mustn't see this (ADR-0083).
+    if (auth?.state.status === 'anon') {
       setHostSignInOpen(true);
       return;
     }
