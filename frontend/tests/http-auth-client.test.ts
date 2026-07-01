@@ -51,7 +51,7 @@ describe('HttpAuthClient.getMe', () => {
         displayName: 'Lapin 472',
         createdAt: '2026-05-01T10:00:00Z',
         providers: [
-          { provider: 'google', linkedAt: '2026-05-01T10:00:00Z', emailOptIn: true },
+          { provider: 'google', linkedAt: '2026-05-01T10:00:00Z' },
         ],
         role: 'player',
         capabilities: [],
@@ -65,7 +65,7 @@ describe('HttpAuthClient.getMe', () => {
       displayName: 'Lapin 472',
       createdAt: '2026-05-01T10:00:00Z',
       providers: [
-        { provider: 'google', linkedAt: '2026-05-01T10:00:00Z', emailOptIn: true },
+        { provider: 'google', linkedAt: '2026-05-01T10:00:00Z' },
       ],
     });
   });

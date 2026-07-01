@@ -247,11 +247,9 @@ export interface components {
             provider: "google" | "apple";
             /** Format: date-time */
             linkedAt: string;
-            emailOptIn: boolean;
         };
         UserUpdate: {
             displayName?: string;
-            emailOptIn?: boolean;
         };
         WhoAmIResponse: {
             /** Format: uuid */

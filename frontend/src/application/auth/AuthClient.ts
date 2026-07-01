@@ -10,7 +10,6 @@ export interface WhoAmIResult {
 export interface LinkedProvider {
   readonly provider: 'google' | 'apple';
   readonly linkedAt: string;
-  readonly emailOptIn: boolean;
 }
 
 export interface GetMeResult {
