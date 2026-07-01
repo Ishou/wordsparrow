@@ -157,6 +157,9 @@ Interlocking is **half-checked**, not fully-checked: a letter cell in exactly on
 word — sandwiched by black/border on the other axis — is valid mots fléchés,
 interior or edge. `GridValidator.uncrossedCells` is relaxed accordingly to flag
 only cells in *no* word (unfillable). The prior "interior cells must cross both"
-rule was stricter than the genre requires and was never enforced during
-generation; keeping it invited a footgun (enabling `enforceInterlocking` would
-have rejected ~15% of valid grids).
+rule was stricter than the genre requires, was never enforced during
+generation, and duplicated the always-on `OrphanedLetterCell` check once
+relaxed to the same condition — the dead `enforceInterlocking` flag and its
+now-redundant `UncrossedCell`-emitting branch are removed from `validate()`.
+`GridValidator.uncrossedCells` remains as a standalone predicate for callers
+that want the orphan check in isolation (see `GridGeneratorPropertyTest`).

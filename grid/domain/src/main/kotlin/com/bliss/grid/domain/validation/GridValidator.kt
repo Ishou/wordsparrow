@@ -9,10 +9,7 @@ import com.bliss.grid.domain.model.Row
 import com.bliss.grid.domain.model.WordAxis
 
 class GridValidator {
-    fun validate(
-        grid: Grid,
-        enforceInterlocking: Boolean = false,
-    ): List<GridViolation> {
+    fun validate(grid: Grid): List<GridViolation> {
         val violations = mutableListOf<GridViolation>()
         violations += outOfBoundsCells(grid)
         violations += duplicateViolations(grid)
@@ -45,10 +42,6 @@ class GridValidator {
             if (cell is ClueCell && pos in letterPositions) {
                 violations += GridViolation.ClueCellLetterCellOverlap(pos)
             }
-        }
-
-        if (enforceInterlocking) {
-            violations += uncrossedCells(grid)
         }
 
         violations += blackTriples(grid)
