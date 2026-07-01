@@ -36,6 +36,17 @@ from morphology_index import (
 # matches first". `infi`/`ppre`/`ppas` are person-less and relax freely.
 _FINITE_MOODS = MOOD_TOKENS - {"infi", "ppre", "ppas"}
 
+# Moods whose negation puts the particles around the verb (`ne X pas`): every
+# finite tense plus the present participle (`ne sachant pas`). Infinitives keep
+# `ne pas X`; past participles have no simple negation and are dropped instead.
+_NEG_RESTRUCTURE_MOODS = _FINITE_MOODS | {"ppre"}
+
+# Vowels + mute-h that trigger `ne → n'` elision (mirrors lemmatize_clue).
+_ELISION_INITIALS = set("aeiouéèêëàâîïôûùüÿœh")
+# Reflexive clitics that may sit between `pas` and the verb in a negated
+# infinitive (`Ne pas se présenter`) and must stay in front of the verb.
+_REFLEXIVE_CLITICS = {"se", "s"}
+
 # Pre-head adjectives in French — a small closed set that conventionally
 # precedes the noun (petit oiseau, vieille femme, bel arbre). When a clue
 # starts with one of these, the actual head is later in the token stream;
@@ -128,7 +139,8 @@ class InflectionResult:
     text: str
     flag: str  # '' | 'no-target-pos' | 'no-head' | 'no-inflection'
                # | 'no-inflection-finite' | 'identity' | 'head-pos-mismatch'
-               # | 'pp-only-skipped' | 'pp-reflexive-skipped' | 'empty'
+               # | 'pp-only-skipped' | 'pp-reflexive-skipped'
+               # | 'neg-nonfinite-skipped' | 'empty'
                #
                # `no-inflection-finite` is a stricter sibling of `no-inflection`
                # for finite-verb targets (no `ppas` in target tags). When the
@@ -156,6 +168,36 @@ def _has_reflexive_head(tokens: list[str]) -> bool:
         norm = tok.lower().rstrip("'")
         return norm in ("se", "s")
     return False
+
+
+def _negation_frame(tokens: list[str]) -> tuple[int, int] | None:
+    """Return `(ne_idx, pas_idx)` iff the clue opens with the negated-infinitive
+    frame `Ne pas …`; otherwise None. Only the leading particles qualify — a
+    `pas` deeper in the clue is not a negation we restructure."""
+    alpha = [(i, t.lower()) for i, t in enumerate(tokens) if _is_alpha_token(t)]
+    if len(alpha) >= 2 and alpha[0][1] == "ne" and alpha[1][1] == "pas":
+        return alpha[0][0], alpha[1][0]
+    return None
+
+
+def _restructure_negation(
+    tokens: list[str], ne_idx: int, pas_idx: int, head_idx: int,
+) -> list[str] | None:
+    """Rewrite `Ne pas [se] <verb> …` → `Ne [se] <verb> pas …`, eliding `ne → n'`
+    before a vowel-initial verb. Returns None (no-op) when non-reflexive material
+    sits between `pas` and the verb — that shape isn't a plain negated infinitive
+    and restructuring it would scramble the clue."""
+    between = tokens[pas_idx + 1:head_idx]
+    if any(_is_alpha_token(t) and t.lower() not in _REFLEXIVE_CLITICS for t in between):
+        return None
+    head_tok = tokens[head_idx]
+    after_head = tokens[head_idx + 1:]
+    first_after_ne = next((t for t in between if _is_alpha_token(t)), head_tok)
+    ne_tokens = (
+        ["n", "’"] if first_after_ne[:1].lower() in _ELISION_INITIALS
+        else [tokens[ne_idx]]
+    )
+    return tokens[:ne_idx] + ne_tokens + between + [head_tok, "pas"] + after_head
 
 
 def _has_verb_dobj_frame(tokens: list[str], head_idx: int) -> bool:
@@ -320,6 +362,14 @@ def inflect_clue(
     if (target_pos == "verbe" and "ppas" in target
             and _has_reflexive_head(tokens)):
         return InflectionResult(_capitalize_first(clue), "pp-reflexive-skipped")
+
+    # Negated-infinitive + past participle: `Ne pas rester` can't restructure to
+    # a clean simple-negation for a ppas surface (`*Ne pas resté`). Drop it — the
+    # higher-freq present sibling supplies the grid clue (accent-fold collision,
+    # CsvWordRepository). Finite surfaces are restructured below instead.
+    if (target_pos == "verbe" and "ppas" in target
+            and _negation_frame(tokens) is not None):
+        return InflectionResult(_capitalize_first(clue), "neg-nonfinite-skipped")
 
     # For nominal targets, gender relaxation is best-effort: try strict
     # gender first so a paradigm with both masc and fem forms (voleur →
@@ -493,6 +543,19 @@ def inflect_clue(
             i -= 1
             continue
         break
+
+    # Negated-infinitive → finite: `Ne pas <inf>` inflates the head in place to
+    # `Ne pas <finite>`, which is ungrammatical (`espère → *Ne pas désespère`).
+    # Once the head has become a finite (or present-participle) form, move `pas`
+    # behind it and elide `ne`: `Ne désespère pas`, `N'acceptant pas`. Only when
+    # the head actually changed — an unchanged infinitive surface keeps the
+    # correct citation-form `Ne pas <inf>`.
+    if head_changed and (target & _NEG_RESTRUCTURE_MOODS):
+        neg = _negation_frame(new_tokens)
+        if neg is not None and head_idx > neg[1]:
+            restructured = _restructure_negation(new_tokens, neg[0], neg[1], head_idx)
+            if restructured is not None:
+                new_tokens = restructured
 
     if not head_changed and new_tokens == tokens:
         return InflectionResult(_capitalize_first(clue), "identity")

@@ -647,3 +647,70 @@ def test_decompose_preserves_person_for_finite_targets() -> None:
     assert {"ipre"} not in finite  # no person-less trial for a person-carrying target
     # A person-less target still exercises the mood-only relaxation branch.
     assert {"ipre"} in _decompose_targets({"ipre"})
+
+
+# ---------------------------------------------------------------------------
+# Negated-infinitive restructuring: `Ne pas <inf>` must become `Ne <verb> pas`
+# when the head inflates to a finite form — not `Ne pas <inflected>` (grid bug
+# `espère → "Ne pas désespère"`). Past-participle targets can't restructure
+# cleanly and are dropped; the higher-freq finite sibling supplies the clue.
+# ---------------------------------------------------------------------------
+
+
+def _rester_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "rester", "rester", "v1__i___zz infi")
+    _add(idx, "rester", "reste", "v1__i___zz ipre spre 1sg 3sg impe 2sg")
+    _add(idx, "rester", "restes", "v1__i___zz ipre 2sg")
+    _add(idx, "rester", "resté", "v1__i___zz ppas mas sg")
+    return idx
+
+
+def test_negation_finite_restructures_pas_after_verb() -> None:
+    res = inflect_clue("Ne pas rester en place", {"v1__i___zz", "ipre", "3sg"}, _rester_index())
+    assert res.flag == ""
+    assert res.text == "Ne reste pas en place"
+
+
+def test_negation_finite_elides_ne_before_vowel() -> None:
+    idx = MorphologyIndex()
+    _add(idx, "accepter", "accepter", "v1__t___zz infi")
+    _add(idx, "accepter", "acceptes", "v1__t___zz ipre 2sg")
+    res = inflect_clue("Ne pas accepter", {"v1__t___zz", "ipre", "2sg"}, idx)
+    assert res.flag == ""
+    assert res.text == "N’acceptes pas"
+
+
+def test_negation_finite_keeps_reflexive_before_verb() -> None:
+    idx = MorphologyIndex()
+    _add(idx, "présenter", "présenter", "v1__t___zz infi")
+    _add(idx, "présenter", "présente", "v1__t___zz ipre spre 1sg 3sg impe 2sg")
+    res = inflect_clue("Ne pas se présenter", {"v1__t___zz", "ipre", "3sg"}, idx)
+    assert res.flag == ""
+    assert res.text == "Ne se présente pas"
+
+
+def test_negation_infinitive_surface_left_intact() -> None:
+    """When the surface is itself an infinitive the head doesn't change — the
+    citation-form `Ne pas <inf>` is already correct and must not be touched."""
+    res = inflect_clue("Ne pas rester en place", {"v1__i___zz", "infi"}, _rester_index())
+    assert res.text == "Ne pas rester en place"
+
+
+def test_negation_present_participle_restructures() -> None:
+    """Present participles negate like finite verbs (`ne sachant pas`), not like
+    infinitives — restructure rather than keep `Ne pas savoir`."""
+    idx = MorphologyIndex()
+    _add(idx, "savoir", "savoir", "v3__t___zz infi")
+    _add(idx, "savoir", "sachant", "v3__t___zz ppre")
+    res = inflect_clue("Ne pas savoir", {"v3__t___zz", "ppre"}, idx)
+    assert res.flag == ""
+    assert res.text == "Ne sachant pas"
+
+
+def test_negation_past_participle_is_skipped() -> None:
+    """`bougé → "Ne pas resté en place"`: a ppas can't restructure to a clean
+    simple-negation, so drop it — the higher-freq present sibling supplies the
+    grid clue (`bouge → "Se met en mouvement"`)."""
+    res = inflect_clue("Ne pas rester en place", {"v1__i___zz", "ppas", "mas", "sg"}, _rester_index())
+    assert res.flag == "neg-nonfinite-skipped"

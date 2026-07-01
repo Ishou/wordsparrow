@@ -5840,7 +5840,7 @@ bougie,fr,6,620517,0.835685,,grammalecte,MPL-2.0,bougie
 bougies,fr,7,663049,0.86059153,,grammalecte,MPL-2.0,bougie
 bougions,fr,8,2364,0.9145323,Se mettions en mouvement,grammalecte,MPL-2.0,bouger
 bougèrent,fr,9,16028,0.9231597,Se mirent en mouvement,grammalecte,MPL-2.0,bouger
-bougé,fr,5,191354,0.821639,Ne pas resté en place,grammalecte,MPL-2.0,bouger
+bougé,fr,5,191354,0.821639,,grammalecte,MPL-2.0,bouger
 bouillaient,fr,11,3411,0.95056623,,grammalecte,MPL-2.0,bouillir
 bouillais,fr,9,1672,0.92971355,,grammalecte,MPL-2.0,bouillir
 bouillait,fr,9,22225,0.9218955,,grammalecte,MPL-2.0,bouillir
@@ -16877,43 +16877,43 @@ esprit,fr,6,58552340,0.7267326,Mental ou fantôme,grammalecte,MPL-2.0,esprit
 esprits,fr,7,11210947,0.8116647,Mentaux ou fantômes,grammalecte,MPL-2.0,esprit
 espèce,fr,6,24960420,0.75596505,Race animale,grammalecte,MPL-2.0,espèce
 espèces,fr,7,16108290,0.8021605,Races animales,grammalecte,MPL-2.0,espèce
-espère,fr,6,1901210,0.8186107,Ne pas désespère,grammalecte,MPL-2.0,espérer
-espèrent,fr,8,508895,0.88544816,Ne pas désespèrent,grammalecte,MPL-2.0,espérer
-espèrerais,fr,10,59,0.94547844,Ne pas désespérerais,grammalecte,MPL-2.0,espérer
-espèrerait,fr,10,432,0.94379765,Ne pas désespérerait,grammalecte,MPL-2.0,espérer
-espèreront,fr,10,166,0.94486356,Ne pas désespéreront,grammalecte,MPL-2.0,espérer
-espères,fr,7,20897,0.8881255,Ne pas désespères,grammalecte,MPL-2.0,espérer
-espéra,fr,6,111120,0.8542262,Ne pas désespéra,grammalecte,MPL-2.0,espérer
-espérai,fr,7,9930,0.8918652,Ne pas désespérai,grammalecte,MPL-2.0,espérer
-espéraient,fr,10,396090,0.92184174,Ne pas désespéraient,grammalecte,MPL-2.0,espérer
-espérais,fr,8,197506,0.89329445,Ne pas désespérais,grammalecte,MPL-2.0,espérer
-espérait,fr,8,1374003,0.8749225,Ne pas désespérait,grammalecte,MPL-2.0,espérer
+espère,fr,6,1901210,0.8186107,Ne désespère pas,grammalecte,MPL-2.0,espérer
+espèrent,fr,8,508895,0.88544816,Ne désespèrent pas,grammalecte,MPL-2.0,espérer
+espèrerais,fr,10,59,0.94547844,Ne désespérerais pas,grammalecte,MPL-2.0,espérer
+espèrerait,fr,10,432,0.94379765,Ne désespérerait pas,grammalecte,MPL-2.0,espérer
+espèreront,fr,10,166,0.94486356,Ne désespéreront pas,grammalecte,MPL-2.0,espérer
+espères,fr,7,20897,0.8881255,Ne désespères pas,grammalecte,MPL-2.0,espérer
+espéra,fr,6,111120,0.8542262,Ne désespéra pas,grammalecte,MPL-2.0,espérer
+espérai,fr,7,9930,0.8918652,Ne désespérai pas,grammalecte,MPL-2.0,espérer
+espéraient,fr,10,396090,0.92184174,Ne désespéraient pas,grammalecte,MPL-2.0,espérer
+espérais,fr,8,197506,0.89329445,Ne désespérais pas,grammalecte,MPL-2.0,espérer
+espérait,fr,8,1374003,0.8749225,Ne désespérait pas,grammalecte,MPL-2.0,espérer
 espérance,fr,9,4960224,0.8790571,Attente,grammalecte,MPL-2.0,espérance
 espérances,fr,10,3347087,0.90353733,Attentes,grammalecte,MPL-2.0,espérance
-espérant,fr,8,796899,0.8810267,Ne pas désespérant,grammalecte,MPL-2.0,espérer
-espérasse,fr,9,1210,0.9303876,Ne pas désespérasse,grammalecte,MPL-2.0,espérer
-espérassent,fr,11,2272,0.95127773,Ne pas désespérassent,grammalecte,MPL-2.0,espérer
+espérant,fr,8,796899,0.8810267,Ne désespérant pas,grammalecte,MPL-2.0,espérer
+espérasse,fr,9,1210,0.9303876,Ne désespérasse pas,grammalecte,MPL-2.0,espérer
+espérassent,fr,11,2272,0.95127773,Ne désespérassent pas,grammalecte,MPL-2.0,espérer
 espérer,fr,7,5839400,0.8263797,Ne pas désespérer,grammalecte,MPL-2.0,espérer
-espérera,fr,8,8418,0.910331,Ne pas désespérera,grammalecte,MPL-2.0,espérer
-espérerai,fr,9,3229,0.92814523,Ne pas désespérerai,grammalecte,MPL-2.0,espérer
-espérerais,fr,10,4300,0.93976444,Ne pas désespérerais,grammalecte,MPL-2.0,espérer
-espérerait,fr,10,12512,0.93695354,Ne pas désespérerait,grammalecte,MPL-2.0,espérer
-espérerez,fr,9,685,0.93144816,Ne pas désespérerez,grammalecte,MPL-2.0,espérer
-espéreriez,fr,10,971,0.94263864,Ne pas désespéreriez,grammalecte,MPL-2.0,espérer
-espérerions,fr,11,1881,0.9515835,Ne pas désespérerions,grammalecte,MPL-2.0,espérer
-espérerons,fr,10,1171,0.9423282,Ne pas désespérerons,grammalecte,MPL-2.0,espérer
-espéreront,fr,10,4697,0.93955606,Ne pas désespéreront,grammalecte,MPL-2.0,espérer
-espérez,fr,7,39750,0.88441855,Ne pas désespérez,grammalecte,MPL-2.0,espérer
-espériez,fr,8,14697,0.9080849,Ne pas désespériez,grammalecte,MPL-2.0,espérer
-espérions,fr,9,111135,0.91436464,Ne pas désespérions,grammalecte,MPL-2.0,espérer
-espérons,fr,8,630077,0.8833904,Ne pas désespérons,grammalecte,MPL-2.0,espérer
-espérâmes,fr,9,2565,0.9287249,Ne pas désespérâmes,grammalecte,MPL-2.0,espérer
-espérât,fr,7,11827,0.89104027,Ne pas désespérât,grammalecte,MPL-2.0,espérer
-espérèrent,fr,10,21284,0.93527967,Ne pas désespérèrent,grammalecte,MPL-2.0,espérer
-espéré,fr,6,718013,0.8337725,Ne pas désespéré,grammalecte,MPL-2.0,espérer
-espérée,fr,7,127795,0.87631667,Ne pas désespérée,grammalecte,MPL-2.0,espérer
-espérées,fr,8,29427,0.9048616,Ne pas désespérées,grammalecte,MPL-2.0,espérer
-espérés,fr,7,76372,0.8801432,Ne pas désespérés,grammalecte,MPL-2.0,espérer
+espérera,fr,8,8418,0.910331,Ne désespérera pas,grammalecte,MPL-2.0,espérer
+espérerai,fr,9,3229,0.92814523,Ne désespérerai pas,grammalecte,MPL-2.0,espérer
+espérerais,fr,10,4300,0.93976444,Ne désespérerais pas,grammalecte,MPL-2.0,espérer
+espérerait,fr,10,12512,0.93695354,Ne désespérerait pas,grammalecte,MPL-2.0,espérer
+espérerez,fr,9,685,0.93144816,Ne désespérerez pas,grammalecte,MPL-2.0,espérer
+espéreriez,fr,10,971,0.94263864,Ne désespéreriez pas,grammalecte,MPL-2.0,espérer
+espérerions,fr,11,1881,0.9515835,Ne désespérerions pas,grammalecte,MPL-2.0,espérer
+espérerons,fr,10,1171,0.9423282,Ne désespérerons pas,grammalecte,MPL-2.0,espérer
+espéreront,fr,10,4697,0.93955606,Ne désespéreront pas,grammalecte,MPL-2.0,espérer
+espérez,fr,7,39750,0.88441855,Ne désespérez pas,grammalecte,MPL-2.0,espérer
+espériez,fr,8,14697,0.9080849,Ne désespériez pas,grammalecte,MPL-2.0,espérer
+espérions,fr,9,111135,0.91436464,Ne désespérions pas,grammalecte,MPL-2.0,espérer
+espérons,fr,8,630077,0.8833904,Ne désespérons pas,grammalecte,MPL-2.0,espérer
+espérâmes,fr,9,2565,0.9287249,Ne désespérâmes pas,grammalecte,MPL-2.0,espérer
+espérât,fr,7,11827,0.89104027,Ne désespérât pas,grammalecte,MPL-2.0,espérer
+espérèrent,fr,10,21284,0.93527967,Ne désespérèrent pas,grammalecte,MPL-2.0,espérer
+espéré,fr,6,718013,0.8337725,,grammalecte,MPL-2.0,espérer
+espérée,fr,7,127795,0.87631667,,grammalecte,MPL-2.0,espérer
+espérées,fr,8,29427,0.9048616,,grammalecte,MPL-2.0,espérer
+espérés,fr,7,76372,0.8801432,,grammalecte,MPL-2.0,espérer
 esquissa,fr,8,53646,0.9017203,Traça,grammalecte,MPL-2.0,esquisser
 esquissai,fr,9,2260,0.9290288,Traçai,grammalecte,MPL-2.0,esquisser
 esquissais,fr,10,3582,0.9401702,Traçais,grammalecte,MPL-2.0,esquisser
@@ -25399,30 +25399,30 @@ mainlevées,fr,10,11230,0.9372552,,grammalecte,MPL-2.0,mainlevée
 mainmise,fr,8,334919,0.889168,Prise de contrôle,grammalecte,MPL-2.0,mainmise
 mainmises,fr,9,2583,0.92870885,Prises de contrôle,grammalecte,MPL-2.0,mainmise
 mains,fr,5,22669284,0.72024304,Porteuses de bagues,grammalecte,MPL-2.0,main
-maintenais,fr,10,7418,0.9384041,Ne pas cédais,grammalecte,MPL-2.0,maintenir
-maintenait,fr,10,502763,0.9202868,Ne pas cédait,grammalecte,MPL-2.0,maintenir
-maintenant,fr,10,26321632,0.87217575,Ne pas cédant,grammalecte,MPL-2.0,maintenant
-maintenez,fr,9,22350,0.9218752,Ne pas cédez,grammalecte,MPL-2.0,maintenir
-mainteniez,fr,10,3935,0.93996257,Ne pas cédiez,grammalecte,MPL-2.0,maintenir
-maintenions,fr,11,9596,0.9484163,Ne pas cédions,grammalecte,MPL-2.0,maintenir
+maintenais,fr,10,7418,0.9384041,Ne cédais pas,grammalecte,MPL-2.0,maintenir
+maintenait,fr,10,502763,0.9202868,Ne cédait pas,grammalecte,MPL-2.0,maintenir
+maintenant,fr,10,26321632,0.87217575,Ne cédant pas,grammalecte,MPL-2.0,maintenant
+maintenez,fr,9,22350,0.9218752,Ne cédez pas,grammalecte,MPL-2.0,maintenir
+mainteniez,fr,10,3935,0.93996257,Ne cédiez pas,grammalecte,MPL-2.0,maintenir
+maintenions,fr,11,9596,0.9484163,Ne cédions pas,grammalecte,MPL-2.0,maintenir
 maintenir,fr,9,10505950,0.866568,Ne pas céder,grammalecte,MPL-2.0,maintenir
-maintenons,fr,10,46725,0.93246067,Ne pas cédons,grammalecte,MPL-2.0,maintenir
-maintenu,fr,8,2728385,0.8656735,Ne pas cédé,grammalecte,MPL-2.0,maintenir
-maintenue,fr,9,2006088,0.8909805,Ne pas cédée,grammalecte,MPL-2.0,maintenir
-maintenues,fr,10,787500,0.91708815,Ne pas cédées,grammalecte,MPL-2.0,maintenir
-maintenus,fr,9,1045533,0.89790463,Ne pas cédés,grammalecte,MPL-2.0,maintenir
+maintenons,fr,10,46725,0.93246067,Ne cédons pas,grammalecte,MPL-2.0,maintenir
+maintenu,fr,8,2728385,0.8656735,,grammalecte,MPL-2.0,maintenir
+maintenue,fr,9,2006088,0.8909805,,grammalecte,MPL-2.0,maintenir
+maintenues,fr,10,787500,0.91708815,,grammalecte,MPL-2.0,maintenir
+maintenus,fr,9,1045533,0.89790463,,grammalecte,MPL-2.0,maintenir
 maintien,fr,8,6775014,0.8505896,Conservation,grammalecte,MPL-2.0,maintien
-maintiendra,fr,11,252230,0.93735653,Ne pas cédera,grammalecte,MPL-2.0,maintenir
-maintienne,fr,10,195651,0.92591494,Ne pas cède,grammalecte,MPL-2.0,maintenir
-maintiennes,fr,11,613,0.9531141,Ne pas cèdes,grammalecte,MPL-2.0,maintenir
-maintiens,fr,9,137213,0.9131514,Ne pas cèdes,grammalecte,MPL-2.0,maintien
-maintient,fr,9,2643620,0.88766533,Ne pas cède,grammalecte,MPL-2.0,maintenir
-maintinrent,fr,11,140249,0.939984,Ne pas cédèrent,grammalecte,MPL-2.0,maintenir
-maintins,fr,8,10313,0.9095455,Ne pas cédas,grammalecte,MPL-2.0,maintenir
-maintinsse,fr,10,217,0.9445988,Ne pas cédasse,grammalecte,MPL-2.0,maintenir
-maintint,fr,8,499822,0.8856165,Ne pas céda,grammalecte,MPL-2.0,maintenir
-maintînmes,fr,10,1313,0.9421407,Ne pas cédâmes,grammalecte,MPL-2.0,maintenir
-maintînt,fr,8,25263,0.9056037,Ne pas cédât,grammalecte,MPL-2.0,maintenir
+maintiendra,fr,11,252230,0.93735653,Ne cédera pas,grammalecte,MPL-2.0,maintenir
+maintienne,fr,10,195651,0.92591494,Ne cède pas,grammalecte,MPL-2.0,maintenir
+maintiennes,fr,11,613,0.9531141,Ne cèdes pas,grammalecte,MPL-2.0,maintenir
+maintiens,fr,9,137213,0.9131514,Ne cèdes pas,grammalecte,MPL-2.0,maintien
+maintient,fr,9,2643620,0.88766533,Ne cède pas,grammalecte,MPL-2.0,maintenir
+maintinrent,fr,11,140249,0.939984,Ne cédèrent pas,grammalecte,MPL-2.0,maintenir
+maintins,fr,8,10313,0.9095455,Ne cédas pas,grammalecte,MPL-2.0,maintenir
+maintinsse,fr,10,217,0.9445988,Ne cédasse pas,grammalecte,MPL-2.0,maintenir
+maintint,fr,8,499822,0.8856165,Ne céda pas,grammalecte,MPL-2.0,maintenir
+maintînmes,fr,10,1313,0.9421407,Ne cédâmes pas,grammalecte,MPL-2.0,maintenir
+maintînt,fr,8,25263,0.9056037,Ne cédât pas,grammalecte,MPL-2.0,maintenir
 maire,fr,5,7016828,0.75673634,,grammalecte,MPL-2.0,maire
 maires,fr,6,1614287,0.82150304,,grammalecte,MPL-2.0,maire
 mairie,fr,6,1464804,0.82316184,Administration communale,grammalecte,MPL-2.0,mairie
@@ -27138,30 +27138,30 @@ médiévaux,fr,9,261802,0.9090946,Anciens,grammalecte,MPL-2.0,médiéval
 médullaire,fr,10,266842,0.92421293,,grammalecte,MPL-2.0,médullaire
 médullaires,fr,11,131063,0.94026107,,grammalecte,MPL-2.0,médullaire
 méfiaient,fr,9,36813,0.9197767,,grammalecte,MPL-2.0,méfier
-méfiais,fr,7,10376,0.8916616,Ne pas faisais confiance,grammalecte,MPL-2.0,méfier
-méfiait,fr,7,100374,0.8781752,Ne pas faisait confiance,grammalecte,MPL-2.0,méfier
+méfiais,fr,7,10376,0.8916616,Ne faisais pas confiance,grammalecte,MPL-2.0,méfier
+méfiait,fr,7,100374,0.8781752,Ne faisait pas confiance,grammalecte,MPL-2.0,méfier
 méfiance,fr,8,1634490,0.87266064,,grammalecte,MPL-2.0,méfiance
 méfiances,fr,9,121648,0.913854,,grammalecte,MPL-2.0,méfiance
-méfiant,fr,7,154656,0.87480927,Ne pas faisant confiance,grammalecte,MPL-2.0,méfier
-méfiassent,fr,10,490,0.9436293,Ne pas fissent confiance,grammalecte,MPL-2.0,méfier
-méfie,fr,5,123511,0.8264229,Ne pas fait confiance,grammalecte,MPL-2.0,méfier
-méfient,fr,7,81782,0.87967145,Ne pas font confiance,grammalecte,MPL-2.0,méfier
+méfiant,fr,7,154656,0.87480927,Ne faisant pas confiance,grammalecte,MPL-2.0,méfier
+méfiassent,fr,10,490,0.9436293,Ne fissent pas confiance,grammalecte,MPL-2.0,méfier
+méfie,fr,5,123511,0.8264229,Ne fait pas confiance,grammalecte,MPL-2.0,méfier
+méfient,fr,7,81782,0.87967145,Ne font pas confiance,grammalecte,MPL-2.0,méfier
 méfier,fr,6,424350,0.8404861,Ne pas faire confiance,grammalecte,MPL-2.0,méfier
-méfiera,fr,7,11226,0.8912816,Ne pas fera confiance,grammalecte,MPL-2.0,méfier
-méfierai,fr,8,1190,0.9163029,Ne pas ferai confiance,grammalecte,MPL-2.0,méfier
-méfieraient,fr,11,1177,0.95227695,Ne pas feraient confiance,grammalecte,MPL-2.0,méfier
-méfierais,fr,9,3406,0.9280075,Ne pas ferais confiance,grammalecte,MPL-2.0,méfier
-méfierait,fr,9,3747,0.9277651,Ne pas ferait confiance,grammalecte,MPL-2.0,méfier
-méfierions,fr,10,269,0.94436693,Ne pas ferions confiance,grammalecte,MPL-2.0,méfier
-méfierons,fr,9,670,0.9314856,Ne pas ferons confiance,grammalecte,MPL-2.0,méfier
-méfieront,fr,9,2263,0.92902565,Ne pas feront confiance,grammalecte,MPL-2.0,méfier
-méfiez,fr,6,13937,0.86911815,Ne pas faites confiance,grammalecte,MPL-2.0,méfier
-méfiions,fr,8,734,0.917376,Ne pas faisions confiance,grammalecte,MPL-2.0,méfier
-méfions,fr,7,8162,0.89274544,Ne pas faisons confiance,grammalecte,MPL-2.0,méfier
-méfièrent,fr,9,2899,0.9284201,Ne pas firent confiance,grammalecte,MPL-2.0,méfier
-méfié,fr,5,23145,0.8410695,Ne pas fait confiance,grammalecte,MPL-2.0,méfier
-méfiée,fr,6,6458,0.87323207,Ne pas faite confiance,grammalecte,MPL-2.0,méfier
-méfiés,fr,6,7518,0.8724734,Ne pas faits confiance,grammalecte,MPL-2.0,méfier
+méfiera,fr,7,11226,0.8912816,Ne fera pas confiance,grammalecte,MPL-2.0,méfier
+méfierai,fr,8,1190,0.9163029,Ne ferai pas confiance,grammalecte,MPL-2.0,méfier
+méfieraient,fr,11,1177,0.95227695,Ne feraient pas confiance,grammalecte,MPL-2.0,méfier
+méfierais,fr,9,3406,0.9280075,Ne ferais pas confiance,grammalecte,MPL-2.0,méfier
+méfierait,fr,9,3747,0.9277651,Ne ferait pas confiance,grammalecte,MPL-2.0,méfier
+méfierions,fr,10,269,0.94436693,Ne ferions pas confiance,grammalecte,MPL-2.0,méfier
+méfierons,fr,9,670,0.9314856,Ne ferons pas confiance,grammalecte,MPL-2.0,méfier
+méfieront,fr,9,2263,0.92902565,Ne feront pas confiance,grammalecte,MPL-2.0,méfier
+méfiez,fr,6,13937,0.86911815,Ne faites pas confiance,grammalecte,MPL-2.0,méfier
+méfiions,fr,8,734,0.917376,Ne faisions pas confiance,grammalecte,MPL-2.0,méfier
+méfions,fr,7,8162,0.89274544,Ne faisons pas confiance,grammalecte,MPL-2.0,méfier
+méfièrent,fr,9,2899,0.9284201,Ne firent pas confiance,grammalecte,MPL-2.0,méfier
+méfié,fr,5,23145,0.8410695,Ne fait pas confiance,grammalecte,MPL-2.0,méfier
+méfiée,fr,6,6458,0.87323207,,grammalecte,MPL-2.0,méfier
+méfiés,fr,6,7518,0.8724734,,grammalecte,MPL-2.0,méfier
 méga,fr,4,37821,0.8081183,Très grand,grammalecte,MPL-2.0,méga
 mégagrammes,fr,11,2,0.9553451,Unités de mesure,grammalecte,MPL-2.0,gramme
 mégalomanie,fr,11,72481,0.94252753,Folie des grandeurs,grammalecte,MPL-2.0,mégalomanie
@@ -30024,28 +30024,28 @@ persanes,fr,8,144726,0.8955752,Originaire d'iran,grammalecte,MPL-2.0,persan
 persans,fr,7,155672,0.8747558,Originaire d'iran,grammalecte,MPL-2.0,persan
 perse,fr,5,98999,0.82867485,,grammalecte,MPL-2.0,pers
 perses,fr,6,30184,0.86423117,,grammalecte,MPL-2.0,pers
-persista,fr,8,289377,0.89035404,Ne pas céda,grammalecte,MPL-2.0,persister
-persistai,fr,9,11856,0.924234,Ne pas cédai,grammalecte,MPL-2.0,persister
-persistais,fr,10,9838,0.9376352,Ne pas cédais,grammalecte,MPL-2.0,persister
-persistait,fr,10,325410,0.9230523,Ne pas cédait,grammalecte,MPL-2.0,persister
-persistant,fr,10,386429,0.92199874,Ne pas cédant,grammalecte,MPL-2.0,persistant
-persistasse,fr,11,192,0.95428544,Ne pas cédasse,grammalecte,MPL-2.0,persister
-persiste,fr,8,856334,0.8802349,Ne pas cède,grammalecte,MPL-2.0,persister
-persistent,fr,10,638250,0.9186257,Ne pas cèdent,grammalecte,MPL-2.0,persister
+persista,fr,8,289377,0.89035404,Ne céda pas,grammalecte,MPL-2.0,persister
+persistai,fr,9,11856,0.924234,Ne cédai pas,grammalecte,MPL-2.0,persister
+persistais,fr,10,9838,0.9376352,Ne cédais pas,grammalecte,MPL-2.0,persister
+persistait,fr,10,325410,0.9230523,Ne cédait pas,grammalecte,MPL-2.0,persister
+persistant,fr,10,386429,0.92199874,Ne cédant pas,grammalecte,MPL-2.0,persistant
+persistasse,fr,11,192,0.95428544,Ne cédasse pas,grammalecte,MPL-2.0,persister
+persiste,fr,8,856334,0.8802349,Ne cède pas,grammalecte,MPL-2.0,persister
+persistent,fr,10,638250,0.9186257,Ne cèdent pas,grammalecte,MPL-2.0,persister
 persister,fr,9,490118,0.90452886,Ne pas céder,grammalecte,MPL-2.0,persister
-persistera,fr,10,80755,0.9302274,Ne pas cédera,grammalecte,MPL-2.0,persister
-persisterai,fr,11,6900,0.94915664,Ne pas céderai,grammalecte,MPL-2.0,persister
-persisteras,fr,11,203,0.9542383,Ne pas céderas,grammalecte,MPL-2.0,persister
-persisterez,fr,11,2231,0.9513073,Ne pas céderez,grammalecte,MPL-2.0,persister
-persistes,fr,9,6939,0.9259848,Ne pas cèdes,grammalecte,MPL-2.0,persister
-persistez,fr,9,20718,0.9221691,Ne pas cédez,grammalecte,MPL-2.0,persister
-persistiez,fr,10,5049,0.9393791,Ne pas cédiez,grammalecte,MPL-2.0,persister
-persistions,fr,11,5885,0.94949985,Ne pas cédions,grammalecte,MPL-2.0,persister
-persistons,fr,10,36229,0.93341047,Ne pas cédons,grammalecte,MPL-2.0,persister
-persistâmes,fr,11,1836,0.9516211,Ne pas cédâmes,grammalecte,MPL-2.0,persister
-persistât,fr,9,12184,0.92414945,Ne pas cédât,grammalecte,MPL-2.0,persister
-persistâtes,fr,11,54,0.95495147,Ne pas cédâtes,grammalecte,MPL-2.0,persister
-persisté,fr,8,359142,0.88858277,Ne pas cédé,grammalecte,MPL-2.0,persister
+persistera,fr,10,80755,0.9302274,Ne cédera pas,grammalecte,MPL-2.0,persister
+persisterai,fr,11,6900,0.94915664,Ne céderai pas,grammalecte,MPL-2.0,persister
+persisteras,fr,11,203,0.9542383,Ne céderas pas,grammalecte,MPL-2.0,persister
+persisterez,fr,11,2231,0.9513073,Ne céderez pas,grammalecte,MPL-2.0,persister
+persistes,fr,9,6939,0.9259848,Ne cèdes pas,grammalecte,MPL-2.0,persister
+persistez,fr,9,20718,0.9221691,Ne cédez pas,grammalecte,MPL-2.0,persister
+persistiez,fr,10,5049,0.9393791,Ne cédiez pas,grammalecte,MPL-2.0,persister
+persistions,fr,11,5885,0.94949985,Ne cédions pas,grammalecte,MPL-2.0,persister
+persistons,fr,10,36229,0.93341047,Ne cédons pas,grammalecte,MPL-2.0,persister
+persistâmes,fr,11,1836,0.9516211,Ne cédâmes pas,grammalecte,MPL-2.0,persister
+persistât,fr,9,12184,0.92414945,Ne cédât pas,grammalecte,MPL-2.0,persister
+persistâtes,fr,11,54,0.95495147,Ne cédâtes pas,grammalecte,MPL-2.0,persister
+persisté,fr,8,359142,0.88858277,,grammalecte,MPL-2.0,persister
 persona,fr,7,307371,0.86866736,Caractère,grammalecte,MPL-2.0,persona
 personne,fr,8,19579548,0.82777244,Être humain,grammalecte,MPL-2.0,personne
 personnes,fr,9,35404272,0.8407522,Été humain,grammalecte,MPL-2.0,personne
@@ -34700,41 +34700,41 @@ refroidît,fr,9,2329,0.9289584,Calmât,grammalecte,MPL-2.0,refroidir
 refuge,fr,6,1988829,0.8178458,Asile pour animaux,grammalecte,MPL-2.0,refuge
 refuges,fr,7,224193,0.8716046,Asiles pour animaux,grammalecte,MPL-2.0,refuge
 refus,fr,5,7036946,0.75667906,Opposition,grammalecte,MPL-2.0,refus
-refusa,fr,6,2107872,0.8167845,Ne pas accepta,grammalecte,MPL-2.0,refuser
-refusai,fr,7,90039,0.87897396,Ne pas acceptai,grammalecte,MPL-2.0,refuser
-refusaient,fr,10,604192,0.9190058,Ne pas acceptaient,grammalecte,MPL-2.0,refuser
-refusais,fr,8,55974,0.90146834,Ne pas acceptais,grammalecte,MPL-2.0,refuser
-refusait,fr,8,1291097,0.8756609,Ne pas acceptait,grammalecte,MPL-2.0,refuser
-refusant,fr,8,1380383,0.87486804,Ne pas acceptant,grammalecte,MPL-2.0,refuser
-refusasse,fr,9,1578,0.92983764,Ne pas acceptasse,grammalecte,MPL-2.0,refuser
-refusassent,fr,11,13400,0.9476072,Ne pas acceptassent,grammalecte,MPL-2.0,refuser
-refusassiez,fr,11,482,0.9533898,Ne pas acceptassiez,grammalecte,MPL-2.0,refuser
-refuse,fr,6,2402149,0.81440085,Ne pas accepte,grammalecte,MPL-2.0,refuser
-refusent,fr,8,1710909,0.87201375,Ne pas acceptent,grammalecte,MPL-2.0,refuser
+refusa,fr,6,2107872,0.8167845,N’accepta pas,grammalecte,MPL-2.0,refuser
+refusai,fr,7,90039,0.87897396,N’acceptai pas,grammalecte,MPL-2.0,refuser
+refusaient,fr,10,604192,0.9190058,N’acceptaient pas,grammalecte,MPL-2.0,refuser
+refusais,fr,8,55974,0.90146834,N’acceptais pas,grammalecte,MPL-2.0,refuser
+refusait,fr,8,1291097,0.8756609,N’acceptait pas,grammalecte,MPL-2.0,refuser
+refusant,fr,8,1380383,0.87486804,N’acceptant pas,grammalecte,MPL-2.0,refuser
+refusasse,fr,9,1578,0.92983764,N’acceptasse pas,grammalecte,MPL-2.0,refuser
+refusassent,fr,11,13400,0.9476072,N’acceptassent pas,grammalecte,MPL-2.0,refuser
+refusassiez,fr,11,482,0.9533898,N’acceptassiez pas,grammalecte,MPL-2.0,refuser
+refuse,fr,6,2402149,0.81440085,N’accepte pas,grammalecte,MPL-2.0,refuser
+refusent,fr,8,1710909,0.87201375,N’acceptent pas,grammalecte,MPL-2.0,refuser
 refuser,fr,7,4785648,0.8304129,Ne pas accepter,grammalecte,MPL-2.0,refuser
-refusera,fr,8,313386,0.8896959,Ne pas acceptera,grammalecte,MPL-2.0,refuser
-refuserai,fr,9,26790,0.92112774,Ne pas accepterai,grammalecte,MPL-2.0,refuser
-refuserais,fr,10,24445,0.93481547,Ne pas accepterais,grammalecte,MPL-2.0,refuser
-refuserait,fr,10,300634,0.9235117,Ne pas accepterait,grammalecte,MPL-2.0,refuser
-refuseras,fr,9,4806,0.92708135,Ne pas accepteras,grammalecte,MPL-2.0,refuser
-refuserez,fr,9,45445,0.9188482,Ne pas accepterez,grammalecte,MPL-2.0,refuser
-refuseriez,fr,10,16986,0.93602026,Ne pas accepteriez,grammalecte,MPL-2.0,refuser
-refuserions,fr,11,14978,0.94732714,Ne pas accepterions,grammalecte,MPL-2.0,refuser
-refuserons,fr,10,22067,0.9351594,Ne pas accepterons,grammalecte,MPL-2.0,refuser
-refuseront,fr,10,116768,0.92854506,Ne pas accepteront,grammalecte,MPL-2.0,refuser
-refuses,fr,7,45418,0.88358706,Ne pas acceptes,grammalecte,MPL-2.0,refuser
-refusez,fr,7,70773,0.8806674,Ne pas acceptez,grammalecte,MPL-2.0,refuser
-refusiez,fr,8,16862,0.90749407,Ne pas acceptiez,grammalecte,MPL-2.0,refuser
-refusions,fr,9,27384,0.92104286,Ne pas acceptions,grammalecte,MPL-2.0,refuser
-refusons,fr,8,89292,0.89874387,Ne pas acceptons,grammalecte,MPL-2.0,refuser
-refusâmes,fr,9,9874,0.92485243,Ne pas acceptâmes,grammalecte,MPL-2.0,refuser
-refusât,fr,7,65891,0.8811374,Ne pas acceptât,grammalecte,MPL-2.0,refuser
-refusâtes,fr,9,1835,0.9295059,Ne pas acceptâtes,grammalecte,MPL-2.0,refuser
-refusèrent,fr,10,636807,0.91863585,Ne pas acceptèrent,grammalecte,MPL-2.0,refuser
-refusé,fr,6,3629363,0.80619025,Ne pas accepté,grammalecte,MPL-2.0,refuser
-refusée,fr,7,855136,0.85751903,Ne pas acceptée,grammalecte,MPL-2.0,refuser
-refusées,fr,8,190866,0.8935644,Ne pas acceptées,grammalecte,MPL-2.0,refuser
-refusés,fr,7,317059,0.86837834,Ne pas acceptés,grammalecte,MPL-2.0,refuser
+refusera,fr,8,313386,0.8896959,N’acceptera pas,grammalecte,MPL-2.0,refuser
+refuserai,fr,9,26790,0.92112774,N’accepterai pas,grammalecte,MPL-2.0,refuser
+refuserais,fr,10,24445,0.93481547,N’accepterais pas,grammalecte,MPL-2.0,refuser
+refuserait,fr,10,300634,0.9235117,N’accepterait pas,grammalecte,MPL-2.0,refuser
+refuseras,fr,9,4806,0.92708135,N’accepteras pas,grammalecte,MPL-2.0,refuser
+refuserez,fr,9,45445,0.9188482,N’accepterez pas,grammalecte,MPL-2.0,refuser
+refuseriez,fr,10,16986,0.93602026,N’accepteriez pas,grammalecte,MPL-2.0,refuser
+refuserions,fr,11,14978,0.94732714,N’accepterions pas,grammalecte,MPL-2.0,refuser
+refuserons,fr,10,22067,0.9351594,N’accepterons pas,grammalecte,MPL-2.0,refuser
+refuseront,fr,10,116768,0.92854506,N’accepteront pas,grammalecte,MPL-2.0,refuser
+refuses,fr,7,45418,0.88358706,N’acceptes pas,grammalecte,MPL-2.0,refuser
+refusez,fr,7,70773,0.8806674,N’acceptez pas,grammalecte,MPL-2.0,refuser
+refusiez,fr,8,16862,0.90749407,N’acceptiez pas,grammalecte,MPL-2.0,refuser
+refusions,fr,9,27384,0.92104286,N’acceptions pas,grammalecte,MPL-2.0,refuser
+refusons,fr,8,89292,0.89874387,N’acceptons pas,grammalecte,MPL-2.0,refuser
+refusâmes,fr,9,9874,0.92485243,N’acceptâmes pas,grammalecte,MPL-2.0,refuser
+refusât,fr,7,65891,0.8811374,N’acceptât pas,grammalecte,MPL-2.0,refuser
+refusâtes,fr,9,1835,0.9295059,N’acceptâtes pas,grammalecte,MPL-2.0,refuser
+refusèrent,fr,10,636807,0.91863585,N’acceptèrent pas,grammalecte,MPL-2.0,refuser
+refusé,fr,6,3629363,0.80619025,,grammalecte,MPL-2.0,refuser
+refusée,fr,7,855136,0.85751903,,grammalecte,MPL-2.0,refuser
+refusées,fr,8,190866,0.8935644,,grammalecte,MPL-2.0,refuser
+refusés,fr,7,317059,0.86837834,,grammalecte,MPL-2.0,refuser
 regard,fr,6,12917490,0.77510387,Point de vue,grammalecte,MPL-2.0,regard
 regarda,fr,7,1126479,0.853955,Jeta un œil,grammalecte,MPL-2.0,regarder
 regardai,fr,8,164770,0.89465135,Jetai un œil,grammalecte,MPL-2.0,regarder
@@ -35338,40 +35338,40 @@ reniées,fr,7,12047,0.89096355,Déniées,grammalecte,MPL-2.0,renier
 reniés,fr,6,21956,0.8663498,Déniés,grammalecte,MPL-2.0,renier
 renne,fr,5,274877,0.81738627,,grammalecte,MPL-2.0,renne
 rennes,fr,6,154024,0.8512541,,grammalecte,MPL-2.0,renne
-renonce,fr,7,694168,0.8600356,Ne pas donne suite,grammalecte,MPL-2.0,renoncer
+renonce,fr,7,694168,0.8600356,Ne donne pas suite,grammalecte,MPL-2.0,renoncer
 renoncement,fr,11,709445,0.9317279,,grammalecte,MPL-2.0,renoncement
-renoncent,fr,9,351503,0.9070514,Ne pas donnent suite,grammalecte,MPL-2.0,renoncer
+renoncent,fr,9,351503,0.9070514,Ne donnent pas suite,grammalecte,MPL-2.0,renoncer
 renoncer,fr,8,4701762,0.85700816,Ne pas donner suite,grammalecte,MPL-2.0,renoncer
-renoncera,fr,9,128981,0.91351694,Ne pas donnera suite,grammalecte,MPL-2.0,renoncer
-renoncerai,fr,10,16951,0.936027,Ne pas donnerai suite,grammalecte,MPL-2.0,renoncer
-renoncerais,fr,11,14050,0.94748926,Ne pas donnerais suite,grammalecte,MPL-2.0,renoncer
-renoncerait,fr,11,100592,0.9413138,Ne pas donnerait suite,grammalecte,MPL-2.0,renoncer
-renonceras,fr,10,1512,0.94188935,Ne pas donneras suite,grammalecte,MPL-2.0,renoncer
-renoncerez,fr,10,6221,0.9388605,Ne pas donnerez suite,grammalecte,MPL-2.0,renoncer
-renonceriez,fr,11,2617,0.95103925,Ne pas donneriez suite,grammalecte,MPL-2.0,renoncer
-renoncerons,fr,11,13311,0.94762623,Ne pas donnerons suite,grammalecte,MPL-2.0,renoncer
-renonceront,fr,11,40600,0.94446415,Ne pas donneront suite,grammalecte,MPL-2.0,renoncer
-renonces,fr,8,7797,0.91062826,Ne pas donnes suite,grammalecte,MPL-2.0,renoncer
-renoncez,fr,8,24201,0.90582395,Ne pas donnez suite,grammalecte,MPL-2.0,renoncer
-renonciez,fr,9,7336,0.92581695,Ne pas donniez suite,grammalecte,MPL-2.0,renoncer
-renoncions,fr,10,17807,0.9358715,Ne pas donnions suite,grammalecte,MPL-2.0,renoncer
-renoncèrent,fr,11,114103,0.94082195,Ne pas donnèrent suite,grammalecte,MPL-2.0,renoncer
-renoncé,fr,7,1784938,0.84737533,Ne pas donné suite,grammalecte,MPL-2.0,renoncer
-renoncée,fr,8,3389,0.91346115,Ne pas donnée suite,grammalecte,MPL-2.0,renoncer
-renoncées,fr,9,944,0.93087196,Ne pas données suite,grammalecte,MPL-2.0,renoncer
-renoncés,fr,8,1596,0.91558385,Ne pas donnés suite,grammalecte,MPL-2.0,renoncer
-renonça,fr,7,447759,0.8649674,Ne pas donna suite,grammalecte,MPL-2.0,renoncer
-renonçai,fr,8,31358,0.9045299,Ne pas donnai suite,grammalecte,MPL-2.0,renoncer
-renonçaient,fr,11,76599,0.94233066,Ne pas donnaient suite,grammalecte,MPL-2.0,renoncer
-renonçais,fr,9,11138,0.9244468,Ne pas donnais suite,grammalecte,MPL-2.0,renoncer
-renonçait,fr,9,255071,0.90926087,Ne pas donnait suite,grammalecte,MPL-2.0,renoncer
-renonçant,fr,9,579445,0.90313804,Ne pas donnant suite,grammalecte,MPL-2.0,renoncer
-renonçasse,fr,10,1510,0.9418918,Ne pas donnasse suite,grammalecte,MPL-2.0,renoncer
-renonçasses,fr,11,52,0.95496696,Ne pas donnasses suite,grammalecte,MPL-2.0,renoncer
-renonçons,fr,9,38886,0.9195514,Ne pas donnons suite,grammalecte,MPL-2.0,renoncer
-renonçâmes,fr,10,4211,0.9398123,Ne pas donnâmes suite,grammalecte,MPL-2.0,renoncer
-renonçât,fr,8,61891,0.9009087,Ne pas donnât suite,grammalecte,MPL-2.0,renoncer
-renonçâtes,fr,10,165,0.9448724,Ne pas donnâtes suite,grammalecte,MPL-2.0,renoncer
+renoncera,fr,9,128981,0.91351694,Ne donnera pas suite,grammalecte,MPL-2.0,renoncer
+renoncerai,fr,10,16951,0.936027,Ne donnerai pas suite,grammalecte,MPL-2.0,renoncer
+renoncerais,fr,11,14050,0.94748926,Ne donnerais pas suite,grammalecte,MPL-2.0,renoncer
+renoncerait,fr,11,100592,0.9413138,Ne donnerait pas suite,grammalecte,MPL-2.0,renoncer
+renonceras,fr,10,1512,0.94188935,Ne donneras pas suite,grammalecte,MPL-2.0,renoncer
+renoncerez,fr,10,6221,0.9388605,Ne donnerez pas suite,grammalecte,MPL-2.0,renoncer
+renonceriez,fr,11,2617,0.95103925,Ne donneriez pas suite,grammalecte,MPL-2.0,renoncer
+renoncerons,fr,11,13311,0.94762623,Ne donnerons pas suite,grammalecte,MPL-2.0,renoncer
+renonceront,fr,11,40600,0.94446415,Ne donneront pas suite,grammalecte,MPL-2.0,renoncer
+renonces,fr,8,7797,0.91062826,Ne donnes pas suite,grammalecte,MPL-2.0,renoncer
+renoncez,fr,8,24201,0.90582395,Ne donnez pas suite,grammalecte,MPL-2.0,renoncer
+renonciez,fr,9,7336,0.92581695,Ne donniez pas suite,grammalecte,MPL-2.0,renoncer
+renoncions,fr,10,17807,0.9358715,Ne donnions pas suite,grammalecte,MPL-2.0,renoncer
+renoncèrent,fr,11,114103,0.94082195,Ne donnèrent pas suite,grammalecte,MPL-2.0,renoncer
+renoncé,fr,7,1784938,0.84737533,,grammalecte,MPL-2.0,renoncer
+renoncée,fr,8,3389,0.91346115,,grammalecte,MPL-2.0,renoncer
+renoncées,fr,9,944,0.93087196,,grammalecte,MPL-2.0,renoncer
+renoncés,fr,8,1596,0.91558385,,grammalecte,MPL-2.0,renoncer
+renonça,fr,7,447759,0.8649674,Ne donna pas suite,grammalecte,MPL-2.0,renoncer
+renonçai,fr,8,31358,0.9045299,Ne donnai pas suite,grammalecte,MPL-2.0,renoncer
+renonçaient,fr,11,76599,0.94233066,Ne donnaient pas suite,grammalecte,MPL-2.0,renoncer
+renonçais,fr,9,11138,0.9244468,Ne donnais pas suite,grammalecte,MPL-2.0,renoncer
+renonçait,fr,9,255071,0.90926087,Ne donnait pas suite,grammalecte,MPL-2.0,renoncer
+renonçant,fr,9,579445,0.90313804,Ne donnant pas suite,grammalecte,MPL-2.0,renoncer
+renonçasse,fr,10,1510,0.9418918,Ne donnasse pas suite,grammalecte,MPL-2.0,renoncer
+renonçasses,fr,11,52,0.95496696,Ne donnasses pas suite,grammalecte,MPL-2.0,renoncer
+renonçons,fr,9,38886,0.9195514,Ne donnons pas suite,grammalecte,MPL-2.0,renoncer
+renonçâmes,fr,10,4211,0.9398123,Ne donnâmes pas suite,grammalecte,MPL-2.0,renoncer
+renonçât,fr,8,61891,0.9009087,Ne donnât pas suite,grammalecte,MPL-2.0,renoncer
+renonçâtes,fr,10,165,0.9448724,Ne donnâtes pas suite,grammalecte,MPL-2.0,renoncer
 renoua,fr,6,27716,0.86481494,Lia de nouveau,grammalecte,MPL-2.0,renouer
 renouai,fr,7,1521,0.89892745,Liai de nouveau,grammalecte,MPL-2.0,renouer
 renouaient,fr,10,7449,0.9383919,Liaient de nouveau,grammalecte,MPL-2.0,renouer
@@ -35998,37 +35998,37 @@ ressuscitât,fr,11,4925,0.94986475,Ramenât à la vie,grammalecte,MPL-2.0,ressus
 ressuscité,fr,10,400839,0.92178005,Ramené à la vie,grammalecte,MPL-2.0,ressuscité
 ressuscitée,fr,11,54975,0.9434718,Ramenée à la vie,grammalecte,MPL-2.0,ressuscité
 ressuscités,fr,11,24081,0.9460358,Ramenés à la vie,grammalecte,MPL-2.0,ressusciter
-resta,fr,5,3824526,0.7718758,Ne pas partit,grammalecte,MPL-2.0,rester
-restai,fr,6,261366,0.84590137,Ne pas partis,grammalecte,MPL-2.0,rester
-restaient,fr,9,1649321,0.8931814,Ne pas partaient,grammalecte,MPL-2.0,rester
-restais,fr,7,127791,0.8763176,Ne pas partais,grammalecte,MPL-2.0,rester
-restait,fr,7,5750147,0.82678044,Ne pas partait,grammalecte,MPL-2.0,rester
-restant,fr,7,1599022,0.8491188,Ne pas partant,grammalecte,MPL-2.0,restant
-restas,fr,6,4507,0.8749435,Ne pas partis,grammalecte,MPL-2.0,rester
-restasse,fr,8,9437,0.90989333,Ne pas partisse,grammalecte,MPL-2.0,rester
-restassent,fr,10,79353,0.9302974,Ne pas partissent,grammalecte,MPL-2.0,rester
-restasses,fr,9,345,0.9325307,Ne pas partisses,grammalecte,MPL-2.0,rester
-restassiez,fr,10,1227,0.9422558,Ne pas partissiez,grammalecte,MPL-2.0,rester
-restassions,fr,11,1825,0.9516302,Ne pas partissions,grammalecte,MPL-2.0,rester
+resta,fr,5,3824526,0.7718758,Ne partit pas,grammalecte,MPL-2.0,rester
+restai,fr,6,261366,0.84590137,Ne partis pas,grammalecte,MPL-2.0,rester
+restaient,fr,9,1649321,0.8931814,Ne partaient pas,grammalecte,MPL-2.0,rester
+restais,fr,7,127791,0.8763176,Ne partais pas,grammalecte,MPL-2.0,rester
+restait,fr,7,5750147,0.82678044,Ne partait pas,grammalecte,MPL-2.0,rester
+restant,fr,7,1599022,0.8491188,Ne partant pas,grammalecte,MPL-2.0,restant
+restas,fr,6,4507,0.8749435,Ne partis pas,grammalecte,MPL-2.0,rester
+restasse,fr,8,9437,0.90989333,Ne partisse pas,grammalecte,MPL-2.0,rester
+restassent,fr,10,79353,0.9302974,Ne partissent pas,grammalecte,MPL-2.0,rester
+restasses,fr,9,345,0.9325307,Ne partisses pas,grammalecte,MPL-2.0,rester
+restassiez,fr,10,1227,0.9422558,Ne partissiez pas,grammalecte,MPL-2.0,rester
+restassions,fr,11,1825,0.9516302,Ne partissions pas,grammalecte,MPL-2.0,rester
 restaurants,fr,11,547405,0.93328977,,grammalecte,MPL-2.0,restaurant
-reste,fr,5,54585512,0.68852663,Ne pas part,grammalecte,MPL-2.0,reste
-restent,fr,7,8081109,0.819425,Ne pas partent,grammalecte,MPL-2.0,rester
+reste,fr,5,54585512,0.68852663,Ne part pas,grammalecte,MPL-2.0,reste
+restent,fr,7,8081109,0.819425,Ne partent pas,grammalecte,MPL-2.0,rester
 rester,fr,6,10301329,0.7812687,Ne pas partir,grammalecte,MPL-2.0,rester
-restera,fr,7,3477526,0.83642215,Ne pas partira,grammalecte,MPL-2.0,rester
-resterai,fr,8,158182,0.8949547,Ne pas partirai,grammalecte,MPL-2.0,rester
-resteraient,fr,11,396174,0.9350888,Ne pas partiraient,grammalecte,MPL-2.0,rester
-resterais,fr,9,42376,0.9191632,Ne pas partirais,grammalecte,MPL-2.0,rester
-resterait,fr,9,1449426,0.89463425,Ne pas partirait,grammalecte,MPL-2.0,rester
-resteras,fr,8,32800,0.90430194,Ne pas partiras,grammalecte,MPL-2.0,rester
-resterez,fr,8,68535,0.90031445,Ne pas partirez,grammalecte,MPL-2.0,rester
-resteriez,fr,9,9185,0.9250931,Ne pas partiriez,grammalecte,MPL-2.0,rester
-resterions,fr,10,25719,0.9346306,Ne pas partirions,grammalecte,MPL-2.0,rester
-resterons,fr,9,120026,0.9139248,Ne pas partirons,grammalecte,MPL-2.0,rester
-resteront,fr,9,1151290,0.8969592,Ne pas partiront,grammalecte,MPL-2.0,rester
-restes,fr,6,1693311,0.82058424,Ne pas pars,grammalecte,MPL-2.0,reste
-restez,fr,6,100177,0.85512567,Ne pas partez,grammalecte,MPL-2.0,rester
-restiez,fr,7,31679,0.88574815,Ne pas partiez,grammalecte,MPL-2.0,rester
-restions,fr,8,90973,0.898636,Ne pas partions,grammalecte,MPL-2.0,rester
+restera,fr,7,3477526,0.83642215,Ne partira pas,grammalecte,MPL-2.0,rester
+resterai,fr,8,158182,0.8949547,Ne partirai pas,grammalecte,MPL-2.0,rester
+resteraient,fr,11,396174,0.9350888,Ne partiraient pas,grammalecte,MPL-2.0,rester
+resterais,fr,9,42376,0.9191632,Ne partirais pas,grammalecte,MPL-2.0,rester
+resterait,fr,9,1449426,0.89463425,Ne partirait pas,grammalecte,MPL-2.0,rester
+resteras,fr,8,32800,0.90430194,Ne partiras pas,grammalecte,MPL-2.0,rester
+resterez,fr,8,68535,0.90031445,Ne partirez pas,grammalecte,MPL-2.0,rester
+resteriez,fr,9,9185,0.9250931,Ne partiriez pas,grammalecte,MPL-2.0,rester
+resterions,fr,10,25719,0.9346306,Ne partirions pas,grammalecte,MPL-2.0,rester
+resterons,fr,9,120026,0.9139248,Ne partirons pas,grammalecte,MPL-2.0,rester
+resteront,fr,9,1151290,0.8969592,Ne partiront pas,grammalecte,MPL-2.0,rester
+restes,fr,6,1693311,0.82058424,Ne pars pas,grammalecte,MPL-2.0,reste
+restez,fr,6,100177,0.85512567,Ne partez pas,grammalecte,MPL-2.0,rester
+restiez,fr,7,31679,0.88574815,Ne partiez pas,grammalecte,MPL-2.0,rester
+restions,fr,8,90973,0.898636,Ne partions pas,grammalecte,MPL-2.0,rester
 restitua,fr,8,55412,0.90152603,Rendit ce qui a été pris,grammalecte,MPL-2.0,restituer
 restituai,fr,9,1516,0.9299204,Rendis ce qui a été pris,grammalecte,MPL-2.0,restituer
 restituais,fr,10,1019,0.9425588,Rendais ce qui a été pris,grammalecte,MPL-2.0,restituer
@@ -36056,7 +36056,7 @@ restituée,fr,9,204564,0.9106995,,grammalecte,MPL-2.0,restituer
 restituées,fr,10,121872,0.92834026,,grammalecte,MPL-2.0,restituer
 restitués,fr,9,223575,0.9101449,,grammalecte,MPL-2.0,restituer
 resto,fr,5,89227,0.8296859,,grammalecte,MPL-2.0,resto
-restons,fr,7,176219,0.87369496,Ne pas partons,grammalecte,MPL-2.0,rester
+restons,fr,7,176219,0.87369496,Ne partons pas,grammalecte,MPL-2.0,rester
 restos,fr,6,17930,0.8676395,,grammalecte,MPL-2.0,resto
 restreigne,fr,10,27628,0.93438226,Limite,grammalecte,MPL-2.0,restreindre
 restreignez,fr,11,1960,0.951517,Limitez,grammalecte,MPL-2.0,restreindre
@@ -36074,14 +36074,14 @@ restrictif,fr,10,236425,0.9249166,Limitatif,grammalecte,MPL-2.0,restrictif
 restrictifs,fr,11,70822,0.942607,Limitatifs,grammalecte,MPL-2.0,restrictif
 restriction,fr,11,1944951,0.92445505,Limite,grammalecte,MPL-2.0,restriction
 restrictive,fr,11,545379,0.9333134,Limitative,grammalecte,MPL-2.0,restrictif
-restâmes,fr,8,117852,0.8969543,Ne pas partîmes,grammalecte,MPL-2.0,rester
-restât,fr,6,385353,0.8415883,Ne pas partît,grammalecte,MPL-2.0,rester
-restâtes,fr,8,930,0.91687477,Ne pas partîtes,grammalecte,MPL-2.0,rester
-restèrent,fr,9,1312047,0.8956963,Ne pas partirent,grammalecte,MPL-2.0,rester
-resté,fr,5,5043584,0.7650422,Ne pas parti,grammalecte,MPL-2.0,rester
-restée,fr,6,3134252,0.809349,Ne pas partie,grammalecte,MPL-2.0,rester
-restées,fr,7,1436668,0.8506808,Ne pas parties,grammalecte,MPL-2.0,rester
-restés,fr,6,2883987,0.81109446,Ne pas partis,grammalecte,MPL-2.0,rester
+restâmes,fr,8,117852,0.8969543,Ne partîmes pas,grammalecte,MPL-2.0,rester
+restât,fr,6,385353,0.8415883,Ne partît pas,grammalecte,MPL-2.0,rester
+restâtes,fr,8,930,0.91687477,Ne partîtes pas,grammalecte,MPL-2.0,rester
+restèrent,fr,9,1312047,0.8956963,Ne partirent pas,grammalecte,MPL-2.0,rester
+resté,fr,5,5043584,0.7650422,,grammalecte,MPL-2.0,rester
+restée,fr,6,3134252,0.809349,,grammalecte,MPL-2.0,rester
+restées,fr,7,1436668,0.8506808,,grammalecte,MPL-2.0,rester
+restés,fr,6,2883987,0.81109446,Ne partis pas,grammalecte,MPL-2.0,rester
 retarda,fr,7,87297,0.87921685,Recula,grammalecte,MPL-2.0,retarder
 retardai,fr,8,1475,0.9157826,Reculai,grammalecte,MPL-2.0,retarder
 retardaient,fr,11,33915,0.94501334,Reculaient,grammalecte,MPL-2.0,retarder
@@ -45254,27 +45254,27 @@ zéros,fr,5,105047,0.8280725,Points nuls,grammalecte,MPL-2.0,zéro
 élucidée,fr,8,91958,0.89857054,,grammalecte,MPL-2.0,élucider
 élucidées,fr,9,51315,0.9182811,,grammalecte,MPL-2.0,élucider
 élucidés,fr,8,45374,0.90263915,,grammalecte,MPL-2.0,élucider
-éluda,fr,5,38049,0.83719975,Ne pas affronta,grammalecte,MPL-2.0,éluder
-éludaient,fr,9,6519,0.9261768,Ne pas affrontaient,grammalecte,MPL-2.0,éluder
-éludait,fr,7,21747,0.8879108,Ne pas affrontait,grammalecte,MPL-2.0,éluder
-éludant,fr,7,30781,0.88592225,Ne pas affrontant,grammalecte,MPL-2.0,éluder
-éludassent,fr,10,355,0.9440405,Ne pas affrontassent,grammalecte,MPL-2.0,éluder
-élude,fr,5,372230,0.81355244,Ne pas affronte,grammalecte,MPL-2.0,éluder
-éludent,fr,7,23734,0.88743526,Ne pas affrontent,grammalecte,MPL-2.0,éluder
+éluda,fr,5,38049,0.83719975,N’affronta pas,grammalecte,MPL-2.0,éluder
+éludaient,fr,9,6519,0.9261768,N’affrontaient pas,grammalecte,MPL-2.0,éluder
+éludait,fr,7,21747,0.8879108,N’affrontait pas,grammalecte,MPL-2.0,éluder
+éludant,fr,7,30781,0.88592225,N’affrontant pas,grammalecte,MPL-2.0,éluder
+éludassent,fr,10,355,0.9440405,N’affrontassent pas,grammalecte,MPL-2.0,éluder
+élude,fr,5,372230,0.81355244,N’affronte pas,grammalecte,MPL-2.0,éluder
+éludent,fr,7,23734,0.88743526,N’affrontent pas,grammalecte,MPL-2.0,éluder
 éluder,fr,6,563621,0.8368982,Ne pas affronter,grammalecte,MPL-2.0,éluder
-éludera,fr,7,4931,0.89487565,Ne pas affrontera,grammalecte,MPL-2.0,éluder
-éluderai,fr,8,635,0.9176719,Ne pas affronterai,grammalecte,MPL-2.0,éluder
-éluderaient,fr,11,1098,0.9523734,Ne pas affronteraient,grammalecte,MPL-2.0,éluder
-éluderait,fr,9,3929,0.92763644,Ne pas affronterait,grammalecte,MPL-2.0,éluder
-éluderons,fr,9,1017,0.93072534,Ne pas affronterons,grammalecte,MPL-2.0,éluder
-éluderont,fr,9,1621,0.9297769,Ne pas affronteront,grammalecte,MPL-2.0,éluder
-éludes,fr,6,292020,0.8446929,Ne pas affrontes,grammalecte,MPL-2.0,éluder
-éludions,fr,8,9534,0.90985507,Ne pas affrontions,grammalecte,MPL-2.0,éluder
-éludèrent,fr,9,7357,0.925807,Ne pas affrontèrent,grammalecte,MPL-2.0,éluder
-éludé,fr,5,84716,0.83020055,Ne pas affronté,grammalecte,MPL-2.0,éluder
-éludée,fr,6,75792,0.85744786,Ne pas affrontée,grammalecte,MPL-2.0,éluder
-éludées,fr,7,38485,0.88461417,Ne pas affrontées,grammalecte,MPL-2.0,éluder
-éludés,fr,6,34301,0.86336213,Ne pas affrontés,grammalecte,MPL-2.0,éluder
+éludera,fr,7,4931,0.89487565,N’affrontera pas,grammalecte,MPL-2.0,éluder
+éluderai,fr,8,635,0.9176719,N’affronterai pas,grammalecte,MPL-2.0,éluder
+éluderaient,fr,11,1098,0.9523734,N’affronteraient pas,grammalecte,MPL-2.0,éluder
+éluderait,fr,9,3929,0.92763644,N’affronterait pas,grammalecte,MPL-2.0,éluder
+éluderons,fr,9,1017,0.93072534,N’affronterons pas,grammalecte,MPL-2.0,éluder
+éluderont,fr,9,1621,0.9297769,N’affronteront pas,grammalecte,MPL-2.0,éluder
+éludes,fr,6,292020,0.8446929,N’affrontes pas,grammalecte,MPL-2.0,éluder
+éludions,fr,8,9534,0.90985507,N’affrontions pas,grammalecte,MPL-2.0,éluder
+éludèrent,fr,9,7357,0.925807,N’affrontèrent pas,grammalecte,MPL-2.0,éluder
+éludé,fr,5,84716,0.83020055,,grammalecte,MPL-2.0,éluder
+éludée,fr,6,75792,0.85744786,,grammalecte,MPL-2.0,éluder
+éludées,fr,7,38485,0.88461417,,grammalecte,MPL-2.0,éluder
+éludés,fr,6,34301,0.86336213,,grammalecte,MPL-2.0,éluder
 élue,fr,4,263844,0.7861588,Choisie,grammalecte,MPL-2.0,élu
 élues,fr,5,86677,0.8299817,Choisies,grammalecte,MPL-2.0,élu
 élurent,fr,7,67186,0.8809991,Choisirent,grammalecte,MPL-2.0,élire
@@ -46840,7 +46840,7 @@ abréviateurs,fr,12,8194,,,grammalecte,MPL-2.0,abréviateur
 abréviations,fr,12,270258,,Mots raccourcis,grammalecte,MPL-2.0,abréviation
 abréviativement,fr,15,2411,,,grammalecte,MPL-2.0,abréviativement
 abréviatives,fr,12,3404,,,grammalecte,MPL-2.0,abréviatif
-absenteraient,fr,13,1831,,Ne pas se présenteraient,grammalecte,MPL-2.0,absenter
+absenteraient,fr,13,1831,,Ne se présenteraient pas,grammalecte,MPL-2.0,absenter
 absentéistes,fr,12,21386,,,grammalecte,MPL-2.0,absentéiste
 absolutisant,fr,12,2274,,,grammalecte,MPL-2.0,absolutiser
 absolutisation,fr,14,18613,,,grammalecte,MPL-2.0,absolutisation
@@ -49509,7 +49509,7 @@ avoisinantes,fr,12,201882,,Proches,grammalecte,MPL-2.0,avoisinant
 avoisineraient,fr,14,1116,,,grammalecte,MPL-2.0,avoisiner
 avoisinerait,fr,12,4980,,,grammalecte,MPL-2.0,avoisiner
 avoisineront,fr,12,1127,,,grammalecte,MPL-2.0,avoisiner
-avorteraient,fr,12,3662,,Ne pas aboutiraient,grammalecte,MPL-2.0,avorter
+avorteraient,fr,12,3662,,N’aboutiraient pas,grammalecte,MPL-2.0,avorter
 avunculaires,fr,12,1747,,,grammalecte,MPL-2.0,avunculaire
 axiologiquement,fr,15,8420,,,grammalecte,MPL-2.0,axiologiquement
 axiologiques,fr,12,37731,,,grammalecte,MPL-2.0,axiologique
@@ -57520,7 +57520,7 @@ espionnaient,fr,12,3062,,,grammalecte,MPL-2.0,espionner
 espiègleries,fr,12,23328,,,grammalecte,MPL-2.0,espièglerie
 espérantiste,fr,12,8220,,,grammalecte,MPL-2.0,espérantiste
 espérantistes,fr,13,7567,,,grammalecte,MPL-2.0,espérantiste
-espéreraient,fr,12,3716,,Ne pas désespéreraient,grammalecte,MPL-2.0,espérer
+espéreraient,fr,12,3716,,Ne désespéreraient pas,grammalecte,MPL-2.0,espérer
 esquilleuses,fr,12,1955,,,grammalecte,MPL-2.0,esquilleux
 esquissaient,fr,12,11472,,Traçaient,grammalecte,MPL-2.0,esquisser
 esquisserait,fr,12,1948,,Tracerait,grammalecte,MPL-2.0,esquisser
@@ -63002,18 +63002,18 @@ maillechorts,fr,12,1885,,,grammalecte,MPL-2.0,maillechort
 mainmortable,fr,12,12886,,,grammalecte,MPL-2.0,mainmortable
 mainmortables,fr,13,24785,,,grammalecte,MPL-2.0,mainmortable
 maintenabilité,fr,14,2879,,,grammalecte,MPL-2.0,maintenabilité
-maintenaient,fr,12,187028,,Ne pas cédaient,grammalecte,MPL-2.0,maintenir
+maintenaient,fr,12,187028,,Ne cédaient pas,grammalecte,MPL-2.0,maintenir
 maintenances,fr,12,3042,,Entretiens,grammalecte,MPL-2.0,maintenance
-maintiendrai,fr,12,23276,,Ne pas céderai,grammalecte,MPL-2.0,maintenir
-maintiendraient,fr,15,27427,,Ne pas céderaient,grammalecte,MPL-2.0,maintenir
-maintiendrais,fr,13,3221,,Ne pas céderais,grammalecte,MPL-2.0,maintenir
-maintiendrait,fr,13,109731,,Ne pas céderait,grammalecte,MPL-2.0,maintenir
-maintiendrez,fr,12,10129,,Ne pas céderez,grammalecte,MPL-2.0,maintenir
-maintiendrions,fr,14,2052,,Ne pas céderions,grammalecte,MPL-2.0,maintenir
-maintiendrons,fr,13,28232,,Ne pas céderons,grammalecte,MPL-2.0,maintenir
-maintiendront,fr,13,78603,,Ne pas céderont,grammalecte,MPL-2.0,maintenir
-maintiennent,fr,12,899643,,Ne pas cèdent,grammalecte,MPL-2.0,maintenir
-maintinssent,fr,12,5308,,Ne pas cédassent,grammalecte,MPL-2.0,maintenir
+maintiendrai,fr,12,23276,,Ne céderai pas,grammalecte,MPL-2.0,maintenir
+maintiendraient,fr,15,27427,,Ne céderaient pas,grammalecte,MPL-2.0,maintenir
+maintiendrais,fr,13,3221,,Ne céderais pas,grammalecte,MPL-2.0,maintenir
+maintiendrait,fr,13,109731,,Ne céderait pas,grammalecte,MPL-2.0,maintenir
+maintiendrez,fr,12,10129,,Ne céderez pas,grammalecte,MPL-2.0,maintenir
+maintiendrions,fr,14,2052,,Ne céderions pas,grammalecte,MPL-2.0,maintenir
+maintiendrons,fr,13,28232,,Ne céderons pas,grammalecte,MPL-2.0,maintenir
+maintiendront,fr,13,78603,,Ne céderont pas,grammalecte,MPL-2.0,maintenir
+maintiennent,fr,12,899643,,Ne cèdent pas,grammalecte,MPL-2.0,maintenir
+maintinssent,fr,12,5308,,Ne cédassent pas,grammalecte,MPL-2.0,maintenir
 maisonnettes,fr,12,88721,,,grammalecte,MPL-2.0,maisonnette
 majestueusement,fr,15,124826,,,grammalecte,MPL-2.0,majestueusement
 majestueuses,fr,12,103993,,Imposantes,grammalecte,MPL-2.0,majestueux
@@ -66035,17 +66035,17 @@ perquisitionnée,fr,15,1467,,,grammalecte,MPL-2.0,perquisitionné
 perquisitionnés,fr,15,2069,,,grammalecte,MPL-2.0,perquisitionné
 perquisitions,fr,13,235657,,,grammalecte,MPL-2.0,perquisition
 persanophones,fr,13,1969,,,grammalecte,MPL-2.0,persanophone
-persistaient,fr,12,115460,,Ne pas cédaient,grammalecte,MPL-2.0,persister
+persistaient,fr,12,115460,,Ne cédaient pas,grammalecte,MPL-2.0,persister
 persistances,fr,12,13397,,,grammalecte,MPL-2.0,persistance
 persistantes,fr,12,259554,,,grammalecte,MPL-2.0,persistant
-persistassent,fr,13,2984,,Ne pas cédassent,grammalecte,MPL-2.0,persister
-persisteraient,fr,14,17418,,Ne pas céderaient,grammalecte,MPL-2.0,persister
-persisterais,fr,12,1788,,Ne pas céderais,grammalecte,MPL-2.0,persister
-persisterait,fr,12,36997,,Ne pas céderait,grammalecte,MPL-2.0,persister
-persisterions,fr,13,1184,,Ne pas céderions,grammalecte,MPL-2.0,persister
-persisterons,fr,12,6276,,Ne pas céderons,grammalecte,MPL-2.0,persister
-persisteront,fr,12,29938,,Ne pas céderont,grammalecte,MPL-2.0,persister
-persistèrent,fr,12,94443,,Ne pas cédèrent,grammalecte,MPL-2.0,persister
+persistassent,fr,13,2984,,Ne cédassent pas,grammalecte,MPL-2.0,persister
+persisteraient,fr,14,17418,,Ne céderaient pas,grammalecte,MPL-2.0,persister
+persisterais,fr,12,1788,,Ne céderais pas,grammalecte,MPL-2.0,persister
+persisterait,fr,12,36997,,Ne céderait pas,grammalecte,MPL-2.0,persister
+persisterions,fr,13,1184,,Ne céderions pas,grammalecte,MPL-2.0,persister
+persisterons,fr,12,6276,,Ne céderons pas,grammalecte,MPL-2.0,persister
+persisteront,fr,12,29938,,Ne céderont pas,grammalecte,MPL-2.0,persister
+persistèrent,fr,12,94443,,Ne cédèrent pas,grammalecte,MPL-2.0,persister
 personnalisable,fr,15,2936,,,grammalecte,MPL-2.0,personnalisable
 personnalisait,fr,14,1139,,,grammalecte,MPL-2.0,personnaliser
 personnalisant,fr,14,8545,,,grammalecte,MPL-2.0,personnaliser
@@ -69494,7 +69494,7 @@ refroidissent,fr,13,71982,,Calment,grammalecte,MPL-2.0,refroidir
 refroidisseur,fr,13,23324,,,grammalecte,MPL-2.0,refroidisseur
 refroidisseurs,fr,14,12887,,,grammalecte,MPL-2.0,refroidisseur
 refroidissons,fr,13,1128,,Calmons,grammalecte,MPL-2.0,refroidir
-refuseraient,fr,12,142631,,Ne pas accepteraient,grammalecte,MPL-2.0,refuser
+refuseraient,fr,12,142631,,N’accepteraient pas,grammalecte,MPL-2.0,refuser
 regagneraient,fr,13,3535,,Reconquerraient,grammalecte,MPL-2.0,regagner
 regardassent,fr,12,11740,,Jetassent un œil,grammalecte,MPL-2.0,regarder
 regarderaient,fr,13,31905,,Jetteraient un œil,grammalecte,MPL-2.0,regarder
@@ -69538,8 +69538,8 @@ rejaillissait,fr,13,24814,,,grammalecte,MPL-2.0,rejaillir
 rejaillissant,fr,13,8538,,,grammalecte,MPL-2.0,rejaillir
 rejaillissement,fr,15,12876,,,grammalecte,MPL-2.0,rejaillissement
 rejaillissent,fr,13,26436,,,grammalecte,MPL-2.0,rejaillir
-rejetteraient,fr,13,12418,,Ne pas accepteraient,grammalecte,MPL-2.0,rejeter
-rejetterions,fr,12,3135,,Ne pas accepterions,grammalecte,MPL-2.0,rejeter
+rejetteraient,fr,13,12418,,N’accepteraient pas,grammalecte,MPL-2.0,rejeter
+rejetterions,fr,12,3135,,N’accepterions pas,grammalecte,MPL-2.0,rejeter
 rejoignaient,fr,12,92704,,,grammalecte,MPL-2.0,rejoindre
 rejoignirent,fr,12,115208,,,grammalecte,MPL-2.0,rejoindre
 rejoignissent,fr,13,2304,,,grammalecte,MPL-2.0,rejoindre
@@ -69736,13 +69736,13 @@ rengagements,fr,12,33497,,Prises de contact,grammalecte,MPL-2.0,rengagement
 rengorgeaient,fr,13,1227,,,grammalecte,MPL-2.0,rengorger
 reniflements,fr,12,5160,,,grammalecte,MPL-2.0,reniflement
 renoncements,fr,12,66928,,,grammalecte,MPL-2.0,renoncement
-renonceraient,fr,13,38902,,Ne pas donneraient suite,grammalecte,MPL-2.0,renoncer
-renoncerions,fr,12,5941,,Ne pas donnerions suite,grammalecte,MPL-2.0,renoncer
+renonceraient,fr,13,38902,,Ne donneraient pas suite,grammalecte,MPL-2.0,renoncer
+renoncerions,fr,12,5941,,Ne donnerions pas suite,grammalecte,MPL-2.0,renoncer
 renonciation,fr,12,1269606,,,grammalecte,MPL-2.0,renonciation
 renonciations,fr,13,109949,,,grammalecte,MPL-2.0,renonciation
 renonculacée,fr,12,1045,,,grammalecte,MPL-2.0,renonculacée
 renonculacées,fr,13,5570,,,grammalecte,MPL-2.0,renonculacée
-renonçassent,fr,12,14143,,Ne pas donnassent suite,grammalecte,MPL-2.0,renoncer
+renonçassent,fr,12,14143,,Ne donnassent pas suite,grammalecte,MPL-2.0,renoncer
 renormalisation,fr,15,8875,,,grammalecte,MPL-2.0,renormalisation
 renoueraient,fr,12,1264,,Lieraient de nouveau,grammalecte,MPL-2.0,renouer
 renouvelable,fr,12,253954,,,grammalecte,MPL-2.0,renouvelable
@@ -76047,30 +76047,30 @@ abréviatifs,fr,11,7391,,,grammalecte,MPL-2.0,abréviatif
 abréviative,fr,11,5735,,,grammalecte,MPL-2.0,abréviatif
 abréviatrice,fr,12,241,,,grammalecte,MPL-2.0,abréviateur
 abréviatrices,fr,13,61,,,grammalecte,MPL-2.0,abréviateur
-absentaient,fr,11,6136,,Ne pas se présentaient,grammalecte,MPL-2.0,absenter
-absentais,fr,9,1620,,Ne pas se présentais,grammalecte,MPL-2.0,absenter
-absentait,fr,9,20244,,Ne pas se présentait,grammalecte,MPL-2.0,absenter
-absentant,fr,9,8020,,Ne pas se présentant,grammalecte,MPL-2.0,absenter
-absentent,fr,9,23156,,Ne pas se présentent,grammalecte,MPL-2.0,absenter
+absentaient,fr,11,6136,,Ne se présentaient pas,grammalecte,MPL-2.0,absenter
+absentais,fr,9,1620,,Ne se présentais pas,grammalecte,MPL-2.0,absenter
+absentait,fr,9,20244,,Ne se présentait pas,grammalecte,MPL-2.0,absenter
+absentant,fr,9,8020,,Ne se présentant pas,grammalecte,MPL-2.0,absenter
+absentent,fr,9,23156,,Ne se présentent pas,grammalecte,MPL-2.0,absenter
 absenter,fr,8,212330,,Ne pas se présenter,grammalecte,MPL-2.0,absenter
-absentera,fr,9,4431,,Ne pas se présentera,grammalecte,MPL-2.0,absenter
-absenterai,fr,10,565,,Ne pas se présenterai,grammalecte,MPL-2.0,absenter
-absenterais,fr,11,152,,Ne pas se présenterais,grammalecte,MPL-2.0,absenter
-absenterait,fr,11,2390,,Ne pas se présenterait,grammalecte,MPL-2.0,absenter
-absenteras,fr,10,0,,Ne pas se présenteras,grammalecte,MPL-2.0,absenter
-absenterez,fr,10,148,,Ne pas se présenterez,grammalecte,MPL-2.0,absenter
-absenterons,fr,11,0,,Ne pas se présenterons,grammalecte,MPL-2.0,absenter
-absenteront,fr,11,3234,,Ne pas se présenteront,grammalecte,MPL-2.0,absenter
-absentez,fr,8,1758,,Ne pas se présentez,grammalecte,MPL-2.0,absenter
-absentiez,fr,9,421,,Ne pas se présentiez,grammalecte,MPL-2.0,absenter
-absentions,fr,10,1169,,Ne pas se présentions,grammalecte,MPL-2.0,absenter
-absentons,fr,9,206,,Ne pas se présentons,grammalecte,MPL-2.0,absenter
-absenté,fr,7,49740,,Ne pas se présenté,grammalecte,MPL-2.0,absenter
-absentée,fr,8,9595,,Ne pas se présentée,grammalecte,MPL-2.0,absenter
-absentées,fr,9,1911,,Ne pas se présentées,grammalecte,MPL-2.0,absenter
+absentera,fr,9,4431,,Ne se présentera pas,grammalecte,MPL-2.0,absenter
+absenterai,fr,10,565,,Ne se présenterai pas,grammalecte,MPL-2.0,absenter
+absenterais,fr,11,152,,Ne se présenterais pas,grammalecte,MPL-2.0,absenter
+absenterait,fr,11,2390,,Ne se présenterait pas,grammalecte,MPL-2.0,absenter
+absenteras,fr,10,0,,Ne se présenteras pas,grammalecte,MPL-2.0,absenter
+absenterez,fr,10,148,,Ne se présenterez pas,grammalecte,MPL-2.0,absenter
+absenterons,fr,11,0,,Ne se présenterons pas,grammalecte,MPL-2.0,absenter
+absenteront,fr,11,3234,,Ne se présenteront pas,grammalecte,MPL-2.0,absenter
+absentez,fr,8,1758,,Ne se présentez pas,grammalecte,MPL-2.0,absenter
+absentiez,fr,9,421,,Ne se présentiez pas,grammalecte,MPL-2.0,absenter
+absentions,fr,10,1169,,Ne se présentions pas,grammalecte,MPL-2.0,absenter
+absentons,fr,9,206,,Ne se présentons pas,grammalecte,MPL-2.0,absenter
+absenté,fr,7,49740,,,grammalecte,MPL-2.0,absenter
+absentée,fr,8,9595,,,grammalecte,MPL-2.0,absenter
+absentées,fr,9,1911,,,grammalecte,MPL-2.0,absenter
 absentéismes,fr,12,300,,,grammalecte,MPL-2.0,absentéisme
 absentéiste,fr,11,7988,,,grammalecte,MPL-2.0,absentéiste
-absentés,fr,8,17081,,Ne pas se présentés,grammalecte,MPL-2.0,absenter
+absentés,fr,8,17081,,,grammalecte,MPL-2.0,absenter
 absolutisaient,fr,14,0,,,grammalecte,MPL-2.0,absolutiser
 absolutisais,fr,12,0,,,grammalecte,MPL-2.0,absolutiser
 absolutisait,fr,12,163,,,grammalecte,MPL-2.0,absolutiser
@@ -79513,30 +79513,30 @@ avoisiné,fr,8,6168,,,grammalecte,MPL-2.0,avoisiner
 avoisinée,fr,9,2073,,,grammalecte,MPL-2.0,avoisiner
 avoisinées,fr,10,881,,,grammalecte,MPL-2.0,avoisiner
 avoisinés,fr,9,983,,,grammalecte,MPL-2.0,avoisiner
-avortaient,fr,10,3792,,Ne pas aboutissaient,grammalecte,MPL-2.0,avorter
-avortais,fr,8,2,,Ne pas aboutissais,grammalecte,MPL-2.0,avorter
-avortait,fr,8,5223,,Ne pas aboutissait,grammalecte,MPL-2.0,avorter
-avortant,fr,8,3479,,Ne pas aboutissant,grammalecte,MPL-2.0,avorter
-avorte,fr,6,26617,,Ne pas aboutit,grammalecte,MPL-2.0,avorter
-avortent,fr,8,42739,,Ne pas aboutissent,grammalecte,MPL-2.0,avorter
+avortaient,fr,10,3792,,N’aboutissaient pas,grammalecte,MPL-2.0,avorter
+avortais,fr,8,2,,N’aboutissais pas,grammalecte,MPL-2.0,avorter
+avortait,fr,8,5223,,N’aboutissait pas,grammalecte,MPL-2.0,avorter
+avortant,fr,8,3479,,N’aboutissant pas,grammalecte,MPL-2.0,avorter
+avorte,fr,6,26617,,N’aboutit pas,grammalecte,MPL-2.0,avorter
+avortent,fr,8,42739,,N’aboutissent pas,grammalecte,MPL-2.0,avorter
 avorter,fr,7,230402,,Ne pas aboutir,grammalecte,MPL-2.0,avorter
-avortera,fr,8,4819,,Ne pas aboutira,grammalecte,MPL-2.0,avorter
-avorterai,fr,9,0,,Ne pas aboutirai,grammalecte,MPL-2.0,avorter
-avorterais,fr,10,0,,Ne pas aboutirais,grammalecte,MPL-2.0,avorter
-avorterait,fr,10,2671,,Ne pas aboutirait,grammalecte,MPL-2.0,avorter
-avorteras,fr,9,0,,Ne pas aboutiras,grammalecte,MPL-2.0,avorter
-avorterez,fr,9,0,,Ne pas aboutirez,grammalecte,MPL-2.0,avorter
-avorterons,fr,10,0,,Ne pas aboutirons,grammalecte,MPL-2.0,avorter
-avorteront,fr,10,2197,,Ne pas aboutiront,grammalecte,MPL-2.0,avorter
-avortes,fr,7,653,,Ne pas aboutis,grammalecte,MPL-2.0,avorter
-avortez,fr,7,137,,Ne pas aboutissez,grammalecte,MPL-2.0,avorter
-avortiez,fr,8,0,,Ne pas aboutissiez,grammalecte,MPL-2.0,avorter
-avortions,fr,9,0,,Ne pas aboutissions,grammalecte,MPL-2.0,avorter
-avortons,fr,8,4422,,Ne pas aboutissons,grammalecte,MPL-2.0,avorter
-avorté,fr,6,149509,,Ne pas abouti,grammalecte,MPL-2.0,avorter
-avortée,fr,7,126774,,Ne pas aboutie,grammalecte,MPL-2.0,avorter
-avortées,fr,8,85500,,Ne pas abouties,grammalecte,MPL-2.0,avorter
-avortés,fr,7,58266,,Ne pas aboutis,grammalecte,MPL-2.0,avorter
+avortera,fr,8,4819,,N’aboutira pas,grammalecte,MPL-2.0,avorter
+avorterai,fr,9,0,,N’aboutirai pas,grammalecte,MPL-2.0,avorter
+avorterais,fr,10,0,,N’aboutirais pas,grammalecte,MPL-2.0,avorter
+avorterait,fr,10,2671,,N’aboutirait pas,grammalecte,MPL-2.0,avorter
+avorteras,fr,9,0,,N’aboutiras pas,grammalecte,MPL-2.0,avorter
+avorterez,fr,9,0,,N’aboutirez pas,grammalecte,MPL-2.0,avorter
+avorterons,fr,10,0,,N’aboutirons pas,grammalecte,MPL-2.0,avorter
+avorteront,fr,10,2197,,N’aboutiront pas,grammalecte,MPL-2.0,avorter
+avortes,fr,7,653,,N’aboutis pas,grammalecte,MPL-2.0,avorter
+avortez,fr,7,137,,N’aboutissez pas,grammalecte,MPL-2.0,avorter
+avortiez,fr,8,0,,N’aboutissiez pas,grammalecte,MPL-2.0,avorter
+avortions,fr,9,0,,N’aboutissions pas,grammalecte,MPL-2.0,avorter
+avortons,fr,8,4422,,N’aboutissons pas,grammalecte,MPL-2.0,avorter
+avorté,fr,6,149509,,,grammalecte,MPL-2.0,avorter
+avortée,fr,7,126774,,,grammalecte,MPL-2.0,avorter
+avortées,fr,8,85500,,,grammalecte,MPL-2.0,avorter
+avortés,fr,7,58266,,N’aboutis pas,grammalecte,MPL-2.0,avorter
 avrils,fr,6,1951,,,grammalecte,MPL-2.0,avril
 avunculaire,fr,11,6072,,,grammalecte,MPL-2.0,avunculaire
 avèrerai,fr,8,0,,Confirmerai,grammalecte,MPL-2.0,avérer
@@ -80368,9 +80368,9 @@ bouchère,fr,8,17213,,,grammalecte,MPL-2.0,boucher
 bouchères,fr,9,4717,,,grammalecte,MPL-2.0,boucher
 bouffissure,fr,11,34437,,,grammalecte,MPL-2.0,bouffissure
 bougiez,fr,7,1031,,Se mettiez en mouvement,grammalecte,MPL-2.0,bouger
-bougée,fr,6,1402,,Ne pas restée en place,grammalecte,MPL-2.0,bouger
-bougées,fr,7,860,,Ne pas restées en place,grammalecte,MPL-2.0,bouger
-bougés,fr,6,1793,,Ne pas restés en place,grammalecte,MPL-2.0,bouger
+bougée,fr,6,1402,,,grammalecte,MPL-2.0,bouger
+bougées,fr,7,860,,,grammalecte,MPL-2.0,bouger
+bougés,fr,6,1793,,,grammalecte,MPL-2.0,bouger
 bouillabaisses,fr,14,945,,,grammalecte,MPL-2.0,bouillabaisse
 bouillez,fr,8,174,,,grammalecte,MPL-2.0,bouillir
 bouilliez,fr,9,2,,,grammalecte,MPL-2.0,bouillir
@@ -93759,13 +93759,13 @@ espionnée,fr,9,3104,,,grammalecte,MPL-2.0,espionner
 espionnées,fr,10,802,,,grammalecte,MPL-2.0,espionner
 espionnés,fr,9,4468,,,grammalecte,MPL-2.0,espionner
 espièglerie,fr,11,39356,,,grammalecte,MPL-2.0,espièglerie
-espèrera,fr,8,414,,Ne pas désespérera,grammalecte,MPL-2.0,espérer
-espèrerai,fr,9,2,,Ne pas désespérerai,grammalecte,MPL-2.0,espérer
-espèreraient,fr,12,130,,Ne pas désespéreraient,grammalecte,MPL-2.0,espérer
-espèreras,fr,9,1,,Ne pas désespéreras,grammalecte,MPL-2.0,espérer
-espèrerez,fr,9,0,,Ne pas désespérerez,grammalecte,MPL-2.0,espérer
-espèrerons,fr,10,0,,Ne pas désespérerons,grammalecte,MPL-2.0,espérer
-espéreras,fr,9,109,,Ne pas désespéreras,grammalecte,MPL-2.0,espérer
+espèrera,fr,8,414,,Ne désespérera pas,grammalecte,MPL-2.0,espérer
+espèrerai,fr,9,2,,Ne désespérerai pas,grammalecte,MPL-2.0,espérer
+espèreraient,fr,12,130,,Ne désespéreraient pas,grammalecte,MPL-2.0,espérer
+espèreras,fr,9,1,,Ne désespéreras pas,grammalecte,MPL-2.0,espérer
+espèrerez,fr,9,0,,Ne désespérerez pas,grammalecte,MPL-2.0,espérer
+espèrerons,fr,10,0,,Ne désespérerons pas,grammalecte,MPL-2.0,espérer
+espéreras,fr,9,109,,Ne désespéreras pas,grammalecte,MPL-2.0,espérer
 esquilleuse,fr,11,13309,,,grammalecte,MPL-2.0,esquilleux
 esquilleux,fr,10,4823,,,grammalecte,MPL-2.0,esquilleux
 esquisseraient,fr,14,329,,Traceraient,grammalecte,MPL-2.0,esquisser
@@ -100533,7 +100533,7 @@ maigrissons,fr,11,174,,Perdons du poids,grammalecte,MPL-2.0,maigrir
 maillechort,fr,11,29208,,,grammalecte,MPL-2.0,maillechort
 maintenabilités,fr,15,0,,,grammalecte,MPL-2.0,maintenabilité
 maintenance,fr,11,552534,,Entretien,grammalecte,MPL-2.0,maintenance
-maintiendras,fr,12,716,,Ne pas céderas,grammalecte,MPL-2.0,maintenir
+maintiendras,fr,12,716,,Ne céderas pas,grammalecte,MPL-2.0,maintenir
 maisonnette,fr,11,139023,,,grammalecte,MPL-2.0,maisonnette
 majoritaire,fr,11,854132,,Prépondérant,grammalecte,MPL-2.0,majoritaire
 malabsorptions,fr,14,782,,,grammalecte,MPL-2.0,malabsorption
@@ -102100,11 +102100,11 @@ méditerrané,fr,11,835,,,grammalecte,MPL-2.0,méditerrané
 méditerranés,fr,12,717,,,grammalecte,MPL-2.0,méditerrané
 médiumnique,fr,11,12232,,,grammalecte,MPL-2.0,médiumnique
 médiévalismes,fr,13,0,,,grammalecte,MPL-2.0,médiévalisme
-méfieras,fr,8,206,,Ne pas feras confiance,grammalecte,MPL-2.0,méfier
-méfierez,fr,8,378,,Ne pas ferez confiance,grammalecte,MPL-2.0,méfier
-méfies,fr,6,2282,,Ne pas fais confiance,grammalecte,MPL-2.0,méfier
-méfiiez,fr,7,196,,Ne pas faisiez confiance,grammalecte,MPL-2.0,méfier
-méfiées,fr,7,1211,,Ne pas faites confiance,grammalecte,MPL-2.0,méfier
+méfieras,fr,8,206,,Ne feras pas confiance,grammalecte,MPL-2.0,méfier
+méfierez,fr,8,378,,Ne ferez pas confiance,grammalecte,MPL-2.0,méfier
+méfies,fr,6,2282,,Ne fais pas confiance,grammalecte,MPL-2.0,méfier
+méfiiez,fr,7,196,,Ne faisiez pas confiance,grammalecte,MPL-2.0,méfier
+méfiées,fr,7,1211,,Ne faites pas confiance,grammalecte,MPL-2.0,méfier
 mégaampère,fr,10,2,,Unité de courant,grammalecte,MPL-2.0,ampère
 mégaampères,fr,11,2,,Unités de courant,grammalecte,MPL-2.0,ampère
 mégacalorie,fr,11,158,,Unité d’énergie,grammalecte,MPL-2.0,calorie
@@ -108736,30 +108736,30 @@ rejaillissais,fr,13,0,,,grammalecte,MPL-2.0,rejaillir
 rejaillisse,fr,11,4316,,,grammalecte,MPL-2.0,rejaillir
 rejaillissez,fr,12,0,,,grammalecte,MPL-2.0,rejaillir
 rejaillissons,fr,13,0,,,grammalecte,MPL-2.0,rejaillir
-rejetaient,fr,10,113600,,Ne pas acceptaient,grammalecte,MPL-2.0,rejeter
-rejetais,fr,8,7433,,Ne pas acceptais,grammalecte,MPL-2.0,rejeter
-rejetait,fr,8,274381,,Ne pas acceptait,grammalecte,MPL-2.0,rejeter
-rejetant,fr,8,598410,,Ne pas acceptant,grammalecte,MPL-2.0,rejeter
+rejetaient,fr,10,113600,,N’acceptaient pas,grammalecte,MPL-2.0,rejeter
+rejetais,fr,8,7433,,N’acceptais pas,grammalecte,MPL-2.0,rejeter
+rejetait,fr,8,274381,,N’acceptait pas,grammalecte,MPL-2.0,rejeter
+rejetant,fr,8,598410,,N’acceptant pas,grammalecte,MPL-2.0,rejeter
 rejeter,fr,7,2660308,,Ne pas accepter,grammalecte,MPL-2.0,rejeter
-rejetez,fr,7,21272,,Ne pas acceptez,grammalecte,MPL-2.0,rejeter
-rejetiez,fr,8,5500,,Ne pas acceptiez,grammalecte,MPL-2.0,rejeter
-rejetions,fr,9,12809,,Ne pas acceptions,grammalecte,MPL-2.0,rejeter
-rejetons,fr,8,122253,,Ne pas acceptons,grammalecte,MPL-2.0,rejeter
-rejette,fr,7,866670,,Ne pas accepte,grammalecte,MPL-2.0,rejeter
-rejettent,fr,9,518475,,Ne pas acceptent,grammalecte,MPL-2.0,rejeter
-rejettera,fr,9,69239,,Ne pas acceptera,grammalecte,MPL-2.0,rejeter
-rejetterai,fr,10,5463,,Ne pas accepterai,grammalecte,MPL-2.0,rejeter
-rejetterais,fr,11,8364,,Ne pas accepterais,grammalecte,MPL-2.0,rejeter
-rejetterait,fr,11,42961,,Ne pas accepterait,grammalecte,MPL-2.0,rejeter
-rejetteras,fr,10,783,,Ne pas accepteras,grammalecte,MPL-2.0,rejeter
-rejetterez,fr,10,7366,,Ne pas accepterez,grammalecte,MPL-2.0,rejeter
-rejetterons,fr,11,9076,,Ne pas accepterons,grammalecte,MPL-2.0,rejeter
-rejetteront,fr,11,20056,,Ne pas accepteront,grammalecte,MPL-2.0,rejeter
-rejettes,fr,8,8867,,Ne pas acceptes,grammalecte,MPL-2.0,rejeter
-rejeté,fr,6,1984024,,Ne pas accepté,grammalecte,MPL-2.0,rejeter
-rejetée,fr,7,1149984,,Ne pas acceptée,grammalecte,MPL-2.0,rejeter
-rejetées,fr,8,461038,,Ne pas acceptées,grammalecte,MPL-2.0,rejeter
-rejetés,fr,7,548776,,Ne pas acceptés,grammalecte,MPL-2.0,rejeter
+rejetez,fr,7,21272,,N’acceptez pas,grammalecte,MPL-2.0,rejeter
+rejetiez,fr,8,5500,,N’acceptiez pas,grammalecte,MPL-2.0,rejeter
+rejetions,fr,9,12809,,N’acceptions pas,grammalecte,MPL-2.0,rejeter
+rejetons,fr,8,122253,,N’acceptons pas,grammalecte,MPL-2.0,rejeter
+rejette,fr,7,866670,,N’accepte pas,grammalecte,MPL-2.0,rejeter
+rejettent,fr,9,518475,,N’acceptent pas,grammalecte,MPL-2.0,rejeter
+rejettera,fr,9,69239,,N’acceptera pas,grammalecte,MPL-2.0,rejeter
+rejetterai,fr,10,5463,,N’accepterai pas,grammalecte,MPL-2.0,rejeter
+rejetterais,fr,11,8364,,N’accepterais pas,grammalecte,MPL-2.0,rejeter
+rejetterait,fr,11,42961,,N’accepterait pas,grammalecte,MPL-2.0,rejeter
+rejetteras,fr,10,783,,N’accepteras pas,grammalecte,MPL-2.0,rejeter
+rejetterez,fr,10,7366,,N’accepterez pas,grammalecte,MPL-2.0,rejeter
+rejetterons,fr,11,9076,,N’accepterons pas,grammalecte,MPL-2.0,rejeter
+rejetteront,fr,11,20056,,N’accepteront pas,grammalecte,MPL-2.0,rejeter
+rejettes,fr,8,8867,,N’acceptes pas,grammalecte,MPL-2.0,rejeter
+rejeté,fr,6,1984024,,,grammalecte,MPL-2.0,rejeter
+rejetée,fr,7,1149984,,,grammalecte,MPL-2.0,rejeter
+rejetées,fr,8,461038,,,grammalecte,MPL-2.0,rejeter
+rejetés,fr,7,548776,,,grammalecte,MPL-2.0,rejeter
 rejointoie,fr,10,95,,,grammalecte,MPL-2.0,rejointoyer
 rejointoient,fr,12,0,,,grammalecte,MPL-2.0,rejointoyer
 rejointoiera,fr,12,0,,,grammalecte,MPL-2.0,rejointoyer
@@ -118207,13 +118207,13 @@ zèles,fr,5,5334,,Ardeurs,grammalecte,MPL-2.0,zèle
 élucides,fr,8,220,,Résous un mystère,grammalecte,MPL-2.0,élucider
 élucidez,fr,8,75,,Résolvez un mystère,grammalecte,MPL-2.0,élucider
 élucidiez,fr,9,0,,Résolviez un mystère,grammalecte,MPL-2.0,élucider
-éludais,fr,7,672,,Ne pas affrontais,grammalecte,MPL-2.0,éluder
-éluderais,fr,9,0,,Ne pas affronterais,grammalecte,MPL-2.0,éluder
-éluderas,fr,8,3,,Ne pas affronteras,grammalecte,MPL-2.0,éluder
-éluderez,fr,8,284,,Ne pas affronterez,grammalecte,MPL-2.0,éluder
-éludez,fr,6,957,,Ne pas affrontez,grammalecte,MPL-2.0,éluder
-éludiez,fr,7,1050,,Ne pas affrontiez,grammalecte,MPL-2.0,éluder
-éludons,fr,7,792,,Ne pas affrontons,grammalecte,MPL-2.0,éluder
+éludais,fr,7,672,,N’affrontais pas,grammalecte,MPL-2.0,éluder
+éluderais,fr,9,0,,N’affronterais pas,grammalecte,MPL-2.0,éluder
+éluderas,fr,8,3,,N’affronteras pas,grammalecte,MPL-2.0,éluder
+éluderez,fr,8,284,,N’affronterez pas,grammalecte,MPL-2.0,éluder
+éludez,fr,6,957,,N’affrontez pas,grammalecte,MPL-2.0,éluder
+éludiez,fr,7,1050,,N’affrontiez pas,grammalecte,MPL-2.0,éluder
+éludons,fr,7,792,,N’affrontons pas,grammalecte,MPL-2.0,éluder
 éléphanteau,fr,11,3124,,,grammalecte,MPL-2.0,éléphanteau
 émanais,fr,7,0,,Se dégageais,grammalecte,MPL-2.0,émaner
 émancipais,fr,10,2,,Affranchissais légalement,grammalecte,MPL-2.0,émanciper
