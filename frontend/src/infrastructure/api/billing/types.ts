@@ -15,11 +15,14 @@ export interface paths {
         put?: never;
         /**
          * Start a hosted provider checkout session.
-         * @description Creates a provider checkout session for the requested `tier` and
-         *     returns the hosted-checkout redirect plus the success / cancel return
-         *     URLs. The caller is identified by the `__Secure-ws_session` cookie;
-         *     `userId` is resolved server-side and is NEVER read from the request
-         *     body (no subscribe-as-another-user / IDOR, ADR-0078 threat model).
+         * @description Creates a provider checkout session for the requested `tier` at the
+         *     chosen billing `cadence` (`monthly` — 2 €/mois — or `yearly` —
+         *     20 €/an, ADR-0080) and returns the hosted-checkout redirect plus the
+         *     success / cancel return URLs. The client picks only the cadence; the
+         *     price and provider billing interval are resolved server-side from it.
+         *     The caller is identified by the `__Secure-ws_session` cookie; `userId`
+         *     is resolved server-side and is NEVER read from the request body (no
+         *     subscribe-as-another-user / IDOR, ADR-0078 threat model).
          *
          *     No card data crosses this surface — the returned `checkoutUrl` is the
          *     provider's hosted page (PCI SAQ A).
@@ -124,9 +127,10 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * @description Request body for `POST /v1/checkout-session`. Carries only the target
-         *     `tier`; `userId` is session-derived and intentionally NOT part of the
-         *     body (ADR-0078 threat model).
+         * @description Request body for `POST /v1/checkout-session`. Carries the target `tier`
+         *     and, optionally, the billing `cadence` (monthly or yearly); `userId` is
+         *     session-derived and intentionally NOT part of the body (ADR-0078 threat
+         *     model).
          */
         CheckoutSessionRequest: {
             /**
@@ -136,6 +140,20 @@ export interface components {
              * @example supporter
              */
             tier: string;
+            /**
+             * @description Billing cadence the caller chose: `monthly` or `yearly` (ADR-0080,
+             *     2 €/mois · 20 €/an). The client picks only the cadence, never the
+             *     amount — the concrete price and the provider billing interval are
+             *     selected server-side from the cadence. Optional for this expand
+             *     phase (ADR-0078: no client-supplied amounts crossing this surface;
+             *     CLAUDE.md expand-and-contract): the frontend cadence-selection
+             *     consumer has not landed yet, so existing callers omit it and the
+             *     server defaults to `monthly`. Will move to `required` once that
+             *     consumer PR ships. An unknown value is rejected with a 400.
+             * @example monthly
+             * @enum {string}
+             */
+            cadence?: "monthly" | "yearly";
         };
         /**
          * @description Response body for `POST /v1/checkout-session` on a 201. The client
@@ -273,8 +291,9 @@ export interface operations {
                 };
             };
             /**
-             * @description Request is malformed — missing or unknown `tier`. RFC 7807 body;
-             *     `type` is `https://bliss.example/errors/invalid-checkout-request`.
+             * @description Request is malformed — missing or unknown `tier` or `cadence`.
+             *     RFC 7807 body; `type` is
+             *     `https://bliss.example/errors/invalid-checkout-request`.
              */
             400: {
                 headers: {
