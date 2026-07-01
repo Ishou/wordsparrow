@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
 
-// Discreet regen cooldown for the solo hint affordance (regen spec §D): a quiet ring that fills over the refill
-// interval, shown whenever the budget is below capacity; announced politely even though it reads as subtle.
+// Discreet regen cooldown for the solo hint affordance (regen spec §D).
 
 const containerStyles = css({
   display: 'inline-flex',
