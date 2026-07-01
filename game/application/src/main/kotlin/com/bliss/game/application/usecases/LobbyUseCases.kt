@@ -47,18 +47,9 @@ private suspend fun mintUniqueCode(repo: LobbyRepository): LobbyCode {
 }
 
 /**
- * Bootstraps a new lobby in WAITING with the calling player as owner.
- *
- * Host quota by tier (ADR-0083): a free player holds one open (WAITING) lobby keyed per
- * [UserId] — if [ownerUserId] already owns a WAITING lobby it is reopened with no event
- * and no new mint (frictionless dedup, subsuming the former per-session idempotency).
- * [hostUnlimited] (the `multiplayer:host-unlimited` capability, resolved at the api edge)
- * skips the dedup entirely so subscribers always mint. Guests never reach this use case —
- * the route rejects anonymous callers with 401 before taking the lock.
- *
- * TOCTOU: the dedup lookup is only race-free because the api edge calls this inside
- * `LobbyWriteCoordinator.withUserLock(ownerUserId)` — two concurrent creates for the same
- * user are serialized there, so they cannot both miss and mint two WAITING lobbies.
+ * Bootstraps a new lobby in WAITING with the calling player as owner. Host quota by tier
+ * (ADR-0083): [ownerUserId]'s existing WAITING lobby is reopened unless [hostUnlimited];
+ * race-freedom depends on the api edge calling this inside `withUserLock(ownerUserId)`.
  */
 class CreateLobbyUseCase(
     private val repo: LobbyRepository,
