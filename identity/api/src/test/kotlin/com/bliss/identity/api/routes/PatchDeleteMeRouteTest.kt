@@ -161,7 +161,7 @@ class PatchDeleteMeRouteTest {
                 client.patch("/v1/users/me") {
                     cookie(SessionCookies.NAME, sessionId.value.toString())
                     contentType(ContentType.Application.Json)
-                    setBody("""{"emailOptIn":true}""")
+                    setBody("""{}""")
                 }
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
             val body = response.bodyAsText()

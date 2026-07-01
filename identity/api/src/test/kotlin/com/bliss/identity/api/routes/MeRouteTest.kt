@@ -132,7 +132,6 @@ class MeRouteTest {
             val body = response.bodyAsText()
             assertThat(body).contains("\"provider\":\"google\"")
             assertThat(body).contains("\"linkedAt\":\"$linkedAt\"")
-            assertThat(body).contains("\"emailOptIn\":true")
             assertThat(body).doesNotContain("\"providers\":[]")
         }
 

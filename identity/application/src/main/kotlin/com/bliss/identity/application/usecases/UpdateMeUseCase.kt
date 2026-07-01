@@ -9,8 +9,6 @@ import com.bliss.identity.domain.user.UserId
 data class UpdateMeCommand(
     val userId: UserId,
     val displayName: String?,
-    /** Intentionally a no-op in v1 — storage model + OIDC re-prompt design deferred. */
-    val emailOptIn: Boolean? = null,
 )
 
 sealed class UpdateMeError(

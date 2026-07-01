@@ -20,7 +20,6 @@ data class GetMeQuery(
 data class LinkedProviderView(
     val provider: Provider,
     val linkedAt: Instant,
-    val emailOptIn: Boolean,
 )
 
 data class GetMeResult(
@@ -52,7 +51,6 @@ class GetMeUseCase(
                 LinkedProviderView(
                     provider = up.provider,
                     linkedAt = up.linkedAt,
-                    emailOptIn = up.emailAtLink != null,
                 )
             }
         val tier = subscriptions.find(query.userId)?.tier

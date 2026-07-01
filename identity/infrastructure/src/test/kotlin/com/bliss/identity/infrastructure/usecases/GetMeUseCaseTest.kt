@@ -65,44 +65,6 @@ class GetMeUseCaseTest {
         }
 
     @Test
-    fun `emailOptIn is true when emailAtLink is non-null`() =
-        runTest {
-            val (sut, users, providers) = newCase()
-            seedUser(users)
-            providers.link(
-                UserProvider(
-                    userId = userId,
-                    provider = Provider.GOOGLE,
-                    subject = Subject.of("google-sub"),
-                    emailAtLink = "alice@example.com",
-                    linkedAt = now,
-                ),
-            )
-            val result = sut.execute(GetMeQuery(userId))
-            assertThat(result.linkedProviders).hasSize(1)
-            assertThat(result.linkedProviders[0].emailOptIn).isEqualTo(true)
-        }
-
-    @Test
-    fun `emailOptIn is false when emailAtLink is null`() =
-        runTest {
-            val (sut, users, providers) = newCase()
-            seedUser(users)
-            providers.link(
-                UserProvider(
-                    userId = userId,
-                    provider = Provider.APPLE,
-                    subject = Subject.of("apple-sub"),
-                    emailAtLink = null,
-                    linkedAt = now,
-                ),
-            )
-            val result = sut.execute(GetMeQuery(userId))
-            assertThat(result.linkedProviders).hasSize(1)
-            assertThat(result.linkedProviders[0].emailOptIn).isEqualTo(false)
-        }
-
-    @Test
     fun `multiple linked providers are all returned`() =
         runTest {
             val (sut, users, providers) = newCase()

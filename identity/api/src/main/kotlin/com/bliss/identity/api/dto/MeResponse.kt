@@ -18,5 +18,4 @@ data class MeResponse(
 data class LinkedProviderDto(
     val provider: String,
     val linkedAt: String,
-    val emailOptIn: Boolean,
 )
