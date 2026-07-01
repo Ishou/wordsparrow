@@ -9,6 +9,8 @@ import type { LobbyClient } from '@/application/game';
 import type { Pseudonym, SessionId } from '@/domain/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Skeleton } from '@/design-system';
+import { useSubscriber } from '@/ui/components/billing';
+import { HomeTeaser } from '@/ui/v2/UpsellEntries';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { MobileTopBar } from '@/ui/v2/MobileTopBar';
 import { BottomNav } from '@/ui/v2/BottomNav';
@@ -134,6 +136,7 @@ const joinGo = css({ flex: 'none', width: '48px', height: '48px', borderRadius: 
 const joinErr = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '7px', textAlign: 'center' });
 
 const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px', lg: { marginTop: 0, paddingBottom: 0 } });
+const teaserWrap = css({ marginTop: '16px' });
 const prevLabel = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk', marginBottom: '12px', paddingLeft: '2px' });
 const prevCard = css({ bg: 'ws.sable', borderRadius: '18px', padding: '15px 10px', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
 const prevRow = css({ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' });
@@ -188,6 +191,7 @@ export function HomeScreen({
   readonly getSession?: () => HomeSession;
 }) {
   const navigate = useNavigate();
+  const subscriber = useSubscriber();
   const [streak, setStreak] = useState({ cur: 0, best: 0 });
   const [menuOpen, setMenuOpen] = useState(false);
   // The mini-game docks our on-screen keyboard over the bottom nav; hide the nav while it's up.
@@ -437,6 +441,11 @@ export function HomeScreen({
                 })}
               </div>
             </div>
+            {!subscriber ? (
+              <div className={teaserWrap}>
+                <HomeTeaser />
+              </div>
+            ) : null}
           </section>
           </div>
         </div>
