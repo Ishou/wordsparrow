@@ -57,8 +57,7 @@ class LobbyUseCasesTest {
             assertThat(result.value.gridConfig).isEqualTo(GridConfig(15, 12))
         }
 
-    // ADR-0083 free-player quota: a signed-in player who already owns a WAITING lobby reopens it
-    // (no new mint, no event) instead of spawning a second — the "1 open lobby" anti-spam limit.
+    // ADR-0083 free-player quota: reopens the owner's existing WAITING lobby instead of minting a second.
     @Test
     fun `CreateLobby reopens the free player's existing WAITING lobby keyed per userId`() =
         runTest {
@@ -71,8 +70,7 @@ class LobbyUseCasesTest {
             assertThat(second.events).hasSize(0)
         }
 
-    // The quota is per userId, not per session: the same signed-in user hosting from a fresh
-    // anonymous browser session still reopens their one WAITING lobby.
+    // ADR-0083: the quota is per userId, not per session — a fresh browser session still dedups.
     @Test
     fun `CreateLobby dedups per userId across different sessions`() =
         runTest {
@@ -98,8 +96,7 @@ class LobbyUseCasesTest {
             assertThat(second.events).hasSize(1)
         }
 
-    // ADR-0083 subscriber quota: the `multiplayer:host-unlimited` capability (threaded as
-    // hostUnlimited) skips the dedup, so every create mints a distinct WAITING lobby.
+    // ADR-0083 subscriber quota: `hostUnlimited` skips the dedup, so every create mints a distinct lobby.
     @Test
     fun `CreateLobby with hostUnlimited mints a distinct lobby on every call`() =
         runTest {

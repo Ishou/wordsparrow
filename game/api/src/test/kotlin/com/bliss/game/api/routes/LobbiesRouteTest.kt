@@ -264,8 +264,7 @@ class LobbiesRouteTest {
             assertThat(response.bodyAsText()).contains("auth-required")
         }
 
-    // ADR-0083 free-player quota: a second host reopens the same WAITING lobby, keyed per userId.
-    // Two distinct browser sessions for the same signed-in user still resolve to one lobby.
+    // ADR-0083 free-player quota: a second host from a distinct session reopens the same WAITING lobby, keyed per userId.
     @Test
     fun `POST twice for the same free player returns the same lobby (per-user dedup)`() =
         testApplicationWithVerifier(
@@ -296,8 +295,7 @@ class LobbiesRouteTest {
             assertThat(secondId).isEqualTo(firstId)
         }
 
-    // ADR-0083 subscriber quota: the `multiplayer:host-unlimited` capability bypasses the dedup,
-    // so each create mints a distinct lobby. Capability is read only from the server-side whoami.
+    // ADR-0083 subscriber quota: the `multiplayer:host-unlimited` capability (from server-side whoami) bypasses the dedup.
     @Test
     fun `POST twice for a subscriber mints a distinct lobby each time`() =
         testApplicationWithVerifier(

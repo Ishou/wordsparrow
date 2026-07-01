@@ -80,8 +80,7 @@ fun Route.lobbies(
                         "La création d'un salon nécessite une connexion.",
                     )
 
-            // Authed create: serialise against user.deleted under the user advisory lock; verifyFresh closes the stale-cache window.
-            // The per-user host quota (ADR-0083) is checked by createLobby INSIDE this same lock — see CreateLobbyUseCase (TOCTOU).
+            // Authed create runs inside withUserLock(userId); the host quota check happens inside that lock too (ADR-0083 TOCTOU).
             val lobby =
                 coordinator.withUserLock(whoAmI.userId) { _ ->
                     val fresh = cookieVerifier.verifyFresh(rawCookie)
