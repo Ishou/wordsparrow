@@ -30,3 +30,11 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   `validate-word` schema + `serviceToken` scheme + regenerated grid types. PR
   **#1242** opened, base = the ADR branch (stacked). spectral clean locally.
   State: OPEN. On P0 merge, retarget+rebase per procedure "Stacked-PR handling".
+- 2026-07-01 — **P0 MERGED.** #1241 §6a review "LGTM, no findings"; all gates
+  green; squash-merged. ADR-0084 confirmed on main.
+- 2026-07-01 — **P1 retargeted+rebased.** #1242 base → main;
+  `git rebase --onto origin/main` dropped the duplicated ADR commit; force-pushed
+  `feat/grid-validate-word-schema` (now a single schema commit on main). CI
+  re-running. Next: merge P1 on LGTM, then dispatch P2 (grid impl).
+- 2026-07-01 — **Autonomous cron armed.** Ticks every ~6 min to drive P1→P5 per
+  the procedure. Standing authority + hard safety rules apply.
