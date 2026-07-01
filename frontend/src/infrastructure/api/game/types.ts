@@ -605,6 +605,11 @@ export interface components {
          */
         CreateLobbyRequest: {
             ownerSessionId: components["schemas"]["SessionId"];
+            /**
+             * @description Accepted for wire-compatibility but unused server-side (ADR-0083):
+             *     the authed create path derives the owner's display name from the
+             *     verified session instead.
+             */
             ownerPseudonym: components["schemas"]["Pseudonym"];
             /**
              * @description Optional human-friendly label for the lobby. Surfaced on the
@@ -723,13 +728,27 @@ export interface operations {
                 };
             };
             /**
-             * @description Request body is malformed. RFC 7807. Variants:
+             * @description Request body is malformed. RFC 7807. Variant:
              *     - `ownerSessionId` is not a UUID v7
              *       (`type` = `https://bliss.example/errors/invalid-lobby-create-request`).
-             *     - `ownerPseudonym` violates length / whitespace rules
-             *       (same `type`).
              */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description Hosting requires a signed-in player (ADR-0083). An anonymous
+             *     `POST /v1/lobbies` (no `__Secure-ws_session` cookie, or a
+             *     session that was revoked between the cached and fresh whoami
+             *     lookups) is rejected — guests get zero lobbies. Joining a
+             *     lobby via link/code stays open to everyone. RFC 7807;
+             *     `type` is `https://bliss.example/errors/auth-required`.
+             */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 private data class WhoAmIResponse(
     val userId: String,
     val displayName: String,
+    val capabilities: List<String> = emptyList(),
 )
 
 /** Calls identity-api whoami; caches 200 (authed) and 401 (anon) for [cacheTtl]; fails closed on 5xx/transport/parse errors. */
@@ -84,7 +85,8 @@ class HttpCookieVerifier(
                 HttpStatusCode.OK -> {
                     val body = response.body<String>()
                     val parsed = json.decodeFromString(WhoAmIResponse.serializer(), body)
-                    val result = WhoAmI(UserId(parsed.userId), Pseudonym.of(parsed.displayName))
+                    // Absent capabilities => empty set; the host gate only denies, so a parse gap never escalates (ADR-0083, ADR-0079 §6).
+                    val result = WhoAmI(UserId(parsed.userId), Pseudonym.of(parsed.displayName), parsed.capabilities.toSet())
                     cache[cookie] = Entry(result, current.plus(cacheTtl))
                     result
                 }

@@ -19,7 +19,6 @@ import com.bliss.game.application.ports.LobbyRepository
 import com.bliss.game.application.usecases.CreateLobbyUseCase
 import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.LobbyId
-import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -42,10 +41,13 @@ private const val INVALID_LOBBY_CODE_TYPE = "https://bliss.example/errors/invali
 private const val LOBBY_NOT_FOUND_TYPE = "https://bliss.example/errors/lobby-not-found"
 private const val AUTH_REQUIRED_TYPE = "https://bliss.example/errors/auth-required"
 
+// Subscriber capability that lifts the one-open-lobby quota (ADR-0083); read only from the server-side whoami, never request input.
+private const val HOST_UNLIMITED_CAPABILITY = "multiplayer:host-unlimited"
+
 /**
  * `POST /v1/lobbies` + `GET /v1/lobbies/{lobbyId}`. The route owns DTO ↔
  * domain translation and HTTP status / RFC 7807 mapping. `IllegalArgumentException`s
- * thrown by domain value-class init blocks (Pseudonym, SessionId, LobbyId)
+ * thrown by domain value-class init blocks (SessionId, LobbyId)
  * are caught locally so the response carries a typed `type` URI; the
  * StatusPages catch-all in Module.kt is the safety net only.
  */
@@ -68,35 +70,33 @@ fun Route.lobbies(
                 runCatching { SessionId(request.ownerSessionId) }
                     .getOrElse { return@post call.respondInvalidCreate(it.message) }
             val rawCookie = call.request.cookies[CookieNames.SESSION]
-            val whoAmI = cookieVerifier.verify(rawCookie)
+            // Hosting is gated (ADR-0083): guests get 0 lobbies. Reject anonymous callers before taking any lock.
+            val whoAmI =
+                cookieVerifier.verify(rawCookie)
+                    ?: return@post call.respondProblem(
+                        HttpStatusCode.Unauthorized,
+                        "Authentification requise",
+                        AUTH_REQUIRED_TYPE,
+                        "La création d'un salon nécessite une connexion.",
+                    )
 
+            // Authed create runs inside withUserLock(userId); the host quota check happens inside that lock too (ADR-0083 TOCTOU).
             val lobby =
-                if (whoAmI != null) {
-                    // Authed create: serialise against user.deleted under the user advisory lock; verifyFresh closes the stale-cache window.
-                    val result =
-                        coordinator.withUserLock(whoAmI.userId) { _ ->
-                            val fresh = cookieVerifier.verifyFresh(rawCookie)
-                            if (fresh == null || fresh.userId != whoAmI.userId) {
-                                null
-                            } else {
-                                createLobby(ownerSessionId, fresh.displayName, fresh.userId).value
-                            }
-                        }
-                    if (result == null) {
-                        return@post call.respondProblem(
-                            HttpStatusCode.Unauthorized,
-                            "Authentification requise",
-                            AUTH_REQUIRED_TYPE,
-                            "Votre session a été invalidée.",
-                        )
+                coordinator.withUserLock(whoAmI.userId) { _ ->
+                    val fresh = cookieVerifier.verifyFresh(rawCookie)
+                    if (fresh == null || fresh.userId != whoAmI.userId) {
+                        null
+                    } else {
+                        val hostUnlimited = HOST_UNLIMITED_CAPABILITY in fresh.capabilities
+                        createLobby(ownerSessionId, fresh.displayName, fresh.userId, hostUnlimited).value
                     }
-                    result
-                } else {
-                    val ownerPseudonym =
-                        runCatching { Pseudonym(request.ownerPseudonym) }
-                            .getOrElse { return@post call.respondInvalidCreate(it.message) }
-                    createLobby(ownerSessionId, ownerPseudonym, null).value
                 }
+                    ?: return@post call.respondProblem(
+                        HttpStatusCode.Unauthorized,
+                        "Authentification requise",
+                        AUTH_REQUIRED_TYPE,
+                        "Votre session a été invalidée.",
+                    )
 
             call.response.header(HttpHeaders.Location, "/v1/lobbies/${lobby.id.value}")
             // Newly-created lobby has no live WS sessions yet; presence is empty.

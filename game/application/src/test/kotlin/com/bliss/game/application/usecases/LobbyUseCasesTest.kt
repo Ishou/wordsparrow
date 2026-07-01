@@ -17,6 +17,8 @@ import com.bliss.game.application.usecases.Samples.pPos
 import com.bliss.game.application.usecases.Samples.sessionA
 import com.bliss.game.application.usecases.Samples.sessionB
 import com.bliss.game.application.usecases.Samples.sessionC
+import com.bliss.game.application.usecases.Samples.userA
+import com.bliss.game.application.usecases.Samples.userB
 import com.bliss.game.domain.GridConfig
 import com.bliss.game.domain.Letter
 import com.bliss.game.domain.Lobby
@@ -25,6 +27,7 @@ import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
+import com.bliss.game.domain.UserId
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -54,16 +57,26 @@ class LobbyUseCasesTest {
             assertThat(result.value.gridConfig).isEqualTo(GridConfig(15, 12))
         }
 
-    // Repro for the "infinite lobbies" DOS path: clicking "Create" repeatedly on the home
-    // screen used to mint a fresh in-memory Lobby on every call. With idempotency the second
-    // call returns the existing lobby and emits no event.
+    // ADR-0083 free-player quota: reopens the owner's existing WAITING lobby instead of minting a second.
     @Test
-    fun `CreateLobby is idempotent for an owner with an existing WAITING lobby`() =
+    fun `CreateLobby reopens the free player's existing WAITING lobby keyed per userId`() =
         runTest {
             val h = harness()
-            val first = h.create(sessionA, alice)
+            val first = h.create(sessionA, alice, userA)
             h.clock.advance(Duration.ofSeconds(30))
-            val second = h.create(sessionA, alice)
+            val second = h.create(sessionA, alice, userA)
+
+            assertThat(second.value.id).isEqualTo(first.value.id)
+            assertThat(second.events).hasSize(0)
+        }
+
+    // ADR-0083: the quota is per userId, not per session — a fresh browser session still dedups.
+    @Test
+    fun `CreateLobby dedups per userId across different sessions`() =
+        runTest {
+            val h = harness()
+            val first = h.create(sessionA, alice, userA)
+            val second = h.create(sessionB, alice, userA)
 
             assertThat(second.value.id).isEqualTo(first.value.id)
             assertThat(second.events).hasSize(0)
@@ -75,21 +88,33 @@ class LobbyUseCasesTest {
     fun `CreateLobby mints a new lobby when the owner's previous lobby has left WAITING`() =
         runTest {
             val h = harness()
-            val first = h.create(sessionA, alice).value
+            val first = h.create(sessionA, alice, userA).value
             h.start(first.id, sessionA).requireSuccess()
-            val second = h.create(sessionA, alice)
+            val second = h.create(sessionA, alice, userA)
 
             assertThat(second.value.id).isNotEqualTo(first.id)
             assertThat(second.events).hasSize(1)
         }
 
-    // A lobby owned by a different session is NOT returned by the idempotency path.
+    // ADR-0083 subscriber quota: `hostUnlimited` skips the dedup, so every create mints a distinct lobby.
     @Test
-    fun `CreateLobby mints a new lobby for a different owner even if other lobbies exist`() =
+    fun `CreateLobby with hostUnlimited mints a distinct lobby on every call`() =
         runTest {
             val h = harness()
-            val a = h.create(sessionA, alice).value
-            val b = h.create(sessionB, bob)
+            val first = h.create(sessionA, alice, userA, hostUnlimited = true)
+            val second = h.create(sessionA, alice, userA, hostUnlimited = true)
+
+            assertThat(second.value.id).isNotEqualTo(first.value.id)
+            assertThat(second.events).hasSize(1)
+        }
+
+    // A lobby owned by a different user is NOT returned by the dedup path.
+    @Test
+    fun `CreateLobby mints a new lobby for a different user even if other lobbies exist`() =
+        runTest {
+            val h = harness()
+            val a = h.create(sessionA, alice, userA).value
+            val b = h.create(sessionB, bob, userB)
 
             assertThat(b.value.id).isNotEqualTo(a.id)
             assertThat(b.value.ownerSessionId).isEqualTo(sessionB)
@@ -580,7 +605,9 @@ internal class Harness(
     suspend fun create(
         s: SessionId,
         p: Pseudonym,
-    ) = create.invoke(s, p)
+        userId: UserId? = null,
+        hostUnlimited: Boolean = false,
+    ) = create.invoke(s, p, userId, hostUnlimited)
 
     /**
      * Convenience join — resolves the lobby's canonical code so the test

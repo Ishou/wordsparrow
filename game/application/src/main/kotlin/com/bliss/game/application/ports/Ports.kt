@@ -76,6 +76,15 @@ interface LobbyRepository {
     suspend fun findWaitingByOwnerSession(ownerSessionId: SessionId): Lobby?
 
     /**
+     * Returns the WAITING lobby whose owner seat is held by [userId], if one exists. Backs the
+     * ADR-0083 per-user host quota: a free player who already owns a WAITING lobby reopens it
+     * instead of minting a second. Keyed on the owner's userId (not sessionId) so the quota
+     * survives a new anonymous browser session for the same signed-in user. O(n) in the in-memory
+     * v1; the Postgres adapter joins `lobby_players.user_id` on the owner seat.
+     */
+    suspend fun findWaitingByOwnerUser(userId: UserId): Lobby?
+
+    /**
      * Returns WAITING lobbies whose [Lobby.lastActivityAt] is at or before [cutoff].
      * Consumed by the lobby garbage collector to evict abandoned lobbies. Snapshot —
      * callers must re-validate inside [mutate] (or [delete]) to avoid TOCTOU between

@@ -221,6 +221,36 @@ class PostgresLobbyRepositoryTest {
         }
 
     @Test
+    fun `findWaitingByOwnerUser returns the WAITING lobby whose owner seat holds the userId`() =
+        runTest {
+            val userId = UserId("11111111-1111-1111-1111-111111111111")
+            val lobby = waitingLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userId)
+            repo.save(lobby)
+
+            val loaded = repo.findWaitingByOwnerUser(userId)
+
+            assertThat(loaded).isEqualTo(lobby)
+        }
+
+    @Test
+    fun `findWaitingByOwnerUser returns null when no waiting lobby carries the userId`() =
+        runTest {
+            val userId = UserId("11111111-1111-1111-1111-111111111111")
+            repo.save(waitingLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = null))
+
+            assertThat(repo.findWaitingByOwnerUser(userId)).isNull()
+        }
+
+    @Test
+    fun `findWaitingByOwnerUser does not return IN_PROGRESS lobbies for the same user`() =
+        runTest {
+            val userId = UserId("11111111-1111-1111-1111-111111111111")
+            repo.save(inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userId))
+
+            assertThat(repo.findWaitingByOwnerUser(userId)).isNull()
+        }
+
+    @Test
     fun `findIdleWaiting returns waiting lobbies at or before the cutoff and excludes IN_PROGRESS`() =
         runTest {
             val idleWaiting =
@@ -793,9 +823,10 @@ class PostgresLobbyRepositoryTest {
     private fun waitingLobby(
         id: LobbyId,
         owner: SessionId = sessionA,
+        ownerUserId: UserId? = null,
         lastActivityAt: Instant = baseInstant,
     ): Lobby {
-        val ownerPlayer = Player(owner, Pseudonym("Alice"), baseInstant)
+        val ownerPlayer = Player(owner, Pseudonym("Alice"), baseInstant, userId = ownerUserId)
         return Lobby(
             id = id,
             ownerSessionId = owner,
@@ -812,8 +843,9 @@ class PostgresLobbyRepositoryTest {
     private fun inProgressLobby(
         id: LobbyId,
         owner: SessionId = sessionA,
+        ownerUserId: UserId? = null,
     ): Lobby {
-        val ownerPlayer = Player(owner, Pseudonym("Alice"), baseInstant)
+        val ownerPlayer = Player(owner, Pseudonym("Alice"), baseInstant, userId = ownerUserId)
         val puzzle = samplePuzzle()
         val entries =
             mapOf(

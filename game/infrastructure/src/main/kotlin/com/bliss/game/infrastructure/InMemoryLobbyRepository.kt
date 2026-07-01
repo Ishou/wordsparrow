@@ -72,6 +72,12 @@ class InMemoryLobbyRepository : LobbyRepository {
     override suspend fun findWaitingByOwnerSession(ownerSessionId: SessionId): Lobby? =
         store.values.firstOrNull { it.ownerSessionId == ownerSessionId && it.state == LobbyLifecycleState.WAITING }
 
+    // Owner seat's userId, not sessionId — the ADR-0083 quota is per signed-in user (see findWaitingByOwnerUser doc).
+    override suspend fun findWaitingByOwnerUser(userId: UserId): Lobby? =
+        store.values.firstOrNull {
+            it.state == LobbyLifecycleState.WAITING && it.players[it.ownerSessionId]?.userId == userId
+        }
+
     override suspend fun findIdleWaiting(cutoff: Instant): List<Lobby> =
         store.values.filter { it.state == LobbyLifecycleState.WAITING && !it.lastActivityAt.isAfter(cutoff) }
 

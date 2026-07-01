@@ -332,6 +332,25 @@ class PostgresLobbyRepository(
             }
         }
 
+    override suspend fun findWaitingByOwnerUser(userId: UserId): Lobby? =
+        withContext(Dispatchers.IO) {
+            ds.connection.use { conn ->
+                val id =
+                    conn
+                        .prepareStatement(
+                            "SELECT l.id FROM lobbies l " +
+                                "JOIN lobby_players lp ON lp.lobby_id = l.id AND lp.session_id = l.owner_session_id " +
+                                "WHERE l.state = 'WAITING' AND lp.user_id = ? LIMIT 1",
+                        ).use { ps ->
+                            ps.setObject(1, UUID.fromString(userId.value))
+                            ps.executeQuery().use { rs ->
+                                if (rs.next()) LobbyId(rs.getString("id")) else null
+                            }
+                        } ?: return@withContext null
+                loadLobby(conn, id)
+            }
+        }
+
     override suspend fun findIdleWaiting(cutoff: Instant): List<Lobby> =
         withContext(Dispatchers.IO) {
             ds.connection.use { conn ->
