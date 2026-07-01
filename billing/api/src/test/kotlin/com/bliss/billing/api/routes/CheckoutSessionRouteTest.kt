@@ -70,6 +70,36 @@ class CheckoutSessionRouteTest {
         }
 
     @Test
+    fun `session-derived email is passed through to the checkout use case`() =
+        testApplication {
+            val provider = FakeBillingProvider()
+            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()), email = "player@example.com")
+            val resp =
+                client.post("/v1/checkout-session") {
+                    cookie(SESSION_COOKIE_NAME, "valid")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"tier":"supporter"}""")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Created)
+            assertThat(provider.lastCheckoutEmail).isEqualTo("player@example.com")
+        }
+
+    @Test
+    fun `absent email still completes checkout`() =
+        testApplication {
+            val provider = FakeBillingProvider()
+            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()), email = null)
+            val resp =
+                client.post("/v1/checkout-session") {
+                    cookie(SESSION_COOKIE_NAME, "valid")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"tier":"supporter"}""")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Created)
+            assertThat(provider.lastCheckoutEmail).isEqualTo(null)
+        }
+
+    @Test
     fun `yearly cadence is forwarded to the use case`() =
         testApplication {
             val provider = FakeBillingProvider()
@@ -175,9 +205,10 @@ class CheckoutSessionRouteTest {
     private fun ApplicationTestBuilder.install(
         principal: SessionPrincipal?,
         useCase: CreateCheckoutSession,
+        email: String? = null,
     ) = application {
         install(SessionMiddleware) { verifySession = { principal } }
         install(ContentNegotiation) { json(WIRE_JSON) }
-        routing { checkoutSessionRoute(useCase) }
+        routing { checkoutSessionRoute(useCase) { email } }
     }
 }

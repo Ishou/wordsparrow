@@ -55,4 +55,39 @@ class IdentityClientTest {
             val engine = MockEngine { respond("", HttpStatusCode.OK) }
             assertThat(IdentityClient("https://auth.example", engine).verifySession(null)).isNull()
         }
+
+    @Test
+    fun `fetches the player email from me`() =
+        runTest {
+            val engine = MockEngine { respond("""{"email":"ada@example.com"}""", HttpStatusCode.OK, jsonHeaders) }
+            assertThat(IdentityClient("https://auth.example", engine).fetchEmail("cookie")).isEqualTo("ada@example.com")
+        }
+
+    @Test
+    fun `absent email field on me yields null`() =
+        runTest {
+            val engine = MockEngine { respond("""{"displayName":"Ada"}""", HttpStatusCode.OK, jsonHeaders) }
+            assertThat(IdentityClient("https://auth.example", engine).fetchEmail("cookie")).isNull()
+        }
+
+    @Test
+    fun `non-OK me yields null email`() =
+        runTest {
+            val engine = MockEngine { respond("", HttpStatusCode.Unauthorized) }
+            assertThat(IdentityClient("https://auth.example", engine).fetchEmail("cookie")).isNull()
+        }
+
+    @Test
+    fun `blank cookie short-circuits email to null`() =
+        runTest {
+            val engine = MockEngine { respond("", HttpStatusCode.OK) }
+            assertThat(IdentityClient("https://auth.example", engine).fetchEmail(null)).isNull()
+        }
+
+    @Test
+    fun `identity network fault yields null email instead of propagating`() =
+        runTest {
+            val engine = MockEngine { throw java.io.IOException("connection reset") }
+            assertThat(IdentityClient("https://auth.example", engine).fetchEmail("cookie")).isNull()
+        }
 }

@@ -260,6 +260,7 @@ class UserDeletedConsumerTest {
             userId: UUID,
             tier: Tier,
             cadence: Cadence,
+            email: String?,
         ): CheckoutUrls = error("unused")
 
         override suspend fun createSubscription(

@@ -5,6 +5,7 @@ class FakeMollieClient : MollieClient {
     var firstPayment: MolliePayment = MolliePayment("tr_first", "open", "https://checkout.test/1", "cust_created", null, emptyMap())
 
     val createdCustomers = mutableListOf<String>()
+    val createdCustomerEmails = mutableListOf<String?>()
     val payments = mutableMapOf<String, MolliePayment>()
     val subscriptions = mutableMapOf<String, MollieSubscription>()
     val cancelCalls = mutableListOf<Pair<String, String>>()
@@ -22,8 +23,12 @@ class FakeMollieClient : MollieClient {
     var lastSubscriptionAmount: String? = null
     var lastSubscriptionMetadata: Map<String, String> = emptyMap()
 
-    override suspend fun createCustomer(userReference: String): String {
+    override suspend fun createCustomer(
+        userReference: String,
+        email: String?,
+    ): String {
         createdCustomers.add(userReference)
+        createdCustomerEmails.add(email)
         return nextCustomerId
     }
 

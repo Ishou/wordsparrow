@@ -10,6 +10,8 @@ import com.bliss.billing.application.usecases.SubscriptionQuery
 // Hand-rolled DI graph; no framework injection.
 class Wiring(
     val verifySession: suspend (String) -> SessionPrincipal?,
+    // Session-derived player email for the Mollie customer; interim /me fetch until email rides on whoami/SessionPrincipal (ADR-0082).
+    val fetchEmail: suspend (String?) -> String?,
     val createCheckoutSession: CreateCheckoutSession,
     val cancelSubscription: CancelSubscription,
     val ingestProviderEvent: IngestProviderEvent,

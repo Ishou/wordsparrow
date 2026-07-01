@@ -24,13 +24,14 @@ class CreateCheckoutSession(
         userId: UUID,
         tier: Tier,
         cadence: Cadence,
+        email: String?,
     ): CreateCheckoutSessionOutcome {
         if (repository.findByUserId(userId)?.status?.isLive() == true) {
             return CreateCheckoutSessionOutcome.AlreadySubscribed
         }
         val urls =
             try {
-                provider.createCheckout(userId, tier, cadence)
+                provider.createCheckout(userId, tier, cadence, email)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

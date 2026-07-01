@@ -70,6 +70,7 @@ fun main() {
     val wiring =
         Wiring(
             verifySession = { cookie -> identityClient.verifySession(cookie) },
+            fetchEmail = { cookie -> identityClient.fetchEmail(cookie) },
             createCheckoutSession = CreateCheckoutSession(provider, subscriptions),
             cancelSubscription = CancelSubscription(provider, subscriptions, publisher, clock, eventIds),
             ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds),

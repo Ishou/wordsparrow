@@ -48,6 +48,19 @@ class IdentityClient(
         return SessionPrincipal(userId = userId, capabilities = body.capabilities?.toSet() ?: emptySet())
     }
 
+    // The verified player email from /me, passed through to the provider customer for receipts (ADR-0082); best-effort, null on any non-OK or network failure.
+    suspend fun fetchEmail(cookieValue: String?): String? {
+        if (cookieValue.isNullOrBlank()) return null
+        return runCatching {
+            val response =
+                client.get("$baseUrl/v1/users/me") {
+                    header(HttpHeaders.Cookie, "$SESSION_COOKIE_NAME=$cookieValue")
+                }
+            if (response.status != HttpStatusCode.OK) return@runCatching null
+            response.body<MeDto>().email
+        }.getOrNull()
+    }
+
     fun close() {
         client.close()
     }
@@ -58,4 +71,9 @@ internal data class WhoAmIDto(
     val userId: String,
     val displayName: String? = null,
     val capabilities: List<String>? = null,
+)
+
+@Serializable
+internal data class MeDto(
+    val email: String? = null,
 )

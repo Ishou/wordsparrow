@@ -37,13 +37,22 @@ class SdkMollieClient(
             .build(),
     )
 
-    override suspend fun createCustomer(userReference: String): String =
+    override suspend fun createCustomer(
+        userReference: String,
+        email: String?,
+    ): String =
         withContext(Dispatchers.IO) {
+            val customer =
+                EntityCustomer
+                    .builder()
+                    .metadata(metadataOf(userReference))
+                    .apply { email?.let { email(it) } }
+                    .build()
             val response =
                 sdk
                     .customers()
                     .create()
-                    .entityCustomer(EntityCustomer.builder().metadata(metadataOf(userReference)).build())
+                    .entityCustomer(customer)
                     .call()
             response.customerResponse().orElseThrow { IllegalStateException("Mollie returned no customer body") }.id()
         }
