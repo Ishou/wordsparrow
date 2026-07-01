@@ -20,8 +20,7 @@ import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger("com.bliss.identity.api.routes.AppleCallbackRoute")
 
-// Apple sends `user` (name + email JSON) only on first sign-in; we read email as a fallback for the
-// signed id_token email claim (ADR-0082). Unsigned, so it never overrides the verified token email.
+// Fallback: Apple's unsigned first-sign-in "user" field email, used only when the signed id_token omits email (ADR-0082).
 private fun parseAppleUserEmail(
     json: Json,
     raw: String,
