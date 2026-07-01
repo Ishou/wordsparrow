@@ -34,6 +34,23 @@ describe('useBackDismiss', () => {
     backSpy.mockRestore();
   });
 
+  it('does not pop the sentinel when a menu item navigated forward, even if the router keeps the flag in state', () => {
+    const onDismiss = vi.fn();
+    const backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+
+    const { rerender } = renderHook(({ active }) => useBackDismiss(active, onDismiss), {
+      initialProps: { active: true },
+    });
+    // A menu item navigated forward: the URL changed. The router may retain our sentinel
+    // flag in history.state, so a state-only check would wrongly pop and undo the navigation.
+    window.history.pushState({ __backDismiss: true }, '', '/reglages');
+    rerender({ active: false });
+
+    expect(backSpy).not.toHaveBeenCalled();
+    backSpy.mockRestore();
+    window.history.pushState({}, '', '/');
+  });
+
   it('does not double-pop history after Back already consumed the sentinel', () => {
     const onDismiss = vi.fn();
     const backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
