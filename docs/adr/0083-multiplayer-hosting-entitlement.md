@@ -55,6 +55,45 @@ independent of billing GA. **subscriber = unlimited** is dormant until
 subscriptions open to players; today only the maintainer holds the subscriber
 tier (billing is dark-launched, ADR-0078).
 
+## Threat model
+
+**Assets:** the lobby-create endpoint (`POST /v1/lobbies`), the per-user host
+quota, the `multiplayer:host-unlimited` capability.
+
+**Threat actors:** unauthenticated guests attempting to host anyway; authenticated
+players attempting to exceed the one-open-lobby quota; a caller attempting to
+claim the subscriber-only capability without holding it.
+
+**Attack vectors and mitigations:**
+
+- **Capability parse failure → privilege escalation:** game's `WhoAmI` gains
+  `capabilities` following the same shape as grid/survey/billing. An absent or
+  malformed `capabilities` field on identity's `whoami` response deserializes
+  to an empty set, so `multiplayer:host-unlimited` is never granted by a parse
+  gap — deny-only, matching ADR-0079 §6's posture.
+- **Quota-check TOCTOU:** the per-user "1 open lobby" check must not race a
+  concurrent create from the same user into minting two WAITING lobbies. game
+  already has the primitive for this: `LobbiesRoute`'s authed-create path runs
+  `createLobby(...)` inside `coordinator.withUserLock(whoAmI.userId) { ... }`
+  (`PostgresLobbyWriteCoordinator`, a `pg_advisory_xact_lock` per `userId`),
+  the same lock that today serializes create against the `user.deleted`
+  freshness check. The new `findWaitingByOwnerUser` lookup lands inside that
+  same lock scope — no new locking primitive, just the quota check moving
+  from `findWaitingByOwnerSession` to `findWaitingByOwnerUser` at a call site
+  already serialized per user. Guests are rejected with `401` before any lock
+  is taken, so there is no race to close on that path; subscribers mint
+  unconditionally and have no quota to race.
+- **Capability forgery/replay:** `multiplayer:host-unlimited` is read from the
+  session principal game fetches server-side from identity's `whoami`
+  (`HttpCookieVerifier`), never from client-supplied input. The existing 30 s
+  `cacheTtl` on that verifier (matching ADR-0079 §6) bounds how long a
+  downgraded subscriber can keep hosting past cancellation; the authed-create
+  path already calls `verifyFresh` to close the equivalent stale-cache window
+  for `user.deleted`, and capability checks ride the same fetch.
+
+**Out of scope:** identity authentication flows (ADR-0044, ADR-0060);
+subscription-tier billing/payment integrity (ADR-0078).
+
 ## Consequences
 - **Behavior change, live on ship:** signed-out players can no longer host — the
   most visible change. They keep full join access, so link-shared games still
