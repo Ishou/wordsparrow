@@ -9,7 +9,8 @@ export function useBackDismiss(active: boolean, onDismiss: () => void): void {
     if (!active || typeof window === 'undefined') return;
 
     let armed = true;
-    window.history.pushState({ __backDismiss: true }, '', window.location.href);
+    const sentinelHref = window.location.href;
+    window.history.pushState({ __backDismiss: true }, '', sentinelHref);
 
     const onPopState = () => {
       armed = false; // Back consumed our sentinel — dismiss rather than let navigation proceed.
@@ -19,8 +20,8 @@ export function useBackDismiss(active: boolean, onDismiss: () => void): void {
 
     return () => {
       window.removeEventListener('popstate', onPopState);
-      // UI-close (not Back): pop the sentinel to balance history, unless a forward link already replaced it.
-      if (armed && (window.history.state as { __backDismiss?: boolean } | null)?.__backDismiss) {
+      // UI-close: pop the sentinel to balance history, but only if still on it — a forward-navigating menu item changed the URL, and popping would undo that navigation.
+      if (armed && window.location.href === sentinelHref) {
         window.history.back();
       }
     };
