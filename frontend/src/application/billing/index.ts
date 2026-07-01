@@ -4,6 +4,8 @@ export type {
   BillingClient,
   BillingErrorKind,
   CheckoutSession,
+  Receipt,
+  ReceiptsPage,
   SubscriptionView,
 } from './BillingClient';
 export { BillingError } from './BillingClient';

@@ -11,6 +11,7 @@ import { BackHeader } from './BackHeader';
 import { EraseData } from './EraseData';
 import { SettingsRow } from './SettingsRow';
 import { AbonnementSection } from './AbonnementSection';
+import { ReceiptsSection } from './ReceiptsSection';
 
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 16px' });
 const stack = css({ display: 'flex', flexDirection: 'column', gap: '16px' });
@@ -164,6 +165,8 @@ function AuthedCompte() {
       {nameError ? <p className={errText} role="alert">{nameError}</p> : null}
 
       {billingClient ? <AbonnementSection client={billingClient} /> : null}
+
+      {billingClient ? <ReceiptsSection client={billingClient} /> : null}
 
       {progressSyncService ? (
         <nav aria-label="Progression">

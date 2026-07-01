@@ -11,6 +11,7 @@ function makeClient(getSubscription: BillingClient['getSubscription']): BillingC
     getSubscription,
     createCheckoutSession: vi.fn(),
     cancelSubscription: vi.fn(),
+    listReceipts: vi.fn().mockResolvedValue({ receipts: [], nextCursor: null }),
   };
 }
 
