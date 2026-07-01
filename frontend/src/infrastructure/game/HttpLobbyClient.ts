@@ -173,6 +173,7 @@ function liftProblem(error: WireProblem | undefined, response: Response): LobbyC
 }
 
 function statusToKind(status: number): LobbyClientErrorKind {
+  if (status === 401) return 'unauthorized';
   if (status === 404) return 'not-found';
   if (status >= 500) return 'transient';
   return 'validation';
