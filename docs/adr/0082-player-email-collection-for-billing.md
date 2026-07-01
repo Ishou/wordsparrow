@@ -81,16 +81,22 @@ recovery. Not used for marketing, profiling, or analytics.
 ### Expose the email
 
 - **identity `GET /v1/users/me`** gains a nullable `email` field so the
-  player can see the address on file (shown on `/compte`).
-- **identity `GET /v1/auth/whoami`** MAY carry the email for
-  cross-context use — the same channel through which it already carries
-  capabilities (ADR-0060 amendment, ADR-0079).
-- **billing** reads the caller's email from identity via its existing
-  `IdentityClient` whoami call (exactly as it already reads capabilities)
-  and passes it to the **Mollie customer at creation** — today
-  `MollieBillingAdapter` calls `client.createCustomer(userId.toString())`
-  with no email; it will pass the email through so Mollie holds it for
-  invoices and receipts.
+  player can see the address on file (shown on `/compte`) — and this is
+  the **only** endpoint that exposes the email.
+- **identity `GET /v1/auth/whoami`** does **not** carry the email.
+  whoami is called by every session-verifying context (billing, grid,
+  survey) on essentially every authenticated request; putting the email
+  there would hand each of those services the caller's own email whether
+  it needs it or not. Data minimization wins over the one-round-trip
+  convenience — the email stays on the account-detail endpoint only.
+- **billing** reads the caller's email from identity's `GET /v1/users/me`
+  at **checkout time** (a dedicated call from the checkout route, session
+  cookie forwarded) and passes it to the **Mollie customer at creation** —
+  `MollieBillingAdapter` previously called
+  `client.createCustomer(userId.toString())` with no email; it now passes
+  the email through so Mollie holds it for invoices and receipts. The
+  extra round-trip is paid only on the rare checkout path, never on
+  ordinary authenticated traffic.
 
 **This narrows ADR-0078's "no PII in billing" posture, explicitly.**
 ADR-0078 said the provider is system-of-record for PII and that billing
