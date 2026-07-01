@@ -4,6 +4,9 @@
 export type BillingTier = string;
 export type SubscriptionStatus = string;
 
+// Closed set: the checkout price is selected server-side from the cadence (ADR-0080, 2 €/mois · 20 €/an).
+export type BillingCadence = 'monthly' | 'yearly';
+
 export interface SubscriptionView {
   readonly tier: BillingTier;
   readonly status: SubscriptionStatus;
@@ -39,7 +42,7 @@ export class BillingError extends Error {
 
 // Cookie-bearing; adapter sets credentials:'include' per ADR-0077.
 export interface BillingClient {
-  createCheckoutSession(tier: BillingTier): Promise<CheckoutSession>;
+  createCheckoutSession(tier: BillingTier, cadence: BillingCadence): Promise<CheckoutSession>;
   cancelSubscription(): Promise<SubscriptionView>;
   getSubscription(): Promise<SubscriptionView>;
 }

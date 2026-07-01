@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Link, useRouteContext } from '@tanstack/react-router';
 import { css, cx } from 'styled-system/css';
 import { Check, ShieldCheck } from '@phosphor-icons/react';
-import type { BillingClient } from '@/application/billing';
+import type { BillingCadence, BillingClient } from '@/application/billing';
 import { BillingError } from '@/application/billing';
 import { useSubscriber } from '@/ui/components/billing';
 import { PhoneShell } from './PhoneShell';
@@ -12,6 +12,8 @@ import { GateLoadingScreen } from './GateLoadingScreen';
 import { useBillingGate } from './useBillingGate';
 
 type Cadence = 'mensuel' | 'annuel';
+
+const WIRE_CADENCE: Readonly<Record<Cadence, BillingCadence>> = { mensuel: 'monthly', annuel: 'yearly' };
 
 interface CadenceOption {
   readonly id: Cadence;
@@ -183,14 +185,13 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
     setActionError(null);
     setPending(true);
     try {
-      // Cadence is presentational for now: the checkout endpoint takes the tier only (ADR-0078 schema).
-      const session = await client.createCheckoutSession('subscriber');
+      const session = await client.createCheckoutSession('subscriber', WIRE_CADENCE[cadence]);
       window.location.assign(session.checkoutUrl);
     } catch (cause) {
       setActionError(messageFor(cause));
       setPending(false);
     }
-  }, [client]);
+  }, [client, cadence]);
 
   return (
     <div className={content}>
