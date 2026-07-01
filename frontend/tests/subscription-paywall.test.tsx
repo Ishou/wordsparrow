@@ -7,7 +7,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthClient, WhoAmIResult } from '@/application/auth';
 import type { DailySummary, PuzzleRepository } from '@/application';
 import type { SoloEntriesStore, SoloEntry } from '@/application/solo/SoloEntriesStore';
@@ -31,15 +31,18 @@ function authClientFor(whoami: WhoAmIResult): AuthClient {
   };
 }
 
-// Fixed UTC day offsets so the 7-day lock window is deterministic regardless of run date.
-function isoDaysAgo(n: number): string {
-  const d = new Date();
+// Fixed "now" — the component under test derives its own todayIso from Date.now(),
+// so the clock is pinned in beforeEach rather than sampled independently here.
+const TODAY = '2026-06-24T00:00:00.000Z';
+
+function isoDaysBefore(n: number): string {
+  const d = new Date(TODAY);
   d.setUTCDate(d.getUTCDate() - n);
   return d.toISOString().slice(0, 10);
 }
 
-const RECENT = isoDaysAgo(3); // within the free window → never locked
-const OLD = isoDaysAgo(20); // outside the free window → locked when unstarted
+const RECENT = isoDaysBefore(3); // within the free window → never locked
+const OLD = isoDaysBefore(20); // outside the free window → locked when unstarted
 
 // n°201 = old + unstarted (the only lockable grid); n°200 recent, n°202 old-but-started.
 const SUMMARIES: ReadonlyArray<DailySummary> = [
@@ -101,6 +104,11 @@ function renderHome(whoami: WhoAmIResult) {
 
 beforeEach(() => {
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+  vi.setSystemTime(new Date(TODAY));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('archive paywall markers (ADR-0080 W5a)', () => {
