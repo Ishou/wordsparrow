@@ -163,3 +163,16 @@ relaxed to the same condition — the dead `enforceInterlocking` flag and its
 now-redundant `UncrossedCell`-emitting branch are removed from `validate()`.
 `GridValidator.uncrossedCells` remains as a standalone predicate for callers
 that want the orphan check in isolation (see `GridGeneratorPropertyTest`).
+
+**Follow-up: generator-side Check 1 relaxed to match.** The half-checked rule
+was relaxed in the *validator*, but `canPlaceBlack` **Check 1** still rejected any
+black that dropped an adjacent white run below `minLen` *on the black's axis* —
+which structurally forbade creating an interior single-axis (sandwiched) cell,
+pinning generated grids near ~90% interlock (a near-full crossword, not
+half-checked). Check 1 is relaxed to the same orphan condition as the validator:
+a neighbour may fall to a length-1 run on one axis as long as it keeps a
+`≥ minLen` run on the other (it stays in ≥ 1 word); reject only if it would be
+orphaned on *both* axes. Measured effect (15x12, 120 grids): interlock 90.6% →
+~79%, first-attempt success 114 → 106/120 (retry path via `GeneratePuzzleUseCase`
+still 200/200), word-length distribution unchanged — the change makes grids
+authentically half-checked, it does not shorten words.

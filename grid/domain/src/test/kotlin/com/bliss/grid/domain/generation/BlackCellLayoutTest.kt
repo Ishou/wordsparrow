@@ -327,6 +327,29 @@ class BlackCellLayoutTest {
     }
 
     @Test
+    fun `canPlaceBlack allows a placement that leaves a neighbour single-axis (half-checked)`() {
+        // 5×5, black at (2,1). Placing black at (0,1) leaves (1,1) with a length-1
+        // vertical run but a length-5 horizontal run — a valid sandwiched cell.
+        // The strict pre-amendment Check 1 rejected this; half-checked allows it.
+        val cells = CellArray(5, 5)
+        cells.set(2, 1, CellArray.BLACK)
+        assertThat(BlackCellLayout.canPlaceBlack(cells, 0, 1, 2)).isTrue()
+    }
+
+    @Test
+    fun `canPlaceBlack rejects a placement that orphans a neighbour on both axes`() {
+        // width=5 leaves col 4 open, so (2,3)'s horizontal run extends to 2 and
+        // clears Check 1. (1,2) is walled left/right by (1,1)/(1,3) and above by
+        // (0,2); placing black at (2,2) seals its last escape, making it the
+        // sole neighbour orphaned on both axes.
+        val cells = CellArray(5, 3)
+        cells.set(0, 2, CellArray.BLACK)
+        cells.set(1, 1, CellArray.BLACK)
+        cells.set(1, 3, CellArray.BLACK)
+        assertThat(BlackCellLayout.canPlaceBlack(cells, 2, 2, 2)).isFalse()
+    }
+
+    @Test
     fun `seed produces no dead black cells`() {
         // With lUseful=12 on a 10×10 grid, removeDeadBlacks never hits the
         // over-long-run bail-out (max run ≤ 10 < 12), so the invariant is hard.
