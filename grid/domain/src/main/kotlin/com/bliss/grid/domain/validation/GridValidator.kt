@@ -9,10 +9,7 @@ import com.bliss.grid.domain.model.Row
 import com.bliss.grid.domain.model.WordAxis
 
 class GridValidator {
-    fun validate(
-        grid: Grid,
-        enforceInterlocking: Boolean = false,
-    ): List<GridViolation> {
+    fun validate(grid: Grid): List<GridViolation> {
         val violations = mutableListOf<GridViolation>()
         violations += outOfBoundsCells(grid)
         violations += duplicateViolations(grid)
@@ -45,10 +42,6 @@ class GridValidator {
             if (cell is ClueCell && pos in letterPositions) {
                 violations += GridViolation.ClueCellLetterCellOverlap(pos)
             }
-        }
-
-        if (enforceInterlocking) {
-            violations += uncrossedCells(grid)
         }
 
         violations += blackTriples(grid)
@@ -168,11 +161,10 @@ class GridValidator {
 
     companion object {
         /**
-         * Returns the list of letter-cell positions that violate the
-         * interlocking rule:
-         * - interior cells (row > 0 and col > 0): must be in both a
-         *   horizontal AND a vertical word
-         * - edge cells (row == 0 or col == 0): must be in at least one
+         * Returns letter cells that belong to NO word — unfillable, since they
+         * have no clue. Every letter cell must be in at least one word. A cell in
+         * exactly one word (sandwiched by black/border on the other axis) is valid
+         * mots fléchés (half-checked), interior or edge — that is not a violation.
          */
         fun uncrossedCells(grid: Grid): List<GridViolation.UncrossedCell> {
             val horizontalPositions = mutableSetOf<Position>()
@@ -190,9 +182,8 @@ class GridValidator {
                 if (cell !is LetterCell) continue
                 val inH = pos in horizontalPositions
                 val inV = pos in verticalPositions
-                val isEdge = pos.row.value == 0 || pos.column.value == 0
-                val valid = if (isEdge) inH || inV else inH && inV
-                if (!valid) {
+                // Valid iff in at least one word; sandwiched (single-axis) cells are fine.
+                if (!inH && !inV) {
                     violations += GridViolation.UncrossedCell(pos, inHorizontal = inH, inVertical = inV)
                 }
             }
