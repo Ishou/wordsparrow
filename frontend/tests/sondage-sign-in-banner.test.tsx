@@ -34,4 +34,13 @@ describe('SignInBanner', () => {
     fireEvent.click(cta);
     expect(onClick).toHaveBeenCalledTimes(1);
   });
+
+  // ADR-0082 "Transparency": the sign-in surface must disclose email collection.
+  it('discloses that signing in registers the player email for billing', async () => {
+    const authClient = stubAuthClient();
+    await act(async () => { render(<SignInBanner authClient={authClient} onClick={() => {}} />); });
+    expect(
+      screen.getByText(/adresse e-mail Google ou Apple est alors enregistrée pour la facturation/i),
+    ).toBeInTheDocument();
+  });
 });

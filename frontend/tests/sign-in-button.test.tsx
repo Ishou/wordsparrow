@@ -34,4 +34,11 @@ describe('SignInButton', () => {
     expect(href).toContain(encodeURIComponent(window.location.href));
     expect(link.getAttribute('aria-disabled')).toBeNull();
   });
+
+  // ADR-0082 "Transparency": the sign-in surface must disclose email collection.
+  it('links to the privacy notice from the sign-in surface', () => {
+    render(<SignInButton authClient={fakeAuthClient()} />);
+    const link = screen.getByRole('link', { name: 'Confidentialité' });
+    expect(link.getAttribute('href')).toBe('/confidentialite');
+  });
 });

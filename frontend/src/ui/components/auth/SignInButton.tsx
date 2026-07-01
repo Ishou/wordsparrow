@@ -26,6 +26,23 @@ const signInLinkStyles = css({
   },
 });
 
+const signInWrapStyles = css({ display: 'inline-flex', alignItems: 'center', gap: 'xs' });
+
+// ADR-0082 "Transparency": the sign-in surface must disclose email collection.
+const disclosureLinkStyles = css({
+  fontFamily: 'body',
+  fontSize: 'xxs',
+  fontWeight: 'medium',
+  color: 'fgMuted',
+  textDecoration: 'underline',
+  _hover: { color: 'fg' },
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+    borderRadius: '2px',
+  },
+});
+
 export interface SignInButtonProps {
   readonly authClient: AuthClient;
 }
@@ -38,12 +55,17 @@ export function SignInButton({ authClient }: SignInButtonProps) {
   }, []);
   const href = returnTo ? authClient.signInUrl('google', returnTo) : '#';
   return (
-    <a
-      className={signInLinkStyles}
-      href={href}
-      aria-disabled={returnTo ? undefined : true}
-    >
-      Se connecter
-    </a>
+    <span className={signInWrapStyles}>
+      <a
+        className={signInLinkStyles}
+        href={href}
+        aria-disabled={returnTo ? undefined : true}
+      >
+        Se connecter
+      </a>
+      <a href="/confidentialite" className={disclosureLinkStyles}>
+        Confidentialité
+      </a>
+    </span>
   );
 }
