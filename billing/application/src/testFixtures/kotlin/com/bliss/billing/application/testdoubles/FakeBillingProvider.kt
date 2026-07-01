@@ -5,6 +5,7 @@ import com.bliss.billing.application.ports.CheckoutUrls
 import com.bliss.billing.application.ports.ProviderSubscriptionRef
 import com.bliss.billing.application.ports.ProviderSubscriptionState
 import com.bliss.billing.domain.BillingSource
+import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
 import java.util.UUID
@@ -19,7 +20,7 @@ class FakeBillingProvider : BillingProviderPort {
 
     val cancelCalls = mutableListOf<String>()
     val createSubscriptionCalls = mutableListOf<Triple<UUID, String, Tier>>()
-    var lastCheckout: Pair<UUID, Tier>? = null
+    var lastCheckout: Triple<UUID, Tier, Cadence>? = null
     var checkoutUrls: CheckoutUrls = CheckoutUrls("https://checkout.test/abc", "https://app.test/merci", "https://app.test/abonnement")
 
     /** The recurring subscription `createSubscription` returns; defaults to an active subscription keyed by a composite ref derived from the first-payment ref. */
@@ -42,8 +43,9 @@ class FakeBillingProvider : BillingProviderPort {
     override suspend fun createCheckout(
         userId: UUID,
         tier: Tier,
+        cadence: Cadence,
     ): CheckoutUrls {
-        lastCheckout = userId to tier
+        lastCheckout = Triple(userId, tier, cadence)
         if (failCheckoutOnce) {
             failCheckoutOnce = false
             throw IllegalStateException("provider checkout failed (simulated)")

@@ -1,5 +1,7 @@
 package com.bliss.billing.infrastructure.provider
 
+import com.bliss.billing.domain.Cadence
+
 /** Mollie adapter configuration: API key (`test_…`/`live_…`) is the sole test-vs-live switch; no code path differs (ADR-0078). */
 data class MollieConfig(
     val apiKey: String,
@@ -9,10 +11,26 @@ data class MollieConfig(
     val successUrl: String,
     val cancelUrl: String,
     val webhookUrl: String,
-    val subscriptionAmount: String = "0.00",
-    // Mollie recurring interval, e.g. "1 month" / "3 months" / "1 week".
-    val interval: String = "1 month",
+    // Per-cadence recurring price + Mollie interval; the amount/interval is server-derived from the cadence (ADR-0080, 2 €/mois · 20 €/an).
+    val monthlyAmount: String = "2.00",
+    val monthlyInterval: String = "1 month",
+    val yearlyAmount: String = "20.00",
+    val yearlyInterval: String = "12 months",
 ) {
+    /** Recurring price for the chosen cadence, server-derived (the client never supplies an amount — ADR-0080). */
+    fun subscriptionAmountFor(cadence: Cadence): String =
+        when (cadence) {
+            Cadence.MONTHLY -> monthlyAmount
+            Cadence.YEARLY -> yearlyAmount
+        }
+
+    /** Mollie recurring interval for the chosen cadence (e.g. "1 month" / "12 months"). */
+    fun subscriptionIntervalFor(cadence: Cadence): String =
+        when (cadence) {
+            Cadence.MONTHLY -> monthlyInterval
+            Cadence.YEARLY -> yearlyInterval
+        }
+
     companion object {
         private fun env(key: String): String? = System.getenv(key) ?: System.getProperty(key)
 
@@ -27,12 +45,14 @@ data class MollieConfig(
                 apiKey = apiKey,
                 currency = env("BILLING_CHECKOUT_CURRENCY") ?: "EUR",
                 firstPaymentAmount = env("BILLING_CHECKOUT_AMOUNT") ?: "0.00",
-                description = env("BILLING_CHECKOUT_DESCRIPTION") ?: "WordSparrow abonnement",
+                description = env("BILLING_CHECKOUT_DESCRIPTION") ?: "Abonnement WordSparrow",
                 successUrl = successUrl,
                 cancelUrl = cancelUrl,
                 webhookUrl = webhookUrl,
-                subscriptionAmount = env("BILLING_SUBSCRIPTION_AMOUNT") ?: env("BILLING_CHECKOUT_AMOUNT") ?: "0.00",
-                interval = env("BILLING_SUBSCRIPTION_INTERVAL") ?: "1 month",
+                monthlyAmount = env("BILLING_MONTHLY_AMOUNT") ?: "2.00",
+                monthlyInterval = env("BILLING_MONTHLY_INTERVAL") ?: "1 month",
+                yearlyAmount = env("BILLING_YEARLY_AMOUNT") ?: "20.00",
+                yearlyInterval = env("BILLING_YEARLY_INTERVAL") ?: "12 months",
             )
         }
 

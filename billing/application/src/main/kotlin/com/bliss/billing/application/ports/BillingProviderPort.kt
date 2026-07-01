@@ -1,6 +1,7 @@
 package com.bliss.billing.application.ports
 
 import com.bliss.billing.domain.BillingSource
+import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
 import java.time.Instant
@@ -34,6 +35,7 @@ interface BillingProviderPort {
     suspend fun createCheckout(
         userId: UUID,
         tier: Tier,
+        cadence: Cadence,
     ): CheckoutUrls
 
     /** Create the recurring subscription from a paid first-payment context (the mandate it established); returns the authoritative state keyed by the new subscription's [ProviderSubscriptionState.externalRef] (ADR-0078). */

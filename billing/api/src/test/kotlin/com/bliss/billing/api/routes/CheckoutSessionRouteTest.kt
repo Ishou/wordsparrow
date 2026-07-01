@@ -12,6 +12,7 @@ import com.bliss.billing.application.testdoubles.FakeBillingProvider
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
 import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.domain.BillingSource
+import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.Subscription
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
@@ -50,6 +51,51 @@ class CheckoutSessionRouteTest {
             assertThat(resp.status).isEqualTo(HttpStatusCode.Created)
             assertThat(resp.bodyAsText()).contains("checkoutUrl")
             assertThat(provider.lastCheckout?.first).isEqualTo(userId)
+            assertThat(provider.lastCheckout?.third).isEqualTo(Cadence.MONTHLY)
+        }
+
+    @Test
+    fun `omitted cadence defaults to monthly`() =
+        testApplication {
+            val provider = FakeBillingProvider()
+            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
+            val resp =
+                client.post("/v1/checkout-session") {
+                    cookie(SESSION_COOKIE_NAME, "valid")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"tier":"supporter"}""")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Created)
+            assertThat(provider.lastCheckout?.third).isEqualTo(Cadence.MONTHLY)
+        }
+
+    @Test
+    fun `yearly cadence is forwarded to the use case`() =
+        testApplication {
+            val provider = FakeBillingProvider()
+            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
+            val resp =
+                client.post("/v1/checkout-session") {
+                    cookie(SESSION_COOKIE_NAME, "valid")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"tier":"supporter","cadence":"yearly"}""")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Created)
+            assertThat(provider.lastCheckout?.third).isEqualTo(Cadence.YEARLY)
+        }
+
+    @Test
+    fun `unknown cadence yields 400`() =
+        testApplication {
+            install(subscriber, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
+            val resp =
+                client.post("/v1/checkout-session") {
+                    cookie(SESSION_COOKIE_NAME, "valid")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"tier":"supporter","cadence":"weekly"}""")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.BadRequest)
+            assertThat(resp.bodyAsText()).contains("errors/invalid-checkout-request")
         }
 
     @Test

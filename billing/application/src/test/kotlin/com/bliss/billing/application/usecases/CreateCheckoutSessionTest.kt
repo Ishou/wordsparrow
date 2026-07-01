@@ -6,6 +6,7 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import com.bliss.billing.application.testdoubles.FakeBillingProvider
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
+import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.Tier
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
@@ -22,10 +23,18 @@ class CreateCheckoutSessionTest {
     @Test
     fun `returns checkout urls when no live subscription exists`() =
         runTest {
-            val outcome = useCase.execute(userId, tier)
+            val outcome = useCase.execute(userId, tier, Cadence.MONTHLY)
 
             assertThat(outcome).isInstanceOf(CreateCheckoutSessionOutcome.Success::class)
-            assertThat(provider.lastCheckout).isEqualTo(userId to tier)
+            assertThat(provider.lastCheckout).isEqualTo(Triple(userId, tier, Cadence.MONTHLY))
+        }
+
+    @Test
+    fun `forwards the chosen cadence to the provider`() =
+        runTest {
+            useCase.execute(userId, tier, Cadence.YEARLY)
+
+            assertThat(provider.lastCheckout).isEqualTo(Triple(userId, tier, Cadence.YEARLY))
         }
 
     @Test
@@ -33,7 +42,7 @@ class CreateCheckoutSessionTest {
         runTest {
             repository.save(subscription(userId = userId))
 
-            val outcome = useCase.execute(userId, tier)
+            val outcome = useCase.execute(userId, tier, Cadence.MONTHLY)
 
             assertThat(outcome).isEqualTo(CreateCheckoutSessionOutcome.AlreadySubscribed)
         }
@@ -43,7 +52,7 @@ class CreateCheckoutSessionTest {
         runTest {
             provider.failCheckoutOnce = true
 
-            val error = runCatching { useCase.execute(userId, tier) }.exceptionOrNull()
+            val error = runCatching { useCase.execute(userId, tier, Cadence.MONTHLY) }.exceptionOrNull()
 
             assertThat(error).isNotNull().isInstanceOf(ProviderUnavailable::class)
         }

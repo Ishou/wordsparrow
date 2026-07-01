@@ -5,6 +5,7 @@ import com.bliss.billing.application.ports.CheckoutUrls
 import com.bliss.billing.application.ports.ProviderSubscriptionRef
 import com.bliss.billing.application.ports.ProviderSubscriptionState
 import com.bliss.billing.domain.BillingSource
+import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.Tier
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -20,6 +21,7 @@ class MollieBillingAdapter(
     override suspend fun createCheckout(
         userId: UUID,
         tier: Tier,
+        cadence: Cadence,
     ): CheckoutUrls {
         val customerId = customerStore.findOrCreate(userId) { client.createCustomer(userId.toString()) }
         val payment =
@@ -31,7 +33,8 @@ class MollieBillingAdapter(
                 redirectUrl = config.successUrl,
                 cancelUrl = config.cancelUrl,
                 webhookUrl = config.webhookUrl,
-                metadata = metadataOf(userId, tier),
+                // Cadence rides in metadata so the recurring subscription (created later, webhook-side) derives its price/interval server-side.
+                metadata = metadataOf(userId, tier, cadence),
             )
         val checkoutUrl =
             requireNotNull(payment.checkoutUrl) { "Mollie payment ${payment.id} returned no checkout URL" }
@@ -48,16 +51,18 @@ class MollieBillingAdapter(
         val payment = requireNotNull(client.getPayment(ref.paymentId)) { "first payment $firstPaymentRef not found" }
         val customerId = requireNotNull(payment.customerId) { "first payment ${payment.id} has no customer" }
         val mandateId = requireNotNull(payment.mandateId) { "first payment ${payment.id} established no mandate" }
+        // The cadence chosen at checkout was stored in the first-payment metadata; it drives the recurring price/interval.
+        val cadence = cadenceFrom(payment.metadata)
         val subscription =
             client.createSubscription(
                 customerId = customerId,
                 mandateId = mandateId,
-                amountValue = config.subscriptionAmount,
+                amountValue = config.subscriptionAmountFor(cadence),
                 currency = config.currency,
-                interval = config.interval,
+                interval = config.subscriptionIntervalFor(cadence),
                 description = config.description,
                 webhookUrl = config.webhookUrl,
-                metadata = metadataOf(userId, tier),
+                metadata = metadataOf(userId, tier, cadence),
             )
         val status =
             checkNotNull(MollieStatusMapping.fromSubscriptionStatus(subscription.status)) {
@@ -140,7 +145,12 @@ class MollieBillingAdapter(
     private fun metadataOf(
         userId: UUID,
         tier: Tier,
-    ): Map<String, String> = mapOf(USER_ID_KEY to userId.toString(), TIER_KEY to tier.value)
+        cadence: Cadence,
+    ): Map<String, String> = mapOf(USER_ID_KEY to userId.toString(), TIER_KEY to tier.value, CADENCE_KEY to cadence.wire)
+
+    // Legacy first payments (pre-cadence) carry no cadence key; default to monthly so their subscription still creates.
+    private fun cadenceFrom(metadata: Map<String, String>): Cadence =
+        metadata[CADENCE_KEY]?.let { runCatching { Cadence.fromWire(it) }.getOrNull() } ?: Cadence.default
 
     private fun identityFrom(metadata: Map<String, String>): Pair<UUID, Tier>? {
         val rawUserId = metadata[USER_ID_KEY] ?: return null
@@ -153,5 +163,6 @@ class MollieBillingAdapter(
     private companion object {
         const val USER_ID_KEY = "userId"
         const val TIER_KEY = "tier"
+        const val CADENCE_KEY = "cadence"
     }
 }
