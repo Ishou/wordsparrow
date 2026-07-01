@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { useBackDismiss } from './useBackDismiss';
+import { useBackDismiss } from '@/ui/lib/useBackDismiss';
 
 describe('useBackDismiss', () => {
   it('pushes a history entry only while active and dismisses on Back (popstate)', () => {
