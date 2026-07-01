@@ -22,7 +22,6 @@ const merciKicker = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '11
 const merciTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.12', color: 'ws.jadeInk', margin: 0 });
 const merciText = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, lineHeight: '1.45', maxWidth: '280px' });
 const merciCta = css({ display: 'block', width: '100%', maxWidth: '300px', textAlign: 'center', textDecoration: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', padding: '14px', borderRadius: '14px', boxShadow: '0 8px 18px rgba(190,73,112,0.34)', marginTop: '4px' });
-const merciSub = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.8 });
 
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(['active', 'pending_cancellation']);
 function hasActiveAccess(subscription: SubscriptionView | null): boolean {
@@ -37,7 +36,7 @@ type ConfirmPhase = 'confirming' | 'active' | 'timeout';
 
 function SuccesShell({ children }: { readonly children: ReactNode }) {
   return (
-    <PhoneShell header={<BackHeader to="/menu" />} backTo="/menu">
+    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       {children}
     </PhoneShell>
   );
@@ -48,17 +47,16 @@ function MerciConfirmation() {
   return (
     <div className={merci}>
       <div className={merciMark}>
-        <SparrowMark size={84} colorway="sakura" tile="jade" />
+        <SparrowMark size={84} colorway="sakura" tile="dark" />
       </div>
       <span className={merciKicker}>Abonnement activé</span>
       <h1 className={merciTitle}>Te voilà abonné·e !</h1>
       <p className={merciText}>
         Toutes les grilles sont à toi, et tu peux en générer de nouvelles quand tu veux.
       </p>
-      <Link to="/play" className={merciCta}>
-        Jouer une grille
+      <Link to="/grilles" className={merciCta}>
+        Découvrir toutes les grilles
       </Link>
-      <span className={merciSub}>Un reçu t&apos;a été envoyé par e-mail.</span>
     </div>
   );
 }
@@ -118,9 +116,15 @@ export function CheckoutSuccessScreen({ client }: { readonly client: BillingClie
           Paiement reçu, confirmation en cours…
         </p>
       )}
-      <Link to="/abonnement" className={linkStyle}>
-        Revenir à mon abonnement
-      </Link>
+      {phase === 'timeout' ? (
+        <Link to="/compte" className={linkStyle}>
+          Retour à mon compte
+        </Link>
+      ) : (
+        <Link to="/abonnement" className={linkStyle}>
+          Revenir à mon abonnement
+        </Link>
+      )}
     </SuccesShell>
   );
 }

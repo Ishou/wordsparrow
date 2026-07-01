@@ -65,11 +65,10 @@ const planCard = css({ bg: 'white', borderRadius: '18px', padding: '16px', boxSh
 const planComplet = css({ border: '1.6px solid token(colors.ws.jade)' });
 const planHead = css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' });
 const planName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
-const tagBonus = css({ fontFamily: 'wsUi', fontSize: '9.5px', fontWeight: 'black', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'ws.clueSurface', bg: 'ws.jade', borderRadius: '999px', padding: '3px 9px' });
 const tagFree = css({ fontFamily: 'wsUi', fontSize: '9.5px', fontWeight: 'black', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'ws.khaki', bg: 'rgba(33,75,64,0.07)', borderRadius: '999px', padding: '3px 9px' });
 const featList = css({ display: 'flex', flexDirection: 'column', gap: '8px' });
-const featRow = css({ display: 'flex', alignItems: 'flex-start', gap: '9px', fontFamily: 'wsUi', fontSize: '13.5px', fontWeight: 'bold', color: 'ws.jadeInk', lineHeight: '1.3' });
-const tick = css({ flex: 'none', width: '20px', height: '20px', borderRadius: '50%', bg: 'ws.jade', color: 'ws.jadeInk', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '1px' });
+const featRow = css({ display: 'flex', alignItems: 'center', gap: '9px', fontFamily: 'wsUi', fontSize: '13.5px', fontWeight: 'bold', color: 'ws.jadeInk', lineHeight: '1.3' });
+const tick = css({ flex: 'none', width: '20px', height: '20px', borderRadius: '50%', bg: 'ws.jade', color: 'ws.jadeInk', display: 'flex', alignItems: 'center', justifyContent: 'center' });
 
 const selector = css({ display: 'flex', flexDirection: 'column', gap: '8px' });
 const optRow = css({ display: 'flex', alignItems: 'center', gap: '11px', textAlign: 'left', width: '100%', bg: 'white', border: '1.6px solid #E6E0CC', borderRadius: '14px', padding: '12px 13px', cursor: 'pointer', fontFamily: 'wsUi', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
@@ -86,8 +85,7 @@ const optCadence = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'blac
 // ws.sakuraDark (not ws.sakura) clears WCAG AA for white text — known palette gotcha.
 const cta = css({ width: '100%', border: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', padding: '14px', borderRadius: '14px', cursor: 'pointer', boxShadow: '0 8px 18px rgba(190,73,112,0.34)', _hover: { opacity: 0.94 }, _disabled: { opacity: 0.5, cursor: 'not-allowed' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const reassure = css({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: 'wsUi', fontSize: '11.5px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, textAlign: 'center', lineHeight: '1.4' });
-// ws.sakuraDark (not ws.sakura) clears WCAG AA for coloured text — known palette gotcha.
-const transparenceLink = css({ display: 'block', textAlign: 'center', fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'bold', color: 'ws.sakuraDark', textDecoration: 'underline', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px', borderRadius: '4px' } });
+const reassureIcon = css({ flex: 'none', display: 'flex' });
 const errText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', margin: '2px 0 0', textAlign: 'center' });
 
 const subscribedCard = css({ bg: 'white', borderRadius: '18px', padding: '18px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'center' });
@@ -206,7 +204,6 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
       <section className={cx(planCard, planComplet)} aria-label="Accès complet">
         <div className={planHead}>
           <span className={planName}>Accès complet</span>
-          <span className={tagBonus}>En bonus</span>
         </div>
         <div className={featList}>
           {ACCES_COMPLET_FEATURES.map((feature) => (
@@ -238,13 +235,11 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
       </section>
 
       <p className={reassure}>
-        <ShieldCheck size={14} weight="fill" aria-hidden="true" />
-        Paiement sécurisé · sans engagement · résiliable à tout moment
+        <span className={reassureIcon}>
+          <ShieldCheck size={14} weight="fill" aria-hidden="true" />
+        </span>
+        <span>Paiement sécurisé · sans engagement · résiliable à tout moment</span>
       </p>
-
-      <Link to="/abonnement/transparence" className={transparenceLink}>
-        Où va ton argent&nbsp;?
-      </Link>
     </div>
   );
 }
@@ -256,7 +251,7 @@ export function AbonnementScreen() {
   if (gate === 'loading') return <GateLoadingScreen />;
   if (gate === 'denied') return <NotFoundScreen />;
   return (
-    <PhoneShell header={<BackHeader to="/menu" />} backTo="/menu">
+    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       {subscribed ? (
         <SubscribedState />
       ) : !billingClient ? (
