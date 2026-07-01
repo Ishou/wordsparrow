@@ -122,6 +122,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's own payment receipts.
+         * @description Returns the authenticated caller's payment receipts, newest-first, for
+         *     the « Mes reçus » panel on `/compte` (ADR-0080). The caller is
+         *     identified by the `__Secure-ws_session` cookie; `userId` is resolved
+         *     server-side.
+         *
+         *     These are the payment provider's records surfaced as opaque references
+         *     (ADR-0078): the provider (Mollie) is the system-of-record for the
+         *     underlying invoice and its PII. This surface carries only the
+         *     non-identifying facts needed to render a list — when a payment
+         *     happened, how much, its status, and a link to the provider's hosted
+         *     receipt. It NEVER carries email, customer name, address, or card data;
+         *     those never leave the provider.
+         */
+        get: operations["listReceipts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -225,6 +256,62 @@ export interface components {
              * @example 2026-07-29T00:00:00Z
              */
             periodEnd: string | null;
+        };
+        /**
+         * @description The caller's own payment receipts, newest-first (ADR-0080). `receipts`
+         *     is always present on the wire and is an empty array when the caller has
+         *     never paid — absence and an empty list are distinct per ADR-0003 §6.
+         */
+        ReceiptsView: {
+            /**
+             * @description The caller's receipts, sorted newest-first by `paidAt`. Empty for a
+             *     caller who has never made a payment.
+             */
+            receipts: components["schemas"]["Receipt"][];
+        };
+        /**
+         * @description A single payment receipt: the provider's record surfaced as an opaque
+         *     reference (ADR-0078). The provider (Mollie) is the system-of-record for
+         *     the underlying invoice and its PII; this shape carries ONLY the
+         *     non-identifying facts needed to render a list. It NEVER carries email,
+         *     customer name, address, or card data — those never leave the provider.
+         */
+        Receipt: {
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant the payment was recorded by the provider.
+             * @example 2026-06-29T14:03:00Z
+             */
+            paidAt: string;
+            /**
+             * @description Decimal amount charged, as a string to avoid float rounding (the
+             *     provider represents money as a decimal string). Paired with
+             *     `currency`.
+             * @example 2.00
+             */
+            amount: string;
+            /**
+             * @description ISO 4217 currency code for `amount`.
+             * @example EUR
+             */
+            currency: string;
+            /**
+             * @description Payment status (e.g. paid, pending, failed, refunded). Open string,
+             *     not an enum, for the same forward-compatibility reason as the
+             *     subscription's `tier`/`status`: the provider's status set is
+             *     config-driven and may grow without a wire-breaking change.
+             * @example paid
+             */
+            status: string;
+            /**
+             * Format: uri
+             * @description Link to the provider's hosted receipt / PDF for this payment, or
+             *     `null` when the provider exposes none for it. Always present on the
+             *     wire; `null` is the explicit "no hosted receipt" value — absence and
+             *     `null` are distinct per ADR-0003 §6.
+             * @example https://www.mollie.com/receipt/tr_WDqYK6vllg
+             */
+            receiptUrl: string | null;
         };
         /**
          * @description RFC 7807 error envelope (ADR-0003 §6). Additional members per
@@ -499,6 +586,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubscriptionView"];
+                };
+            };
+            /**
+             * @description No valid `__Secure-ws_session` cookie. RFC 7807;
+             *     `type` is `https://bliss.example/errors/auth-required`.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listReceipts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description Receipts resolved for the authenticated caller. The list is sorted
+             *     newest-first and may be empty (a caller who never paid).
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptsView"];
                 };
             };
             /**
