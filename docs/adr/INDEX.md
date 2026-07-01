@@ -189,8 +189,8 @@ ADR-0081  grid/*/src/main/resources/db/migration/**  Migration adds nullable puz
 ADR-0082  identity/application/**/usecases/BeginOidcLoginUseCase.kt  Request `email` scope: Google `openid email`, Apple `email` (supersedes ADR-0045 openid-only). No name/profile/picture
 ADR-0082  identity/domain/**/oidc/OidcIdToken.kt    Retain the `email` claim (was dropped by ADR-0045); Apple path also captures email from the first-sign-in `user` field
 ADR-0082  identity/**/usecases/CompleteOidcLoginUseCase.kt  Persist the verified email (was emailAtLink=null); recommended model = canonical nullable users.email set/refreshed at sign-in + link
-ADR-0082  identity/api/openapi.yaml                  /v1/users/me gains nullable `email`; /v1/auth/whoami MAY carry it; emailOptIn opt-in machinery retired (email is by-necessity, not consent)
-ADR-0082  billing/infrastructure/**/provider/MollieBillingAdapter.kt  Pass caller email (read from identity whoami) to Mollie createCustomer for invoices/receipts; billing STORES no email (narrows ADR-0078 no-PII to pass-through only)
+ADR-0082  identity/api/openapi.yaml                  /v1/users/me gains nullable `email` (the ONLY endpoint that exposes it); /v1/auth/whoami does NOT carry it (minimization — whoami fires on every authed request across contexts); emailOptIn opt-in machinery retired (email is by-necessity, not consent)
+ADR-0082  billing/infrastructure/**/provider/MollieBillingAdapter.kt  Pass caller email (read from identity /v1/users/me at checkout) to Mollie createCustomer for invoices/receipts; billing STORES no email (narrows ADR-0078 no-PII to pass-through only)
 # ADR-0082: RGPD basis = performance of contract / legal obligation (invoicing), purpose-limited to billing/receipts/recovery; erasure unchanged (email on users row, ON DELETE CASCADE + UserDeleted); still no name/picture/IP. Supersedes ADR-0045 OAuth-scope + email-retention parts. Transparency (confidentialité + CGV + DPA/records-of-processing) updates required — accountant/DPO angle
 ```
 
