@@ -132,9 +132,10 @@ export interface paths {
         /**
          * List the caller's own payment receipts.
          * @description Returns the authenticated caller's payment receipts, newest-first, for
-         *     the « Mes reçus » panel on `/compte` (ADR-0080). The caller is
-         *     identified by the `__Secure-ws_session` cookie; `userId` is resolved
-         *     server-side.
+         *     a receipts list on `/compte` mirroring the manage-subscription panel
+         *     — this PR's own proposal, not yet a ratified ADR-0080 decision. The
+         *     caller is identified by the `__Secure-ws_session` cookie; `userId` is
+         *     resolved server-side.
          *
          *     These are the payment provider's records surfaced as opaque references
          *     (ADR-0078): the provider (Mollie) is the system-of-record for the
@@ -263,8 +264,8 @@ export interface components {
             periodEnd: string | null;
         };
         /**
-         * @description One page of the caller's own payment receipts, newest-first
-         *     (ADR-0080). `receipts` is always present on the wire and is an empty
+         * @description One page of the caller's own payment receipts, newest-first.
+         *     `receipts` is always present on the wire and is an empty
          *     array when the caller has never paid, or when this is the last page
          *     — absence and an empty list are distinct per ADR-0003 §6. Cursor
          *     pagination per ADR-0003 §6: pass `nextCursor` as the next request's
