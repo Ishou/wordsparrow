@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouteContext } from '@tanstack/react-router';
-import { ArrowsClockwise, Check, CircleNotch, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
+import { ArrowsClockwise, Check, CircleNotch, Envelope, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { InvalidDisplayNameError, type GetMeResult } from '@/application/auth';
 import { useAuth } from '@/ui/components/auth';
@@ -37,6 +37,8 @@ const dangerWrap = css({ marginTop: '6px' });
 
 const signInCard = css({ bg: 'white', borderRadius: '20px', padding: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 12px 26px rgba(33,75,64,0.09)', textAlign: 'center' });
 const signInLede = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'semibold', color: 'ws.khaki', marginTop: '8px', marginBottom: '16px' });
+const signInDisclosure = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki', lineHeight: '1.45', marginTop: '14px', marginBottom: 0 });
+const groupNote = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, margin: '7px 6px 0' });
 const googleBtn = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', height: '50px', borderRadius: '14px', bg: 'ws.jadeInk', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', textDecoration: 'none', cursor: 'pointer', transition: 'opacity 120ms', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const spin = css({ animation: 'wsSpin 0.7s linear infinite' });
 const srOnly = css({ srOnly: true });
@@ -168,6 +170,19 @@ function AuthedCompte() {
 
       {billingClient ? <ReceiptsSection client={billingClient} /> : null}
 
+      <nav aria-label="Facturation">
+        <div className={groupLabel}>Facturation</div>
+        <ul className={card}>
+          <SettingsRow
+            icon={Envelope}
+            label="Adresse e-mail"
+            sub={me ? (me.email ?? 'Non renseignée') : <Skeleton tone="onCard" width={140} height={11} radius={6} />}
+            last
+          />
+        </ul>
+        <p className={groupNote}>Utilisée uniquement pour la facturation.</p>
+      </nav>
+
       {progressSyncService ? (
         <nav aria-label="Progression">
           <div className={groupLabel}>Progression</div>
@@ -240,6 +255,10 @@ function SignInPrompt() {
             </>
           )}
         </a>
+        <p className={signInDisclosure}>
+          En te connectant, ton adresse e-mail Google ou Apple est enregistrée pour la facturation
+          d’un éventuel abonnement.
+        </p>
       </div>
     </div>
   );

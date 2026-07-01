@@ -17,6 +17,8 @@ export interface GetMeResult {
   readonly displayName: string;
   readonly createdAt: string;
   readonly providers: ReadonlyArray<LinkedProvider>;
+  // Absent for players who signed in before email collection shipped (ADR-0082).
+  readonly email?: string;
 }
 
 // Thrown by updateMe on HTTP 400; .message is the server's English RFC 7807 detail — map to French copy at the call site.

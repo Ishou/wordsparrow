@@ -54,6 +54,7 @@ function MerciConfirmation() {
       <p className={merciText}>
         Toutes les grilles sont à toi, et tu peux en générer de nouvelles quand tu veux.
       </p>
+      <p className={merciText}>Un reçu te sera envoyé par e-mail.</p>
       <Link to="/grilles" className={merciCta}>
         Découvrir toutes les grilles
       </Link>
