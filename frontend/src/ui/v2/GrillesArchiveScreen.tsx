@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { CaretRight } from '@phosphor-icons/react';
-import { css } from 'styled-system/css';
+import { CaretRight, Lock } from '@phosphor-icons/react';
+import { css, cx } from 'styled-system/css';
 import type { DailySummary, PuzzleRepository } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Skeleton } from '@/design-system';
+import { useSubscriber } from '@/ui/components/billing';
 import { PhoneShell } from './PhoneShell';
 import { MobileTopBar } from './MobileTopBar';
 import { SegmentedControl } from './SegmentedControl';
 import { GrillesEmptyState } from './GrillesEmptyState';
 import { BottomNav } from './BottomNav';
 import { MenuSheet } from './MenuSheet';
+import { AbonnementSheet, type SheetContext } from './AbonnementSheet';
+import { ArchiveUpsellBanner } from './UpsellEntries';
 
 type Status = 'done' | 'progress' | 'new';
 // Filters mirror the statuses one-to-one — to-do-oriented, no neutral "all".
@@ -21,6 +24,8 @@ interface DayRow {
   readonly status: Status;
   readonly locked: number;
   readonly today: boolean;
+  // Cosmetic lock: older than 7 days, unstarted, non-subscriber (ADR-0080 W5a; server enforces in W5b).
+  readonly paywalled: boolean;
 }
 
 const FILTERS: ReadonlyArray<{ readonly id: Filter; readonly label: string }> = [
@@ -97,6 +102,12 @@ const todayFlag = css({
   verticalAlign: 'middle',
 });
 
+const cardLocked = css({ border: 'none', bg: 'rgba(255,255,255,0.7)', _hover: { bg: 'rgba(255,255,255,0.7)' } });
+const dTitleLocked = css({ color: 'ws.khaki' });
+const lockedFlag = css({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontFamily: 'wsUi', fontSize: '9px', fontWeight: 'black', letterSpacing: '0.04em', textTransform: 'uppercase', color: '#5A4B12', bg: 'ws.or', borderRadius: '999px', padding: '2px 7px 2px 5px', marginLeft: '6px', verticalAlign: 'middle' });
+const lockTile = css({ flex: 'none', width: '30px', height: '30px', borderRadius: '9px', bg: 'ws.or', color: '#5A4B12', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.9 });
+const bannerWrap = css({ marginBottom: '14px' });
+
 const moreBtn = css({
   display: 'block',
   margin: '8px auto 0',
@@ -130,6 +141,13 @@ function isoUtcDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Whole-day age of an ISO date relative to today (both UTC midnight).
+function daysSince(iso: string, todayIso: string): number {
+  const then = new Date(`${iso}T00:00:00Z`).getTime();
+  const now = new Date(`${todayIso}T00:00:00Z`).getTime();
+  return Math.round((now - then) / 86_400_000);
+}
+
 function metaFor(row: DayRow): string {
   const total = row.summary.totalLetterCells;
   if (row.status === 'done') return 'Terminée';
@@ -151,7 +169,10 @@ export function GrillesArchiveScreen({
   readonly soloEntriesStore: SoloEntriesStore;
 }) {
   const navigate = useNavigate();
+  const subscriber = useSubscriber();
   const [menuOpen, setMenuOpen] = useState(false);
+  // Kept mounted (Ark animates its own close) and the context persists through the close transition.
+  const [sheet, setSheet] = useState<{ open: boolean; context: SheetContext }>({ open: false, context: 'grid' });
   const [filter, setFilter] = useState<Filter>('new');
   const [summaries, setSummaries] = useState<ReadonlyArray<DailySummary>>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -201,9 +222,12 @@ export function GrillesArchiveScreen({
       const total = summary.totalLetterCells;
       const locked = soloEntriesStore.loadLockedCells(summary.id).length;
       const status: Status = total > 0 && locked >= total ? 'done' : locked > 0 ? 'progress' : 'new';
-      return { summary, status, locked, today: summary.date === todayIso };
+      // Started = any locked cell or saved entry, the same signal the home strip uses (ADR-0075 blob).
+      const started = locked > 0 || soloEntriesStore.load(summary.id).length > 0;
+      const paywalled = !subscriber && !started && daysSince(summary.date, todayIso) > 7;
+      return { summary, status, locked, today: summary.date === todayIso, paywalled };
     });
-  }, [summaries, soloEntriesStore, todayIso]);
+  }, [summaries, soloEntriesStore, todayIso, subscriber]);
 
   const visible = useMemo(
     () =>
@@ -254,6 +278,11 @@ export function GrillesArchiveScreen({
       </div>
 
       <div className={scrollArea}>
+      {!subscriber ? (
+        <div className={bannerWrap}>
+          <ArchiveUpsellBanner />
+        </div>
+      ) : null}
       {showSkeleton ? (
         <ul className={list} aria-busy="true" aria-label="Chargement des grilles">
           {Array.from({ length: 5 }, (_, i) => (
@@ -277,6 +306,31 @@ export function GrillesArchiveScreen({
                 {m.rows.map((row) => {
                   const total = row.summary.totalLetterCells;
                   const pct = total > 0 ? Math.round((row.locked / total) * 100) : 0;
+                  if (row.paywalled) {
+                    return (
+                      <li key={row.summary.id}>
+                        <button
+                          type="button"
+                          className={cx(card, cardLocked)}
+                          aria-label={`Grille réservée à l'abonnement — ${longDateFr(row.summary.date)}`}
+                          onClick={() => setSheet({ open: true, context: 'grid' })}
+                        >
+                          <div className={mid}>
+                            <div className={cx(dTitle, dTitleLocked)}>
+                              {longDateFr(row.summary.date)} · n°{row.summary.gridNumber}
+                              <span className={lockedFlag}>
+                                <Lock size={9} weight="fill" aria-hidden="true" /> Abonnés
+                              </span>
+                            </div>
+                            <div className={dMeta}>Réservée à l&apos;abonnement</div>
+                          </div>
+                          <span className={lockTile}>
+                            <Lock size={15} weight="fill" aria-hidden="true" />
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  }
                   return (
                     <li key={row.summary.id}>
                       <Link
@@ -316,6 +370,11 @@ export function GrillesArchiveScreen({
       </div>
     </PhoneShell>
     <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
+    <AbonnementSheet
+      open={sheet.open}
+      context={sheet.context}
+      onClose={() => setSheet((s) => ({ ...s, open: false }))}
+    />
     </>
   );
 }
