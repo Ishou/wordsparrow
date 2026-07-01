@@ -70,7 +70,7 @@ export function SignInBanner({ authClient, onClick }: SignInBannerProps) {
       <p className={textStyles}>
         Connectez-vous pour proposer vos propres indices et suivre vos contributions.
         <span className={disclosureStyles}>
-          Votre adresse e-mail Google ou Apple est alors enregistrée pour la facturation d’un
+          Votre adresse e-mail Google est alors enregistrée pour la facturation d’un
           éventuel abonnement.
         </span>
       </p>

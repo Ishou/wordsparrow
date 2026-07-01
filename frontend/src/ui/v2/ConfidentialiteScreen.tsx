@@ -64,8 +64,8 @@ export function ConfidentialiteScreen() {
           <p className={sectionBody}>
             Quand tu te connectes, ton adresse e-mail est enregistrée puis conservée pour établir
             les factures et les reçus liés à un abonnement — au titre d&apos;une obligation légale
-            et de l&apos;exécution du contrat (article [à compléter]). Durée de conservation :
-            [à compléter].
+            et de l&apos;exécution du contrat. Elle est conservée pendant la durée légale de
+            conservation des documents comptables.
           </p>
           <p className={sectionBody}>
             Pour gérer ton abonnement et t&apos;envoyer les reçus, cette adresse est transmise à

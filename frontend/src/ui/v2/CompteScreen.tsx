@@ -256,7 +256,7 @@ function SignInPrompt() {
           )}
         </a>
         <p className={signInDisclosure}>
-          En te connectant, ton adresse e-mail Google ou Apple est enregistrée pour la facturation
+          En te connectant, ton adresse e-mail Google est enregistrée pour la facturation
           d’un éventuel abonnement.
         </p>
       </div>
