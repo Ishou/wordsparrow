@@ -2,6 +2,7 @@ package com.bliss.identity.domain.user
 
 import assertk.assertThat
 import assertk.assertions.containsExactlyInAnyOrder
+import assertk.assertions.doesNotContain
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import org.junit.jupiter.api.Test
@@ -14,6 +15,7 @@ class CapabilityTest {
         assertThat(Capability.BILLING_SUBSCRIBE.wire).isEqualTo("billing:subscribe")
         assertThat(Capability.GRILLES_ALL.wire).isEqualTo("grilles:all")
         assertThat(Capability.GRILLES_GENERATE.wire).isEqualTo("grilles:generate")
+        assertThat(Capability.MULTIPLAYER_HOST_UNLIMITED.wire).isEqualTo("multiplayer:host-unlimited")
     }
 
     @Test
@@ -42,11 +44,16 @@ class CapabilityTest {
     }
 
     @Test
-    fun `subscriber tier adds grilles all and generate to a player`() {
+    fun `subscriber tier adds grilles all generate and unlimited hosting to a player`() {
         assertThat(capabilitiesFor(Role.PLAYER, SubscriptionTier.SUBSCRIBER))
-            .containsExactlyInAnyOrder(Capability.HINT, Capability.GRILLES_ALL, Capability.GRILLES_GENERATE)
+            .containsExactlyInAnyOrder(
+                Capability.HINT,
+                Capability.GRILLES_ALL,
+                Capability.GRILLES_GENERATE,
+                Capability.MULTIPLAYER_HOST_UNLIMITED,
+            )
         assertThat(capabilitiesFor(Role.PLAYER, SubscriptionTier.SUBSCRIBER).map { it.wire })
-            .containsExactlyInAnyOrder("hint", "grilles:all", "grilles:generate")
+            .containsExactlyInAnyOrder("hint", "grilles:all", "grilles:generate", "multiplayer:host-unlimited")
     }
 
     @Test
@@ -58,12 +65,25 @@ class CapabilityTest {
                 Capability.BILLING_SUBSCRIBE,
                 Capability.GRILLES_ALL,
                 Capability.GRILLES_GENERATE,
+                Capability.MULTIPLAYER_HOST_UNLIMITED,
             )
     }
 
     @Test
     fun `tier capabilities derive independently of role`() {
         assertThat(capabilitiesFor(null, SubscriptionTier.SUBSCRIBER))
-            .containsExactlyInAnyOrder(Capability.GRILLES_ALL, Capability.GRILLES_GENERATE)
+            .containsExactlyInAnyOrder(
+                Capability.GRILLES_ALL,
+                Capability.GRILLES_GENERATE,
+                Capability.MULTIPLAYER_HOST_UNLIMITED,
+            )
+    }
+
+    @Test
+    fun `multiplayer host unlimited is subscriber-only, not role-derived`() {
+        assertThat(capabilitiesFor(Role.PLAYER)).doesNotContain(Capability.MULTIPLAYER_HOST_UNLIMITED)
+        assertThat(capabilitiesFor(Role.MAINTAINER)).doesNotContain(Capability.MULTIPLAYER_HOST_UNLIMITED)
+        assertThat(capabilitiesFor(Role.PLAYER, SubscriptionTier.FREE)).doesNotContain(Capability.MULTIPLAYER_HOST_UNLIMITED)
+        assertThat(capabilitiesFor(null)).doesNotContain(Capability.MULTIPLAYER_HOST_UNLIMITED)
     }
 }

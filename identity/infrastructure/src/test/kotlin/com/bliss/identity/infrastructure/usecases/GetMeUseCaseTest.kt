@@ -141,6 +141,11 @@ class GetMeUseCaseTest {
             val sut = GetMeUseCase(users, providers, subscriptions)
             val result = sut.execute(GetMeQuery(userId))
             assertThat(result.capabilities)
-                .containsExactlyInAnyOrder(Capability.HINT, Capability.GRILLES_ALL, Capability.GRILLES_GENERATE)
+                .containsExactlyInAnyOrder(
+                    Capability.HINT,
+                    Capability.GRILLES_ALL,
+                    Capability.GRILLES_GENERATE,
+                    Capability.MULTIPLAYER_HOST_UNLIMITED,
+                )
         }
 }
