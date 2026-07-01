@@ -5,7 +5,7 @@ import { css, cx } from 'styled-system/css';
 import type { DailySummary, PuzzleRepository } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Skeleton } from '@/design-system';
-import { useSubscriber } from '@/ui/components/billing';
+import { useCanSubscribe } from '@/ui/components/billing';
 import { PhoneShell } from './PhoneShell';
 import { MobileTopBar } from './MobileTopBar';
 import { SegmentedControl } from './SegmentedControl';
@@ -104,7 +104,6 @@ const todayFlag = css({
 
 const cardLocked = css({ border: 'none', bg: 'rgba(255,255,255,0.7)', _hover: { bg: 'rgba(255,255,255,0.7)' } });
 const dTitleLocked = css({ color: 'ws.khaki' });
-const lockedFlag = css({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontFamily: 'wsUi', fontSize: '9px', fontWeight: 'black', letterSpacing: '0.04em', textTransform: 'uppercase', color: '#5A4B12', bg: 'ws.or', borderRadius: '999px', padding: '2px 7px 2px 5px', marginLeft: '6px', verticalAlign: 'middle' });
 const lockTile = css({ flex: 'none', width: '30px', height: '30px', borderRadius: '9px', bg: 'ws.or', color: '#5A4B12', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.9 });
 const bannerWrap = css({ marginBottom: '14px' });
 
@@ -169,7 +168,7 @@ export function GrillesArchiveScreen({
   readonly soloEntriesStore: SoloEntriesStore;
 }) {
   const navigate = useNavigate();
-  const subscriber = useSubscriber();
+  const canSubscribe = useCanSubscribe();
   const [menuOpen, setMenuOpen] = useState(false);
   // Kept mounted (Ark animates its own close) and the context persists through the close transition.
   const [sheet, setSheet] = useState<{ open: boolean; context: SheetContext }>({ open: false, context: 'grid' });
@@ -224,10 +223,10 @@ export function GrillesArchiveScreen({
       const status: Status = total > 0 && locked >= total ? 'done' : locked > 0 ? 'progress' : 'new';
       // Started = any locked cell or saved entry, the same signal the home strip uses (ADR-0075 blob).
       const started = locked > 0 || soloEntriesStore.load(summary.id).length > 0;
-      const paywalled = !subscriber && !started && daysSince(summary.date, todayIso) > 7;
+      const paywalled = canSubscribe && !started && daysSince(summary.date, todayIso) > 7;
       return { summary, status, locked, today: summary.date === todayIso, paywalled };
     });
-  }, [summaries, soloEntriesStore, todayIso, subscriber]);
+  }, [summaries, soloEntriesStore, todayIso, canSubscribe]);
 
   const visible = useMemo(
     () =>
@@ -278,7 +277,7 @@ export function GrillesArchiveScreen({
       </div>
 
       <div className={scrollArea}>
-      {!subscriber ? (
+      {canSubscribe ? (
         <div className={bannerWrap}>
           <ArchiveUpsellBanner />
         </div>
@@ -318,9 +317,6 @@ export function GrillesArchiveScreen({
                           <div className={mid}>
                             <div className={cx(dTitle, dTitleLocked)}>
                               {longDateFr(row.summary.date)} · n°{row.summary.gridNumber}
-                              <span className={lockedFlag}>
-                                <Lock size={9} weight="fill" aria-hidden="true" /> Abonnés
-                              </span>
                             </div>
                             <div className={dMeta}>Réservée à l&apos;abonnement</div>
                           </div>
