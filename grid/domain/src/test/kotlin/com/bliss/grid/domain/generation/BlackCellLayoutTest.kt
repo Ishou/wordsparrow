@@ -338,13 +338,15 @@ class BlackCellLayoutTest {
 
     @Test
     fun `canPlaceBlack rejects a placement that orphans a neighbour on both axes`() {
-        // (1,1) walled left/right by blacks; placing black below it at (2,1) would
-        // also wall it vertically → run 1 on BOTH axes (in no word) → rejected.
-        val cells = CellArray(3, 3)
-        cells.set(1, 0, CellArray.BLACK)
-        cells.set(1, 2, CellArray.BLACK)
-        cells.set(0, 1, CellArray.BLACK)
-        assertThat(BlackCellLayout.canPlaceBlack(cells, 2, 1, 2)).isFalse()
+        // (1,2) is walled left/right by (1,1)/(1,3) and above by (0,2); placing
+        // black at (2,2) seals its last escape → orphaned on BOTH axes. The
+        // other neighbours of (2,2) each keep one axis clear, isolating (1,2)
+        // as the sole cause of rejection.
+        val cells = CellArray(4, 3)
+        cells.set(0, 2, CellArray.BLACK)
+        cells.set(1, 1, CellArray.BLACK)
+        cells.set(1, 3, CellArray.BLACK)
+        assertThat(BlackCellLayout.canPlaceBlack(cells, 2, 2, 2)).isFalse()
     }
 
     @Test

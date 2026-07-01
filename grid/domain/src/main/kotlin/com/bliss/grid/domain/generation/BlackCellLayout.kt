@@ -225,10 +225,7 @@ internal object BlackCellLayout {
         val prior = cells.get(r, c)
         cells.set(r, c, CellArray.BLACK)
         try {
-            // Check 1: no adjacent white cell may be orphaned — it must stay in at
-            // least ONE word. A length-1 run on the black's axis is a valid single-axis
-            // (sandwiched) cell in half-checked mots fléchés; reject only if the
-            // neighbour drops below minLen on BOTH axes (in no word at all).
+            // Check 1: no adjacent white cell may be orphaned (ADR-0039 half-checked amendment).
             for (cc in intArrayOf(c - 1, c + 1)) {
                 if (cc !in 0 until cells.width) continue
                 if (cells.isBlack(r, cc)) continue
