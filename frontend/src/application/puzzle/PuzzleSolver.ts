@@ -28,6 +28,8 @@ export interface HintResult {
   readonly cells: ReadonlyArray<RevealedWordCell>;
   /** Remaining budget after this call; `0` means the next call 429s. */
   readonly hintsRemaining: number;
+  /** Seconds until the next regenerated credit; `null` when the budget is full. */
+  readonly secondsUntilNextHint: number | null;
 }
 
 export type HintErrorKind =

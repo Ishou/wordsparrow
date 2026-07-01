@@ -23,11 +23,12 @@ describe('useHintRequest — whole-word reveal', () => {
     vi.useRealTimers();
   });
 
-  it('sends the active direction and writes hintsRemaining + the revealed word', async () => {
+  it('sends the active direction and writes hintsRemaining + secondsUntilNextHint + the revealed word', async () => {
     const solver = makeSolver();
     (solver.requestHint as ReturnType<typeof vi.fn>).mockResolvedValue({
       cells: WORD,
       hintsRemaining: 2,
+      secondsUntilNextHint: 600,
     });
     const { result } = renderHook(() => useHintRequest(PUZZLE_ID, 3, solver));
 
@@ -39,9 +40,65 @@ describe('useHintRequest — whole-word reveal', () => {
 
     expect(solver.requestHint).toHaveBeenCalledWith(PUZZLE_ID, 3, 5, 'across');
     expect(result.current.hintsRemaining).toBe(2);
+    expect(result.current.secondsUntilNextHint).toBe(600);
     expect(result.current.lastResult).toEqual({ cells: WORD });
     expect(result.current.exhausted).toBe(false);
     expect(result.current.errorMessage).toBeNull();
+  });
+
+  it('reports "full" (secondsUntilNextHint null) on a reveal that fills the budget', async () => {
+    const solver = makeSolver();
+    (solver.requestHint as ReturnType<typeof vi.fn>).mockResolvedValue({
+      cells: WORD,
+      hintsRemaining: 3,
+      secondsUntilNextHint: null,
+    });
+    const { result } = renderHook(() => useHintRequest(PUZZLE_ID, 3, solver));
+
+    await act(async () => {
+      result.current.request(3, 5, 'across');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.secondsUntilNextHint).toBeNull();
+  });
+
+  it('seeds secondsUntilNextHint from the puzzle read', () => {
+    const solver = makeSolver();
+    const { result } = renderHook(() =>
+      useHintRequest(PUZZLE_ID, 2, solver, undefined, undefined, 420),
+    );
+    expect(result.current.secondsUntilNextHint).toBe(420);
+  });
+
+  it('blocks a spend at 0 tokens until the cooldown elapses, then optimistically allows it', () => {
+    vi.useFakeTimers();
+    const solver = makeSolver();
+    (solver.requestHint as ReturnType<typeof vi.fn>).mockResolvedValue({
+      cells: WORD,
+      hintsRemaining: 0,
+      secondsUntilNextHint: 600,
+    });
+    const { result } = renderHook(() =>
+      useHintRequest(PUZZLE_ID, 0, solver, undefined, undefined, 2),
+    );
+
+    expect(result.current.exhausted).toBe(true);
+    act(() => {
+      result.current.request(3, 5, 'across');
+    });
+    expect(solver.requestHint).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(2_000);
+    });
+    expect(result.current.secondsUntilNextHint).toBe(0);
+
+    act(() => {
+      result.current.request(3, 5, 'across');
+    });
+    expect(solver.requestHint).toHaveBeenCalledWith(PUZZLE_ID, 3, 5, 'across');
   });
 
   it('fires onReveal with every revealed cell so the parent can write the whole word', async () => {

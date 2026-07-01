@@ -91,6 +91,7 @@ export function createHttpPuzzleSolver(
           letter: c.letter,
         })),
         hintsRemaining: data.hintsRemaining,
+        secondsUntilNextHint: data.secondsUntilNextHint,
       };
     },
   };

@@ -11,6 +11,8 @@ export interface Puzzle {
   readonly height: number;
   readonly hintsAllowed: number;
   readonly hintsRemaining: number;
+  /** Seconds until the next regenerated hint credit; `null` when the budget is full or the caller is anonymous. */
+  readonly secondsUntilNextHint?: number | null;
   readonly cells: readonly Cell[];
   readonly difficulty?: Difficulty | null;
   readonly gridNumber?: number | null;

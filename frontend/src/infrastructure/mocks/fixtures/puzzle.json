@@ -6,6 +6,7 @@
   "height": 12,
   "hintsAllowed": 3,
   "hintsRemaining": 3,
+  "secondsUntilNextHint": null,
   "cells": [
     { "kind": "definition", "position": { "row": 0, "column": 0 }, "clueId": "019e0147-bfc8-7c0b-90cd-000000000000", "text": "Rang ou position", "arrow": "down" },
     { "kind": "letter", "position": { "row": 0, "column": 1 }, "letter": "M" },

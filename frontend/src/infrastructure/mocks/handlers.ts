@@ -255,7 +255,9 @@ const gridHandlers = [
     }
     const next = remaining - 1;
     hintsRemainingByPuzzle.set(puzzleId, next);
-    return HttpResponse.json({ cells: word, hintsRemaining: next });
+    const allowed = puzzleFixture.hintsAllowed ?? 3;
+    const secondsUntilNextHint = next < allowed ? 600 : null;
+    return HttpResponse.json({ cells: word, hintsRemaining: next, secondsUntilNextHint });
   }),
 
   // POST /v1/puzzles/{id}/validate — preview parity: a pure binary verdict (ADR-0076 §§7–9), no positional data on the wire.

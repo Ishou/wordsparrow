@@ -1,5 +1,7 @@
 export { Grid } from './Grid';
 export { HintControl, type HintControlProps } from './HintControl';
+export { HintCooldown, type HintCooldownProps } from './HintCooldown';
+export { useCountdownTicker } from './useCountdownTicker';
 export {
   usePuzzleValidation,
   type PuzzleValidationState,
