@@ -192,6 +192,11 @@ ADR-0082  identity/**/usecases/CompleteOidcLoginUseCase.kt  Persist the verified
 ADR-0082  identity/api/openapi.yaml                  /v1/users/me gains nullable `email` (the ONLY endpoint that exposes it); /v1/auth/whoami does NOT carry it (minimization — whoami fires on every authed request across contexts); emailOptIn opt-in machinery retired (email is by-necessity, not consent)
 ADR-0082  billing/infrastructure/**/provider/MollieBillingAdapter.kt  Pass caller email (read from identity /v1/users/me at checkout) to Mollie createCustomer for invoices/receipts; billing STORES no email (narrows ADR-0078 no-PII to pass-through only)
 # ADR-0082: RGPD basis = performance of contract / legal obligation (invoicing), purpose-limited to billing/receipts/recovery; erasure unchanged (email on users row, ON DELETE CASCADE + UserDeleted); still no name/picture/IP. Supersedes ADR-0045 OAuth-scope + email-retention parts. Transparency (confidentialité + CGV + DPA/records-of-processing) updates required — accountant/DPO angle
+ADR-0083  identity/domain/**/user/Capability.kt         Mint `multiplayer:host-unlimited` for the subscriber tier only (dedicated cap, not `grilles:all`); consumers see capabilities, never tiers (ADR-0079)
+ADR-0083  game/application/**/auth/CookieVerifier.kt     WhoAmI carries `capabilities` parsed from identity whoami — game becomes a capability consumer (mirrors grid/survey/billing); absent ⇒ empty ⇒ deny-only
+ADR-0083  game/application/**/usecases/LobbyUseCases.kt  Host quota: authed player = 1 WAITING lobby (findWaitingByOwnerUser, reopen existing); `multiplayer:host-unlimited` ⇒ unlimited
+ADR-0083  game/api/**/routes/LobbiesRoute.kt             Guest = 0: anon `POST /v1/lobbies` returns 401 (hosting requires sign-in); joining stays open to everyone
+# ADR-0083: Multiplayer hosting entitlement — extends ADR-0080 into game; guest 0 / player 1 open lobby / subscriber unlimited; join open to all; server-side enforced in game (unlike cosmetic solo grid gating). guest=0/player=1 ship now, subscriber=∞ dormant until billing GA
 ```
 
 ## Adding entries
