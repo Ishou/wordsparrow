@@ -32,10 +32,12 @@ data class ProviderSubscriptionRef(
 
 /** Anti-corruption port over the payment provider; only infrastructure knows a provider exists, and provider payload shapes never leak past it (ADR-0078). */
 interface BillingProviderPort {
+    /** Start hosted checkout; [email] (session-derived, nullable) is passed through to the provider customer for receipts/invoices, never stored (ADR-0082). */
     suspend fun createCheckout(
         userId: UUID,
         tier: Tier,
         cadence: Cadence,
+        email: String?,
     ): CheckoutUrls
 
     /** Create the recurring subscription from a paid first-payment context (the mandate it established); returns the authoritative state keyed by the new subscription's [ProviderSubscriptionState.externalRef] (ADR-0078). */

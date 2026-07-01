@@ -43,12 +43,13 @@ class MollieBillingAdapterTest {
             val client = FakeMollieClient().apply { nextCustomerId = "cust_new" }
             val store = InMemoryMollieCustomerStore()
 
-            val urls = adapter(client, store).createCheckout(userId, tier, Cadence.MONTHLY)
+            val urls = adapter(client, store).createCheckout(userId, tier, Cadence.MONTHLY, "player@example.com")
 
             assertThat(urls.checkoutUrl).isEqualTo("https://checkout.test/1")
             assertThat(urls.successUrl).isEqualTo(config.successUrl)
             assertThat(urls.cancelUrl).isEqualTo(config.cancelUrl)
             assertThat(client.createdCustomers).containsExactly(userId.toString())
+            assertThat(client.createdCustomerEmails).containsExactly("player@example.com")
             assertThat(store.saved[userId]).isEqualTo("cust_new")
             assertThat(client.lastPaymentCustomerId).isEqualTo("cust_new")
             assertThat(client.lastPaymentMetadata).isEqualTo(metadata())
@@ -60,9 +61,19 @@ class MollieBillingAdapterTest {
         runTest {
             val client = FakeMollieClient()
 
-            adapter(client, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.YEARLY)
+            adapter(client, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.YEARLY, null)
 
             assertThat(client.lastPaymentMetadata).isEqualTo(metadata("yearly"))
+        }
+
+    @Test
+    fun `createCheckout creates the customer with no email when the caller has none`() =
+        runTest {
+            val client = FakeMollieClient().apply { nextCustomerId = "cust_new" }
+
+            adapter(client, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.MONTHLY, null)
+
+            assertThat(client.createdCustomerEmails).containsExactly(null)
         }
 
     @Test
@@ -71,7 +82,7 @@ class MollieBillingAdapterTest {
             val client = FakeMollieClient()
             val store = InMemoryMollieCustomerStore(mapOf(userId to "cust_existing"))
 
-            adapter(client, store).createCheckout(userId, tier, Cadence.MONTHLY)
+            adapter(client, store).createCheckout(userId, tier, Cadence.MONTHLY, null)
 
             assertThat(client.createdCustomers).isEmpty()
             assertThat(client.lastPaymentCustomerId).isEqualTo("cust_existing")
@@ -84,7 +95,7 @@ class MollieBillingAdapterTest {
                 FakeMollieClient().apply {
                     firstPayment = firstPayment.copy(checkoutUrl = null)
                 }
-            val result = runCatching { adapter(client, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.MONTHLY) }
+            val result = runCatching { adapter(client, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.MONTHLY, null) }
             assertThat(result.exceptionOrNull()).isNotNull().isInstanceOf(IllegalArgumentException::class)
         }
 

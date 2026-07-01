@@ -45,7 +45,11 @@ class MollieResourceGoneException(
 
 /** Thin SDK seam: tests mock this interface, not the adapter; only Mollie SDK import lives in its impl (ADR-0078). */
 interface MollieClient {
-    suspend fun createCustomer(userReference: String): String
+    /** Create the provider Customer; [email] (nullable) rides on the Customer for receipts/invoices, omitted when absent (ADR-0082). */
+    suspend fun createCustomer(
+        userReference: String,
+        email: String?,
+    ): String
 
     suspend fun createFirstPayment(
         customerId: String,

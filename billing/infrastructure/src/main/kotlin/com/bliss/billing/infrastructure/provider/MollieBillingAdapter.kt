@@ -22,8 +22,9 @@ class MollieBillingAdapter(
         userId: UUID,
         tier: Tier,
         cadence: Cadence,
+        email: String?,
     ): CheckoutUrls {
-        val customerId = customerStore.findOrCreate(userId) { client.createCustomer(userId.toString()) }
+        val customerId = customerStore.findOrCreate(userId) { client.createCustomer(userId.toString(), email) }
         val payment =
             client.createFirstPayment(
                 customerId = customerId,

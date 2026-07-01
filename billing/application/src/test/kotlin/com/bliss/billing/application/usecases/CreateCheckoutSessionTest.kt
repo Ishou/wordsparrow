@@ -23,7 +23,7 @@ class CreateCheckoutSessionTest {
     @Test
     fun `returns checkout urls when no live subscription exists`() =
         runTest {
-            val outcome = useCase.execute(userId, tier, Cadence.MONTHLY)
+            val outcome = useCase.execute(userId, tier, Cadence.MONTHLY, email = null)
 
             assertThat(outcome).isInstanceOf(CreateCheckoutSessionOutcome.Success::class)
             assertThat(provider.lastCheckout).isEqualTo(Triple(userId, tier, Cadence.MONTHLY))
@@ -32,9 +32,17 @@ class CreateCheckoutSessionTest {
     @Test
     fun `forwards the chosen cadence to the provider`() =
         runTest {
-            useCase.execute(userId, tier, Cadence.YEARLY)
+            useCase.execute(userId, tier, Cadence.YEARLY, email = null)
 
             assertThat(provider.lastCheckout).isEqualTo(Triple(userId, tier, Cadence.YEARLY))
+        }
+
+    @Test
+    fun `forwards the caller email to the provider`() =
+        runTest {
+            useCase.execute(userId, tier, Cadence.MONTHLY, email = "player@example.com")
+
+            assertThat(provider.lastCheckoutEmail).isEqualTo("player@example.com")
         }
 
     @Test
@@ -42,7 +50,7 @@ class CreateCheckoutSessionTest {
         runTest {
             repository.save(subscription(userId = userId))
 
-            val outcome = useCase.execute(userId, tier, Cadence.MONTHLY)
+            val outcome = useCase.execute(userId, tier, Cadence.MONTHLY, email = null)
 
             assertThat(outcome).isEqualTo(CreateCheckoutSessionOutcome.AlreadySubscribed)
         }
@@ -52,7 +60,7 @@ class CreateCheckoutSessionTest {
         runTest {
             provider.failCheckoutOnce = true
 
-            val error = runCatching { useCase.execute(userId, tier, Cadence.MONTHLY) }.exceptionOrNull()
+            val error = runCatching { useCase.execute(userId, tier, Cadence.MONTHLY, email = null) }.exceptionOrNull()
 
             assertThat(error).isNotNull().isInstanceOf(ProviderUnavailable::class)
         }
