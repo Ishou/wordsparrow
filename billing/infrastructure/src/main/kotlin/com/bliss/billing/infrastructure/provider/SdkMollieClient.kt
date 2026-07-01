@@ -3,21 +3,27 @@ package com.bliss.billing.infrastructure.provider
 import com.mollie.mollie.Client
 import com.mollie.mollie.models.components.Amount
 import com.mollie.mollie.models.components.EntityCustomer
+import com.mollie.mollie.models.components.ListPaymentResponse
 import com.mollie.mollie.models.components.ListSubscriptionResponse
+import com.mollie.mollie.models.components.Locale
 import com.mollie.mollie.models.components.Metadata
 import com.mollie.mollie.models.components.PaymentRequest
 import com.mollie.mollie.models.components.PaymentResponse
 import com.mollie.mollie.models.components.Security
 import com.mollie.mollie.models.components.SequenceType
+import com.mollie.mollie.models.components.Sorting
 import com.mollie.mollie.models.components.SubscriptionRequest
 import com.mollie.mollie.models.components.SubscriptionResponse
 import com.mollie.mollie.models.errors.APIException
 import com.mollie.mollie.models.operations.GetPaymentRequest
 import com.mollie.mollie.models.operations.ListAllSubscriptionsRequest
+import com.mollie.mollie.models.operations.ListCustomerPaymentsRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.openapitools.jackson.nullable.JsonNullable
+import java.net.URI
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 /** Sole Mollie SDK import (ADR-0078): blocking calls run on IO dispatcher, responses flattened to [MollieClient] primitives. */
@@ -68,6 +74,8 @@ class SdkMollieClient(
                     .webhookUrl(webhookUrl)
                     .sequenceType(SequenceType.FIRST)
                     .customerId(customerId)
+                    // fr_FR localises the hosted checkout (where Mollie collects the shopper email) and the confirmation Mollie mails them (ADR-0078: we hold no email).
+                    .locale(Locale.FRFR)
                     .metadata(metadataOf(metadata))
                     .build()
             val response =
@@ -91,6 +99,48 @@ class SdkMollieClient(
                     .map { it.toDto() }
                     .orElse(null)
             }
+        }
+
+    override suspend fun listCustomerPayments(
+        customerId: String,
+        from: String?,
+        limit: Int,
+    ): MolliePaymentPage =
+        withContext(Dispatchers.IO) {
+            val request =
+                ListCustomerPaymentsRequest
+                    .builder()
+                    .customerId(customerId)
+                    // Mollie defaults to newest-first; DESC is explicit so the receipts contract holds if that default ever changes.
+                    .sort(Sorting.DESC)
+                    .limit(limit.toLong())
+                    .apply { if (from != null) from(from) }
+                    .build()
+            val body =
+                sdk
+                    .customers()
+                    .listPayments()
+                    .request(request)
+                    .call()
+                    .`object`()
+                    .orElse(null)
+                    ?: return@withContext MolliePaymentPage(emptyList(), null)
+            val payments =
+                body
+                    .embedded()
+                    .payments()
+                    .orElse(emptyList())
+                    .map { it.toRecord() }
+            MolliePaymentPage(
+                payments,
+                nextCursorFrom(
+                    body
+                        .links()
+                        .next()
+                        .flatMap { it.href() }
+                        .orElse(null),
+                ),
+            )
         }
 
     override suspend fun createSubscription(
@@ -219,6 +269,25 @@ class SdkMollieClient(
                 },
             metadata = metadata().orElse(null)?.toStringMap() ?: emptyMap(),
         )
+
+    private fun ListPaymentResponse.toRecord(): MolliePaymentRecord =
+        MolliePaymentRecord(
+            amountValue = amount().value(),
+            currency = amount().currency(),
+            status = status().value(),
+            // Mollie timestamps carry an explicit offset (e.g. +00:00); OffsetDateTime parses them where Instant.parse would reject.
+            paidAt = paidAt().toNullable()?.let { OffsetDateTime.parse(it).toInstant() },
+            createdAt = OffsetDateTime.parse(createdAt()).toInstant(),
+        )
+
+    // Mollie's next link is a full URL; the opaque cursor is its `from` query param (a payment id).
+    private fun nextCursorFrom(nextHref: String?): String? =
+        nextHref
+            ?.let { URI(it).query }
+            ?.split("&")
+            ?.firstOrNull { it.startsWith("from=") }
+            ?.substringAfter("from=")
+            ?.takeIf { it.isNotBlank() }
 
     private fun <T> notFoundToNull(block: () -> T?): T? =
         try {

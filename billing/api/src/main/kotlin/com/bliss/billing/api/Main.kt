@@ -8,6 +8,7 @@ import com.bliss.billing.application.usecases.CancelSubscription
 import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.application.usecases.HandleUserDeleted
 import com.bliss.billing.application.usecases.IngestProviderEvent
+import com.bliss.billing.application.usecases.ListReceipts
 import com.bliss.billing.application.usecases.SubscriptionQuery
 import com.bliss.billing.infrastructure.nats.MaxDeliveriesDlqRepublisher
 import com.bliss.billing.infrastructure.nats.NatsSubscriptionPublisher
@@ -18,6 +19,7 @@ import com.bliss.billing.infrastructure.persistence.PostgresProcessedEventLedger
 import com.bliss.billing.infrastructure.persistence.PostgresSubscriptionRepository
 import com.bliss.billing.infrastructure.provider.MollieBillingAdapter
 import com.bliss.billing.infrastructure.provider.MollieConfig
+import com.bliss.billing.infrastructure.provider.MollieReceiptAdapter
 import com.bliss.billing.infrastructure.provider.SdkMollieClient
 import com.fasterxml.uuid.Generators
 import io.ktor.server.cio.CIO
@@ -38,7 +40,9 @@ fun main() {
     val subscriptions = PostgresSubscriptionRepository(dataSource)
     val ledger = PostgresProcessedEventLedger(dataSource)
     val customerStore = PostgresMollieCustomerStore(dataSource)
-    val provider = MollieBillingAdapter(SdkMollieClient(mollieConfig), customerStore, mollieConfig)
+    val mollieClient = SdkMollieClient(mollieConfig)
+    val provider = MollieBillingAdapter(mollieClient, customerStore, mollieConfig)
+    val receiptProvider = MollieReceiptAdapter(mollieClient, customerStore)
 
     // ADR-0049 — connect to NATS before Ktor serves so the SubscriptionChanged publisher is ready on first request.
     val natsConn = Nats.connect(config.natsUrl)
@@ -70,6 +74,7 @@ fun main() {
             cancelSubscription = CancelSubscription(provider, subscriptions, publisher, clock, eventIds),
             ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds),
             subscriptionQuery = SubscriptionQuery(subscriptions),
+            listReceipts = ListReceipts(receiptProvider),
             closeNats = {
                 dlqRepublisher.close()
                 userDeletedConsumer.stop()

@@ -14,6 +14,21 @@ data class MolliePayment(
     val mandateId: String? = null,
 )
 
+/** One customer payment reduced to receipt primitives at the SDK boundary; amount stays the provider decimal string (ADR-0078: no PII). */
+data class MolliePaymentRecord(
+    val amountValue: String,
+    val currency: String,
+    val status: String,
+    val paidAt: Instant?,
+    val createdAt: Instant,
+)
+
+/** One page of a customer's payments, newest-first; [nextCursor] is the opaque `from` id for the next page or null on the last (ADR-0078). */
+data class MolliePaymentPage(
+    val payments: List<MolliePaymentRecord>,
+    val nextCursor: String?,
+)
+
 /** Provider subscription snapshot, reduced to primitives at the SDK boundary (ADR-0078). */
 data class MollieSubscription(
     val id: String,
@@ -44,6 +59,13 @@ interface MollieClient {
     ): MolliePayment
 
     suspend fun getPayment(paymentId: String): MolliePayment?
+
+    /** One page of a customer's payments newest-first, paging by the opaque `from` cursor (a payment id); [limit] is clamped by the caller. */
+    suspend fun listCustomerPayments(
+        customerId: String,
+        from: String?,
+        limit: Int,
+    ): MolliePaymentPage
 
     /** Create the recurring subscription against an existing mandate; the first payment must already be paid. */
     suspend fun createSubscription(

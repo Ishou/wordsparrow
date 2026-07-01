@@ -6,6 +6,7 @@ import com.bliss.billing.api.dto.ProblemDetails
 import com.bliss.billing.api.routes.cancelSubscriptionRoute
 import com.bliss.billing.api.routes.checkoutSessionRoute
 import com.bliss.billing.api.routes.healthRoute
+import com.bliss.billing.api.routes.receiptsRoute
 import com.bliss.billing.api.routes.subscriptionRoute
 import com.bliss.billing.api.routes.webhookRoute
 import io.ktor.http.ContentType
@@ -73,6 +74,7 @@ fun Application.billingApiModule(
         cancelSubscriptionRoute(wiring.cancelSubscription)
         webhookRoute(wiring.ingestProviderEvent)
         subscriptionRoute(wiring.subscriptionQuery)
+        receiptsRoute(wiring.listReceipts)
     }
 }
 

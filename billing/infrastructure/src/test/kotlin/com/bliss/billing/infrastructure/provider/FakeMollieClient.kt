@@ -45,6 +45,22 @@ class FakeMollieClient : MollieClient {
 
     override suspend fun getPayment(paymentId: String): MolliePayment? = payments[paymentId]
 
+    var customerPayments: MolliePaymentPage = MolliePaymentPage(emptyList(), null)
+    var lastListCustomerId: String? = null
+    var lastListFrom: String? = null
+    var lastListLimit: Int? = null
+
+    override suspend fun listCustomerPayments(
+        customerId: String,
+        from: String?,
+        limit: Int,
+    ): MolliePaymentPage {
+        lastListCustomerId = customerId
+        lastListFrom = from
+        lastListLimit = limit
+        return customerPayments
+    }
+
     override suspend fun createSubscription(
         customerId: String,
         mandateId: String,
