@@ -14,7 +14,7 @@ const linkStyle = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold'
 
 export function CheckoutCancelScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/menu" />} backTo="/menu">
+    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <h1 className={title}>Paiement annulé</h1>
       <p className={statusCard} role="status">
         Aucun montant n'a été débité.
