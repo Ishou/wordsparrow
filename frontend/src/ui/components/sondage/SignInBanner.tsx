@@ -22,6 +22,14 @@ const textStyles = css({
   flex: 1,
 });
 
+// ADR-0082 "Transparency": the sign-in surface must disclose email collection.
+const disclosureStyles = css({
+  display: 'block',
+  fontSize: 'xs',
+  color: 'fgMuted',
+  marginTop: 'xs',
+});
+
 const ctaStyles = css({
   display: 'inline-flex',
   alignItems: 'center',
@@ -61,6 +69,10 @@ export function SignInBanner({ authClient, onClick }: SignInBannerProps) {
     <aside className={bannerStyles} role="note" aria-label="Invitation à se connecter">
       <p className={textStyles}>
         Connectez-vous pour proposer vos propres indices et suivre vos contributions.
+        <span className={disclosureStyles}>
+          Votre adresse e-mail Google ou Apple est alors enregistrée pour la facturation d’un
+          éventuel abonnement.
+        </span>
       </p>
       <a
         className={ctaStyles}

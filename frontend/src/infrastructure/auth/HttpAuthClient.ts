@@ -54,6 +54,7 @@ export function createHttpAuthClient(
           provider: p.provider,
           linkedAt: p.linkedAt,
         })),
+        email: data.email,
       };
     },
 

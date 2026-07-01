@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AuthClient, WhoAmIResult } from '@/application/auth';
+import type { AuthClient, GetMeResult, WhoAmIResult } from '@/application/auth';
 import type { BillingClient, SubscriptionView } from '@/application/billing';
 import { AuthProvider } from '@/ui/components/auth';
 
@@ -133,6 +133,62 @@ describe('CheckoutSuccessScreen polling', () => {
       await vi.advanceTimersByTimeAsync(10000);
     });
     expect(getSubscription).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('CheckoutSuccessScreen receipt line', () => {
+  function fakeAuthClientWithEmail(email?: string): AuthClient {
+    const me: GetMeResult = {
+      id: USER_ID,
+      displayName: 'Lapin 472',
+      createdAt: '2026-01-01T00:00:00Z',
+      providers: [],
+      email,
+    };
+    return {
+      whoami: vi.fn().mockResolvedValue(SUBSCRIBER),
+      getMe: vi.fn().mockResolvedValue(me),
+      updateMe: vi.fn(),
+      deleteMe: vi.fn(),
+      logout: vi.fn(),
+      signInUrl: (provider, returnTo) => `https://auth.test/${provider}?return_to=${returnTo}`,
+    };
+  }
+
+  beforeEach(() => {
+    routeContext = {};
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+  });
+
+  it('shows the receipt line once getMe resolves with an email on file', async () => {
+    routeContext = { authClient: fakeAuthClientWithEmail('lapin@example.com') };
+    const getSubscription = vi.fn<BillingClient['getSubscription']>().mockResolvedValue(ACTIVE_VIEW);
+    render(<CheckoutSuccessScreen client={fakeBillingClient(getSubscription)} />, {
+      wrapper: withAuth(SUBSCRIBER),
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(await screen.findByText(/un reçu te sera envoyé par e-mail/i)).toBeInTheDocument();
+  });
+
+  it('hides the receipt line when no email is on file', async () => {
+    routeContext = { authClient: fakeAuthClientWithEmail(undefined) };
+    const getSubscription = vi.fn<BillingClient['getSubscription']>().mockResolvedValue(ACTIVE_VIEW);
+    render(<CheckoutSuccessScreen client={fakeBillingClient(getSubscription)} />, {
+      wrapper: withAuth(SUBSCRIBER),
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(await screen.findByText(/te voilà abonné/i)).toBeInTheDocument();
+    expect(screen.queryByText(/un reçu te sera envoyé par e-mail/i)).toBeNull();
   });
 });
 

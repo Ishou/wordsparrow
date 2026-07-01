@@ -58,6 +58,22 @@ export function ConfidentialiteScreen() {
           </p>
         </section>
 
+        {/* DRAFT-à-valider — à confirmer avec le comptable/juridique */}
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Facturation et paiement</h2>
+          <p className={sectionBody}>
+            Quand tu te connectes, ton adresse e-mail est enregistrée puis conservée pour établir
+            les factures et les reçus liés à un abonnement — au titre d&apos;une obligation légale
+            et de l&apos;exécution du contrat (article [à compléter]). Durée de conservation :
+            [à compléter].
+          </p>
+          <p className={sectionBody}>
+            Pour gérer ton abonnement et t&apos;envoyer les reçus, cette adresse est transmise à
+            notre prestataire de paiement, Mollie. Elle n&apos;est jamais utilisée à des fins
+            commerciales ni de prospection.
+          </p>
+        </section>
+
         <section className={contentCard}>
           <h2 className={sectionHeading}>Tes droits</h2>
           <p className={sectionBody}>

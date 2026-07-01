@@ -75,6 +75,7 @@ describe('/compte auth-hydration', () => {
       displayName: 'Lapin 472',
       createdAt: '2026-01-01T00:00:00Z',
       providers: [{ provider: 'google', linkedAt: '2026-01-01T00:00:00Z' }],
+      email: 'lapin@example.com',
     };
     const authClient = stubAuth({
       whoami: vi.fn().mockResolvedValue({ userId: USER_ID, displayName: 'Lapin 472' }),
@@ -87,5 +88,37 @@ describe('/compte auth-hydration', () => {
     );
     expect(screen.getAllByText('Lapin 472').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { level: 1, name: /Mon compte/i })).toBeInTheDocument();
+  });
+
+  it('surfaces the collected email once getMe resolves', async () => {
+    const me: GetMeResult = {
+      id: USER_ID,
+      displayName: 'Lapin 472',
+      createdAt: '2026-01-01T00:00:00Z',
+      providers: [{ provider: 'google', linkedAt: '2026-01-01T00:00:00Z' }],
+      email: 'lapin@example.com',
+    };
+    const authClient = stubAuth({
+      whoami: vi.fn().mockResolvedValue({ userId: USER_ID, displayName: 'Lapin 472' }),
+      getMe: vi.fn().mockResolvedValue(me),
+    });
+    renderCompte(authClient);
+    await waitFor(() => expect(screen.getByText('lapin@example.com')).toBeInTheDocument());
+    expect(screen.getByText(/Adresse e-mail/i)).toBeInTheDocument();
+  });
+
+  it('shows a graceful fallback when no email is on file', async () => {
+    const me: GetMeResult = {
+      id: USER_ID,
+      displayName: 'Lapin 472',
+      createdAt: '2026-01-01T00:00:00Z',
+      providers: [{ provider: 'google', linkedAt: '2026-01-01T00:00:00Z' }],
+    };
+    const authClient = stubAuth({
+      whoami: vi.fn().mockResolvedValue({ userId: USER_ID, displayName: 'Lapin 472' }),
+      getMe: vi.fn().mockResolvedValue(me),
+    });
+    renderCompte(authClient);
+    await waitFor(() => expect(screen.getByText('Non renseignée')).toBeInTheDocument());
   });
 });
