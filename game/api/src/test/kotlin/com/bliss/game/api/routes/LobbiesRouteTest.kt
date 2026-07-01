@@ -3,6 +3,7 @@ package com.bliss.game.api.routes
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.matches
 import assertk.assertions.startsWith
@@ -53,12 +54,21 @@ class LobbiesRouteTest {
     private val ownerPseudonym = "Joueur 1234"
 
     @Test
-    fun `POST creates a lobby, returns 201 with Location header and a body matching LobbyResponseDto`() =
-        testApplication {
-            application { module() }
-            val client = jsonClient()
-
-            val response = client.post("/v1/lobbies") { jsonBody(CreateLobbyRequestDto(ownerSessionId, ownerPseudonym)) }
+    fun `POST with a valid session creates a lobby, returns 201 with Location header and a body matching LobbyResponseDto`() =
+        testApplicationWithVerifier(
+            verifier =
+                stubVerifier(
+                    WhoAmI(
+                        userId = UserId("11111111-1111-1111-1111-111111111111"),
+                        displayName = Pseudonym(ownerPseudonym),
+                    ),
+                ),
+        ) { client, _ ->
+            val response =
+                client.post("/v1/lobbies") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                    jsonBody(CreateLobbyRequestDto(ownerSessionId, ownerPseudonym))
+                }
 
             assertThat(response.status).isEqualTo(HttpStatusCode.Created)
             assertThat(response.headers["Content-Type"]!!).startsWith("application/json")
@@ -92,11 +102,20 @@ class LobbiesRouteTest {
 
     @Test
     fun `GET on the just-created lobby returns 200 with the same body shape`() =
-        testApplication {
-            application { module() }
-            val client = jsonClient()
-
-            val created = client.post("/v1/lobbies") { jsonBody(CreateLobbyRequestDto(ownerSessionId, ownerPseudonym)) }
+        testApplicationWithVerifier(
+            verifier =
+                stubVerifier(
+                    WhoAmI(
+                        userId = UserId("11111111-1111-1111-1111-111111111111"),
+                        displayName = Pseudonym(ownerPseudonym),
+                    ),
+                ),
+        ) { client, _ ->
+            val created =
+                client.post("/v1/lobbies") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                    jsonBody(CreateLobbyRequestDto(ownerSessionId, ownerPseudonym))
+                }
             val lobbyId = JSON.decodeFromString<LobbyResponseDto>(created.bodyAsText()).id
 
             val response = client.get("/v1/lobbies/$lobbyId")
@@ -121,17 +140,15 @@ class LobbiesRouteTest {
         }
 
     @Test
-    fun `POST with an invalid request body returns 400 with RFC 7807 problem json`() =
+    fun `POST with a non-UUID ownerSessionId returns 400 before the auth check`() =
         testApplication {
             application { module() }
             val client = jsonClient()
             val invalidCreateUri = "https://bliss.example/errors/invalid-lobby-create-request"
 
-            // Empty pseudonym fails Pseudonym init.
-            val emptyPseudonym = client.post("/v1/lobbies") { jsonBody(CreateLobbyRequestDto(ownerSessionId, "")) }
-            assertProblem(emptyPseudonym, HttpStatusCode.BadRequest, invalidCreateUri)
-
-            // Non-UUID sessionId fails SessionId init.
+            // Non-UUID sessionId fails SessionId init, mapped to 400 before hosting is gated.
+            // (The request-body pseudonym is no longer validated at this edge: the owner
+            // pseudonym now comes from the authenticated whoami, not the request, ADR-0083.)
             val badSession = client.post("/v1/lobbies") { jsonBody(CreateLobbyRequestDto("not-a-uuid", ownerPseudonym)) }
             assertProblem(badSession, HttpStatusCode.BadRequest, invalidCreateUri)
         }
@@ -151,11 +168,20 @@ class LobbiesRouteTest {
 
     @Test
     fun `GET by-code returns 200 with the same lobby as the create response`() =
-        testApplication {
-            application { module() }
-            val client = jsonClient()
-
-            val created = client.post("/v1/lobbies") { jsonBody(CreateLobbyRequestDto(ownerSessionId, ownerPseudonym)) }
+        testApplicationWithVerifier(
+            verifier =
+                stubVerifier(
+                    WhoAmI(
+                        userId = UserId("11111111-1111-1111-1111-111111111111"),
+                        displayName = Pseudonym(ownerPseudonym),
+                    ),
+                ),
+        ) { client, _ ->
+            val created =
+                client.post("/v1/lobbies") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                    jsonBody(CreateLobbyRequestDto(ownerSessionId, ownerPseudonym))
+                }
             val createdLobby = JSON.decodeFromString<LobbyResponseDto>(created.bodyAsText())
             val code = createdLobby.code!!
 
@@ -226,28 +252,78 @@ class LobbiesRouteTest {
         }
 
     @Test
-    fun `POST with no cookie keeps anon pseudonym from the request body and leaves userId null`() =
-        testApplicationWithVerifier(verifier = stubVerifier(null)) { client, repo ->
+    fun `POST with no session returns 401 - guests cannot host (ADR-0083)`() =
+        testApplicationWithVerifier(verifier = stubVerifier(null)) { client, _ ->
             val response =
                 client.post("/v1/lobbies") {
                     jsonBody(CreateLobbyRequestDto(ownerSessionId, "Marmotte"))
                 }
 
-            assertThat(response.status).isEqualTo(HttpStatusCode.Created)
-            val lobby = JSON.decodeFromString<LobbyResponseDto>(response.bodyAsText())
-            assertThat(lobby.players[0].pseudonym).isEqualTo("Marmotte")
-            val saved =
-                repo.findById(
-                    com.bliss.game.domain
-                        .LobbyId(lobby.id),
-                )!!
-            val owner =
-                saved.players[
-                    com.bliss.game.domain
-                        .SessionId(ownerSessionId),
-                ]!!
-            assertThat(owner.userId).isEqualTo(null)
-            assertThat(owner.pseudonym).isEqualTo(Pseudonym("Marmotte"))
+            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
+            assertThat(response.headers["Content-Type"]!!).startsWith("application/problem+json")
+            assertThat(response.bodyAsText()).contains("auth-required")
+        }
+
+    // ADR-0083 free-player quota: a second host reopens the same WAITING lobby, keyed per userId.
+    // Two distinct browser sessions for the same signed-in user still resolve to one lobby.
+    @Test
+    fun `POST twice for the same free player returns the same lobby (per-user dedup)`() =
+        testApplicationWithVerifier(
+            verifier =
+                stubVerifier(
+                    WhoAmI(
+                        userId = UserId("11111111-1111-1111-1111-111111111111"),
+                        displayName = Pseudonym("Isho"),
+                    ),
+                ),
+        ) { client, _ ->
+            val first =
+                client.post("/v1/lobbies") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                    jsonBody(CreateLobbyRequestDto(ownerSessionId, "Isho"))
+                }
+            val secondSession = "0190e3b2-1c45-7d2e-9a3f-b0c1d2e3f4a5"
+            val second =
+                client.post("/v1/lobbies") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                    jsonBody(CreateLobbyRequestDto(secondSession, "Isho"))
+                }
+
+            assertThat(first.status).isEqualTo(HttpStatusCode.Created)
+            assertThat(second.status).isEqualTo(HttpStatusCode.Created)
+            val firstId = JSON.decodeFromString<LobbyResponseDto>(first.bodyAsText()).id
+            val secondId = JSON.decodeFromString<LobbyResponseDto>(second.bodyAsText()).id
+            assertThat(secondId).isEqualTo(firstId)
+        }
+
+    // ADR-0083 subscriber quota: the `multiplayer:host-unlimited` capability bypasses the dedup,
+    // so each create mints a distinct lobby. Capability is read only from the server-side whoami.
+    @Test
+    fun `POST twice for a subscriber mints a distinct lobby each time`() =
+        testApplicationWithVerifier(
+            verifier =
+                stubVerifier(
+                    WhoAmI(
+                        userId = UserId("11111111-1111-1111-1111-111111111111"),
+                        displayName = Pseudonym("Isho"),
+                        capabilities = setOf("multiplayer:host-unlimited"),
+                    ),
+                ),
+        ) { client, _ ->
+            val first =
+                client.post("/v1/lobbies") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                    jsonBody(CreateLobbyRequestDto(ownerSessionId, "Isho"))
+                }
+            val second =
+                client.post("/v1/lobbies") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                    jsonBody(CreateLobbyRequestDto(ownerSessionId, "Isho"))
+                }
+
+            val firstId = JSON.decodeFromString<LobbyResponseDto>(first.bodyAsText()).id
+            val secondId = JSON.decodeFromString<LobbyResponseDto>(second.bodyAsText()).id
+            assertThat(secondId).isNotEqualTo(firstId)
         }
 
     @Test
@@ -303,7 +379,9 @@ class LobbiesRouteTest {
         val createLobby = CreateLobbyUseCase(repo, clock)
         val sessionManager = SessionManager()
         application {
-            install(ServerContentNegotiation) { json(JSON) }
+            // Server serializes with the production REST_JSON (explicitNulls + encodeDefaults,
+            // ADR-0003 §6) so wire-contract assertions like `game: null` present hold.
+            install(ServerContentNegotiation) { json(com.bliss.game.api.REST_JSON) }
             routing {
                 lobbies(
                     createLobby = createLobby,

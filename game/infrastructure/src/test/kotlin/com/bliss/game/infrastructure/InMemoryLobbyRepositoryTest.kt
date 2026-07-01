@@ -38,6 +38,7 @@ private val STUB_CONN: Connection =
 
 class InMemoryLobbyRepositoryTest {
     private val sessionA = SessionId("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b")
+    private val userA = UserId("11111111-1111-1111-1111-111111111111")
     private val alice = Pseudonym("Alice")
     private val baseInstant: Instant = Instant.parse("2026-01-01T00:00:00Z")
     private val gridConfig = GridConfig(5, 5)
@@ -46,6 +47,7 @@ class InMemoryLobbyRepositoryTest {
         id: LobbyId,
         joinedAt: Instant = baseInstant,
         ownerSessionId: SessionId = sessionA,
+        ownerUserId: UserId? = null,
         state: LobbyLifecycleState = LobbyLifecycleState.WAITING,
         lastActivityAt: Instant = joinedAt,
         code: LobbyCode = LobbyCode.generate(),
@@ -53,7 +55,7 @@ class InMemoryLobbyRepositoryTest {
         Lobby(
             id = id,
             ownerSessionId = ownerSessionId,
-            players = mapOf(ownerSessionId to Player(ownerSessionId, alice, joinedAt)),
+            players = mapOf(ownerSessionId to Player(ownerSessionId, alice, joinedAt, userId = ownerUserId)),
             state = state,
             gridConfig = gridConfig,
             game = null,
@@ -229,6 +231,39 @@ class InMemoryLobbyRepositoryTest {
             val found = repo.findWaitingByOwnerSession(sessionA)
 
             assertThat(found).isNull()
+        }
+
+    @Test
+    fun `findWaitingByOwnerUser returns the WAITING lobby whose owner seat holds the userId`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val ownerLobby = lobbyAt(LobbyId.generate(), ownerUserId = userA)
+            repo.save(ownerLobby)
+
+            val found = repo.findWaitingByOwnerUser(userA)
+
+            assertThat(found).isNotNull()
+            assertThat(found!!.id).isEqualTo(ownerLobby.id)
+        }
+
+    @Test
+    fun `findWaitingByOwnerUser returns null when no waiting lobby carries the userId`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            repo.save(lobbyAt(LobbyId.generate(), ownerUserId = null))
+
+            assertThat(repo.findWaitingByOwnerUser(userA)).isNull()
+        }
+
+    // A different user's WAITING lobby must not satisfy this user's quota.
+    @Test
+    fun `findWaitingByOwnerUser ignores lobbies owned by a different user`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val otherUser = UserId("22222222-2222-2222-2222-222222222222")
+            repo.save(lobbyAt(LobbyId.generate(), ownerUserId = otherUser))
+
+            assertThat(repo.findWaitingByOwnerUser(userA)).isNull()
         }
 
     @Test

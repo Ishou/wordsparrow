@@ -15,4 +15,5 @@ interface CookieVerifier {
 data class WhoAmI(
     val userId: UserId,
     val displayName: Pseudonym,
+    val capabilities: Set<String> = emptySet(),
 )

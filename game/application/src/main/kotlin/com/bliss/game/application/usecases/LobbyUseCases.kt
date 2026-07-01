@@ -49,16 +49,16 @@ private suspend fun mintUniqueCode(repo: LobbyRepository): LobbyCode {
 /**
  * Bootstraps a new lobby in WAITING with the calling player as owner.
  *
- * Idempotent per [SessionId]: if the caller already owns a WAITING lobby, that
- * lobby is returned with no event emitted (and no new lobby minted). This kills
- * the trivial DOS / RAM-exhaustion path where a single user creates an unbounded
- * number of lobbies by repeatedly hitting POST /v1/lobbies on the home screen.
+ * Host quota by tier (ADR-0083): a free player holds one open (WAITING) lobby keyed per
+ * [UserId] — if [ownerUserId] already owns a WAITING lobby it is reopened with no event
+ * and no new mint (frictionless dedup, subsuming the former per-session idempotency).
+ * [hostUnlimited] (the `multiplayer:host-unlimited` capability, resolved at the api edge)
+ * skips the dedup entirely so subscribers always mint. Guests never reach this use case —
+ * the route rejects anonymous callers with 401 before taking the lock.
  *
- * Note: the lookup-then-save sequence is not strictly atomic — two concurrent
- * createLobby calls from the same sessionId may both miss the existing lobby and
- * mint two. The window is microseconds and the GC sweep evicts the loser in at
- * most one TTL period. A stricter "create-or-get" would require a per-session
- * lock or a unique index in the eventual Postgres adapter; out of scope for v1.
+ * TOCTOU: the dedup lookup is only race-free because the api edge calls this inside
+ * `LobbyWriteCoordinator.withUserLock(ownerUserId)` — two concurrent creates for the same
+ * user are serialized there, so they cannot both miss and mint two WAITING lobbies.
  */
 class CreateLobbyUseCase(
     private val repo: LobbyRepository,
@@ -70,9 +70,13 @@ class CreateLobbyUseCase(
         ownerSessionId: SessionId,
         ownerPseudonym: Pseudonym,
         ownerUserId: UserId? = null,
+        hostUnlimited: Boolean = false,
     ): UseCaseResult<Lobby> {
-        repo.findWaitingByOwnerSession(ownerSessionId)?.let { existing ->
-            return UseCaseResult(existing, emptyList())
+        // Per-user "1 open lobby" quota; safe against concurrent double-create only under the route's withUserLock(ownerUserId) (ADR-0083).
+        if (!hostUnlimited && ownerUserId != null) {
+            repo.findWaitingByOwnerUser(ownerUserId)?.let { existing ->
+                return UseCaseResult(existing, emptyList())
+            }
         }
         val now = clock.now()
         val owner = Player(ownerSessionId, ownerPseudonym, now, userId = ownerUserId)

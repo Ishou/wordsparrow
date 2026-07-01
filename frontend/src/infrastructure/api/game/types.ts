@@ -737,6 +737,22 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /**
+             * @description Hosting requires a signed-in player (ADR-0083). An anonymous
+             *     `POST /v1/lobbies` (no `__Secure-ws_session` cookie, or a
+             *     session that was revoked between the cached and fresh whoami
+             *     lookups) is rejected — guests get zero lobbies. Joining a
+             *     lobby via link/code stays open to everyone. RFC 7807;
+             *     `type` is `https://bliss.example/errors/auth-required`.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getLobbyByCode: {

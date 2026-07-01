@@ -100,6 +100,13 @@ class InMemoryLobbyRepository : LobbyRepository {
             }
         }
 
+    override suspend fun findWaitingByOwnerUser(userId: UserId): Lobby? =
+        storeLock.withLock {
+            store.values.firstOrNull {
+                it.state == LobbyLifecycleState.WAITING && it.players[it.ownerSessionId]?.userId == userId
+            }
+        }
+
     override suspend fun findIdleWaiting(cutoff: Instant): List<Lobby> =
         storeLock.withLock {
             store.values
@@ -294,6 +301,8 @@ internal object Samples {
     val sessionA = SessionId("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b")
     val sessionB = SessionId("0190e3b2-1c45-7d2e-9a3f-b0c1d2e3f4a5")
     val sessionC = SessionId("0190e3b3-2d56-7e3f-8a4b-c1d2e3f4a5b6")
+    val userA = UserId("11111111-1111-1111-1111-111111111111")
+    val userB = UserId("22222222-2222-2222-2222-222222222222")
     val alice = Pseudonym("Alice")
     val bob = Pseudonym("Bob")
 
