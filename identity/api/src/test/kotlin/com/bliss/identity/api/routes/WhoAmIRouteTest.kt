@@ -139,7 +139,7 @@ class WhoAmIRouteTest {
                 }
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
             val body = response.bodyAsText()
-            assertThat(body).contains("\"capabilities\":[\"grilles:all\",\"grilles:generate\",\"hint\"]")
+            assertThat(body).contains("\"capabilities\":[\"grilles:all\",\"grilles:generate\",\"hint\",\"multiplayer:host-unlimited\"]")
             assertThat(body).doesNotContain("tier")
         }
 }

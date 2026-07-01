@@ -122,7 +122,12 @@ class SubscriptionChangedConsumerTest {
 
             val result = whoAmI.execute(WhoAmIQuery(sessionId))
             assertThat(result.capabilities)
-                .containsExactlyInAnyOrder(Capability.HINT, Capability.GRILLES_ALL, Capability.GRILLES_GENERATE)
+                .containsExactlyInAnyOrder(
+                    Capability.HINT,
+                    Capability.GRILLES_ALL,
+                    Capability.GRILLES_GENERATE,
+                    Capability.MULTIPLAYER_HOST_UNLIMITED,
+                )
 
             // last-write-wins: an older free event is ignored.
             publish("free", "active", now.minusSeconds(60))
