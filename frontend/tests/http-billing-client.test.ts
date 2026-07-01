@@ -106,3 +106,52 @@ describe('HttpBillingClient.getSubscription', () => {
     expect((err as BillingError).kind).toBe('auth-required');
   });
 });
+
+describe('HttpBillingClient.listReceipts', () => {
+  const receipt = {
+    paidAt: '2026-06-29T14:03:00Z',
+    amountMinorUnits: 200,
+    currency: 'EUR',
+    status: 'paid',
+    receiptUrl: null,
+  };
+
+  it('returns the first page and omits the cursor query when none is given', async () => {
+    let requestUrl = '';
+    server.use(
+      http.get(`${BASE_URL}/v1/receipts`, ({ request }) => {
+        requestUrl = request.url;
+        return HttpResponse.json({ receipts: [receipt], nextCursor: 'NEXT' });
+      }),
+    );
+
+    const page = await makeClient().listReceipts();
+
+    expect(page).toEqual({ receipts: [receipt], nextCursor: 'NEXT' });
+    expect(new URL(requestUrl).searchParams.has('cursor')).toBe(false);
+  });
+
+  it('passes the cursor query when paginating', async () => {
+    let requestUrl = '';
+    server.use(
+      http.get(`${BASE_URL}/v1/receipts`, ({ request }) => {
+        requestUrl = request.url;
+        return HttpResponse.json({ receipts: [], nextCursor: null });
+      }),
+    );
+
+    await makeClient().listReceipts('CURSOR2');
+
+    expect(new URL(requestUrl).searchParams.get('cursor')).toBe('CURSOR2');
+  });
+
+  it('maps 401 to a typed auth-required BillingError', async () => {
+    server.use(http.get(`${BASE_URL}/v1/receipts`, () => problem(401, 'auth-required')));
+
+    await expect(makeClient().listReceipts()).rejects.toMatchObject({
+      name: 'BillingError',
+      kind: 'auth-required',
+      status: 401,
+    });
+  });
+});

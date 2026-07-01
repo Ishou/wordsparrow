@@ -19,6 +19,20 @@ export interface CheckoutSession {
   readonly cancelUrl: string;
 }
 
+// Provider payment record surfaced as opaque, non-identifying facts (ADR-0078); receiptUrl is null when the provider exposes no hosted receipt.
+export interface Receipt {
+  readonly paidAt: string;
+  readonly amountMinorUnits: number;
+  readonly currency: string;
+  readonly status: string;
+  readonly receiptUrl: string | null;
+}
+
+export interface ReceiptsPage {
+  readonly receipts: Receipt[];
+  readonly nextCursor: string | null;
+}
+
 export type BillingErrorKind =
   | 'auth-required'
   | 'invalid-checkout-request'
@@ -45,4 +59,5 @@ export interface BillingClient {
   createCheckoutSession(tier: BillingTier, cadence: BillingCadence): Promise<CheckoutSession>;
   cancelSubscription(): Promise<SubscriptionView>;
   getSubscription(): Promise<SubscriptionView>;
+  listReceipts(cursor?: string): Promise<ReceiptsPage>;
 }

@@ -35,6 +35,7 @@ function fakeBillingClient(): BillingClient {
     getSubscription: vi.fn().mockResolvedValue(ACTIVE_VIEW),
     createCheckoutSession: vi.fn(),
     cancelSubscription: vi.fn(),
+    listReceipts: vi.fn().mockResolvedValue({ receipts: [], nextCursor: null }),
   };
 }
 

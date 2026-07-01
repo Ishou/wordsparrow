@@ -5,6 +5,7 @@ import { uuidv7 } from 'uuidv7';
 import type {
   BillingClient,
   BillingErrorKind,
+  ReceiptsPage,
   SubscriptionView,
 } from '@/application/billing';
 import { BillingError } from '@/application/billing';
@@ -27,6 +28,19 @@ export interface HttpBillingClientOptions {
 
 function toSubscriptionView(view: components['schemas']['SubscriptionView']): SubscriptionView {
   return { tier: view.tier, status: view.status, periodEnd: view.periodEnd };
+}
+
+function toReceiptsPage(view: components['schemas']['ReceiptsView']): ReceiptsPage {
+  return {
+    receipts: view.receipts.map((receipt) => ({
+      paidAt: receipt.paidAt,
+      amountMinorUnits: receipt.amountMinorUnits,
+      currency: receipt.currency,
+      status: receipt.status,
+      receiptUrl: receipt.receiptUrl,
+    })),
+    nextCursor: view.nextCursor,
+  };
 }
 
 function billingError(status: number, detail?: string): BillingError {
@@ -72,6 +86,15 @@ export function createHttpBillingClient(options: HttpBillingClientOptions): Bill
       });
       if (error || !data) throw billingError(response.status, error?.detail ?? error?.title);
       return toSubscriptionView(data);
+    },
+
+    async listReceipts(cursor) {
+      const { data, error, response } = await client.GET('/v1/receipts', {
+        credentials: 'include',
+        params: { query: cursor !== undefined ? { cursor } : {} },
+      });
+      if (error || !data) throw billingError(response.status, error?.detail ?? error?.title);
+      return toReceiptsPage(data);
     },
   };
 }
