@@ -502,3 +502,27 @@ candidates per lemma**. With 80 lemmas and 1 candidate each, run-to-run
 variance (~7pp here) drowns out structural changes. With 200 lemmas and the
 best-of-3 ranker, variance should drop below the magnitude of typical
 interventions (3–5pp), making iter-to-iter comparisons meaningful.
+
+## round-11: generator-demand coverage via Modal Command-R + Opus-as-judge
+
+**Coverage: clued surfaces 26,786 → 43,291 (+16,505, +62%) in `words-fr.csv`.**
+
+Targeted the words the *grid generator actually demands but can't place*: a 2,000-grid
+full-corpus generation (prod cooldown) tallied placement frequency of unclued surfaces,
+yielding the top ~3,000 unclued lemmas (≈97% of unclued demand). Generated one
+`definition_directe` clue per lemma on Modal with the `raft-round-10` Command-R adapter
+(`modal_jobs/04_generate_command_r.py`, round 11) → 2,886 pipeline_v2-passing candidates.
+
+**Filter finding (negative, documented):** the CamemBERT bi-encoder filter (v5) is
+mis-calibrated for the Command-R lane and structurally weak at *sense*-correctness (cosine ≠
+correctness). Measured AUROC 0.73 on an Opus-judged held-out; retraining made it worse (MNRL
+0.61; contrastive crashed on MPS; a fresh cross-encoder reached only 0.63 / ~0.80 precision
+from 305 labels). At this label budget no bi/cross-encoder replicates LLM judgment — the LLM
+judge *is* the gate.
+
+**Gate: Opus-as-judge.** 2,682 candidates judged by parallel Opus editors against a strict
+mots-fléchés rubric (sense first) → **GOOD 1,576 / BAD 582 / BORDERLINE 524** (labels checked
+in at `data/eval/round11_opus_labels.csv` — enough to train a real judge next time). Shipped
+the 1,571 GOOD (accented-lemma resolved), inflated via `build_surface_clues` (1,475 verbatim +
+15,440 inflected), **additively** merged (blank placeholders only; no existing clue
+overwritten, 480 skipped). Pleonasm runtime guard 3/3; `pytest scripts/eval/` 143/143.

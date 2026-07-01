@@ -1,0 +1,2683 @@
+lemma,clue,verdict,v5_filter_score
+ecorce,Enveloppe d’un arbre,GOOD,0.6687
+isoler,Mettre à l’écart,GOOD,0.6215
+civil,Citoyen ou urbain,BAD,0.5472
+turco,Style oriental,BAD,0.6065
+spasme,Contraction involontaire,GOOD,0.6331
+barbe,Du bonhomme de neige,BAD,0.4660
+nuit,Temps de sommeil,GOOD,0.5811
+azote,Gaz de l’air,GOOD,0.6616
+phi,Lettre grecque,GOOD,0.6192
+parterre,Niveau du chœur,BAD,0.5077
+venir,Arriver jusqu’à,GOOD,0.6115
+lasser,Remettre dans le coma,BAD,0.6049
+classer,Mettre en ordre,GOOD,0.5475
+lacte,Allaitement,BAD,0.5709
+rimer,Versifier,BORDERLINE,0.7209
+tribut,Pension due à un seigneur,GOOD,0.5442
+nid,Abri d'oiseau,GOOD,0.5966
+compatir,Partager le sort de,BORDERLINE,0.7247
+etale,Style,BAD,0.6447
+distendre,Étirer en tirant,GOOD,0.5553
+abusif,Excessif,GOOD,0.5118
+defaite,Brisée ou vaincue,BORDERLINE,0.7371
+filon,Veine de minerai,GOOD,0.5532
+toast,Pain grillé,GOOD,0.5752
+sonnet,Poème de 14 vers,GOOD,0.7159
+coca,Boisson sud-américaine,BORDERLINE,0.6200
+course,Épreuve d’athlétisme,GOOD,0.5523
+hutte,Abri sommaire,GOOD,0.6152
+cosmos,Univers ordonné,GOOD,0.5645
+proue,Partie avant d’un bateau,GOOD,0.6319
+bucher,Brûler sur pied,BAD,0.5785
+scribe,Copiste égyptien,GOOD,0.6435
+cola,Boisson gazeuse,GOOD,0.5273
+foot,Style typographique,BAD,0.5794
+soupe,Plat liquide,GOOD,0.6441
+examiner,Étudier de près,GOOD,0.6099
+ruban,Bande décorative,GOOD,0.7132
+antre,Caverne profonde,GOOD,0.5736
+fevr,Mois d’hiver,BAD,0.4145
+ictere,Teint jaunâtre,GOOD,0.5025
+reporter,Remettre à plus tard,GOOD,0.5583
+plaindre,Se lamenter,BORDERLINE,0.5228
+tech,Style d'écriture,BAD,0.5829
+recif,Briseur de coques,GOOD,0.4836
+fecule,Farine de pomme de terre,GOOD,0.6430
+eurafricain,Continent,BAD,0.5603
+regretter,Être nostalgique,BORDERLINE,0.5719
+duit,Or ou argent fondu,BAD,0.5069
+datte,Fruit du palmier,GOOD,0.5443
+rotor,Disque d’hélicoptère,BORDERLINE,0.5694
+regagner,Reconquérir,GOOD,0.5847
+obstiner,Être buté,BORDERLINE,0.6092
+receler,Posséder en soi,GOOD,0.5519
+cobalt,Métal bleu,GOOD,0.5969
+croit,Remontée de lune,BAD,0.5278
+indigene,Habitant d’origine,GOOD,0.5394
+garder,Conserver,GOOD,0.6657
+grappe,Troupe du vignoble,BORDERLINE,0.5380
+bebe,Enfant en bas âge,GOOD,0.5355
+granit,Roche dure,GOOD,0.6179
+relancer,Donner un nouveau souffle,GOOD,0.6033
+tibia,Os de la jambe,GOOD,0.6507
+brave,Courageux,GOOD,0.5285
+halo,Passe de maître,BAD,0.5633
+tyran,Souverain absolu,GOOD,0.6839
+arroser,Donner à boire,BORDERLINE,0.5965
+destituer,Renverser un dirigeant,GOOD,0.5879
+anomalie,Dérogation à la règle,GOOD,0.5703
+allier,Rassembler en un tout,GOOD,0.5180
+manger,Passer à table,GOOD,0.5692
+gens,Population d'une cité,GOOD,0.5983
+tripler,Multiplier par trois,GOOD,0.6728
+chemise,Vêtement de corps,GOOD,0.6307
+pondre,Faire l’œuf,BORDERLINE,0.5751
+mante,Veste féminine,BORDERLINE,0.5958
+auditoire,Public qui écoute,GOOD,0.5178
+caseine,Lait en gros,BAD,0.4644
+abdomen,Ventre du corps,GOOD,0.7833
+camper,S’installer pour la nuit,GOOD,0.5929
+huis,Cadre de porte,BORDERLINE,0.6513
+ski,Glisse sur neige,GOOD,0.5551
+evier,Vasque de cuisine,GOOD,0.6173
+vieillard,Pensionné usé,BORDERLINE,0.6328
+pelouse,Tapis de gazon,GOOD,0.5838
+cran,Tête d’arbre,BAD,0.5859
+regresser,Aller vers le passé,BORDERLINE,0.6597
+chagriner,Faire grimacer,BAD,0.5297
+oublie,Ne garde pas en mémoire,BORDERLINE,0.5877
+etourderie,Style négligé,BAD,0.5811
+tuf,Roche tendre,GOOD,0.5167
+camphre,Teinture verte,BAD,0.5955
+poeme,Texte littéraire,BORDERLINE,0.6009
+renouer,Lier de nouveau,GOOD,0.4696
+griffe,Style d’écriture,BORDERLINE,0.5835
+rembourser,Rendre l’argent,GOOD,0.6124
+inhiber,Empêcher une action,GOOD,0.6829
+femme,Partenaire d’un homme,GOOD,0.6723
+ampute,Privé d’un membre,GOOD,0.5391
+tic,Style : manière de faire,BORDERLINE,0.5661
+deal,Entente conclue,GOOD,0.5066
+locus,Point d’une courbe,BORDERLINE,0.5312
+mme,Titre abrege,GOOD,0.5797
+herbe,Végétation fine,GOOD,0.6082
+raconter,Énoncer un récit,GOOD,0.6160
+otite,Inflammation de l’oreille,GOOD,0.6371
+poulet,Volaille juvénile,GOOD,0.5504
+oeil,Organe de la vue,GOOD,0.6206
+createur,Auteur d’œuvre,GOOD,0.5705
+floreal,Mois de mai romain,BAD,0.5396
+beta,Lettre grecque (2e),GOOD,0.5003
+dilater,S’ouvrir comme la fleur,BORDERLINE,0.4819
+ouvrier,Salarié manuel,GOOD,0.5972
+coton,Tissu blanc,BORDERLINE,0.4781
+argile,Terre à potier,GOOD,0.6295
+philo,Courant grec,BAD,0.5382
+handicap,Désavantage ou avantage,GOOD,0.7222
+diton,Style verbal,BAD,0.5933
+coaliser,S’unir contre un ennemi,GOOD,0.6217
+etude,Travail sur un sujet,GOOD,0.6313
+entretenir,En faire le bilan,BAD,0.6131
+manne,Pluie biblique,BORDERLINE,0.5055
+convenir,Être de bon augure,BAD,0.5902
+roulis,Mouvement du bateau,GOOD,0.6162
+millet,Céréale ancienne,GOOD,0.5541
+rassurer,Lever les doutes,GOOD,0.6468
+sisal,Style,BAD,0.5185
+soumettre,Présenter à l’examen,GOOD,0.6022
+pendu,Punition d’un mot fléché,BAD,0.5972
+reculer,Aller en arrière,GOOD,0.7461
+fard,Maquillage ancien,GOOD,0.5369
+accroitre,Augmenter,GOOD,0.5827
+bouee,Flotte sans avancer,GOOD,0.5977
+traitre,Infâme lâche,BORDERLINE,0.6225
+atre,Style ancien,BAD,0.5652
+velin,Papier de qualité,GOOD,0.5098
+survol,Passage aérien,GOOD,0.6363
+nuee,Nuage sombre,GOOD,0.6403
+remercier,Exprimer sa gratitude,GOOD,0.6190
+laisse,Style,BAD,1.0000
+vessie,Organe urinaire,GOOD,0.6429
+car,Voyage urbain,BORDERLINE,0.5852
+specimen,Exemple à suivre,BAD,0.3489
+fane,Style d’autrefois,BAD,0.5854
+assurer,Garantir le risque,BORDERLINE,0.5888
+heroine,Personnage de roman,GOOD,0.4662
+resume,Récit concis,GOOD,0.6245
+bemol,Caractère d’altération,GOOD,0.5982
+neveu,Fils de votre frère,GOOD,0.6154
+math,Style d’écriture,BAD,0.5346
+respect,Considération due,GOOD,0.6918
+regence,Style de Louis XV enfant,GOOD,0.5717
+tonus,Force vitale,GOOD,0.6121
+dorsal,Du dos,GOOD,0.6147
+hair,Style,BAD,0.5546
+instar,Manière d’être,BORDERLINE,0.6464
+bouillon,Eau qui frémit,BORDERLINE,0.5730
+faience,Terre cuite vernissée,GOOD,0.5569
+emporter,Faire disparaître,BORDERLINE,0.6000
+tremper,Plonger dans un liquide,GOOD,0.6726
+contenter,Remplir de joie,BORDERLINE,0.5607
+coiffe,Tenue de tête,GOOD,0.5995
+corolle,Style de robe,BAD,0.5376
+abandon,Acte de désespoir,BORDERLINE,0.6479
+comete,Visiteur céleste,GOOD,0.6331
+ukase,Décret russe,GOOD,0.5506
+radium,Découvert par Curie,GOOD,0.5669
+canif,Couteau d’écolier,GOOD,0.5489
+pierre,Parement ou outil,BORDERLINE,0.7355
+chanfreiner,Enlever l’arête,GOOD,0.5854
+ban,Décret ancien,GOOD,0.6011
+suspect,Sous le regard,BAD,0.5551
+cousin,Insecte estival piquant,GOOD,0.5376
+accepter,Donner son accord,GOOD,0.6059
+clavicule,Os du cou,BORDERLINE,0.5570
+patin,Glisse sur la glace,GOOD,0.6386
+intro,Entrée en matière,GOOD,0.5818
+editeur,Maison de publication,BORDERLINE,0.5400
+module,Bâtiment préfabriqué,BORDERLINE,0.5976
+cric,Outil de mécanicien,GOOD,0.5353
+mine,Explosif ou offensif,BORDERLINE,0.6990
+ordi,Ordinateur de bureau,BAD,0.6644
+crier,Faire entendre sa voix,BORDERLINE,0.5602
+cerebrospinal,Liquide du cerveau,BORDERLINE,0.4162
+dent,Organe de mastication,GOOD,0.6473
+melasse,Sucre brun,BORDERLINE,0.5699
+pudeur,Gêne excessive,BORDERLINE,0.6149
+ria,Cours d'eau breton,BORDERLINE,0.5447
+nager,Se déplacer dans l’eau,GOOD,0.6107
+rancune,Souvenir de blessure,BORDERLINE,0.5655
+potier,Artisan du vase,GOOD,0.5966
+refermer,Faire retour sur ses pas,BAD,0.6076
+chale,Vêtement d'épaule,GOOD,0.5660
+deporte,Oublie ce qu’il dit,BAD,0.6159
+decade,Période de dix ans,BORDERLINE,0.5999
+medium,Style intermédiaire,BAD,0.6969
+cep,Lettre grecque,BAD,0.5181
+marabout,Style,BAD,0.5736
+allumer,Mettre le feu,GOOD,0.8101
+caserne,Bâtiment des pompiers,GOOD,0.6587
+lampe,Source d’éclairage,GOOD,0.5812
+inoui,Style intemporel,BAD,0.5925
+prosterner,Se jeter à genoux,GOOD,0.6377
+lieue,Mesure ancienne,GOOD,0.6132
+carnage,Bain de sang,GOOD,0.6123
+came,Style ancien,BAD,0.5252
+cerebral,Du cerveau,GOOD,0.5949
+statut,Texte juridique,GOOD,0.6015
+descendre,Aller vers le bas,GOOD,0.7463
+analogue,"Pareil, similaire",GOOD,0.7313
+raisonner,Faire comprendre,BORDERLINE,0.6398
+necrose,Mort cellulaire,GOOD,0.5638
+permis,Autorisation officielle,GOOD,0.7384
+augure,Prêt à écrire,BAD,0.6253
+cyanure,Sel d’uranium,BAD,0.5795
+batailler,Combattre en ordre,BORDERLINE,0.5779
+essor,Décollage réussi,BORDERLINE,0.5015
+pourfendre,Couper net,GOOD,0.6863
+remontrer,Faire des reproches,BORDERLINE,0.4851
+maree,Mouvement du littoral,BORDERLINE,0.4471
+circoncire,Couper le prépuce,GOOD,0.5070
+raidir,Devenir plus dur,GOOD,0.5133
+meule,Pierre à grain,GOOD,0.5854
+consumer,Détruire progressivement,GOOD,0.7190
+hesiter,Ne savoir que faire,GOOD,0.5631
+heur,Style littéraire,BAD,0.5281
+poigne,Style,BAD,0.6364
+parrain,Marraine au masculin,GOOD,0.4998
+azotate,Sel d’azote,BORDERLINE,0.5971
+croate,Langue slave,GOOD,0.5802
+pari,Risque calculé,GOOD,0.6405
+relever,Se redresser,BORDERLINE,0.6122
+tronc,Partie centrale d’un mot,BAD,0.5779
+bandit,Malfaiteur armé,GOOD,0.6017
+toc,Style d'écriture,BAD,0.5483
+vitrine,Meuble d’exposition,GOOD,0.7270
+profil,Contour en coupe,GOOD,0.6058
+rapt,Vol à main armée,BAD,0.5418
+risquer,Braver le danger,GOOD,0.6644
+alimenter,Donner à manger,GOOD,0.7255
+enrichir,Faire entrer de l’or,BAD,0.6099
+aieul,Grand-père du père,BAD,0.5769
+tarir,Ne plus couler,GOOD,0.6534
+venal,Corrompu,GOOD,0.5121
+poire,Fruit du Poirier,GOOD,0.6469
+mouvoir,Se déplacer faiblement,BAD,0.6054
+blouse,Vêtement de travail,GOOD,0.5833
+diode,Composant électronique,GOOD,0.5161
+respecter,Obéir à quelqu’un,BAD,0.6364
+rentree,Retour à l’école,GOOD,0.5061
+pronom,Mot qui remplace un nom,GOOD,0.8550
+etoffe,Tissu ou caractère,GOOD,0.4861
+titane,Métal du ciel étoilé,BAD,0.6169
+vulgariser,Rendre commun,BORDERLINE,0.5072
+prefet,Représentant de l’État,GOOD,0.6692
+friche,Terrain abandonné,GOOD,0.5891
+caresse,Touche tendre,BORDERLINE,0.5921
+timon,Style d’un texte,BAD,0.5597
+tuile,Couverture de toit,GOOD,0.6284
+lier,Rendre solide,BAD,0.5336
+aller,Se rendre quelque part,GOOD,0.6253
+tocsin,Alerte ou alarme,GOOD,0.5989
+nettoyer,Enlever la saleté,GOOD,0.7534
+colorer,Donner du ton,BORDERLINE,0.4548
+nage,Mouvement dans l’eau,GOOD,0.6542
+levre,Marge de la bouche,BORDERLINE,0.6386
+cadence,Allure de marche,GOOD,0.5934
+solenniser,Fêter un anniversaire,BAD,0.5257
+dependre,Être soumis à,GOOD,0.5789
+attacher,Lier solidement,GOOD,0.6469
+parfum,Eau de toilette,BORDERLINE,0.6359
+gite,Location de vacances,GOOD,0.4758
+parente,Lien de famille,GOOD,0.5679
+interagir,Échanger avec autrui,GOOD,0.6998
+carnet,Bloc de notes,GOOD,0.6413
+cotiser,Payer sa part,GOOD,0.5560
+bible,Livre sacré des chrétiens,GOOD,0.6111
+triste,De mauvais poil,BAD,0.6076
+caid,Chef de bande,GOOD,0.6124
+fixer,Rendre ferme,BORDERLINE,0.5947
+festonner,Décorer à l’antique,BAD,0.5069
+essuie,Glisse sur le tableau,BAD,0.5686
+escorter,Faire le pied de grille,BAD,0.6099
+krach,Bruit d’explosion,BAD,0.6076
+poursuivre,Aller jusqu’au bout,BORDERLINE,0.6362
+mondain,Style urbain,BAD,0.5143
+cellule,Bloc d’un tableau,GOOD,0.5680
+codex,Livre manuscrit ancien,GOOD,0.5514
+tata,Style,BAD,0.5855
+roc,Style ancien,BAD,0.5113
+star,Vedette de cinéma,GOOD,0.5832
+nudite,Sans vêtement,BORDERLINE,0.4044
+scan,Style de paragraphe,BAD,0.6188
+lateral,D’un côté,GOOD,0.5138
+rivage,Berge d’un plan d’eau,BORDERLINE,0.6098
+survivre,Rester en vie,GOOD,0.5667
+bief,Sans détour,BAD,0.5804
+junior,Titre de courtoisie,BAD,0.6032
+persister,Ne pas céder,GOOD,0.5738
+invertir,Retourner une situation,BORDERLINE,0.4684
+zebu,Bovin d'Asie,GOOD,0.5435
+lire,Décrypter un texte,BORDERLINE,0.5412
+plaire,Être du goût de,GOOD,0.5772
+decret,Ordre du souverain,GOOD,0.7062
+minus,Symbole de soustraction,BAD,0.5898
+jouir,Posséder pleinement,BORDERLINE,0.5390
+preavis,Notification anticipée,GOOD,0.6061
+build,Style architectural,BAD,0.6573
+etroit,Sans marge de manœuvre,BORDERLINE,0.5318
+defunt,Passé de l’autre côté,GOOD,0.5436
+creole,Mélange de langues,GOOD,0.5151
+meurtrir,Faire mal,BORDERLINE,0.5811
+taie,Drap décoratif,BAD,0.5368
+vol,Larcin ou trajet aérien,GOOD,0.6390
+propos,Parole délibérée,BORDERLINE,0.6999
+cultiver,Traiter la terre,BORDERLINE,0.5868
+pature,Style d’écriture,BAD,0.5989
+aureole,Rayon de soleil,BAD,0.5059
+froid,Température glaciale,GOOD,0.5630
+locataire,Occupant un logement,GOOD,0.5799
+ameublir,Meubler de façon sommaire,BAD,0.5749
+hune,Poteau central,BAD,0.6185
+trot,Allure du cheval,GOOD,0.5949
+radio,Passe par l’éther,GOOD,0.5158
+vert,Couleur des prairies,GOOD,0.5597
+serosite,Style d’écriture,BAD,0.3848
+gorge,Collier ou passage étroit,BORDERLINE,0.6821
+glisser,Aller sans faire de bruit,BORDERLINE,0.3998
+rob,Style,BAD,0.6159
+peri,Style grec ancien,BAD,0.5733
+amylopectine,Polysaccharide du riz,BORDERLINE,0.5868
+gronde,Réprimande sévère,BORDERLINE,0.5921
+insister,Tenir bon,BORDERLINE,0.6115
+beige,Couleur de sable,GOOD,0.5806
+lacet,Lien de chaussure,GOOD,0.4838
+facade,Entrée en matière,BAD,0.7548
+bazar,Style iranien,BAD,0.4948
+accueil,Réception chaleureuse,GOOD,0.6079
+perturber,Troubler le calme,GOOD,0.5954
+pollen,Poudre des fleurs,GOOD,0.6192
+ceinturer,Entourer de ruban,BORDERLINE,0.5777
+boire,Lever son verre,GOOD,0.5002
+branche,Style d’écriture,BAD,0.5870
+preteur,Il avance de l’argent,GOOD,0.5605
+appoint,Décision officielle,BAD,0.5838
+crane,Tête sans chair,GOOD,0.5953
+purger,Nettoyer en profondeur,GOOD,0.6630
+cassure,Brisée net,BORDERLINE,0.5851
+antique,Style grec ou romain,GOOD,0.5988
+algo,Style informatique,BAD,0.5295
+tiret,Signe de ponctuation,GOOD,0.5311
+graisse,Tissu adipeux,GOOD,0.6008
+cachet,Sceau personnel,GOOD,0.5954
+stabiliser,Rendre ferme,BORDERLINE,0.5948
+redite,Récidive ennuyeuse,BORDERLINE,0.6053
+escalier,D’un étage à l’autre,GOOD,0.5939
+courber,Plier le dos,GOOD,0.5788
+trainer,Allonger le temps,BORDERLINE,0.6022
+shah,Titre persan,GOOD,0.6067
+abside,Partie d’église,GOOD,0.6345
+thai,Style : Type,BAD,0.4163
+demi,Moitié d’un tout,GOOD,0.6059
+graphe,Représentation visuelle,BORDERLINE,0.5742
+unir,Rassembler,GOOD,0.6139
+fumure,Engrais naturel,BORDERLINE,0.6072
+cortege,Escorte nuptiale,BORDERLINE,0.5173
+ecarlate,Rouge vif,GOOD,0.7208
+lynx,Chat sauvage,GOOD,0.5983
+caravane,Troupe qui avance,BORDERLINE,0.5675
+vilain,Style grossier,BAD,0.6348
+perte,Chose disparue,BORDERLINE,0.6322
+ranger,Remettre de l’ordre,GOOD,0.5710
+meche,Tige d’une bougie,BORDERLINE,0.6125
+nuage,Massif aérien,BAD,0.5477
+fermete,Caractère d’un roc,GOOD,0.5683
+batte,Outil du menuisier,BORDERLINE,0.5469
+informer,Faire part,GOOD,0.6851
+abus,Usage excessif,GOOD,0.6955
+fiance,Promis à sa dulcinée,GOOD,0.5991
+beant,En bon ordre,BAD,0.5065
+abriter,Protéger du vent,GOOD,0.5843
+agenda,Ordre du jour,BORDERLINE,0.6200
+viande,Aliment d’origine animale,GOOD,0.6332
+nourrir,Donner à manger,GOOD,0.6176
+catherinette,Jeune fille non mariée,GOOD,0.5073
+arche,Bateau de Noé,GOOD,0.6094
+gros,D’importance majeure,GOOD,0.6706
+actu,Style du jour,BAD,0.7477
+saillie,Portée par le chien,BAD,0.5478
+galon,Tissu à passepoiler,BORDERLINE,0.3394
+depit,Colère froide,BORDERLINE,0.5258
+ami,Compagnon de confiance,GOOD,0.6362
+seance,Réunion à l’ordre du jour,BORDERLINE,0.5923
+apparaitre,Venir au jour,GOOD,0.6612
+ratifier,Approuver sans réserve,GOOD,0.7113
+hiver,Saison de Noël,GOOD,0.5625
+ante,Style ancien,BAD,0.4830
+carcan,Contrainte qui étouffe,GOOD,0.5897
+enraciner,Faire pousser des racines,GOOD,0.7877
+bout,Extrémité d’un objet,GOOD,0.6817
+cape,Vêtement sans manche,GOOD,0.4838
+marin,Bleu qui prend le large,GOOD,0.5904
+biere,Boisson du Nord,GOOD,0.5054
+odieux,Insupportable,GOOD,0.5787
+rigole,Creuse un sillon,BORDERLINE,0.5559
+diete,Régime alimentaire,GOOD,0.5442
+grever,Porter préjudice,BORDERLINE,0.5155
+tolerer,Supporter sans réagir,GOOD,0.5072
+rester,Ne pas partir,GOOD,0.5531
+berceau,Lit de bébé,GOOD,0.5061
+transparaitre,Filer entre les doigts,BAD,0.5470
+dur,Solide comme le roc,GOOD,0.6171
+bataillon,Unité militaire,GOOD,0.5596
+appareillage,Matériel nécessaire,GOOD,0.5974
+aniline,Teinture de charbon,BORDERLINE,0.5370
+mafia,Organisation criminelle,GOOD,0.6394
+rentrer,Filer au bercail,GOOD,0.4837
+ardu,Difficile à supporter,BORDERLINE,0.5293
+laiton,Cuivre et zinc,GOOD,0.5345
+veste,Enveloppe de manteau,BAD,0.6305
+laque,Vernis oriental,GOOD,0.5357
+encadre,Style et format,BAD,0.5559
+avarice,Cupidité excessive,GOOD,0.7290
+susdit,Style : manière,BAD,0.5313
+tenir,Ne fléchir,BAD,0.6112
+singe,Primat familier,BORDERLINE,0.5787
+terroir,Cadre naturel du vin,GOOD,0.6073
+paria,Peur de caste en Inde,BAD,0.5410
+aerodigestif,Digestion ventrale,BAD,0.5518
+reveler,Ne rien cacher,GOOD,0.5700
+amiante,Matériau cancérigène,GOOD,0.5761
+agriculture,Travail de la terre,GOOD,0.5877
+chrome,Métal brillant,GOOD,0.6150
+alliage,Métal mélangé,GOOD,0.6191
+enseigner,Transmettre un savoir,GOOD,0.7525
+aout,Mois des vacances,GOOD,0.6349
+peul,Style typographique,BAD,0.5560
+suint,Style qui coule,BAD,0.6009
+ventose,Mois d’hiver,GOOD,0.5987
+alun,Roche lunaire,BAD,0.5599
+ravir,Combler quelqu’un,GOOD,0.6375
+loch,Lac écossais,GOOD,0.5553
+astuce,Tour de passe-passe,BORDERLINE,0.5787
+radar,Mesure la vitesse,GOOD,0.5497
+hate,Sentiment négatif,BAD,0.5084
+chenal,Passage d’une rivière,GOOD,0.6116
+nivose,Style : hivernal,BAD,0.4341
+soudain,Brusquement,GOOD,0.7960
+aune,Mesure ancienne,GOOD,0.6151
+refuser,Ne pas accepter,GOOD,0.5519
+surnager,En ressortir,BORDERLINE,0.5794
+luge,Glisse sur neige,GOOD,0.6339
+cap,Titre professionnel,GOOD,0.6622
+mite,Insecte nuisible,GOOD,0.5746
+maison,Couverture et murs,BORDERLINE,0.5813
+autoroute,Voie rapide,GOOD,0.5297
+chap,Titre abrégé,BORDERLINE,0.6648
+recu,Attestation de réception,GOOD,0.6484
+daigner,Consentir à,BORDERLINE,0.6268
+flou,Imprécis,GOOD,0.6027
+front,Visage ou guerre,GOOD,0.6930
+brosse,Outil de toilette,GOOD,0.5904
+ruer,Fonder une compagnie,BAD,0.6330
+terre,Planète bleue,GOOD,0.5761
+lyse,Style : manière de faire,BAD,0.5655
+matin,Lever du jour,GOOD,0.5841
+naval,Relatif à la flotte,GOOD,0.6476
+signal,Indication donnée,GOOD,0.6367
+roi,Souverain monarque,GOOD,0.5621
+chinois,Langue de Confucius,GOOD,0.6275
+turc,Style ottoman,BORDERLINE,0.5641
+palette,Gamme de peintre,GOOD,0.5990
+combler,Remplir un vide,GOOD,0.6273
+raison,Logique ou motivation,GOOD,0.7593
+trempe,Plonge sans hésiter,BORDERLINE,0.5572
+recouvrer,Remplacer une perte,BORDERLINE,0.7451
+atlas,Collection de cartes,GOOD,0.5310
+attaquer,Faire front,BORDERLINE,0.7008
+romano,Style musical tzigane,BORDERLINE,0.4923
+navire,Bateau de fort tonnage,GOOD,0.5864
+annuler,Effacer une dette,GOOD,0.5925
+cubain,Citoyen de La Havane,GOOD,0.5312
+larme,Lave l’œil,GOOD,0.5659
+redresser,Se relever,BORDERLINE,0.5924
+accrocher,Fixer sur un mur,GOOD,0.6271
+loir,Rivière du Perche,BORDERLINE,0.4838
+aerer,Faire circuler l’air,GOOD,0.5581
+oser,Franchir le pas,GOOD,0.6124
+esse,Style féminin,BAD,0.6017
+peser,Avoir du poids,GOOD,0.6398
+epier,Suivre discrètement,BORDERLINE,0.3935
+emettre,Faire une assertion,BORDERLINE,0.6837
+raire,Qui ne pousse pas,BAD,0.4823
+tater,Toucher par petits gestes,BORDERLINE,0.6936
+taire,Ne rien dire,GOOD,0.6926
+parer,Défendre une thèse,BAD,0.6749
+vetir,Habiller quelqu’un,GOOD,0.7210
+citer,Mentionner,GOOD,0.6860
+amer,Goûté et désagréable,BORDERLINE,0.5883
+erre,Style désuet,BAD,0.3854
+reel,"Vrai, concret",GOOD,0.7593
+dire,Énoncer clairement,GOOD,0.5745
+etaler,Déployer,GOOD,0.5383
+tuer,Mettre fin à la vie,GOOD,0.5659
+las,Style,BAD,0.6994
+omettre,Laisser de côté,GOOD,0.6863
+sortir,Aller au cinéma,BORDERLINE,0.6957
+editer,Faire paraître un livre,GOOD,0.6004
+aine,Grand-parent,BAD,0.4742
+epee,Arme blanche,GOOD,0.6830
+issir,Style ancien,BAD,0.4382
+roti,Plat du dimanche,GOOD,0.4796
+ecru,Blanc de lin,BORDERLINE,0.4324
+noter,Marquer d’une mention,GOOD,0.5045
+fier,Digne d’estime,BORDERLINE,0.6769
+mentir,Dire des contrevérités,GOOD,0.7187
+reunir,Rassembler,GOOD,0.7542
+aviser,Donner un avertissement,BORDERLINE,0.6443
+retirer,Enlever,GOOD,0.5866
+sein,Mamelle féminine,BORDERLINE,0.6384
+amuser,Détourner l’attention,BORDERLINE,0.6898
+pair,Duelle ou incertaine,BAD,0.6511
+stase,Point mort,BORDERLINE,0.6228
+tendre,Douce et affectueuse,GOOD,0.5646
+arene,Stade antique,GOOD,0.4615
+remettre,Donner de nouveau,BORDERLINE,0.5944
+cerner,Entourer pour maîtriser,GOOD,0.6248
+ere,Point cardinal,BAD,0.6631
+laver,Nettoyer complètement,GOOD,0.6131
+paraitre,Faire illusion,BORDERLINE,0.6788
+revetir,Faire face ou dos,BAD,0.5394
+traire,Tirer le lait,GOOD,0.4268
+avaler,Ingérer sans mastiquer,GOOD,0.5271
+elan,Vital ou éditorial,BORDERLINE,0.4360
+reagir,Faire preuve d’initiative,BORDERLINE,0.6080
+esperer,Ne pas désespérer,GOOD,0.7232
+scier,Couper au scie,BAD,0.7930
+elever,Porter haut,GOOD,0.7430
+epurer,Nettoyer en profondeur,GOOD,0.6102
+feter,Marquer une occasion,GOOD,0.7494
+oree,Borderie,BAD,0.3786
+ramer,Propulser une galère,GOOD,0.5900
+eteindre,Mettre fin à,BORDERLINE,0.6119
+sire,Titre abrege,BAD,0.5349
+sucer,Lever un cube,BAD,0.5701
+alea,Risque ou hasard,GOOD,0.5403
+etui,Boîte pour lunettes,GOOD,0.4697
+eviter,Contourner le danger,GOOD,0.6879
+noir,Teinte d’encre,GOOD,0.6350
+partir,Quitter un lieu,GOOD,0.6889
+raie,Poisson à peau glissante,GOOD,0.5295
+acier,Métal dur,GOOD,0.6144
+aliener,Transmettre par acte,GOOD,0.4623
+ternir,Perde sa couleur,BAD,0.5026
+acre,Point cardinal,BAD,0.6446
+anal,Style : manière de faire,BAD,0.6609
+arreter,Faire cesser,GOOD,0.6376
+garer,Mettre la voiture,GOOD,0.5926
+plier,Changer de direction,BAD,0.7337
+emeri,Style ancien,BAD,0.4200
+frire,Faire sauter,BORDERLINE,0.5681
+sur,Préposition de position,GOOD,0.6886
+ivre,En état d’ébriété,GOOD,0.5402
+nuire,Faire du tort,GOOD,0.7557
+tirer,Sortir une arme,BORDERLINE,0.7432
+neon,Tube lumineux,GOOD,0.5308
+saper,Remettre en question,BORDERLINE,0.5373
+benir,Élever la main droite,BORDERLINE,0.5876
+egarer,Perdre son chemin,BORDERLINE,0.4964
+mourir,Passer de vie à trépas,GOOD,0.6321
+sale,Qui se lave mal,BAD,0.4862
+crever,Périr,GOOD,0.4737
+harem,Femmes du sultan,GOOD,0.5412
+emoi,Style d’expression,BAD,0.6812
+essai,Texte sans prétention,BORDERLINE,0.5724
+batir,Élever une maison,GOOD,0.5855
+luire,Briller faiblement,GOOD,0.3972
+open,Sans fermeture,BORDERLINE,0.6498
+para,Style ou insecte,BAD,0.4999
+reine,Souveraine,GOOD,0.6726
+reste,Ce qui n’est pas parti,GOOD,0.6180
+ruiner,Détruire financièrement,GOOD,0.5490
+tarder,Prendre son temps,GOOD,0.6569
+inter,Préposition de position,BAD,0.6895
+ire,Colère ou conjuguer,BAD,0.6972
+noyer,Arbre à fruit toxique,BAD,0.6554
+serie,Suite ordonnée,GOOD,0.4889
+alite,Lit d’enfant,BAD,0.3896
+amine,Dérivée d’un acide,BORDERLINE,0.6666
+repaitre,Se désaltérer,BAD,0.5568
+sauter,Passer à l’action,BAD,0.7709
+maar,Cratère volcanique,GOOD,0.4943
+egare,Perdu sans repère,GOOD,0.4027
+mere,Donne la vie,GOOD,0.5256
+percer,Faire un trou,GOOD,0.6522
+casser,Briser en morceaux,GOOD,0.6328
+iris,Camée du œil,BAD,0.6219
+mess,Style ancien,BAD,0.5096
+aliter,Style d'écriture,BAD,0.5591
+creuser,Faire un trou,GOOD,0.6517
+laic,Style grec,BAD,0.5777
+lent,Sans précipitation,GOOD,0.5485
+obeir,Se soumettre,GOOD,0.5719
+ours,Animal des forêts,GOOD,0.5213
+resoudre,Trouver la solution,GOOD,0.6848
+saut,Bond dans le vide,GOOD,0.7006
+sirene,Signal de péril,GOOD,0.3784
+tine,Style ancien,BAD,0.4444
+armee,Force de combat,GOOD,0.6291
+clerc,D'église ou de notaire,GOOD,0.6140
+gener,Descendance d’un ancêtre,BAD,0.6723
+ose,Point cardinal,BAD,0.6331
+sente,File entre les maisons,BORDERLINE,0.6559
+voter,Glisser un bulletin,GOOD,0.5547
+attirer,Faire venir à soi,GOOD,0.7096
+courir,Filer à pied,GOOD,0.6265
+ecarter,Mettre de côté,GOOD,0.5521
+etau,Pince à gros bras,BORDERLINE,0.6094
+saluer,Marquer le respect,GOOD,0.6735
+amen,Affirmation religieuse,GOOD,0.5311
+battre,Écraser ou vaincre,GOOD,0.6090
+geler,Prendre la température,BAD,0.6248
+gemir,Lamenter en gémissant,BAD,0.5241
+ile,Terre entourée d’eau,GOOD,0.5776
+pers,Point cardinal,BAD,0.6332
+peso,Monnaie mexicaine,GOOD,0.6202
+redire,Répéter à l’identique,GOOD,0.5731
+etain,Métal argenté,GOOD,0.5975
+etre,Verbâter,BAD,0.5775
+ferie,Jour chômé,GOOD,0.5497
+genese,Création biblique,GOOD,0.4476
+oint,Onction reçue,GOOD,0.5511
+recrier,Protestation véhémente,BORDERLINE,0.4222
+renard,Voisin d’Astérix,BAD,0.4807
+resto,Style,BAD,0.5347
+rose,Teinte du coucher,GOOD,0.5654
+apte,Capable d’agir,GOOD,0.6303
+avilir,Dégrader quelqu’un,GOOD,0.5803
+envier,Éprouver de la jalousie,GOOD,0.6296
+hisser,Lever avec effort,GOOD,0.6064
+petrir,Masser la pâte,BORDERLINE,0.6616
+rance,Style désagréable,BAD,0.5223
+rural,Relatif au pays,BORDERLINE,0.4882
+aile,Portion de bâtiment,GOOD,0.6631
+baiser,Salut ou traitresse,BAD,0.6112
+dresser,Mettre la table,GOOD,0.6797
+seve,Nutrition des arbres,BORDERLINE,0.4966
+tarse,Ville d’Arménie,BAD,0.4327
+adorer,Chérir,GOOD,0.7179
+aorte,Vaisseau du cœur,GOOD,0.6418
+durer,Persister dans le temps,GOOD,0.6380
+freiner,Diminuer l’accélération,BORDERLINE,0.5265
+laisser,Abandonner,GOOD,0.4472
+coudre,Fermer à l’aiguille,BORDERLINE,0.5583
+figer,Ne plus bouger,GOOD,0.5911
+here,Point cardinal,BAD,0.6747
+paitre,Suit son berger,BAD,0.4689
+parti,Organisation politique,GOOD,0.6384
+sape,Tenue vestimentaire,GOOD,0.5166
+aber,Style breton,BAD,0.4838
+delier,Libérer quelqu'un,GOOD,0.4770
+eta,Style espagnol,BAD,0.5598
+gater,Ajouter du sel,BAD,0.5924
+insu,Sans plus de détail,BAD,0.6759
+mari,Conjoint ou époux,GOOD,0.6301
+psi,Lettre grecque,GOOD,0.4906
+revivre,Retrouver de l’énergie,GOOD,0.6103
+rire,Sourire à voix haute,BORDERLINE,0.5377
+suie,Résidu de torchon,BAD,0.5826
+un,Article,GOOD,0.9999
+arabe,Langue de Saladin,GOOD,0.5312
+art,Mouvement créatif,BORDERLINE,0.7809
+leger,D’un poids minime,GOOD,0.5985
+ovin,Agneau ou bélier,GOOD,0.6439
+polir,Enlever les aspérités,GOOD,0.5899
+rayer,Effacer sans pardon,BORDERLINE,0.5160
+reparer,Remettre en état,GOOD,0.6982
+senat,Chambre haute,GOOD,0.5327
+separer,Mettre à part,GOOD,0.7003
+vrai,Authentique,GOOD,0.6166
+adore,Chérit,GOOD,0.6841
+ascese,Vie de renoncement,GOOD,0.5619
+crin,Cheveu de cheval,BORDERLINE,0.7910
+deni,Refus net,BORDERLINE,0.4997
+eluder,Ne pas affronter,GOOD,0.3524
+ennemi,Cible de haine,GOOD,0.7088
+friser,Faire des vagues,BORDERLINE,0.5822
+natte,Cheveux tressés,GOOD,0.5647
+renne,Père Noël,BORDERLINE,0.4643
+rotir,Cuire à la broche,GOOD,0.4745
+afro,Coiffure ébouriffante,GOOD,0.4369
+agiter,Faire bouger,GOOD,0.6722
+eclore,Style ancien,BAD,0.4855
+errone,Faux ou trompeur,GOOD,0.5364
+mare,Eau stagnante,GOOD,0.6832
+mer,Vaste étendue salée,GOOD,0.7527
+recuser,Refuser net,BORDERLINE,0.6672
+rompre,Faire une pause,BAD,0.5997
+saute,Style ou style,BAD,0.5915
+soie,Tissu délicat,GOOD,0.5935
+stele,Pierre tombale,GOOD,0.7186
+tole,Métal feuilleté,BORDERLINE,0.5447
+uterin,Qui concerne l’utérus,GOOD,0.6747
+aigu,"Net, franc et direct",BORDERLINE,0.6546
+deperir,Se laisser mourir,BORDERLINE,0.5616
+elite,Meilleure d’une classe,GOOD,0.6169
+grenu,Style ancien,BAD,0.4546
+manier,Donner du style,BAD,0.6702
+osseux,Squelette dur,BORDERLINE,0.5570
+planer,Glisser sans avancer,BORDERLINE,0.6682
+rang,Place dans l’échelle,GOOD,0.6778
+rat,Petit rongeur,GOOD,0.5984
+seing,Signature d’acte notarié,BORDERLINE,0.4583
+tain,Cours d'eau français,BAD,0.5386
+vain,Gagnant ou victorieux,BAD,0.6752
+aigri,Acariâtre et revêche,GOOD,0.6792
+dorer,Donner une belle couleur,BORDERLINE,0.5996
+feu,Combustion vive,GOOD,0.6919
+genet,Arbre à fleurs jaunes,BORDERLINE,0.5826
+hart,Style ancien,BAD,0.5048
+rame,Train ou mémoire,BORDERLINE,0.5882
+realiser,Faire quelque chose,BORDERLINE,0.6467
+saint,D'une pureté absolue,BORDERLINE,0.4554
+spot,Point lumineux,GOOD,0.6525
+traiter,Faire subir un sort,BORDERLINE,0.6730
+cire,Fondue sur chandelier,GOOD,0.4214
+denoter,Montrer directement,BORDERLINE,0.5794
+etioler,Perdre de sa vigueur,GOOD,0.5106
+rage,Colère intense,GOOD,0.6621
+sec,Point cardinal,BAD,0.6332
+sereux,Solennel et grave,BAD,0.5811
+sexe,Genre sexuel,BORDERLINE,0.7235
+agent,Représentant mandaté,GOOD,0.6844
+amasser,Rassembler ou entasser,GOOD,0.7646
+cene,Repas familial,BAD,0.3841
+deci,Style ou manière,BAD,0.5418
+diner,Repas du soir,GOOD,0.6576
+ecume,Mousse de la mer,GOOD,0.5517
+loger,Trouver un abri,GOOD,0.6794
+loup,Ennemi du berger,GOOD,0.6994
+mimer,Imiter sans le dire,GOOD,0.6476
+munir,Donner les moyens,GOOD,0.6579
+nard,Parfum oriental,GOOD,0.5417
+nasse,Piège à poissons,GOOD,0.5519
+none,Point cardinal,BAD,0.6576
+oued,Rivière du désert,GOOD,0.5629
+rebatir,Reconstruire,GOOD,0.8510
+reprendre,Commencer de nouveau,GOOD,0.4676
+trust,Giga société,BORDERLINE,0.5597
+usure,Intérêt abusif,GOOD,0.5685
+desservir,Ne pas satisfaire,BORDERLINE,0.5717
+enroler,Remettre un billet,BAD,0.4875
+entendre,Percevoir des sons,GOOD,0.5372
+essaim,Style : manière,BAD,0.4660
+lait,Boisson blanche,GOOD,0.5112
+peindre,Donner des couleurs,GOOD,0.7356
+recevoir,Être l’hôte d’un dîner,GOOD,0.5880
+revendre,Remettre en vente,GOOD,0.5675
+secreter,Produire une substance,GOOD,0.7138
+suivre,Aller après,GOOD,0.6980
+tort,Mal fait,BORDERLINE,0.7541
+uretre,Canal de la vessie,GOOD,0.4688
+agite,En tous sens,BORDERLINE,0.6640
+air,Masse gazeuse respirable,GOOD,0.5727
+avertir,Mettre en garde,GOOD,0.7084
+aviso,Navire de guerre,GOOD,0.4870
+avouer,Reconnaître un fait,GOOD,0.6989
+benit,Sacré,GOOD,0.6544
+danser,Bouger sur un rythme,GOOD,0.6482
+deceler,Discerner à l’avance,BORDERLINE,0.5720
+ecrin,Boîte à bijoux,GOOD,0.5425
+estimer,Porter un jugement sur,GOOD,0.6913
+fete,Réjouissance,GOOD,0.5516
+guerir,Se remettre,GOOD,0.5848
+maie,Style grec,BAD,0.5495
+naos,Style grec,BAD,0.7974
+net,Sans entretien,BAD,0.6145
+oisif,Paresseux ou fainéant,GOOD,0.7497
+orienter,Trouver le nord,BORDERLINE,0.6197
+sceau,Tampon officiel,GOOD,0.5550
+trac,Style ou fil conducteur,BAD,0.5847
+usine,Bâtiment de production,GOOD,0.6430
+adieu,Au revoir définitif,GOOD,0.6258
+annexer,Ajouter un texte,GOOD,0.6756
+avenu,Style urbain,BAD,0.4768
+choir,Ensemble de voix,BAD,0.5323
+cite,Style,BAD,0.9999
+emane,Vient du verbe venir,BAD,0.3731
+paon,Oiseau de Juno,GOOD,0.6056
+recel,Cache et protège,BORDERLINE,0.6022
+snob,Élégant mais prétentieux,GOOD,0.5654
+trial,Procès pénal anglais,BAD,0.4997
+usurper,S’emparer d’un pouvoir,GOOD,0.6339
+venger,Rendre justice,BORDERLINE,0.6283
+age,Période de la vie,GOOD,0.7962
+agio,Style d’écriture,BAD,0.4924
+bleuir,Prendre une teinte bleue,GOOD,0.7199
+caresser,Faire des papouilles,GOOD,0.4300
+copier,Réaliser un duplicata,GOOD,0.6606
+crise,Moment critique,GOOD,0.7261
+erreur,Faute de jugement,GOOD,0.6484
+etole,Veste sans manche,BAD,0.4075
+grec,Suisie par le latin,BAD,0.6267
+ileon,En forme de lion,BAD,0.6460
+liant,Qui unit les choses,GOOD,0.6975
+manioc,Tubercule tropical,GOOD,0.6532
+ogre,Mangeur de petits enfants,GOOD,0.4268
+pendre,Attacher en hauteur,BORDERLINE,0.5694
+piller,Dépouiller un lieu,GOOD,0.7174
+pneu,Tonneau sans vin,BAD,0.4901
+rai,Courant italien,BAD,0.4367
+repartir,Commencer à nouveau,GOOD,0.4855
+reperer,Localiser quelque chose,GOOD,0.6584
+reseau,Tissu connecté,BORDERLINE,0.5903
+rumen,Ventre d’herbivore,GOOD,0.5829
+satin,Tissu soyeux,GOOD,0.5349
+tour,Visite guidée,GOOD,0.6498
+verse,Énonce d’un poème,BAD,0.5847
+acide,Sour,BAD,0.5589
+athee,Sans dieu,GOOD,0.6034
+atterrir,Poser son avion,GOOD,0.6386
+cine,Style d’écriture,BAD,0.4350
+fletrir,Perdre de sa beauté,GOOD,0.5210
+gouter,Saisir le style,BAD,0.6365
+heriter,Prendre la succession,GOOD,0.5413
+ideal,Concept parfait,GOOD,0.6373
+initie,Qui connaît les secrets,GOOD,0.5410
+italien,Langue de Dante,GOOD,0.4760
+lice,Tissu à motifs,BORDERLINE,0.5372
+mordre,Attraper comme le choléra,BAD,0.4583
+obtenir,Parvenir à,BORDERLINE,0.6581
+rabattre,Ramener vers soi,GOOD,0.4865
+replier,Ramener en soi,BORDERLINE,0.7846
+resider,Habiter de manière stable,GOOD,0.6388
+resumer,Raconter brièvement,GOOD,0.5095
+rue,Voie urbaine,GOOD,0.5630
+admettre,Reconnaître une vérité,GOOD,0.6614
+arsenic,Poudre blanche,GOOD,0.5668
+casier,Meuble à école,BORDERLINE,0.6056
+corse,Île française,GOOD,0.4541
+decrire,Faire le portrait en mots,GOOD,0.7257
+ebene,Bois d’Afrique,GOOD,0.5698
+email,Lettre électronique,GOOD,0.6370
+etonner,Laisser sans voix,GOOD,0.5911
+hamac,Berceau sud-américain,GOOD,0.5507
+latin,Langue des Romains,GOOD,0.6822
+meeting,Réunion sportive ou non,GOOD,0.5684
+nasal,Comme la voix d’un rhino,BORDERLINE,0.5788
+nitre,Sel d'ammoniaque,BAD,0.4046
+parent,Lien de sang,GOOD,0.7097
+recruter,Engager des nouveaux,GOOD,0.5630
+route,Lien entre villes,GOOD,0.4714
+ruee,Affluence urbaine,BORDERLINE,0.6121
+secher,Évaporer l’eau,BORDERLINE,0.5545
+serf,Lien,BAD,0.6421
+silo,Citerne à grain,BORDERLINE,0.4977
+tertre,Monticule élevé,GOOD,0.6080
+troc,Échange sans argent,GOOD,0.5275
+vexer,Porter préjudice,BORDERLINE,0.7556
+aigre,Acide pour l’estomac,BORDERLINE,0.5686
+betise,Chose dite par un âne,BORDERLINE,0.4955
+borner,Définir des limites,GOOD,0.6201
+ciel,Bleu la plupart du temps,GOOD,0.4470
+daim,Cèdre du Liban,BAD,0.5309
+eclat,Brillance ou scandale,GOOD,0.6655
+endurer,Supporter des épreuves,GOOD,0.6839
+etreindre,Saisir fortement,GOOD,0.5941
+idiot,Imbécile notoire,GOOD,0.6512
+lion,Roi des animaux,GOOD,0.6322
+main,Porteuse de bagues,GOOD,0.4778
+melee,Mélange confus,GOOD,0.4565
+nazi,Symbole du IIIe Reich,BORDERLINE,0.7191
+nu,Sans vêtement,GOOD,0.6217
+oasis,Point de repère,BORDERLINE,0.7020
+opale,Pierre précieuse blanche,GOOD,0.5145
+payer,Règler l’addition,GOOD,0.6144
+permettre,Autoriser,GOOD,0.6377
+rixe,Mauvaise querelle,GOOD,0.5932
+sauver,Échapper au danger,BORDERLINE,0.5334
+tri,Classement ordonné,GOOD,0.6487
+verdir,Devenir plus vert,GOOD,0.4987
+visiter,Aller voir,GOOD,0.7590
+abrutir,Rendre stupide,GOOD,0.8054
+banc,Abreuvé le chat,BAD,0.5935
+calmer,Apaiser quelqu’un,GOOD,0.5067
+carie,Dent qui se dégrade,BORDERLINE,0.5937
+detester,Avoir en horreur,GOOD,0.4929
+diese,Point de suspension,BAD,0.4160
+eclater,Faire du bruit,BORDERLINE,0.5105
+ecrit,Posé sur le papier,GOOD,0.6917
+enlever,Effacer ou capturer,BORDERLINE,0.7080
+expier,Payer pour ses fautes,GOOD,0.4729
+gant,Protection de main,GOOD,0.6797
+germer,Sortir de l’œuf,BAD,0.5415
+lama,Style,BAD,0.5477
+liane,Végétation tropicale,GOOD,0.5584
+living,Pièce à feu central,BAD,0.4473
+manege,Tourne en rond,GOOD,0.5571
+mediter,Ruminer ses pensées,GOOD,0.5677
+mesurer,Évaluer avec un étalon,GOOD,0.4791
+mie,Style ou maniere,BAD,0.5954
+moral,Conformité aux règles,GOOD,0.4896
+noce,Célébration de mariage,GOOD,0.6056
+ourdir,Préparer un complot,GOOD,0.5231
+penetrer,S’imposer malgré tout,BORDERLINE,0.5562
+priver,Laisser dans le besoin,GOOD,0.6575
+releve,Lève la main,BORDERLINE,0.5972
+repli,Retrait stratégique,GOOD,0.6921
+russe,Langue d’Tolstoï,BAD,0.5157
+salin,Eau de mer,BORDERLINE,0.6307
+tenure,Poste universitaire,BORDERLINE,0.5004
+tome,Livre épais,GOOD,0.5624
+aplanir,Rendre régulier,GOOD,0.4678
+arrete,Décision ferme,GOOD,0.5260
+assure,Garanti sans réserve,GOOD,0.5915
+baril,Tonneau,GOOD,0.5790
+desir,Motivante aspiration,BORDERLINE,0.5624
+dual,Style à deux faces,BAD,0.4737
+epuiser,Mettre à bout de forces,GOOD,0.7028
+evaluer,Jauger la valeur de,GOOD,0.6952
+galet,Pierre rondeuse,BORDERLINE,0.5876
+galop,Allure du cheval,GOOD,0.5438
+gril,Style de vie,BAD,0.4996
+hennir,Cri du chien,BAD,0.5200
+intact,Sans atteinte,GOOD,0.6639
+lame,Style ou cisaille,BAD,0.5716
+merci,Gratitude exprimée,GOOD,0.6637
+ondee,Précipitation sans nuage,BAD,0.4167
+ouate,Tissu douillet,BORDERLINE,0.3886
+priere,Texte de dévotion,GOOD,0.6759
+recto,Face d’un papier,GOOD,0.7078
+roidir,Devenir plus ferme,GOOD,0.3709
+salete,Miettes sur la table,BORDERLINE,0.6077
+souper,Repas du soir,GOOD,0.7054
+tau,Lettre grecque (19e),GOOD,0.5077
+tierce,Course après l’arrivée,BAD,0.6670
+absent,Manquant à l’appel,GOOD,0.6600
+alarmer,Mettre en garde,BORDERLINE,0.6174
+atout,Carte maîtresse,GOOD,0.6536
+deceder,Passer de vie à trépas,GOOD,0.5797
+demeler,Défaire les nœuds,GOOD,0.5439
+detenir,Posséder quelque chose,GOOD,0.7236
+envie,Sentiment de jalousie,GOOD,0.6094
+evacuer,Quitter les lieux,GOOD,0.5415
+foutre,Jeter sans ménagement,GOOD,0.5372
+guet,Surveillance discrète,GOOD,0.5847
+mefier,Ne pas faire confiance,GOOD,0.6656
+meriter,Gagner par ses actes,GOOD,0.5936
+mica,Minéral brillant,GOOD,0.5509
+miss,Titre abrege,BORDERLINE,0.5704
+ordre,Autorité ou instruction,GOOD,0.7633
+outre,Au-delà,GOOD,0.6431
+papier,Support d’écriture,GOOD,0.5836
+peur,Émotion de menace,BORDERLINE,0.7416
+pitie,Sentiment compassionnel,BORDERLINE,0.4403
+preau,Abri sans mur,BORDERLINE,0.5026
+prevoir,Anticiper l’avenir,GOOD,0.7717
+rade,Port frugal,BAD,0.5416
+raton,Petit mammifère,GOOD,0.5469
+remise,Piscine municipale,BAD,0.5849
+repentir,Remords profond,GOOD,0.6060
+tao,Courant littéraire,BAD,0.4602
+ton,Possessif,GOOD,0.6822
+trafic,Circulation urbaine,GOOD,0.5520
+vitae,Eau de vie latine,BORDERLINE,0.6614
+agora,Place grecque,GOOD,0.7590
+attester,Affirmer la vérité,GOOD,0.7223
+bareme,Échelle de notation,GOOD,0.5298
+braver,Affronter sans peur,GOOD,0.5544
+cadet,Plus jeune d’une fratrie,GOOD,0.5450
+carne,Teinte soutenue,BAD,0.4292
+cartel,Entente économique,GOOD,0.5973
+cheri,Bien aimé,GOOD,0.5932
+croup,Style typographique,BAD,0.4200
+deroger,Ne pas obéir,BORDERLINE,0.4239
+desoler,Rendre triste,GOOD,0.6796
+eau,Liquide vital,GOOD,0.6811
+ego,Moi en latin,GOOD,0.5306
+endormir,Bercer jusqu’au sommeil,GOOD,0.8254
+enfer,Section de Dante,GOOD,0.5105
+fraise,Fruit rouge,GOOD,0.5940
+gene,Transmission héréditaire,BORDERLINE,0.5349
+glapir,Cri du renard,GOOD,0.5798
+heure,Mesure du temps,GOOD,0.6830
+laine,Tonte du mouton,GOOD,0.6207
+mana,Eau sacrée polynésienne,BAD,0.5661
+melo,Genre musical,BORDERLINE,0.5774
+miel,Produit par les abeilles,GOOD,0.6615
+opium,Sommeil de Morphée,BORDERLINE,0.6442
+peril,Risque extrême,GOOD,0.5085
+pied,Membre inférieur,BORDERLINE,0.6986
+pipe,Tenue ou comportement,BAD,0.6733
+poete,Auteur inspiré,GOOD,0.4264
+predire,Annoncer l’avenir,GOOD,0.6631
+puine,Vin tourné,BAD,0.4104
+regent,Plein pouvoir,BORDERLINE,0.6312
+retentir,Remplir l’oreille,BORDERLINE,0.6818
+revif,Style de vie,BAD,0.6699
+roof,Couverture d’immeuble,BAD,0.4712
+stand,Style ou façon,BAD,0.6522
+subir,Être victime de,GOOD,0.6303
+toit,Couvre la maison,GOOD,0.6061
+verre,Sable fondu,GOOD,0.5884
+volt,Symbole de la tension,BORDERLINE,0.6228
+acheter,Faire un acquisition,BAD,0.6664
+alias,Style ou pseudonyme,BORDERLINE,0.7020
+avarie,Dégât sur un bateau,GOOD,0.5915
+bore,Style ennuyeux,BAD,0.4814
+canne,Tige du sucre,BORDERLINE,0.6678
+clone,Copie conforme,GOOD,0.5426
+cuir,Pelle tannée,BAD,0.5466
+defaire,Détricotage,BORDERLINE,0.4145
+deteindre,Perdre de l’intensité,GOOD,0.5366
+deviner,Trouver sans voir,GOOD,0.6591
+ebahir,Style,BAD,0.4633
+encan,Vente publique,GOOD,0.5362
+gnose,Connaissance intime,GOOD,0.4875
+goal,But sportif,GOOD,0.6305
+herse,Point de vue,BAD,0.6353
+ibis,Oiseau d'Égypte,GOOD,0.5218
+inerte,Sans réaction,GOOD,0.7306
+inox,Acier sans rouille,GOOD,0.4708
+leste,Point cardinal,BAD,0.6099
+mars,Planète rouge,GOOD,0.6212
+metro,Transport en ville,GOOD,0.6942
+olive,Arbre ou fruit,BORDERLINE,0.6255
+pie,Chant populaire,BAD,0.5602
+presser,Ne pas laisser le temps,BORDERLINE,0.5691
+pretendre,Affirmer sans preuve,GOOD,0.5515
+rand,Cours d'eau,BAD,0.5232
+roux,Teinte du soleil,BORDERLINE,0.6164
+secouer,Faire trembler,BORDERLINE,0.6202
+titre,Nom du chapitre,GOOD,0.6865
+tract,Texte sans marge,BAD,0.4780
+train,Transport ferroviaire,GOOD,0.5303
+vegeter,Vivre au jour le jour,BORDERLINE,0.3710
+alpin,Style de vie,BAD,0.4576
+aval,Eau qui s’écoule,BORDERLINE,0.6405
+casse,Brise en éclats,GOOD,0.6317
+clef,Outil du verrou,GOOD,0.5976
+craie,Pierre à tableau,GOOD,0.4328
+crepe,Pliée par le froid,BAD,0.4792
+crime,Action répréhensible,GOOD,0.5748
+dico,Dictionnaire abrégé,GOOD,0.6044
+digerer,Passer au crible,BAD,0.4286
+durcir,Rendre plus ferme,GOOD,0.7415
+emparer,Prendre possession,GOOD,0.7719
+entente,Accord implicite,GOOD,0.6716
+etalon,Norme de mesure,GOOD,0.5638
+foret,Bois dense,GOOD,0.6753
+gaze,Style désuet,BAD,0.4421
+gelee,Sans pied ni tête,BAD,0.4468
+gluten,Collant du blé,GOOD,0.5719
+hase,Lapine féminine,BORDERLINE,0.6741
+lente,Sans précipitation,GOOD,0.6131
+lepre,Animal d'Irlande,BAD,0.4895
+mossi,Style d'écriture,BAD,0.3588
+nul,Aucun et inutile,GOOD,0.6818
+palpe,Tacte doucement,BAD,0.6641
+pur,Sans mélange,GOOD,0.6585
+rave,Réunion dansante,GOOD,0.5693
+roue,Tourne en rond,GOOD,0.5568
+ruine,Décombres d’un château,GOOD,0.5033
+sacre,Parole solennelle,BORDERLINE,0.5744
+small,Petit en anglais,GOOD,0.4592
+spath,Style ancien grec,BAD,0.5348
+the,Article défini,BAD,0.6996
+acteur,Comédien ou tragédien,GOOD,0.5372
+agha,Titre ottoman,GOOD,0.4162
+alterner,Changer par moments,BORDERLINE,0.6178
+amincir,Affiner sa silhouette,GOOD,0.6809
+apprendre,Acquérir un savoir,GOOD,0.7144
+arbre,Végétal à tronc,GOOD,0.6950
+arriere,Rang le plus éloigné,GOOD,0.5511
+cafe,Robusta ou arabica,GOOD,0.4789
+celeste,Bleu du ciel,GOOD,0.4836
+cotoyer,Vivre à proximité,GOOD,0.5606
+creve,Brille comme la lune,BAD,0.5732
+cutane,De la peau,GOOD,0.3583
+decent,Convenable,GOOD,0.4942
+desunir,Briser l’unité,GOOD,0.6799
+detecter,Déceler sans équivoque,GOOD,0.5377
+emplir,Combler un vase,GOOD,0.5832
+epitre,Lettre aux chrétiens,GOOD,0.5058
+epouser,Prendre pour conjoint,GOOD,0.6439
+ermite,Solitaire et reclus,GOOD,0.6728
+etiage,Période de basses eaux,GOOD,0.5683
+extra,En dehors du contrat,BORDERLINE,0.6217
+grand,Dépasse les autres,GOOD,0.5899
+lave,Roche fondue,GOOD,0.6179
+lien,Fil qui retient,GOOD,0.7265
+mairie,Administration communale,GOOD,0.5206
+mais,Conjonction d'opposition,GOOD,0.6485
+maman,Parent féminin,GOOD,0.7520
+massif,Bloc compact,GOOD,0.6212
+modeler,Donner une forme,GOOD,0.5241
+mole,Style,BAD,0.4714
+morose,De mauvais poil,BORDERLINE,0.5956
+parade,Passe en revue,BORDERLINE,0.5139
+parler,Énoncer ses pensées,GOOD,0.6530
+pieux,Style religieux,BAD,0.6374
+pile,Sans un écart,BORDERLINE,0.7033
+planter,Mettre en terre,GOOD,0.6440
+prenom,Nom de baptême,GOOD,0.6986
+reserver,Bloquer pour soi,GOOD,0.7580
+ricin,Style,BAD,0.5315
+rival,Adversaire acharné,GOOD,0.6365
+sac,Contenant souple,GOOD,0.7007
+semis,Disposition des plantes,BORDERLINE,0.6859
+terme,Point final,GOOD,0.6729
+tomber,Chuter,GOOD,0.6467
+topo,Style d’écriture,BAD,0.5556
+van,Mini-bus,BORDERLINE,0.5852
+amender,Modifier pour améliorer,GOOD,0.7033
+ampere,Unité de courant,GOOD,0.4931
+annexe,Texte ajouté,GOOD,0.6363
+anode,Pôle positif d’une pile,BORDERLINE,0.5638
+aube,Lueur du jour,GOOD,0.6391
+axe,Pivot en travers,BORDERLINE,0.6453
+banal,Sans originalité,GOOD,0.5584
+beaute,Charme physique,GOOD,0.4612
+bien,Sans ambigüité,BAD,0.5491
+boni,Excédent de trésorerie,GOOD,0.4455
+brunir,Donner de l’éclat,BORDERLINE,0.7589
+ceste,Gant de fé,BAD,0.5598
+cle,Outil d’ouverture,GOOD,0.6994
+cocu,Dupe trompé,BORDERLINE,0.6557
+couler,Disparaître à bord,BORDERLINE,0.5383
+cri,Vocalisation forte,GOOD,0.6287
+degel,Dégagement de la glace,BORDERLINE,0.7457
+delire,Perte de raison,GOOD,0.6056
+deparer,Couper net,BAD,0.6405
+dollar,Devise américaine,GOOD,0.5541
+empieter,Franchir le pas,BAD,0.5204
+epaissir,Rendre plus dense,GOOD,0.6186
+fisc,Administration fiscale,GOOD,0.5341
+flirt,Jeu de séduction,GOOD,0.7241
+fret,Transport de marchandises,GOOD,0.7595
+gent,"Manner, manière",BAD,0.5957
+glose,Style d’écriture,BAD,0.4967
+grisou,Style désuet,BAD,0.5627
+hurler,Crier fort,GOOD,0.5131
+indien,Style de tapis,BAD,0.5046
+input,Entrée sur un clavier,BORDERLINE,0.5738
+jaunir,Passer au citron,GOOD,0.3884
+lac,Miroir des montagnes,GOOD,0.6108
+latex,Logiciel de mise en page,BAD,0.4295
+leurre,Appât du pêcheur,GOOD,0.6756
+mali,Pays d’Afrique,BORDERLINE,0.5860
+mastic,Résine du lentisque,GOOD,0.5810
+navet,Légume rond,GOOD,0.7164
+negre,Teinte foncée,BORDERLINE,0.5576
+nom,Mot d’appel,BORDERLINE,0.6808
+pan,Coup dur,BAD,0.6645
+pape,Souverain du Vatican,GOOD,0.5848
+poele,Source de chaleur,GOOD,0.5558
+pote,Ami de confiance,GOOD,0.6274
+prevu,Anticipé,GOOD,0.5315
+racial,Relatif à l’ethnie,GOOD,0.6876
+raisin,Fruit de la vigne,GOOD,0.6583
+reduire,Rendre plus petit,GOOD,0.7356
+reveur,Voyageur de nuit,BORDERLINE,0.7074
+robe,Tenue de soirée,GOOD,0.6700
+rougir,Devenir écarlate,GOOD,0.5500
+script,Texte cinématographique,GOOD,0.6578
+signer,Apposer sa signature,BORDERLINE,0.4994
+stade,Équipement sportif,GOOD,0.6627
+suisse,Pays d’Europe centrale,BORDERLINE,0.4957
+tetanos,Maladie du nourrisson,BAD,0.3786
+tube,Objet cylindrique,GOOD,0.5938
+utiliser,Faire appel à,GOOD,0.6995
+veine,Couleur du sang,BAD,0.6897
+verrou,Sécurité de porte,GOOD,0.6594
+veuf,Sans épouse,BORDERLINE,0.5387
+animal,Être vivant,BORDERLINE,0.5650
+aryen,Groupe ethnique,GOOD,0.5240
+bis,Encore une fois,GOOD,0.6962
+cage,Contient mais emprisonne,GOOD,0.5720
+cargo,Bateau de transport,GOOD,0.6872
+ci,Symbole du césium,BAD,0.4959
+claie,Clot en biais,BAD,0.5228
+culee,Portée à bout,BAD,0.5059
+debiter,Enoncer sans hesitation,GOOD,0.4451
+demain,Jour suivant,GOOD,0.7457
+devot,Zélé,BORDERLINE,0.4958
+ebranler,Faire trembler,GOOD,0.6071
+enfouir,Mettre en cachette,GOOD,0.5263
+foie,Organe du métabolisme,GOOD,0.5717
+galene,Minerai d’argent,BORDERLINE,0.6190
+genant,Qui met mal à l’aise,GOOD,0.6467
+haie,Brise vue,GOOD,0.4938
+imago,Insecte adulte,GOOD,0.5265
+large,Spacieux,GOOD,0.6126
+loco,Style,BAD,0.6044
+militer,Servir sous les drapeaux,BAD,0.6380
+noircir,Devenir plus sombre,GOOD,0.5668
+percee,Brisée ou comprise,BAD,0.6092
+porto,Vin portugais,GOOD,0.7328
+pre,Titre abrege,BAD,0.5579
+promettre,Donner sa parole,GOOD,0.5445
+promouvoir,Faire avancer,GOOD,0.6750
+quai,Cote d’embarquement,BORDERLINE,0.6162
+quitter,Partir en laissant,GOOD,0.6395
+rafle,Arrestation massive,GOOD,0.5099
+repasser,Refaire le lit,BAD,0.4469
+reverdir,Redevenir vert,GOOD,0.5074
+round,Forme géométrique,BAD,0.6720
+sauve,Sortie du danger,BORDERLINE,0.6290
+sida,Maladie d’origine virale,GOOD,0.6695
+soul,Style musical américain,GOOD,0.5855
+tiroir,Commode ou mémoire,BORDERLINE,0.7338
+vote,Choix exprimé,GOOD,0.7091
+acetate,Tissu fragile,BORDERLINE,0.3648
+adapter,Rendre compatible,GOOD,0.5172
+alcool,Substance addictive,GOOD,0.8062
+alerte,Vigilance accrue,GOOD,0.4945
+amollir,Adoucir,BORDERLINE,0.6547
+ample,Spacieux et confortable,GOOD,0.5036
+assidu,Diligent et régulier,GOOD,0.5689
+assister,Être présent,GOOD,0.6744
+atroce,Insupportable à vivre,GOOD,0.6132
+benin,Calme et serein,BAD,0.4282
+boum,Explosion ou fête,GOOD,0.5447
+buse,Oiseau gris,BORDERLINE,0.4705
+caisse,Contenant de magasin,BORDERLINE,0.6085
+canon,Règle sans exception,GOOD,0.4825
+cash,Liquide et payable,BORDERLINE,0.5128
+chatier,Corriger fermement,GOOD,0.3521
+croitre,Augmenter progressivement,GOOD,0.3948
+croupir,Rendre l’âme,BAD,0.5912
+danse,Mouvement rythmé,GOOD,0.4779
+decerner,Attribuer officiellement,GOOD,0.5780
+decri,Raconter en détail,BAD,0.4280
+demele,Style ou manière,BAD,0.4116
+demeurer,Habiter un lieu,GOOD,0.7117
+drop,Poser sans prendre,BAD,0.5317
+ecrouler,Tomber en ruines,GOOD,0.6344
+ecueil,Pierre sous la mer,GOOD,0.4640
+entasser,Rassembler en tas,GOOD,0.7436
+erudit,Lettré,GOOD,0.5656
+expirer,Perdre son souffle,BORDERLINE,0.5888
+festin,Repas de fête,GOOD,0.7191
+foutu,Condamné ou perdu,GOOD,0.6304
+frac,Style d’œuvre d’art,BAD,0.5064
+interim,Durée du remplacement,GOOD,0.6934
+larve,Stade intermédiaire,BORDERLINE,0.5102
+liege,Style,BAD,0.5996
+lot,Ensemble pris en bloc,GOOD,0.6766
+messire,Titre de noblesse,GOOD,0.5567
+moisi,Ennuyeux,BORDERLINE,0.4664
+moisir,Pourrir progressivement,GOOD,0.6745
+morne,Sans vie ni relief,GOOD,0.4508
+motiver,Donner une raison,GOOD,0.7107
+nerf,Tendon du mot fléché,BAD,0.6390
+ode,Poème à sujet unique,BORDERLINE,0.7068
+ordo,Ordre religieux,BORDERLINE,0.5832
+pairie,Symétrie parfaite,BAD,0.4490
+patre,Style d'écriture,BAD,0.4413
+pause,Temps d’arrêt,GOOD,0.7558
+probe,Style d’écriture,BAD,0.5667
+pseudo,Nom trompeur,BORDERLINE,0.6772
+rameau,Branche d’arbre,GOOD,0.5748
+remonter,Aller vers le haut,GOOD,0.7471
+renoncer,Ne pas donner suite,GOOD,0.6167
+senile,Dénuée de bon sens,BORDERLINE,0.5856
+soda,Eau gazeuse,BORDERLINE,0.6036
+sortie,Brise de liberté,BAD,0.6763
+soutenir,Porter,GOOD,0.7315
+sport,Activité physique,GOOD,0.7340
+sucre,Succombe à la tentation,BAD,0.6008
+tabou,Interdit de toucher,GOOD,0.5833
+tenon,Morceau de bois en queue,BORDERLINE,0.6449
+tutti,En chœur,GOOD,0.5295
+vil,Style abject,BAD,0.5194
+wolof,Ethnie sénégalaise,GOOD,0.5616
+adherer,Accoler sans colle,BORDERLINE,0.5530
+alfa,Lettre grecque,BORDERLINE,0.4783
+amitie,Lien affectif,GOOD,0.6387
+arborer,Porter comme un drapeau,GOOD,0.7304
+archet,Style d’écriture,BAD,0.4086
+bleu,Teinte du ciel,GOOD,0.6703
+connaitre,Savoir par expérience,GOOD,0.7346
+corail,Squelette marin,BORDERLINE,0.5654
+dalle,Pierre taillée,GOOD,0.5943
+deplaire,Ne pas convenir,BORDERLINE,0.4021
+detenu,Captif ou dossier,BAD,0.7091
+devorer,Détruire par la faim,BORDERLINE,0.7349
+dissiper,Chasser en tous sens,GOOD,0.5274
+eclairer,Chasser l’obscurité,GOOD,0.7353
+entour,Cadre ou marge,BORDERLINE,0.7302
+envahir,Prendre d’assaut,GOOD,0.5677
+exagerer,Aller trop loin,GOOD,0.4972
+expo,Style de paragraphe,BAD,0.5545
+fer,Métal magnétique,GOOD,0.7040
+fesse,Partie du postérieur,GOOD,0.5240
+flash,Éclat lumineux bref,GOOD,0.7442
+franc,Style sans équivoque,BORDERLINE,0.6529
+frele,Chétif,GOOD,0.4280
+fumer,Passer du bleu,BAD,0.4536
+grandir,Devenir plus haut,GOOD,0.6832
+griot,Conteur traditionnel,GOOD,0.7022
+grossir,Prendre du volume,GOOD,0.4540
+habiter,Résider,GOOD,0.6543
+haine,Sentiment de mépris,BORDERLINE,0.6529
+helium,Gaz du ballon,GOOD,0.4739
+hernie,Brèche dans le tronc,BORDERLINE,0.6164
+heron,Oiseau des marais,GOOD,0.5786
+hotel,Maison d’hébergement,GOOD,0.6654
+inclure,Intégrer dans un ensemble,GOOD,0.6805
+ivoire,D’éléphant ou de piano,GOOD,0.7046
+jeep,Véhicule tout-terrain,GOOD,0.5646
+lift,Style,BAD,0.6308
+lustre,Éclat du passé,BORDERLINE,0.6811
+male,Brutal selon Sartre,BAD,0.5021
+manie,Geste répétitif,GOOD,0.5542
+massue,Arme préhistorique,GOOD,0.4931
+nitrate,Sel d'acide nitrique,GOOD,0.5619
+nonce,Clerc du pape,GOOD,0.5647
+obsede,Style très personnel,BAD,0.4393
+onereux,Coûteux,GOOD,0.8751
+patenter,Déposer une invention,GOOD,0.7392
+pave,Pierre cubique,GOOD,0.5043
+pesant,Qui pèse sur le moral,GOOD,0.6858
+pitre,Comique burlesque,GOOD,0.4643
+pleurer,Lâcher ses larmes,GOOD,0.5180
+plie,Style ou cède au poids,BAD,0.5675
+preparer,Mettre en état,GOOD,0.5513
+remplir,Combler,GOOD,0.5407
+retour,Aller et venue,BORDERLINE,0.7338
+retrecir,Devenir plus étroit,GOOD,0.5516
+scheme,Planifier sa stratégie,BAD,0.4039
+silex,Pierre à feu,GOOD,0.5052
+soucier,Qui cause de l’inquiétude,BORDERLINE,0.5687
+suif,Graisse animale,GOOD,0.5484
+susciter,Éveiller,GOOD,0.6557
+tamis,Outil de sélection,BORDERLINE,0.6543
+tardif,En retard,GOOD,0.5290
+top,Point cardinal,BAD,0.6334
+triade,Groupe de trois,GOOD,0.6050
+vitesse,Allure de déplacement,GOOD,0.5549
+achever,Terminer une tâche,GOOD,0.7258
+aplomb,Franche assurance,GOOD,0.4665
+apotre,Messager du Christ,GOOD,0.5295
+appele,Citation invoquée,BAD,0.6258
+appeler,Solliciter par la voix,GOOD,0.6680
+apposer,Signer en bas d’un texte,GOOD,0.8103
+ardoise,Style en noir,BAD,0.4017
+assiste,Aide de près,BORDERLINE,0.6518
+attenter,Porter atteinte,GOOD,0.7429
+attiedir,Style,BAD,0.5002
+austere,Sévère et rigoureux,GOOD,0.4457
+avorter,Ne pas aboutir,GOOD,0.6221
+avoue,Reconnaît sa faute,GOOD,0.5639
+barbu,Poilue comme un chat,BAD,0.5798
+benne,Remorque agricole,BORDERLINE,0.5237
+brevet,Diplôme du collège,GOOD,0.6318
+briller,Émettre de la lumière,GOOD,0.6772
+caduc,Qui a perdu sa valeur,GOOD,0.5724
+carton,Remarque cinglante,BAD,0.5472
+clan,Famille élargie,GOOD,0.5353
+clic,Son d’une souris,GOOD,0.6149
+coule,Teinte d’un objet,BAD,0.6383
+czar,Titre russe,GOOD,0.5222
+dard,Pique du scorpion,GOOD,0.5582
+debet,Solde négatif,GOOD,0.6005
+declarer,Faire connaître,GOOD,0.5239
+definir,Donner une définition,BAD,0.7510
+degager,Libérer ou s’éloigner,GOOD,0.6668
+departir,Quitter un lieu,BORDERLINE,0.6705
+desister,Se retirer,GOOD,0.5858
+desobeir,Ne pas obéir,BORDERLINE,0.4630
+destiner,Décréter le sort de,BORDERLINE,0.7209
+detente,Relaxation complète,GOOD,0.5888
+ecouter,Prêter l’oreille,GOOD,0.7109
+envoler,S’élever dans les airs,GOOD,0.7957
+exigu,Qui manque de place,GOOD,0.4348
+extase,Élevation de l’âme,GOOD,0.6852
+filtrer,Éliminer les impuretés,GOOD,0.4820
+fleurir,Donner de la couleur,BORDERLINE,0.5224
+fume,Style : manière de faire,BAD,0.4962
+gastro,Style d’estomac,BAD,0.5942
+grace,Élégance naturelle,GOOD,0.6862
+gras,Richissime ou obèse,BORDERLINE,0.5409
+guepe,Insecte piqueur,GOOD,0.6910
+land,Style d'écriture,BAD,0.4116
+lisse,Sans relief,GOOD,0.7284
+loge,Salle de spectacle,BAD,0.7034
+loi,Règle obligatoire,GOOD,0.6299
+lord,Titre anglais,GOOD,0.5381
+maigrir,Perdre du poids,GOOD,0.4897
+malle,Bagage à sangles,GOOD,0.6479
+marine,Bleue ou blanche,BORDERLINE,0.4918
+metal,Style musical dur,GOOD,0.8238
+mille,Un si joli papier,BAD,0.5232
+mime,Art du geste,GOOD,0.6328
+moine,Religieux contemplatif,GOOD,0.6660
+moite,Humide à souhait,BORDERLINE,0.5391
+mortel,Fatal,GOOD,0.5679
+murier,Arbre à soie,BORDERLINE,0.6258
+nef,Vaisseau d'église,GOOD,0.5493
+oiseau,Animal à plume,GOOD,0.6932
+oraison,Prière longue,GOOD,0.6316
+pagus,Division gallo-romaine,GOOD,0.6233
+panne,Coupure intenable,BORDERLINE,0.5582
+penal,Répressif,GOOD,0.5904
+pin,Conifère résineux,GOOD,0.5960
+plain,Sans relief,GOOD,0.7290
+plasma,Sang ionisé,BAD,0.7409
+poindre,Faire ses bagages,BAD,0.4349
+prevenir,Avertir à l’avance,GOOD,0.6971
+pulpe,Chair juteuse d’un fruit,GOOD,0.5820
+rab,Style,BAD,0.5551
+recuperer,Remporter la mise,BAD,0.5428
+regarnir,Remplacer le gazon,BORDERLINE,0.4459
+regret,Remords exprimé,BORDERLINE,0.6013
+sabre,Arme blanche,GOOD,0.5745
+sou,Style ou besoin,BAD,0.6926
+sourd,Ne veut pas entendre,BORDERLINE,0.6496
+super,Forme,BAD,1.0000
+tempe,Vent violent,BAD,0.5980
+tuteur,Juge de paix,BAD,0.6489
+urbain,D’une grande ville,GOOD,0.5488
+valider,Apposer son tampon,GOOD,0.4747
+vassal,Définition obsolète,BAD,0.4899
+venin,Liquide de vipère,GOOD,0.6030
+abonne,Client régulier,GOOD,0.4510
+aborder,Arriver au port,GOOD,0.5841
+accise,Taxe sur la consommation,GOOD,0.4834
+achat,Acquisition volontaire,GOOD,0.6273
+appreter,Mettre en appétit,BAD,0.5391
+arroger,Attribuer par décret,BAD,0.4561
+artiste,Créateur inspiré,GOOD,0.6947
+asperger,Style direct,BAD,0.3222
+assiege,Entoure pour conquérir,GOOD,0.6004
+atteindre,Parvenir à un but,GOOD,0.6287
+averse,Pluie torrentielle,GOOD,0.7322
+berbere,Style nord-africain,BAD,0.4244
+beurre,Produit laitier,GOOD,0.4521
+blesse,Contusionnée,BORDERLINE,0.5835
+brin,Fil d’herbe,BORDERLINE,0.6568
+bris,Morceau de verre,BORDERLINE,0.6731
+catch,Style de combat,BORDERLINE,0.6861
+chair,Tissu animal,BORDERLINE,0.5923
+chetif,Pauvre et fragile,BORDERLINE,0.5163
+choeur,Section vocale,GOOD,0.7841
+cil,Point cardinal romain,BAD,0.4776
+client,Consommateur fidèle,GOOD,0.6026
+colis,Envoi postal,GOOD,0.6239
+confier,Remettre à quelqu’un,GOOD,0.5896
+copie,Duplicata d’un original,GOOD,0.5629
+cou,Style ou décolleté,BAD,0.6973
+crabe,Décapé sur le dos,BAD,0.4437
+cuisse,Jambe supérieure,BORDERLINE,0.5394
+dessin,Représentation graphique,GOOD,0.7744
+detruire,Anéantir quelque chose,GOOD,0.8067
+devenir,Changer de nature,GOOD,0.6450
+devise,Citation qui enseigne,BORDERLINE,0.6828
+docu,Style direct,BAD,0.6416
+drame,Pièce à forte teneur,BORDERLINE,0.4831
+ducal,De duc,GOOD,0.6756
+eloigner,Mettre à distance,GOOD,0.4140
+elucider,Résoudre un mystère,GOOD,0.5532
+eminent,En son genre,BAD,0.4456
+encourir,Faire du pied,BAD,0.5154
+entraver,Faire obstacle,GOOD,0.4983
+envoi,Texte d’une lettre,BAD,0.5758
+epoux,Conjoint ou cônjointe,BAD,0.4954
+epreuve,Section d’examen,BORDERLINE,0.7670
+esprit,Mental ou fantôme,GOOD,0.6612
+fierte,Digne d’orgueil,BORDERLINE,0.6924
+fraude,Acte de tromperie,GOOD,0.7680
+gars,Mâle du sud,BAD,0.5998
+geant,Grand et fort,BORDERLINE,0.6479
+golf,Sport du club,GOOD,0.6825
+haras,Élevage de chevaux,GOOD,0.4606
+incarner,Donner chair,GOOD,0.7488
+lemme,Théorème admis,BORDERLINE,0.5831
+liberer,Affranchir du joug,GOOD,0.6833
+limite,Cône d’un crayon,BAD,0.6242
+media,Milieu ou télévision,BORDERLINE,0.6827
+menager,Ne pas faire de vagues,BORDERLINE,0.3886
+negoce,Commerce de gros,GOOD,0.5004
+niche,Recoin aménagé,GOOD,0.5894
+noix,Fruit du noyer,GOOD,0.6276
+otage,Pion d’un brasier,BAD,0.5391
+papal,Relatif au pape,GOOD,0.5209
+partie,Portion d’un tout,GOOD,0.6904
+plebe,Classe sociale romaine,GOOD,0.4420
+pont,Lien entre rives,GOOD,0.5743
+port,Cité et havre,BORDERLINE,0.6319
+purin,Style sans mélange,BAD,0.5538
+ravager,Dévaster,GOOD,0.7083
+repandre,Faire connaître,GOOD,0.4308
+rouge,Couleur communiste,GOOD,0.4403
+sixte,Mouvement du piano,BAD,0.4826
+socle,Base solide,GOOD,0.6630
+sol,Note de musique,GOOD,0.6537
+speed,Style de vie,BAD,0.5398
+temperer,Mélanger pour adoucir,BORDERLINE,0.4702
+tzar,Souverain russe,GOOD,0.5301
+verve,Manière d’exprimer,BORDERLINE,0.7359
+zen,Calme et serein,GOOD,0.6352
+accelerer,Donner de la vitesse,GOOD,0.4914
+accourir,Se précipiter,GOOD,0.7143
+activer,Donner du peps,BORDERLINE,0.5004
+acuite,Sensibilité aux détails,GOOD,0.3872
+adopter,Faire sien,GOOD,0.6646
+aguerrir,Rendre plus robuste,GOOD,0.7598
+ambre,Résine fossile,GOOD,0.6125
+attarder,Retarder encore,BORDERLINE,0.5015
+attenuer,Rendre moins intense,GOOD,0.6381
+bang,Explosion ou onomatopée,GOOD,0.6157
+bar,Établissement à boire,GOOD,0.6114
+bison,Taureau d’Amérique,BORDERLINE,0.6221
+blesser,Faire mal,GOOD,0.6496
+blottir,Effacer sans trace,BAD,0.6709
+broyer,Réduire en poudre,GOOD,0.7529
+catalan,Langue d’Espagne,GOOD,0.4789
+chalet,Maison de montagne,GOOD,0.5074
+chaud,Qui brûle les doigts,GOOD,0.5820
+conclure,Faire le bilan,BORDERLINE,0.6749
+cotte,Veste d’enfant,BAD,0.4826
+curer,Nettoyer à fond,GOOD,0.5328
+densite,Quantité de matière,BORDERLINE,0.4424
+devaster,Raser complètement,GOOD,0.5342
+eblouir,Jeter un voile sur,BAD,0.4974
+ecarteler,Tendre à l’extrême,BORDERLINE,0.5643
+egide,Protection divine,GOOD,0.5951
+egout,Réseau urbain,BORDERLINE,0.3891
+encherir,Monter au fur et à mesure,BORDERLINE,0.5358
+enlaidir,Rendre laid,GOOD,0.6346
+envol,Départ dans les airs,GOOD,0.8040
+espion,Agent secret,GOOD,0.5925
+estime,Jugement porté sur autrui,BORDERLINE,0.6832
+etudier,S’appliquer à apprendre,GOOD,0.7111
+exiger,Poser comme condition,GOOD,0.7284
+fiacre,Meneur de chevaux,BAD,0.4771
+flot,Masse liquide,GOOD,0.7110
+folio,Grand papier,BORDERLINE,0.5443
+gateau,Dessert festif,GOOD,0.5396
+goth,Style musical sombre,GOOD,0.7327
+hardi,Intrépide,GOOD,0.5679
+hebreu,Langue biblique,GOOD,0.5706
+hoir,Descendant,BORDERLINE,0.6322
+image,Reflet d’un miroir,GOOD,0.6555
+integrer,Faire partie d’un tout,GOOD,0.6280
+labeur,Travail pénible,GOOD,0.7419
+levure,Champignon boulanger,GOOD,0.5315
+lit,Meuble pour dormir,GOOD,0.5653
+longer,Plus long,BAD,0.5533
+louis,Prénom du roi Soleil,GOOD,0.5935
+lyre,Instrument d’Orphée,GOOD,0.6750
+mat,Style sans fantaisie,BAD,0.5877
+melon,Fruit d’été,GOOD,0.4318
+mitre,Couvre la tête du pape,BORDERLINE,0.5865
+mollir,Devenir plus souple,BORDERLINE,0.4563
+nimbe,Aura sacrée,GOOD,0.5055
+orateur,Parleur éloquent,BORDERLINE,0.7294
+pacte,Entente officielle,GOOD,0.6962
+page,Style en un coup d’œil,BAD,0.6328
+pavot,Plante à opium,GOOD,0.5057
+peigne,Outil capillaire,GOOD,0.6328
+phare,Guide de nuit,GOOD,0.6142
+pilon,Mortier à long manche,BAD,0.6361
+pinte,Mesure de bière,GOOD,0.6273
+point,Caractère de précision,BORDERLINE,0.6384
+pope,Style vestimentaire,BAD,0.5814
+prevenu,Informé à l’avance,GOOD,0.6689
+purge,Médicament ou nettoyage,GOOD,0.7134
+racheter,Effacer par un achat,BORDERLINE,0.6239
+rallie,Style suivi,BAD,0.4862
+recolter,Rassembler les fruits,GOOD,0.7847
+refleter,Donner l’image de,GOOD,0.7389
+regarder,Jeter un œil,GOOD,0.5426
+regler,Rendre compte,BAD,0.6897
+reliure,Travail du libraire,BAD,0.7177
+renvoi,Texte dirigé,BAD,0.6417
+reserve,Stock ou prudence,GOOD,0.5864
+resigner,Accepter son sort,GOOD,0.5410
+resorber,Effacer progressivement,GOOD,0.6420
+retablir,Remettre en place,GOOD,0.8075
+rouvrir,Défaire la fermeture,BORDERLINE,0.8182
+scelerat,Malfaisant,GOOD,0.5200
+serieux,Sans rire,GOOD,0.5560
+sexuel,Qui concerne la sexualité,BORDERLINE,0.6483
+sincere,Sans faux semblant,GOOD,0.5530
+slogan,Phrase publicitaire,GOOD,0.6863
+solaire,D’un beau matin d’été,BORDERLINE,0.5324
+sphere,Forme géométrique,BORDERLINE,0.6592
+statuer,Décider en juge,GOOD,0.7028
+taxi,Véhicule à réserver,GOOD,0.4285
+telex,Service de messages,GOOD,0.5724
+tendon,Lien musculo-squelettique,GOOD,0.4602
+terminer,Aller au bout,GOOD,0.6851
+terreau,Matière à plantes,GOOD,0.6593
+thon,Poisson à longue queue,BAD,0.5213
+toge,Tenue des Romains,GOOD,0.5604
+val,Cours d'eau,BAD,0.6462
+verger,Arbre à pommes,BAD,0.6549
+villa,Maison de maître,GOOD,0.6139
+yen,Monnaie japonaise,GOOD,0.4777
+zinc,Métal bleu,BORDERLINE,0.5243
+amidon,Farine de blé,BAD,0.6579
+armoire,Meuble de rangement,GOOD,0.6794
+assainir,Nettoyer en profondeur,GOOD,0.5743
+assieger,Entourer une place forte,GOOD,0.5239
+associer,Rassembler en lien,BORDERLINE,0.6284
+assortir,Choisir en harmonie,GOOD,0.5762
+bail,Contrat de location,GOOD,0.6497
+baise,Style ou agrément,BAD,0.7182
+banni,Exclu par décret,GOOD,0.5593
+baume,Remède apaisant,GOOD,0.8507
+bon,Bienveillant ou coupé,BORDERLINE,0.6460
+bouc,Animal cornu,GOOD,0.5094
+bourg,Ville de taille moyenne,BORDERLINE,0.5888
+camera,Enregistre les images,GOOD,0.6401
+carte,Support d’information,BORDERLINE,0.7028
+chaine,Lien qui unit,GOOD,0.6462
+chariot,Il transporte les courses,GOOD,0.6368
+choisir,Faire son tri,GOOD,0.5245
+choyer,Entourer d’attention,GOOD,0.5693
+cidre,Boisson de pomme,GOOD,0.6654
+clou,Point central,GOOD,0.7122
+cocon,Enveloppe du bébé insecte,GOOD,0.5895
+continuer,Aller jusqu’au bout,BORDERLINE,0.6360
+cooperer,Agir de concert,GOOD,0.5497
+cravate,Noeud de col,GOOD,0.5725
+datif,Cas du complément,GOOD,0.7750
+debattre,Discuter vivement,GOOD,0.5654
+defendre,Prendre sa cause,GOOD,0.7459
+delicat,Tendre comme un chat,BORDERLINE,0.4967
+demander,Solliciter quelqu’un,GOOD,0.6886
+depute,Représentant élu,GOOD,0.6029
+deraciner,Arracher du sol,GOOD,0.5782
+deranger,Troubler le repos,GOOD,0.5075
+devouer,Consacrer à,GOOD,0.8187
+divan,Canapé ancien,GOOD,0.4801
+endurcir,Rendre plus ferme,GOOD,0.6938
+entretuer,Se faire la guerre,GOOD,0.6126
+entrevoir,Rencontrer brièvement,BORDERLINE,0.5934
+epanouir,Fleurir,GOOD,0.5801
+evanouir,Perdre connaissance,GOOD,0.4692
+exclu,Privé d’entrée,GOOD,0.6909
+fermier,Locataire d’un domaine,GOOD,0.5261
+fertile,Capable de donner la vie,GOOD,0.6128
+fou,Privé de raison,GOOD,0.6662
+fraie,Poussée d’écriture,BAD,0.6308
+fruste,Style dépouillé,BORDERLINE,0.6024
+gang,Groupe criminel,GOOD,0.7766
+glaise,Style ancien,BAD,0.4638
+good,Qualité ou bien,BAD,0.8154
+gosier,Col de l’oiseau,BORDERLINE,0.5029
+grotte,Cavité naturelle,GOOD,0.5932
+guerre,Conflit armé,GOOD,0.5655
+guette,Surveille à distance,GOOD,0.6385
+hasard,Fortuité,BORDERLINE,0.5244
+hatif,Sans méfiance,BAD,0.4904
+homo,Genre grammatical,BAD,0.5906
+honnir,Chasser comme un paria,BORDERLINE,0.6674
+hutu,Groupe ethnique rwandais,GOOD,0.6326
+implorer,Supplier avec force,GOOD,0.6139
+inonder,Remplir à ras bord,BORDERLINE,0.7033
+jete,Style ou colère,BAD,0.5990
+labourer,Creuser la terre,GOOD,0.7560
+legal,Autorisé par la loi,GOOD,0.7139
+liais,Style,BAD,0.5026
+lime,Citron verte,BAD,0.5900
+lingot,Or en barres,GOOD,0.6027
+macon,Ville de France,BAD,0.4807
+mage,Magicien oriental,GOOD,0.4955
+marcher,Aller à pied,GOOD,0.6925
+match,Rencontre sportive,GOOD,0.5704
+motte,Bloc de beurre,GOOD,0.5350
+moue,Geste d’acquiescement,BAD,0.5614
+obole,Pièce romaine,BAD,0.5961
+oncle,Parental ou tonton,GOOD,0.5330
+ouragan,Vent violent,GOOD,0.7151
+patte,Membre d’animal,GOOD,0.6576
+pervertir,Corrompre,GOOD,0.6374
+plant,Style d’écriture,BAD,0.5367
+pouf,Petite table d’appoint,BAD,0.6003
+prof,Enseignant d’université,BORDERLINE,0.6283
+puant,Qui fait fuir par l’odeur,GOOD,0.6469
+quota,Part allouée,GOOD,0.7428
+racornir,Se faire plus petit,BORDERLINE,0.4548
+rangee,En ordre,BORDERLINE,0.5466
+rattraper,Combler un retard,GOOD,0.5957
+redevenir,Rétablir une situation,BAD,0.7537
+resonner,Rendre écho,BORDERLINE,0.7098
+resurgir,Revenir à la surface,GOOD,0.7140
+retribuer,Rendre la pareille,BAD,0.5767
+revenu,Gain annuel,GOOD,0.6327
+reverie,Voyage immobile,GOOD,0.4110
+ronronner,Faire plaisir au chat,BAD,0.5079
+roseau,Paille du blé,BAD,0.6044
+rubis,Pierre rouge,GOOD,0.6067
+sagesse,Bon sens accumulé,GOOD,0.6833
+savoir,Connaître,GOOD,1.0000
+skin,Couverture du corps,BAD,0.6547
+sorcier,Maître en magie noire,GOOD,0.6165
+sternum,Os du thorax,GOOD,0.6261
+tantot,Autrefois,BAD,0.5829
+truite,Poisson à ombrelle,BAD,0.6335
+vendu,Échangé pour de l’argent,GOOD,0.5646
+verge,Baton du berger,BORDERLINE,0.3829
+vif,Sans retard,BORDERLINE,0.6506
+vin,Boisson du raisin,GOOD,0.5294
+about,Point final,BORDERLINE,0.6730
+accent,Ton régional,GOOD,0.5715
+accentuer,Mettre en relief,GOOD,0.6324
+adopte,Fait sien,GOOD,0.6711
+aigrir,Devenir acariâtre,GOOD,0.4547
+allume,Met de la lumière,GOOD,0.7310
+amenuiser,Réduire quelque chose,GOOD,0.4676
+appuyer,Donner du poids,GOOD,0.6557
+assoupir,Souffler de lassitude,BAD,0.7563
+axis,Symétrie,BAD,0.6050
+baby,Bébé anglais,GOOD,0.5455
+banane,Fruit jaune,GOOD,0.5099
+bec,Pointe d'oiseau,BORDERLINE,0.6215
+ble,Style d'écriture,BAD,0.4716
+bovin,Taureau ou vache,GOOD,0.7569
+bran,Style ancien,BAD,0.4546
+break,Pause dans la musique,GOOD,0.4418
+broc,Vase ancien,BORDERLINE,0.5165
+burin,Outil de gravure,GOOD,0.5795
+calcul,Opération mentale,GOOD,0.6349
+charger,Remplir ou empiler,GOOD,0.5551
+chas,Fil à suivre,BAD,0.5458
+chasser,Expulser,GOOD,0.4991
+cherir,Porter dans le cœur,GOOD,0.7047
+cherte,Prix élevé,GOOD,0.5117
+chevet,Table de nuit,GOOD,0.6166
+clarte,Lune de papier,BAD,0.5485
+col,Porté par le pigeon,BAD,0.5552
+concerner,Avoir trait à,GOOD,0.6421
+convier,Inviter à une réception,GOOD,0.6856
+cornet,Instrument à vent,GOOD,0.5761
+cru,Vin non assemblé,BORDERLINE,0.6033
+debat,Discussion argumentée,GOOD,0.6130
+depasser,Aller au-delà,GOOD,0.6961
+deserter,Faire faux bond,BORDERLINE,0.4845
+deuil,Port du noir,GOOD,0.6592
+discerner,Distinguer clairement,GOOD,0.5475
+diverger,Aller chacun de son côté,GOOD,0.5798
+ecaille,Pelle de poisson,BAD,0.6283
+enfanter,Accoucher,GOOD,0.5687
+enteriner,Approuver officiellement,GOOD,0.4513
+episode,Chapitre d’un récit,GOOD,0.6348
+etalage,Vitrine commerciale,GOOD,0.5326
+eterniser,Rendre immortel,GOOD,0.5402
+ethnie,Groupe culturel,GOOD,0.5813
+etouffer,Réprimer une émotion,GOOD,0.5914
+evader,Filer à l’anglaise,BORDERLINE,0.4677
+excite,Stimule ou interpelle,GOOD,0.7054
+excuser,Justifier une faute,GOOD,0.8181
+fan,Style d'écriture,BAD,0.5823
+fetu,Style ou manière,BAD,0.4641
+filtre,Retient le bon liquide,BAD,0.6274
+flan,Dessert fondant,GOOD,0.5099
+fleau,Mal redouté,GOOD,0.5364
+forage,Pénétration dans le sol,GOOD,0.6221
+frapper,Porter un coup,GOOD,0.6348
+garcon,Serveur en salle,GOOD,0.7351
+gendre,Beau-fils,GOOD,0.5327
+germe,Il pousse,BORDERLINE,0.6326
+graine,Portée par le vent,GOOD,0.4789
+graviter,Tendre vers,BORDERLINE,0.7288
+grimper,Aller vers le sommet,GOOD,0.6300
+heberger,Donner un toit,GOOD,0.4890
+hiatus,Interruption prolongée,GOOD,0.6523
+home,Où l’on revient toujours,GOOD,0.6122
+jetee,Portion de quai,BORDERLINE,0.4839
+languir,Perdre de l’intensité,BORDERLINE,0.4525
+lapis,Pierre à écrire,BAD,0.4299
+lecture,Saisir le sens d’un texte,GOOD,0.5860
+liasse,Style d’écriture,BAD,0.4658
+lin,Tissu frais,GOOD,0.6737
+malade,En état de faiblesse,BORDERLINE,0.6085
+marche,Allée du jardin,BAD,0.6072
+mariage,Union civile,BORDERLINE,0.5529
+menu,Table des mets,GOOD,0.7560
+micro,Style réduit,BAD,0.6366
+mixte,Qui allie deux genres,GOOD,0.6850
+mmhg,Symbole du mercure,BAD,0.5465
+montrer,Faire voir,GOOD,0.7534
+morve,Larmes du nez,GOOD,0.6178
+mou,Sans conviction,GOOD,0.5763
+niveau,Sans haut ni bas,BORDERLINE,0.6814
+obus,Projetile d'artillerie,BAD,0.7861
+onglet,Marque de paragraphe,BAD,0.6483
+oreille,Organe de l’audition,GOOD,0.5497
+patio,Jardin intérieur,GOOD,0.6889
+pedale,Actionne le vélo,GOOD,0.5327
+pensif,Qui réfléchit,GOOD,0.6307
+pigeon,Messager volant,GOOD,0.5393
+pressee,Sans perdre de temps,GOOD,0.4819
+promis,Engagé sous serment,GOOD,0.4996
+radis,Légume croquant,GOOD,0.5905
+ralenti,Allure modérée,BORDERLINE,0.5275
+ralentir,Diminuer l’allure,GOOD,0.5656
+ramasser,"Rassembler, nettoyer",GOOD,0.6277
+refluer,Retourner en arrière,GOOD,0.6595
+remunerer,Payer quelqu’un,GOOD,0.6352
+rencherir,Monter en gamme,BORDERLINE,0.4828
+ressasser,Revenir sans cesse sur,GOOD,0.6878
+restant,En réserve,BORDERLINE,0.6722
+restituer,Rendre ce qui a été pris,GOOD,0.6473
+revient,Rentre au bercail,GOOD,0.6030
+robinet,Tire le lait de vache,BAD,0.5257
+routine,Rien de nouveau,GOOD,0.5131
+ruelle,Passage étroit,GOOD,0.6607
+sacrum,Os du bas du dos,GOOD,0.5329
+savon,Nettoie la peau,GOOD,0.6856
+sclerose,Maladie de la matière,BAD,0.5060
+seigle,Céréale ancienne,GOOD,0.6221
+serrure,Mécanisme de porte,GOOD,0.6652
+short,Veste sans manches,BAD,0.4698
+silice,Composant du sable,GOOD,0.6501
+simple,Sans complication,GOOD,0.6543
+soufre,Style : manière de faire,BAD,0.4936
+soute,Cale du navire,GOOD,0.6369
+tomate,Fruit du sol,BORDERLINE,0.4996
+tombe,Passe de mode,BORDERLINE,0.7535
+travestir,Donner une fausse image,GOOD,0.6328
+valise,Bagage à main,BORDERLINE,0.6161
+veineux,Sanguins,BORDERLINE,0.4523
+vide,Sans contenu,GOOD,0.7254
+volet,Protection de fenêtre,GOOD,0.6488
+water,Liquide vital,BAD,0.7496
+acharne,Style dur,BAD,0.7066
+adepte,Disciple convaincu,GOOD,0.6536
+agilite,Capacité à se déplacer,BORDERLINE,0.5030
+agonie,Mort qui s’étire,GOOD,0.5597
+amaigrir,Perdre du poids,GOOD,0.6954
+anticiper,Prendre les devants,GOOD,0.6935
+arpent,Mesure de superficie,GOOD,0.6604
+assassin,Adepte du couperet,BAD,0.4854
+asthme,Maladie respiratoire,GOOD,0.5889
+atemporel,Sans durée,BORDERLINE,0.7896
+attentif,Qui écoute bien,BORDERLINE,0.6144
+auditif,Qui concerne l’ouïe,GOOD,0.7660
+autour,En circonférence,BORDERLINE,0.6402
+avoir,Posséder ou devoir,BORDERLINE,0.6605
+baigner,Tremper dans l’eau,GOOD,0.6340
+bain,Douche relaxante,BAD,0.5847
+balayer,Enlever la poussière,GOOD,0.5626
+bateau,Voyage sur l’eau,BAD,0.6629
+berge,Rive d’un cours d’eau,GOOD,0.7095
+bill,Remarque écrite,BAD,0.6252
+bouillir,Changer d’état,BORDERLINE,0.7265
+but,Objectif à atteindre,GOOD,0.6408
+calme,Posé ou sans vent,GOOD,0.5276
+canine,Dente du sourire,BAD,0.5957
+chancre,Lésion cutanée,GOOD,0.4985
+cheveu,Fil capillaire,GOOD,0.6467
+cierge,Chandelle d’église,GOOD,0.6230
+corvee,Travail obligatoire,GOOD,0.4358
+croix,Symbole du christianisme,GOOD,0.6524
+dague,Poignard ancien,GOOD,0.5645
+decupler,Se multiplier par 10,GOOD,0.5550
+dedain,Mauvaise humeur,BAD,0.4484
+delie,Style d’écriture,BAD,0.5711
+demanger,Supprimer de la table,BAD,0.6447
+demeure,Maison imposante,GOOD,0.5779
+derober,Enlever avec ruse,GOOD,0.6708
+derouler,Déployer comme un tapis,GOOD,0.7038
+dey,Style à copier,BAD,0.4094
+diocese,Territoire d’un évêque,GOOD,0.5427
+disparaitre,S’évanouir dans la nature,GOOD,0.4900
+dissoudre,Détruire par l’eau,BORDERLINE,0.5753
+doigt,Cité de la main,BAD,0.6747
+ecolier,Il apprend ses leçons,GOOD,0.6203
+econome,Ménageur de moyens,BORDERLINE,0.4771
+emanciper,Affranchir légalement,GOOD,0.4261
+embarrer,Enfermer à clé,BAD,0.5563
+emphase,Insistance sur un mot,GOOD,0.6740
+encadrer,Donner un style,BAD,0.6127
+enfermer,Mettre sous clé,GOOD,0.6999
+envers,Face cachée,GOOD,0.6605
+estomper,Effacer en passant,BORDERLINE,0.7513
+etable,Remise à vache,BORDERLINE,0.3411
+etasunien,Citoyen des États-Unis,GOOD,0.3546
+etrange,Inattendu,BORDERLINE,0.7462
+exceder,Aller au-delà,GOOD,0.5128
+fictif,Inventé de toutes pièces,GOOD,0.5640
+fille,Progéniture féminine,GOOD,0.6727
+flic,Agent de police,GOOD,0.6936
+foin,Aliment des animaux,GOOD,0.4905
+fourbir,Polir soigneusement,GOOD,0.4925
+gaffe,Mauvaise piqure,BAD,0.5781
+galant,Aimable avec les dames,GOOD,0.6248
+gibet,Pieu de supplicié,BORDERLINE,0.7089
+gin,Alcool britannique,GOOD,0.6536
+golfe,Plein d’eau salée,BORDERLINE,0.6309
+granite,Roche magmatique,GOOD,0.5758
+grille,Barre d’ordinateur,BAD,0.6557
+guano,Engrais insulaire,GOOD,0.4944
+guide,Conduit et renseigne,GOOD,0.7207
+honnete,Droit et franc,GOOD,0.5871
+hostie,Pain consacré,GOOD,0.4894
+identite,Passeport d’un individu,GOOD,0.6400
+imposer,Faire accepter,GOOD,0.6799
+impot,Taxe obligatoire,GOOD,0.6836
+imputer,Faire porter le chapeau,GOOD,0.3918
+inapercu,Non remarqué,GOOD,0.6212
+indecis,Qui hésite à trancher,GOOD,0.5807
+inonde,Remet de ses eaux,BAD,0.5364
+inscrit,Mentionné,GOOD,0.6233
+intercaler,Glisser entre,GOOD,0.6471
+interdire,Prohibition formelle,BORDERLINE,0.7336
+internet,Réseau mondial,GOOD,0.6785
+janv,Mois de la galette,BORDERLINE,0.5196
+jaspe,Pierre dure,GOOD,0.5487
+joie,Bonheur intense,GOOD,0.6695
+kola,Rivière d’Afrique,BAD,0.6281
+lacune,Manque dans un texte,GOOD,0.4290
+lagune,Eau stagnante,BORDERLINE,0.5842
+lenteur,Moteur qui tousse,BAD,0.3750
+lisiere,Style d’écriture,BAD,0.3853
+litige,Dispute judiciaire,GOOD,0.6245
+littoral,Zone côtière,GOOD,0.5868
+lotus,Fleur d’Égypte,GOOD,0.5812
+maintenir,Ne pas céder,GOOD,0.5789
+malaise,Gêne physique,GOOD,0.7037
+manteau,Veste longue,BORDERLINE,0.6323
+marasme,État de stagnation,GOOD,0.5806
+marocain,Style nord-africain,BAD,0.4132
+memoire,Capacité du cerveau,GOOD,0.6404
+mesmerien,Hypnotique,BORDERLINE,0.2987
+message,Communication écrite,GOOD,0.6545
+mil,Style : manière de faire,BAD,0.4583
+mineral,Substance naturelle,GOOD,0.6514
+minima,Pire à supporter,BAD,0.6973
+miroir,Reflète l’image,GOOD,0.6892
+mordu,Complètement conquis,GOOD,0.6087
+mouiller,Faire tremper,GOOD,0.7778
+nation,Communauté politique,GOOD,0.5692
+nonpareil,Incomparable,GOOD,0.6280
+numeroter,Mettre des chiffres,GOOD,0.6372
+observer,Regarder attentivement,GOOD,0.6925
+obstruer,Bloquer le passage,GOOD,0.7715
+palatin,Style romain,BAD,0.6759
+pallier,Étager comme une maison,BAD,0.6416
+partiel,Incomplet,GOOD,0.6530
+pelle,Outil de jardin,GOOD,0.5142
+penaliser,Sanctionner sévèrement,GOOD,0.5739
+pointe,Extrémité qui marque,BORDERLINE,0.6516
+poreux,Qui laisse passer,GOOD,0.5624
+poulie,Tire et fait glisser,GOOD,0.6607
+pourrir,Rendre caduc,BAD,0.4113
+prelude,Introduction musicale,GOOD,0.7901
+prepose,Autorisé à faire,BORDERLINE,0.5352
+presage,Augure ou prophétie,GOOD,0.6140
+prodiguer,Donner généreusement,GOOD,0.5516
+ptolemeen,École d’Alexandrie,BORDERLINE,0.3969
+rajah,Souverain indien,GOOD,0.6151
+ramollir,Perdre de sa fermeté,GOOD,0.4703
+rassasier,Remplir l’appétit,BORDERLINE,0.5106
+reactif,Qui répond sans tarder,GOOD,0.6302
+reapprendre,Remettre en mémoire,GOOD,0.6545
+rebus,Énigme verbale,BORDERLINE,0.5784
+reclame,Publicité ancienne,GOOD,0.4937
+redonner,Rendre de nouveau,GOOD,0.4709
+rejeter,Ne pas accepter,GOOD,0.5520
+renfort,Matériel supplémentaire,BORDERLINE,0.6276
+renouveler,Faire le plein,BAD,0.7220
+renseigner,Donner des informations,GOOD,0.7563
+retroagir,Agir en sens inverse,BORDERLINE,0.7854
+retroceder,Faire un pas en arrière,BAD,0.6454
+reussite,Succès obtenu,GOOD,0.5948
+rouage,Mécanisme interne,GOOD,0.5826
+routier,Style ancien,BAD,0.4421
+rupture,Séparation nette,GOOD,0.6658
+sanitaire,Propre et net,BAD,0.4293
+serment,Parole qui engage,GOOD,0.6624
+sonde,Mesure les planètes,BORDERLINE,0.4559
+soumis,Sans personnalité,BORDERLINE,0.7105
+stature,Taille d’une personne,GOOD,0.6805
+steriliser,Rendre improductif,GOOD,0.5227
+stylo,Outil d’écriture,GOOD,0.7694
+subit,Brutal et inattendu,GOOD,0.6455
+tomme,Fromage de Savoie,GOOD,0.5507
+trainee,Style qui se traîne,BAD,0.4324
+travers,Aller d’un bout à l’autre,BAD,0.6528
+traverser,Aller d’un côté à l’autre,GOOD,0.7038
+trefle,Carte ou feuille,GOOD,0.5229
+unisson,Même hauteur,GOOD,0.5478
+viaduc,Pont long,GOOD,0.6822
+vierge,Constellation estivale,BORDERLINE,0.5181
+aeroport,Plateforme aérienne,GOOD,0.6861
+alanguir,Allonger le style,BAD,0.4113
+amiable,Aimable et souriant,BAD,0.5475
+apparat,Matériel nécessaire,BAD,0.6449
+apprecier,Évaluer à sa juste valeur,GOOD,0.5363
+armateur,Propriétaire de bateau,GOOD,0.4926
+arteriel,D’un chien enragé,BAD,0.4528
+assaillir,Attaquer de front,GOOD,0.5304
+attrister,Rendre malheureux,GOOD,0.8799
+aurore,Annonce du jour,GOOD,0.6245
+austerite,Sévérité,GOOD,0.3642
+austral,Qui vient du sud,GOOD,0.6707
+axiome,Vérité indémontrable,GOOD,0.5248
+bac,Style ou examen,BAD,0.4780
+bagne,Prison dure,GOOD,0.5716
+bague,Bijou au doigt,GOOD,0.6900
+bal,Danse de soirée,GOOD,0.6178
+ballet,Danse chorégraphiée,GOOD,0.5834
+baptiser,Donner un prénom,GOOD,0.6165
+barrage,Interdiction ferme,BORDERLINE,0.5277
+batard,Issu sans mariage,GOOD,0.3896
+belge,D’Herge,GOOD,0.5285
+berger,Suit ses moutons,GOOD,0.6294
+bey,Titre ottoman,GOOD,0.5318
+bleme,Point cardinal,BAD,0.5929
+bol,Récipient creux,GOOD,0.6582
+bondir,Sauter en avant,GOOD,0.5684
+borne,Limite territoriale,GOOD,0.6514
+bouger,Ne pas rester en place,GOOD,0.5534
+brandir,Lever haut,GOOD,0.6374
+branle,Mouvement d’équilibre,BAD,0.6589
+broie,Réduit en poudre,GOOD,0.5083
+cabale,Style conspirateur,BAD,0.4657
+cabaret,Maison de nuit,BORDERLINE,0.6174
+cache,Style ou dissimule,BAD,0.6619
+calorie,Unité d’énergie,GOOD,0.7361
+camion,Véhicule utilitaire,GOOD,0.4742
+capsule,Forme concise,BAD,0.6168
+cascade,Chute d’eau,GOOD,0.5974
+caveau,Sombre berceau de vigne,BORDERLINE,0.6995
+cd,Disque compact,GOOD,0.6892
+charge,Contenu d’un discours,BAD,0.6604
+chaste,Digne et pudique,GOOD,0.5627
+chondroitine,Sulfate du cartilage,GOOD,0.4305
+cigue,Mortelle pour les chiens,BAD,0.5069
+ciment,Colle à béton,BORDERLINE,0.5660
+clown,Passe la balle,BAD,0.6104
+colonel,Grade militaire,GOOD,0.5723
+colosse,Géant d’Athènes,BAD,0.5581
+concret,Style sans abstraction,BORDERLINE,0.6494
+conspirer,Intriguer en secret,GOOD,0.5687
+constater,Remarquer et noter,GOOD,0.6601
+construire,Élever une maison,GOOD,0.4642
+contenir,Avoir dans son sein,GOOD,0.7020
+contester,Mettre en doute,GOOD,0.7390
+contrat,Engagement écrit,GOOD,0.6012
+convaincre,Faire admettre une idée,GOOD,0.7331
+copte,Écriture égyptienne,GOOD,0.5350
+cristal,Verre pur,GOOD,0.5763
+criterium,Course cycliste,GOOD,0.4132
+cruche,Piche ou pêne,BAD,0.6698
+cul,Postérieur ou dénigrement,BORDERLINE,0.5883
+cumuler,Amasser sans relâche,GOOD,0.7233
+deglutir,Avaler sa salive,GOOD,0.6026
+demenager,Changer de logement,GOOD,0.6383
+denoncer,Lever le voile,BORDERLINE,0.5083
+derouter,Mettre en échec,BAD,0.4248
+dessus,Face visible,GOOD,0.6810
+digne,Qui a de la dignité,BAD,0.6144
+dime,Encre effaçable,BAD,0.5166
+discourir,Perdre de sa substance,BAD,0.5687
+disserter,Quitter le sujet,BAD,0.6254
+distraire,Détourner l’attention,GOOD,0.6907
+docte,Savante,GOOD,0.6413
+donneur,Il a la main généreuse,GOOD,0.4975
+dosage,Mélange de mesures,BORDERLINE,0.6026
+douane,Contrôle frontalier,GOOD,0.6273
+doute,Suspicion retenue,BORDERLINE,0.6504
+drapeau,Couleurs nationales,GOOD,0.6082
+drole,Qui fait rire,GOOD,0.6622
+duc,Titre nobiliaire,GOOD,0.5820
+ellipse,Passe par trois points,BAD,0.6052
+ensorceler,Jeter un sort,GOOD,0.6686
+entreprendre,Se lancer dans,GOOD,0.5394
+eponge,Tire son pain de l’eau,BORDERLINE,0.5696
+essuyer,Enlever le liquide,GOOD,0.6537
+estropier,Détruire le style,BAD,0.3468
+etinceler,Jeter des étincelles,BAD,0.6430
+exciter,Stimuler quelqu’un,GOOD,0.6783
+expedier,Envoyer sans délai,GOOD,0.4548
+facon,Manner,BAD,0.6358
+fameux,Réputation durable,BORDERLINE,0.5573
+feutre,Tissu sans fil,GOOD,0.5910
+fevrier,Mois de l’hiver,GOOD,0.7399
+fiat,Décision,GOOD,0.6585
+fissure,Brèche dans un mur,GOOD,0.6492
+foetal,Relatif au fœtus,BAD,0.5512
+fomenter,Attiser la discorde,GOOD,0.6383
+formol,Solution gélifiée,BAD,0.6393
+fraternel,Lien de frère à frère,BORDERLINE,0.6310
+fregate,Navire de guerre,GOOD,0.5613
+frene,Bois d’ébène,BAD,0.4855
+fronde,Arme à pierre,GOOD,0.4505
+funebre,Oration mortuaire,BAD,0.5692
+glace,Eau solidifiée,GOOD,0.6545
+glacial,Très lent,BAD,0.5104
+gong,Son d’Orient,GOOD,0.5731
+gouverner,Diriger un pays,GOOD,0.6047
+gravure,Art du burin,GOOD,0.5945
+grimpe,Style d’écriture,BAD,0.5639
+habitat,Cadre de vie d’une espèce,GOOD,0.6640
+haleine,Souffle exhalé,GOOD,0.6244
+horaire,Planifié,BORDERLINE,0.3979
+illegal,Interdit par la loi,GOOD,0.6170
+indemne,Sans une égratignure,GOOD,0.6003
+infecter,Contaminer,GOOD,0.6402
+injure,Parole méprisante,GOOD,0.8331
+inscrire,Noter sur support,GOOD,0.6885
+interpenetrer,Pénétrer l’autre,BAD,0.5356
+intervenir,Faire irruption,BORDERLINE,0.6510
+investir,Mettre de l’argent,GOOD,0.7207
+jante,Cadre d’une roue,BORDERLINE,0.5556
+jean,Tissu ou prénom,GOOD,0.6565
+jeton,Pièce sans valeur,BORDERLINE,0.5500
+jointer,Rendre une surface lisse,BORDERLINE,0.6700
+jupe,Vêtement féminin,GOOD,0.6487
+jute,Tissu ou corde,GOOD,0.6277
+lange,Tenue de bébé,GOOD,0.4601
+lecteur,Il décrypte un texte,BORDERLINE,0.5256
+legerete,Qualité du style aérien,BORDERLINE,0.4421
+litteral,Style sans figure,BORDERLINE,0.4997
+lopin,Morceau de terre,GOOD,0.6783
+loterie,Jeu de hasard,GOOD,0.6383
+louage,Contrat de location,GOOD,0.6838
+luisant,Qui brille faiblement,GOOD,0.5520
+marbre,Pierre dure,GOOD,0.6498
+marraine,Parrain féminin,GOOD,0.6130
+matelas,Lit à ressorts,BORDERLINE,0.5903
+moindre,Plus petit,GOOD,0.5750
+mome,Style ancien,BAD,0.5161
+morbide,Macabre,GOOD,0.5643
+mufti,Style religieux,BAD,0.6755
+mur,Cloison verticale,GOOD,0.6710
+navette,Transport urbain,GOOD,0.5855
+officier,Grade intermédiaire,GOOD,0.6897
+onction,Sacrée ou profane,BORDERLINE,0.6670
+opus,Œuvre musicale,GOOD,0.6187
+orgue,Instrument à vent,GOOD,0.6353
+original,Authentique,GOOD,0.6151
+paddy,Style d'écriture,BAD,0.3494
+pagne,Ceinture ancienne,BAD,0.5439
+pagode,Temple bouddhique,GOOD,0.6244
+papaute,Pouvoir pontifical,GOOD,0.4590
+perche,Taille du modèle,BAD,0.5681
+perpetrer,Commettre un forfait,GOOD,0.4861
+phrase,Groupe de mots,GOOD,0.8429
+pirogue,Embarcation à balancier,GOOD,0.6214
+placard,Meuble sans étagère,BAD,0.6079
+placer,Mettre à bonne école,BORDERLINE,0.6033
+platine,Blond très pâle,GOOD,0.4696
+pluriel,Nombre de mots,BAD,0.6649
+postal,Qui concerne le courrier,GOOD,0.5876
+prelasser,Se reposer,GOOD,0.5618
+premunir,Protéger à l’avance,GOOD,0.5913
+presager,Annoncer en avance,GOOD,0.5879
+prescrire,Donner une ordonnance,GOOD,0.5612
+preserver,Conserver intact,GOOD,0.8063
+profiler,Style d’écriture,BAD,0.5073
+proposer,Faire une suggestion,GOOD,0.6947
+queue,File dans le port,BORDERLINE,0.6245
+quinine,Traitement du paludisme,GOOD,0.3666
+radieux,Qui irradie,BORDERLINE,0.5710
+radoucir,Atténuer la sévérité,GOOD,0.7082
+rancon,Paiement d’un otage,BORDERLINE,0.4392
+ranconner,Faire un chantage,BORDERLINE,0.4561
+reapparaitre,Sortir de l’ombre,GOOD,0.5790
+reclamer,Faire une demande,GOOD,0.5438
+refuge,Asile pour animaux,GOOD,0.5551
+reglage,Mise au point,GOOD,0.5814
+relance,Nouvelle tentative,BORDERLINE,0.6593
+remporter,Vaincre et convaincre,BORDERLINE,0.7006
+ressaisir,Prendre à nouveau,GOOD,0.7178
+retomber,Chuter de nouveau,GOOD,0.4459
+reveiller,Sortir du sommeil,BORDERLINE,0.4620
+rideau,Tissu de fenêtre,GOOD,0.6762
+rompu,En état de marche,BAD,0.6301
+saignee,Pillée,BAD,0.6824
+scion,Descendant direct,BAD,0.5870
+scrutin,Vote à bulletin secret,GOOD,0.6173
+serenite,Calme intérieur,GOOD,0.5310
+sergent,Grade militaire,GOOD,0.6482
+serpent,Il a la peau dure,BORDERLINE,0.5470
+serveur,Il apporte les plats,GOOD,0.5616
+signaler,Faire connaître,GOOD,0.6518
+solennel,Qui inspire le respect,GOOD,0.4724
+sorgho,Céréale africaine,GOOD,0.6535
+soulager,Diminuer la douleur,GOOD,0.6258
+souscrire,Accepter un contrat,GOOD,0.5509
+souvenir,Mémoire d’un événement,GOOD,0.7793
+spectre,Couleur fantôme,BORDERLINE,0.6445
+sterile,Incapable de procréer,GOOD,0.3927
+superbe,Magnifique,GOOD,1.0000
+supprimer,Effacer sans remplacer,GOOD,0.6315
+surmonter,Vaincre ses peurs,GOOD,0.5874
+sursaut,Réaction vive,GOOD,0.7222
+survie,Durée de vie,BAD,0.7110
+tabac,Plante à nicotine,GOOD,0.7713
+tabes,Maladie de la syphilis,BORDERLINE,0.4452
+taillader,Entailler profondément,GOOD,0.6379
+temoigner,Dire ce que l’on sait,GOOD,0.6201
+terroriser,Intimider par la peur,GOOD,0.6151
+tique,Insecte parasite,BORDERLINE,0.6766
+tissage,Travail d’araignée,BORDERLINE,0.4879
+toison,Ornée comme une crinière,BAD,0.5454
+toiture,Couverture du bâtiment,GOOD,0.5703
+treillisser,Faire des allers-retours,BAD,0.3874
+tremble,Arbre à feuilles fines,BORDERLINE,0.5014
+trepas,Mort sans héritage,BAD,0.5563
+tressaillir,Sursauter,GOOD,0.4777
+trompe,Instrument à vent,GOOD,0.6536
+univers,Cosmos ou réalité,GOOD,0.7893
+valide,En règle,GOOD,0.6766
+vanne,Robinet coupé,BORDERLINE,0.6275
+vitre,Brise en cas de choc,BORDERLINE,0.6278
+voltiger,Sauter sur un cheval,BORDERLINE,0.4962
+vrombir,Faire vibrer l’air,BORDERLINE,0.7983
+zig,Style oblique,BAD,0.5325
+zona,Zone d’exclusion,BAD,0.4896
+absenter,Ne pas se présenter,GOOD,0.5844
+absurde,Inacceptable en logique,BORDERLINE,0.4795
+academie,Institution du savoir,GOOD,0.6162
+accabler,Charger d’opprobre,GOOD,0.6193
+adherence,Capacité à coller,GOOD,0.4391
+adverbe,Particule de modification,BORDERLINE,0.6677
+affluer,Converger en grand nombre,GOOD,0.6548
+agneau,Gigot au menu,BORDERLINE,0.7324
+agrementer,Donner du style,BORDERLINE,0.4602
+aigreur,Mauvaise humeur,GOOD,0.6369
+ajourner,Remettre à plus tard,GOOD,0.7256
+alleguer,Affirmer sans preuve,GOOD,0.5365
+allemand,Langue de Goethe,GOOD,0.4716
+amalgamer,Mêler intimement,GOOD,0.7011
+annexion,Intégration forcée,GOOD,0.6664
+annuaire,Liste alphabétique,BORDERLINE,0.6474
+arachneen,Cousine de Tarzan,BAD,0.3554
+archiduc,Titre autrichien,GOOD,0.5521
+argentin,De Buenos Aires,GOOD,0.5074
+armenien,Communauté dispersée,BORDERLINE,0.3523
+arrondir,Rendre plus net,BAD,0.7652
+assouvir,Soulager une douleur,BAD,0.7149
+assureur,Il couvre vos risques,GOOD,0.7764
+avantager,Faire pencher la balance,GOOD,0.6373
+aventurer,Style risqué,BAD,0.5419
+avoisiner,Habiter à proximité,BORDERLINE,0.6898
+ayant,Possédant,GOOD,0.6138
+baptise,Donne un prénom,GOOD,0.5414
+baragouiner,Parler indistinctement,GOOD,0.4800
+bevue,Erreur grossière,GOOD,0.6384
+biseau,Coupe oblique,GOOD,0.5180
+blamer,Relever ses fautes,BORDERLINE,0.5431
+blanc,Teinte de neige,GOOD,0.5704
+bobine,Enroulée sur elle-même,GOOD,0.4867
+bond,Connexion ou lien,BAD,0.7697
+bonheur,Éclate sur le visage,BORDERLINE,0.5757
+boue,Mélange d’eau et de terre,GOOD,0.6756
+bourre,Remplir à l’excès,GOOD,0.5432
+boussole,Compas de navigation,GOOD,0.6611
+brousse,Style ou région du sud,BAD,0.5238
+buffet,Meuble à vaisselle,GOOD,0.5757
+cable,Lien téléphonique,GOOD,0.5082
+calomnier,Jeter l’opprobe,BORDERLINE,0.4869
+campo,Style musical espagnol,BAD,0.6548
+canton,Style régional,BAD,0.4767
+carmelitain,Ordre religieux,BORDERLINE,0.3071
+carmin,Rouge écarlate,BORDERLINE,0.5288
+celibat,Vie sans conjoint,GOOD,0.4292
+chaudiere,Produit de la combustion,BAD,0.7114
+chlore,Halogène vert,GOOD,0.7012
+chretien,Religion de Jésus,BORDERLINE,0.5868
+clientele,Liste de courses,BAD,0.5064
+cocher,Remet le réveil,BAD,0.5919
+code,Règles d’un langage,BORDERLINE,0.6156
+coeternel,Éternel comme Dieu,BORDERLINE,0.6039
+colle,Lien entre deux murs,BAD,0.5481
+colossal,D’une taille immense,GOOD,0.6087
+comparaitre,Style ou manière,BAD,0.5509
+completer,Remplir entièrement,GOOD,0.5975
+confondre,Mêler sans discernement,GOOD,0.4047
+consoler,Réconforter quelqu’un,GOOD,0.6791
+contacter,Joindre quelqu’un,GOOD,0.6999
+contenu,Ce que recèle un vase,GOOD,0.6034
+contrecarrer,Faire échec à,GOOD,0.4802
+corsaire,Vêtement sans manche,BAD,0.4502
+costume,Tenue du jour ou du soir,GOOD,0.7112
+coteau,Vin : style,BAD,0.4610
+coupure,Interruption,GOOD,0.6441
+courage,Vertu du lion,GOOD,0.5118
+croisiere,Voyage sur le bleu,GOOD,0.4328
+croute,Miette de pain,BAD,0.6775
+danger,Risque majeur,GOOD,0.6408
+debile,D’avril à août,BAD,0.4799
+debourser,Sortir l’argent,GOOD,0.4117
+decennie,Durée de dix ans,GOOD,0.5905
+decision,Acte de résoudre,GOOD,0.7650
+deduire,Enlever une somme,GOOD,0.7212
+defensif,Style qui protège,BORDERLINE,0.7209
+degarnir,Enlever le garnissage,BAD,0.6333
+dejeuner,Repas du matin,BORDERLINE,0.6280
+demanteler,Détruire pièce par pièce,GOOD,0.5038
+demantibuler,Se débarrasser du style,BAD,0.4655
+dement,Privé de raison,GOOD,0.7075
+demesurement,Sans retenue,GOOD,0.6347
+desastre,Catastrophe majeure,GOOD,0.4848
+desheriter,Priver d’héritage,BORDERLINE,0.6739
+deshonorer,Faire injure à,GOOD,0.5813
+desserrer,Ne pas être trop serré,BAD,0.6165
+detacher,Se démarquer,GOOD,0.6046
+diabete,Maladie du sucre,GOOD,0.6064
+diamant,Pierre précieuse,GOOD,0.6189
+diminuer,Perdre de l’intensité,GOOD,0.6653
+discretiser,Faire preuve de retenue,BAD,0.3678
+disculper,Lever le blâme,GOOD,0.7469
+disputer,Contester vivement,GOOD,0.5595
+distancer,Prendre de l’avance,GOOD,0.6499
+doge,Vénitien jadis,GOOD,0.6277
+dogme,Vérité imposée,GOOD,0.6778
+dolmen,Table de pierre,GOOD,0.5156
+dom,Style typographique,BAD,0.4996
+double,Copie conforme,GOOD,0.5618
+eclaircir,Rendre plus lumineux,GOOD,0.8640
+eclipse,Disparition solaire,GOOD,0.7405
+ecrivain,Auteur de romans,GOOD,0.7664
+effleurir,Toucher à peine,BORDERLINE,0.6085
+effroi,Sentiment de terreur,GOOD,0.8816
+emballage,Protection du produit,GOOD,0.7409
+embaucher,Recruter un salarié,GOOD,0.8587
+embrasser,Faire un câlin,BORDERLINE,0.7919
+emigre,Partis changer de pays,BAD,0.4367
+emotion,État de l’âme,GOOD,0.8098
+encercler,Entourer comme une cible,GOOD,0.7264
+encours,Non achevé,BAD,0.5947
+engendrer,Faire naître,GOOD,0.5436
+engrais,Aliment du sol,GOOD,0.5810
+enhardir,Rendre dur comme du roc,BAD,0.6708
+enquerir,Demander avec insistance,BORDERLINE,0.6938
+entacher,Couper net,BAD,0.6500
+entailler,Couper en partie,GOOD,0.6530
+entrelarder,Mêler sans ordre,BORDERLINE,0.5019
+entretoiser,Style : manière,BAD,0.3433
+envenimer,Rendre plus virulent,GOOD,0.6885
+epiloguer,Conclure un récit,BAD,0.5789
+epingle,Tenue par le col,BORDERLINE,0.5649
+essentiel,Incontournable,GOOD,0.5894
+estuarien,Style de vie,BAD,0.4011
+etrangete,Style décalé,BAD,0.5742
+evolutif,Qui évolue,BORDERLINE,0.7351
+exacerber,Aggraver un mal,GOOD,0.5992
+exces,Abus,GOOD,0.6785
+excessif,Qui va trop loin,GOOD,0.6144
+excuse,Mot de défense,GOOD,0.6755
+exprimer,Faire connaître,GOOD,0.6524
+extreme,D’un style,BAD,0.6851
+faiblir,Perdre de l’intensité,GOOD,0.5709
+faussete,Manque de sincérité,GOOD,0.5004
+fermenter,Pourrir ou faire lever,GOOD,0.7189
+feuilleter,Tourner des pages,GOOD,0.6281
+figurer,Être représenté,GOOD,0.6520
+fjord,Enclave maritime,BORDERLINE,0.6375
+fonder,Faire fondre,BAD,0.6198
+formel,Style concis,BAD,0.6532
+fourmi,Insecte social,GOOD,0.5825
+fraichir,Rendre plus supportable,BAD,0.5800
+frange,Mèche de cheveux,GOOD,0.6084
+fraterniser,Tisser des liens,GOOD,0.6128
+frisson,Poil qui se hérisse,BORDERLINE,0.4663
+frite,Plongeon dans l’huile,BORDERLINE,0.6666
+froc,Vêtement religieux,GOOD,0.5724
+froisser,Faire des plis,GOOD,0.6704
+fromage,Produit laitier,GOOD,0.5308
+fronton,Style architectural,BAD,0.4159
+funeraire,Transport de défunt,BORDERLINE,0.4709
+fustiger,Critiquer sévèrement,GOOD,0.8633
+futile,Inutile et vain,GOOD,0.5237
+gaulois,Peuple d’Astérix,GOOD,0.6131
+gazeux,Qui prend facilement feu,BAD,0.7398
+glaive,Arme romaine,GOOD,0.6231
+godet,Cuve du pelleteuse,BAD,0.5829
+gracieux,Élégant et raffiné,GOOD,0.5480
+gravier,Pierre concassée,GOOD,0.5785
+grelotter,Frissonner de froid,GOOD,0.5375
+grossier,Manque de finesse,GOOD,0.6167
+guider,Montrer le chemin,GOOD,0.6966
+habile,Adroit et malin,GOOD,0.5525
+habitus,"Manner, port",BAD,0.5200
+hanovrien,Style de piano,BAD,0.2977
+hectare,Cent ares,GOOD,0.7300
+heredite,Transmission familiale,GOOD,0.4234
+hote,Accueil chaleureux,BORDERLINE,0.5134
+houx,Petit arbre de Noël,BORDERLINE,0.5355
+humain,Plein de compassion,GOOD,0.7005
+humble,Sans prétention,GOOD,0.6721
+hymne,Chant officiel,GOOD,0.5587
+idiome,Expression imagée,BAD,0.8064
+ignoble,Vile et méprisable,GOOD,0.7813
+illustrer,Donner des exemples,GOOD,0.7162
+impartir,Donner une leçon,BAD,0.6749
+importer,Apporter d’ailleurs,GOOD,0.6994
+imprimeur,Il met le papier en noir,GOOD,0.5945
+impurete,Saleté,GOOD,0.5298
+inactif,Sans effet,BORDERLINE,0.5716
+incertain,Qui hésite,BORDERLINE,0.5767
+incinerer,Faire passer en fumée,GOOD,0.5678
+inculte,Ignorant et ignorant,BAD,0.7680
+indivis,Sans prise,BAD,0.6102
+informel,Style décontracté,BORDERLINE,0.4612
+inimitie,Sentiment de rejet,BORDERLINE,0.8114
+ininterrompu,Sans discontinuité,GOOD,0.6225
+instruire,Donner des leçons,GOOD,0.7983
+insurger,Révolté,GOOD,0.4707
+interchanger,Échanger réciproquement,BORDERLINE,0.8792
+isthme,Style : manière de faire,BAD,0.4745
+jade,Pierre verte,GOOD,0.5759
+jaloux,Vert de rage,BORDERLINE,0.6056
+jaune,Couleur du soleil,GOOD,0.5036
+lache,Sans courage,GOOD,0.4291
+laicite,Principe républicain,GOOD,0.4241
+laique,Sans lien avec l’Église,GOOD,0.5638
+lancer,Projetter,BAD,0.6746
+langue,Organe de la parole,GOOD,0.6221
+lateralement,D’une manière oblique,BORDERLINE,0.7377
+legataire,Ayant reçu un legs,BORDERLINE,0.6207
+legion,Troupe romaine,GOOD,0.5945
+lesionnel,Style blessé,BAD,0.5153
+licence,Autorisation légale,GOOD,0.6094
+lisible,Que l’on peut lire,GOOD,0.5401
+livide,Pale comme un mort,GOOD,0.6618
+loque,Tissu déchiré,GOOD,0.5736
+magnesien,Habitant de Magnésie,GOOD,0.4593
+malaisien,Style indésirable,BAD,0.2853
+mamelle,Seins ou tétines,GOOD,0.5740
+matrice,Mère à copie,BAD,0.6752
+maudit,Posé sur un sort,BAD,0.6674
+mepriser,Considérer de haut,GOOD,0.5337
+metadiscours,Style discursif,BAD,0.5790
+militaire,Style autoritaire,BAD,0.5840
+miniaturiser,Réduire en format réduit,BAD,0.3672
+moderniser,Rendre plus actuel,GOOD,0.5030
+morfondre,Se laisser aller,BAD,0.4813
+morgue,Salle d’identification,BORDERLINE,0.3881
+mout,Style ou manière,BAD,0.5604
+musulman,Croyant au Coran,GOOD,0.6202
+neutraliser,Rendre inoffensif,GOOD,0.4967
+notaire,Rédige les actes,GOOD,0.5946
+nullite,Invalidité d’un acte,GOOD,0.5495
+obliger,Contraindre quelqu’un,GOOD,0.6442
+obliterer,Effacer complètement,GOOD,0.5581
+oisivete,Paresse active,BAD,0.7264
+ongle,Doigt ou orteil,BAD,0.7324
+orbite,Trajectoire planétaire,GOOD,0.6426
+orientaliser,Donner un style asiatique,GOOD,0.3723
+oublier,Effacer de sa mémoire,GOOD,0.6172
+output,Production d’un système,GOOD,0.5717
+parasite,Style indésirable,BAD,0.6599
+partager,Faire un gâteau,BAD,0.6450
+partant,Prêt à partir,BORDERLINE,0.6919
+pelerinage,Voyage spirituel,GOOD,0.5118
+perfide,Traître,GOOD,0.5119
+peritoneal,Relatif au péritoine,BAD,0.5288
+perpetuer,Faire durer dans le temps,GOOD,0.4889
+perspicace,Pénètre sans peine,BORDERLINE,0.5162
+phenomene,Chose remarquable,GOOD,0.5882
+pilule,Médicament comprimé,GOOD,0.8172
+pioche,Outil de jardin,BORDERLINE,0.5881
+piquer,Faire mal,BORDERLINE,0.6493
+piston,Aller et retour,GOOD,0.4782
+plonger,Se jeter dans l’eau,GOOD,0.6349
+pole,Point cardinal,BORDERLINE,0.6315
+police,Force de l’ordre,GOOD,0.6000
+pomme,Fruit du verger,GOOD,0.6578
+postulat,Théorème admis,BORDERLINE,0.6314
+poud,Tenue ou attitude,BAD,0.5569
+precher,Faire le sermon,GOOD,0.4995
+predestiner,Décider à l’avance,GOOD,0.6927
+predominer,Avoir le dessus,GOOD,0.5987
+preexister,Être avant quelque chose,GOOD,0.8017
+proclamer,Annoncer officiellement,GOOD,0.6765
+progresser,Aller de l’avant,GOOD,0.7426
+protocole,Règles de savoir-vivre,GOOD,0.6403
+prouver,Étayer son raisonnement,GOOD,0.6045
+pupille,Cible d’un regard,BAD,0.6426
+quint,En cinq actes,BAD,0.5939
+quintessencier,Style essentiel,BAD,0.4005
+rafraichir,Rendre plus supportable,BORDERLINE,0.5678
+ramassage,Service d’enlèvement,GOOD,0.6598
+raya,Style,BAD,0.5063
+realisme,Style de Zola,BORDERLINE,0.5478
+rechapper,Faire une nouvelle fois,BAD,0.5552
+reconstituer,Remettre en état,GOOD,0.6009
+redissoudre,Lien rétabli,BAD,0.5527
+refoule,Style indirect,BAD,0.5308
+regorger,Déborder à nouveau,BORDERLINE,0.5524
+rejet,Refus catégorique,GOOD,0.6322
+rememorer,Raconter un souvenir,BORDERLINE,0.8124
+rempart,Protection de cité,GOOD,0.6474
+renvoyer,Écrire à distance,BAD,0.7504
+reoccuper,Reprendre possession,GOOD,0.6438
+repercuter,Faire écho,GOOD,0.6859
+reproduire,Copier,GOOD,0.7313
+reptilien,Animal à sang froid,BORDERLINE,0.4184
+retourner,Aller en sens inverse,GOOD,0.6720
+retracter,Revenir sur ses dires,GOOD,0.5148
+retranscrire,Copier en transcrivant,BAD,0.5558
+retrouver,Remettre la main sur,GOOD,0.6442
+revolte,Soulèvement,GOOD,0.6682
+royal,Meneur d’orchestre,BAD,0.5123
+saturnien,Style ancien,BAD,0.3702
+sautiller,Bondir en petits sauts,GOOD,0.6036
+seminaire,Réunion d’étude,GOOD,0.6519
+sevrage,Passage au biberon,BORDERLINE,0.5752
+shunt,Court-circuit,BORDERLINE,0.5347
+sillon,Trace du regard,BAD,0.7415
+souche,Tronc sans branches,GOOD,0.5807
+souk,Marché oriental,GOOD,0.6515
+square,Place urbaine,BORDERLINE,0.5814
+station,Arrêt obligatoire,BORDERLINE,0.5353
+sublime,Élevé,GOOD,0.5499
+suicider,Se donner la mort,GOOD,0.7150
+support,Ce qui permet de tenir,GOOD,0.6673
+surplomber,Dominer de haut,GOOD,0.7533
+surprise,Étonnement soudain,GOOD,0.6684
+survenir,Arriver à l’improviste,GOOD,0.5883
+suzerain,Seigneur féodal,GOOD,0.7469
+table,Meuble à pieds,BORDERLINE,0.6972
+tacher,Coller sans relâche,BAD,0.7032
+taureau,Signe du printemps,BORDERLINE,0.5968
+telephoner,Appeler quelqu’un,GOOD,0.7810
+tergiverser,Changer d’avis sans cesse,BORDERLINE,0.5130
+thorax,Tronc sans abdomen,GOOD,0.7239
+tirailler,Soldat d’infanterie,BAD,0.3732
+tonneau,Contenant de vin,GOOD,0.6971
+trachee,Tube respiratoire,GOOD,0.4902
+transmettre,Faire passer,GOOD,0.6412
+transpirer,La sueur apparaît,GOOD,0.5698
+travail,Activité rémunérée,GOOD,0.6746
+trottiner,Aller au pas,BAD,0.5664
+tutelaire,Protecteur légal,BORDERLINE,0.6673
+ultramoderne,Très actuel,GOOD,0.6319
+variole,Maladie éradiquée,GOOD,0.5333
+vepres,Prière du soir,GOOD,0.6826
+veracite,Honnêteté,BORDERLINE,0.4798
+victime,Pieu du taureau,BAD,0.4214
+vigne,Vin : fruit du cep,BAD,0.6771
+violent,Brutal,GOOD,0.5476
+virginite,État d’une personne pure,BORDERLINE,0.4512
+vivacite,Promptitude,GOOD,0.4446
+volupte,Attrait des sens,GOOD,0.5455
+abaissement,Attitude servile,BORDERLINE,0.5448
+abatardir,Rendre dur par le froid,BAD,0.5228
+acajou,Bois rouge,GOOD,0.6163
+accentuel,Qui met en relief,BORDERLINE,0.5844
+accourcir,Rendre plus court,GOOD,0.6658
+accoutumer,Familieriser,BAD,0.5916
+accueillir,Recevoir favorablement,GOOD,0.5839
+acetique,Style : direct,BAD,0.4969
+acquit,Passe du procès,BAD,0.6426
+acquitter,Laver de tout soupçon,GOOD,0.6528
+actionner,Mettre en marche,GOOD,0.5317
+adaptateur,Permet la connexion,GOOD,0.7555
+admonestation,Leçon donnée,BORDERLINE,0.6622
+adoration,Culte religieux,GOOD,0.7748
+adversite,Style d’écriture,BAD,0.5008
+affame,Fait souffrir de faim,BORDERLINE,0.4641
+affecter,Faire ressentir,BORDERLINE,0.7255
+affermir,Rendre plus ferme,GOOD,0.7255
+affut,Position de tir,GOOD,0.6948
+aggiornamento,Mise à jour,GOOD,0.4959
+agresseur,Auteur de menaces,BORDERLINE,0.7773
+allumettier,Fabricant de feu,BAD,0.3816
+amabilite,Aimabilité,BAD,0.4448
+amande,Fruit du pruneau,BAD,0.6401
+ameliorant,Qui fait du bien,BORDERLINE,0.6793
+ameliorer,Alléger ses souffrances,BORDERLINE,0.5731
+amerindien,Indigène d’Amérique,GOOD,0.7124
+amertume,Senteurs d’absinthe,BORDERLINE,0.4603
+amonceler,Accumuler progressivement,GOOD,0.6301
+amplifier,Donner plus de force,GOOD,0.6811
+anastomoser,Relier entre eux,GOOD,0.4145
+anglais,Langue de Shakespeare,GOOD,0.5426
+annihiler,Détruire complètement,GOOD,0.7939
+anorexigene,Qui coupe l’appétit,GOOD,0.3724
+antecedent,Histoire personnelle,GOOD,0.5826
+antimissile,Style défensif,BAD,0.6720
+antimusulman,Islamophobe,GOOD,0.8674
+antinomie,Style contradictoire,BAD,0.5734
+antipatriote,Hostile à la nation,GOOD,0.6952
+antithese,Style opposé,BAD,0.5854
+antivenerien,Style grec ancien,BAD,0.3850
+apoplexie,Mort subite,BORDERLINE,0.6409
+apostasie,Renoncement à sa foi,GOOD,0.6536
+apparent,Qui saute aux yeux,GOOD,0.6558
+appartenir,Être la propriété de,GOOD,0.8333
+appesantir,Alléger,BAD,0.3725
+appointer,Donner un rendez-vous,BAD,0.5626
+approcher,Se mettre à portée de,GOOD,0.6010
+arachide,Pâte à tartiner,BAD,0.5024
+arbitral,Décision sans appel,BAD,0.6527
+aristocratisme,Style de vie élitiste,BORDERLINE,0.7348
+arracher,Déchirer violemment,BORDERLINE,0.5928
+arraisonner,Faire changer d’avis,BAD,0.4951
+arteriosclerose,Durcissement des artères,GOOD,0.6108
+ascensionnel,Qui monte,GOOD,0.6529
+assesseur,Style,BAD,0.6064
+assiette,Contient le plat,BORDERLINE,0.7029
+assistant,Aide le professeur,GOOD,0.6734
+assombrir,Rendre triste,BORDERLINE,0.6254
+astronome,Étude des étoiles,BAD,0.6456
+atherosclerose,Maladie coronarienne,BORDERLINE,0.4798
+attarde,En retard,BORDERLINE,0.5801
+attrouper,Rassembler en foule,GOOD,0.6858
+auditeur,Comptable externe,BORDERLINE,0.5749
+aurantiacee,Famille du safran,BAD,0.4743
+autobus,Transport en commun,GOOD,0.6344
+autogouverner,Se gérer soi-même,GOOD,0.6397
+autographier,Se signer,BORDERLINE,0.6513
+autonome,Qui se suffit à soi-même,GOOD,0.6444
+autoproclamer,Se déclarer soi-même,GOOD,0.7236
+autoreguler,Se contrôler soi-même,GOOD,0.5426
+aventure,Expérience inattendue,GOOD,0.6805
+avidite,Gourmandise excessive,BORDERLINE,0.7051
+axiomatiser,Donner des règles,BORDERLINE,0.4664
+bacterien,Style microbien,BAD,0.4875
+badigeonner,Remettre du plâtre,BAD,0.6218
+balance,Signes du zodiaque,BORDERLINE,0.5602
+balancer,Faire pencher,BORDERLINE,0.6727
+balancier,Aller-retour régulier,GOOD,0.5014
+ballotter,Maltraiter verbalement,BAD,0.6636
+bambou,Bois à cannes,GOOD,0.4999
+bapteme,Sacrement d’accueil,GOOD,0.6520
+barquisimeto,Ville du Venezuela,GOOD,0.5360
+baryte,Minéral dense,GOOD,0.5743
+beauvaisien,Style gothique,BAD,0.2823
+beethovenien,Style de Ludwig van,GOOD,0.3721
+belligerance,État de guerre,GOOD,0.5241
+benedictin,Ordre monastique,GOOD,0.7309
+benissant,Qui fait des bénédictions,BORDERLINE,0.6598
+benzonitrile,Solvant du laboratoire,BORDERLINE,0.5018
+berrichon,Style régional,BAD,0.4461
+betteravier,Il pousse en terre,BAD,0.4263
+bienveillant,Bien intentionné,GOOD,0.6362
+bondieuserie,Style religieux,BAD,0.5542
+bourreau,Tortionnaire,GOOD,0.5346
+bourrellerie,Travail du cuir,GOOD,0.6781
+bradykinesie,Mouvement lent,GOOD,0.3018
+brassage,Mélange de bières,BORDERLINE,0.6301
+brasserie,Bière artisanale,BAD,0.4970
+brebis,Tonte du berger,BAD,0.5890
+brigade,Collectif au travail,GOOD,0.5072
+brigadier,Grade intermédiaire,GOOD,0.4938
+brisant,Qui brise tout,BAD,0.6810
+bulbe,Tigre d’Amsterdam,BAD,0.4667
+bulle,Texte dans un nuage,GOOD,0.5604
+cachot,Prison médiévale,GOOD,0.5465
+calculer,Trouver le résultat,GOOD,0.6803
+caleidoscope,Tube à images,GOOD,0.5899
+calomnie,Parole mensongère,GOOD,0.8230
+calorifuger,Isoler thermiquement,GOOD,0.5714
+canevas,Tissu à broder,GOOD,0.5034
+caracteriser,Donner une définition,BORDERLINE,0.6162
+carapace,Croisillon à jambes,BAD,0.5363
+caravanserail,Relais du désert,GOOD,0.5247
+caricatural,Outré ou outrancier,GOOD,0.5436
+caricaturer,Exagérer les traits,GOOD,0.6434
+carnaval,Fête costumée,GOOD,0.7934
+cartusien,Ordre monastique,BORDERLINE,0.3513
+cassette,Support démodé,GOOD,0.5589
+catechiser,Donner le catéchisme,BORDERLINE,0.3668
+caution,Mise en garde,BAD,0.7151
+centaure,Bête noire d’Héraclès,BORDERLINE,0.6744
+centupler,Multiplier par cent,GOOD,0.7505
+ceroferaire,Style grec ancien,BAD,0.3982
+charentais,Vents d’ouest,BAD,0.4343
+charmer,Produire de l’attrait,BORDERLINE,0.7664
+charretier,Transportait jadis,BORDERLINE,0.4992
+chiffrer,Énoncer un théorème,BAD,0.7041
+chomage,Période sans emploi,GOOD,0.7204
+chou,Légume brassicado,BAD,0.5604
+cimmerien,Style antique,BAD,0.3750
+circonvenir,Tromper quelqu’un,GOOD,0.6722
+clairiere,Brise le bois,BAD,0.5248
+cochon,Porcin,BORDERLINE,0.6703
+codage,Mise en forme,BORDERLINE,0.6647
+codirecteur,Partage la gestion,GOOD,0.5880
+coexister,Vivre ensemble,GOOD,0.6851
