@@ -93,8 +93,20 @@ env:
   # Identity-api base URL for session-cookie verification (billing:subscribe gate).
   - name: IDENTITY_API_URL
     value: "http://wordsparrow-identity-api.wordsparrow:8082"
-  # Mollie checkout currency; amount/description/interval default in MollieConfig.
+  # Mollie checkout currency; first-payment amount + description default in MollieConfig.
   - name: BILLING_CHECKOUT_CURRENCY
     value: "EUR"
+  # Statement/Mollie-page label shown to the customer.
+  - name: BILLING_CHECKOUT_DESCRIPTION
+    value: "Abonnement WordSparrow"
+  # Per-cadence recurring price + interval, server-derived from the checkout cadence (ADR-0080, 2 €/mois · 20 €/an).
+  - name: BILLING_MONTHLY_AMOUNT
+    value: "2.00"
+  - name: BILLING_MONTHLY_INTERVAL
+    value: "1 month"
+  - name: BILLING_YEARLY_AMOUNT
+    value: "20.00"
+  - name: BILLING_YEARLY_INTERVAL
+    value: "12 months"
 # Kubernetes Secret to envFrom; carries MOLLIE_API_KEY. Bootstrapped per ADR-0009 §10.
 envFromSecret: ""

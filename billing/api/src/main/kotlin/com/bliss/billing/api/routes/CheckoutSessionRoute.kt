@@ -9,6 +9,7 @@ import com.bliss.billing.api.respondProblem
 import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.application.usecases.CreateCheckoutSessionOutcome
 import com.bliss.billing.application.usecases.ProviderUnavailable
+import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.Tier
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
@@ -20,11 +21,11 @@ import io.ktor.server.routing.post
 fun Route.checkoutSessionRoute(createCheckoutSession: CreateCheckoutSession) {
     post("/v1/checkout-session") {
         val principal = call.requireCapability(SUBSCRIBE_CAPABILITY) ?: return@post
-        val tier = call.parseTier() ?: return@post
+        val request = call.parseCheckoutRequest() ?: return@post
 
         val outcome =
             try {
-                createCheckoutSession.execute(principal.userId, tier)
+                createCheckoutSession.execute(principal.userId, request.tier, request.cadence)
             } catch (e: ProviderUnavailable) {
                 return@post call.respondProblem(
                     HttpStatusCode.ServiceUnavailable,
@@ -53,12 +54,22 @@ fun Route.checkoutSessionRoute(createCheckoutSession: CreateCheckoutSession) {
     }
 }
 
-// Parses the request body's tier; responds 400 (and returns null) for a missing, malformed, or non-canonical tier.
-private suspend fun io.ktor.server.application.ApplicationCall.parseTier(): Tier? {
-    val raw = runCatching { receive<CheckoutSessionRequest>() }.getOrNull()?.tier
-    val tier = raw?.let { runCatching { Tier.of(it) }.getOrNull() }
-    if (tier == null) {
-        respondProblem(HttpStatusCode.BadRequest, ProblemTypes.INVALID_CHECKOUT_REQUEST, "missing or unknown tier")
-    }
-    return tier
+private data class ParsedCheckout(
+    val tier: Tier,
+    val cadence: Cadence,
+)
+
+// Parses tier + cadence from the body; responds 400 (and returns null) on a missing/unknown tier or an unknown cadence. An absent cadence defaults to monthly (ADR-0080 expand phase).
+private suspend fun io.ktor.server.application.ApplicationCall.parseCheckoutRequest(): ParsedCheckout? {
+    val body = runCatching { receive<CheckoutSessionRequest>() }.getOrNull()
+    val tier = body?.tier?.let { runCatching { Tier.of(it) }.getOrNull() }
+    // A supplied-but-unknown cadence is a client error; absence is the monthly default.
+    val cadence = body?.cadence?.let { runCatching { Cadence.fromWire(it) }.getOrNull() ?: return badCheckout() } ?: Cadence.default
+    if (tier == null) return badCheckout()
+    return ParsedCheckout(tier, cadence)
+}
+
+private suspend fun io.ktor.server.application.ApplicationCall.badCheckout(): Nothing? {
+    respondProblem(HttpStatusCode.BadRequest, ProblemTypes.INVALID_CHECKOUT_REQUEST, "missing or unknown tier or cadence")
+    return null
 }

@@ -8,6 +8,7 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import com.bliss.billing.domain.BillingSource
+import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
 import kotlinx.coroutines.test.runTest
@@ -34,7 +35,7 @@ class MollieBillingAdapterTest {
         store: InMemoryMollieCustomerStore,
     ) = MollieBillingAdapter(client, store, config)
 
-    private fun metadata() = mapOf("userId" to userId.toString(), "tier" to "premium")
+    private fun metadata(cadence: String = "monthly") = mapOf("userId" to userId.toString(), "tier" to "premium", "cadence" to cadence)
 
     @Test
     fun `createCheckout creates a customer when absent and returns hosted urls`() =
@@ -42,7 +43,7 @@ class MollieBillingAdapterTest {
             val client = FakeMollieClient().apply { nextCustomerId = "cust_new" }
             val store = InMemoryMollieCustomerStore()
 
-            val urls = adapter(client, store).createCheckout(userId, tier)
+            val urls = adapter(client, store).createCheckout(userId, tier, Cadence.MONTHLY)
 
             assertThat(urls.checkoutUrl).isEqualTo("https://checkout.test/1")
             assertThat(urls.successUrl).isEqualTo(config.successUrl)
@@ -55,12 +56,22 @@ class MollieBillingAdapterTest {
         }
 
     @Test
+    fun `createCheckout stamps the chosen cadence into the first payment metadata`() =
+        runTest {
+            val client = FakeMollieClient()
+
+            adapter(client, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.YEARLY)
+
+            assertThat(client.lastPaymentMetadata).isEqualTo(metadata("yearly"))
+        }
+
+    @Test
     fun `createCheckout reuses the stored customer for a returning user`() =
         runTest {
             val client = FakeMollieClient()
             val store = InMemoryMollieCustomerStore(mapOf(userId to "cust_existing"))
 
-            adapter(client, store).createCheckout(userId, tier)
+            adapter(client, store).createCheckout(userId, tier, Cadence.MONTHLY)
 
             assertThat(client.createdCustomers).isEmpty()
             assertThat(client.lastPaymentCustomerId).isEqualTo("cust_existing")
@@ -73,7 +84,7 @@ class MollieBillingAdapterTest {
                 FakeMollieClient().apply {
                     firstPayment = firstPayment.copy(checkoutUrl = null)
                 }
-            val result = runCatching { adapter(client, InMemoryMollieCustomerStore()).createCheckout(userId, tier) }
+            val result = runCatching { adapter(client, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.MONTHLY) }
             assertThat(result.exceptionOrNull()).isNotNull().isInstanceOf(IllegalArgumentException::class)
         }
 
@@ -95,6 +106,53 @@ class MollieBillingAdapterTest {
             assertThat(state.status).isEqualTo(SubscriptionStatus.ACTIVE)
             assertThat(state.source).isEqualTo(BillingSource.MOLLIE)
             assertThat(state.periodEnd).isEqualTo(nextPayment)
+        }
+
+    @Test
+    fun `createSubscription bills the monthly amount and interval for a monthly first payment`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.payments["tr_1"] = MolliePayment("tr_1", "paid", null, "cust_x", null, metadata("monthly"), mandateId = "mdt_1")
+
+            adapter(client, InMemoryMollieCustomerStore()).createSubscription(userId, "tr_1", tier)
+
+            assertThat(client.lastSubscriptionAmount).isEqualTo("2.00")
+            assertThat(client.lastSubscriptionInterval).isEqualTo("1 month")
+            assertThat(client.lastSubscriptionMetadata).isEqualTo(metadata("monthly"))
+        }
+
+    @Test
+    fun `createSubscription bills the yearly amount and interval for a yearly first payment`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.payments["tr_1"] = MolliePayment("tr_1", "paid", null, "cust_x", null, metadata("yearly"), mandateId = "mdt_1")
+
+            adapter(client, InMemoryMollieCustomerStore()).createSubscription(userId, "tr_1", tier)
+
+            assertThat(client.lastSubscriptionAmount).isEqualTo("20.00")
+            assertThat(client.lastSubscriptionInterval).isEqualTo("12 months")
+            assertThat(client.lastSubscriptionMetadata).isEqualTo(metadata("yearly"))
+        }
+
+    @Test
+    fun `createSubscription defaults to monthly when the first payment carries no cadence`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.payments["tr_1"] =
+                MolliePayment(
+                    "tr_1",
+                    "paid",
+                    null,
+                    "cust_x",
+                    null,
+                    mapOf("userId" to userId.toString(), "tier" to "premium"),
+                    mandateId = "mdt_1",
+                )
+
+            adapter(client, InMemoryMollieCustomerStore()).createSubscription(userId, "tr_1", tier)
+
+            assertThat(client.lastSubscriptionAmount).isEqualTo("2.00")
+            assertThat(client.lastSubscriptionInterval).isEqualTo("1 month")
         }
 
     @Test

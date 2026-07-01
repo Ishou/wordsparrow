@@ -3,6 +3,7 @@ package com.bliss.billing.application.usecases
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.CheckoutUrls
 import com.bliss.billing.application.ports.SubscriptionRepository
+import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.Tier
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
@@ -22,13 +23,14 @@ class CreateCheckoutSession(
     suspend fun execute(
         userId: UUID,
         tier: Tier,
+        cadence: Cadence,
     ): CreateCheckoutSessionOutcome {
         if (repository.findByUserId(userId)?.status?.isLive() == true) {
             return CreateCheckoutSessionOutcome.AlreadySubscribed
         }
         val urls =
             try {
-                provider.createCheckout(userId, tier)
+                provider.createCheckout(userId, tier, cadence)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

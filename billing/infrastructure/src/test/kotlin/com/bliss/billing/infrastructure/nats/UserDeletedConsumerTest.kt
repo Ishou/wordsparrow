@@ -15,6 +15,7 @@ import com.bliss.billing.application.ports.SubscriptionPublisher
 import com.bliss.billing.application.ports.SubscriptionRepository
 import com.bliss.billing.application.usecases.HandleUserDeleted
 import com.bliss.billing.domain.BillingSource
+import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.Subscription
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
@@ -258,6 +259,7 @@ class UserDeletedConsumerTest {
         override suspend fun createCheckout(
             userId: UUID,
             tier: Tier,
+            cadence: Cadence,
         ): CheckoutUrls = error("unused")
 
         override suspend fun createSubscription(
