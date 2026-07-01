@@ -42,8 +42,8 @@ function SuccesShell({ children }: { readonly children: ReactNode }) {
   );
 }
 
-// The post-checkout confirmation, shown once the webhook flips the subscription active.
-function MerciConfirmation() {
+// hasEmail gates the receipt line — pre-W2 sessions may have no email on file (ADR-0082).
+function MerciConfirmation({ hasEmail }: { readonly hasEmail: boolean }) {
   return (
     <div className={merci}>
       <div className={merciMark}>
@@ -54,7 +54,7 @@ function MerciConfirmation() {
       <p className={merciText}>
         Toutes les grilles sont à toi, et tu peux en générer de nouvelles quand tu veux.
       </p>
-      <p className={merciText}>Un reçu te sera envoyé par e-mail.</p>
+      {hasEmail ? <p className={merciText}>Un reçu te sera envoyé par e-mail.</p> : null}
       <Link to="/grilles" className={merciCta}>
         Découvrir toutes les grilles
       </Link>
@@ -63,7 +63,18 @@ function MerciConfirmation() {
 }
 
 export function CheckoutSuccessScreen({ client }: { readonly client: BillingClient }) {
+  const { authClient } = useRouteContext({ from: '__root__' });
   const [phase, setPhase] = useState<ConfirmPhase>('confirming');
+  const [hasEmail, setHasEmail] = useState(false);
+
+  useEffect(() => {
+    if (!authClient) return;
+    let cancelled = false;
+    authClient.getMe().then((me) => {
+      if (!cancelled) setHasEmail(Boolean(me.email));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [authClient]);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,7 +109,7 @@ export function CheckoutSuccessScreen({ client }: { readonly client: BillingClie
   if (phase === 'active') {
     return (
       <SuccesShell>
-        <MerciConfirmation />
+        <MerciConfirmation hasEmail={hasEmail} />
       </SuccesShell>
     );
   }
