@@ -1,7 +1,15 @@
 # ADR-0045: Player identity data minimization
 
 ## Status
-Accepted
+Superseded by ADR-0082
+
+> The OAuth-scope (`openid`-only) and email-retention decisions below are
+> superseded by [ADR-0082](./0082-player-email-collection-for-billing.md):
+> a French EURL selling a subscription is legally required to invoice
+> paying customers, so the `email` scope is now requested and the verified
+> email is retained for billing/receipts/recovery. The rest of the
+> minimization stance (no name, no picture, no client IP) still holds.
+> This body is left intact as the historical record.
 
 ## Context
 
