@@ -233,6 +233,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             displayName: string;
+            /** Format: email */
+            email: string | null;
             providers: components["schemas"]["LinkedProvider"][];
             /** Format: date-time */
             createdAt: string;

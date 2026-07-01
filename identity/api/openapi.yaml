@@ -357,10 +357,15 @@ components:
   schemas:
     User:
       type: object
-      required: [id, displayName, providers, createdAt, role, capabilities]
+      required: [id, displayName, email, providers, createdAt, role, capabilities]
       properties:
         id: { type: string, format: uuid }
         displayName: { type: string, minLength: 1, maxLength: 30 }
+        email:
+          type: string
+          format: email
+          nullable: true
+          # Player email captured from the OIDC provider, for billing/invoicing/receipts + account recovery (ADR-0082); null for legacy accounts pre-email-scope; never exposed on /v1/auth/whoami.
         providers:
           type: array
           items: { $ref: '#/components/schemas/LinkedProvider' }
