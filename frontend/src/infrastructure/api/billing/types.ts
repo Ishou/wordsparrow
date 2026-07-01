@@ -143,6 +143,11 @@ export interface paths {
          *     happened, how much, its status, and a link to the provider's hosted
          *     receipt. It NEVER carries email, customer name, address, or card data;
          *     those never leave the provider.
+         *
+         *     A subscriber accrues one receipt per billing cycle for as long as they
+         *     stay subscribed, so the list is unbounded over a long enough
+         *     subscription. Paginated cursor-first per ADR-0003 §6: pass `cursor`
+         *     (the previous response's `nextCursor`) to fetch the next page.
          */
         get: operations["listReceipts"];
         put?: never;
@@ -258,16 +263,28 @@ export interface components {
             periodEnd: string | null;
         };
         /**
-         * @description The caller's own payment receipts, newest-first (ADR-0080). `receipts`
-         *     is always present on the wire and is an empty array when the caller has
-         *     never paid — absence and an empty list are distinct per ADR-0003 §6.
+         * @description One page of the caller's own payment receipts, newest-first
+         *     (ADR-0080). `receipts` is always present on the wire and is an empty
+         *     array when the caller has never paid, or when this is the last page
+         *     — absence and an empty list are distinct per ADR-0003 §6. Cursor
+         *     pagination per ADR-0003 §6: pass `nextCursor` as the next request's
+         *     `cursor` to fetch the following page.
          */
         ReceiptsView: {
             /**
-             * @description The caller's receipts, sorted newest-first by `paidAt`. Empty for a
-             *     caller who has never made a payment.
+             * @description Up to `limit` receipts (default 20, max 100), sorted newest-first
+             *     by `paidAt`. Empty for a caller who has never made a payment, or
+             *     when there are no more receipts after `cursor`.
              */
             receipts: components["schemas"]["Receipt"][];
+            /**
+             * @description Opaque cursor for the next page, or `null` when this is the last
+             *     page. Always present on the wire; `null` is the explicit
+             *     "no more pages" value — absence and `null` are distinct per
+             *     ADR-0003 §6.
+             * @example eyJwYWlkQXQiOiIyMDI2LTA1LTI5VDE0OjAzOjAwWiJ9
+             */
+            nextCursor: string | null;
         };
         /**
          * @description A single payment receipt: the provider's record surfaced as an opaque
@@ -284,14 +301,15 @@ export interface components {
              */
             paidAt: string;
             /**
-             * @description Decimal amount charged, as a string to avoid float rounding (the
-             *     provider represents money as a decimal string). Paired with
-             *     `currency`.
-             * @example 2.00
+             * @description Amount charged, in integer minor units (cents) per ADR-0003 §6 —
+             *     `200` for 2.00 EUR. The provider represents money as a decimal
+             *     string; the billing adapter converts to minor units before this
+             *     leaves the server. Paired with `currency`.
+             * @example 200
              */
-            amount: string;
+            amountMinorUnits: number;
             /**
-             * @description ISO 4217 currency code for `amount`.
+             * @description ISO 4217 currency code for `amountMinorUnits`.
              * @example EUR
              */
             currency: string;
@@ -604,7 +622,15 @@ export interface operations {
     };
     listReceipts: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Opaque pagination cursor from a previous response's `nextCursor`.
+                 *     Omit to fetch the first page.
+                 */
+                cursor?: string;
+                /** @description Max receipts to return. Defaults to 20; clamped to 100. */
+                limit?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -612,8 +638,9 @@ export interface operations {
         requestBody?: never;
         responses: {
             /**
-             * @description Receipts resolved for the authenticated caller. The list is sorted
-             *     newest-first and may be empty (a caller who never paid).
+             * @description Receipts resolved for the authenticated caller. The page is sorted
+             *     newest-first and may be empty (a caller who never paid, or the
+             *     last page of a longer history).
              */
             200: {
                 headers: {
