@@ -180,3 +180,4 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   game emit → frontend last), handling stacked retarget/rebase, dispatching FIXERS
   (never reviewers/reruns) for findings, and stopping+escalating if the classifier
   blocks a merge. Rules in the procedure "ADR-0085 auto-merge cron" section.
+- 2026-07-02 — **cron tick: merged #1247 (ADR-0085).** Next: retarget+rebase #1248 (asyncapi) onto main.
