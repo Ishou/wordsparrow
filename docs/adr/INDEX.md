@@ -202,8 +202,12 @@ ADR-0084  grid/api/**/routes/PuzzleRoute.kt              validate-word route: si
 ADR-0084  grid/application/**/puzzle/ValidatePuzzleUseCase.kt  Word-scoped validation reuse: `correct` iff every submitted cell matches solution; no positional data leaked
 ADR-0084  game/infrastructure/**/HttpWordValidator.kt    Call validate-word per candidate word with `X-Service-Token`; response DTO is `{correct}`; wire-shape contract test REQUIRED (the gap that let #1170 break co-op silently)
 ADR-0084  game/application/**/usecases/LobbyUseCases.kt  Validator failure must be observable (logged/metered), not a silent swallow — a total lock outage must never again be invisible
-ADR-0084  frontend/src/ui/v2/multiplayer/useCoopValidating.ts  Co-op pulse timeout → reject → `rejectingPositions` → shake (backend sends no wrong-word event by design)
+ADR-0084  frontend/src/ui/v2/multiplayer/useCoopValidating.ts  Co-op pulse timeout → reject → `rejectingPositions` → shake (timeout-driven; the shake trigger is SUPERSEDED by ADR-0085's server-driven `wordRejected`)
 # ADR-0084: Internal service-authenticated word validation for multiplayer locking — restores co-op word-locking broken by ADR-0076's binary `/validate` (#1170 dropped `incorrectCells`, game-api still required it → swallowed parse failure → nothing locked). Dedicated internal `validate-word` (token + not-publicly-routed); solo never regains per-cell feedback. HTTP not NATS (ADR-0049). Extends ADR-0076.
+ADR-0085  game/api/asyncapi.yaml                         New server→client `wordRejected` event (mirror of `wordLocked`); supersedes ADR-0076 §9 "no wrong-word event" for the co-op path only
+ADR-0085  game/application/**/usecases/LobbyUseCases.kt  Emit `LobbyEvent.WordRejected(positions, rejectedAt)` when a fully-filled candidate word validates incorrect (mirror of the WordLocked emit)
+ADR-0085  frontend/src/ui/v2/multiplayer/useCoopValidating.ts  Shake is server-driven: `wordRejected` → clear pulse + shake immediately; the MAX_MS timeout is demoted to a silent safety-clear (no shake)
+# ADR-0085: Synchronous wrong-word feedback via `wordRejected` — the co-op shake becomes server-authoritative (mirror of `wordLocked`) instead of a client-side pulse-timeout guess. Leaks nothing (positions the player already typed; wrong-completion already inferable). Broadcast, symmetric with wordLocked. Extends ADR-0084; supersedes ADR-0076 §9 for co-op only.
 ```
 
 ## Adding entries
