@@ -53,7 +53,7 @@ import java.util.UUID
 
 // Mirrors minimum/maximum from PuzzleWidth/PuzzleHeight in openapi.yaml; keep in sync manually.
 internal const val PUZZLE_MIN_DIMENSION: Int = 5
-internal const val PUZZLE_MAX_DIMENSION: Int = 15
+internal const val PUZZLE_MAX_DIMENSION: Int = 28
 
 private const val INVALID_DIMENSIONS_TYPE: String =
     "https://bliss.example/errors/invalid-puzzle-dimensions"

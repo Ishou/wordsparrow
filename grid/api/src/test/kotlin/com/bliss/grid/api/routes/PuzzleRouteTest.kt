@@ -455,7 +455,7 @@ class PuzzleRouteTest {
         testApplication {
             application { module() }
 
-            val response = client.get("/v1/puzzles/$validId?height=16") // one above the spec maximum of 15
+            val response = client.get("/v1/puzzles/$validId?height=29") // one above the spec maximum of 28
 
             assertThat(response.status).isEqualTo(HttpStatusCode.BadRequest)
             assertThat(response.bodyAsText()).contains("invalid-puzzle-dimensions")

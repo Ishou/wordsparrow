@@ -7,7 +7,7 @@ import com.bliss.grid.application.puzzle.GridGenerationPort
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PuzzleRepository
 import com.bliss.grid.application.puzzle.asGridGenerationPort
-import com.bliss.grid.application.puzzle.dailyPuzzleConstraints
+import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.BlissDatabase
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
@@ -104,7 +104,7 @@ private fun productionGridGenerationPort(): GridGenerationPort {
     val generatePuzzle =
         GeneratePuzzleUseCase(
             wordRepository = wordRepository,
-            defaults = dailyPuzzleConstraints(),
+            defaults = defaultPuzzleConstraints(),
         )
     return generatePuzzle.asGridGenerationPort()
 }
