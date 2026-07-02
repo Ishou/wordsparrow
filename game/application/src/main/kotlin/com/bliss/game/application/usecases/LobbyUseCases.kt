@@ -447,20 +447,22 @@ class UpdateCellUseCase(
         var actualLocks = emptySet<Position>()
         repo.mutate(lobbyId) { lobby ->
             val s = lobby.game ?: return@mutate lobby
+            // First-writer-wins (ADR-0086): re-filter against the live lock map so a
+            // position a crossing word locked between step 1 and here keeps its owner.
             val stillCorrect =
                 newLocks
                     .filter { pos ->
-                        s.entries[pos]?.letter == entriesAfter[pos]?.letter
+                        pos !in s.lockedPositions && s.entries[pos]?.letter == entriesAfter[pos]?.letter
                     }.toSet()
             if (stillCorrect.isEmpty()) return@mutate lobby
             actualLocks = stillCorrect
             lobby.copy(
-                game = s.copy(lockedPositions = s.lockedPositions + stillCorrect),
+                game = s.copy(lockedPositions = s.lockedPositions + stillCorrect.associateWith { sessionId }),
                 lastActivityAt = stamp,
             )
         }
         if (actualLocks.isEmpty()) return success(updated, events).withSolved(solved)
-        events += LobbyEvent.WordLocked(actualLocks, stamp)
+        events += LobbyEvent.WordLocked(actualLocks, sessionId, stamp)
         val finalLobby = repo.findById(lobbyId) ?: updated
         return success(finalLobby, events).withSolved(solved)
     }

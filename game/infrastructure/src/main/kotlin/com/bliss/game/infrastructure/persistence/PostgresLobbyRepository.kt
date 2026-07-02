@@ -736,7 +736,7 @@ private data class GameSessionPayload(
     val puzzle: PuzzlePayload,
     val startedAt: String,
     val completedAt: String? = null,
-    val lockedPositions: List<PositionPayload> = emptyList(),
+    val lockedPositions: List<LockedCellPayload> = emptyList(),
 ) {
     fun toDomain(entries: Map<Position, CellEntry>): GameSession =
         GameSession(
@@ -744,7 +744,7 @@ private data class GameSessionPayload(
             entries = entries,
             startedAt = Instant.parse(startedAt),
             completedAt = completedAt?.let { Instant.parse(it) },
-            lockedPositions = lockedPositions.map { it.toDomain() }.toSet(),
+            lockedPositions = lockedPositions.associate { it.toDomain() },
         )
 
     companion object {
@@ -753,7 +753,10 @@ private data class GameSessionPayload(
                 puzzle = PuzzlePayload.from(game.puzzle),
                 startedAt = game.startedAt.toString(),
                 completedAt = game.completedAt?.toString(),
-                lockedPositions = game.lockedPositions.map { PositionPayload(it.row, it.column) },
+                lockedPositions =
+                    game.lockedPositions.map { (pos, owner) ->
+                        LockedCellPayload(pos.row, pos.column, owner.value)
+                    },
             )
     }
 }
@@ -764,6 +767,15 @@ private data class PositionPayload(
     val column: Int,
 ) {
     fun toDomain(): Position = Position(row, column)
+}
+
+@Serializable
+private data class LockedCellPayload(
+    val row: Int,
+    val column: Int,
+    val lockedBy: String,
+) {
+    fun toDomain(): Pair<Position, SessionId> = Position(row, column) to SessionId(lockedBy)
 }
 
 @Serializable

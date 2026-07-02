@@ -9,6 +9,7 @@ import com.bliss.game.api.dto.GamePositionDto
 import com.bliss.game.api.dto.GamePuzzleDto
 import com.bliss.game.api.dto.GameSessionDto
 import com.bliss.game.api.dto.GridConfigDto
+import com.bliss.game.api.dto.LockedCellDto
 import com.bliss.game.api.dto.PlayerDto
 import com.bliss.game.api.dto.PresenceEntryDto
 import com.bliss.game.api.dto.ServerToClientFrame
@@ -122,6 +123,7 @@ internal fun LobbyEvent.toFrameOrNull(): ServerToClientFrame? =
                     positions
                         .sortedWith(compareBy({ it.row }, { it.column }))
                         .map { it.toDto() },
+                lockedBy = lockedBy.value,
                 lockedAt = lockedAt.toIsoString(),
             )
         is LobbyEvent.WordRejected ->
@@ -216,9 +218,9 @@ private fun GameSession.toDto(presence: Map<String, PresencePosition>): GameSess
                 .map { (pos, entry) -> entry.toDto(pos) },
         // Same sort posture as entries: snapshot is diff-friendly across reconnects.
         lockedPositions =
-            lockedPositions
-                .sortedWith(compareBy({ it.row }, { it.column }))
-                .map { it.toDto() },
+            lockedPositions.entries
+                .sortedWith(compareBy({ it.key.row }, { it.key.column }))
+                .map { (pos, owner) -> LockedCellDto(pos.row, pos.column, owner.value) },
         startedAt = startedAt.toIsoString(),
         completedAt = completedAt?.toIsoString(),
         // Presence is unordered in [SessionManager]'s map; sort by sessionId

@@ -318,7 +318,7 @@ class ListLobbiesForSessionTest {
                     ),
                     baseInstant,
                     null,
-                    lockedPositions = setOf(pPos),
+                    lockedPositions = mapOf(pPos to sessionA),
                 )
             val withEntries =
                 Lobby(

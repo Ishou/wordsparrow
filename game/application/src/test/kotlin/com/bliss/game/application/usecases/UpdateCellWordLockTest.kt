@@ -8,7 +8,9 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import com.bliss.game.application.ports.LobbyEvent
 import com.bliss.game.application.usecases.Samples.alice
+import com.bliss.game.application.usecases.Samples.bob
 import com.bliss.game.application.usecases.Samples.sessionA
+import com.bliss.game.application.usecases.Samples.sessionB
 import com.bliss.game.domain.BlockCell
 import com.bliss.game.domain.GameClue
 import com.bliss.game.domain.GameClueDirection
@@ -81,7 +83,18 @@ class UpdateCellWordLockTest {
             assertThat(solved.events[0]).isInstanceOf(LobbyEvent.CellUpdated::class)
             val locked = solved.events[1] as LobbyEvent.WordLocked
             assertThat(locked.positions).containsExactlyInAnyOrder(across01, across02, cross03)
-            assertThat(solved.value.game?.lockedPositions).isEqualTo(locked.positions)
+            assertThat(locked.lockedBy).isEqualTo(sessionA)
+            assertThat(
+                solved.value.game
+                    ?.lockedPositions
+                    ?.keys,
+            ).isEqualTo(locked.positions)
+            assertThat(
+                solved.value.game
+                    ?.lockedPositions
+                    ?.values
+                    ?.toSet(),
+            ).isEqualTo(setOf(sessionA))
             assertThat(solved.events.filterIsInstance<LobbyEvent.WordRejected>()).isEmpty()
         }
 
@@ -102,7 +115,7 @@ class UpdateCellWordLockTest {
             val rejected = wrong.events[1] as LobbyEvent.WordRejected
             assertThat(rejected.positions).containsExactlyInAnyOrder(across01, across02, cross03)
             assertThat(wrong.events.filterIsInstance<LobbyEvent.WordLocked>()).isEmpty()
-            assertThat(wrong.value.game?.lockedPositions ?: emptySet()).isEmpty()
+            assertThat(wrong.value.game?.lockedPositions ?: emptyMap()).isEmpty()
         }
 
     @Test
@@ -313,5 +326,37 @@ class UpdateCellWordLockTest {
             // CellUpdated then WordLocked then GameSolved (order: writes, locks, solve).
             val types = out.events.map { it::class.simpleName }
             assertThat(types).isEqualTo(listOf("CellUpdated", "WordLocked", "GameSolved"))
+        }
+
+    @Test
+    fun `crossing lock keeps the first finder's owner on the shared cell (first-writer-wins)`() =
+        runTest {
+            // Player A locks the across word (owns the shared cross03); player B
+            // then completes the crossing down word. B's WordLocked carries only
+            // the NEW cells, and cross03 keeps A's ownership in the snapshot.
+            val h = harness()
+            val lobby = h.create(sessionA, alice).value
+            h.join(lobby.id, sessionB, bob).requireSuccess()
+            h.start(lobby.id, sessionA).requireSuccess()
+
+            h.write(lobby.id, sessionA, across01, Letter('P')).requireSuccess()
+            h.write(lobby.id, sessionA, across02, Letter('A')).requireSuccess()
+            h.write(lobby.id, sessionA, cross03, Letter('S')).requireSuccess()
+
+            h.write(lobby.id, sessionB, down13, Letter('E')).requireSuccess()
+            val out = h.write(lobby.id, sessionB, down23, Letter('L')).requireSuccess()
+
+            val locked = out.events.filterIsInstance<LobbyEvent.WordLocked>()
+            assertThat(locked).hasSize(1)
+            // B's frame carries only the new cells, attributed to B.
+            assertThat(locked[0].positions).containsExactlyInAnyOrder(down13, down23)
+            assertThat(locked[0].lockedBy).isEqualTo(sessionB)
+
+            val locks = out.value.game?.lockedPositions
+            // First-writer-wins: the shared cell keeps A; the new cells belong to B.
+            assertThat(locks?.get(cross03)).isEqualTo(sessionA)
+            assertThat(locks?.get(across01)).isEqualTo(sessionA)
+            assertThat(locks?.get(down13)).isEqualTo(sessionB)
+            assertThat(locks?.get(down23)).isEqualTo(sessionB)
         }
 }

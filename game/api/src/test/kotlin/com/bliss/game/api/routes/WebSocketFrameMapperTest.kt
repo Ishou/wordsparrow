@@ -117,11 +117,13 @@ class WebSocketFrameMapperTest {
         val event =
             LobbyEvent.WordLocked(
                 positions = setOf(Position(2, 3), Position(0, 4), Position(0, 3), Position(1, 3)),
+                lockedBy = ownerId,
                 lockedAt = writtenAt2,
             )
         val frame = event.toFrameOrNull() as ServerToClientFrame.WordLocked
         assertThat(frame.positions.map { it.row to it.column })
             .containsExactly(0 to 3, 0 to 4, 1 to 3, 2 to 3)
+        assertThat(frame.lockedBy).isEqualTo(ownerId.value)
         assertThat(frame.lockedAt).isEqualTo(writtenAt2.toString())
     }
 
@@ -154,15 +156,25 @@ class WebSocketFrameMapperTest {
     }
 
     @Test
-    fun `lobbyState snapshot serializes lockedPositions sorted by row then column`() {
-        val locks = setOf(Position(2, 0), Position(0, 1), Position(0, 0))
+    fun `lobbyState snapshot serializes lockedPositions sorted by row then column with per-cell lockedBy`() {
+        val other = SessionId("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c")
+        val locks =
+            mapOf(
+                Position(2, 0) to ownerId,
+                Position(0, 1) to other,
+                Position(0, 0) to ownerId,
+            )
         val lobby = inProgressLobby(emptyMap(), lockedPositions = locks)
 
         val frame = lobby.toLobbyStateFrame()
         val game = frame.game
         assertThat(game).isNotNull()
-        assertThat(game!!.lockedPositions.map { it.row to it.column })
-            .containsExactly(0 to 0, 0 to 1, 2 to 0)
+        assertThat(game!!.lockedPositions.map { Triple(it.row, it.column, it.lockedBy) })
+            .containsExactly(
+                Triple(0, 0, ownerId.value),
+                Triple(0, 1, other.value),
+                Triple(2, 0, ownerId.value),
+            )
     }
 
     @Test
@@ -248,7 +260,7 @@ class WebSocketFrameMapperTest {
 
     private fun inProgressLobby(
         entries: Map<Position, CellEntry>,
-        lockedPositions: Set<Position> = emptySet(),
+        lockedPositions: Map<Position, SessionId> = emptyMap(),
     ): Lobby =
         Lobby(
             id = LobbyId.generate(),
