@@ -192,3 +192,4 @@ Append-only event ledger for maintainer review. Newest at the bottom.
 - 2026-07-02 — **Cron consolidated:** deleted the ADR-0085-only cron; armed ONE
   combined cron (15be1eed) driving both rollouts' remaining phases (avoids two
   crons racing on the log push). "COMBINED auto-merge phases" section in procedure.
+- 2026-07-02 — **cron tick: rebased #1248 onto main** (was CONFLICTING after retarget; dropped the squashed ADR-0085 commit → asyncapi-only). CI re-running; next tick merges on green+LGTM.
