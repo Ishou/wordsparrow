@@ -45,7 +45,7 @@ describe('reduceLobby', () => {
         joinedAt: '2026-05-02T15:30:01Z' as Instant,
       },
       { type: 'gameStarted', puzzle, startedAt: '2026-05-02T15:31:00Z' as Instant },
-      { type: 'wordLocked', positions: [{ row: 0, column: 0 }], lockedAt: '2026-05-02T15:31:05Z' as Instant },
+      { type: 'wordLocked', positions: [{ row: 0, column: 0 }], lockedBy: joinerSessionId, lockedAt: '2026-05-02T15:31:05Z' as Instant },
       { type: 'gameSolved', durationMs: 42_000, finalEntries: [] },
     ];
 
@@ -53,7 +53,7 @@ describe('reduceLobby', () => {
 
     expect(result.lobby.players).toHaveLength(2);
     expect(result.lobby.state).toBe('COMPLETED');
-    expect(result.lobby.game?.lockedPositions).toEqual([{ row: 0, column: 0 }]);
+    expect(result.lobby.game?.lockedPositions).toEqual([{ row: 0, column: 0, lockedBy: joinerSessionId }]);
     expect(result.durationMs).toBe(42_000);
     expect(result.modalDismissed).toBe(false);
   });
@@ -120,14 +120,45 @@ describe('reduceLobby', () => {
     const once = reduceLobby(started, {
       type: 'wordLocked',
       positions: [{ row: 0, column: 0 }, { row: 0, column: 1 }],
+      lockedBy: ownerSessionId,
       lockedAt: '2026-05-02T15:31:05Z' as Instant,
     });
     const twice = reduceLobby(once, {
       type: 'wordLocked',
       positions: [{ row: 0, column: 1 }],
+      lockedBy: ownerSessionId,
       lockedAt: '2026-05-02T15:31:06Z' as Instant,
     });
-    expect(twice.lobby.game?.lockedPositions).toEqual([{ row: 0, column: 0 }, { row: 0, column: 1 }]);
+    expect(twice.lobby.game?.lockedPositions).toEqual([
+      { row: 0, column: 0, lockedBy: ownerSessionId },
+      { row: 0, column: 1, lockedBy: ownerSessionId },
+    ]);
+  });
+
+  it('records lockedBy per wordLocked and keeps the FIRST finder on a crossing cell (ADR-0086)', () => {
+    const started = reduceLobby(baseView, {
+      type: 'gameStarted',
+      puzzle,
+      startedAt: '2026-05-02T15:31:00Z' as Instant,
+    });
+    // Owner locks POMME across, including the shared cell (0,0).
+    const first = reduceLobby(started, {
+      type: 'wordLocked',
+      positions: [{ row: 0, column: 0 }],
+      lockedBy: ownerSessionId,
+      lockedAt: '2026-05-02T15:31:05Z' as Instant,
+    });
+    // Joiner later locks PUIT down; the shared (0,0) is already locked and must NOT be re-attributed.
+    const second = reduceLobby(first, {
+      type: 'wordLocked',
+      positions: [{ row: 0, column: 0 }, { row: 1, column: 0 }],
+      lockedBy: joinerSessionId,
+      lockedAt: '2026-05-02T15:31:06Z' as Instant,
+    });
+    expect(second.lobby.game?.lockedPositions).toEqual([
+      { row: 0, column: 0, lockedBy: ownerSessionId },
+      { row: 1, column: 0, lockedBy: joinerSessionId },
+    ]);
   });
 
   it('leaves the view untouched for overlay-only frames (cellUpdated)', () => {

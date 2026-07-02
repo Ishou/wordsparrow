@@ -102,7 +102,7 @@ export interface LiveCoopScreenProps {
   readonly players: ReadonlyArray<Player>;
   readonly playersBySessionId: ReadonlyMap<SessionId, Player>;
   readonly initialEntries: ReadonlyArray<{ row: number; column: number; letter: string }>;
-  readonly lockedPositions: ReadonlyArray<{ row: number; column: number }>;
+  readonly lockedPositions: ReadonlyArray<{ row: number; column: number; lockedBy: SessionId }>;
   readonly onCellChange: (row: number, col: number, letter: string | null) => void;
   readonly onLocalFocusChange: (position: Position | null, direction: 'across' | 'down' | null) => void;
   readonly subscribeToRemoteCellUpdates: (handler: (event: GameEvent) => void) => Unsubscribe;
@@ -157,6 +157,14 @@ export function LiveCoopScreen({
     }
     return set;
   }, [isCompleted, lockedPositions, puzzle.cells]);
+
+  // ADR-0086: per-cell finder so PuzzleBoard tints each locked cell with the player's colour.
+  const lockedByAt = useMemo<ReadonlyMap<string, SessionId>>(() => {
+    const m = new Map<string, SessionId>();
+    for (const p of lockedPositions) m.set(posKey(p.row, p.column), p.lockedBy);
+    return m;
+  }, [lockedPositions]);
+
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
 
@@ -286,6 +294,7 @@ export function LiveCoopScreen({
         puzzle={puzzle}
         nav={nav}
         validatedPositions={validatedPositions}
+        lockedByAt={lockedByAt}
         validatingPositions={validating}
         rejectingPositions={rejecting}
         entryAt={entryAt}

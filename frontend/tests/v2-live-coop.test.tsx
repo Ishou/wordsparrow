@@ -142,9 +142,25 @@ describe('v2 LiveCoopScreen', () => {
   });
 
   it('marks a server-locked cell as solved', () => {
-    renderScreen({ lockedPositions: [{ row: 0, column: 1 }] });
+    renderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerId }] });
     expect(letterInput(0, 1).readOnly).toBe(true);
     expect(letterInput(0, 2).readOnly).toBe(false);
+  });
+
+  it('tints an owned solved cell with the finder colour and leaves no-owner cells untinted (ADR-0086)', () => {
+    renderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerId }] });
+    // The finder's --player-color is wired onto the owned solved cell's wrapper.
+    expect(cellWrap(0, 1).style.getPropertyValue('--player-color')).not.toBe('');
+    expect(cellWrap(0, 1).querySelector('[data-cell-state="solved"]')).toBeTruthy();
+    // An unlocked cell carries no owner tint.
+    expect(cellWrap(0, 2).style.getPropertyValue('--player-color')).toBe('');
+  });
+
+  it('leaves COMPLETED-lit cells untinted when nobody is recorded as finder (ADR-0086)', () => {
+    renderScreen({ isCompleted: true, frozenAtMs: 90_000, lockedPositions: [] });
+    // Solo / no-owner: every cell is solved but none tinted.
+    expect(cellWrap(0, 1).style.getPropertyValue('--player-color')).toBe('');
+    expect(cellWrap(0, 2).style.getPropertyValue('--player-color')).toBe('');
   });
 
   it('plays the solve beat (PuzzleBoard) when validatedPositions gains a cell', () => {
@@ -153,14 +169,14 @@ describe('v2 LiveCoopScreen', () => {
     expect(cellWrap(0, 1).style.animationDelay).toBe('');
     // A new server lock celebrates the freshly-solved cell — the same beat solo gets.
     act(() => {
-      rerenderScreen({ lockedPositions: [{ row: 0, column: 1 }] });
+      rerenderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerId }] });
     });
     expect(cellWrap(0, 1).style.animationDelay).not.toBe('');
   });
 
   it('does not celebrate already-locked cells on initial hydration (rejoin)', () => {
     // A board mounted with a pre-locked cell (coop rejoin) must not flash the beat.
-    renderScreen({ lockedPositions: [{ row: 0, column: 1 }] });
+    renderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerId }] });
     expect(cellWrap(0, 1).style.animationDelay).toBe('');
   });
 

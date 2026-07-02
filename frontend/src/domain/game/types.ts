@@ -39,6 +39,13 @@ export interface Position {
   readonly column: number;
 }
 
+// ADR-0086: locked cell plus the session that first locked it (first-writer-wins on crossings).
+export interface LockedCell {
+  readonly row: number;
+  readonly column: number;
+  readonly lockedBy: SessionId;
+}
+
 export interface GridConfig {
   readonly width: number;
   readonly height: number;
@@ -157,7 +164,7 @@ export interface PresenceEntry {
 export interface GameSession {
   readonly puzzle: GamePuzzle;
   readonly entries: readonly CellEntry[];
-  readonly lockedPositions: readonly Position[];
+  readonly lockedPositions: readonly LockedCell[];
   readonly startedAt: Instant;
   readonly completedAt: Instant | null;
   readonly presence?: readonly PresenceEntry[];
