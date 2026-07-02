@@ -330,6 +330,33 @@ describe('useLobbyConnection error + connection seams', () => {
     expect(result.current.connectionState).toBe('disconnected');
   });
 
+  it('shows a sticky toast on connection loss and dismisses it once reconnected', () => {
+    const gameClient = makeFakeGameClient();
+    const showToast = vi.fn();
+    const dismissToast = vi.fn();
+    renderHook(() => useLobbyConnection(makeArgs(gameClient, { showToast, dismissToast })));
+    act(() => gameClient.dispatchConnectionState('connected'));
+    act(() => gameClient.dispatchConnectionState('disconnected'));
+    expect(showToast).toHaveBeenCalledWith({
+      text: 'Connexion perdue. On se reconnecte…',
+      tone: 'info',
+      duration: null,
+    });
+    act(() => gameClient.dispatchConnectionState('reconnecting'));
+    expect(showToast).toHaveBeenCalledWith({ text: 'Reconnexion…', tone: 'info', duration: null });
+    act(() => gameClient.dispatchConnectionState('connected'));
+    expect(dismissToast).toHaveBeenCalled();
+  });
+
+  it('never toasts before the first successful connection', () => {
+    const gameClient = makeFakeGameClient();
+    const showToast = vi.fn();
+    renderHook(() => useLobbyConnection(makeArgs(gameClient, { showToast })));
+    act(() => gameClient.dispatchConnectionState('disconnected'));
+    act(() => gameClient.dispatchConnectionState('reconnecting'));
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
   it('announces a peer joining via the announce seam', () => {
     const gameClient = makeFakeGameClient();
     const announce = vi.fn();

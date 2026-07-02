@@ -284,7 +284,8 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     if (connectionState === 'reconnecting' || connectionState === 'connecting') {
       showToast({ text: 'Reconnexion…', tone: 'info', duration: null });
     } else if (connectionState === 'disconnected') {
-      dismissToast();
+      // Sticky until the retry loop lands back on `connected`.
+      showToast({ text: 'Connexion perdue. On se reconnecte…', tone: 'info', duration: null });
     }
   }, [connectionState, showToast, dismissToast]);
 

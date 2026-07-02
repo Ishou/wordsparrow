@@ -233,19 +233,6 @@ const leaveButton = css({
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 
-// Sakura-blush info/alert banner shown while the WS isn't connected.
-const banner = css({
-  fontFamily: 'wsUi',
-  fontSize: '14px',
-  fontWeight: 'bold',
-  color: 'ws.sakuraDark',
-  bg: 'ws.sakuraBlush',
-  borderRadius: '12px',
-  padding: '10px 14px',
-  marginBottom: '16px',
-  textAlign: 'center',
-});
-
 function connStateLabel(state: ConnectionState): { dot: string; label: string } {
   switch (state) {
     case 'connected':
@@ -305,12 +292,6 @@ export function SalonScreen({
     <PhoneShell header={<BackHeader to="/" />}>
       <h1 className={title}>Partie</h1>
       <p className={lead}>Invite tes amis, puis lance la grille ensemble.</p>
-
-      {connectionState !== 'connected' ? (
-        <p className={banner} role="status">
-          {connectionState === 'disconnected' ? 'Connexion perdue. On se reconnecte…' : 'Connexion à la partie…'}
-        </p>
-      ) : null}
 
       {lobby.code != null ? (
         <section className={card} aria-label="Code de partie">

@@ -134,9 +134,10 @@ describe('v2 SalonScreen', () => {
     expect((jouer as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('shows a connection banner when not connected', async () => {
+  it('renders no in-page connection banner — connection status is toast-owned', async () => {
     await renderSalonReady({ connectionState: 'disconnected' });
-    expect(screen.getByText(/Connexion perdue/)).toBeTruthy();
+    expect(screen.queryByText(/Connexion perdue/)).toBeNull();
+    expect(screen.queryByText(/Connexion à la partie/)).toBeNull();
   });
 
   it('is axe-clean for the owner (ADR-0050)', async () => {
