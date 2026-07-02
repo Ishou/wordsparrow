@@ -3,10 +3,7 @@ import { CaretRight } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import type { LobbySummary } from '@/application/game';
 
-// "Parties à plusieurs" on /grilles — pure-presentational (ADR-0066: the
-// route fetches via the session-scoped read; this stays single-shape when
-// the user-scoped endpoint lands). Empty list renders nothing: create/join
-// entry points live on the home screen.
+// Session-scoped read only (ADR-0066 §4); stays single-shape when the user-scoped endpoint lands.
 
 const wrap = css({ marginBottom: '18px' });
 
