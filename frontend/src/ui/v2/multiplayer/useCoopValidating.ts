@@ -113,8 +113,7 @@ export function useCoopValidating(
     }
   }, [validatedPositions, stopWord]);
 
-  // A lock that lands after MAX_MS reaches cells already moved into `rejecting`; strip them immediately
-  // so a correct word never renders the reject shake alongside its solved state.
+  // Strip a rejecting cell once it's locked, so a correct word never shows shake + solved together.
   useEffect(() => {
     setRejecting((prev) => {
       if (prev.size === 0) return prev;
