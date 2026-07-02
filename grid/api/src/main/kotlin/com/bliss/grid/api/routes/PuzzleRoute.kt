@@ -9,6 +9,8 @@ import com.bliss.grid.api.dto.RevealCellHintResult
 import com.bliss.grid.api.dto.RevealedCellDto
 import com.bliss.grid.api.dto.ValidatePuzzleRequest
 import com.bliss.grid.api.dto.ValidatePuzzleResult
+import com.bliss.grid.api.dto.ValidateWordRequest
+import com.bliss.grid.api.dto.ValidateWordResult
 import com.bliss.grid.api.dto.toSecondsUntilNextHintWire
 import com.bliss.grid.api.mapper.GridToPuzzleMapper
 import com.bliss.grid.application.auth.CookieVerifier
@@ -24,6 +26,8 @@ import com.bliss.grid.application.puzzle.RevealCellHintOutcome
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.ValidatePuzzleOutcome
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
+import com.bliss.grid.application.puzzle.ValidateWordOutcome
+import com.bliss.grid.application.puzzle.ValidateWordUseCase
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.domain.model.WordAxis
 import io.ktor.http.ContentType
@@ -39,6 +43,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
+import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -76,6 +81,8 @@ private const val AUTH_REQUIRED_TYPE: String =
     "https://bliss.example/errors/auth-required"
 private const val FORBIDDEN_TYPE: String =
     "https://bliss.example/errors/forbidden"
+private const val SERVICE_AUTH_REQUIRED_TYPE: String =
+    "https://bliss.example/errors/service-auth-required"
 
 private const val SESSION_COOKIE_NAME: String = "__Secure-ws_session"
 private const val HINT_CAPABILITY: String = "hint"
@@ -85,6 +92,7 @@ fun Route.puzzles(
     loadOrGenerate: LoadOrGeneratePuzzleUseCase,
     revealCellHint: RevealCellHintUseCase,
     validatePuzzle: ValidatePuzzleUseCase,
+    validateWord: ValidateWordUseCase,
     puzzleRepository: PuzzleRepository,
     hintUsageRepository: HintUsageRepository,
     hintWriteCoordinator: HintWriteCoordinator,
@@ -93,6 +101,7 @@ fun Route.puzzles(
     mapper: GridToPuzzleMapper = GridToPuzzleMapper(),
     dailyPuzzleSelector: DailyPuzzleSelector = DailyPuzzleSelector(),
     clock: Clock = Clock.systemUTC(),
+    wordValidateServiceToken: String? = System.getenv("WORD_VALIDATE_SERVICE_TOKEN"),
 ) {
     val log = LoggerFactory.getLogger("com.bliss.grid.api.routes.PuzzleRoute")
 
@@ -469,6 +478,76 @@ fun Route.puzzles(
                 )
         }
     }
+
+    // Internal per-word oracle (ADR-0084). Token-gated first so an unauthenticated caller learns nothing, not even puzzle existence.
+    post("/v1/puzzles/{puzzleId}/validate-word") {
+        if (!serviceTokenMatches(wordValidateServiceToken, call.request.headers["X-Service-Token"])) {
+            call.respondProblem(
+                status = HttpStatusCode.Unauthorized,
+                title = "Authentification de service requise",
+                type = SERVICE_AUTH_REQUIRED_TYPE,
+                detail = "Cet endpoint interne nécessite un jeton de service valide.",
+            )
+            return@post
+        }
+
+        val rawId = call.parameters["puzzleId"].orEmpty()
+        val puzzleId =
+            parseUuid(rawId) ?: run {
+                call.respondProblem(
+                    status = HttpStatusCode.BadRequest,
+                    title = "Identifiant de grille invalide",
+                    type = INVALID_PUZZLE_ID_TYPE,
+                    detail = "Le paramètre puzzleId doit être un UUID, reçu : '$rawId'.",
+                )
+                return@post
+            }
+
+        val body =
+            try {
+                call.receive<ValidateWordRequest>()
+            } catch (e: SerializationException) {
+                call.respondProblem(
+                    status = HttpStatusCode.BadRequest,
+                    title = "Corps de requête invalide",
+                    type = INVALID_REQUEST_BODY_TYPE,
+                    detail = e.message ?: "request body could not be deserialized as ValidateWordRequest",
+                )
+                return@post
+            }
+
+        val inputs = body.cells.map { FilledCellInput(it.row, it.column, it.letter) }
+        when (val outcome = withContext(Dispatchers.IO) { validateWord.execute(puzzleId, inputs) }) {
+            is ValidateWordOutcome.Result ->
+                call.respond(ValidateWordResult(correct = outcome.correct))
+            is ValidateWordOutcome.PuzzleNotFound ->
+                call.respondProblem(
+                    status = HttpStatusCode.NotFound,
+                    title = "Grille introuvable",
+                    type = PUZZLE_NOT_FOUND_TYPE,
+                    detail = "Aucune grille pour l'identifiant '$puzzleId'.",
+                )
+            is ValidateWordOutcome.RequestInvalid ->
+                call.respondProblem(
+                    status = HttpStatusCode.BadRequest,
+                    title = "Requête de validation invalide",
+                    type = INVALID_VALIDATE_REQUEST_TYPE,
+                    detail = outcome.reason,
+                )
+        }
+    }
+}
+
+// Constant-time equality; false when either side is unset so a missing WORD_VALIDATE_SERVICE_TOKEN degrades closed (ADR-0084).
+private fun serviceTokenMatches(
+    expected: String?,
+    provided: String?,
+): Boolean {
+    if (expected.isNullOrEmpty() || provided.isNullOrEmpty()) return false
+    return MessageDigest.isEqual(
+        expected.toByteArray(Charsets.UTF_8),
+        provided.toByteArray(Charsets.UTF_8),
+    )
 }
 
 private suspend fun hintBudgetFor(
