@@ -55,7 +55,7 @@ data class GridConfigDto(
 data class GameSessionDto(
     val puzzle: GamePuzzleDto,
     val entries: List<CellEntryDto>,
-    val lockedPositions: List<GamePositionDto> = emptyList(),
+    val lockedPositions: List<LockedCellDto> = emptyList(),
     val startedAt: String,
     val completedAt: String?,
     val presence: List<PresenceEntryDto> = emptyList(),
@@ -117,6 +117,14 @@ data class GameDefinitionClueDto(
 data class GamePositionDto(
     val row: Int,
     val column: Int,
+)
+
+/** `LockedCell` schema: a locked cell plus the session that first locked it (first-writer-wins, ADR-0086). */
+@Serializable
+data class LockedCellDto(
+    val row: Int,
+    val column: Int,
+    val lockedBy: String,
 )
 
 @Serializable

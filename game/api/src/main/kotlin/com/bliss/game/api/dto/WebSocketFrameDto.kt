@@ -199,12 +199,14 @@ sealed class ServerToClientFrame {
      * Server broadcast: every cell in [positions] is now locked (its
      * containing word was just validated correct). Mirrors `WordLockedPayload`
      * in `game/api/asyncapi.yaml`. A crossing fill that closes two words at
-     * once produces a single frame whose `positions` is the union.
+     * once produces a single frame whose `positions` is the union. `lockedBy`
+     * is the session whose write completed the word(s) (ADR-0086).
      */
     @Serializable
     @SerialName("wordLocked")
     data class WordLocked(
         val positions: List<GamePositionDto>,
+        val lockedBy: String,
         val lockedAt: String,
     ) : ServerToClientFrame()
 

@@ -19,6 +19,7 @@ import kotlin.time.Duration.Companion.seconds
 class GameSessionTest {
     private val pPos = Position(0, 3)
     private val aPos = Position(0, 4)
+    private val finder = SessionId("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b")
 
     @Test
     fun `isSolved is false when the puzzle has no answerable cells`() {
@@ -97,12 +98,12 @@ class GameSessionTest {
 
     @Test
     fun `lockedPositions defaults to empty`() {
-        assertThat(gameSession().lockedPositions).isEqualTo(emptySet<Position>())
+        assertThat(gameSession().lockedPositions).isEqualTo(emptyMap<Position, SessionId>())
     }
 
     @Test
     fun `lockedPositions roundtrips when set`() {
-        val locks = setOf(pPos, aPos)
+        val locks = mapOf(pPos to finder, aPos to finder)
         val s =
             GameSession(
                 puzzle = gameSession().puzzle,

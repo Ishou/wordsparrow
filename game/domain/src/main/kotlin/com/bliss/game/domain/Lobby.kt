@@ -31,16 +31,17 @@ data class CellEntry(
 /**
  * Live game state embedded in a [Lobby] once the owner has clicked Start.
  * [entries] is the authoritative server-side cell map; [completedAt] is null
- * until the puzzle is solved. [lockedPositions] is the cumulative set of
- * cells whose containing word was validated correct — server-enforced
- * read-only and surfaced on the lobbyState snapshot for late-joiners.
+ * until the puzzle is solved. [lockedPositions] maps each cumulatively
+ * locked cell to the session that first locked it (first-writer-wins on
+ * crossings, ADR-0086) — server-enforced read-only and surfaced on the
+ * lobbyState snapshot for late-joiners.
  */
 data class GameSession(
     val puzzle: GamePuzzle,
     val entries: Map<Position, CellEntry>,
     val startedAt: Instant,
     val completedAt: Instant?,
-    val lockedPositions: Set<Position> = emptySet(),
+    val lockedPositions: Map<Position, SessionId> = emptyMap(),
 ) {
     init {
         if (completedAt != null) {

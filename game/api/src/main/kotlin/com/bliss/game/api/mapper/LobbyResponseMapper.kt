@@ -17,6 +17,7 @@ import com.bliss.game.api.dto.GamePuzzleDto
 import com.bliss.game.api.dto.GameSessionDto
 import com.bliss.game.api.dto.GridConfigDto
 import com.bliss.game.api.dto.LobbyResponseDto
+import com.bliss.game.api.dto.LockedCellDto
 import com.bliss.game.api.dto.PlayerDto
 import com.bliss.game.api.dto.PresenceEntryDto
 import com.bliss.game.domain.BlockCell
@@ -75,9 +76,9 @@ private fun GameSession.toDto(presence: Map<String, PresencePosition>) =
                 .sortedWith(compareBy({ it.key.row }, { it.key.column }))
                 .map { (pos, entry) -> entry.toDto(pos) },
         lockedPositions =
-            lockedPositions
-                .sortedWith(compareBy({ it.row }, { it.column }))
-                .map { GamePositionDto(row = it.row, column = it.column) },
+            lockedPositions.entries
+                .sortedWith(compareBy({ it.key.row }, { it.key.column }))
+                .map { (pos, owner) -> LockedCellDto(row = pos.row, column = pos.column, lockedBy = owner.value) },
         startedAt = ISO.format(startedAt),
         completedAt = completedAt?.let(ISO::format),
         // Sort by sessionId for deterministic JSON, mirroring `entries` above.
