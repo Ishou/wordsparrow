@@ -97,6 +97,17 @@ describe('HttpLobbyClient.createLobby', () => {
     );
   });
 
+  it('lifts a 401 problem-details body into LobbyClientError(kind: unauthorized) — guest hosting (ADR-0083)', async () => {
+    const problem = problemBody(401, 'Sign in to host a game',
+      'https://bliss.example/errors/hosting-requires-auth');
+    server.use(http.post(`${BASE_URL}/v1/lobbies`, () => respondProblem(401, problem)));
+
+    await expectError(
+      makeClient().createLobby({ ownerSessionId: sessionId, ownerPseudonym: pseudonym }),
+      { kind: 'unauthorized', status: 401, messageMatch: /Sign in to host a game/, type: problem.type },
+    );
+  });
+
   it('treats a non-RFC-7807 response (e.g., a wrong service occupying the port) as upstream-unavailable', async () => {
     // Mimics the local-dev failure mode: something is bound to
     // localhost:8081 but it isn't game-api — a gunicorn HTML 404

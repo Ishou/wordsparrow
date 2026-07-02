@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useRouteContext } from '@tanstack/react-router';
 import { ArrowRight, Eye, EyeSlash, UsersThree } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
 import { extractLobbyCode, LOBBY_CODE_PATTERN } from '@/domain/game/lobbyCode';
 import type { DailySummary, PuzzleRepository, WordsRepository } from '@/application';
-import type { LobbyClient } from '@/application/game';
+import { LobbyClientError, type LobbyClient } from '@/application/game';
+import { useOptionalAuth } from '@/ui/components/auth';
+import { HostSignInSheet } from './HostSignInSheet';
 import type { Pseudonym, SessionId } from '@/domain/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Skeleton } from '@/design-system';
@@ -197,16 +199,29 @@ export function HomeScreen({
   // The mini-game docks our on-screen keyboard over the bottom nav; hide the nav while it's up.
   const [miniGameTyping, setMiniGameTyping] = useState(false);
   const [coopPending, setCoopPending] = useState(false);
+  const [hostSignInOpen, setHostSignInOpen] = useState(false);
+  const auth = useOptionalAuth();
+  const { authClient } = useRouteContext({ from: '__root__' });
 
   const multiplayerOn = lobbyClient != null && getSession != null;
+  // Hosting is entitlement-gated server-side (ADR-0083): guests get 401. Prompt sign-in before the call so they don't hit a silent failure; joining stays open.
   const handleCreateCoop = () => {
     if (!multiplayerOn || coopPending) return;
+    // Gate on confirmed 'anon' only, not 'loading' — a returning authed player mustn't see this (ADR-0083).
+    if (auth?.state.status === 'anon') {
+      setHostSignInOpen(true);
+      return;
+    }
     setCoopPending(true);
     const { sessionId: ownerSessionId, pseudonym: ownerPseudonym } = getSession();
     lobbyClient
       .createLobby({ ownerSessionId, ownerPseudonym })
       .then((created) => navigate({ to: '/lobby/$lobbyId', params: { lobbyId: created.id } }))
-      .catch(() => setCoopPending(false));
+      .catch((cause) => {
+        setCoopPending(false);
+        // Safety net for a session that expired between load and tap (ADR-0083).
+        if (cause instanceof LobbyClientError && cause.kind === 'unauthorized') setHostSignInOpen(true);
+      });
   };
 
   const joinInputRef = useRef<HTMLInputElement>(null);
@@ -455,6 +470,7 @@ export function HomeScreen({
       </div>
 
       <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} streak={streak.cur} />
+      <HostSignInSheet open={hostSignInOpen} authClient={authClient} onClose={() => setHostSignInOpen(false)} />
     </main>
   );
 }

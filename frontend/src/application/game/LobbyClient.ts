@@ -101,6 +101,7 @@ export interface LobbyProgress {
 
 export type LobbyClientErrorKind =
   | 'validation' // 400 — request body malformed.
+  | 'unauthorized' // 401 — hosting requires a signed-in player (ADR-0083).
   | 'not-found' // 404 — lobby id unknown / GC'd.
   | 'transient' // 5xx — server-side, safe to retry.
   | 'upstream-unavailable'; // network error — DNS / connection refused / abort.
