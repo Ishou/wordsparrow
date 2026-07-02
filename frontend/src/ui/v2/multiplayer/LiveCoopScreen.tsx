@@ -49,8 +49,8 @@ const shell = css({
     borderRadius: '28px',
     boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
   },
-  // Desktop: match the home frame width so the top bars align; the board itself is capped narrower below.
-  lg: { maxWidth: '1140px', height: '100dvh', borderRadius: 0, boxShadow: 'none' },
+  // Desktop: full-bleed like solo PlayScreen — uncap the shell so the DesktopAppBar's 100vw frosting isn't clipped by overflow:hidden.
+  lg: { maxWidth: 'none', height: '100dvh', borderRadius: 0, boxShadow: 'none' },
 });
 const GUTTER = '14px';
 const header = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 4, padding: `12px ${GUTTER} 0`, display: 'flex', flexDirection: 'column', gap: '8px', lg: { position: 'static', width: '100%', paddingTop: '24px', paddingInline: '36px' } });
@@ -88,7 +88,7 @@ const iconBtn = css({
   lg: { width: '44px', height: '44px', background: 'rgba(255,255,255,0.62)', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', fontSize: '20px', _hover: { background: 'rgba(255,255,255,0.82)' } },
 });
 const headerSpacer = css({ flex: 1 });
-const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%', maxWidth: '760px', marginInline: 'auto' } });
+const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%' } });
 
 const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 4, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { position: 'static', paddingBottom: '24px' } });
 
