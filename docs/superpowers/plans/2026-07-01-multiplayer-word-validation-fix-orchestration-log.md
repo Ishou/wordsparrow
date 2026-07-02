@@ -234,3 +234,4 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   the FINAL piece — word-locking fix, guest gate, wordRejected sync-shake, and ADR-0086
   ADR+schema are all merged & deploying.
 - 2026-07-02 — **Auto-merge cron (15be1eed) DELETED.** Remaining merges (#1253/#1254) are self-approval-blocked → the cron would only re-hit the block each tick (== retrying, forbidden). Stopped it; both PRs left green + ready for one-click maintainer merge. Autonomous work complete.
+- 2026-07-02 — **#1254 (frontend coloring) MERGED (comment-block finding already fixed on remote by 24c3a6b3; my parallel collapse was redundant — discarded).** **ACTION:** both rollouts merged (ADR-0085 wordRejected + ADR-0086 coloring); watch deploy. Cron 15be1eed being deleted.
