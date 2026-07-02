@@ -68,8 +68,7 @@ internal fun intArg(
     return if (idx >= 0 && idx + 1 < args.size) args[idx + 1].toIntOrNull() ?: default else default
 }
 
-// force=true appends a fresh daily even when the date already has a row, refreshing stale clues (ADR-0081).
-// startOffset backdates the window start (e.g. -7 to also regenerate the past week); windowDays widens its span.
+// force appends a fresh daily even when a row exists (ADR-0081); startOffset backdates the window, windowDays widens it.
 private fun runDailies(
     force: Boolean,
     startOffset: Int = 0,
