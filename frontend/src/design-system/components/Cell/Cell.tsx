@@ -44,8 +44,7 @@ const byState = {
 // Opt-in flatten ripple, played once when a cell becomes solved.
 const solveRipple = css({ animation: 'wsFlatten 0.26s ease both' });
 
-// ADR-0086: co-op solved fill tinted with the finder's `--player-color` (set by
-// the caller); 32% matches the presence word-tint, over the neutral solved sable.
+// ADR-0086: co-op solved fill tinted with the finder's `--player-color`.
 const solvedTint = css({ bg: 'color-mix(in srgb, var(--player-color) 32%, token(colors.ws.sable))' });
 
 export type CellState = keyof typeof byState;

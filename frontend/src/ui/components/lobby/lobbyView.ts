@@ -124,8 +124,7 @@ export function reduceLobby(current: LobbyView, event: GameEvent): LobbyView {
         seen.add(key);
         merged.push(p);
       }
-      // First-writer-wins (ADR-0086): dedup keeps the existing owner, so a
-      // crossing cell already locked by an earlier word is never re-attributed.
+      // ADR-0086: first-writer-wins — dedup keeps the existing owner on crossing cells.
       for (const p of event.positions) {
         const key = `${p.row},${p.column}`;
         if (seen.has(key)) continue;

@@ -39,9 +39,7 @@ export interface Position {
   readonly column: number;
 }
 
-// A locked cell plus the session that first locked it (ADR-0086). Crossing
-// cells keep the first finder's colour (first-writer-wins). Mirrors the
-// AsyncAPI/OpenAPI `LockedCell` schema.
+// ADR-0086: locked cell plus the session that first locked it (first-writer-wins on crossings).
 export interface LockedCell {
   readonly row: number;
   readonly column: number;

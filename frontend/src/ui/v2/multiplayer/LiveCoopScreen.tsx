@@ -158,8 +158,7 @@ export function LiveCoopScreen({
     return set;
   }, [isCompleted, lockedPositions, puzzle.cells]);
 
-  // ADR-0086: per-cell finder so PuzzleBoard tints each locked cell with the
-  // player's colour. Solo has none; COMPLETED-lit cells are left untinted.
+  // ADR-0086: per-cell finder so PuzzleBoard tints each locked cell with the player's colour.
   const lockedByAt = useMemo<ReadonlyMap<string, SessionId>>(() => {
     const m = new Map<string, SessionId>();
     for (const p of lockedPositions) m.set(posKey(p.row, p.column), p.lockedBy);
