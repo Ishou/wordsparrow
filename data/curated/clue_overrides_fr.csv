@@ -1,7 +1,11 @@
 word,clue,note
 pain,Aliment de base,english-leak: pain (bread) generated as EN "pain" (souffrance)
+pains,Aliments de base,english-leak plural of pain
 cane,Femelle du canard,english-leak: cane (duck) generated as EN "cane" (bâton); regressed repeatedly
 canes,Femelles du canard,english-leak plural of cane
 sole,Poisson plat,english-leak: sole (fish) generated as EN "sole" (unique)
+soles,Poissons plats,english-leak plural of sole
 pull,Vêtement en laine,english-leak: pull (sweater) generated as EN "pull" (tirer)
+pulls,Vêtements en laine,english-leak plural of pull
 score,Total des points,english-leak: score (noun) generated as EN "to score" (obtenir)
+scores,Totaux des points,english-leak plural of score
