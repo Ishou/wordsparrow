@@ -96,11 +96,7 @@ def is_obscure_tag(tag_str: str) -> str | None:
         return "subj-imparfait"
     if "cond" in tags and ("1pl" in tags or "2pl" in tags):
         return "cond-1pl-2pl"
-    # Literary interrogative-inversion forms (`posè-je`, `réprimè-je`) — same
-    # crossword-noise class as passé simple, and unclueable: their `Nisg` person
-    # isn't in `PERSON_TOKENS`, so the inflater skips them (no-inflection-finite).
-    # Block only inversion-ONLY rows so a syncretic surface that is also a normal
-    # conjugation (`finis` = 2sg + 1isg) survives via its normal-person reading.
+    # Literary interrogative-inversion forms (`posè-je`) are unclueable (`Nisg` isn't in `PERSON_TOKENS`); block only inversion-ONLY rows so a syncretic surface like `finis` (2sg + 1isg) survives via its normal-person reading.
     if (tags & _INVERSION_PERSONS) and not (tags & _NORMAL_PERSONS):
         return "inversion"
     return None

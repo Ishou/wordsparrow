@@ -39,10 +39,7 @@ def main() -> None:
         raise SystemExit(f"grammalecte lexique not found: {args.lexique}")
     index = MorphologyIndex.load(args.lexique)
 
-    # Filter raw lines verbatim — parse only to make the drop decision — so every
-    # kept row keeps the exact bytes the Kotlin `export-words` writer produced (no
-    # requoting / line-ending churn that would swamp the diff). Each row is a
-    # single physical line here (no embedded newlines), so raw-line ↔ record align.
+    # Filter raw lines verbatim (parsed only to decide drop/keep) so kept rows preserve the exact bytes the Kotlin `export-words` writer produced, avoiding requoting/line-ending diff churn.
     raw = args.wordlist.read_text(encoding="utf-8").splitlines(keepends=True)
     header, body = raw[0], raw[1:]
     records = list(csv.reader(body))

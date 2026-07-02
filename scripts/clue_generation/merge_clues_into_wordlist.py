@@ -100,10 +100,7 @@ def main() -> None:
                 r["clue"] = ""
                 reset += 1
 
-    # Curated overrides win, applied last — the hand-authored source of truth
-    # for clues generation keeps getting wrong (English-sense homograph leaks).
-    # This is what lets `pain`/`cane` survive a full regeneration instead of
-    # being clobbered by the next `run_production.sh` (cfa0980f's prescription).
+    # Curated overrides win, applied last, so hand-authored fixes for recurring English-sense homograph leaks (e.g. `pain`/`cane`) survive the next `run_production.sh` regeneration.
     overrides = load_overrides(args.overrides)
     overridden = 0
     for r in rows:

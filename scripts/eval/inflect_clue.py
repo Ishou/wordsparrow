@@ -31,20 +31,15 @@ from morphology_index import (
     extract_inflection_target,
 )
 
-# Moods that carry a grammatical person. A verb form in one of these must be
-# matched to the surface's exact person — never inflated to "whatever row
-# matches first". `infi`/`ppre`/`ppas` are person-less and relax freely.
+# Person-bearing moods (must match the surface's exact person, never relaxed); `infi`/`ppre`/`ppas` are person-less.
 _FINITE_MOODS = MOOD_TOKENS - {"infi", "ppre", "ppas"}
 
-# Moods whose negation puts the particles around the verb (`ne X pas`): every
-# finite tense plus the present participle (`ne sachant pas`). Infinitives keep
-# `ne pas X`; past participles have no simple negation and are dropped instead.
+# Moods whose negation wraps the verb (`ne X pas`) rather than preceding it (`ne pas X`, infinitives; ppas has no simple negation).
 _NEG_RESTRUCTURE_MOODS = _FINITE_MOODS | {"ppre"}
 
 # Vowels + mute-h that trigger `ne → n'` elision (mirrors lemmatize_clue).
 _ELISION_INITIALS = set("aeiouéèêëàâîïôûùüÿœh")
-# Reflexive clitics that may sit between `pas` and the verb in a negated
-# infinitive (`Ne pas se présenter`) and must stay in front of the verb.
+# Reflexive clitics that may sit between `pas` and the verb in `Ne pas se présenter` and must stay in front of it.
 _REFLEXIVE_CLITICS = {"se", "s"}
 
 # Pre-head adjectives in French — a small closed set that conventionally
@@ -171,9 +166,7 @@ def _has_reflexive_head(tokens: list[str]) -> bool:
 
 
 def _negation_frame(tokens: list[str]) -> tuple[int, int] | None:
-    """Return `(ne_idx, pas_idx)` iff the clue opens with the negated-infinitive
-    frame `Ne pas …`; otherwise None. Only the leading particles qualify — a
-    `pas` deeper in the clue is not a negation we restructure."""
+    """Return `(ne_idx, pas_idx)` iff the clue opens with `Ne pas …`, else None — only the leading particles qualify, not a `pas` deeper in the clue."""
     alpha = [(i, t.lower()) for i, t in enumerate(tokens) if _is_alpha_token(t)]
     if len(alpha) >= 2 and alpha[0][1] == "ne" and alpha[1][1] == "pas":
         return alpha[0][0], alpha[1][0]
@@ -183,10 +176,7 @@ def _negation_frame(tokens: list[str]) -> tuple[int, int] | None:
 def _restructure_negation(
     tokens: list[str], ne_idx: int, pas_idx: int, head_idx: int,
 ) -> list[str] | None:
-    """Rewrite `Ne pas [se] <verb> …` → `Ne [se] <verb> pas …`, eliding `ne → n'`
-    before a vowel-initial verb. Returns None (no-op) when non-reflexive material
-    sits between `pas` and the verb — that shape isn't a plain negated infinitive
-    and restructuring it would scramble the clue."""
+    """Rewrite `Ne pas [se] <verb> …` → `Ne [se] <verb> pas …`, eliding `ne → n'` before a vowel; returns None when non-reflexive material sits between `pas` and the verb, since that shape isn't a plain negated infinitive."""
     between = tokens[pas_idx + 1:head_idx]
     if any(_is_alpha_token(t) and t.lower() not in _REFLEXIVE_CLITICS for t in between):
         return None
@@ -257,13 +247,7 @@ def _decompose_targets(target: set[str]) -> list[set[str]]:
                 if trial != target:
                     candidates.append(trial)
 
-    # As a last resort, try with mood-only (drop person constraint) — but ONLY
-    # when the target had no person to begin with (non-finite / nominal). For a
-    # finite verb carrying a person, dropping it lets the index return an
-    # arbitrary-person form ("whatever row matches first" — the posè→Placent
-    # class of bug). Exact or skip. We also never fall back to an empty target:
-    # that would match the lemma's first row (typically the infinitive / mas-sg),
-    # a silent identity that defeats the `no-inflection` signal callers rely on.
+    # Mood-only fallback (drop person) only when the target had no person to begin with — for a finite verb, dropping person risks an arbitrary-person match (the posè→Placent bug); exact or skip instead. Never fall back to an empty target either, since that silently matches the lemma's first row rather than a real conjugation.
     if not persons:
         for m in [m for m in _MOOD_PREFERENCE if m in moods]:
             candidates.append(rest | {m})
@@ -298,12 +282,7 @@ def inflect_clue(
     if not target:
         return InflectionResult(_capitalize_first(clue), "no-target-pos")
 
-    # Exact-or-skip on person: a finite-verb surface must carry a person we can
-    # match. If the surface's person was unrepresentable — the literary inversion
-    # persons `Nisg` grammalecte emits for `posè-je`, which `PERSON_TOKENS` omits
-    # and `extract_inflection_target` therefore drops — the target loses its
-    # person and the matcher would otherwise return an arbitrary-person head
-    # (`posè → Placent`). Skip instead of guessing.
+    # Exact-or-skip on person: skip rather than guess when the surface's person is unrepresentable (e.g. the `Nisg` inversion person for `posè-je`, dropped by `PERSON_TOKENS`), since matching would otherwise return an arbitrary-person head (`posè → Placent`).
     if (target_pos == "verbe" and (target & _FINITE_MOODS)
             and not (target & PERSON_TOKENS)):
         return InflectionResult(_capitalize_first(clue), "no-inflection-finite")
@@ -363,10 +342,7 @@ def inflect_clue(
             and _has_reflexive_head(tokens)):
         return InflectionResult(_capitalize_first(clue), "pp-reflexive-skipped")
 
-    # Negated-infinitive + past participle: `Ne pas rester` can't restructure to
-    # a clean simple-negation for a ppas surface (`*Ne pas resté`). Drop it — the
-    # higher-freq present sibling supplies the grid clue (accent-fold collision,
-    # CsvWordRepository). Finite surfaces are restructured below instead.
+    # Negated-infinitive + past participle can't restructure to a clean simple-negation (`Ne pas rester` → `*Ne pas resté`); skip and let the higher-freq present sibling supply the grid clue instead (finite surfaces are restructured below).
     if (target_pos == "verbe" and "ppas" in target
             and _negation_frame(tokens) is not None):
         return InflectionResult(_capitalize_first(clue), "neg-nonfinite-skipped")
@@ -544,12 +520,7 @@ def inflect_clue(
             continue
         break
 
-    # Negated-infinitive → finite: `Ne pas <inf>` inflates the head in place to
-    # `Ne pas <finite>`, which is ungrammatical (`espère → *Ne pas désespère`).
-    # Once the head has become a finite (or present-participle) form, move `pas`
-    # behind it and elide `ne`: `Ne désespère pas`, `N'acceptant pas`. Only when
-    # the head actually changed — an unchanged infinitive surface keeps the
-    # correct citation-form `Ne pas <inf>`.
+    # Negated-infinitive → finite: an unrestructured `Ne pas <finite>` is ungrammatical (`espère → *Ne pas désespère`), so once the head has changed to a finite/present-participle form, move `pas` behind it and elide `ne` (`Ne désespère pas`, `N'acceptant pas`).
     if head_changed and (target & _NEG_RESTRUCTURE_MOODS):
         neg = _negation_frame(new_tokens)
         if neg is not None and head_idx > neg[1]:

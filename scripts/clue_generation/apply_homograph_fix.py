@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""Apply tightened homograph replacements to the (lemma, pos) corpus.
-
-Gate: replace only if
-  - score_delta > 0.03
-  - new_clue != old_clue
-  - token-set Jaccard(old_tokens, new_tokens) <= 0.7  (drops near-rewrites)
-  - the new clue RE-VALIDATES `ok` against the row's own POS.
-
-The last gate is recomputed here, not trusted from the diff's `new_flag`:
-trusting the self-reported flag is what let `score -> Obtenir` ship (a verb
-clue on the noun `score` with a copied `ok`). A homograph replacement lands
-only on the (lemma, pos) row(s) whose POS the new clue actually matches.
-"""
+"""Apply tightened homograph replacements (score_delta > 0.03, changed clue, Jaccard <= 0.7, re-validated `ok` against the row's own POS — not trusted from the diff's `new_flag`, the gap that let `score -> Obtenir` ship)."""
 from __future__ import annotations
 import argparse, csv, os, re, sys
 from collections import defaultdict

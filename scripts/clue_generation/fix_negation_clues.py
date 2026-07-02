@@ -25,8 +25,7 @@ from morphology_index import MorphologyIndex  # noqa: E402
 
 
 def _head_after_pas(tokens: list[str], pas_idx: int, index: MorphologyIndex) -> int | None:
-    """Index of the verb the negation governs — the first non-reflexive content
-    token after `pas`. None if that token isn't a verb (not a plain negated verb)."""
+    """Index of the first non-reflexive content token after `pas`, or None if it isn't a verb (not a plain negated verb)."""
     for i in range(pas_idx + 1, len(tokens)):
         if not _is_alpha_token(tokens[i]):
             continue
@@ -54,9 +53,7 @@ def fix_clue(clue: str, index: MorphologyIndex) -> tuple[str, str]:
     if head_idx is None:
         return clue, "kept"
     moods = _head_moods(tokens[head_idx], index)
-    # Finite / present-participle → restructure `ne X pas`. Infinitive keeps
-    # `ne pas X` (already correct). Past-participle-only → blank (no simple
-    # negation; the present sibling supplies the grid clue).
+    # Finite/present-participle restructures to `ne X pas`; infinitive keeps `ne pas X`; past-participle-only blanks (no simple negation, present sibling supplies the grid clue).
     if not (moods & _NEG_RESTRUCTURE_MOODS):
         return ("", "blanked") if "infi" not in moods else (clue, "kept")
     restructured = _restructure_negation(tokens, ne_idx, pas_idx, head_idx)
