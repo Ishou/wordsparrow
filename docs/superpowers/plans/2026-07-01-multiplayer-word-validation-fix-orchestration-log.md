@@ -145,3 +145,11 @@ Append-only event ledger for maintainer review. Newest at the bottom.
 - 2026-07-02 — **Remaining:** merge #1244 on LGTM → grid+game deploy → co-op
   locks (token live) → then merge #1243 (shake). Second access control (internal
   connector, ADR-0084 §3) remains a maintainer follow-up.
+- 2026-07-02 — **#1244 (game rewire) MERGED** (05:10). Entire ADR-0084 backend is
+  now on main: grid serves token-gated validate-word (#1245), game calls it
+  (#1244), token provisioned in both env Secrets. Post-merge pipeline (CI → Build
+  Image → Deploy API k8s) running. Once grid+game pods roll to the new images
+  (they read the provisioned token at start), **co-op word-locking is restored**.
+- 2026-07-02 — **#1243 (frontend shake) gated on backend deploy.** Monitoring the
+  Deploy API (k8s) run; will merge #1243 once grid+game are deployed with the
+  token (so correct words lock and only wrong words shake).
