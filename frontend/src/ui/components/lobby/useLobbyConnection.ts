@@ -284,7 +284,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     if (connectionState === 'reconnecting' || connectionState === 'connecting') {
       showToast({ text: 'Reconnexion…', tone: 'info', duration: null });
     } else if (connectionState === 'disconnected') {
-      // Toast-owned since the salon dropped its in-page banner; sticky until the retry loop lands back on `connected`.
+      // Sticky until the retry loop lands back on `connected`.
       showToast({ text: 'Connexion perdue. On se reconnecte…', tone: 'info', duration: null });
     }
   }, [connectionState, showToast, dismissToast]);
