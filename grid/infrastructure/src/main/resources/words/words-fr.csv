@@ -6555,8 +6555,8 @@ candidate,fr,9,150677,0.91262233,,grammalecte,MPL-2.0,candidat
 candidates,fr,10,150498,0.9273163,,grammalecte,MPL-2.0,candidat
 candidats,fr,9,4970300,0.8790212,,grammalecte,MPL-2.0,candidat
 candidature,fr,11,1427000,0.92695564,Postulation,grammalecte,MPL-2.0,candidature
-cane,fr,4,94500,0.7989368,Bâton,grammalecte,MPL-2.0,cane
-canes,fr,5,40102,0.8367726,Bâtons,grammalecte,MPL-2.0,cane
+cane,fr,4,94500,0.7989368,Femelle du canard,grammalecte,MPL-2.0,cane
+canes,fr,5,40102,0.8367726,Femelles du canard,grammalecte,MPL-2.0,cane
 canevas,fr,7,330289,0.86799425,Tissu à broder,grammalecte,MPL-2.0,canevas
 canif,fr,5,94448,0.8291635,Couteau d’écolier,grammalecte,MPL-2.0,canif
 canifs,fr,6,15093,0.868653,Couteaux d’écolier,grammalecte,MPL-2.0,canif
@@ -29056,7 +29056,7 @@ paieront,fr,8,208659,0.8928865,,grammalecte,MPL-2.0,payer
 paies,fr,5,17160,0.8432378,Rémunérations,grammalecte,MPL-2.0,paie
 paille,fr,6,1156268,0.8268424,,grammalecte,MPL-2.0,paille
 pailles,fr,7,202601,0.87246704,,grammalecte,MPL-2.0,paille
-pain,fr,4,7099217,0.71769804,Souffrance,grammalecte,MPL-2.0,pain
+pain,fr,4,7099217,0.71769804,Aliment de base,grammalecte,MPL-2.0,pain
 pains,fr,5,594937,0.8069629,Souffrances,grammalecte,MPL-2.0,pain
 pair,fr,4,2396478,0.74634075,,grammalecte,MPL-2.0,pair
 paire,fr,5,1766796,0.7883808,,grammalecte,MPL-2.0,pair
@@ -33136,7 +33136,7 @@ puisée,fr,6,250370,0.8463572,Tirée,grammalecte,MPL-2.0,puiser
 puisées,fr,7,238130,0.8710785,Tirées,grammalecte,MPL-2.0,puiser
 puisés,fr,6,319915,0.84370065,Tirés,grammalecte,MPL-2.0,puiser
 puits,fr,5,4176032,0.7698241,Trou profond,grammalecte,MPL-2.0,puits
-pull,fr,4,102255,0.7980067,Tirer,grammalecte,MPL-2.0,pull
+pull,fr,4,102255,0.7980067,Vêtement en laine,grammalecte,MPL-2.0,pull
 pulls,fr,5,15291,0.8440181,Tirer,grammalecte,MPL-2.0,pull
 pullulation,fr,11,83133,0.942035,,grammalecte,MPL-2.0,pullulation
 pulpe,fr,5,678316,0.8049959,Chair juteuse d’un fruit,grammalecte,MPL-2.0,pulpe
@@ -38674,7 +38674,7 @@ scléroses,fr,9,32832,0.9202604,,grammalecte,MPL-2.0,sclérose
 scolarité,fr,9,804509,0.90036947,Durée des études,grammalecte,MPL-2.0,scolarité
 scolarités,fr,10,11780,0.93712234,Durées des études,grammalecte,MPL-2.0,scolarité
 scolastique,fr,11,788645,0.9310684,,grammalecte,MPL-2.0,scolastique
-score,fr,5,638409,0.8059312,Obtenir,grammalecte,MPL-2.0,score
+score,fr,5,638409,0.8059312,Total des points,grammalecte,MPL-2.0,score
 scores,fr,6,248277,0.8464597,Obtenir,grammalecte,MPL-2.0,score
 scribe,fr,6,239450,0.84685695,Copiste égyptien,grammalecte,MPL-2.0,scribe
 scribes,fr,7,220215,0.8717499,Copistes égyptiens,grammalecte,MPL-2.0,scribe
@@ -39380,7 +39380,7 @@ soldé,fr,5,117650,0.82691914,Soudé,grammalecte,MPL-2.0,solder
 soldée,fr,6,129095,0.85286623,Soudée,grammalecte,MPL-2.0,solder
 soldées,fr,7,96945,0.87845564,Soudées,grammalecte,MPL-2.0,solder
 soldés,fr,6,121684,0.8534105,Soudés,grammalecte,MPL-2.0,solder
-sole,fr,4,459107,0.77810603,Unique,grammalecte,MPL-2.0,sole
+sole,fr,4,459107,0.77810603,Poisson plat,grammalecte,MPL-2.0,sole
 soleil,fr,6,12868277,0.77523327,Astre du jour,grammalecte,MPL-2.0,soleil
 soleils,fr,7,302972,0.86879045,Astres du jour,grammalecte,MPL-2.0,soleil
 solennel,fr,8,1125148,0.8771966,Qui inspire le respect,grammalecte,MPL-2.0,solennel
