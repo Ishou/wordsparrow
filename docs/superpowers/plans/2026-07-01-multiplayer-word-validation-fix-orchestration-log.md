@@ -223,3 +223,4 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   LockedCell+lockedBy; frontend game types too). **Re-dispatched the two coloring
   IMPL agents OFF MAIN** (prior ones died on the session limit): `feat/game-locked-by-impl`
   + `feat/coop-locked-word-color`. Cron phases 6/7 will merge them on green+LGTM.
+- 2026-07-02 — **Both coloring impl agents were SLOW (~66min), not dead** (idle/164B output was just unflushed transcript). Both completed green: game **#1253**, frontend **#1254**. No zombie cleanup needed; pruned their two idle worktrees. **Merged #1253 (game impl, phase 6).** Last phase: #1254 (frontend coloring) — merges next tick on green + autonomous LGTM, then cron self-deletes → ADR-0086 complete.
