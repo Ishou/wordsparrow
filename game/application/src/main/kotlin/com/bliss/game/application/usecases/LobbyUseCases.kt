@@ -430,7 +430,7 @@ class UpdateCellUseCase(
             if (correct) {
                 newLocks += word.filter { it !in session.lockedPositions }
             } else {
-                rejectedPositions += word
+                rejectedPositions += word.filter { it !in session.lockedPositions }
             }
         }
         // ADR-0085: broadcast wrong-completion cells so clients shake synchronously, mirror of WordLocked.

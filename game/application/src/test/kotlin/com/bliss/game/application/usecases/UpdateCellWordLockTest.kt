@@ -254,6 +254,28 @@ class UpdateCellWordLockTest {
         }
 
     @Test
+    fun `rejecting a word that crosses an already-locked word excludes the locked cell`() =
+        runTest {
+            // Lock the across word first, then get the down word wrong. The
+            // shared cell (cross03) is already locked-correct client-side;
+            // WordRejected must not tell peers to shake it too.
+            val h = harness()
+            val lobby = h.create(sessionA, alice).value
+            h.start(lobby.id, sessionA).requireSuccess()
+
+            h.write(lobby.id, sessionA, across01, Letter('P')).requireSuccess()
+            h.write(lobby.id, sessionA, across02, Letter('A')).requireSuccess()
+            h.write(lobby.id, sessionA, cross03, Letter('S')).requireSuccess()
+
+            h.write(lobby.id, sessionA, down13, Letter('Z')).requireSuccess()
+            val out = h.write(lobby.id, sessionA, down23, Letter('Z')).requireSuccess()
+
+            val rejected = out.events.filterIsInstance<LobbyEvent.WordRejected>()
+            assertThat(rejected).hasSize(1)
+            assertThat(rejected[0].positions).containsExactlyInAnyOrder(down13, down23)
+        }
+
+    @Test
     fun `a validator failure on one candidate word does not block locking of the other`() =
         runTest {
             // Down word's isWordCorrect call throws; across word's still succeeds.
