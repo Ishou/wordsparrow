@@ -3,9 +3,12 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { CaretRight, Lock } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import type { DailySummary, PuzzleRepository } from '@/application';
+import type { LobbyClient, LobbySummary } from '@/application/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
+import type { SessionId } from '@/domain/game';
 import { Skeleton } from '@/design-system';
 import { useCanSubscribe } from '@/ui/components/billing';
+import { GrillesLobbiesSection } from './GrillesLobbiesSection';
 import { PhoneShell } from './PhoneShell';
 import { MobileTopBar } from './MobileTopBar';
 import { SegmentedControl } from './SegmentedControl';
@@ -163,9 +166,14 @@ function actionLabel(status: Status): string {
 export function GrillesArchiveScreen({
   puzzleRepository,
   soloEntriesStore,
+  lobbyClient,
+  getSession,
 }: {
   readonly puzzleRepository: PuzzleRepository;
   readonly soloEntriesStore: SoloEntriesStore;
+  // Multiplayer adapters are optional — absent when the flag is off (ADR-0018 §10).
+  readonly lobbyClient?: LobbyClient;
+  readonly getSession?: () => { readonly sessionId: SessionId };
 }) {
   const navigate = useNavigate();
   const canSubscribe = useCanSubscribe();
@@ -180,6 +188,7 @@ export function GrillesArchiveScreen({
   const [showSkeleton, setShowSkeleton] = useState(false);
   // Oldest date we've already requested down to; load-more widens the window further back.
   const [floor, setFloor] = useState<string | undefined>(undefined);
+  const [lobbies, setLobbies] = useState<readonly LobbySummary[]>([]);
 
   const todayIso = useMemo(() => isoUtcDate(new Date()), []);
 
@@ -215,6 +224,22 @@ export function GrillesArchiveScreen({
       cancelled = true;
     };
   }, [puzzleRepository, todayIso, floor]);
+
+  useEffect(() => {
+    if (lobbyClient == null || getSession == null) return;
+    let cancelled = false;
+    lobbyClient
+      .listMyLobbies(getSession().sessionId)
+      .then((items) => {
+        if (!cancelled) setLobbies(items);
+      })
+      .catch(() => {
+        if (!cancelled) setLobbies([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lobbyClient, getSession]);
 
   const rows = useMemo<ReadonlyArray<DayRow>>(() => {
     return summaries.map((summary) => {
@@ -277,6 +302,7 @@ export function GrillesArchiveScreen({
       </div>
 
       <div className={scrollArea}>
+      <GrillesLobbiesSection lobbies={lobbies} />
       {canSubscribe ? (
         <div className={bannerWrap}>
           <ArchiveUpsellBanner />
