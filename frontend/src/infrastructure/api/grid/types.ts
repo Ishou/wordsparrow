@@ -858,18 +858,18 @@ export interface components {
          */
         OptionalSessionId: string;
         /**
-         * @description Number of columns to generate. Defaults to 15 when omitted, matching
-         *     the daily landscape grid. Valid range is 5..15 inclusive; values
-         *     outside that range — or non-integers — produce a 400 with problem
+         * @description Number of columns to generate. Defaults to 15 when omitted. Valid
+         *     range is 5..15 inclusive; values outside that range — or
+         *     non-integers — produce a 400 with problem
          *     type `https://bliss.example/errors/invalid-puzzle-dimensions`. The
          *     bounds keep the CSP solver's vocabulary needs and per-request time
          *     budget reasonable.
          */
         PuzzleWidth: number;
         /**
-         * @description Number of rows to generate. Defaults to 12 when omitted, matching
-         *     the daily landscape grid. Valid range is 5..15 inclusive; values
-         *     outside that range — or non-integers — produce a 400 with problem
+         * @description Number of rows to generate. Defaults to 12 when omitted. Valid range
+         *     is 5..15 inclusive; values outside that range — or non-integers —
+         *     produce a 400 with problem
          *     type `https://bliss.example/errors/invalid-puzzle-dimensions`.
          */
         PuzzleHeight: number;
@@ -884,18 +884,18 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description Number of columns to generate. Defaults to 15 when omitted, matching
-                 *     the daily landscape grid. Valid range is 5..15 inclusive; values
-                 *     outside that range — or non-integers — produce a 400 with problem
+                 * @description Number of columns to generate. Defaults to 15 when omitted. Valid
+                 *     range is 5..15 inclusive; values outside that range — or
+                 *     non-integers — produce a 400 with problem
                  *     type `https://bliss.example/errors/invalid-puzzle-dimensions`. The
                  *     bounds keep the CSP solver's vocabulary needs and per-request time
                  *     budget reasonable.
                  */
                 width?: components["parameters"]["PuzzleWidth"];
                 /**
-                 * @description Number of rows to generate. Defaults to 12 when omitted, matching
-                 *     the daily landscape grid. Valid range is 5..15 inclusive; values
-                 *     outside that range — or non-integers — produce a 400 with problem
+                 * @description Number of rows to generate. Defaults to 12 when omitted. Valid range
+                 *     is 5..15 inclusive; values outside that range — or non-integers —
+                 *     produce a 400 with problem
                  *     type `https://bliss.example/errors/invalid-puzzle-dimensions`.
                  */
                 height?: components["parameters"]["PuzzleHeight"];

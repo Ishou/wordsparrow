@@ -738,9 +738,9 @@ components:
       in: query
       required: false
       description: |
-        Number of columns to generate. Defaults to 15 when omitted, matching
-        the daily landscape grid. Valid range is 5..15 inclusive; values
-        outside that range — or non-integers — produce a 400 with problem
+        Number of columns to generate. Defaults to 15 when omitted. Valid
+        range is 5..15 inclusive; values outside that range — or
+        non-integers — produce a 400 with problem
         type `https://bliss.example/errors/invalid-puzzle-dimensions`. The
         bounds keep the CSP solver's vocabulary needs and per-request time
         budget reasonable.
@@ -756,9 +756,9 @@ components:
       in: query
       required: false
       description: |
-        Number of rows to generate. Defaults to 12 when omitted, matching
-        the daily landscape grid. Valid range is 5..15 inclusive; values
-        outside that range — or non-integers — produce a 400 with problem
+        Number of rows to generate. Defaults to 12 when omitted. Valid range
+        is 5..15 inclusive; values outside that range — or non-integers —
+        produce a 400 with problem
         type `https://bliss.example/errors/invalid-puzzle-dimensions`.
       schema:
         type: integer
