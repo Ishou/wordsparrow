@@ -208,6 +208,14 @@ sealed class ServerToClientFrame {
         val lockedAt: String,
     ) : ServerToClientFrame()
 
+    /** Mirrors `WordRejectedPayload` in `game/api/asyncapi.yaml`; negative-verdict twin of [WordLocked] (ADR-0085). */
+    @Serializable
+    @SerialName("wordRejected")
+    data class WordRejected(
+        val positions: List<GamePositionDto>,
+        val rejectedAt: String,
+    ) : ServerToClientFrame()
+
     @Serializable
     @SerialName("gameSolved")
     data class GameSolved(

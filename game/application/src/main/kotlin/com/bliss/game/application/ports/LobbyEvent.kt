@@ -72,6 +72,12 @@ sealed interface LobbyEvent {
         val lockedAt: Instant,
     ) : LobbyEvent
 
+    /** Mirror of [WordLocked] for the negative verdict; wire mapping `wordRejected` (ADR-0085). */
+    data class WordRejected(
+        val positions: Set<Position>,
+        val rejectedAt: Instant,
+    ) : LobbyEvent
+
     /**
      * Wire mapping: the API layer sends a WebSocket close frame (no `lobbyClosed` broadcast to
      * remaining members — there are none). No `lobbyClosed` entry is needed in `asyncapi.yaml`.

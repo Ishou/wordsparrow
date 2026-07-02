@@ -126,6 +126,19 @@ class WebSocketFrameMapperTest {
     }
 
     @Test
+    fun `LobbyEvent WordRejected sorts positions by row then column on the wire`() {
+        val event =
+            LobbyEvent.WordRejected(
+                positions = setOf(Position(2, 3), Position(0, 4), Position(0, 3), Position(1, 3)),
+                rejectedAt = writtenAt2,
+            )
+        val frame = event.toFrameOrNull() as ServerToClientFrame.WordRejected
+        assertThat(frame.positions.map { it.row to it.column })
+            .containsExactly(0 to 3, 0 to 4, 1 to 3, 2 to 3)
+        assertThat(frame.rejectedAt).isEqualTo(writtenAt2.toString())
+    }
+
+    @Test
     fun `lobbyState snapshot carries the lobby code as a first-class field`() {
         // `code` is always present — the server mints one at create-time and never sends a snapshot without it.
         val lobby = inProgressLobby(emptyMap())

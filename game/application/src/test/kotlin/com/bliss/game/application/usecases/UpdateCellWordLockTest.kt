@@ -76,16 +76,17 @@ class UpdateCellWordLockTest {
             h.write(lobby.id, sessionA, across02, Letter('A')).requireSuccess()
             val solved = h.write(lobby.id, sessionA, cross03, Letter('S')).requireSuccess()
 
-            // CellUpdated then WordLocked.
+            // CellUpdated then WordLocked, and no WordRejected on a correct completion.
             assertThat(solved.events).hasSize(2)
             assertThat(solved.events[0]).isInstanceOf(LobbyEvent.CellUpdated::class)
             val locked = solved.events[1] as LobbyEvent.WordLocked
             assertThat(locked.positions).containsExactlyInAnyOrder(across01, across02, cross03)
             assertThat(solved.value.game?.lockedPositions).isEqualTo(locked.positions)
+            assertThat(solved.events.filterIsInstance<LobbyEvent.WordRejected>()).isEmpty()
         }
 
     @Test
-    fun `filling an incorrect last letter emits only CellUpdated`() =
+    fun `filling an incorrect last letter emits CellUpdated and WordRejected for that word`() =
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice).value
@@ -95,8 +96,12 @@ class UpdateCellWordLockTest {
             h.write(lobby.id, sessionA, across02, Letter('A')).requireSuccess()
             val wrong = h.write(lobby.id, sessionA, cross03, Letter('Z')).requireSuccess()
 
-            assertThat(wrong.events).hasSize(1)
+            // CellUpdated then WordRejected (ADR-0085); nothing locks.
+            assertThat(wrong.events).hasSize(2)
             assertThat(wrong.events[0]).isInstanceOf(LobbyEvent.CellUpdated::class)
+            val rejected = wrong.events[1] as LobbyEvent.WordRejected
+            assertThat(rejected.positions).containsExactlyInAnyOrder(across01, across02, cross03)
+            assertThat(wrong.events.filterIsInstance<LobbyEvent.WordLocked>()).isEmpty()
             assertThat(wrong.value.game?.lockedPositions ?: emptySet()).isEmpty()
         }
 
@@ -246,6 +251,28 @@ class UpdateCellWordLockTest {
             val locks = out.events.filterIsInstance<LobbyEvent.WordLocked>()
             assertThat(locks).hasSize(1)
             assertThat(locks[0].positions).containsExactlyInAnyOrder(down13, down23)
+        }
+
+    @Test
+    fun `rejecting a word that crosses an already-locked word excludes the locked cell`() =
+        runTest {
+            // Lock the across word first, then get the down word wrong. The
+            // shared cell (cross03) is already locked-correct client-side;
+            // WordRejected must not tell peers to shake it too.
+            val h = harness()
+            val lobby = h.create(sessionA, alice).value
+            h.start(lobby.id, sessionA).requireSuccess()
+
+            h.write(lobby.id, sessionA, across01, Letter('P')).requireSuccess()
+            h.write(lobby.id, sessionA, across02, Letter('A')).requireSuccess()
+            h.write(lobby.id, sessionA, cross03, Letter('S')).requireSuccess()
+
+            h.write(lobby.id, sessionA, down13, Letter('Z')).requireSuccess()
+            val out = h.write(lobby.id, sessionA, down23, Letter('Z')).requireSuccess()
+
+            val rejected = out.events.filterIsInstance<LobbyEvent.WordRejected>()
+            assertThat(rejected).hasSize(1)
+            assertThat(rejected[0].positions).containsExactlyInAnyOrder(down13, down23)
         }
 
     @Test
