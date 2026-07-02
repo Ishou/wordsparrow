@@ -31,6 +31,21 @@ class ValidateWordUseCaseTest {
                 ),
         )
 
+    // PAIN placed at (0,0) Direction.DOWN: clue at (0,0), letters P,A,I,N at (1,0)..(4,0).
+    private val downGrid =
+        Grid.fromPlacements(
+            width = 1,
+            height = 5,
+            placements =
+                listOf(
+                    WordPlacement(
+                        Word(text = "PAIN", definition = "bread"),
+                        Position(Row(0), Column(0)),
+                        Direction.DOWN,
+                    ),
+                ),
+        )
+
     @Test
     fun `correct=true when every submitted cell matches the solution`() {
         val (puzzleId, store) = stored()
@@ -76,6 +91,23 @@ class ValidateWordUseCaseTest {
     }
 
     @Test
+    fun `correct=true for a vertically-submitted word - Direction DOWN`() {
+        val (puzzleId, store) = stored(downGrid)
+        val outcome =
+            ValidateWordUseCase(store).execute(
+                puzzleId,
+                listOf(
+                    FilledCellInput(1, 0, "P"),
+                    FilledCellInput(2, 0, "A"),
+                    FilledCellInput(3, 0, "I"),
+                    FilledCellInput(4, 0, "N"),
+                ),
+            )
+        assertThat(outcome).isInstanceOf(ValidateWordOutcome.Result::class)
+        assertThat((outcome as ValidateWordOutcome.Result).correct).isEqualTo(true)
+    }
+
+    @Test
     fun `RequestInvalid when cells do not form a contiguous span`() {
         val (puzzleId, store) = stored()
         val outcome =
@@ -117,7 +149,7 @@ class ValidateWordUseCaseTest {
         assertThat(outcome).isInstanceOf(ValidateWordOutcome.PuzzleNotFound::class)
     }
 
-    private fun stored(): Pair<UUID, PuzzleRepository> {
+    private fun stored(grid: Grid = this.grid): Pair<UUID, PuzzleRepository> {
         val id = UUID.randomUUID()
         val stored =
             StoredPuzzle(
