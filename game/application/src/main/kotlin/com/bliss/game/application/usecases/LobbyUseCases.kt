@@ -405,14 +405,8 @@ class UpdateCellUseCase(
             return success(updated, events).withSolved(solved)
         }
 
-        // Ask grid per candidate word (1-2 per keystroke, ADR-0084 §1).
-        // A validator failure must NOT take down the cellUpdate — the cell
-        // entry is already committed and the player still sees their letter;
-        // the lock just won't fire on this keystroke. We log so a *total*
-        // lock outage is observable and never silent again (ADR-0084).
-        // Positions that just transitioned to locked. Words crossing an
-        // already-locked word reuse its cells — those cells are already
-        // sage on every client, so we emit only the freshly-locked ones.
+        // Validator failure is non-fatal (cell already committed) but logged so a total lock outage is never silent (ADR-0084).
+        // newLocks holds only freshly-transitioned positions — words crossing an already-locked word reuse cells already known client-side.
         val newLocks = mutableSetOf<Position>()
         for (word in candidateWords) {
             val correct =

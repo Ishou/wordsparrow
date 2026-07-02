@@ -1,14 +1,4 @@
-// HTTP adapter for the WordValidator port. Calls grid's internal,
-// service-authenticated `POST /v1/puzzles/{id}/validate-word` (ADR-0084)
-// and returns whether the submitted word is fully correct.
-//
-// Why not derive from the puzzle's letter cells directly: per the v1
-// wire (grid/api/openapi.yaml `LetterCell`), letter cells ship without
-// their canonical answer — solutions are server-private. game-api
-// therefore can't validate locally and must delegate to grid for every
-// word check. The endpoint is a per-word binary oracle (`{ correct }`)
-// carrying no positional data (ADR-0084 §1), reachable only with the
-// shared service token; solo clients never regain per-cell feedback.
+// HTTP adapter for WordValidator — see ADR-0084 for the per-word validate-word contract and rationale.
 package com.bliss.game.infrastructure
 
 import com.bliss.game.application.ports.WordValidator
