@@ -214,7 +214,7 @@ interface AnalyticsEventSink {
 }
 
 /**
- * Asks grid which currently-filled cells don't match the canonical solution.
+ * Asks grid whether every currently-filled cell of a word matches the canonical solution.
  *
  * Per the v1 wire spec (grid/api/openapi.yaml `LetterCell`), grid strips
  * letter answers from `GET /v1/puzzles/{id}` so the browser can never see
