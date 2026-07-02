@@ -46,6 +46,18 @@ def test_neutral_tag_allowed() -> None:
     assert is_obscure_tag("") is None
 
 
+def test_inversion_only_blocks() -> None:
+    # Inversion-only rows (`posè`, tag `1isg`, no normal person) are crossword-noise and unclueable.
+    assert is_obscure_tag("v1_itxq__a ipre 1isg") == "inversion"
+    assert is_obscure_tag("v1__t___zz ipre 2isg") == "inversion"
+    assert is_obscure_tag("v1__t___zz ipre 3isg") == "inversion"
+
+
+def test_inversion_syncretic_with_normal_person_allowed() -> None:
+    # A surface that is BOTH inversion and a normal conjugation survives via its normal-person reading (don't drop `finis` et al.).
+    assert is_obscure_tag("v2__t___zz ipre 2sg 1isg") is None
+
+
 # ---------------------------------------------------------------------------
 # parse_grammalecte_lemma_anchored — smoke test with synthetic lexique
 # ---------------------------------------------------------------------------

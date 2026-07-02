@@ -31,6 +31,17 @@ from morphology_index import (
     extract_inflection_target,
 )
 
+# Person-bearing moods (must match the surface's exact person, never relaxed); `infi`/`ppre`/`ppas` are person-less.
+_FINITE_MOODS = MOOD_TOKENS - {"infi", "ppre", "ppas"}
+
+# Moods whose negation wraps the verb (`ne X pas`) rather than preceding it (`ne pas X`, infinitives; ppas has no simple negation).
+_NEG_RESTRUCTURE_MOODS = _FINITE_MOODS | {"ppre"}
+
+# Vowels + mute-h that trigger `ne → n'` elision (mirrors lemmatize_clue).
+_ELISION_INITIALS = set("aeiouéèêëàâîïôûùüÿœh")
+# Reflexive clitics that may sit between `pas` and the verb in `Ne pas se présenter` and must stay in front of it.
+_REFLEXIVE_CLITICS = {"se", "s"}
+
 # Pre-head adjectives in French — a small closed set that conventionally
 # precedes the noun (petit oiseau, vieille femme, bel arbre). When a clue
 # starts with one of these, the actual head is later in the token stream;
@@ -123,7 +134,8 @@ class InflectionResult:
     text: str
     flag: str  # '' | 'no-target-pos' | 'no-head' | 'no-inflection'
                # | 'no-inflection-finite' | 'identity' | 'head-pos-mismatch'
-               # | 'pp-only-skipped' | 'pp-reflexive-skipped' | 'empty'
+               # | 'pp-only-skipped' | 'pp-reflexive-skipped'
+               # | 'neg-nonfinite-skipped' | 'empty'
                #
                # `no-inflection-finite` is a stricter sibling of `no-inflection`
                # for finite-verb targets (no `ppas` in target tags). When the
@@ -151,6 +163,31 @@ def _has_reflexive_head(tokens: list[str]) -> bool:
         norm = tok.lower().rstrip("'")
         return norm in ("se", "s")
     return False
+
+
+def _negation_frame(tokens: list[str]) -> tuple[int, int] | None:
+    """Return `(ne_idx, pas_idx)` iff the clue opens with `Ne pas …`, else None — only the leading particles qualify, not a `pas` deeper in the clue."""
+    alpha = [(i, t.lower()) for i, t in enumerate(tokens) if _is_alpha_token(t)]
+    if len(alpha) >= 2 and alpha[0][1] == "ne" and alpha[1][1] == "pas":
+        return alpha[0][0], alpha[1][0]
+    return None
+
+
+def _restructure_negation(
+    tokens: list[str], ne_idx: int, pas_idx: int, head_idx: int,
+) -> list[str] | None:
+    """Rewrite `Ne pas [se] <verb> …` → `Ne [se] <verb> pas …`, eliding `ne → n'` before a vowel; returns None when non-reflexive material sits between `pas` and the verb, since that shape isn't a plain negated infinitive."""
+    between = tokens[pas_idx + 1:head_idx]
+    if any(_is_alpha_token(t) and t.lower() not in _REFLEXIVE_CLITICS for t in between):
+        return None
+    head_tok = tokens[head_idx]
+    after_head = tokens[head_idx + 1:]
+    first_after_ne = next((t for t in between if _is_alpha_token(t)), head_tok)
+    ne_tokens = (
+        ["n", "’"] if first_after_ne[:1].lower() in _ELISION_INITIALS
+        else [tokens[ne_idx]]
+    )
+    return tokens[:ne_idx] + ne_tokens + between + [head_tok, "pas"] + after_head
 
 
 def _has_verb_dobj_frame(tokens: list[str], head_idx: int) -> bool:
@@ -210,13 +247,10 @@ def _decompose_targets(target: set[str]) -> list[set[str]]:
                 if trial != target:
                     candidates.append(trial)
 
-    # As a last resort, try with mood-only (drop person constraint). We do
-    # NOT fall back to an empty target: that would match the lemma's first
-    # row (typically the infinitive / mas-sg), which is a silent identity
-    # rather than a real conjugation, and would defeat the `no-inflection`
-    # signal callers rely on.
-    for m in [m for m in _MOOD_PREFERENCE if m in moods]:
-        candidates.append(rest | {m})
+    # Mood-only fallback (drop person) only when the target had no person to begin with — for a finite verb, dropping person risks an arbitrary-person match (the posè→Placent bug); exact or skip instead. Never fall back to an empty target either, since that silently matches the lemma's first row rather than a real conjugation.
+    if not persons:
+        for m in [m for m in _MOOD_PREFERENCE if m in moods]:
+            candidates.append(rest | {m})
 
     # Dedup while preserving order.
     seen: list[set[str]] = []
@@ -247,6 +281,11 @@ def inflect_clue(
     target = extract_inflection_target(surface_tags)
     if not target:
         return InflectionResult(_capitalize_first(clue), "no-target-pos")
+
+    # Exact-or-skip on person: skip rather than guess when the surface's person is unrepresentable (e.g. the `Nisg` inversion person for `posè-je`, dropped by `PERSON_TOKENS`), since matching would otherwise return an arbitrary-person head (`posè → Placent`).
+    if (target_pos == "verbe" and (target & _FINITE_MOODS)
+            and not (target & PERSON_TOKENS)):
+        return InflectionResult(_capitalize_first(clue), "no-inflection-finite")
 
     tokens = _TOKEN_RE.findall(clue)
     if not tokens:
@@ -302,6 +341,11 @@ def inflect_clue(
     if (target_pos == "verbe" and "ppas" in target
             and _has_reflexive_head(tokens)):
         return InflectionResult(_capitalize_first(clue), "pp-reflexive-skipped")
+
+    # Negated-infinitive + past participle can't restructure to a clean simple-negation (`Ne pas rester` → `*Ne pas resté`); skip and let the higher-freq present sibling supply the grid clue instead (finite surfaces are restructured below).
+    if (target_pos == "verbe" and "ppas" in target
+            and _negation_frame(tokens) is not None):
+        return InflectionResult(_capitalize_first(clue), "neg-nonfinite-skipped")
 
     # For nominal targets, gender relaxation is best-effort: try strict
     # gender first so a paradigm with both masc and fem forms (voleur →
@@ -475,6 +519,14 @@ def inflect_clue(
             i -= 1
             continue
         break
+
+    # Negated-infinitive → finite: an unrestructured `Ne pas <finite>` is ungrammatical (`espère → *Ne pas désespère`), so once the head has changed to a finite/present-participle form, move `pas` behind it and elide `ne` (`Ne désespère pas`, `N'acceptant pas`).
+    if head_changed and (target & _NEG_RESTRUCTURE_MOODS):
+        neg = _negation_frame(new_tokens)
+        if neg is not None and head_idx > neg[1]:
+            restructured = _restructure_negation(new_tokens, neg[0], neg[1], head_idx)
+            if restructured is not None:
+                new_tokens = restructured
 
     if not head_changed and new_tokens == tokens:
         return InflectionResult(_capitalize_first(clue), "identity")

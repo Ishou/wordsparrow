@@ -250,7 +250,7 @@ def main() -> None:
         # `tira → "Extraire"` tense-disagreement bug.
         # `agreement-mismatch`: inflated head number disagrees with the surface.
         skipped = r.get("inflection_status") in (
-            "pp-only-skipped", "pp-reflexive-skipped",
+            "pp-only-skipped", "pp-reflexive-skipped", "neg-nonfinite-skipped",
             "no-inflection-finite", "agreement-mismatch",
         )
         if skipped or s < args.threshold:

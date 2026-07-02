@@ -14,10 +14,12 @@ from CC0 training data, no DBnary. We preserve the existing source
 and source_license fields and don't add per-field provenance.
 """
 from __future__ import annotations
-import argparse, csv, shutil
+import argparse, csv, shutil, sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(REPO / "scripts" / "clue_generation"))
+from apply_clue_overrides import DEFAULT_OVERRIDES, load_overrides  # noqa: E402
 
 
 def main() -> None:
@@ -34,6 +36,7 @@ def main() -> None:
                    help="minimum filter_score; clues below are skipped")
     p.add_argument("--backup", type=Path,
                    default=REPO / "/tmp/words-fr.backup.csv")
+    p.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES)
     args = p.parse_args()
 
     def keep(r: dict) -> bool:
@@ -97,6 +100,15 @@ def main() -> None:
                 r["clue"] = ""
                 reset += 1
 
+    # Curated overrides win, applied last, so hand-authored fixes for recurring English-sense homograph leaks (e.g. `pain`/`cane`) survive the next `run_production.sh` regeneration.
+    overrides = load_overrides(args.overrides)
+    overridden = 0
+    for r in rows:
+        new = overrides.get(r.get("word", "").strip().lower())
+        if new is not None and r.get("clue") != new:
+            r["clue"] = new
+            overridden += 1
+
     with args.wordlist.open("w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         w.writeheader()
@@ -106,6 +118,7 @@ def main() -> None:
     pct = updated / len(rows) * 100
     print(f"updated {updated}/{len(rows)} rows ({pct:.1f}%)")
     print(f"blanked to empty-clue convention (stale clue scrub): {reset}")
+    print(f"curated overrides applied: {overridden}")
     print(f"backup: {args.backup}")
 
 
