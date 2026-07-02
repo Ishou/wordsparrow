@@ -1,9 +1,6 @@
 package com.bliss.grid.application.puzzle
 
-import com.bliss.grid.domain.model.Column
 import com.bliss.grid.domain.model.LetterCell
-import com.bliss.grid.domain.model.Position
-import com.bliss.grid.domain.model.Row
 import java.util.UUID
 
 /** Binary oracle: returns `solved` iff every letter cell is filled and matches the solution; ADR-0076. */
@@ -17,31 +14,11 @@ class ValidatePuzzleUseCase(
         val puzzle = puzzleRepository.get(puzzleId) ?: return ValidatePuzzleOutcome.PuzzleNotFound
 
         val grid = puzzle.grid
-        val byPosition = mutableMapOf<Position, Char>()
-        for (entry in filled) {
-            if (entry.row < 0 || entry.row >= grid.height || entry.column < 0 || entry.column >= grid.width) {
-                return ValidatePuzzleOutcome.RequestInvalid(
-                    "filledCell (${entry.row}, ${entry.column}) out of grid bounds (${grid.width}x${grid.height})",
-                )
+        val byPosition =
+            when (val resolved = resolveFilledCells(grid, filled)) {
+                is ResolvedCells.Invalid -> return ValidatePuzzleOutcome.RequestInvalid(resolved.reason)
+                is ResolvedCells.Ok -> resolved.byPosition
             }
-            if (entry.letter.length != 1 || entry.letter[0] !in 'A'..'Z') {
-                return ValidatePuzzleOutcome.RequestInvalid(
-                    "letter must be a single uppercase A-Z; got '${entry.letter}'",
-                )
-            }
-            val pos = Position(Row(entry.row), Column(entry.column))
-            val cell = grid.cells[pos]
-            if (cell !is LetterCell) {
-                return ValidatePuzzleOutcome.RequestInvalid(
-                    "filledCell (${entry.row}, ${entry.column}) does not point at a letter cell",
-                )
-            }
-            if (byPosition.put(pos, entry.letter[0]) != null) {
-                return ValidatePuzzleOutcome.RequestInvalid(
-                    "duplicate filledCell at (${entry.row}, ${entry.column})",
-                )
-            }
-        }
 
         val solved =
             grid.cells.all { (pos, cell) ->

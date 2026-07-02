@@ -17,6 +17,7 @@ import com.bliss.grid.application.puzzle.PUZZLE_WIDTH
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
+import com.bliss.grid.application.puzzle.ValidateWordUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.WordRepository
 import com.bliss.grid.domain.model.Column
@@ -345,6 +346,7 @@ class PuzzleRouteTest {
                 loadOrGenerate = LoadOrGeneratePuzzleUseCase(repo, gen),
                 revealCellHint = RevealCellHintUseCase(repo, hintRepo),
                 validatePuzzle = ValidatePuzzleUseCase(repo),
+                validateWord = ValidateWordUseCase(repo),
                 puzzleRepository = repo,
                 hintUsageRepository = hintRepo,
                 hintWriteCoordinator = InMemoryHintWriteCoordinator(),
@@ -365,6 +367,7 @@ class PuzzleRouteTest {
                         loadOrGenerate = LoadOrGeneratePuzzleUseCase(puzzleRepo, gen),
                         revealCellHint = RevealCellHintUseCase(puzzleRepo, hintUsageRepo),
                         validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
+                        validateWord = ValidateWordUseCase(puzzleRepo),
                         puzzleRepository = puzzleRepo,
                         hintUsageRepository = hintUsageRepo,
                         hintWriteCoordinator = InMemoryHintWriteCoordinator(),
@@ -492,6 +495,7 @@ class PuzzleRouteTest {
                         loadOrGenerate = LoadOrGeneratePuzzleUseCase(puzzleRepo, gen),
                         revealCellHint = RevealCellHintUseCase(puzzleRepo, hintUsageRepo),
                         validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
+                        validateWord = ValidateWordUseCase(puzzleRepo),
                         puzzleRepository = puzzleRepo,
                         hintUsageRepository = hintUsageRepo,
                         hintWriteCoordinator = InMemoryHintWriteCoordinator(),

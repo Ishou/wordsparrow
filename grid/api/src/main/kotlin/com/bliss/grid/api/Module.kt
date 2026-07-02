@@ -18,6 +18,7 @@ import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PuzzleRepository
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
+import com.bliss.grid.application.puzzle.ValidateWordUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.application.words.SampleWordsUseCase
 import com.bliss.grid.application.words.VerifySampleWordUseCase
@@ -268,6 +269,7 @@ fun Application.module() {
     val revealCellHint =
         RevealCellHintUseCase(puzzleRepository, hintUsageRepository, analyticsEventSink = analyticsEventSink, clock = clock)
     val validatePuzzle = ValidatePuzzleUseCase(puzzleRepository)
+    val validateWord = ValidateWordUseCase(puzzleRepository)
     val deleteSession = DeleteSessionUseCase(cooldownRepository)
     val dailyPuzzleSelector = DailyPuzzleSelector()
     val listDailyPuzzles =
@@ -282,6 +284,7 @@ fun Application.module() {
             loadOrGenerate,
             revealCellHint,
             validatePuzzle,
+            validateWord,
             puzzleRepository = puzzleRepository,
             hintUsageRepository = hintUsageRepository,
             hintWriteCoordinator = hintWriteCoordinator,

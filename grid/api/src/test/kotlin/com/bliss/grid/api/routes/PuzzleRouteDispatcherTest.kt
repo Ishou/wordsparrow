@@ -10,6 +10,7 @@ import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.StoredDailyPuzzle
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
+import com.bliss.grid.application.puzzle.ValidateWordUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.WordRepository
 import com.bliss.grid.domain.model.Word
@@ -67,6 +68,7 @@ class PuzzleRouteDispatcherTest {
                         loadOrGenerate = LoadOrGeneratePuzzleUseCase(recordingRepo, gen),
                         revealCellHint = RevealCellHintUseCase(recordingRepo, hintUsageRepo),
                         validatePuzzle = ValidatePuzzleUseCase(recordingRepo),
+                        validateWord = ValidateWordUseCase(recordingRepo),
                         puzzleRepository = recordingRepo,
                         hintUsageRepository = hintUsageRepo,
                         hintWriteCoordinator = InMemoryHintWriteCoordinator(),

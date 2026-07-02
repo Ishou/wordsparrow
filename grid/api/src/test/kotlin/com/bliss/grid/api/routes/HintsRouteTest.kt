@@ -10,6 +10,7 @@ import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
+import com.bliss.grid.application.puzzle.ValidateWordUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
@@ -65,6 +66,7 @@ class HintsRouteTest {
                     loadOrGenerate = LoadOrGeneratePuzzleUseCase(puzzleRepo, gen),
                     revealCellHint = RevealCellHintUseCase(puzzleRepo, hintUsageRepo),
                     validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
+                    validateWord = ValidateWordUseCase(puzzleRepo),
                     puzzleRepository = puzzleRepo,
                     hintUsageRepository = hintUsageRepo,
                     hintWriteCoordinator = InMemoryHintWriteCoordinator(),

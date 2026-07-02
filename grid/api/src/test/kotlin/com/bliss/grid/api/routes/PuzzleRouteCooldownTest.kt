@@ -9,6 +9,7 @@ import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
+import com.bliss.grid.application.puzzle.ValidateWordUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.domain.generation.WordRepository
@@ -55,6 +56,7 @@ class PuzzleRouteCooldownTest {
                         ),
                     revealCellHint = RevealCellHintUseCase(puzzleRepo, hintUsageRepo),
                     validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
+                    validateWord = ValidateWordUseCase(puzzleRepo),
                     puzzleRepository = puzzleRepo,
                     hintUsageRepository = hintUsageRepo,
                     hintWriteCoordinator = InMemoryHintWriteCoordinator(),
