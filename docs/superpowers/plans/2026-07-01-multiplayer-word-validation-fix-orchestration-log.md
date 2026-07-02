@@ -211,3 +211,4 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   only; runtime coloring won't work until the two impl PRs land + deploy.
   Everything else (word-locking fix, guest gate, wordRejected sync-shake) is
   merged/deploying and unaffected.
+- 2026-07-02 — **cron tick: rebased #1249 (game emit) onto main** (was CONFLICTING after #1248 merged; dropped squashed ADR+asyncapi commits → game-only, 3 commits). CI re-running; merges next on green+LGTM, then #1250.
