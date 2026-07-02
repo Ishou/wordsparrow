@@ -1,12 +1,4 @@
-"""Regression guard: the shipped words-fr.csv must carry the curated override
-clue for every known-wrong-sense word, not the clue generation keeps producing.
-
-Restores and generalizes the guard from cfa0980f (which asserted no `cane*` row
-contained "Bâton"). That guard was lost, so round-11 silently re-introduced
-`cane -> Bâton` and `pain -> Souffrance`. Now the whole override list is
-asserted, so any regeneration that clobbers a curated override fails here
-instead of shipping to a live grid.
-"""
+"""Regression guard: the shipped words-fr.csv must carry the curated override clue for every known-wrong-sense word in `data/curated/clue_overrides_fr.csv`."""
 from __future__ import annotations
 
 import csv

@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Apply the curated clue overrides to words-fr.csv (last-writer wins).
-
-`data/curated/clue_overrides_fr.csv` is the hand-authored (CC0) source of
-truth for clues the LoRA keeps generating wrong — chiefly English-sense leaks
-on French/English homographs (`pain -> Souffrance`, `cane -> Bâton`) that no
-structural gate can catch and that every full regeneration re-introduces.
-
-Storing the corrections in the generated artifact is why they kept regressing
-(cfa0980f documented this): `run_production.sh` rebuilds the corpus from scratch
-and clobbers them. Keeping them in a curated CSV applied last — by both
-`merge_clues_into_wordlist.py` and this standalone scrub — makes them survive.
-"""
+"""Apply the curated clue overrides in `data/curated/clue_overrides_fr.csv` to words-fr.csv (last-writer wins)."""
 from __future__ import annotations
 
 import argparse

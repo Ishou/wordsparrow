@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""Remove literary interrogative-inversion surfaces from words-fr.csv.
-
-Inversion forms (`posè-je`, `réprimè-je`) carry grammalecte's `Nisg` person,
-which `PERSON_TOKENS` omits. They are crossword-noise (same class as passé
-simple) and unclueable — the inflater skips them (`no-inflection-finite`), so
-they ship either blank or, when a regeneration slips through, with an
-arbitrary-person clue (`posè → Placent`). `is_obscure_tag` now
-blocks them at admission; this one-off scrub removes the rows already present.
-
-A surface is removed iff, scoped to its declared lemma, every grammalecte row
-is obscure AND at least one is an inversion form — so a syncretic surface that
-is also a normal conjugation (`finis` = 2sg + 1isg) is kept.
-"""
+"""Remove literary interrogative-inversion surfaces (`posè-je` and similar, `Nisg`-tagged) from words-fr.csv."""
 from __future__ import annotations
 
 import argparse

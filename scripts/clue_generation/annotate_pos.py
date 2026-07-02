@@ -1,23 +1,5 @@
 #!/usr/bin/env python3
-"""Explode the lemma-clues raw CSV into one row per (lemma, POS).
-
-Reads `data/eval/production/lemma_clues_raw.csv` and, for every POS class a
-lemma genuinely has in grammalecte, emits a separate row with the `pos` column
-set and the clue's `validation_flag` recomputed against that POS. POS classes:
-nom, verbe, adj, adv.
-
-A lemma that is both a noun and an adjective (`acajou`) gets a `nom` row and an
-`adj` row, each free to carry its own clue. The clue present today validates
-`ok` on the POS whose head it matches and `pos-mismatch` on the others, so it
-lands on the right POS; the remaining rows await their own generated clue. This
-replaces the old single dominant-POS row (which mis-clued the other POS) and the
-stale validation flag inherited from upstream (which let `score -> Obtenir`
-ship: a verb clue on a noun with a copied `ok`).
-
-Only a lemma's OWN POS classes are emitted — not POS bleeding in from a
-homograph surface owned by a different lemma (the verb `porte` belongs to
-`porter`, so the noun-lemma `porte` stays a single `nom` row).
-"""
+"""Explode the lemma-clues raw CSV into one row per (lemma, POS the lemma genuinely has), re-deriving `validation_flag` per row."""
 
 from __future__ import annotations
 

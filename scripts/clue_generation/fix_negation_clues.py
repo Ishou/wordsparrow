@@ -1,20 +1,5 @@
 #!/usr/bin/env python3
-"""Restructure or drop stale `Ne pas <inf>` clues already in words-fr.csv.
-
-The inflater now rewrites `Ne pas V → Ne V pas` for finite surfaces and skips
-past participles, but clues merged before that fix still ship the broken
-`Ne pas <inflected>` shape (`espère → "Ne pas désespère"`). This one-off scrub
-fixes the rows already present, operating on the clue text directly so the
-already-correct surface verb form is preserved (no re-inflation / person drift):
-
-- head is a finite verb form  → restructure the particles in place
-  (`Ne pas désespère → Ne désespère pas`, eliding `ne → n'`);
-- head is a bare past participle / non-finite → blank the clue (the loader drops
-  blank-clue rows; the higher-freq present sibling supplies the grid clue).
-
-Only the clue field of matched rows is rewritten; every other row keeps its
-exact bytes.
-"""
+"""Restructure or drop stale `Ne pas <inf>` clues already shipped in words-fr.csv, operating on clue text only (no re-inflation)."""
 from __future__ import annotations
 
 import argparse

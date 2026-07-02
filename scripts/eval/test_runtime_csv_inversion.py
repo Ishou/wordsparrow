@@ -1,22 +1,4 @@
-"""Regression guard: the shipped words-fr.csv must not contain literary
-interrogative-inversion surfaces (`posè-je`, `réprimè-je`, `puissé-je`).
-
-These carry grammalecte's `Nisg` person, which `PERSON_TOKENS` omits: the
-inflater can't match a person for them and skips (`no-inflection-finite`), so
-they ship either unclueable or — when a regeneration slips through — with an
-arbitrary-person clue (`posè → Placent`). `is_obscure_tag` now
-blocks them at admission and `strip_inversion_forms.py` scrubbed the rows.
-
-This catches the merged-but-not-rebuilt regression: a future import re-adds
-inversion surfaces, or the CSV is hand-edited. Lexique-gated — it needs the
-grammalecte tags to identify inversion-only surfaces, so it skips gracefully
-in environments without the lexique (CI). The admission unit test
-(`test_import_grammalecte_admission.py`) and the inflater exact-or-skip test
-(`test_inflect_clue.py`) run everywhere and are the CI-visible guards.
-
-If this fires, re-run:
-    python scripts/clue_generation/strip_inversion_forms.py
-"""
+"""Regression guard: shipped words-fr.csv must carry no literary interrogative-inversion surfaces. Lexique-gated (skips without it). If it fires, re-run `python scripts/clue_generation/strip_inversion_forms.py`."""
 from __future__ import annotations
 
 import csv
