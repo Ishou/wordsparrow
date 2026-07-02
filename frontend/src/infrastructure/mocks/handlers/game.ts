@@ -333,7 +333,12 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
   // just-filled position; for each whose letters all match `MOCK_ANSWERS`,
   // emit a `wordLocked`. Crossing fills emit one frame whose `positions`
   // is the union of both words.
-  const maybeFireWordLocked = (lobby: Lobby, justRow: number, justCol: number): void => {
+  const maybeFireWordLocked = (
+    lobby: Lobby,
+    justRow: number,
+    justCol: number,
+    lockedBy: string,
+  ): void => {
     if (!lobby.game) return;
     const clues = lobby.game.puzzle.clues;
     const newLocks: Array<{ row: number; column: number }> = [];
@@ -382,7 +387,7 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
               ...current.game,
               lockedPositions: [
                 ...current.game.lockedPositions,
-                ...newLocks,
+                ...newLocks.map((p) => ({ ...p, lockedBy })),
               ].sort((a, b) => a.row - b.row || a.column - b.column),
             }
           : current.game,
@@ -391,6 +396,7 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
         JSON.stringify({
           type: 'wordLocked',
           positions: newLocks,
+          lockedBy,
           lockedAt: nowIso(),
         }),
       );
@@ -568,7 +574,8 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
         );
         if (upd.letter == null) cellEntries.delete(key);
         else cellEntries.set(key, upd.letter);
-        if (lobby) maybeFireWordLocked(lobby, upd.row, upd.column);
+        // Preview attributes the lock to the caller (the owner-stamped write above).
+        if (lobby) maybeFireWordLocked(lobby, upd.row, upd.column, ownerSessionId);
         maybeFireGameSolved();
         return;
       }

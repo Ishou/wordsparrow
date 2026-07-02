@@ -3,7 +3,7 @@ import type {
   GameSession,
   Lobby,
   LobbyLifecycleState,
-  Position as GamePosition,
+  LockedCell,
 } from '@/domain/game';
 
 // Internal lobby state — the route-local snapshot the reducer folds
@@ -114,7 +114,7 @@ export function reduceLobby(current: LobbyView, event: GameEvent): LobbyView {
       const game = current.lobby.game;
       if (!game) return current;
       const seen = new Set<string>();
-      const merged: GamePosition[] = [];
+      const merged: LockedCell[] = [];
       // `?? []`: backend omits this field when empty due to
       // kotlinx-serialization `encodeDefaults=false`. Guard kept as
       // defense-in-depth against future schema drift.
@@ -124,11 +124,13 @@ export function reduceLobby(current: LobbyView, event: GameEvent): LobbyView {
         seen.add(key);
         merged.push(p);
       }
+      // First-writer-wins (ADR-0086): dedup keeps the existing owner, so a
+      // crossing cell already locked by an earlier word is never re-attributed.
       for (const p of event.positions) {
         const key = `${p.row},${p.column}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        merged.push(p);
+        merged.push({ row: p.row, column: p.column, lockedBy: event.lockedBy });
       }
       return {
         ...current,

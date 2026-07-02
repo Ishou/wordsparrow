@@ -44,6 +44,10 @@ const byState = {
 // Opt-in flatten ripple, played once when a cell becomes solved.
 const solveRipple = css({ animation: 'wsFlatten 0.26s ease both' });
 
+// ADR-0086: co-op solved fill tinted with the finder's `--player-color` (set by
+// the caller); 32% matches the presence word-tint, over the neutral solved sable.
+const solvedTint = css({ bg: 'color-mix(in srgb, var(--player-color) 32%, token(colors.ws.sable))' });
+
 export type CellState = keyof typeof byState;
 
 export interface CellProps {
@@ -51,14 +55,16 @@ export interface CellProps {
   readonly letter?: string;
   // ms stagger for the solve ripple; omit to render solved statically (no motion).
   readonly solveDelay?: number;
+  // ADR-0086: when solved, tint the fill from the ancestor's `--player-color`.
+  readonly tinted?: boolean;
 }
 
-export function Cell({ state, letter, solveDelay }: CellProps) {
+export function Cell({ state, letter, solveDelay, tinted }: CellProps) {
   const ripple = state === 'solved' && solveDelay !== undefined;
   return (
     <div
       data-cell-state={state}
-      className={cx(base, byState[state], ripple && solveRipple)}
+      className={cx(base, byState[state], ripple && solveRipple, state === 'solved' && tinted && solvedTint)}
       style={ripple ? { animationDelay: `${solveDelay}ms` } : undefined}
     >
       {state === 'empty' ? '' : letter}

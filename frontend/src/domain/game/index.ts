@@ -17,6 +17,7 @@ export type {
   GridConfig,
   Instant,
   Letter,
+  LockedCell,
   Lobby,
   LobbyId,
   LobbyLifecycleState,

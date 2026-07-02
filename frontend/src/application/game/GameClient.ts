@@ -216,6 +216,9 @@ export interface CursorBumpedEvent {
 export interface WordLockedEvent {
   readonly type: 'wordLocked';
   readonly positions: readonly Position[];
+  // ADR-0086: the session that completed the word(s) in this frame; all
+  // positions here share it (locked by one write). Tints the solved cells.
+  readonly lockedBy: SessionId;
   readonly lockedAt: Instant;
 }
 
