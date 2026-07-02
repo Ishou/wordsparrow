@@ -133,6 +133,16 @@ env:
   # multijoueur") root-caused.
   - name: GRID_BASE_URL
     value: "http://wordsparrow-api:8080"
+  # Shared service token for grid's internal POST /v1/puzzles/{id}/validate-word
+  # (ADR-0084). optional=true is load-bearing: game must boot even when the
+  # Secret is absent — an unset token just 401s validate-word and co-op stays
+  # unlocked, never worse. grid owns the Secret's creation (its Phase 2).
+  - name: WORD_VALIDATE_SERVICE_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: word-validate-token
+        key: token
+        optional: true
   # OpenTelemetry agent configuration (ADR-0027). Endpoint defaults to
   # the in-cluster SigNoz collector Service. Local installs without
   # observability/* deployed will see harmless connection-refused

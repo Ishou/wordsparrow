@@ -221,19 +221,18 @@ interface AnalyticsEventSink {
  * the solution and cheat. game-api therefore can't validate locally —
  * `LetterCell.answer` is null on every cell of every puzzle it ever
  * receives. To know whether a player just completed a word, `UpdateCellUseCase`
- * delegates to this port (HTTP adapter calls `POST /v1/puzzles/{id}/validate`,
- * mirroring the FE solo path's `PuzzleSolver.validate`).
+ * delegates to this port (HTTP adapter calls grid's internal, service-
+ * authenticated `POST /v1/puzzles/{id}/validate-word`, ADR-0084).
  *
- * Returns the set of positions whose submitted letter does NOT match the
- * canonical solution. A position absent from the set is correct; a
- * position absent from the request is reported as incorrect (the v1
- * grid endpoint treats unfilled cells as wrong, same as FE solo).
+ * Returns true iff every submitted cell of the word matches the canonical
+ * solution. The endpoint is a per-word binary oracle carrying no positional
+ * data (ADR-0084 §1) — it never says *which* cell is wrong.
  */
 interface WordValidator {
-    suspend fun incorrectPositions(
+    suspend fun isWordCorrect(
         puzzleId: UUID,
-        filled: Map<Position, Letter>,
-    ): Set<Position>
+        word: Map<Position, Letter>,
+    ): Boolean
 }
 
 /**

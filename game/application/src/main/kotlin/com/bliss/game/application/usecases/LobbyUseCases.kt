@@ -22,6 +22,8 @@ import com.bliss.game.domain.UserId
 import com.bliss.game.domain.analytics.AnalyticsEvent
 import com.bliss.game.domain.wordsContaining
 import kotlinx.coroutines.CancellationException
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.Instant
 
@@ -327,15 +329,16 @@ class LeaveLobbyUseCase(
  * the canonical letter is stripped from `GET /v1/puzzles/{id}` so the
  * client (and game-api) never see the solution. To know whether a fill
  * just completed a correct word, this use case delegates to
- * [WordValidator] (HTTP adapter calls grid's `POST /validate`). The
- * validator is queried OUTSIDE the per-lobby mutator so the lock is not
- * held across an HTTP call.
+ * [WordValidator] (HTTP adapter calls grid's per-word
+ * `POST /validate-word`, ADR-0084). The validator is queried OUTSIDE the
+ * per-lobby mutator so the lock is not held across an HTTP call.
  */
 class UpdateCellUseCase(
     private val repo: LobbyRepository,
     private val clock: Clock,
     private val wordValidator: WordValidator,
     private val analyticsEventSink: AnalyticsEventSink = AnalyticsEventSink.Noop,
+    private val log: Logger = LoggerFactory.getLogger(UpdateCellUseCase::class.java),
 ) {
     suspend operator fun invoke(
         lobbyId: LobbyId,
@@ -402,29 +405,34 @@ class UpdateCellUseCase(
             return success(updated, events).withSolved(solved)
         }
 
-        val incorrect =
-            try {
-                wordValidator.incorrectPositions(session.puzzle.id, lettersOf(entriesAfter))
-            } catch (cause: CancellationException) {
-                throw cause
-            } catch (cause: Exception) {
-                // Validator failure must NOT take down the cellUpdate. The cell
-                // entry is already committed; the player will still see their
-                // letter. The lock just won't fire on this keystroke.
-                return success(updated, events).withSolved(solved)
-            }
+        // Ask grid per candidate word (1-2 per keystroke, ADR-0084 §1).
+        // A validator failure must NOT take down the cellUpdate — the cell
+        // entry is already committed and the player still sees their letter;
+        // the lock just won't fire on this keystroke. We log so a *total*
+        // lock outage is observable and never silent again (ADR-0084).
         // Positions that just transitioned to locked. Words crossing an
         // already-locked word reuse its cells — those cells are already
         // sage on every client, so we emit only the freshly-locked ones.
-        // The WordLocked event payload becomes the diff, not the union;
-        // re-broadcasting an already-locked position would be wire noise.
-        val newLocks =
-            candidateWords
-                .asSequence()
-                .filter { word -> word.none { it in incorrect } }
-                .flatMap { it.asSequence() }
-                .filter { it !in session.lockedPositions }
-                .toSet()
+        val newLocks = mutableSetOf<Position>()
+        for (word in candidateWords) {
+            val correct =
+                try {
+                    wordValidator.isWordCorrect(session.puzzle.id, lettersOf(word, entriesAfter))
+                } catch (cause: CancellationException) {
+                    throw cause
+                } catch (cause: Exception) {
+                    log.warn(
+                        "coop.word_validate_failed lobbyId={} puzzleId={} position={} cause={}",
+                        lobbyId.value,
+                        session.puzzle.id,
+                        position,
+                        cause.message,
+                        cause,
+                    )
+                    continue
+                }
+            if (correct) newLocks += word.filter { it !in session.lockedPositions }
+        }
         if (newLocks.isEmpty()) return success(updated, events).withSolved(solved)
 
         // Step 3: re-enter the mutator to commit the locks. Filter to positions
@@ -491,7 +499,10 @@ class UpdateCellUseCase(
         return candidates
     }
 
-    private fun lettersOf(entries: Map<Position, CellEntry>): Map<Position, Letter> = entries.mapValues { (_, entry) -> entry.letter }
+    private fun lettersOf(
+        word: List<Position>,
+        entries: Map<Position, CellEntry>,
+    ): Map<Position, Letter> = word.associateWith { entries.getValue(it).letter }
 
     private fun passthroughOrFailure(
         lobby: Lobby,

@@ -1091,10 +1091,10 @@ class LobbyWebSocketRouteTest {
      * use case still needs an instance for construction.
      */
     private object NullWordValidator : com.bliss.game.application.ports.WordValidator {
-        override suspend fun incorrectPositions(
+        override suspend fun isWordCorrect(
             puzzleId: java.util.UUID,
-            filled: Map<com.bliss.game.domain.Position, com.bliss.game.domain.Letter>,
-        ): Set<com.bliss.game.domain.Position> = emptySet()
+            word: Map<com.bliss.game.domain.Position, com.bliss.game.domain.Letter>,
+        ): Boolean = true
     }
 
     private object SamplePuzzles {

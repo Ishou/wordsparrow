@@ -1,12 +1,14 @@
-// HTTP adapter for the WordValidator port. Calls grid's
-// `POST /v1/puzzles/{id}/validate` and translates the wire response into
-// the set of incorrect positions.
+// HTTP adapter for the WordValidator port. Calls grid's internal,
+// service-authenticated `POST /v1/puzzles/{id}/validate-word` (ADR-0084)
+// and returns whether the submitted word is fully correct.
 //
 // Why not derive from the puzzle's letter cells directly: per the v1
 // wire (grid/api/openapi.yaml `LetterCell`), letter cells ship without
 // their canonical answer — solutions are server-private. game-api
 // therefore can't validate locally and must delegate to grid for every
-// word check, mirroring the FE solo path's `PuzzleSolver.validate`.
+// word check. The endpoint is a per-word binary oracle (`{ correct }`)
+// carrying no positional data (ADR-0084 §1), reachable only with the
+// shared service token; solo clients never regain per-cell feedback.
 package com.bliss.game.infrastructure
 
 import com.bliss.game.application.ports.WordValidator
@@ -30,24 +32,26 @@ import java.util.UUID
 class HttpWordValidator(
     private val httpClient: HttpClient,
     private val gridBaseUrl: String,
+    private val serviceToken: String? = System.getenv(SERVICE_TOKEN_ENV),
     private val json: Json = DEFAULT_JSON,
 ) : WordValidator {
-    override suspend fun incorrectPositions(
+    override suspend fun isWordCorrect(
         puzzleId: UUID,
-        filled: Map<Position, Letter>,
-    ): Set<Position> {
+        word: Map<Position, Letter>,
+    ): Boolean {
         val request =
-            ValidateRequestDto(
-                filledCells =
-                    filled.entries.map { (pos, letter) ->
-                        FilledCellDto(row = pos.row, column = pos.column, letter = letter.value.toString())
+            ValidateWordRequestDto(
+                cells =
+                    word.entries.map { (pos, letter) ->
+                        WordCellDto(row = pos.row, column = pos.column, letter = letter.value.toString())
                     },
             )
         val response: HttpResponse =
             try {
-                httpClient.post("$gridBaseUrl/v1/puzzles/$puzzleId/validate") {
+                httpClient.post("$gridBaseUrl/v1/puzzles/$puzzleId/validate-word") {
                     header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody(json.encodeToString(ValidateRequestDto.serializer(), request))
+                    serviceToken?.let { header(SERVICE_TOKEN_HEADER, it) }
+                    setBody(json.encodeToString(ValidateWordRequestDto.serializer(), request))
                 }
             } catch (cause: IOException) {
                 throw WordValidatorException.UpstreamUnavailable(cause)
@@ -57,14 +61,17 @@ class HttpWordValidator(
         }
         val dto =
             try {
-                json.decodeFromString(ValidateResponseDto.serializer(), response.bodyAsText())
+                json.decodeFromString(ValidateWordResponseDto.serializer(), response.bodyAsText())
             } catch (cause: SerializationException) {
                 throw WordValidatorException.UpstreamMalformed(cause)
             }
-        return dto.incorrectCells.map { Position(it.row, it.column) }.toSet()
+        return dto.correct
     }
 
     companion object {
+        const val SERVICE_TOKEN_HEADER = "X-Service-Token"
+        const val SERVICE_TOKEN_ENV = "WORD_VALIDATE_SERVICE_TOKEN"
+
         internal val DEFAULT_JSON: Json =
             Json {
                 ignoreUnknownKeys = true
@@ -74,27 +81,20 @@ class HttpWordValidator(
 }
 
 @Serializable
-private data class ValidateRequestDto(
-    val filledCells: List<FilledCellDto>,
+private data class ValidateWordRequestDto(
+    val cells: List<WordCellDto>,
 )
 
 @Serializable
-private data class FilledCellDto(
+private data class WordCellDto(
     val row: Int,
     val column: Int,
     val letter: String,
 )
 
 @Serializable
-private data class ValidateResponseDto(
-    val solved: Boolean,
-    val incorrectCells: List<IncorrectCellDto>,
-)
-
-@Serializable
-private data class IncorrectCellDto(
-    val row: Int,
-    val column: Int,
+private data class ValidateWordResponseDto(
+    val correct: Boolean,
 )
 
 sealed class WordValidatorException(
@@ -104,13 +104,13 @@ sealed class WordValidatorException(
     class UpstreamError(
         val status: Int,
         val body: String,
-    ) : WordValidatorException("grid validate responded with HTTP $status: $body")
+    ) : WordValidatorException("grid validate-word responded with HTTP $status: $body")
 
     class UpstreamUnavailable(
         cause: Throwable,
-    ) : WordValidatorException("grid validate is unreachable: ${cause.message}", cause)
+    ) : WordValidatorException("grid validate-word is unreachable: ${cause.message}", cause)
 
     class UpstreamMalformed(
         cause: Throwable,
-    ) : WordValidatorException("grid validate response failed to parse: ${cause.message}", cause)
+    ) : WordValidatorException("grid validate-word response failed to parse: ${cause.message}", cause)
 }
