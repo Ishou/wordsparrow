@@ -264,3 +264,45 @@ comment the same on the relevant PR (as orchestrator), `CronDelete` self, exit.
 Escalate on: any CLOSED-not-merged PR; 3 fix passes exhausted; identical-finding
 loop on a non-cap finding; ANY prod-deploy/secret/infra step that risks breakage;
 a bonus-phase wire change you are not confident is safe unattended.
+
+## ADR-0085 auto-merge cron (maintainer said "cron auto-merge green+lgtm")
+
+STANDING AUTH (2026-07-02): maintainer authorized a cron to auto-merge PRs that
+are green + bot-LGTM. This is the explicit per-merge approval the classifier
+requires. Merge ONLY on the AUTONOMOUS bot review (posted on PR open/synchronize).
+**NEVER manufacture a review** (no `gh run rerun`, no dispatched reviewer, no
+steering) — that is self-approval and is forbidden; it is what broke earlier.
+
+Phase order (dependency + deploy sequencing). Resolve each PR by branch via
+`gh pr list --repo Ishou/bliss --head <branch> --json number,state,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,reviews`:
+1. `docs/adr-0085-word-rejected-event` (ADR #1247, base main)
+2. `feat/game-word-rejected-schema` (asyncapi #1248, base = ADR branch → retarget)
+3. `feat/game-word-rejected-impl` (game emit, base = asyncapi branch → retarget)
+4. `feat/coop-word-rejected-sync-shake` (frontend, base main) — merge LAST, only
+   after phase 3 is MERGED (so wrong-word shake works end-to-end; frontend demotes
+   the timeout, so shipping it before the game emit deploys would leave wrong words
+   with no shake — not harmful, correct words still lock, but avoid the window).
+
+Tick (one action per fire):
+- Walk phases in order; act on the first not-MERGED.
+- **No PR yet** (impl agent still authoring) → WAIT (do NOT dispatch a new
+  implementer; they were already dispatched).
+- **OPEN, base != main and its base PR MERGED** → `gh pr edit <#> --base main`
+  then rebase onto main dropping the base's commits:
+  `git fetch origin; git checkout -B rb origin/<branch>; git rebase --onto origin/main origin/<base-branch> rb; git push --force-with-lease origin rb:<branch>`. Then wait for CI re-run.
+- **OPEN, ready** = all blocking checks success + mergeable + mergeStateStatus in
+  (CLEAN,UNSTABLE) + latest review body starts with `LGTM` (case-insensitive) AND
+  (phase 4 gated on phase 3 MERGED) → `gh pr merge <#> --repo Ishou/bliss --squash`.
+- **OPEN, latest review starts `Findings —` and no fix commit since it and no
+  claude-review running** → dispatch a FIXER agent (worktree, background) to
+  resolve the findings + push (the bot then re-reviews autonomously). NEVER a
+  reviewer/rerun.
+- else WAIT.
+- After any action, append a one-line dated event to the log; commit+push to
+  `chore/claude-mp-validation-orchestration`.
+- When phase 4 is MERGED → append `**ACTION:** ADR-0085 rollout merged; watch
+  deploy` and CronDelete self.
+
+HARD SAFETY unchanged: never force risky infra to prod; never reopen ADR-0076 for
+clients/solo; if a merge is classifier-blocked as self-approval, STOP + escalate
+(do not retry/manufacture).
