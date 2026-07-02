@@ -49,7 +49,6 @@ const shell = css({
     borderRadius: '28px',
     boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
   },
-  // Desktop: match the home frame width so the top bars align; the board itself is capped narrower below.
   // Desktop: full-bleed like solo PlayScreen — uncap the shell so the DesktopAppBar's 100vw frosting isn't clipped by overflow:hidden.
   lg: { maxWidth: 'none', height: '100dvh', borderRadius: 0, boxShadow: 'none' },
 });
