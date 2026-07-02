@@ -116,3 +116,17 @@ Append-only event ledger for maintainer review. Newest at the bottom.
     permits documented deferral; the fixer documents it in the PR body.
     **MAINTAINER TODO: implement the internal-connector second control as the
     immediate follow-up** (or accept token-only and amend ADR-0084 §3).
+- 2026-07-02 — **Maintainer gave explicit merge authorization** ("merge all
+  that's good to merge") — the specific per-PR approval the classifier required.
+  Merged **#1242** (schema → validate-word on main) and **#1240** (guest
+  sign-in gate → on main, deploying to Cloudflare Pages; the guest-feedback
+  request is SHIPPED). Held #1243/#1244/#1245 (see below).
+- 2026-07-02 — **Remaining merge plan.** #1245 (grid impl) + #1244 (game rewire):
+  merge once their fixers land green + bot-LGTM (retarget #1245 → main + rebase
+  first). Both are boot-safe — merging without the token provisioned leaves co-op
+  unlocked == current prod, no regression. **#1243 (frontend shake) HELD for the
+  maintainer**: it is only safe once co-op ACTUALLY locks, which needs #1245+#1244
+  deployed AND the `WORD_VALIDATE_SERVICE_TOKEN` secret provisioned in both
+  `wordsparrow-api-env` + `bliss-game-api-env`. Merging #1243 before locking works
+  would make correct words shake. Sequence: provision token → confirm co-op locks
+  → merge #1243.
