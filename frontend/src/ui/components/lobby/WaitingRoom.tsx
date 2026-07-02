@@ -20,7 +20,7 @@ import { PlayerList, MAX_PLAYERS } from './PlayerList';
 // All interactive controls (Button, TextField, ToggleGroup) are project-
 // local primitives wrapping Ark UI per ADR-0002 §2.
 //
-// Grid presets: square sizes 5–11 and the 15×12 landscape default. The
+// Grid presets: square sizes 5–11 and the 15×12 / 28×20 landscape options. The
 // option `value` doubles as a stable serialisable id (`<W>x<H>`); the
 // picker resolves it back to (width, height) before invoking
 // `onSetGridConfig`.
@@ -30,6 +30,7 @@ const GRID_SIZE_OPTIONS = [
   { value: '9x9',   label: '9×9',   width: 9,  height: 9 },
   { value: '11x11', label: '11×11', width: 11, height: 11 },
   { value: '15x12', label: '15×12', width: 15, height: 12 },
+  { value: '28x20', label: '28×20', width: 28, height: 20 },
 ] as const;
 type GridSize = (typeof GRID_SIZE_OPTIONS)[number]['value'];
 
@@ -326,8 +327,8 @@ function PseudonymEditor({
   );
 }
 
-// Five presets: four squares (5×5 / 7×7 / 9×9 / 11×11) and the 15×12
-// landscape default. Selection is keyed by the `<W>x<H>` value string;
+// Six presets: four squares (5×5 / 7×7 / 9×9 / 11×11) and the 15×12 /
+// 28×20 landscape options. Selection is keyed by the `<W>x<H>` value string;
 // `currentValue` resolves the lobby's actual gridConfig back to the
 // matching option, with the empty string used when the lobby holds a
 // custom (W,H) outside the preset set so the toggle group renders
