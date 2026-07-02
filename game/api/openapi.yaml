@@ -448,13 +448,13 @@ components:
         width:
           type: integer
           minimum: 5
-          maximum: 15
+          maximum: 28
           description: Number of columns.
           example: 7
         height:
           type: integer
           minimum: 5
-          maximum: 15
+          maximum: 28
           description: Number of rows.
           example: 7
 

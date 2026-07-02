@@ -190,8 +190,8 @@ components:
       required: [width, height]
       description: Dimensions chosen by the lobby owner before start.
       properties:
-        width:  { type: integer, minimum: 5, maximum: 15, description: Number of columns., example: 7 }
-        height: { type: integer, minimum: 5, maximum: 15, description: Number of rows.,    example: 7 }
+        width:  { type: integer, minimum: 5, maximum: 28, description: Number of columns., example: 7 }
+        height: { type: integer, minimum: 5, maximum: 28, description: Number of rows.,    example: 7 }
     Letter:
       type: string
       minLength: 1
@@ -429,8 +429,8 @@ components:
       description: Owner-only. Server rejects with `error` otherwise.
       properties:
         type:   { type: string, enum: [setGridConfig] }
-        width:  { type: integer, minimum: 5, maximum: 15 }
-        height: { type: integer, minimum: 5, maximum: 15 }
+        width:  { type: integer, minimum: 5, maximum: 28 }
+        height: { type: integer, minimum: 5, maximum: 28 }
       example: { type: setGridConfig, width: 7, height: 7 }
     StartGamePayload:
       type: object
