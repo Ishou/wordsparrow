@@ -279,14 +279,19 @@ class FakePuzzleProvider(
  * same contract as grid's per-word `POST /validate-word` (ADR-0084).
  * Defaults to an empty answer table (no word ever reads as correct),
  * matching the production behavior of a puzzle whose answers are absent.
+ * [failingPositions] simulates a validator outage for words touching those positions.
  */
 class FakeWordValidator(
     private val answers: Map<com.bliss.game.domain.Position, com.bliss.game.domain.Letter> = emptyMap(),
+    private val failingPositions: Set<com.bliss.game.domain.Position> = emptySet(),
 ) : com.bliss.game.application.ports.WordValidator {
     override suspend fun isWordCorrect(
         puzzleId: java.util.UUID,
         word: Map<com.bliss.game.domain.Position, com.bliss.game.domain.Letter>,
-    ): Boolean = word.isNotEmpty() && word.all { (pos, letter) -> answers[pos] == letter }
+    ): Boolean {
+        if (word.keys.any { it in failingPositions }) throw RuntimeException("simulated word-validate outage")
+        return word.isNotEmpty() && word.all { (pos, letter) -> answers[pos] == letter }
+    }
 }
 
 internal object Samples {
