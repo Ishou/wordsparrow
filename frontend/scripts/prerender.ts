@@ -25,7 +25,12 @@ import { chromium, type BrowserContext } from '@playwright/test';
 import { createServer, type Server } from 'node:http';
 import { readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { extname, join, dirname, resolve, sep } from 'node:path';
-import { INDEXABLE_ROUTES, NOINDEX_PRERENDER_ROUTES } from '../src/ui/seo/routeManifest.ts';
+import {
+  INDEXABLE_ROUTES,
+  NOINDEX_PRERENDER_ROUTES,
+  PARAM_SHELL_ROUTES,
+} from '../src/ui/seo/routeManifest.ts';
+import { noindexHead, type RouteHead } from '../src/ui/seo/buildHead.ts';
 
 const DIST = resolve(import.meta.dirname, '../dist');
 
@@ -41,8 +46,14 @@ const DIST = resolve(import.meta.dirname, '../dist');
 const PUZZLE_LOADING_ROUTES: ReadonlySet<string> = new Set(['/', '/play']);
 
 // Hang auth/survey so AuthProvider stays in `loading` and the anon-redirect effect never fires.
-const AUTH_GATED_ROUTES: ReadonlySet<string> = new Set(
-  NOINDEX_PRERENDER_ROUTES.map((r) => r.path),
+const AUTH_GATED_ROUTES: ReadonlySet<string> = new Set([
+  ...NOINDEX_PRERENDER_ROUTES.map((r) => r.path),
+  ...PARAM_SHELL_ROUTES.map((r) => r.prerenderPath),
+]);
+
+// Hang the lobby REST read so pendingComponent renders instead of the 503 catch-all's errorComponent.
+const LOBBY_SHELL_PATHS: ReadonlySet<string> = new Set(
+  PARAM_SHELL_ROUTES.map((r) => r.prerenderPath),
 );
 
 const MIME: Record<string, string> = {
@@ -185,10 +196,18 @@ async function loadRoute(
       await page.route('**/v1/auth/**', () => { /* hang */ });
       await page.route('**/v1/survey/**', () => { /* hang */ });
     }
+    if (LOBBY_SHELL_PATHS.has(route.path)) {
+      await page.route('**/v1/lobbies/**', () => { /* hang */ });
+    }
     await page.goto(`${baseUrl}${route.path}`, {
       waitUntil: 'domcontentloaded',
       timeout: 30_000,
     });
+    if (LOBBY_SHELL_PATHS.has(route.path)) {
+      // head() never fires while the loader hangs, so canonical/title are unreachable — the pendingComponent's status node is the ready-signal.
+      await page.waitForSelector('[role="status"]', { timeout: 10_000 });
+      return await page.content();
+    }
     // canonical link is a stronger ready-signal than title; pendingMs:0 lets title fire early.
     if (puzzleStub === 'fixture') {
       await page.waitForSelector('link[rel="canonical"]', { state: 'attached', timeout: 5_000 });
@@ -242,13 +261,32 @@ function mergeHeadIntoBody(metaHtml: string, bodyHtml: string): string {
   return merged;
 }
 
+function renderHeadTags(head: RouteHead): string {
+  const meta = head.meta.map((entry) =>
+    'title' in entry
+      ? `<title>${entry.title}</title>`
+      : `<meta ${'property' in entry ? `property="${entry.property}"` : `name="${entry.name}"`} content="${entry.content}">`,
+  );
+  const links = head.links.map((link) => `<link rel="${link.rel}" href="${link.href}">`);
+  return [...meta, ...links].join('');
+}
+
+// The hung-loader shells never run head(); reuse noindexHead so the shell's tags can't drift from the hydrated route's own metadata.
+function injectShellHead(html: string, meta: { title: string; description: string }): string {
+  const tags = renderHeadTags(noindexHead(meta.title, meta.description));
+  return html.replace('</head>', `${tags}</head>`);
+}
+
 async function prerenderRoute(
   context: BrowserContext,
   baseUrl: string,
-  route: { path: string; title: string },
+  route: { path: string; title: string; outSlug?: string; description?: string },
 ): Promise<PrerenderError | null> {
   try {
-    const fullHtml = await loadRoute(context, baseUrl, route, 'fixture');
+    let fullHtml = await loadRoute(context, baseUrl, route, 'fixture');
+    if (route.outSlug != null && route.description != null) {
+      fullHtml = injectShellHead(fullHtml, { title: route.title, description: route.description });
+    }
     let html = fullHtml;
     if (PUZZLE_LOADING_ROUTES.has(route.path)) {
       // Second pass: render the skeleton (hang the puzzle endpoint),
@@ -259,9 +297,10 @@ async function prerenderRoute(
       const skeletonHtml = await loadRoute(context, baseUrl, route, 'hang');
       html = mergeHeadIntoBody(fullHtml, skeletonHtml);
     }
+    const slug = route.outSlug ?? route.path.slice(1);
     const outPath = route.path === '/'
       ? join(DIST, 'index.html')
-      : join(DIST, `${route.path.slice(1)}.html`);
+      : join(DIST, `${slug}.html`);
     mkdirSync(dirname(outPath), { recursive: true });
     writeFileSync(outPath, html, 'utf8');
     console.warn(`[prerender] ok ${route.path} -> ${outPath.replace(DIST, 'dist')}`);
@@ -323,6 +362,12 @@ async function main(): Promise<void> {
   const allRoutes = [
     ...INDEXABLE_ROUTES.map((r) => ({ path: r.path, title: r.title })),
     ...NOINDEX_PRERENDER_ROUTES,
+    ...PARAM_SHELL_ROUTES.map((r) => ({
+      path: r.prerenderPath,
+      title: r.title,
+      outSlug: r.outSlug,
+      description: r.description,
+    })),
   ];
   const errors: PrerenderError[] = [];
   try {

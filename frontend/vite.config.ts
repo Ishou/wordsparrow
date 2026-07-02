@@ -18,12 +18,18 @@ const PRERENDERED_ROUTE_PATHS = [
   '/reglages',
   '/menu',
   '/finish',
+  '/abonnement',
+  '/abonnement/succes',
+  '/abonnement/annule',
 ] as const;
 const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // `(\?.*)?` keeps query-string URLs (e.g. /play?date=…) denylisted; without it the SW serves the home shell and flashes it.
-const PRERENDER_NAV_DENYLIST: RegExp[] = PRERENDERED_ROUTE_PATHS.map(
-  (p) => new RegExp(`^${escapeRegExp(p)}/?(\\?.*)?$`),
-);
+const PRERENDER_NAV_DENYLIST: RegExp[] = [
+  ...PRERENDERED_ROUTE_PATHS.map((p) => new RegExp(`^${escapeRegExp(p)}/?(\\?.*)?$`)),
+  // Param routes: Pages serves their prerendered loading shells via the _redirects 200-rewrites.
+  /^\/lobby\//,
+  /^\/join\//,
+];
 
 // MSW preview handlers (see ADR-0007 §5) replay the spec's
 // `examples/` payloads so the preview SPA stays contract-conformant

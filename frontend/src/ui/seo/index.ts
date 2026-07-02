@@ -3,9 +3,11 @@ export {
   INDEXABLE_ROUTES,
   EXCLUDED_ROUTES,
   NOINDEX_PRERENDER_ROUTES,
+  PARAM_SHELL_ROUTES,
   DEFAULT_OG_IMAGE,
   type IndexableRoute,
   type PrerenderRoute,
+  type ParamShellRoute,
 } from './routeManifest';
 export {
   buildHead,

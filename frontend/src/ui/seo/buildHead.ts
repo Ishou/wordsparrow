@@ -7,8 +7,8 @@
 // One source of truth for the canonical URL, OG tags, Twitter card,
 // and the optional `noindex` flag. Tested in seo-build-head.test.ts.
 
-import { DEFAULT_OG_IMAGE, INDEXABLE_ROUTES, SITE_BASE_URL } from './routeManifest';
-import { breadcrumbJsonLd } from './jsonLd';
+import { DEFAULT_OG_IMAGE, INDEXABLE_ROUTES, SITE_BASE_URL } from './routeManifest.ts';
+import { breadcrumbJsonLd } from './jsonLd.ts';
 
 export interface BuildHeadInput {
   readonly title: string;
