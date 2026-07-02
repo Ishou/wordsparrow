@@ -224,3 +224,12 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   IMPL agents OFF MAIN** (prior ones died on the session limit): `feat/game-locked-by-impl`
   + `feat/coop-locked-word-color`. Cron phases 6/7 will merge them on green+LGTM.
 - 2026-07-02 — **Both coloring impl agents were SLOW (~66min), not dead** (idle/164B output was just unflushed transcript). Both completed green: game **#1253**, frontend **#1254**. No zombie cleanup needed; pruned their two idle worktrees. **Merged #1253 (game impl, phase 6).** Last phase: #1254 (frontend coloring) — merges next tick on green + autonomous LGTM, then cron self-deletes → ADR-0086 complete.
+- 2026-07-02 — **Coloring impl PRs OPEN, MERGE BLOCKED (self-approval) — needs maintainer.**
+  Both ADR-0086 coloring impl PRs are up and green: **#1253** (`feat/game-locked-by-impl`,
+  game, bot-LGTM, CLEAN) and **#1254** (`feat/coop-locked-word-color`, frontend;
+  validated locally — typecheck + 24 tests + build green; awaiting bot review).
+  `gh pr merge 1253` was classifier-BLOCKED as self-approval (this session finalized
+  the coloring work), so NOT retried/manufactured per the hard rule. **ACTION: maintainer
+  merges #1253 then #1254** (game before frontend), or grants a merge permission. This is
+  the FINAL piece — word-locking fix, guest gate, wordRejected sync-shake, and ADR-0086
+  ADR+schema are all merged & deploying.
