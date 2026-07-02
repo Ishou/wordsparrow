@@ -107,6 +107,25 @@ describe('useCoopValidating', () => {
     expect(result.current.rejecting.size).toBe(0);
   });
 
+  it('cancels an in-progress reject shake when a late lock arrives for the same cells', () => {
+    vi.useFakeTimers();
+    fillWord();
+    const { result, rerender } = renderHook(
+      ({ validated }: { validated: ReadonlySet<string> }) => useCoopValidating(puzzle, validated),
+      { initialProps: { validated: new Set<string>() } },
+    );
+
+    act(() => result.current.noteLocalFill(0, 4));
+    act(() => vi.advanceTimersByTime(3500)); // never locked by MAX_MS → rejected
+
+    for (const k of WORD_KEYS) expect(result.current.rejecting.has(k)).toBe(true);
+
+    // A slow `wordLocked` broadcast lands after the reject already started.
+    act(() => rerender({ validated: new Set<string>(WORD_KEYS) }));
+
+    expect(result.current.rejecting.size).toBe(0);
+  });
+
   it('never shakes a word locked before the safety window', () => {
     vi.useFakeTimers();
     fillWord();

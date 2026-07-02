@@ -113,6 +113,17 @@ export function useCoopValidating(
     }
   }, [validatedPositions, stopWord]);
 
+  // A lock that lands after MAX_MS reaches cells already moved into `rejecting`; strip them immediately
+  // so a correct word never renders the reject shake alongside its solved state.
+  useEffect(() => {
+    setRejecting((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set(prev);
+      for (const k of prev) if (validatedPositions.has(k)) next.delete(k);
+      return next.size === prev.size ? prev : next;
+    });
+  }, [validatedPositions]);
+
   useEffect(
     () => () => {
       for (const entry of wordsRef.current.values()) {
