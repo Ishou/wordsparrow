@@ -249,6 +249,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/puzzles/{puzzleId}/validate-word": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * (Internal) Verify a single completed word against the solution.
+         * @description INTERNAL, service-to-service only. Used by game-api to lock a word in a
+         *     multiplayer co-op grid: game-api submits the cells of one just-completed
+         *     word and receives a single binary verdict — `correct` or not. Like
+         *     `/validate` it carries NO positional data (it never says which cell is
+         *     wrong), so it cannot reconstruct the solution; unlike `/validate` it is
+         *     scoped to one word rather than the whole grid.
+         *
+         *     Authentication: requires the `X-Service-Token` header matching the
+         *     server's `WORD_VALIDATE_SERVICE_TOKEN`. This endpoint is NOT exposed on
+         *     the public ingress and MUST NOT be reachable by a browser — a solo
+         *     player calling it directly would defeat the binary-oracle posture of
+         *     `/validate` (ADR-0076 §9). See ADR-0084 for the threat model.
+         */
+        post: operations["validateWord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sessions/{sessionId}": {
         parameters: {
             query?: never;
@@ -680,6 +711,58 @@ export interface components {
             solved: boolean;
         };
         /**
+         * @description Request body for `POST /v1/puzzles/{puzzleId}/validate-word`. Carries the
+         *     cells of ONE completed word (a single contiguous across or down span).
+         *     Order is irrelevant; the server keys by `(row, column)`. Duplicate
+         *     `(row, column)` entries are a 400.
+         * @example {
+         *       "cells": [
+         *         {
+         *           "row": 0,
+         *           "column": 1,
+         *           "letter": "P"
+         *         },
+         *         {
+         *           "row": 0,
+         *           "column": 2,
+         *           "letter": "A"
+         *         },
+         *         {
+         *           "row": 0,
+         *           "column": 3,
+         *           "letter": "I"
+         *         },
+         *         {
+         *           "row": 0,
+         *           "column": 4,
+         *           "letter": "N"
+         *         }
+         *       ]
+         *     }
+         */
+        ValidateWordRequest: {
+            /**
+             * @description The submitted word's letters. A word is at least two cells;
+             *     `maxItems` matches the protocol-level max word length (`≤ 50`, the
+             *     grid dimension bound).
+             */
+            cells: components["schemas"]["FilledCell"][];
+        };
+        /**
+         * @description Per-word validation outcome: a pure binary verdict. Carries no
+         *     positional data — it never says which cell is wrong — so it cannot be
+         *     used to locate or reconstruct any part of the solution (ADR-0076 §9
+         *     posture, scoped to one word).
+         */
+        ValidateWordResult: {
+            /**
+             * @description True iff every submitted cell matches the canonical solution and the
+             *     cells form a valid word span.
+             * @example true
+             */
+            correct: boolean;
+        };
+        /**
          * @description RFC 7807 error envelope (ADR-0003 §6). Additional members per
          *     RFC 7807 §3.2 may appear; clients tolerate them.
          */
@@ -754,6 +837,11 @@ export interface components {
     };
     responses: never;
     parameters: {
+        /**
+         * @description Shared service token for internal endpoints (ADR-0084). Must match the
+         *     server's `WORD_VALIDATE_SERVICE_TOKEN`; otherwise 401.
+         */
+        ServiceToken: string;
         /** @description UUID v7 identifier of the puzzle. */
         PuzzleId: components["schemas"]["PuzzleId"];
         /**
@@ -1245,6 +1333,82 @@ export interface operations {
              *     `type` is `https://bliss.example/errors/invalid-validate-request`.
              */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description No puzzle with this id. RFC 7807;
+             *     `type` is `https://bliss.example/errors/puzzle-not-found`.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    validateWord: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Shared service token for internal endpoints (ADR-0084). Must match the
+                 *     server's `WORD_VALIDATE_SERVICE_TOKEN`; otherwise 401.
+                 */
+                "X-Service-Token": components["parameters"]["ServiceToken"];
+            };
+            path: {
+                /** @description UUID v7 identifier of the puzzle. */
+                puzzleId: components["parameters"]["PuzzleId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateWordRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description Validation completed. The body carries only `correct` — a binary
+             *     per-word verdict with no positional data.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateWordResult"];
+                };
+            };
+            /**
+             * @description Request invalid: fewer than two cells, position out of range,
+             *     position pointing at a non-letter cell, `letter` not a single
+             *     uppercase A-Z, duplicate `(row, column)`, or the cells do not form a
+             *     single contiguous word span. RFC 7807; `type` is
+             *     `https://bliss.example/errors/invalid-validate-request`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description Missing or invalid `X-Service-Token`. This endpoint is
+             *     service-authenticated; browsers cannot call it. RFC 7807; `type` is
+             *     `https://bliss.example/errors/service-auth-required`.
+             */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

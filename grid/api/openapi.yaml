@@ -553,6 +553,73 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /v1/puzzles/{puzzleId}/validate-word:
+    post:
+      operationId: validateWord
+      summary: (Internal) Verify a single completed word against the solution.
+      description: |
+        INTERNAL, service-to-service only. Used by game-api to lock a word in a
+        multiplayer co-op grid: game-api submits the cells of one just-completed
+        word and receives a single binary verdict — `correct` or not. Like
+        `/validate` it carries NO positional data (it never says which cell is
+        wrong), so it cannot reconstruct the solution; unlike `/validate` it is
+        scoped to one word rather than the whole grid.
+
+        Authentication: requires the `X-Service-Token` header matching the
+        server's `WORD_VALIDATE_SERVICE_TOKEN`. This endpoint is NOT exposed on
+        the public ingress and MUST NOT be reachable by a browser — a solo
+        player calling it directly would defeat the binary-oracle posture of
+        `/validate` (ADR-0076 §9). See ADR-0084 for the threat model.
+      tags: [puzzles]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/PuzzleId'
+        - $ref: '#/components/parameters/ServiceToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateWordRequest'
+      responses:
+        '200':
+          description: |
+            Validation completed. The body carries only `correct` — a binary
+            per-word verdict with no positional data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateWordResult'
+        '400':
+          description: |
+            Request invalid: fewer than two cells, position out of range,
+            position pointing at a non-letter cell, `letter` not a single
+            uppercase A-Z, duplicate `(row, column)`, or the cells do not form a
+            single contiguous word span. RFC 7807; `type` is
+            `https://bliss.example/errors/invalid-validate-request`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: |
+            Missing or invalid `X-Service-Token`. This endpoint is
+            service-authenticated; browsers cannot call it. RFC 7807; `type` is
+            `https://bliss.example/errors/service-auth-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: |
+            No puzzle with this id. RFC 7807;
+            `type` is `https://bliss.example/errors/puzzle-not-found`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /v1/sessions/{sessionId}:
     delete:
       operationId: deleteSession
@@ -615,8 +682,29 @@ components:
         identity-api's whoami endpoint and resolves the calling user's
         `userId`. Missing or revoked cookies produce a 401
         `auth-required` response on protected operations.
+    serviceToken:
+      type: apiKey
+      in: header
+      name: X-Service-Token
+      description: |
+        Shared service-to-service token gating internal, non-public endpoints
+        (e.g. `validate-word`). game-api sends it; grid compares it
+        constant-time to `WORD_VALIDATE_SERVICE_TOKEN`. Injected at runtime as a
+        k8s Secret (ADR-0009 §10, ADR-0084) — never committed, never held by any
+        browser. Not the user session cookie.
 
   parameters:
+    ServiceToken:
+      name: X-Service-Token
+      in: header
+      required: true
+      description: |
+        Shared service token for internal endpoints (ADR-0084). Must match the
+        server's `WORD_VALIDATE_SERVICE_TOKEN`; otherwise 401.
+      schema:
+        type: string
+        minLength: 1
+        example: 3f9c1a7e4b2d8f60a1c5e9d3b7f04a26
     PuzzleId:
       name: puzzleId
       in: path
@@ -1149,6 +1237,48 @@ components:
             True iff every letter cell is filled and matches the canonical
             solution.
           example: false
+
+    ValidateWordRequest:
+      type: object
+      description: |
+        Request body for `POST /v1/puzzles/{puzzleId}/validate-word`. Carries the
+        cells of ONE completed word (a single contiguous across or down span).
+        Order is irrelevant; the server keys by `(row, column)`. Duplicate
+        `(row, column)` entries are a 400.
+      required: [cells]
+      properties:
+        cells:
+          type: array
+          minItems: 2
+          maxItems: 50
+          description: |
+            The submitted word's letters. A word is at least two cells;
+            `maxItems` matches the protocol-level max word length (`≤ 50`, the
+            grid dimension bound).
+          items:
+            $ref: '#/components/schemas/FilledCell'
+      example:
+        cells:
+          - { row: 0, column: 1, letter: P }
+          - { row: 0, column: 2, letter: A }
+          - { row: 0, column: 3, letter: I }
+          - { row: 0, column: 4, letter: N }
+
+    ValidateWordResult:
+      type: object
+      description: |
+        Per-word validation outcome: a pure binary verdict. Carries no
+        positional data — it never says which cell is wrong — so it cannot be
+        used to locate or reconstruct any part of the solution (ADR-0076 §9
+        posture, scoped to one word).
+      required: [correct]
+      properties:
+        correct:
+          type: boolean
+          description: |
+            True iff every submitted cell matches the canonical solution and the
+            cells form a valid word span.
+          example: true
 
     Problem:
       type: object
