@@ -88,4 +88,39 @@ describe('useCoopValidating', () => {
     act(() => vi.advanceTimersByTime(3500));
     expect(result.current.validating.size).toBe(0);
   });
+
+  it('shakes a word that times out unlocked, then clears the reject after the window', () => {
+    vi.useFakeTimers();
+    fillWord();
+    const { result } = renderHook(
+      ({ validated }: { validated: ReadonlySet<string> }) => useCoopValidating(puzzle, validated),
+      { initialProps: { validated: new Set<string>() } },
+    );
+
+    act(() => result.current.noteLocalFill(0, 4));
+    act(() => vi.advanceTimersByTime(3500)); // never locked → reject on the safety window
+
+    for (const k of WORD_KEYS) expect(result.current.rejecting.has(k)).toBe(true);
+    expect(result.current.validating.size).toBe(0);
+
+    act(() => vi.advanceTimersByTime(600));
+    expect(result.current.rejecting.size).toBe(0);
+  });
+
+  it('never shakes a word locked before the safety window', () => {
+    vi.useFakeTimers();
+    fillWord();
+    const { result, rerender } = renderHook(
+      ({ validated }: { validated: ReadonlySet<string> }) => useCoopValidating(puzzle, validated),
+      { initialProps: { validated: new Set<string>() } },
+    );
+
+    act(() => result.current.noteLocalFill(0, 4));
+    act(() => vi.advanceTimersByTime(200));
+    act(() => rerender({ validated: new Set<string>(WORD_KEYS) })); // server `wordLocked`
+    act(() => vi.advanceTimersByTime(4100)); // past MAX_MS + the reject window
+
+    expect(result.current.rejecting.size).toBe(0);
+    expect(result.current.validating.size).toBe(0);
+  });
 });
