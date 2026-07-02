@@ -5,7 +5,7 @@ Inversion forms (`posè-je`, `réprimè-je`) carry grammalecte's `Nisg` person,
 which `PERSON_TOKENS` omits. They are crossword-noise (same class as passé
 simple) and unclueable — the inflater skips them (`no-inflection-finite`), so
 they ship either blank or, when a regeneration slips through, with an
-arbitrary-person clue (grid #181: `posè → Placent`). `is_obscure_tag` now
+arbitrary-person clue (`posè → Placent`). `is_obscure_tag` now
 blocks them at admission; this one-off scrub removes the rows already present.
 
 A surface is removed iff, scoped to its declared lemma, every grammalecte row

@@ -4,7 +4,7 @@ interrogative-inversion surfaces (`posè-je`, `réprimè-je`, `puissé-je`).
 These carry grammalecte's `Nisg` person, which `PERSON_TOKENS` omits: the
 inflater can't match a person for them and skips (`no-inflection-finite`), so
 they ship either unclueable or — when a regeneration slips through — with an
-arbitrary-person clue (grid #181: `posè → Placent`). `is_obscure_tag` now
+arbitrary-person clue (`posè → Placent`). `is_obscure_tag` now
 blocks them at admission and `strip_inversion_forms.py` scrubbed the rows.
 
 This catches the merged-but-not-rebuilt regression: a future import re-adds

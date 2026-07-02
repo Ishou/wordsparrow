@@ -587,7 +587,7 @@ def test_adj_nom_ambiguous_agrees_not_cohead_inflated() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Exact-or-skip on person (grid #181: `posè → Placent`). A finite-verb surface
+# Exact-or-skip on person (`posè → Placent`). A finite-verb surface
 # whose person can't be matched exactly must SKIP, never fall through to
 # "whatever row matches first" and emit an arbitrary-person head.
 # ---------------------------------------------------------------------------
@@ -606,7 +606,7 @@ def _placer_index() -> MorphologyIndex:
 
 
 def test_inversion_person_surface_skips_instead_of_arbitrary_plural() -> None:
-    """The grid #181 regression. `posè` (answer POSE) is a literary inversion
+    """`posè` (answer POSE) is a literary inversion
     form tagged `1isg`, which `PERSON_TOKENS` omits; `extract_inflection_target`
     drops the person, leaving a person-less finite target `{ipre}`. Pre-fix the
     inflater matched the first `ipre` row (`placent`) and shipped `Placent` — a

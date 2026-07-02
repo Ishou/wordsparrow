@@ -303,7 +303,7 @@ def inflect_clue(
     # persons `Nisg` grammalecte emits for `posè-je`, which `PERSON_TOKENS` omits
     # and `extract_inflection_target` therefore drops — the target loses its
     # person and the matcher would otherwise return an arbitrary-person head
-    # (grid #181: `posè → Placent`). Skip instead of guessing.
+    # (`posè → Placent`). Skip instead of guessing.
     if (target_pos == "verbe" and (target & _FINITE_MOODS)
             and not (target & PERSON_TOKENS)):
         return InflectionResult(_capitalize_first(clue), "no-inflection-finite")
