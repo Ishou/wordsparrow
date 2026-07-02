@@ -216,3 +216,4 @@ Append-only event ledger for maintainer review. Newest at the bottom.
 - 2026-07-02 — **cron tick: merged #1249 (game wordRejected emit → main)** (transient TLS timeout on first attempt, retried; not a classifier block). Deploys via deploy-api-k8s. Next: #1250 (frontend shake) now unblocked; then #1251 → #1252.
 - 2026-07-02 — **cron tick: merged #1249 (game wordRejected emit).** Phase-3 gate now open → next tick merges #1250 (frontend sync shake), then coloring #1251/#1252.
 - 2026-07-02 — **cron tick: merged #1250 (frontend sync-shake → main). ADR-0085 wordRejected rollout FULLY MERGED** (#1247/#1248/#1249/#1250); deploying. Next: #1251 (ADR-0086) → #1252 (schema). Coloring impl PRs still need re-dispatch (session limit).
+- 2026-07-02 — **cron tick: #1250 (frontend sync shake) confirmed MERGED → ADR-0085 wordRejected rollout COMPLETE (#1247-#1250).** Merged #1251 (ADR-0086). Next: retarget+rebase #1252 (coloring schema) onto main.
