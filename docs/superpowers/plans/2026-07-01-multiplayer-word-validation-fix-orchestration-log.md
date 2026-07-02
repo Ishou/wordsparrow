@@ -99,3 +99,20 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   safety net; backend deps #1237/#1239 already MERGED. #1240 is green, mergeable
   CLEAN, independently bot-LGTM'd — **complete, ready for human merge** (the prior
   session just never merged it). Merge blocked here only by the review-gate above.
+- 2026-07-02 — **§6a findings on backend PRs; fixers dispatched.**
+  - #1244 (game): per-word validator-failure isolation was untested → fixer adds
+    a `FakeWordValidator` failure mode + a test (one word throws, the other still
+    locks, outcome still success). (Its earlier chart-shadowing finding already
+    resolved.)
+  - #1245 (grid): 3 findings. (2) 400-line citation + (3) vertical-word-span test
+    → fixed. (1) **"not publicly routed" second control (ADR-0084 §3) DEFERRED —
+    maintainer follow-up.** DECISION: ship the token gate only for now (browser →
+    401, per-word correctness never exposed, solo grids protected, co-op
+    functionally identical to prod). The second control = a dedicated internal
+    Ktor connector not fronted by the public ingress — coordinated grid+game+chart
+    infra requiring cluster verification; NOT auto-shipped unattended (hard-safety
+    rule). A NetworkPolicy is NOT a substitute (pod-level; can't isolate one HTTP
+    path without breaking grid's public routes). The §6a reviewer explicitly
+    permits documented deferral; the fixer documents it in the PR body.
+    **MAINTAINER TODO: implement the internal-connector second control as the
+    immediate follow-up** (or accept token-only and amend ADR-0084 §3).
