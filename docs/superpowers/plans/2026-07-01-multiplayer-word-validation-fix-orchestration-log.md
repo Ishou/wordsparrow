@@ -193,3 +193,9 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   combined cron (15be1eed) driving both rollouts' remaining phases (avoids two
   crons racing on the log push). "COMBINED auto-merge phases" section in procedure.
 - 2026-07-02 — **cron tick: rebased #1248 onto main** (was CONFLICTING after retarget; dropped the squashed ADR-0085 commit → asyncapi-only). CI re-running; next tick merges on green+LGTM.
+- 2026-07-02 — **ADR-0086 schema landed (#1252, green, stacked on #1251).** Dispatched
+  the two coloring impl agents stacked on it: game `feat/game-locked-by-impl`
+  (GameSession per-position owner + WordLocked.lockedBy + LockedCell snapshot +
+  crossing first-writer-wins test) and frontend `feat/coop-locked-word-color`
+  (reduceLobby lockedBy + PuzzleBoard tint from playerColor + mock lockedBy).
+  Cron merge queue: waiting on #1248 CI (submit-gradle) before it merges the 0085 tail.
