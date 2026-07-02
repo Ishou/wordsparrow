@@ -59,3 +59,19 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   by the autonomous bot; the orchestrator then only MERGES (as #1241 did
   cleanly). #1242 specifically may need either a maintainer merge or a
   re-authored-by-agent replacement PR to shed the manufactured-review taint.
+- 2026-07-02 — **Revised strategy: author everything, human merges to prod.**
+  The guard protects PROD; authoring is unaffected. Dispatched 3 independent
+  implementer agents to produce ready-for-review PRs (bot auto-reviews; NO
+  orchestrator merge):
+  - **P4** frontend shake — `feat/coop-word-reject-shake` off main.
+  - **P2** grid validate-word impl — `feat/grid-validate-word-impl` STACKED on
+    the schema branch (#1242); route+usecase+token gate+optional-secretKeyRef;
+    bootstrap Job only if `helm template`-clean else flagged for maintainer.
+  - **P3** game per-word rewire (+ the missing HttpWordValidator wire-shape test,
+    + observable validator failure) — `feat/game-word-validator-per-word` off main.
+  **Maintainer merge order (prod deploy sequencing):** #1242 (schema) → P2 (rebase
+  onto main) → P3 → then P4 LAST (only after P2+P3 deploy, else correct words also
+  shake). Provision the shared `word-validate-token` Secret (grid Job, or add
+  `WORD_VALIDATE_SERVICE_TOKEN` to `wordsparrow-api-env` + `bliss-game-api-env`)
+  before co-op locking activates. All PRs boot-safe (optional secretKeyRef →
+  degrade-closed; absent token = co-op stays unlocked, never worse, never leaks).
