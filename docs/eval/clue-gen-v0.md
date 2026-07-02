@@ -526,3 +526,36 @@ in at `data/eval/round11_opus_labels.csv` — enough to train a real judge next 
 the 1,571 GOOD (accented-lemma resolved), inflated via `build_surface_clues` (1,475 verbatim +
 15,440 inflected), **additively** merged (blank placeholders only; no existing clue
 overwritten, 480 skipped). Pleonasm runtime guard 3/3; `pytest scripts/eval/` 143/143.
+
+## filter-v6: mine historical-reject failures (structural noise, not sense)
+
+Round-11 correctly found the CamemBERT bi-encoder can't learn *sense*-correctness
+at our label budget (cosine ≠ correctness → the LLM judge is the sense gate). This
+targets a **different, learnable** class: truncated / hallucinated clues
+(`unknown-head`/`no-head` — `"R"`, `"Dé"`, `"Escal"`), which v5 scores at cosine
+≈1.0 vs the lemma (a fragment embeds ~identically to the word). On 3.3k
+reconstructed pairs v5 ranks good>bad only **58.5%** — near-random on this class.
+
+Pipeline: `harvest_historical_rejects.py` reconstructs rejects from the 11 git
+snapshots of `lemma_clues_dropped.csv` + human `rating=n` iters → re-validates
+against today's guard (keeps still-failed) → keeps clean BAD classes
+(`unknown-head`/`no-head`, single-token `pos-mismatch`/`self-reference`; drops
+`too-long`/`head-not-lemma` whose rejects are usually good) → pairs with the
+latest validated, score-gated good clue. `train_filter_v6.py` mines only the
+pairs v5 gets wrong, upweights them 3× against a **replay** of v5's corpus
+(round2 + iters + cross-lemma), trains from v2.
+
+Result (held-out by lemma; `eval_human` excluded from training):
+
+| metric | v5 | v6 |
+|---|---|---|
+| held-out failure test (ranks good>bad) | 0.0% | **84.9%** |
+| regression set (pairs v5 already got right) | 100% | 95.0% |
+| eval_human AUROC (y vs n), 246 rows | 0.634 | 0.628 |
+| eval_human mean cos y/b/n | .648/.615/.606 | .819/.790/.758 (monotonic) |
+
+Replay + 3× upweight is what balances it: failures-only fixed 79% but regressed
+the known-good set to 92%; replay alone retained 95% but only fixed 63%. This
+improves the cheap pre-filter's structural-noise floor; it does **not** replace
+the LLM sense-judge. Promotion: run `train_filter_v6.py`, then bump
+`run_production.sh` `FILTER` default to `models/filter-camembert-v6`.
