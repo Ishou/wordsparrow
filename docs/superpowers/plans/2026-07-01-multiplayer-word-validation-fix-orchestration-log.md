@@ -153,3 +153,15 @@ Append-only event ledger for maintainer review. Newest at the bottom.
 - 2026-07-02 — **#1243 (frontend shake) gated on backend deploy.** Monitoring the
   Deploy API (k8s) run; will merge #1243 once grid+game are deployed with the
   token (so correct words lock and only wrong words shake).
+- 2026-07-02 — **DEPLOYED + ROLLOUT COMPLETE.** Deploy API (k8s) succeeded; grid
+  (RS 6d9649dc97) + game (RS 7dd979bc7c) pods 1/1 Running on the new digests,
+  reading the provisioned token via envFrom → **co-op word-locking live in prod.**
+  Then merged **#1243 (frontend shake)** (green + bot-LGTM) — `rejecting` logic on
+  main, deploying to Cloudflare Pages. All ADR-0084 PRs + the ADR-0083 guest-gate
+  #1240 are merged & deploying.
+- 2026-07-02 — **OPEN FOLLOW-UP (maintainer):** the `validate-word` second access
+  control (ADR-0084 §3 "not publicly routed" — dedicated internal Ktor connector).
+  Shipped token-gate only (browser → 401, no leak); connector is the tracked
+  follow-up. **BONUS (not started):** per-player word coloring (needs a
+  `wordLocked` wire change to carry the locker's sessionId — a schema-first
+  mini-rollout; deliberately not auto-shipped).
