@@ -407,7 +407,9 @@ class UpdateCellUseCase(
 
         // Validator failure is non-fatal (cell already committed) but logged so a total lock outage is never silent (ADR-0084).
         // newLocks holds only freshly-transitioned positions — words crossing an already-locked word reuse cells already known client-side.
+        // A validator exception is non-fatal and yields neither a lock nor a reject (continue).
         val newLocks = mutableSetOf<Position>()
+        val rejectedPositions = mutableSetOf<Position>()
         for (word in candidateWords) {
             val correct =
                 try {
@@ -425,8 +427,14 @@ class UpdateCellUseCase(
                     )
                     continue
                 }
-            if (correct) newLocks += word.filter { it !in session.lockedPositions }
+            if (correct) {
+                newLocks += word.filter { it !in session.lockedPositions }
+            } else {
+                rejectedPositions += word
+            }
         }
+        // ADR-0085: broadcast wrong-completion cells so clients shake synchronously, mirror of WordLocked.
+        if (rejectedPositions.isNotEmpty()) events += LobbyEvent.WordRejected(rejectedPositions, stamp)
         if (newLocks.isEmpty()) return success(updated, events).withSolved(solved)
 
         // Step 3: re-enter the mutator to commit the locks. Filter to positions

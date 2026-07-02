@@ -124,6 +124,14 @@ internal fun LobbyEvent.toFrameOrNull(): ServerToClientFrame? =
                         .map { it.toDto() },
                 lockedAt = lockedAt.toIsoString(),
             )
+        is LobbyEvent.WordRejected ->
+            ServerToClientFrame.WordRejected(
+                positions =
+                    positions
+                        .sortedWith(compareBy({ it.row }, { it.column }))
+                        .map { it.toDto() },
+                rejectedAt = rejectedAt.toIsoString(),
+            )
     }
 
 internal fun UseCaseError.toErrorFrame(): ServerToClientFrame.Error =

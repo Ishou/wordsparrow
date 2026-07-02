@@ -73,6 +73,16 @@ sealed interface LobbyEvent {
     ) : LobbyEvent
 
     /**
+     * Server broadcast: every position in [positions] belongs to a word that was just completed but
+     * validated incorrect (ADR-0085). Mirror of [WordLocked] so clients shake synchronously on the
+     * same round-trip instead of waiting for a client-side timeout. Wire mapping: `wordRejected`.
+     */
+    data class WordRejected(
+        val positions: Set<Position>,
+        val rejectedAt: Instant,
+    ) : LobbyEvent
+
+    /**
      * Wire mapping: the API layer sends a WebSocket close frame (no `lobbyClosed` broadcast to
      * remaining members — there are none). No `lobbyClosed` entry is needed in `asyncapi.yaml`.
      */

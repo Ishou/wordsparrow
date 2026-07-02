@@ -76,16 +76,17 @@ class UpdateCellWordLockTest {
             h.write(lobby.id, sessionA, across02, Letter('A')).requireSuccess()
             val solved = h.write(lobby.id, sessionA, cross03, Letter('S')).requireSuccess()
 
-            // CellUpdated then WordLocked.
+            // CellUpdated then WordLocked, and no WordRejected on a correct completion.
             assertThat(solved.events).hasSize(2)
             assertThat(solved.events[0]).isInstanceOf(LobbyEvent.CellUpdated::class)
             val locked = solved.events[1] as LobbyEvent.WordLocked
             assertThat(locked.positions).containsExactlyInAnyOrder(across01, across02, cross03)
             assertThat(solved.value.game?.lockedPositions).isEqualTo(locked.positions)
+            assertThat(solved.events.filterIsInstance<LobbyEvent.WordRejected>()).isEmpty()
         }
 
     @Test
-    fun `filling an incorrect last letter emits only CellUpdated`() =
+    fun `filling an incorrect last letter emits CellUpdated and WordRejected for that word`() =
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice).value
@@ -95,8 +96,12 @@ class UpdateCellWordLockTest {
             h.write(lobby.id, sessionA, across02, Letter('A')).requireSuccess()
             val wrong = h.write(lobby.id, sessionA, cross03, Letter('Z')).requireSuccess()
 
-            assertThat(wrong.events).hasSize(1)
+            // CellUpdated then WordRejected (ADR-0085); nothing locks.
+            assertThat(wrong.events).hasSize(2)
             assertThat(wrong.events[0]).isInstanceOf(LobbyEvent.CellUpdated::class)
+            val rejected = wrong.events[1] as LobbyEvent.WordRejected
+            assertThat(rejected.positions).containsExactlyInAnyOrder(across01, across02, cross03)
+            assertThat(wrong.events.filterIsInstance<LobbyEvent.WordLocked>()).isEmpty()
             assertThat(wrong.value.game?.lockedPositions ?: emptySet()).isEmpty()
         }
 
