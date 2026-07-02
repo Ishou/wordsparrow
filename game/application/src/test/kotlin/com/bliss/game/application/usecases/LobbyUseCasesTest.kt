@@ -588,11 +588,12 @@ internal class Harness(
             }
             map
         },
+    failingPositions: Set<com.bliss.game.domain.Position> = emptySet(),
 ) {
     val clock = FakeClock()
     val repo = InMemoryLobbyRepository()
     val provider = FakePuzzleProvider(puzzle)
-    val wordValidator = FakeWordValidator(answers)
+    val wordValidator = FakeWordValidator(answers, failingPositions)
     val create = CreateLobbyUseCase(repo, clock)
     val join = JoinLobbyUseCase(repo, clock)
     val rename = RenameSelfUseCase(repo, clock)

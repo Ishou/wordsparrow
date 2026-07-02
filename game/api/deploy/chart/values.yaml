@@ -163,4 +163,5 @@ env:
     value: "http://wordsparrow-identity-api.wordsparrow:8082"
 # Name of a Kubernetes Secret to envFrom into the pod. ADR-0009 §10:
 # bootstrapped via `kubectl create secret`, never committed.
+# Must carry a WORD_VALIDATE_SERVICE_TOKEN key per ADR-0084 §3.
 envFromSecret: ""

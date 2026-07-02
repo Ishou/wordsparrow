@@ -275,25 +275,22 @@ class FakePuzzleProvider(
 
 /**
  * In-memory [com.bliss.game.application.ports.WordValidator] for tests.
- * Returns the set of positions whose submitted letter does not match the
- * answer table — same contract as grid's `POST /validate`. Defaults to
- * an empty answer table (every typed cell reads as incorrect), matching
- * the production behavior of an empty puzzle.
+ * A word is correct iff every submitted cell matches the answer table —
+ * same contract as grid's per-word `POST /validate-word` (ADR-0084).
+ * Defaults to an empty answer table (no word ever reads as correct),
+ * matching the production behavior of a puzzle whose answers are absent.
+ * [failingPositions] simulates a validator outage for words touching those positions.
  */
 class FakeWordValidator(
     private val answers: Map<com.bliss.game.domain.Position, com.bliss.game.domain.Letter> = emptyMap(),
+    private val failingPositions: Set<com.bliss.game.domain.Position> = emptySet(),
 ) : com.bliss.game.application.ports.WordValidator {
-    override suspend fun incorrectPositions(
+    override suspend fun isWordCorrect(
         puzzleId: java.util.UUID,
-        filled: Map<com.bliss.game.domain.Position, com.bliss.game.domain.Letter>,
-    ): Set<com.bliss.game.domain.Position> {
-        val incorrect = mutableSetOf<com.bliss.game.domain.Position>()
-        // Every answer-bearing position not present (or wrong) in `filled`
-        // is reported incorrect — mirrors grid/api ValidatePuzzleUseCase.
-        for ((pos, expected) in answers) {
-            if (filled[pos] != expected) incorrect += pos
-        }
-        return incorrect
+        word: Map<com.bliss.game.domain.Position, com.bliss.game.domain.Letter>,
+    ): Boolean {
+        if (word.keys.any { it in failingPositions }) throw RuntimeException("simulated word-validate outage")
+        return word.isNotEmpty() && word.all { (pos, letter) -> answers[pos] == letter }
     }
 }
 

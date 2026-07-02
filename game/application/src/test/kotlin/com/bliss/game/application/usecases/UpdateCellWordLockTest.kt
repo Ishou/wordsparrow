@@ -249,6 +249,27 @@ class UpdateCellWordLockTest {
         }
 
     @Test
+    fun `a validator failure on one candidate word does not block locking of the other`() =
+        runTest {
+            // Down word's isWordCorrect call throws; across word's still succeeds.
+            val h = Harness(puzzle, failingPositions = setOf(down13, down23))
+            val lobby = h.create(sessionA, alice).value
+            h.start(lobby.id, sessionA).requireSuccess()
+
+            h.write(lobby.id, sessionA, across01, Letter('P')).requireSuccess()
+            h.write(lobby.id, sessionA, across02, Letter('A')).requireSuccess()
+            h.write(lobby.id, sessionA, down13, Letter('E')).requireSuccess()
+            h.write(lobby.id, sessionA, down23, Letter('L')).requireSuccess()
+
+            val out = h.write(lobby.id, sessionA, cross03, Letter('S')).requireSuccess()
+
+            // Down word is skipped on the thrown exception; across word still locks.
+            val locked = out.events.filterIsInstance<LobbyEvent.WordLocked>()
+            assertThat(locked).hasSize(1)
+            assertThat(locked[0].positions).containsExactlyInAnyOrder(across01, across02, cross03)
+        }
+
+    @Test
     fun `WordLocked is emitted alongside GameSolved on the final winning fill`() =
         runTest {
             val h = harness()
