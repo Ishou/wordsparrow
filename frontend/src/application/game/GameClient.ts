@@ -219,6 +219,13 @@ export interface WordLockedEvent {
   readonly lockedAt: Instant;
 }
 
+// Server broadcast: word validated incorrect — mirror of wordLocked, ADR-0085 threat model.
+export interface WordRejectedEvent {
+  readonly type: 'wordRejected';
+  readonly positions: readonly Position[];
+  readonly rejectedAt: Instant;
+}
+
 export interface GameSolvedEvent {
   readonly type: 'gameSolved';
   readonly durationMs: number;
@@ -248,5 +255,6 @@ export type GameEvent =
   | ConnectionLostEvent
   | CursorBumpedEvent
   | WordLockedEvent
+  | WordRejectedEvent
   | GameSolvedEvent
   | GameErrorEvent;
