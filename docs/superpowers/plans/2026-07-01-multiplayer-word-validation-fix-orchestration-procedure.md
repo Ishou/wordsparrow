@@ -306,3 +306,25 @@ Tick (one action per fire):
 HARD SAFETY unchanged: never force risky infra to prod; never reopen ADR-0076 for
 clients/solo; if a merge is classifier-blocked as self-approval, STOP + escalate
 (do not retry/manufacture).
+
+## COMBINED auto-merge phases (supersedes the ADR-0085-only cron)
+
+Single cron now drives BOTH the ADR-0085 tail and the ADR-0086 coloring rollout
+(two crons would race on the log push). Same tick rules as the "ADR-0085
+auto-merge cron" section above: one action/tick; retarget `--base main` + rebase
+`--onto origin/main origin/<base-branch>` when a stacked PR's base has merged;
+merge on green + mergeable + AUTONOMOUS bot `LGTM` only; findings → dispatch a
+FIXER (never rerun/dispatch a review); escalate + stop (no retry) if a merge is
+classifier-blocked; append to log + push after each action.
+
+Phase order (act on FIRST not-MERGED; resolve each via `gh pr list --head <branch>`):
+1. `feat/game-word-rejected-schema`  (#1248 asyncapi 0085; base was ADR-0085 → retarget+rebase onto main)
+2. `feat/game-word-rejected-impl`    (#1249 game 0085; base was #1248 → retarget+rebase after #1248 merges)
+3. `feat/coop-word-rejected-sync-shake` (#1250 frontend 0085; base main; merge after phase 2)
+4. `docs/adr-0086-player-locked-word-coloring` (#1251 ADR 0086; base main)
+5. `feat/game-locked-by-schema`      (0086 schema; base = ADR-0086 branch → retarget+rebase after #1251)
+6. `feat/game-locked-by-impl`        (0086 game; base = schema branch → retarget+rebase after phase 5; may not exist yet → WAIT)
+7. `feat/coop-locked-word-color`     (0086 frontend; base = schema branch → retarget+rebase after phase 5; merge after phase 6; may not exist yet → WAIT)
+
+Deploy sequencing: within each rollout merge backend (game) before frontend.
+When phase 7 is MERGED → append `**ACTION:** both rollouts merged` + CronDelete self.
