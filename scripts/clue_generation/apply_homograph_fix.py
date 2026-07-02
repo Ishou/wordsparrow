@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
-"""Apply tightened homograph replacements to the POS-annotated corpus.
+"""Apply tightened homograph replacements to the (lemma, pos) corpus.
 
 Gate: replace only if
-  - new_flag == "ok"
   - score_delta > 0.03
   - new_clue != old_clue
   - token-set Jaccard(old_tokens, new_tokens) <= 0.7  (drops near-rewrites)
+  - the new clue RE-VALIDATES `ok` against the row's own POS.
+
+The last gate is recomputed here, not trusted from the diff's `new_flag`:
+trusting the self-reported flag is what let `score -> Obtenir` ship (a verb
+clue on the noun `score` with a copied `ok`). A homograph replacement lands
+only on the (lemma, pos) row(s) whose POS the new clue actually matches.
 """
 from __future__ import annotations
-import argparse, csv, re
+import argparse, csv, os, re, sys
+from collections import defaultdict
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(REPO / "scripts" / "eval"))
+from morphology_index import MorphologyIndex  # noqa: E402
+from validate_clue import validate_lemma_clue  # noqa: E402
+
 TOKEN = re.compile(r"[a-zàâäæçéèêëîïôöœùûüÿ']+", re.IGNORECASE)
 
 
@@ -21,6 +31,45 @@ def jaccard(a: str, b: str) -> float:
     if not sa or not sb:
         return 0.0
     return len(sa & sb) / len(sa | sb)
+
+
+def apply_replacements(
+    rows: list[dict], diffs: list[dict], index: MorphologyIndex,
+    min_delta: float = 0.03, max_jaccard: float = 0.7,
+) -> dict[str, int]:
+    """Mutate `rows` in place with the accepted homograph replacements. Each
+    replacement lands only on the (lemma, pos) rows whose POS the new clue
+    re-validates `ok` against — never on the diff's self-reported flag."""
+    rows_by_lemma: dict[str, list[dict]] = defaultdict(list)
+    for r in rows:
+        rows_by_lemma[r["lemma"]].append(r)
+    stats = defaultdict(int)
+    for d in diffs:
+        new, old = d["new_clue"], d["old_clue"]
+        if not new or new == old:
+            continue
+        try:
+            delta = float(d["score_delta"])
+        except ValueError:
+            continue
+        if delta <= min_delta:
+            stats["rejected_delta"] += 1
+            continue
+        if jaccard(old, new) > max_jaccard:
+            stats["rejected_jaccard"] += 1
+            continue
+        applied = False
+        for r in rows_by_lemma.get(d["lemma"], []):
+            if not r.get("pos"):
+                continue
+            if validate_lemma_clue(new, d["lemma"], r["pos"], index).flag != "ok":
+                continue
+            r["lemma_clue"] = new
+            r["filter_score"] = f"{float(d['new_score']):.4f}"
+            r["validation_flag"] = "ok"
+            applied = True
+        stats["replaced" if applied else "rejected_flag"] += 1
+    return stats
 
 
 def main() -> None:
@@ -33,44 +82,20 @@ def main() -> None:
                    default=REPO / "data" / "eval" / "production" / "lemma_clues_raw_pos_fixed.csv")
     p.add_argument("--min-delta", type=float, default=0.03)
     p.add_argument("--max-jaccard", type=float, default=0.7)
+    p.add_argument("--lexique", type=Path,
+                   default=Path(os.path.expanduser(
+                       "~/Downloads/grammalecte/lexique-grammalecte-fr-v7.7.txt")))
     args = p.parse_args()
+
+    index = MorphologyIndex.load(args.lexique)
 
     with args.src.open(encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
         fieldnames = list(rows[0].keys())
-    by_lemma = {r["lemma"]: r for r in rows}
-
-    replaced = 0
-    rejected_delta = 0
-    rejected_flag = 0
-    rejected_jaccard = 0
     with args.diff.open(encoding="utf-8", newline="") as f:
-        for d in csv.DictReader(f):
-            lemma = d["lemma"]
-            if lemma not in by_lemma:
-                continue
-            new = d["new_clue"]
-            old = d["old_clue"]
-            if not new or new == old:
-                continue
-            if d["new_flag"] != "ok":
-                rejected_flag += 1
-                continue
-            try:
-                delta = float(d["score_delta"])
-            except ValueError:
-                continue
-            if delta <= args.min_delta:
-                rejected_delta += 1
-                continue
-            if jaccard(old, new) > args.max_jaccard:
-                rejected_jaccard += 1
-                continue
-            r = by_lemma[lemma]
-            r["lemma_clue"] = new
-            r["filter_score"] = f"{float(d['new_score']):.4f}"
-            r["validation_flag"] = d["new_flag"]
-            replaced += 1
+        diffs = list(csv.DictReader(f))
+
+    stats = apply_replacements(rows, diffs, index, args.min_delta, args.max_jaccard)
 
     with args.dst.open("w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
@@ -79,10 +104,10 @@ def main() -> None:
             w.writerow({k: r.get(k, "") for k in fieldnames})
 
     print(f"wrote {args.dst}")
-    print(f"  replaced: {replaced}")
-    print(f"  rejected (flag != ok): {rejected_flag}")
-    print(f"  rejected (delta <= {args.min_delta}): {rejected_delta}")
-    print(f"  rejected (jaccard > {args.max_jaccard}): {rejected_jaccard}")
+    print(f"  replaced: {stats['replaced']}")
+    print(f"  rejected (re-validation != ok): {stats['rejected_flag']}")
+    print(f"  rejected (delta <= {args.min_delta}): {stats['rejected_delta']}")
+    print(f"  rejected (jaccard > {args.max_jaccard}): {stats['rejected_jaccard']}")
 
 
 if __name__ == "__main__":
