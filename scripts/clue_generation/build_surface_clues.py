@@ -41,6 +41,7 @@ sys.path.insert(0, str(REPO / "scripts" / "eval"))
 from morphology_index import MorphologyIndex, _classify, normalize_tag  # noqa: E402
 from inflect_clue import _FUNCTION_WORDS, inflect_clue  # noqa: E402
 from clue_metrics import MAX_CLUE_CHARS, fits_single_cell  # noqa: E402
+from derive_adverb_clue import adverbialise, base_adjective  # noqa: E402
 
 POS_PRECEDENCE = {"nom": 0, "adj": 1, "adv": 2, "verbe": 3}
 
@@ -194,7 +195,25 @@ def main() -> None:
                 candidates.append((lemma, pos_class, tags, f_))
 
             if not candidates:
-                status_counter["no-owner"] += 1
+                # Manner-adverb fallback: a `-ment` adverb has no clue of its
+                # own, but its base adjective might — `terrible → "Effrayant"`
+                # gives `terriblement → "De façon effrayante"` (ADR: adverb
+                # derivation). Only when the base adjective is clued and its
+                # clue adverbialises cleanly.
+                base = base_adjective(surface, index)
+                adj_row = corpus.get((base, "adj")) if base else None
+                derived = adverbialise(adj_row["lemma_clue"], index) if adj_row else None
+                if derived:
+                    status_counter["derived-adverb"] += 1
+                    out_rows.append({
+                        "surface": surface, "lemma": base, "pos": "adv",
+                        "clue": derived, "source_clue": adj_row["lemma_clue"],
+                        "inflection_status": "derived-adverb",
+                        "filter_score": adj_row.get("filter_score", ""),
+                        "validation_flag": "ok",
+                    })
+                else:
+                    status_counter["no-owner"] += 1
                 continue
 
             # Pick winner by freq (desc) then POS precedence (asc).
