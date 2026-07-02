@@ -126,6 +126,7 @@ channels:
           - { $ref: '#/components/messages/ConnectionLost' }
           - { $ref: '#/components/messages/CursorBumped' }
           - { $ref: '#/components/messages/WordLocked' }
+          - { $ref: '#/components/messages/WordRejected' }
           - { $ref: '#/components/messages/GameSolved' }
           - { $ref: '#/components/messages/Error' }
 
@@ -151,6 +152,7 @@ components:
     ConnectionLost: { name: connectionLost, title: Peer disconnected (graceful),       summary: Peer's WebSocket closed; the slot is held during a server-side grace window before a playerLeft follows.,        payload: { $ref: '#/components/schemas/ConnectionLostPayload' },  description: Ephemeral. Distinct from `playerLeft` — clients SHOULD grey-out the roster pill on this event and only remove the slot when (or if) `playerLeft` arrives. If the same `sessionId` reconnects within the grace window, the server emits `presenceUpdated` (or no event) instead of `playerLeft`. }
     CursorBumped:   { name: cursorBumped,   title: Server-authoritative cursor relocation, summary: Peer's cursor was on a now-validated answer; server moves it to the next clue.,                  payload: { $ref: '#/components/schemas/CursorBumpedPayload' },    description: Ephemeral. Emitted when an answer-validation flow locks cells that contained a peer's cursor; clients apply unconditionally (last-write-wins) and re-render the named session's cursor at the bumped position. }
     WordLocked:     { name: wordLocked,     title: Word validated and locked,          summary: Server-authoritative lock for cells whose containing word was just completed correctly., payload: { $ref: '#/components/schemas/WordLockedPayload' },      description: "Emitted when the last letter of a word is filled and every cell in that word matches the canonical solution. Locked positions are server-enforced — subsequent `cellUpdate` frames targeting any of them are silently ignored (no `cellUpdated` rebroadcast). Locks are monotonically additive within a game session and are surfaced on snapshot via `lobbyState.game.lockedPositions`. Incorrect completions emit no event (intentional: wrong answers are indistinguishable from in-progress ones)." }
+    WordRejected:   { name: wordRejected,   title: Word completed but incorrect,       summary: Server-authoritative signal that a just-completed word does not match the solution., payload: { $ref: '#/components/schemas/WordRejectedPayload' },  description: "Mirror of `wordLocked` for the negative verdict (ADR-0085). Emitted when the last letter of a word is filled and the word does NOT match the canonical solution, so clients can render immediate wrong-answer feedback (a shake) synchronously — the same round-trip that `wordLocked` uses for the positive case, replacing the client-side timeout guess. Ephemeral: it changes no lobby state and is NOT surfaced on `lobbyState`. Carries only the positions the player just filled (never a letter or the solution); it leaks nothing beyond what filled-but-not-locked already implies. Supersedes ADR-0076 §9's 'no wrong-word event' for the co-op path only." }
     GameSolved:     { name: gameSolved,     title: Game solved,                        summary: All cells match the canonical solution; lobby is COMPLETED.,                                       payload: { $ref: '#/components/schemas/GameSolvedPayload' } }
     Error:          { name: error,          title: Error frame,                        summary: RFC 7807 problem document for a rejected client frame.,                                            payload: { $ref: '#/components/schemas/ErrorPayload' },         description: Mirrors the REST error envelope. Closing the socket is at the server's discretion. }
 
@@ -657,6 +659,35 @@ components:
           - { row: 0, column: 2 }
           - { row: 0, column: 3 }
         lockedAt: '2026-05-02T15:36:10Z'
+    WordRejectedPayload:
+      type: object
+      required: [type, positions, rejectedAt]
+      description: |
+        Server broadcast (ADR-0085): the word covering `positions` was just
+        completed (its last letter filled) but does NOT match the canonical
+        solution. Purely a UI signal — it locks nothing, changes no lobby
+        state, and is NOT surfaced on `lobbyState`. Clients render a transient
+        wrong-answer cue (a shake) on these cells. `positions` are the cells the
+        player just filled — the payload carries no letter and no positional
+        correctness data, so it cannot be used to probe the solution
+        (contrast the per-cell `incorrectCells` removed from grid `/validate`
+        by ADR-0076). Two words may be reported together when the just-filled
+        cell is a crossing whose both words are wrong.
+      properties:
+        type:      { type: string, enum: [wordRejected] }
+        positions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/GamePosition' }
+          description: One or more cells whose containing word was just completed but validated incorrect. Order is row then column.
+        rejectedAt: { $ref: '#/components/schemas/Instant' }
+      example:
+        type: wordRejected
+        positions:
+          - { row: 0, column: 1 }
+          - { row: 0, column: 2 }
+          - { row: 0, column: 3 }
+        rejectedAt: '2026-05-02T15:36:10Z'
     GameSolvedPayload:
       type: object
       required: [type, durationMs, finalEntries]
