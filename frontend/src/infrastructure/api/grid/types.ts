@@ -858,8 +858,8 @@ export interface components {
          */
         OptionalSessionId: string;
         /**
-         * @description Number of columns to generate. Defaults to 15 when omitted. Valid
-         *     range is 5..15 inclusive; values outside that range — or
+         * @description Number of columns to generate. Defaults to 28 when omitted. Valid
+         *     range is 5..28 inclusive; values outside that range — or
          *     non-integers — produce a 400 with problem
          *     type `https://bliss.example/errors/invalid-puzzle-dimensions`. The
          *     bounds keep the CSP solver's vocabulary needs and per-request time
@@ -867,8 +867,8 @@ export interface components {
          */
         PuzzleWidth: number;
         /**
-         * @description Number of rows to generate. Defaults to 12 when omitted. Valid range
-         *     is 5..15 inclusive; values outside that range — or non-integers —
+         * @description Number of rows to generate. Defaults to 20 when omitted. Valid range
+         *     is 5..28 inclusive; values outside that range — or non-integers —
          *     produce a 400 with problem
          *     type `https://bliss.example/errors/invalid-puzzle-dimensions`.
          */
@@ -884,8 +884,8 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description Number of columns to generate. Defaults to 15 when omitted. Valid
-                 *     range is 5..15 inclusive; values outside that range — or
+                 * @description Number of columns to generate. Defaults to 28 when omitted. Valid
+                 *     range is 5..28 inclusive; values outside that range — or
                  *     non-integers — produce a 400 with problem
                  *     type `https://bliss.example/errors/invalid-puzzle-dimensions`. The
                  *     bounds keep the CSP solver's vocabulary needs and per-request time
@@ -893,8 +893,8 @@ export interface operations {
                  */
                 width?: components["parameters"]["PuzzleWidth"];
                 /**
-                 * @description Number of rows to generate. Defaults to 12 when omitted. Valid range
-                 *     is 5..15 inclusive; values outside that range — or non-integers —
+                 * @description Number of rows to generate. Defaults to 20 when omitted. Valid range
+                 *     is 5..28 inclusive; values outside that range — or non-integers —
                  *     produce a 400 with problem
                  *     type `https://bliss.example/errors/invalid-puzzle-dimensions`.
                  */
@@ -927,7 +927,7 @@ export interface operations {
              * @description Puzzle found. Canonical sample at
              *     `grid/api/examples/get-puzzle-200.json` is the contract-test
              *     fixture for both sides of the wire. The example is a 10×10
-             *     grid (smaller than the daily default of 15×12) chosen to keep
+             *     grid (smaller than the daily default of 28×20) chosen to keep
              *     the file readable; the wire shape is identical at any size,
              *     and requesting `?width=7&height=7` produces an analogous 7×7
              *     document with the same fields.
@@ -945,7 +945,7 @@ export interface operations {
              *     - Path parameter `puzzleId` is not a valid UUID
              *       (`type` = `https://bliss.example/errors/invalid-puzzle-id`).
              *     - Query parameter `width` or `height` is not an integer or is
-             *       outside the supported 5..15 range
+             *       outside the supported 5..28 range
              *       (`type` = `https://bliss.example/errors/invalid-puzzle-dimensions`).
              *     - Header `X-Session-Id` is present but not a valid UUID, or
              *       equals the reserved daily-bucket sentinel
