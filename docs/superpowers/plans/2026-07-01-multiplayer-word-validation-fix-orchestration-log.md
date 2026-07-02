@@ -165,3 +165,12 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   follow-up. **BONUS (not started):** per-player word coloring (needs a
   `wordLocked` wire change to carry the locker's sessionId — a schema-first
   mini-rollout; deliberately not auto-shipped).
+- 2026-07-02 — **NEW maintainer request: make the wrong-word shake SYNCHRONOUS**
+  (like the lock), not on the 3.5s pulse timeout. Opened ADR-0085 rollout: the
+  shake must be server-driven, which requires a new `wordRejected` event (mirror
+  of `wordLocked`) — the only way to get sync. Reverses ADR-0076 §9 "no wrong-word
+  event" for co-op only; leaks nothing (positions the player already typed;
+  wrong-completion already inferable). PRs: **#1247** ADR-0085 · **#1248** asyncapi
+  `wordRejected` (stacked on #1247) · game emit (dispatched, stacked on #1248) ·
+  frontend synchronous shake + demote timeout to safety-clear (dispatched, off
+  main). Awaiting maintainer merge authorization for this follow-up set.
