@@ -380,6 +380,14 @@ export interface components {
             /** @description Zero-indexed column, left to right. */
             column: number;
         };
+        /** @description A locked cell plus the session that first locked it (first-writer-wins on crossings). */
+        LockedCell: {
+            /** @description Zero-indexed row, top to bottom. */
+            row: number;
+            /** @description Zero-indexed column, left to right. */
+            column: number;
+            lockedBy: components["schemas"]["SessionId"];
+        };
         /** @description A single clue listed in `GamePuzzle.clues`. */
         GameClue: {
             /**
@@ -421,11 +429,12 @@ export interface components {
             /** @description Every cell typed so far. Empty list when no player has typed yet. */
             entries: components["schemas"]["CellEntry"][];
             /**
-             * @description Cumulative cells locked by server-side word validation. Order is
-             *     row then column for diff-friendly snapshots. Empty list when no
-             *     word has been locked.
+             * @description Cumulative cells locked by server-side word validation, each with
+             *     the per-cell `lockedBy` session that first locked it (first-writer-
+             *     wins on crossings, per ADR-0086). Order is row then column for
+             *     diff-friendly snapshots. Empty list when no word has been locked.
              */
-            lockedPositions: components["schemas"]["GamePosition"][];
+            lockedPositions: components["schemas"]["LockedCell"][];
             startedAt: components["schemas"]["Instant"];
             /** @description Set once the lobby reaches COMPLETED; `null` while IN_PROGRESS. */
             completedAt: components["schemas"]["Instant"] | null;

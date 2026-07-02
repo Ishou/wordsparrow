@@ -329,6 +329,14 @@ components:
       properties:
         row:    { type: integer, minimum: 0, description: Zero-indexed row, top to bottom. }
         column: { type: integer, minimum: 0, description: Zero-indexed column, left to right. }
+    LockedCell:
+      type: object
+      required: [row, column, lockedBy]
+      description: A locked cell plus the session that first locked it (first-writer-wins on crossings).
+      properties:
+        row:      { type: integer, minimum: 0, description: Zero-indexed row, top to bottom. }
+        column:   { type: integer, minimum: 0, description: Zero-indexed column, left to right. }
+        lockedBy: { $ref: '#/components/schemas/SessionId' }
     GameClue:
       type: object
       required: [id, direction, start, length, text]
@@ -369,11 +377,13 @@ components:
           description: Every cell typed so far. Empty list when no player has typed yet.
         lockedPositions:
           type: array
-          items: { $ref: '#/components/schemas/GamePosition' }
+          items: { $ref: '#/components/schemas/LockedCell' }
           description: |
-            Cumulative set of cells the server has locked. Order is row,
-            then column (stable for diff-friendly snapshots). Empty list
-            when no word has been validated yet.
+            Cumulative set of cells the server has locked, each with the
+            per-cell `lockedBy` session that first locked it (first-writer-
+            wins on crossings, per ADR-0086). Order is row, then column
+            (stable for diff-friendly snapshots). Empty list when no word
+            has been validated yet.
         startedAt:   { $ref: '#/components/schemas/Instant' }
         completedAt: { $ref: '#/components/schemas/Instant', nullable: true, description: Set once the lobby reaches COMPLETED. }
         presence:
@@ -633,7 +643,7 @@ components:
       example: { type: cursorBumped, sessionId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, row: 2, column: 0, direction: down }
     WordLockedPayload:
       type: object
-      required: [type, positions, lockedAt]
+      required: [type, positions, lockedBy, lockedAt]
       description: |
         Server broadcast: every position in `positions` is now locked. The
         positions belong to one or more words whose last letter was just
@@ -643,7 +653,9 @@ components:
         monotonically additive within a game session and are surfaced on
         `lobbyState.game.lockedPositions` for late-joiners. Two words may
         lock simultaneously when the just-filled cell is a crossing — the
-        server merges their positions into a single frame.
+        server merges their positions into a single frame. `lockedBy` is
+        the session whose write completed the word(s) in this event; every
+        position in a single frame shares it (per ADR-0086).
       properties:
         type:      { type: string, enum: [wordLocked] }
         positions:
@@ -651,6 +663,7 @@ components:
           minItems: 1
           items: { $ref: '#/components/schemas/GamePosition' }
           description: One or more cells whose containing word was just validated correct. Order is row then column.
+        lockedBy:  { $ref: '#/components/schemas/SessionId' }
         lockedAt:  { $ref: '#/components/schemas/Instant' }
       example:
         type: wordLocked
@@ -658,6 +671,7 @@ components:
           - { row: 0, column: 1 }
           - { row: 0, column: 2 }
           - { row: 0, column: 3 }
+        lockedBy: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b
         lockedAt: '2026-05-02T15:36:10Z'
     WordRejectedPayload:
       type: object
