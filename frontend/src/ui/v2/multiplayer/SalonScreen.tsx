@@ -12,13 +12,14 @@ import { PlayerAvatar } from './PlayerAvatar';
 import { PhoneShell } from '@/ui/v2/PhoneShell';
 import { BackHeader } from '@/ui/v2/BackHeader';
 
-// Five presets mirror the prod WaitingRoom picker: four squares + the landscape default.
+// Six presets mirror the prod WaitingRoom picker: four squares + two landscape options.
 const GRID_SIZE_OPTIONS = [
   { value: '5x5', label: '5×5', width: 5, height: 5 },
   { value: '7x7', label: '7×7', width: 7, height: 7 },
   { value: '9x9', label: '9×9', width: 9, height: 9 },
   { value: '11x11', label: '11×11', width: 11, height: 11 },
   { value: '15x12', label: '15×12', width: 15, height: 12 },
+  { value: '28x20', label: '28×20', width: 28, height: 20 },
 ] as const;
 const MAX_PLAYERS = 8;
 

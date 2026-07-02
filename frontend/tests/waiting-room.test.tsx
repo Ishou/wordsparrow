@@ -301,6 +301,30 @@ describe('WaitingRoom — grid size picker', () => {
     expect(screen.getByRole('radio', { name: '15×12' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: '7×7' })).toHaveAttribute('aria-checked', 'false');
   });
+
+  it('exposes the 28×20 landscape preset and emits (28, 20) on selection', async () => {
+    const onSetGridConfig = vi.fn();
+    render(
+      <WaitingRoom
+        lobby={baseLobby}
+        currentSessionId={ownerSessionId}
+        {...noopProps}
+        onSetGridConfig={onSetGridConfig}
+      />,
+    );
+    const item = screen.getByRole('radio', { name: '28×20' }) as HTMLButtonElement;
+    await act(async () => { item.focus(); item.click(); });
+    expect(onSetGridConfig).toHaveBeenCalledWith(28, 20);
+  });
+
+  it('reflects a 28×20 lobby config as the pressed toggle', () => {
+    const landscape: Lobby = { ...baseLobby, gridConfig: { width: 28, height: 20 } };
+    render(
+      <WaitingRoom lobby={landscape} currentSessionId={ownerSessionId} {...noopProps} />,
+    );
+    expect(screen.getByRole('radio', { name: '28×20' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: '15×12' })).toHaveAttribute('aria-checked', 'false');
+  });
 });
 
 describe('WaitingRoom — share URL button', () => {

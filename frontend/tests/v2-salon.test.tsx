@@ -92,6 +92,19 @@ describe('v2 SalonScreen', () => {
     expect(screen.getByRole('button', { name: /Nouveau code/ })).toBeTruthy();
   });
 
+  it('exposes the 28×20 landscape preset and emits (28, 20) on selection', async () => {
+    const { props } = await renderSalonReady({ sessionId: ownerId });
+    fireEvent.click(screen.getByRole('button', { name: '28×20' }));
+    expect(props.onSetGridConfig).toHaveBeenCalledWith(28, 20);
+  });
+
+  it('reflects a 28×20 lobby config as the pressed preset', async () => {
+    const landscape: Lobby = { ...baseLobby, gridConfig: { width: 28, height: 20 } };
+    await renderSalonReady({ sessionId: ownerId, lobby: landscape });
+    expect(screen.getByRole('button', { name: '28×20' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: '15×12' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
   it('hides owner controls for a non-owner', async () => {
     await renderSalonReady({ sessionId: guestId });
     expect(screen.queryByRole('button', { name: 'Jouer' })).toBeNull();
