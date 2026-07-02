@@ -2,9 +2,7 @@ package com.bliss.grid.application.puzzle
 
 import com.bliss.grid.domain.generation.GridConstraints
 
-// grid/api/openapi.yaml PuzzleWidth/PuzzleHeight: default 15 / 12, maximum 15.
-// This is the on-demand `GET /v1/puzzles/{puzzleId}` fallback when width/height
-// are omitted -- keep in sync with the schema, not with DAILY_PUZZLE_WIDTH/HEIGHT.
+// on-demand GET fallback; mirrors openapi.yaml PuzzleWidth/Height (default 15/12, max 15) -- not DAILY_PUZZLE_WIDTH/HEIGHT.
 const val PUZZLE_WIDTH: Int = 15
 const val PUZZLE_HEIGHT: Int = 12
 const val PUZZLE_MIN_WORD_LENGTH: Int = 2
