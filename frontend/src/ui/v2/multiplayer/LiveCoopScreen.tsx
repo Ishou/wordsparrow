@@ -161,7 +161,7 @@ export function LiveCoopScreen({
   validatedRef.current = validatedPositions;
 
   // Discreet "checking…" pulse on a word the local player just completed, until the server locks it (or a safety window passes).
-  const { validating, noteLocalFill } = useCoopValidating(puzzle, validatedPositions);
+  const { validating, rejecting, noteLocalFill } = useCoopValidating(puzzle, validatedPositions);
   const handleLocalCellChange = useCallback(
     (row: number, col: number, letter: string | null) => {
       onCellChange(row, col, letter);
@@ -286,6 +286,7 @@ export function LiveCoopScreen({
         nav={nav}
         validatedPositions={validatedPositions}
         validatingPositions={validating}
+        rejectingPositions={rejecting}
         entryAt={entryAt}
         className={viewportFill}
         padTop={isDesktop ? 12 : 104}
