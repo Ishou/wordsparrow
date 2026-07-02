@@ -49,12 +49,12 @@ class LobbyUseCasesTest {
         }
 
     @Test
-    fun `CreateLobby starts the lobby at the 15x12 default grid size`() =
+    fun `CreateLobby starts the lobby at the 28x20 default grid size`() =
         runTest {
             val h = harness()
             val result = h.create(sessionA, alice)
 
-            assertThat(result.value.gridConfig).isEqualTo(GridConfig(15, 12))
+            assertThat(result.value.gridConfig).isEqualTo(GridConfig(28, 20))
         }
 
     // ADR-0083 free-player quota: reopens the owner's existing WAITING lobby instead of minting a second.
