@@ -199,3 +199,15 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   crossing first-writer-wins test) and frontend `feat/coop-locked-word-color`
   (reduceLobby lockedBy + PuzzleBoard tint from playerColor + mock lockedBy).
   Cron merge queue: waiting on #1248 CI (submit-gradle) before it merges the 0085 tail.
+- 2026-07-02 — **FINISH checkpoint.** Merged #1248 (wordRejected asyncapi → main).
+  Combined cron (15be1eed) continues draining the ready PRs: #1249 (game emit, will
+  need retarget→main+rebase since its base #1248 merged) → #1250 (frontend shake);
+  #1251 (ADR-0086) → #1252 (0086 schema, retarget after #1251).
+  **BLOCKED / NEEDS RE-DISPATCH:** the ADR-0086 coloring IMPL agents both died on
+  the session limit (resets 09:10 Europe/Paris) — `feat/game-locked-by-impl` and
+  `feat/coop-locked-word-color` have NO PR yet. The cron will NOT author them (it
+  never dispatches implementers), so after 09:10 re-dispatch both (specs: ADR-0086
+  + the game/frontend prompts). Until then the coloring feature is ADR+schema-merged
+  only; runtime coloring won't work until the two impl PRs land + deploy.
+  Everything else (word-locking fix, guest gate, wordRejected sync-shake) is
+  merged/deploying and unaffected.
