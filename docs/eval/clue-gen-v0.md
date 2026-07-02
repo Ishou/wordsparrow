@@ -526,3 +526,29 @@ in at `data/eval/round11_opus_labels.csv` — enough to train a real judge next 
 the 1,571 GOOD (accented-lemma resolved), inflated via `build_surface_clues` (1,475 verbatim +
 15,440 inflected), **additively** merged (blank placeholders only; no existing clue
 overwritten, 480 skipped). Pleonasm runtime guard 3/3; `pytest scripts/eval/` 143/143.
+
+## round-12: POS-conditioned Command-R regen to reduce English-sense leaks
+
+Targeted the pos-mismatch/English-leak rows (`able→Capable`, `pull→Tirer`,
+`sole→Unique`, `score→Obtenir`) — 2,680 (lemma, pos) pairs with no OK clue
+after per-POS annotation. Regenerated **POS-conditioned** on Modal (Command-R
+`raft-round-10`, `definition_directe`, `mot (pos)` prompt) → 2,107
+pipeline_v2-accepted; 47 prompt-echo scrubbed → **2,060 applied**.
+
+Key calls (verified by spot-check both ways):
+- **Trust pipeline_v2, not the grid-side validator.** The MLX-lane
+  `validate_clue` false-flags ~870 good Command-R clues as head-not-lemma /
+  pos-mismatch (ppas / relative-clause / noun-phrase heads are valid crossword
+  clues). `build_surface_clues` trusts the corpus flag, so this is a fold-time
+  decision only.
+- **Keep the stem-leak drops.** Substring drops like `adimensionnel→"Sans
+  dimension"` lean on the visible base word — weak by editorial bar; the filter
+  is right. No reclaim.
+- **Stubborn same-POS leaks** the model still misses (`able`, `cane`, `pain`)
+  stay on the curated override layer.
+- **Additive merge, not full rebuild.** Rebuilding from `lemma_clues_raw.csv`
+  at threshold 0.65 dropped 5.3k currently-shipped sub-threshold clues; applying
+  only the regenerated surfaces onto the live CSV is **+3,890 net** (42,588 →
+  46,478 clued rows) and preserves prior fixes (e.g. `restes→"Ne pars pas"`).
+
+`pytest scripts/eval/` 168/168.

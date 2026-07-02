@@ -102,7 +102,7 @@ def charger_lemmes(path: Path) -> list[tuple[str, str | None]]:
 @app.function(
     image=image,
     gpu="A100-40GB",
-    timeout=1800,
+    timeout=10800,
     volumes={
         "/models": volume_models,
         "/adapters": volume_adapters,
@@ -116,6 +116,7 @@ def generate_remote(
     lemmes: list[tuple[str, str | None]],
     n_per_pair: int,
     source_batch: str,
+    styles: list[str] | None = None,
 ) -> dict:
     import datetime as dt
     from collections import Counter
@@ -159,14 +160,28 @@ def generate_remote(
     generated_at = dt.datetime.now(dt.timezone.utc).isoformat()
     # synthetic_v1 matches the Kotlin Source enum; modal lineage lives in source_batch instead.
     source_tag = "synthetic_v1"
-    pairs = [(m, pos, s) for (m, pos) in lemmes for s in STYLES_ACTIFS]
+    active_styles = styles or STYLES_ACTIFS
+    pairs = [(m, pos, s) for (m, pos) in lemmes for s in active_styles]
     requested = len(pairs) * n_per_pair
+    print(f"[REMOTE] generating {requested} clues over {len(pairs)} pairs, styles={active_styles}", flush=True)
 
     accepted: list[dict] = []
+    dropped_samples: list[dict] = []
     dropped_by_filter: Counter[str] = Counter()
     n_returned = 0
 
-    for mot, pos, style in pairs:
+    import time as _time
+    _t0 = _time.monotonic()
+    for _i, (mot, pos, style) in enumerate(pairs):
+        if _i > 0 and _i % 100 == 0:
+            _el = _time.monotonic() - _t0
+            _rate = _i / _el if _el > 0 else 0
+            _eta = (len(pairs) - _i) / _rate if _rate > 0 else 0
+            print(
+                f"[REMOTE] {_i}/{len(pairs)} ({100 * _i / len(pairs):.1f}%) "
+                f"accepted={len(accepted)} rate={_rate:.1f}/s eta={_eta / 60:.1f}min",
+                flush=True,
+            )
         prompt = construire_prompt(mot, pos, style)
         messages = [{"role": "user", "content": prompt}]
         inputs = tokenizer.apply_chat_template(
@@ -207,6 +222,10 @@ def generate_remote(
                 first_reason = verdict["pipeline_reasons"].split(";")[0]
                 filter_id = first_reason.split(":")[0].strip() or "unknown"
                 dropped_by_filter[filter_id] += 1
+                dropped_samples.append(
+                    {"mot": mot, "pos": pos or "autre", "definition": text,
+                     "reason": first_reason.strip()}
+                )
                 continue
 
             accepted.append({
@@ -227,6 +246,9 @@ def generate_remote(
     candidates_path = out_dir / "candidates.jsonl"
     with candidates_path.open("w", encoding="utf-8") as f:
         for row in accepted:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    with (out_dir / "dropped.jsonl").open("w", encoding="utf-8") as f:
+        for row in dropped_samples:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     summary = {
@@ -249,22 +271,24 @@ def generate(
     round: int = 1,
     lemmas: str = "data/curated/round_1_lemmas.csv",
     n_per_pair: int = 1,
+    styles: str = "",
 ) -> None:
     import uuid
 
     lemmes_path = ROOT / lemmas if not Path(lemmas).is_absolute() else Path(lemmas)
     lemmes = charger_lemmes(lemmes_path)
+    active_styles = [s.strip() for s in styles.split(",") if s.strip()] or None
     source_batch = f"{run_tag}-r{round}-{uuid.uuid4().hex[:8]}"
 
     print(f"[LOCAL] run_tag      : {run_tag}")
     print(f"[LOCAL] round        : {round}")
     print(f"[LOCAL] lemmes       : {len(lemmes)} (depuis {lemmes_path})")
-    print(f"[LOCAL] styles       : {len(STYLES_ACTIFS)}")
+    print(f"[LOCAL] styles       : {active_styles or STYLES_ACTIFS}")
     print(f"[LOCAL] n_per_pair   : {n_per_pair}")
     print(f"[LOCAL] source_batch : {source_batch}")
     print(
         f"[LOCAL] requested    : "
-        f"{len(lemmes) * len(STYLES_ACTIFS) * n_per_pair}"
+        f"{len(lemmes) * len(active_styles or STYLES_ACTIFS) * n_per_pair}"
     )
 
     summary = generate_remote.remote(
@@ -273,6 +297,7 @@ def generate(
         lemmes=lemmes,
         n_per_pair=n_per_pair,
         source_batch=source_batch,
+        styles=active_styles,
     )
 
     print()
