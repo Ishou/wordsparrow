@@ -208,12 +208,7 @@ sealed class ServerToClientFrame {
         val lockedAt: String,
     ) : ServerToClientFrame()
 
-    /**
-     * Server broadcast: every cell in [positions] belongs to a word that was
-     * just completed but validated incorrect (ADR-0085). Mirrors
-     * `WordRejectedPayload` in `game/api/asyncapi.yaml`; clients shake these
-     * cells synchronously, mirroring the `wordLocked` lock path.
-     */
+    /** Mirrors `WordRejectedPayload` in `game/api/asyncapi.yaml`; negative-verdict twin of [WordLocked] (ADR-0085). */
     @Serializable
     @SerialName("wordRejected")
     data class WordRejected(
