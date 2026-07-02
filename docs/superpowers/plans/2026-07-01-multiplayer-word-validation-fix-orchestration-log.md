@@ -218,3 +218,8 @@ Append-only event ledger for maintainer review. Newest at the bottom.
 - 2026-07-02 — **cron tick: merged #1250 (frontend sync-shake → main). ADR-0085 wordRejected rollout FULLY MERGED** (#1247/#1248/#1249/#1250); deploying. Next: #1251 (ADR-0086) → #1252 (schema). Coloring impl PRs still need re-dispatch (session limit).
 - 2026-07-02 — **cron tick: #1250 (frontend sync shake) confirmed MERGED → ADR-0085 wordRejected rollout COMPLETE (#1247-#1250).** Merged #1251 (ADR-0086). Next: retarget+rebase #1252 (coloring schema) onto main.
 - 2026-07-02 — **cron tick: merged #1252 (coloring schema — LockedCell + wordLocked.lockedBy on main).** Re-dispatched the two coloring impl agents (had died on session limit) NOW OFF MAIN (schema merged): feat/game-locked-by-impl + feat/coop-locked-word-color. Phases 6/7 are base=main (no retarget needed) — cron merges them on green+LGTM (phase 7 after phase 6). This completes ADR-0086 once they land.
+- 2026-07-02 — **cron tick: confirmed #1252 (ADR-0086 schema) MERGED** (707b998b on
+  main; earlier gh list was stale). ADR-0086 ADR+schema now on main (asyncapi/openapi
+  LockedCell+lockedBy; frontend game types too). **Re-dispatched the two coloring
+  IMPL agents OFF MAIN** (prior ones died on the session limit): `feat/game-locked-by-impl`
+  + `feat/coop-locked-word-color`. Cron phases 6/7 will merge them on green+LGTM.
