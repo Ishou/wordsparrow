@@ -101,8 +101,7 @@ export interface ParamShellRoute {
   readonly description: string;
 }
 
-// Param routes can't prerender one file per URL; each gets a single loading
-// shell that public/_redirects serves for every concrete path.
+// Param routes can't prerender one file per URL; each gets a single loading shell that public/_redirects serves for every concrete path.
 export const PARAM_SHELL_ROUTES: ReadonlyArray<ParamShellRoute> = [
   {
     routePath: '/lobby/$lobbyId',

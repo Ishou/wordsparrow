@@ -30,6 +30,7 @@ import {
   NOINDEX_PRERENDER_ROUTES,
   PARAM_SHELL_ROUTES,
 } from '../src/ui/seo/routeManifest.ts';
+import { noindexHead, type RouteHead } from '../src/ui/seo/buildHead.ts';
 
 const DIST = resolve(import.meta.dirname, '../dist');
 
@@ -50,8 +51,7 @@ const AUTH_GATED_ROUTES: ReadonlySet<string> = new Set([
   ...PARAM_SHELL_ROUTES.map((r) => r.prerenderPath),
 ]);
 
-// Hang the lobby REST read so the route's pendingComponent renders — the 503
-// catch-all would reject the loader into errorComponent instead.
+// Hang the lobby REST read so pendingComponent renders instead of the 503 catch-all's errorComponent.
 const LOBBY_SHELL_PATHS: ReadonlySet<string> = new Set(
   PARAM_SHELL_ROUTES.map((r) => r.prerenderPath),
 );
@@ -261,16 +261,19 @@ function mergeHeadIntoBody(metaHtml: string, bodyHtml: string): string {
   return merged;
 }
 
-// The hung-loader shells never run head(); graft the manifest's metadata in.
-// Values identical to the route's noindexHead, so hydration re-emits the same content.
+function renderHeadTags(head: RouteHead): string {
+  const meta = head.meta.map((entry) =>
+    'title' in entry
+      ? `<title>${entry.title}</title>`
+      : `<meta ${'property' in entry ? `property="${entry.property}"` : `name="${entry.name}"`} content="${entry.content}">`,
+  );
+  const links = head.links.map((link) => `<link rel="${link.rel}" href="${link.href}">`);
+  return [...meta, ...links].join('');
+}
+
+// The hung-loader shells never run head(); reuse noindexHead so the shell's tags can't drift from the hydrated route's own metadata.
 function injectShellHead(html: string, meta: { title: string; description: string }): string {
-  const tags = [
-    `<title>${meta.title}</title>`,
-    `<meta name="description" content="${meta.description}">`,
-    '<meta name="robots" content="noindex,follow">',
-    `<meta property="og:title" content="${meta.title}">`,
-    `<meta property="og:description" content="${meta.description}">`,
-  ].join('');
+  const tags = renderHeadTags(noindexHead(meta.title, meta.description));
   return html.replace('</head>', `${tags}</head>`);
 }
 
