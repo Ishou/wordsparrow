@@ -174,3 +174,9 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   `wordRejected` (stacked on #1247) · game emit (dispatched, stacked on #1248) ·
   frontend synchronous shake + demote timeout to safety-clear (dispatched, off
   main). Awaiting maintainer merge authorization for this follow-up set.
+- 2026-07-02 — **AUTO-MERGE CRON ARMED (f7e70c3c, ~6 min).** Maintainer: "cron
+  auto-merge green+lgtm pls" — standing authorization to auto-merge the ADR-0085
+  PRs on autonomous bot LGTM + green, in dependency/deploy order (#1247 → #1248 →
+  game emit → frontend last), handling stacked retarget/rebase, dispatching FIXERS
+  (never reviewers/reruns) for findings, and stopping+escalating if the classifier
+  blocks a merge. Rules in the procedure "ADR-0085 auto-merge cron" section.
