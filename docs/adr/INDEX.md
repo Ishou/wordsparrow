@@ -208,6 +208,11 @@ ADR-0085  game/api/asyncapi.yaml                         New server→client `wo
 ADR-0085  game/application/**/usecases/LobbyUseCases.kt  Emit `LobbyEvent.WordRejected(positions, rejectedAt)` when a fully-filled candidate word validates incorrect (mirror of the WordLocked emit)
 ADR-0085  frontend/src/ui/v2/multiplayer/useCoopValidating.ts  Shake is server-driven: `wordRejected` → clear pulse + shake immediately; the MAX_MS timeout is demoted to a silent safety-clear (no shake)
 # ADR-0085: Synchronous wrong-word feedback via `wordRejected` — the co-op shake becomes server-authoritative (mirror of `wordLocked`) instead of a client-side pulse-timeout guess. Leaks nothing (positions the player already typed; wrong-completion already inferable). Broadcast, symmetric with wordLocked. Extends ADR-0084; reverses the `WordLocked` "no wrong-word event" description for co-op only (ADR-0076 §9 untouched).
+ADR-0086  game/api/asyncapi.yaml                         `wordLocked` gains `lockedBy: SessionId`; `lockedPositions` items become `LockedCell {row,column,lockedBy}` (per-cell owner) for late-joiner coloring
+ADR-0086  game/api/openapi.yaml                          `GET /v1/lobbies/{id}` GameSession.lockedPositions items become `LockedCell {row,column,lockedBy}` (mirror asyncapi)
+ADR-0086  game/application/**/usecases/LobbyUseCases.kt  `WordLocked` carries `lockedBy` = the completing player; `GameSession` tracks lock owner per position; crossing lock emits only new cells (first-writer-wins on the shared cell)
+ADR-0086  frontend/src/ui/components/grid/PuzzleBoard.tsx  Owned solved cell tints `color-mix(var(--player-color) 32%, solved-fill)` from `playerColor(lockedBy)`; solo/no-owner untinted (WCAG AA)
+# ADR-0086: Attribute locked co-op words to the player who found them — `wordLocked.lockedBy` + `LockedCell` snapshot; frontend soft-tints solved cells with the finder's `playerColor`. First-writer-wins on crossing cells (server emits diff-not-union + additive snapshot, so a shared cell keeps its first owner). Extends ADR-0084.
 ```
 
 ## Adding entries
