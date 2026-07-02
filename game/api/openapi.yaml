@@ -644,6 +644,22 @@ components:
           minimum: 0
           description: Zero-indexed column, left to right.
 
+    LockedCell:
+      type: object
+      required: [row, column, lockedBy]
+      description: A locked cell plus the session that first locked it (first-writer-wins on crossings).
+      properties:
+        row:
+          type: integer
+          minimum: 0
+          description: Zero-indexed row, top to bottom.
+        column:
+          type: integer
+          minimum: 0
+          description: Zero-indexed column, left to right.
+        lockedBy:
+          $ref: '#/components/schemas/SessionId'
+
     GameClue:
       type: object
       required: [id, direction, start, length, text]
@@ -704,11 +720,12 @@ components:
         lockedPositions:
           type: array
           items:
-            $ref: '#/components/schemas/GamePosition'
+            $ref: '#/components/schemas/LockedCell'
           description: |
-            Cumulative cells locked by server-side word validation. Order is
-            row then column for diff-friendly snapshots. Empty list when no
-            word has been locked.
+            Cumulative cells locked by server-side word validation, each with
+            the per-cell `lockedBy` session that first locked it (first-writer-
+            wins on crossings, per ADR-0086). Order is row then column for
+            diff-friendly snapshots. Empty list when no word has been locked.
         startedAt:
           $ref: '#/components/schemas/Instant'
         completedAt:
