@@ -21,6 +21,6 @@ data class GridConfig(
 
     companion object {
         const val MIN = 5
-        const val MAX = 15
+        const val MAX = 28
     }
 }

@@ -18,16 +18,16 @@ class PositionTest {
     }
 
     @Test
-    fun `GridConfig accepts dimensions in 5 to 15`() {
+    fun `GridConfig accepts dimensions in 5 to 28`() {
         assertThat(GridConfig(5, 5).width).isEqualTo(5)
-        assertThat(GridConfig(15, 15).height).isEqualTo(15)
+        assertThat(GridConfig(28, 28).height).isEqualTo(28)
         assertThat(GridConfig(7, 11)).isEqualTo(GridConfig(7, 11))
     }
 
     @Test
-    fun `GridConfig accepts the boundary 6 and 14`() {
+    fun `GridConfig accepts the boundary 6 and 27`() {
         // Mutation guard: catches `<=` vs `<` mutations on the boundary.
-        assertThat(GridConfig(6, 14).width).isEqualTo(6)
+        assertThat(GridConfig(6, 27).width).isEqualTo(6)
     }
 
     @Test
@@ -36,8 +36,8 @@ class PositionTest {
     }
 
     @Test
-    fun `GridConfig rejects width above 15`() {
-        assertFailure { GridConfig(16, 5) }.messageContains("width")
+    fun `GridConfig rejects width above 28`() {
+        assertFailure { GridConfig(29, 5) }.messageContains("width")
     }
 
     @Test
@@ -46,7 +46,7 @@ class PositionTest {
     }
 
     @Test
-    fun `GridConfig rejects height above 15`() {
-        assertFailure { GridConfig(5, 16) }.messageContains("height")
+    fun `GridConfig rejects height above 28`() {
+        assertFailure { GridConfig(5, 29) }.messageContains("height")
     }
 }
