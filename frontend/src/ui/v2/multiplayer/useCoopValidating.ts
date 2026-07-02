@@ -46,6 +46,8 @@ export function useCoopValidating(
   const [rejecting, setRejecting] = useState<ReadonlySet<string>>(() => new Set());
   const wordsRef = useRef(new Map<string, PendingWord>());
   const rejectTimersRef = useRef(new Set<number>());
+  const validatedRef = useRef(validatedPositions);
+  validatedRef.current = validatedPositions;
 
   const stopWord = useCallback((wordKey: string) => {
     const entry = wordsRef.current.get(wordKey);
@@ -71,9 +73,12 @@ export function useCoopValidating(
   }, []);
 
   // Server verdict for a just-completed wrong word: drop any pulse on those cells, then shake them.
+  // Excludes cells already locked by an earlier, different word (dense grids share cells across words).
   const noteServerReject = useCallback(
     (positions: ReadonlyArray<{ row: number; column: number }>) => {
-      const keys = positions.map((p) => posKey(p.row, p.column));
+      const keys = positions
+        .map((p) => posKey(p.row, p.column))
+        .filter((k) => !validatedRef.current.has(k));
       if (keys.length === 0) return;
       const keySet = new Set(keys);
       for (const [wordKey, entry] of [...wordsRef.current]) {

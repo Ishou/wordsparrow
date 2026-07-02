@@ -146,6 +146,19 @@ describe('useCoopValidating', () => {
     expect(result.current.rejecting.size).toBe(0);
   });
 
+  it('never shakes a cell already locked by a different, earlier word', () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(
+      ({ validated }: { validated: ReadonlySet<string> }) => useCoopValidating(puzzle, validated),
+      { initialProps: { validated: new Set<string>(['0,1']) } }, // '0,1' locked by a crossing word
+    );
+
+    act(() => result.current.noteServerReject(WORD_POSITIONS)); // '0,1' shared with the rejected word
+
+    expect(result.current.rejecting.has('0,1')).toBe(false);
+    for (const k of WORD_KEYS.slice(1)) expect(result.current.rejecting.has(k)).toBe(true);
+  });
+
   it('a word locked before the safety window never rejects', () => {
     vi.useFakeTimers();
     fillWord();
