@@ -161,7 +161,7 @@ export function LiveCoopScreen({
   validatedRef.current = validatedPositions;
 
   // Discreet "checking…" pulse on a word the local player just completed, until the server locks it (or a safety window passes).
-  const { validating, rejecting, noteLocalFill } = useCoopValidating(puzzle, validatedPositions);
+  const { validating, rejecting, noteLocalFill, noteServerReject } = useCoopValidating(puzzle, validatedPositions);
   const handleLocalCellChange = useCallback(
     (row: number, col: number, letter: string | null) => {
       onCellChange(row, col, letter);
@@ -185,13 +185,14 @@ export function LiveCoopScreen({
 
   // Inbound remote writes land directly on the uncontrolled inputs (ADR-0002 §4), never re-emitting onCellChange.
   const { applyRemoteCellUpdate } = nav;
+  // ADR-0085: the same raw stream carries `wordRejected` — shake synchronously off the server verdict.
   useEffect(() => {
     const unsubscribe = subscribeToRemoteCellUpdates((event) => {
-      if (event.type !== 'cellUpdated') return;
-      applyRemoteCellUpdate(event.row, event.column, event.letter);
+      if (event.type === 'cellUpdated') applyRemoteCellUpdate(event.row, event.column, event.letter);
+      else if (event.type === 'wordRejected') noteServerReject(event.positions);
     });
     return unsubscribe;
-  }, [subscribeToRemoteCellUpdates, applyRemoteCellUpdate]);
+  }, [subscribeToRemoteCellUpdates, applyRemoteCellUpdate, noteServerReject]);
 
   // Peer presence state → typing/idle/lost sets for the roster strip + grid badges.
   const presenceState = usePresenceState(subscribeToRemotePresence, sessionId);

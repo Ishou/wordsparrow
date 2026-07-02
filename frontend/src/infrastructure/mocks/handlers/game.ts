@@ -337,6 +337,8 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
     if (!lobby.game) return;
     const clues = lobby.game.puzzle.clues;
     const newLocks: Array<{ row: number; column: number }> = [];
+    // ADR-0085: a fully-filled candidate word that does NOT match answers rejects (mirror of wordLocked).
+    const rejected = new Map<string, { row: number; column: number }>();
     for (const clue of clues) {
       const positions: Array<{ row: number; column: number }> = [];
       for (let i = 0; i < clue.length; i++) {
@@ -350,41 +352,60 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
       if (!includesJust) continue;
       // Skip already-locked words.
       if (positions.every((p) => lockedKeys.has(`${p.row},${p.column}`))) continue;
+      const allFilled = positions.every(
+        (p) => cellEntries.get(`${p.row},${p.column}`) != null,
+      );
+      if (!allFilled) continue;
       const allCorrect = positions.every((p) => {
         const key = `${p.row},${p.column}`;
         const placed = cellEntries.get(key);
         const expected = MOCK_ANSWERS.get(key);
         return placed != null && expected != null && placed === expected;
       });
-      if (!allCorrect) continue;
-      for (const p of positions) {
-        const key = `${p.row},${p.column}`;
-        if (!lockedKeys.has(key)) {
-          lockedKeys.add(key);
-          newLocks.push(p);
+      if (allCorrect) {
+        for (const p of positions) {
+          const key = `${p.row},${p.column}`;
+          if (!lockedKeys.has(key)) {
+            lockedKeys.add(key);
+            newLocks.push(p);
+          }
         }
+      } else {
+        for (const p of positions) rejected.set(`${p.row},${p.column}`, p);
       }
     }
-    if (newLocks.length === 0) return;
-    updateLobby(lobbyId, (current) => ({
-      ...current,
-      game: current.game
-        ? {
-            ...current.game,
-            lockedPositions: [
-              ...current.game.lockedPositions,
-              ...newLocks,
-            ].sort((a, b) => a.row - b.row || a.column - b.column),
-          }
-        : current.game,
-    }));
-    client.send(
-      JSON.stringify({
-        type: 'wordLocked',
-        positions: newLocks,
-        lockedAt: nowIso(),
-      }),
-    );
+    if (newLocks.length > 0) {
+      updateLobby(lobbyId, (current) => ({
+        ...current,
+        game: current.game
+          ? {
+              ...current.game,
+              lockedPositions: [
+                ...current.game.lockedPositions,
+                ...newLocks,
+              ].sort((a, b) => a.row - b.row || a.column - b.column),
+            }
+          : current.game,
+      }));
+      client.send(
+        JSON.stringify({
+          type: 'wordLocked',
+          positions: newLocks,
+          lockedAt: nowIso(),
+        }),
+      );
+    }
+    // Never shake a cell that just locked via a crossing correct word.
+    for (const p of newLocks) rejected.delete(`${p.row},${p.column}`);
+    if (rejected.size > 0) {
+      client.send(
+        JSON.stringify({
+          type: 'wordRejected',
+          positions: [...rejected.values()],
+          rejectedAt: nowIso(),
+        }),
+      );
+    }
   };
 
   // Mock relaxation: emit `gameSolved` once every non-block cell holds

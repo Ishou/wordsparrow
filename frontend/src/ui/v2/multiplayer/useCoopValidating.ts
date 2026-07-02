@@ -4,8 +4,9 @@ import { wordRange } from '@/ui/components/grid/wordRange';
 
 // Pulse tracks local completions not yet server-locked; armed behind DELAY_MS, capped at MAX_MS.
 const DELAY_MS = 200;
+// Safety cap: an unresolved pulse silently clears here (ADR-0085: the shake is now server-driven, not timed).
 const MAX_MS = 3500;
-// A pulse that times out unlocked = wrong word: shake once, then clear (co-op has no wrong-word event).
+// Shake window for a server `wordRejected` verdict, then the cells clear.
 const REJECT_MS = 600;
 
 const posKey = (row: number, col: number): string => `${row},${col}`;
@@ -31,6 +32,10 @@ export interface CoopValidatingState {
   readonly rejecting: ReadonlySet<string>;
   // Arms the pulse when the filled cell completes a word.
   readonly noteLocalFill: (row: number, col: number) => void;
+  // Server `wordRejected` verdict: clear any pulse on these cells and shake them.
+  readonly noteServerReject: (
+    positions: ReadonlyArray<{ row: number; column: number }>,
+  ) => void;
 }
 
 export function useCoopValidating(
@@ -41,8 +46,6 @@ export function useCoopValidating(
   const [rejecting, setRejecting] = useState<ReadonlySet<string>>(() => new Set());
   const wordsRef = useRef(new Map<string, PendingWord>());
   const rejectTimersRef = useRef(new Set<number>());
-  const validatedRef = useRef(validatedPositions);
-  validatedRef.current = validatedPositions;
 
   const stopWord = useCallback((wordKey: string) => {
     const entry = wordsRef.current.get(wordKey);
@@ -53,23 +56,33 @@ export function useCoopValidating(
     setValidating((prev) => withoutKeys(prev, entry.keys));
   }, []);
 
-  // MAX_MS elapsed and the server never locked the word → shake once, then clear.
-  const rejectWord = useCallback((wordKey: string) => {
-    const entry = wordsRef.current.get(wordKey);
-    if (!entry) return;
-    wordsRef.current.delete(wordKey);
-    setValidating((prev) => withoutKeys(prev, entry.keys));
+  const shakeCells = useCallback((keys: ReadonlyArray<string>) => {
+    if (keys.length === 0) return;
     setRejecting((prev) => {
       const next = new Set(prev);
-      for (const k of entry.keys) next.add(k);
+      for (const k of keys) next.add(k);
       return next;
     });
     const clear = window.setTimeout(() => {
       rejectTimersRef.current.delete(clear);
-      setRejecting((prev) => withoutKeys(prev, entry.keys));
+      setRejecting((prev) => withoutKeys(prev, keys));
     }, REJECT_MS);
     rejectTimersRef.current.add(clear);
   }, []);
+
+  // Server verdict for a just-completed wrong word: drop any pulse on those cells, then shake them.
+  const noteServerReject = useCallback(
+    (positions: ReadonlyArray<{ row: number; column: number }>) => {
+      const keys = positions.map((p) => posKey(p.row, p.column));
+      if (keys.length === 0) return;
+      const keySet = new Set(keys);
+      for (const [wordKey, entry] of [...wordsRef.current]) {
+        if (entry.keys.some((k) => keySet.has(k))) stopWord(wordKey);
+      }
+      shakeCells(keys);
+    },
+    [stopWord, shakeCells],
+  );
 
   const noteLocalFill = useCallback(
     (row: number, col: number) => {
@@ -96,14 +109,12 @@ export function useCoopValidating(
             return next;
           });
         }, DELAY_MS);
-        const max = window.setTimeout(() => {
-          if (keys.every((k) => validatedRef.current.has(k))) stopWord(wordKey);
-          else rejectWord(wordKey);
-        }, MAX_MS);
+        // Safety net only — clears the pulse if neither a lock nor a reject ever arrives (ADR-0085).
+        const max = window.setTimeout(() => stopWord(wordKey), MAX_MS);
         wordsRef.current.set(wordKey, { arm, max, keys });
       }
     },
-    [puzzle, validatedPositions, stopWord, rejectWord],
+    [puzzle, validatedPositions, stopWord],
   );
 
   // Clear a pending word the moment the server locks all of its cells — never rejects.
@@ -136,5 +147,5 @@ export function useCoopValidating(
     [],
   );
 
-  return { validating, rejecting, noteLocalFill };
+  return { validating, rejecting, noteLocalFill, noteServerReject };
 }

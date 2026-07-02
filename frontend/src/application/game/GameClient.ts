@@ -219,6 +219,15 @@ export interface WordLockedEvent {
   readonly lockedAt: Instant;
 }
 
+// Server broadcast: a just-completed word validated as incorrect. Mirror of
+// `wordLocked` — carries only the cells the player themselves filled (ADR-0085
+// threat model: no letter, no per-cell verdict). Clients shake these cells.
+export interface WordRejectedEvent {
+  readonly type: 'wordRejected';
+  readonly positions: readonly Position[];
+  readonly rejectedAt: Instant;
+}
+
 export interface GameSolvedEvent {
   readonly type: 'gameSolved';
   readonly durationMs: number;
@@ -248,5 +257,6 @@ export type GameEvent =
   | ConnectionLostEvent
   | CursorBumpedEvent
   | WordLockedEvent
+  | WordRejectedEvent
   | GameSolvedEvent
   | GameErrorEvent;
