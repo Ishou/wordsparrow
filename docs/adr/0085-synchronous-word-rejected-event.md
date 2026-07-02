@@ -11,9 +11,10 @@ just-completed word against grid and, when correct, broadcasts `wordLocked` so
 every client renders the word as solved — synchronously, one round-trip after
 the last letter.
 
-Wrong completions emit nothing (ADR-0076 §9: "incorrect completions emit no
-event"). So the frontend's wrong-word "shake" (ADR-0084 Phase 5, PR #1243) is
-driven **client-side** off the "checking…" pulse **timeout** (`useCoopValidating`,
+Wrong completions emit nothing (`game/api/asyncapi.yaml`'s `WordLocked`
+message description, written under ADR-0084's rollout: "incorrect completions
+emit no event"). So the frontend's wrong-word "shake" (ADR-0084 Phase 5, PR
+#1243) is driven **client-side** off the "checking…" pulse **timeout** (`useCoopValidating`,
 `MAX_MS = 3500`): if a completed word is not locked within 3.5 s, the client
 assumes it was wrong and shakes. That is laggy (a fixed 3.5 s wait for negative
 feedback while the positive path is instant) and can mis-fire (a correct lock
@@ -43,11 +44,12 @@ pulse **timeout** is demoted to a pure safety-clear — it no longer produces a
 shake. Result: fill a word → brief pulse → **lock (correct) or shake (wrong)**,
 both synchronous and server-authoritative.
 
-### 3. Supersedes ADR-0076 §9's "no wrong-word event" for the co-op path
+### 3. Reverses the `WordLocked` "no wrong-word event" description
 
-ADR-0076 §9's "incorrect completions emit no event" is reversed **only** for the
-co-op multiplayer path. The grid client-facing `/validate` binary oracle and the
-solo posture are untouched.
+The `game/api/asyncapi.yaml` `WordLocked` message description's "incorrect
+completions emit no event" (written under ADR-0084's rollout) is reversed
+**only** for the co-op multiplayer path. Grid's client-facing `/validate`
+binary oracle and its solo posture (ADR-0076 §9) are untouched.
 
 ## Threat model — why this leaks nothing
 
@@ -84,7 +86,9 @@ solo posture are untouched.
 ## Rollout (schema-first)
 
 1. **This ADR.** Update `docs/adr/INDEX.md`.
-2. **Schema (game asyncapi):** add the `wordRejected` message + `WordRejectedPayload`.
+2. **Schema (game asyncapi):** add the `wordRejected` message + `WordRejectedPayload`;
+   update the now-stale "incorrect completions emit no event" sentence in
+   `WordLocked`'s description.
 3. **game-api:** emit `LobbyEvent.WordRejected` on incorrect candidate words; map
    + broadcast.
 4. **frontend:** add the `wordRejected` event; `useCoopValidating` shakes on it
@@ -94,4 +98,7 @@ solo posture are untouched.
 
 - **Extends ADR-0084** (co-op word-locking), completing its Phase-5 shake as a
   synchronous, server-authoritative signal.
-- **Supersedes ADR-0076 §9** in part (the co-op "no wrong-word event" rule only).
+- **Reverses** the `WordLocked` message description's "no wrong-word event"
+  sentence in `game/api/asyncapi.yaml` (written under ADR-0084's rollout) for
+  the co-op path only. ADR-0076 §9 (grid's `/validate` binary oracle) is a
+  separate, untouched decision.
