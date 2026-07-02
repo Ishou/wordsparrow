@@ -181,3 +181,14 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   (never reviewers/reruns) for findings, and stopping+escalating if the classifier
   blocks a merge. Rules in the procedure "ADR-0085 auto-merge cron" section.
 - 2026-07-02 — **cron tick: merged #1247 (ADR-0085).** Next: retarget+rebase #1248 (asyncapi) onto main.
+- 2026-07-02 — **ADR-0086 coloring rollout STARTED (maintainer "go").** Design =
+  soft player-color tint on locked cells (color-mix var(--player-color) 32%),
+  reuse playerColor.ts; wire adds `wordLocked.lockedBy` + `LockedCell {row,column,
+  lockedBy}` snapshot; first-writer-wins on crossings (POMME/PUIT shared P stays
+  player-1) falls out of diff-not-union emit + additive snapshot. ADR-0086 = the
+  design record. PRs: **#1251** ADR · schema (dispatched, `feat/game-locked-by-schema`,
+  stacked on #1251). game + frontend impl to be dispatched on schema completion
+  (branches feat/game-locked-by-impl, feat/coop-locked-word-color).
+- 2026-07-02 — **Cron consolidated:** deleted the ADR-0085-only cron; armed ONE
+  combined cron (15be1eed) driving both rollouts' remaining phases (avoids two
+  crons racing on the log push). "COMBINED auto-merge phases" section in procedure.
