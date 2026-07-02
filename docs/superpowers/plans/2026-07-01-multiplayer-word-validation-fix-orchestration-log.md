@@ -130,3 +130,18 @@ Append-only event ledger for maintainer review. Newest at the bottom.
   `wordsparrow-api-env` + `bliss-game-api-env`. Merging #1243 before locking works
   would make correct words shake. Sequence: provision token → confirm co-op locks
   → merge #1243.
+- 2026-07-02 — **TOKEN PROVISIONED in prod (maintainer-authorized "use
+  wordsparrow-prod").** Via `~/.kube/wordsparrow-prod`, merge-patched
+  `WORD_VALIDATE_SERVICE_TOKEN` (one shared `openssl rand -hex 32`) into BOTH
+  `wordsparrow-api-env` and `bliss-game-api-env` in ns `wordsparrow`, preserving
+  existing keys; verified both hold the SAME value (sha256 match); value never
+  printed. No pod roll (current code doesn't read it; the grid/game deploys of
+  #1245/#1244 spin up pods that pick it up).
+- 2026-07-02 — **#1245 (grid impl) MERGED** (green + bot-LGTM; squash netted the
+  redundant stacked schema commit to zero — validate-word path appears exactly
+  once on main; `ValidateWordUseCase.kt` on main). Deploys via deploy-api-k8s.
+- 2026-07-02 — **#1244 (game rewire)**: fixer resolved the validator-failure-test
+  finding; bot re-review + build in progress → merge on fresh LGTM.
+- 2026-07-02 — **Remaining:** merge #1244 on LGTM → grid+game deploy → co-op
+  locks (token live) → then merge #1243 (shake). Second access control (internal
+  connector, ADR-0084 §3) remains a maintainer follow-up.
