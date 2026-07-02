@@ -84,6 +84,40 @@ export const NOINDEX_PRERENDER_ROUTES: ReadonlyArray<PrerenderRoute> = [
   { path: '/reglages', title: 'Réglages — WordSparrow' },
   { path: '/menu', title: 'Menu — WordSparrow' },
   { path: '/finish', title: 'Partie terminée — WordSparrow' },
+  { path: '/abonnement', title: 'Abonnement — WordSparrow' },
+  { path: '/abonnement/succes', title: 'Merci — WordSparrow' },
+  { path: '/abonnement/annule', title: 'Paiement annulé — WordSparrow' },
+];
+
+export interface ParamShellRoute {
+  // TanStack route pattern this shell stands in for (e.g. '/lobby/$lobbyId').
+  readonly routePath: string;
+  // Concrete URL the prerenderer loads: syntactically valid param, lobby API hung → pendingComponent.
+  readonly prerenderPath: string;
+  // dist/<outSlug>.html — the target of the route's `_redirects` 200-rewrite.
+  readonly outSlug: string;
+  // head() never fires on a hung loader, so the prerenderer injects these; keep in sync with the route's noindexHead.
+  readonly title: string;
+  readonly description: string;
+}
+
+// Param routes can't prerender one file per URL; each gets a single loading
+// shell that public/_redirects serves for every concrete path.
+export const PARAM_SHELL_ROUTES: ReadonlyArray<ParamShellRoute> = [
+  {
+    routePath: '/lobby/$lobbyId',
+    prerenderPath: '/lobby/7Hk2pQrS',
+    outSlug: 'lobby-shell',
+    title: 'Partie — WordSparrow',
+    description: 'Partie de mots fléchés en multijoueur.',
+  },
+  {
+    routePath: '/join/$code',
+    prerenderPath: '/join/A2B3C4',
+    outSlug: 'join-shell',
+    title: 'Rejoindre une partie — WordSparrow',
+    description: 'Rejoins une partie de mots fléchés.',
+  },
 ];
 
 export const DEFAULT_OG_IMAGE = `${SITE_BASE_URL}/og-home.png`;

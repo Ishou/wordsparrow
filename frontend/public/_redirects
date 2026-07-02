@@ -17,6 +17,9 @@
 /reglages/           /reglages           308
 /menu/               /menu               308
 /finish/             /finish             308
+/abonnement/succes/  /abonnement/succes  308
+/abonnement/annule/  /abonnement/annule  308
+/abonnement/         /abonnement         308
 
 # /sondage → /contribuer: server-side 308s because SPA fallback is gone (ADR-0004)
 /sondage/pairs/      /contribuer/pairs   308
@@ -24,6 +27,6 @@
 /sondage/            /contribuer         308
 /sondage             /contribuer         308
 
-# lobby/join: 200 rewrite (no prerendered file) — client resolves param (ADR-0026)
-/lobby/*             /                   200
-/join/*              /                   200
+# lobby/join: 200 rewrite to the prerendered loading shells — the client resolves the param (ADR-0026). Never target /: index.html is the prerendered homepage and flashes it.
+/lobby/*             /lobby-shell        200
+/join/*              /join-shell         200

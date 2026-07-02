@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { INDEXABLE_ROUTES, NOINDEX_PRERENDER_ROUTES, SITE_BASE_URL } from '@/ui/seo';
+import {
+  INDEXABLE_ROUTES,
+  NOINDEX_PRERENDER_ROUTES,
+  PARAM_SHELL_ROUTES,
+  SITE_BASE_URL,
+} from '@/ui/seo';
 
 const DIST = resolve(__dirname, '../dist');
 
@@ -92,10 +97,30 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       expect(robots).toContain('Sitemap: https://wordsparrow.io/sitemap.xml');
     });
 
+    // Param routes get one shell each; the _redirects 200-rewrites serve it for every concrete URL.
+    it.each(PARAM_SHELL_ROUTES)('emits a param shell for $routePath', (route) => {
+      const html = readFileSync(resolve(DIST, `${route.outSlug}.html`), 'utf8');
+      expect(html).toContain(`<title>${route.title}</title>`);
+      expect(html).toContain('content="noindex,follow"');
+    });
+
+    // A shell that carries the home-only JSON-LD is a copy of index.html — the fallback flash is back.
+    it.each([...NOINDEX_PRERENDER_ROUTES.map((r) => `${r.path.slice(1)}.html`), ...PARAM_SHELL_ROUTES.map((r) => `${r.outSlug}.html`)])(
+      'dist/%s does not carry the homepage body',
+      (file) => {
+        const html = readFileSync(resolve(DIST, file), 'utf8');
+        expect(html).not.toContain('"@type":"WebApplication"');
+        expect(html).not.toContain('"@type":"Organization"');
+      },
+    );
+
     // SW navigation fallback must exclude every prerendered route or returning users get the home shell.
     const PRERENDERED = [
       ...INDEXABLE_ROUTES.map((r) => r.path).filter((p) => p !== '/'),
       ...NOINDEX_PRERENDER_ROUTES.map((r) => r.path),
+      // Concrete param URLs must reach the network so Pages serves the shells.
+      '/lobby/7Hk2pQrS',
+      '/join/A2B3C4',
     ];
     // A query string (e.g. /play?date=…) must stay denylisted too — else the SW serves the home shell and flashes it.
     const PRERENDERED_WITH_QUERY = PRERENDERED.flatMap((p) => [p, `${p}?date=2026-06-29`]);

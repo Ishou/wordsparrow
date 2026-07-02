@@ -60,9 +60,9 @@ describe('prerendered-shell coherence (_redirects)', () => {
     expect(ruleFor(`${route.path}/`)).toEqual({ target: route.path, status: '308' });
   });
 
-  // lobby/join are dynamic param routes with no prerendered file; they MUST keep the SPA-fallback rewrite.
-  it('keeps the SPA-fallback rewrite for dynamic lobby/join routes', () => {
-    expect(ruleFor('/lobby/*')).toEqual({ target: '/', status: '200' });
-    expect(ruleFor('/join/*')).toEqual({ target: '/', status: '200' });
+  // lobby/join are dynamic param routes; their rewrite must target the prerendered loading shells — / is the prerendered homepage and flashes it.
+  it('rewrites dynamic lobby/join routes to their prerendered shells', () => {
+    expect(ruleFor('/lobby/*')).toEqual({ target: '/lobby-shell', status: '200' });
+    expect(ruleFor('/join/*')).toEqual({ target: '/join-shell', status: '200' });
   });
 });
