@@ -25,9 +25,7 @@ def apply_replacements(
     rows: list[dict], diffs: list[dict], index: MorphologyIndex,
     min_delta: float = 0.03, max_jaccard: float = 0.7,
 ) -> dict[str, int]:
-    """Mutate `rows` in place with the accepted homograph replacements. Each
-    replacement lands only on the (lemma, pos) rows whose POS the new clue
-    re-validates `ok` against — never on the diff's self-reported flag."""
+    """Mutate `rows` in place with accepted homograph replacements, landing each only on the (lemma, pos) rows whose POS the new clue re-validates `ok` against — never on the diff's self-reported flag."""
     rows_by_lemma: dict[str, list[dict]] = defaultdict(list)
     for r in rows:
         rows_by_lemma[r["lemma"]].append(r)

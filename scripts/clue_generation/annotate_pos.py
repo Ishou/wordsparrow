@@ -19,9 +19,7 @@ POS_PRECEDENCE = {"nom": 0, "adj": 1, "adv": 2, "verbe": 3}
 
 
 def lemma_own_pos_classes(lemma: str, index: MorphologyIndex) -> set[str]:
-    """The content-POS classes for which `lemma` is itself a citation form,
-    from grammalecte rows keyed on the lemma — excluding cross-lemma POS a
-    homograph surface would otherwise contribute."""
+    """The content-POS classes for which `lemma` is itself a citation form (excludes cross-lemma POS a homograph surface would otherwise contribute)."""
     return {
         c
         for _surface, tags in index.by_lemma.get(lemma.lower(), [])
@@ -33,9 +31,7 @@ def expand_and_validate(
     rows: list[dict], index: MorphologyIndex,
     blocklist: frozenset[str] | None = None,
 ) -> list[dict]:
-    """One output row per (lemma, own-POS), with `validation_flag` recomputed
-    for the clue against that POS. Lemmas grammalecte can't resolve keep a
-    single pos-less row (as before)."""
+    """One output row per (lemma, own-POS), with `validation_flag` recomputed for the clue against that POS; lemmas grammalecte can't resolve keep a single pos-less row."""
     out: list[dict] = []
     for r in rows:
         lemma = r["lemma"]

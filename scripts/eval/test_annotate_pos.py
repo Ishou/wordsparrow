@@ -1,6 +1,4 @@
-"""Tests for annotate_pos: each POS a lemma genuinely has gets its own row,
-with the clue freshly validated against that POS (no dominant-POS collapse,
-no stale validation flag)."""
+"""Tests for annotate_pos: each POS a lemma genuinely has gets its own row, with the clue freshly validated against that POS (no dominant-POS collapse, no stale validation flag)."""
 from __future__ import annotations
 
 import os
@@ -31,8 +29,7 @@ def _lexique() -> Path | None:
 
 
 def test_own_pos_excludes_cross_lemma_pos() -> None:
-    """`porte` the noun-lemma must not inherit the verb POS of the homograph
-    surface `porte` (which belongs to lemma `porter`)."""
+    """`porte` the noun-lemma must not inherit the verb POS of the homograph surface `porte` (which belongs to lemma `porter`)."""
     idx = MorphologyIndex()
     _add(idx, "porte", "porte", "nom fem sg")
     _add(idx, "porte", "portes", "nom fem pl")
@@ -41,8 +38,7 @@ def test_own_pos_excludes_cross_lemma_pos() -> None:
 
 
 def test_multi_pos_lemma_emits_one_row_per_pos() -> None:
-    """`acajou` is both a noun (wood) and an adjective (colour) — two rows, one
-    per POS, each carrying the lemma's clue for its own (future) generation."""
+    """`acajou` is both a noun (wood) and an adjective (colour) — two rows, one per POS, each carrying the lemma's clue for its own (future) generation."""
     idx = MorphologyIndex()
     _add(idx, "acajou", "acajou", "nom mas sg")
     _add(idx, "acajou", "acajou", "adj epi sg")
@@ -55,8 +51,7 @@ def test_multi_pos_lemma_emits_one_row_per_pos() -> None:
 
 @pytest.mark.skipif(_lexique() is None, reason="grammalecte lexique absent")
 def test_stale_ok_is_recomputed_pos_mismatch_dropped() -> None:
-    """The `score → Obtenir` leak: a noun lemma carrying a verb-headed clue with
-    a stale `ok` flag must be re-derived to `pos-mismatch`, not trusted."""
+    """The `score → Obtenir` leak: a noun lemma carrying a verb-headed clue with a stale `ok` flag must be re-derived to `pos-mismatch`, not trusted."""
     idx = MorphologyIndex.load(_lexique())
     rows = [{"lemma": "score", "pos": "", "lemma_clue": "Obtenir",
              "validation_flag": "ok", "filter_score": "0.9997"}]
@@ -67,9 +62,7 @@ def test_stale_ok_is_recomputed_pos_mismatch_dropped() -> None:
 
 @pytest.mark.skipif(_lexique() is None, reason="grammalecte lexique absent")
 def test_clue_attaches_to_its_matching_pos_only() -> None:
-    """A noun clue on a noun+adj lemma validates ok on the noun row and
-    mismatches on the adj row — so the clue lands on the right POS, and the
-    other POS row awaits its own generated clue."""
+    """A noun clue on a noun+adj lemma validates ok on the noun row and mismatches on the adj row, so the clue lands on the right POS and the other POS row awaits its own generated clue."""
     idx = MorphologyIndex.load(_lexique())
     rows = [{"lemma": "acajou", "pos": "", "lemma_clue": "Bois exotique",
              "validation_flag": "ok", "filter_score": "0.9"}]

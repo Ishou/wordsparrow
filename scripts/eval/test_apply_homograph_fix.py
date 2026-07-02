@@ -1,5 +1,4 @@
-"""apply_homograph_fix must re-validate a replacement against the row's POS,
-not trust the diff's self-reported `new_flag` — the `score -> Obtenir` leak."""
+"""apply_homograph_fix must re-validate a replacement against the row's POS, not trust the diff's self-reported `new_flag` — the `score -> Obtenir` leak."""
 from __future__ import annotations
 
 import os

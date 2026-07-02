@@ -586,16 +586,11 @@ def test_adj_nom_ambiguous_agrees_not_cohead_inflated() -> None:
     assert res.text == "Dévouements totaux"
 
 
-# ---------------------------------------------------------------------------
-# Exact-or-skip on person (`posè → Placent`). A finite-verb surface
-# whose person can't be matched exactly must SKIP, never fall through to
-# "whatever row matches first" and emit an arbitrary-person head.
-# ---------------------------------------------------------------------------
+# --- Exact-or-skip on person (`posè → Placent`) ---------------------------
 
 
 def _placer_index() -> MorphologyIndex:
-    """`placer` paradigm with the 3pl row FIRST, so a person-less lookup would
-    return the plural `placent` — reproducing the incident's arbitrary pick."""
+    """`placer` paradigm with the 3pl row FIRST, so a person-less lookup would return the plural `placent` — reproducing the incident's arbitrary pick."""
     idx = MorphologyIndex()
     _add(idx, "placer", "placent", "v1__t___zz ipre 3pl")
     _add(idx, "placer", "placer", "v1__t___zz infi")
@@ -606,12 +601,7 @@ def _placer_index() -> MorphologyIndex:
 
 
 def test_inversion_person_surface_skips_instead_of_arbitrary_plural() -> None:
-    """`posè` (answer POSE) is a literary inversion
-    form tagged `1isg`, which `PERSON_TOKENS` omits; `extract_inflection_target`
-    drops the person, leaving a person-less finite target `{ipre}`. Pre-fix the
-    inflater matched the first `ipre` row (`placent`) and shipped `Placent` — a
-    plural clue on a singular answer. Post-fix: a finite target with no matchable
-    person skips."""
+    """`posè` (answer POSE) is a literary inversion form tagged `1isg`, which `PERSON_TOKENS` omits, so a finite target with no matchable person must skip rather than matching the first `ipre` row (`placent`, the `Placent` incident)."""
     idx = _placer_index()
     res = inflect_clue("Placer", {"v1__t___zz", "ipre", "1isg"}, idx)
     assert res.text != "Placent"
@@ -619,17 +609,14 @@ def test_inversion_person_surface_skips_instead_of_arbitrary_plural() -> None:
 
 
 def test_finite_person_still_matches_exactly() -> None:
-    """Exactness cuts both ways: a real 3pl surface still inflates to `Placent`,
-    a real 2sg surface to `Places`. Skip is only for the unmatchable case."""
+    """Exactness cuts both ways: a real 3pl surface still inflates to `Placent`, a real 2sg surface to `Places`. Skip is only for the unmatchable case."""
     idx = _placer_index()
     assert inflect_clue("Placer", {"v1__t___zz", "ipre", "3pl"}, idx).text == "Placent"
     assert inflect_clue("Placer", {"v1__t___zz", "ipre", "2sg"}, idx).text == "Places"
 
 
 def test_finite_person_unproducible_by_head_skips() -> None:
-    """General exact-or-skip: the surface is an unambiguous 2sg, but the clue
-    head `finir` is defective at 2sg here (only 3pl present). No person-dropping
-    fallback may fire — skip rather than emit the 3pl form."""
+    """General exact-or-skip: the surface is an unambiguous 2sg, but the clue head `finir` is defective at 2sg here (only 3pl present) — skip rather than emit the 3pl form."""
     idx = MorphologyIndex()
     _add(idx, "finir", "finissent", "v2__t___zz ipre 3pl")
     _add(idx, "finir", "finir", "v2__t___zz infi")
@@ -639,9 +626,7 @@ def test_finite_person_unproducible_by_head_skips() -> None:
 
 
 def test_decompose_preserves_person_for_finite_targets() -> None:
-    """`_decompose_targets` must never yield a person-less trial when the target
-    carries a person (that trial is what let the index pick an arbitrary person).
-    Person-less targets (ppas / nominal) still get the mood-only relaxation."""
+    """`_decompose_targets` must never yield a person-less trial when the target carries a person (that trial is what let the index pick an arbitrary person); person-less targets (ppas / nominal) still get the mood-only relaxation."""
     finite = _decompose_targets({"ipre", "3sg"})
     assert all(t & {"1sg", "2sg", "3sg", "1pl", "2pl", "3pl"} for t in finite)
     assert {"ipre"} not in finite  # no person-less trial for a person-carrying target
@@ -649,12 +634,7 @@ def test_decompose_preserves_person_for_finite_targets() -> None:
     assert {"ipre"} in _decompose_targets({"ipre"})
 
 
-# ---------------------------------------------------------------------------
-# Negated-infinitive restructuring: `Ne pas <inf>` must become `Ne <verb> pas`
-# when the head inflates to a finite form — not `Ne pas <inflected>` (grid bug
-# `espère → "Ne pas désespère"`). Past-participle targets can't restructure
-# cleanly and are dropped; the higher-freq finite sibling supplies the clue.
-# ---------------------------------------------------------------------------
+# --- Negated-infinitive restructuring: `Ne pas <inf>` → `Ne <verb> pas` ----
 
 
 def _rester_index() -> MorphologyIndex:
@@ -691,15 +671,13 @@ def test_negation_finite_keeps_reflexive_before_verb() -> None:
 
 
 def test_negation_infinitive_surface_left_intact() -> None:
-    """When the surface is itself an infinitive the head doesn't change — the
-    citation-form `Ne pas <inf>` is already correct and must not be touched."""
+    """When the surface is itself an infinitive the head doesn't change — the citation-form `Ne pas <inf>` is already correct and must not be touched."""
     res = inflect_clue("Ne pas rester en place", {"v1__i___zz", "infi"}, _rester_index())
     assert res.text == "Ne pas rester en place"
 
 
 def test_negation_present_participle_restructures() -> None:
-    """Present participles negate like finite verbs (`ne sachant pas`), not like
-    infinitives — restructure rather than keep `Ne pas savoir`."""
+    """Present participles negate like finite verbs (`ne sachant pas`), not like infinitives — restructure rather than keep `Ne pas savoir`."""
     idx = MorphologyIndex()
     _add(idx, "savoir", "savoir", "v3__t___zz infi")
     _add(idx, "savoir", "sachant", "v3__t___zz ppre")
@@ -709,8 +687,6 @@ def test_negation_present_participle_restructures() -> None:
 
 
 def test_negation_past_participle_is_skipped() -> None:
-    """`bougé → "Ne pas resté en place"`: a ppas can't restructure to a clean
-    simple-negation, so drop it — the higher-freq present sibling supplies the
-    grid clue (`bouge → "Se met en mouvement"`)."""
+    """`bougé → "Ne pas resté en place"`: a ppas can't restructure to a clean simple-negation, so drop it — the higher-freq present sibling supplies the grid clue (`bouge → "Se met en mouvement"`)."""
     res = inflect_clue("Ne pas rester en place", {"v1__i___zz", "ppas", "mas", "sg"}, _rester_index())
     assert res.flag == "neg-nonfinite-skipped"
