@@ -35,7 +35,12 @@ fun main(args: Array<String>) {
                 printUsage()
                 1
             }
-            args.contains("--regenerate-dailies") -> runDailies(force = true)
+            args.contains("--regenerate-dailies") ->
+                runDailies(
+                    force = true,
+                    startOffset = intArg(args, "--start-offset", 0),
+                    windowDays = intArg(args, "--window-days", EnsureUpcomingDailiesUseCase.DEFAULT_WINDOW_DAYS),
+                )
             args.contains("--ensure-dailies") -> runDailies(force = false)
             else -> {
                 log.error("event=worker_unknown_arguments args=\"{}\"", args.joinToString(separator = " "))
@@ -47,11 +52,29 @@ fun main(args: Array<String>) {
 }
 
 private fun printUsage() {
-    log.info("usage: grid-worker --ensure-dailies | --regenerate-dailies | --help")
+    log.info(
+        "usage: grid-worker --ensure-dailies | --regenerate-dailies [--start-offset N] [--window-days N] | --help",
+    )
+}
+
+// Parse `--name=value` or `--name value`; fall back to `default` when absent or unparseable.
+internal fun intArg(
+    args: Array<String>,
+    name: String,
+    default: Int,
+): Int {
+    args.firstOrNull { it.startsWith("$name=") }?.let { return it.substringAfter('=').toIntOrNull() ?: default }
+    val idx = args.indexOf(name)
+    return if (idx >= 0 && idx + 1 < args.size) args[idx + 1].toIntOrNull() ?: default else default
 }
 
 // force=true appends a fresh daily even when the date already has a row, refreshing stale clues (ADR-0081).
-private fun runDailies(force: Boolean): Int {
+// startOffset backdates the window start (e.g. -7 to also regenerate the past week); windowDays widens its span.
+private fun runDailies(
+    force: Boolean,
+    startOffset: Int = 0,
+    windowDays: Int = EnsureUpcomingDailiesUseCase.DEFAULT_WINDOW_DAYS,
+): Int {
     val database =
         BlissDatabase(
             poolName = "grid-worker-hikari",
@@ -63,7 +86,14 @@ private fun runDailies(force: Boolean): Int {
         val dataSource = database.dataSource() ?: error("DATABASE_URL produced a null DataSource")
         val puzzleRepository: PuzzleRepository = PostgresPuzzleRepository(dataSource)
         val cooldownRepository: ClueCooldownRepository = PostgresClueCooldownRepository(dataSource)
-        executeAndExit(puzzleRepository, cooldownRepository, productionGridGenerationPort(), force = force)
+        executeAndExit(
+            puzzleRepository,
+            cooldownRepository,
+            productionGridGenerationPort(),
+            today = LocalDate.now(ZoneOffset.UTC).plusDays(startOffset.toLong()),
+            force = force,
+            windowDays = windowDays,
+        )
     } finally {
         database.stop()
     }
@@ -86,6 +116,7 @@ internal fun executeAndExit(
     gridGenerationPort: GridGenerationPort,
     today: LocalDate = LocalDate.now(ZoneOffset.UTC),
     force: Boolean = false,
+    windowDays: Int = EnsureUpcomingDailiesUseCase.DEFAULT_WINDOW_DAYS,
 ): Int {
     val cooldownMax =
         System.getenv("GRID_CLUE_COOLDOWN_MAX")?.toIntOrNull()
@@ -97,6 +128,7 @@ internal fun executeAndExit(
             dailyPuzzleSelector = DailyPuzzleSelector(),
             cooldownRepository = cooldownRepository,
             cooldownMax = cooldownMax,
+            windowDays = windowDays,
         )
     val summary = useCase.execute(today, force = force)
     log.info(

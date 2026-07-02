@@ -83,6 +83,31 @@ class MainTest {
     }
 
     @Test
+    fun `executeAndExit honours a custom windowDays span`() {
+        val exit =
+            executeAndExit(
+                PreseededRepo(),
+                NoopCooldownRepo(),
+                SuccessfulPort,
+                today = today,
+                force = true,
+                windowDays = 15,
+            )
+
+        assertThat(exit).isEqualTo(0)
+        val summary = appender.list.single { it.formattedMessage.contains("event=ensure_upcoming_dailies_summary") }
+        assertThat(summary.formattedMessage).contains("generated_count=15")
+    }
+
+    @Test
+    fun `intArg parses equals and space forms and falls back to default`() {
+        assertThat(intArg(arrayOf("--start-offset", "-7"), "--start-offset", 0)).isEqualTo(-7)
+        assertThat(intArg(arrayOf("--window-days=15"), "--window-days", 7)).isEqualTo(15)
+        assertThat(intArg(arrayOf("--regenerate-dailies"), "--start-offset", 0)).isEqualTo(0)
+        assertThat(intArg(arrayOf("--start-offset", "NaN"), "--start-offset", 3)).isEqualTo(3)
+    }
+
+    @Test
     fun `executeAndExit returns 1 and logs failed plus skipped dates when first day fails`() {
         val repo = PreseededRepo()
         val failingPort =
