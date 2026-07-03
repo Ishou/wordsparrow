@@ -458,7 +458,6 @@ export function ContribuerScreen() {
   return <ContribuerPage />;
 }
 
-// Unregistered post-cutover (ADR-0074): id cast so the lazy half still resolves its eager parent.
-export const Route = createLazyRoute('/contribuer' as '/app')({
+export const Route = createLazyRoute('/contribuer')({
   component: ContribuerScreen,
 });

@@ -58,9 +58,10 @@ const openCampaign: Campaign = {
 
 const closedCampaign: Campaign = { ...openCampaign, closedAt: '2026-05-30T12:00:00Z' };
 
+// Maintainer session: the pairs route is capability-gated (ADR-0079); these tests cover the campaign lock, not the gate.
 function stubAuth(): AuthClient {
   return {
-    whoami: vi.fn().mockResolvedValue(null),
+    whoami: vi.fn().mockResolvedValue({ userId: 'u-1', displayName: 'Lapin 1', role: 'maintainer', capabilities: ['contribuer'] }),
     getMe: vi.fn(),
     updateMe: vi.fn(),
     deleteMe: vi.fn(),

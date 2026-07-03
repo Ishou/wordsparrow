@@ -19,6 +19,8 @@ import { Route as LobbyRoute } from './routes/lobby.$lobbyId';
 import { Route as JoinRoute } from './routes/join.$code';
 import { Route as DesignSystemRoute } from './routes/design-system';
 import { Route as LockupRoute } from './routes/lockup';
+import { Route as ContribuerRoute } from './routes/contribuer';
+import { Route as ContribuerPairsRoute } from './routes/contribuer.pairs';
 import {
   AccueilRedirectRoute,
   GrilleRedirectRoute,
@@ -29,7 +31,7 @@ import {
 // factory means `ui/` never instantiates `infrastructure/` directly
 // (ADR-0002 §7). The `multiplayer` flag (ADR-0018 §10) gates the lobby
 // route so it stays unreachable in environments where game-api is not
-// yet deployed. v2 is the production app at root (ADR-0074); v1 contribuer stays on disk but unregistered.
+// yet deployed. v2 is the production app at root (ADR-0074); contribuer is registered again as a maintainer-gated surface (ADR-0079).
 export interface CreateAppRouterOptions {
   readonly context: AppRouterContext;
   readonly multiplayer: boolean;
@@ -57,7 +59,8 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
     ...(multiplayer ? [LobbyRoute, JoinRoute] : []),
     ...(import.meta.env.DEV ? [DesignSystemRoute, LockupRoute] : []),
   ];
-  const routeTree = RootRoute.addChildren([AppLayoutRoute.addChildren(appChildren)]);
+  // Contribuer parents RootRoute (v1 ContentPage shell owns its own chrome; reparenting would break the lazy-route ids).
+  const routeTree = RootRoute.addChildren([AppLayoutRoute.addChildren(appChildren), ContribuerRoute, ContribuerPairsRoute]);
   return createRouter({ routeTree, context });
 }
 export type AppRouter = ReturnType<typeof createAppRouter>;

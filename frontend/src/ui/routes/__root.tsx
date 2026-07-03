@@ -1,5 +1,4 @@
 import { HeadContent, Outlet, createRootRouteWithContext } from '@tanstack/react-router';
-import { useLayoutEffect } from 'react';
 import { css } from 'styled-system/css';
 import type { PuzzleRepository, PuzzleSolver, WordsRepository } from '@/application';
 import type { AnalyticsPort } from '@/application/analytics';
@@ -14,6 +13,7 @@ import type { SurveyAnonStore, SurveyClient } from '@/application/survey';
 import type { TourSeenStore } from '@/application/tour/TourSeenStore';
 import type { Pseudonym, SessionId } from '@/domain/game';
 import { SparrowState } from '@/ui/v2/SparrowState';
+import { NOT_FOUND_COPY, useNotFoundDocumentTitle } from '@/ui/v2/NotFoundScreen';
 import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { AnnouncerProvider } from '@/ui/components/a11y/Announcer';
 import { Toast, ToastProvider } from '@/ui/components/primitives';
@@ -101,24 +101,17 @@ function RootErrorBoundary() {
   );
 }
 
+// Same copy/title as NotFoundScreen but hard-navigates and skips PhoneShell: the root fallback
+// must render even when the route tree itself is the problem.
 function RootNotFound() {
-  // The 27812a6 refactor dropped hardcoded `<title>` defaults; the
-  // not-found path has no per-route `head: () => …` slot, so the
-  // document is left without a title — fails axe's `document-title`
-  // rule (serious) on the WCAG 2.4.2 baseline. Set it imperatively
-  // here so the gate stays green.
-  useLayoutEffect(() => {
-    const previous = document.title;
-    document.title = 'Page introuvable — WordSparrow';
-    return () => { document.title = previous; };
-  }, []);
+  useNotFoundDocumentTitle();
   return (
     <main id="main-content" tabIndex={-1} className={errorPageStyles} lang="fr">
       <SparrowState
         scene={sparrowFlightScene('404')}
-        title="Page introuvable"
-        body="Cette page n'existe pas ou a été déplacée."
-        cta={{ label: "Retour à l'accueil", onClick: () => { window.location.href = '/'; } }}
+        title={NOT_FOUND_COPY.title}
+        body={NOT_FOUND_COPY.body}
+        cta={{ label: NOT_FOUND_COPY.cta, onClick: () => { window.location.href = '/'; } }}
       />
     </main>
   );
