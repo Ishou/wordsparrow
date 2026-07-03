@@ -13,7 +13,7 @@ const rowBase = {
   textAlign: 'left' as const,
   fontFamily: 'wsUi',
   border: 'none',
-  borderBottom: '1px solid #EEF3EC',
+  borderBottom: '1px solid token(colors.ws.hairline)',
   background: 'transparent',
 };
 const rowStatic = css(rowBase);

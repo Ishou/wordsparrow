@@ -11,7 +11,7 @@ import { GateLoadingScreen } from './GateLoadingScreen';
 import { useBillingGate } from './useBillingGate';
 
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 16px' });
-const statusCard = css({ display: 'flex', alignItems: 'center', gap: '10px', bg: 'white', borderRadius: '16px', padding: '16px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)', fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'semibold', color: 'ws.jadeInk', margin: '0 0 18px' });
+const statusCard = css({ display: 'flex', alignItems: 'center', gap: '10px', bg: 'white', borderRadius: '18px', padding: '16px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)', fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'semibold', color: 'ws.jadeInk', margin: '0 0 18px' });
 const spin = css({ flexShrink: 0, animation: 'wsSpin 0.7s linear infinite', color: 'ws.jade' });
 // ws.sakuraDark (not ws.sakura) clears WCAG AA for coloured text — known palette gotcha.
 const linkStyle = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.sakuraDark', textDecoration: 'underline' });

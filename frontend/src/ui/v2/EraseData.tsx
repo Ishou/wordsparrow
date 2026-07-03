@@ -43,7 +43,7 @@ const input = css({
 });
 const errText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '8px' });
 const dlgActions = css({ display: 'flex', gap: '8px', marginTop: '16px' });
-const ghostBtn = css({ flex: 1, height: '44px', borderRadius: '12px', border: 'none', bg: 'ws.sable', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk', cursor: 'pointer', _hover: { bg: '#DED7BC' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const ghostBtn = css({ flex: 1, height: '44px', borderRadius: '12px', border: 'none', bg: 'ws.sable', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk', cursor: 'pointer', _hover: { bg: 'ws.sableHover' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const confirmBtn = css({ flex: 1, height: '44px', marginTop: 0, borderRadius: '12px', border: 'none', bg: 'ws.sakuraDark', color: 'white', _disabled: { opacity: 0.45, cursor: 'not-allowed' } });
 
 // Auth-only RGPD erasure; guests have no server account.

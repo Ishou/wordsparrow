@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
 import { css, cx } from 'styled-system/css';
+import { pill, pillMuted, pillPending } from './statusPill';
 import type { BillingClient, Receipt } from '@/application/billing';
 import { useBillingGate } from './useBillingGate';
 
-const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#543C00', margin: '0 6px 7px' });
-const cardWrap = css({ bg: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
+const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'ws.eyebrow', margin: '0 6px 7px' });
+const cardWrap = css({ bg: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
 
 const list = css({ listStyle: 'none', margin: 0, padding: 0 });
-const row = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 15px', borderTop: '1px solid #EEF3EC', _first: { borderTop: 'none' } });
+const row = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 15px', borderTop: '1px solid token(colors.ws.hairline)', _first: { borderTop: 'none' } });
 const rowMain = css({ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' });
 const dateText = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk' });
 const amountText = css({ flex: 'none', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '15px', color: 'ws.jadeInk' });
 
-const pill = css({ display: 'inline-flex', alignItems: 'center', lineHeight: 1, fontFamily: 'wsUi', fontSize: '9.5px', fontWeight: 'black', letterSpacing: '0.04em', textTransform: 'uppercase', borderRadius: '999px', padding: '4px 8px' });
 const pillPaid = css({ color: 'ws.clueSurface', bg: 'ws.jade' });
-const pillPending = css({ color: '#5A4B12', bg: 'ws.or' });
 const pillAlert = css({ color: 'ws.sakuraDark', bg: 'rgba(190,73,112,0.12)' });
-const pillMuted = css({ color: 'ws.khaki', bg: 'rgba(33,75,64,0.08)' });
 
-const divider = css({ height: '1px', bg: '#EEF3EC' });
+const divider = css({ height: '1px', bg: 'ws.hairline' });
 const moreBtn = css({ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '48px', padding: '12px 15px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk', _hover: { bg: 'ws.sable' }, _disabled: { opacity: 0.6, cursor: 'default' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' } });
 const loadingRow = css({ padding: '16px 15px', fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85 });
 const messagePad = css({ padding: '16px 15px' });

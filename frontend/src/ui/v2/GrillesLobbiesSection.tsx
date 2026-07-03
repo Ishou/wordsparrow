@@ -1,36 +1,10 @@
 import { Link } from '@tanstack/react-router';
 import { CaretRight } from '@phosphor-icons/react';
-import { css } from 'styled-system/css';
+import { bar, barFill, card, chevron, list, mid, rowMeta, rowTitle } from './listRowStyles';
 import type { LobbySummary } from '@/application/game';
 
 // Session-scoped read only (ADR-0066 §4); stays single-shape when the user-scoped endpoint lands.
 
-const list = css({ listStyle: 'none', margin: 0, padding: 0 });
-
-const card = css({
-  width: '100%',
-  textAlign: 'left',
-  textDecoration: 'none',
-  bg: 'white',
-  borderRadius: '16px',
-  padding: '13px 14px',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  marginBottom: '10px',
-  boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
-  cursor: 'pointer',
-  transition: 'background-color 120ms',
-  _hover: { bg: 'ws.sable' },
-  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' },
-});
-
-const mid = css({ flex: 1, minWidth: 0 });
-const rowTitle = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk' });
-const rowMeta = css({ fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '11.5px', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
-const bar = css({ height: '7px', borderRadius: '999px', bg: 'rgba(33,75,64,0.1)', overflow: 'hidden', marginTop: '7px' });
-const barFill = css({ display: 'block', height: '100%', borderRadius: '999px', bg: '#4F6E5C' });
-const chevron = css({ flex: 'none', color: 'ws.khaki', opacity: 0.55 });
 
 // "28 juin" from an ISO timestamp; year omitted, the list only carries recent games.
 function dayFr(iso: string): string {

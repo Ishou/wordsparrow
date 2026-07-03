@@ -118,7 +118,7 @@ const pillButton = css({
   bg: 'ws.jade',
   color: 'ws.jadeInk',
   transition: 'background-color 120ms ease-out, opacity 120ms ease-out',
-  _hover: { bg: '#A9D8BE' },
+  _hover: { bg: 'ws.jadeHover' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
   _disabled: { opacity: 0.55, cursor: 'not-allowed' },
 });
@@ -146,6 +146,9 @@ const connDot = css({
   height: '9px',
   borderRadius: '50%',
 });
+const connDotOnline = css({ background: 'ws.statusOnline' });
+const connDotIdle = css({ background: 'ws.statusIdle' });
+const connDotLost = css({ background: 'ws.statusLost' });
 
 const renameButton = css({
   fontFamily: 'wsUi',
@@ -210,7 +213,7 @@ const startButton = css({
   boxShadow: '0 8px 18px rgba(190,73,112,0.30)',
   transition: 'background-color 120ms ease-out, opacity 120ms ease-out',
   _hover: { bg: '#A63C61' },
-  _focusVisible: { outline: '3px solid token(colors.ws.sakura)', outlineOffset: '2px' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
   _disabled: { bg: '#E0DAC8', color: '#7A7560', boxShadow: 'none', cursor: 'not-allowed' },
 });
 const leaveButton = css({
@@ -233,15 +236,15 @@ const leaveButton = css({
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 
-function connStateLabel(state: ConnectionState): { dot: string; label: string } {
+function connStateLabel(state: ConnectionState): { cls: string; label: string } {
   switch (state) {
     case 'connected':
-      return { dot: '#3F9D6E', label: 'connecté' };
+      return { cls: connDotOnline, label: 'connecté' };
     case 'reconnecting':
     case 'connecting':
-      return { dot: '#C9A227', label: 'connexion' };
+      return { cls: connDotIdle, label: 'connexion' };
     case 'disconnected':
-      return { dot: '#9A9A9A', label: 'déconnecté' };
+      return { cls: connDotLost, label: 'déconnecté' };
   }
 }
 
@@ -352,8 +355,7 @@ export function SalonScreen({
                 </span>
                 {p.sessionId === lobby.ownerSessionId ? <span className={badge}>Hôte</span> : null}
                 <span
-                  className={connDot}
-                  style={{ background: conn.dot }}
+                  className={cx(connDot, conn.cls)}
                   role="img"
                   aria-label={`${p.pseudonym} : ${conn.label}`}
                 />

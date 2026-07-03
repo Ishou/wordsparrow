@@ -23,16 +23,16 @@ const heroMain = css({ flex: 1, minWidth: 0 });
 const heroName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk', lineHeight: '1.15', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
 const heroMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
 
-const iconBtn = css({ flex: 'none', width: '38px', height: '38px', borderRadius: '50%', border: 'none', bg: 'ws.sable', color: 'ws.jadeInk', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _hover: { bg: '#DED7BC' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const iconBtn = css({ flex: 'none', width: '38px', height: '38px', borderRadius: '50%', border: 'none', bg: 'ws.sable', color: 'ws.jadeInk', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _hover: { bg: 'ws.sableHover' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
 const editRow = css({ display: 'flex', gap: '8px', alignItems: 'center' });
 const nameInput = css({ flex: 1, minWidth: 0, height: '44px', borderRadius: '12px', border: '1.5px solid rgba(33,75,64,0.16)', bg: 'white', paddingInline: '14px', fontFamily: 'wsDisplay', fontSize: '18px', fontWeight: 'semibold', color: 'ws.jadeInk', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
-const saveBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '12px', border: 'none', bg: 'ws.sakuraDark', color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _disabled: { opacity: 0.45, cursor: 'not-allowed' } });
-const cancelBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '12px', border: 'none', bg: 'ws.sable', color: 'ws.jadeInk', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' });
+const saveBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '12px', border: 'none', bg: 'ws.sakuraDark', color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _hover: { bg: 'ws.sakura' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' }, _disabled: { opacity: 0.45, cursor: 'not-allowed' } });
+const cancelBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '12px', border: 'none', bg: 'ws.sable', color: 'ws.jadeInk', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _hover: { bg: 'ws.sableHover' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const errText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '8px' });
 
-const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#543C00', margin: '0 6px 7px' });
-const card = css({ listStyle: 'none', margin: 0, padding: 0, bg: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
+const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'ws.eyebrow', margin: '0 6px 7px' });
+const card = css({ listStyle: 'none', margin: 0, padding: 0, bg: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
 const dangerWrap = css({ marginTop: '6px' });
 
 const signInCard = css({ bg: 'white', borderRadius: '20px', padding: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 12px 26px rgba(33,75,64,0.09)', textAlign: 'center' });

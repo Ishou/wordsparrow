@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Sparkle } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
+import { pill, pillMuted, pillPending } from './statusPill';
 import { BillingError, type BillingClient, type SubscriptionView } from '@/application/billing';
 import { useSubscription } from '@/ui/components/billing';
 import { Dialog, DialogDescription } from '@/ui/components/primitives';
@@ -9,7 +10,7 @@ import { useBillingGate } from './useBillingGate';
 
 type Etat = 'free' | 'actif' | 'pending' | 'expire';
 
-const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#543C00', margin: '0 6px 7px' });
+const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'ws.eyebrow', margin: '0 6px 7px' });
 const cardWrap = css({ bg: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
 const summary = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '15px 15px 13px' });
 const markTile = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '12px', bg: 'ws.sakuraBlush', color: 'ws.sakuraDark', display: 'flex', alignItems: 'center', justifyContent: 'center' });
@@ -18,12 +19,9 @@ const tierLine = css({ display: 'flex', alignItems: 'center', gap: '8px', flexWr
 const tierName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const periodLine = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9 });
 
-const pill = css({ display: 'inline-flex', alignItems: 'center', lineHeight: 1, fontFamily: 'wsUi', fontSize: '9.5px', fontWeight: 'black', letterSpacing: '0.04em', textTransform: 'uppercase', borderRadius: '999px', padding: '4px 8px' });
 const pillActif = css({ color: 'ws.clueSurface', bg: 'ws.jade' });
-const pillPending = css({ color: '#5A4B12', bg: 'ws.or' });
-const pillMuted = css({ color: 'ws.khaki', bg: 'rgba(33,75,64,0.08)' });
 
-const divider = css({ height: '1px', bg: '#EEF3EC' });
+const divider = css({ height: '1px', bg: 'ws.hairline' });
 const cancelRow = css({ display: 'flex', alignItems: 'center', width: '100%', minHeight: '50px', padding: '11px 15px', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '14px', color: 'ws.sakuraDark', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' } });
 
 const actionPad = css({ padding: '13px 15px 16px', display: 'flex', flexDirection: 'column', gap: '9px' });
@@ -33,8 +31,8 @@ const primaryLink = css({ display: 'block', width: '100%', textAlign: 'center', 
 const loadingRow = css({ padding: '16px 15px', fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85 });
 
 // cancel confirmation dialog buttons -------------------------------------
-const dConfirm = css({ width: '100%', border: '1.6px solid token(colors.ws.sakuraDark)', bg: 'transparent', color: 'ws.sakuraDark', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14.5px', padding: '12px', borderRadius: '13px', cursor: 'pointer', _disabled: { opacity: 0.6, cursor: 'default' } });
-const dKeep = css({ width: '100%', border: 'none', bg: 'transparent', color: 'ws.khaki', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', padding: '6px', cursor: 'pointer' });
+const dConfirm = css({ width: '100%', border: '1.6px solid token(colors.ws.sakuraDark)', bg: 'transparent', color: 'ws.sakuraDark', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14.5px', padding: '12px', borderRadius: '13px', cursor: 'pointer', _hover: { bg: 'ws.sakuraBlush' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' }, _disabled: { opacity: 0.6, cursor: 'default' } });
+const dKeep = css({ width: '100%', border: 'none', bg: 'transparent', color: 'ws.khaki', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', padding: '6px', cursor: 'pointer', _hover: { color: 'ws.jadeInk' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
 function etatFor(subscription: SubscriptionView | null): Etat {
   if (!subscription) return 'free';
