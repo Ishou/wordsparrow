@@ -24,6 +24,7 @@ private fun Provider.toJWSAlgorithm(): JWSAlgorithm =
     when (this) {
         Provider.GOOGLE -> JWSAlgorithm.RS256
         Provider.APPLE -> JWSAlgorithm.ES256
+        Provider.EMAIL -> error("email is not an OIDC provider")
     }
 
 class JoseOidcVerifier(
