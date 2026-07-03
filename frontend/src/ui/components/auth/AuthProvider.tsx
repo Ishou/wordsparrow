@@ -61,7 +61,7 @@ function ProgressSyncRunner({ service }: { service?: ProgressSyncService }) {
 // AuthProvider PATCHes it once so identity stays continuous.
 const SERVER_DEFAULT_DISPLAY_NAME = 'Joueur';
 
-// ADR-0089 — a tab regaining focus re-checks whoami at most every 5 minutes.
+// A tab regaining focus re-checks whoami at most every 5 minutes.
 const WHOAMI_STALE_MS = 5 * 60_000;
 
 export function AuthProvider({
