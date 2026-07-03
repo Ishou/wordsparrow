@@ -23,6 +23,7 @@ import {
   BOT_SESSION_ID,
   MOCK_ANSWERS,
   buildGameSession,
+  deleteLobby,
   generateLobbyCode,
   generateLobbyId,
   getLobby,
@@ -43,6 +44,37 @@ const LOBBY_ID_PATTERN = /^[1-9A-HJ-NP-Za-km-z]{8}$/;
 // `*://*/...` glob so MSW intercepts whatever host the adapters use —
 // `wss://game.wordsparrow.io` in preview, `ws://localhost:7778` in dev.
 const lobbyWs = ws.link('*://*/v1/lobbies/:lobbyId/ws');
+
+// e2e outage seam (preview-only bundle, same tree-shake posture as `__msw__`).
+let wsOutage = false;
+let failLobbyFetches = 0;
+const activeWsClients = new Set<{ close: (code?: number, reason?: string) => void }>();
+const gameWsTestApi = {
+  setOutage(value: boolean) { wsOutage = value; },
+  dropAll() { for (const c of [...activeWsClients]) c.close(1011, 'e2e drop'); },
+  failNextLobbyFetches(count: number) { failLobbyFetches = count; },
+  // A "remote participant" writing while the local socket is down — only
+  // the rejoin snapshot can carry it back, which is what resync must prove.
+  injectEntry(lobbyId: string, row: number, column: number, letter: string) {
+    updateLobby(lobbyId, (current) =>
+      current.game
+        ? {
+            ...current,
+            game: {
+              ...current.game,
+              entries: [
+                ...current.game.entries.filter((e) => !(e.row === row && e.column === column)),
+                { sessionId: BOT_SESSION_ID, row, column, letter, writtenAt: nowIso() },
+              ],
+            },
+          }
+        : current,
+    );
+  },
+  deleteLobby,
+  getLobby,
+};
+(globalThis as { __gameWsTest__?: typeof gameWsTestApi }).__gameWsTest__ = gameWsTestApi;
 
 // Bot cadence — random in 4–8 s so the demo feels alive without being
 // frantic. 3-s delay before join lets the reviewer see the empty
@@ -192,6 +224,12 @@ export const gameHandlers = [
 
   // GET /v1/lobbies/:lobbyId — replay the persisted lobby.
   http.get('*/v1/lobbies/:lobbyId', ({ params }) => {
+    // e2e seam: a dropped request (network error), NOT a 404 — the loader
+    // retry must recover from it without ever claiming the lobby is gone.
+    if (failLobbyFetches > 0) {
+      failLobbyFetches -= 1;
+      return HttpResponse.error();
+    }
     const lobbyId = String(params.lobbyId);
     if (!LOBBY_ID_PATTERN.test(lobbyId)) {
       return problem(
@@ -218,6 +256,11 @@ export const gameHandlers = [
 // expects in its handler array — capture and export it below.
 const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params }) => {
   const lobbyId = String(params.lobbyId);
+  // e2e outage: the "server" is down — involuntary close, no error frame.
+  if (wsOutage) {
+    client.close(1011, 'outage');
+    return;
+  }
   // Per-connection state. Closing the socket clears every timer so a
   // reload does not leak setTimeout callbacks into the next session.
   let joinTimer: ReturnType<typeof setTimeout> | null = null;
@@ -444,12 +487,31 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
     );
   };
 
-  // 1. Initial snapshot (or close if the lobby vanished across a hot
-  //    reload — same as the real server's behavior).
+  // 1. Initial snapshot — or the server's honest 404: error frame
+  //    (protocol, status 404) then a policy close, mirroring
+  //    LobbyWebSocketRoute's lobby-unknown branch.
   if (!getLobby(lobbyId)) {
-    client.close(1011, 'lobby not found');
+    client.send(
+      JSON.stringify({
+        type: 'error',
+        errorType: 'https://bliss.example/errors/protocol',
+        title: 'Salon introuvable',
+        detail: `Aucun salon avec l'identifiant ${lobbyId} n'existe.`,
+        status: 404,
+      }),
+    );
+    // Macrotask close: a sync close would mark the socket CLOSING before
+    // the interceptor's send/open microtasks run, silently dropping the
+    // 404 frame — the real server opens, sends, then closes.
+    setTimeout(() => client.close(1008, 'lobby not found'), 0);
     return;
   }
+  activeWsClients.add(client);
+  // Reconnect: seed the per-connection caches from the persisted session
+  // so lock enforcement and the solved check survive a socket swap.
+  const existingGame = getLobby(lobbyId)?.game;
+  for (const e of existingGame?.entries ?? []) cellEntries.set(cellKey(e.row, e.column), e.letter);
+  for (const p of existingGame?.lockedPositions ?? []) lockedKeys.add(cellKey(p.row, p.column));
   sendSnapshot();
 
   // 2. Schedule the bot's delayed join.
@@ -574,6 +636,32 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
         );
         if (upd.letter == null) cellEntries.delete(key);
         else cellEntries.set(key, upd.letter);
+        // Persist into the store so the rejoin `lobbyState` snapshot
+        // resyncs the board — mirrors the real server's GameSession.
+        updateLobby(lobbyId, (current) =>
+          current.game
+            ? {
+                ...current,
+                game: {
+                  ...current.game,
+                  entries: [
+                    ...current.game.entries.filter(
+                      (e) => !(e.row === upd.row && e.column === upd.column),
+                    ),
+                    ...(upd.letter == null
+                      ? []
+                      : [{
+                          sessionId: ownerSessionId,
+                          row: upd.row,
+                          column: upd.column,
+                          letter: upd.letter,
+                          writtenAt: nowIso(),
+                        }]),
+                  ],
+                },
+              }
+            : current,
+        );
         // Preview attributes the lock to the caller (the owner-stamped write above).
         if (lobby) maybeFireWordLocked(lobby, upd.row, upd.column, ownerSessionId);
         maybeFireGameSolved();
@@ -646,6 +734,7 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
 
   // 4. Cleanup on close — fires even on abnormal terminations.
   client.addEventListener('close', () => {
+    activeWsClients.delete(client);
     if (joinTimer) clearTimeout(joinTimer);
     if (tickTimer) clearTimeout(tickTimer);
     if (presenceTimer) clearTimeout(presenceTimer);

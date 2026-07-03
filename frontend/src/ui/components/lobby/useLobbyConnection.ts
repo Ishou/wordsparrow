@@ -49,6 +49,9 @@ export interface LobbyConnection {
   readonly pseudonymError: string | null;
   readonly joinDenied: string | null;
   readonly joinConfirmed: boolean;
+  // True once the server said the lobby no longer exists (404 protocol
+  // frame on rejoin) — the route renders the introuvable screen.
+  readonly lobbyGone: boolean;
   readonly isStarting: boolean;
   readonly isRotating: boolean;
   // Local session identity — renderers mark the local row / gate owner controls without re-reading `getSession`.
@@ -82,6 +85,13 @@ export interface LobbyActions {
   readonly subscribeToRemoteCellUpdates: (handler: (event: GameEvent) => void) => () => void;
   readonly subscribeToRemotePresence: (handler: (event: GameEvent) => void) => () => void;
 }
+
+// LobbyWebSocketRoute answers a rejoin against an unknown lobby with a
+// protocol error frame carrying status 404 before closing the socket.
+const isLobbyGoneFrame = (event: GameEvent): boolean =>
+  event.type === 'error' &&
+  event.errorType === 'https://bliss.example/errors/protocol' &&
+  event.status === 404;
 
 export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   const {
@@ -124,6 +134,9 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   // read-only-snapshot view with this banner asking the organiser
   // for the code. Already-joined sessions never raise this.
   const [joinDenied, setJoinDenied] = useState<string | null>(null);
+  // Server-confirmed "this lobby no longer exists" — the only case that
+  // may claim the game is gone (honest 404, never a transient outage).
+  const [lobbyGone, setLobbyGone] = useState(false);
   // ADR-0027: gate the WaitingRoom render on a confirmed join so a new
   // joiner whose code the server is about to reject doesn't see the
   // lobby contents (player list with the owner) flash before the
@@ -156,6 +169,11 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   // ADR-0029: rotation spinner; cleared in the subscribe handler below.
   const [isRotating, setIsRotating] = useState(false);
   const preRotationCodeRef = useRef<string | null>(null);
+  // Skip initial `connecting` — first `connected` arms the ref; only then do transient drops earn toast chrome.
+  const hasConnectedRef = useRef(false);
+  // One toast + one announcement per LOST transition (ADR-0050 one-shot
+  // rule) — the retry loop's reconnecting/connecting churn stays silent.
+  const connectionLostRef = useRef(false);
 
   // Single side effect: connect on mount, disconnect on unmount.
   // `joinLobby` is auto-sent by the adapter inside `connect` (the
@@ -187,6 +205,12 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
         setJoinDenied(event.detail ?? 'Code invalide ou partie privée. Demandez le code à l’organisateur.');
         lobbyJoinCodeStash.clear(lobbyId);
       }
+      // Server-confirmed lobby-unknown (WS rejoin against a GC'd / wiped
+      // lobby): the route swaps to the introuvable screen; the effect
+      // below tears the retry loop down.
+      if (isLobbyGoneFrame(event)) {
+        setLobbyGone(true);
+      }
       // `protocol` errors before the join completes mean the server
       // saw a client→server frame other than `joinLobby` first —
       // either a bug in our wire ordering or a stale frame from a
@@ -198,8 +222,9 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       // earn an in-game toast rather than booting the user out).
       if (event.type === 'error' &&
         event.errorType === 'https://bliss.example/errors/protocol' &&
+        !isLobbyGoneFrame(event) &&
         !joinConfirmedRef.current) {
-        setJoinDenied('Impossible de rejoindre cette partie. Réessayez.');
+        setJoinDenied('Impossible de rejoindre cette partie. Réessaie.');
         lobbyJoinCodeStash.clear(lobbyId);
       }
       // First `playerJoined` for our own sessionId confirms the WS join
@@ -237,6 +262,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
         const inlineHandled =
           event.errorType === 'https://bliss.example/errors/invalid-pseudonym' ||
           event.errorType === 'https://bliss.example/errors/wrong-code' ||
+          isLobbyGoneFrame(event) ||
           (event.errorType === 'https://bliss.example/errors/protocol' &&
             !joinConfirmedRef.current);
         if (!inlineHandled) {
@@ -258,6 +284,22 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     });
     const unsubscribeConnection = gameClient.subscribeConnectionState((state) => {
       setConnectionState(state);
+      // Toast + announce here, not in an effect: Announcer.say flushSyncs,
+      // which React forbids inside lifecycle methods.
+      if (state === 'connected') {
+        if (connectionLostRef.current) {
+          connectionLostRef.current = false;
+          // show() replaces the sticky lost-toast (single-slot) and auto-dismisses.
+          showToast({ text: 'Connexion rétablie', tone: 'info' });
+          announce('Connexion rétablie');
+        }
+        hasConnectedRef.current = true;
+        return;
+      }
+      if (!hasConnectedRef.current || connectionLostRef.current) return;
+      connectionLostRef.current = true;
+      showToast({ text: 'Connexion perdue — reconnexion en cours…', tone: 'info', duration: null });
+      announce('Connexion perdue, reconnexion en cours');
     });
     // ADR-0027: read the code stash the navigation populated. Read is
     // non-destructive so React StrictMode's mount-unmount-remount
@@ -272,24 +314,15 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       unsubscribeConnection();
       gameClient.disconnect();
     };
-  }, [gameClient, lobbyId, getSession, lobbyJoinCodeStash, showToast]);
+  }, [gameClient, lobbyId, getSession, lobbyJoinCodeStash, showToast, announce]);
 
-  // Skip initial `connecting` — first `connected` arms the ref; only then do transient drops earn toast chrome.
-  const hasConnectedRef = useRef(false);
+  // Honest 404 mid-game: stop retrying against a lobby the server says is
+  // gone, and drop the (now wrong) reconnection toast.
   useEffect(() => {
-    if (connectionState === 'connected') {
-      if (hasConnectedRef.current) dismissToast();
-      hasConnectedRef.current = true;
-      return;
-    }
-    if (!hasConnectedRef.current) return;
-    if (connectionState === 'reconnecting' || connectionState === 'connecting') {
-      showToast({ text: 'Reconnexion…', tone: 'info', duration: null });
-    } else if (connectionState === 'disconnected') {
-      // Sticky until the retry loop lands back on `connected`.
-      showToast({ text: 'Connexion perdue. On se reconnecte…', tone: 'info', duration: null });
-    }
-  }, [connectionState, showToast, dismissToast]);
+    if (!lobbyGone) return;
+    dismissToast();
+    gameClient.disconnect();
+  }, [lobbyGone, gameClient, dismissToast]);
 
   // Bounce the user back to Accueil with an error toast when the WS
   // join was denied (wrong code, pre-join protocol error, etc.). The
@@ -498,6 +531,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     pseudonymError,
     joinDenied,
     joinConfirmed,
+    lobbyGone,
     isStarting,
     isRotating,
     sessionId,

@@ -1,8 +1,11 @@
 // Multiplayer-gated `/lobby/$lobbyId` (ADR-0018 §10); smart container over `useLobbyConnection`.
 
 import { createRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { LobbyClientError } from '@/application/game';
 import type { Lobby, LobbyId } from '@/domain/game';
+import { createLoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
+import { LoaderRetry } from '@/ui/v2/LoaderRetry';
 import { useLobbyConnection } from '@/ui/components/lobby/useLobbyConnection';
 import { useToast } from '@/ui/components/primitives';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
@@ -34,8 +37,8 @@ function V2LobbyPlaceholder({ text }: { readonly text: string }) {
   );
 }
 
-// getLobby rejection boundary — headerless SparrowState matching the 404 error pattern; CTA handles navigation
-function V2LobbyError() {
+// Headerless SparrowState matching the 404 error pattern; CTA handles navigation.
+function V2LobbyIntrouvable() {
   const navigate = useNavigate();
   return (
     <PhoneShell>
@@ -47,6 +50,17 @@ function V2LobbyError() {
       />
     </PhoneShell>
   );
+}
+
+// Survives the errorComponent's remount-per-attempt so the ladder progresses.
+export const lobbyLoaderRetryPolicy = createLoaderRetryPolicy();
+
+// getLobby rejection boundary — « introuvable » only on a server-confirmed
+// 404; anything transient auto-retries instead of claiming the game is gone.
+function V2LobbyError({ error }: { readonly error: Error }) {
+  const notFound = error instanceof LobbyClientError && error.kind === 'not-found';
+  if (notFound) return <V2LobbyIntrouvable />;
+  return <LoaderRetry policy={lobbyLoaderRetryPolicy} silentText="Chargement de la partie…" />;
 }
 
 function V2LobbyPage() {
@@ -73,12 +87,18 @@ function V2LobbyPage() {
     [showToast, navigate],
   );
 
+  // Loader succeeded — restore the full auto-retry budget for the next incident.
+  useEffect(() => {
+    lobbyLoaderRetryPolicy.reset();
+  }, []);
+
   const {
     view,
     connectionState,
     pseudonymError,
     joinDenied,
     joinConfirmed,
+    lobbyGone,
     isStarting,
     isRotating,
     sessionId,
@@ -124,6 +144,12 @@ function V2LobbyPage() {
     actions.leave();
     void navigate({ to: '/' });
   }, [actions, navigate]);
+
+  // Server-confirmed 404 mid-game (rejoin against a wiped lobby) — the only
+  // involuntary path that leaves the game surface (spec: honest 404s).
+  if (lobbyGone) {
+    return <V2LobbyIntrouvable />;
+  }
 
   if (!joinConfirmed || joinDenied != null) {
     return <V2LobbyPlaceholder text="Connexion à la partie…" />;

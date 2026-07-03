@@ -193,6 +193,10 @@ export function LiveCoopScreen({
 
   // Inbound remote writes land directly on the uncontrolled inputs (ADR-0002 §4), never re-emitting onCellChange.
   const { applyRemoteCellUpdate } = nav;
+  // Rejoin replay resync — `initialEntries` reference changes only on a fresh snapshot, never on keystrokes.
+  useEffect(() => {
+    for (const e of initialEntries) applyRemoteCellUpdate(e.row, e.column, e.letter);
+  }, [initialEntries, applyRemoteCellUpdate]);
   // ADR-0085: the same raw stream carries `wordRejected` — shake synchronously off the server verdict.
   useEffect(() => {
     const unsubscribe = subscribeToRemoteCellUpdates((event) => {

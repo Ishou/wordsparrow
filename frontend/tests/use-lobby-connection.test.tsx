@@ -330,22 +330,64 @@ describe('useLobbyConnection error + connection seams', () => {
     expect(result.current.connectionState).toBe('disconnected');
   });
 
-  it('shows a sticky toast on connection loss and dismisses it once reconnected', () => {
+  it('shows ONE sticky toast per lost transition — not one per retry attempt', () => {
     const gameClient = makeFakeGameClient();
     const showToast = vi.fn();
-    const dismissToast = vi.fn();
-    renderHook(() => useLobbyConnection(makeArgs(gameClient, { showToast, dismissToast })));
+    const announce = vi.fn();
+    renderHook(() => useLobbyConnection(makeArgs(gameClient, { showToast, announce })));
     act(() => gameClient.dispatchConnectionState('connected'));
-    act(() => gameClient.dispatchConnectionState('disconnected'));
+    act(() => gameClient.dispatchConnectionState('reconnecting'));
+    expect(showToast).toHaveBeenCalledTimes(1);
     expect(showToast).toHaveBeenCalledWith({
-      text: 'Connexion perdue. On se reconnecte…',
+      text: 'Connexion perdue — reconnexion en cours…',
       tone: 'info',
       duration: null,
     });
+    expect(announce).toHaveBeenCalledWith('Connexion perdue, reconnexion en cours');
+    // The retry loop cycles reconnecting → connecting → reconnecting…
+    // — no additional toast or announcement per attempt.
+    act(() => gameClient.dispatchConnectionState('connecting'));
     act(() => gameClient.dispatchConnectionState('reconnecting'));
-    expect(showToast).toHaveBeenCalledWith({ text: 'Reconnexion…', tone: 'info', duration: null });
+    act(() => gameClient.dispatchConnectionState('connecting'));
+    expect(showToast).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledTimes(1);
+  });
+
+  it('replaces the sticky toast with a brief « Connexion rétablie » and announces once on recovery', () => {
+    const gameClient = makeFakeGameClient();
+    const showToast = vi.fn();
+    const announce = vi.fn();
+    renderHook(() => useLobbyConnection(makeArgs(gameClient, { showToast, announce })));
     act(() => gameClient.dispatchConnectionState('connected'));
-    expect(dismissToast).toHaveBeenCalled();
+    act(() => gameClient.dispatchConnectionState('reconnecting'));
+    act(() => gameClient.dispatchConnectionState('connecting'));
+    act(() => gameClient.dispatchConnectionState('connected'));
+    expect(showToast).toHaveBeenLastCalledWith({ text: 'Connexion rétablie', tone: 'info' });
+    expect(announce).toHaveBeenLastCalledWith('Connexion rétablie');
+    expect(announce).toHaveBeenCalledTimes(2); // lost once, restored once
+
+    // A second outage re-arms the pair.
+    act(() => gameClient.dispatchConnectionState('reconnecting'));
+    expect(showToast).toHaveBeenLastCalledWith({
+      text: 'Connexion perdue — reconnexion en cours…',
+      tone: 'info',
+      duration: null,
+    });
+  });
+
+  it('treats a terminal disconnected like any other lost state — toast, no bounce seam', () => {
+    const gameClient = makeFakeGameClient();
+    const showToast = vi.fn();
+    const onJoinDenied = vi.fn();
+    renderHook(() => useLobbyConnection(makeArgs(gameClient, { showToast, onJoinDenied })));
+    act(() => gameClient.dispatchConnectionState('connected'));
+    act(() => gameClient.dispatchConnectionState('disconnected'));
+    expect(showToast).toHaveBeenCalledWith({
+      text: 'Connexion perdue — reconnexion en cours…',
+      tone: 'info',
+      duration: null,
+    });
+    expect(onJoinDenied).not.toHaveBeenCalled();
   });
 
   it('never toasts before the first successful connection', () => {
@@ -355,6 +397,65 @@ describe('useLobbyConnection error + connection seams', () => {
     act(() => gameClient.dispatchConnectionState('disconnected'));
     act(() => gameClient.dispatchConnectionState('reconnecting'));
     expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('flags lobbyGone and stops the retry loop on a 404 protocol error frame', () => {
+    const gameClient = makeFakeGameClient();
+    const showToast = vi.fn();
+    const dismissToast = vi.fn();
+    const onJoinDenied = vi.fn();
+    // Stable args: a fresh `getSession` per render would re-run the mount
+    // effect and skew the disconnect count below.
+    const args = makeArgs(gameClient, { showToast, dismissToast, onJoinDenied });
+    const { result } = renderHook(() => useLobbyConnection(args));
+    act(() => gameClient.dispatchConnectionState('connected'));
+    expect(result.current.lobbyGone).toBe(false);
+    act(() => {
+      gameClient.dispatch({
+        type: 'error',
+        errorType: 'https://bliss.example/errors/protocol',
+        title: 'Salon introuvable',
+        detail: "Aucun salon avec l'identifiant 7gQ2xK9p n'existe.",
+        status: 404,
+      });
+    });
+    expect(result.current.lobbyGone).toBe(true);
+    // Voluntary disconnect kills the reconnect loop; the sticky toast goes.
+    expect(gameClient.disconnectCalls.count).toBe(1);
+    expect(dismissToast).toHaveBeenCalled();
+    // Neither the generic error toast nor the join-denied bounce fires.
+    expect(showToast).not.toHaveBeenCalledWith(expect.objectContaining({ tone: 'error' }));
+    expect(onJoinDenied).not.toHaveBeenCalled();
+  });
+
+  it('re-seeds initialEntries from the rejoin lobbyState replay (board resync)', () => {
+    const gameClient = makeFakeGameClient();
+    const { result } = renderHook(() => useLobbyConnection(makeArgs(gameClient)));
+    act(() => gameClient.dispatchConnectionState('connected'));
+    expect(result.current.initialEntries).toEqual([]);
+    // Reconnect: the server replays the full snapshot on every WS rejoin
+    // (LobbyWebSocketRoute sends lobbyState to each new socket).
+    act(() => gameClient.dispatchConnectionState('reconnecting'));
+    act(() => gameClient.dispatchConnectionState('connected'));
+    act(() => {
+      gameClient.dispatch({
+        type: 'lobbyState',
+        players: baseLobby.players,
+        ownerSessionId: sessionId,
+        state: 'IN_PROGRESS',
+        gridConfig: { width: 1, height: 1 },
+        code: 'A2B3C4',
+        game: {
+          puzzle,
+          startedAt: '2026-05-02T15:31:00Z' as Instant,
+          completedAt: null,
+          entries: [{ sessionId, row: 0, column: 0, letter: 'A' as Letter, writtenAt: '2026-05-02T15:32:00Z' as Instant }],
+          presence: [],
+          lockedPositions: [],
+        },
+      });
+    });
+    expect(result.current.initialEntries).toEqual([{ row: 0, column: 0, letter: 'A' }]);
   });
 
   it('announces a peer joining via the announce seam', () => {
