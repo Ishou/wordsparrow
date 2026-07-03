@@ -50,6 +50,11 @@ tags:
       endpoint (RGPD Article 17, ADR-0025 §5). Mirrors the grid-api
       `/v1/sessions/{sessionId}` shape so the frontend's "Effacer mes données"
       flow can fan out to both contexts.
+  - name: users
+    description: |
+      Authenticated-user reads. Cookie-authed via `sessionCookie`; scopes
+      queries to the user resolved from the cookie, not a path parameter
+      (ADR-0066).
 
 paths:
   /v1/lobbies:
@@ -278,6 +283,44 @@ paths:
           description: |
             Path parameter `sessionId` is not a valid UUID. RFC 7807;
             `type` is `https://bliss.example/errors/invalid-session-id`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /v1/users/me/lobbies:
+    get:
+      operationId: listLobbiesForUser
+      summary: List lobbies for the authenticated user, across all their devices.
+      description: |
+        Cookie-authed (ADR-0066). Returns the union of lobbies where any
+        seat carries the caller's `userId` (stamped by the seat-rebind
+        path at sign-in), so a signed-in player sees the same "Mes
+        parties" on every device. Same shape, state filter
+        (`IN_PROGRESS` / `COMPLETED`) and `lastActivityAt` DESC ordering
+        as `listLobbiesForSession` — the two reads stay
+        interchangeable for the frontend loader, which picks by auth
+        state.
+
+        Empty array is the "no lobbies" answer — never 404, mirroring
+        the session-scoped path's information-disclosure rule.
+      tags: [users]
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: |
+            Lobby summaries for the authenticated user. Empty array when
+            no seat carries their userId (never played multiplayer while
+            signed in, all lobbies garbage-collected, etc.).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LobbySummary'
+        '401':
+          description: Cookie missing, expired, or rejected by identity-api.
           content:
             application/problem+json:
               schema:
