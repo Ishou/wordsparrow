@@ -664,6 +664,41 @@ The durable fix is to wire the chart's `envFrom` directly to CNPG's
 manual pass-2 swap. Tracked as a follow-up PR against
 `grid/api/deploy/chart/`.
 
+## Daily-puzzle regeneration + edge purge (grid)
+
+The grid worker purges the Cloudflare edge cache after every daily
+generation run (ADR-0089 §5). Prerequisite: the `cloudflare-purge-token`
+Secret in the `wordsparrow` namespace (creation one-liner in
+`docs/secrets.md`); without it the worker logs `edge_purge_skipped` and
+continues, and a purge HTTP failure logs `edge_purge_failed` without
+failing the Job (staleness is bounded by the until-midnight edge TTL).
+
+**Trigger a regeneration** (fresh UUID per date, ADR-0081) by
+materializing the one-off Job from the chart — never commit
+`regenerateDailies.enabled: true`:
+
+```sh
+helm template wordsparrow-api grid/api/deploy/chart/ \
+  -f grid/api/deploy/chart/values-prod.yaml \
+  --set image.digest=<current-prod-digest> \
+  --set ensureDailies.image.digest=<current-prod-worker-digest> \
+  --set regenerateDailies.enabled=true \
+  --show-only templates/job-regenerate-dailies.yaml \
+  | kubectl -n wordsparrow apply -f -
+```
+
+Backdate or widen the window with
+`--set 'regenerateDailies.extraArgs={--start-offset,-7,--window-days,14}'`.
+The Job self-deletes one hour after finishing (`ttlSecondsAfterFinished`).
+
+**Manual purge fallback** when the automatic purge failed:
+
+```sh
+curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
+  -H "Authorization: Bearer $PURGE_TOKEN" -H "Content-Type: application/json" \
+  --data '{"files":["https://api.wordsparrow.io/v1/puzzles/daily","https://api.wordsparrow.io/v1/puzzles/daily?date=2026-07-03"]}'
+```
+
 
 # Observability chart (`infra/observability/`) — upgrades
 

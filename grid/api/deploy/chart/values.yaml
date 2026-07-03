@@ -182,3 +182,18 @@ ensureDailies:
       value: "parentbased_traceidratio"
     - name: OTEL_TRACES_SAMPLER_ARG
       value: "1.0"
+# Cloudflare edge purge after daily generation (ADR-0089 §5). Reads the
+# `cloudflare-purge-token` Secret (keys `zone-id` + `token`, zone-scoped
+# Zone -> Cache Purge permission; see docs/secrets.md). Off by default so
+# local clusters skip the purge (worker logs edge_purge_skipped).
+edgePurge:
+  enabled: false
+  secretName: "cloudflare-purge-token"
+# One-off manual regeneration Job (ADR-0081 regen semantics, ADR-0089 §5).
+# Never commit `enabled: true`: materialize once via
+# `helm upgrade --reuse-values --set regenerateDailies.enabled=true` (see
+# docs/deploy.md "Daily-puzzle regeneration"); the Job self-cleans via TTL.
+regenerateDailies:
+  enabled: false
+  # Appended after --regenerate-dailies, e.g. ["--start-offset", "-7", "--window-days", "14"].
+  extraArgs: []

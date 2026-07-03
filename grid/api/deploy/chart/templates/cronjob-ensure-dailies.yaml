@@ -51,6 +51,19 @@ spec:
                 {{- with .Values.ensureDailies.env }}
                 {{- toYaml . | nindent 16 }}
                 {{- end }}
+                {{- if .Values.edgePurge.enabled }}
+                # ADR-0089 §5: Cloudflare edge purge after each generation run.
+                - name: CLOUDFLARE_ZONE_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.edgePurge.secretName }}
+                      key: zone-id
+                - name: CLOUDFLARE_PURGE_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.edgePurge.secretName }}
+                      key: token
+                {{- end }}
               {{- with .Values.ensureDailies.resources }}
               resources: {{- toYaml . | nindent 16 }}
               {{- end }}
