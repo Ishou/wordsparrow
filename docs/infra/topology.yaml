@@ -15,8 +15,8 @@ services:
 
 # Grep-gated against terraform/*.tf; use null for nodes with no TF resource (e.g. the k3s node concept).
 cloud:
-  - { id: pages,       label: Cloudflare Pages,    tf_resource: cloudflare_pages_project }
-  - { id: pagesdomain, label: Pages custom domain, tf_resource: cloudflare_pages_domain }
+  - { id: workers,     label: Cloudflare Worker (frontend), tf_resource: null }
+  - { id: pages,       label: Cloudflare Pages (legacy 301), tf_resource: cloudflare_pages_project }
   - { id: dns,         label: Cloudflare DNS,      tf_resource: cloudflare_dns_record }
   - { id: cacherules,  label: Cloudflare cache rules, tf_resource: cloudflare_ruleset }
   - { id: k3s,         label: Hetzner k3s,         tf_resource: null }
@@ -50,9 +50,9 @@ flow_edges:
 
 # `from` may be a deploy-*.yml workflow stem (gated against real workflows) or a cloud/service id.
 deploy_edges:
-  - { from: deploy-frontend, to: pages, label: wrangler }
+  - { from: deploy-frontend, to: workers, label: wrangler deploy }
   - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
-  - { from: pages,           to: pagesdomain, label: custom domain }
+  - { from: pages,           to: workers, label: 301 redirect, style: dashed }
   - { from: dns,             to: k3s,   label: service subdomains via external-dns }
   - { from: dns,             to: cacherules, label: edge cache }
   - { from: cacherules,      to: k3s,   label: cache miss / bypass }

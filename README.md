@@ -132,15 +132,15 @@ flowchart LR
     deploy_frontend["deploy-frontend.yml"]
   end
   subgraph Cloud
-    pages["Cloudflare Pages"]
-    pagesdomain["Pages custom domain"]
+    workers["Cloudflare Worker (frontend)"]
+    pages["Cloudflare Pages (legacy 301)"]
     dns["Cloudflare DNS"]
     cacherules["Cloudflare cache rules"]
     k3s["Hetzner k3s"]
   end
-  deploy_frontend -->|wrangler| pages
+  deploy_frontend -->|wrangler deploy| workers
   deploy_api_k8s -->|helm upgrade| k3s
-  pages -->|custom domain| pagesdomain
+  pages -. 301 redirect .-> workers
   dns -->|service subdomains via external-dns| k3s
   dns -->|edge cache| cacherules
   cacherules -->|cache miss / bypass| k3s

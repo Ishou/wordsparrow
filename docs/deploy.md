@@ -68,61 +68,35 @@ After step 3, the next push to `main` deploys to production.
 
 ## Custom domain (`wordsparrow.io`)
 
-Per ADR-0005 §1, the production domain is `wordsparrow.io`. The
-attachment is IaC (`terraform/cloudflare-pages-domain.tf`) — the
-maintainer's only manual step is DNS at the registrar (or at Cloudflare
-DNS, if the zone has been transferred there).
+Per ADR-0005 §1, the production domain is `wordsparrow.io`. Since the
+ADR-0090 Workers cutover, the attachment is owned by
+`frontend/wrangler.jsonc`'s `routes` block, not Terraform:
 
-**One-time after the next `tofu apply`:**
+```jsonc
+"routes": [
+  { "pattern": "wordsparrow.io", "custom_domain": true },
+  { "pattern": "www.wordsparrow.io", "custom_domain": true }
+]
+```
 
-1. Apply the Terraform with the custom domain enabled (it is enabled
-   by default; `var.custom_domain` defaults to `wordsparrow.io`):
-   ```sh
-   tofu -chdir=terraform/ apply -var="cloudflare_account_id=<account uuid>"
-   ```
-   Two new resources are created: `cloudflare_pages_domain.apex` for
-   the apex and `cloudflare_pages_domain.www[0]` for the `www.` alias.
-   Cloudflare returns a *Pending verification* status until DNS is set.
+`.github/workflows/deploy-frontend.yml`'s `wrangler deploy` step (push to
+`main`) applies this on every deploy — no separate maintainer step, no
+`tofu apply`. Cloudflare-managed custom domains provision and issue SSL
+automatically because the zone's nameservers are already on Cloudflare;
+there is no CNAME/ALIAS/A record to add by hand, unlike the old Pages
+custom-domain flow this replaces.
 
-2. Configure DNS so Cloudflare can verify ownership and serve traffic.
-   Two paths:
+Terraform's remaining role for `wordsparrow.io` is zone-level only — the
+cache ruleset (`terraform/cloudflare-cache-rules.tf`) and the
+`api.<custom_domain>` DNS records (`terraform/cloudflare-dns-records.tf`),
+both still gated on `var.custom_domain`. That variable is unchanged; only
+the two `cloudflare_pages_domain` resources that used to consume it
+(`terraform/cloudflare-pages-domain.tf`) are gone.
 
-   **(a) Zone managed by Cloudflare DNS (recommended).** Add the zone
-   in the Cloudflare dashboard, point the registrar at the issued
-   nameservers, then add two records (both proxied / orange-cloud):
-   - `wordsparrow.io` — `CNAME` flattening to `<project>.pages.dev`
-     (Cloudflare resolves the apex CNAME automatically).
-   - `www.wordsparrow.io` — `CNAME` to `<project>.pages.dev`.
-
-   **(b) Zone managed externally.** Most registrars do not support a
-   true apex CNAME. Two options:
-   - If the registrar offers `ALIAS` / `ANAME`, point
-     `wordsparrow.io` to `<project>.pages.dev`.
-   - Otherwise, use `A` records to Cloudflare Pages's anycast IPs (see
-     `https://developers.cloudflare.com/pages/configuration/custom-domains/`
-     for the current list — it changes; verify before pasting).
-   For `www.wordsparrow.io`, a `CNAME` to `<project>.pages.dev` works
-   on every registrar.
-
-3. Wait for verification. Cloudflare's dashboard
-   (Pages -> Project -> Custom domains) flips each domain from
-   *Pending* to *Active* within a few minutes once DNS resolves.
-   SSL certificates are issued automatically (Cloudflare handles ACME);
-   no certbot, no renewal cron.
-
-4. (Optional) Canonicalize on the apex via a `_redirects` rule in
-   `frontend/public/_redirects`:
-   ```
-   https://www.wordsparrow.io/* https://wordsparrow.io/:splat 301!
-   ```
-   Ships in a follow-up frontend workstream alongside any other
-   redirect rules.
-
-**To temporarily skip custom-domain attachment** (e.g. before the
-domain is registered, or in a fork): pass
-`-var="custom_domain="` to `tofu apply`. Both `cloudflare_pages_domain`
-resources skip via the `count` guard and the deployment stays on the
-`*.pages.dev` subdomain.
+**To point a fork at a different domain (or skip custom-domain
+attachment entirely):** edit or remove the `routes` array in
+`frontend/wrangler.jsonc` directly — this is no longer a `tofu apply -var`
+flag, since the attachment moved out of Terraform.
 
 ## Rollback
 
