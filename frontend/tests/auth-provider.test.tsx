@@ -61,6 +61,7 @@ describe('AuthProvider', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -127,6 +128,8 @@ describe('AuthProvider', () => {
   });
 
   it('only attempts the carry-over PATCH once across multiple refreshes', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-03T10:00:00Z'));
     const client = fakeAuthClient({
       whoamiSeq: [
         { userId: USER_ID, displayName: 'Joueur' },
@@ -140,12 +143,74 @@ describe('AuthProvider', () => {
       </AuthProvider>,
     );
     await waitFor(() => expect(screen.getByTestId('display')?.textContent).toBe('Renard 423'));
-    // Simulate a tab-focus visibility change — should re-check but never re-PATCH.
+    // Simulate a stale tab-focus visibility change — should re-check but never re-PATCH.
+    vi.setSystemTime(new Date('2026-07-03T10:05:00Z'));
     await act(async () => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
     await waitFor(() => expect(client._calls.whoami).toBeGreaterThanOrEqual(3));
     expect(client._calls.updateMe).toEqual(['Renard 423']);
+  });
+
+  describe('whoami staleness gate on tab focus', () => {
+    const T0 = new Date('2026-07-03T10:00:00Z');
+    const FIVE_MINUTES_MS = 5 * 60_000;
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(T0);
+    });
+
+    function renderAnonProvider() {
+      const client = fakeAuthClient({ whoamiSeq: [null] });
+      render(
+        <AuthProvider authClient={client} getPseudonym={() => 'Renard 423'}>
+          <Probe />
+        </AuthProvider>,
+      );
+      return client;
+    }
+
+    it('calls whoami exactly once on mount', async () => {
+      const client = renderAnonProvider();
+      await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('anon'));
+      expect(client._calls.whoami).toBe(1);
+    });
+
+    it('skips the refetch when the tab regains focus within 5 minutes', async () => {
+      const client = renderAnonProvider();
+      await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('anon'));
+      vi.setSystemTime(new Date(T0.getTime() + FIVE_MINUTES_MS - 1));
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      expect(client._calls.whoami).toBe(1);
+    });
+
+    it('refetches exactly once when the tab regains focus after 5 minutes', async () => {
+      const client = renderAnonProvider();
+      await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('anon'));
+      vi.setSystemTime(new Date(T0.getTime() + FIVE_MINUTES_MS));
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      expect(client._calls.whoami).toBe(2);
+    });
+
+    it('updates the staleness window on a failed (anon) resolution too', async () => {
+      const client = fakeAuthClient({ whoamiSeq: [new Error('fetch failed')] });
+      render(
+        <AuthProvider authClient={client} getPseudonym={() => 'Renard 423'}>
+          <Probe />
+        </AuthProvider>,
+      );
+      await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('anon'));
+      vi.setSystemTime(new Date(T0.getTime() + FIVE_MINUTES_MS - 1));
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      expect(client._calls.whoami).toBe(1);
+    });
   });
 
   it('settles authed even when the carry-over PATCH fails', async () => {
