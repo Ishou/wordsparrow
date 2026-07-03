@@ -61,7 +61,7 @@ const lead = css({
 });
 
 const card = css({
-  bg: 'rgba(255,255,255,0.62)',
+  bg: 'ws.glass',
   borderRadius: '18px',
   padding: '16px',
   marginBottom: '16px',
@@ -99,7 +99,7 @@ const revealButton = css({
   borderRadius: '12px',
   border: 'none',
   cursor: 'pointer',
-  bg: 'rgba(255,255,255,0.7)',
+  bg: 'ws.glassStrong',
   color: 'ws.khaki',
   transition: 'color 120ms ease-out, background-color 120ms ease-out',
   _hover: { color: 'ws.jadeInk', bg: 'ws.card' },

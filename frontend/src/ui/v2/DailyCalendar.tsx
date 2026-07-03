@@ -20,7 +20,7 @@ const monthTitle = css({
 
 const navBtn = css({
   border: 'none',
-  background: 'white',
+  background: 'ws.card',
   flex: 'none',
   borderRadius: '10px',
   width: '34px',

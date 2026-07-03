@@ -28,7 +28,7 @@ const nav = css({ position: 'absolute', left: '50%', transform: 'translateX(-50%
 const link = css({ fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'bold', color: 'ws.jadeInk', opacity: 0.6, textDecoration: 'none', cursor: 'pointer', padding: '4px 2px', borderRadius: '8px', _hover: { opacity: 1 }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const linkActive = css({ color: 'ws.sakura', opacity: 1 });
 const right = css({ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' });
-const menuBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'rgba(255,255,255,0.62)', color: 'ws.jadeInk', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'rgba(255,255,255,0.82)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const menuBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'ws.glass', color: 'ws.jadeInk', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'ws.glassHover' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
 export interface DesktopAppBarProps {
   readonly active?: 'accueil' | 'grilles';

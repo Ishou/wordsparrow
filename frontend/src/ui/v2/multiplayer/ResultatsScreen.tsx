@@ -15,7 +15,7 @@ const subCss = css({ fontFamily: 'wsUi', fontWeight: 'semibold', fontSize: '15px
 
 const timeCard = css({
   marginTop: '22px',
-  bg: 'rgba(255,255,255,0.62)',
+  bg: 'ws.glass',
   borderRadius: '18px',
   padding: '16px 28px',
   boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
@@ -26,7 +26,7 @@ const timeValue = css({ fontFamily: 'wsMono', fontWeight: 'semibold', fontSize: 
 const contribCard = css({
   width: '100%',
   marginTop: '18px',
-  bg: 'rgba(255,255,255,0.62)',
+  bg: 'ws.glass',
   borderRadius: '18px',
   padding: '16px',
   boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
