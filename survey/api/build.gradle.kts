@@ -54,10 +54,11 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
 
-    // Status pages (RFC 7807) + call logging + CORS.
+    // Status pages (RFC 7807) + call logging + CORS + default security headers.
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-server-call-logging:$ktorVersion")
     implementation("io.ktor:ktor-server-cors:$ktorVersion")
+    implementation("io.ktor:ktor-server-default-headers:$ktorVersion")
 
     // Structured JSON logging stack (ADR-0007 §7), parity with identity/api.
     implementation("ch.qos.logback:logback-classic:$logbackVersion")

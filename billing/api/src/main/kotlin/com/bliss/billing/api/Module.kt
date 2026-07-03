@@ -10,6 +10,7 @@ import com.bliss.billing.api.routes.receiptsRoute
 import com.bliss.billing.api.routes.subscriptionRoute
 import com.bliss.billing.api.routes.webhookRoute
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -18,13 +19,14 @@ import io.ktor.server.application.install
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
+import io.ktor.server.plugins.defaultheaders.DefaultHeaders
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.routing
 import kotlinx.serialization.json.Json
 import org.slf4j.event.Level
 
-// Install order mirrors survey/identity: CallLogging -> ContentNegotiation -> CORS -> StatusPages -> SessionMiddleware.
+// Install order mirrors survey/identity: CallLogging -> DefaultHeaders -> ContentNegotiation -> CORS -> StatusPages -> SessionMiddleware.
 fun Application.billingApiModule(
     wiring: Wiring,
     config: BillingApiConfig,
@@ -32,6 +34,8 @@ fun Application.billingApiModule(
     install(CallLogging) {
         level = Level.INFO
     }
+
+    installBillingDefaultHeaders()
 
     install(ContentNegotiation) {
         json(WIRE_JSON)
@@ -86,6 +90,18 @@ internal val WIRE_JSON: Json =
         explicitNulls = true
         encodeDefaults = true
     }
+
+// Kept byte-identical across all five service modules; Timing-Allow-Origin per ADR-0089 §6.
+internal fun Application.installBillingDefaultHeaders() {
+    install(DefaultHeaders) {
+        header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        header("X-Content-Type-Options", "nosniff")
+        header("Referrer-Policy", "strict-origin-when-cross-origin")
+        header("X-Frame-Options", "DENY")
+        header(HttpHeaders.Server, "WordSparrow")
+        header("Timing-Allow-Origin", "https://wordsparrow.io https://www.wordsparrow.io")
+    }
+}
 
 internal fun Application.installBillingCors(config: BillingApiConfig) {
     install(CORS) {

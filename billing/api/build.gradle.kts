@@ -53,10 +53,11 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
 
-    // Status pages (RFC 7807) + call logging + CORS.
+    // Status pages (RFC 7807) + call logging + CORS + default security headers.
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-server-call-logging:$ktorVersion")
     implementation("io.ktor:ktor-server-cors:$ktorVersion")
+    implementation("io.ktor:ktor-server-default-headers:$ktorVersion")
 
     // Ktor client + CIO engine — the whoami session-verify call (ADR-0044); no identity import.
     implementation("io.ktor:ktor-client-core:$ktorVersion")

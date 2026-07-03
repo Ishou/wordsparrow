@@ -15,6 +15,7 @@ import com.bliss.survey.api.routes.submitPairRatingRoute
 import com.bliss.survey.api.routes.submitRatingRoute
 import com.bliss.survey.api.routes.undoActionRoute
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -25,13 +26,14 @@ import io.ktor.server.application.install
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
+import io.ktor.server.plugins.defaultheaders.DefaultHeaders
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.routing
 import kotlinx.serialization.json.Json
 import org.slf4j.event.Level
 
-// Install order mirrors identity/api: CallLogging → ContentNegotiation → CORS → StatusPages → SessionMiddleware.
+// Install order mirrors identity/api: CallLogging → DefaultHeaders → ContentNegotiation → CORS → StatusPages → SessionMiddleware.
 fun Application.surveyApiModule(
     wiring: Wiring,
     config: SurveyApiConfig,
@@ -39,6 +41,8 @@ fun Application.surveyApiModule(
     install(CallLogging) {
         level = Level.INFO
     }
+
+    installSurveyDefaultHeaders()
 
     install(ContentNegotiation) {
         json(WIRE_JSON)
@@ -125,6 +129,18 @@ internal suspend fun ApplicationCall.respondProblem(
     contentType = ContentType.parse("application/problem+json"),
     status = status,
 )
+
+// Kept byte-identical across all five service modules; Timing-Allow-Origin per ADR-0089 §6.
+internal fun Application.installSurveyDefaultHeaders() {
+    install(DefaultHeaders) {
+        header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        header("X-Content-Type-Options", "nosniff")
+        header("Referrer-Policy", "strict-origin-when-cross-origin")
+        header("X-Frame-Options", "DENY")
+        header(HttpHeaders.Server, "WordSparrow")
+        header("Timing-Allow-Origin", "https://wordsparrow.io https://www.wordsparrow.io")
+    }
+}
 
 internal fun Application.installSurveyCors(config: SurveyApiConfig) {
     install(CORS) {
