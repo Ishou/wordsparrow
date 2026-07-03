@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { useNavigate, useRouteContext } from '@tanstack/react-router';
+import { Link, useNavigate, useRouteContext } from '@tanstack/react-router';
 import { ArrowRight, Eye, EyeSlash, UsersThree } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
@@ -136,6 +136,10 @@ const joinMaskStyle = {
 const joinEyeBtn = css({ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: '10px', bg: 'transparent', color: 'ws.khaki', cursor: 'pointer', _hover: { color: 'ws.jadeInk' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const joinGo = css({ flex: 'none', width: '48px', height: '48px', borderRadius: '13px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'ws.jade', color: 'ws.jadeInk', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: '#A9D8BE' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const joinErr = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '7px', textAlign: 'center' });
+
+// Legal footer on the home page — Google OAuth branding verification requires the privacy-policy link visible here.
+const legalNav = css({ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '16px', fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki' });
+const legalLink = css({ color: 'ws.khaki', textDecoration: 'underline', textUnderlineOffset: '3px', _hover: { color: 'ws.jadeInk' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px', borderRadius: '4px' } });
 
 const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px', lg: { marginTop: 0, paddingBottom: 0 } });
 const teaserWrap = css({ marginTop: '16px' });
@@ -462,6 +466,17 @@ export function HomeScreen({
                 <HomeTeaser />
               </div>
             ) : null}
+            <footer>
+              <nav className={legalNav} aria-label="Liens légaux">
+                <Link className={legalLink} to="/confidentialite">
+                  Confidentialité
+                </Link>
+                <span aria-hidden="true">·</span>
+                <Link className={legalLink} to="/mentions-legales">
+                  Mentions légales
+                </Link>
+              </nav>
+            </footer>
           </section>
           </div>
         </div>
