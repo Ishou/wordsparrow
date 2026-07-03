@@ -15,7 +15,8 @@
 /privacy/            /privacy            308
 /compte/             /compte             308
 /reglages/           /reglages           308
-/menu/               /menu               308
+/menu/               /reglages           308
+/menu                /reglages           308
 /finish/             /finish             308
 /abonnement/succes/  /abonnement/succes  308
 /abonnement/annule/  /abonnement/annule  308

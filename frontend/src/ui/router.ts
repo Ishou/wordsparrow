@@ -3,7 +3,6 @@ import type { AppRouterContext } from './routes/__root';
 import { Route as RootRoute } from './routes/__root';
 import { Route as AppLayoutRoute } from './routes/app-layout';
 import { Route as IndexRoute } from './routes/index';
-import { Route as MenuRoute } from './routes/menu';
 import { Route as PlayRoute } from './routes/play';
 import { Route as FinishRoute } from './routes/finish';
 import { Route as GrillesRoute } from './routes/grilles';
@@ -24,6 +23,7 @@ import { Route as ContribuerPairsRoute } from './routes/contribuer.pairs';
 import {
   AccueilRedirectRoute,
   GrilleRedirectRoute,
+  MenuRedirectRoute,
   PrivacyRedirectRoute,
 } from './routes/redirects';
 
@@ -41,7 +41,6 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
   // Multiplayer-flag-gated lobby/join need the game-api adapter (ADR-0018 §10); design-system + lockup stay dev-only (ADR-0072).
   const appChildren = [
     IndexRoute,
-    MenuRoute,
     PlayRoute,
     FinishRoute,
     GrillesRoute,
@@ -55,6 +54,7 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
     MentionsLegalesRoute,
     AccueilRedirectRoute,
     GrilleRedirectRoute,
+    MenuRedirectRoute,
     PrivacyRedirectRoute,
     ...(multiplayer ? [LobbyRoute, JoinRoute] : []),
     ...(import.meta.env.DEV ? [DesignSystemRoute, LockupRoute] : []),
