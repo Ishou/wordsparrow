@@ -1,5 +1,7 @@
 package com.bliss.grid.domain.generation
 
+import com.bliss.grid.domain.model.LetterCell
+import com.bliss.grid.domain.model.Position
 import com.bliss.grid.domain.model.Word
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -19,7 +21,7 @@ class CoGenerationProbeTest {
 
     // Bump when sweep semantics change: persisted nogoods are only valid for the rule set
     // and corpus they were certified under.
-    private val engineVersion = "v3-endgame1"
+    private val engineVersion = "v4-joint1"
     private val bandVersion = "v2-validity1"
 
     @Test
@@ -35,6 +37,10 @@ class CoGenerationProbeTest {
         val bands = loadBands()
         val newBands = LinkedHashSet<String>()
         val runSeed = System.currentTimeMillis()
+        var allWalks = 0L
+        var allBest = 0
+        var allBestDump = ""
+        var egTotal = 0
         while (best == null && System.currentTimeMillis() < deadline) {
             attempts++
             val sweep = Sweep(lexicon, Random(runSeed + attempts), nogoods)
@@ -44,7 +50,14 @@ class CoGenerationProbeTest {
                 } else {
                     null
                 }
-            if (sweep.run(band)) {
+            val okRun = sweep.run(band)
+            allWalks += sweep.jwWalks
+            egTotal += sweep.egCalls
+            if (sweep.jwBest > allBest) {
+                allBest = sweep.jwBest
+                allBestDump = sweep.jwBestDump
+            }
+            if (okRun) {
                 best = sweep
             } else {
                 if (band == null && sweep.deepest >= 10 * width) {
@@ -53,7 +66,7 @@ class CoGenerationProbeTest {
                 }
                 if (sweep.deepest > deepestSeen) {
                 deepestSeen = sweep.deepest
-                    deepestDump = "=== attempt $attempts deepest row ${sweep.deepest / width} dpFails=${sweep.dpFails} realizeFails=${sweep.realizeFails} walk=${sweep.rfWalk} apply=${sweep.rfApply} (blk=${sweep.afBlack} wrd=${sweep.afWord} sgl=${sweep.afSingle} scoreRej=${sweep.scoreRejected}) nogoods=${nogoods.size} bands=${bands.size}+${newBands.size} EG[calls=${sweep.egCalls} botNull=${sweep.egBottomNull} pinDead=${sweep.egPinDead} dpNull=${sweep.egDpNull} rlz=${sweep.egRealizeFail} r19=${sweep.egRow19Fail}] ===\n" + sweep.egDump + "\n" + sweep.deathDump
+                    deepestDump = "=== attempt $attempts deepest row ${sweep.deepest / width} dpFails=${sweep.dpFails} realizeFails=${sweep.realizeFails} walk=${sweep.rfWalk} apply=${sweep.rfApply} (blk=${sweep.afBlack} wrd=${sweep.afWord} sgl=${sweep.afSingle} scoreRej=${sweep.scoreRejected}) nogoods=${nogoods.size} bands=${bands.size}+${newBands.size} EG[calls=${sweep.egCalls} botNull=${sweep.egBottomNull} r19=${sweep.egRow19Fail} jwBest=${sweep.jwBest}/${sweep.jwWalks} ${sweep.jwBestDump}] ===\n" + sweep.egDump + "\n" + sweep.deathDump
                 }
             }
         }
@@ -62,6 +75,7 @@ class CoGenerationProbeTest {
         if (best == null && deepestDump.isNotEmpty()) println(deepestDump)
         if (best == null) {
             println("COGEN v1 INFEASIBLE in 120s ($attempts attempts)")
+            println("JW TOTAL walks=$allWalks best=$allBest eg=$egTotal $allBestDump")
             return
         }
         val cells = best.toCellArray()
@@ -118,6 +132,102 @@ class CoGenerationProbeTest {
         val dups = best.words.groupingBy { it }.eachCount().filterValues { it > 1 }
         if (dups.isNotEmpty()) println("DUPLICATE WORDS: $dups")
         println(best.render())
+    }
+
+    // Discrimination probe: rows 0..17 faked (row 17 all black, all columns fresh), so the
+    // joint 2-row walk faces a maximally free endgame that certainly has solutions.
+    @Test
+    fun `joint endgame walk solves a maximally free synthetic state`() {
+        val lexicon = Lexicon(loadRepository(), maxLen = 17)
+        var solved = 0
+        var bestDeep = 0
+        var bestDump = ""
+        repeat(20) { i ->
+            val sweep = Sweep(lexicon, Random(1234L + i), HashSet())
+            for (r in 0 until height - 3) {
+                for (c in 0 until width) sweep.grid[r][c] = if ((r + c) % 7 == 0) '#' else 'X'
+            }
+            for (c in 0 until width) {
+                sweep.grid[height - 4][c] = 'X'
+                if (c % 2 == 0) {
+                    sweep.grid[height - 3][c] = '#'
+                    sweep.columns[c].reset(2, null)
+                } else {
+                    sweep.grid[height - 4][c] = '#'
+                    sweep.columns[c].reset(3, null)
+                    val bits = sweep.columns[c].continueLetters(3)
+                    val letters = (0 until 26).filter { bits and (1 shl it) != 0 }
+                    val ch = 'A' + letters[Random(77L * i + c).nextInt(letters.size)]
+                    sweep.grid[height - 3][c] = ch
+                    sweep.columns[c].apply(ch)
+                }
+            }
+            sweep.jwTrace = i == 0
+            if (sweep.solveEndgameForProbe()) {
+                solved++
+            }
+            sweep.jwTrace = false
+            if (sweep.jwBest > bestDeep) {
+                bestDeep = sweep.jwBest
+                bestDump = sweep.jwBestDump
+            }
+        }
+        println("SYNTH solved=$solved/20 bestDeep=$bestDeep")
+        println("SYNTH2 $bestDump")
+    }
+
+    // Ground truth: take SlotRegistry-valid boards from the production generator, keep
+    // rows 0..height-3, rebuild column prefixes, and ask the joint walk to re-solve the
+    // bottom two rows. A solution provably exists (the original bottom).
+    @Test
+    fun `joint endgame walk re-solves real board bottoms`() {
+        val repo = loadRepository()
+        val lexicon = Lexicon(repo, maxLen = 17)
+        val generator = GridGenerator(repo)
+        var solved = 0
+        var tried = 0
+        var bestDeep = 0
+        var bestDump = ""
+        var attempt = 0
+        while (tried < 8 && attempt < 30) {
+            attempt++
+            val g =
+                generator.generate(
+                    GridConstraints(width = width, height = height),
+                    Random(9000L + attempt),
+                ) ?: continue
+            tried++
+            val sweep = Sweep(lexicon, Random(31L * attempt), HashSet())
+            for (r in 0 until height) {
+                for (c in 0 until width) {
+                    val cell = g.cells[Position(com.bliss.grid.domain.model.Row(r), com.bliss.grid.domain.model.Column(c))]
+                    sweep.grid[r][c] = if (cell is LetterCell) cell.letter else '#'
+                }
+            }
+            val original = (height - 2 until height).joinToString("/") { sweep.grid[it].concatToString() }
+            for (r in height - 2 until height) for (c in 0 until width) sweep.grid[r][c] = '.'
+            if (!sweep.rebuildForProbe()) {
+                println("REALBOT attempt=$attempt rebuild failed")
+                continue
+            }
+            var ok = sweep.solveEndgameForProbe()
+            if (!ok) {
+                println("REALBOT attempt=$attempt replaying original bottom:")
+                ok = sweep.replayOriginalBottom(original)
+                if (ok) println("REALBOT attempt=$attempt replay SUCCEEDED (walk search missed it)")
+            }
+            if (ok) {
+                solved++
+                println("REALBOT attempt=$attempt SOLVED")
+                println("  original: $original")
+                println("  found   : ${sweep.grid[height - 2].concatToString()}/${sweep.grid[height - 1].concatToString()}")
+            }
+            if (sweep.jwBest > bestDeep) {
+                bestDeep = sweep.jwBest
+                bestDump = sweep.jwBestDump
+            }
+        }
+        println("REALBOT solved=$solved/$tried bestDeep=$bestDeep $bestDump")
     }
 
     // Flexible-end prefix over the lexicon: masks per candidate total length, filtered as letters commit.
@@ -239,6 +349,10 @@ class CoGenerationProbeTest {
             var egRealizeFail = 0
             var egRow19Fail = 0
             var egDump = ""
+            var jwBest = 0
+            var jwWalks = 0
+            var jwBestDump = ""
+            var jwTrace = false
         var realizeFails = 0
         var nogoodHits = 0
         var rfWalk = 0
@@ -277,7 +391,7 @@ class CoGenerationProbeTest {
             // Beam over rows: carry several board lineages; doomed ones die by selection.
             var beam = mutableListOf(captureState())
             deepest = maxOf(deepest, startRow * width)
-            for (r in startRow until height - 1) {
+            for (r in startRow until height - 2) {
                 val children = ArrayList<Pair<BoardState, Int>>()
                 for (st in beam) {
                     restoreState(st)
@@ -326,7 +440,7 @@ class CoGenerationProbeTest {
                     var bits = facts.maskLetters[c]
                     while (bits != 0) {
                         val bit = bits and (-bits)
-                        bits = bits and (bit - 1)
+                        bits = bits and bit.inv()
                         val letter = 'A' + Integer.numberOfTrailingZeros(bit)
                         val copy = m.copyOf()
                         lexicon.filterByLetterInPlace(v + 1, v, letter, copy)
@@ -347,7 +461,7 @@ class CoGenerationProbeTest {
                 var bits = mask[w]
                 while (bits != 0L) {
                     val bit = bits and (-bits)
-                    bits = bits and (bit - 1)
+                    bits = bits and bit.inv()
                     val idx = w * 64 + java.lang.Long.numberOfTrailingZeros(bit)
                     if (lexicon.wordAt(len, idx).text !in used) return true
                 }
@@ -355,38 +469,492 @@ class CoGenerationProbeTest {
             return false
         }
 
-        private fun solveEndgame(): Boolean {
-            val r19 = height - 1
-            val entry = captureState()
-            egCalls++
-            repeat(60) {
-                nodes++
-                val facts = RowFacts(r19)
-                val (bMask, bBlackOk) = bottomConstraints(facts)
-                val row19 = realizeBottomRow(bMask, bBlackOk)
-                if (row19 == null) {
-                    egBottomNull++
-                    if (egDump.isEmpty()) {
-                        val sb = StringBuilder("EGDUMP r19 cols:\n")
-                        for (c in 0 until width) {
-                            val col = columns[c]
-                            sb.append(c).append(": pop=").append(Integer.bitCount(bMask[c]))
-                                .append(" blk=").append(if (bBlackOk[c]) 1 else 0)
-                                .append(" '").append(col.text).append('\'')
-                                .append(if (col.forcedBlackNext) " F" else "")
-                                .append(if (col.reserved) " R" else "")
-                                .append(if (col.isEmpty) " E" else "")
-                                .append('\n')
-                        }
-                        sb.append("row18: ").append(grid[height - 2].concatToString())
-                        egDump = sb.toString()
+        fun rebuildForProbe(): Boolean {
+            for (r in 0 until height - 2) {
+                var c = 0
+                while (c < width) {
+                    if (grid[r][c] == '#') {
+                        c++
+                        continue
                     }
-                    return@repeat
+                    val st = c
+                    while (c < width && grid[r][c] != '#') c++
+                    if (c - st >= minLen) {
+                        val w = String(CharArray(c - st) { grid[r][st + it] })
+                        words.add(w)
+                        used.add(w)
+                    }
                 }
-                if (applyEndgame(r19, row19, facts)) return true
-                restoreState(entry)
+            }
+            for (c in 0 until width) {
+                var st = height - 2
+                var r = height - 3
+                while (r >= 0 && grid[r][c] != '#') {
+                    st = r
+                    r--
+                }
+                val col = columns[c]
+                col.reset(height - st, null)
+                for (i in st until height - 2) {
+                    val ch = grid[i][c]
+                    if (col.continueLetters(height - i) and (1 shl (ch - 'A')) == 0) return false
+                    col.apply(ch)
+                }
+                if (!col.isEmpty && col.continueLetters(2) == 0) {
+                    val w = col.completeWord(used) ?: return false
+                    words.add(w)
+                    used.add(w)
+                    col.reserved = true
+                }
+                if (col.text.length == 1) col.lastSingle = runLenAt(height - 3, c) == 1
+            }
+            return true
+        }
+
+        fun replayOriginalBottom(original: String): Boolean {
+            val parts = original.split("/")
+            val ctx = JointCtx()
+            ctx.forced18 = parts[0].toCharArray()
+            ctx.forced19 = parts[1].toCharArray()
+            return jwStep(ctx, 0)
+        }
+
+        fun solveEndgameForProbe(): Boolean {
+            val ok = solveEndgame()
+            if (!ok) {
+                repeat(3) {
+                    val ctx = JointCtx()
+                    jwWalks++
+                    if (jwStep(ctx, 0)) return@repeat
+                    if (ctx.deepest > jwBest) {
+                        jwBest = ctx.deepest
+                        jwBestDump = "a18='${ctx.deepA18}' a19='${ctx.deepA19}' budget=${ctx.budget}"
+                    }
+                }
+            }
+            return ok
+        }
+
+        private fun solveEndgame(): Boolean {
+            egCalls++
+            val entry = captureState()
+            repeat(200) {
+                val ctx = JointCtx()
+                val walk = if (jwStep(ctx, 0)) ctx.a18 to ctx.a19 else null
+                if (walk == null) {
+                    egBottomNull++
+                    if (egDump.length < 900) {
+                        val cc = ctx.deepest
+                        val col = columns[cc]
+                        val v = col.text.length
+                        val c2 = col.masks[v + 2]?.let { lexicon.lettersAt(v + 2, v, it) } ?: 0
+                        val e1 = col.masks[v + 1]?.let { lexicon.lettersAt(v + 1, v, it) } ?: 0
+                        egDump += "JW deep=$cc a18='${ctx.deepA18}' a19='${ctx.deepA19}' col$cc='${col.text}'" +
+                            (if (col.reserved) "R" else "") + (if (col.forcedBlackNext) "F" else "") +
+                            (if (col.isEmpty) "E" else "") +
+                            " c2=${Integer.bitCount(c2)} e1=${Integer.bitCount(e1)} debt=${col.hostDebt}\n"
+                    }
+                } else if (applyJoint(walk.first, walk.second)) {
+                    return true
+                } else {
+                    egRow19Fail++
+                    restoreState(entry)
+                }
             }
             return false
+        }
+
+        // === joint endgame: rows height-2 and height-1 walked column-by-column as one
+        // constraint problem. Both rows follow B? W (B W)* (no singles: a bottom-zone black
+        // can only be hosted by the across word to its right). Letters are vertical pairs.
+        private inner class JointCtx {
+            val a18 = CharArray(width) { '.' }
+            val a19 = CharArray(width) { '.' }
+            val h18 = Prefix(lexicon)
+            val h19 = Prefix(lexicon)
+            var open18 = false
+            var open19 = false
+            val usedLocal = HashSet<String>(used)
+            var budget = 30000
+            var deepest = 0
+            var deepA18 = ""
+            var deepA19 = ""
+            var single18 = false
+            var single19 = false
+            var forced18: CharArray? = null
+            var forced19: CharArray? = null
+        }
+
+        private fun jointWalk(): Pair<CharArray, CharArray>? {
+            val ctx = JointCtx()
+            return if (jwStep(ctx, 0)) ctx.a18 to ctx.a19 else null
+        }
+
+        private fun jointFeasible(): Boolean {
+            repeat(8) {
+                val ctx = JointCtx()
+                ctx.budget = 15000
+                jwWalks++
+                val ok = jwStep(ctx, 0)
+                if (ctx.deepest > jwBest) {
+                    jwBest = ctx.deepest
+                    jwBestDump = "a18='${ctx.deepA18}' a19='${ctx.deepA19}'"
+                }
+                if (ok) return true
+            }
+            return false
+        }
+
+        private fun letterList(bits: Int): MutableList<Char> {
+            val out = ArrayList<Char>(Integer.bitCount(bits))
+            var b = bits
+            while (b != 0) {
+                val bit = b and (-b)
+                b = b and bit.inv()
+                out.add('A' + Integer.numberOfTrailingZeros(bit))
+            }
+            return out
+        }
+
+        private fun jwStep(
+            ctx: JointCtx,
+            c: Int,
+        ): Boolean {
+            if (ctx.budget-- <= 0) return false
+            nodes++
+            if (c > ctx.deepest) {
+                ctx.deepest = c
+                ctx.deepA18 = String(ctx.a18, 0, c)
+                ctx.deepA19 = String(ctx.a19, 0, c)
+            }
+            if (c == width) {
+                if (!ctx.open18 || !ctx.open19) return false
+                val w18 = ctx.h18.completeWord(ctx.usedLocal) ?: return false
+                ctx.usedLocal.add(w18)
+                val w19 = ctx.h19.completeWord(ctx.usedLocal)
+                if (w19 == null) {
+                    ctx.usedLocal.remove(w18)
+                    return false
+                }
+                return true
+            }
+            val col = columns[c]
+            val v = col.text.length
+            val must18Black = col.reserved || col.forcedBlackNext
+            val vClump18 = grid[height - 3][c] == '#' && grid[height - 4][c] == '#'
+            val orphanAbove18 = col.text.length == 1 && !col.lastSingle
+            val bendHosted0 = c == 1 && ctx.a18[0] == '#' && ctx.a19[0] != '#'
+            val can18Black =
+                !vClump18 && c <= width - 3 && col.hostDebt == 0 &&
+                    (must18Black || col.isEmpty || orphanAbove18 || col.completeWord(ctx.usedLocal) != null) &&
+                    (ctx.open18 || c == 0 || ctx.single18 || bendHosted0)
+            val debt = col.hostDebt > 0
+            val cont2A = if (must18Black) 0 else col.masks[v + 2]?.let { lexicon.lettersAt(v + 2, v, it) } ?: 0
+            val end18A =
+                if (must18Black || debt) {
+                    0
+                } else {
+                    col.masks[v + 1]?.let { m -> if (anyUnusedWord(v + 1, m)) lexicon.lettersAt(v + 1, v, m) else 0 } ?: 0
+                }
+            val orphanA = if (col.isEmpty && !debt) 0x3FFFFFF else 0
+            val h18Bits =
+                if (ctx.open18) {
+                    ctx.h18.continueLetters(width - c)
+                } else {
+                    -1 // resolved after reset; enumerate against col sets first
+                }
+            val can19Black = c <= width - 3 && (ctx.open19 || c == 0 || ctx.single19)
+
+            // Option order: verticals flowing first, then structural blacks.
+            data class JOpt(val ch18: Char, val ch19: Char)
+            val opts = ArrayList<JOpt>()
+            if (!must18Black) {
+                val aList = letterList(cont2A and (if (ctx.open18) h18Bits else -1))
+                aList.shuffle(random)
+                for (a in aList.take(4)) {
+                    val m = col.masks[v + 2] ?: continue
+                    val copy = m.copyOf()
+                    lexicon.filterByLetterInPlace(v + 2, v, a, copy)
+                    if (!anyUnusedWord(v + 2, copy)) continue
+                    val bBits =
+                        lexicon.lettersAt(v + 2, v + 1, copy) and
+                            (if (ctx.open19) ctx.h19.continueLetters(width - c) else -1)
+                    val bList = letterList(bBits)
+                    bList.shuffle(random)
+                    for (b in bList.take(3)) opts.add(JOpt(a, b))
+                }
+                if (can19Black) {
+                    val eList = letterList(end18A and (if (ctx.open18) h18Bits else -1))
+                    eList.shuffle(random)
+                    for (a in eList.take(3)) opts.add(JOpt(a, '#'))
+                }
+                if (can19Black && orphanA != 0) {
+                    val oList = letterList(orphanA and (if (ctx.open18) h18Bits else -1))
+                    oList.shuffle(random)
+                    for (a in oList.take(2)) opts.add(JOpt(a, '#'))
+                }
+            }
+            if (can18Black) {
+                // Column resets at 18; bottom cell is a fresh orphan letter or (rarely) black.
+                opts.add(JOpt('#', '*'))
+                if (can19Black && grid[height - 3][c] != '#') opts.add(JOpt('#', '#'))
+            }
+            if (must18Black && !can18Black) {
+                if (ctx.forced18 != null) {
+                    println(
+                        "REPLAY c=$c DEAD: must18Black && !can18Black (vClump=$vClump18 open18=${ctx.open18} " +
+                            "single18=${ctx.single18} hostDebt=${columns[c].hostDebt} c=$c)",
+                    )
+                }
+                return false
+            }
+            // Mix structural choices (column-ending blacks) among letter pairs — depth-first
+            // with a fixed order would exhaust the try cap on vertical continuations alone.
+            opts.shuffle(random)
+            if (random.nextInt(4) == 0) {
+                val bi = opts.indexOfFirst { it.ch18 == '#' || it.ch19 == '#' }
+                if (bi > 0) {
+                    val o = opts.removeAt(bi)
+                    opts.add(0, o)
+                }
+            }
+            if (jwTrace && c <= 6) {
+                println(
+                    "TRACE c=$c opts=${opts.size} open18=${ctx.open18} open19=${ctx.open19} " +
+                        "s18=${ctx.single18} s19=${ctx.single19} cont2A=${Integer.bitCount(cont2A)} " +
+                        "end18A=${Integer.bitCount(end18A)} orphanA=${Integer.bitCount(orphanA)} " +
+                        "can18B=$can18Black can19B=$can19Black must18B=$must18Black " +
+                        "opts=${opts.take(6).joinToString { "(" + it.ch18 + "," + it.ch19 + ")" }}",
+                )
+            }
+
+            val f18 = ctx.forced18
+            val f19 = ctx.forced19
+            if (f18 != null && f19 != null) {
+                val fc18 = f18[c]
+                val fc19 = f19[c]
+                val why =
+                    whyNot(ctx, c, fc18, fc19, must18Black, can18Black, can19Black, cont2A, end18A, orphanA, vClump18)
+                if (why != null) {
+                    println("REPLAY c=$c pair=($fc18,$fc19) refused: $why")
+                    return false
+                }
+                val r = tryOption(ctx, c, fc18, fc19)
+                if (!r) println("REPLAY c=$c pair=($fc18,$fc19) tryOption failed")
+                return r
+            }
+            var tried = 0
+            for (opt in opts) {
+                if (ctx.single18 && opt.ch18 != '#') continue
+                if (ctx.single19 && opt.ch19 != '#') continue
+                if (tried >= 24) break
+                tried++
+                val r = tryOption(ctx, c, opt.ch18, opt.ch19)
+                if (jwTrace && c <= 6) println("TRACE   c=$c try(${opt.ch18},${opt.ch19}) -> $r")
+                if (r) return true
+            }
+            return false
+        }
+
+        private fun whyNot(
+            ctx: JointCtx,
+            c: Int,
+            ch18: Char,
+            ch19: Char,
+            must18Black: Boolean,
+            can18Black: Boolean,
+            can19Black: Boolean,
+            cont2A: Int,
+            end18A: Int,
+            orphanA: Int,
+            vClump18: Boolean,
+        ): String? {
+            val col = columns[c]
+            if (ch18 == '#') {
+                if (!can18Black) {
+                    return "can18Black=false (vClump=$vClump18 hostDebt=${col.hostDebt} isEmpty=${col.isEmpty} " +
+                        "reserved=${col.reserved} forced=${col.forcedBlackNext} v=${col.text.length} " +
+                        "lastSingle=${col.lastSingle} " +
+                        "complete=${col.completeWord(ctx.usedLocal) != null} open18=${ctx.open18} single18=${ctx.single18})"
+                }
+                if (ch19 == '#' && grid[height - 3][c] == '#') return "double black under black at 17"
+                return null
+            }
+            if (must18Black) return "must18Black but letter"
+            val bit = 1 shl (ch18 - 'A')
+            val inCont2 = cont2A and bit != 0
+            val inEnd = end18A and bit != 0
+            val inOrph = orphanA and bit != 0
+            if (ch19 == '#') {
+                if (!can19Black) return "can19Black=false (open19=${ctx.open19} single19=${ctx.single19})"
+                if (!inEnd && !inOrph) return "ch18 not in end18A/orphanA (cont2=$inCont2)"
+                return null
+            }
+            if (!inCont2) return "ch18 not in cont2A (end=$inEnd orph=$inOrph)"
+            val v = col.text.length
+            val m = col.masks[v + 2] ?: return "no masks[v+2]"
+            val copy = m.copyOf()
+            lexicon.filterByLetterInPlace(v + 2, v, ch18, copy)
+            if (!anyUnusedWord(v + 2, copy)) return "no unused (v+2)-word for ch18"
+            val bBits = lexicon.lettersAt(v + 2, v + 1, copy)
+            if (bBits and (1 shl (ch19 - 'A')) == 0) return "ch19 not a completion of prefix+ch18"
+            return null
+        }
+
+        private fun tryOption(
+            ctx: JointCtx,
+            c: Int,
+            ch18: Char,
+            ch19: Char,
+        ): Boolean {
+            val trail = ArrayList<String>(2)
+            var s18: Snap? = null
+            var s19: Snap? = null
+            val o18 = ctx.open18
+            val o19 = ctx.open19
+            val si18 = ctx.single18
+            val si19 = ctx.single19
+            // Col-0 bend hosting: an unhosted letter at col 0 is a legal left-border single —
+            // it must be followed by a black at col 1 (tracked via the single flags).
+            val single18Now = c == 0 && ch18 != '#' && grid[height - 3][0] != '#'
+            val single19Now = c == 0 && ch19 != '#' && ch18 != '#'
+            // row 18
+            if (ch18 == '#') {
+                if (ctx.open18) {
+                    val w = ctx.h18.completeWord(ctx.usedLocal) ?: return false
+                    ctx.usedLocal.add(w)
+                    trail.add(w)
+                }
+                ctx.open18 = false
+                ctx.a18[c] = '#'
+            } else if (single18Now) {
+                ctx.single18 = true
+                ctx.a18[c] = ch18
+            } else {
+                s18 = ctx.h18.snapshot()
+                if (!ctx.open18) {
+                    ctx.h18.reset(width - c, null)
+                    for (l in 11..lexicon.maxLength) ctx.h18.forbidLength(l)
+                    ctx.open18 = true
+                }
+                if (ctx.h18.continueLetters(width - c) and (1 shl (ch18 - 'A')) == 0) {
+                    ctx.h18.restore(s18)
+                    ctx.open18 = o18
+                    trail.forEach { ctx.usedLocal.remove(it) }
+                    return false
+                }
+                ctx.h18.apply(ch18)
+                ctx.a18[c] = ch18
+            }
+            if (ch18 == '#' && si18) ctx.single18 = false
+            // row 19
+            var ok = true
+            if (ch19 == '#') {
+                if (ctx.open19) {
+                    val w = ctx.h19.completeWord(ctx.usedLocal)
+                    if (w == null) {
+                        ok = false
+                    } else {
+                        ctx.usedLocal.add(w)
+                        trail.add(w)
+                    }
+                }
+                if (ok) {
+                    ctx.open19 = false
+                    ctx.a19[c] = '#'
+                }
+            } else if (single19Now) {
+                if (ch19 == '*') {
+                    ok = false
+                } else {
+                    ctx.single19 = true
+                    ctx.a19[c] = ch19
+                }
+            } else {
+                s19 = ctx.h19.snapshot()
+                if (!ctx.open19) {
+                    ctx.h19.reset(width - c, null)
+                    for (l in 11..lexicon.maxLength) ctx.h19.forbidLength(l)
+                    ctx.open19 = true
+                }
+                val bBits = ctx.h19.continueLetters(width - c)
+                val pick =
+                    if (ch19 == '*') {
+                        // fresh orphan cell: any letter the across word accepts
+                        val list = letterList(bBits)
+                        if (list.isEmpty()) null else list[random.nextInt(list.size)]
+                    } else if (bBits and (1 shl (ch19 - 'A')) != 0) {
+                        ch19
+                    } else {
+                        null
+                    }
+                if (pick == null) {
+                    ok = false
+                } else {
+                    ctx.h19.apply(pick)
+                    ctx.a19[c] = pick
+                }
+            }
+            if (ok && ch19 == '#' && si19) ctx.single19 = false
+            if (ok && jwStep(ctx, c + 1)) return true
+            // undo
+            s19?.let { ctx.h19.restore(it) }
+            s18?.let { ctx.h18.restore(it) }
+            ctx.open18 = o18
+            ctx.open19 = o19
+            ctx.single18 = si18
+            ctx.single19 = si19
+            ctx.a18[c] = '.'
+            ctx.a19[c] = '.'
+            trail.forEach { ctx.usedLocal.remove(it) }
+            return false
+        }
+
+        private fun applyJoint(
+            row18: CharArray,
+            row19: CharArray,
+        ): Boolean {
+            val f18 = RowFacts(height - 2)
+            for (c in 0 until width) {
+                if (row18[c] == '#') {
+                    if (!applyBlack(height - 2, c, acrossHosted = true)) return false
+                    grid[height - 2][c] = '#'
+                } else {
+                    if (!applyRowLetter(height - 2, c, row18[c], f18)) return false
+                    grid[height - 2][c] = row18[c]
+                }
+            }
+            if (!registerAcross(height - 2)) return false
+            val f19 = RowFacts(height - 1)
+            for (c in 0 until width) {
+                if (row19[c] == '#') {
+                    if (!applyBlack(height - 1, c, acrossHosted = true)) return false
+                    grid[height - 1][c] = '#'
+                } else {
+                    if (!applyRowLetter(height - 1, c, row19[c], f19)) return false
+                    grid[height - 1][c] = row19[c]
+                }
+            }
+            return registerAcross(height - 1)
+        }
+
+        private fun registerAcross(r: Int): Boolean {
+            var c = 0
+            while (c < width) {
+                if (grid[r][c] == '#') {
+                    c++
+                    continue
+                }
+                val st = c
+                while (c < width && grid[r][c] != '#') c++
+                if (c - st >= minLen) {
+                    val w = String(CharArray(c - st) { grid[r][st + it] })
+                    if (w in used) return false
+                    words.add(w)
+                    used.add(w)
+                }
+            }
+            return true
         }
 
         // Tile the bottom row exactly: grammar B? W (B W)*, guided by a backward
@@ -606,7 +1174,12 @@ class CoGenerationProbeTest {
                         if (stateSignature(r + 1) in nogoods || !nextRowFeasible(r)) {
                             Int.MIN_VALUE / 2
                         } else {
-                            futureFlexibility(r)
+                            var sc = futureFlexibility(r)
+                            // A row-17 child is only worth keeping if its 2-row endgame walks.
+                            if (sc > Int.MIN_VALUE / 2 && r == height - 3 && !jointFeasible()) {
+                                sc = Int.MIN_VALUE / 2
+                            }
+                            sc
                         }
                     if (score > Int.MIN_VALUE / 2) {
                         out.add(captureState() to score)
@@ -975,6 +1548,23 @@ class CoGenerationProbeTest {
                         if (keepOpen == 0) return Int.MIN_VALUE / 2
                     }
                 }
+                // Every column must have at least one endgame move: continue two rows,
+                // finish at height-2, or take a black there — else the joint walk is dead.
+                for (c in 0 until width) {
+                    val col = columns[c]
+                    val vClump = grid[height - 3][c] == '#' && grid[height - 4][c] == '#'
+                    val blackable =
+                        !vClump && c <= width - 3 && col.hostDebt == 0 &&
+                            (col.reserved || col.forcedBlackNext || col.isEmpty || col.completeWord(used) != null)
+                    if (col.reserved || col.forcedBlackNext) {
+                        if (!blackable) return Int.MIN_VALUE / 2
+                        continue
+                    }
+                    val v = col.text.length
+                    val cont2 = col.masks[v + 2]?.let { m -> if (anyUnusedWord(v + 2, m)) lexicon.lettersAt(v + 2, v, m) else 0 } ?: 0
+                    val end18 = col.masks[v + 1]?.let { m -> if (anyUnusedWord(v + 1, m)) lexicon.lettersAt(v + 1, v, m) else 0 } ?: 0
+                    if (cont2 == 0 && end18 == 0 && !blackable) return Int.MIN_VALUE / 2
+                }
             }
             // Endgame: bottom-row blacks are forced wherever a column is fresh, reserved or debt-bound;
             // adjacent forced blacks are unsatisfiable under bottom-row hosting — reject a row early.
@@ -1221,9 +1811,13 @@ class CoGenerationProbeTest {
         ): Boolean {
             val col = columns[c]
             if (!col.isEmpty && !col.forcedBlackNext && !col.reserved) {
-                val w = col.completeWord(used) ?: return false
-                words.add(w)
-                used.add(w)
+                if (col.text.length >= minLen) {
+                    val w = col.completeWord(used) ?: return false
+                    words.add(w)
+                    used.add(w)
+                } else if (col.lastSingle) {
+                    return false
+                }
             }
             col.reset(height - r - 1, brickBand(c, r))
             cornerTiming(c, height - r - 1)
