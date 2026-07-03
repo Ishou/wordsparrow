@@ -127,6 +127,62 @@ paths:
         '500': { $ref: '#/components/responses/ProblemDetails' }
         '503': { $ref: '#/components/responses/ProblemDetails' }
 
+  /v1/auth/email/start:
+    post:
+      operationId: startEmailLogin
+      summary: Begin an email-OTP sign-in by emailing a 6-digit code.
+      description: |
+        Accepts an email address and emails a single-use 6-digit code
+        (ADR-0091). Responds with a uniform 202 regardless of whether the
+        email maps to an existing account, so the caller cannot enumerate
+        which addresses are known. Sets a short-TTL, HttpOnly challenge cookie
+        `__Secure-ws_otp_chal` that `verify` requires alongside the code.
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailStartRequest' }
+      responses:
+        '202':
+          description: |
+            Accepted. A code was emailed if the address is deliverable; the
+            response is identical whether or not the email is known. Sets the
+            `__Secure-ws_otp_chal` challenge cookie.
+          headers:
+            Set-Cookie: { schema: { type: string } }
+        '400': { $ref: '#/components/responses/ProblemDetails' }
+        '429': { $ref: '#/components/responses/ProblemDetails' }
+
+  /v1/auth/email/verify:
+    post:
+      operationId: verifyEmailLogin
+      summary: Verify an email-OTP code and mint a session.
+      description: |
+        Takes the emailed 6-digit code plus the `__Secure-ws_otp_chal`
+        challenge cookie set by `start`. On a valid, unexpired, unlocked code
+        with a matching cookie, resolves the account (ADR-0091) and issues the
+        standard `__Secure-ws_session` cookie. Failure responses are uniform
+        and non-enumerating (a bad, expired, or locked code all return
+        400/401 regardless of whether the email is known).
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailVerifyRequest' }
+      responses:
+        '200':
+          description: Signed in. Sets the `__Secure-ws_session` cookie and returns the minimal identity.
+          headers:
+            Set-Cookie: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WhoAmIResponse' }
+        '400': { $ref: '#/components/responses/ProblemDetails' }
+        '401': { $ref: '#/components/responses/ProblemDetails' }
+        '429': { $ref: '#/components/responses/ProblemDetails' }
+
   /v1/auth/whoami:
     get:
       operationId: whoAmI
@@ -163,6 +219,23 @@ paths:
           description: Logged out. Response sets a clearing Set-Cookie.
           headers:
             Set-Cookie: { schema: { type: string } }
+        '401': { $ref: '#/components/responses/ProblemDetails' }
+
+  /v1/auth/logout-all:
+    post:
+      operationId: logoutAll
+      summary: Revoke all of the user's other sessions, keeping the caller's.
+      description: |
+        Revokes every server-side session for the authenticated user except
+        the caller's current one — a provider-agnostic compromise-containment
+        escape hatch (ADR-0091). Does not clear the caller's cookie; the
+        caller stays signed in on this device.
+      tags: [auth]
+      security:
+        - sessionCookie: []
+      responses:
+        '204':
+          description: Other sessions revoked. The caller's own session is unaffected (no Set-Cookie).
         '401': { $ref: '#/components/responses/ProblemDetails' }
 
   /v1/users/me:
@@ -446,6 +519,19 @@ components:
       required: [updatedAt]
       properties:
         updatedAt: { type: string, format: date-time }
+
+    EmailStartRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+
+    EmailVerifyRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        code: { type: string, pattern: '^[0-9]{6}$' }
 
     ProblemDetails:
       type: object
