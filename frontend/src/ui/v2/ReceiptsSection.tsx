@@ -5,7 +5,7 @@ import type { BillingClient, Receipt } from '@/application/billing';
 import { useBillingGate } from './useBillingGate';
 
 const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'ws.eyebrow', margin: '0 6px 7px' });
-const cardWrap = css({ bg: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
+const cardWrap = css({ bg: 'ws.card', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
 
 const list = css({ listStyle: 'none', margin: 0, padding: 0 });
 const row = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 15px', borderTop: '1px solid token(colors.ws.hairline)', _first: { borderTop: 'none' } });

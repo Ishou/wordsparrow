@@ -1,3 +1,4 @@
+import { applyThemePreference, loadThemePreference, watchSystemTheme } from '@/infrastructure/session/localStorageTheme';
 // Composition root for the Bliss frontend bundle. This file is the only
 // place where the ui and infrastructure layers are wired together; it is
 // excluded from the layered architecture rules in eslint.config.js.
@@ -358,6 +359,11 @@ enableMocks()
           await rebindLobby(anonSessionId);
         }
       : undefined;
+
+    // ADR-0088: re-assert the pre-paint theme (covers SPA-restored sessions) and track OS changes under 'auto'.
+    const themePref = loadThemePreference();
+    applyThemePreference(themePref);
+    watchSystemTheme(themePref);
 
     // onCaughtError only: onUncaughtError would double-emit via the window.error handler.
     const mount = () =>

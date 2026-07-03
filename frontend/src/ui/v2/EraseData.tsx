@@ -24,7 +24,7 @@ const dangerBtn = css({
 });
 const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out' });
 const positioner = css({ position: 'fixed', inset: 0, zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' });
-const card = css({ width: '100%', maxWidth: '380px', bg: 'white', borderRadius: '20px', padding: '20px', boxShadow: '0 24px 60px rgba(20,40,34,0.28)', fontFamily: 'wsUi', outline: 'none', animation: 'wsSheetUp 240ms cubic-bezier(0.32,0.72,0,1)' });
+const card = css({ width: '100%', maxWidth: '380px', bg: 'ws.card', borderRadius: '20px', padding: '20px', boxShadow: '0 24px 60px rgba(20,40,34,0.28)', fontFamily: 'wsUi', outline: 'none', animation: 'wsSheetUp 240ms cubic-bezier(0.32,0.72,0,1)' });
 const dlgTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '19px', color: 'ws.jadeInk' });
 const dlgDesc = css({ fontFamily: 'wsUi', fontSize: '14px', color: 'ws.khaki', marginTop: '8px', lineHeight: '1.4' });
 const input = css({
@@ -33,7 +33,7 @@ const input = css({
   marginTop: '14px',
   borderRadius: '12px',
   border: '1.5px solid rgba(33,75,64,0.16)',
-  bg: 'white',
+  bg: 'ws.card',
   paddingInline: '14px',
   fontFamily: 'wsUi',
   fontSize: '15px',

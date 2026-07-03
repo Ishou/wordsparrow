@@ -102,7 +102,7 @@ const revealButton = css({
   bg: 'rgba(255,255,255,0.7)',
   color: 'ws.khaki',
   transition: 'color 120ms ease-out, background-color 120ms ease-out',
-  _hover: { color: 'ws.jadeInk', bg: 'white' },
+  _hover: { color: 'ws.jadeInk', bg: 'ws.card' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 
@@ -172,7 +172,7 @@ const fieldInput = css({
   fontSize: '16px',
   fontWeight: 'bold',
   color: 'ws.jadeInk',
-  bg: 'white',
+  bg: 'ws.card',
   border: '1.6px solid token(colors.ws.jade)',
   borderRadius: '12px',
   padding: '10px 12px',
@@ -187,7 +187,7 @@ const sizeOption = css({
   fontSize: '15px',
   fontWeight: 'bold',
   color: 'ws.jadeInk',
-  bg: 'white',
+  bg: 'ws.card',
   border: '1.6px solid token(colors.ws.jade)',
   borderRadius: '12px',
   padding: '9px 13px',

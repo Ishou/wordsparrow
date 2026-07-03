@@ -38,13 +38,13 @@ type DailyState =
 const shell = css({
   // Cap to the viewport so the top bar + bottom nav pin and only `content` scrolls (app-shell), at every width.
   height: '100dvh',
-  bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
+  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   // Tablet: a contained app card on a calm jade surround. Desktop: full-bleed for the 2-col layout.
-  md: { bgImage: 'none', bg: '#9CCBB1', justifyContent: 'center', padding: '40px 24px' },
-  lg: { height: '100dvh', bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0 },
+  md: { bgImage: 'none', bg: 'var(--colors-ws-hero-flat)', justifyContent: 'center', padding: '40px 24px' },
+  lg: { height: '100dvh', bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0 },
 });
 // Phone: mobile column. Tablet: centred framed card. Desktop: a wide 2-column container.
 const frame = css({
@@ -55,7 +55,7 @@ const frame = css({
   minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
-  bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
+  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
   md: {
     flex: 'none',
     maxWidth: '460px',
@@ -89,7 +89,7 @@ const content = css({
 // Desktop hub: hero (left) + grilles (right) side by side, capped + centred in the viewport (matches the 1140 top-bar cap). Passthrough on phone/tablet.
 const hub = css({ display: 'contents', lg: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 0.92fr)', columnGap: '36px', alignItems: 'start', alignContent: 'center', flex: '1 0 auto', width: '100%', maxWidth: '1140px', marginInline: 'auto', paddingInline: '36px' } });
 
-const hero = css({ flex: 'none', bg: 'white', borderRadius: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
+const hero = css({ flex: 'none', bg: 'ws.card', borderRadius: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
 // clipPath clips upward overflow (midday sun, night stars) while its -34 px bottom inset lets the branch drape over heroBody; zIndex 2 keeps it above.
 // Taller on the wider desktop hero so the slice-scaled sky (sun/moon) clears the visible band.
 const heroArt = css({ position: 'relative', height: '116px', borderTopLeftRadius: '22px', borderTopRightRadius: '22px', zIndex: 2, clipPath: 'inset(0 0 -34px 0 round 22px 22px 0 0)', lg: { height: '208px' } });

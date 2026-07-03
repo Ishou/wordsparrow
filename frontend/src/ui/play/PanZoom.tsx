@@ -87,7 +87,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     const el = fadeRef.current;
     if (masks.length) {
       const m = masks.join(', ');
-      el.style.background = 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)';
+      el.style.background = 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)';
       el.style.setProperty('mask-image', m);
       el.style.setProperty('-webkit-mask-image', m);
       el.style.setProperty('mask-composite', 'add');

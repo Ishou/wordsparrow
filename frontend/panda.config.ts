@@ -45,39 +45,16 @@ export default defineConfig({
   exclude: [],
   jsxFramework: 'react',
   outdir: 'styled-system',
+  conditions: {
+    extend: {
+      // ADR-0088: dark theme is class-driven (html[data-theme=dark]), set pre-paint from bliss.theme.
+      dark: '[data-theme=dark] &',
+    },
+  },
   theme: {
     tokens: {
       colors: {
-        // WordSparrow v2 (ADR-0072): jade/sakura/khaki — namespaced 'ws' to avoid collision with the ADR-0043 colour tokens.
-        ws: {
-          jade: { value: '#C4E5D3' },
-          jadeInk: { value: '#214B40' },
-          sable: { value: '#E8E2C6' },
-          khaki: { value: '#4C4824' },
-          or: { value: '#D8C77A' },
-          sakura: { value: '#D45D83' },
-          sakuraDark: { value: '#BE4970' },
-          sakuraRose: { value: '#E586A4' },
-          sakuraBlush: { value: '#F7DEE7' },
-          // Deep sage clue-cell surface; cream text on it clears WCAG AA (~5.3:1).
-          clueSurface: { value: '#4F6E5C' },
-          // Solved-clue light sage; pairs with jade-ink (not cream) text for WCAG AA (~4.7:1).
-          clueSurfaceDone: { value: '#9FBCA8' },
-          clueText: { value: '#FBF6E9' },
-          // Uppercase group-label brown (eyebrow), previously hardcoded across six files.
-          eyebrow: { value: '#543C00' },
-          // Ink pairing for gold (ws.or) surfaces — lock tile, paywall band, status pills.
-          orInk: { value: '#5A4B12' },
-          // 1px separators on white cards.
-          hairline: { value: '#EEF3EC' },
-          // Hover shades for jade / sable buttons.
-          jadeHover: { value: '#A9D8BE' },
-          sableHover: { value: '#DED7BC' },
-          // Multiplayer presence dots.
-          statusOnline: { value: '#3F9D6E' },
-          statusIdle: { value: '#C9A227' },
-          statusLost: { value: '#9A9A9A' },
-        },
+        // WordSparrow v2 (ADR-0072) `ws.*` colors live in semanticTokens (ADR-0088: light/dark pairs).
         // Primary ramp — mousse (moss-green brand + success/validation).
         // ADR-0043 anchors:
         //   .100 = #dfeacb (mousse pâle — accentBg, validated cell bg)
@@ -222,6 +199,43 @@ export default defineConfig({
     },
     semanticTokens: {
       colors: {
+        // WordSparrow v2 chrome (ADR-0072 hues, ADR-0088 night values). Dark values preserve every
+        // documented AA pairing; aesthetic re-balancing happens per-surface in the Wave B QA pass.
+        ws: {
+          jade: { value: { base: '#C4E5D3', _dark: '#2E4A3C' } },
+          jadeInk: { value: { base: '#214B40', _dark: '#E9F2EC' } },
+          sable: { value: { base: '#E8E2C6', _dark: '#23301F' } },
+          khaki: { value: { base: '#4C4824', _dark: '#A8B49B' } },
+          or: { value: { base: '#D8C77A', _dark: '#8A7A3D' } },
+          sakura: { value: { base: '#D45D83', _dark: '#D45D83' } },
+          sakuraDark: { value: { base: '#BE4970', _dark: '#BE4970' } },
+          sakuraRose: { value: { base: '#E586A4', _dark: '#E586A4' } },
+          sakuraBlush: { value: { base: '#F7DEE7', _dark: '#3A2230' } },
+          // Deep sage clue-cell surface; cream clueText clears AA in both themes (~5.3:1).
+          clueSurface: { value: { base: '#4F6E5C', _dark: '#4F6E5C' } },
+          // Solved-clue surface; pairs with jadeInk text — dark deepens so the flipped ink stays AA.
+          clueSurfaceDone: { value: { base: '#9FBCA8', _dark: '#3C5A4B' } },
+          clueText: { value: { base: '#FBF6E9', _dark: '#FBF6E9' } },
+          // Uppercase group-label (eyebrow) — a text color, so it lightens on dark.
+          eyebrow: { value: { base: '#543C00', _dark: '#CBBE83' } },
+          // Ink pairing for gold (ws.or) surfaces.
+          orInk: { value: { base: '#5A4B12', _dark: '#EFE6BC' } },
+          // 1px separators on cards.
+          hairline: { value: { base: '#EEF3EC', _dark: '#2C3B32' } },
+          // Hover shades for jade / sable buttons.
+          jadeHover: { value: { base: '#A9D8BE', _dark: '#3A5D4B' } },
+          sableHover: { value: { base: '#DED7BC', _dark: '#2E3A28' } },
+          // Multiplayer presence dots (legible on both themes).
+          statusOnline: { value: { base: '#3F9D6E', _dark: '#3F9D6E' } },
+          statusIdle: { value: { base: '#C9A227', _dark: '#C9A227' } },
+          statusLost: { value: { base: '#9A9A9A', _dark: '#9A9A9A' } },
+          // Elevated card surface — was a bg:'white' literal before ADR-0088.
+          card: { value: { base: '#FFFFFF', _dark: '#1C2D25' } },
+          // Page hero gradient stops (consumed as CSS vars by the shells).
+          heroTop: { value: { base: '#CDE9DA', _dark: '#0E1F1A' } },
+          heroBottom: { value: { base: '#BBE0CD', _dark: '#14261F' } },
+          heroFlat: { value: { base: '#9CCBB1', _dark: '#182720' } },
+        },
         // ── Surfaces ────────────────────────────────────────────────
         bg:             { value: '{colors.neutral.50}' },     // page background (papier crème)
         surface:        { value: '#ffffff' },                 // letter cell ("cellule") — pure white paper

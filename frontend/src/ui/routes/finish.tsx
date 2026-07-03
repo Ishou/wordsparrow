@@ -6,7 +6,7 @@ import { noindexHead } from '@/ui/seo';
 import { Route as AppLayoutRoute } from './app-layout';
 
 // Phone-shaped jade field giving the absolute-positioned WinScreen overlay a positioned ancestor.
-const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marginInline: 'auto', height: '100dvh', overflow: 'hidden', bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)' });
+const shell = css({ position: 'relative', width: '100%', maxWidth: '440px', marginInline: 'auto', height: '100dvh', overflow: 'hidden', bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top), var(--colors-ws-hero-bottom))' });
 
 function FinishScreen() {
   const navigate = useNavigate();

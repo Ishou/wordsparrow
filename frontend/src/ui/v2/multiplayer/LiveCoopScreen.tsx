@@ -28,10 +28,10 @@ const stage = css({
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)',
-  md: { bgImage: 'none', bg: '#9CCBB1', padding: '32px 24px' },
+  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
+  md: { bgImage: 'none', bg: 'var(--colors-ws-hero-flat)', padding: '32px 24px' },
   // Desktop: drop the surround — the board goes immersive on the full-bleed gradient.
-  lg: { bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)', bg: 'transparent', padding: 0, alignItems: 'stretch' },
+  lg: { bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)', bg: 'transparent', padding: 0, alignItems: 'stretch' },
 });
 const shell = css({
   position: 'relative',
@@ -41,7 +41,7 @@ const shell = css({
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
-  bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)',
+  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
   fontFamily: 'wsUi',
   md: {
     maxWidth: '720px',

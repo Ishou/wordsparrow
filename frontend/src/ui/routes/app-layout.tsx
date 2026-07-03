@@ -6,7 +6,7 @@ import { Route as RootRoute } from './__root';
 // Align html background to jade so macOS overscroll shows the v2 gradient, not the v1 cream.
 function AppLayout() {
   useEffect(() => {
-    document.documentElement.style.backgroundColor = '#CDE9DA';
+    document.documentElement.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--colors-ws-hero-top') || '#CDE9DA';
   }, []);
   return <Outlet />;
 }
