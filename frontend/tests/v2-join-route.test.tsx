@@ -1,14 +1,16 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectAxeClean } from '@/test/a11y';
 import type { PuzzleRepository, PuzzleSolver } from '@/application';
+import type { AuthClient } from '@/application/auth/AuthClient';
+import { AuthProvider } from '@/ui/components/auth';
 import { LobbyClientError, type GameClient, type LobbyClient } from '@/application/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { Lobby, LobbyId, Pseudonym, SessionId } from '@/domain/game';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
-import { Route as JoinRoute } from '@/ui/routes/join.$code';
+import { Route as JoinRoute, joinLoaderRetryPolicy } from '@/ui/routes/join.$code';
 import { Route as LobbyRoute } from '@/ui/routes/lobby.$lobbyId';
 
 const sessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
@@ -53,6 +55,15 @@ const stubGameClient: GameClient = {
   disconnect: () => {},
   subscribe: () => () => {},
   subscribeConnectionState: () => () => {},
+};
+
+const stubAuthClient: AuthClient = {
+  whoami: () => Promise.resolve(null),
+  getMe: vi.fn(),
+  updateMe: vi.fn(),
+  deleteMe: vi.fn(),
+  logout: vi.fn(),
+  signInUrl: (provider, returnTo) => `https://auth.test/${provider}?return=${returnTo}`,
 };
 
 const makeInMemoryStash = () => {
@@ -104,8 +115,21 @@ function renderJoin(initialEntry: string, lobbyClientOverrides: Partial<LobbyCli
       lobbyJoinCodeStash: stash,
     },
   });
-  return { router, lobbyClient, stash, ...render(<RouterProvider router={router} />) };
+  return {
+    router,
+    lobbyClient,
+    stash,
+    ...render(
+      <AuthProvider authClient={stubAuthClient} getPseudonym={() => pseudonym}>
+        <RouterProvider router={router} />
+      </AuthProvider>,
+    ),
+  };
 }
+
+beforeEach(() => {
+  joinLoaderRetryPolicy.reset();
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -138,6 +162,34 @@ describe('v2 /join/$code route', () => {
     const { lobbyClient } = renderJoin('/join/!!');
     expect(await screen.findByText('Code invalide ou partie expirée.')).toBeTruthy();
     expect(lobbyClient.findByCode).not.toHaveBeenCalled();
+  });
+
+  it('auto-retries a transient findByCode failure instead of claiming the code is bad', async () => {
+    const findByCode = vi
+      .fn<LobbyClient['findByCode']>()
+      .mockRejectedValueOnce(
+        new LobbyClientError({ kind: 'upstream-unavailable', status: null, problem: null, message: 'net' }),
+      )
+      .mockResolvedValue(lobby);
+    const { router } = renderJoin('/join/A2B3C4', { findByCode });
+
+    // The instant silent retry lands and the redirect proceeds — the bad-code screen never renders.
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/lobby/${lobbyId}`);
+    });
+    expect(findByCode).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText('Code invalide ou partie expirée.')).toBeNull();
+  });
+
+  it('shows « Reconnexion… » with a « Réessayer » CTA while findByCode keeps failing', async () => {
+    renderJoin('/join/A2B3C4', {
+      findByCode: vi.fn().mockRejectedValue(
+        new LobbyClientError({ kind: 'transient', status: 502, problem: null, message: '5xx' }),
+      ),
+    });
+    expect(await screen.findByText('Reconnexion…')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeTruthy();
+    expect(screen.queryByText('Code invalide ou partie expirée.')).toBeNull();
   });
 
   it('V2JoinError is axe-clean (ADR-0050)', async () => {

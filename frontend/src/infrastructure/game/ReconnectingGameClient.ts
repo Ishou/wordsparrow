@@ -20,7 +20,10 @@
 //                                                                       │
 //                                                                       │ inner 'disconnected' (involuntary)
 //                                                                       ▼
-//                                                  attempts < max ? reconnecting (delay) : disconnected (terminal)
+//                                            silent instant retry (no state emission)
+//                                                       │ fails
+//                                                       ▼
+//                                  attempts < max ? reconnecting (backoff delay) : disconnected (terminal)
 //                                                       │
 //                                                       │ timer fires
 //                                                       ▼
@@ -39,6 +42,8 @@
 //      bare adapter throws "already connected". The wrapper only calls
 //      `connect` after the inner has emitted `'disconnected'`, which
 //      the adapter only emits AFTER it clears its `socket` ref.
+//   4. A drop from an ESTABLISHED connection gets one instant, silent retry (no state emission) before the outage surfaces and backoff begins.
+//   5. `cellUpdate` while the socket is down is queued (last write per cell wins) and flushed after the rejoin's `lobbyState` replay; `cellFocus` is ephemeral and dropped, never queued.
 
 import type {
   ConnectionState,
@@ -54,14 +59,9 @@ type RandomFn = () => number;
 
 export interface ReconnectingGameClientOptions {
   readonly inner: GameClient;
-  // Maximum reconnect attempts before the wrapper gives up and emits
-  // a terminal `disconnected`. Default 6 (~32 s real-time at the
-  // default base/cap), which is well inside the server's 30-second
-  // warm-slot window. Tune via the composition root if upstream warmth
-  // changes.
+  // Maximum reconnect attempts before the wrapper gives up. Default Infinity: retries for as long as the tab stays open (delay capped at `maxDelayMs`).
   readonly maxAttempts?: number;
-  // First retry delay (ms). Each subsequent attempt doubles, capped at
-  // `maxDelayMs`. Default 500.
+  // Attempt 1 fires instantly; attempt 2 waits this long (ms), doubling per attempt after, capped at `maxDelayMs`. Default 500.
   readonly baseDelayMs?: number;
   // Maximum delay between attempts (ms). Default 10_000.
   readonly maxDelayMs?: number;
@@ -82,7 +82,7 @@ interface ConnectArgs {
   readonly code?: string;
 }
 
-const DEFAULT_MAX_ATTEMPTS = 6;
+const DEFAULT_MAX_ATTEMPTS = Number.POSITIVE_INFINITY;
 const DEFAULT_BASE_DELAY_MS = 500;
 const DEFAULT_MAX_DELAY_MS = 10_000;
 const DEFAULT_JITTER_RATIO = 0.15;
@@ -104,6 +104,16 @@ export function createReconnectingGameClient(
   let delayHandle: ReturnType<typeof setTimeout> | null = null;
   let voluntaryClose = false;
   let started = false;
+  // True while the instant post-drop attempt is in flight — suppresses every state emission (note 4).
+  let silentAttempt = false;
+  let lastInnerState: ConnectionState = 'disconnected';
+  // True from the moment the socket reopens until the post-rejoin lobbyState replay lands, so writes made in that window queue instead of racing the flush.
+  let awaitingReplay = false;
+  // Outage write queue (note 5) — insertion-ordered, last write per cell.
+  const pendingCellWrites = new Map<
+    string,
+    { row: number; column: number; letter: Parameters<GameClient['cellUpdate']>[2] }
+  >();
 
   let state: ConnectionState = 'disconnected';
   const subscribers = new Set<(s: ConnectionState) => void>();
@@ -121,8 +131,9 @@ export function createReconnectingGameClient(
   };
 
   const computeDelay = (attempt: number): number => {
-    // attempt is 1-indexed. delay = base * 2^(attempt - 1), capped.
-    const exp = baseDelayMs * 2 ** (attempt - 1);
+    // attempt is 1-indexed; attempt 1 is instant, then exponential capped.
+    if (attempt <= 1) return 0;
+    const exp = baseDelayMs * 2 ** (attempt - 2);
     const capped = Math.min(exp, maxDelayMs);
     if (jitterRatio === 0) return capped;
     const factor = 1 + (random() * 2 - 1) * jitterRatio;
@@ -148,7 +159,7 @@ export function createReconnectingGameClient(
       setState('disconnected');
       return;
     }
-    setState('reconnecting');
+    if (!silentAttempt) setState('reconnecting');
     const delay = computeDelay(attempts + 1);
     delayHandle = schedule(() => {
       delayHandle = null;
@@ -156,9 +167,31 @@ export function createReconnectingGameClient(
     }, delay);
   };
 
+  const flushPendingCellWrites = () => {
+    for (const [key, write] of pendingCellWrites) {
+      try {
+        inner.cellUpdate(write.row, write.column, write.letter);
+        pendingCellWrites.delete(key);
+      } catch {
+        // Socket dropped mid-flush — keep the remainder for the next rejoin.
+        return;
+      }
+    }
+  };
+
+  // Flush AFTER the rejoin `lobbyState` replay so the stale snapshot is applied before our echoes arrive (note 5).
+  inner.subscribe((event) => {
+    if (event.type !== 'lobbyState') return;
+    if (lastInnerState !== 'connected') return;
+    awaitingReplay = false;
+    if (pendingCellWrites.size === 0) return;
+    flushPendingCellWrites();
+  });
+
   // Mirror the inner client's connection state into the wrapper's, with
   // the reconnect/exhaustion logic layered on top of `disconnected`.
   inner.subscribeConnectionState((innerState) => {
+    lastInnerState = innerState;
     if (!started) {
       // Pre-connect priming call (the inner adapter primes synchronously
       // on subscribe). Don't overwrite the wrapper's `disconnected`
@@ -167,13 +200,15 @@ export function createReconnectingGameClient(
     }
     if (innerState === 'connected') {
       attempts = 0;
+      silentAttempt = false;
       clearPendingTimer();
+      awaitingReplay = pendingCellWrites.size > 0;
       setState('connected');
       return;
     }
     if (innerState === 'connecting') {
       // Either the user's initial connect() OR a scheduled retry attempt.
-      setState('connecting');
+      if (!silentAttempt) setState('connecting');
       return;
     }
     // innerState === 'disconnected' (the bare adapter does not emit
@@ -181,6 +216,13 @@ export function createReconnectingGameClient(
     if (voluntaryClose) {
       setState('disconnected');
       return;
+    }
+    if (silentAttempt) {
+      // The instant attempt failed — the outage becomes visible now.
+      silentAttempt = false;
+    } else if (attempts === 0 && state === 'connected') {
+      // Fresh drop from an established connection — go silent (note 4).
+      silentAttempt = true;
     }
     scheduleNextAttempt();
   });
@@ -190,6 +232,8 @@ export function createReconnectingGameClient(
       lastConnectArgs = args;
       voluntaryClose = false;
       attempts = 0;
+      silentAttempt = false;
+      awaitingReplay = false;
       clearPendingTimer();
       started = true;
       setState('connecting');
@@ -199,6 +243,8 @@ export function createReconnectingGameClient(
     disconnect() {
       voluntaryClose = true;
       clearPendingTimer();
+      pendingCellWrites.clear();
+      awaitingReplay = false;
       inner.disconnect();
       // Defensive: ensure the wrapper's externally-visible state
       // matches even if the inner adapter does not emit 'disconnected'
@@ -210,8 +256,31 @@ export function createReconnectingGameClient(
     renameSelf(pseudonym) { inner.renameSelf(pseudonym); },
     setGridConfig(config) { inner.setGridConfig(config); },
     startGame() { inner.startGame(); },
-    cellUpdate(row, column, letter) { inner.cellUpdate(row, column, letter); },
-    cellFocus(row, column, direction) { inner.cellFocus(row, column, direction); },
+    cellUpdate(row, column, letter) {
+      const key = `${row},${column}`;
+      const enqueue = () => {
+        // Re-insert so map order == order of LAST writes (LWW per cell).
+        pendingCellWrites.delete(key);
+        pendingCellWrites.set(key, { row, column, letter });
+      };
+      if (lastInnerState !== 'connected' || awaitingReplay) {
+        enqueue();
+        return;
+      }
+      try {
+        inner.cellUpdate(row, column, letter);
+      } catch {
+        enqueue();
+      }
+    },
+    cellFocus(row, column, direction) {
+      if (lastInnerState !== 'connected') return;
+      try {
+        inner.cellFocus(row, column, direction);
+      } catch {
+        // Ephemeral presence — a send racing the close is droppable.
+      }
+    },
     leaveLobby() { inner.leaveLobby(); },
     rotateCode() { inner.rotateCode(); },
 

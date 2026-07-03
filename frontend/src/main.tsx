@@ -313,14 +313,11 @@ enableMocks()
           // WebSocket URL derives from the same host: swap http(s) for
           // ws(s) so a single env var configures both adapters.
           const wsBaseUrl = gameApiBaseUrl.replace(/^http/, 'ws');
-          // Wrap the bare WebSocket adapter in a backoff-driven reconnect
-          // wrapper so an involuntary close (network blip, server restart
-          // inside the warm-slot window) is silently retried instead of
-          // surfacing the misleading "Connexion perdue" banner. The
-          // wrapper exposes the same `GameClient` port; the lobby route
-          // sees the `reconnecting` state on `subscribeConnectionState`.
+          // Backoff-driven reconnect wrapper over the bare WS adapter — same `GameClient` port, retried indefinitely while the tab is open.
           const gameClient = createReconnectingGameClient({
             inner: createWebSocketGameClient({ wsBaseUrl }),
+            // A JVM restart outlasts any finite budget; the delay cap (10 s ± jitter) bounds server load.
+            maxAttempts: Number.POSITIVE_INFINITY,
           });
           // `getSession` is a thin closure over the localStorage helpers
           // so routes don't pull `infrastructure/` into `ui/` directly.

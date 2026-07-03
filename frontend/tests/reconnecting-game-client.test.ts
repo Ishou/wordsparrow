@@ -16,7 +16,9 @@ import type { LobbyId, Pseudonym, SessionId } from '@/domain/game';
 function makeFakeInnerClient() {
   const connectCalls: Array<{ lobbyId: LobbyId; code?: string }> = [];
   const disconnectCalls = { count: 0 };
+  const cellUpdateCalls: Array<{ row: number; column: number; letter: string | null }> = [];
   const connectionSubscribers = new Set<(s: ConnectionState) => void>();
+  const eventSubscribers = new Set<(e: GameEvent) => void>();
   let connectionState: ConnectionState = 'disconnected';
   let pendingConnect: { resolve: () => void; reject: (e: Error) => void } | null = null;
 
@@ -37,15 +39,28 @@ function makeFakeInnerClient() {
     renameSelf: () => {},
     setGridConfig: () => {},
     startGame: () => {},
-    cellUpdate: () => {},
-    cellFocus: () => {},
+    cellUpdate: (row, column, letter) => {
+      // Mirror the bare adapter: sends on a non-open socket throw.
+      if (connectionState !== 'connected') {
+        throw new Error('WebSocketGameClient: socket is not open');
+      }
+      cellUpdateCalls.push({ row, column, letter: letter as unknown as string | null });
+    },
+    cellFocus: () => {
+      if (connectionState !== 'connected') {
+        throw new Error('WebSocketGameClient: socket is not open');
+      }
+    },
     leaveLobby: () => {},
     rotateCode: () => {},
     disconnect: () => {
       disconnectCalls.count += 1;
       setConnectionState('disconnected');
     },
-    subscribe: () => () => undefined,
+    subscribe: (handler) => {
+      eventSubscribers.add(handler);
+      return () => { eventSubscribers.delete(handler); };
+    },
     subscribeConnectionState: (handler) => {
       connectionSubscribers.add(handler);
       handler(connectionState);
@@ -57,6 +72,10 @@ function makeFakeInnerClient() {
     inner,
     connectCalls,
     disconnectCalls,
+    cellUpdateCalls,
+    dispatchEvent: (event: GameEvent) => {
+      for (const h of [...eventSubscribers]) h(event);
+    },
     // Test helpers — pair with each pending inner.connect() promise.
     resolveOpen: () => {
       pendingConnect?.resolve();
@@ -111,7 +130,7 @@ describe('ReconnectingGameClient', () => {
     expect(states).toEqual(['disconnected', 'connecting', 'connected']);
   });
 
-  it('schedules a reconnect with backoff after an involuntary drop', async () => {
+  it('retries instantly and silently after a drop from an established connection', async () => {
     const fake = makeFakeInnerClient();
     const client = createReconnectingGameClient({
       inner: fake.inner,
@@ -123,23 +142,47 @@ describe('ReconnectingGameClient', () => {
     const p = client.connect(connectArgs);
     fake.resolveOpen();
     await p;
-    expect(states.at(-1)).toBe('connected');
+    expect(states).toEqual(['disconnected', 'connecting', 'connected']);
 
-    // Mid-session drop.
+    // Mid-session drop: NO externally-visible transition — the instant retry is silent.
     fake.drop();
-    // Wrapper transitions to 'reconnecting' immediately — visible chrome
-    // before the timer fires.
-    expect(states.at(-1)).toBe('reconnecting');
-
-    // Within the base delay window the wrapper has NOT called connect again.
-    expect(fake.connectCalls.length).toBe(1);
-    await vi.advanceTimersByTimeAsync(499);
-    expect(fake.connectCalls.length).toBe(1);
-    await vi.advanceTimersByTimeAsync(1);
+    expect(states).toEqual(['disconnected', 'connecting', 'connected']);
+    await vi.advanceTimersByTimeAsync(0);
     expect(fake.connectCalls.length).toBe(2);
+    expect(states).toEqual(['disconnected', 'connecting', 'connected']);
+
+    // Instant retry succeeds — still zero new state emissions.
+    fake.resolveOpen();
+    expect(states).toEqual(['disconnected', 'connecting', 'connected']);
   });
 
-  it('uses exponential backoff capped at maxDelayMs across consecutive failed attempts', async () => {
+  it('surfaces "reconnecting" and enters backoff only after the silent instant retry fails', async () => {
+    const fake = makeFakeInnerClient();
+    const client = createReconnectingGameClient({
+      inner: fake.inner,
+      baseDelayMs: 500,
+      jitterRatio: 0,
+    });
+    const { states } = collectStates(client);
+
+    const p = client.connect(connectArgs);
+    fake.resolveOpen();
+    await p;
+
+    fake.drop();
+    await vi.advanceTimersByTimeAsync(0); // instant attempt fires
+    expect(fake.connectCalls.length).toBe(2);
+    fake.rejectAndClose(new Error('still down'));
+    // Now — and only now — the outage becomes visible.
+    expect(states.at(-1)).toBe('reconnecting');
+
+    await vi.advanceTimersByTimeAsync(499);
+    expect(fake.connectCalls.length).toBe(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fake.connectCalls.length).toBe(3);
+  });
+
+  it('uses exponential backoff capped at maxDelayMs after the instant first attempt', async () => {
     const fake = makeFakeInnerClient();
     const client = createReconnectingGameClient({
       inner: fake.inner,
@@ -158,10 +201,14 @@ describe('ReconnectingGameClient', () => {
     fake.resolveOpen();
     await p;
 
-    const expectedDelays = [500, 1000, 2000, 4000, 4000];
-    // First drop transitions to 'reconnecting' — no inner.connect yet.
     fake.drop();
-    let priorConnects = 1;
+    // Attempt 1 is instant (silent), then the exponential ladder.
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fake.connectCalls.length).toBe(2);
+    fake.rejectAndClose(new Error('still down'));
+
+    const expectedDelays = [500, 1000, 2000, 4000, 4000];
+    let priorConnects = 2;
     for (const delay of expectedDelays) {
       await vi.advanceTimersByTimeAsync(delay - 1);
       expect(fake.connectCalls.length).toBe(priorConnects);
@@ -172,6 +219,35 @@ describe('ReconnectingGameClient', () => {
       // schedules the next attempt with the next exponential delay.
       fake.rejectAndClose(new Error('still down'));
     }
+  });
+
+  it('retries indefinitely by default (no terminal give-up)', async () => {
+    const fake = makeFakeInnerClient();
+    const client = createReconnectingGameClient({
+      inner: fake.inner,
+      baseDelayMs: 500,
+      maxDelayMs: 10_000,
+      jitterRatio: 0,
+    });
+    const { states } = collectStates(client);
+
+    const p = client.connect(connectArgs);
+    fake.resolveOpen();
+    await p;
+    fake.drop();
+
+    // Fail 20 straight attempts — well past the old 6-attempt budget.
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await vi.advanceTimersByTimeAsync(10_000);
+      fake.rejectAndClose(new Error('still down'));
+    }
+    expect(fake.connectCalls.length).toBeGreaterThan(7);
+    expect(states.at(-1)).toBe('reconnecting');
+
+    // And a late recovery still lands.
+    await vi.advanceTimersByTimeAsync(10_000);
+    fake.resolveOpen();
+    expect(states.at(-1)).toBe('connected');
   });
 
   it('resets the attempt counter after a successful reconnect', async () => {
@@ -187,20 +263,18 @@ describe('ReconnectingGameClient', () => {
     fake.resolveOpen();
     await p;
 
-    // Drop, recover after first attempt — next drop should use base delay again.
+    // Drop, recover on the instant attempt — the next drop must get a fresh silent instant attempt, not a mid-ladder delay.
     fake.drop();
-    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(0);
     expect(fake.connectCalls.length).toBe(2);
     fake.resolveOpen();
 
     fake.drop();
-    await vi.advanceTimersByTimeAsync(499);
-    expect(fake.connectCalls.length).toBe(2);
-    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(0);
     expect(fake.connectCalls.length).toBe(3);
   });
 
-  it('gives up after maxAttempts and emits a terminal "disconnected"', async () => {
+  it('gives up after an explicit finite maxAttempts and emits a terminal "disconnected"', async () => {
     const fake = makeFakeInnerClient();
     const client = createReconnectingGameClient({
       inner: fake.inner,
@@ -214,12 +288,12 @@ describe('ReconnectingGameClient', () => {
     fake.resolveOpen();
     await p;
     fake.drop();
-    // attempt 1
-    await vi.advanceTimersByTimeAsync(500);
+    // attempt 1 — instant
+    await vi.advanceTimersByTimeAsync(0);
     expect(fake.connectCalls.length).toBe(2);
     fake.rejectAndClose(new Error('boom'));
     // attempt 2 — last one
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(500);
     expect(fake.connectCalls.length).toBe(3);
     fake.rejectAndClose(new Error('boom'));
     // No further attempts; wrapper has emitted terminal 'disconnected'.
@@ -263,6 +337,8 @@ describe('ReconnectingGameClient', () => {
     await p;
 
     fake.drop();
+    await vi.advanceTimersByTimeAsync(0); // instant silent attempt
+    fake.rejectAndClose(new Error('still down'));
     expect(states.at(-1)).toBe('reconnecting');
 
     client.disconnect();
@@ -270,26 +346,25 @@ describe('ReconnectingGameClient', () => {
     expect(fake.disconnectCalls.count).toBe(1);
 
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(fake.connectCalls.length).toBe(1); // no retry fired
+    expect(fake.connectCalls.length).toBe(2); // no further retry fired
   });
 
-  it('forwards write-side methods straight through to the inner client', async () => {
+  it('forwards write-side methods straight through to the inner client while connected', async () => {
     const fake = makeFakeInnerClient();
-    const sentCellUpdates: Array<{ row: number; col: number; letter: string | null }> = [];
     const startGameCalls = { count: 0 };
     const innerOverride: GameClient = {
       ...fake.inner,
-      cellUpdate: (row, column, letter) => {
-        sentCellUpdates.push({ row, col: column, letter: letter as unknown as string | null });
-      },
       startGame: () => { startGameCalls.count += 1; },
     };
     const client = createReconnectingGameClient({ inner: innerOverride });
 
+    const p = client.connect(connectArgs);
+    fake.resolveOpen();
+    await p;
     client.cellUpdate(1, 2, 'A' as never);
     client.startGame();
 
-    expect(sentCellUpdates).toEqual([{ row: 1, col: 2, letter: 'A' }]);
+    expect(fake.cellUpdateCalls).toEqual([{ row: 1, column: 2, letter: 'A' }]);
     expect(startGameCalls.count).toBe(1);
   });
 
@@ -311,6 +386,138 @@ describe('ReconnectingGameClient', () => {
       { lobbyId, code: 'A2B3C4' },
       { lobbyId, code: 'A2B3C4' },
     ]);
+  });
+
+  it('queues cellUpdate during an outage and flushes after the rejoin lobbyState snapshot', async () => {
+    const fake = makeFakeInnerClient();
+    const client = createReconnectingGameClient({
+      inner: fake.inner,
+      baseDelayMs: 500,
+      jitterRatio: 0,
+    });
+
+    const p = client.connect(connectArgs);
+    fake.resolveOpen();
+    await p;
+    fake.drop();
+
+    // Typing while the socket is down must not throw; frames are queued with last-write-wins per cell.
+    expect(() => {
+      client.cellUpdate(0, 1, 'A' as never);
+      client.cellUpdate(0, 2, 'B' as never);
+      client.cellUpdate(0, 1, 'C' as never);
+    }).not.toThrow();
+    expect(fake.cellUpdateCalls).toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(0);
+    fake.resolveOpen();
+    // Reconnected, but the server's replay snapshot has not arrived yet — flushing now would overwrite it.
+    expect(fake.cellUpdateCalls).toEqual([]);
+
+    fake.dispatchEvent({
+      type: 'lobbyState',
+      players: [],
+      ownerSessionId: sessionId,
+      state: 'IN_PROGRESS',
+      gridConfig: { width: 5, height: 5 },
+      code: 'A2B3C4',
+      game: null,
+    });
+    expect(fake.cellUpdateCalls).toEqual([
+      { row: 0, column: 2, letter: 'B' },
+      { row: 0, column: 1, letter: 'C' },
+    ]);
+
+    // Queue is drained — a later snapshot must not re-send.
+    fake.dispatchEvent({
+      type: 'lobbyState',
+      players: [],
+      ownerSessionId: sessionId,
+      state: 'IN_PROGRESS',
+      gridConfig: { width: 5, height: 5 },
+      code: 'A2B3C4',
+      game: null,
+    });
+    expect(fake.cellUpdateCalls).toHaveLength(2);
+  });
+
+  it('queues a cellUpdate made after reconnect but before the lobbyState replay, instead of racing the flush', async () => {
+    const fake = makeFakeInnerClient();
+    const client = createReconnectingGameClient({
+      inner: fake.inner,
+      baseDelayMs: 500,
+      jitterRatio: 0,
+    });
+
+    const p = client.connect(connectArgs);
+    fake.resolveOpen();
+    await p;
+    fake.drop();
+    client.cellUpdate(0, 1, 'C' as never);
+
+    await vi.advanceTimersByTimeAsync(0);
+    fake.resolveOpen();
+    // Reconnected but the rejoin's lobbyState replay hasn't arrived — this write must not overtake the queued stale one.
+    client.cellUpdate(0, 1, 'X' as never);
+    expect(fake.cellUpdateCalls).toEqual([]);
+
+    fake.dispatchEvent({
+      type: 'lobbyState',
+      players: [],
+      ownerSessionId: sessionId,
+      state: 'IN_PROGRESS',
+      gridConfig: { width: 5, height: 5 },
+      code: 'A2B3C4',
+      game: null,
+    });
+    expect(fake.cellUpdateCalls).toEqual([{ row: 0, column: 1, letter: 'X' }]);
+  });
+
+  it('drops queued cell writes on a voluntary disconnect', async () => {
+    const fake = makeFakeInnerClient();
+    const client = createReconnectingGameClient({
+      inner: fake.inner,
+      baseDelayMs: 500,
+      jitterRatio: 0,
+    });
+
+    const p = client.connect(connectArgs);
+    fake.resolveOpen();
+    await p;
+    fake.drop();
+    client.cellUpdate(0, 1, 'A' as never);
+
+    client.disconnect();
+
+    const p2 = client.connect(connectArgs);
+    fake.resolveOpen();
+    await p2;
+    fake.dispatchEvent({
+      type: 'lobbyState',
+      players: [],
+      ownerSessionId: sessionId,
+      state: 'WAITING',
+      gridConfig: { width: 5, height: 5 },
+      code: 'A2B3C4',
+      game: null,
+    });
+    expect(fake.cellUpdateCalls).toEqual([]);
+  });
+
+  it('silently drops cellFocus during an outage (ephemeral presence, never queued)', async () => {
+    const fake = makeFakeInnerClient();
+    const client = createReconnectingGameClient({
+      inner: fake.inner,
+      baseDelayMs: 500,
+      jitterRatio: 0,
+    });
+
+    const p = client.connect(connectArgs);
+    fake.resolveOpen();
+    await p;
+    fake.drop();
+
+    expect(() => client.cellFocus(0, 1, 'across')).not.toThrow();
   });
 
   it('proxies event subscriptions to the inner client', () => {

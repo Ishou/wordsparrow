@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { LobbyClientError } from '@/application/game';
 import type { Lobby, LobbyId } from '@/domain/game';
 import { LOBBY_CODE_PATTERN } from '@/domain/game/lobbyCode';
+import { createLoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
+import { LoaderRetry } from '@/ui/v2/LoaderRetry';
 import { PhoneShell } from '@/ui/v2/PhoneShell';
 import { BackHeader } from '@/ui/v2/BackHeader';
 import { SparrowState } from '@/ui/v2/SparrowState';
@@ -21,6 +23,9 @@ const message = css({
   textAlign: 'center',
   marginTop: '40px',
 });
+// Survives the errorComponent's remount-per-attempt so the ladder progresses.
+export const joinLoaderRetryPolicy = createLoaderRetryPolicy();
+
 function V2JoinRedirect() {
   const lobby = Route.useLoaderData() as Lobby & { readonly id: LobbyId };
   const { code } = Route.useParams();
@@ -31,6 +36,7 @@ function V2JoinRedirect() {
 
   // One-shot after paint: stash the code so the lobby route's WS-open consumes it, then replace the URL.
   useEffect(() => {
+    joinLoaderRetryPolicy.reset();
     lobbyJoinCodeStash.stash(lobby.id, code);
     void navigate({ to: '/lobby/$lobbyId', params: { lobbyId: lobby.id }, replace: true });
   }, [code, lobby.id, lobbyJoinCodeStash, navigate]);
@@ -53,12 +59,16 @@ function V2JoinError({ error }: { readonly error: Error }) {
   const badCode =
     error.cause instanceof MalformedCodeError ||
     (error instanceof LobbyClientError && error.kind === 'not-found');
+  if (!badCode) {
+    // Transient / upstream failure — auto-retry; never claim the code is bad.
+    return <LoaderRetry policy={joinLoaderRetryPolicy} silentText="Recherche de la partie…" />;
+  }
   return (
     <PhoneShell>
       <SparrowState
         scene={sparrowFlightScene()}
-        title={badCode ? 'Partie introuvable' : 'Oups'}
-        body={badCode ? 'Code invalide ou partie expirée.' : 'Une erreur est survenue. Réessaie.'}
+        title="Partie introuvable"
+        body="Code invalide ou partie expirée."
         cta={{ label: 'Accueil', onClick: () => void navigate({ to: '/' }) }}
       />
     </PhoneShell>

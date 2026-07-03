@@ -86,6 +86,11 @@ export function __resetLobbyStore(): void {
   lobbies.clear();
 }
 
+// e2e seam: simulate a lobby GC'd / wiped by a server restart.
+export function deleteLobby(lobbyId: string): void {
+  lobbies.delete(lobbyId);
+}
+
 // Hand-crafted small mots-fléchés puzzle for preview demos. 5x5 keeps it
 // tiny enough that a reviewer can fill it in under a minute, and the
 // shape matches the smallest GridConfig the WaitingRoom picker offers.

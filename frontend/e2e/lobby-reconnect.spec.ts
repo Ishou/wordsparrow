@@ -1,0 +1,213 @@
+// Multiplayer resilience: transient outages must never masquerade as permanent failures (loader retry, WS backoff, offline write queue, honest 404 — see PR body). Drives MSW's e2e seams on `window.__gameWsTest__`.
+import { expect, test, type Locator, type Page } from '@playwright/test';
+
+import { startMultiplayerGame } from './lib/multiHelpers';
+
+interface GameWsTestApi {
+  setOutage(value: boolean): void;
+  dropAll(): void;
+  failNextLobbyFetches(count: number): void;
+  injectEntry(lobbyId: string, row: number, column: number, letter: string): void;
+  evict(lobbyId: string, sessionId: string): void;
+  deleteLobby(lobbyId: string): void;
+  getLobby(lobbyId: string):
+    | { game: { entries: ReadonlyArray<{ row: number; column: number; letter: string }> } | null }
+    | undefined;
+}
+
+declare global {
+  interface Window {
+    __gameWsTest__: GameWsTestApi;
+    __forbiddenTextsSeen: string[];
+  }
+}
+
+function letterInput(page: Page, row: number, col: number): Locator {
+  return page.locator(
+    `input[data-cell-kind="letter"][data-row="${row}"][data-col="${col}"]`,
+  );
+}
+
+async function typeAcross(
+  page: Page,
+  row: number,
+  startCol: number,
+  letters: readonly string[],
+): Promise<void> {
+  // Same trusted-focus pattern as word-auto-validate-multiplayer.spec.ts: focus once, let auto-advance carry it.
+  await page.evaluate(({ row, col }) => {
+    const sel = `input[data-cell-kind="letter"][data-row="${row}"][data-col="${col}"]`;
+    document.querySelector<HTMLInputElement>(sel)?.focus();
+  }, { row, col: startCol });
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
+  for (const letter of letters) {
+    await page.evaluate((l) => {
+      const el = document.activeElement as HTMLInputElement | null;
+      if (!el || el.getAttribute('data-cell-kind') !== 'letter') return;
+      el.value = l;
+      el.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: l, bubbles: true }));
+    }, letter);
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
+  }
+}
+
+function lobbyIdFromUrl(page: Page): string {
+  const match = /\/lobby\/([^/?#]+)/.exec(page.url());
+  if (!match) throw new Error(`not on a lobby URL: ${page.url()}`);
+  return match[1]!;
+}
+
+const lostToast = (page: Page) =>
+  page.getByTestId('toast').filter({ hasText: 'Connexion perdue' });
+const restoredToast = (page: Page) =>
+  page.getByTestId('toast').filter({ hasText: 'Connexion rétablie' });
+
+test('a one-shot getLobby network failure recovers silently — zero visible change', async ({ page }) => {
+  // Record any forbidden copy that ever hits the DOM, even transiently.
+  await page.addInitScript(() => {
+    window.localStorage.setItem('wordsparrow.tour.seen', 'true');
+    window.__forbiddenTextsSeen = [];
+    const forbidden = ['Partie introuvable', 'Réessayer', 'Reconnexion…'];
+    const check = () => {
+      const text = document.body?.textContent ?? '';
+      for (const s of forbidden) {
+        if (text.includes(s) && !window.__forbiddenTextsSeen.includes(s)) {
+          window.__forbiddenTextsSeen.push(s);
+        }
+      }
+    };
+    new MutationObserver(check).observe(document, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+  });
+  await page.goto('/grilles?onglet=plusieurs');
+
+  // Arm the seam BEFORE the create-flow navigation runs the loader (the global appears once MSW finishes loading).
+  await page.waitForFunction(() => window.__gameWsTest__ !== undefined);
+  await page.evaluate(() => window.__gameWsTest__.failNextLobbyFetches(1));
+  await page.getByRole('button', { name: /Créer une partie/i }).click();
+  await page.waitForURL(/\/lobby\/[^/]+$/);
+
+  // The salon renders with no manual action despite the dropped request.
+  await expect(page.getByRole('button', { name: 'Jouer' }))
+    .toBeEnabled({ timeout: 10_000 });
+
+  const seen = await page.evaluate(() => window.__forbiddenTextsSeen);
+  expect(seen).toEqual([]);
+});
+
+test('an outage past the old 32s budget: one sticky toast, no navigation, resync, toast cleared', async ({ page }) => {
+  test.setTimeout(150_000);
+  await startMultiplayerGame(page);
+  const lobbyUrl = page.url();
+  const lobbyId = lobbyIdFromUrl(page);
+
+  await typeAcross(page, 0, 1, ['D']);
+  await expect(letterInput(page, 0, 1)).toHaveValue('D');
+
+  await page.evaluate(() => {
+    window.__gameWsTest__.setOutage(true);
+    window.__gameWsTest__.dropAll();
+  });
+
+  // The sticky lost-toast appears once the silent instant retry has failed.
+  await expect(lostToast(page)).toBeVisible({ timeout: 10_000 });
+
+  // A "remote participant" fills a cell while we are offline — only the rejoin replay can bring it to this client.
+  await page.evaluate((id) => window.__gameWsTest__.injectEntry(id, 0, 2, 'E'), lobbyId);
+
+  // Outlast the retired 6-attempt/~32s budget: still in the game, still ONE toast, never « introuvable ».
+  await page.waitForTimeout(33_000);
+  await expect(lostToast(page)).toHaveCount(1);
+  expect(page.url()).toBe(lobbyUrl);
+  await expect(letterInput(page, 0, 1)).toBeVisible();
+  await expect(page.getByText('Partie introuvable')).toHaveCount(0);
+
+  await page.evaluate(() => window.__gameWsTest__.setOutage(false));
+
+  // Recovery: brief « rétablie » toast replaces the sticky one; the board resyncs the remote write.
+  await expect(restoredToast(page)).toBeVisible({ timeout: 20_000 });
+  await expect(lostToast(page)).toHaveCount(0);
+  await expect(letterInput(page, 0, 2)).toHaveValue('E');
+  await expect(letterInput(page, 0, 1)).toHaveValue('D');
+});
+
+test('two cells typed during an outage reach the server after reconnect and stay on the board', async ({ page, isMobile }) => {
+  // Touch-primary inputs are readOnly (the on-screen keyboard owns input); this typing seam is hardware-keyboard-shaped.
+  test.skip(Boolean(isMobile), 'typing seam drives hardware-keyboard input');
+  test.setTimeout(90_000);
+  await startMultiplayerGame(page);
+  const lobbyId = lobbyIdFromUrl(page);
+
+  await page.evaluate(() => {
+    window.__gameWsTest__.setOutage(true);
+    window.__gameWsTest__.dropAll();
+  });
+  await expect(lostToast(page)).toBeVisible({ timeout: 10_000 });
+
+  // The grid stays interactive while offline.
+  await typeAcross(page, 0, 1, ['D', 'E']);
+  await expect(letterInput(page, 0, 1)).toHaveValue('D');
+  await expect(letterInput(page, 0, 2)).toHaveValue('E');
+
+  await page.evaluate(() => window.__gameWsTest__.setOutage(false));
+  await expect(restoredToast(page)).toBeVisible({ timeout: 20_000 });
+
+  // The queued writes were flushed after the replay snapshot: the mock server's persisted session carries both.
+  await expect
+    .poll(
+      () =>
+        page.evaluate((id) => {
+          const entries = window.__gameWsTest__.getLobby(id)?.game?.entries ?? [];
+          return entries.filter(
+            (e) =>
+              (e.row === 0 && e.column === 1 && e.letter === 'D') ||
+              (e.row === 0 && e.column === 2 && e.letter === 'E'),
+          ).length;
+        }, lobbyId),
+      { timeout: 10_000 },
+    )
+    .toBe(2);
+
+  // And nothing was lost locally.
+  await expect(letterInput(page, 0, 1)).toHaveValue('D');
+  await expect(letterInput(page, 0, 2)).toHaveValue('E');
+});
+
+test('a lobby deleted mid-game surfaces the honest « Partie introuvable » screen', async ({ page }) => {
+  await startMultiplayerGame(page);
+  const lobbyUrl = page.url();
+  const lobbyId = lobbyIdFromUrl(page);
+
+  // Server restart wiped the lobby; the rejoin meets the server's honest 404 protocol frame.
+  await page.evaluate((id) => {
+    window.__gameWsTest__.deleteLobby(id);
+    window.__gameWsTest__.dropAll();
+  }, lobbyId);
+
+  await expect(page.getByText('Partie introuvable')).toBeVisible({ timeout: 10_000 });
+  // Honest 404 replaces the surface in place — no bounce to Accueil.
+  expect(page.url()).toBe(lobbyUrl);
+});
+
+test('evicted while offline (reconnect-grace elapsed) lands on the honest "la partie a continue sans toi" screen', async ({ page }) => {
+  await startMultiplayerGame(page);
+  const lobbyUrl = page.url();
+  const lobbyId = lobbyIdFromUrl(page);
+  const sessionId = await page.evaluate(() => window.localStorage.getItem('bliss.session.id'));
+  expect(sessionId).toBeTruthy();
+
+  // ADR-0018 §5: the server freed the seat during the outage; the codeless rejoin is denied (wrong-code).
+  await page.evaluate((args) => {
+    window.__gameWsTest__.evict(args.lobbyId, args.sessionId);
+    window.__gameWsTest__.dropAll();
+  }, { lobbyId, sessionId: sessionId! });
+
+  await expect(page.getByText('La partie a continué sans toi')).toBeVisible({ timeout: 10_000 });
+  // Honest in-place screen: no bounce to Accueil, no wrong-code toast, no reconnexion toast left behind.
+  expect(page.url()).toBe(lobbyUrl);
+  await expect(lostToast(page)).toHaveCount(0);
+  await expect(page.getByText('Code invalide ou partie privée', { exact: false })).toHaveCount(0);
+});

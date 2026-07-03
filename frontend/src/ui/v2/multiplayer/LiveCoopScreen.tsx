@@ -170,8 +170,11 @@ export function LiveCoopScreen({
 
   // Discreet "checking…" pulse on a word the local player just completed, until the server locks it (or a safety window passes).
   const { validating, rejecting, noteLocalFill, noteServerReject } = useCoopValidating(puzzle, validatedPositions);
+  // Cells written locally but not yet echoed back by the server — lets the rejoin replay resync (below) tell a stale pre-flush snapshot apart from a confirmed value.
+  const unconfirmedLocalWritesRef = useRef(new Map<string, string | null>());
   const handleLocalCellChange = useCallback(
     (row: number, col: number, letter: string | null) => {
+      unconfirmedLocalWritesRef.current.set(posKey(row, col), letter);
       onCellChange(row, col, letter);
       if (letter) noteLocalFill(row, col);
     },
@@ -193,14 +196,28 @@ export function LiveCoopScreen({
 
   // Inbound remote writes land directly on the uncontrolled inputs (ADR-0002 §4), never re-emitting onCellChange.
   const { applyRemoteCellUpdate } = nav;
+  // Rejoin replay resync (skips a cell with an unconfirmed local write — the snapshot can predate the post-reconnect flush and would otherwise revert it until the echo below lands).
+  useEffect(() => {
+    for (const e of initialEntries) {
+      const key = posKey(e.row, e.column);
+      const pending = unconfirmedLocalWritesRef.current;
+      if (pending.has(key)) {
+        if (pending.get(key) !== e.letter) continue;
+        pending.delete(key);
+      }
+      applyRemoteCellUpdate(e.row, e.column, e.letter);
+    }
+  }, [initialEntries, applyRemoteCellUpdate]);
   // ADR-0085: the same raw stream carries `wordRejected` — shake synchronously off the server verdict.
   useEffect(() => {
     const unsubscribe = subscribeToRemoteCellUpdates((event) => {
-      if (event.type === 'cellUpdated') applyRemoteCellUpdate(event.row, event.column, event.letter);
-      else if (event.type === 'wordRejected') noteServerReject(event.positions);
+      if (event.type === 'cellUpdated') {
+        if (event.sessionId === sessionId) unconfirmedLocalWritesRef.current.delete(posKey(event.row, event.column));
+        applyRemoteCellUpdate(event.row, event.column, event.letter);
+      } else if (event.type === 'wordRejected') noteServerReject(event.positions);
     });
     return unsubscribe;
-  }, [subscribeToRemoteCellUpdates, applyRemoteCellUpdate, noteServerReject]);
+  }, [subscribeToRemoteCellUpdates, applyRemoteCellUpdate, noteServerReject, sessionId]);
 
   // Peer presence state → typing/idle/lost sets for the roster strip + grid badges.
   const presenceState = usePresenceState(subscribeToRemotePresence, sessionId);
