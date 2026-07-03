@@ -11,6 +11,7 @@ import type { ProgressSyncService } from '@/application/progress';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { SurveyAnonStore, SurveyClient } from '@/application/survey';
 import type { TourSeenStore } from '@/application/tour/TourSeenStore';
+import type { ThemeStore } from '@/application/session/ThemeStore';
 import type { Pseudonym, SessionId } from '@/domain/game';
 import { SparrowState } from '@/ui/v2/SparrowState';
 import { NOT_FOUND_COPY, useNotFoundDocumentTitle } from '@/ui/v2/NotFoundScreen';
@@ -50,6 +51,8 @@ export interface AppRouterContext {
   // Solo-progress sync side-channel (ADR-0075); optional so Vitest fixtures can omit it.
   readonly progressSyncService?: ProgressSyncService;
   readonly tourSeenStore: TourSeenStore;
+  // Theme preference port (ADR-0088); optional so route-level Vitest fixtures can omit it.
+  readonly themeStore?: ThemeStore;
   // Phase 5 — identity-api adapter + a thin getter over the anon
   // localStorage pseudonym. Wired in `main.tsx`; `ui/` consumers read
   // both via this context so `infrastructure/` stays out of `ui/`.

@@ -59,25 +59,27 @@ describe('localStorageTheme', () => {
   });
 
   describe('loadThemePreference', () => {
-    it('defaults to clair when storage is empty', () => {
-      expect(loadThemePreference()).toBe('clair');
+    it('defaults to auto when storage is empty', () => {
+      expect(loadThemePreference()).toBe('auto');
     });
 
-    it('defaults to clair when storage holds an invalid value', () => {
+    it('defaults to auto when storage holds an invalid value', () => {
       window.localStorage.setItem(KEY, 'nuit');
-      expect(loadThemePreference()).toBe('clair');
+      expect(loadThemePreference()).toBe('auto');
     });
 
-    it('reads back sombre and auto', () => {
+    it('reads back clair, sombre and auto', () => {
+      window.localStorage.setItem(KEY, 'clair');
+      expect(loadThemePreference()).toBe('clair');
       window.localStorage.setItem(KEY, 'sombre');
       expect(loadThemePreference()).toBe('sombre');
       window.localStorage.setItem(KEY, 'auto');
       expect(loadThemePreference()).toBe('auto');
     });
 
-    it('falls back to clair when localStorage throws', () => {
+    it('falls back to auto when localStorage throws', () => {
       installThrowingStorage();
-      expect(loadThemePreference()).toBe('clair');
+      expect(loadThemePreference()).toBe('auto');
     });
   });
 
@@ -102,6 +104,20 @@ describe('localStorageTheme', () => {
     it('resolves sombre to the dark theme', () => {
       applyThemePreference('sombre');
       expect(document.documentElement.dataset.theme).toBe('dark');
+    });
+
+    it('syncs the theme-color meta with the resolved mode', () => {
+      const meta = document.createElement('meta');
+      meta.setAttribute('name', 'theme-color');
+      document.head.appendChild(meta);
+      try {
+        applyThemePreference('clair');
+        expect(meta.getAttribute('content')).toBe('#CDE9DA');
+        applyThemePreference('sombre');
+        expect(meta.getAttribute('content')).toBe('#0E1F1A');
+      } finally {
+        meta.remove();
+      }
     });
 
     it('resolves auto against matchMedia', () => {

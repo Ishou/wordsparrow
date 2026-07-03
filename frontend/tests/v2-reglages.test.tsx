@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthClient } from '@/application/auth';
+import type { ThemeStore } from '@/application/session/ThemeStore';
 import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
@@ -23,7 +24,7 @@ function stubAuth(overrides: Partial<AuthClient> = {}): AuthClient {
   };
 }
 
-function renderReglages(authClient: AuthClient) {
+function renderReglages(authClient: AuthClient, themeStore?: ThemeStore) {
   const routeTree = RootRoute.addChildren([AppLayoutRoute.addChildren([ReglagesRoute])]);
   const router = createRouter({
     routeTree,
@@ -56,6 +57,7 @@ function renderReglages(authClient: AuthClient) {
         clearForPuzzle: () => {},
       },
       tourSeenStore: { get: () => true, set: () => {}, clear: () => {} },
+      themeStore,
     },
   });
   return render(
@@ -72,6 +74,25 @@ describe('v2 réglages screen', () => {
     expect(screen.getByRole('navigation', { name: 'Confidentialité & légal' })).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Aide' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Retour/ })).toBeTruthy();
+  });
+
+  it('renders the theme control when a themeStore is wired and persists a change', async () => {
+    const themeStore: ThemeStore = { load: vi.fn().mockReturnValue('auto'), set: vi.fn() };
+    renderReglages(stubAuth(), themeStore);
+    await screen.findByRole('heading', { level: 1, name: 'Réglages' });
+    const group = screen.getByRole('group', { name: 'Thème' });
+    expect(group).toBeTruthy();
+    const sombre = screen.getByRole('button', { name: 'Sombre' });
+    expect(screen.getByRole('button', { name: 'Auto' }).getAttribute('aria-pressed')).toBe('true');
+    sombre.click();
+    await waitFor(() => expect(themeStore.set).toHaveBeenCalledWith('sombre'));
+    expect(sombre.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('omits the theme control when no themeStore is in context', async () => {
+    renderReglages(stubAuth());
+    await screen.findByRole('heading', { level: 1, name: 'Réglages' });
+    expect(screen.queryByRole('group', { name: 'Thème' })).toBeNull();
   });
 
   it('links Confidentialité and Mentions légales to their v2 routes', async () => {

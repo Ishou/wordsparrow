@@ -1,11 +1,14 @@
-import { Link } from '@tanstack/react-router';
+import { useState } from 'react';
+import { Link, useRouteContext } from '@tanstack/react-router';
 import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
+import type { ThemePreference, ThemeStore } from '@/application/session/ThemeStore';
 import { useAuth } from '@/ui/components/auth';
 import { useInstallPrompt } from '@/ui/lib/useInstallPrompt';
 import { Skeleton } from '@/design-system';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
+import { SegmentedControl } from './SegmentedControl';
 import { SettingsRow } from './SettingsRow';
 
 const title = css({
@@ -68,6 +71,35 @@ const listCard = css({
 
 const chevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
 
+const themeCard = css({ bg: 'ws.card', borderRadius: '18px', padding: '8px', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
+
+const THEME_OPTIONS: ReadonlyArray<{ id: ThemePreference; label: string }> = [
+  { id: 'clair', label: 'Clair' },
+  { id: 'sombre', label: 'Sombre' },
+  { id: 'auto', label: 'Auto' },
+];
+
+function ThemeGroup({ themeStore }: { readonly themeStore: ThemeStore }) {
+  const [pref, setPref] = useState<ThemePreference>(() => themeStore.load());
+  return (
+    <section aria-label="Apparence">
+      <div className={groupLabel}>Apparence</div>
+      <div className={themeCard}>
+        <SegmentedControl
+          mode="group"
+          ariaLabel="Thème"
+          options={THEME_OPTIONS}
+          value={pref}
+          onChange={(id) => {
+            themeStore.set(id);
+            setPref(id);
+          }}
+        />
+      </div>
+    </section>
+  );
+}
+
 const foot = css({ fontFamily: 'wsMono', fontSize: '11px', color: 'ws.khaki', opacity: 0.85, textAlign: 'center', paddingTop: '10px' });
 
 function initialFor(displayName: string): string {
@@ -125,12 +157,15 @@ function ProfileCard() {
 
 export function ReglagesScreen() {
   const { canInstall, promptInstall } = useInstallPrompt();
+  const { themeStore } = useRouteContext({ from: '__root__' });
   return (
     <PhoneShell header={<BackHeader to="/" />} backTo="/">
       <div className={stack}>
         <h1 className={title}>Réglages</h1>
 
         <ProfileCard />
+
+        {themeStore ? <ThemeGroup themeStore={themeStore} /> : null}
 
         {canInstall ? (
           <nav aria-label="Application">
