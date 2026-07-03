@@ -22,6 +22,10 @@ resource "cloudflare_ruleset" "api_cache_rules" {
         edge_ttl = {
           mode = "respect_origin"
         }
+        # Without this, the edge rewrites Cache-Control to the zone-default max-age=14400, breaking no-cache revalidation.
+        browser_ttl = {
+          mode = "respect_origin"
+        }
       }
     }
   ]
