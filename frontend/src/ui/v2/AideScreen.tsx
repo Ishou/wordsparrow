@@ -69,6 +69,13 @@ export function AideScreen() {
           Crée une partie à plusieurs depuis l&apos;accueil et partage le lien&nbsp;: tout le monde joue la même
           grille, en même temps.
         </Section>
+
+        <Section heading="Installer l&apos;application">
+          WordSparrow s&apos;installe comme une app&nbsp;: grille en plein écran, lancement depuis ton écran
+          d&apos;accueil. Sur Android et sur ordinateur, passe par «&nbsp;Installer l&apos;application&nbsp;» dans les
+          Réglages. Sur iPhone et iPad&nbsp;: bouton Partager de Safari, puis
+          «&nbsp;Sur l&apos;écran d&apos;accueil&nbsp;».
+        </Section>
       </article>
     </PhoneShell>
   );

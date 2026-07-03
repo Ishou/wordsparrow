@@ -1,7 +1,8 @@
 import { Link } from '@tanstack/react-router';
-import { Lock, FileText, Envelope, CaretRight, Question, User } from '@phosphor-icons/react';
+import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { useAuth } from '@/ui/components/auth';
+import { useInstallPrompt } from '@/ui/lib/useInstallPrompt';
 import { Skeleton } from '@/design-system';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
@@ -123,12 +124,28 @@ function ProfileCard() {
 }
 
 export function ReglagesScreen() {
+  const { canInstall, promptInstall } = useInstallPrompt();
   return (
     <PhoneShell header={<BackHeader to="/" />} backTo="/">
       <div className={stack}>
         <h1 className={title}>Réglages</h1>
 
         <ProfileCard />
+
+        {canInstall ? (
+          <nav aria-label="Application">
+            <div className={groupLabel}>Application</div>
+            <ul className={listCard}>
+              <SettingsRow
+                icon={DownloadSimple}
+                label="Installer l'application"
+                sub="Sur ton écran d'accueil"
+                onClick={promptInstall}
+                last
+              />
+            </ul>
+          </nav>
+        ) : null}
 
         <nav aria-label="Confidentialité &amp; légal">
           <div className={groupLabel}>Confidentialité &amp; légal</div>
