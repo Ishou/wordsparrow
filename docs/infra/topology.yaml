@@ -54,6 +54,8 @@ deploy_edges:
   - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
   - { from: pages,           to: pagesdomain, label: custom domain }
   - { from: dns,             to: k3s,   label: service subdomains via external-dns }
+  - { from: dns,             to: cacherules, label: edge cache }
+  - { from: cacherules,      to: k3s,   label: cache miss / bypass }
 
 # Observability TARGET (ADR-0027/0033/0040): hand-maintained, not chart-gated — missing source edge = gap to fix.
 observability:

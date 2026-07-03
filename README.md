@@ -142,6 +142,8 @@ flowchart LR
   deploy_api_k8s -->|helm upgrade| k3s
   pages -->|custom domain| pagesdomain
   dns -->|service subdomains via external-dns| k3s
+  dns -->|edge cache| cacherules
+  cacherules -->|cache miss / bypass| k3s
   style CI fill:#5a655a1f,stroke:#8b9488;
   style Cloud fill:#b8554020,stroke:#b85540;
   classDef default stroke:#6b7fd7,stroke-width:1.5px;
