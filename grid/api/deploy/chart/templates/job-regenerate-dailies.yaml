@@ -1,0 +1,61 @@
+{{- if .Values.regenerateDailies.enabled -}}
+{{/* One-off manual regeneration Job (ADR-0081, ADR-0089 §5) — clone of the ensure-dailies CronJob shape; see docs/deploy.md "Daily-puzzle regeneration". */}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "wordsparrow-api.fullname" . }}-regenerate-dailies
+  labels: {{- include "wordsparrow-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: regenerate-dailies
+spec:
+  activeDeadlineSeconds: {{ .Values.ensureDailies.activeDeadlineSeconds }}
+  backoffLimit: 0
+  # Self-clean so a later one-off run can rematerialize under the same name.
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels: {{- include "wordsparrow-api.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: regenerate-dailies
+    spec:
+      serviceAccountName: {{ include "wordsparrow-api.serviceAccountName" . }}
+      restartPolicy: Never
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: worker
+          image: {{ include "wordsparrow-api.workerImage" . | quote }}
+          imagePullPolicy: {{ .Values.ensureDailies.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command: ["/app/bin/grid-worker"]
+          args:
+            - "--regenerate-dailies"
+            {{- range .Values.regenerateDailies.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wordsparrow-api.pgClusterName" . }}-app
+                  key: uri
+            {{- with .Values.ensureDailies.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.edgePurge.enabled }}
+            - name: CLOUDFLARE_ZONE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.edgePurge.secretName }}
+                  key: zone-id
+            - name: CLOUDFLARE_PURGE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.edgePurge.secretName }}
+                  key: token
+            {{- end }}
+          {{- with .Values.ensureDailies.resources }}
+          resources: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: tmp, emptyDir: {}}
+{{- end }}

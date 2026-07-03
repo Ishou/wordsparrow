@@ -2,6 +2,7 @@ package com.bliss.grid.worker
 
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
@@ -97,6 +98,51 @@ class MainTest {
         assertThat(exit).isEqualTo(0)
         val summary = appender.list.single { it.formattedMessage.contains("event=ensure_upcoming_dailies_summary") }
         assertThat(summary.formattedMessage).contains("generated_count=15")
+    }
+
+    @Test
+    fun `executeAndExit purges the generated dates and a purge failure leaves the exit code unchanged`() {
+        val sender = CloudflarePurgeTest.RecordingSender(status = 500)
+        val hook =
+            EdgePurgeHook(
+                env = mapOf("CLOUDFLARE_ZONE_ID" to "zone", "CLOUDFLARE_PURGE_TOKEN" to "tok")::get,
+                sender = sender,
+            )
+
+        val exit =
+            executeAndExit(
+                PreseededRepo(),
+                NoopCooldownRepo(),
+                SuccessfulPort,
+                today = today,
+                force = true,
+                edgePurgeHook = hook,
+            )
+
+        assertThat(exit).isEqualTo(0)
+        val body = sender.calls.single().jsonBody
+        for (offset in 0 until 7) {
+            assertThat(body).contains("?date=${today.plusDays(offset.toLong())}")
+        }
+    }
+
+    @Test
+    fun `executeAndExit does not purge when every day was already persisted`() {
+        val repo = PreseededRepo()
+        for (offset in 0 until 7) {
+            repo.seedDaily(today.plusDays(offset.toLong()), newStoredPuzzle())
+        }
+        val sender = CloudflarePurgeTest.RecordingSender()
+        val hook =
+            EdgePurgeHook(
+                env = mapOf("CLOUDFLARE_ZONE_ID" to "zone", "CLOUDFLARE_PURGE_TOKEN" to "tok")::get,
+                sender = sender,
+            )
+
+        val exit = executeAndExit(repo, NoopCooldownRepo(), ExplodingPort, today = today, edgePurgeHook = hook)
+
+        assertThat(exit).isEqualTo(0)
+        assertThat(sender.calls).isEmpty()
     }
 
     @Test

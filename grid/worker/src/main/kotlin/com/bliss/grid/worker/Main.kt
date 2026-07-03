@@ -116,6 +116,7 @@ internal fun executeAndExit(
     today: LocalDate = LocalDate.now(ZoneOffset.UTC),
     force: Boolean = false,
     windowDays: Int = EnsureUpcomingDailiesUseCase.DEFAULT_WINDOW_DAYS,
+    edgePurgeHook: EdgePurgeHook = EdgePurgeHook(),
 ): Int {
     val cooldownMax =
         System.getenv("GRID_CLUE_COOLDOWN_MAX")?.toIntOrNull()
@@ -139,5 +140,6 @@ internal fun executeAndExit(
         summary.failedDates.joinToString(separator = ","),
         summary.skippedDates.joinToString(separator = ","),
     )
+    edgePurgeHook.afterGenerationRun(summary.generatedDates)
     return if (summary.failedDates.isEmpty() && summary.skippedDates.isEmpty()) 0 else 1
 }
