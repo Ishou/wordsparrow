@@ -63,7 +63,7 @@ jobs:
             case "$HANDOFF_URL" in
               https://wordsparrow.io|https://wordsparrow.io/)
                 ;;
-              https://*.bliss-cb4.pages.dev|https://*.bliss-cb4.pages.dev/)
+              https://*-wordsparrow-frontend.colin-auberger.workers.dev|https://*-wordsparrow-frontend.colin-auberger.workers.dev/)
                 ;;
               *)
                 echo "::error::Refusing to audit unexpected URL: $HANDOFF_URL"
@@ -77,7 +77,7 @@ jobs:
             case "$DISPATCH_URL" in
               https://wordsparrow.io|https://wordsparrow.io/)
                 ;;
-              https://*.bliss-cb4.pages.dev|https://*.bliss-cb4.pages.dev/)
+              https://*-wordsparrow-frontend.colin-auberger.workers.dev|https://*-wordsparrow-frontend.colin-auberger.workers.dev/)
                 ;;
               *)
                 echo "::error::Refusing to audit unexpected URL: $DISPATCH_URL"
