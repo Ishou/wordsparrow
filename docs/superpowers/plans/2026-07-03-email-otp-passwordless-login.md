@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- **Branch/worktree:** `feat/email-auth` at `/Users/isho/IdeaProjects/bliss-email-auth` (off the true `origin/main`). Never commit in the main checkout.
+- **Branch/worktree:** `feat/email-auth`, a separate worktree off `origin/main`. Never commit in the main checkout.
 - **DCO:** every commit `git commit -s`. Conventional commits, bounded-context scope: `feat(identity-domain): …`, `feat(identity-api): …`, `chore(api-identity): …` (types: feat/fix/chore/refactor/test/docs only; single scope; body ≤100 cols; no PascalCase first word).
 - **ADR pre-read:** before code in any wave, run `scripts/adr-context.sh <paths>` and read matching ADRs. Binding ADRs here: **0044** (identity context, session cookie), **0045**/**0082** (data minimization / email retention), **0003** (schema-first), **0007** (env config, fail-fast), **0009** (deploy/secrets bootstrap), **0050** (a11y WCAG AA).
 - **Hexagonal boundaries (Konsist, enforced):** `domain/` imports nothing from application/infrastructure, no frameworks, no vendor SDKs (`java.security.SecureRandom` + `java.util.Base64` + `java.security.MessageDigest` are allowed in domain); `application/` imports only `domain`; `api.dto` package imports neither `com.bliss.identity.domain` nor `io.ktor`.
