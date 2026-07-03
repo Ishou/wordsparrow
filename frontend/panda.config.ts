@@ -252,6 +252,11 @@ export default defineConfig({
           heroTop: { value: { base: '#CDE9DA', _dark: '#0E1F1A' } },
           heroBottom: { value: { base: '#BBE0CD', _dark: '#14261F' } },
           heroFlat: { value: { base: '#9CCBB1', _dark: '#182720' } },
+          // Loading-placeholder tints — dark reads a touch lighter than its night backdrop so it stays a subtle raised shape.
+          skeletonJade: { value: { base: '#BDD9C8', _dark: '#2C3E34' } },
+          skeletonDeep: { value: { base: '#A9CBB8', _dark: '#33463B' } },
+          // onCard sits on the elevated night card (ws.card), so its dark tint lifts off that surface.
+          skeletonOnCard: { value: { base: '#E4ECE7', _dark: '#2A3A31' } },
         },
         // ── Surfaces ────────────────────────────────────────────────
         bg:             { value: { base: '{colors.neutral.50}', _dark: '{colors.neutral.900}' } },     // page background (papier crème)
