@@ -19,6 +19,7 @@ import { BottomNav } from '@/ui/v2/BottomNav';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { SkipLink } from '@/ui/v2/SkipLink';
 import { PrimaryButton, SecondaryButton } from '@/ui/v2/Buttons';
+import { progressRingBackground } from '@/ui/v2/DailyCalendar';
 import { HomeGreetingArt, bucketForHour, greetingForBucket } from './HomeGreetingArt';
 import { MiniGame } from './MiniGame';
 import { useDelayedFlag } from '@/ui/lib/useDelayedFlag';
@@ -174,10 +175,10 @@ function longDateFr(iso: string): string {
 
 type DayStatus = 'solved' | 'started' | 'none';
 
-// Solved: sakura fill; started: blush fill + sakura ring; today: sakura ring; untouched past: white dot.
-function dayDotStyle(today: boolean, status: DayStatus): CSSProperties {
+// Solved: sakura fill; started: blush disc + conic completion arc; today: sakura ring; untouched past: white dot.
+function dayDotStyle(today: boolean, status: DayStatus, pct = 0): CSSProperties {
   if (status === 'solved') return { background: 'var(--colors-ws-sakura-dark)', color: 'white', border: today ? '2px solid var(--colors-ws-sakura-dark)' : undefined };
-  if (status === 'started') return { background: 'var(--colors-ws-sakura-blush)', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' };
+  if (status === 'started') return { background: progressRingBackground(pct), color: 'var(--colors-ws-jade-ink)' };
   if (today) return { background: 'transparent', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' };
   return { background: 'white', color: 'var(--colors-ws-khaki)' };
 }
@@ -303,7 +304,9 @@ export function HomeScreen({
       const started =
         !solved && summary != null && (lockedCount > 0 || soloEntriesStore.load(summary.id).length > 0);
       const status: DayStatus = solved ? 'solved' : started ? 'started' : 'none';
-      return { ...d, available: summary != null, label: longDateFr(d.iso), status };
+      const total = summary?.totalLetterCells ?? 0;
+      const pct = total > 0 ? Math.round((lockedCount / total) * 100) : 0;
+      return { ...d, available: summary != null, label: longDateFr(d.iso), status, pct };
     });
   }, [week, history, soloEntriesStore]);
 
@@ -445,14 +448,14 @@ export function HomeScreen({
                         <button
                           type="button"
                           className={dayDotBtn}
-                          style={dayDotStyle(d.today, cell.status)}
+                          style={dayDotStyle(d.today, cell.status, cell.pct)}
                           onClick={() => navigate({ to: '/play', search: { date: d.iso } })}
-                          aria-label={`${cell.label}${d.today ? " (aujourd'hui)" : ''}${cell.status === 'solved' ? ' — terminée' : cell.status === 'started' ? ' — commencée' : ''}`}
+                          aria-label={`${cell.label}${d.today ? " (aujourd'hui)" : ''}${cell.status === 'solved' ? ' — terminée' : cell.status === 'started' ? ` — commencée — ${cell.pct} %` : ''}`}
                         >
                           {d.num}
                         </button>
                       ) : (
-                        <span className={dayDot} style={dayDotStyle(d.today, cell?.status ?? 'none')}>
+                        <span className={dayDot} style={dayDotStyle(d.today, cell?.status ?? 'none', cell?.pct ?? 0)}>
                           {d.num}
                         </span>
                       )}

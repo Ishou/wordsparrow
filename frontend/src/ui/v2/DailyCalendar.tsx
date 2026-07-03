@@ -83,13 +83,12 @@ const cellVoid = css({
 });
 
 const cellDone = css({ bg: 'ws.sakuraDark', color: 'white', border: 'none' });
-// Blush disc inside a conic progress ring; `--pct` (0-100) is set inline per cell.
-const cellProgress = css({
-  color: 'ws.jadeInk',
-  border: 'none',
-  background:
-    'radial-gradient(closest-side, token(colors.ws.sakuraBlush) 76%, transparent 77% 100%), conic-gradient(token(colors.ws.sakura) calc(var(--pct) * 1%), rgba(190,73,112,0.22) 0)',
-});
+const cellProgress = css({ color: 'ws.jadeInk', border: 'none' });
+
+// Blush disc inside a conic completion arc — shared with the home "Grilles précédentes" strip.
+export function progressRingBackground(pct: number): string {
+  return `radial-gradient(closest-side, var(--colors-ws-sakura-blush) 76%, transparent 77% 100%), conic-gradient(var(--colors-ws-sakura) calc(${pct} * 1%), rgba(190,73,112,0.22) 0)`;
+}
 const cellNew = css({ bg: 'white', color: 'ws.khaki', border: 'none' });
 // Paywalled days render as one continuous range band per row (date-range-picker style), gold like the lock tile.
 const cellPaywalled = css({
@@ -213,7 +212,7 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
                 search={info.today ? undefined : { date: cell.iso }}
                 // the today ring only marks an untouched day — a progress arc would be unreadable under it
                 className={cx(cellBase, byStatus[info.status], info.today && info.status === 'new' && cellToday)}
-                style={progress ? ({ '--pct': pctOf(info) } as React.CSSProperties) : undefined}
+                style={progress ? { background: progressRingBackground(pctOf(info)) } : undefined}
                 aria-label={`${actionLabel(info.status)} — ${longDateFr(cell.iso)}${progress ? ` — ${pctOf(info)} %` : ''}`}
               >
                 {cell.dayOfMonth}
@@ -224,7 +223,7 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
       ))}
       <p className={legend}>
         <span className={cx(swatch, cellDone)} aria-hidden="true" /> terminée ·{' '}
-        <span className={cx(swatch, cellProgress)} style={{ '--pct': 66 } as React.CSSProperties} aria-hidden="true" /> en cours ·{' '}
+        <span className={swatch} style={{ background: progressRingBackground(66) }} aria-hidden="true" /> en cours ·{' '}
         <span className={cx(swatch, cellNew)} aria-hidden="true" /> à jouer ·{' '}
         <span className={cx(swatch, swatchBand)} aria-hidden="true" /> réservées à l&apos;abonnement
       </p>
