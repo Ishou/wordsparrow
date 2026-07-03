@@ -6,32 +6,34 @@ sampling SFT) cycles seeded by `/sondage` ratings.
 
 Algorithm choice is RAFT, not DPO. Rationale + expectations live in
 `docs/superpowers/plans/2026-05-26-clue-loop-raft.md`. Backbone design
-is ADR-0057 (Modal cloud-GPU lane). This runbook is for **solo
-operation** — one maintainer, one rater, no calibration step.
+is ADR-0057 (Modal cloud-GPU lane) as amended by ADR-0087: **this is
+the sole clue-generation and training lane** — the local MLX lane is
+retired (2026-06-23); never fall back to it. This runbook is for
+**solo operation** — one maintainer, one rater, no calibration step.
 
-## What's where — three independent counters
+## What's where — the counters
 
 The clue-AI stack carries three numbering schemes that are easy to
 confuse. They are not interchangeable.
 
 | Counter         | Lane                              | What it tracks                          | What bumps it                                         |
 |-----------------|-----------------------------------|-----------------------------------------|-------------------------------------------------------|
-| `iter9`, `iter18`, … | **MLX** (Command-R, Apple Silicon) | LoRA adapter iteration in `docs/eval/clue-gen-v0.md` | Any new adapter trained on the MLX lane               |
 | `modal_corpus_v1`   | **Modal**                        | Recipe version of the SFT corpus        | Structural manifest edit (new source, prompt change)  |
 | `round-N`           | **Modal RAFT**                   | Training *cycle* within a corpus version | Each retrain after a fresh winners CSV is appended    |
+| `iter9`, `iter18`, … | ~~MLX~~ **retired (ADR-0087)** | LoRA adapter iteration in `docs/eval/clue-gen-v0.md` — frozen history | Nothing anymore; never start a new iter |
 
 The Modal lane has **two base-model forks** sharing the same RAFT
 cycle counter:
 
 | Fork              | Base model                  | Trainer script                       | source_batch prefix in `survey_items`         |
 |-------------------|-----------------------------|--------------------------------------|-----------------------------------------------|
-| Mistral-Nemo path | Mistral-Nemo-Base-2407 (12B) | `modal_jobs/03b_finetune.py`         | `mistral-nemo-pilot-v1-r<N>-<hash>`           |
-| Command-R fork    | command-r-08-2024-4bit (35B) | `modal_jobs/03b_finetune_command_r.py` (lives on `experiment/command-r-base`) | `c4ai-command-r-pilot-v1-r<N>-<hash>` |
+| **Command-R fork (sole active path)** | command-r-08-2024-4bit (35B) | `modal_jobs/03b_finetune_command_r.py` (lives on `experiment/command-r-base`) | `c4ai-command-r-pilot-v1-r<N>-<hash>` |
+| Mistral-Nemo path (dormant, r1 only) | Mistral-Nemo-Base-2407 (12B) | `modal_jobs/03b_finetune.py`         | `mistral-nemo-pilot-v1-r<N>-<hash>`           |
 
 The Command-R fork has been the active iteration path since
-2026-05-27 (commit `6894271a`). Round numbering continues across the
-fork — at the time of writing, generations through r9 exist on the
-Command-R fork; the Mistral-Nemo path has r1 only.
+2026-05-27 (commit `6894271a`); `raft-round-10` is the adapter behind
+the round-11/12 production generations
+(`modal_jobs/04_generate_command_r.py`).
 
 ## How correctifs flow into training
 

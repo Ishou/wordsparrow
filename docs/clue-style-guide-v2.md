@@ -1,12 +1,12 @@
 # Style Guide — Définitions de mots fléchés français
 
-> **Lane scope:** This style guide drives the Modal + HuggingFace
-> clue-AI lane (ADR-0057, Mistral-Nemo-Base-2407 target). The
-> existing local-MLX / Command-R lane is documented in
-> `.claude/skills/clue-ai/SKILL.md` and `docs/eval/clue-gen-v0.md`;
-> the two lanes share `validate_clue.py`'s structural gates only
-> through the fused `pipeline_v2` validator (this doc's §8.3
-> filters 9 + 10).
+> **Lane scope:** This style guide drives the Modal clue-AI lane —
+> the **sole** lane (ADR-0057 as amended by ADR-0087; Command-R fork
+> in production, Mistral-Nemo dormant). The local MLX lane is retired
+> (2026-06-23); its history lives in `docs/eval/clue-gen-v0.md`. The
+> `pipeline_v2` validator (this doc's §8.3, incl. filters 9 + 10
+> ported from `validate_clue.py`) plus an LLM judge is the quality
+> gate.
 
 ## Préambule
 

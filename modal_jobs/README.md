@@ -1,7 +1,13 @@
-# Modal jobs — cloud-GPU clue-AI training lane
+# Modal jobs — cloud-GPU clue-AI lane (the sole lane)
 
-Implements ADR-0057. **Training only.** Production inference path is
-local + committed CSV per ADR-0013 §8.
+Implements ADR-0057 as amended by ADR-0087: **the sole
+clue-generation and training lane** (the local MLX lane is retired).
+Training via `03b_finetune_command_r.py` (Command-R fork; `03b_finetune.py`
+is the dormant Mistral path) and batch generation via
+`04_generate_command_r.py`. The *product* never runs inference —
+production read path is the committed CSV per ADR-0013 §8. Round
+operations (RAFT loop, campaigns, winners extraction) are in
+`docs/runbooks/clue-loop.md`.
 
 ## One-time setup (per developer)
 

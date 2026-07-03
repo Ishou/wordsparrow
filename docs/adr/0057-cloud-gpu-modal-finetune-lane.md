@@ -1,7 +1,11 @@
 # ADR-0057: Cloud-GPU clue-AI fine-tuning lane via Modal + HuggingFace
 
 ## Status
-Proposed
+Accepted — **amended by [ADR-0087](./0087-retire-mlx-clue-generation-lane.md)**:
+the MLX lane this ADR describes as primary was retired 2026-06-23; the
+Modal Command-R fork is now the **sole** lane and covers generation as
+well as training. Read ADR-0087 before acting on the two-lane framing
+below.
 
 ## Context
 The current clue-AI pipeline trains a LoRA adapter on

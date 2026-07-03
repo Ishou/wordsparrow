@@ -35,6 +35,10 @@ import sys
 import time
 from pathlib import Path
 
+# ADR-0087: MLX lane retired 2026-06-23 — generate on Modal (modal_jobs/04_generate_command_r.py).
+if os.environ.get("FORCE_MLX") != "1":
+    sys.exit("RETIRED (ADR-0087): MLX lane retired; use modal_jobs/04_generate_command_r.py (docs/runbooks/clue-loop.md). Set FORCE_MLX=1 only for archaeology.")
+
 REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO / "scripts" / "eval"))
 

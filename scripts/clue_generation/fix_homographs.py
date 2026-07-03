@@ -79,6 +79,9 @@ def lemma_pos_freq(lexique: Path) -> dict[tuple[str, str], int]:
 
 
 def main() -> None:
+    # ADR-0087: MLX lane retired 2026-06-23 — regenerate on Modal (modal_jobs/04_generate_command_r.py).
+    if os.environ.get("FORCE_MLX") != "1":
+        sys.exit("RETIRED (ADR-0087): MLX lane retired; regenerate on Modal (modal_jobs/04_generate_command_r.py, POS-conditioned — see round-12 logbook entry). Set FORCE_MLX=1 only for archaeology.")
     parser = argparse.ArgumentParser()
     parser.add_argument("--raw", type=Path,
                         default=REPO / "data" / "eval" / "production" / "lemma_clues_raw.csv")

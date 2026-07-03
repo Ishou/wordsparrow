@@ -11,6 +11,12 @@
 #   (5 iters; verifies arch + gradients before the long run)
 set -euo pipefail
 
+# ADR-0087: MLX lane retired 2026-06-23 — training happens on Modal.
+if [[ "${FORCE_MLX:-}" != "1" ]]; then
+  echo "RETIRED (ADR-0087): the local MLX lane is retired. Train on Modal (modal_jobs/03b_finetune_command_r.py; see docs/runbooks/clue-loop.md). Set FORCE_MLX=1 only for archaeology." >&2
+  exit 1
+fi
+
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO"
 

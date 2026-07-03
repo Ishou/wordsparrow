@@ -1,93 +1,87 @@
 ---
 name: clue-ai
-description: Implement, train, evaluate, or fix the fully-local French clue-generation AI pipeline. Stack is mlx-lm (LoRA + DPO on command-r-08-2024-4bit) + sentence-transformers (CamemBERT semantic filter) + grammalecte morphology + DBnary SPARQL/TTL + a Python `validate_clue` gate, fronted by the Kotlin `bliss-worker` (`clue_candidates` Postgres table + CSV export). No hosted-LLM lane — generation is on-device only. Use when the task touches `scripts/clue_generation/`, `scripts/eval/`, `scripts/dbnary/`, `data/{eval,lora,lora_filter,lora_dpo,dbnary,curated}/`, `models/`, `grid/worker/src/main/kotlin/com/bliss/grid/worker/{clues,dbnary}/`, the Python validator/morphology helpers, the eval logbook at `docs/eval/clue-gen-v0.md`, when an iter LoRA/DPO config under `scripts/clue_generation/lora_iter*.yaml` needs revising, or when changing what gets emitted into `grid/api/src/main/resources/words/words-fr.csv`. Encodes ADR-0013 (offline batch worker), ADR-0023 (DBnary CC BY-SA constraints), ADR-0024 (synonym-lemma narrow relaxation), the eval methodology from `docs/eval/clue-gen-v0.md`, and the licence + leak failure modes that have actually bitten this repo.
-paths: ["scripts/clue_generation/**", "scripts/eval/**", "scripts/dbnary/**", "grid/worker/src/main/kotlin/com/bliss/grid/worker/clues/**", "grid/worker/src/main/kotlin/com/bliss/grid/worker/dbnary/**", "grid/application/src/main/kotlin/com/bliss/grid/application/lexicon/**", "grid/domain/src/main/kotlin/com/bliss/grid/domain/lexicon/**", "data/eval/**", "data/lora/**", "data/lora_filter/**", "data/lora_dpo/**", "data/dbnary/**", "data/curated/**", "models/**", "docs/eval/**"]
+description: Implement, train, evaluate, or fix the French clue-generation AI pipeline. THE SOLE GENERATION + TRAINING LANE IS MODAL CLOUD-GPU COMMAND-R (ADR-0057 as amended by ADR-0087) — QLoRA/RAFT training on A100 (`modal_jobs/`), generation via `modal_jobs/04_generate_command_r.py`, gating via `scripts/clue_generation/pipeline_v2/` filters + an LLM judge. The legacy local MLX lane (mlx-lm training/inference, `run_production.sh`, CamemBERT filter as shipping gate) was RETIRED 2026-06-23 — never invoke it or propose it. Still live and lane-independent: grammalecte morphology + lemma→surface inflation, the Python `validate_clue` runtime guards, DBnary handling, and the Kotlin `bliss-worker` (`clue_candidates` Postgres table + CSV export). Use when the task touches `modal_jobs/`, `scripts/clue_generation/`, `scripts/eval/`, `scripts/dbnary/`, `data/{eval,lora,lora_filter,lora_dpo,dbnary,curated}/`, `models/`, `grid/worker/src/main/kotlin/com/bliss/grid/worker/{clues,dbnary}/`, the Python validator/morphology helpers, the eval logbook at `docs/eval/clue-gen-v0.md`, or when changing what gets emitted into `grid/api/src/main/resources/words/words-fr.csv`. Encodes ADR-0013 (offline batch worker), ADR-0023 (DBnary CC BY-SA constraints), ADR-0024 (synonym-lemma narrow relaxation), ADR-0087 (MLX retirement), the eval methodology from `docs/eval/clue-gen-v0.md`, and the licence + leak failure modes that have actually bitten this repo.
+paths: ["modal_jobs/**", "scripts/clue_generation/**", "scripts/eval/**", "scripts/dbnary/**", "grid/worker/src/main/kotlin/com/bliss/grid/worker/clues/**", "grid/worker/src/main/kotlin/com/bliss/grid/worker/dbnary/**", "grid/application/src/main/kotlin/com/bliss/grid/application/lexicon/**", "grid/domain/src/main/kotlin/com/bliss/grid/domain/lexicon/**", "data/eval/**", "data/lora/**", "data/lora_filter/**", "data/lora_dpo/**", "data/dbnary/**", "data/curated/**", "models/**", "docs/eval/**"]
 ---
 
 # Clue-AI playbook
 
-For everything in the offline French clue-generation pipeline: corpus building, LoRA training, DPO refinement, CamemBERT filter scoring, validator gates, DBnary handling, and the bridge into `bliss-worker` that lands clues in `clue_candidates` and exports `words-fr.csv`. The pipeline is local-dev only (no deployed inference): the production read path is the in-tree CSV. Everything below is binding because licence missteps and leak regressions have already cost real iterations.
+> **⚠️ Lane status (ADR-0087, 2026-06-23).** The **Modal Command-R lane
+> is the sole generation + training lane.** The local MLX lane (mlx-lm,
+> `run_production.sh`, `train_lora.sh`, `train_dpo.sh`,
+> `lora_iter*.yaml`, CamemBERT filter as shipping gate) is **RETIRED**
+> — never invoke it, never propose it, never treat its scripts'
+> defaults as production. Its scripts hard-stop unless `FORCE_MLX=1`.
+> Sections below marked **[RETIRED — MLX]** are kept only because
+> still-live rules (stem-leak threshold, pleonasm set, eval
+> methodology) were derived there.
+
+For everything in the offline French clue-generation pipeline: corpus building, Modal QLoRA/RAFT training, generation + gating, validator gates, lemma→surface inflation, DBnary handling, and the bridge that lands clues in the committed `words-fr.csv`. Inference for the product is never deployed: the production read path is the in-tree CSV (ADR-0013 §8). Everything below is binding because licence missteps and leak regressions have already cost real iterations.
 
 ## Anchor documents
 
-- `docs/adr/0013-words-clues-worker.md` — the offline-batch shape, the §5 clue rules (length cap, retry-on-overrun, drop on repeated overrun), the worker subcommand surface, and the §8 amendment that made the committed CSV the production source of truth (no DB read path in prod). The hosted-LLM lane described in §5 has been retired in favour of pure-LoRA generation; only the local Python pipeline produces clues today.
+- `docs/adr/0087-retire-mlx-clue-generation-lane.md` — **read first.** Modal Command-R is the sole lane; what's retired vs still live.
+- `docs/adr/0057-cloud-gpu-modal-finetune-lane.md` — the Modal lane's shape (volumes, secrets, cost bounds, corpus tiers). Its "second lane / training-only" framing is amended by ADR-0087.
+- `docs/runbooks/clue-loop.md` — the operational RAFT loop: campaign lifecycle, `extract_winners.py`, corpus build, Modal train, round tagging.
+- `docs/clue-style-guide-v2.md` — the style rubric the `pipeline_v2` filters and the LLM judge enforce.
+- `docs/adr/0013-words-clues-worker.md` — the offline-batch shape, the §5 clue rules (length cap, retry-on-overrun, drop on repeated overrun), the worker subcommand surface, and the §8 amendment that made the committed CSV the production source of truth (no DB read path in prod). The hosted-LLM lane described in §5 has been retired.
 - `docs/adr/0023-dbnary-lexical-data-source.md` — the CC BY-SA constraints. Read constraint #1 and #2 word-for-word before touching anything that surfaces DBnary content (definition_text, synonyms, gloss).
 - `docs/adr/0024-dbnary-synonym-lemma-as-direct-clue-candidate.md` — the **narrow** relaxation that authorises a capitalized `synonym_lemma` as `clue_text` with `source = 'dbnary-synonym'`. Definitions are still off-limits. Don't extend the relaxation by analogy.
-- `docs/eval/clue-gen-v0.md` — the live eval logbook. Iter1 → iter17+ (and counting) with acceptance numbers, failure-mode taxonomy, variance-at-N analysis, and the ranked next-step list. **This logbook is the source of truth for which LoRA adapter and which filter are currently production.** Read the latest iter row before invoking the pipeline; the `run_production.sh` defaults below drift behind. Append a new iter section here for any change you ship; do not silently overwrite an iter's row.
+- `docs/eval/clue-gen-v0.md` — the live eval logbook. MLX iter1 → iter18 (frozen history), then Modal `round-N` entries (round-11 Opus-as-judge, round-12 POS-conditioned regen, …). **This logbook is the source of truth for which Modal adapter (`raft-round-N`) is currently production and how each round was gated.** Read the latest round entry before generating. Append a new round section for any change you ship; do not silently overwrite a row.
 - `NOTICE.md` — attribution surface. The Hunspell-fr / DBnary entries here are load-bearing for licence compliance; don't drop one without an ADR.
 
-## Pipeline at a glance
+## Pipeline at a glance (Modal Command-R — the only lane)
 
 ```
-DBnary TTL ─► scripts/dbnary/parse_ttl_to_csv.py ─► data/dbnary/dbnary_fr.csv
-                                                          │
-                                                          ▼
-words-fr.csv (lemma list) ────────► sample top-X per length, length-interleaved
-                                                          │
-                                                          ▼
-                          ┌───────── scripts/clue_generation/generate_clues_lora_batched.py
-                          │           (mlx-lm + LoRA adapter, K=5 candidates @ T∈{0.3,0.5,0.7,0.9,1.1})
-                          │                              │
-                          │                              ▼
-                          │           scripts/eval/validate_clue.py  (structural gates)
-                          │                              │
-                          ▼                              ▼
-              scripts/eval/synonym_clues.py     CamemBERT filter (models/filter-camembert-vN; latest in eval logbook)
-              (DBnary synonym → capitalized clue)         │
-                          │                              ▼
-                          ▼                    threshold split (T≈0.65) → lemma_clues_shipped.csv
-                          │                              │
-                          │                              ▼
-                          │                    build_surface_clues.py (per-surface inflation:
-                          │                      MorphologyIndex.inflect on the head token,
-                          │                      POS precedence nom>adj>adv>verbe)
-                          │                              │
-                          │                              ▼
-                          │                    merge_clues_into_wordlist.py
-                          └─────────► CSV(s) merged ────► bliss-worker ingest-clue-candidates
-                                                                          │
-                                                                          ▼
-                                                                  Postgres clue_candidates
-                                                                          │
-                                                                          ▼
-                                              bliss-worker export-words ──► words-fr.csv (committed)
+lemma CSV (curated demand list, e.g. data/curated/clue_gap_top3000_lemmas.csv)
+        │
+        ▼
+modal_jobs/04_generate_command_r.py   (Modal A100, adapter raft-round-N —
+        │                              latest promoted round in the eval logbook)
+        │  candidates.jsonl on volume mots-fleches-generations
+        ▼
+scripts/clue_generation/pipeline_v2/  (structural + style-guide-v2 gates,
+        │                              incl. stem-leak + pleonasm ported from validate_clue)
+        ▼
+LLM judge (sense-first mots-fléchés rubric — THE quality gate since round-11;
+        │  the CamemBERT filter is retired as a gate, cosine ≠ sense-correctness)
+        ▼
+scripts/clue_generation/build_surface_clues.py   (lemma→surface inflation:
+        │             MorphologyIndex.inflect on the head token,
+        │             POS precedence nom>adj>adv>verbe)
+        ▼
+scripts/clue_generation/merge_clues_into_wordlist.py   (ADDITIVE merge —
+        │             fill blank placeholders only, never overwrite shipped clues)
+        ▼
+grid/api/src/main/resources/words/words-fr.csv (committed; prod read path)
+        ▲
+        └── runtime guards: scripts/eval/test_runtime_csv_pleonasms.py + pytest scripts/eval/
 ```
 
-The two ingestion lanes (LoRA-generated + dbnary-synonym) live side-by-side in `clue_candidates` with distinct `source` values, and `export-words`'s `findTopBySourcePriority` picks per lemma. Don't collapse them — the priority order is how we keep dbnary-synonym as a free-win without it pre-empting better LLM clues.
+The training loop (RAFT) runs alongside: `/sondage` ratings → close campaign → `extract_winners.py` → `build_modal_corpus` → `03a_upload_dataset.py` → `03b_finetune_command_r.py` → tag `raft-round-N`. Full procedure in `docs/runbooks/clue-loop.md`.
 
-## Two-lane reality (post-ADR-0057)
+The dbnary-synonym lane (`bliss-worker derive-synonym-clues`) and the worker ingestion path (`ingest-clue-candidates` → `export-words`) still exist; when both LLM and synonym candidates target one lemma in `clue_candidates`, `findTopBySourcePriority` picks per lemma via distinct `source` values. Don't collapse the sources — the priority order is how we keep dbnary-synonym as a free-win without it pre-empting better LLM clues. Note that rounds 11–12 shipped via the direct additive CSV merge above, not through the worker.
 
-The pipeline above is the **MLX lane** (Apple Silicon, Command-R-4bit,
-mlx-lm). A second **Modal lane** lives at `modal_jobs/` +
-`scripts/clue_generation/modal/` + `scripts/clue_generation/pipeline_v2/`,
-on Modal A100s (ADR-0057). The Modal lane has **two base-model forks
-sharing the same RAFT cycle counter**; the Command-R fork is the
-active production path as of round-9 (2026-05-29):
+## Lane reality (post-ADR-0087): Modal Command-R only
 
-| Lane  | Base model                          | Hardware           | Trainer script                                                                                     | source_batch prefix in `survey_items`           |
-|-------|-------------------------------------|--------------------|----------------------------------------------------------------------------------------------------|-------------------------------------------------|
-| MLX             | Command-R-08-2024-4bit (32B) | Apple Silicon      | `mlx_lm.lora` via `scripts/clue_generation/train_lora.sh`                                          | `command-r-lora-vN-iterMM` (different cycle counter) |
-| Modal — Mistral | Mistral-Nemo-Base-2407 (12B) | Modal A100-40GB    | `modal_jobs/03b_finetune.py`                                                                       | `mistral-nemo-pilot-v1-r<N>-<hash>`             |
-| Modal — Command-R | command-r-08-2024-4bit (35B) | Modal A100-40GB | `modal_jobs/03b_finetune_command_r.py` (lives on `experiment/command-r-base`)                      | `c4ai-command-r-pilot-v1-r<N>-<hash>`           |
+The lane lives at `modal_jobs/` + `scripts/clue_generation/modal/` +
+`scripts/clue_generation/pipeline_v2/`, on Modal A100s (ADR-0057).
+There is **no lane choice to make** — Modal Command-R is it:
 
-`findTopBySourcePriority` in the worker picks per lemma — no
-collision. **Three independent counters** — do not conflate them:
-MLX `iterN` (adapter version in `docs/eval/clue-gen-v0.md`), Modal
-`corpus_vN` (recipe version of `data/lora/modal_corpus_v1/manifest.toml`),
-Modal RAFT `round-N` (training cycle within a corpus version).
+| Lane  | Status | Base model | Hardware | Trainer / generator | source_batch prefix in `survey_items` |
+|-------|--------|------------|----------|---------------------|----------------------------------------|
+| **Modal — Command-R** | **SOLE ACTIVE LANE** | command-r-08-2024-4bit (35B) | Modal A100-40GB | `modal_jobs/03b_finetune_command_r.py` (train, lives on `experiment/command-r-base`) + `modal_jobs/04_generate_command_r.py` (generate, on main) | `c4ai-command-r-pilot-v1-r<N>-<hash>` |
+| Modal — Mistral | dormant (round-1 only; A/B reserve) | Mistral-Nemo-Base-2407 (12B) | Modal A100-40GB | `modal_jobs/03b_finetune.py` | `mistral-nemo-pilot-v1-r<N>-<hash>` |
+| MLX | **RETIRED 2026-06-23 (ADR-0087)** | Command-R-08-2024-4bit (32B) | Apple Silicon | ~~`mlx_lm.lora` via `train_lora.sh`~~ — hard-stopped | `command-r-lora-vN-iterMM` (historical) |
 
-### When to use which lane
-
-- **MLX lane:** quick iteration on a known adapter ladder (iter17+),
-  the production-shipping path today, regression-checked nightly
-  by `test_runtime_csv_pleonasms.py`.
-- **Modal — Command-R:** the active RAFT-loop training path. Forked
-  from the Mistral palier in commit `6894271a` after the Command-R
-  fork hit 1.36 eval loss vs Mistral-Nemo's 1.71 on the same gold
-  corpus. Round-9 generations (r1 → r9 in `survey_items.source_batch`)
-  preceded round-10's correctif-aware retrain.
-- **Modal — Mistral-Nemo:** dormant comparison lane (round-1 only);
-  kept for A/B against the Command-R fork if needed.
+**Counters — do not conflate:** MLX `iterN` is frozen history in
+`docs/eval/clue-gen-v0.md`; the live counters are Modal `corpus_vN`
+(recipe version of `data/lora/modal_corpus_v1/manifest.toml`) and
+Modal RAFT `round-N` (training cycle within a corpus version). The
+Command-R fork was cut from the Mistral palier in commit `6894271a`
+(1.36 vs 1.71 eval loss on the same gold corpus) and has been the
+active path since round-9 (2026-05-29); round-10 was the first
+correctif-aware retrain, and `raft-round-10` generated rounds 11–12.
 
 ### Modal-lane runbook (cost-aware)
 
@@ -98,10 +92,12 @@ Modal RAFT `round-N` (training cycle within a corpus version).
 | 2 | `modal run modal_jobs/02_download_mistral.py`                                    | $0.05  | HF token + licence + volume |
 | C | `python3 -m scripts.clue_generation.modal.build_modal_corpus`                    | $0     | Fused-corpus JSONL |
 | 3a | `modal run modal_jobs/03a_upload_dataset.py`                                    | $0.01  | Dataset volume |
-| 3b | `modal run modal_jobs/03b_finetune.py`                                          | $1.50  | Adapter on volume |
-| 7 ⚠ | `python3 -m scripts.clue_generation.modal.export_adapter_to_csv …` | n/a | **Not yet runnable** — `_generate_clues_on_modal` is a `NotImplementedError` stub; requires the palier 4 Modal inference app (separate follow-up ADR). |
-| 8 | `bliss-worker ingest-clue-candidates --source mistral-nemo-pilot-vN`             | $0     | Postgres `clue_candidates` |
-| 9 | `bliss-worker export-words`                                                      | $0     | Updates committed `words-fr.csv` |
+| 3b | `modal run modal_jobs/03b_finetune_command_r.py` (Command-R; `03b_finetune.py` = dormant Mistral fork) | $1.50 | Adapter on volume |
+| 4 | `modal run modal_jobs/04_generate_command_r.py --run-tag raft-round-<N> …`       | ~$1–3  | candidates.jsonl on `mots-fleches-generations` (pipeline_v2-gated) |
+| 5 | LLM-judge pass over candidates (sense-first rubric; see round-11/12 logbook entries) | varies | GOOD/BAD/BORDERLINE labels |
+| 6 | `build_surface_clues.py` → `merge_clues_into_wordlist.py` (**additive**)         | $0     | Updated committed `words-fr.csv` + runtime guards |
+| 8* | `bliss-worker ingest-clue-candidates --source c4ai-command-r-pilot-vN`          | $0     | Postgres `clue_candidates` (worker path — rounds 11–12 used the direct merge in 6 instead) |
+| 9* | `bliss-worker export-words`                                                     | $0     | Committed `words-fr.csv` via worker path |
 
 ### Modal-lane corpus
 
@@ -186,13 +182,13 @@ needle?", check whether the round predates this fix.
 
 | Concern | Choice | Notes |
 |---|---|---|
-| Base LLM (LoRA target) | `mlx-community/c4ai-command-r-08-2024-4bit` | 32B, ~17 GB on disk, runs natively on Apple Silicon. Pinned; bumping is an ADR-class change. **Local inference only — there is no hosted-LLM lane.** |
-| Fine-tuning | mlx-lm `lora` | LoRA + DPO. Configs at `scripts/clue_generation/lora_iter*.yaml` (iter9 through iter18 at last count; new iters land alongside, never overwrite). |
-| Filter / ranker | `sentence-transformers` w/ CamemBERT base | Triplet contrastive on (lemma, y-clue, n-clue). **Current production filter is whichever the latest eval-logbook iter row promoted** — `ls models/filter-camembert-v*` for the inventory. |
-| Morphology | grammalecte lexique 7.7 | `lexique-grammalecte-fr-v7.7.txt` (MPL-2.0). Drives `validate_clue` head/POS lookup. |
-| Lexical data (synonyms, defs) | DBnary (Wiktionary RDF) | CC BY-SA. **definition_text** never leaves the offline pipeline. **synonym_lemma** allowed as direct clue per ADR-0024. |
-| Validator | `scripts/eval/validate_clue.py` | Pure Python, no model. Output flags listed below — used as a gate before scoring. |
-| Eval rating | y / b / n in CSV `rating` column | y=1.0, b=0.5, n=0.0. Self-rating runs ≈10pp stricter than user-rating; don't compare across calibrations. |
+| Base LLM (QLoRA target) | `c4ai-command-r-08-2024-bnb-4bit` (unsloth pre-quantized) on Modal A100, volume `mots-fleches-models` | 35B. Pinned; bumping is an ADR-class change. Training + generation both on Modal (ADR-0057/0087). **Product inference is never deployed — prod reads the committed CSV.** |
+| Fine-tuning | Modal QLoRA + RAFT | `modal_jobs/03b_finetune_command_r.py`; rounds tagged `raft-round-N` on volume `mots-fleches-adapters`. ~~mlx-lm `lora` configs (`lora_iter*.yaml`)~~ **[RETIRED — MLX]**. |
+| Quality gate | `pipeline_v2` filters + LLM judge | Structural/style gates in `scripts/clue_generation/pipeline_v2/filters.py`, then a sense-first LLM judge (round-11: Opus). ~~CamemBERT bi-encoder filter (`models/filter-camembert-v*`)~~ **[RETIRED as gate — round-11: AUROC 0.73, cosine ≠ sense-correctness]**. |
+| Morphology | grammalecte lexique 7.7 | `lexique-grammalecte-fr-v7.7.txt` (MPL-2.0). Drives `validate_clue` head/POS lookup + surface inflation. **Live.** |
+| Lexical data (synonyms, defs) | DBnary (Wiktionary RDF) | CC BY-SA. **definition_text** never leaves the offline pipeline. **synonym_lemma** allowed as direct clue per ADR-0024. **Live.** |
+| Validator | `scripts/eval/validate_clue.py` | Pure Python, no model. **Live as runtime guard** (`test_runtime_csv_pleonasms.py`, `pytest scripts/eval/`). Fold-time trusts `pipeline_v2` flags instead — the MLX-era validator false-flags valid Command-R clue shapes (round-12 logbook entry). |
+| Eval rating | y / b / n in CSV `rating` column; GOOD/BAD/SKIP in `/sondage` | y=1.0, b=0.5, n=0.0. Self-rating runs ≈10pp stricter than user-rating; don't compare across calibrations. |
 | Worker side | Kotlin / Ktor stack — see the `jvm-backend` skill for layer rules | Worker subcommands: `ingest-clue-candidates`, `derive-synonym-clues`, `ingest-dbnary`, `export-words`. |
 
 ## Data layout (binding)
@@ -209,9 +205,9 @@ data/
 ├── lora_filter/                 # filter contrastive corpus.
 └── lora_dpo/                    # mined preference pairs (chosen, rejected) from rated iters.
 models/
-├── lora-clue-v1..vN/            # SFT + DPO adapters. v3 = iter10 SFT base; later v's are DPO on top of v3. Cross-reference `docs/eval/clue-gen-v0.md` to map version → iter; **production stitches the latest promoted adapter with a prior-version fallback** (verify before dispatching — defaults in `run_production.sh` drift behind).
-├── filter-camembert-v1..vN/     # ranker checkpoints. Current production = latest promoted in the eval logbook.
-└── filter-crossencoder-v1/      # alt cross-encoder explored; not the production path.
+├── lora-clue-v1..vN/            # [RETIRED — MLX] SFT + DPO adapters, iter-era history. Live adapters are on the Modal volume `mots-fleches-adapters` (raft-round-N).
+├── filter-camembert-v1..vN/     # [RETIRED as gate] ranker checkpoints; round-11 showed cosine ≠ sense-correctness. Kept for archaeology.
+└── filter-crossencoder-v1/      # alt cross-encoder explored; never the production path.
 ```
 
 Anything under `data/` and `models/` is gitignored at scale (large weights, regeneratable corpora). The exception is the rated CSVs under `data/eval/`, which encode human judgement and **must be checked in** when they back a docs/eval iter row.
@@ -226,7 +222,12 @@ Three constraints are load-bearing. Internalise these before writing any code th
 
 If you find yourself wanting to surface DBnary glosses to end users, that's an ADR. Don't sneak it through.
 
-## LoRA training — corpus + config
+## [RETIRED — MLX] LoRA training — corpus + config
+
+> **Do not run anything in this section** (ADR-0087). Training happens
+> on Modal via `docs/runbooks/clue-loop.md`. Kept because the
+> hyperparameter lessons (best-val-loss promotion, SFT vs DPO learning
+> rates) inform the Modal trainer too.
 
 The SFT corpus is built by `scripts/clue_generation/build_corpus.py`. Inputs:
 
@@ -252,7 +253,14 @@ When you ship a new adapter:
 2. Add the iter row to `docs/eval/clue-gen-v0.md` with acceptance %, train/val loss curve, and the qualitative diff (≥5pp moves at N=80 only).
 3. Re-train the filter only when the failure-mode mix changed materially — filter v5 is from iter11's hand-paired (y, n).
 
-## Filter (CamemBERT) — what it does + thresholds
+## [RETIRED as gate] Filter (CamemBERT) — what it did + thresholds
+
+> **Not a shipping gate anymore.** Round-11 measured the bi-encoder at
+> AUROC 0.73 vs an LLM-judged held-out set, and no bi/cross-encoder
+> retrain matched LLM judgment at the available label budget — **the
+> LLM judge is the gate** (labels at `data/eval/round11_opus_labels.csv`
+> if you want to train a real judge). Don't resurrect the filter as a
+> shipping decision without a fresh eval that beats that finding.
 
 The filter (`models/filter-camembert-vN`) is a sentence-transformers bi-encoder over CamemBERT base, contrastively trained on:
 - DBnary `(lemma, sense)` positive pairs (in-batch random negatives).
@@ -296,26 +304,15 @@ The `decision rule` table in `docs/eval/clue-gen-v0.md`:
 
 That table is the gate for shipping a new adapter into the production pipeline; do not promote an adapter that hasn't cleared the 5-sample variance check at the appropriate decision-rule threshold.
 
-## Production pipeline — `run_production.sh`
+## [RETIRED — MLX] `run_production.sh`
 
-Three phases. Resume-safe by design (each phase rewrites its output file in place):
-
-```
-# Replace vN with the LoRA adapter + filter version named in the latest
-# `docs/eval/clue-gen-v0.md` iter row that promoted a production change.
-# The script's own GEN_ADAPTER / FILTER defaults are stale — always override.
-X=5000 THRESHOLD=0.65 \
-GEN_MODEL=mlx-community/c4ai-command-r-08-2024-4bit \
-GEN_ADAPTER=models/lora-clue-vN \
-FILTER=models/filter-camembert-vN \
-  ./scripts/clue_generation/run_production.sh
-```
-
-1. **Sample top-X per length, length-interleaved.** Reads `grid/api/src/main/resources/words/words-fr.csv`, keeps lemmas where `lemma == word` and alphabetic, in length 4–11. Round-robin interleaves so a kill mid-run leaves balanced length coverage. Writes `data/eval/production/sample.jsonl`.
-2. **Batched LoRA generation.** `generate_clues_lora_batched.py` runs `mlx_lm.batch_generate` at `batch=16` (M4 Max 64 GB fits comfortably with command-r 4-bit; bump cautiously). The batched path skips per-prompt validate-and-retry — validator runs once and non-`ok` rows are kept with the flag for the filter to drop.
-3. **Filter score + threshold split.** Encodes lemma and clue with the filter, writes `filter_score`, then splits into `lemma_clues_shipped.csv` (score ≥ T **and** validator `ok`) and `lemma_clues_dropped.csv`.
-
-The `shipped` CSV is what feeds `bliss-worker ingest-clue-candidates --source <model_version>`. Tag the source consistently (e.g. `command-r-lora-vN-iterMM`) so downstream `findTopBySourcePriority` can prefer or demote it relative to other sources.
+**Do not run it** (it now hard-stops without `FORCE_MLX=1`; ADR-0087).
+This was the MLX-lane end-to-end script: sample top-X lemmas → batched
+mlx-lm generation → CamemBERT threshold split into
+`lemma_clues_shipped.csv` / `lemma_clues_dropped.csv`. Its output files
+under `data/eval/production/` are the provenance of the pre-round-11
+clue base — that's the only reason to ever read it. The live
+production path is the Modal diagram at the top of this skill.
 
 ## Lemma → surface inflation (the lemma-to-grid bridge)
 
@@ -386,6 +383,11 @@ Cross-layer rules in this corner are the same as for the rest of the JVM backend
 
 ## Common failure modes (and where they live)
 
+Rows mentioning LoRA/DPO training runs, the filter, or
+`run_production.sh` are MLX-era — kept because the training lessons
+transfer to the Modal trainer; do not act on them by running MLX
+scripts (ADR-0087).
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | Filter score collapses across the board after retraining | Triplet corpus regenerated with held-out lemmas leaking into train | Re-check `held_out` set against `eval_human.jsonl` in `train_filter_v5.py`. |
@@ -409,16 +411,17 @@ Cross-layer rules in this corner are the same as for the rest of the JVM backend
 - **Don't** emit a lower-case DBnary `synonym_lemma` as `clue_text`. ADR-0024 only authorises the **capitalized** form, and only when paired with `source = 'dbnary-synonym'`.
 - **Don't** extend the ADR-0024 relaxation by analogy (e.g. "if synonyms are fine, glosses must be too"). They aren't. New surfaces require a new ADR + legal review.
 - **Don't** commit large weights or full corpus dumps under `data/` or `models/` — those paths are gitignored at scale; only the rated eval CSVs that back a logbook iter row belong in git.
-- **Don't** propose a hosted-LLM lane (Anthropic, OpenAI, etc.) as a "quick win" without an ADR. The pipeline is fully local by deliberate decision; reintroducing a hosted call means standing up auth, cost monitoring, retries, prompt caching, and offline-architecture review per ADR-0013.
-- **Don't** bump the `command-r-08-2024-4bit` base model in a LoRA config without re-training all downstream adapters and re-running the eval. Adapters are model-specific.
+- **Don't** invoke the MLX lane — no `mlx_lm.*`, no `run_production.sh`, no `train_lora.sh`/`train_dpo.sh`, no new `lora_iter*.yaml`. ADR-0087. Generation and training go through Modal (`modal_jobs/`).
+- **Don't** add a *deployed/runtime* hosted-LLM call without an ADR. Batch usage is established (Modal generation per ADR-0057, LLM-as-judge per round-11), but the product itself never calls an LLM — the prod read path is the committed CSV (ADR-0013 §8).
+- **Don't** bump the `command-r-08-2024` base model without an ADR + re-training all downstream adapters and re-running the eval. Adapters are model-specific.
 - **Don't** swap SFT and DPO learning rates. SFT ≈ 1e-5, DPO ≈ 1e-6. Wrong LR silently destroys the model.
 - **Don't** promote the last-iteration adapter. Always promote best-val-loss — train loss keeps falling on small corpora.
-- **Don't** drop the validator gate before scoring. The filter is trained on validator-clean data and behaves badly on `head-not-lemma` / `pos-mismatch` rows it never saw.
+- **Don't** re-gate Command-R output with the MLX-era `validate_clue` at fold time — it false-flags valid Command-R clue shapes (ppas / relative-clause / noun-phrase heads); trust the `pipeline_v2` flags instead (round-12 logbook entry). `validate_clue` stays authoritative only for the runtime pleonasm guard.
 - **Don't** lower the stem-leak threshold from 5 chars without rerunning the 5-sample variance check.
-- **Don't** silently overwrite an iter row in `docs/eval/clue-gen-v0.md`. Append the new iter; the logbook is the project memory for what's been tried.
+- **Don't** silently overwrite an iter/round row in `docs/eval/clue-gen-v0.md`. Append the new round; the logbook is the project memory for what's been tried.
 - **Don't** compare self-rated and user-rated acceptance numbers directly — there's a ~10pp calibration gap.
-- **Don't** mix the LoRA lane and the dbnary-synonym lane into a single `clue_candidates.source` value. The two-source design is what `findTopBySourcePriority` relies on.
-- **Don't** add a deployed inference service. The pipeline is local-dev only by ADR-0013 §8; the prod read path is the committed CSV.
+- **Don't** mix the LLM lane and the dbnary-synonym lane into a single `clue_candidates.source` value. The two-source design is what `findTopBySourcePriority` relies on.
+- **Don't** replace shipped clues with a full-rebuild merge. Merge **additively** (fill blank placeholders only) — the round-12 full-rebuild attempt would have dropped 5.3k shipped clues and erased prior curated fixes.
 - **Don't** generate clues at surface form. The pipeline assumes lemma-form generation + head-token inflation at build time; surface-form generation breaks the dedup that lets one lemma clue cover all of its inflected surfaces.
 - **Don't** widen `_find_pleonasm`'s pattern set on intuition. Add a pattern only when there's a concrete failed clue to back it; broad heuristics false-positive on legitimate two-phrase clues.
 - **Don't** treat `inv` (invariable) or `epi` (epicene) as hard tags in `MorphologyIndex.inflect`. They are wildcards on either side of the matcher. PR #193 fixed this; don't regress it.

@@ -245,6 +245,17 @@ Full rationale is in MANIFESTO.md.
   TSV/CSV from a French linguistic resource you haven't classified,
   or carrying a "(licence TBD)" note into a spec. Stop and consult
   the ADR matrix.
+- **Clue generation runs on Modal Command-R only — the local MLX lane
+  is retired** ([ADR-0087](./docs/adr/0087-retire-mlx-clue-generation-lane.md),
+  2026-06-23). Generation is `modal_jobs/04_generate_command_r.py` +
+  `pipeline_v2` gates + LLM judge; training is the RAFT loop in
+  `docs/runbooks/clue-loop.md`. Never invoke `mlx_lm`,
+  `run_production.sh`, `train_lora.sh`/`train_dpo.sh`, or a new
+  `lora_iter*.yaml` — those scripts hard-stop by design. **Tell**
+  you're about to make this mistake: you're proposing "the local MLX
+  pipeline" for clue work, importing `mlx_lm`, or reading MLX-era
+  defaults out of an old script as if they were production. Stop and
+  read ADR-0087 + the `clue-ai` skill.
 - **Auth/authz changes need a threat model.** ADR or PR body must
   include one before the PR is reviewed.
 - **Configure-in-cluster, not push-from-CI.** When the work is
