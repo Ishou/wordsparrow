@@ -46,9 +46,47 @@ class GridValidator {
 
         violations += blackTriples(grid)
         violations += closedClamps(grid)
+        violations += shortDeadEnds(grid)
 
         return violations.distinct()
     }
+
+    /**
+     * Words shorter than the dead-end minimum whose last cell is sealed
+     * ahead by a clue cell and uncrossed on the perpendicular axis (clue
+     * cell or border on both sides). ADR-0039 amendment.
+     */
+    private fun shortDeadEnds(grid: Grid): List<GridViolation.ShortDeadEnd> {
+        val violations = mutableListOf<GridViolation.ShortDeadEnd>()
+        for (placement in grid.placements) {
+            val length = placement.word.text.length
+            if (length >= DEAD_END_MIN_LEN) continue
+            val tip = placement.letterPositions().lastOrNull()?.first ?: continue
+            val r = tip.row.value
+            val c = tip.column.value
+            val walled =
+                when (placement.direction.axis) {
+                    WordAxis.HORIZONTAL ->
+                        c + 1 < grid.width &&
+                            isClue(grid, r, c + 1) &&
+                            isWall(grid, r - 1, c) &&
+                            isWall(grid, r + 1, c)
+                    WordAxis.VERTICAL ->
+                        r + 1 < grid.height &&
+                            isClue(grid, r + 1, c) &&
+                            isWall(grid, r, c - 1) &&
+                            isWall(grid, r, c + 1)
+                }
+            if (walled) violations += GridViolation.ShortDeadEnd(tip, placement.direction.axis, length)
+        }
+        return violations
+    }
+
+    private fun isWall(
+        grid: Grid,
+        r: Int,
+        c: Int,
+    ): Boolean = r < 0 || c < 0 || r >= grid.height || c >= grid.width || isClue(grid, r, c)
 
     /**
      * Detect every closed clamp on the grid. A clamp traps a length-2
@@ -160,6 +198,9 @@ class GridValidator {
     }
 
     companion object {
+        /** Minimum length for a word ending in a dead end (ADR-0039 amendment) — its uncrossed tip letter is unconfirmable, unfair on a short word. */
+        const val DEAD_END_MIN_LEN: Int = 5
+
         /**
          * Returns letter cells that belong to NO word — unfillable, since they
          * have no clue. Every letter cell must be in at least one word. A cell in

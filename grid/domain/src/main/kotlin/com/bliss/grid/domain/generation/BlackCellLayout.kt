@@ -1,5 +1,6 @@
 package com.bliss.grid.domain.generation
 
+import com.bliss.grid.domain.validation.GridValidator
 import kotlin.math.max
 import kotlin.random.Random
 
@@ -202,6 +203,63 @@ internal object BlackCellLayout {
     }
 
     /**
+     * True iff `(r, c)` is the last cell of a run shorter than [deadEndMinLen]
+     * that ends in a dead end: its forward neighbour on that axis is an
+     * in-bounds BLACK cell (border endings are exempt) and its perpendicular
+     * run has length 1 (uncrossed tip).
+     */
+    fun isShortDeadEndTip(
+        cells: CellArray,
+        r: Int,
+        c: Int,
+        deadEndMinLen: Int = GridValidator.DEAD_END_MIN_LEN,
+    ): Boolean {
+        if (cells.isBlack(r, c)) return false
+        if (c + 1 < cells.width &&
+            cells.isBlack(r, c + 1) &&
+            runLengthHorizontal(cells, r, c) < deadEndMinLen &&
+            runLengthVertical(cells, r, c) == 1
+        ) {
+            return true
+        }
+        if (r + 1 < cells.height &&
+            cells.isBlack(r + 1, c) &&
+            runLengthVertical(cells, r, c) < deadEndMinLen &&
+            runLengthHorizontal(cells, r, c) == 1
+        ) {
+            return true
+        }
+        return false
+    }
+
+    /**
+     * True iff BLACK at `(r, c)` (already tentatively placed) walls or
+     * shortens some run into a short dead end. Candidate tips: the four
+     * neighbours plus the far ends of the split right/down runs.
+     */
+    private fun createsShortDeadEnd(
+        cells: CellArray,
+        r: Int,
+        c: Int,
+    ): Boolean {
+        if (c - 1 >= 0 && isShortDeadEndTip(cells, r, c - 1)) return true
+        if (r - 1 >= 0 && isShortDeadEndTip(cells, r - 1, c)) return true
+        if (c + 1 < cells.width && !cells.isBlack(r, c + 1)) {
+            if (isShortDeadEndTip(cells, r, c + 1)) return true
+            var e = c + 1
+            while (e + 1 < cells.width && !cells.isBlack(r, e + 1)) e++
+            if (isShortDeadEndTip(cells, r, e)) return true
+        }
+        if (r + 1 < cells.height && !cells.isBlack(r + 1, c)) {
+            if (isShortDeadEndTip(cells, r + 1, c)) return true
+            var e = r + 1
+            while (e + 1 < cells.height && !cells.isBlack(e + 1, c)) e++
+            if (isShortDeadEndTip(cells, e, c)) return true
+        }
+        return false
+    }
+
+    /**
      * Predicate gating every black-cell placement. Spec §4.3:
      *  - **Check 1**: no adjacent white cell is orphaned — each stays in ≥ 1
      *    word (≥ minLen on at least one axis). Single-axis (sandwiched) cells
@@ -212,6 +270,9 @@ internal object BlackCellLayout {
      *  - **Check 4**: no 3-in-a-row block of black cells (§4.1 C2).
      *  - **Check 5**: no closed clamp formed (§4.1 C7) — letter cells
      *    enclosed by aligned black pairs.
+     *  - **Check 6**: the white cells stay one 4-connected region.
+     *  - **Check 7**: no run tip becomes a dead end shorter than
+     *    [GridValidator.DEAD_END_MIN_LEN] (ADR-0039 amendment).
      *
      * Tentatively mutates [cells] and reverts before returning.
      */
@@ -261,6 +322,8 @@ internal object BlackCellLayout {
             // B.B/B.B horizontally) crowd the clue text and never appear
             // in printed mots fléchés.
             if (formsClamp(cells, r, c)) return false
+            // Check 7: no run tip may become a dead end shorter than GridValidator.DEAD_END_MIN_LEN (ADR-0039 amendment).
+            if (createsShortDeadEnd(cells, r, c)) return false
             // Check 6: the white cells must stay a single connected region — this
             // black must not seal off an isolated pocket (a "closed block").
             if (disconnectsWhite(cells)) return false

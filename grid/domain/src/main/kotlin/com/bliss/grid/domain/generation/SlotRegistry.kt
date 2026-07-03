@@ -7,6 +7,7 @@ import com.bliss.grid.domain.model.Row
 import com.bliss.grid.domain.model.Word
 import com.bliss.grid.domain.model.WordClue
 import com.bliss.grid.domain.model.WordPlacement
+import com.bliss.grid.domain.validation.GridValidator
 
 /**
  * One slot in the bitmask CSP — a maximal horizontal or vertical white
@@ -213,6 +214,13 @@ internal object SlotRegistry {
                     slots[vSid].crossings[vPos] += (hSid to hPos)
                 }
             }
+        }
+
+        // Invariant (ADR-0039 amendment): no slot shorter than DEAD_END_MIN_LEN may end in a dead end.
+        for (slot in slots) {
+            if (slot.length >= GridValidator.DEAD_END_MIN_LEN) continue
+            val tip = slot.cells.last()
+            if (BlackCellLayout.isShortDeadEndTip(cells, tip.row.value, tip.column.value)) return null
         }
 
         // Invariant (spec §12.1 V1): every BLACK cell must be the clue

@@ -77,4 +77,16 @@ sealed interface GridViolation {
         val topLeft: Position,
         val axis: WordAxis,
     ) : GridViolation
+
+    /**
+     * A word shorter than the dead-end minimum whose last cell is a dead
+     * end — sealed ahead by a clue cell and uncrossed on the other axis
+     * (clue cell or border on both sides). The tip letter has no crossing
+     * to confirm it, which is unfair on a short word (ADR-0039 amendment).
+     */
+    data class ShortDeadEnd(
+        val tip: Position,
+        val axis: WordAxis,
+        val length: Int,
+    ) : GridViolation
 }

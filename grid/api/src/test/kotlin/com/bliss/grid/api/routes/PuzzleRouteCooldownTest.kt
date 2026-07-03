@@ -42,7 +42,8 @@ class PuzzleRouteCooldownTest {
             val gen =
                 GeneratePuzzleUseCase(
                     wordRepository = SmallWordRepository,
-                    defaults = defaultPuzzleConstraints(),
+                    // Small grid: this suite tests cooldown plumbing, not generation; the synthetic corpus is unreliable at full 28x20.
+                    defaults = defaultPuzzleConstraints().copy(width = 12, height = 10),
                 )
             val puzzleRepo = InMemoryPuzzleRepository()
             val hintUsageRepo = InMemoryHintUsageRepository()
