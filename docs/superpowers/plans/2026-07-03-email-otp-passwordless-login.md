@@ -343,9 +343,7 @@ fun interface TokenHasher { fun hash(raw: String): String }                     
 - [ ] **Step 1:** `V9` (expand-and-contract — widen the CHECK before any code writes `'email'`):
 
 ```sql
--- Add 'email' as a first-class login provider (ADR-0091). Expand step: widen the CHECK
--- before VerifyEmailOtpUseCase writes ('email', <address>) links. Only identity_user_providers
--- is touched; identity_auth_attempts stays OIDC-only.
+-- Expand step (ADR-0091): widen the CHECK before 'email' links are written; identity_auth_attempts stays OIDC-only.
 ALTER TABLE identity_user_providers DROP CONSTRAINT identity_user_providers_provider_check;
 ALTER TABLE identity_user_providers ADD CONSTRAINT identity_user_providers_provider_check
     CHECK (provider IN ('google', 'apple', 'email'));
@@ -355,8 +353,7 @@ ALTER TABLE identity_user_providers ADD CONSTRAINT identity_user_providers_provi
 - [ ] **Step 2:** `V10` (model on V4 auth_attempts — expiring token store):
 
 ```sql
--- One-time email OTP challenges (ADR-0091). code_hash + binding_hash are SHA-256 hex (never plaintext);
--- attempts capped in domain (EmailOtpChallenge.MAX_ATTEMPTS); expires_at drives TTL cleanup.
+-- OTP challenges (ADR-0091): code_hash/binding_hash are SHA-256 hex, never plaintext; TTL cleanup via expires_at.
 CREATE TABLE identity_email_otp_challenges (
     challenge_id  UUID        PRIMARY KEY,
     email         TEXT        NOT NULL,
@@ -466,9 +463,10 @@ CREATE INDEX idx_identity_email_otp_challenges_expires_at ON identity_email_otp_
 
 ## Task 5.1: Chart env + deploy the dark backend
 
-**Files:** Modify `identity/api/deploy/chart/values.yaml` (+ `templates/deployment.yaml` env list if needed).
+**Files:** Modify `identity/api/deploy/chart/values.yaml`, `identity/api/deploy/chart/templates/ingress.yaml` (+ `templates/deployment.yaml` env list if needed).
 
 - [ ] **Step 1:** Add `IDENTITY_EMAIL_OTP_ENABLED: "false"` to the inline `env:` list (non-secret) with a `# Flag retirement: 2026-10-01` comment. `BREVO_API_KEY` needs **no template change** — it rides the existing `envFromSecret` bag. Add non-secret `BREVO_SENDER_EMAIL`/`BREVO_SENDER_NAME` to `env:`.
+- [ ] **Step 1b:** Add the per-IP rate-limit annotation to the identity ingress so the ADR-0091 email-bombing mitigation actually ships: `nginx.ingress.kubernetes.io/limit-rps` (+ `limit-burst-multiplier`) on `templates/ingress.yaml`, mirroring `infra/observability/templates/ingress-otlp-public.yaml` (ADR-0033). Scope it to the auth host; confirm the value is generous enough for legitimate OIDC + OTP traffic.
 - [ ] **Step 2: Lint** — `helm lint identity/api/deploy/chart` (or the repo's `helm-lint`/`api-chart-lint` invocation). Expected PASS.
 - [ ] **Step 3: Commit + deploy** — `git commit -s -m "feat(identity): chart env for email-OTP flag (dark)"`. Merges + deploys the whole backend **dark** (flag off; endpoints wired but the start/verify use cases return null accessors → routes 404, safe).
 

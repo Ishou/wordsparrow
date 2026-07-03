@@ -74,8 +74,12 @@ does not widen it.
   10-minute TTL.
 - **Email bombing / cost abuse.** Per-email 60-second resend cooldown + daily
   send cap, enforced in-app via the challenge table. **Per-IP rate-limiting is
-  delegated to ingress-nginx** (ADR-0030) — the application stores no client IP,
-  preserving ADR-0045 minimization.
+  delegated to the ingress layer** — an nginx `limit-rps` annotation on the
+  identity-api ingress, the same mechanism the public OTLP ingress uses
+  (`infra/observability/templates/ingress-otlp-public.yaml`, ADR-0033). The
+  application stores no client IP, preserving ADR-0045 minimization. (This
+  annotation ships in the deploy wave; no ADR previously governed identity-api
+  ingress rate limiting.)
 - **Account enumeration.** `start` returns a uniform `202` regardless of whether
   the email is known; and because an unknown email simply creates an account,
   there is inherently no "not found" path.

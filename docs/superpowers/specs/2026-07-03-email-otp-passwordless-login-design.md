@@ -193,7 +193,8 @@ New operations:
 - **TTL 10 min**, **single-use**, stored **hashed**.
 - **Verify attempt cap 5** per challenge → lock, require a fresh `start`.
 - **Resend cooldown 60s** per email; **daily send cap** per email; **per-IP**
-  cap. ingress-nginx rate-limits (ADR-0030) plus app-level throttle on
+  cap via an nginx `limit-rps` annotation on the identity ingress (same
+  mechanism as the public OTLP ingress, ADR-0033), plus app-level throttle on
   `start` (it triggers email sends = spam/cost vector).
 
 ## Threat model (auth change — required)
