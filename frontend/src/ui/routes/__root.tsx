@@ -101,8 +101,7 @@ function RootErrorBoundary() {
   );
 }
 
-// Same copy/title as NotFoundScreen but hard-navigates and skips PhoneShell: the root fallback
-// must render even when the route tree itself is the problem.
+// Mirrors NotFoundScreen's copy/title, but hard-navigates and skips PhoneShell since the route tree itself may be broken.
 function RootNotFound() {
   useNotFoundDocumentTitle();
   return (

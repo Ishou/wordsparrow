@@ -11,8 +11,7 @@ export const NOT_FOUND_COPY = {
   cta: "Retour à l'accueil",
 } as const;
 
-// Not-found paths have no per-route head() slot, so the title is set imperatively or axe's
-// `document-title` rule (serious, WCAG 2.4.2) fails on the previous page's leftover title.
+// No per-route head() slot on not-found paths, so set the title imperatively — axe's document-title rule (WCAG 2.4.2) otherwise fails on the stale title.
 export function useNotFoundDocumentTitle() {
   useLayoutEffect(() => {
     const previous = document.title;
