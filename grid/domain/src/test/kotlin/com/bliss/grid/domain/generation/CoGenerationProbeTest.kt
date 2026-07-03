@@ -14,15 +14,16 @@ import kotlin.random.Random
 // stay open until a separator lands). Blacks are emitted where words end, never pre-committed.
 @Tag("bench")
 class CoGenerationProbeTest {
-    private val width = 28
-    private val height = 20
+    private val width = 15
+    private val height = 12
     private val minLen = 2
+    private val DEAD_END_MIN = 5
     private val nodeBudget = 1_200_000
 
     // Bump when sweep semantics change: persisted nogoods are only valid for the rule set
     // and corpus they were certified under.
-    private val engineVersion = "v4-joint1"
-    private val bandVersion = "v2-validity1"
+    private val engineVersion = "v7-col0tip"
+    private val bandVersion = "v3-tipfree"
 
     @Test
     fun `co-generation sweep produces a valid sparse board`() {
@@ -41,6 +42,8 @@ class CoGenerationProbeTest {
         var allBest = 0
         var allBestDump = ""
         var egTotal = 0
+        var allCacheFails = ""
+
         while (best == null && System.currentTimeMillis() < deadline) {
             attempts++
             val sweep = Sweep(lexicon, Random(runSeed + attempts), nogoods)
@@ -53,6 +56,7 @@ class CoGenerationProbeTest {
             val okRun = sweep.run(band)
             allWalks += sweep.jwWalks
             egTotal += sweep.egCalls
+            if (sweep.egCacheFail.isNotEmpty() && allCacheFails.length < 300) allCacheFails += sweep.egCacheFail + "; "
             if (sweep.jwBest > allBest) {
                 allBest = sweep.jwBest
                 allBestDump = sweep.jwBestDump
@@ -66,7 +70,7 @@ class CoGenerationProbeTest {
                 }
                 if (sweep.deepest > deepestSeen) {
                 deepestSeen = sweep.deepest
-                    deepestDump = "=== attempt $attempts deepest row ${sweep.deepest / width} dpFails=${sweep.dpFails} realizeFails=${sweep.realizeFails} walk=${sweep.rfWalk} apply=${sweep.rfApply} (blk=${sweep.afBlack} wrd=${sweep.afWord} sgl=${sweep.afSingle} scoreRej=${sweep.scoreRejected}) nogoods=${nogoods.size} bands=${bands.size}+${newBands.size} EG[calls=${sweep.egCalls} botNull=${sweep.egBottomNull} r19=${sweep.egRow19Fail} jwBest=${sweep.jwBest}/${sweep.jwWalks} ${sweep.jwBestDump}] ===\n" + sweep.egDump + "\n" + sweep.deathDump
+                    deepestDump = "=== attempt $attempts deepest row ${sweep.deepest / width} dpFails=${sweep.dpFails} realizeFails=${sweep.realizeFails} walk=${sweep.rfWalk} apply=${sweep.rfApply} (blk=${sweep.afBlack} wrd=${sweep.afWord} sgl=${sweep.afSingle} scoreRej=${sweep.scoreRejected}) nogoods=${nogoods.size} bands=${bands.size}+${newBands.size} EG[calls=${sweep.egCalls} botNull=${sweep.egBottomNull} r19=${sweep.egRow19Fail} jwBest=${sweep.jwBest}/${sweep.jwWalks} cacheTry=${sweep.egCacheTry} cacheFail=${sweep.egCacheFail} ${sweep.jwBestDump}] ===\n" + sweep.egDump + "\n" + sweep.deathDump
                 }
             }
         }
@@ -75,7 +79,7 @@ class CoGenerationProbeTest {
         if (best == null && deepestDump.isNotEmpty()) println(deepestDump)
         if (best == null) {
             println("COGEN v1 INFEASIBLE in 120s ($attempts attempts)")
-            println("JW TOTAL walks=$allWalks best=$allBest eg=$egTotal $allBestDump")
+            println("JW TOTAL walks=$allWalks best=$allBest eg=$egTotal cacheFails=$allCacheFails $allBestDump")
             return
         }
         val cells = best.toCellArray()
@@ -353,6 +357,9 @@ class CoGenerationProbeTest {
             var jwWalks = 0
             var jwBestDump = ""
             var jwTrace = false
+            private var foundEndgame: Pair<CharArray, CharArray>? = null
+            var egCacheTry = 0
+            var egCacheFail = ""
         var realizeFails = 0
         var nogoodHits = 0
         var rfWalk = 0
@@ -409,8 +416,17 @@ class CoGenerationProbeTest {
                         .toMutableList()
                 deepest = maxOf(deepest, (r + 1) * width)
             }
-            // Endgame: solve the last two rows jointly, bottom-up, per surviving lineage.
+            // Endgame: apply each lineage's cached walk product; fall back to fresh walks.
             for (st in beam) {
+                restoreState(st)
+                val cached = st.endgameRows
+                if (cached != null) egCacheTry++
+                if (cached != null && applyJoint(cached.first, cached.second)) {
+                    deepest = height * width
+                    if (SlotRegistry.build(toCellArray(), lexicon, minLen) != null) return true
+                    if (egDump.length < 1200) egDump += "BUILD-NULL:\n" + render() + "\n" + auditBoard() + "\n"
+                    restoreState(st)
+                }
                 restoreState(st)
                 if (solveEndgame()) {
                     deepest = height * width
@@ -538,13 +554,13 @@ class CoGenerationProbeTest {
         private fun solveEndgame(): Boolean {
             egCalls++
             val entry = captureState()
-            repeat(200) {
+            repeat(60) {
                 val ctx = JointCtx()
                 val walk = if (jwStep(ctx, 0)) ctx.a18 to ctx.a19 else null
                 if (walk == null) {
                     egBottomNull++
                     if (egDump.length < 900) {
-                        val cc = ctx.deepest
+                        val cc = minOf(ctx.deepest, width - 1)
                         val col = columns[cc]
                         val v = col.text.length
                         val c2 = col.masks[v + 2]?.let { lexicon.lettersAt(v + 2, v, it) } ?: 0
@@ -575,7 +591,7 @@ class CoGenerationProbeTest {
             var open18 = false
             var open19 = false
             val usedLocal = HashSet<String>(used)
-            var budget = 30000
+            var budget = 100000
             var deepest = 0
             var deepA18 = ""
             var deepA19 = ""
@@ -590,19 +606,19 @@ class CoGenerationProbeTest {
             return if (jwStep(ctx, 0)) ctx.a18 to ctx.a19 else null
         }
 
-        private fun jointFeasible(): Boolean {
-            repeat(8) {
+        private fun jointFind(): Pair<CharArray, CharArray>? {
+            repeat(4) {
                 val ctx = JointCtx()
-                ctx.budget = 15000
+                ctx.budget = 30000
                 jwWalks++
                 val ok = jwStep(ctx, 0)
                 if (ctx.deepest > jwBest) {
                     jwBest = ctx.deepest
                     jwBestDump = "a18='${ctx.deepA18}' a19='${ctx.deepA19}'"
                 }
-                if (ok) return true
+                if (ok) return ctx.a18.copyOf() to ctx.a19.copyOf()
             }
-            return false
+            return null
         }
 
         private fun letterList(bits: Int): MutableList<Char> {
@@ -643,9 +659,10 @@ class CoGenerationProbeTest {
             val must18Black = col.reserved || col.forcedBlackNext
             val vClump18 = grid[height - 3][c] == '#' && grid[height - 4][c] == '#'
             val orphanAbove18 = col.text.length == 1 && !col.lastSingle
+            val tipAbove18 = col.lastSingle && col.text.length < DEAD_END_MIN
             val bendHosted0 = c == 1 && ctx.a18[0] == '#' && ctx.a19[0] != '#'
             val can18Black =
-                !vClump18 && c <= width - 3 && col.hostDebt == 0 &&
+                !vClump18 && !tipAbove18 && c <= width - 3 && col.hostDebt == 0 &&
                     (must18Black || col.isEmpty || orphanAbove18 || col.completeWord(ctx.usedLocal) != null) &&
                     (ctx.open18 || c == 0 || ctx.single18 || bendHosted0)
             val debt = col.hostDebt > 0
@@ -666,12 +683,13 @@ class CoGenerationProbeTest {
             val can19Black = c <= width - 3 && (ctx.open19 || c == 0 || ctx.single19)
 
             // Option order: verticals flowing first, then structural blacks.
-            data class JOpt(val ch18: Char, val ch19: Char)
+            data class JOpt(val ch18: Char, val ch19: Char, val s18: Boolean = false)
             val opts = ArrayList<JOpt>()
+            val bendSingle18 = c == 1 && ctx.a18[0] == '#' && ctx.a19[0] != '#'
             if (!must18Black) {
                 val aList = letterList(cont2A and (if (ctx.open18) h18Bits else -1))
                 aList.shuffle(random)
-                for (a in aList.take(4)) {
+                for (a in aList.take(6)) {
                     val m = col.masks[v + 2] ?: continue
                     val copy = m.copyOf()
                     lexicon.filterByLetterInPlace(v + 2, v, a, copy)
@@ -681,7 +699,7 @@ class CoGenerationProbeTest {
                             (if (ctx.open19) ctx.h19.continueLetters(width - c) else -1)
                     val bList = letterList(bBits)
                     bList.shuffle(random)
-                    for (b in bList.take(3)) opts.add(JOpt(a, b))
+                    for (b in bList.take(4)) opts.add(JOpt(a, b))
                 }
                 if (can19Black) {
                     val eList = letterList(end18A and (if (ctx.open18) h18Bits else -1))
@@ -698,6 +716,9 @@ class CoGenerationProbeTest {
                 // Column resets at 18; bottom cell is a fresh orphan letter or (rarely) black.
                 opts.add(JOpt('#', '*'))
                 if (can19Black && grid[height - 3][c] != '#') opts.add(JOpt('#', '#'))
+            }
+            if (bendSingle18) {
+                for (o in opts.filter { it.ch18 != '#' }.take(6)) opts.add(JOpt(o.ch18, o.ch19, s18 = true))
             }
             if (must18Black && !can18Black) {
                 if (ctx.forced18 != null) {
@@ -739,17 +760,18 @@ class CoGenerationProbeTest {
                     println("REPLAY c=$c pair=($fc18,$fc19) refused: $why")
                     return false
                 }
-                val r = tryOption(ctx, c, fc18, fc19)
-                if (!r) println("REPLAY c=$c pair=($fc18,$fc19) tryOption failed")
-                return r
+                if (tryOption(ctx, c, fc18, fc19)) return true
+                if (bendSingle18 && fc18 != '#' && tryOption(ctx, c, fc18, fc19, s18Mode = true)) return true
+                println("REPLAY c=$c pair=($fc18,$fc19) tryOption failed")
+                return false
             }
             var tried = 0
             for (opt in opts) {
                 if (ctx.single18 && opt.ch18 != '#') continue
                 if (ctx.single19 && opt.ch19 != '#') continue
-                if (tried >= 24) break
+                if (tried >= 48) break
                 tried++
-                val r = tryOption(ctx, c, opt.ch18, opt.ch19)
+                val r = tryOption(ctx, c, opt.ch18, opt.ch19, opt.s18)
                 if (jwTrace && c <= 6) println("TRACE   c=$c try(${opt.ch18},${opt.ch19}) -> $r")
                 if (r) return true
             }
@@ -806,6 +828,7 @@ class CoGenerationProbeTest {
             c: Int,
             ch18: Char,
             ch19: Char,
+            s18Mode: Boolean = false,
         ): Boolean {
             val trail = ArrayList<String>(2)
             var s18: Snap? = null
@@ -816,7 +839,8 @@ class CoGenerationProbeTest {
             val si19 = ctx.single19
             // Col-0 bend hosting: an unhosted letter at col 0 is a legal left-border single —
             // it must be followed by a black at col 1 (tracked via the single flags).
-            val single18Now = c == 0 && ch18 != '#' && grid[height - 3][0] != '#'
+            var single18Now = s18Mode || (c == 0 && ch18 != '#' && grid[height - 3][0] != '#')
+            if (single18Now && ch19 == '#' && columns[c].text.length + 1 < DEAD_END_MIN) return false
             val single19Now = c == 0 && ch19 != '#' && ch18 != '#'
             // row 18
             if (ch18 == '#') {
@@ -896,6 +920,26 @@ class CoGenerationProbeTest {
                 }
             }
             if (ok && ch19 == '#' && si19) ctx.single19 = false
+            // Claim the column's vertical word so no later column or across word reuses it.
+            if (ok) {
+                val col = columns[c]
+                var vw: String? = null
+                if (ch18 != '#' && ctx.a19[c] != '#' && ctx.a19[c] != '.') {
+                    vw = col.text.toString() + ch18 + ctx.a19[c]
+                } else if (ch18 != '#' && ch19 == '#' && !col.isEmpty) {
+                    vw = col.text.toString() + ch18
+                } else if (ch18 == '#' && !col.isEmpty && !col.reserved && !col.forcedBlackNext) {
+                    vw = col.text.toString()
+                }
+                if (vw != null && vw.length >= minLen) {
+                    if (vw in ctx.usedLocal) {
+                        ok = false
+                    } else {
+                        ctx.usedLocal.add(vw)
+                        trail.add(vw)
+                    }
+                }
+            }
             if (ok && jwStep(ctx, c + 1)) return true
             // undo
             s19?.let { ctx.h19.restore(it) }
@@ -917,25 +961,69 @@ class CoGenerationProbeTest {
             val f18 = RowFacts(height - 2)
             for (c in 0 until width) {
                 if (row18[c] == '#') {
-                    if (!applyBlack(height - 2, c, acrossHosted = true)) return false
+                    if (!applyBlack(height - 2, c, acrossHosted = true)) {
+                        egCacheFail = "black18 c=$c"
+                        return false
+                    }
                     grid[height - 2][c] = '#'
                 } else {
-                    if (!applyRowLetter(height - 2, c, row18[c], f18)) return false
+                    if (!applyRowLetter(height - 2, c, row18[c], f18)) {
+                        egCacheFail = "letter18 c=$c ch=${row18[c]}"
+                        return false
+                    }
                     grid[height - 2][c] = row18[c]
                 }
             }
-            if (!registerAcross(height - 2)) return false
+            if (!registerAcross(height - 2)) {
+                egCacheFail = "register18"
+                return false
+            }
             val f19 = RowFacts(height - 1)
             for (c in 0 until width) {
                 if (row19[c] == '#') {
-                    if (!applyBlack(height - 1, c, acrossHosted = true)) return false
+                    if (!applyBlack(height - 1, c, acrossHosted = true)) {
+                        egCacheFail = "black19 c=$c"
+                        return false
+                    }
                     grid[height - 1][c] = '#'
                 } else {
-                    if (!applyRowLetter(height - 1, c, row19[c], f19)) return false
+                    if (!applyRowLetter(height - 1, c, row19[c], f19)) {
+                        egCacheFail = "letter19 c=$c ch=${row19[c]}"
+                        return false
+                    }
                     grid[height - 1][c] = row19[c]
                 }
             }
-            return registerAcross(height - 1)
+            if (!registerAcross(height - 1)) {
+                egCacheFail = "register19"
+                return false
+            }
+            return true
+        }
+
+        private fun auditBoard(): String {
+            val cells = toCellArray()
+            val sb = StringBuilder()
+            for (r in 0 until height) {
+                for (c in 0 until width) {
+                    if (!cells.isBlack(r, c) && BlackCellLayout.isShortDeadEndTip(cells, r, c)) {
+                        sb.append("TIP r=").append(r).append(" c=").append(c).append(' ')
+                    }
+                }
+            }
+            for (r in 0 until height) {
+                for (c in 0 until width) {
+                    if (!cells.isBlack(r, c)) continue
+                    val hostsAcross = c + 2 < width && !cells.isBlack(r, c + 1) && !cells.isBlack(r, c + 2)
+                    val hostsDown = r + 2 < height && !cells.isBlack(r + 1, c) && !cells.isBlack(r + 2, c)
+                    val bendH = c == 0 && r + 1 < height && !cells.isBlack(r + 1, 0) && width > 1 && !cells.isBlack(r + 1, 1)
+                    val bendV = r == 0 && c + 1 < width && !cells.isBlack(1, c + 1) && height > 1 && !cells.isBlack(0, c + 1)
+                    if (!hostsAcross && !hostsDown && !bendH && !bendV) {
+                        sb.append("DEADBLACK r=").append(r).append(" c=").append(c).append(' ')
+                    }
+                }
+            }
+            return sb.toString()
         }
 
         private fun registerAcross(r: Int): Boolean {
@@ -1113,7 +1201,9 @@ class CoGenerationProbeTest {
             val rows: Array<CharArray>,
             val snaps: Array<Snap>,
             val wordList: List<String>,
-        )
+        ) {
+            var endgameRows: Pair<CharArray, CharArray>? = null
+        }
 
         private fun captureState(): BoardState =
             BoardState(
@@ -1157,32 +1247,35 @@ class CoGenerationProbeTest {
             // bottom filter means any accepted child has a provably tileable final row.
             val maxTries =
                 when {
-                    r >= height - 2 -> 3000
-                    r >= height - 3 -> 600
+                    r >= height - 3 -> 100
                     else -> 24
                 }
             val wantChildren =
                 when {
-                    r >= height - 2 -> 4
-                    r >= height - 3 -> 16
+                    r >= height - 3 -> 6
                     else -> expansions
                 }
             while (out.size < wantChildren && tries < maxTries) {
                 tries++
+                foundEndgame = null
                 if (realizeRow(r, facts, reach)) {
                     val score =
                         if (stateSignature(r + 1) in nogoods || !nextRowFeasible(r)) {
                             Int.MIN_VALUE / 2
                         } else {
                             var sc = futureFlexibility(r)
-                            // A row-17 child is only worth keeping if its 2-row endgame walks.
-                            if (sc > Int.MIN_VALUE / 2 && r == height - 3 && !jointFeasible()) {
-                                sc = Int.MIN_VALUE / 2
+                            // A row-17 child is only worth keeping if its 2-row endgame walks;
+                            // keep the found rows so the endgame applies them directly.
+                            if (sc > Int.MIN_VALUE / 2 && r == height - 3) {
+                                foundEndgame = jointFind()
+                                if (foundEndgame == null) sc = Int.MIN_VALUE / 2
                             }
                             sc
                         }
                     if (score > Int.MIN_VALUE / 2) {
-                        out.add(captureState() to score)
+                        val st = captureState()
+                        st.endgameRows = foundEndgame
+                        out.add(st to score)
                     } else {
                         scoreRejected++
                         if (rejectedChild == null) rejectedChild = captureState()
@@ -1248,7 +1341,11 @@ class CoGenerationProbeTest {
                             if (ok) reach[c + l][0] = true
                         }
                         // Bottom two rows: singles after blacks are banned (their black can't be down-hosted).
-                        if (facts.bottomStrict.not() && facts.maskLetters[c] != 0 && !facts.forcedBlack[c]) reach[c + 1][0] = true
+                        if (facts.bottomStrict.not() && facts.maskLetters[c] != 0 && !facts.forcedBlack[c] &&
+                            facts.singleOk[c]
+                        ) {
+                            reach[c + 1][0] = true
+                        }
                     }
                 }
             }
@@ -1327,6 +1424,7 @@ class CoGenerationProbeTest {
                     used.add(w)
                     col.reserved = true
                 }
+                if (!col.isEmpty) col.lastSingle = runLenAt(5, c) == 1
             }
             return true
         }
@@ -1342,6 +1440,18 @@ class CoGenerationProbeTest {
         fun dumpState(r: Int): String {
             val sb = StringBuilder()
             sb.append("failed row r=").append(r).append('\n')
+            if (r < height) {
+                val f = RowFacts(r)
+                sb.append("facts: ")
+                for (c in 0 until width) {
+                    sb.append(c).append(":m").append(Integer.bitCount(f.maskLetters[c]))
+                        .append(if (f.blackAllowed[c]) "B" else "")
+                        .append(if (f.forcedBlack[c]) "F" else "")
+                        .append(if (f.singleOk[c]) "s" else "")
+                        .append(' ')
+                }
+                sb.append('\n')
+            }
             for (row in 0 until r) sb.append(grid[row].concatToString()).append('\n')
             sb.append("cols: ")
             for (i in 0 until width) {
@@ -1365,6 +1475,7 @@ class CoGenerationProbeTest {
             val blackAllowed = BooleanArray(width)
             val forcedBlack = BooleanArray(width)
             val vClumpBlocked = BooleanArray(width)
+            val singleOk = BooleanArray(width)
 
             init {
                 val rowsBelow = height - r - 1
@@ -1397,9 +1508,11 @@ class CoGenerationProbeTest {
                     }
                     blackAllowed[c] = col.hostDebt == 0 &&
                         (col.isEmpty || col.forcedBlackNext || col.reserved || col.completeWord(used) != null) &&
-                        !(r >= height - 2 && c >= width - 2)
+                        !(r >= height - 2 && c >= width - 2) &&
+                        !(c == 0 && !col.isEmpty && !col.forcedBlackNext && col.lastSingle && col.text.length < DEAD_END_MIN)
                     forcedBlack[c] = col.forcedBlackNext
                     vClumpBlocked[c] = r > 1 && grid[r - 1][c] == '#' && grid[r - 2][c] == '#'
+                    singleOk[c] = true
                 }
             }
         }
@@ -1475,6 +1588,15 @@ class CoGenerationProbeTest {
                 if (!corner) return Int.MIN_VALUE / 2
             }
             var score = 0
+            // Freshly created dead-end tips (short vertical ending under a single): steer away.
+            if (r >= 2) {
+                for (c in 0 until width) {
+                    if (grid[r][c] == '#' && grid[r - 1][c] != '#') {
+                        val vRun = runLenUp(r - 1, c)
+                        if (vRun < DEAD_END_MIN && runLenAt(r - 1, c) == 1) score -= 60
+                    }
+                }
+            }
             // Certain local defects introduced by this row (determinable at r-1): heavy penalties.
             if (r >= 1) {
                 var defects = 0
@@ -1595,6 +1717,19 @@ class CoGenerationProbeTest {
             return score - maxGap * 2
         }
 
+        private fun runLenUp(
+            r: Int,
+            c: Int,
+        ): Int {
+            var n = 0
+            var i = r
+            while (i >= 0 && grid[i][c] != '#') {
+                n++
+                i--
+            }
+            return n
+        }
+
         private fun runLenAt(
             r: Int,
             c: Int,
@@ -1699,10 +1834,10 @@ class CoGenerationProbeTest {
                         if (word != null) options.add(Step(p, hostedK[random.nextInt(hostedK.size)], 1, l, word))
                     }
                     val pc = c - 1
-                    if (pc >= 0 && facts.maskLetters[pc] != 0 && !facts.forcedBlack[pc]) {
+                    if (pc >= 0 && facts.maskLetters[pc] != 0 && !facts.forcedBlack[pc] && facts.singleOk[pc]) {
                         for (kk in 1..2) if (reach[pc][kk]) options.add(Step(pc, kk, 2, 1, null))
                     }
-                    if (pc == 0 && facts.maskLetters[0] != 0) {
+                    if (pc == 0 && facts.maskLetters[0] != 0 && facts.singleOk[0]) {
                         // col-0 single letter unhosted-left is fine (across run 1)
                         if (reach[0][0]) options.add(Step(0, 0, 2, 1, null))
                     }
@@ -1810,6 +1945,11 @@ class CoGenerationProbeTest {
             acrossHosted: Boolean,
         ): Boolean {
             val col = columns[c]
+            // Col 0 is where every observed dead-end tip lives (left-border singles whose
+            // short vertical then ends): refuse exactly that, nothing global.
+            if (c == 0 && !col.isEmpty && !col.forcedBlackNext && col.lastSingle && col.text.length < DEAD_END_MIN) {
+                return false
+            }
             if (!col.isEmpty && !col.forcedBlackNext && !col.reserved) {
                 if (col.text.length >= minLen) {
                     val w = col.completeWord(used) ?: return false
@@ -1855,7 +1995,7 @@ class CoGenerationProbeTest {
                 used.add(w)
                 col.reserved = true
             }
-            if (r == height - 1 && !col.forcedBlackNext && !col.reserved) {
+            if (r == height - 1 && !col.forcedBlackNext && !col.reserved && col.text.length >= minLen) {
                 val w = col.completeWord(used) ?: return false
                 words.add(w)
                 used.add(w)
@@ -1878,9 +2018,9 @@ class CoGenerationProbeTest {
             c: Int,
             r: Int,
         ): IntRange {
-            // Left column mirrors print: short verticals so the corner always has landings
-            // (everything in col 0 is hosted from above).
-            if (c == 0) return 2..3
+            // Left column runs long: its cells host row-starts as singles, and a single may
+            // never be the last letter of a short vertical (dead-end tip) — length buys cover.
+            if (c == 0) return 5..7
             // Top band mirrors print: columns starting in rows 0-1 are mostly short, so rows
             // 2-3 inherit plentiful staggered landings instead of impossible long spans.
             if (r <= 1) return if (random.nextInt(3) < 2) 2..4 else 3..6
@@ -1905,7 +2045,7 @@ class CoGenerationProbeTest {
                     "grid/infrastructure/src/main/resources/words/words-fr.csv",
                 ).first { File(it).exists() },
             ).length()
-        return File(dir, "nogoods-" + engineVersion + "-" + corpusFp + ".bin")
+        return File(dir, "nogoods-" + engineVersion + "-" + width + "x" + height + "-" + corpusFp + ".bin")
     }
 
     private fun loadNogoods(): HashSet<Long> {
@@ -1934,7 +2074,7 @@ class CoGenerationProbeTest {
         println("nogoods saved: " + capped.size + " (+" + (capped.size - preloaded) + ") to " + f.name)
     }
 
-    private fun bandStore(): File = File(nogoodStore().parentFile, "bands-" + bandVersion + "-" + nogoodStore().name.substringAfterLast('-'))
+    private fun bandStore(): File = File(nogoodStore().parentFile, "bands-" + bandVersion + "-" + width + "x" + height + "-" + nogoodStore().name.substringAfterLast('-'))
 
     private fun loadBands(): MutableList<String> {
         val f = bandStore()
