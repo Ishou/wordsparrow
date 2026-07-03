@@ -14,13 +14,18 @@ import com.bliss.identity.application.usecases.DeleteUserUseCase
 import com.bliss.identity.application.usecases.GetMeUseCase
 import com.bliss.identity.application.usecases.GetProgressUseCase
 import com.bliss.identity.application.usecases.ListProgressUseCase
+import com.bliss.identity.application.usecases.LogoutAllUseCase
 import com.bliss.identity.application.usecases.LogoutUseCase
 import com.bliss.identity.application.usecases.PutProgressUseCase
+import com.bliss.identity.application.usecases.RequestEmailOtpUseCase
 import com.bliss.identity.application.usecases.UpdateMeUseCase
+import com.bliss.identity.application.usecases.VerifyEmailOtpUseCase
 import com.bliss.identity.application.usecases.WhoAmIUseCase
 import com.bliss.identity.domain.oidc.OidcVerifier
 import com.bliss.identity.domain.provider.Provider
 import com.bliss.identity.infrastructure.auth.SecureRandomFactory
+import com.bliss.identity.infrastructure.auth.Sha256TokenHasher
+import com.bliss.identity.infrastructure.email.BrevoEmailSender
 import com.bliss.identity.infrastructure.events.NatsUserDeletedBroadcaster
 import com.bliss.identity.infrastructure.events.NatsUserRenamedBroadcaster
 import com.bliss.identity.infrastructure.id.UuidV7IdGenerator
@@ -29,6 +34,7 @@ import com.bliss.identity.infrastructure.oidc.JwksCache
 import com.bliss.identity.infrastructure.oidc.KtorOidcCodeExchanger
 import com.bliss.identity.infrastructure.oidc.StaticOidcProviderConfigSource
 import com.bliss.identity.infrastructure.persistence.PostgresAuthAttemptRepository
+import com.bliss.identity.infrastructure.persistence.PostgresEmailOtpChallengeRepository
 import com.bliss.identity.infrastructure.persistence.PostgresPuzzleProgressRepository
 import com.bliss.identity.infrastructure.persistence.PostgresSessionRepository
 import com.bliss.identity.infrastructure.persistence.PostgresSubscriptionTierRepository
@@ -57,6 +63,9 @@ class Wiring private constructor(
     private val _putProgress: PutProgressUseCase?,
     private val _callbackDispatcher: CallbackDispatcher?,
     private val _applySubscriptionChange: ApplySubscriptionChangeUseCase?,
+    private val _requestEmailOtp: RequestEmailOtpUseCase?,
+    private val _verifyEmailOtp: VerifyEmailOtpUseCase?,
+    private val _logoutAll: LogoutAllUseCase?,
 ) {
     val beginOidcLogin: BeginOidcLoginUseCase get() = require(_beginOidcLogin, "BeginOidcLoginUseCase")
     val completeOidcLogin: CompleteOidcLoginUseCase get() = require(_completeOidcLogin, "CompleteOidcLoginUseCase")
@@ -71,6 +80,9 @@ class Wiring private constructor(
     val putProgress: PutProgressUseCase get() = require(_putProgress, "PutProgressUseCase")
     val callbackDispatcher: CallbackDispatcher get() = require(_callbackDispatcher, "CallbackDispatcher")
     val applySubscriptionChange: ApplySubscriptionChangeUseCase get() = require(_applySubscriptionChange, "ApplySubscriptionChangeUseCase")
+    val requestEmailOtp: RequestEmailOtpUseCase get() = require(_requestEmailOtp, "RequestEmailOtpUseCase")
+    val verifyEmailOtp: VerifyEmailOtpUseCase get() = require(_verifyEmailOtp, "VerifyEmailOtpUseCase")
+    val logoutAll: LogoutAllUseCase get() = require(_logoutAll, "LogoutAllUseCase")
 
     // Nullable peek accessors so Module.kt can mount only the routes whose use case is wired,
     // letting tests supply a slim Wiring.forTesting(...) for the route under test.
@@ -85,6 +97,9 @@ class Wiring private constructor(
     internal val getProgressOrNull: GetProgressUseCase? get() = _getProgress
     internal val putProgressOrNull: PutProgressUseCase? get() = _putProgress
     internal val callbackDispatcherOrNull: CallbackDispatcher? get() = _callbackDispatcher
+    internal val requestEmailOtpOrNull: RequestEmailOtpUseCase? get() = _requestEmailOtp
+    internal val verifyEmailOtpOrNull: VerifyEmailOtpUseCase? get() = _verifyEmailOtp
+    internal val logoutAllOrNull: LogoutAllUseCase? get() = _logoutAll
 
     private fun <T : Any> require(
         value: T?,
@@ -188,6 +203,19 @@ class Wiring private constructor(
                     completeProviderLink = completeProviderLinkUseCase,
                 )
 
+            // Flag retirement: 2026-10-01
+            val emailOtpEnabled = System.getenv("IDENTITY_EMAIL_OTP_ENABLED")?.toBooleanStrictOrNull() == true
+            var requestEmailOtp: RequestEmailOtpUseCase? = null
+            var verifyEmailOtp: VerifyEmailOtpUseCase? = null
+            if (emailOtpEnabled) {
+                val brevo = config.brevo ?: error("IDENTITY_EMAIL_OTP_ENABLED=true requires BREVO_API_KEY")
+                val challenges = PostgresEmailOtpChallengeRepository(dataSource)
+                val hasher = Sha256TokenHasher()
+                val emailSender = BrevoEmailSender(httpClientEngine, brevo)
+                requestEmailOtp = RequestEmailOtpUseCase(challenges, emailSender, hasher, random, idGen, clock)
+                verifyEmailOtp = VerifyEmailOtpUseCase(challenges, hasher, users, userProviders, sessions, idGen, clock)
+            }
+
             return Wiring(
                 _beginOidcLogin =
                     BeginOidcLoginUseCase(
@@ -210,6 +238,9 @@ class Wiring private constructor(
                 _putProgress = PutProgressUseCase(progress, clock),
                 _callbackDispatcher = callbackDispatcher,
                 _applySubscriptionChange = ApplySubscriptionChangeUseCase(users, subscriptions),
+                _requestEmailOtp = requestEmailOtp,
+                _verifyEmailOtp = verifyEmailOtp,
+                _logoutAll = LogoutAllUseCase(sessions, clock),
             )
         }
 
@@ -227,6 +258,9 @@ class Wiring private constructor(
             putProgress: PutProgressUseCase? = null,
             callbackDispatcher: CallbackDispatcher? = null,
             applySubscriptionChange: ApplySubscriptionChangeUseCase? = null,
+            requestEmailOtp: RequestEmailOtpUseCase? = null,
+            verifyEmailOtp: VerifyEmailOtpUseCase? = null,
+            logoutAll: LogoutAllUseCase? = null,
         ): Wiring =
             Wiring(
                 _beginOidcLogin = beginOidcLogin,
@@ -242,6 +276,9 @@ class Wiring private constructor(
                 _putProgress = putProgress,
                 _callbackDispatcher = callbackDispatcher,
                 _applySubscriptionChange = applySubscriptionChange,
+                _requestEmailOtp = requestEmailOtp,
+                _verifyEmailOtp = verifyEmailOtp,
+                _logoutAll = logoutAll,
             )
     }
 }

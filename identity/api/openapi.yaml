@@ -153,6 +153,7 @@ paths:
             Set-Cookie: { schema: { type: string } }
         '400': { $ref: '#/components/responses/ProblemDetails' }
         '429': { $ref: '#/components/responses/ProblemDetails' }
+        '502': { $ref: '#/components/responses/ProblemDetails' }
 
   /v1/auth/email/verify:
     post:

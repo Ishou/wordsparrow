@@ -517,6 +517,7 @@ export interface operations {
             };
             400: components["responses"]["ProblemDetails"];
             429: components["responses"]["ProblemDetails"];
+            502: components["responses"]["ProblemDetails"];
         };
     };
     verifyEmailLogin: {
