@@ -576,7 +576,8 @@ private fun publicCacheControlUntilUtcMidnight(now: Instant): String {
             .atStartOfDay(ZoneOffset.UTC)
             .toInstant()
     val seconds = maxOf(1L, Duration.between(now, nextMidnight).seconds)
-    return "public, no-cache, s-maxage=$seconds"
+    // Not no-cache: RFC 9111 binds it on shared caches too — CF answered REVALIDATED, never HIT (ADR-0089 §3 amendment).
+    return "public, max-age=0, must-revalidate, s-maxage=$seconds"
 }
 
 // Strong list validator (ADR-0089 §3): hasMore is hashed too because a backfilled older date can flip it without changing the visible ids.
