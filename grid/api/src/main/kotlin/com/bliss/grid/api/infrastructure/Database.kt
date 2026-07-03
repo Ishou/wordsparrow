@@ -15,7 +15,7 @@ object Database {
     private val delegate =
         BlissDatabase(
             poolName = "grid-api-hikari",
-            maxPoolSize = 5,
+            maxPoolSize = 10,
             requireUrl = false,
         )
 
