@@ -31,8 +31,10 @@ import com.bliss.grid.application.puzzle.ValidateWordUseCase
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.domain.model.WordAxis
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
@@ -45,6 +47,7 @@ import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import java.security.MessageDigest
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -137,6 +140,19 @@ fun Route.puzzles(
         }
         val puzzleId = current.puzzleId
         val stored = current.puzzle
+        val rawCookie = call.request.cookies[SESSION_COOKIE_NAME]
+        if (rawCookie == null) {
+            // ADR-0089 §3: anonymous responses are edge-cacheable until UTC midnight; the id is a strong validator (ADR-0081).
+            val etag = "\"$puzzleId\""
+            call.response.header(HttpHeaders.CacheControl, publicCacheControlUntilUtcMidnight(clock.instant()))
+            call.response.header(HttpHeaders.ETag, etag)
+            if (call.request.headers[HttpHeaders.IfNoneMatch] == etag) {
+                call.respond(HttpStatusCode.NotModified)
+                return@get
+            }
+        } else {
+            call.response.header(HttpHeaders.CacheControl, "private, no-store")
+        }
         val difficulty = DifficultyDto.fromWire(dailyPuzzleSelector.difficultyForDate(date))
         val rawGridNumber = dailyPuzzleSelector.gridNumberForDate(date)
         val gridNumber = if (rawGridNumber >= 1) rawGridNumber else null
@@ -144,7 +160,7 @@ fun Route.puzzles(
             hintBudgetFor(
                 cookieVerifier = cookieVerifier,
                 hintUsageRepository = hintUsageRepository,
-                rawCookie = call.request.cookies[SESSION_COOKIE_NAME],
+                rawCookie = rawCookie,
                 puzzleId = puzzleId,
                 hintsAllowed = stored.hintsAllowed,
                 now = clock.instant(),
@@ -206,7 +222,15 @@ fun Route.puzzles(
                     totalLetterCells = item.totalLetterCells,
                 )
             }
-        call.respond(ListDailyPuzzlesResponseDto(items = items, hasMore = result.hasMore))
+        // ADR-0089 §3: no edge caching for the list (unbounded query variants defeat exact-URL purge), so no s-maxage.
+        val etag = listEtagOf(result.items.map { it.id }, result.hasMore)
+        call.response.header(HttpHeaders.CacheControl, "public, no-cache")
+        call.response.header(HttpHeaders.ETag, etag)
+        if (call.request.headers[HttpHeaders.IfNoneMatch] == etag) {
+            call.respond(HttpStatusCode.NotModified)
+        } else {
+            call.respond(ListDailyPuzzlesResponseDto(items = items, hasMore = result.hasMore))
+        }
         log.info(
             "list_daily_puzzles from={} to={} items_returned={} has_more={} latency_ms={}",
             from ?: "(default)",
@@ -536,6 +560,28 @@ fun Route.puzzles(
                 )
         }
     }
+}
+
+private fun publicCacheControlUntilUtcMidnight(now: Instant): String {
+    val nextMidnight =
+        LocalDate
+            .ofInstant(now, ZoneOffset.UTC)
+            .plusDays(1)
+            .atStartOfDay(ZoneOffset.UTC)
+            .toInstant()
+    val seconds = maxOf(1L, Duration.between(now, nextMidnight).seconds)
+    return "public, no-cache, s-maxage=$seconds"
+}
+
+// Strong list validator (ADR-0089 §3): hasMore is hashed too because a backfilled older date can flip it without changing the visible ids.
+private fun listEtagOf(
+    ids: List<UUID>,
+    hasMore: Boolean,
+): String {
+    val input = ids.joinToString(",") + "|hasMore=$hasMore"
+    val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
+    val hex = digest.joinToString("") { "%02x".format(it) }
+    return "\"${hex.take(16)}\""
 }
 
 // Constant-time equality; false when either side is unset so a missing WORD_VALIDATE_SERVICE_TOKEN degrades closed (ADR-0084).
