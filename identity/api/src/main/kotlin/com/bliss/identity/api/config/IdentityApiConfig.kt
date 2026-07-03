@@ -1,6 +1,7 @@
 package com.bliss.identity.api.config
 
 import com.bliss.identity.application.ports.ClientAuth
+import com.bliss.identity.infrastructure.email.BrevoConfig
 import java.time.Duration
 
 data class GoogleClientConfig(
@@ -24,6 +25,8 @@ data class IdentityApiConfig(
     val google: GoogleClientConfig,
     val apple: AppleClientConfig,
     val allowedReturnOrigins: List<String>,
+    // Null unless BREVO_API_KEY is set: only required when the email-OTP flag is on (ADR-0092).
+    val brevo: BrevoConfig? = null,
 ) {
     val googleAuth: ClientAuth.Secret get() = ClientAuth.Secret(google.clientSecret)
     val appleAuth: ClientAuth.AppleClientAssertion
@@ -51,6 +54,14 @@ data class IdentityApiConfig(
                         privateKeyPem = requireEnv("APPLE_PRIVATE_KEY_PEM"),
                     ),
                 allowedReturnOrigins = requireEnv("ALLOWED_RETURN_ORIGINS").split(",").map { it.trim() },
+                brevo =
+                    System.getenv("BREVO_API_KEY")?.let { apiKey ->
+                        BrevoConfig(
+                            apiKey = apiKey,
+                            senderEmail = requireEnv("BREVO_SENDER_EMAIL"),
+                            senderName = requireEnv("BREVO_SENDER_NAME"),
+                        )
+                    },
             )
 
         private fun requireEnv(name: String): String = System.getenv(name) ?: error("Required env var $name is unset.")
