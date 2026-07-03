@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Curated multi-clue overlay for 2-3 letter French mots-fléchés fillers.
-
-Each word carries 3-5 distinct hand-authored clues (CC0-1.0, original
-Claude/Bliss authorship). The ADR-0031 clue cooldown is per-(word, clue),
-so a word is only unavailable when ALL its clues are cooling — multiple
-clues per short word multiply the effective fill capacity of the tiny
-2-3 letter pool that dense 28x20 grids lean on. Idempotent: the first
-clue lands on the word's existing row (or a fresh one), the rest are
-appended as duplicate rows; prior source=bliss duplicates are replaced.
-The runtime loader (CsvWordRepository) merges duplicate word rows into
-one multi-clue Word.
-"""
+"""Curated multi-clue overlay for 2-3 letter French mots-fléchés fillers; see docs/superpowers/plans/2026-07-03-short-word-cooldown-fix.md."""
 from __future__ import annotations
 import csv
 from pathlib import Path

@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""Recover curated passé-simple false positives into words-fr.csv.
-
-The lemma-anchored admission (import_grammalecte_long_words.py) blanket-bans
-`ipsi` surfaces — right for the ~41k archaic/foreign/obscure forms, wrong for
-the hand-picked common, tonally clean forms below (FIT, OSA, TINT, ...). This
-script admits ONLY the curated allowlist and machine-inflects each form's
-clue(s) from its source verb's existing lemma clues via `inflect_clue` at the
-exact mood + person carried by the surface's grammalecte tags; no clue text
-is hand-written here, and the general ban stays untouched. Rows are stamped
-source=bliss like the other curated short-word overlays so the full-merge
-scrub (merge_clues_into_wordlist.py) never blanks them. Idempotent: prior
-source=bliss rows for allowlisted surfaces are replaced on re-run.
-"""
+"""Recover curated passé-simple false positives into words-fr.csv; see docs/superpowers/plans/2026-07-03-short-word-cooldown-fix.md."""
 from __future__ import annotations
 import argparse
 import csv
@@ -37,12 +25,9 @@ DEFAULT_LEXIQUE = Path(os.path.expanduser(
 
 MAX_CLUES_PER_FORM = 3
 
-# surface -> source verb. Hand-picked false positives of the ipsi ban
-# (docs/superpowers/plans/2026-07-03-short-word-cooldown-fix.md, list B):
-# common verbs, guessable forms, tonally clean. Vulgar/obscure/archaic
-# forms stay banned — do NOT widen this list by analogy.
+# surface -> source verb; curated ipsi-ban false positives, list B in
+# docs/superpowers/plans/2026-07-03-short-word-cooldown-fix.md — do NOT widen by analogy.
 ALLOWLIST: dict[str, str] = {
-    # Irregular auxiliaries / modals (highest value).
     "fit": "faire", "fis": "faire",
     "mit": "mettre", "mis": "mettre",
     "put": "pouvoir",
@@ -57,11 +42,7 @@ ALLOWLIST: dict[str, str] = {
     "mut": "mouvoir", "mus": "mouvoir",
     "tut": "taire", "tus": "taire",
     "rit": "rire",
-    # Common -er verbs, 3sg (guessable, tonally clean). buta/riva/tapa/fia/
-    # rua/dosa are deliberately absent: their corpus lemma clues carry a
-    # wrong sense (buter->Beurrer, river->Cours d'eau, taper->S'affiner,
-    # fier->adjective reading, ruer->Galoper, doser->Administrer); re-add
-    # once the lemma clue is fixed upstream.
+    # buta/riva/tapa/fia/rua/dosa deliberately absent — wrong-sense corpus clues, see plan doc.
     "osa": "oser", "ôta": "ôter", "tua": "tuer",
     "sua": "suer", "hua": "huer", "nua": "nuer",
     "pua": "puer", "mua": "muer", "arma": "armer", "fila": "filer",
@@ -92,10 +73,7 @@ def _leading_reflexive(clue: str) -> bool:
 
 
 def _infinitive_led(clue: str, index: MorphologyIndex) -> bool:
-    """True iff the clue's first non-function content token is a verb in the
-    infinitive — the lemma-form verb-clue shape that inflects safely. Rejects
-    nominal clues whose embedded verb the head ranker would otherwise grab
-    (`Obligation à remplir` -> *`Obligation à remplit`)."""
+    """True iff the clue's head token is an infinitive verb; see docs/superpowers/plans/2026-07-03-short-word-cooldown-fix.md."""
     for tok in _TOKEN_RE.findall(clue):
         if not _is_alpha_token(tok):
             continue
