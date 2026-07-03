@@ -2,6 +2,7 @@ package com.bliss.identity.infrastructure.id
 
 import com.bliss.identity.application.ports.IdGenerator
 import com.bliss.identity.domain.auth.AuthAttemptId
+import com.bliss.identity.domain.auth.ChallengeId
 import com.bliss.identity.domain.session.SessionId
 import com.bliss.identity.domain.user.UserId
 import com.fasterxml.uuid.Generators
@@ -15,4 +16,6 @@ class UuidV7IdGenerator : IdGenerator {
     override fun newSessionId(): SessionId = SessionId(generator.generate())
 
     override fun newAuthAttemptId(): AuthAttemptId = AuthAttemptId(generator.generate())
+
+    override fun newChallengeId(): ChallengeId = ChallengeId(generator.generate())
 }

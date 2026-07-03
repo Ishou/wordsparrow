@@ -1,6 +1,7 @@
 package com.bliss.identity.application.ports
 
 import com.bliss.identity.domain.auth.AuthAttemptId
+import com.bliss.identity.domain.auth.ChallengeId
 import com.bliss.identity.domain.session.SessionId
 import com.bliss.identity.domain.user.UserId
 
@@ -15,4 +16,6 @@ interface IdGenerator {
     fun newSessionId(): SessionId
 
     fun newAuthAttemptId(): AuthAttemptId
+
+    fun newChallengeId(): ChallengeId
 }
