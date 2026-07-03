@@ -6,10 +6,13 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isGreaterThanOrEqualTo
 import assertk.assertions.isNotEqualTo
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import assertk.assertions.startsWith
 import com.bliss.grid.api.dto.PuzzleResponse
 import com.bliss.grid.api.module
+import com.bliss.grid.application.auth.CookieVerifier
+import com.bliss.grid.application.auth.WhoAmI
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PUZZLE_HEIGHT
@@ -30,8 +33,11 @@ import com.bliss.grid.domain.model.WordPlacement
 import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
+import io.ktor.client.request.cookie
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -46,8 +52,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 
 /** Wire-path tests for `GET /v1/puzzles/{puzzleId}` via Ktor [testApplication]. */
@@ -328,7 +336,11 @@ class PuzzleRouteTest {
         )
     }
 
-    private fun Application.dailyRouteWith(seed: (InMemoryPuzzleRepository) -> Unit) {
+    private fun Application.dailyRouteWith(
+        clock: Clock = Clock.systemUTC(),
+        cookieVerifier: CookieVerifier = FakeCookieVerifier(),
+        seed: (InMemoryPuzzleRepository) -> Unit,
+    ) {
         install(ContentNegotiation) {
             json(
                 Json {
@@ -350,10 +362,121 @@ class PuzzleRouteTest {
                 puzzleRepository = repo,
                 hintUsageRepository = hintRepo,
                 hintWriteCoordinator = InMemoryHintWriteCoordinator(),
-                cookieVerifier = FakeCookieVerifier(),
+                cookieVerifier = cookieVerifier,
+                clock = clock,
             )
         }
     }
+
+    private val cacheClock: Clock =
+        Clock.fixed(Instant.parse("2026-05-09T10:00:00Z"), ZoneOffset.UTC)
+
+    @Test
+    fun `anonymous daily emits public cache-control with s-maxage until utc midnight and a puzzle-id etag`() =
+        testApplication {
+            val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6d")
+            application { dailyRouteWith(clock = cacheClock) { it.insertDaily(id, dailyDate, storedDailyPuzzle()) } }
+
+            val response = client.get("/v1/puzzles/daily?date=2026-05-09")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            // 2026-05-09T10:00:00Z -> next UTC midnight is 14h = 50400s away.
+            assertThat(response.headers["Cache-Control"]!!).isEqualTo("public, no-cache, s-maxage=50400")
+            assertThat(response.headers["ETag"]!!).isEqualTo("\"$id\"")
+        }
+
+    @Test
+    fun `cookied daily emits private no-store and no etag`() =
+        testApplication {
+            val verifier = FakeCookieVerifier(cached = WhoAmI(userId = UUID.randomUUID(), displayName = "joueur"))
+            application {
+                dailyRouteWith(clock = cacheClock, cookieVerifier = verifier) {
+                    it.insertDaily(UUID.randomUUID(), dailyDate, storedDailyPuzzle())
+                }
+            }
+
+            val response =
+                client.get("/v1/puzzles/daily?date=2026-05-09") {
+                    cookie("__Secure-ws_session", "session-token")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.headers["Cache-Control"]!!).isEqualTo("private, no-store")
+            assertThat(response.headers["ETag"]).isNull()
+        }
+
+    @Test
+    fun `anonymous daily answers 304 with cache headers and empty body on matching If-None-Match`() =
+        testApplication {
+            val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6e")
+            application { dailyRouteWith(clock = cacheClock) { it.insertDaily(id, dailyDate, storedDailyPuzzle()) } }
+
+            val response =
+                client.get("/v1/puzzles/daily?date=2026-05-09") {
+                    header(HttpHeaders.IfNoneMatch, "\"$id\"")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NotModified)
+            assertThat(response.bodyAsText()).isEqualTo("")
+            assertThat(response.headers["Cache-Control"]!!).isEqualTo("public, no-cache, s-maxage=50400")
+            assertThat(response.headers["ETag"]!!).isEqualTo("\"$id\"")
+        }
+
+    @Test
+    fun `cookied daily never answers 304 even when If-None-Match carries the current puzzle id`() =
+        testApplication {
+            val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6f")
+            val verifier = FakeCookieVerifier(cached = WhoAmI(userId = UUID.randomUUID(), displayName = "joueur"))
+            application {
+                dailyRouteWith(clock = cacheClock, cookieVerifier = verifier) {
+                    it.insertDaily(id, dailyDate, storedDailyPuzzle())
+                }
+            }
+
+            val response =
+                client.get("/v1/puzzles/daily?date=2026-05-09") {
+                    cookie("__Secure-ws_session", "session-token")
+                    header(HttpHeaders.IfNoneMatch, "\"$id\"")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.headers["Cache-Control"]!!).isEqualTo("private, no-store")
+        }
+
+    @Test
+    fun `regenerated daily flips the etag so a stale If-None-Match gets 200 with the new body`() =
+        testApplication {
+            val oldId = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a01")
+            val newId = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a02")
+            application {
+                dailyRouteWith(clock = cacheClock) { repo ->
+                    repo.insertDaily(oldId, dailyDate, storedDailyPuzzle(width = 7, height = 7))
+                    repo.insertDaily(newId, dailyDate, storedDailyPuzzle(width = 9, height = 9))
+                }
+            }
+
+            val response =
+                client.get("/v1/puzzles/daily?date=2026-05-09") {
+                    header(HttpHeaders.IfNoneMatch, "\"$oldId\"")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.headers["ETag"]!!).isEqualTo("\"$newId\"")
+            val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            assertThat(json["width"]!!.jsonPrimitive.content.toInt()).isEqualTo(9)
+        }
+
+    @Test
+    fun `daily 404 carries no cache headers`() =
+        testApplication {
+            application { dailyRouteWith(clock = cacheClock) { } }
+
+            val response = client.get("/v1/puzzles/daily?date=2026-05-09")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NotFound)
+            assertThat(response.headers["Cache-Control"]).isNull()
+            assertThat(response.headers["ETag"]).isNull()
+        }
 
     @Test
     fun `daily endpoint responds 404 with RFC 7807 problem when no row is persisted`() =

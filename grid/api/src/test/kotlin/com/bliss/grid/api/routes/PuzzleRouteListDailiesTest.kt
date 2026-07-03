@@ -7,7 +7,10 @@ import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
+import assertk.assertions.isNotEqualTo
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
+import assertk.assertions.matches
 import assertk.assertions.startsWith
 import com.bliss.grid.api.dto.ListDailyPuzzlesResponseDto
 import com.bliss.grid.application.puzzle.DailyPuzzleSelector
@@ -31,7 +34,9 @@ import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -147,9 +152,71 @@ class PuzzleRouteListDailiesTest {
             assertThat(body.items.all { it.totalLetterCells == 5 }).isTrue()
         }
 
+    @Test
+    fun `list emits public no-cache and a strong 16-hex etag, stable across identical calls`() =
+        testApplication {
+            application { listDailyPuzzlesModule(seed = LocalDate.parse("2026-05-12")..today) }
+
+            val first = client.get("/v1/puzzles/daily/list")
+            val second = client.get("/v1/puzzles/daily/list")
+
+            assertThat(first.headers["Cache-Control"]!!).isEqualTo("public, no-cache")
+            val etag = first.headers["ETag"]!!
+            assertThat(etag).matches(Regex("\"[0-9a-f]{16}\""))
+            assertThat(second.headers["ETag"]!!).isEqualTo(etag)
+        }
+
+    @Test
+    fun `list answers 304 with empty body on matching If-None-Match`() =
+        testApplication {
+            application { listDailyPuzzlesModule(seed = LocalDate.parse("2026-05-12")..today) }
+
+            val etag = client.get("/v1/puzzles/daily/list").headers["ETag"]!!
+            val response =
+                client.get("/v1/puzzles/daily/list") {
+                    header(HttpHeaders.IfNoneMatch, etag)
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NotModified)
+            assertThat(response.bodyAsText()).isEqualTo("")
+            assertThat(response.headers["Cache-Control"]!!).isEqualTo("public, no-cache")
+            assertThat(response.headers["ETag"]!!).isEqualTo(etag)
+        }
+
+    @Test
+    fun `list etag flips when the id set changes so a stale If-None-Match gets 200`() =
+        testApplication {
+            val repo = InMemoryPuzzleRepository()
+            application { listDailyPuzzlesModule(seed = LocalDate.parse("2026-05-12")..today, puzzleRepo = repo) }
+
+            val etag = client.get("/v1/puzzles/daily/list").headers["ETag"]!!
+            // Regenerating a date inserts a newer row whose fresh id wins (ADR-0081).
+            repo.insertDaily(UUID.randomUUID(), today, stubStoredPuzzle())
+            val response =
+                client.get("/v1/puzzles/daily/list") {
+                    header(HttpHeaders.IfNoneMatch, etag)
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.headers["ETag"]!!).isNotEqualTo(etag)
+        }
+
+    @Test
+    fun `list 400 carries no cache headers`() =
+        testApplication {
+            application { listDailyPuzzlesModule(seed = LocalDate.parse("2026-05-12")..today) }
+
+            val response = client.get("/v1/puzzles/daily/list?from=not-a-date")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.BadRequest)
+            assertThat(response.headers["Cache-Control"]).isNull()
+            assertThat(response.headers["ETag"]).isNull()
+        }
+
     private fun Application.listDailyPuzzlesModule(
         seed: ClosedRange<LocalDate>,
         maxItems: Int = ListDailyPuzzlesUseCase.DEFAULT_MAX_ITEMS,
+        puzzleRepo: InMemoryPuzzleRepository = InMemoryPuzzleRepository(),
     ) {
         install(ContentNegotiation) {
             json(
@@ -159,7 +226,6 @@ class PuzzleRouteListDailiesTest {
                 },
             )
         }
-        val puzzleRepo = InMemoryPuzzleRepository()
         val hintRepo = InMemoryHintUsageRepository()
         val selector = DailyPuzzleSelector()
 
