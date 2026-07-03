@@ -18,6 +18,7 @@ const bar = css({
     marginInline: 'calc(50% - 50vw)',
     paddingBlock: '14px',
     bg: 'rgba(231,242,236,0.72)',
+    _dark: { bg: 'ws.barFrost' },
     backdropFilter: 'blur(12px)',
   },
 });
@@ -26,7 +27,7 @@ const barInner = css({ position: 'relative', display: 'flex', alignItems: 'cente
 const brand = css({ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', borderRadius: '12px', cursor: 'pointer', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '4px' } });
 const nav = css({ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '26px' });
 const link = css({ fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'bold', color: 'ws.jadeInk', opacity: 0.6, textDecoration: 'none', cursor: 'pointer', padding: '4px 2px', borderRadius: '8px', _hover: { opacity: 1 }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
-const linkActive = css({ color: 'ws.sakura', opacity: 1 });
+const linkActive = css({ color: 'ws.navAccent', opacity: 1 });
 const right = css({ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' });
 const menuBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'ws.glass', color: 'ws.jadeInk', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'ws.glassHover' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 

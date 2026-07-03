@@ -20,7 +20,7 @@ const nav = css({
 const navItem = css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, textDecoration: 'none', cursor: 'pointer', padding: 0, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px', borderRadius: '8px' } });
 const navLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold' });
 
-const ACTIVE = 'var(--colors-ws-sakura)';
+const ACTIVE = 'var(--colors-ws-nav-accent)';
 const IDLE = 'var(--colors-ws-jade-ink)';
 
 export interface BottomNavProps {

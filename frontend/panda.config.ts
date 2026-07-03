@@ -212,6 +212,8 @@ export default defineConfig({
           sakura: { value: { base: '#D45D83', _dark: '#D45D83' } },
           sakuraDark: { value: { base: '#BE4970', _dark: '#BE4970' } },
           sakuraRose: { value: { base: '#E586A4', _dark: '#E586A4' } },
+          // Active-nav text — sakura is ~4.5:1 borderline on the night bar frost; rose clears it (~6.5:1 dark).
+          navAccent: { value: { base: '#D45D83', _dark: '#E586A4' } },
           sakuraBlush: { value: { base: '#F7DEE7', _dark: '#3A2230' } },
           // Deep sage clue-cell surface; cream clueText clears AA in both themes (~5.3:1).
           clueSurface: { value: { base: '#4F6E5C', _dark: '#4F6E5C' } },
