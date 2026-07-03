@@ -135,6 +135,7 @@ flowchart LR
     pages["Cloudflare Pages"]
     pagesdomain["Pages custom domain"]
     dns["Cloudflare DNS"]
+    cacherules["Cloudflare cache rules"]
     k3s["Hetzner k3s"]
   end
   deploy_frontend -->|wrangler| pages

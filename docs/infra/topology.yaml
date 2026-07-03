@@ -18,6 +18,7 @@ cloud:
   - { id: pages,       label: Cloudflare Pages,    tf_resource: cloudflare_pages_project }
   - { id: pagesdomain, label: Pages custom domain, tf_resource: cloudflare_pages_domain }
   - { id: dns,         label: Cloudflare DNS,      tf_resource: cloudflare_dns_record }
+  - { id: cacherules,  label: Cloudflare cache rules, tf_resource: cloudflare_ruleset }
   - { id: k3s,         label: Hetzner k3s,         tf_resource: null }
 
 # Cluster-topology edges (request-protocol detail lives in flow_edges); cluster_external lists non-cluster nodes.
