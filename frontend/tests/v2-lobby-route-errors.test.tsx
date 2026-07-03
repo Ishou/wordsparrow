@@ -95,6 +95,7 @@ function renderLobbyRoute(getLobby: LobbyClient['getLobby']) {
     getLobby,
     findByCode: vi.fn().mockResolvedValue(lobby),
     listMyLobbies: vi.fn().mockResolvedValue([]),
+    listMyLobbiesForUser: vi.fn().mockResolvedValue([]),
     rebindLobbySessions: vi.fn().mockResolvedValue(undefined),
     unbindLobbySessions: vi.fn().mockResolvedValue(undefined),
   };
