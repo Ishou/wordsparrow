@@ -18,6 +18,7 @@ cloud:
   - { id: pages,       label: Cloudflare Pages,    tf_resource: cloudflare_pages_project }
   - { id: pagesdomain, label: Pages custom domain, tf_resource: cloudflare_pages_domain }
   - { id: dns,         label: Cloudflare DNS,      tf_resource: cloudflare_dns_record }
+  - { id: cacherules,  label: Cloudflare cache rules, tf_resource: cloudflare_ruleset }
   - { id: k3s,         label: Hetzner k3s,         tf_resource: null }
 
 # Cluster-topology edges (request-protocol detail lives in flow_edges); cluster_external lists non-cluster nodes.
@@ -53,6 +54,8 @@ deploy_edges:
   - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
   - { from: pages,           to: pagesdomain, label: custom domain }
   - { from: dns,             to: k3s,   label: service subdomains via external-dns }
+  - { from: dns,             to: cacherules, label: edge cache }
+  - { from: cacherules,      to: k3s,   label: cache miss / bypass }
 
 # Observability TARGET (ADR-0027/0033/0040): hand-maintained, not chart-gated — missing source edge = gap to fix.
 observability:
