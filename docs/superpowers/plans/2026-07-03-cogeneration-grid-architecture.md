@@ -93,3 +93,28 @@ feedback-bench-feasibility-gate memory. Remaining gap to print after
 interim: sharing optimizer (pair word-starts on shared def cells; ours
 1.37–1.43 vs print ~1.7) and/or frontend def-cell restyle (print def
 cells are white).
+
+## v2 findings (row-DP engine, 2026-07-03 evening)
+
+Engine rewritten: exact per-row DP (regular-language intersection over
+per-position allowed letters; boundaries only on terminable columns) +
+backward realization sampling + reservation semantics + structural print
+rules (row 0 alternating; top-band/bottom-band/left-column short verticals;
+no clump blacks; staggered 3-length bands; weighted 4-7 word lengths) +
+landing-flexibility selection + exact one-row-DP lookahead + row-level
+backtracking (80) + attempt restarts.
+
+Frontier trajectory: rows 2 -> 3 -> 7 -> 14, then STALLED at 13-14/20
+across four runs (stall rule triggered). Boards through row 13 are
+print-quality (SOUTIENNE / BAPTISE / NAGERA / RADEAU / AUSTRALE ...).
+Remaining wall: multi-row global consistency — failures at row ~13 are
+caused by commitments 2-4 rows earlier (reserved-column landing patterns,
+orphan-forced blacks); a one-row oracle cannot see them.
+
+Next candidates (reassessment):
+1. Beam search over rows (width 4-8, keep best boards by flexibility +
+   next-row-DP): attempts cost ~40ms, beam ~seconds/board — cheap, the
+   natural scale-up. RECOMMENDED first.
+2. Two-row lookahead (sampled r+1 realization + r+2 DP oracle).
+3. Combine with best-of-N at board level for density selection once
+   completion is reached.
