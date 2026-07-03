@@ -25,8 +25,7 @@ DEFAULT_LEXIQUE = Path(os.path.expanduser(
 
 MAX_CLUES_PER_FORM = 3
 
-# surface -> source verb; curated ipsi-ban false positives, list B in
-# docs/superpowers/plans/2026-07-03-short-word-cooldown-fix.md — do NOT widen by analogy.
+# surface -> source verb; ipsi-ban false positives (list B, plan doc) — do NOT widen by analogy.
 ALLOWLIST: dict[str, str] = {
     "fit": "faire", "fis": "faire",
     "mit": "mettre", "mis": "mettre",
@@ -201,9 +200,7 @@ def main() -> None:
                     break
                 if not _infinitive_led(source_clue, index):
                     continue
-                # A reflexive source keeps its `Se` verbatim, which only stays
-                # grammatical when the target person is third (`Se déplaça`
-                # yes, *`Se déplaças` no).
+                # A reflexive source's leading "Se" only stays grammatical at third person ("Se déplaça", not *"Se déplaças").
                 if _leading_reflexive(source_clue) and not third_person:
                     continue
                 text, status = classify_inflection(source_clue, norm, index)

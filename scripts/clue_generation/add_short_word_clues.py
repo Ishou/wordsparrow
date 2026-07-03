@@ -7,8 +7,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent.parent
 WORDLIST = REPO / "grid/infrastructure/src/main/resources/words/words-fr.csv"
 
-# word -> list of distinct clues. Words are matched case-insensitively
-# against the wordlist; original row casing is preserved.
+# word -> list of distinct clues, matched case-insensitively against the wordlist (original row casing preserved).
 ENTRIES: dict[str, list[str]] = {
     # === 2-letter: roman numerals (uppercase rows) ===
     "cc": ["C + C", "Deux cents romain", "Copie carbone", "200 en chiffres romains"],
@@ -439,9 +438,7 @@ def main() -> None:
         rows = list(csv.DictReader(f))
         fieldnames = list(rows[0].keys())
 
-    # Rows grouped case-insensitively; the first row per word is the primary
-    # (keeps original casing/frequency), later source=bliss rows are treated
-    # as replaceable multi-clue duplicates from a previous run.
+    # Rows are grouped case-insensitively; the first row per word is primary, later source=bliss rows are replaceable duplicates from a previous run.
     primary: dict[str, dict] = {}
     out_rows: list[dict] = []
     dropped_dups = 0
