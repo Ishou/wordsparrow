@@ -28,6 +28,14 @@ export interface SoloEntriesStore {
   clearForPuzzle(puzzleId: string): void;
 }
 
+// Distinct cells the player has content in — typed entries ∪ locked cells; solo grids only lock on full validation or hints, so progress UIs must count entries too.
+export function countFilledCells(store: SoloEntriesStore, puzzleId: string): number {
+  const keys = new Set<string>();
+  for (const e of store.load(puzzleId)) if (e.letter !== '') keys.add(`${e.row}:${e.column}`);
+  for (const c of store.loadLockedCells(puzzleId)) keys.add(`${c.row}:${c.column}`);
+  return keys.size;
+}
+
 export interface SoloEntriesStoreDeps {
   readonly getSessionId: () => string;
   readonly storage: SoloEntriesStorage;

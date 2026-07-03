@@ -5,7 +5,8 @@ export type DayStatus = 'done' | 'progress' | 'new' | 'paywalled';
 export interface DayInfo {
   readonly summary: DailySummary;
   readonly status: DayStatus;
-  readonly locked: number;
+  // Cells with content (typed ∪ locked) — drives the progress ring; done is derived from locked alone.
+  readonly filled: number;
   readonly today: boolean;
 }
 
@@ -80,19 +81,19 @@ function daysSince(iso: string, todayIso: string): number {
 
 export function deriveDayInfos(
   summaries: ReadonlyArray<DailySummary>,
-  progressOf: (summaryId: string) => { locked: number; started: boolean },
+  progressOf: (summaryId: string) => { locked: number; filled: number },
   todayIso: string,
   canSubscribe: boolean,
 ): ReadonlyMap<string, DayInfo> {
   const out = new Map<string, DayInfo>();
   for (const summary of summaries) {
-    const { locked, started } = progressOf(summary.id);
+    const { locked, filled } = progressOf(summary.id);
     const total = summary.totalLetterCells;
-    const base: DayStatus = total > 0 && locked >= total ? 'done' : locked > 0 ? 'progress' : 'new';
-    // Cosmetic lock: older than 7 days, unstarted, non-subscriber (ADR-0080 W5a; server enforces in W5b).
+    const base: DayStatus = total > 0 && locked >= total ? 'done' : filled > 0 ? 'progress' : 'new';
+    // Cosmetic lock: older than 7 days, unstarted ('new' implies filled === 0), non-subscriber (ADR-0080 W5a; server enforces in W5b).
     const status: DayStatus =
-      base === 'new' && canSubscribe && !started && daysSince(summary.date, todayIso) > 7 ? 'paywalled' : base;
-    out.set(summary.date, { summary, status, locked, today: summary.date === todayIso });
+      base === 'new' && canSubscribe && daysSince(summary.date, todayIso) > 7 ? 'paywalled' : base;
+    out.set(summary.date, { summary, status, filled, today: summary.date === todayIso });
   }
   return out;
 }

@@ -9,7 +9,7 @@ import { LobbyClientError, type LobbyClient } from '@/application/game';
 import { useOptionalAuth } from '@/ui/components/auth';
 import { HostSignInSheet } from './HostSignInSheet';
 import type { Pseudonym, SessionId } from '@/domain/game';
-import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
+import { countFilledCells, type SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import { Skeleton } from '@/design-system';
 import { useCanSubscribe } from '@/ui/components/billing';
 import { HomeTeaser } from '@/ui/v2/UpsellEntries';
@@ -301,13 +301,13 @@ export function HomeScreen({
     return week.map((d) => {
       const summary = byDate.get(d.iso);
       const lockedCount = summary != null ? soloEntriesStore.loadLockedCells(summary.id).length : 0;
+      const filledCount = summary != null ? countFilledCells(soloEntriesStore, summary.id) : 0;
       const solved = summary != null && summary.totalLetterCells > 0 && lockedCount >= summary.totalLetterCells;
-      // Started = touched (any entry or locked cell) but not finished — distinguishes resumable grids from untouched ones.
-      const started =
-        !solved && summary != null && (lockedCount > 0 || soloEntriesStore.load(summary.id).length > 0);
+      // Started = touched (any filled cell) but not finished — distinguishes resumable grids from untouched ones.
+      const started = !solved && filledCount > 0;
       const status: DayStatus = solved ? 'solved' : started ? 'started' : 'none';
       const total = summary?.totalLetterCells ?? 0;
-      const pct = total > 0 ? Math.round((lockedCount / total) * 100) : 0;
+      const pct = total > 0 ? Math.round((filledCount / total) * 100) : 0;
       return { ...d, available: summary != null, label: longDateFr(d.iso), status, pct };
     });
   }, [week, history, soloEntriesStore]);
