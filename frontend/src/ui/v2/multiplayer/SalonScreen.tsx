@@ -35,8 +35,7 @@ export interface SalonScreenProps {
   readonly onSetGridConfig: (width: number, height: number) => void;
   readonly onStart: () => void;
   readonly onRotateCode: () => void;
-  // Resolves to the branch the share actually took; the "Lien copié !"
-  // feedback below is gated on `'copied'`, not on platform capability.
+  // See ShareInviteResult (shareInvite.ts) for the gating rule.
   readonly onCopyShareUrl: () => Promise<ShareInviteResult | null>;
   readonly onLeave: () => void;
   readonly onClearPseudonymError?: () => void;

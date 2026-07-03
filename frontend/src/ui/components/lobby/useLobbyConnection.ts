@@ -65,9 +65,7 @@ export interface LobbyActions {
   readonly setGridConfig: (width: number, height: number) => void;
   readonly start: () => void;
   readonly rotateCode: () => void;
-  // Resolves to the branch `shareOrCopyInviteUrl` actually took, so the
-  // caller can gate "Lien copié !" feedback on the real outcome instead
-  // of on `canNativeShare()`. `null` when there's no code to share yet.
+  // See ShareInviteResult (shareInvite.ts) for the gating rule; `null` when there's no code to share yet.
   readonly copyShareUrl: () => Promise<ShareInviteResult | null>;
   // Voluntary leave: frees the slot server-side. Navigation is the caller's concern — the hook owns no navigate seam.
   readonly leave: () => void;

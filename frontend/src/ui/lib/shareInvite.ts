@@ -3,9 +3,7 @@ export function canNativeShare(): boolean {
   return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 }
 
-// Reports which branch actually ran so callers can gate "copied" feedback
-// on the real outcome rather than on platform capability — a non-abort
-// `navigator.share()` rejection still falls back to the clipboard.
+// Branch actually taken; callers gate "copied" feedback on 'copied', not on platform capability.
 export type ShareInviteResult = 'shared' | 'dismissed' | 'copied';
 
 export async function shareOrCopyInviteUrl(url: string): Promise<ShareInviteResult> {
