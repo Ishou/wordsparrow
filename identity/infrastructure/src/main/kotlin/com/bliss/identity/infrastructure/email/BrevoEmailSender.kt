@@ -4,12 +4,15 @@ import com.bliss.identity.application.ports.EmailSender
 import com.bliss.identity.domain.auth.OtpCode
 import com.bliss.identity.domain.user.EmailAddress
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
 
 class EmailSendFailed(
@@ -18,9 +21,15 @@ class EmailSendFailed(
 
 /** Delivers OTP codes via Brevo's transactional email API (POST /v3/smtp/email); no vendor SDK — Ktor client only. */
 class BrevoEmailSender(
-    private val httpClient: HttpClient,
+    engine: HttpClientEngine,
     private val config: BrevoConfig,
 ) : EmailSender {
+    private val httpClient =
+        HttpClient(engine) {
+            expectSuccess = false // non-2xx handled via explicit status check in sendOtp()
+            install(ContentNegotiation) { json() }
+        }
+
     override suspend fun sendOtp(
         to: EmailAddress,
         code: OtpCode,

@@ -7,16 +7,13 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import com.bliss.identity.domain.auth.OtpCode
 import com.bliss.identity.domain.user.EmailAddress
-import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.toByteArray
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
@@ -57,11 +54,7 @@ class BrevoEmailSenderTest {
                     headers = headersOf("Content-Type", ContentType.Application.Json.toString()),
                 )
             }
-        val client =
-            HttpClient(engine) {
-                install(ContentNegotiation) { json() }
-            }
-        return BrevoEmailSender(client, config)
+        return BrevoEmailSender(engine, config)
     }
 
     @Test
