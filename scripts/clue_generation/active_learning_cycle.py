@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import random
 import re
 import sys
@@ -275,6 +276,9 @@ def cmd_train(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
+    # ADR-0087: MLX lane retired 2026-06-23 — the RAFT loop runs on Modal (docs/runbooks/clue-loop.md).
+    if os.environ.get("FORCE_MLX") != "1":
+        sys.exit("RETIRED (ADR-0087): MLX lane retired; the training loop runs on Modal (docs/runbooks/clue-loop.md). Set FORCE_MLX=1 only for archaeology.")
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="cmd", required=True)
 

@@ -75,7 +75,7 @@ ADR-0053  frontend/vite.config.ts                  SW navigateFallbackDenylist f
 ADR-0054  frontend/src/ui/**                       Page-shell primitive
 ADR-0055  game/**/persistence/**                   Multiplayer game persistence
 ADR-0056  survey/**                                Survey bounded context (RLHF clue rating; pairwise comparison task pulled from v2 deferral)
-ADR-0057  modal_jobs/**                            Cloud-GPU finetune lane (Modal)
+ADR-0057  modal_jobs/**                            Cloud-GPU finetune lane (Modal); "second lane / training-only" framing amended by ADR-0087 (sole lane, generation included)
 ADR-0058  data/external/**                         Licensed-data posture (commercial intent); per-source verdict matrix
 ADR-0058  data/dbnary/**                           DBnary SA-acceptance + distribution discipline
 ADR-0058  scripts/clue_generation/**               Training/filter paths must classify per ADR-0058 matrix
@@ -213,6 +213,9 @@ ADR-0086  game/api/openapi.yaml                          `GET /v1/lobbies/{id}` 
 ADR-0086  game/application/**/usecases/LobbyUseCases.kt  `WordLocked` carries `lockedBy` = the completing player; `GameSession` tracks lock owner per position; crossing lock emits only new cells (first-writer-wins on the shared cell)
 ADR-0086  frontend/src/ui/components/grid/PuzzleBoard.tsx  Owned solved cell tints `color-mix(var(--player-color) 32%, solved-fill)` from `playerColor(lockedBy)`; solo/no-owner untinted (WCAG AA)
 # ADR-0086: Attribute locked co-op words to the player who found them — `wordLocked.lockedBy` + `LockedCell` snapshot; frontend soft-tints solved cells with the finder's `playerColor`. First-writer-wins on crossing cells (server emits diff-not-union + additive snapshot, so a shared cell keeps its first owner). Extends ADR-0084.
+ADR-0087  modal_jobs/**                            Modal Command-R is the SOLE clue-generation + training lane (amends ADR-0057)
+ADR-0087  scripts/clue_generation/**               MLX lane (run_production.sh, train_lora.sh, train_dpo.sh, generate_clues_lora*, lora_iter*.yaml) RETIRED 2026-06-23 — never invoke for new work
+ADR-0087  scripts/eval/**                          validate_clue/inflation/runtime guards stay live (lane-independent); CamemBERT filter retired as a shipping gate
 ```
 
 ## Adding entries

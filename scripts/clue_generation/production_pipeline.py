@@ -83,6 +83,9 @@ def length_score(clue: str) -> float:
 
 
 def main() -> None:
+    # ADR-0087: MLX lane retired 2026-06-23 — generate on Modal (modal_jobs/04_generate_command_r.py).
+    if os.environ.get("FORCE_MLX") != "1":
+        sys.exit("RETIRED (ADR-0087): MLX lane retired; use modal_jobs/04_generate_command_r.py (docs/runbooks/clue-loop.md). Set FORCE_MLX=1 only for archaeology.")
     parser = argparse.ArgumentParser()
     parser.add_argument("--generator-model",
                         default="mlx-community/c4ai-command-r-08-2024-4bit")

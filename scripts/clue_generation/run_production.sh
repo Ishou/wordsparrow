@@ -15,6 +15,12 @@
 #   data/eval/production/lemma_clues_dropped.csv  - score < threshold
 set -euo pipefail
 
+# ADR-0087: MLX lane retired 2026-06-23 — production is the Modal Command-R lane.
+if [[ "${FORCE_MLX:-}" != "1" ]]; then
+  echo "RETIRED (ADR-0087): the local MLX lane is retired. Generate on Modal (modal_jobs/04_generate_command_r.py; see docs/runbooks/clue-loop.md). Set FORCE_MLX=1 only for archaeology." >&2
+  exit 1
+fi
+
 X="${X:-5000}"
 THRESHOLD="${THRESHOLD:-0.65}"
 GEN_MODEL="${GEN_MODEL:-mlx-community/c4ai-command-r-08-2024-4bit}"
