@@ -38,6 +38,7 @@ ADR-0003  */api/openapi.yaml                       Schema-first contract; merge 
 ADR-0003  */api/asyncapi.yaml                      Same as openapi but for event channels (ADR-0019)
 ADR-0003  frontend/src/infrastructure/api/**/types.ts  Generated; never hand-edit (drift gate)
 ADR-0007  */api/src/**/config/*.kt                 Runtime config from env vars; fail-fast at boot
+# ADR-0007: §4 DNS-only / no-orange-cloud posture amended by ADR-0089 — narrowed to WS hosts (game); api+auth are Cloudflare-proxied
 ADR-0009  infra/platform/charts/**                 Self-managed k3s on Hetzner; helm chart layout
 ADR-0009  .github/workflows/deploy-api-k8s.yml     Deploy pattern: configure-in-cluster, not push-from-CI
 ADR-0010  terraform/**                             OpenTofu remote state on Hetzner
@@ -221,6 +222,11 @@ ADR-0088  frontend/src/ui/v2/**                          Night-ramp values for t
 ADR-0088  frontend/index.html                            Pre-paint data-theme applied from localStorage bliss.theme ('clair'|'sombre'|'auto'); auto follows prefers-color-scheme
 ADR-0088  frontend/src/ui/v2/ReglagesScreen.tsx          Theme control lives in Réglages; default flips to 'auto' only in rollout Wave C
 # ADR-0088: Dark mode « jardin de nuit » — ws.* and semantic tokens promoted to {base,_dark} pairs, condition = [data-theme=dark]; theme setting 'clair'|'sombre'|'auto' persisted in localStorage, applied pre-paint; rollout ships dark first (default clair), flips to auto once QA completes.
+ADR-0089  */api/deploy/chart/values-prod.yaml        Orange-cloud api+auth via external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"; game stays gray (WS); rollback = remove the annotation
+ADR-0089  terraform/cloudflare-cache-rules.tf        cloudflare_ruleset (http_request_cache_settings): host api.wordsparrow.io + /v1/puzzles/daily, respect origin TTL, bypass on __Secure-ws_session cookie
+ADR-0089  grid/worker/**                             Purge-on-regen: exact-URL CF purge (/v1/puzzles/daily [+?date=]) after every generation run; failure logs, never fails the Job; Zone.Cache Purge-scoped token Secret
+ADR-0089  */api/src/main/kotlin/**/Module.kt         Timing-Allow-Origin: https://wordsparrow.io https://www.wordsparrow.io in DefaultHeaders (all five services)
+# ADR-0089: amends ADR-0007 §4 (DNS-only posture narrowed to WS hosts); daily cache policy = anon-only public,no-cache + s-maxage-to-UTC-midnight + ETag="<puzzleId>" (304), cookie ⇒ private,no-store; daily/list never edge-cached (unbounded query variants vs exact-URL purge); regen propagates via ADR-0081 fresh-UUID ETag flip + edge purge
 ```
 
 ## Adding entries
