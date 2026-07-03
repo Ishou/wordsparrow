@@ -7,7 +7,7 @@ const statusCard = css({ bg: 'white', borderRadius: '18px', padding: '16px', box
 // No page <h1>: a `denied` resolve flips this to the 404, so showing the page title here would flash the page identity to a non-eligible visitor.
 export function GateLoadingScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/menu" />} backTo="/menu">
+    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <p className={statusCard} role="status">
         Chargement…
       </p>

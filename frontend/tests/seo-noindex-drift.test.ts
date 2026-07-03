@@ -40,7 +40,7 @@ describe('noindex ⇔ manifest drift', () => {
 
   it('yields one entry per route in multi-route files (redirects.tsx)', () => {
     const redirectPaths = scanned.filter((r) => r.file === 'redirects.tsx').map((r) => r.path).sort();
-    expect(redirectPaths).toEqual(['/accueil', '/grille', '/privacy']);
+    expect(redirectPaths).toEqual(['/accueil', '/grille', '/menu', '/privacy']);
   });
 
   it('every route emitting a noindex head is listed in EXCLUDED_ROUTES', () => {

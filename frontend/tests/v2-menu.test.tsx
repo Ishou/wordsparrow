@@ -8,11 +8,10 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
-import { MenuScreen } from '@/ui/v2/MenuScreen';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
 import { Route as IndexRoute } from '@/ui/routes/index';
-import { Route as MenuRoute } from '@/ui/routes/menu';
+import { MenuRedirectRoute } from '@/ui/routes/redirects';
 import { expectAxeClean } from '@/test/a11y';
 
 // zag schedules dismiss/focus-trap listeners via rAF + setTimeout; drain both before firing close events.
@@ -49,64 +48,6 @@ function renderSheetWithTrigger(onCloseSpy?: () => void) {
   });
   return render(<RouterProvider router={router} />);
 }
-
-function renderMenu() {
-  const rootRoute = createRootRoute();
-  const route = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/menu',
-    component: () => <MenuScreen />,
-  });
-  const router = createRouter({
-    routeTree: rootRoute.addChildren([route]),
-    history: createMemoryHistory({ initialEntries: ['/menu'] }),
-  });
-  return render(<RouterProvider router={router} />);
-}
-
-describe('v2 menu screen', () => {
-  it('renders the h1, the menu nav and every item', async () => {
-    renderMenu();
-
-    expect(await screen.findByRole('heading', { level: 1, name: 'Menu' })).toBeTruthy();
-    expect(screen.getByRole('navigation', { name: 'Menu' })).toBeTruthy();
-    expect(screen.getByText('Mon compte')).toBeTruthy();
-    expect(screen.getByText('Réglages')).toBeTruthy();
-    expect(screen.getByText('Aide')).toBeTruthy();
-    expect(screen.getByText('Mentions légales')).toBeTruthy();
-    expect(screen.getByText('Confidentialité')).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Retour/ })).toBeTruthy();
-  });
-
-  it('wires the legal links to the v2 legal routes', async () => {
-    renderMenu();
-    await screen.findByRole('heading', { level: 1, name: 'Menu' });
-
-    expect(screen.getByRole('link', { name: 'Mentions légales' }).getAttribute('href')).toBe(
-      '/mentions-legales',
-    );
-    expect(screen.getByRole('link', { name: 'Confidentialité' }).getAttribute('href')).toBe(
-      '/confidentialite',
-    );
-  });
-
-  it('wires the account, settings and help rows to their live routes', async () => {
-    renderMenu();
-    await screen.findByRole('heading', { level: 1, name: 'Menu' });
-
-    expect(screen.getByRole('link', { name: 'Mon compte' }).getAttribute('href')).toBe('/compte');
-    expect(screen.getByRole('link', { name: 'Réglages' }).getAttribute('href')).toBe('/reglages');
-    expect(screen.getByRole('link', { name: 'Aide' }).getAttribute('href')).toBe('/aide');
-    expect(screen.queryByText('Bientôt')).toBeNull();
-  });
-
-  it('is axe-clean (ADR-0050)', async () => {
-    const { container } = renderMenu();
-    await screen.findByRole('heading', { level: 1, name: 'Menu' });
-
-    await expectAxeClean(container);
-  });
-});
 
 describe('v2 menu sheet', () => {
   it('opens from the home trigger and shows the profile header + rows', async () => {
@@ -198,9 +139,8 @@ describe('route wiring', () => {
     expect(IndexRoute.options.getParentRoute?.()).toBe(AppLayoutRoute);
   });
 
-  it('registers /menu under the app layout', () => {
-    expect(pathOf(MenuRoute)).toBe('menu');
-    expect(MenuRoute.options.getParentRoute?.()).toBe(AppLayoutRoute);
-    expect(MenuRoute.options.component).toBe(MenuScreen);
+  it('redirects the retired /menu path to réglages', () => {
+    expect(pathOf(MenuRedirectRoute)).toBe('menu');
+    expect(MenuRedirectRoute.options.getParentRoute?.()).toBe(AppLayoutRoute);
   });
 });

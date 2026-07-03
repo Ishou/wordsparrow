@@ -25,6 +25,15 @@ export const GrilleRedirectRoute = createRoute({
   },
 });
 
+// `/menu` → `/reglages`: the standalone menu screen was superseded by the MenuSheet; réglages carries its content.
+export const MenuRedirectRoute = createRoute({
+  getParentRoute: () => AppLayoutRoute,
+  path: 'menu',
+  beforeLoad: () => {
+    throw redirect({ to: '/reglages', replace: true });
+  },
+});
+
 // `/privacy` → `/confidentialite` (EN variant dropped — French-first/tutoiement).
 export const PrivacyRedirectRoute = createRoute({
   getParentRoute: () => AppLayoutRoute,

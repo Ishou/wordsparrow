@@ -15,7 +15,7 @@ import {
 // HOMEPAGE, so any route that falls back to it flashes the home screen.
 
 // redirects.tsx: the router navigates away on mount; landing HTML is irrelevant.
-const CLIENT_REDIRECT_PATHS = new Set(['/accueil', '/grille', '/privacy']);
+const CLIENT_REDIRECT_PATHS = new Set(['/accueil', '/grille', '/menu', '/privacy']);
 // Registered only under import.meta.env.DEV (router.ts) — never served in prod.
 const DEV_ONLY_PATHS = new Set(['/design-system', '/lockup']);
 

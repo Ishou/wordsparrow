@@ -74,7 +74,6 @@ export const NOINDEX_PRERENDER_ROUTES: ReadonlyArray<PrerenderRoute> = [
   { path: '/contribuer', title: 'Campagne — WordSparrow' },
   { path: '/contribuer/pairs', title: 'Campagne par paires — WordSparrow' },
   { path: '/reglages', title: 'Réglages — WordSparrow' },
-  { path: '/menu', title: 'Menu — WordSparrow' },
   { path: '/finish', title: 'Partie terminée — WordSparrow' },
   { path: '/abonnement', title: 'Abonnement — WordSparrow' },
   { path: '/abonnement/succes', title: 'Merci — WordSparrow' },
