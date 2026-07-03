@@ -61,6 +61,9 @@ function ProgressSyncRunner({ service }: { service?: ProgressSyncService }) {
 // AuthProvider PATCHes it once so identity stays continuous.
 const SERVER_DEFAULT_DISPLAY_NAME = 'Joueur';
 
+// ADR-0089 — a tab regaining focus re-checks whoami at most every 5 minutes.
+const WHOAMI_STALE_MS = 5 * 60_000;
+
 export function AuthProvider({
   authClient,
   getPseudonym,
@@ -76,6 +79,8 @@ export function AuthProvider({
   // Anon→authed rebind latch. Cleared on sign-out so a re-sign-in
   // re-fires the hook; cleared on callback rejection so the next render retries.
   const onAuthedLatch = useRef(false);
+  // Set on every completed refresh (authed or anon) — records "we just asked", not "we are authed".
+  const lastRefreshAt = useRef(0);
 
   const checkSession = useCallback(async (): Promise<WhoAmIResult | null> => {
     try {
@@ -89,39 +94,46 @@ export function AuthProvider({
   }, [authClient]);
 
   const refresh = useCallback(async () => {
-    const whoami = await checkSession();
-    if (!whoami) {
-      setState({ status: 'anon' });
-      return;
-    }
-    // First-sign-in carry-over. The server defaulted displayName to
-    // `Joueur` and the local anon pseudonym is still a generated
-    // `Animal NNN` shape — patch the display name so it matches the
-    // anon identity the player already saw, then re-read.
-    if (
-      !carryOverAttempted.current
-      && whoami.displayName === SERVER_DEFAULT_DISPLAY_NAME
-    ) {
-      const local = getPseudonym();
-      if (local.length > 0 && isDefaultPseudonym(local)) {
-        carryOverAttempted.current = true;
-        try {
-          await authClient.updateMe(local);
-          const after = await checkSession();
-          setState(after ? { status: 'authed', whoami: after } : { status: 'anon' });
-          return;
-        } catch {
-          // Non-fatal — display the server default; user can rename in /compte.
+    try {
+      const whoami = await checkSession();
+      if (!whoami) {
+        setState({ status: 'anon' });
+        return;
+      }
+      // First-sign-in carry-over. The server defaulted displayName to
+      // `Joueur` and the local anon pseudonym is still a generated
+      // `Animal NNN` shape — patch the display name so it matches the
+      // anon identity the player already saw, then re-read.
+      if (
+        !carryOverAttempted.current
+        && whoami.displayName === SERVER_DEFAULT_DISPLAY_NAME
+      ) {
+        const local = getPseudonym();
+        if (local.length > 0 && isDefaultPseudonym(local)) {
+          carryOverAttempted.current = true;
+          try {
+            await authClient.updateMe(local);
+            const after = await checkSession();
+            setState(after ? { status: 'authed', whoami: after } : { status: 'anon' });
+            return;
+          } catch {
+            // Non-fatal — display the server default; user can rename in /compte.
+          }
         }
       }
+      setState({ status: 'authed', whoami });
+    } finally {
+      lastRefreshAt.current = Date.now();
     }
-    setState({ status: 'authed', whoami });
   }, [authClient, checkSession, getPseudonym]);
 
   useEffect(() => {
     void refresh();
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
+      if (
+        document.visibilityState === 'visible'
+        && Date.now() - lastRefreshAt.current >= WHOAMI_STALE_MS
+      ) {
         void refresh();
       }
     };
