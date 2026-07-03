@@ -78,7 +78,13 @@ export function EraseData() {
       setDeleting(false);
       return;
     }
-    await refresh().catch(() => {});
+    try {
+      await refresh();
+    } catch {
+      // Erase succeeded but the session refresh didn't: hard-navigate so no stale auth chrome survives.
+      window.location.href = '/';
+      return;
+    }
     void navigate({ to: '/' });
   };
 

@@ -121,4 +121,15 @@ describe('/compte auth-hydration', () => {
     renderCompte(authClient);
     await waitFor(() => expect(screen.getByText('Non renseignée')).toBeInTheDocument());
   });
+
+  it('announces a toast when getMe fails to load the profile details', async () => {
+    const authClient = stubAuth({
+      whoami: vi.fn().mockResolvedValue({ userId: USER_ID, displayName: 'Lapin 472' }),
+      getMe: vi.fn().mockRejectedValue(new Error('offline')),
+    });
+    renderCompte(authClient);
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(/Impossible de charger les détails du profil/i),
+    );
+  });
 });

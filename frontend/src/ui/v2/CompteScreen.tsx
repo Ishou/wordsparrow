@@ -4,6 +4,7 @@ import { ArrowsClockwise, Check, CircleNotch, Envelope, GoogleLogo, PencilSimple
 import { css, cx } from 'styled-system/css';
 import { InvalidDisplayNameError, type GetMeResult } from '@/application/auth';
 import { useAuth } from '@/ui/components/auth';
+import { useToast } from '@/ui/components/primitives';
 import { useSubscriber } from '@/ui/components/billing';
 import { Skeleton } from '@/design-system';
 import { PhoneShell } from './PhoneShell';
@@ -67,6 +68,7 @@ function AuthedCompte() {
   const subscriber = useSubscriber();
   const [me, setMe] = useState<GetMeResult | null>(null);
   const [syncState, setSyncState] = useState<SyncState>('idle');
+  const { show: showToast } = useToast();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -76,9 +78,11 @@ function AuthedCompte() {
   useEffect(() => {
     if (!authClient) return;
     let cancelled = false;
-    authClient.getMe().then((r) => { if (!cancelled) setMe(r); }).catch(() => {});
+    authClient.getMe().then((r) => { if (!cancelled) setMe(r); }).catch(() => {
+      if (!cancelled) showToast({ text: 'Impossible de charger les détails du profil. Réessaie plus tard.', tone: 'error' });
+    });
     return () => { cancelled = true; };
-  }, [authClient]);
+  }, [authClient, showToast]);
   useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
 
   // displayName is live in auth state even before getMe resolves.
