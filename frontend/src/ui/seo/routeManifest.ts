@@ -63,17 +63,6 @@ export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
   },
 ];
 
-// Routes that exist but must NOT be indexed. They get a `noindex,follow`
-// meta + Disallow in robots.txt. Path is the TanStack route pattern, not
-// a concrete URL — `$lobbyId` and `$code` are TanStack params.
-export const EXCLUDED_ROUTES: ReadonlyArray<string> = [
-  '/compte',
-  '/contribuer',
-  '/contribuer/pairs',
-  '/lobby/$lobbyId',
-  '/join/$code',
-];
-
 export interface PrerenderRoute {
   readonly path: string;
   readonly title: string;
@@ -120,6 +109,16 @@ export const PARAM_SHELL_ROUTES: ReadonlyArray<ParamShellRoute> = [
     title: 'Rejoindre une partie — WordSparrow',
     description: 'Rejoins une partie de mots fléchés.',
   },
+];
+
+// Registered-but-noindex routes, derived so the list cannot drift from the routes
+// that actually emit `noindex`. The noindex META is the exclusion mechanism —
+// robots.txt Disallow stays deliberately limited to the param-space routes
+// (crawl-budget) and the dropped /privacy alias, because a Disallow would stop
+// crawlers from ever seeing the noindex.
+export const EXCLUDED_ROUTES: ReadonlyArray<string> = [
+  ...NOINDEX_PRERENDER_ROUTES.map((r) => r.path),
+  ...PARAM_SHELL_ROUTES.map((r) => r.routePath),
 ];
 
 export const DEFAULT_OG_IMAGE = `${SITE_BASE_URL}/og-home.png`;
