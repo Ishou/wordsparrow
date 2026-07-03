@@ -60,10 +60,23 @@ gray. Pre-flight checked at flip time: the zone SSL mode is Full (strict).
 ### 3. Cache policy for the daily endpoints
 `GET /v1/puzzles/daily[?date=]`:
 
-- **Cookie-less:** `Cache-Control: public, no-cache, s-maxage=<seconds-to-next-UTC-midnight>`
+- **Cookie-less:**
+  `Cache-Control: public, max-age=0, must-revalidate, s-maxage=<seconds-to-next-UTC-midnight>`
   plus a strong `ETag: "<puzzleId>"`, answering `304` on an `If-None-Match` match. Browsers
-  revalidate on every use (`no-cache`); the Cloudflare edge holds the 200 until UTC midnight
-  or an explicit purge.
+  revalidate on every use (`max-age=0, must-revalidate`); the Cloudflare edge uses `s-maxage`
+  freshness and holds the 200 until UTC midnight or an explicit purge.
+
+  *Amended 2026-07-03.* The original recipe was `public, no-cache, s-maxage=…`, on the
+  assumption that `no-cache` bound only browsers while `s-maxage` governed the edge. Prod
+  observation with the cache rule live (2026-07-03 ~18:5xZ) disproved it: every anonymous
+  request returned `cf-cache-status: REVALIDATED`, never `HIT` — per RFC 9111 §5.2.2.4,
+  `no-cache` binds *shared* caches too, so Cloudflare revalidated with origin on every hit
+  instead of serving within `s-maxage`. `max-age=0, must-revalidate` gives browsers the same
+  revalidate-every-use behaviour without disabling shared-cache reuse. The daily/list recipe
+  below keeps `public, no-cache` deliberately: that endpoint must never be edge-cached, and
+  binding shared caches is exactly the point there. Companion edge-side requirement: the §4
+  cache rule must pin the browser TTL to respect-origin, else Cloudflare rewrites
+  `max-age` downstream (rule-side change ships separately).
 - **With the `__Secure-ws_session` cookie:** `Cache-Control: private, no-store` — the response
   embeds the per-user hint budget (`hintsRemaining`, `secondsUntilNextHint`) and must never be
   shared.
@@ -95,7 +108,8 @@ cross-origin API fetches.
 ### 7. Regen-propagation guarantee
 A regenerated daily propagates immediately by construction: regeneration mints a fresh UUID
 (ADR-0081) → the ETag flips → every browser holding the old copy revalidates on next use
-(`no-cache`) and gets a `200` with the new body; the edge copy is purged by §5. Worst-case
+(`max-age=0, must-revalidate`) and gets a `200` with the new body; the edge copy is purged
+by §5. Worst-case
 staleness — purge fails *and* nothing retries — is the until-midnight edge TTL, never a
 silently wrong grid replayed onto stale progress (ADR-0081 already guarantees the new id
 starts from fresh state).
