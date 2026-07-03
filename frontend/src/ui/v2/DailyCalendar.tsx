@@ -50,7 +50,8 @@ const weekdayRow = css({
   },
 });
 
-const weekRow = css({ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '7px', justifyItems: 'center' });
+// No column gap: paywalled range bands must run continuously across adjacent days.
+const weekRow = css({ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '7px', justifyItems: 'center', alignItems: 'center' });
 
 // Day dots mirror the home strip: 34px circles, same status palette (dayDotStyle in HomeScreen).
 const cellBase = css({
@@ -90,13 +91,27 @@ const cellProgress = css({
     'radial-gradient(closest-side, token(colors.ws.sakuraBlush) 76%, transparent 77% 100%), conic-gradient(token(colors.ws.sakura) calc(var(--pct) * 1%), rgba(190,73,112,0.22) 0)',
 });
 const cellNew = css({ bg: 'white', color: 'ws.khaki', border: 'none' });
+// Paywalled days render as one continuous range band per row (date-range-picker style), gold like the lock tile.
 const cellPaywalled = css({
-  bg: 'rgba(255,255,255,0.45)',
-  color: 'ws.khaki',
+  justifySelf: 'stretch',
+  width: '100%',
+  height: '34px',
+  borderRadius: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontFamily: 'wsUi',
+  fontSize: '13px',
+  fontWeight: 'bold',
   border: 'none',
-  opacity: 0.7,
-  _hover: { transform: 'none' },
+  padding: 0,
+  bg: 'rgba(216,199,122,0.4)',
+  color: '#5A4B12',
+  cursor: 'pointer',
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' },
 });
+const capLeft = css({ borderTopLeftRadius: '999px', borderBottomLeftRadius: '999px' });
+const capRight = css({ borderTopRightRadius: '999px', borderBottomRightRadius: '999px' });
 const cellToday = css({ border: '2px solid token(colors.ws.sakura)', color: 'ws.jadeInk', fontWeight: 'black' });
 
 const legend = css({
@@ -117,6 +132,8 @@ const swatch = css({
   marginRight: '4px',
   verticalAlign: 'middle',
 });
+
+const swatchBand = css({ width: '16px', borderRadius: '999px', bg: 'rgba(216,199,122,0.75)' });
 
 const byStatus: Record<Exclude<DayStatus, 'paywalled'>, string> = {
   done: cellDone,
@@ -165,6 +182,7 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
       {monthGrid(month).map((week, wi) => (
         <div key={wi} className={weekRow}>
           {week.map((cell, ci) => {
+            const paywalled = (c: (typeof week)[number]) => c != null && infos.get(c.iso)?.status === 'paywalled';
             if (cell == null) return <span key={ci} className={cellBlank} />;
             const info = infos.get(cell.iso);
             if (info == null) {
@@ -179,7 +197,7 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
                 <button
                   key={ci}
                   type="button"
-                  className={cx(cellBase, cellPaywalled)}
+                  className={cx(cellPaywalled, !paywalled(week[ci - 1]) && capLeft, !paywalled(week[ci + 1]) && capRight)}
                   onClick={onPaywalledSelect}
                   aria-label={`Grille réservée à l'abonnement — ${longDateFr(cell.iso)}`}
                 >
@@ -207,8 +225,8 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
       <p className={legend}>
         <span className={cx(swatch, cellDone)} aria-hidden="true" /> terminée ·{' '}
         <span className={cx(swatch, cellProgress)} style={{ '--pct': 66 } as React.CSSProperties} aria-hidden="true" /> en cours ·{' '}
-        <span className={cx(swatch, cellNew)} aria-hidden="true" /> à jouer · les grilles plus anciennes sont
-        réservées à l&apos;abonnement
+        <span className={cx(swatch, cellNew)} aria-hidden="true" /> à jouer ·{' '}
+        <span className={cx(swatch, swatchBand)} aria-hidden="true" /> réservées à l&apos;abonnement
       </p>
     </div>
   );
