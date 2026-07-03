@@ -265,9 +265,8 @@ export default defineConfig({
 
         // ── Foreground ──────────────────────────────────────────────
         fg:                 { value: { base: '{colors.neutral.900}', _dark: '#EDE9DA' } },  // primary text — forêt profonde on papier
-        fgMuted:            { value: { base: '{colors.neutral.500}', _dark: '#9DA898' } },  // encre sourde — ~5.6:1 on bg; AA-safe for de-emphasized small text
-        // Text colour on the honey-pale clue surface — honey-deep at
-        // ~7.5:1 contrast on `surfaceVariant`'s miel pâle. Comfortably AA.
+        fgMuted:            { value: { base: '{colors.neutral.500}', _dark: '#9DA898' } },  // encre sourde — ~5.6:1 on bg (light) / ~5.8:1 (dark); AA-safe for de-emphasized small text
+        // Text colour on the clue surface — ~6.2:1 on miel pâle (light) / ~8.8:1 on miel sombre (dark); AA both themes.
         onSurfaceVariant:   { value: { base: '{colors.secondary.700}', _dark: '{colors.secondary.300}' } },
 
         // ── Lines ───────────────────────────────────────────────────
