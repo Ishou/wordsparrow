@@ -14,11 +14,11 @@ export interface SkeletonProps {
   readonly style?: CSSProperties;
 }
 
+// CSS-var form (not a token string): inline React style can't resolve Panda tokens, but custom properties re-resolve under [data-theme=dark].
 const TONE_BG: Record<SkeletonTone, string> = {
-  jade: '#BDD9C8',
-  deep: '#A9CBB8',
-  // Light jade tint so a placeholder still reads on a white card (a translucent white would vanish).
-  onCard: '#E4ECE7',
+  jade: 'var(--colors-ws-skeleton-jade)',
+  deep: 'var(--colors-ws-skeleton-deep)',
+  onCard: 'var(--colors-ws-skeleton-on-card)',
 };
 
 const base = css({
@@ -33,6 +33,8 @@ const base = css({
     backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent)',
     animation: 'wsShimmer 1.5s infinite',
   },
+  // The bright white sweep flashes on night surfaces; dim it to a gentle sheen.
+  _dark: { _after: { backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent)' } },
   // display:none removes the band entirely; animation:none alone leaves a static artifact.
   '@media (prefers-reduced-motion: reduce)': { _after: { animation: 'none', display: 'none' } },
 });
