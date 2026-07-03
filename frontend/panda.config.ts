@@ -204,6 +204,8 @@ export default defineConfig({
         ws: {
           jade: { value: { base: '#C4E5D3', _dark: '#2E4A3C' } },
           jadeInk: { value: { base: '#214B40', _dark: '#E9F2EC' } },
+          // Text on jadeInk-filled pills — the fill flips near-white in dark, so its ink flips too.
+          onJadeInk: { value: { base: '#FFFFFF', _dark: '#16241D' } },
           sable: { value: { base: '#E8E2C6', _dark: '#23301F' } },
           khaki: { value: { base: '#4C4824', _dark: '#A8B49B' } },
           or: { value: { base: '#D8C77A', _dark: '#8A7A3D' } },
@@ -248,62 +250,61 @@ export default defineConfig({
           heroFlat: { value: { base: '#9CCBB1', _dark: '#182720' } },
         },
         // ── Surfaces ────────────────────────────────────────────────
-        bg:             { value: '{colors.neutral.50}' },     // page background (papier crème)
-        surface:        { value: '#ffffff' },                 // letter cell ("cellule") — pure white paper
+        bg:             { value: { base: '{colors.neutral.50}', _dark: '{colors.neutral.900}' } },     // page background (papier crème)
+        surface:        { value: { base: '#ffffff', _dark: '#26332B' } },                 // letter cell ("cellule") — pure white paper
         // `surfaceVariant` is the def-cell ("clue") surface. The nature/
         // forest palette pairs a honey-pale fill (`secondary.100`) with
         // a honey-deep text (`secondary.700`) — the "indice fond / indice
         // texte" pair from the ADR-0043 mockup. Both halves stay in the
         // secondary ramp so the clue surface keeps its honey family.
-        surfaceVariant: { value: '{colors.secondary.100}' },  // def cell — miel pâle
-        surfaceMuted:   { value: '{colors.neutral.200}' },    // block / inert-cell — bordure sable
+        surfaceVariant: { value: { base: '{colors.secondary.100}', _dark: '#33270F' } },  // def cell — miel pâle
+        surfaceMuted:   { value: { base: '{colors.neutral.200}', _dark: '{colors.neutral.800}' } },    // block / inert-cell — bordure sable
         // Elevated cream surface (e.g. progress-bar track behind a moss
         // fill). Slightly warmer than the page bg so layered panels read.
-        surfaceElevated:{ value: '{colors.neutral.100}' },
+        surfaceElevated:{ value: { base: '{colors.neutral.100}', _dark: '#2A362E' } },
         // Component-specific token; keeps track tweaks isolated from `border` uses
-        progressTrackPending: { value: '{colors.neutral.300}' },
+        progressTrackPending: { value: { base: '{colors.neutral.300}', _dark: '#3A463F' } },
 
         // ── Foreground ──────────────────────────────────────────────
-        fg:                 { value: '{colors.neutral.900}' },  // primary text — forêt profonde on papier
-        fgMuted:            { value: '{colors.neutral.500}' },  // encre sourde — ~5.6:1 on bg; AA-safe for de-emphasized small text
-        // Text colour on the honey-pale clue surface — honey-deep at
-        // ~7.5:1 contrast on `surfaceVariant`'s miel pâle. Comfortably AA.
-        onSurfaceVariant:   { value: '{colors.secondary.700}' },
+        fg:                 { value: { base: '{colors.neutral.900}', _dark: '#EDE9DA' } },  // primary text — forêt profonde on papier
+        fgMuted:            { value: { base: '{colors.neutral.500}', _dark: '#9DA898' } },  // encre sourde — ~5.6:1 on bg (light) / ~5.8:1 (dark); AA-safe for de-emphasized small text
+        // Text colour on the clue surface — ~6.2:1 on miel pâle (light) / ~8.8:1 on miel sombre (dark); AA both themes.
+        onSurfaceVariant:   { value: { base: '{colors.secondary.700}', _dark: '{colors.secondary.300}' } },
 
         // ── Lines ───────────────────────────────────────────────────
-        border:         { value: '{colors.neutral.200}' },  // UI borders — bordure sable
-        gridLine:       { value: '{colors.neutral.300}' },  // grid cell perimeter + stack divider — trait de grille
-        muted:          { value: '{colors.neutral.200}' },  // legacy alias of border (used by some lobby code)
+        border:         { value: { base: '{colors.neutral.200}', _dark: '#37423B' } },  // UI borders — bordure sable
+        gridLine:       { value: { base: '{colors.neutral.300}', _dark: '#3F4B44' } },  // grid cell perimeter + stack divider — trait de grille
+        muted:          { value: { base: '{colors.neutral.200}', _dark: '#37423B' } },  // legacy alias of border (used by some lobby code)
 
         // ── Brand · primary (mousse — moss-green, also the success colour) ──
         // `accent` / `accentText` are aliases — same value, different
         // semantic intent at the call site (one reads as "the brand
         // colour", the other as "the colour for branded text").
-        accent:         { value: '{colors.primary.500}' },  // mousse — wordmark, current-clue, timer
-        accentText:     { value: '{colors.primary.500}' },  // alias for clarity
-        accentBg:       { value: '{colors.primary.100}' },  // mousse pâle (letter-in-word bg, validated cell bg)
-        accentHover:    { value: '{colors.primary.700}' },  // mousse profonde — hover state of solid primary CTAs
+        accent:         { value: { base: '{colors.primary.500}', _dark: '{colors.primary.300}' } },  // mousse — wordmark, current-clue, timer
+        accentText:     { value: { base: '{colors.primary.500}', _dark: '{colors.primary.300}' } },  // alias for clarity
+        accentBg:       { value: { base: '{colors.primary.100}', _dark: '{colors.primary.800}' } },  // mousse pâle (letter-in-word bg, validated cell bg)
+        accentHover:    { value: { base: '{colors.primary.700}', _dark: '{colors.primary.200}' } },  // mousse profonde — hover state of solid primary CTAs
 
         // ── Brand · secondary (miel — honey amber, cursor + focus) ──
-        secondaryAccent:{ value: '{colors.secondary.500}' },
-        secondaryText:  { value: '{colors.secondary.700}' },
-        secondaryBg:    { value: '{colors.secondary.100}' },
+        secondaryAccent:{ value: { base: '{colors.secondary.500}', _dark: '{colors.secondary.400}' } },
+        secondaryText:  { value: { base: '{colors.secondary.700}', _dark: '{colors.secondary.300}' } },
+        secondaryBg:    { value: { base: '{colors.secondary.100}', _dark: '{colors.secondary.900}' } },
 
         // ── Status ─────────────────────────────────────────────────
         // `success` aliased onto mousse primary (validation cells,
         // progress, timer). `error` uses the dedicated `terra` ramp — kept
         // separate from secondary (honey) so error and focus carry distinct hues.
-        success:        { value: '{colors.primary.500}' },
-        successBg:      { value: '{colors.primary.100}' },
-        successText:    { value: '{colors.primary.700}' },
-        error:          { value: '{colors.terra.500}' },
-        errorBg:        { value: '{colors.terra.100}' },
-        errorText:      { value: '{colors.terra.700}' },     // #9b3f2a per ADR-0043 Option (a)
+        success:        { value: { base: '{colors.primary.500}', _dark: '{colors.primary.300}' } },
+        successBg:      { value: { base: '{colors.primary.100}', _dark: '{colors.primary.800}' } },
+        successText:    { value: { base: '{colors.primary.700}', _dark: '{colors.primary.200}' } },
+        error:          { value: { base: '{colors.terra.500}', _dark: '{colors.terra.300}' } },
+        errorBg:        { value: { base: '{colors.terra.100}', _dark: '{colors.terra.900}' } },
+        errorText:      { value: { base: '{colors.terra.700}', _dark: '{colors.terra.200}' } },     // #9b3f2a per ADR-0043 Option (a)
 
         // ── On-bg foregrounds ───────────────────────────────────────
         // Text colors paired with specific solid backgrounds.
-        onAccent:       { value: '#ffffff' },                  // text on solid mousse CTA / "Vérifier" button — pure white "sur mousse"
-        onSecondary:    { value: '{colors.secondary.700}' },   // text on solid honey bg — miel profond
+        onAccent:       { value: { base: '#ffffff', _dark: '{colors.primary.900}' } },                  // text on solid mousse CTA / "Vérifier" button — pure white "sur mousse"
+        onSecondary:    { value: { base: '{colors.secondary.700}', _dark: '{colors.secondary.900}' } },   // text on solid honey bg — miel profond
 
         // ── Focus ───────────────────────────────────────────────────
         // The focused letter cell uses `focusBg` (honey-pale wash) for
@@ -311,19 +312,19 @@ export default defineConfig({
         // the visual signal — see Cell.tsx letterInput `_focus`. Both
         // alias the secondary ramp; honey IS the cursor colour per
         // ADR-0043's semantic intent ("miel — calme action, en cours").
-        focusBg:        { value: '{colors.secondary.100}' },
-        focusRing:      { value: '{colors.secondary.500}' },
+        focusBg:        { value: { base: '{colors.secondary.100}', _dark: '#33270F' } },
+        focusRing:      { value: { base: '{colors.secondary.500}', _dark: '{colors.secondary.400}' } },
 
         // Band tri-state tokens: pristine → honey pale; modified → deeper honey; saved → mousse green.
-        metaSuggestedBg:   { value: '{colors.secondary.50}' },
-        metaSuggestedLine: { value: '{colors.secondary.300}' },
-        metaSuggestedText: { value: '{colors.secondary.700}' },
-        metaModifiedBg:    { value: '{colors.secondary.100}' },
-        metaModifiedLine:  { value: '{colors.secondary.500}' },
-        metaModifiedText:  { value: '{colors.secondary.800}' },
-        metaSavedBg:       { value: '{colors.primary.100}' },
-        metaSavedLine:     { value: '{colors.primary.300}' },
-        metaSavedText:     { value: '{colors.primary.700}' },
+        metaSuggestedBg:   { value: { base: '{colors.secondary.50}', _dark: '#2A2110' } },
+        metaSuggestedLine: { value: { base: '{colors.secondary.300}', _dark: '{colors.secondary.600}' } },
+        metaSuggestedText: { value: { base: '{colors.secondary.700}', _dark: '{colors.secondary.300}' } },
+        metaModifiedBg:    { value: { base: '{colors.secondary.100}', _dark: '#33270F' } },
+        metaModifiedLine:  { value: { base: '{colors.secondary.500}', _dark: '{colors.secondary.400}' } },
+        metaModifiedText:  { value: { base: '{colors.secondary.800}', _dark: '{colors.secondary.200}' } },
+        metaSavedBg:       { value: { base: '{colors.primary.100}', _dark: '{colors.primary.800}' } },
+        metaSavedLine:     { value: { base: '{colors.primary.300}', _dark: '{colors.primary.400}' } },
+        metaSavedText:     { value: { base: '{colors.primary.700}', _dark: '{colors.primary.200}' } },
       },
     },
     keyframes: {

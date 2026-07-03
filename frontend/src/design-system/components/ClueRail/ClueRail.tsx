@@ -3,22 +3,24 @@ import { CaretLeft, CaretRight, CaretDown, Minus, Plus } from '@phosphor-icons/r
 import { css } from 'styled-system/css';
 
 const rail = css({
-  bg: 'white',
+  bg: 'ws.card',
   borderRadius: '16px',
   padding: '13px 16px 14px',
   boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 8px 22px rgba(33,75,64,0.10)',
+  _dark: { boxShadow: '0 1px 2px rgba(0,0,0,0.3), 0 8px 22px rgba(0,0,0,0.35)' },
 });
 const topRow = css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '9px' });
 const labelGroup = css({ display: 'flex', alignItems: 'center', gap: '8px' });
 const dot = css({ width: '7px', height: '7px', borderRadius: '999px', bg: 'ws.sakura', flexShrink: 0 });
-const label = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.14em', color: '#6B520F', display: 'inline-flex', alignItems: 'center', gap: '4px' });
-const sep = css({ width: '1px', height: '11px', bg: 'rgba(76,72,36,0.22)' });
+const label = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.14em', color: '#6B520F',
+  _dark: { color: '#CBBE83' }, display: 'inline-flex', alignItems: 'center', gap: '4px' });
+const sep = css({ width: '1px', height: '11px', bg: 'rgba(76,72,36,0.22)', _dark: { bg: 'rgba(233,242,236,0.2)' } });
 const counter = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.7, whiteSpace: 'nowrap' });
 
 const rightGroup = css({ display: 'flex', alignItems: 'center', gap: '10px' });
-const zoom = css({ display: 'flex', alignItems: 'center', bg: '#F2EDDC', borderRadius: '9px', overflow: 'hidden' });
+const zoom = css({ display: 'flex', alignItems: 'center', bg: '#F2EDDC', borderRadius: '9px', overflow: 'hidden', _dark: { bg: '#2A362E' } });
 const zoomBtn = css({ width: '32px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'transparent', border: 'none', color: 'ws.jadeInk', cursor: 'pointer' });
-const zoomSep = css({ width: '1px', height: '15px', bg: 'rgba(33,75,64,0.16)' });
+const zoomSep = css({ width: '1px', height: '15px', bg: 'rgba(33,75,64,0.16)', _dark: { bg: 'rgba(233,242,236,0.14)' } });
 
 const mainRow = css({ display: 'flex', alignItems: 'center', gap: '10px' });
 const stepper = css({
@@ -31,6 +33,7 @@ const stepper = css({
   borderRadius: '13px',
   bg: '#F2EDDC',
   color: 'ws.jadeInk',
+  _dark: { bg: '#2A362E' },
   fontSize: '18px',
   cursor: 'pointer',
   _disabled: { opacity: 0.4, cursor: 'not-allowed' },

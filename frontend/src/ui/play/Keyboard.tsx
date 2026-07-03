@@ -18,12 +18,13 @@ const keyboard = css({
   // Cap + centre here so the keypad renders identically whatever the wrapper (home dock vs play bottom bar).
   maxWidth: '440px',
   marginInline: 'auto',
-  bg: 'rgba(255,255,255,0.62)',
+  bg: 'ws.glass',
   backdropFilter: 'blur(10px)',
-  border: '0.5px solid rgba(255,255,255,0.7)',
+  border: '0.5px solid token(colors.ws.glassBorder)',
   borderRadius: '18px',
   padding: '5px 6px',
   boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
+  _dark: { boxShadow: '0 2px 12px rgba(0,0,0,0.35)' },
   // pointer:fine guards the lg hide — a touch tablet wider than 1024px has no physical keyboard.
   '@media (min-width: 1024px) and (pointer: fine)': { display: 'none' },
 });

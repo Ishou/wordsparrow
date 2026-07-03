@@ -12,15 +12,17 @@ const cell = css({
   bg: 'ws.clueSurface',
   color: 'ws.clueText',
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 0 0 #425C4D, 0 5px 8px -3px rgba(33,75,64,0.22)',
+  _dark: { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 0 0 #31463A, 0 5px 8px -3px rgba(0,0,0,0.4)' },
 });
 const cellActive = css({
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1.5px token(colors.ws.sakura), 0 4px 0 0 token(colors.ws.sakuraDark), 0 5px 8px -3px rgba(212,93,131,0.26)',
 });
 // Solved-clue text applied inline at call sites: a class `color` loses Panda's atomic ordering race against the base cream.
-const DONE_TEXT = '#214B40'; // ws.jadeInk — clears WCAG AA on clueSurfaceDone (~4.7:1)
+const DONE_TEXT = 'var(--colors-ws-jade-ink)'; // jadeInk on clueSurfaceDone — ~4.8:1 light / ~6.7:1 dark; AA both themes
 const cellValidated = css({
   bg: 'ws.clueSurfaceDone',
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 0 0 #7E9C88, 0 3px 6px -3px rgba(33,75,64,0.16)',
+  _dark: { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 0 0 #2C453A, 0 3px 6px -3px rgba(0,0,0,0.4)' },
 });
 
 const flushTop = css({ display: 'flex', alignItems: 'flex-start' });
@@ -38,6 +40,7 @@ const tab = css({
   height: '1.15em',
   bg: 'ws.or',
   color: '#1B3F35',
+  _dark: { color: 'ws.onJadeInk' },
   borderRadius: '5px',
   boxShadow: '0 1px 2px rgba(33,75,64,0.32)',
   zIndex: 5,

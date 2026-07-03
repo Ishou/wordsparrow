@@ -11,6 +11,10 @@ const screen = css({
   overflow: 'hidden',
   background:
     'radial-gradient(125% 78% at 50% 24%, rgba(247,222,231,0.95) 0%, rgba(247,222,231,0) 56%), linear-gradient(168deg, #CDE9DA 0%, #DEE7DD 46%, #F7DEE7 100%)',
+  _dark: {
+    background:
+      'radial-gradient(125% 78% at 50% 24%, rgba(190,73,112,0.32) 0%, rgba(190,73,112,0) 56%), linear-gradient(168deg, #14261F 0%, #1B2A23 46%, #301C26 100%)',
+  },
   animation: 'wsFade 0.4s ease both',
 });
 
@@ -27,6 +31,7 @@ const closeBtn = css({
   borderRadius: '999px',
   border: 'none',
   bg: 'rgba(255,255,255,0.5)',
+  _dark: { bg: 'rgba(23,41,33,0.72)', _hover: { bg: 'rgba(35,58,47,0.85)' } },
   color: 'ws.jadeInk',
   fontSize: '19px',
   cursor: 'pointer',
@@ -70,7 +75,7 @@ const bloomCenter = css({ position: 'absolute', left: '50%', top: '50%', width: 
 
 const headline = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '37px', lineHeight: '1.04', margin: 0, color: 'ws.jadeInk', letterSpacing: '-0.015em', whiteSpace: 'nowrap' });
 
-const gridCard = css({ bg: 'rgba(255,255,255,0.42)', border: '0.5px solid rgba(255,255,255,0.6)', borderRadius: '16px', padding: '12px', boxShadow: '0 8px 22px rgba(33,75,64,0.10)' });
+const gridCard = css({ bg: 'rgba(255,255,255,0.42)', border: '0.5px solid rgba(255,255,255,0.6)', _dark: { bg: 'rgba(23,41,33,0.5)', borderColor: 'rgba(233,242,236,0.12)' }, borderRadius: '16px', padding: '12px', boxShadow: '0 8px 22px rgba(33,75,64,0.10)' });
 const miniGrid = css({ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px', width: '154px' });
 const miniCell = css({ aspectRatio: '1', borderRadius: '3px' });
 
@@ -82,6 +87,7 @@ const statsBar = css({
   bg: 'rgba(255,255,255,0.55)',
   backdropFilter: 'blur(8px)',
   border: '0.5px solid rgba(255,255,255,0.7)',
+  _dark: { bg: 'rgba(23,41,33,0.65)', borderColor: 'rgba(233,242,236,0.14)' },
   borderRadius: '16px',
   padding: '13px 6px',
   boxShadow: '0 6px 18px rgba(33,75,64,0.08)',

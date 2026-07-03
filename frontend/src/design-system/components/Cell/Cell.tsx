@@ -17,27 +17,40 @@ const byState = {
   empty: css({
     bgImage: 'linear-gradient(180deg, #FBFAF3, #EFEADB)',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.75), 0 2.5px 0 0 #DCD6C5, 0 3px 5px -3px rgba(33,75,64,0.16)',
+    _dark: {
+      bgImage: 'linear-gradient(180deg, #2C3830, #232E27)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2.5px 0 0 #17211B, 0 3px 5px -3px rgba(0,0,0,0.4)',
+    },
   }),
   // A typed-but-unlocked cell: still a raised keycap, but now carries its letter.
   filled: css({
     bgImage: 'linear-gradient(180deg, #FBFAF3, #EFEADB)',
     color: 'ws.khaki',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.75), 0 2.5px 0 0 #DCD6C5, 0 3px 5px -3px rgba(33,75,64,0.16)',
+    _dark: {
+      bgImage: 'linear-gradient(180deg, #2C3830, #232E27)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2.5px 0 0 #17211B, 0 3px 5px -3px rgba(0,0,0,0.4)',
+    },
   }),
   solved: css({
     bg: 'ws.sable',
     color: 'ws.khaki',
     boxShadow: 'inset 0 1px 3px rgba(33,75,64,0.16), inset 0 0 0 1px rgba(33,75,64,0.07)',
+    _dark: { boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(233,242,236,0.06)' },
   }),
   activeWord: css({
     bg: 'ws.sakuraBlush',
     color: 'ws.khaki',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6), inset 0 0 0 1.5px rgba(212,93,131,0.5), 0 4px 0 0 #E9C3D0, 0 4px 6px -3px rgba(33,75,64,0.2)',
+    _dark: { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1.5px rgba(212,93,131,0.5), 0 4px 0 0 #4A2635, 0 4px 6px -3px rgba(0,0,0,0.4)' },
   }),
   active: css({
     bg: 'ws.sakura',
     color: 'white',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 0 2px token(colors.ws.sakuraDark), 0 4px 0 0 #A84362, 0 4px 6px -3px rgba(33,75,64,0.24)',
+    _dark: {
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 2px token(colors.ws.sakuraDark), 0 4px 0 0 #7E3149, 0 4px 6px -3px rgba(0,0,0,0.4)',
+    },
   }),
 } as const;
 
