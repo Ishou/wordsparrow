@@ -65,7 +65,10 @@ const frame = css({
     boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
   },
   // Desktop: full-width so the top bar's full-bleed frost isn't clipped and the content scrollbar lands at the screen edge; the hub stays capped + centred inside.
+  // flex/height reset the md card sizing — without it the frame keeps min(900px, 100dvh - 80px) and desktop content clips above a dead band.
   lg: {
+    flex: 1,
+    height: 'auto',
     maxWidth: 'none',
     minHeight: 0,
     borderRadius: 0,
