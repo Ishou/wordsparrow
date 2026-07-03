@@ -226,7 +226,7 @@ ADR-0089  */api/deploy/chart/values-prod.yaml        Orange-cloud api+auth via e
 ADR-0089  terraform/cloudflare-cache-rules.tf        cloudflare_ruleset (http_request_cache_settings): host api.wordsparrow.io + /v1/puzzles/daily, respect origin TTL, bypass on __Secure-ws_session cookie
 ADR-0089  grid/worker/**                             Purge-on-regen: exact-URL CF purge (/v1/puzzles/daily [+?date=]) after every generation run; failure logs, never fails the Job; Zone.Cache Purge-scoped token Secret
 ADR-0089  */api/src/main/kotlin/**/Module.kt         Timing-Allow-Origin: https://wordsparrow.io https://www.wordsparrow.io in DefaultHeaders (all five services)
-# ADR-0089: amends ADR-0007 §4 (DNS-only posture narrowed to WS hosts); daily cache policy = anon-only public,no-cache + s-maxage-to-UTC-midnight + ETag="<puzzleId>" (304), cookie ⇒ private,no-store; daily/list never edge-cached (unbounded query variants vs exact-URL purge); regen propagates via ADR-0081 fresh-UUID ETag flip + edge purge
+# ADR-0089: amends ADR-0007 §4 (DNS-only posture narrowed to WS hosts); daily cache policy = anon-only public,max-age=0,must-revalidate + s-maxage-to-UTC-midnight + ETag="<puzzleId>" (304), cookie ⇒ private,no-store; daily/list stays public,no-cache — never edge-cached (unbounded query variants vs exact-URL purge); regen propagates via ADR-0081 fresh-UUID ETag flip + edge purge
 ```
 
 ## Adding entries
