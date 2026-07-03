@@ -3,7 +3,7 @@
   <head>
     <script>
       // ADR-0088: resolve bliss.theme before first paint so dark never flashes light.
-      (function () { try { var t = localStorage.getItem('bliss.theme'); var dark = t === 'sombre' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.dataset.theme = dark ? 'dark' : 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; } })();
+      (function () { try { var t = localStorage.getItem('bliss.theme'); var dark = t === 'sombre' || (t !== 'clair' && matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.dataset.theme = dark ? 'dark' : 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; } })();
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />

@@ -1,15 +1,16 @@
 // Theme preference (ADR-0088). Storage failures degrade to the default, never throw.
+import type { ThemePreference } from '@/application/session/ThemeStore';
 
-export type ThemePreference = 'clair' | 'sombre' | 'auto';
+export type { ThemePreference };
 
 const KEY = 'bliss.theme';
 
 export function loadThemePreference(): ThemePreference {
   try {
     const raw = globalThis.localStorage?.getItem(KEY);
-    return raw === 'sombre' || raw === 'auto' ? raw : 'clair';
+    return raw === 'sombre' || raw === 'clair' ? raw : 'auto';
   } catch {
-    return 'clair';
+    return 'auto';
   }
 }
 
@@ -27,9 +28,14 @@ function resolved(pref: ThemePreference): 'light' | 'dark' {
   return 'light';
 }
 
+// Keeps the PWA status-bar/title-bar chrome in step with the resolved theme (hero-top hues).
+const THEME_COLOR = { light: '#CDE9DA', dark: '#0E1F1A' } as const;
+
 // Applies the preference to <html data-theme>; with 'auto' it tracks the OS scheme live.
 export function applyThemePreference(pref: ThemePreference): void {
-  document.documentElement.dataset.theme = resolved(pref);
+  const mode = resolved(pref);
+  document.documentElement.dataset.theme = mode;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[mode]);
 }
 
 let mediaListener: ((e: MediaQueryListEvent) => void) | null = null;

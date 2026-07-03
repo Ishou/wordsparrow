@@ -29,17 +29,21 @@ export interface SegmentedControlProps<T extends string> {
   readonly onChange: (id: T) => void;
   readonly ariaLabel: string;
   readonly className?: string;
+  // 'tablist' when the segments switch visible panels; 'group' (toggle buttons) for a settings choice.
+  readonly mode?: 'tablist' | 'group';
 }
 
-export function SegmentedControl<T extends string>({ options, value, onChange, ariaLabel, className }: SegmentedControlProps<T>) {
+export function SegmentedControl<T extends string>({ options, value, onChange, ariaLabel, className, mode = 'tablist' }: SegmentedControlProps<T>) {
+  const tabs = mode === 'tablist';
   return (
-    <div className={className ? cx(track, className) : track} role="tablist" aria-label={ariaLabel}>
+    <div className={className ? cx(track, className) : track} role={tabs ? 'tablist' : 'group'} aria-label={ariaLabel}>
       {options.map((option) => (
         <button
           key={option.id}
           type="button"
-          role="tab"
-          aria-selected={value === option.id}
+          role={tabs ? 'tab' : undefined}
+          aria-selected={tabs ? value === option.id : undefined}
+          aria-pressed={tabs ? undefined : value === option.id}
           className={cx(segBtn, value === option.id ? segOn : segOff)}
           onClick={() => onChange(option.id)}
         >
