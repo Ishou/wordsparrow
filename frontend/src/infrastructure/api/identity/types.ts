@@ -70,6 +70,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/email/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Begin an email-OTP sign-in by emailing a 6-digit code.
+         * @description Accepts an email address and emails a single-use 6-digit code
+         *     (ADR-0091). Responds with a uniform 202 regardless of whether the
+         *     email maps to an existing account, so the caller cannot enumerate
+         *     which addresses are known. Sets a short-TTL, HttpOnly challenge cookie
+         *     `__Secure-ws_otp_chal` that `verify` requires alongside the code.
+         */
+        post: operations["startEmailLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/email/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify an email-OTP code and mint a session.
+         * @description Takes the emailed 6-digit code plus the `__Secure-ws_otp_chal`
+         *     challenge cookie set by `start`. On a valid, unexpired, unlocked code
+         *     with a matching cookie, resolves the account (ADR-0091) and issues the
+         *     standard `__Secure-ws_session` cookie. Failure responses are uniform
+         *     and non-enumerating (a bad, expired, or locked code all return
+         *     400/401 regardless of whether the email is known).
+         */
+        post: operations["verifyEmailLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/whoami": {
         parameters: {
             query?: never;
@@ -109,6 +158,29 @@ export interface paths {
          *     client side; returns 401 only when the cookie is absent).
          */
         post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/logout-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke all of the user's other sessions, keeping the caller's.
+         * @description Revokes every server-side session for the authenticated user except
+         *     the caller's current one — a provider-agnostic compromise-containment
+         *     escape hatch (ADR-0091). Does not clear the caller's cookie; the
+         *     caller stays signed in on this device.
+         */
+        post: operations["logoutAll"];
         delete?: never;
         options?: never;
         head?: never;
@@ -286,6 +358,15 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        EmailStartRequest: {
+            /** Format: email */
+            email: string;
+        };
+        EmailVerifyRequest: {
+            /** Format: email */
+            email: string;
+            code: string;
+        };
         ProblemDetails: {
             /** Format: uri */
             type: string;
@@ -409,6 +490,63 @@ export interface operations {
             503: components["responses"]["ProblemDetails"];
         };
     };
+    startEmailLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailStartRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description Accepted. A code was emailed if the address is deliverable; the
+             *     response is identical whether or not the email is known. Sets the
+             *     `__Secure-ws_otp_chal` challenge cookie.
+             */
+            202: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ProblemDetails"];
+            429: components["responses"]["ProblemDetails"];
+        };
+    };
+    verifyEmailLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed in. Sets the `__Secure-ws_session` cookie and returns the minimal identity. */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhoAmIResponse"];
+                };
+            };
+            400: components["responses"]["ProblemDetails"];
+            401: components["responses"]["ProblemDetails"];
+            429: components["responses"]["ProblemDetails"];
+        };
+    };
     whoAmI: {
         parameters: {
             query?: never;
@@ -443,6 +581,25 @@ export interface operations {
             204: {
                 headers: {
                     "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["ProblemDetails"];
+        };
+    };
+    logoutAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Other sessions revoked. The caller's own session is unaffected (no Set-Cookie). */
+            204: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
