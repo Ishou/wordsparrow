@@ -1,0 +1,10 @@
+// ADR-0090: assets-only Worker; custom-domain routes attach at cutover (PR 3).
+{
+  "name": "wordsparrow-frontend",
+  "compatibility_date": "2026-07-03",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "preview_urls": true
+}
