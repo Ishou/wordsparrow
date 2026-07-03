@@ -184,6 +184,22 @@ class PuzzleRouteListDailiesTest {
         }
 
     @Test
+    fun `list answers 304 when If-None-Match carries the weak form of the current etag`() =
+        testApplication {
+            application { listDailyPuzzlesModule(seed = LocalDate.parse("2026-05-12")..today) }
+
+            val etag = client.get("/v1/puzzles/daily/list").headers["ETag"]!!
+            val response =
+                client.get("/v1/puzzles/daily/list") {
+                    header(HttpHeaders.IfNoneMatch, "W/$etag")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NotModified)
+            assertThat(response.bodyAsText()).isEqualTo("")
+            assertThat(response.headers["ETag"]!!).isEqualTo(etag)
+        }
+
+    @Test
     fun `list etag flips when the id set changes so a stale If-None-Match gets 200`() =
         testApplication {
             val repo = InMemoryPuzzleRepository()

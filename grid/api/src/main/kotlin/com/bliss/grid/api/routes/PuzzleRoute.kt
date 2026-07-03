@@ -146,7 +146,7 @@ fun Route.puzzles(
             val etag = "\"$puzzleId\""
             call.response.header(HttpHeaders.CacheControl, publicCacheControlUntilUtcMidnight(clock.instant()))
             call.response.header(HttpHeaders.ETag, etag)
-            if (call.request.headers[HttpHeaders.IfNoneMatch] == etag) {
+            if (ifNoneMatchMatches(call.request.headers[HttpHeaders.IfNoneMatch], etag)) {
                 call.respond(HttpStatusCode.NotModified)
                 return@get
             }
@@ -226,7 +226,7 @@ fun Route.puzzles(
         val etag = listEtagOf(result.items.map { it.id }, result.hasMore)
         call.response.header(HttpHeaders.CacheControl, "public, no-cache")
         call.response.header(HttpHeaders.ETag, etag)
-        if (call.request.headers[HttpHeaders.IfNoneMatch] == etag) {
+        if (ifNoneMatchMatches(call.request.headers[HttpHeaders.IfNoneMatch], etag)) {
             call.respond(HttpStatusCode.NotModified)
         } else {
             call.respond(ListDailyPuzzlesResponseDto(items = items, hasMore = result.hasMore))
@@ -561,6 +561,12 @@ fun Route.puzzles(
         }
     }
 }
+
+// RFC 7232 §3.2 weak comparison: intermediaries (edge compression) rewrite our strong ETag to W/"<id>" in transit.
+private fun ifNoneMatchMatches(
+    headerValue: String?,
+    etag: String,
+): Boolean = headerValue?.split(',')?.any { it.trim().removePrefix("W/") == etag } ?: false
 
 private fun publicCacheControlUntilUtcMidnight(now: Instant): String {
     val nextMidnight =

@@ -423,6 +423,51 @@ class PuzzleRouteTest {
         }
 
     @Test
+    fun `anonymous daily answers 304 when If-None-Match carries the weak form of the current etag`() =
+        testApplication {
+            val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a70")
+            application { dailyRouteWith(clock = cacheClock) { it.insertDaily(id, dailyDate, storedDailyPuzzle()) } }
+
+            val response =
+                client.get("/v1/puzzles/daily?date=2026-05-09") {
+                    header(HttpHeaders.IfNoneMatch, "W/\"$id\"")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NotModified)
+            assertThat(response.bodyAsText()).isEqualTo("")
+            assertThat(response.headers["ETag"]!!).isEqualTo("\"$id\"")
+        }
+
+    @Test
+    fun `anonymous daily answers 304 when a multi-value If-None-Match includes the weak current etag`() =
+        testApplication {
+            val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a71")
+            application { dailyRouteWith(clock = cacheClock) { it.insertDaily(id, dailyDate, storedDailyPuzzle()) } }
+
+            val response =
+                client.get("/v1/puzzles/daily?date=2026-05-09") {
+                    header(HttpHeaders.IfNoneMatch, "\"stale\", W/\"$id\"")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NotModified)
+        }
+
+    @Test
+    fun `anonymous daily answers 200 when If-None-Match carries only a stale weak etag`() =
+        testApplication {
+            val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a72")
+            application { dailyRouteWith(clock = cacheClock) { it.insertDaily(id, dailyDate, storedDailyPuzzle()) } }
+
+            val response =
+                client.get("/v1/puzzles/daily?date=2026-05-09") {
+                    header(HttpHeaders.IfNoneMatch, "W/\"${UUID.randomUUID()}\"")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.headers["ETag"]!!).isEqualTo("\"$id\"")
+        }
+
+    @Test
     fun `cookied daily never answers 304 even when If-None-Match carries the current puzzle id`() =
         testApplication {
             val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6f")
