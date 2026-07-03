@@ -60,8 +60,8 @@ describe('DailyCalendar', () => {
   it('labels playable days by status and navigates a past day to /play with its date', async () => {
     const { router } = renderCalendar();
     expect(await screen.findByRole('link', { name: 'Revoir — Lundi 29 juin' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Reprendre — Dimanche 28 juin' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('link', { name: 'Reprendre — Dimanche 28 juin' }));
+    expect(screen.getByRole('link', { name: 'Reprendre — Dimanche 28 juin — 30 %' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('link', { name: 'Reprendre — Dimanche 28 juin — 30 %' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/play'));
     expect(router.state.location.search).toEqual({ date: '2026-06-28' });
   });

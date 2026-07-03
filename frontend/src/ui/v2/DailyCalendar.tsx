@@ -82,7 +82,13 @@ const cellVoid = css({
 });
 
 const cellDone = css({ bg: 'ws.sakuraDark', color: 'white', border: 'none' });
-const cellProgress = css({ bg: 'ws.sakuraBlush', color: 'ws.jadeInk', border: '2px solid token(colors.ws.sakura)' });
+// Blush disc inside a conic progress ring; `--pct` (0-100) is set inline per cell.
+const cellProgress = css({
+  color: 'ws.jadeInk',
+  border: 'none',
+  background:
+    'radial-gradient(closest-side, token(colors.ws.sakuraBlush) 76%, transparent 77% 100%), conic-gradient(token(colors.ws.sakura) calc(var(--pct) * 1%), rgba(190,73,112,0.22) 0)',
+});
 const cellNew = css({ bg: 'white', color: 'ws.khaki', border: 'none' });
 const cellPaywalled = css({
   bg: 'rgba(255,255,255,0.45)',
@@ -107,7 +113,7 @@ const swatch = css({
   display: 'inline-block',
   width: '10px',
   height: '10px',
-  borderRadius: '4px',
+  borderRadius: '50%',
   marginRight: '4px',
   verticalAlign: 'middle',
 });
@@ -122,6 +128,11 @@ function actionLabel(status: DayStatus): string {
   if (status === 'done') return 'Revoir';
   if (status === 'progress') return 'Reprendre';
   return 'Commencer';
+}
+
+function pctOf(info: DayInfo): number {
+  const total = info.summary.totalLetterCells;
+  return total > 0 ? Math.round((info.locked / total) * 100) : 0;
 }
 
 export interface DailyCalendarProps {
@@ -176,13 +187,16 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
                 </button>
               );
             }
+            const progress = info.status === 'progress';
             return (
               <Link
                 key={ci}
                 to="/play"
                 search={info.today ? undefined : { date: cell.iso }}
-                className={cx(cellBase, byStatus[info.status], info.today && cellToday)}
-                aria-label={`${actionLabel(info.status)} — ${longDateFr(cell.iso)}`}
+                // the today ring only marks an untouched day — a progress arc would be unreadable under it
+                className={cx(cellBase, byStatus[info.status], info.today && info.status === 'new' && cellToday)}
+                style={progress ? ({ '--pct': pctOf(info) } as React.CSSProperties) : undefined}
+                aria-label={`${actionLabel(info.status)} — ${longDateFr(cell.iso)}${progress ? ` — ${pctOf(info)} %` : ''}`}
               >
                 {cell.dayOfMonth}
               </Link>
@@ -192,7 +206,7 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
       ))}
       <p className={legend}>
         <span className={cx(swatch, cellDone)} aria-hidden="true" /> terminée ·{' '}
-        <span className={cx(swatch, cellProgress)} aria-hidden="true" /> en cours ·{' '}
+        <span className={cx(swatch, cellProgress)} style={{ '--pct': 66 } as React.CSSProperties} aria-hidden="true" /> en cours ·{' '}
         <span className={cx(swatch, cellNew)} aria-hidden="true" /> à jouer · les grilles plus anciennes sont
         réservées à l&apos;abonnement
       </p>

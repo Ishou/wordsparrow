@@ -140,8 +140,8 @@ function renderGrilles(opts: HarnessOptions = {}) {
 }
 
 async function findTodayCell() {
-  // today's fixture has 8/14 locked cells, so its calendar action is Reprendre.
-  return screen.findByRole('link', { name: `Reprendre — ${longDateFr(TODAY)}` });
+  // today's fixture has 8/14 locked cells: Reprendre with a 57 % progress ring.
+  return screen.findByRole('link', { name: `Reprendre — ${longDateFr(TODAY)} — 57 %` });
 }
 
 // Click ◀ until the viewed month is the one containing `date` (cells outside the viewed month don't render).

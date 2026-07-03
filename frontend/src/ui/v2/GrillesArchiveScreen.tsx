@@ -76,6 +76,8 @@ const barFill = css({ display: 'block', height: '100%', borderRadius: '999px', b
 const chevron = css({ flex: 'none', color: 'ws.khaki', opacity: 0.55 });
 const bannerWrap = css({ margin: '14px 0' });
 
+// Desktop: cap the calendar near-square instead of stretching across the content column.
+const calWrap = css({ lg: { maxWidth: '420px', marginInline: 'auto' } });
 const calendarSkeletonCard = css({ bg: 'ws.sable', borderRadius: '18px', padding: '15px 12px' });
 const calendarSkeletonRow = css({ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '7px', justifyItems: 'center' });
 
@@ -211,14 +213,16 @@ export function GrillesArchiveScreen({
   };
 
   const calendarSkeleton = (
-    <div className={calendarSkeletonCard} aria-busy="true" aria-label="Chargement des grilles">
-      {Array.from({ length: 5 }, (_, w) => (
-        <div key={w} className={calendarSkeletonRow}>
-          {Array.from({ length: 7 }, (_, d) => (
-            <Skeleton key={d} tone="onCard" width={34} height={34} radius={999} />
-          ))}
-        </div>
-      ))}
+    <div className={calWrap}>
+      <div className={calendarSkeletonCard} aria-busy="true" aria-label="Chargement des grilles">
+        {Array.from({ length: 5 }, (_, w) => (
+          <div key={w} className={calendarSkeletonRow}>
+            {Array.from({ length: 7 }, (_, d) => (
+              <Skeleton key={d} tone="onCard" width={34} height={34} radius={999} />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 
@@ -227,7 +231,7 @@ export function GrillesArchiveScreen({
   ) : loading ? null : summaries.length === 0 ? (
     <GrillesEmptyState filter="new" onPlay={() => navigate({ to: '/play' })} />
   ) : (
-    <>
+    <div className={calWrap}>
       <DailyCalendar
         month={month}
         infos={infos}
@@ -242,7 +246,7 @@ export function GrillesArchiveScreen({
           <ArchiveUpsellBanner />
         </div>
       ) : null}
-    </>
+    </div>
   );
 
   const aFinir = showSkeleton ? (
