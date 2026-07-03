@@ -216,6 +216,11 @@ ADR-0086  frontend/src/ui/components/grid/PuzzleBoard.tsx  Owned solved cell tin
 ADR-0087  modal_jobs/**                            Modal Command-R is the SOLE clue-generation + training lane (amends ADR-0057)
 ADR-0087  scripts/clue_generation/**               MLX lane (run_production.sh, train_lora.sh, train_dpo.sh, generate_clues_lora*, lora_iter*.yaml) RETIRED 2026-06-23 — never invoke for new work
 ADR-0087  scripts/eval/**                          validate_clue/inflation/runtime guards stay live (lane-independent); CamemBERT filter retired as a shipping gate
+ADR-0088  frontend/panda.config.ts                       Dark mode « jardin de nuit »: ws.* promoted to semanticTokens with {base,_dark}; dark condition = [data-theme=dark]
+ADR-0088  frontend/src/ui/v2/**                          Night-ramp values for the v2 chrome; SVG art + hero gradients consume CSS vars so they theme
+ADR-0088  frontend/index.html                            Pre-paint data-theme applied from localStorage bliss.theme ('clair'|'sombre'|'auto'); auto follows prefers-color-scheme
+ADR-0088  frontend/src/ui/v2/ReglagesScreen.tsx          Theme control lives in Réglages; default flips to 'auto' only in rollout Wave C
+# ADR-0088: Dark mode « jardin de nuit » — ws.* and semantic tokens promoted to {base,_dark} pairs, condition = [data-theme=dark]; theme setting 'clair'|'sombre'|'auto' persisted in localStorage, applied pre-paint; rollout ships dark first (default clair), flips to auto once QA completes.
 ```
 
 ## Adding entries
