@@ -31,7 +31,7 @@ bootstrap branch: `git show origin/docs/perf-edge-orchestration:<path>`.
 | Phase | Wave | Branch | Base | PR title prefix | Scope (plan section) |
 |---|---|---|---|---|---|
 | 0 | — | `docs/perf-edge-orchestration` | main | `docs(plans): perf edge rollout docs` | Bootstrap PR: analysis, plan, this procedure, log. Standard 3a handling. |
-| 1 | 1 | `docs/adr-0088-api-edge-cloudflare` | main | `docs(adr): ADR-0088 api edge` | ADR-0088 + INDEX.md rows (plan "Wave 1"). Docs read from Phase-0 branch if unmerged. |
+| 1 | 1 | `docs/adr-0089-api-edge-cloudflare` | main | `docs(adr): ADR-0089 api edge` | ADR-0089 + INDEX.md rows (plan "Wave 1"). Docs read from Phase-0 branch if unmerged. |
 | 2 | 2 | `feat/frontend-preconnect-daily-prime` | main | `feat(frontend): preconnect + eager daily prime` | Plan "PR 2". |
 | 3 | 2 | `feat/frontend-whoami-staleness-gate` | main | `feat(frontend): whoami staleness gate` | Plan "PR 3". |
 | 4 | 2 | `feat/grid-daily-cache-headers` | main | `feat(grid-api): daily cache headers + etag` | Plan "PR 4". |
@@ -132,7 +132,7 @@ in this rollout — no schema edits).
 4. Commit with git commit -s, Conventional Commit, single scope, no PascalCase first
    word, body lines ≤100 chars.
 5. Push and open the PR (gh pr create, base main). Title = commit subject. Body: Why /
-   What / Test plan, cite ADR-0088 + the plan file, name the wave + PR number.
+   What / Test plan, cite ADR-0089 + the plan file, name the wave + PR number.
    <Phase 8 only: cite the ADR-0001 §4 2026-05-25 soft-target override in the body from
    the first push, per the procedure's standing-authorization section.>
    <If the PR touches infra/**, terraform/**, or a */api/deploy/** chart: update

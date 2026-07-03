@@ -20,7 +20,7 @@ review when convenient.
 - Bootstrap authored from worktree `perf-query-timings-analysis` (analysis-only; no code
   changes). Plan deviation noted: plan's PR 1 said "bundle spec docs"; the analysis +
   plan docs ship in this Phase-0 PR instead so the cron and implementers can read them
-  from origin before the ADR merges. Wave-1 PR is ADR-0088 + INDEX.md only.
+  from origin before the ADR merges. Wave-1 PR is ADR-0089 + INDEX.md only.
 - Deferred issues (plan "Issues to file") are Phase 10, filed by the orchestrator.
 - No stashes created. Main checkout untouched.
 

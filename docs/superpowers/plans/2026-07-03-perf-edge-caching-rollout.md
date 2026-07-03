@@ -35,9 +35,9 @@ headers anywhere; no real IPv6 on API hosts (Cloudflare proxy adds AAAA automati
 
 ## Wave 1 — governance
 
-### PR 1: ADR-0088 "API edge: Cloudflare proxy for non-WS hosts, daily-cache policy, regen purge"
+### PR 1: ADR-0089 "API edge: Cloudflare proxy for non-WS hosts, daily-cache policy, regen purge"
 
-**Files:** create `docs/adr/0088-api-edge-cloudflare-proxy-and-daily-cache.md`; modify `docs/adr/INDEX.md`.
+**Files:** create `docs/adr/0089-api-edge-cloudflare-proxy-and-daily-cache.md`; modify `docs/adr/INDEX.md`.
 
 Decision points the ADR must carry (all verified feasible):
 
@@ -77,7 +77,7 @@ Decision points the ADR must carry (all verified feasible):
 7. **Amendments:** ADR-0007 §2 (gray-cloud-everything reasoning narrowed to WS hosts).
 
 INDEX.md rows: glob `*/api/deploy/chart/values-prod.yaml` (proxied annotation), `terraform/cloudflare-cache-rules.tf`,
-`grid/worker/**` (purge hook), `*/api/src/main/kotlin/**/Module.kt` (TAO header) → ADR-0088.
+`grid/worker/**` (purge hook), `*/api/src/main/kotlin/**/Module.kt` (TAO header) → ADR-0089.
 
 ---
 
@@ -118,7 +118,7 @@ create `frontend/src/infrastructure/api/grid/DedupedPuzzleRepository.ts` + test.
 **Files:** modify `grid/api/src/main/kotlin/com/bliss/grid/api/routes/PuzzleRoute.kt`
 (daily handler `:108-166`, list handler `:168+`); tests in the existing PuzzleRoute test class.
 
-- Implement policy §3 of ADR-0088 exactly (values above). Seconds-to-midnight computed from
+- Implement policy §3 of ADR-0089 exactly (values above). Seconds-to-midnight computed from
   the route's existing `clock` (UTC — same zone the route already uses for "today").
 - `If-None-Match` handling: compare against `"<puzzleId>"`; on match respond `304` with the
   same Cache-Control header and no body. List ETag: strong hash (SHA-256 hex, first 16 chars)
