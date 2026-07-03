@@ -49,8 +49,7 @@ export interface LobbyConnection {
   readonly pseudonymError: string | null;
   readonly joinDenied: string | null;
   readonly joinConfirmed: boolean;
-  // True once the server said the lobby no longer exists (404 protocol
-  // frame on rejoin) — the route renders the introuvable screen.
+  // True once the server said the lobby no longer exists (404 protocol frame on rejoin) — the route renders the introuvable screen.
   readonly lobbyGone: boolean;
   readonly isStarting: boolean;
   readonly isRotating: boolean;
@@ -86,8 +85,7 @@ export interface LobbyActions {
   readonly subscribeToRemotePresence: (handler: (event: GameEvent) => void) => () => void;
 }
 
-// LobbyWebSocketRoute answers a rejoin against an unknown lobby with a
-// protocol error frame carrying status 404 before closing the socket.
+// LobbyWebSocketRoute answers a rejoin against an unknown lobby with a protocol error frame carrying status 404 before closing the socket.
 const isLobbyGoneFrame = (event: GameEvent): boolean =>
   event.type === 'error' &&
   event.errorType === 'https://bliss.example/errors/protocol' &&
@@ -134,8 +132,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   // read-only-snapshot view with this banner asking the organiser
   // for the code. Already-joined sessions never raise this.
   const [joinDenied, setJoinDenied] = useState<string | null>(null);
-  // Server-confirmed "this lobby no longer exists" — the only case that
-  // may claim the game is gone (honest 404, never a transient outage).
+  // Server-confirmed "this lobby no longer exists" — the only case that may claim the game is gone (honest 404, never a transient outage).
   const [lobbyGone, setLobbyGone] = useState(false);
   // ADR-0027: gate the WaitingRoom render on a confirmed join so a new
   // joiner whose code the server is about to reject doesn't see the
@@ -171,8 +168,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   const preRotationCodeRef = useRef<string | null>(null);
   // Skip initial `connecting` — first `connected` arms the ref; only then do transient drops earn toast chrome.
   const hasConnectedRef = useRef(false);
-  // One toast + one announcement per LOST transition (ADR-0050 one-shot
-  // rule) — the retry loop's reconnecting/connecting churn stays silent.
+  // One toast per LOST transition (ADR-0050 one-shot rule) — the retry loop's reconnecting/connecting churn stays silent.
   const connectionLostRef = useRef(false);
 
   // Single side effect: connect on mount, disconnect on unmount.
@@ -205,9 +201,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
         setJoinDenied(event.detail ?? 'Code invalide ou partie privée. Demandez le code à l’organisateur.');
         lobbyJoinCodeStash.clear(lobbyId);
       }
-      // Server-confirmed lobby-unknown (WS rejoin against a GC'd / wiped
-      // lobby): the route swaps to the introuvable screen; the effect
-      // below tears the retry loop down.
+      // Server-confirmed lobby-unknown (WS rejoin against a GC'd / wiped lobby) — the route swaps to the introuvable screen.
       if (isLobbyGoneFrame(event)) {
         setLobbyGone(true);
       }
@@ -284,14 +278,12 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     });
     const unsubscribeConnection = gameClient.subscribeConnectionState((state) => {
       setConnectionState(state);
-      // Toast + announce here, not in an effect: Announcer.say flushSyncs,
-      // which React forbids inside lifecycle methods.
+      // Toast is dispatched here, not in an effect, to fire in the same tick as the connection-state flip.
       if (state === 'connected') {
         if (connectionLostRef.current) {
           connectionLostRef.current = false;
-          // show() replaces the sticky lost-toast (single-slot) and auto-dismisses.
+          // show() replaces the sticky lost-toast (single-slot) and auto-dismisses; Toast owns its own aria-live region.
           showToast({ text: 'Connexion rétablie', tone: 'info' });
-          announce('Connexion rétablie');
         }
         hasConnectedRef.current = true;
         return;
@@ -299,7 +291,6 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       if (!hasConnectedRef.current || connectionLostRef.current) return;
       connectionLostRef.current = true;
       showToast({ text: 'Connexion perdue — reconnexion en cours…', tone: 'info', duration: null });
-      announce('Connexion perdue, reconnexion en cours');
     });
     // ADR-0027: read the code stash the navigation populated. Read is
     // non-destructive so React StrictMode's mount-unmount-remount
@@ -316,8 +307,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     };
   }, [gameClient, lobbyId, getSession, lobbyJoinCodeStash, showToast, announce]);
 
-  // Honest 404 mid-game: stop retrying against a lobby the server says is
-  // gone, and drop the (now wrong) reconnection toast.
+  // Honest 404 mid-game: stop retrying against a lobby the server says is gone, and drop the (now wrong) reconnection toast.
   useEffect(() => {
     if (!lobbyGone) return;
     dismissToast();

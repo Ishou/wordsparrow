@@ -1,19 +1,15 @@
-// Auto-retry budget for a route loader that failed transiently. One
-// module-level instance per route survives the errorComponent's
-// remount-per-attempt, so the ladder progresses instead of restarting.
+// Auto-retry budget for a route loader that failed transiently — one module-level instance per route survives the errorComponent's remount-per-attempt.
 
 export interface LoaderRetryDecision {
   readonly delayMs: number;
-  // Instant first retry: render nothing new — a one-shot dropped request
-  // (rollout drain, stale keep-alive) must recover invisibly.
+  // Instant first retry: render nothing new — a one-shot dropped request must recover invisibly.
   readonly silent: boolean;
   // 1-indexed; lets the UI announce once on attempt 2 (first loud), never per attempt.
   readonly attempt: number;
 }
 
 export interface LoaderRetryPolicy {
-  // Consume the next auto-retry; `null` once the budget is spent (rest at
-  // the manual « Réessayer » CTA).
+  // Consume the next auto-retry; `null` once the budget is spent (rest at the manual « Réessayer » CTA).
   next(now?: number): LoaderRetryDecision | null;
   reset(): void;
 }
@@ -24,8 +20,7 @@ export interface LoaderRetryPolicyOptions {
   readonly maxAutoRetries?: number;
   // A failure this long after the previous one is a NEW incident.
   readonly incidentResetMs?: number;
-  // Calls this close together are the same mount (React StrictMode
-  // double-effect) — replay the decision instead of consuming twice.
+  // Calls this close together are the same mount (React StrictMode double-effect) — replay the decision instead of consuming twice.
   readonly dedupWindowMs?: number;
 }
 

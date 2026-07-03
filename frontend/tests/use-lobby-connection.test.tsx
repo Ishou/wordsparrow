@@ -343,17 +343,16 @@ describe('useLobbyConnection error + connection seams', () => {
       tone: 'info',
       duration: null,
     });
-    expect(announce).toHaveBeenCalledWith('Connexion perdue, reconnexion en cours');
-    // The retry loop cycles reconnecting → connecting → reconnecting…
-    // — no additional toast or announcement per attempt.
+    // Toast owns its own aria-live region (Toast.tsx) — no separate announce() call.
+    expect(announce).not.toHaveBeenCalled();
+    // The retry loop cycles reconnecting → connecting → reconnecting… — no additional toast per attempt.
     act(() => gameClient.dispatchConnectionState('connecting'));
     act(() => gameClient.dispatchConnectionState('reconnecting'));
     act(() => gameClient.dispatchConnectionState('connecting'));
     expect(showToast).toHaveBeenCalledTimes(1);
-    expect(announce).toHaveBeenCalledTimes(1);
   });
 
-  it('replaces the sticky toast with a brief « Connexion rétablie » and announces once on recovery', () => {
+  it('replaces the sticky toast with a brief « Connexion rétablie » on recovery', () => {
     const gameClient = makeFakeGameClient();
     const showToast = vi.fn();
     const announce = vi.fn();
@@ -363,8 +362,8 @@ describe('useLobbyConnection error + connection seams', () => {
     act(() => gameClient.dispatchConnectionState('connecting'));
     act(() => gameClient.dispatchConnectionState('connected'));
     expect(showToast).toHaveBeenLastCalledWith({ text: 'Connexion rétablie', tone: 'info' });
-    expect(announce).toHaveBeenLastCalledWith('Connexion rétablie');
-    expect(announce).toHaveBeenCalledTimes(2); // lost once, restored once
+    // Toast owns its own aria-live region (Toast.tsx) — no separate announce() call.
+    expect(announce).not.toHaveBeenCalled();
 
     // A second outage re-arms the pair.
     act(() => gameClient.dispatchConnectionState('reconnecting'));
@@ -404,8 +403,7 @@ describe('useLobbyConnection error + connection seams', () => {
     const showToast = vi.fn();
     const dismissToast = vi.fn();
     const onJoinDenied = vi.fn();
-    // Stable args: a fresh `getSession` per render would re-run the mount
-    // effect and skew the disconnect count below.
+    // Stable args: a fresh `getSession` per render would re-run the mount effect and skew the disconnect count below.
     const args = makeArgs(gameClient, { showToast, dismissToast, onJoinDenied });
     const { result } = renderHook(() => useLobbyConnection(args));
     act(() => gameClient.dispatchConnectionState('connected'));
@@ -433,8 +431,7 @@ describe('useLobbyConnection error + connection seams', () => {
     const { result } = renderHook(() => useLobbyConnection(makeArgs(gameClient)));
     act(() => gameClient.dispatchConnectionState('connected'));
     expect(result.current.initialEntries).toEqual([]);
-    // Reconnect: the server replays the full snapshot on every WS rejoin
-    // (LobbyWebSocketRoute sends lobbyState to each new socket).
+    // Reconnect: the server replays the full snapshot on every WS rejoin (LobbyWebSocketRoute sends lobbyState per socket).
     act(() => gameClient.dispatchConnectionState('reconnecting'));
     act(() => gameClient.dispatchConnectionState('connected'));
     act(() => {

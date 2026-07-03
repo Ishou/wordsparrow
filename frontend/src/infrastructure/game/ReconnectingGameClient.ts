@@ -42,16 +42,8 @@
 //      bare adapter throws "already connected". The wrapper only calls
 //      `connect` after the inner has emitted `'disconnected'`, which
 //      the adapter only emits AFTER it clears its `socket` ref.
-//   4. A drop from an ESTABLISHED connection gets one instant, silent
-//      retry: no `reconnecting` emission, no mirrored `connecting`. A
-//      one-shot blip (rollout-drained keep-alive, stale connection
-//      reset) recovers with zero visible chrome; only when that instant
-//      attempt fails does the outage surface and backoff begin.
-//   5. `cellUpdate` while the socket is down is queued (last write per
-//      cell wins — mirrors the server's LWW echo semantics) and flushed
-//      after the reconnect's `lobbyState` replay snapshot, so the stale
-//      snapshot cannot overwrite the flushed writes' echoes. `cellFocus`
-//      is ephemeral presence and is dropped, never queued.
+//   4. A drop from an ESTABLISHED connection gets one instant, silent retry (no state emission) before the outage surfaces and backoff begins.
+//   5. `cellUpdate` while the socket is down is queued (last write per cell wins) and flushed after the rejoin's `lobbyState` replay; `cellFocus` is ephemeral and dropped, never queued.
 
 import type {
   ConnectionState,
@@ -67,13 +59,9 @@ type RandomFn = () => number;
 
 export interface ReconnectingGameClientOptions {
   readonly inner: GameClient;
-  // Maximum reconnect attempts before the wrapper gives up and emits a
-  // terminal `disconnected`. Default Infinity: a game-api JVM restart
-  // outlasts any finite budget, so the wrapper retries for as long as
-  // the lobby tab stays open (delay capped at `maxDelayMs`).
+  // Maximum reconnect attempts before the wrapper gives up. Default Infinity: retries for as long as the tab stays open (delay capped at `maxDelayMs`).
   readonly maxAttempts?: number;
-  // Attempt 1 fires instantly; attempt 2 waits this long (ms), doubling
-  // per attempt after that, capped at `maxDelayMs`. Default 500.
+  // Attempt 1 fires instantly; attempt 2 waits this long (ms), doubling per attempt after, capped at `maxDelayMs`. Default 500.
   readonly baseDelayMs?: number;
   // Maximum delay between attempts (ms). Default 10_000.
   readonly maxDelayMs?: number;
@@ -116,8 +104,7 @@ export function createReconnectingGameClient(
   let delayHandle: ReturnType<typeof setTimeout> | null = null;
   let voluntaryClose = false;
   let started = false;
-  // True while the instant post-drop attempt is in flight — suppresses
-  // every state emission so a one-shot blip stays invisible (note 4).
+  // True while the instant post-drop attempt is in flight — suppresses every state emission (note 4).
   let silentAttempt = false;
   let lastInnerState: ConnectionState = 'disconnected';
   // Outage write queue (note 5) — insertion-ordered, last write per cell.
@@ -190,8 +177,7 @@ export function createReconnectingGameClient(
     }
   };
 
-  // Flush AFTER the rejoin `lobbyState` replay so the stale snapshot is
-  // applied before our echoes arrive (note 5).
+  // Flush AFTER the rejoin `lobbyState` replay so the stale snapshot is applied before our echoes arrive (note 5).
   inner.subscribe((event) => {
     if (event.type !== 'lobbyState') return;
     if (lastInnerState !== 'connected') return;

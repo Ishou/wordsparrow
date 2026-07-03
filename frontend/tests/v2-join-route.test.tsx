@@ -172,8 +172,7 @@ describe('v2 /join/$code route', () => {
       .mockResolvedValue(lobby);
     const { router } = renderJoin('/join/A2B3C4', { findByCode });
 
-    // The instant silent retry lands and the redirect proceeds — the
-    // bad-code screen never gets a chance to lie about a network blip.
+    // The instant silent retry lands and the redirect proceeds — the bad-code screen never renders.
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/lobby/${lobbyId}`);
     });

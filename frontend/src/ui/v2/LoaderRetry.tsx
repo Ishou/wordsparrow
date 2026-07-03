@@ -9,9 +9,7 @@ import { SparrowState } from './SparrowState';
 import { sparrowFlightScene } from './SparrowScenes';
 import { PrimaryButton } from './Buttons';
 
-// Transient-loader-failure boundary body: silent instant retry first, then
-// auto-retries on the policy's capped backoff, then rests at « Réessayer ».
-// Never claims the resource doesn't exist — that's the not-found branch's job.
+// Transient-loader-failure boundary body: silent instant retry, then capped backoff, then rests at « Réessayer » — never claims the resource doesn't exist (that's the not-found branch's job).
 
 const placeholder = css({
   fontFamily: 'wsUi',
@@ -33,9 +31,7 @@ const retryCta = css({ padding: '0 26px' });
 
 export interface LoaderRetryProps {
   readonly policy: LoaderRetryPolicy;
-  // Shown during the silent instant retry — same copy as the route's
-  // pending state so a one-shot failure is visually seamless. NOT a live
-  // region: the boundary remounts per attempt and must never re-announce.
+  // Shown during the silent instant retry. NOT a live region: the boundary remounts per attempt and must never re-announce.
   readonly silentText: string;
 }
 

@@ -55,8 +55,7 @@ function V2LobbyIntrouvable() {
 // Survives the errorComponent's remount-per-attempt so the ladder progresses.
 export const lobbyLoaderRetryPolicy = createLoaderRetryPolicy();
 
-// getLobby rejection boundary — « introuvable » only on a server-confirmed
-// 404; anything transient auto-retries instead of claiming the game is gone.
+// getLobby rejection boundary — « introuvable » only on a server-confirmed 404; anything transient auto-retries.
 function V2LobbyError({ error }: { readonly error: Error }) {
   const notFound = error instanceof LobbyClientError && error.kind === 'not-found';
   if (notFound) return <V2LobbyIntrouvable />;
@@ -145,8 +144,7 @@ function V2LobbyPage() {
     void navigate({ to: '/' });
   }, [actions, navigate]);
 
-  // Server-confirmed 404 mid-game (rejoin against a wiped lobby) — the only
-  // involuntary path that leaves the game surface (spec: honest 404s).
+  // Server-confirmed 404 mid-game (rejoin against a wiped lobby) — the only involuntary path that leaves the game surface.
   if (lobbyGone) {
     return <V2LobbyIntrouvable />;
   }

@@ -1,20 +1,4 @@
-/**
- * Multiplayer resilience (transient outages must never masquerade as
- * permanent failures):
- *
- *  1. A ONE-SHOT getLobby network failure recovers via the silent
- *     instant loader retry — zero visible change, never « introuvable ».
- *  2. A WS outage longer than the old 32-s budget keeps the player in
- *     the game behind one sticky toast, then resyncs and clears it.
- *  3. Cells typed while offline are queued and flushed to the server
- *     after the rejoin replay — nothing is silently dropped.
- *  4. Only a server-confirmed lobby-unknown (404 frame on rejoin) may
- *     claim the game is gone.
- *
- * Drives the MSW mock's e2e seams exposed on `window.__gameWsTest__`
- * (preview-only bundle): setOutage / dropAll / failNextLobbyFetches /
- * injectEntry / deleteLobby / getLobby.
- */
+// Multiplayer resilience: transient outages must never masquerade as permanent failures (loader retry, WS backoff, offline write queue, honest 404 — see PR body). Drives MSW's e2e seams on `window.__gameWsTest__`.
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { startMultiplayerGame } from './lib/multiHelpers';
@@ -49,9 +33,7 @@ async function typeAcross(
   startCol: number,
   letters: readonly string[],
 ): Promise<void> {
-  // Same trusted-focus pattern as word-auto-validate-multiplayer.spec.ts:
-  // focus once, then let auto-advance carry focus so cellUpdate frames
-  // target the cell actually being typed into.
+  // Same trusted-focus pattern as word-auto-validate-multiplayer.spec.ts: focus once, let auto-advance carry it.
   await page.evaluate(({ row, col }) => {
     const sel = `input[data-cell-kind="letter"][data-row="${row}"][data-col="${col}"]`;
     document.querySelector<HTMLInputElement>(sel)?.focus();
@@ -101,8 +83,7 @@ test('a one-shot getLobby network failure recovers silently — zero visible cha
   });
   await page.goto('/grilles?onglet=plusieurs');
 
-  // Arm the seam BEFORE the create-flow navigation runs the loader. The
-  // seam global appears once the MSW module graph finishes loading.
+  // Arm the seam BEFORE the create-flow navigation runs the loader (the global appears once MSW finishes loading).
   await page.waitForFunction(() => window.__gameWsTest__ !== undefined);
   await page.evaluate(() => window.__gameWsTest__.failNextLobbyFetches(1));
   await page.getByRole('button', { name: /Créer une partie/i }).click();
@@ -133,12 +114,10 @@ test('an outage past the old 32s budget: one sticky toast, no navigation, resync
   // The sticky lost-toast appears once the silent instant retry has failed.
   await expect(lostToast(page)).toBeVisible({ timeout: 10_000 });
 
-  // A "remote participant" fills a cell while we are offline — only the
-  // rejoin replay snapshot can bring it to this client.
+  // A "remote participant" fills a cell while we are offline — only the rejoin replay can bring it to this client.
   await page.evaluate((id) => window.__gameWsTest__.injectEntry(id, 0, 2, 'E'), lobbyId);
 
-  // Outlast the retired 6-attempt/~32s budget: still in the game, still
-  // ONE toast, never « introuvable », no navigation.
+  // Outlast the retired 6-attempt/~32s budget: still in the game, still ONE toast, never « introuvable ».
   await page.waitForTimeout(33_000);
   await expect(lostToast(page)).toHaveCount(1);
   expect(page.url()).toBe(lobbyUrl);
@@ -147,8 +126,7 @@ test('an outage past the old 32s budget: one sticky toast, no navigation, resync
 
   await page.evaluate(() => window.__gameWsTest__.setOutage(false));
 
-  // Recovery: brief « rétablie » toast replaces the sticky one; the board
-  // resyncs the remote write; local state survived. Delay cap is 10s ±15%.
+  // Recovery: brief « rétablie » toast replaces the sticky one; the board resyncs the remote write.
   await expect(restoredToast(page)).toBeVisible({ timeout: 20_000 });
   await expect(lostToast(page)).toHaveCount(0);
   await expect(letterInput(page, 0, 2)).toHaveValue('E');
@@ -174,8 +152,7 @@ test('two cells typed during an outage reach the server after reconnect and stay
   await page.evaluate(() => window.__gameWsTest__.setOutage(false));
   await expect(restoredToast(page)).toBeVisible({ timeout: 20_000 });
 
-  // The queued writes were flushed after the replay snapshot: the mock
-  // server's persisted session now carries both letters.
+  // The queued writes were flushed after the replay snapshot: the mock server's persisted session carries both.
   await expect
     .poll(
       () =>
@@ -201,9 +178,7 @@ test('a lobby deleted mid-game surfaces the honest « Partie introuvable » scre
   const lobbyUrl = page.url();
   const lobbyId = lobbyIdFromUrl(page);
 
-  // Server restart wiped the lobby; the live socket drops. The rejoin
-  // meets the server's 404 protocol frame — the only path allowed to
-  // claim the game no longer exists.
+  // Server restart wiped the lobby; the rejoin meets the server's honest 404 protocol frame.
   await page.evaluate((id) => {
     window.__gameWsTest__.deleteLobby(id);
     window.__gameWsTest__.dropAll();

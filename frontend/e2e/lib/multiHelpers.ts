@@ -5,18 +5,12 @@ export interface StartMultiplayerOptions {
   readonly stopBeforeStart?: boolean;
 }
 
-/**
- * Drive the grilles → create-lobby → salon → game flow against the MSW
- * WebSocket mock (v2 surface: « À plusieurs » tab, « Créer une partie »,
- * salon CTA « Jouer »). Used by the multiplayer e2e specs and the a11y
- * scan of the salon.
- */
+// Drive the grilles → create-lobby → salon → game flow against the MSW WebSocket mock (v2 surface).
 export async function startMultiplayerGame(
   page: Page,
   options: StartMultiplayerOptions = {},
 ): Promise<void> {
-  // Pre-seed the tour-seen flag so the solo tour backdrop never blocks
-  // pointer events if a spec later lands on the grid.
+  // Pre-seed the tour-seen flag so the solo tour backdrop never blocks pointer events.
   await page.addInitScript(() => {
     window.localStorage.setItem('wordsparrow.tour.seen', 'true');
   });

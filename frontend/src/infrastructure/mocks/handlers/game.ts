@@ -53,8 +53,7 @@ const gameWsTestApi = {
   setOutage(value: boolean) { wsOutage = value; },
   dropAll() { for (const c of [...activeWsClients]) c.close(1011, 'e2e drop'); },
   failNextLobbyFetches(count: number) { failLobbyFetches = count; },
-  // A "remote participant" writing while the local socket is down — only
-  // the rejoin snapshot can carry it back, which is what resync must prove.
+  // A "remote participant" writing while the local socket is down — only the rejoin snapshot can carry it back.
   injectEntry(lobbyId: string, row: number, column: number, letter: string) {
     updateLobby(lobbyId, (current) =>
       current.game
@@ -224,8 +223,7 @@ export const gameHandlers = [
 
   // GET /v1/lobbies/:lobbyId — replay the persisted lobby.
   http.get('*/v1/lobbies/:lobbyId', ({ params }) => {
-    // e2e seam: a dropped request (network error), NOT a 404 — the loader
-    // retry must recover from it without ever claiming the lobby is gone.
+    // e2e seam: a dropped request (network error), NOT a 404 — the loader retry must recover from it silently.
     if (failLobbyFetches > 0) {
       failLobbyFetches -= 1;
       return HttpResponse.error();
@@ -487,9 +485,7 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
     );
   };
 
-  // 1. Initial snapshot — or the server's honest 404: error frame
-  //    (protocol, status 404) then a policy close, mirroring
-  //    LobbyWebSocketRoute's lobby-unknown branch.
+  // 1. Initial snapshot — or the server's honest 404 (error frame + policy close), mirroring LobbyWebSocketRoute's lobby-unknown branch.
   if (!getLobby(lobbyId)) {
     client.send(
       JSON.stringify({
@@ -500,15 +496,12 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
         status: 404,
       }),
     );
-    // Macrotask close: a sync close would mark the socket CLOSING before
-    // the interceptor's send/open microtasks run, silently dropping the
-    // 404 frame — the real server opens, sends, then closes.
+    // Macrotask close: a sync close would drop the 404 frame before the interceptor's send microtask runs.
     setTimeout(() => client.close(1008, 'lobby not found'), 0);
     return;
   }
   activeWsClients.add(client);
-  // Reconnect: seed the per-connection caches from the persisted session
-  // so lock enforcement and the solved check survive a socket swap.
+  // Reconnect: seed the per-connection caches from the persisted session so lock enforcement survives a socket swap.
   const existingGame = getLobby(lobbyId)?.game;
   for (const e of existingGame?.entries ?? []) cellEntries.set(cellKey(e.row, e.column), e.letter);
   for (const p of existingGame?.lockedPositions ?? []) lockedKeys.add(cellKey(p.row, p.column));
@@ -636,8 +629,7 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
         );
         if (upd.letter == null) cellEntries.delete(key);
         else cellEntries.set(key, upd.letter);
-        // Persist into the store so the rejoin `lobbyState` snapshot
-        // resyncs the board — mirrors the real server's GameSession.
+        // Persist into the store so the rejoin `lobbyState` snapshot resyncs the board, mirroring the real server.
         updateLobby(lobbyId, (current) =>
           current.game
             ? {

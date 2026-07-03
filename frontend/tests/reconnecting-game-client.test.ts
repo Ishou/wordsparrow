@@ -144,8 +144,7 @@ describe('ReconnectingGameClient', () => {
     await p;
     expect(states).toEqual(['disconnected', 'connecting', 'connected']);
 
-    // Mid-session drop: NO externally-visible transition — the instant
-    // retry is silent so a one-shot blip never surfaces any chrome.
+    // Mid-session drop: NO externally-visible transition — the instant retry is silent.
     fake.drop();
     expect(states).toEqual(['disconnected', 'connecting', 'connected']);
     await vi.advanceTimersByTimeAsync(0);
@@ -264,8 +263,7 @@ describe('ReconnectingGameClient', () => {
     fake.resolveOpen();
     await p;
 
-    // Drop, recover on the instant attempt — the next drop must get a
-    // fresh silent instant attempt again, not a mid-ladder delay.
+    // Drop, recover on the instant attempt — the next drop must get a fresh silent instant attempt, not a mid-ladder delay.
     fake.drop();
     await vi.advanceTimersByTimeAsync(0);
     expect(fake.connectCalls.length).toBe(2);
@@ -403,8 +401,7 @@ describe('ReconnectingGameClient', () => {
     await p;
     fake.drop();
 
-    // Typing while the socket is down must not throw; frames are queued
-    // with last-write-wins per cell (LWW mirrors the server semantics).
+    // Typing while the socket is down must not throw; frames are queued with last-write-wins per cell.
     expect(() => {
       client.cellUpdate(0, 1, 'A' as never);
       client.cellUpdate(0, 2, 'B' as never);
@@ -414,8 +411,7 @@ describe('ReconnectingGameClient', () => {
 
     await vi.advanceTimersByTimeAsync(0);
     fake.resolveOpen();
-    // Reconnected, but the server's replay snapshot has not arrived yet —
-    // flushing now would let the stale snapshot overwrite the echoes.
+    // Reconnected, but the server's replay snapshot has not arrived yet — flushing now would overwrite it.
     expect(fake.cellUpdateCalls).toEqual([]);
 
     fake.dispatchEvent({
