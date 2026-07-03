@@ -3,7 +3,7 @@ import { css } from 'styled-system/css';
 import type { ReactZoomPanPinchContentRef } from 'react-zoom-pan-pinch';
 import type { Puzzle } from '@/domain';
 import { GridMinimap } from '@/ui/components/grid/GridMinimap';
-import type { FocusedCell } from '@/ui/components/grid/HintControl';
+import type { FocusedCell } from '@/ui/components/grid/focusedCell';
 import type { Clue, Direction } from '@/ui/components/grid/useGridNavigation';
 import { HintIcon } from '@/ui/components/icons';
 import { AZERTY_ROWS } from './azertyLayout';
@@ -79,7 +79,7 @@ export interface MobileKeyboardProps {
   readonly hintRemaining: number;
   readonly hintExhausted: boolean;
   readonly hintPending: boolean;
-  // Imperative read at click time (ADR-0002 §4) — mirrors HintControl.getFocusedCell.
+  // Imperative read at click time (ADR-0002 §4).
   readonly getFocusedCell: () => FocusedCell | null;
   // Reads cell entries for the banner letter-preview row; identity bumps per write per ADR-0002 §4.
   readonly getEntryAt: (row: number, col: number) => string;

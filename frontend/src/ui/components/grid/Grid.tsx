@@ -16,7 +16,7 @@ import {
 } from './Cell';
 import { CurrentCluePanel } from './CurrentCluePanel';
 import { GridMinimap } from './GridMinimap';
-import type { FocusedCell } from './HintControl';
+import type { FocusedCell } from './focusedCell';
 import { GridScrollbar } from './GridScrollbar';
 import { GridZoomControls } from './GridZoomControls';
 import { positionKey } from './positionKey';
