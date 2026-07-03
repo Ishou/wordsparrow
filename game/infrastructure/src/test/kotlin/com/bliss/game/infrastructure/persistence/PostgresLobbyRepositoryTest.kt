@@ -364,6 +364,41 @@ class PostgresLobbyRepositoryTest {
             assertThat(result.map { it.id }).containsExactly(completed.id)
         }
 
+    // ADR-0066: cross-device union keyed by the seat userId stamped at rebind.
+    @Test
+    fun `findByUserId unions seats across sessions and keeps the state filter and ordering`() =
+        runTest {
+            val userId = UserId("22222222-2222-2222-2222-222222222222")
+            val phone =
+                inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userId)
+                    .copy(lastActivityAt = baseInstant.plusSeconds(60))
+            val laptop =
+                completedLobby(id = LobbyId.generate(), owner = sessionB)
+                    .let { it.copy(players = it.players.mapValues { (_, p) -> p.copy(userId = userId) }, lastActivityAt = baseInstant) }
+            val waiting =
+                waitingLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userId)
+                    .copy(lastActivityAt = baseInstant.plusSeconds(120))
+            val stranger = inProgressLobby(id = LobbyId.generate(), owner = sessionB)
+            repo.save(phone)
+            repo.save(laptop)
+            repo.save(waiting)
+            repo.save(stranger)
+
+            val result = repo.findByUserId(userId)
+
+            assertThat(result.map { it.id }).containsExactly(phone.id, laptop.id)
+        }
+
+    @Test
+    fun `findByUserId returns empty when no seat carries the userId`() =
+        runTest {
+            repo.save(inProgressLobby(id = LobbyId.generate(), owner = sessionA))
+
+            val result = repo.findByUserId(UserId("33333333-3333-3333-3333-333333333333"))
+
+            assertThat(result).isEmpty()
+        }
+
     @Test
     fun `findBySessionId returns empty when the session is not in any lobby`() =
         runTest {

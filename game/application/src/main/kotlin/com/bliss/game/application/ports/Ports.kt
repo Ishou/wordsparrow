@@ -43,6 +43,9 @@ interface LobbyRepository {
      */
     suspend fun findBySessionId(sessionId: SessionId): List<Lobby>
 
+    /** Cross-device "Mes parties" (ADR-0066): seats whose userId matches; same WAITING exclusion + ordering as [findBySessionId]; seats only, no owner arm. */
+    suspend fun findByUserId(userId: UserId): List<Lobby>
+
     /**
      * RGPD Article 17 erasure (ADR-0039). Atomic per lobby. Idempotent.
      * This is the ONLY method that transfers lobby ownership — regular
