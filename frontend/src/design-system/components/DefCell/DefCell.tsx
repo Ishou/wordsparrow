@@ -18,7 +18,7 @@ const cellActive = css({
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1.5px token(colors.ws.sakura), 0 4px 0 0 token(colors.ws.sakuraDark), 0 5px 8px -3px rgba(212,93,131,0.26)',
 });
 // Solved-clue text applied inline at call sites: a class `color` loses Panda's atomic ordering race against the base cream.
-const DONE_TEXT = 'var(--colors-ws-jade-ink)'; // themes with the token pair; AA on clueSurfaceDone in both modes
+const DONE_TEXT = 'var(--colors-ws-jade-ink)'; // jadeInk on clueSurfaceDone — ~4.8:1 light / ~6.7:1 dark; AA both themes
 const cellValidated = css({
   bg: 'ws.clueSurfaceDone',
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 0 0 #7E9C88, 0 3px 6px -3px rgba(33,75,64,0.16)',
@@ -40,7 +40,7 @@ const tab = css({
   height: '1.15em',
   bg: 'ws.or',
   color: '#1B3F35',
-  _dark: { color: '#16241D' },
+  _dark: { color: 'ws.onJadeInk' },
   borderRadius: '5px',
   boxShadow: '0 1px 2px rgba(33,75,64,0.32)',
   zIndex: 5,

@@ -204,6 +204,8 @@ export default defineConfig({
         ws: {
           jade: { value: { base: '#C4E5D3', _dark: '#2E4A3C' } },
           jadeInk: { value: { base: '#214B40', _dark: '#E9F2EC' } },
+          // Text on jadeInk-filled pills — the fill flips near-white in dark, so its ink flips too.
+          onJadeInk: { value: { base: '#FFFFFF', _dark: '#16241D' } },
           sable: { value: { base: '#E8E2C6', _dark: '#23301F' } },
           khaki: { value: { base: '#4C4824', _dark: '#A8B49B' } },
           or: { value: { base: '#D8C77A', _dark: '#8A7A3D' } },

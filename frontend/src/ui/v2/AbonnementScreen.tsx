@@ -93,7 +93,7 @@ const errText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', 
 const subscribedCard = css({ bg: 'ws.card', borderRadius: '18px', padding: '18px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'center' });
 const subscribedTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '19px', color: 'ws.jadeInk', margin: 0 });
 const subscribedBody = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.khaki', lineHeight: '1.4', margin: 0 });
-const manageLink = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '48px', borderRadius: '14px', bg: 'ws.jadeInk', color: 'white', _dark: { color: '#16241D' }, fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', textDecoration: 'none', _hover: { opacity: 0.92 }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const manageLink = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '48px', borderRadius: '14px', bg: 'ws.jadeInk', color: 'ws.onJadeInk', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', textDecoration: 'none', _hover: { opacity: 0.92 }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
 function Feature({ label }: { readonly label: string }) {
   return (
