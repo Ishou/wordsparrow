@@ -2,6 +2,7 @@ package com.bliss.identity.infrastructure.persistence
 
 import com.bliss.identity.application.ports.UserRepository
 import com.bliss.identity.domain.user.DisplayName
+import com.bliss.identity.domain.user.EmailAddress
 import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
@@ -44,6 +45,18 @@ class PostgresUserRepository(
                 conn.prepareStatement(SELECT_SQL).use { stmt ->
                     stmt.setObject(1, id.value)
                     stmt.executeQuery().use { rs -> if (rs.next()) rs.toUser() else null }
+                }
+            }
+        }
+
+    override suspend fun findByEmail(email: EmailAddress): List<User> =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(SELECT_BY_EMAIL_SQL).use { stmt ->
+                    stmt.setString(1, email.value)
+                    stmt.executeQuery().use { rs ->
+                        buildList { while (rs.next()) add(rs.toUser()) }
+                    }
                 }
             }
         }
@@ -131,6 +144,8 @@ class PostgresUserRepository(
                 "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (user_id) DO NOTHING"
         private const val SELECT_SQL =
             "SELECT user_id, display_name, created_at, last_seen_at, role, email FROM identity_users WHERE user_id = ?"
+        private const val SELECT_BY_EMAIL_SQL =
+            "SELECT user_id, display_name, created_at, last_seen_at, role, email FROM identity_users WHERE lower(email) = ?"
         private const val UPDATE_LAST_SEEN_SQL =
             "UPDATE identity_users SET last_seen_at = ? WHERE user_id = ?"
         private const val UPDATE_DISPLAY_NAME_SQL =

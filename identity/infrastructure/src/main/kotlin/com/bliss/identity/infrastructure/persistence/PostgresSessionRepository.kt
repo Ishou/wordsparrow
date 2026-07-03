@@ -61,6 +61,22 @@ class PostgresSessionRepository(
             }
         }
 
+    override suspend fun revokeAllForUserExcept(
+        userId: UserId,
+        keep: SessionId,
+        at: Instant,
+    ): Unit =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(REVOKE_ALL_EXCEPT_SQL).use { stmt ->
+                    stmt.setObject(1, at.atOffset(ZoneOffset.UTC))
+                    stmt.setObject(2, userId.value)
+                    stmt.setObject(3, keep.value)
+                    stmt.executeUpdate()
+                }
+            }
+        }
+
     override suspend fun deleteForUser(userId: UserId): Unit =
         withContext(Dispatchers.IO) {
             dataSource.connection.use { conn ->
@@ -87,6 +103,8 @@ class PostgresSessionRepository(
             "SELECT session_id, user_id, created_at, last_seen_at, revoked_at FROM identity_sessions WHERE session_id = ?"
         private const val REVOKE_SQL =
             "UPDATE identity_sessions SET revoked_at = ? WHERE session_id = ? AND revoked_at IS NULL"
+        private const val REVOKE_ALL_EXCEPT_SQL =
+            "UPDATE identity_sessions SET revoked_at = ? WHERE user_id = ? AND session_id <> ? AND revoked_at IS NULL"
         private const val DELETE_FOR_USER_SQL =
             "DELETE FROM identity_sessions WHERE user_id = ?"
     }

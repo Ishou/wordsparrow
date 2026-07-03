@@ -1,6 +1,7 @@
 package com.bliss.identity.application.ports
 
 import com.bliss.identity.domain.user.DisplayName
+import com.bliss.identity.domain.user.EmailAddress
 import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
@@ -11,6 +12,9 @@ interface UserRepository {
     suspend fun create(user: User)
 
     suspend fun findById(id: UserId): User?
+
+    /** All users whose stored email matches (case-insensitive); empty when none. */
+    suspend fun findByEmail(email: EmailAddress): List<User>
 
     /**
      * Update the user's last-seen timestamp. No-op if the user does not exist —

@@ -2,6 +2,7 @@ package com.bliss.identity.infrastructure.persistence
 
 import com.bliss.identity.application.ports.UserRepository
 import com.bliss.identity.domain.user.DisplayName
+import com.bliss.identity.domain.user.EmailAddress
 import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
@@ -16,6 +17,8 @@ class InMemoryUserRepository : UserRepository {
     }
 
     override suspend fun findById(id: UserId): User? = byId[id]
+
+    override suspend fun findByEmail(email: EmailAddress): List<User> = byId.values.filter { it.email?.lowercase() == email.value }
 
     override suspend fun updateLastSeenAt(
         id: UserId,

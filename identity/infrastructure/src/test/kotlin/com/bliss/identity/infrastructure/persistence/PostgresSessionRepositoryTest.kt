@@ -196,6 +196,53 @@ class PostgresSessionRepositoryTest {
         }
 
     @Test
+    fun `revokeAllForUserExcept revokes siblings and keeps the caller active`() =
+        runTest {
+            val u = user()
+            userRepo.create(u)
+            val keep = session(userId = u.id)
+            val siblingA = session(userId = u.id)
+            val siblingB = session(userId = u.id)
+            repo.create(keep)
+            repo.create(siblingA)
+            repo.create(siblingB)
+            val at = now.plusSeconds(30)
+            repo.revokeAllForUserExcept(u.id, keep.id, at)
+            assertThat(repo.findById(keep.id)?.isActive).isEqualTo(true)
+            assertThat(repo.findById(siblingA.id)?.revokedAt).isEqualTo(at)
+            assertThat(repo.findById(siblingB.id)?.revokedAt).isEqualTo(at)
+        }
+
+    @Test
+    fun `revokeAllForUserExcept leaves other users' sessions untouched`() =
+        runTest {
+            val u1 = user()
+            val u2 = user()
+            userRepo.create(u1)
+            userRepo.create(u2)
+            val keep = session(userId = u1.id)
+            val theirs = session(userId = u2.id)
+            repo.create(keep)
+            repo.create(theirs)
+            repo.revokeAllForUserExcept(u1.id, keep.id, now.plusSeconds(30))
+            assertThat(repo.findById(theirs.id)?.isActive).isEqualTo(true)
+        }
+
+    @Test
+    fun `revokeAllForUserExcept preserves an already-revoked session's timestamp`() =
+        runTest {
+            val u = user()
+            userRepo.create(u)
+            val keep = session(userId = u.id)
+            val firstRevoke = now.plusSeconds(10)
+            val alreadyRevoked = session(userId = u.id, revokedAt = firstRevoke)
+            repo.create(keep)
+            repo.create(alreadyRevoked)
+            repo.revokeAllForUserExcept(u.id, keep.id, now.plusSeconds(30))
+            assertThat(repo.findById(alreadyRevoked.id)?.revokedAt).isEqualTo(firstRevoke)
+        }
+
+    @Test
     fun `delete of parent user cascades to sessions`() =
         runTest {
             val u = user()

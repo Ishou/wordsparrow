@@ -1,9 +1,12 @@
 package com.bliss.identity.infrastructure.persistence
 
 import assertk.assertThat
+import assertk.assertions.containsExactlyInAnyOrder
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.bliss.identity.domain.user.DisplayName
+import com.bliss.identity.domain.user.EmailAddress
 import com.bliss.identity.domain.user.Role
 import com.bliss.identity.domain.user.User
 import com.bliss.identity.domain.user.UserId
@@ -271,6 +274,40 @@ class PostgresUserRepositoryTest {
             val unknownId = UserId(UUID.randomUUID())
             repo.updateRole(unknownId, Role.MAINTAINER)
             assertThat(repo.findById(unknownId)).isNull()
+        }
+
+    @Test
+    fun `findByEmail returns empty when no user matches`() =
+        runTest {
+            repo.create(user().copy(email = "someone@example.com"))
+            assertThat(repo.findByEmail(EmailAddress.of("nobody@example.com"))).isEmpty()
+        }
+
+    @Test
+    fun `findByEmail returns the single matching user`() =
+        runTest {
+            val u = user().copy(email = "match@example.com")
+            repo.create(u)
+            repo.create(user().copy(email = "other@example.com"))
+            assertThat(repo.findByEmail(EmailAddress.of("match@example.com"))).isEqualTo(listOf(u))
+        }
+
+    @Test
+    fun `findByEmail matches case-insensitively against stored casing`() =
+        runTest {
+            val u = user().copy(email = "Mixed.Case@Example.com")
+            repo.create(u)
+            assertThat(repo.findByEmail(EmailAddress.of("mixed.case@example.com"))).isEqualTo(listOf(u))
+        }
+
+    @Test
+    fun `findByEmail returns every user sharing the email`() =
+        runTest {
+            val a = user().copy(email = "shared@example.com")
+            val b = user().copy(email = "shared@example.com")
+            repo.create(a)
+            repo.create(b)
+            assertThat(repo.findByEmail(EmailAddress.of("shared@example.com"))).containsExactlyInAnyOrder(a, b)
         }
 
     @Test

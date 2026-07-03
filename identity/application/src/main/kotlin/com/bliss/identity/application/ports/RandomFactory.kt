@@ -1,5 +1,7 @@
 package com.bliss.identity.application.ports
 
+import com.bliss.identity.domain.auth.ChallengeSecret
+import com.bliss.identity.domain.auth.OtpCode
 import com.bliss.identity.domain.auth.PkceVerifier
 import com.bliss.identity.domain.auth.State
 
@@ -13,4 +15,8 @@ interface RandomFactory {
     fun newState(): State
 
     fun newPkceVerifier(): PkceVerifier
+
+    fun newOtpCode(): OtpCode
+
+    fun newChallengeSecret(): ChallengeSecret
 }
