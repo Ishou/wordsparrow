@@ -8,6 +8,7 @@ import { LobbyClientError, type LobbyClient, type LobbySummary } from '@/applica
 import { countFilledCells, type SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { Pseudonym, SessionId } from '@/domain/game';
 import { Skeleton } from '@/design-system';
+import { useAuth } from '@/ui/components/auth';
 import { useCanSubscribe } from '@/ui/components/billing';
 import { HostSignInSheet } from '@/ui/home/HostSignInSheet';
 import { DailyCalendar } from './DailyCalendar';
@@ -89,6 +90,7 @@ export function GrillesArchiveScreen({
 }) {
   const navigate = useNavigate();
   const canSubscribe = useCanSubscribe();
+  const { status: authStatus } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   // Kept mounted (Ark animates its own close) and the context persists through the close transition.
   const [sheet, setSheet] = useState<{ open: boolean; context: SheetContext }>({ open: false, context: 'grid' });
@@ -137,9 +139,12 @@ export function GrillesArchiveScreen({
 
   useEffect(() => {
     if (lobbyClient == null || getSession == null) return;
+    if (authStatus === 'loading') return;
     let cancelled = false;
-    lobbyClient
-      .listMyLobbies(getSession().sessionId)
+    // ADR-0066: authed players get the cross-device user-scoped union; anon stays session-scoped.
+    const fetching =
+      authStatus === 'authed' ? lobbyClient.listMyLobbiesForUser() : lobbyClient.listMyLobbies(getSession().sessionId);
+    fetching
       .then((items) => {
         if (!cancelled) setLobbies(items);
       })
@@ -149,7 +154,7 @@ export function GrillesArchiveScreen({
     return () => {
       cancelled = true;
     };
-  }, [lobbyClient, getSession]);
+  }, [lobbyClient, getSession, authStatus]);
 
   const infos = useMemo(
     () =>

@@ -37,6 +37,11 @@ export function setAuthed(whoami: WhoAmIResponse, full?: User): void {
 }
 
 // Mark the simulated session anonymous. whoami / getMe will 401.
+// Read-side probe for sibling handlers that mirror cookie-auth gating (e.g. /v1/users/me/lobbies).
+export function isMockAuthed(): boolean {
+  return state != null;
+}
+
 export function setAnon(): void {
   state = null;
 }

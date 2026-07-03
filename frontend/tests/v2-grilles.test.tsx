@@ -102,7 +102,8 @@ function renderGrilles(opts: HarnessOptions = {}) {
   const getSession = () => ({ sessionId: 'session-1' as SessionId, pseudonym: 'Renard 423' as Pseudonym });
   const withMultiplayer = opts.withMultiplayer ?? true;
   const lobbyClient =
-    opts.lobbyClient ?? ({ listMyLobbies: () => Promise.resolve([]) } as unknown as LobbyClient);
+    opts.lobbyClient
+    ?? ({ listMyLobbies: () => Promise.resolve([]), listMyLobbiesForUser: () => Promise.resolve([]) } as unknown as LobbyClient);
   const play = createRoute({ getParentRoute: () => AppLayoutRoute, path: 'play', component: () => <div>play</div> });
   const lobby = createRoute({
     getParentRoute: () => AppLayoutRoute,
@@ -260,6 +261,16 @@ describe('v2 grilles — à plusieurs', () => {
     const lobbyClient = { listMyLobbies: () => Promise.resolve([LOBBY]) } as unknown as LobbyClient;
     renderGrilles({ lobbyClient, initialEntry: '/grilles?onglet=plusieurs' });
     expect(await screen.findByRole('link', { name: 'Reprendre — Partie du 28 juin' })).toBeTruthy();
+  });
+
+  it('uses the user-scoped list when authed and skips the session-scoped one (ADR-0066)', async () => {
+    const listMyLobbies = vi.fn().mockResolvedValue([]);
+    const listMyLobbiesForUser = vi.fn().mockResolvedValue([LOBBY]);
+    const lobbyClient = { listMyLobbies, listMyLobbiesForUser } as unknown as LobbyClient;
+    renderGrilles({ lobbyClient, capabilities: [], initialEntry: '/grilles?onglet=plusieurs' });
+    expect(await screen.findByRole('link', { name: 'Reprendre — Partie du 28 juin' })).toBeTruthy();
+    expect(listMyLobbiesForUser).toHaveBeenCalled();
+    expect(listMyLobbies).not.toHaveBeenCalled();
   });
 
   it('creates a lobby from the empty state and navigates to it', async () => {

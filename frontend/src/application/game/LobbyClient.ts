@@ -55,6 +55,14 @@ export interface LobbyClient {
   listMyLobbies(sessionId: SessionId): Promise<readonly LobbySummary[]>;
 
   /**
+   * `GET /v1/users/me/lobbies`. Cookie-authed cross-device variant
+   * (ADR-0066): union of lobbies whose seats carry the caller's userId,
+   * same shape/filter/ordering as `listMyLobbies`. The loader picks this
+   * when `auth.status === 'authed'`.
+   */
+  listMyLobbiesForUser(): Promise<readonly LobbySummary[]>;
+
+  /**
    * `POST /v1/lobbies/players/rebind`. Cookie-authed (`__Secure-ws_session`).
    * Called on the anon→authed transition so existing lobby seats keyed by
    * the local session id are linked to the now-signed-in user. Idempotent;
