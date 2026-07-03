@@ -17,7 +17,6 @@ import { ContentPage } from '@/ui/components/layout';
 import { NotFoundScreen } from '@/ui/v2/NotFoundScreen';
 import { useCapabilityGate } from '@/ui/v2/useCapabilityGate';
 import { LockBanner, PairCard, SignInBanner, UndoBar, useCampaignStatus } from '@/ui/components/sondage';
-import type { AppRouterContext } from './__root';
 import { Route as ParentRoute } from './contribuer.pairs';
 
 const articleStyles = css({
@@ -114,8 +113,7 @@ const modeLinkStyles = css({
 const DIFFICULTE_PLACEHOLDER: LikertScore = 3;
 
 function ContribuerPairsPage() {
-  // Unregistered post-cutover (ADR-0074): the typed registry no longer carries this route, so read context via the app type.
-  const ctx = ParentRoute.useRouteContext() as AppRouterContext;
+  const ctx = ParentRoute.useRouteContext();
   const { state } = useAuth();
   const isAuth = state.status === 'authed';
   const surveyClient = ctx.surveyClient;

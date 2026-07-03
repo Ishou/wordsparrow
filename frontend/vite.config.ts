@@ -21,6 +21,8 @@ const PRERENDERED_ROUTE_PATHS = [
   '/abonnement',
   '/abonnement/succes',
   '/abonnement/annule',
+  '/contribuer',
+  '/contribuer/pairs',
 ] as const;
 const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // `(\?.*)?` keeps query-string URLs (e.g. /play?date=…) denylisted; without it the SW serves the home shell and flashes it.

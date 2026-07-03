@@ -26,6 +26,8 @@
 /sondage/pairs       /contribuer/pairs   308
 /sondage/            /contribuer         308
 /sondage             /contribuer         308
+/contribuer/pairs/   /contribuer/pairs   308
+/contribuer/         /contribuer         308
 
 # lobby/join: 200 rewrite to the prerendered loading shells — the client resolves the param (ADR-0026). Never target /: index.html is the prerendered homepage and flashes it.
 /lobby/*             /lobby-shell        200
