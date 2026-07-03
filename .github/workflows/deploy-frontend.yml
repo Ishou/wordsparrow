@@ -103,6 +103,23 @@ jobs:
         working-directory: frontend
         run: pnpm test:post-build
 
+      - name: Bootstrap Worker if it does not exist yet
+        if: ${{ github.event_name == 'pull_request' }}
+        working-directory: frontend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        # `versions upload` refuses a never-deployed Worker, so the first PR run bootstraps the dark Worker once (ADR-0090).
+        run: |
+          status="$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/services/wordsparrow-frontend")"
+          case "$status" in
+            200) echo "Worker exists; no bootstrap needed" ;;
+            404) pnpm exec wrangler deploy ;;
+            *) echo "::error::Unexpected HTTP $status checking Worker existence"; exit 1 ;;
+          esac
+
       - name: Publish to Cloudflare Workers
         id: publish
         # cloudflare/wrangler-action v4.0.0 (ADR-0090). No wranglerVersion
