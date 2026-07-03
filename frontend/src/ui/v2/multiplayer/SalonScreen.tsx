@@ -194,7 +194,7 @@ const sizeOption = css({
   cursor: 'pointer',
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
-const sizeOptionActive = css({ bg: 'ws.jadeInk', color: 'white', borderColor: 'ws.jadeInk' });
+const sizeOptionActive = css({ bg: 'ws.jadeInk', color: 'white', _dark: { color: '#16241D' }, borderColor: 'ws.jadeInk' });
 
 const startButton = css({
   display: 'flex',

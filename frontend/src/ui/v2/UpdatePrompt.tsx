@@ -48,6 +48,7 @@ const updateButton = css({
   fontSize: '13px',
   fontWeight: 'bold',
   color: 'ws.clueText',
+  _dark: { color: '#16241D' },
   bg: 'ws.jadeInk',
   border: 'none',
   borderRadius: '999px',
