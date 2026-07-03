@@ -49,9 +49,7 @@ export const sectionBody = css({
   fontFamily: 'wsUi',
   fontSize: '14px',
   lineHeight: '1.6',
-  // encre sourde on card — ~7.4:1 on white (light) / ~7.1:1 on the night card (dark); the light hex is theme-blind so it needs a night pair.
-  color: '#42594F',
-  _dark: { color: '#AEB9AC' },
+  color: 'ws.contentInk',
   margin: 0,
   '& strong, & b': { fontWeight: 'bold', color: 'ws.jadeInk' },
 });
