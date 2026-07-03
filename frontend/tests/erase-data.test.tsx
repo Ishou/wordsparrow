@@ -10,9 +10,7 @@ let routeContext: Record<string, unknown> = {};
 let authState: AuthState = { status: 'authed', whoami: { userId: USER_ID, displayName: DISPLAY_NAME } };
 let refresh = vi.fn().mockResolvedValue(undefined);
 
-// EraseData pulls authClient from the router context and session state from
-// useAuth() — stubbing both directly is far more direct than driving the real
-// AuthProvider/whoami round-trip to force a refresh() rejection.
+// Stub authClient + useAuth directly rather than driving a real AuthProvider round-trip.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>();
   return {
