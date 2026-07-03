@@ -76,7 +76,8 @@ const barFill = css({ display: 'block', height: '100%', borderRadius: '999px', b
 const chevron = css({ flex: 'none', color: 'ws.khaki', opacity: 0.55 });
 const bannerWrap = css({ margin: '14px 0' });
 
-const calendarSkeletonRow = css({ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', marginBottom: '6px' });
+const calendarSkeletonCard = css({ bg: 'ws.sable', borderRadius: '18px', padding: '15px 12px' });
+const calendarSkeletonRow = css({ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '7px', justifyItems: 'center' });
 
 const joinLink = css({
   display: 'block',
@@ -210,11 +211,11 @@ export function GrillesArchiveScreen({
   };
 
   const calendarSkeleton = (
-    <div aria-busy="true" aria-label="Chargement des grilles">
+    <div className={calendarSkeletonCard} aria-busy="true" aria-label="Chargement des grilles">
       {Array.from({ length: 5 }, (_, w) => (
         <div key={w} className={calendarSkeletonRow}>
           {Array.from({ length: 7 }, (_, d) => (
-            <Skeleton key={d} tone="onCard" height={38} radius={11} />
+            <Skeleton key={d} tone="onCard" width={34} height={34} radius={999} />
           ))}
         </div>
       ))}

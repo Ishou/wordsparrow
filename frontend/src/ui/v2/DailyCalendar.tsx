@@ -5,6 +5,9 @@ import { longDateFr, monthGrid, monthLabelFr, type DayInfo, type DayStatus } fro
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
+// Same card language as the home "Grilles précédentes" strip (sable surface, 18px radius).
+const cardWrap = css({ bg: 'ws.sable', borderRadius: '18px', padding: '15px 12px', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
+
 const header = css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' });
 
 const monthTitle = css({
@@ -18,6 +21,7 @@ const monthTitle = css({
 const navBtn = css({
   border: 'none',
   background: 'white',
+  flex: 'none',
   borderRadius: '10px',
   width: '34px',
   height: '34px',
@@ -34,25 +38,25 @@ const navBtn = css({
 const weekdayRow = css({
   display: 'grid',
   gridTemplateColumns: 'repeat(7, 1fr)',
-  gap: '6px',
-  marginBottom: '6px',
+  gap: '4px',
+  marginBottom: '8px',
   '& > span': {
     textAlign: 'center',
     fontFamily: 'wsUi',
-    fontSize: '10px',
-    fontWeight: 'black',
-    letterSpacing: '0.08em',
+    fontSize: '11px',
+    fontWeight: 'bold',
     color: 'ws.khaki',
-    opacity: 0.85,
+    opacity: 0.9,
   },
 });
 
-const weekRow = css({ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', marginBottom: '6px' });
+const weekRow = css({ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '7px', justifyItems: 'center' });
 
+// Day dots mirror the home strip: 34px circles, same status palette (dayDotStyle in HomeScreen).
 const cellBase = css({
-  aspectRatio: '1',
-  minHeight: '38px',
-  borderRadius: '11px',
+  width: '34px',
+  height: '34px',
+  borderRadius: '50%',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -60,32 +64,34 @@ const cellBase = css({
   fontSize: '13px',
   fontWeight: 'bold',
   textDecoration: 'none',
+  padding: 0,
   cursor: 'pointer',
   transition: 'transform 120ms',
-  _hover: { transform: 'scale(1.06)' },
+  _hover: { transform: 'translateY(-1px)' },
+  _active: { transform: 'translateY(0)' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 
-const cellBlank = css({ aspectRatio: '1', minHeight: '38px' });
+const cellBlank = css({ width: '34px', height: '34px' });
 
 const cellVoid = css({
   color: 'ws.khaki',
-  opacity: 0.3,
+  opacity: 0.35,
   cursor: 'default',
   _hover: { transform: 'none' },
 });
 
-const cellDone = css({ bg: '#4F6E5C', color: 'white', border: 'none' });
-const cellProgress = css({ bg: 'white', color: 'ws.jadeInk', border: '2.5px solid token(colors.ws.sakuraDark)' });
-const cellNew = css({ bg: 'white', color: 'ws.jadeInk', border: '1.5px solid rgba(33,75,64,0.18)' });
+const cellDone = css({ bg: 'ws.sakuraDark', color: 'white', border: 'none' });
+const cellProgress = css({ bg: 'ws.sakuraBlush', color: 'ws.jadeInk', border: '2px solid token(colors.ws.sakura)' });
+const cellNew = css({ bg: 'white', color: 'ws.khaki', border: 'none' });
 const cellPaywalled = css({
-  bg: 'rgba(255,255,255,0.55)',
+  bg: 'rgba(255,255,255,0.45)',
   color: 'ws.khaki',
   border: 'none',
   opacity: 0.7,
   _hover: { transform: 'none' },
 });
-const cellToday = css({ outline: '2px solid token(colors.ws.sakuraDark)', outlineOffset: '2px', fontWeight: 'black' });
+const cellToday = css({ border: '2px solid token(colors.ws.sakura)', color: 'ws.jadeInk', fontWeight: 'black' });
 
 const legend = css({
   fontFamily: 'wsUi',
@@ -130,7 +136,7 @@ export interface DailyCalendarProps {
 
 export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, onPaywalledSelect }: DailyCalendarProps) {
   return (
-    <div>
+    <div className={cardWrap}>
       <div className={header}>
         <button type="button" aria-label="Mois précédent" disabled={!canPrev} onClick={onPrev} className={navBtn}>
           <CaretLeft size={18} weight="bold" aria-hidden="true" />
