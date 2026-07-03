@@ -3,7 +3,6 @@ import { Link, type LinkProps } from '@tanstack/react-router';
 import {
   User,
   Gear,
-  Moon,
   Question,
   FileText,
   ShieldCheck,
@@ -53,7 +52,6 @@ const rowLink = css({
   _hover: { bg: 'ws.sable' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
-const rowDisabled = css({ ...rowBase, cursor: 'default', opacity: 0.55 });
 
 const iconTile = css({
   flex: 'none',
@@ -70,28 +68,8 @@ const iconTileSoft = css({ bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
 
 const labelWrap = css({ display: 'flex', flexDirection: 'column', minWidth: 0 });
 const label = css({ fontSize: '16px', fontWeight: 'bold', color: 'ws.jadeInk' });
-const soon = css({ fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85 });
 
 const trailing = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.45, display: 'flex' });
-const togglePlaceholder = css({
-  marginLeft: 'auto',
-  flex: 'none',
-  width: '42px',
-  height: '24px',
-  borderRadius: '999px',
-  bg: 'rgba(33,75,64,0.18)',
-  position: 'relative',
-  _after: {
-    content: '""',
-    position: 'absolute',
-    width: '18px',
-    height: '18px',
-    borderRadius: '50%',
-    bg: 'white',
-    top: '3px',
-    left: '3px',
-  },
-});
 
 function Tile({ icon: I, soft }: { readonly icon: Icon; readonly soft?: boolean }) {
   return (
@@ -125,26 +103,6 @@ function MenuLink({
   );
 }
 
-function MenuSoon({
-  icon,
-  soft,
-  children,
-}: {
-  readonly icon: Icon;
-  readonly soft?: boolean;
-  readonly children: ReactNode;
-}) {
-  return (
-    <li className={rowDisabled} aria-disabled="true">
-      <Tile icon={icon} soft={soft} />
-      <span className={labelWrap}>
-        <span className={label}>{children}</span>
-        <span className={soon}>Bientôt</span>
-      </span>
-    </li>
-  );
-}
-
 export function MenuScreen() {
   return (
     <PhoneShell header={<BackHeader to="/" />}>
@@ -153,19 +111,15 @@ export function MenuScreen() {
 
       <nav aria-label="Menu">
         <ul className={list}>
-          <MenuSoon icon={User}>Mon compte</MenuSoon>
-          <MenuSoon icon={Gear} soft>
+          <MenuLink to="/compte" icon={User}>
+            Mon compte
+          </MenuLink>
+          <MenuLink to="/reglages" icon={Gear}>
             Réglages
-          </MenuSoon>
-          <li className={rowDisabled} aria-disabled="true">
-            <Tile icon={Moon} soft />
-            <span className={labelWrap}>
-              <span className={label}>Mode sombre</span>
-              <span className={soon}>Bientôt</span>
-            </span>
-            <span className={togglePlaceholder} aria-hidden="true" />
-          </li>
-          <MenuSoon icon={Question}>Aide</MenuSoon>
+          </MenuLink>
+          <MenuLink to="/aide" icon={Question}>
+            Aide
+          </MenuLink>
           <MenuLink to="/mentions-legales" icon={FileText}>
             Mentions légales
           </MenuLink>

@@ -72,7 +72,6 @@ describe('v2 menu screen', () => {
     expect(screen.getByRole('navigation', { name: 'Menu' })).toBeTruthy();
     expect(screen.getByText('Mon compte')).toBeTruthy();
     expect(screen.getByText('Réglages')).toBeTruthy();
-    expect(screen.getByText('Mode sombre')).toBeTruthy();
     expect(screen.getByText('Aide')).toBeTruthy();
     expect(screen.getByText('Mentions légales')).toBeTruthy();
     expect(screen.getByText('Confidentialité')).toBeTruthy();
@@ -91,13 +90,14 @@ describe('v2 menu screen', () => {
     );
   });
 
-  it('marks the not-yet-built items as disabled rather than dead links', async () => {
+  it('wires the account, settings and help rows to their live routes', async () => {
     renderMenu();
     await screen.findByRole('heading', { level: 1, name: 'Menu' });
 
-    expect(screen.queryByRole('link', { name: 'Mon compte' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Réglages' })).toBeNull();
-    expect(screen.getAllByText('Bientôt').length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByRole('link', { name: 'Mon compte' }).getAttribute('href')).toBe('/compte');
+    expect(screen.getByRole('link', { name: 'Réglages' }).getAttribute('href')).toBe('/reglages');
+    expect(screen.getByRole('link', { name: 'Aide' }).getAttribute('href')).toBe('/aide');
+    expect(screen.queryByText('Bientôt')).toBeNull();
   });
 
   it('is axe-clean (ADR-0050)', async () => {
