@@ -233,6 +233,8 @@ export default defineConfig({
           card: { value: { base: '#FFFFFF', _dark: '#1C2D25' } },
           // Frosted-glass surfaces over the hero backdrop (pills, round buttons, nav bars).
           glass: { value: { base: 'rgba(255,255,255,0.62)', _dark: 'rgba(23,41,33,0.72)' } },
+          // Softer than glassHover — segmented-control off-state hover, byte-identical to its pre-tokenized light value.
+          glassSoft: { value: { base: 'rgba(255,255,255,0.55)', _dark: 'rgba(23,41,33,0.6)' } },
           glassHover: { value: { base: 'rgba(255,255,255,0.82)', _dark: 'rgba(35,58,47,0.85)' } },
           glassBright: { value: { base: 'rgba(255,255,255,0.92)', _dark: 'rgba(40,63,52,0.9)' } },
           glassStrong: { value: { base: 'rgba(255,255,255,0.7)', _dark: 'rgba(23,41,33,0.8)' } },

@@ -15,7 +15,7 @@ const segBtn = css({
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 // background/color live only on the variants (never on segBtn) — declaring a property on both base and the active variant lets Panda's atomic order beat cx, which leaves the active segment unpainted.
-const segOff = css({ background: 'transparent', color: 'ws.khaki', _hover: { background: 'ws.glass', color: 'ws.jadeInk' } });
+const segOff = css({ background: 'transparent', color: 'ws.khaki', _hover: { background: 'ws.glassSoft', color: 'ws.jadeInk' } });
 const segOn = css({ background: 'ws.card', color: 'ws.jadeInk', boxShadow: '0 2px 8px rgba(33,75,64,0.16)' });
 
 export interface SegmentOption<T extends string> {
