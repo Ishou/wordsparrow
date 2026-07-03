@@ -105,7 +105,7 @@ const cellPaywalled = css({
   border: 'none',
   padding: 0,
   bg: 'rgba(216,199,122,0.4)',
-  color: '#5A4B12',
+  color: 'ws.orInk',
   cursor: 'pointer',
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' },
 });

@@ -37,10 +37,10 @@ const dot = css({
   height: '7px',
   borderRadius: '50%',
 });
-const dotConnected = css({ background: '#3F9D6E' });
+const dotConnected = css({ background: 'ws.statusOnline' });
 const dotTyping = css({ background: 'ws.sakuraDark', animation: 'wsPulse 1s ease-in-out infinite' });
-const dotIdle = css({ background: '#C9A227' });
-const dotLost = css({ background: '#9A9A9A' });
+const dotIdle = css({ background: 'ws.statusIdle' });
+const dotLost = css({ background: 'ws.statusLost' });
 
 export interface PlayerStripProps {
   readonly players: ReadonlyArray<Player>;

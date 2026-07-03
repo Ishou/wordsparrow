@@ -48,7 +48,7 @@ const dragZone = css({ touchAction: 'none', cursor: 'grab', padding: '6px 0 2px'
 const head = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', borderRadius: '13px' });
 const headLink = css({ textDecoration: 'none', cursor: 'pointer', transition: 'background-color 120ms', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-2px' } });
 // Standalone separator so the rounded hover above never clips it.
-const headDivider = css({ display: 'block', height: '1px', bg: '#EEF3EC', margin: '6px 4px' });
+const headDivider = css({ display: 'block', height: '1px', bg: 'ws.hairline', margin: '6px 4px' });
 const headChevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opacity: 0.5, display: 'flex' });
 const headAvatar = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '50%', bg: 'ws.sakuraDark', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '18px' });
 const headName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });

@@ -118,7 +118,7 @@ const pillButton = css({
   bg: 'ws.jade',
   color: 'ws.jadeInk',
   transition: 'background-color 120ms ease-out, opacity 120ms ease-out',
-  _hover: { bg: '#A9D8BE' },
+  _hover: { bg: 'ws.jadeHover' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
   _disabled: { opacity: 0.55, cursor: 'not-allowed' },
 });
@@ -210,7 +210,7 @@ const startButton = css({
   boxShadow: '0 8px 18px rgba(190,73,112,0.30)',
   transition: 'background-color 120ms ease-out, opacity 120ms ease-out',
   _hover: { bg: '#A63C61' },
-  _focusVisible: { outline: '3px solid token(colors.ws.sakura)', outlineOffset: '2px' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
   _disabled: { bg: '#E0DAC8', color: '#7A7560', boxShadow: 'none', cursor: 'not-allowed' },
 });
 const leaveButton = css({
@@ -236,12 +236,12 @@ const leaveButton = css({
 function connStateLabel(state: ConnectionState): { dot: string; label: string } {
   switch (state) {
     case 'connected':
-      return { dot: '#3F9D6E', label: 'connecté' };
+      return { dot: 'ws.statusOnline', label: 'connecté' };
     case 'reconnecting':
     case 'connecting':
-      return { dot: '#C9A227', label: 'connexion' };
+      return { dot: 'ws.statusIdle', label: 'connexion' };
     case 'disconnected':
-      return { dot: '#9A9A9A', label: 'déconnecté' };
+      return { dot: 'ws.statusLost', label: 'déconnecté' };
   }
 }
 

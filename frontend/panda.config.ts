@@ -64,6 +64,19 @@ export default defineConfig({
           // Solved-clue light sage; pairs with jade-ink (not cream) text for WCAG AA (~4.7:1).
           clueSurfaceDone: { value: '#9FBCA8' },
           clueText: { value: '#FBF6E9' },
+          // Uppercase group-label brown (eyebrow), previously hardcoded across six files.
+          eyebrow: { value: '#543C00' },
+          // Ink pairing for gold (ws.or) surfaces — lock tile, paywall band, status pills.
+          orInk: { value: '#5A4B12' },
+          // 1px separators on white cards.
+          hairline: { value: '#EEF3EC' },
+          // Hover shades for jade / sable buttons.
+          jadeHover: { value: '#A9D8BE' },
+          sableHover: { value: '#DED7BC' },
+          // Multiplayer presence dots.
+          statusOnline: { value: '#3F9D6E' },
+          statusIdle: { value: '#C9A227' },
+          statusLost: { value: '#9A9A9A' },
         },
         // Primary ramp — mousse (moss-green brand + success/validation).
         // ADR-0043 anchors:

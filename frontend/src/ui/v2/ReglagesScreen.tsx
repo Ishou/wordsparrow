@@ -52,7 +52,7 @@ const groupLabel = css({
   fontWeight: 'black',
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
-  color: '#543C00',
+  color: 'ws.eyebrow',
   margin: '0 6px 7px',
 });
 const listCard = css({
@@ -60,7 +60,7 @@ const listCard = css({
   margin: 0,
   padding: 0,
   bg: 'white',
-  borderRadius: '16px',
+  borderRadius: '18px',
   overflow: 'hidden',
   boxShadow: '0 1px 2px rgba(33,75,64,0.05)',
 });

@@ -11,6 +11,7 @@ import { Skeleton } from '@/design-system';
 import { useCanSubscribe } from '@/ui/components/billing';
 import { HostSignInSheet } from '@/ui/home/HostSignInSheet';
 import { DailyCalendar } from './DailyCalendar';
+import { bar, barFill, card, chevron, list, mid, rowMeta, rowTitle } from './listRowStyles';
 import { deriveDayInfos, isoUtcDate, longDateFr, monthOf, nextMonth, prevMonth, type DayInfo } from './dailyCalendarModel';
 import { GrillesLobbiesSection } from './GrillesLobbiesSection';
 import { PhoneShell } from './PhoneShell';
@@ -48,32 +49,6 @@ const head = css({ flex: 'none', lg: { paddingRight: '16px' } });
 // The tab body is the one scroll container; mobile carries the fixed-BottomNav inset the shell dropped (fillBody).
 const scrollArea = css({ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)', lg: { paddingBottom: '40px', paddingRight: '16px', scrollbarGutter: 'stable' } });
 
-const list = css({ listStyle: 'none', margin: 0, padding: 0 });
-// The whole row is the tap target — a quiet chevron is the only affordance, so primaries are reserved for the empty state.
-const card = css({
-  width: '100%',
-  textAlign: 'left',
-  textDecoration: 'none',
-  bg: 'white',
-  borderRadius: '16px',
-  padding: '13px 14px',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  marginBottom: '10px',
-  boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
-  cursor: 'pointer',
-  transition: 'background-color 120ms',
-  _hover: { bg: 'ws.sable' },
-  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' },
-});
-
-const mid = css({ flex: 1, minWidth: 0 });
-const dTitle = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk' });
-const dMeta = css({ fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '11.5px', color: 'ws.khaki', opacity: 0.85, marginTop: '2px' });
-const bar = css({ height: '7px', borderRadius: '999px', bg: 'rgba(33,75,64,0.1)', overflow: 'hidden', marginTop: '7px' });
-const barFill = css({ display: 'block', height: '100%', borderRadius: '999px', bg: '#4F6E5C' });
-const chevron = css({ flex: 'none', color: 'ws.khaki', opacity: 0.55 });
 const bannerWrap = css({ margin: '14px 0' });
 
 // Desktop: cap the calendar near-square instead of stretching across the content column.
@@ -267,10 +242,10 @@ export function GrillesArchiveScreen({
               aria-label={`Reprendre — ${longDateFr(info.summary.date)}`}
             >
               <div className={mid}>
-                <div className={dTitle}>
+                <div className={rowTitle}>
                   {longDateFr(info.summary.date)} · n°{info.summary.gridNumber}
                 </div>
-                <div className={dMeta}>
+                <div className={rowMeta}>
                   En cours · {info.locked} / {total} cases
                 </div>
                 <div className={bar}>
