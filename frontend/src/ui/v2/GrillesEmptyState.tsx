@@ -58,7 +58,7 @@ export function LobbiesEmptyState({ onCreate }: { readonly onCreate: () => void 
     <SparrowState
       scene={nestScene}
       title="Aucune partie à plusieurs"
-      body="Crée une partie et invite tes proches — vous remplissez la même grille ensemble."
+      body="Crée une partie et invite tes proches — vous remplissez la même grille ensemble. Les parties terminées sont conservées 7 jours."
       cta={{ label: 'Créer une partie', onClick: onCreate }}
       as="p"
     />

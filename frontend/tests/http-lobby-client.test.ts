@@ -189,6 +189,22 @@ describe('HttpLobbyClient.listMyLobbies', () => {
     title: 'Mardi soir',
   };
 
+  it('GETs the user-scoped lobbies at /v1/users/me/lobbies and maps the body (ADR-0066)', async () => {
+    let calledUrl: string | null = null;
+    server.use(
+      http.get(`${BASE_URL}/v1/users/me/lobbies`, ({ request }) => {
+        calledUrl = request.url;
+        return HttpResponse.json([summaryFixture]);
+      }),
+    );
+
+    const summaries = await makeClient().listMyLobbiesForUser();
+
+    expect(calledUrl).toBe(`${BASE_URL}/v1/users/me/lobbies`);
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].id).toBe(summaryFixture.id);
+  });
+
   it('GETs the session lobbies and maps the 200 array body to LobbySummary[]', async () => {
     let calledUrl: string | null = null;
     server.use(

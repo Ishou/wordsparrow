@@ -126,6 +126,10 @@ export function createHttpLobbyClient(
       );
       return summaries.map(wireToSummary);
     },
+    async listMyLobbiesForUser() {
+      const summaries = await safeRequestList(() => client.GET('/v1/users/me/lobbies'));
+      return summaries.map(wireToSummary);
+    },
     async rebindLobbySessions(anonSessionId) {
       const { response } = await client.POST('/v1/lobbies/players/rebind', {
         body: { anonSessionId },

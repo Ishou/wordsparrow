@@ -14,6 +14,7 @@
 // ADR-0003 §6 and ADR-0020 (LobbyId is base58 nanoid, sessions are
 // UUID v7); errors are RFC 7807.
 
+import { isMockAuthed } from './auth';
 import { http, HttpResponse, ws } from 'msw';
 
 import type { components } from '@/infrastructure/api/game/types';
@@ -189,6 +190,15 @@ export const gameHandlers = [
   // empty array is the "no lobbies" answer (would leak whether the
   // session has ever played otherwise).
   http.get('*/v1/sessions/:sessionId/lobbies', () => HttpResponse.json([])),
+
+  // GET /v1/users/me/lobbies — cross-device authed list (ADR-0066); 401 anon, [] authed. Tests override for data.
+  http.get('*/v1/users/me/lobbies', () =>
+    isMockAuthed()
+      ? HttpResponse.json([])
+      : HttpResponse.json(
+          { type: 'about:blank', title: 'unauthenticated', status: 401 },
+          { status: 401, headers: { 'content-type': 'application/problem+json' } },
+        )),
 
   // GET /v1/lobbies/:lobbyId — replay the persisted lobby.
   http.get('*/v1/lobbies/:lobbyId', ({ params }) => {
