@@ -6,6 +6,7 @@ import assertk.assertions.doesNotContain
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import com.bliss.game.application.ports.LobbyRepository
 import com.bliss.game.application.usecases.Samples.alice
 import com.bliss.game.application.usecases.Samples.bob
 import com.bliss.game.application.usecases.Samples.sessionA
@@ -20,6 +21,7 @@ import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Player
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
+import com.bliss.game.domain.UserId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,6 +31,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import java.time.Duration
+import java.time.Instant
 
 /**
  * Pure-domain tests for the lobby GC: time is fully under FakeClock control, no real
@@ -132,6 +135,86 @@ class LobbyGarbageCollectorTest {
 
             assertThat(evicted).isEqualTo(1)
             assertThat(h.repo.findById(id)).isNull()
+        }
+
+    @Test
+    fun `sweepOnce keeps an idle COMPLETED lobby whose seat carries a userId`() =
+        runTest {
+            val h = harness()
+            val now = h.clock.now()
+            val id = LobbyId.generate()
+            val authedSeat = Player(sessionA, alice, now, userId = UserId("22222222-2222-2222-2222-222222222222"))
+            val completed =
+                Lobby(
+                    id = id,
+                    code = LobbyCode.generate(),
+                    ownerSessionId = sessionA,
+                    state = LobbyLifecycleState.COMPLETED,
+                    gridConfig = GridConfig(5, 5),
+                    title = null,
+                    players = linkedMapOf(sessionA to authedSeat),
+                    game =
+                        GameSession(
+                            puzzle = Samples.puzzle(),
+                            entries = emptyMap(),
+                            startedAt = now,
+                            completedAt = now,
+                        ),
+                    lastActivityAt = now.minus(completedTtl.plus(Duration.ofDays(365))),
+                )
+            h.repo.save(completed)
+
+            val evicted = h.gc.sweepOnce()
+
+            assertThat(evicted).isEqualTo(0)
+            assertThat(h.repo.findById(id)).isNotNull()
+        }
+
+    @Test
+    fun `sweepOnce keeps a lobby that gained an authed seat between the scan and the eviction`() =
+        runTest {
+            val h = harness()
+            val now = h.clock.now()
+            val id = LobbyId.generate()
+
+            fun withSeat(seat: Player): Lobby =
+                Lobby(
+                    id = id,
+                    code = LobbyCode.generate(),
+                    ownerSessionId = sessionA,
+                    state = LobbyLifecycleState.COMPLETED,
+                    gridConfig = GridConfig(5, 5),
+                    title = null,
+                    players = linkedMapOf(sessionA to seat),
+                    game =
+                        GameSession(
+                            puzzle = Samples.puzzle(),
+                            entries = emptyMap(),
+                            startedAt = now,
+                            completedAt = now,
+                        ),
+                    lastActivityAt = now.minus(completedTtl.plus(Duration.ofDays(1))),
+                )
+            val staleAnonSnapshot = withSeat(Player(sessionA, alice, now))
+            h.repo.save(withSeat(Player(sessionA, alice, now, userId = UserId("22222222-2222-2222-2222-222222222222"))))
+            // Stale scan result simulates rebindAnonSeats landing between findIdleCompleted and mutate().
+            val racingRepo =
+                object : LobbyRepository by h.repo {
+                    override suspend fun findIdleCompleted(cutoff: Instant): List<Lobby> = listOf(staleAnonSnapshot)
+                }
+            val gc =
+                LobbyGarbageCollector(
+                    repo = racingRepo,
+                    clock = h.clock,
+                    waitingTtl = waitingTtl,
+                    completedTtl = completedTtl,
+                    sweepInterval = sweepInterval,
+                )
+
+            val evicted = gc.sweepOnce()
+
+            assertThat(evicted).isEqualTo(0)
+            assertThat(h.repo.findById(id)).isNotNull()
         }
 
     @Test

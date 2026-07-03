@@ -65,6 +65,8 @@ class LobbyGarbageCollector(
                 candidates = repo.findIdleCompleted(completedCutoff),
                 cutoff = completedCutoff,
                 requiredState = LobbyLifecycleState.COMPLETED,
+                // ADR-0055 amendment: an authed seat exempts; re-checked under the lock so a sign-in racing the scan cannot lose the lobby.
+                stillEligible = { lobby -> lobby.players.values.none { it.userId != null } },
             )
         if (evicted > 0) {
             log.info(
@@ -81,15 +83,16 @@ class LobbyGarbageCollector(
         candidates: List<com.bliss.game.domain.Lobby>,
         cutoff: java.time.Instant,
         requiredState: LobbyLifecycleState,
+        stillEligible: (com.bliss.game.domain.Lobby) -> Boolean = { true },
     ): Int {
         var evicted = 0
         for (candidate in candidates) {
             // Re-validate inside mutate(): a player could have joined / written / re-opened
             // between the snapshot scan and the eviction. Only delete (return null) when the
-            // lobby is still in [requiredState] and still beyond the cutoff.
+            // lobby is still in [requiredState], still beyond the cutoff and still eligible.
             var deleted = false
             repo.mutate(candidate.id) { current ->
-                if (current.state == requiredState && !current.lastActivityAt.isAfter(cutoff)) {
+                if (current.state == requiredState && !current.lastActivityAt.isAfter(cutoff) && stillEligible(current)) {
                     deleted = true
                     null // delete signal
                 } else {

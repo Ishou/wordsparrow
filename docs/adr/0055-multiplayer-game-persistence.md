@@ -76,7 +76,7 @@ to a per-state matrix:
 |--------------|------------------|----------------------------------------------------------------|
 | IN_PROGRESS  | never evicted    | Players can return any time; this is the whole point of the change. |
 | WAITING      | 24 hours         | Long enough for an owner to share a join code overnight; replaces today's 30 min. |
-| COMPLETED    | 7 days           | Leaves a window for players to review the finished puzzle.     |
+| COMPLETED    | 7 days (anon-only) | Leaves a window for players to review the finished puzzle. **Amendment 2026-07-03**: a lobby where any seat carries a `userId` is exempt — signed-in players keep their finished games indefinitely (their cross-device "Mes parties" per ADR-0066 would otherwise silently lose history); erasure remains available via the RGPD cascade and account deletion. Anon-only games keep the 7-day TTL as the storage backstop. |
 
 Implementation lives in `LobbyGarbageCollector`; the port gains
 `findIdleCompleted(cutoff)` alongside the existing `findIdleWaiting`,

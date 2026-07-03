@@ -89,7 +89,11 @@ class InMemoryLobbyRepository : LobbyRepository {
         store.values.filter { it.state == LobbyLifecycleState.WAITING && !it.lastActivityAt.isAfter(cutoff) }
 
     override suspend fun findIdleCompleted(cutoff: Instant): List<Lobby> =
-        store.values.filter { it.state == LobbyLifecycleState.COMPLETED && !it.lastActivityAt.isAfter(cutoff) }
+        store.values.filter { lobby ->
+            lobby.state == LobbyLifecycleState.COMPLETED &&
+                !lobby.lastActivityAt.isAfter(cutoff) &&
+                lobby.players.values.none { it.userId != null }
+        }
 
     // RGPD Article 17 erasure (ADR-0039). Snapshot the affected lobby ids first, then
     // process each under its own per-lobby lock so the cascade is atomic per lobby.

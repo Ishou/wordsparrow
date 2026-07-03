@@ -96,10 +96,11 @@ interface LobbyRepository {
     suspend fun findIdleWaiting(cutoff: Instant): List<Lobby>
 
     /**
-     * Returns COMPLETED lobbies whose [Lobby.lastActivityAt] is at or before [cutoff].
-     * Consumed by the lobby garbage collector per the ADR-0039 §c retention matrix
-     * (COMPLETED lobbies kept 7 days). Snapshot — callers must re-validate inside
-     * [mutate] (or [delete]) to avoid TOCTOU between the scan and the eviction.
+     * Returns COMPLETED lobbies whose [Lobby.lastActivityAt] is at or before [cutoff]
+     * AND no seat carries a userId — an authed member exempts the whole lobby from
+     * eviction (ADR-0055 amendment 2026-07-03; anon-only games keep the 7-day TTL).
+     * Snapshot — callers must re-validate inside [mutate] (or [delete]) to avoid
+     * TOCTOU between the scan and the eviction.
      */
     suspend fun findIdleCompleted(cutoff: Instant): List<Lobby>
 
