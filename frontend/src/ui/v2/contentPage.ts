@@ -49,7 +49,7 @@ export const sectionBody = css({
   fontFamily: 'wsUi',
   fontSize: '14px',
   lineHeight: '1.6',
-  color: '#42594F',
+  color: 'ws.contentInk',
   margin: 0,
   '& strong, & b': { fontWeight: 'bold', color: 'ws.jadeInk' },
 });

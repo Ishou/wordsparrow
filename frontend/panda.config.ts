@@ -224,6 +224,8 @@ export default defineConfig({
           eyebrow: { value: { base: '#543C00', _dark: '#CBBE83' } },
           // Ink pairing for gold (ws.or) surfaces.
           orInk: { value: { base: '#5A4B12', _dark: '#EFE6BC' } },
+          // Body copy on content/legal cards — ~7.4:1 on white (light) / ~7.1:1 on the night card (dark).
+          contentInk: { value: { base: '#42594F', _dark: '#AEB9AC' } },
           // 1px separators on cards.
           hairline: { value: { base: '#EEF3EC', _dark: '#2C3B32' } },
           // Hover shades for jade / sable buttons.
