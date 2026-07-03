@@ -7,7 +7,8 @@ const avatar = css({
   flex: 'none',
   borderRadius: '50%',
   background: 'var(--player-color)',
-  color: 'ws.jadeInk',
+  // The disc never themes (pastel in both modes), so the initial uses the recipe's on-color, not a theming token.
+  color: 'var(--player-on)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

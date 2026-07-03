@@ -37,7 +37,7 @@ const badge = css({
   paddingInline: '3px',
   borderRadius: '999px',
   background: 'var(--player-color)',
-  color: 'ws.jadeInk',
+  color: 'var(--player-on)',
   fontFamily: 'wsUi',
   fontSize: '10px',
   fontWeight: 'black',
