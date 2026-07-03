@@ -195,9 +195,11 @@ export const gameHandlers = [
   http.get('*/v1/users/me/lobbies', () =>
     isMockAuthed()
       ? HttpResponse.json([])
-      : HttpResponse.json(
-          { type: 'about:blank', title: 'unauthenticated', status: 401 },
-          { status: 401, headers: { 'content-type': 'application/problem+json' } },
+      : problem(
+          401,
+          'https://bliss.example/errors/unauthenticated',
+          'unauthenticated',
+          'Cookie missing, expired, or rejected by identity-api.',
         )),
 
   // GET /v1/lobbies/:lobbyId — replay the persisted lobby.
