@@ -10,13 +10,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
-/**
- * Emulates the ADR-0031 daily bucket across consecutive 28×20 generations:
- * every placed (word, clue) pair cools down for a random 1..cm generations,
- * and the next generation runs with those pairs banned. On a thin short-word
- * pool this starves the fill (a word whose every clue is cooling is rejected
- * by WordAcceptor) — the regression this sweep guards against.
- */
+// Regression guard for the ADR-0031 short-word cooldown starvation; see docs/superpowers/plans/2026-07-03-short-word-cooldown-fix.md
 @Tag("bench")
 class CooldownSweepTest {
     private data class SweepResult(
