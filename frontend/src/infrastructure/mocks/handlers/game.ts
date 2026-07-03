@@ -70,6 +70,13 @@ const gameWsTestApi = {
         : current,
     );
   },
+  // The ADR-0018 §5 grace elapsed while the client was offline: the seat is freed server-side.
+  evict(lobbyId: string, sessionId: string) {
+    updateLobby(lobbyId, (current) => ({
+      ...current,
+      players: current.players.filter((p) => p.sessionId !== sessionId),
+    }));
+  },
   deleteLobby,
   getLobby,
 };

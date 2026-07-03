@@ -52,6 +52,21 @@ function V2LobbyIntrouvable() {
   );
 }
 
+// ADR-0018 §5 accepted gap: a rejoin denied after the server's 30s grace freed the seat lands here.
+function V2LobbyEvicted() {
+  const navigate = useNavigate();
+  return (
+    <PhoneShell>
+      <SparrowState
+        scene={sparrowFlightScene()}
+        title="La partie a continué sans toi"
+        body="Ta connexion est restée coupée trop longtemps et ta place a été libérée. Demande un nouveau code pour revenir."
+        cta={{ label: 'Accueil', onClick: () => void navigate({ to: '/' }) }}
+      />
+    </PhoneShell>
+  );
+}
+
 // Survives the errorComponent's remount-per-attempt so the ladder progresses.
 export const lobbyLoaderRetryPolicy = createLoaderRetryPolicy();
 
@@ -98,6 +113,7 @@ function V2LobbyPage() {
     joinDenied,
     joinConfirmed,
     lobbyGone,
+    evicted,
     isStarting,
     isRotating,
     sessionId,
@@ -144,9 +160,13 @@ function V2LobbyPage() {
     void navigate({ to: '/' });
   }, [actions, navigate]);
 
-  // Server-confirmed 404 mid-game (rejoin against a wiped lobby) — the only involuntary path that leaves the game surface.
+  // The only involuntary exits from the game surface: server-confirmed 404 or a freed seat (honest states).
   if (lobbyGone) {
     return <V2LobbyIntrouvable />;
+  }
+
+  if (evicted) {
+    return <V2LobbyEvicted />;
   }
 
   if (!joinConfirmed || joinDenied != null) {

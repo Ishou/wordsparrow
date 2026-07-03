@@ -294,9 +294,11 @@ describe('useLobbyConnection error + connection seams', () => {
     const showToast = vi.fn();
     renderHook(() => useLobbyConnection(makeArgs(gameClient, { showToast })));
     act(() => {
-      gameClient.dispatch({ type: 'error', errorType: 'https://bliss.example/errors/lobby-full', title: 'Salon complet' });
+      gameClient.dispatch({ type: 'error', errorType: 'https://bliss.example/errors/not-owner', title: 'Opération réservée au propriétaire' });
     });
-    expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ text: 'Salon complet', tone: 'error' }));
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Opération réservée au propriétaire', tone: 'error' }),
+    );
   });
 
   it('sets pseudonymError on invalid-pseudonym and clears it via clearPseudonymError', () => {
@@ -310,14 +312,51 @@ describe('useLobbyConnection error + connection seams', () => {
     expect(result.current.pseudonymError).toBeNull();
   });
 
-  it('routes a wrong-code error to onJoinDenied', () => {
+  it('routes a pre-join wrong-code error to onJoinDenied', () => {
     const gameClient = makeFakeGameClient();
     const onJoinDenied = vi.fn();
-    renderHook(() => useLobbyConnection(makeArgs(gameClient, { onJoinDenied })));
+    const lobbyWithoutSelf: Lobby = {
+      ...baseLobby,
+      ownerSessionId: otherSessionId,
+      players: [{ sessionId: otherSessionId, pseudonym: 'Autre' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
+    };
+    renderHook(() => useLobbyConnection(makeArgs(gameClient, { onJoinDenied, initialLobby: lobbyWithoutSelf })));
     act(() => {
       gameClient.dispatch({ type: 'error', errorType: 'https://bliss.example/errors/wrong-code', title: 'Refusé', detail: 'Code invalide' });
     });
     expect(onJoinDenied).toHaveBeenCalledWith('Code invalide');
+  });
+
+  it('flags evicted (not joinDenied) on a post-join wrong-code rejoin denial', () => {
+    const gameClient = makeFakeGameClient();
+    const dismissToast = vi.fn();
+    const onJoinDenied = vi.fn();
+    const showToast = vi.fn();
+    const args = makeArgs(gameClient, { dismissToast, onJoinDenied, showToast });
+    const { result } = renderHook(() => useLobbyConnection(args));
+    act(() => gameClient.dispatchConnectionState('connected'));
+    expect(result.current.joinConfirmed).toBe(true);
+    expect(result.current.evicted).toBe(false);
+    // ADR-0018 §5 grace elapsed during an outage; the codeless rejoin is denied.
+    act(() => {
+      gameClient.dispatch({ type: 'error', errorType: 'https://bliss.example/errors/wrong-code', title: 'Code de partie invalide', status: 403 });
+    });
+    expect(result.current.evicted).toBe(true);
+    // Retry loop torn down; no misleading chrome — no bounce, no error toast, no lost-toast from the teardown disconnect.
+    expect(gameClient.disconnectCalls.count).toBe(1);
+    expect(dismissToast).toHaveBeenCalled();
+    expect(onJoinDenied).not.toHaveBeenCalled();
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('flags evicted on a post-join lobby-full rejoin denial', () => {
+    const gameClient = makeFakeGameClient();
+    const { result } = renderHook(() => useLobbyConnection(makeArgs(gameClient)));
+    act(() => gameClient.dispatchConnectionState('connected'));
+    act(() => {
+      gameClient.dispatch({ type: 'error', errorType: 'https://bliss.example/errors/lobby-full', title: 'Salon complet', status: 409 });
+    });
+    expect(result.current.evicted).toBe(true);
   });
 
   it('tracks the connectionState stream', () => {

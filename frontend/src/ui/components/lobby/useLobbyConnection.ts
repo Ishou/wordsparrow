@@ -51,6 +51,8 @@ export interface LobbyConnection {
   readonly joinConfirmed: boolean;
   // True once the server said the lobby no longer exists (404 protocol frame on rejoin) — the route renders the introuvable screen.
   readonly lobbyGone: boolean;
+  // Rejoin denied after we HAD a seat (ADR-0018 §5 grace elapsed) — routes to the honest evicted screen.
+  readonly evicted: boolean;
   readonly isStarting: boolean;
   readonly isRotating: boolean;
   // Local session identity — renderers mark the local row / gate owner controls without re-reading `getSession`.
@@ -90,6 +92,12 @@ const isLobbyGoneFrame = (event: GameEvent): boolean =>
   event.type === 'error' &&
   event.errorType === 'https://bliss.example/errors/protocol' &&
   event.status === 404;
+
+// Post-join, these denials mean the ADR-0018 §5 grace elapsed and the freed seat is no longer re-enterable.
+const isRejoinDenialFrame = (event: GameEvent): boolean =>
+  event.type === 'error' &&
+  (event.errorType === 'https://bliss.example/errors/wrong-code' ||
+    event.errorType === 'https://bliss.example/errors/lobby-full');
 
 export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   const {
@@ -134,6 +142,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   const [joinDenied, setJoinDenied] = useState<string | null>(null);
   // Server-confirmed "this lobby no longer exists" — the only case that may claim the game is gone (honest 404, never a transient outage).
   const [lobbyGone, setLobbyGone] = useState(false);
+  const [evicted, setEvicted] = useState(false);
   // ADR-0027: gate the WaitingRoom render on a confirmed join so a new
   // joiner whose code the server is about to reject doesn't see the
   // lobby contents (player list with the owner) flash before the
@@ -170,6 +179,8 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   const hasConnectedRef = useRef(false);
   // One toast per LOST transition (ADR-0050 one-shot rule) — the retry loop's reconnecting/connecting churn stays silent.
   const connectionLostRef = useRef(false);
+  // Terminal server verdict received — the teardown disconnect must not re-trigger the lost-toast.
+  const terminalRef = useRef(false);
 
   // Single side effect: connect on mount, disconnect on unmount.
   // `joinLobby` is auto-sent by the adapter inside `connect` (the
@@ -192,17 +203,20 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
         setPersistedPseudonymRef.current?.(event.newPseudonym);
       }
       if (event.type === 'error' &&
-        event.errorType === 'https://bliss.example/errors/wrong-code') {
-        // Server rejected the join — the WaitingRoom does not mount.
-        // The joinDenied effect navigates back to home with a toast
-        // carrying the message, so the in-progress grid / waiting
-        // roster never reaches the denied joiner's DOM.
-        // Drop the stash so a later reload doesn't replay the bad code.
+        event.errorType === 'https://bliss.example/errors/wrong-code' &&
+        !joinConfirmedRef.current) {
+        // Pre-join denial: bounce home via the joinDenied effect so the lobby never reaches a non-member's DOM.
         setJoinDenied(event.detail ?? 'Code invalide ou partie privée. Demandez le code à l’organisateur.');
         lobbyJoinCodeStash.clear(lobbyId);
       }
+      // Post-join denial = evicted while offline (ADR-0018 §5) — honest screen, not a misleading wrong-code bounce.
+      if (isRejoinDenialFrame(event) && joinConfirmedRef.current) {
+        terminalRef.current = true;
+        setEvicted(true);
+      }
       // Server-confirmed lobby-unknown (WS rejoin against a GC'd / wiped lobby) — the route swaps to the introuvable screen.
       if (isLobbyGoneFrame(event)) {
+        terminalRef.current = true;
         setLobbyGone(true);
       }
       // `protocol` errors before the join completes mean the server
@@ -257,6 +271,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
           event.errorType === 'https://bliss.example/errors/invalid-pseudonym' ||
           event.errorType === 'https://bliss.example/errors/wrong-code' ||
           isLobbyGoneFrame(event) ||
+          (isRejoinDenialFrame(event) && joinConfirmedRef.current) ||
           (event.errorType === 'https://bliss.example/errors/protocol' &&
             !joinConfirmedRef.current);
         if (!inlineHandled) {
@@ -278,6 +293,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     });
     const unsubscribeConnection = gameClient.subscribeConnectionState((state) => {
       setConnectionState(state);
+      if (terminalRef.current) return;
       // Toast is dispatched here, not in an effect, to fire in the same tick as the connection-state flip.
       if (state === 'connected') {
         if (connectionLostRef.current) {
@@ -307,12 +323,12 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     };
   }, [gameClient, lobbyId, getSession, lobbyJoinCodeStash, showToast, announce]);
 
-  // Honest 404 mid-game: stop retrying against a lobby the server says is gone, and drop the (now wrong) reconnection toast.
+  // Terminal server verdict (lobby gone / seat lost): stop retrying and drop the now-wrong reconnection toast.
   useEffect(() => {
-    if (!lobbyGone) return;
+    if (!lobbyGone && !evicted) return;
     dismissToast();
     gameClient.disconnect();
-  }, [lobbyGone, gameClient, dismissToast]);
+  }, [lobbyGone, evicted, gameClient, dismissToast]);
 
   // Bounce the user back to Accueil with an error toast when the WS
   // join was denied (wrong code, pre-join protocol error, etc.). The
@@ -522,6 +538,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     joinDenied,
     joinConfirmed,
     lobbyGone,
+    evicted,
     isStarting,
     isRotating,
     sessionId,

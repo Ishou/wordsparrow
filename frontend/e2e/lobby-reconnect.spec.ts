@@ -8,6 +8,7 @@ interface GameWsTestApi {
   dropAll(): void;
   failNextLobbyFetches(count: number): void;
   injectEntry(lobbyId: string, row: number, column: number, letter: string): void;
+  evict(lobbyId: string, sessionId: string): void;
   deleteLobby(lobbyId: string): void;
   getLobby(lobbyId: string):
     | { game: { entries: ReadonlyArray<{ row: number; column: number; letter: string }> } | null }
@@ -133,7 +134,9 @@ test('an outage past the old 32s budget: one sticky toast, no navigation, resync
   await expect(letterInput(page, 0, 1)).toHaveValue('D');
 });
 
-test('two cells typed during an outage reach the server after reconnect and stay on the board', async ({ page }) => {
+test('two cells typed during an outage reach the server after reconnect and stay on the board', async ({ page, isMobile }) => {
+  // Touch-primary inputs are readOnly (the on-screen keyboard owns input); this typing seam is hardware-keyboard-shaped.
+  test.skip(Boolean(isMobile), 'typing seam drives hardware-keyboard input');
   test.setTimeout(90_000);
   await startMultiplayerGame(page);
   const lobbyId = lobbyIdFromUrl(page);
@@ -187,4 +190,24 @@ test('a lobby deleted mid-game surfaces the honest « Partie introuvable » scre
   await expect(page.getByText('Partie introuvable')).toBeVisible({ timeout: 10_000 });
   // Honest 404 replaces the surface in place — no bounce to Accueil.
   expect(page.url()).toBe(lobbyUrl);
+});
+
+test('evicted while offline (reconnect-grace elapsed) lands on the honest "la partie a continue sans toi" screen', async ({ page }) => {
+  await startMultiplayerGame(page);
+  const lobbyUrl = page.url();
+  const lobbyId = lobbyIdFromUrl(page);
+  const sessionId = await page.evaluate(() => window.localStorage.getItem('bliss.session.id'));
+  expect(sessionId).toBeTruthy();
+
+  // ADR-0018 §5: the server freed the seat during the outage; the codeless rejoin is denied (wrong-code).
+  await page.evaluate((args) => {
+    window.__gameWsTest__.evict(args.lobbyId, args.sessionId);
+    window.__gameWsTest__.dropAll();
+  }, { lobbyId, sessionId: sessionId! });
+
+  await expect(page.getByText('La partie a continué sans toi')).toBeVisible({ timeout: 10_000 });
+  // Honest in-place screen: no bounce to Accueil, no wrong-code toast, no reconnexion toast left behind.
+  expect(page.url()).toBe(lobbyUrl);
+  await expect(lostToast(page)).toHaveCount(0);
+  await expect(page.getByText('Code invalide ou partie privée', { exact: false })).toHaveCount(0);
 });
