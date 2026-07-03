@@ -62,6 +62,15 @@ class InMemoryLobbyRepository : LobbyRepository {
                 }.sortedByDescending { it.lastActivityAt }
         }
 
+    override suspend fun findByUserId(userId: UserId): List<Lobby> =
+        storeLock.withLock {
+            store.values
+                .filter { lobby ->
+                    lobby.players.values.any { it.userId == userId } &&
+                        lobby.state != LobbyLifecycleState.WAITING
+                }.sortedByDescending { it.lastActivityAt }
+        }
+
     override suspend fun save(lobby: Lobby): Lobby =
         lockFor(lobby.id).withLock {
             storeLock.withLock { store[lobby.id] = lobby }

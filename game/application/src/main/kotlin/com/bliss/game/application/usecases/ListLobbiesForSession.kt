@@ -10,6 +10,7 @@ import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.LobbyTitle
 import com.bliss.game.domain.SessionId
+import com.bliss.game.domain.UserId
 import java.time.Instant
 
 /**
@@ -64,6 +65,13 @@ class ListLobbiesForSession(
     private val repo: LobbyRepository,
 ) {
     suspend operator fun invoke(sessionId: SessionId): List<LobbySummary> = repo.findBySessionId(sessionId).map { it.toSummary() }
+}
+
+/** Cross-device variant (ADR-0066): same summary shape, keyed by the cookie-resolved userId. */
+class ListLobbiesForUser(
+    private val repo: LobbyRepository,
+) {
+    suspend operator fun invoke(userId: UserId): List<LobbySummary> = repo.findByUserId(userId).map { it.toSummary() }
 }
 
 private fun Lobby.toSummary(): LobbySummary =

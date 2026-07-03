@@ -109,6 +109,30 @@ class PostgresLobbyRepository(
             }
         }
 
+    // ADR-0066: seat-scoped user union; no owner arm (see LobbyRepository.findByUserId doc).
+    override suspend fun findByUserId(userId: UserId): List<Lobby> =
+        withContext(Dispatchers.IO) {
+            ds.connection.use { conn ->
+                val ids = mutableListOf<LobbyId>()
+                conn
+                    .prepareStatement(
+                        "SELECT l.id FROM lobbies l " +
+                            "WHERE EXISTS (" +
+                            "  SELECT 1 FROM lobby_players lp " +
+                            "  WHERE lp.lobby_id = l.id AND lp.user_id = ?" +
+                            ") " +
+                            "AND l.state IN ('IN_PROGRESS', 'COMPLETED') " +
+                            "ORDER BY l.last_activity_at DESC",
+                    ).use { ps ->
+                        ps.setObject(1, UUID.fromString(userId.value))
+                        ps.executeQuery().use { rs ->
+                            while (rs.next()) ids += LobbyId(rs.getString("id"))
+                        }
+                    }
+                ids.mapNotNull { loadLobby(conn, it) }
+            }
+        }
+
     override suspend fun save(lobby: Lobby): Lobby =
         withContext(Dispatchers.IO) {
             ds.connection.use { conn ->

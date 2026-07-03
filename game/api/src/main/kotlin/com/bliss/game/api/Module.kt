@@ -6,6 +6,7 @@ import com.bliss.game.api.routes.lobbies
 import com.bliss.game.api.routes.lobbyRebind
 import com.bliss.game.api.routes.lobbyWebSocketRoute
 import com.bliss.game.api.routes.sessions
+import com.bliss.game.api.routes.users
 import com.bliss.game.application.auth.CookieVerifier
 import com.bliss.game.application.lobby.LobbyWriteCoordinator
 import com.bliss.game.application.ports.AnalyticsEventSink
@@ -15,6 +16,7 @@ import com.bliss.game.application.usecases.EraseSessionUseCase
 import com.bliss.game.application.usecases.JoinLobbyUseCase
 import com.bliss.game.application.usecases.LeaveLobbyUseCase
 import com.bliss.game.application.usecases.ListLobbiesForSession
+import com.bliss.game.application.usecases.ListLobbiesForUser
 import com.bliss.game.application.usecases.LobbyGarbageCollector
 import com.bliss.game.application.usecases.PresenceAggregator
 import com.bliss.game.application.usecases.RenameSelfUseCase
@@ -339,6 +341,7 @@ fun Application.module() {
             coordinator = lobbyWriteCoordinator,
         )
         sessions(ListLobbiesForSession(lobbyRepository), EraseSessionUseCase(lobbyRepository))
+        users(cookieVerifier, ListLobbiesForUser(lobbyRepository))
         lobbyRebind(cookieVerifier, lobbyRepository, lobbyWriteCoordinator)
         lobbyWebSocketRoute(
             sessionManager,
