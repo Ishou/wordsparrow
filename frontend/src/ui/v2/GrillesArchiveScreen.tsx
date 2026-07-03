@@ -5,7 +5,7 @@ import { css } from 'styled-system/css';
 import { fetchAllDailySummaries, type DailySummary, type PuzzleRepository } from '@/application';
 import type { AuthClient } from '@/application/auth';
 import { LobbyClientError, type LobbyClient, type LobbySummary } from '@/application/game';
-import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
+import { countFilledCells, type SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { Pseudonym, SessionId } from '@/domain/game';
 import { Skeleton } from '@/design-system';
 import { useCanSubscribe } from '@/ui/components/billing';
@@ -155,11 +155,10 @@ export function GrillesArchiveScreen({
     () =>
       deriveDayInfos(
         summaries,
-        (id) => {
-          const locked = soloEntriesStore.loadLockedCells(id).length;
-          // Started = any locked cell or saved entry, the same signal the home strip uses (ADR-0075 blob).
-          return { locked, started: locked > 0 || soloEntriesStore.load(id).length > 0 };
-        },
+        (id) => ({
+          locked: soloEntriesStore.loadLockedCells(id).length,
+          filled: countFilledCells(soloEntriesStore, id),
+        }),
         todayIso,
         canSubscribe,
       ),
@@ -232,7 +231,7 @@ export function GrillesArchiveScreen({
     <ul className={list}>
       {enCours.map((info) => {
         const total = info.summary.totalLetterCells;
-        const pct = total > 0 ? Math.round((info.locked / total) * 100) : 0;
+        const pct = total > 0 ? Math.round((info.filled / total) * 100) : 0;
         return (
           <li key={info.summary.id}>
             <Link
@@ -246,7 +245,7 @@ export function GrillesArchiveScreen({
                   {longDateFr(info.summary.date)} · n°{info.summary.gridNumber}
                 </div>
                 <div className={rowMeta}>
-                  En cours · {info.locked} / {total} cases
+                  En cours · {info.filled} / {total} cases
                 </div>
                 <div className={bar}>
                   <span className={barFill} style={{ width: `${pct}%` }} />

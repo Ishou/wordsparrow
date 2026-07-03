@@ -45,20 +45,21 @@ describe('month navigation', () => {
 describe('deriveDayInfos', () => {
   const TODAY = '2026-07-03';
 
-  it('derives done / progress / new from locked cells', () => {
+  it('derives done from locked cells and progress / new from filled cells', () => {
     const infos = deriveDayInfos(
       [summary('2026-07-01', 'a'), summary('2026-07-02', 'b'), summary(TODAY, 'c')],
       (id) =>
         id === 'a'
-          ? { locked: 10, started: true }
+          ? { locked: 10, filled: 10 }
           : id === 'b'
-            ? { locked: 4, started: true }
-            : { locked: 0, started: false },
+            ? { locked: 0, filled: 4 }
+            : { locked: 0, filled: 0 },
       TODAY,
       false,
     );
     expect(infos.get('2026-07-01')?.status).toBe('done');
     expect(infos.get('2026-07-02')?.status).toBe('progress');
+    expect(infos.get('2026-07-02')?.filled).toBe(4);
     expect(infos.get(TODAY)?.status).toBe('new');
     expect(infos.get(TODAY)?.today).toBe(true);
     expect(infos.get('2026-07-01')?.today).toBe(false);
@@ -67,7 +68,7 @@ describe('deriveDayInfos', () => {
   it('paywalls unstarted grids strictly older than 7 days, only for subscribable users', () => {
     const boundary = summary('2026-06-26', 'seven');
     const older = summary('2026-06-25', 'eight');
-    const none = () => ({ locked: 0, started: false });
+    const none = () => ({ locked: 0, filled: 0 });
     const asFree = deriveDayInfos([boundary, older], none, TODAY, true);
     expect(asFree.get('2026-06-26')?.status).toBe('new');
     expect(asFree.get('2026-06-25')?.status).toBe('paywalled');
@@ -75,8 +76,8 @@ describe('deriveDayInfos', () => {
     expect(asSubscriber.get('2026-06-25')?.status).toBe('new');
   });
 
-  it('never paywalls a started grid', () => {
-    const infos = deriveDayInfos([summary('2026-01-01')], () => ({ locked: 2, started: true }), TODAY, true);
+  it('never paywalls a started grid, even entries-only (no locked cells)', () => {
+    const infos = deriveDayInfos([summary('2026-01-01')], () => ({ locked: 0, filled: 2 }), TODAY, true);
     expect(infos.get('2026-01-01')?.status).toBe('progress');
   });
 });

@@ -148,7 +148,7 @@ function actionLabel(status: DayStatus): string {
 
 function pctOf(info: DayInfo): number {
   const total = info.summary.totalLetterCells;
-  return total > 0 ? Math.round((info.locked / total) * 100) : 0;
+  return total > 0 ? Math.round((info.filled / total) * 100) : 0;
 }
 
 export interface DailyCalendarProps {

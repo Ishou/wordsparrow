@@ -22,10 +22,10 @@ const INFOS = deriveDayInfos(
   [summary('2026-06-29', 'done-d'), summary('2026-06-28', 'prog-d'), summary(TODAY, 'today-d'), summary('2026-06-01', 'old-d')],
   (id) =>
     id === 'done-d'
-      ? { locked: 10, started: true }
+      ? { locked: 10, filled: 10 }
       : id === 'prog-d'
-        ? { locked: 3, started: true }
-        : { locked: 0, started: false },
+        ? { locked: 0, filled: 3 }
+        : { locked: 0, filled: 0 },
   TODAY,
   true,
 );
@@ -83,7 +83,7 @@ describe('DailyCalendar', () => {
     // 9-12 juin, all past the free window; 11 juin is started by the player and splits the band.
     const infos = deriveDayInfos(
       [summary('2026-06-09', 'pw-0'), summary('2026-06-10', 'pw-a'), summary('2026-06-11', 'kept'), summary('2026-06-12', 'pw-b')],
-      (id) => (id === 'kept' ? { locked: 3, started: true } : { locked: 0, started: false }),
+      (id) => (id === 'kept' ? { locked: 0, filled: 3 } : { locked: 0, filled: 0 }),
       TODAY,
       true,
     );
