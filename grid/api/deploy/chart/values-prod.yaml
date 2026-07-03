@@ -24,6 +24,8 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     external-dns.alpha.kubernetes.io/hostname: "api.wordsparrow.io"
+    # ADR-0089 §1: orange-cloud this non-WS host (game stays gray — free-tier WS idle timeout).
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
     # Per repo rule (`docs/deploy.md` §"Floating IP / DNS records"): every
     # Ingress in this repo sets `target` explicitly to the Hetzner floating
     # IP. Currently works without it because the platform chart was upgraded

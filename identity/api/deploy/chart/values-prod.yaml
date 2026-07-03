@@ -36,6 +36,8 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     external-dns.alpha.kubernetes.io/hostname: "auth.wordsparrow.io"
+    # ADR-0089 §1: orange-cloud this non-WS host (game stays gray — free-tier WS idle timeout).
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
     external-dns.alpha.kubernetes.io/target: "116.202.180.82"
     # Per-IP rate limiting at the ingress (leaky-bucket). Identity is an
     # auth-flow REST surface (OAuth callback, session refresh, logout) —
