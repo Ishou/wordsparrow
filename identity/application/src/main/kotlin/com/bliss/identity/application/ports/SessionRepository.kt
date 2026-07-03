@@ -16,5 +16,12 @@ interface SessionRepository {
         at: Instant,
     )
 
+    /** Revoke every active session of the user except [keep] — the caller's current device stays signed in. */
+    suspend fun revokeAllForUserExcept(
+        userId: UserId,
+        keep: SessionId,
+        at: Instant,
+    )
+
     suspend fun deleteForUser(userId: UserId)
 }

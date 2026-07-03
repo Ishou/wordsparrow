@@ -25,6 +25,16 @@ class InMemorySessionRepository : SessionRepository {
         }
     }
 
+    override suspend fun revokeAllForUserExcept(
+        userId: UserId,
+        keep: SessionId,
+        at: Instant,
+    ) {
+        byId.values
+            .filter { it.userId == userId && it.id != keep && it.revokedAt == null }
+            .forEach { byId[it.id] = it.copy(revokedAt = at) }
+    }
+
     override suspend fun deleteForUser(userId: UserId) {
         byId.values
             .filter { it.userId == userId }
