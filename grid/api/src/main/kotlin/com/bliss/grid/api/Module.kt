@@ -135,7 +135,7 @@ fun Application.module() {
         header("Referrer-Policy", "strict-origin-when-cross-origin")
         header("X-Frame-Options", "DENY")
         header(HttpHeaders.Server, "WordSparrow")
-        header("Timing-Allow-Origin", "https://wordsparrow.io https://www.wordsparrow.io")
+        header("Timing-Allow-Origin", "https://wordsparrow.io, https://www.wordsparrow.io")
     }
 
     install(StatusPages) {
