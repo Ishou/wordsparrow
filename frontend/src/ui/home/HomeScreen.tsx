@@ -86,7 +86,7 @@ const content = css({
 });
 
 // Desktop hub: hero (left) + grilles (right) side by side, capped + centred in the viewport (matches the 1140 top-bar cap). Passthrough on phone/tablet.
-const hub = css({ display: 'contents', lg: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 0.92fr)', columnGap: '36px', alignItems: 'start', alignContent: 'center', flex: 1, minHeight: 0, width: '100%', maxWidth: '1140px', marginInline: 'auto', paddingInline: '36px' } });
+const hub = css({ display: 'contents', lg: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 0.92fr)', columnGap: '36px', alignItems: 'start', alignContent: 'center', flex: '1 0 auto', width: '100%', maxWidth: '1140px', marginInline: 'auto', paddingInline: '36px' } });
 
 const hero = css({ flex: 'none', bg: 'white', borderRadius: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 14px 30px rgba(33,75,64,0.10)' });
 // clipPath clips upward overflow (midday sun, night stars) while its -34 px bottom inset lets the branch drape over heroBody; zIndex 2 keeps it above.
@@ -138,7 +138,7 @@ const joinGo = css({ flex: 'none', width: '48px', height: '48px', borderRadius: 
 const joinErr = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '7px', textAlign: 'center' });
 
 // Legal footer on the home page — Google OAuth branding verification requires the privacy-policy link visible here.
-const legalNav = css({ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '16px', fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki' });
+const legalNav = css({ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '16px', fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki', lg: { marginTop: '12px' } });
 const legalLink = css({ color: 'ws.khaki', textDecoration: 'underline', textUnderlineOffset: '3px', _hover: { color: 'ws.jadeInk' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px', borderRadius: '4px' } });
 
 const prevWrap = css({ flex: 'none', marginTop: '26px', paddingBottom: '22px', lg: { marginTop: 0, paddingBottom: 0 } });
@@ -466,19 +466,19 @@ export function HomeScreen({
                 <HomeTeaser />
               </div>
             ) : null}
-            <footer>
-              <nav className={legalNav} aria-label="Liens légaux">
-                <Link className={legalLink} to="/confidentialite">
-                  Confidentialité
-                </Link>
-                <span aria-hidden="true">·</span>
-                <Link className={legalLink} to="/mentions-legales">
-                  Mentions légales
-                </Link>
-              </nav>
-            </footer>
           </section>
           </div>
+          <footer>
+            <nav className={legalNav} aria-label="Liens légaux">
+              <Link className={legalLink} to="/confidentialite">
+                Confidentialité
+              </Link>
+              <span aria-hidden="true">·</span>
+              <Link className={legalLink} to="/mentions-legales">
+                Mentions légales
+              </Link>
+            </nav>
+          </footer>
         </div>
 
         {!miniGameTyping ? <BottomNav active="accueil" /> : null}
