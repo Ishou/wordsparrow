@@ -36,8 +36,7 @@ class GridGeneratorPropertyTest {
 
     @Test
     fun `no generated word shorter than five ends in a dead end`() {
-        // Synthetic 5-letter-alphabet corpus: crossings are easy, so 12x10
-        // grids fill and interior black cells (pocket material) exist.
+        // Synthetic 5-letter-alphabet corpus: crossings are easy, so 12x10 grids fill with pocket material.
         val letters = listOf("A", "E", "I", "R", "S")
         val syntheticWords =
             (2..5)

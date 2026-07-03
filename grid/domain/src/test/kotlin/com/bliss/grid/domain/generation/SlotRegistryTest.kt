@@ -254,8 +254,7 @@ class SlotRegistryTest {
 
     @Test
     fun `build accepts a layout whose dead-end tips are all crossed or long enough`() {
-        // Control for the dead-end rejection below: identical layout except
-        // (3,2) is white, so the row-2 tip (2,2) keeps a vertical crossing.
+        // Control: identical layout but (3,2) white, so tip (2,2) keeps a vertical crossing.
         val cells =
             cellsFrom(
                 """
@@ -272,8 +271,7 @@ class SlotRegistryTest {
 
     @Test
     fun `build returns null when a word ends in a dead end shorter than five`() {
-        // Row-2 slot (2,1)..(2,2) is 2 long; its tip (2,2) is walled by
-        // (1,2), (3,2) and (2,3) — a short dead end.
+        // Row-2 slot (2,1)..(2,2) is 2 long; tip (2,2) walled by (1,2),(3,2),(2,3) - a short dead end.
         val cells =
             cellsFrom(
                 """

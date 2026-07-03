@@ -547,8 +547,7 @@ class BlackCellLayoutTest {
 
     @Test
     fun `canPlaceBlack rejects the forward wall that completes a short dead end`() {
-        // (1,3), (3,3) already wall the tip (2,3) of the 4-long row-2 run;
-        // placing (2,4) would seal its last open side. Check 7 fires.
+        // (1,3),(3,3) wall the tip (2,3) of the 4-long row-2 run; placing (2,4) seals it - Check 7 fires.
         val cells = CellArray(7, 5)
         cells.set(1, 3, CellArray.BLACK)
         cells.set(3, 3, CellArray.BLACK)
@@ -557,8 +556,7 @@ class BlackCellLayoutTest {
 
     @Test
     fun `canPlaceBlack rejects the side wall that completes a short dead end`() {
-        // (1,3) above and (2,4) ahead already wall the tip (2,3);
-        // placing (3,3) below removes its last crossing. Check 7 fires.
+        // (1,3) and (2,4) wall the tip (2,3); placing (3,3) removes its last crossing - Check 7 fires.
         val cells = CellArray(7, 5)
         cells.set(1, 3, CellArray.BLACK)
         cells.set(2, 4, CellArray.BLACK)
@@ -567,8 +565,7 @@ class BlackCellLayoutTest {
 
     @Test
     fun `canPlaceBlack rejects a split that shortens a dead-end word below five`() {
-        // Row-2 run (2,0)..(2,7) ends in a walled tip at (2,7) — legal at length 8.
-        // Splitting at (2,3) would leave the tip's word only 4 long.
+        // Row-2 run (2,0)..(2,7) is legal at length 8; splitting at (2,3) shortens the tip word to 4.
         val cells = CellArray(10, 5)
         cells.set(1, 7, CellArray.BLACK)
         cells.set(3, 7, CellArray.BLACK)
