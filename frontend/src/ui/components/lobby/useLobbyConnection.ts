@@ -1,3 +1,4 @@
+import { shareOrCopyInviteUrl, type ShareInviteResult } from '@/ui/lib/shareInvite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type ConnectionState,
@@ -64,7 +65,8 @@ export interface LobbyActions {
   readonly setGridConfig: (width: number, height: number) => void;
   readonly start: () => void;
   readonly rotateCode: () => void;
-  readonly copyShareUrl: () => void;
+  // See ShareInviteResult (shareInvite.ts) for the gating rule; `null` when there's no code to share yet.
+  readonly copyShareUrl: () => Promise<ShareInviteResult | null>;
   // Voluntary leave: frees the slot server-side. Navigation is the caller's concern — the hook owns no navigate seam.
   readonly leave: () => void;
   readonly clearPseudonymError: () => void;
@@ -348,10 +350,10 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   // instead; recipients clicking it land on the lobby with the code
   // already stashed, and the URL replaces back to `/lobby/$lobbyId`.
   const lobbyCode = lobby.code;
-  const copyShareUrl = useCallback(() => {
-    if (lobbyCode == null) return;
+  const copyShareUrl = useCallback(async (): Promise<ShareInviteResult | null> => {
+    if (lobbyCode == null) return null;
     const shareUrl = `${window.location.origin}/join/${lobbyCode}`;
-    void navigator.clipboard?.writeText(shareUrl);
+    return shareOrCopyInviteUrl(shareUrl);
   }, [lobbyCode]);
 
   const leave = useCallback(() => {

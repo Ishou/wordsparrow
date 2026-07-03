@@ -1,3 +1,4 @@
+import { canNativeShare, type ShareInviteResult } from '@/ui/lib/shareInvite';
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
 import { MAX_PSEUDONYM_LENGTH, type Lobby, type Pseudonym, type SessionId } from '@/domain/game';
@@ -40,7 +41,8 @@ export interface WaitingRoomProps {
   readonly onRename: (newPseudonym: Pseudonym) => void;
   readonly onSetGridConfig: (width: number, height: number) => void;
   readonly onStart: () => void;
-  readonly onCopyShareUrl: () => void;
+  // See ShareInviteResult (shareInvite.ts) for the gating rule.
+  readonly onCopyShareUrl: () => Promise<ShareInviteResult | null>;
   // Server-side rename rejection surfaced inline below the editor.
   // The parent route subscribes to `gameClient` `error` frames with
   // `errorType === 'https://bliss.example/errors/invalid-pseudonym'`
@@ -156,13 +158,16 @@ export function WaitingRoom({
     [],
   );
   const handleCopyClick = () => {
-    onCopyShareUrl();
-    if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
-    setJustCopied(true);
-    copyTimerRef.current = setTimeout(() => {
-      setJustCopied(false);
-      copyTimerRef.current = null;
-    }, COPY_FEEDBACK_MS);
+    void (async () => {
+      const result = await onCopyShareUrl();
+      if (result !== 'copied') return;
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
+      setJustCopied(true);
+      copyTimerRef.current = setTimeout(() => {
+        setJustCopied(false);
+        copyTimerRef.current = null;
+      }, COPY_FEEDBACK_MS);
+    })();
   };
   // ADR-0027 §"WaitingRoom code visibility toggle" — default-masked
   // (streamer-safe). The eye toggle is the single visibility
@@ -220,7 +225,7 @@ export function WaitingRoom({
 
       <div className={styles.row}>
         <Button variant="ghost" onClick={handleCopyClick}>
-          Copier le lien
+          {canNativeShare() ? 'Partager le lien' : 'Copier le lien'}
         </Button>
         {justCopied ? (
           <span role="status" aria-live="polite" className={styles.copyFeedback}>

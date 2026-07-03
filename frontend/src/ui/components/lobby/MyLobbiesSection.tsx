@@ -1,3 +1,4 @@
+import { canNativeShare, shareOrCopyInviteUrl } from '@/ui/lib/shareInvite';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
@@ -198,13 +199,16 @@ function LobbyRow({ lobby }: { readonly lobby: LobbySummary }) {
   const handleCopy = () => {
     // ADR-0027: invite URL is `/join/$code`, not the bare code.
     const shareUrl = `${window.location.origin}/join/${lobby.code}`;
-    void navigator.clipboard?.writeText(shareUrl);
-    if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
-    setJustCopied(true);
-    copyTimerRef.current = setTimeout(() => {
-      setJustCopied(false);
-      copyTimerRef.current = null;
-    }, COPY_FEEDBACK_MS);
+    void (async () => {
+      const result = await shareOrCopyInviteUrl(shareUrl);
+      if (result !== 'copied') return;
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
+      setJustCopied(true);
+      copyTimerRef.current = setTimeout(() => {
+        setJustCopied(false);
+        copyTimerRef.current = null;
+      }, COPY_FEEDBACK_MS);
+    })();
   };
 
   return (
@@ -246,7 +250,7 @@ function LobbyRow({ lobby }: { readonly lobby: LobbySummary }) {
           <button
             type="button"
             className={iconButtonStyles}
-            aria-label="Copier le lien"
+            aria-label={canNativeShare() ? 'Partager le lien' : 'Copier le lien'}
             onClick={handleCopy}
           >
             <CopyGlyph />

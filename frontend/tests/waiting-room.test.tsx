@@ -32,7 +32,7 @@ const noopProps = {
   onRename: () => {},
   onSetGridConfig: () => {},
   onStart: () => {},
-  onCopyShareUrl: () => {},
+  onCopyShareUrl: () => Promise.resolve(null),
 };
 
 describe('WaitingRoom — player list', () => {
@@ -346,18 +346,21 @@ describe('WaitingRoom — share URL button', () => {
     beforeEach(() => { vi.useFakeTimers(); });
     afterEach(() => { vi.useRealTimers(); });
 
-    it('shows "Lien copié !" right after the click and hides it after ~2s', () => {
+    it('shows "Lien copié !" right after the click and hides it after ~2s', async () => {
       render(
         <WaitingRoom
           lobby={baseLobby}
           currentSessionId={ownerSessionId}
           {...noopProps}
+          onCopyShareUrl={() => Promise.resolve('copied')}
         />,
       );
       // No feedback visible before the click.
       expect(screen.queryByText(/lien copié/i)).toBeNull();
 
-      fireEvent.click(screen.getByRole('button', { name: /copier le lien/i }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /copier le lien/i }));
+      });
 
       // The status node uses role="status" + aria-live so assistive
       // tech announces it; assert presence + the role at the same time.
@@ -366,6 +369,23 @@ describe('WaitingRoom — share URL button', () => {
 
       // After the 2s timer the feedback is gone again.
       act(() => { vi.advanceTimersByTime(2000); });
+      expect(screen.queryByText(/lien copié/i)).toBeNull();
+    });
+
+    it('does not show "Lien copié !" when the native share sheet was used', async () => {
+      render(
+        <WaitingRoom
+          lobby={baseLobby}
+          currentSessionId={ownerSessionId}
+          {...noopProps}
+          onCopyShareUrl={() => Promise.resolve('shared')}
+        />,
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /copier le lien/i }));
+      });
+
       expect(screen.queryByText(/lien copié/i)).toBeNull();
     });
   });

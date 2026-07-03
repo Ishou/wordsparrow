@@ -1,3 +1,4 @@
+import { canNativeShare, type ShareInviteResult } from '@/ui/lib/shareInvite';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowsClockwise, Copy, Eye, EyeSlash, SignOut } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
@@ -34,7 +35,8 @@ export interface SalonScreenProps {
   readonly onSetGridConfig: (width: number, height: number) => void;
   readonly onStart: () => void;
   readonly onRotateCode: () => void;
-  readonly onCopyShareUrl: () => void;
+  // See ShareInviteResult (shareInvite.ts) for the gating rule.
+  readonly onCopyShareUrl: () => Promise<ShareInviteResult | null>;
   readonly onLeave: () => void;
   readonly onClearPseudonymError?: () => void;
 }
@@ -271,10 +273,13 @@ export function SalonScreen({
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current); }, []);
   const handleCopy = () => {
-    onCopyShareUrl();
-    if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
-    setJustCopied(true);
-    copyTimerRef.current = setTimeout(() => { setJustCopied(false); copyTimerRef.current = null; }, COPY_FEEDBACK_MS);
+    void (async () => {
+      const result = await onCopyShareUrl();
+      if (result !== 'copied') return;
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
+      setJustCopied(true);
+      copyTimerRef.current = setTimeout(() => { setJustCopied(false); copyTimerRef.current = null; }, COPY_FEEDBACK_MS);
+    })();
   };
 
   const [editing, setEditing] = useState(false);
@@ -320,7 +325,7 @@ export function SalonScreen({
           <div className={cx(codeRow, css({ marginTop: '14px', flexWrap: 'wrap' }))}>
             <button type="button" className={pillButton} onClick={handleCopy}>
               <Copy size={16} weight="bold" aria-hidden="true" />
-              Copier le lien
+              {canNativeShare() ? 'Partager le lien' : 'Copier le lien'}
             </button>
             {isOwner ? (
               <button
