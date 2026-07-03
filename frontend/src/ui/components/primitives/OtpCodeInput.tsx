@@ -2,10 +2,7 @@ import { PinInput as ArkPinInput } from '@ark-ui/react/pin-input';
 import { forwardRef } from 'react';
 import { css } from 'styled-system/css';
 
-// Sibling of `PinInput` for the email-OTP login flow (ADR-0091): six
-// numeric slots, no lobby Crockford alphabet, no URL-paste extraction.
-// Ark UI `pin-input` with `type="numeric"` bakes in the numeric filter +
-// `inputMode="numeric"` so mobile keyboards surface the digit pad.
+// Sibling of PinInput (ADR-0091): numeric slots, no Crockford alphabet/paste extraction.
 
 const OTP_CODE_LENGTH = 6;
 
@@ -18,8 +15,7 @@ const rootStyles = css({
   maxWidth: '20em',
 });
 
-// Visually-hidden label — Ark's Label part still names the group for
-// assistive tech without competing with the slots for visual space.
+// Visually-hidden label — Ark's Label part still names the group for assistive tech.
 const labelStyles = css({
   position: 'absolute',
   width: '1px',
@@ -82,8 +78,7 @@ export const OtpCodeInput = forwardRef<HTMLDivElement, OtpCodeInputProps>(functi
   { label, value, onValueChange, disabled, invalid, errorText, placeholder = '_', readOnly },
   ref,
 ) {
-  // Ark's `value` is a `string[]` (one entry per slot); pad the controlled
-  // string so React + Ark stay in sync whatever the consumer passes.
+  // Ark's `value` is a `string[]`; pad the controlled string to match.
   const slots = Array.from({ length: OTP_CODE_LENGTH }, (_, i) => value[i] ?? '');
 
   return (

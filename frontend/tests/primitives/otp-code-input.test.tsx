@@ -3,9 +3,7 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { OtpCodeInput } from '@/ui/components/primitives/OtpCodeInput';
 
-// Sibling of `PinInput` for the email-OTP login flow (ADR-0091): six
-// numeric slots, no Crockford alphabet, no URL-paste extraction. Ark UI
-// `pin-input` with `type="numeric"` drives the keyboard + a11y.
+// Mirrors pin-input.test.tsx for the numeric OtpCodeInput sibling (ADR-0091).
 
 function ControlledOtp({
   initial = '',
@@ -55,8 +53,6 @@ describe('OtpCodeInput', () => {
     const { container } = render(<ControlledOtp onValueChange={onValueChange} />);
     const slots = container.querySelectorAll<HTMLInputElement>('input[data-part="input"]');
     for (const [index, digit] of [...'123456'].entries()) {
-      // The machine only processes a change on the focused slot; async
-      // `act` lets zag's effects flush between keystrokes.
       await act(async () => {
         slots[index]!.focus();
         fireEvent.change(slots[index]!, { target: { value: digit } });
