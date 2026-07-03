@@ -381,7 +381,8 @@ class PuzzleRouteTest {
 
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
             // 2026-05-09T10:00:00Z -> next UTC midnight is 14h = 50400s away.
-            assertThat(response.headers["Cache-Control"]!!).isEqualTo("public, no-cache, s-maxage=50400")
+            assertThat(response.headers["Cache-Control"]!!)
+                .isEqualTo("public, max-age=0, must-revalidate, s-maxage=50400")
             assertThat(response.headers["ETag"]!!).isEqualTo("\"$id\"")
         }
 
@@ -418,7 +419,8 @@ class PuzzleRouteTest {
 
             assertThat(response.status).isEqualTo(HttpStatusCode.NotModified)
             assertThat(response.bodyAsText()).isEqualTo("")
-            assertThat(response.headers["Cache-Control"]!!).isEqualTo("public, no-cache, s-maxage=50400")
+            assertThat(response.headers["Cache-Control"]!!)
+                .isEqualTo("public, max-age=0, must-revalidate, s-maxage=50400")
             assertThat(response.headers["ETag"]!!).isEqualTo("\"$id\"")
         }
 
