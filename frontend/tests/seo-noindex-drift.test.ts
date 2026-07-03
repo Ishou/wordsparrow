@@ -38,6 +38,11 @@ describe('noindex ⇔ manifest drift', () => {
     expect(scanned.filter((r) => r.noindex).length).toBeGreaterThanOrEqual(8);
   });
 
+  it('yields one entry per route in multi-route files (redirects.tsx)', () => {
+    const redirectPaths = scanned.filter((r) => r.file === 'redirects.tsx').map((r) => r.path).sort();
+    expect(redirectPaths).toEqual(['/accueil', '/grille', '/privacy']);
+  });
+
   it('every route emitting a noindex head is listed in EXCLUDED_ROUTES', () => {
     const missing = scanned
       .filter((r) => r.noindex)
