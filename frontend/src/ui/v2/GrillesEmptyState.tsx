@@ -53,3 +53,15 @@ export function GrillesEmptyState({ onPlay, filter = 'new' }: { readonly onPlay:
     />
   );
 }
+
+export function LobbiesEmptyState({ onCreate }: { readonly onCreate: () => void }) {
+  return (
+    <SparrowState
+      scene={nestScene}
+      title="Aucune partie à plusieurs"
+      body="Crée une partie et invite tes proches — vous remplissez la même grille ensemble."
+      cta={{ label: 'Créer une partie', onClick: onCreate }}
+      as="p"
+    />
+  );
+}

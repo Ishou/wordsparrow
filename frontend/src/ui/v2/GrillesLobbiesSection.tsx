@@ -5,18 +5,6 @@ import type { LobbySummary } from '@/application/game';
 
 // Session-scoped read only (ADR-0066 §4); stays single-shape when the user-scoped endpoint lands.
 
-const wrap = css({ marginBottom: '18px' });
-
-const label = css({
-  fontFamily: 'wsUi',
-  fontSize: '11px',
-  fontWeight: 'black',
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  color: '#543C00',
-  margin: '4px 4px 10px',
-});
-
 const list = css({ listStyle: 'none', margin: 0, padding: 0 });
 
 const card = css({
@@ -72,14 +60,10 @@ function actionFor(lobby: LobbySummary): string {
   return 'Rejoindre';
 }
 
+// Headless card list — the caller supplies the heading (the /grilles tab) and decides emptiness.
 export function GrillesLobbiesSection({ lobbies }: { readonly lobbies: readonly LobbySummary[] }) {
-  if (lobbies.length === 0) return null;
   return (
-    <section className={wrap} aria-labelledby="grilles-lobbies-heading">
-      <h2 id="grilles-lobbies-heading" className={label}>
-        Parties à plusieurs
-      </h2>
-      <ul className={list}>
+    <ul className={list}>
         {lobbies.map((lobby) => {
           const total = lobby.progress.totalCells;
           const pct = total > 0 ? Math.round((lobby.progress.solvedCells / total) * 100) : 0;
@@ -105,7 +89,6 @@ export function GrillesLobbiesSection({ lobbies }: { readonly lobbies: readonly 
             </li>
           );
         })}
-      </ul>
-    </section>
+    </ul>
   );
 }

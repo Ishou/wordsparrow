@@ -302,7 +302,7 @@ export function GrillesArchiveScreen({
       </div>
 
       <div className={scrollArea}>
-      <GrillesLobbiesSection lobbies={lobbies} />
+      {lobbies.length > 0 ? <GrillesLobbiesSection lobbies={lobbies} /> : null}
       {canSubscribe ? (
         <div className={bannerWrap}>
           <ArchiveUpsellBanner />
