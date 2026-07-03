@@ -146,6 +146,9 @@ const connDot = css({
   height: '9px',
   borderRadius: '50%',
 });
+const connDotOnline = css({ background: 'ws.statusOnline' });
+const connDotIdle = css({ background: 'ws.statusIdle' });
+const connDotLost = css({ background: 'ws.statusLost' });
 
 const renameButton = css({
   fontFamily: 'wsUi',
@@ -233,15 +236,15 @@ const leaveButton = css({
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 
-function connStateLabel(state: ConnectionState): { dot: string; label: string } {
+function connStateLabel(state: ConnectionState): { cls: string; label: string } {
   switch (state) {
     case 'connected':
-      return { dot: 'ws.statusOnline', label: 'connecté' };
+      return { cls: connDotOnline, label: 'connecté' };
     case 'reconnecting':
     case 'connecting':
-      return { dot: 'ws.statusIdle', label: 'connexion' };
+      return { cls: connDotIdle, label: 'connexion' };
     case 'disconnected':
-      return { dot: 'ws.statusLost', label: 'déconnecté' };
+      return { cls: connDotLost, label: 'déconnecté' };
   }
 }
 
@@ -352,8 +355,7 @@ export function SalonScreen({
                 </span>
                 {p.sessionId === lobby.ownerSessionId ? <span className={badge}>Hôte</span> : null}
                 <span
-                  className={connDot}
-                  style={{ background: conn.dot }}
+                  className={cx(connDot, conn.cls)}
                   role="img"
                   aria-label={`${p.pseudonym} : ${conn.label}`}
                 />
