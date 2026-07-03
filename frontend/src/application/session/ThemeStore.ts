@@ -1,7 +1,4 @@
-// Application-layer port for the theme preference (ADR-0088). The
-// localStorage adapter lives in `@/infrastructure/session`; Réglages
-// consumes this contract via the router context so `ui/` never imports
-// `infrastructure/` directly (ADR-0002 §7).
+// Theme-preference port (ADR-0088); adapter in @/infrastructure/session, consumed via router context (ADR-0002 §7).
 
 export type ThemePreference = 'clair' | 'sombre' | 'auto';
 
