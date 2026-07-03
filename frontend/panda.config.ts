@@ -231,6 +231,13 @@ export default defineConfig({
           // Hover shades for jade / sable buttons.
           jadeHover: { value: { base: '#A9D8BE', _dark: '#3A5D4B' } },
           sableHover: { value: { base: '#DED7BC', _dark: '#2E3A28' } },
+          // Blush bg for the inline hint-error pill (pairs with sakuraDark/sakuraRose text).
+          hintErrorBg: { value: { base: '#FBEEF2', _dark: '#3A2230' } },
+          // Disabled solid-CTA bg + text (e.g. the salon start button before it is playable).
+          ctaDisabledBg: { value: { base: '#E0DAC8', _dark: '#2E3A28' } },
+          ctaDisabledFg: { value: { base: '#7A7560', _dark: '#8B9584' } },
+          // Faint tint behind inline tag chips — jade wash on light, cream wash on dark.
+          chipFaint: { value: { base: 'rgba(33,75,64,0.07)', _dark: 'rgba(233,242,236,0.08)' } },
           // Multiplayer presence dots (legible on both themes).
           statusOnline: { value: { base: '#3F9D6E', _dark: '#3F9D6E' } },
           statusIdle: { value: { base: '#C9A227', _dark: '#C9A227' } },

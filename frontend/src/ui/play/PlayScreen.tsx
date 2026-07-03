@@ -127,8 +127,8 @@ const hintError = css({
   fontWeight: 'semibold',
   fontSize: '12px',
   color: 'ws.sakuraDark',
-  bg: '#FBEEF2',
-  _dark: { color: 'ws.sakuraRose', bg: '#3A2230' },
+  bg: 'ws.hintErrorBg',
+  _dark: { color: 'ws.sakuraRose' },
 });
 // Transient, non-cell-specific binary verdict (ADR-0076): no cell highlight, just a polite "not yet" line.
 const failPill = css({
