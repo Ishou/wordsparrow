@@ -43,5 +43,4 @@ export const Route = createRoute({
       canonical: `${SITE_BASE_URL}/contribuer/pairs`,
       noindex: true,
     }),
-  // Unregistered post-cutover (ADR-0074): lazy id is cast, so widen the glue to keep this v1 route compiling.
-}).lazy(() => import('./contribuer.pairs.lazy').then((m) => m.Route as never));
+}).lazy(() => import('./contribuer.pairs.lazy').then((m) => m.Route));

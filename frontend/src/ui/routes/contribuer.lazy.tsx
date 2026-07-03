@@ -14,7 +14,6 @@ import type { RatingMeta, Verdict } from '@/ui/components/sondage';
 import { LockBanner, RatingCard, SignInBanner, UndoBar, useCampaignStatus } from '@/ui/components/sondage';
 import { NotFoundScreen } from '@/ui/v2/NotFoundScreen';
 import { useCapabilityGate } from '@/ui/v2/useCapabilityGate';
-import type { AppRouterContext } from './__root';
 import { Route as ParentRoute } from './contribuer';
 
 const articleStyles = css({
@@ -126,8 +125,7 @@ const alertStyles = css({
 });
 
 export function ContribuerPage() {
-  // Unregistered post-cutover (ADR-0074): the typed registry no longer carries this route, so read context via the app type.
-  const ctx = ParentRoute.useRouteContext() as AppRouterContext;
+  const ctx = ParentRoute.useRouteContext();
   const { state } = useAuth();
   const isAuth = state.status === 'authed';
   const surveyClient = ctx.surveyClient;
@@ -458,7 +456,6 @@ export function ContribuerScreen() {
   return <ContribuerPage />;
 }
 
-// Unregistered post-cutover (ADR-0074): id cast so the lazy half still resolves its eager parent.
-export const Route = createLazyRoute('/contribuer' as '/app')({
+export const Route = createLazyRoute('/contribuer')({
   component: ContribuerScreen,
 });

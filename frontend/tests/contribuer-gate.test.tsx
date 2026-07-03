@@ -8,6 +8,7 @@ import { surveyAnonRatedStore } from '@/infrastructure/session/localStorageSurve
 import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { ContribuerScreen } from '@/ui/routes/contribuer.lazy';
+import { ContribuerPairsScreen } from '@/ui/routes/contribuer.pairs.lazy';
 
 // Mount the gate wrapper directly (same '/contribuer' route id) to avoid lazy-chunk timing; ContribuerScreen is the lazy route's component.
 const GatedContribuerRoute = createRoute({
@@ -137,5 +138,74 @@ describe('Contribuer capability gate', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Chargement…');
     expect(screen.queryByText("Cette page s'est envolée")).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Campagne de qualité des indices' })).toBeNull();
+  });
+});
+
+describe('Contribuer pairs capability gate', () => {
+  function renderPairsGate(authClient: AuthClient): ReactNode {
+    const PairsRoute = createRoute({
+      getParentRoute: () => RootRoute,
+      path: '/contribuer/pairs',
+      component: ContribuerPairsScreen,
+    });
+    const routeTree = RootRoute.addChildren([PairsRoute]);
+    const router = createRouter({
+      routeTree,
+      history: createMemoryHistory({ initialEntries: ['/contribuer/pairs'] }),
+      context: {
+        authClient,
+        getPseudonym: () => 'Lapin 1',
+        surveyClient: stubSurveyClient(),
+        surveyAnonStore: surveyAnonRatedStore,
+        analytics: { trackEvent: vi.fn() },
+        puzzleRepository: {
+          fetchById: vi.fn(),
+          fetchDaily: vi.fn(),
+          listDailySummaries: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
+        },
+        puzzleSolver: { validate: vi.fn(), requestHint: vi.fn() },
+        sessionClient: {
+          eraseSession: () => Promise.resolve({ deleted: 0 }),
+          getSessionId: () => 'test-session-id',
+          clearLocalSession: () => {},
+        },
+        soloEntriesStore: {
+          load: () => [],
+          save: () => {},
+          loadLockedCells: () => [],
+          lockCell: () => {},
+          loadHintsUsed: () => 0,
+          recordHintUsed: () => {},
+          loadElapsed: () => 0,
+          saveElapsed: () => {},
+          clearForPuzzle: () => {},
+        },
+        tourSeenStore: { get: () => true, set: () => {}, clear: () => {} },
+      },
+    });
+    return (
+      <AuthProvider authClient={authClient} getPseudonym={() => 'Lapin 1'}>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    );
+  }
+
+  it('renders the 404 screen for a player lacking the contribuer capability', async () => {
+    render(renderPairsGate(authClientFor(PLAYER)));
+    await waitFor(() => expect(screen.getByText("Cette page s'est envolée")).toBeInTheDocument());
+  });
+
+  it('renders the pairs screen for a maintainer', async () => {
+    render(renderPairsGate(authClientFor(MAINTAINER)));
+    // the pairs page shares the campaign h1; its distinguishing chrome is the pair-mode shortcuts legend
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Campagne de qualité des indices' })).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("Cette page s'est envolée")).toBeNull();
+  });
+
+  it('sets the document title on the 404 gate screen (WCAG 2.4.2)', async () => {
+    render(renderPairsGate(authClientFor(null)));
+    await waitFor(() => expect(document.title).toBe('Page introuvable — WordSparrow'));
   });
 });

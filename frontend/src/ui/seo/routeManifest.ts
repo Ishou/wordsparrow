@@ -68,6 +68,8 @@ export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
 // a concrete URL — `$lobbyId` and `$code` are TanStack params.
 export const EXCLUDED_ROUTES: ReadonlyArray<string> = [
   '/compte',
+  '/contribuer',
+  '/contribuer/pairs',
   '/lobby/$lobbyId',
   '/join/$code',
 ];
@@ -79,8 +81,9 @@ export interface PrerenderRoute {
 
 // Noindex routes still prerendered so Cloudflare Pages serves the route's own shell, not the home shell.
 export const NOINDEX_PRERENDER_ROUTES: ReadonlyArray<PrerenderRoute> = [
-  // /contribuer is unregistered post-cutover (ADR-0074).
   { path: '/compte', title: 'Mon compte — WordSparrow' },
+  { path: '/contribuer', title: 'Campagne — WordSparrow' },
+  { path: '/contribuer/pairs', title: 'Campagne par paires — WordSparrow' },
   { path: '/reglages', title: 'Réglages — WordSparrow' },
   { path: '/menu', title: 'Menu — WordSparrow' },
   { path: '/finish', title: 'Partie terminée — WordSparrow' },
