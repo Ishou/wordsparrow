@@ -17,7 +17,7 @@ import { ReceiptsSection } from './ReceiptsSection';
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 16px' });
 const stack = css({ display: 'flex', flexDirection: 'column', gap: '16px' });
 
-const hero = css({ display: 'flex', alignItems: 'center', gap: '13px', bg: 'white', borderRadius: '18px', padding: '14px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
+const hero = css({ display: 'flex', alignItems: 'center', gap: '13px', bg: 'ws.card', borderRadius: '18px', padding: '14px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
 const avatar = css({ flex: 'none', width: '48px', height: '48px', borderRadius: '50%', bg: 'ws.sakuraDark', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '20px' });
 const avatarAnon = css({ bg: 'ws.jade', color: 'ws.jadeInk' });
 const heroMain = css({ flex: 1, minWidth: 0 });
@@ -27,16 +27,16 @@ const heroMeta = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold',
 const iconBtn = css({ flex: 'none', width: '38px', height: '38px', borderRadius: '50%', border: 'none', bg: 'ws.sable', color: 'ws.jadeInk', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _hover: { bg: 'ws.sableHover' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
 const editRow = css({ display: 'flex', gap: '8px', alignItems: 'center' });
-const nameInput = css({ flex: 1, minWidth: 0, height: '44px', borderRadius: '12px', border: '1.5px solid rgba(33,75,64,0.16)', bg: 'white', paddingInline: '14px', fontFamily: 'wsDisplay', fontSize: '18px', fontWeight: 'semibold', color: 'ws.jadeInk', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const nameInput = css({ flex: 1, minWidth: 0, height: '44px', borderRadius: '12px', border: '1.5px solid rgba(33,75,64,0.16)', bg: 'ws.card', paddingInline: '14px', fontFamily: 'wsDisplay', fontSize: '18px', fontWeight: 'semibold', color: 'ws.jadeInk', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const saveBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '12px', border: 'none', bg: 'ws.sakuraDark', color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _hover: { bg: 'ws.sakura' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' }, _disabled: { opacity: 0.45, cursor: 'not-allowed' } });
 const cancelBtn = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '12px', border: 'none', bg: 'ws.sable', color: 'ws.jadeInk', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', _hover: { bg: 'ws.sableHover' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const errText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', marginTop: '8px' });
 
 const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'ws.eyebrow', margin: '0 6px 7px' });
-const card = css({ listStyle: 'none', margin: 0, padding: 0, bg: 'white', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
+const card = css({ listStyle: 'none', margin: 0, padding: 0, bg: 'ws.card', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
 const dangerWrap = css({ marginTop: '6px' });
 
-const signInCard = css({ bg: 'white', borderRadius: '20px', padding: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 12px 26px rgba(33,75,64,0.09)', textAlign: 'center' });
+const signInCard = css({ bg: 'ws.card', borderRadius: '20px', padding: '22px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 12px 26px rgba(33,75,64,0.09)', textAlign: 'center' });
 const signInLede = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'semibold', color: 'ws.khaki', marginTop: '8px', marginBottom: '16px' });
 const signInDisclosure = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki', lineHeight: '1.45', marginTop: '14px', marginBottom: 0 });
 const groupNote = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, margin: '7px 6px 0' });

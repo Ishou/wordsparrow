@@ -63,7 +63,7 @@ const heroSub = css({ fontFamily: 'wsUi', fontSize: '13.5px', fontWeight: 'bold'
 // Factual framing (ADR-0080): the game is free; the subscription unlocks Accès complet. No donation/pressure copy.
 const ethos = css({ bg: 'ws.jade', borderRadius: '13px', padding: '11px 13px', fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'bold', color: 'ws.jadeInk', lineHeight: '1.4' });
 
-const planCard = css({ bg: 'white', borderRadius: '18px', padding: '16px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)', display: 'flex', flexDirection: 'column', gap: '11px' });
+const planCard = css({ bg: 'ws.card', borderRadius: '18px', padding: '16px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)', display: 'flex', flexDirection: 'column', gap: '11px' });
 const planComplet = css({ border: '1.6px solid token(colors.ws.jade)' });
 const planHead = css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' });
 const planName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
@@ -73,7 +73,7 @@ const featRow = css({ display: 'flex', alignItems: 'center', gap: '9px', fontFam
 const tick = css({ flex: 'none', width: '20px', height: '20px', borderRadius: '50%', bg: 'ws.jade', color: 'ws.jadeInk', display: 'flex', alignItems: 'center', justifyContent: 'center' });
 
 const selector = css({ display: 'flex', flexDirection: 'column', gap: '8px' });
-const optRow = css({ display: 'flex', alignItems: 'center', gap: '11px', textAlign: 'left', width: '100%', bg: 'white', border: '1.6px solid #E6E0CC', borderRadius: '14px', padding: '12px 13px', cursor: 'pointer', fontFamily: 'wsUi', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const optRow = css({ display: 'flex', alignItems: 'center', gap: '11px', textAlign: 'left', width: '100%', bg: 'ws.card', border: '1.6px solid #E6E0CC', borderRadius: '14px', padding: '12px 13px', cursor: 'pointer', fontFamily: 'wsUi', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const optRowOn = css({ borderColor: 'token(colors.ws.sakura)', bg: 'ws.sakuraBlush', boxShadow: '0 4px 14px rgba(190,73,112,0.12)' });
 const radio = css({ flex: 'none', width: '20px', height: '20px', borderRadius: '50%', border: '2px solid token(colors.ws.khaki)', opacity: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' });
 const radioOn = css({ borderColor: 'token(colors.ws.sakuraDark)', opacity: 1, bg: 'ws.sakuraDark', color: 'white' });
@@ -90,7 +90,7 @@ const reassure = css({ display: 'flex', alignItems: 'center', justifyContent: 'c
 const reassureIcon = css({ flex: 'none', display: 'flex' });
 const errText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', margin: '2px 0 0', textAlign: 'center' });
 
-const subscribedCard = css({ bg: 'white', borderRadius: '18px', padding: '18px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'center' });
+const subscribedCard = css({ bg: 'ws.card', borderRadius: '18px', padding: '18px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'center' });
 const subscribedTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '19px', color: 'ws.jadeInk', margin: 0 });
 const subscribedBody = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.khaki', lineHeight: '1.4', margin: 0 });
 const manageLink = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '48px', borderRadius: '14px', bg: 'ws.jadeInk', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', textDecoration: 'none', _hover: { opacity: 0.92 }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });

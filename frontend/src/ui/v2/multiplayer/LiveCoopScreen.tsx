@@ -29,7 +29,7 @@ const stage = css({
   justifyContent: 'center',
   alignItems: 'center',
   bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)',
-  md: { bgImage: 'none', bg: '#9CCBB1', padding: '32px 24px' },
+  md: { bgImage: 'none', bg: 'var(--colors-ws-hero-flat)', padding: '32px 24px' },
   // Desktop: drop the surround — the board goes immersive on the full-bleed gradient.
   lg: { bgImage: 'linear-gradient(180deg, #CDE9DA, #BBE0CD)', bg: 'transparent', padding: 0, alignItems: 'stretch' },
 });

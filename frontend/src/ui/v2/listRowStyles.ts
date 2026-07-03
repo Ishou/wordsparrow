@@ -9,7 +9,7 @@ export const card = css({
   width: '100%',
   textAlign: 'left',
   textDecoration: 'none',
-  bg: 'white',
+  bg: 'ws.card',
   borderRadius: '16px',
   padding: '13px 14px',
   display: 'flex',

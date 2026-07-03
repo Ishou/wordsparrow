@@ -89,7 +89,7 @@ const cellProgress = css({ color: 'ws.jadeInk', border: 'none' });
 export function progressRingBackground(pct: number): string {
   return `radial-gradient(closest-side, var(--colors-ws-sakura-blush) 76%, transparent 77% 100%), conic-gradient(var(--colors-ws-sakura) calc(${pct} * 1%), rgba(190,73,112,0.22) 0)`;
 }
-const cellNew = css({ bg: 'white', color: 'ws.khaki', border: 'none' });
+const cellNew = css({ bg: 'ws.card', color: 'ws.khaki', border: 'none' });
 // Paywalled days render as one continuous range band per row (date-range-picker style), gold like the lock tile.
 const cellPaywalled = css({
   justifySelf: 'stretch',

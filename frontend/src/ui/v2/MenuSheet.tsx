@@ -23,7 +23,7 @@ const positioner = css({
 const sheet = css({
   width: '100%',
   maxWidth: '440px',
-  bg: 'white',
+  bg: 'ws.card',
   borderTopLeftRadius: '22px',
   borderTopRightRadius: '22px',
   padding: '14px 16px calc(18px + env(safe-area-inset-bottom))',

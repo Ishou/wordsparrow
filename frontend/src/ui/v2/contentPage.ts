@@ -20,7 +20,7 @@ export const lede = css({
 });
 
 export const contentCard = css({
-  bg: 'white',
+  bg: 'ws.card',
   borderRadius: '18px',
   padding: '16px 18px',
   boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)',

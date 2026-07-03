@@ -11,7 +11,7 @@ import { useBillingGate } from './useBillingGate';
 type Etat = 'free' | 'actif' | 'pending' | 'expire';
 
 const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'ws.eyebrow', margin: '0 6px 7px' });
-const cardWrap = css({ bg: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
+const cardWrap = css({ bg: 'ws.card', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
 const summary = css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '15px 15px 13px' });
 const markTile = css({ flex: 'none', width: '44px', height: '44px', borderRadius: '12px', bg: 'ws.sakuraBlush', color: 'ws.sakuraDark', display: 'flex', alignItems: 'center', justifyContent: 'center' });
 const sumMid = css({ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' });

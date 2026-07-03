@@ -24,19 +24,19 @@ export interface PhoneShellProps {
 const shell = css({
   // Cap to the viewport so the header pins and only the body scrolls (app-shell), at every width.
   height: '100dvh',
-  bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
+  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   fontFamily: 'wsUi',
   md: {
     bgImage: 'none',
-    bg: '#9CCBB1',
+    bg: 'var(--colors-ws-hero-flat)',
     justifyContent: 'center',
     padding: '40px 24px',
   },
   // Desktop: drop the surround — full-bleed gradient with a pinned top bar + scrollable content, matching home/play.
-  lg: { height: '100dvh', bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0, alignItems: 'stretch' },
+  lg: { height: '100dvh', bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0, alignItems: 'stretch' },
 });
 
 const frame = css({
@@ -46,7 +46,7 @@ const frame = css({
   minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
-  bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
+  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
   md: {
     flex: 'none',
     maxWidth: '460px',

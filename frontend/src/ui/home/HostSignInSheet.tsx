@@ -11,7 +11,7 @@ const positioner = css({ position: 'fixed', inset: 0, zIndex: 1001, display: 'fl
 const sheet = css({
   width: '100%',
   maxWidth: '440px',
-  bg: 'white',
+  bg: 'ws.card',
   borderTopLeftRadius: '22px',
   borderTopRightRadius: '22px',
   padding: '12px 18px calc(22px + env(safe-area-inset-bottom))',

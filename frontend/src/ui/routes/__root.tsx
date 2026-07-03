@@ -84,7 +84,7 @@ const errorPageStyles = css({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  bgImage: 'linear-gradient(180deg, #CDE9DA 0%, #BBE0CD 100%)',
+  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
   padding: '24px',
 });
 
