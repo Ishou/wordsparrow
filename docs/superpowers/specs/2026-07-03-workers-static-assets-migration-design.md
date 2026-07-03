@@ -69,10 +69,11 @@ same Worker instead of a separate mechanism.
 3. **PR 3 — cutover**: add the two `custom_domain` routes; Terraform removes the two
    `cloudflare_pages_domain` attachments (project stays); deploy a stub `_redirects`
    (`/* https://wordsparrow.io/:splat 301`) to the Pages project as its final deployment;
-   update the stale `CLAUDE.md` "Live:" line to wordsparrow.io; update
-   `docs/infra/topology.yaml` if it models the Pages node + `make diagrams`. Cutover is a
-   Cloudflare-internal flip (seconds). Verification: prod smoke (headers, h3, deep links,
-   Matomo/OTel beacons), `bliss-cb4.pages.dev/<any>` 301s to wordsparrow.io.
+   update `.github/workflows/lighthouse.yml`'s hardcoded `bliss-cb4.pages.dev` URL pattern
+   to wordsparrow.io; update `docs/infra/topology.yaml` if it models the Pages node +
+   `make diagrams`. Cutover is a Cloudflare-internal flip (seconds). Verification: prod
+   smoke (headers, h3, deep links, Matomo/OTel beacons), `bliss-cb4.pages.dev/<any>` 301s
+   to wordsparrow.io.
    Rollback: revert PR 3, `terraform apply` re-attaches the Pages domains, redeploy worker
    without routes.
 4. **Deferred issue (T+~1 month)**: delete the Pages project (TF) + remaining references.
@@ -90,6 +91,8 @@ same Worker instead of a separate mechanism.
 - SPA fallback behavior differences → caught by PR 2's deep-link verification before any
   domain moves.
 - Preview-URL shape change breaks a hardcoded assumption → grep for `pages.dev` in repo
-  during PR 2 (known: CLAUDE.md Live line, handled in PR 3).
+  during PR 2 (known: `.github/workflows/lighthouse.yml`'s hardcoded production URL
+  pattern, handled in PR 3; `terraform/outputs.tf` + `variables.tf` descriptions are
+  cosmetic-only, optional cleanup).
 - Custom-domain flip races DNS → routes use Cloudflare custom domains (CF manages the DNS
   records atomically); worst case is seconds of 522, rollback documented.

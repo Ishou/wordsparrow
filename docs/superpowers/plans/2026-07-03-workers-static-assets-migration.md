@@ -71,8 +71,12 @@ adding pinned `wrangler` devDependency.
 - `pnpm add -D wrangler@<current-4x>` in frontend so CI and local use one pinned version
   (`wrangler-action` gets `wranglerVersion` from the lockfile-installed version or pin the
   same version in the action input — pick ONE source of truth and say which in the PR body).
-- Grep `rg -n "pages.dev" --glob '!node_modules'` — expected hits: CLAUDE.md Live line
-  (handled in PR 3), terraform README, ADR-0004 (historical, leave). Anything else: report.
+- Grep `rg -n "pages.dev" --glob '!node_modules'` — expected hits: `terraform/outputs.tf`
+  + `terraform/variables.tf` (output/description text, cosmetic-only, optional cleanup),
+  `.github/workflows/lighthouse.yml` (hardcoded `bliss-cb4.pages.dev` URL pattern — a CI
+  gate; must be updated in PR 3, or it silently checks a dead redirect stub once cutover
+  happens), ADR-0004 (historical, leave). CLAUDE.md's "Live:" line already reads
+  `wordsparrow.io` — no edit needed there. Anything else: report.
 - **Verification (post-merge, orchestrator-run):** on `https://wordsparrow-frontend.<account>.workers.dev`:
   bundle serves + h3; `curl -sD-` shows the `_headers` security headers; deep link
   `/grilles` returns 200 with the SPA shell; open one test PR touching `frontend/**` →
@@ -85,9 +89,11 @@ adding pinned `wrangler` devDependency.
 **Files:** modify `frontend/wrangler.jsonc` (add routes); modify `terraform/cloudflare-pages-domain.tf`
 (remove both `cloudflare_pages_domain` resources; keep `cloudflare_pages_project`); create
 `frontend/pages-legacy-redirect/_redirects` (`/* https://wordsparrow.io/:splat 301`) +
-minimal `index.html` fallback; modify `CLAUDE.md` (Live: line → `https://wordsparrow.io`);
-check `docs/infra/topology.yaml` (if the Pages node/edges are modeled, update + `make diagrams`
-+ commit README.md — the drift gate arbitrates).
+minimal `index.html` fallback; modify `.github/workflows/lighthouse.yml` (hardcoded
+`bliss-cb4.pages.dev` URL pattern → `wordsparrow.io`, else Lighthouse checks a dead
+redirect stub for the grace month, then fails outright); check `docs/infra/topology.yaml`
+(if the Pages node/edges are modeled, update + `make diagrams` + commit README.md — the
+drift gate arbitrates).
 
 - wrangler.jsonc gains:
   ```jsonc
@@ -119,7 +125,7 @@ check `docs/infra/topology.yaml` (if the Pages node/edges are modeled, update + 
 ## Self-review notes
 
 Spec coverage: target-state config → PR 2/3; ownership split + amends ADR-0004 → PR 1;
-grace redirect + CLAUDE.md + topology → PR 3; deferred deletion → issue. Preview mechanism,
-token prerequisite, rollback all carried into PR bodies. No placeholders except the two
-explicitly implementer-resolved pins (compatibility_date, wrangler version/SHA — resolution
-instructions given inline).
+grace redirect + lighthouse.yml + topology → PR 3; deferred deletion → issue. Preview
+mechanism, token prerequisite, rollback all carried into PR bodies. No placeholders except
+the two explicitly implementer-resolved pins (compatibility_date, wrangler version/SHA —
+resolution instructions given inline).
