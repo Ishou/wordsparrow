@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted — hosting product amended by [ADR-0090](./0090-frontend-hosting-workers-static-assets.md) (Pages → Workers static assets); the deploy/promotion/rollback shape described here still applies.
 
 ## Context
 

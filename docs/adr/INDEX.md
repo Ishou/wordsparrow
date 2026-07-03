@@ -228,6 +228,10 @@ ADR-0089  terraform/cloudflare-cache-rules.tf        cloudflare_ruleset (http_re
 ADR-0089  grid/worker/**                             Purge-on-regen: exact-URL CF purge (/v1/puzzles/daily [+?date=]) after every generation run; failure logs, never fails the Job; Zone.Cache Purge-scoped token Secret
 ADR-0089  */api/src/main/kotlin/**/Module.kt         Timing-Allow-Origin: https://wordsparrow.io https://www.wordsparrow.io in DefaultHeaders (all five services)
 # ADR-0089: amends ADR-0007 §4 (DNS-only posture narrowed to WS hosts); daily cache policy = anon-only public,max-age=0,must-revalidate + s-maxage-to-UTC-midnight + ETag="<puzzleId>" (304), cookie ⇒ private,no-store; daily/list stays public,no-cache — never edge-cached (unbounded query variants vs exact-URL purge); regen propagates via ADR-0081 fresh-UUID ETag flip + edge purge
+ADR-0090  frontend/wrangler.jsonc                    Assets-only Worker owns name, SPA not_found_handling, preview_urls, custom-domain routes (routes added only at cutover); TF never owns the Worker
+ADR-0090  .github/workflows/deploy-frontend.yml      Publish via cloudflare/wrangler-action: `deploy` on main-push, `versions upload` + PR comment on PRs; build steps byte-for-byte; CI is the only path to production
+ADR-0090  terraform/cloudflare-pages*.tf             TF keeps zone-level resources + the Pages project (grace-period 301 to wordsparrow.io) until T+1-month decommission; cutover removes only the cloudflare_pages_domain attachments
+# ADR-0090: amends ADR-0004 (hosting: Cloudflare Pages → Workers static assets); deploy/promotion/rollback shape of ADR-0004 stands, only the hosting product changes
 ```
 
 ## Adding entries
