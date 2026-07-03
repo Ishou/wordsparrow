@@ -36,6 +36,16 @@ data class GridConstraints(
      * latency hit.
      */
     val lengthTwoPenalty: Double = 0.0,
+    /** Per-axis override of the seeded run-length cap for horizontal runs; null = legacy shared lTarget. */
+    val lTargetHorizontal: Int? = null,
+    /** Per-axis override of the seeded run-length cap for vertical runs; null = legacy shared lTarget. */
+    val lTargetVertical: Int? = null,
+    /** Max blacks [LayoutDistiller] may whiten on fresh seeds (0 = off); bounded so boards stay fillable. */
+    val distillBudget: Int = 0,
+    /** Number of long horizontal anchor runs [LayoutAnchorer] carves into fresh seeds (0 = off). */
+    val anchorCount: Int = 0,
+    /** Target length of carved anchor runs. */
+    val anchorLength: Int = 13,
 ) {
     init {
         require(width > 0 && height > 0) { "Grid dimensions must be positive" }
@@ -43,6 +53,8 @@ data class GridConstraints(
         require(themeLimits.values.all { it >= 0 }) { "theme caps must be non-negative" }
         require(longWordBias in 0.0..1.0) { "longWordBias must be in [0.0, 1.0]" }
         require(lengthTwoPenalty >= 0.0) { "lengthTwoPenalty must be non-negative" }
+        require(lTargetHorizontal == null || lTargetHorizontal > minWordLength) { "lTargetHorizontal must exceed minWordLength" }
+        require(lTargetVertical == null || lTargetVertical > minWordLength) { "lTargetVertical must exceed minWordLength" }
     }
 }
 

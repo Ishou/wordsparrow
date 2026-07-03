@@ -35,24 +35,27 @@ internal object BlackCellLayout {
         random: Random,
         lMinGood: Int = minLen,
         lengthTwoPenalty: Double = 0.0,
+        lTargetHorizontal: Int = lTarget,
+        lTargetVertical: Int = lTarget,
     ): CellArray {
         require(minLen >= 2) { "minLen must be ≥ 2, was $minLen" }
-        require(lTarget in minLen..lUseful) { "lTarget=$lTarget not in [minLen=$minLen, lUseful=$lUseful]" }
+        require(lTargetHorizontal in minLen..lUseful) { "lTargetHorizontal=$lTargetHorizontal not in [minLen=$minLen, lUseful=$lUseful]" }
+        require(lTargetVertical in minLen..lUseful) { "lTargetVertical=$lTargetVertical not in [minLen=$minLen, lUseful=$lUseful]" }
         require(blackRatio in 0.0..0.5) { "blackRatio $blackRatio out of [0.0, 0.5]" }
 
         val cells = CellArray(width, height)
         seedBoundarySkeleton(cells, width, height)
 
-        // Passes 1+2: cap long runs at lTarget by midpoint-splitting.
+        // Passes 1+2: cap long runs per axis by midpoint-splitting.
         repeat(8) {
             var changed = false
             for (r in 0 until height) {
-                if (capLongHorizontalRuns(cells, r, minLen, lTarget, lengthTwoPenalty, random)) {
+                if (capLongHorizontalRuns(cells, r, minLen, lTargetHorizontal, lengthTwoPenalty, random)) {
                     changed = true
                 }
             }
             for (c in 0 until width) {
-                if (capLongVerticalRuns(cells, c, minLen, lTarget, lengthTwoPenalty, random)) {
+                if (capLongVerticalRuns(cells, c, minLen, lTargetVertical, lengthTwoPenalty, random)) {
                     changed = true
                 }
             }

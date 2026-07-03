@@ -63,6 +63,8 @@ class GridGenerator(
         val bias = clampedBias(constraints.longWordBias)
         val biasedLTarget = lTargetFor(bias, lUseful, constraints.minWordLength)
         val lTarget = min(maxOf(GenerationKnobs.DEFAULT_L_TARGET, biasedLTarget), lUseful)
+        val lTargetH = (constraints.lTargetHorizontal ?: lTarget).coerceIn(constraints.minWordLength + 1, lUseful)
+        val lTargetV = (constraints.lTargetVertical ?: lTarget).coerceIn(constraints.minWordLength + 1, lUseful)
         val lMinGood = lMinGood(bias, lUseful, constraints.minWordLength)
         val effectiveBlackRatio = GenerationKnobs.DEFAULT_BLACK_RATIO * densityFactor(bias)
         val whitenP = whitenProbability(bias)
@@ -82,7 +84,10 @@ class GridGenerator(
                 random = random,
                 lMinGood = lMinGood,
                 lengthTwoPenalty = constraints.lengthTwoPenalty,
+                lTargetHorizontal = lTargetH,
+                lTargetVertical = lTargetV,
             )
+        if (constraints.distillBudget > 0) LayoutDistiller.distill(cells, constraints.minWordLength, lUseful, lex, constraints.distillBudget)
         metrics?.skeletonMs = (clock.nanoTime() - layoutStart) / NS_PER_MS
 
         val searchStart = clock.nanoTime()
@@ -103,6 +108,9 @@ class GridGenerator(
                         constraints.minWordLength,
                         lTarget,
                         lUseful,
+                        lTargetH = lTargetH,
+                        lTargetV = lTargetV,
+                        distillWith = if (constraints.distillBudget > 0) lex to constraints.distillBudget else null,
                         hotCells = emptyList(),
                         consecFails = consecFails,
                         random = random,
@@ -126,6 +134,9 @@ class GridGenerator(
                         constraints.minWordLength,
                         lTarget,
                         lUseful,
+                        lTargetH = lTargetH,
+                        lTargetV = lTargetV,
+                        distillWith = if (constraints.distillBudget > 0) lex to constraints.distillBudget else null,
                         hotCells = emptyList(),
                         consecFails = consecFails,
                         random = random,
@@ -173,6 +184,9 @@ class GridGenerator(
                     constraints.minWordLength,
                     lTarget,
                     lUseful,
+                    lTargetH = lTargetH,
+                    lTargetV = lTargetV,
+                    distillWith = if (constraints.distillBudget > 0) lex to constraints.distillBudget else null,
                     hotCells = hot,
                     consecFails = consecFails,
                     random = random,
@@ -196,6 +210,9 @@ class GridGenerator(
         minLen: Int,
         lTarget: Int,
         lUseful: Int,
+        lTargetH: Int = lTarget,
+        lTargetV: Int = lTarget,
+        distillWith: Pair<Lexicon, Int>? = null,
         hotCells: List<Pair<Int, Int>>,
         consecFails: Int,
         random: Random,
@@ -204,7 +221,8 @@ class GridGenerator(
         whitenP: Double,
         lengthTwoPenalty: Double,
     ): CellArray {
-        if (consecFails > 0 && consecFails % GenerationKnobs.CONSEC_RESEED == 0) {
+        // Distill mode never perturbs: blacken-perturbation would erode the distilled structure, so every retry is a fresh seed + distill.
+        if (distillWith != null || (consecFails > 0 && consecFails % GenerationKnobs.CONSEC_RESEED == 0)) {
             return BlackCellLayout.seed(
                 width = w,
                 height = h,
@@ -215,7 +233,9 @@ class GridGenerator(
                 random = random,
                 lMinGood = lMinGood,
                 lengthTwoPenalty = lengthTwoPenalty,
-            )
+                lTargetHorizontal = lTargetH,
+                lTargetVertical = lTargetV,
+            ).also { fresh -> distillWith?.let { LayoutDistiller.distill(fresh, minLen, lUseful, it.first, it.second) } }
         }
         BlackCellLayout.perturb(
             cells = cells,
