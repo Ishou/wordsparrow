@@ -1,13 +1,6 @@
 name: Deploy Frontend
 
-# Implements ADR-0004 §3 (GitHub Actions is the only deploy path) as amended
-# by ADR-0090 (Cloudflare Workers static assets via wrangler-action).
-#
-# - push to main      -> `wrangler deploy` (workers.dev only until the
-#                        ADR-0090 cutover PR adds custom-domain routes;
-#                        wordsparrow.io stays on Pages meanwhile)
-# - pull_request      -> `wrangler versions upload` -> preview URL upserted
-#                        as a sticky PR comment.
+# Implements ADR-0004 §3 (CI is the only deploy path) as amended by ADR-0090 (Workers static assets).
 #
 # Drafts are skipped to match the ADR-0001 §6a workflow's behavior and
 # avoid burning deploys on work-in-progress branches.
@@ -122,9 +115,7 @@ jobs:
 
       - name: Publish to Cloudflare Workers
         id: publish
-        # cloudflare/wrangler-action v4.0.0 (ADR-0090). No wranglerVersion
-        # input: the action reuses the wrangler pinned in frontend
-        # devDependencies, keeping the lockfile the single version source.
+        # wrangler-action v4.0.0 pinned by SHA (ADR-0090); the wrangler version comes from the frontend lockfile.
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
