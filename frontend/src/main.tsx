@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from '@/ui/App';
 import { createAppRouter } from '@/ui/router';
 import {
+  createDedupedPuzzleRepository,
   createHttpAuthClient,
   createHttpBillingClient,
   createHttpLobbyClient,
@@ -179,9 +180,11 @@ enableMocks()
   })
   .then(() => {
     const gridApiBaseUrl = import.meta.env.VITE_GRID_API_URL;
-    const puzzleRepository = createHttpPuzzleRepository({
-      baseUrl: gridApiBaseUrl,
-    });
+    const puzzleRepository = createDedupedPuzzleRepository(
+      createHttpPuzzleRepository({ baseUrl: gridApiBaseUrl }),
+    );
+    // ADR-0089: prime the daily fetch pre-mount; loaders join the in-flight promise. Post-MSW-start so previews stay mocked.
+    void puzzleRepository.fetchDaily().catch(() => {});
     // Session id is retained for multiplayer presence; grid-api hints authenticate via cookie.
     const sessionId = getOrCreateSessionId();
     const puzzleSolver = createHttpPuzzleSolver({
