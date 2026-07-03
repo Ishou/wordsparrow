@@ -14,3 +14,4 @@ export type {
   ValidationResult,
 } from './PuzzleSolver';
 export { HintRequestError } from './PuzzleSolver';
+export { fetchAllDailySummaries } from './fetchAllDailySummaries';
