@@ -22,6 +22,12 @@ on:
       - 'frontend/**'
       - 'terraform/**'
       - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
+    inputs:
+      legacy_redirect:
+        description: 'Publish the pages-legacy-redirect 301 stub to the legacy Pages project instead of deploying the Worker (ADR-0090 §3)'
+        type: boolean
+        default: false
 
 # A second push to the same branch cancels the in-flight deploy of that
 # branch — the newer commit wins. `cancel-in-progress` is safe here
@@ -37,7 +43,7 @@ permissions:
 
 jobs:
   deploy:
-    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.legacy_redirect) && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -155,7 +161,8 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
         run: |
           mkdir -p lighthouse-handoff
-          if [ "$EVENT" = "push" ]; then
+          # Any non-PR deploy targets production, so audit the production host.
+          if [ "$EVENT" != "pull_request" ]; then
             URL="https://wordsparrow.io"
           else
             URL="$DEPLOY_URL"
@@ -164,6 +171,65 @@ jobs:
             echo "url=$URL"
             echo "event=$EVENT"
             echo "pr=$PR_NUMBER"
+            echo "sha=$COMMIT_SHA"
+          } > lighthouse-handoff/handoff.txt
+
+      - name: Upload Lighthouse handoff artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-handoff
+          path: lighthouse-handoff/handoff.txt
+          retention-days: 1
+
+  legacy-redirect:
+    # ADR-0090 §3 grace-period 301 stub, published through CI per ADR-0004 §3 (never from a shell).
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.legacy_redirect }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up pnpm
+        # pnpm/action-setup v4.0.0
+        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
+        with:
+          version: '11.7.0'
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish legacy redirect stub to Pages
+        # wrangler warns that wrangler.jsonc is not a Pages config and ignores it; the stub dir is the deploy source.
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: frontend
+          command: pages deploy pages-legacy-redirect --project-name=bliss --branch=main
+
+      - name: Emit Lighthouse handoff artifact
+        # lighthouse.yml consumes a handoff from every Deploy Frontend run; production is the audit target here.
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p lighthouse-handoff
+          {
+            echo "url=https://wordsparrow.io"
+            echo "event=workflow_dispatch"
+            echo "pr="
             echo "sha=$COMMIT_SHA"
           } > lighthouse-handoff/handoff.txt
 
