@@ -31,6 +31,9 @@ allowBuilds:
   msw: true
   protobufjs: true
   unrs-resolver: true
+  # sharp + workerd are wrangler transitive natives; deploy/versions-upload never executes them, so skip their postinstall downloads.
+  sharp: false
+  workerd: false
 
 # Supply-chain cooldown (ADR-0071): refuse any dependency version younger than 24h, at resolution AND frozen-lockfile verify, transitive included.
 minimumReleaseAge: 1440
