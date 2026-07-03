@@ -23,7 +23,7 @@ const banner = css({
   gap: '12px',
   paddingBlock: '12px',
   paddingInline: '16px',
-  bg: 'rgba(255,255,255,0.88)',
+  bg: 'ws.frost',
   backdropFilter: 'blur(14px)',
   borderRadius: '16px',
   border: '0.5px solid rgba(33,75,64,0.12)',

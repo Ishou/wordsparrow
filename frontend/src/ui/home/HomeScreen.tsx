@@ -117,7 +117,7 @@ const joinInput = css({
   height: '48px',
   borderRadius: '13px',
   border: '1.5px solid rgba(33,75,64,0.12)',
-  bg: 'rgba(255,255,255,0.62)',
+  bg: 'ws.glass',
   paddingLeft: '16px',
   paddingRight: '44px',
   fontFamily: 'wsUi',
@@ -180,7 +180,7 @@ function dayDotStyle(today: boolean, status: DayStatus, pct = 0): CSSProperties 
   if (status === 'solved') return { background: 'var(--colors-ws-sakura-dark)', color: 'white', border: today ? '2px solid var(--colors-ws-sakura-dark)' : undefined };
   if (status === 'started') return { background: progressRingBackground(pct), color: 'var(--colors-ws-jade-ink)' };
   if (today) return { background: 'transparent', border: '2px solid var(--colors-ws-sakura)', color: 'var(--colors-ws-jade-ink)' };
-  return { background: 'white', color: 'var(--colors-ws-khaki)' };
+  return { background: 'var(--colors-ws-card)', color: 'var(--colors-ws-khaki)' };
 }
 
 export function HomeScreen({

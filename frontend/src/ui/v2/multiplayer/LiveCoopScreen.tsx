@@ -60,9 +60,9 @@ const headerBar = css({
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
-  bg: 'rgba(255,255,255,0.62)',
+  bg: 'ws.glass',
   backdropFilter: 'blur(10px)',
-  border: '0.5px solid rgba(255,255,255,0.7)',
+  border: '0.5px solid token(colors.ws.glassBorder)',
   borderRadius: '999px',
   padding: '5px 8px',
   boxShadow: '0 2px 12px rgba(33,75,64,0.14)',
@@ -85,7 +85,7 @@ const iconBtn = css({
   _active: { background: 'rgba(33,75,64,0.08)' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
   // Desktop: frosted circle button matching the home top bar's menu button.
-  lg: { width: '44px', height: '44px', background: 'rgba(255,255,255,0.62)', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', fontSize: '20px', _hover: { background: 'rgba(255,255,255,0.82)' } },
+  lg: { width: '44px', height: '44px', background: 'ws.glass', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', fontSize: '20px', _hover: { background: 'ws.glassHover' } },
 });
 const headerSpacer = css({ flex: 1 });
 const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%' } });

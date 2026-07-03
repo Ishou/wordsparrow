@@ -33,10 +33,10 @@ const primaryCss = css({
 const secondaryCss = css({
   height: '50px',
   fontSize: '16px',
-  bg: 'rgba(255,255,255,0.62)',
+  bg: 'ws.glass',
   color: 'ws.jadeInk',
   boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
-  _hover: { bg: 'rgba(255,255,255,0.92)', transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(33,75,64,0.14)' },
+  _hover: { bg: 'ws.glassBright', transform: 'translateY(-1px)', boxShadow: '0 6px 16px rgba(33,75,64,0.14)' },
   _active: { transform: 'translateY(1px)' },
   _disabled: { opacity: 0.55 },
 });

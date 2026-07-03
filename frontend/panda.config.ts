@@ -231,6 +231,17 @@ export default defineConfig({
           statusLost: { value: { base: '#9A9A9A', _dark: '#9A9A9A' } },
           // Elevated card surface — was a bg:'white' literal before ADR-0088.
           card: { value: { base: '#FFFFFF', _dark: '#1C2D25' } },
+          // Frosted-glass surfaces over the hero backdrop (pills, round buttons, nav bars).
+          glass: { value: { base: 'rgba(255,255,255,0.62)', _dark: 'rgba(23,41,33,0.72)' } },
+          // Softer than glassHover — segmented-control off-state hover, byte-identical to its pre-tokenized light value.
+          glassSoft: { value: { base: 'rgba(255,255,255,0.55)', _dark: 'rgba(23,41,33,0.6)' } },
+          glassHover: { value: { base: 'rgba(255,255,255,0.82)', _dark: 'rgba(35,58,47,0.85)' } },
+          glassBright: { value: { base: 'rgba(255,255,255,0.92)', _dark: 'rgba(40,63,52,0.9)' } },
+          glassStrong: { value: { base: 'rgba(255,255,255,0.7)', _dark: 'rgba(23,41,33,0.8)' } },
+          glassBorder: { value: { base: 'rgba(255,255,255,0.7)', _dark: 'rgba(233,242,236,0.14)' } },
+          frost: { value: { base: 'rgba(255,255,255,0.9)', _dark: 'rgba(16,30,25,0.92)' } },
+          // Sticky top-bar frost — jade-tinted in light, deep night in dark; hides content sliding under.
+          barFrost: { value: { base: 'rgba(205,233,218,0.82)', _dark: 'rgba(14,31,26,0.86)' } },
           // Page hero gradient stops (consumed as CSS vars by the shells).
           heroTop: { value: { base: '#CDE9DA', _dark: '#0E1F1A' } },
           heroBottom: { value: { base: '#BBE0CD', _dark: '#14261F' } },

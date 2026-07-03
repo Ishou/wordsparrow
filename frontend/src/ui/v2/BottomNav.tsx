@@ -8,7 +8,7 @@ const nav = css({
   right: 0,
   bottom: 0,
   zIndex: 40,
-  bg: 'rgba(255,255,255,0.9)',
+  bg: 'ws.frost',
   backdropFilter: 'blur(14px)',
   borderTop: '0.5px solid rgba(33,75,64,0.10)',
   padding: '10px 28px calc(8px + env(safe-area-inset-bottom))',

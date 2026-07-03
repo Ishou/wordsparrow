@@ -20,9 +20,9 @@ const back = css({
   textDecoration: 'none',
   borderRadius: '999px',
   padding: '6px 12px 6px 8px',
-  bg: 'rgba(255,255,255,0.62)',
+  bg: 'ws.glass',
   boxShadow: '0 1px 2px rgba(33,75,64,0.08)',
-  _hover: { bg: 'rgba(255,255,255,0.82)' },
+  _hover: { bg: 'ws.glassHover' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 // Desktop clusters Retour + Lockup on the left (like the play header); phone keeps the lockup pinned right.

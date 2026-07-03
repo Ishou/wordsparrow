@@ -68,7 +68,7 @@ const skipBtn = css({
 const kbDock = css({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1100, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '6px 14px calc(8px + env(safe-area-inset-bottom))' });
 const kbInner = css({ width: '100%', maxWidth: '440px' });
 // Dismiss handle sits on the dock, above the keys (where a keyboard's collapse affordance belongs).
-const kbCollapse = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '46px', height: '24px', border: 'none', borderRadius: '999px', background: 'rgba(255,255,255,0.62)', backdropFilter: 'blur(10px)', boxShadow: '0 2px 12px rgba(33,75,64,0.14)', color: 'ws.jadeInk', cursor: 'pointer', _active: { opacity: 0.85 }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const kbCollapse = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '46px', height: '24px', border: 'none', borderRadius: '999px', background: 'ws.glass', backdropFilter: 'blur(10px)', boxShadow: '0 2px 12px rgba(33,75,64,0.14)', color: 'ws.jadeInk', cursor: 'pointer', _active: { opacity: 0.85 }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
 // Fisher–Yates: each batch is walked in order, so every word shows once before any repeat.
 function shuffle(words: ReadonlyArray<SampleWord>): SampleWord[] {
