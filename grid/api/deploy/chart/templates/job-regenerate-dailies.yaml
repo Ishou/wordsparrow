@@ -45,11 +45,13 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.edgePurge.secretName }}
                   key: zone-id
+                  optional: true
             - name: CLOUDFLARE_PURGE_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.edgePurge.secretName }}
                   key: token
+                  optional: true
             {{- end }}
           {{- with .Values.ensureDailies.resources }}
           resources: {{- toYaml . | nindent 12 }}
