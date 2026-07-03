@@ -25,7 +25,7 @@ export function HomeTeaser() {
 }
 
 // White card with a jade accent tile reads as intentional against the sable page; the pill CTA is the single clear affordance.
-const banner = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left', textDecoration: 'none', bg: 'white', border: '1.5px solid token(colors.ws.jade)', borderRadius: '16px', padding: '12px 13px', cursor: 'pointer', fontFamily: 'wsUi', boxShadow: '0 1px 2px rgba(33,75,64,0.06)', transition: 'background-color 120ms', _hover: { bg: 'rgba(196,229,211,0.28)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const banner = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left', textDecoration: 'none', bg: 'white', border: '1.5px solid token(colors.ws.jade)', borderRadius: '16px', padding: '12px 13px', cursor: 'pointer', fontFamily: 'wsUi', boxShadow: '0 1px 2px rgba(33,75,64,0.06)', transition: 'background-color 120ms', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const bannerTile = css({ flex: 'none', width: '38px', height: '38px', borderRadius: '11px', bg: 'ws.jade', color: 'ws.jadeInk', display: 'flex', alignItems: 'center', justifyContent: 'center' });
 const bannerMid = css({ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' });
 const bannerTitle = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '13.5px', color: 'ws.jadeInk' });
