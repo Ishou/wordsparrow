@@ -34,6 +34,9 @@ function fakeAuthClient(opts: {
     },
     async deleteMe() {},
     async logout() {},
+    async logoutAll() {},
+    async startEmailOtp() { return 'sent' as const; },
+    async verifyEmailOtp() { return 'ok' as const; },
     signInUrl(provider, returnTo) {
       return `https://auth.test/v1/auth/${provider}/login?return_to=${encodeURIComponent(returnTo)}`;
     },

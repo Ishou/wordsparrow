@@ -66,6 +66,9 @@ function stubAuth(): AuthClient {
     updateMe: vi.fn(),
     deleteMe: vi.fn(),
     logout: vi.fn(),
+    logoutAll: vi.fn(),
+    startEmailOtp: vi.fn(),
+    verifyEmailOtp: vi.fn(),
     signInUrl: (provider, returnTo) =>
       `https://auth.test/${provider}?return=${encodeURIComponent(returnTo)}`,
   };

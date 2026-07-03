@@ -37,5 +37,9 @@ export interface AuthClient {
   updateMe(displayName: string): Promise<void>; // throws InvalidDisplayNameError on 400
   deleteMe(): Promise<void>;
   logout(): Promise<void>;
+  logoutAll(): Promise<void>; // revoke every other session; caller stays signed in
+  // Email-OTP passwordless sign-in (ADR-0091). Both calls set the challenge/session cookies via `credentials: 'include'`.
+  startEmailOtp(email: string): Promise<'sent' | 'rate_limited' | 'invalid'>;
+  verifyEmailOtp(email: string, code: string): Promise<'ok' | 'invalid'>;
   signInUrl(provider: 'google' | 'apple', returnTo: string): string;
 }
