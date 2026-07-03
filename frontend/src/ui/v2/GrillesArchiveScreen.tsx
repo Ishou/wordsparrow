@@ -43,10 +43,10 @@ const title = css({
 
 const tabBar = css({ marginBottom: '18px' });
 
-// Desktop: the title + tabs pin while the body scrolls; paddingRight matches the body's so tabs stay aligned above the scrollbar.
-const head = css({ lg: { flex: 'none', paddingRight: '16px' } });
-// Desktop: the body is its own scroll container (one scrollbar); paddingRight keeps content off the scrollbar gutter.
-const scrollArea = css({ lg: { flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '40px', paddingRight: '16px', scrollbarGutter: 'stable' } });
+// The title + tabs pin at every width while the tab body scrolls; desktop paddingRight matches the body's so tabs stay aligned above the scrollbar.
+const head = css({ flex: 'none', lg: { paddingRight: '16px' } });
+// The tab body is the one scroll container; mobile carries the fixed-BottomNav inset the shell dropped (fillBody).
+const scrollArea = css({ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)', lg: { paddingBottom: '40px', paddingRight: '16px', scrollbarGutter: 'stable' } });
 
 const list = css({ listStyle: 'none', margin: 0, padding: 0 });
 // The whole row is the tap target — a quiet chevron is the only affordance, so primaries are reserved for the empty state.
