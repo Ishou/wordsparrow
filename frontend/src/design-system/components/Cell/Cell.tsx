@@ -48,6 +48,9 @@ const byState = {
     bg: 'ws.sakura',
     color: 'white',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 0 2px token(colors.ws.sakuraDark), 0 4px 0 0 #A84362, 0 4px 6px -3px rgba(33,75,64,0.24)',
+    _dark: {
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 2px token(colors.ws.sakuraDark), 0 4px 0 0 #7E3149, 0 4px 6px -3px rgba(0,0,0,0.4)',
+    },
   }),
 } as const;
 
