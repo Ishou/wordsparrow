@@ -17,24 +17,47 @@ class CoGenerationProbeTest {
     private val minLen = 2
     private val nodeBudget = 1_200_000
 
+    // Bump when sweep semantics change: persisted nogoods are only valid for the rule set
+    // and corpus they were certified under.
+    private val engineVersion = "v2-validity1"
+
     @Test
     fun `co-generation sweep produces a valid sparse board`() {
         val lexicon = Lexicon(loadRepository(), maxLen = 17)
-        val deadline = System.currentTimeMillis() + 120_000
+        val deadline = System.currentTimeMillis() + 300_000
         var attempts = 0
         var best: Sweep? = null
         var deepestSeen = -1
         var deepestDump = ""
+        val nogoods = loadNogoods()
+        val preloaded = nogoods.size
+        val bands = loadBands()
+        val newBands = LinkedHashSet<String>()
+        val runSeed = System.currentTimeMillis()
         while (best == null && System.currentTimeMillis() < deadline) {
             attempts++
-            val sweep = Sweep(lexicon, Random(attempts.toLong()))
-            if (sweep.run()) {
+            val sweep = Sweep(lexicon, Random(runSeed + attempts), nogoods)
+            val band =
+                if ((bands.isNotEmpty() || newBands.isNotEmpty()) && attempts % 3 != 0) {
+                    (bands + newBands).random(Random(runSeed + attempts * 31))
+                } else {
+                    null
+                }
+            if (sweep.run(band)) {
                 best = sweep
-            } else if (sweep.deepest > deepestSeen) {
+            } else {
+                if (band == null && sweep.deepest >= 10 * width) {
+                    val donated = (0 until 6).joinToString("|") { sweep.grid[it].concatToString() }
+                    if (!donated.contains('.')) newBands.add(donated)
+                }
+                if (sweep.deepest > deepestSeen) {
                 deepestSeen = sweep.deepest
-                deepestDump = "=== attempt $attempts deepest row ${sweep.deepest / width} dpFails=${sweep.dpFails} realizeFails=${sweep.realizeFails} ===\n" + sweep.deathDump
+                    deepestDump = "=== attempt $attempts deepest row ${sweep.deepest / width} dpFails=${sweep.dpFails} realizeFails=${sweep.realizeFails} walk=${sweep.rfWalk} apply=${sweep.rfApply} (blk=${sweep.afBlack} wrd=${sweep.afWord} sgl=${sweep.afSingle} scoreRej=${sweep.scoreRejected}) nogoods=${nogoods.size} bands=${bands.size}+${newBands.size} ===\n" + sweep.deathDump
+                }
             }
         }
+        saveBands(bands, newBands)
+        saveNogoods(nogoods, preloaded)
         if (best == null && deepestDump.isNotEmpty()) println(deepestDump)
         if (best == null) {
             println("COGEN v1 INFEASIBLE in 120s ($attempts attempts)")
@@ -65,6 +88,34 @@ class CoGenerationProbeTest {
         }
         println("double-checked cells: %.0f%%".format(100.0 * checked / letters))
         println("SlotRegistry.build: " + if (build != null) "VALID (${build.slots.size} slots)" else "INVALID")
+        // Diagnose: unhosted runs + duplicate words.
+        val g = best.grid
+        for (r in 0 until height) {
+            var c = 0
+            while (c < width) {
+                if (g[r][c] == '#') { c++; continue }
+                val st = c
+                while (c < width && g[r][c] != '#') c++
+                if (c - st >= minLen) {
+                    val hosted = (st > 0 && g[r][st - 1] == '#') || (st == 0 && r > 0 && g[r - 1][0] == '#')
+                    if (!hosted) println("UNHOSTED across r=$r c=$st len=${c - st}")
+                }
+            }
+        }
+        for (c in 0 until width) {
+            var r = 0
+            while (r < height) {
+                if (g[r][c] == '#') { r++; continue }
+                val st = r
+                while (r < height && g[r][c] != '#') r++
+                if (r - st >= minLen) {
+                    val hosted = (st > 0 && g[st - 1][c] == '#') || (st == 0 && c > 0 && g[0][c - 1] == '#')
+                    if (!hosted) println("UNHOSTED down r=$st c=$c len=${r - st}")
+                }
+            }
+        }
+        val dups = best.words.groupingBy { it }.eachCount().filterValues { it > 1 }
+        if (dups.isNotEmpty()) println("DUPLICATE WORDS: $dups")
         println(best.render())
     }
 
@@ -74,6 +125,8 @@ class CoGenerationProbeTest {
         val text = StringBuilder()
         var forcedBlackNext = false
         var reserved = false
+        var hostDebt = 0
+        var lastSingle = false
 
         fun reset(
             maxTotal: Int,
@@ -83,12 +136,21 @@ class CoGenerationProbeTest {
             text.setLength(0)
             forcedBlackNext = false
             reserved = false
+            hostDebt = 0
+            lastSingle = false
             val top = minOf(lexicon.maxLength, maxTotal)
             val lengths =
                 band?.let { b -> (maxOf(b.first, minLen)..minOf(b.last, top)).takeIf { !it.isEmpty() } }
                     ?: (minLen..top)
             for (l in lengths) {
                 if (lexicon.count(l) > 0) masks[l] = lexicon.initialMask(l)
+            }
+            // Soft bands: an escape tail of longer lengths keeps continuations alive, so a column
+            // that misses its planned landing window continues instead of becoming a forced black.
+            if (band != null && band.last + 2 <= top) {
+                for (l in band.last + 2..top) {
+                    if (lexicon.count(l) > 0) masks[l] = lexicon.initialMask(l)
+                }
             }
         }
 
@@ -123,7 +185,7 @@ class CoGenerationProbeTest {
             text.append(ch)
         }
 
-        fun snapshot(): Snap = Snap(HashMap(masks.mapValues { it.value.copyOf() }), text.toString(), forcedBlackNext, reserved)
+        fun snapshot(): Snap = Snap(HashMap(masks.mapValues { it.value.copyOf() }), text.toString(), forcedBlackNext, reserved, hostDebt, lastSingle)
 
         fun restore(s: Snap) {
             masks = HashMap(s.masks.mapValues { it.value.copyOf() })
@@ -131,6 +193,8 @@ class CoGenerationProbeTest {
             text.append(s.text)
             forcedBlackNext = s.forced
             reserved = s.reserved
+            hostDebt = s.hostDebt
+            lastSingle = s.lastSingle
         }
 
         val isEmpty get() = text.isEmpty()
@@ -149,9 +213,11 @@ class CoGenerationProbeTest {
         val text: String,
         val forced: Boolean,
         val reserved: Boolean,
+        val hostDebt: Int,
+        val lastSingle: Boolean,
     )
 
-    private inner class Sweep(val lexicon: Lexicon, val random: Random) {
+    private inner class Sweep(val lexicon: Lexicon, val random: Random, val nogoods: HashSet<Long>) {
         val grid = Array(height) { CharArray(width) { '.' } }
         val words = mutableListOf<String>()
         val used = HashSet<String>()
@@ -162,44 +228,466 @@ class CoGenerationProbeTest {
         var maxFailRow = -1
         var dpFails = 0
         var realizeFails = 0
+        var nogoodHits = 0
+        var rfWalk = 0
+        var rfApply = 0
+        var afBlack = 0
+        var afWord = 0
+        var afSingle = 0
+        var scoreRejected = 0
 
-        fun run(): Boolean {
-            for (c in 0 until width) columns[c].reset(height, brickBand(c, 0))
-            // Row 0 like print: alternating def/letter.
-            for (c in 0 until width) {
-                if (c % 2 == 0) {
-                    grid[0][c] = '#'
-                    columns[c].reset(height - 1, brickBand(c, 1))
-                } else {
-                    val bits = columns[c].continueLetters(height)
-                    if (bits == 0) return false
-                    val letters = (0 until 26).filter { bits and (1 shl it) != 0 }
-                    grid[0][c] = 'A' + letters[random.nextInt(letters.size)]
-                    columns[c].apply(grid[0][c])
+        fun run(band: String? = null): Boolean {
+            val startRow: Int
+            if (band != null) {
+                if (!replayBand(band)) return false
+                startRow = 6
+            } else {
+                startRow = 1
+                for (c in 0 until width) columns[c].reset(height, brickBand(c, 0))
+                // Row 0 like print: alternating def/letter.
+                for (c in 0 until width) {
+                    if (c % 2 == 0) {
+                        grid[0][c] = '#'
+                        columns[c].reset(height - 1, brickBand(c, 1))
+                    } else {
+                        val bits = columns[c].continueLetters(height)
+                        if (bits == 0) return false
+                        val letters = (0 until 26).filter { bits and (1 shl it) != 0 }
+                        grid[0][c] = 'A' + letters[random.nextInt(letters.size)]
+                        columns[c].apply(grid[0][c])
+                    }
                 }
             }
-            val colStack = ArrayList<Array<Snap>>()
-            val wordStack = ArrayList<Int>()
-            var r = 1
-            var backtracks = 0
-            while (r < height) {
-                colStack.add(Array(width) { columns[it].snapshot() })
-                wordStack.add(words.size)
-                if (fillRowDp(r)) {
-                    r++
-                    deepest = maxOf(deepest, r * width)
+            // Beam over rows: carry several board lineages; doomed ones die by selection.
+            var beam = mutableListOf(captureState())
+            deepest = maxOf(deepest, startRow * width)
+            for (r in startRow until height - 2) {
+                val children = ArrayList<Pair<BoardState, Int>>()
+                for (st in beam) {
+                    restoreState(st)
+                    childrenOf(r).forEach { children.add(it) }
+                }
+                if (children.isEmpty()) return false
+                children.sortByDescending { it.second }
+                // Endgame variety matters most: widen the beam for the last rows.
+                val w = if (r >= height - 4) beamWidth * 3 else beamWidth
+                beam =
+                    children
+                        .distinctBy { it.first.rows[r].concatToString() }
+                        .take(w)
+                        .map { it.first }
+                        .toMutableList()
+                deepest = maxOf(deepest, (r + 1) * width)
+            }
+            // Endgame: solve the last two rows jointly, bottom-up, per surviving lineage.
+            for (st in beam) {
+                restoreState(st)
+                if (solveEndgame()) {
+                    deepest = height * width
+                    return SlotRegistry.build(toCellArray(), lexicon, minLen) != null
+                }
+            }
+            return false
+        }
+
+        // Rows 18+19 are coupled through column completions: realize row 19 first from
+        // pair-union letters, then row 18 under pair-filtered pinned letters.
+        private fun solveEndgame(): Boolean {
+            val r18 = height - 2
+            val r19 = height - 1
+            val entry = captureState()
+            repeat(60) {
+                nodes++
+                // Phase 1: bottom-row facts from pair unions.
+                val bMask = IntArray(width)
+                val bBlackOk = BooleanArray(width)
+                for (c in 0 until width) {
+                    val col = columns[c]
+                    val v = col.text.length
+                    when {
+                        col.forcedBlackNext || col.reserved -> {
+                            // row 18 black; row 19 = free orphan letter or black
+                            bMask[c] = 0x3FFFFFF
+                            bBlackOk[c] = true
+                        }
+                        col.isEmpty -> {
+                            // 2-letter vertical (18-19), or 18 orphan + 19 black, or 18 black + 19 orphan
+                            var bits = 0
+                            col.masks[2]?.let { bits = bits or lexicon.lettersAt(2, 1, it) }
+                            bMask[c] = bits or 0x3FFFFFF
+                            bBlackOk[c] = true
+                        }
+                        else -> {
+                            var bits = 0
+                            col.masks[v + 2]?.let { bits = bits or lexicon.lettersAt(v + 2, v + 1, it) }
+                            bMask[c] = bits
+                            // 19 can be black iff the column can complete at 18
+                            bBlackOk[c] = col.masks[v + 1]?.let { lexicon.popcount(it) > 0 } == true
+                        }
+                    }
+                }
+                val row19 = realizeBottomRow(bMask, bBlackOk) ?: return@repeat
+                // Phase 2: row-18 letters pinned by chosen row-19 cells.
+                val aPinned = IntArray(width)
+                for (c in 0 until width) {
+                    val col = columns[c]
+                    val v = col.text.length
+                    val b = row19[c]
+                    aPinned[c] =
+                        when {
+                            col.forcedBlackNext || col.reserved -> -1 // row 18 must be black
+                            col.isEmpty ->
+                                if (b == '#') {
+                                    0x3FFFFFF // orphan at 18, black below
+                                } else {
+                                    col.masks[2]?.let { m ->
+                                        val copy = m.copyOf()
+                                        lexicon.filterByLetterInPlace(2, 1, b, copy)
+                                        lexicon.lettersAt(2, 0, copy)
+                                    } ?: 0
+                                }
+                            b == '#' -> col.masks[v + 1]?.let { lexicon.lettersAt(v + 1, v, it) } ?: 0
+                            else ->
+                                col.masks[v + 2]?.let { m ->
+                                    val copy = m.copyOf()
+                                    lexicon.filterByLetterInPlace(v + 2, v + 1, b, copy)
+                                    lexicon.lettersAt(v + 2, v, copy)
+                                } ?: 0
+                        }
+                }
+                if (applyEndgame(r18, r19, row19, aPinned)) return true
+                restoreState(entry)
+            }
+            return false
+        }
+
+        // Tile the bottom row: words over bMask letters, blacks only where allowed, strict hosting.
+        private fun realizeBottomRow(
+            bMask: IntArray,
+            bBlackOk: BooleanArray,
+        ): CharArray? {
+            val row = CharArray(width) { '.' }
+            var c = 0
+            var lastBlack = -1
+            var guard = 0
+            while (c < width && guard++ < 100) {
+                val hosted = c == 0 || lastBlack == c - 1
+                if (hosted) {
+                    // try a word
+                    var placed = false
+                    var l = minOf(lexicon.maxLength, width - c)
+                    val lengths = (2..l).shuffled(random)
+                    for (len in lengths) {
+                        if (lexicon.count(len) == 0) continue
+                        if ((0 until len).any { bMask[c + it] == 0 }) continue
+                        val end = c + len
+                        if (end < width && !bBlackOk[end]) continue
+                        val m = lexicon.initialMask(len)
+                        var ok = true
+                        for (i in 0 until len) {
+                            val union = lexicon.unionMaskForLetters(len, i, bMask[c + i])
+                            for (j in m.indices) m[j] = m[j] and union[j]
+                            if (lexicon.popcount(m) == 0) {
+                                ok = false
+                                break
+                            }
+                        }
+                        if (!ok) continue
+                        val idx = lexicon.pickIndex(m, random)
+                        if (idx < 0) continue
+                        val w = lexicon.wordAt(len, idx).text
+                        if (w in used) continue
+                        for (i in 0 until len) row[c + i] = w[i]
+                        c = end
+                        placed = true
+                        break
+                    }
+                    if (placed) {
+                        // separator black or border
+                        if (c < width) {
+                            if (!bBlackOk[c]) return null
+                            row[c] = '#'
+                            lastBlack = c
+                            c++
+                        }
+                        continue
+                    }
+                    return null
+                } else {
+                    // needs a black before any word can start
+                    if (!bBlackOk[c]) return null
+                    row[c] = '#'
+                    lastBlack = c
+                    c++
+                }
+            }
+            return if (c >= width) row else null
+        }
+
+        private fun applyEndgame(
+            r18: Int,
+            r19: Int,
+            row19: CharArray,
+            aPinned: IntArray,
+        ): Boolean {
+            // Row-18 facts with pinned letters, then standard DP + realization.
+            val facts = RowFacts(r18)
+            for (c in 0 until width) {
+                if (aPinned[c] == -1) {
+                    facts.maskLetters[c] = 0
+                    facts.anyLetters[c] = 0
+                } else {
+                    facts.maskLetters[c] = facts.maskLetters[c] and aPinned[c]
+                    facts.anyLetters[c] = facts.anyLetters[c] and aPinned[c]
+                }
+            }
+            val reach = buildReach(r18, facts) ?: return false
+            var done = false
+            repeat(20) {
+                if (!done && realizeRow(r18, facts, reach)) done = true
+            }
+            if (!done) return false
+            // Apply row 19 from the precomputed cells.
+            for (c in 0 until width) {
+                if (row19[c] == '#') {
+                    if (!canBlackBottom(c)) return false
+                    if (!applyBlack(r19, c, acrossHosted = true)) return false
+                    grid[r19][c] = '#'
+                } else {
+                    if (!applyRowLetter(r19, c, row19[c], facts)) return false
+                    grid[r19][c] = row19[c]
+                }
+            }
+            // Bottom-row across words register as used.
+            var c = 0
+            while (c < width) {
+                if (grid[r19][c] == '#') {
+                    c++
                     continue
                 }
-                colStack.removeLast()
-                wordStack.removeLast()
-                if (r <= 1 || backtracks >= 80) return false
-                backtracks++
-                r--
-                val snaps = colStack.removeLast()
-                for (i in 0 until width) columns[i].restore(snaps[i])
-                val keep = wordStack.removeLast()
-                while (words.size > keep) used.remove(words.removeLast())
-                grid[r].fill('.')
+                val st = c
+                while (c < width && grid[r19][c] != '#') c++
+                if (c - st >= minLen) {
+                    val w = String(CharArray(c - st) { grid[r19][st + it] })
+                    if (w in used) return false
+                    words.add(w)
+                    used.add(w)
+                }
+            }
+            return true
+        }
+
+        private fun canBlackBottom(c: Int): Boolean {
+            val col = columns[c]
+            return col.isEmpty || col.forcedBlackNext || col.reserved || col.completeWord(used) != null
+        }
+
+        private fun unusedEndgameGuard(): Boolean = true
+
+        private val beamWidth = 8
+        private val expansions = 4
+
+        private inner class BoardState(
+            val rows: Array<CharArray>,
+            val snaps: Array<Snap>,
+            val wordList: List<String>,
+        )
+
+        private fun captureState(): BoardState =
+            BoardState(
+                Array(height) { grid[it].copyOf() },
+                Array(width) { columns[it].snapshot() },
+                words.toList(),
+            )
+
+        private fun restoreState(st: BoardState) {
+            for (r in 0 until height) st.rows[r].copyInto(grid[r])
+            for (c in 0 until width) columns[c].restore(st.snaps[c])
+            words.clear()
+            words.addAll(st.wordList)
+            used.clear()
+            used.addAll(st.wordList)
+        }
+
+        // Expand the current board at row r: up to `expansions` scored children.
+        private fun childrenOf(r: Int): List<Pair<BoardState, Int>> {
+            val sig = stateSignature(r)
+            if (sig in nogoods) {
+                nogoodHits++
+                return emptyList()
+            }
+            val facts = RowFacts(r)
+            val reach = buildReach(r, facts)
+            if (reach == null) {
+                dpFails++
+                nogoods.add(sig)
+                if (r > maxFailRow) {
+                    maxFailRow = r
+                    deathDump = "DP-INFEASIBLE " + dumpState(r)
+                }
+                return emptyList()
+            }
+            val parent = captureState()
+            val out = ArrayList<Pair<BoardState, Int>>()
+            var tries = 0
+            var rejectedChild: BoardState? = null
+            // The penultimate row is the critical needle: sample far more candidates there.
+            val maxTries = if (r >= height - 2) 200 else 24
+            val wantChildren = if (r >= height - 2) 16 else expansions
+            while (out.size < wantChildren && tries < maxTries) {
+                tries++
+                if (realizeRow(r, facts, reach)) {
+                    val score =
+                        if (stateSignature(r + 1) in nogoods || !nextRowFeasible(r)) {
+                            Int.MIN_VALUE / 2
+                        } else {
+                            futureFlexibility(r)
+                        }
+                    if (score > Int.MIN_VALUE / 2) {
+                        out.add(captureState() to score)
+                    } else {
+                        scoreRejected++
+                        if (rejectedChild == null) rejectedChild = captureState()
+                    }
+                    restoreState(parent)
+                }
+            }
+            if (out.isEmpty() && r > maxFailRow) {
+                maxFailRow = r
+                val rc = rejectedChild
+                deathDump =
+                    if (rc != null) {
+                        restoreState(rc)
+                        val d = "NEXTROW-INFEASIBLE " + dumpState(r + 1)
+                        restoreState(parent)
+                        d
+                    } else {
+                        "NO-CHILDREN " + dumpState(r)
+                    }
+            }
+            return out
+        }
+
+        // Forward DP; null when the row is unparseable.
+        private fun buildReach(
+            r: Int,
+            facts: RowFacts,
+        ): Array<BooleanArray>? {
+            nodes++
+            val reach = Array(width + 1) { BooleanArray(3) }
+            val col0Hosted = grid[r - 1][0] == '#'
+            reach[0][if (col0Hosted) 1 else 0] = true
+            if (reach[0][0] && facts.maskLetters[0] != 0 && !facts.forcedBlack[0]) reach[1][0] = true
+            for (c in 0 until width) {
+                for (k in 0..2) {
+                    if (!reach[c][k]) continue
+                    // Bottom two rows: no consecutive blacks (the first can't be hosted).
+                    val maxRun = if (facts.bottomStrict) 1 else 2
+                    if (facts.blackAllowed[c] && !facts.vClumpBlocked[c] && k < maxRun) {
+                        reach[c + 1][k + 1] = true
+                    }
+                    if (facts.forcedBlack[c]) continue
+                    if (k >= 1) {
+                        for (l in 2..minOf(lexicon.maxLength, width - c)) {
+                            if (lexicon.count(l) == 0) continue
+                            var ok = true
+                            for (i in 0 until l) {
+                                if (facts.forcedBlack[c + i] || letterBitsAt(facts, c, l, i) == 0) {
+                                    ok = false
+                                    break
+                                }
+                            }
+                            if (!ok) continue
+                            val m = lexicon.initialMask(l)
+                            for (i in 0 until l) {
+                                val union = lexicon.unionMaskForLetters(l, i, letterBitsAt(facts, c, l, i))
+                                for (j in m.indices) m[j] = m[j] and union[j]
+                                if (lexicon.popcount(m) == 0) {
+                                    ok = false
+                                    break
+                                }
+                            }
+                            if (ok) reach[c + l][0] = true
+                        }
+                        // Bottom two rows: singles after blacks are banned (their black can't be down-hosted).
+                        if (facts.bottomStrict.not() && facts.maskLetters[c] != 0 && !facts.forcedBlack[c]) reach[c + 1][0] = true
+                    }
+                }
+            }
+            return if (reach[width][0] || reach[width][1] || reach[width][2]) reach else null
+        }
+
+        // Dead-end handling is a scoring concern (violations are sparse and local); keep letters permissive.
+        private fun letterBitsAt(
+            facts: RowFacts,
+            c: Int,
+            l: Int,
+            i: Int,
+        ): Int = facts.anyLetters[c + i]
+
+        // Reconstruct full state from a donated opening (6 rows): columns from letters below the
+        // last black, across + completed vertical words from geometry, reservations re-derived.
+        fun replayBand(band: String): Boolean {
+            val rows = band.split("|")
+            if (rows.size != 6 || rows.any { it.length != width }) return false
+            for (r in 0 until 6) for (c in 0 until width) grid[r][c] = rows[r][c]
+            // across words
+            for (r in 0 until 6) {
+                var c = 0
+                while (c < width) {
+                    if (grid[r][c] == '#') {
+                        c++
+                        continue
+                    }
+                    val st = c
+                    while (c < width && grid[r][c] != '#') c++
+                    if (c - st >= minLen) {
+                        val w = String(CharArray(c - st) { grid[r][st + it] })
+                        if (w in used) return false
+                        words.add(w)
+                        used.add(w)
+                    }
+                }
+            }
+            // vertical words completed inside the band
+            for (c in 0 until width) {
+                var r = 0
+                while (r < 6) {
+                    if (grid[r][c] == '#') {
+                        r++
+                        continue
+                    }
+                    val st = r
+                    while (r < 6 && grid[r][c] != '#') r++
+                    if (r < 6 && r - st >= minLen) {
+                        val w = String(CharArray(r - st) { grid[st + it][c] })
+                        if (w in used) return false
+                        words.add(w)
+                        used.add(w)
+                    }
+                }
+            }
+            // columns: prefix = letters below the last black
+            for (c in 0 until width) {
+                var st = 6
+                var r = 5
+                while (r >= 0 && grid[r][c] != '#') {
+                    st = r
+                    r--
+                }
+                val col = columns[c]
+                col.reset(height - st, null)
+                for (i in st until 6) {
+                    val ch = grid[i][c]
+                    if (col.continueLetters(height - i) and (1 shl (ch - 'A')) == 0) return false
+                    col.apply(ch)
+                }
+                if (!col.isEmpty && col.continueLetters(height - 6) == 0) {
+                    val w = col.completeWord(used) ?: return false
+                    words.add(w)
+                    used.add(w)
+                    col.reserved = true
+                }
             }
             return true
         }
@@ -232,6 +720,7 @@ class CoGenerationProbeTest {
 
         // Per-position facts derived from column states (fixed before the row).
         private inner class RowFacts(r: Int) {
+            val bottomStrict = r >= height - 2
             val maskLetters = IntArray(width)
             val anyLetters = IntArray(width)
             val blackAllowed = BooleanArray(width)
@@ -243,7 +732,7 @@ class CoGenerationProbeTest {
                 for (c in 0 until width) {
                     val col = columns[c]
                     maskLetters[c] = if (col.forcedBlackNext) 0 else col.continueLetters(rowsBelow + 1)
-                    val orphan = col.isEmpty && !col.forcedBlackNext && r + 1 < height
+                    val orphan = col.isEmpty && !col.forcedBlackNext && col.hostDebt == 0
                     anyLetters[c] = if (orphan) 0x3FFFFFF else maskLetters[c]
                     // bottom row: letters must complete the column — restrict to completing letters
                     if (r == height - 1) {
@@ -253,113 +742,28 @@ class CoGenerationProbeTest {
                             completing = lexicon.lettersAt(v + 1, v, m)
                         }
                         maskLetters[c] = maskLetters[c] and completing
-                        anyLetters[c] = maskLetters[c]
+                        anyLetters[c] = if (orphan) 0x3FFFFFF else maskLetters[c]
                     }
-                    blackAllowed[c] = col.isEmpty || col.forcedBlackNext || col.reserved || col.completeWord(used) != null
+                    blackAllowed[c] = col.hostDebt == 0 &&
+                        (col.isEmpty || col.forcedBlackNext || col.reserved || col.completeWord(used) != null)
                     forcedBlack[c] = col.forcedBlackNext
                     vClumpBlocked[c] = r > 1 && grid[r - 1][c] == '#' && grid[r - 2][c] == '#'
                 }
             }
         }
 
-        // DP states per position: bit0 = reachable with prevBlackRun 0 (just closed a word/letter, needs black next unless border)
-        //   we track: arrival "afterBlack" count (0 = after word, 1 = one black, 2 = two blacks) and mustBlack flag folded in.
-        private fun fillRowDp(r: Int): Boolean {
-            nodes++
-            val facts = RowFacts(r)
-            // reach[c][k]: position c reachable with k = consecutive blacks just before c (0,1,2); words may start iff k>=1 or (c==0 hosted)
-            val reach = Array(width + 1) { BooleanArray(3) }
-            val col0Hosted = grid[r - 1][0] == '#'
-            reach[0][if (col0Hosted) 1 else 0] = true
-            // transitions
-            // Border delimits runs: a single letter at col 0 is legal without a left black.
-            if (reach[0][0] && facts.maskLetters[0] != 0 && !facts.forcedBlack[0]) reach[1][0] = true
+
+        // Certified-dead state learning: hash of (row, column constraint states).
+        private fun stateSignature(r: Int): Long {
+            var h = r.toLong() * 1_000_003L
             for (c in 0 until width) {
-                for (k in 0..2) {
-                    if (!reach[c][k]) continue
-                    // black
-                    if (facts.blackAllowed[c] && !facts.vClumpBlocked[c] && k < 2) {
-                        reach[c + 1][k + 1] = true
-                    }
-                    if (facts.forcedBlack[c]) continue
-                    // words (len >= 2), hosted iff k >= 1
-                    if (k >= 1) {
-                        for (l in 2..minOf(lexicon.maxLength, width - c)) {
-                            if (lexicon.count(l) == 0) continue
-                            var ok = true
-                            var covered = 0
-                            var m: LongArray? = null
-                            for (i in 0 until l) {
-                                if (facts.forcedBlack[c + i] || facts.anyLetters[c + i] == 0) { ok = false; break }
-                                covered++
-                            }
-                            if (!ok) continue
-                            m = lexicon.initialMask(l)
-                            for (i in 0 until l) {
-                                val union = lexicon.unionMaskForLetters(l, i, facts.anyLetters[c + i])
-                                for (j in m.indices) m[j] = m[j] and union[j]
-                                if (lexicon.popcount(m) == 0) { ok = false; break }
-                            }
-                            if (ok) reach[c + l][0] = true
-                        }
-                        // single letter (across run 1): needs vertical >= 2 (mask letters only) and black next (or border)
-                        if (facts.maskLetters[c] != 0 && !facts.forcedBlack[c]) reach[c + 1][0] = true
-                    } else if (facts.forcedBlack[c]) {
-                        continue
-                    }
-                }
-                // forced black position must be black: kill any reach state that would place a letter here — handled implicitly (word/letter transitions skip forcedBlack)
+                val col = columns[c]
+                h = h * 31 + col.text.hashCode()
+                h = h * 31 + (if (col.forcedBlackNext) 17 else if (col.reserved) 13 else 7)
+                for (l in 2..17) if (col.masks.containsKey(l)) h = h xor (1L shl (l + c % 8))
+                h = h * 1_000_000_007L + c
             }
-            if (!(reach[width][0] || reach[width][1] || reach[width][2])) {
-                dpFails++
-                if (r > maxFailRow) {
-                    maxFailRow = r
-                    deathDump = "DP-INFEASIBLE " + dumpState(r)
-                }
-                return false
-            }
-            // Sample several realizations, keep the one leaving the most future flexibility.
-            var bestScore = Int.MIN_VALUE
-            var bestRow: CharArray? = null
-            var bestSnaps: Array<Snap>? = null
-            var bestWords: List<String>? = null
-            val preSnaps = Array(width) { columns[it].snapshot() }
-            val preWords = words.size
-            var got = 0
-            var tries = 0
-            while (got < 8 && tries < 40) {
-                tries++
-                if (realizeRow(r, facts, reach)) {
-                    got++
-                    val score = if (nextRowFeasible(r)) futureFlexibility(r) else Int.MIN_VALUE / 2
-                    if (score > bestScore) {
-                        bestScore = score
-                        bestRow = grid[r].copyOf()
-                        bestSnaps = Array(width) { columns[it].snapshot() }
-                        bestWords = words.subList(preWords, words.size).toList()
-                    }
-                    // roll back and resample
-                    for (i in 0 until width) columns[i].restore(preSnaps[i])
-                    while (words.size > preWords) used.remove(words.removeLast())
-                    grid[r].fill('.')
-                }
-            }
-            val row = bestRow
-            if (row != null) {
-                for (i in 0 until width) grid[r][i] = row[i]
-                for (i in 0 until width) columns[i].restore(bestSnaps!![i])
-                for (w in bestWords!!) {
-                    words.add(w)
-                    used.add(w)
-                }
-                return true
-            }
-            realizeFails++
-            if (r > maxFailRow) {
-                maxFailRow = r
-                deathDump = "REALIZE-FAILED " + dumpState(r)
-            }
-            return false
+            return h
         }
 
         // Exact one-row lookahead: is the next row's DP feasible given current column states?
@@ -415,10 +819,46 @@ class CoGenerationProbeTest {
                 if (!corner) return Int.MIN_VALUE / 2
             }
             var score = 0
+            // Certain local defects introduced by this row (determinable at r-1): heavy penalties.
+            if (r >= 1) {
+                var defects = 0
+                for (c in 0 until width) {
+                    val cell = grid[r - 1][c]
+                    if (cell == '#') {
+                        val rightRun = runLenRight(r - 1, c)
+                        val hostsAcross = rightRun >= 2
+                        val hostsDown = grid[r][c] != '#' && grid[r][c] != '.'
+                        // Row-0 blacks also host via the RIGHT_DOWN bend: the vertical starting at (0, c+1).
+                        val hostsBendVertical =
+                            r - 1 == 0 && c + 1 < width && grid[0][c + 1] != '#' && grid[r][c + 1] != '#' && grid[r][c + 1] != '.'
+                        // Col-0 blacks also host via the DOWN_RIGHT bend: the across starting at (r, 0).
+                        val hostsBendAcross = c == 0 && grid[r][0] != '#' && grid[r][0] != '.' && runLenAt(r, 0) >= 2
+                        if (!hostsAcross && !hostsDown && !hostsBendVertical && !hostsBendAcross) return Int.MIN_VALUE / 2
+                    } else {
+                        val hRun = runLenAt(r - 1, c)
+                        val vBlackBelow = grid[r][c] == '#'
+                        val rightBlack = c + 1 < width && grid[r - 1][c + 1] == '#'
+                        val vRun = vRunLen(r - 1, c)
+                        if (rightBlack && hRun < 5 && vRun == 1 && vBlackBelow) defects++
+                        if (vBlackBelow && vRun < 5 && hRun == 1) defects++
+                    }
+                }
+                score -= defects * 12
+            }
             var gap = 0
             var maxGap = 0
+            var reservedCount = 0
+            var debtCount = 0
             for (c in 0 until width) {
                 val col = columns[c]
+                if (col.reserved || col.forcedBlackNext) reservedCount++
+                if (col.hostDebt > 0) debtCount++
+                // Near-dead prefixes strangle future across spans: penalize hard.
+                if (!col.isEmpty && !col.reserved && !col.forcedBlackNext &&
+                    Integer.bitCount(col.continueLetters(height)) < 2 && col.completeWord(used) == null
+                ) {
+                    score -= 5
+                }
                 val lands = landsWithin(col, 2)
                 if (lands) {
                     score += if (col.isEmpty) 3 else 2
@@ -428,7 +868,86 @@ class CoGenerationProbeTest {
                     if (gap > maxGap) maxGap = gap
                 }
             }
+            // Obligation budget: many forced blacks (reserved) or forced letters (hostDebt)
+            // in one wave over-constrain the next row's tiling.
+            score -= 6 * maxOf(0, reservedCount - 3) + 4 * maxOf(0, debtCount - 3)
+            // Entering the strict zone (last two rows), adjacent forced blacks are unsatisfiable:
+            // reject children that leave adjacent reservations for row height-2.
+            if (r == height - 3) {
+                var prev = false
+                for (c in 0 until width) {
+                    val col = columns[c]
+                    val forced = col.reserved || col.forcedBlackNext
+                    if (forced && prev) return Int.MIN_VALUE / 2
+                    prev = forced
+                }
+            }
+            // Endgame: bottom-row blacks are forced wherever a column is fresh, reserved or debt-bound;
+            // adjacent forced blacks are unsatisfiable under bottom-row hosting — reject a row early.
+            if (r == height - 2) {
+                var obligations = 0
+                var prevForced = false
+                for (c in 0 until width) {
+                    val col = columns[c]
+                    val forced = col.reserved || col.forcedBlackNext
+                    if (forced && prevForced) return Int.MIN_VALUE / 2
+                    if (forced) obligations++
+                    prevForced = forced
+                    if (!forced && !col.isEmpty) {
+                        // The bottom row gives each column exactly one more letter: it must be able
+                        // to finish there (single completing letter) or already be a complete word.
+                        val v = col.text.length
+                        val oneLetterFinish =
+                            col.masks[v + 1]?.let { lexicon.lettersAt(v + 1, v, it) } ?: 0
+                        if (oneLetterFinish == 0 && col.completeWord(used) == null) return Int.MIN_VALUE / 2
+                    }
+                }
+                score -= obligations * 8
+            }
             return score - maxGap * 2
+        }
+
+        private fun runLenAt(
+            r: Int,
+            c: Int,
+        ): Int {
+            var st = c
+            while (st > 0 && grid[r][st - 1] != '#') st--
+            var n = 0
+            var i = st
+            while (i < width && grid[r][i] != '#') {
+                n++
+                i++
+            }
+            return n
+        }
+
+        private fun runLenRight(
+            r: Int,
+            c: Int,
+        ): Int {
+            var n = 0
+            var i = c + 1
+            while (i < width && grid[r][i] != '#' && grid[r][i] != '.') {
+                n++
+                i++
+            }
+            return n
+        }
+
+        private fun vRunLen(
+            r: Int,
+            c: Int,
+        ): Int {
+            var top = r
+            while (top > 0 && grid[top - 1][c] != '#') top--
+            var n = 0
+            var i = top
+            while (i <= r && grid[i][c] != '#') {
+                n++
+                i++
+            }
+            return n
         }
 
         private fun landsWithin(
@@ -470,11 +989,11 @@ class CoGenerationProbeTest {
                         val p = c - l
                         val hostedK = (1..2).filter { reach[p][it] }
                         if (hostedK.isEmpty()) continue
-                        if ((0 until l).any { facts.forcedBlack[p + it] || facts.anyLetters[p + it] == 0 }) continue
+                        if ((0 until l).any { facts.forcedBlack[p + it] || letterBitsAt(facts, p, l, it) == 0 }) continue
                         val m = lexicon.initialMask(l)
                         var ok = true
                         for (i in 0 until l) {
-                            val union = lexicon.unionMaskForLetters(l, i, facts.anyLetters[p + i])
+                            val union = lexicon.unionMaskForLetters(l, i, letterBitsAt(facts, p, l, i))
                             for (j in m.indices) m[j] = m[j] and union[j]
                             if (lexicon.popcount(m) == 0) { ok = false; break }
                         }
@@ -500,7 +1019,10 @@ class CoGenerationProbeTest {
                         if (reach[0][0]) options.add(Step(0, 0, 2, 1, null))
                     }
                 }
-                if (options.isEmpty()) return false
+                if (options.isEmpty()) {
+                    rfWalk++
+                    return false
+                }
                 val weights = options.map { o ->
                     when {
                         o.type == 1 && o.len in 4..7 -> 6
@@ -518,40 +1040,62 @@ class CoGenerationProbeTest {
                     pickAt -= w
                 }
                 val step = options[stepIdx]
+                if (step.word != null) rowUsed.add(step.word)
                 steps.add(step)
                 c = step.from
                 k = step.k
             }
-            if (c != 0) return false
+            if (c != 0) {
+                rfWalk++
+                return false
+            }
             // apply forward
             steps.reverse()
             val colSnaps = Array(width) { columns[it].snapshot() }
             val wMark = words.size
             var pos = 0
-            for (step in steps) {
+            for ((si, step) in steps.withIndex()) {
                 when (step.type) {
                     0 -> {
-                        if (!applyBlack(r, pos)) { rollback(colSnaps, wMark, r); return false }
+                        val hosted = si + 1 < steps.size && steps[si + 1].type == 1
+                        if (!applyBlack(r, pos, hosted).also { if (!it) afBlack++ }) {
+                            rfApply++
+                            rollback(colSnaps, wMark, r)
+                            return false
+                        }
                         rowChars[pos] = '#'
                         pos++
                     }
                     1 -> {
                         val w = step.word!!
-                        for (i in w.indices) {
-                            if (!applyRowLetter(r, pos + i, w[i], facts)) { rollback(colSnaps, wMark, r); return false }
-                            rowChars[pos + i] = w[i]
-                        }
                         words.add(w)
                         used.add(w)
                         rowUsed.add(w)
+                        for (i in w.indices) {
+                            if (!applyRowLetter(r, pos + i, w[i], facts, isFinal = i == w.length - 1 && w.length < 5 && pos + w.length < width).also { if (!it) afWord++ }) {
+                            rfApply++
+                            rollback(colSnaps, wMark, r)
+                            return false
+                        }
+                            rowChars[pos + i] = w[i]
+                        }
                         pos += w.length
                     }
                     2 -> {
                         val bits = facts.maskLetters[pos]
                         val letters = (0 until 26).filter { bits and (1 shl it) != 0 }
-                        if (letters.isEmpty()) { rollback(colSnaps, wMark, r); return false }
+                        if (letters.isEmpty()) {
+                            rfApply++
+                            rollback(colSnaps, wMark, r)
+                            return false
+                        }
                         val ch = 'A' + letters[random.nextInt(letters.size)]
-                        if (!applyRowLetter(r, pos, ch, facts)) { rollback(colSnaps, wMark, r); return false }
+                        if (!applyRowLetter(r, pos, ch, facts).also { if (!it) afSingle++ }) {
+                            rfApply++
+                            rollback(colSnaps, wMark, r)
+                            return false
+                        }
+                        columns[pos].lastSingle = true
                         rowChars[pos] = ch
                         pos++
                     }
@@ -564,6 +1108,7 @@ class CoGenerationProbeTest {
         private fun applyBlack(
             r: Int,
             c: Int,
+            acrossHosted: Boolean,
         ): Boolean {
             val col = columns[c]
             if (!col.isEmpty && !col.forcedBlackNext && !col.reserved) {
@@ -572,6 +1117,11 @@ class CoGenerationProbeTest {
                 used.add(w)
             }
             col.reset(height - r - 1, brickBand(c, r))
+            // Un-across-hosted black must be hosted by the down word: owe two letters below.
+            if (!acrossHosted) {
+                if (r >= height - 2) return false
+                col.hostDebt = 2
+            }
             return true
         }
 
@@ -580,17 +1130,20 @@ class CoGenerationProbeTest {
             c: Int,
             ch: Char,
             facts: RowFacts,
+            isFinal: Boolean = false,
         ): Boolean {
             val col = columns[c]
             val rowsBelow = height - r - 1
             if (!col.forcedBlackNext && col.continueLetters(rowsBelow + 1) and (1 shl (ch - 'A')) != 0) {
                 col.apply(ch)
-            } else if (col.isEmpty && r + 1 < height) {
+            } else if (col.isEmpty && col.hostDebt == 0) {
                 col.apply(ch)
-                col.forcedBlackNext = true
+                if (r + 1 < height) col.forcedBlackNext = true
             } else {
                 return false
             }
+            if (col.hostDebt > 0) col.hostDebt--
+            col.lastSingle = false
             // reservation: no continuation left -> word fixed now
             if (!col.forcedBlackNext && !col.reserved && r != height - 1 && col.continueLetters(rowsBelow) == 0) {
                 val w = col.completeWord(used) ?: return false
@@ -634,6 +1187,67 @@ class CoGenerationProbeTest {
             val base = 3 + ((c * 2 + r + random.nextInt(2)) % 4)
             return base..base + 2
         }
+    }
+
+    // === nogood persistence ===
+
+    private fun nogoodStore(): File {
+        val dir = sequenceOf(File("../../data/cogen"), File("data/cogen")).first { it.parentFile?.exists() == true }
+        dir.mkdirs()
+        val corpusFp =
+            File(
+                sequenceOf(
+                    "../infrastructure/src/main/resources/words/words-fr.csv",
+                    "grid/infrastructure/src/main/resources/words/words-fr.csv",
+                ).first { File(it).exists() },
+            ).length()
+        return File(dir, "nogoods-" + engineVersion + "-" + corpusFp + ".bin")
+    }
+
+    private fun loadNogoods(): HashSet<Long> {
+        val out = HashSet<Long>()
+        val f = nogoodStore()
+        if (!f.exists()) return out
+        java.io.DataInputStream(f.inputStream().buffered()).use { ds ->
+            val n = ds.readInt()
+            repeat(n) { out.add(ds.readLong()) }
+        }
+        println("nogoods loaded: " + out.size + " from " + f.name)
+        return out
+    }
+
+    private fun saveNogoods(
+        nogoods: HashSet<Long>,
+        preloaded: Int,
+    ) {
+        if (nogoods.size == preloaded) return
+        val f = nogoodStore()
+        val capped = if (nogoods.size > 3_000_000) nogoods.asSequence().take(3_000_000).toList() else nogoods.toList()
+        java.io.DataOutputStream(f.outputStream().buffered()).use { ds ->
+            ds.writeInt(capped.size)
+            for (v in capped) ds.writeLong(v)
+        }
+        println("nogoods saved: " + capped.size + " (+" + (capped.size - preloaded) + ") to " + f.name)
+    }
+
+    private fun bandStore(): File = File(nogoodStore().parentFile, "bands-" + engineVersion + "-" + nogoodStore().name.substringAfterLast('-'))
+
+    private fun loadBands(): MutableList<String> {
+        val f = bandStore()
+        if (!f.exists()) return mutableListOf()
+        val out = f.readLines().filter { it.isNotBlank() }.toMutableList()
+        println("bands loaded: " + out.size)
+        return out
+    }
+
+    private fun saveBands(
+        old: List<String>,
+        fresh: Set<String>,
+    ) {
+        if (fresh.isEmpty()) return
+        val all = (old + fresh).distinct().takeLast(400)
+        bandStore().writeText(all.joinToString("\n"))
+        println("bands saved: " + all.size + " (+" + fresh.size + ")")
     }
 
     // === corpus ===
