@@ -6,6 +6,7 @@ import com.bliss.identity.api.dto.ProblemDetails
 import com.bliss.identity.api.routes.PutRateLimiter
 import com.bliss.identity.api.routes.appleCallback
 import com.bliss.identity.api.routes.deleteMe
+import com.bliss.identity.api.routes.emailOtp
 import com.bliss.identity.api.routes.getProgress
 import com.bliss.identity.api.routes.googleCallback
 import com.bliss.identity.api.routes.health
@@ -13,6 +14,7 @@ import com.bliss.identity.api.routes.link
 import com.bliss.identity.api.routes.listProgress
 import com.bliss.identity.api.routes.login
 import com.bliss.identity.api.routes.logout
+import com.bliss.identity.api.routes.logoutAll
 import com.bliss.identity.api.routes.me
 import com.bliss.identity.api.routes.patchMe
 import com.bliss.identity.api.routes.putProgress
@@ -168,6 +170,18 @@ fun Application.module(
         wiring.logoutOrNull?.let { logout ->
             wiring.whoAmIOrNull?.let { whoAmI ->
                 logout(logout, whoAmI)
+            }
+        }
+        wiring.logoutAllOrNull?.let { logoutAll ->
+            wiring.whoAmIOrNull?.let { whoAmI ->
+                logoutAll(logoutAll, whoAmI)
+            }
+        }
+        wiring.whoAmIOrNull?.let { whoAmI ->
+            wiring.requestEmailOtpOrNull?.let { requestEmailOtp ->
+                wiring.verifyEmailOtpOrNull?.let { verifyEmailOtp ->
+                    emailOtp(requestEmailOtp, verifyEmailOtp, whoAmI, config.sessionMaxAge)
+                }
             }
         }
         wiring.getMeOrNull?.let { getMe ->
