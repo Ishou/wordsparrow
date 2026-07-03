@@ -1,3 +1,4 @@
+import { shareOrCopyInviteUrl } from '@/ui/lib/shareInvite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type ConnectionState,
@@ -351,7 +352,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   const copyShareUrl = useCallback(() => {
     if (lobbyCode == null) return;
     const shareUrl = `${window.location.origin}/join/${lobbyCode}`;
-    void navigator.clipboard?.writeText(shareUrl);
+    void shareOrCopyInviteUrl(shareUrl);
   }, [lobbyCode]);
 
   const leave = useCallback(() => {

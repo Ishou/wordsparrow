@@ -1,3 +1,4 @@
+import { canNativeShare } from '@/ui/lib/shareInvite';
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
 import { MAX_PSEUDONYM_LENGTH, type Lobby, type Pseudonym, type SessionId } from '@/domain/game';
@@ -157,6 +158,7 @@ export function WaitingRoom({
   );
   const handleCopyClick = () => {
     onCopyShareUrl();
+    if (canNativeShare()) return;
     if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
     setJustCopied(true);
     copyTimerRef.current = setTimeout(() => {
@@ -220,7 +222,7 @@ export function WaitingRoom({
 
       <div className={styles.row}>
         <Button variant="ghost" onClick={handleCopyClick}>
-          Copier le lien
+          {canNativeShare() ? 'Partager le lien' : 'Copier le lien'}
         </Button>
         {justCopied ? (
           <span role="status" aria-live="polite" className={styles.copyFeedback}>
