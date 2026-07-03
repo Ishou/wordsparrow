@@ -52,17 +52,19 @@ spec:
                 {{- toYaml . | nindent 16 }}
                 {{- end }}
                 {{- if .Values.edgePurge.enabled }}
-                # ADR-0089 §5: Cloudflare edge purge after each generation run.
+                # ADR-0089 §5: Cloudflare edge purge after each generation run; optional so a missing Secret degrades to the worker's edge_purge_skipped no-op.
                 - name: CLOUDFLARE_ZONE_ID
                   valueFrom:
                     secretKeyRef:
                       name: {{ .Values.edgePurge.secretName }}
                       key: zone-id
+                      optional: true
                 - name: CLOUDFLARE_PURGE_TOKEN
                   valueFrom:
                     secretKeyRef:
                       name: {{ .Values.edgePurge.secretName }}
                       key: token
+                      optional: true
                 {{- end }}
               {{- with .Values.ensureDailies.resources }}
               resources: {{- toYaml . | nindent 16 }}
