@@ -30,6 +30,9 @@ class HealthRouteTest {
             val contentType = response.headers["Content-Type"]
             assertThat(contentType).isNotNull()
             assertThat(contentType!!).startsWith(ContentType.Application.Json.toString())
+            // ADR-0089 §6: expose resource timings to browser RUM on the first-party origins.
+            assertThat(response.headers["Timing-Allow-Origin"])
+                .isEqualTo("https://wordsparrow.io, https://www.wordsparrow.io")
         }
 
     @Test
