@@ -4,43 +4,30 @@ import { css } from 'styled-system/css';
 
 // Ambient nudges shown only to free players (ADR-0080 W5a) — discreet, never a hard paywall. Both link to the offer.
 
-const teaser = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left', textDecoration: 'none', bg: 'white', border: '1.5px solid token(colors.ws.sakuraBlush)', borderRadius: '16px', padding: '13px 14px', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.06)', fontFamily: 'wsUi', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
-const teaserTile = css({ flex: 'none', width: '40px', height: '40px', borderRadius: '12px', bg: 'ws.sakuraBlush', color: 'ws.sakuraDark', display: 'flex', alignItems: 'center', justifyContent: 'center' });
-const teaserMid = css({ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' });
-const teaserTitle = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk' });
-const teaserSub = css({ fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '12px', color: 'ws.khaki', opacity: 0.9 });
-const teaserChevron = css({ flex: 'none', color: 'ws.sakuraDark', opacity: 0.6, display: 'flex' });
+const card = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left', textDecoration: 'none', bg: 'white', border: '1.5px solid token(colors.ws.sakuraBlush)', borderRadius: '16px', padding: '13px 14px', cursor: 'pointer', boxShadow: '0 1px 2px rgba(33,75,64,0.06)', fontFamily: 'wsUi', transition: 'border-color 120ms, box-shadow 120ms, transform 120ms', _hover: { borderColor: 'ws.sakuraRose', boxShadow: '0 3px 10px rgba(33,75,64,0.12)', transform: 'translateY(-1px)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const tile = css({ flex: 'none', width: '40px', height: '40px', borderRadius: '12px', bg: 'ws.sakuraBlush', color: 'ws.sakuraDark', display: 'flex', alignItems: 'center', justifyContent: 'center' });
+const mid = css({ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' });
+const title = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', color: 'ws.jadeInk' });
+const sub = css({ fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '12px', color: 'ws.khaki', opacity: 0.9 });
+const chevron = css({ flex: 'none', color: 'ws.sakuraDark', opacity: 0.6, display: 'flex' });
 
-export function HomeTeaser() {
+function UpsellCard({ subline }: { readonly subline: string }) {
   return (
-    <Link to="/abonnement" className={teaser}>
-      <span className={teaserTile}><Sparkle size={20} weight="fill" aria-hidden="true" /></span>
-      <span className={teaserMid}>
-        <span className={teaserTitle}>Débloque toutes les grilles</span>
-        <span className={teaserSub}>Abonne-toi et joue sans limite</span>
+    <Link to="/abonnement" className={card}>
+      <span className={tile}><Sparkle size={20} weight="fill" aria-hidden="true" /></span>
+      <span className={mid}>
+        <span className={title}>Débloque toutes les grilles</span>
+        <span className={sub}>{subline}</span>
       </span>
-      <span className={teaserChevron}><CaretRight size={18} weight="bold" aria-hidden="true" /></span>
+      <span className={chevron}><CaretRight size={18} weight="bold" aria-hidden="true" /></span>
     </Link>
   );
 }
 
-// White card with a jade accent tile reads as intentional against the sable page; the pill CTA is the single clear affordance.
-const banner = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left', textDecoration: 'none', bg: 'white', border: '1.5px solid token(colors.ws.jade)', borderRadius: '16px', padding: '12px 13px', cursor: 'pointer', fontFamily: 'wsUi', boxShadow: '0 1px 2px rgba(33,75,64,0.06)', transition: 'background-color 120ms', _hover: { bg: 'rgba(196,229,211,0.28)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
-const bannerTile = css({ flex: 'none', width: '38px', height: '38px', borderRadius: '11px', bg: 'ws.jade', color: 'ws.jadeInk', display: 'flex', alignItems: 'center', justifyContent: 'center' });
-const bannerMid = css({ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' });
-const bannerTitle = css({ fontFamily: 'wsUi', fontWeight: 'black', fontSize: '13.5px', color: 'ws.jadeInk' });
-const bannerSub = css({ fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '11.5px', color: 'ws.khaki', opacity: 0.9 });
-const bannerCta = css({ flex: 'none', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '12px', color: 'white', bg: 'ws.sakuraDark', borderRadius: '999px', padding: '7px 14px' });
+export function HomeTeaser() {
+  return <UpsellCard subline="Abonne-toi et joue sans limite" />;
+}
 
 export function ArchiveUpsellBanner() {
-  return (
-    <Link to="/abonnement" className={banner}>
-      <span className={bannerTile}><Sparkle size={19} weight="fill" aria-hidden="true" /></span>
-      <span className={bannerMid}>
-        <span className={bannerTitle}>Débloque toutes les grilles</span>
-        <span className={bannerSub}>Tout l&apos;historique et les nouvelles grilles</span>
-      </span>
-      <span className={bannerCta}>Voir</span>
-    </Link>
-  );
+  return <UpsellCard subline="Tout l'historique et les nouvelles grilles" />;
 }

@@ -34,14 +34,13 @@ const nestScene = (
   </svg>
 );
 
-// Copy depends on which tab is empty: a filtered tab still has an archive, it's just empty in that bucket.
-const COPY: Record<'new' | 'progress' | 'done', { readonly title: string; readonly body: string }> = {
+// Copy depends on which view is empty: an empty archive vs a view with nothing to resume.
+const COPY: Record<'new' | 'progress', { readonly title: string; readonly body: string }> = {
   new: { title: 'Tout est joué !', body: 'Aucune grille à commencer pour l’instant — reviens demain pour la prochaine.' },
   progress: { title: 'Aucune grille en cours', body: 'Tu n’as pas de grille commencée à reprendre pour le moment.' },
-  done: { title: 'Aucune grille terminée', body: 'Termine une grille et tu la retrouveras ici.' },
 };
 
-export function GrillesEmptyState({ onPlay, filter = 'new' }: { readonly onPlay: () => void; readonly filter?: 'new' | 'progress' | 'done' }) {
+export function GrillesEmptyState({ onPlay, filter = 'new' }: { readonly onPlay: () => void; readonly filter?: 'new' | 'progress' }) {
   const copy = COPY[filter];
   return (
     <SparrowState
@@ -49,6 +48,18 @@ export function GrillesEmptyState({ onPlay, filter = 'new' }: { readonly onPlay:
       title={copy.title}
       body={copy.body}
       cta={{ label: 'Jouer la grille du jour', onClick: onPlay }}
+      as="p"
+    />
+  );
+}
+
+export function LobbiesEmptyState({ onCreate }: { readonly onCreate: () => void }) {
+  return (
+    <SparrowState
+      scene={nestScene}
+      title="Aucune partie à plusieurs"
+      body="Crée une partie et invite tes proches — vous remplissez la même grille ensemble."
+      cta={{ label: 'Créer une partie', onClick: onCreate }}
       as="p"
     />
   );

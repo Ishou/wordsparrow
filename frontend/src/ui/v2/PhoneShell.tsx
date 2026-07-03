@@ -16,7 +16,7 @@ export interface PhoneShellProps {
   readonly headerFlush?: boolean;
   // Fixed full-bleed mobile bottom nav (home/grilles only); reserves body bottom inset when present.
   readonly bottomNav?: ReactNode;
-  // Desktop-only: body fills the viewport and delegates scrolling to an inner flex:1 child (e.g. the grilles list), instead of scrolling itself.
+  // Body fills the viewport and delegates scrolling to an inner flex:1 child (e.g. the grilles list), instead of scrolling itself — at every width, so sticky heads (tabs) pin on mobile too.
   readonly fillBody?: boolean;
 }
 
@@ -105,9 +105,9 @@ const inner = css({ display: 'contents', lg: { display: 'block', width: '100%', 
 const bodyWithNav = css({ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)', lg: { paddingBottom: '56px' } });
 // A self-spacing header (MobileTopBar) owns the top gap, so the body must not add its own.
 const bodyFlushTop = css({ paddingTop: 0, lg: { paddingTop: '26px' } });
-// Desktop: body stops scrolling and becomes a flex column so an inner flex:1 child owns the scroll; bottom inset moves onto that child.
-const bodyFill = css({ lg: { overflowY: 'hidden', display: 'flex', flexDirection: 'column', paddingBottom: 0 } });
-const innerFill = css({ lg: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 } });
+// Body stops scrolling and becomes a flex column so an inner flex:1 child owns the scroll; bottom insets move onto that child.
+const bodyFill = css({ overflowY: 'hidden', display: 'flex', flexDirection: 'column', paddingBottom: 0, lg: { paddingBottom: 0 } });
+const innerFill = css({ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 });
 
 export function PhoneShell({ children, header, navActive, backTo, headerFlush, bottomNav, fillBody }: PhoneShellProps) {
   return (

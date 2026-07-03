@@ -15,6 +15,7 @@ export type {
   ValidationResult,
 } from './puzzle';
 export { HintRequestError } from './puzzle';
+export { fetchAllDailySummaries } from './puzzle';
 export type {
   SampleWord,
   SampleWordsOptions,
