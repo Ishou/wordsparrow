@@ -202,6 +202,32 @@ class PuzzleRouteListDailiesTest {
         }
 
     @Test
+    fun `list etag flips when a backfilled older date flips hasMore with identical visible ids`() =
+        testApplication {
+            val repo = InMemoryPuzzleRepository()
+            application {
+                listDailyPuzzlesModule(seed = LocalDate.parse("2026-05-14")..today, maxItems = 3, puzzleRepo = repo)
+            }
+
+            val first = client.get("/v1/puzzles/daily/list")
+            val etag = first.headers["ETag"]!!
+            assertThat(json.decodeFromString<ListDailyPuzzlesResponseDto>(first.bodyAsText()).hasMore).isFalse()
+
+            // Truncation drops the OLDEST end, so a backfilled older date flips hasMore while the visible ids stay identical.
+            repo.insertDaily(UUID.randomUUID(), LocalDate.parse("2026-05-13"), stubStoredPuzzle())
+            val response =
+                client.get("/v1/puzzles/daily/list") {
+                    header(HttpHeaders.IfNoneMatch, etag)
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.headers["ETag"]!!).isNotEqualTo(etag)
+            val body: ListDailyPuzzlesResponseDto = json.decodeFromString(response.bodyAsText())
+            assertThat(body.hasMore).isTrue()
+            assertThat(body.items.map { it.date }).containsExactly("2026-05-16", "2026-05-15", "2026-05-14")
+        }
+
+    @Test
     fun `list 400 carries no cache headers`() =
         testApplication {
             application { listDailyPuzzlesModule(seed = LocalDate.parse("2026-05-12")..today) }

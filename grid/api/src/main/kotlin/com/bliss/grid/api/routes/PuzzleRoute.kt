@@ -223,7 +223,7 @@ fun Route.puzzles(
                 )
             }
         // ADR-0089 §3: no edge caching for the list (unbounded query variants defeat exact-URL purge), so no s-maxage.
-        val etag = listEtagOf(result.items.map { it.id })
+        val etag = listEtagOf(result.items.map { it.id }, result.hasMore)
         call.response.header(HttpHeaders.CacheControl, "public, no-cache")
         call.response.header(HttpHeaders.ETag, etag)
         if (call.request.headers[HttpHeaders.IfNoneMatch] == etag) {
@@ -573,9 +573,13 @@ private fun publicCacheControlUntilUtcMidnight(now: Instant): String {
     return "public, no-cache, s-maxage=$seconds"
 }
 
-// Strong list validator (ADR-0089 §3): first 16 hex chars of SHA-256 over the ordered puzzle ids.
-private fun listEtagOf(ids: List<UUID>): String {
-    val digest = MessageDigest.getInstance("SHA-256").digest(ids.joinToString(",").toByteArray(Charsets.UTF_8))
+// Strong list validator (ADR-0089 §3): hasMore is hashed too because a backfilled older date can flip it without changing the visible ids.
+private fun listEtagOf(
+    ids: List<UUID>,
+    hasMore: Boolean,
+): String {
+    val input = ids.joinToString(",") + "|hasMore=$hasMore"
+    val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
     val hex = digest.joinToString("") { "%02x".format(it) }
     return "\"${hex.take(16)}\""
 }
