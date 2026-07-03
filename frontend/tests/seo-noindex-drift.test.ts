@@ -11,18 +11,20 @@ interface ScannedRoute {
   readonly noindex: boolean;
 }
 
-// Static scan: a route is noindex if its file calls noindexHead(...) or passes noindex: true.
+// Static scan, scoped per createRoute(...) block (not per file) since one file can export several routes.
 function scanRoutes(): ScannedRoute[] {
   const out: ScannedRoute[] = [];
   for (const name of readdirSync(ROUTES_DIR)) {
     if (!name.endsWith('.tsx') || name.includes('.lazy.')) continue;
     const src = readFileSync(join(ROUTES_DIR, name), 'utf8');
-    const pathMatch = src.match(/^\s*path: '([^']+)',/m);
-    if (!pathMatch) continue;
-    const raw = pathMatch[1];
-    const path = raw.startsWith('/') ? raw : `/${raw}`;
-    const noindex = src.includes('noindexHead(') || /noindex:\s*true/.test(src);
-    out.push({ file: name, path, noindex });
+    for (const block of src.split(/(?=createRoute\()/)) {
+      const pathMatch = block.match(/^\s*path: '([^']+)',/m);
+      if (!pathMatch) continue;
+      const raw = pathMatch[1];
+      const path = raw.startsWith('/') ? raw : `/${raw}`;
+      const noindex = block.includes('noindexHead(') || /noindex:\s*true/.test(block);
+      out.push({ file: name, path, noindex });
+    }
   }
   return out;
 }
