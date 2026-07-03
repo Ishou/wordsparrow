@@ -441,6 +441,38 @@ describe('ReconnectingGameClient', () => {
     expect(fake.cellUpdateCalls).toHaveLength(2);
   });
 
+  it('queues a cellUpdate made after reconnect but before the lobbyState replay, instead of racing the flush', async () => {
+    const fake = makeFakeInnerClient();
+    const client = createReconnectingGameClient({
+      inner: fake.inner,
+      baseDelayMs: 500,
+      jitterRatio: 0,
+    });
+
+    const p = client.connect(connectArgs);
+    fake.resolveOpen();
+    await p;
+    fake.drop();
+    client.cellUpdate(0, 1, 'C' as never);
+
+    await vi.advanceTimersByTimeAsync(0);
+    fake.resolveOpen();
+    // Reconnected but the rejoin's lobbyState replay hasn't arrived — this write must not overtake the queued stale one.
+    client.cellUpdate(0, 1, 'X' as never);
+    expect(fake.cellUpdateCalls).toEqual([]);
+
+    fake.dispatchEvent({
+      type: 'lobbyState',
+      players: [],
+      ownerSessionId: sessionId,
+      state: 'IN_PROGRESS',
+      gridConfig: { width: 5, height: 5 },
+      code: 'A2B3C4',
+      game: null,
+    });
+    expect(fake.cellUpdateCalls).toEqual([{ row: 0, column: 1, letter: 'X' }]);
+  });
+
   it('drops queued cell writes on a voluntary disconnect', async () => {
     const fake = makeFakeInnerClient();
     const client = createReconnectingGameClient({

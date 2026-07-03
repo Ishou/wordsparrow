@@ -107,6 +107,8 @@ export function createReconnectingGameClient(
   // True while the instant post-drop attempt is in flight — suppresses every state emission (note 4).
   let silentAttempt = false;
   let lastInnerState: ConnectionState = 'disconnected';
+  // True from the moment the socket reopens until the post-rejoin lobbyState replay lands, so writes made in that window queue instead of racing the flush.
+  let awaitingReplay = false;
   // Outage write queue (note 5) — insertion-ordered, last write per cell.
   const pendingCellWrites = new Map<
     string,
@@ -181,6 +183,7 @@ export function createReconnectingGameClient(
   inner.subscribe((event) => {
     if (event.type !== 'lobbyState') return;
     if (lastInnerState !== 'connected') return;
+    awaitingReplay = false;
     if (pendingCellWrites.size === 0) return;
     flushPendingCellWrites();
   });
@@ -199,6 +202,7 @@ export function createReconnectingGameClient(
       attempts = 0;
       silentAttempt = false;
       clearPendingTimer();
+      awaitingReplay = pendingCellWrites.size > 0;
       setState('connected');
       return;
     }
@@ -229,6 +233,7 @@ export function createReconnectingGameClient(
       voluntaryClose = false;
       attempts = 0;
       silentAttempt = false;
+      awaitingReplay = false;
       clearPendingTimer();
       started = true;
       setState('connecting');
@@ -239,6 +244,7 @@ export function createReconnectingGameClient(
       voluntaryClose = true;
       clearPendingTimer();
       pendingCellWrites.clear();
+      awaitingReplay = false;
       inner.disconnect();
       // Defensive: ensure the wrapper's externally-visible state
       // matches even if the inner adapter does not emit 'disconnected'
@@ -257,7 +263,7 @@ export function createReconnectingGameClient(
         pendingCellWrites.delete(key);
         pendingCellWrites.set(key, { row, column, letter });
       };
-      if (lastInnerState !== 'connected') {
+      if (lastInnerState !== 'connected' || awaitingReplay) {
         enqueue();
         return;
       }
