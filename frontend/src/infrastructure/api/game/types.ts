@@ -151,6 +151,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/users/me/lobbies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List lobbies for the authenticated user, across all their devices.
+         * @description Cookie-authed (ADR-0066). Returns the union of lobbies where any
+         *     seat carries the caller's `userId` (stamped by the seat-rebind
+         *     path at sign-in), so a signed-in player sees the same "Mes
+         *     parties" on every device. Same shape, state filter
+         *     (`IN_PROGRESS` / `COMPLETED`) and `lastActivityAt` DESC ordering
+         *     as `listLobbiesForSession` — the two reads stay
+         *     interchangeable for the frontend loader, which picks by auth
+         *     state.
+         *
+         *     Empty array is the "no lobbies" answer — never 404, mirroring
+         *     the session-scoped path's information-disclosure rule.
+         */
+        get: operations["listLobbiesForUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/lobbies/players/rebind": {
         parameters: {
             query?: never;
@@ -940,6 +970,39 @@ export interface operations {
              *     `type` is `https://bliss.example/errors/invalid-session-id`.
              */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listLobbiesForUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description Lobby summaries for the authenticated user. Empty array when
+             *     no seat carries their userId (never played multiplayer while
+             *     signed in, all lobbies garbage-collected, etc.).
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LobbySummary"][];
+                };
+            };
+            /** @description Cookie missing, expired, or rejected by identity-api. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
