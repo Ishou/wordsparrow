@@ -232,6 +232,17 @@ ADR-0090  frontend/wrangler.jsonc                    Assets-only Worker owns nam
 ADR-0090  .github/workflows/deploy-frontend.yml      Publish via cloudflare/wrangler-action: `deploy` on main-push, `versions upload` + PR comment on PRs; build steps byte-for-byte; CI is the only path to production
 ADR-0090  terraform/cloudflare-pages*.tf             TF keeps zone-level resources + the Pages project (grace-period 301 to wordsparrow.io) until T+1-month decommission; cutover removes only the cloudflare_pages_domain attachments
 # ADR-0090: amends ADR-0004 (hosting: Cloudflare Pages → Workers static assets); deploy/promotion/rollback shape of ADR-0004 stands, only the hosting product changes
+ADR-0091  identity/domain/**/auth/**                 Email-OTP domain: OtpCode, ChallengeSecret, EmailOtpChallenge; TTL + 5-attempt-cap + single-use invariants
+ADR-0091  identity/application/**/usecases/RequestEmailOtpUseCase.kt  Start: enumeration-safe 202, per-email 60s cooldown + daily cap, hashed code + hashed binding secret
+ADR-0091  identity/application/**/usecases/VerifyEmailOtpUseCase.kt   Verify: challenge-cookie binding check, Option-B verified-email account resolution, session mint
+ADR-0091  identity/api/**/auth/ChallengeCookies.kt    __Secure-ws_otp_chal HttpOnly short-TTL binding cookie (PKCE-style)
+ADR-0091  identity/api/**/routes/EmailOtpRoute.kt     POST /v1/auth/email/start + /v1/auth/email/verify
+ADR-0091  identity/api/**/routes/LogoutAllRoute.kt    POST /v1/auth/logout-all — revoke all sessions except the caller (provider-agnostic)
+ADR-0091  identity/infrastructure/**/db/migration/V9__*.sql  Expand identity_user_providers CHECK to include 'email' (expand-and-contract)
+# ADR-0091: passwordless email-OTP login; email = first-class provider; verified-email collision = same account (Option B), never merge on ambiguity; per-IP limiting delegated to ingress-nginx (no IP stored); full cross-provider merge deferred
+ADR-0092  identity/infrastructure/**/email/BrevoEmailSender.kt   Brevo transactional adapter (Ktor HttpClient → POST /v3/smtp/email; no vendor SDK)
+ADR-0092  identity/api/**/config/IdentityApiConfig.kt            Reads BREVO_API_KEY (nullable; required fail-fast only when IDENTITY_EMAIL_OTP_ENABLED)
+# ADR-0092: paid service (maintainer-approved 2026-07-03, Starter plan); EU data residency; SPF/DKIM/DMARC domain-auth is the deliverability lever; swappable behind the EmailSender port
 ```
 
 ## Adding entries
