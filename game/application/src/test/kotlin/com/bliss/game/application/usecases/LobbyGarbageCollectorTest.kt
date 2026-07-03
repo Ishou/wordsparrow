@@ -20,6 +20,7 @@ import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Player
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
+import com.bliss.game.domain.UserId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -132,6 +133,39 @@ class LobbyGarbageCollectorTest {
 
             assertThat(evicted).isEqualTo(1)
             assertThat(h.repo.findById(id)).isNull()
+        }
+
+    @Test
+    fun `sweepOnce keeps an idle COMPLETED lobby whose seat carries a userId`() =
+        runTest {
+            val h = harness()
+            val now = h.clock.now()
+            val id = LobbyId.generate()
+            val authedSeat = Player(sessionA, alice, now, userId = UserId("22222222-2222-2222-2222-222222222222"))
+            val completed =
+                Lobby(
+                    id = id,
+                    code = LobbyCode.generate(),
+                    ownerSessionId = sessionA,
+                    state = LobbyLifecycleState.COMPLETED,
+                    gridConfig = GridConfig(5, 5),
+                    title = null,
+                    players = linkedMapOf(sessionA to authedSeat),
+                    game =
+                        GameSession(
+                            puzzle = Samples.puzzle(),
+                            entries = emptyMap(),
+                            startedAt = now,
+                            completedAt = now,
+                        ),
+                    lastActivityAt = now.minus(completedTtl.plus(Duration.ofDays(365))),
+                )
+            h.repo.save(completed)
+
+            val evicted = h.gc.sweepOnce()
+
+            assertThat(evicted).isEqualTo(0)
+            assertThat(h.repo.findById(id)).isNotNull()
         }
 
     @Test

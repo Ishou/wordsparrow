@@ -126,8 +126,11 @@ class InMemoryLobbyRepository : LobbyRepository {
     override suspend fun findIdleCompleted(cutoff: Instant): List<Lobby> =
         storeLock.withLock {
             store.values
-                .filter { it.state == LobbyLifecycleState.COMPLETED && !it.lastActivityAt.isAfter(cutoff) }
-                .toList()
+                .filter { lobby ->
+                    lobby.state == LobbyLifecycleState.COMPLETED &&
+                        !lobby.lastActivityAt.isAfter(cutoff) &&
+                        lobby.players.values.none { it.userId != null }
+                }.toList()
         }
 
     // RGPD erasure mirror of the production InMemoryLobbyRepository (ADR-0039).

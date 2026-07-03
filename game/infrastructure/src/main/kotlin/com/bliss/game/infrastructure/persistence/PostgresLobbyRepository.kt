@@ -399,8 +399,12 @@ class PostgresLobbyRepository(
                 val ids = mutableListOf<LobbyId>()
                 conn
                     .prepareStatement(
-                        "SELECT id FROM lobbies " +
-                            "WHERE state = 'COMPLETED' AND last_activity_at <= ?",
+                        "SELECT l.id FROM lobbies l " +
+                            "WHERE l.state = 'COMPLETED' AND l.last_activity_at <= ? " +
+                            "AND NOT EXISTS (" +
+                            "  SELECT 1 FROM lobby_players lp " +
+                            "  WHERE lp.lobby_id = l.id AND lp.user_id IS NOT NULL" +
+                            ")",
                     ).use { ps ->
                         ps.setTimestamp(1, Timestamp.from(cutoff))
                         ps.executeQuery().use { rs ->

@@ -364,6 +364,32 @@ class PostgresLobbyRepositoryTest {
             assertThat(result.map { it.id }).containsExactly(completed.id)
         }
 
+    // ADR-0055 amendment 2026-07-03: an authed seat exempts a COMPLETED lobby from GC.
+    @Test
+    fun `findIdleCompleted excludes an idle COMPLETED lobby whose seat carries a userId`() =
+        runTest {
+            val authed =
+                completedLobby(id = LobbyId.generate(), owner = sessionA)
+                    .let {
+                        it.copy(
+                            players =
+                                it.players.mapValues { (_, p) ->
+                                    p.copy(userId = UserId("44444444-4444-4444-4444-444444444444"))
+                                },
+                            lastActivityAt = baseInstant.minusSeconds(3600),
+                        )
+                    }
+            val anonIdle =
+                completedLobby(id = LobbyId.generate(), owner = sessionB)
+                    .copy(lastActivityAt = baseInstant.minusSeconds(3600))
+            repo.save(authed)
+            repo.save(anonIdle)
+
+            val result = repo.findIdleCompleted(baseInstant)
+
+            assertThat(result.map { it.id }).containsExactly(anonIdle.id)
+        }
+
     // ADR-0066: cross-device union keyed by the seat userId stamped at rebind.
     @Test
     fun `findByUserId unions seats across sessions and keeps the state filter and ordering`() =
