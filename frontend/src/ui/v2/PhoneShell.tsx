@@ -107,7 +107,8 @@ const bodyWithNav = css({ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80p
 const bodyFlushTop = css({ paddingTop: 0, lg: { paddingTop: '26px' } });
 // Body stops scrolling and becomes a flex column so an inner flex:1 child owns the scroll; bottom insets move onto that child.
 const bodyFill = css({ overflowY: 'hidden', display: 'flex', flexDirection: 'column', paddingBottom: 0, lg: { paddingBottom: 0 } });
-const innerFill = css({ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 });
+// Standalone (never stacked with `inner`): stacking made inner's lg display:block beat the base flex and killed the desktop scroll chain.
+const innerFill = css({ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, lg: { width: '100%', maxWidth: '680px', marginInline: 'auto', paddingInline: '36px' } });
 
 export function PhoneShell({ children, header, navActive, backTo, headerFlush, bottomNav, fillBody }: PhoneShellProps) {
   return (
@@ -117,7 +118,7 @@ export function PhoneShell({ children, header, navActive, backTo, headerFlush, b
         <DesktopAppBar active={navActive} />
         {header != null ? (headerFlush ? header : <div className={headerSlot}>{header}</div>) : null}
         <main id="main-content" tabIndex={-1} className={cx(body, bottomNav != null && bodyWithNav, headerFlush && bodyFlushTop, fillBody && bodyFill)}>
-          <div className={cx(inner, fillBody && innerFill)}>
+          <div className={fillBody ? innerFill : inner}>
             {backTo != null ? (
               <Link to={backTo} className={deskBack}>
                 <CaretLeft size={16} weight="bold" aria-hidden="true" />
