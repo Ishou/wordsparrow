@@ -12,12 +12,14 @@ class ProviderMapperTest {
     fun `toWire returns lowercase name`() {
         assertThat(Provider.GOOGLE.toWire()).isEqualTo("google")
         assertThat(Provider.APPLE.toWire()).isEqualTo("apple")
+        assertThat(Provider.EMAIL.toWire()).isEqualTo("email")
     }
 
     @Test
     fun `toProvider parses lowercase wire form`() {
         assertThat("google".toProvider()).isEqualTo(Provider.GOOGLE)
         assertThat("apple".toProvider()).isEqualTo(Provider.APPLE)
+        assertThat("email".toProvider()).isEqualTo(Provider.EMAIL)
     }
 
     @Test
