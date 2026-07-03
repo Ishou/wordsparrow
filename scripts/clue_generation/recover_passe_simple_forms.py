@@ -115,12 +115,18 @@ def _surface_freqs(lexique: Path, wanted: set[str]) -> dict[str, int]:
     return out
 
 
-def _lemma_clues(lemma: str, corpus: dict[str, list[str]], wordlist_clues: dict[str, str]) -> list[str]:
-    """Distinct candidate lemma-form clues, corpus first then wordlist row."""
-    clues = list(corpus.get(lemma, []))
+def _lemma_clues(
+    lemma: str,
+    corpus: dict[str, list[str]],
+    wordlist_clues: dict[str, tuple[str, str]],
+) -> list[tuple[str, str]]:
+    """Distinct (clue, source_license) pairs; wordlist clues inherit their row's own license instead of CC0-1.0."""
+    clues = [(c, "CC0-1.0") for c in corpus.get(lemma, [])]
     wl = wordlist_clues.get(lemma)
-    if wl and wl.lower() != lemma.lower() and wl not in clues:
-        clues.append(wl)
+    if wl:
+        wl_text, wl_license = wl
+        if wl_text.lower() != lemma.lower() and wl_text not in {c for c, _ in clues}:
+            clues.append((wl_text, wl_license))
     return clues
 
 
@@ -149,11 +155,11 @@ def main() -> None:
         rows = list(csv.DictReader(f))
         fieldnames = list(rows[0].keys())
 
-    wordlist_clues: dict[str, str] = {}
+    wordlist_clues: dict[str, tuple[str, str]] = {}
     for r in rows:
         w = r["word"].strip().lower()
         if w not in wordlist_clues and (r.get("clue") or "").strip():
-            wordlist_clues[w] = r["clue"].strip()
+            wordlist_clues[w] = (r["clue"].strip(), r.get("source_license") or "CC0-1.0")
 
     existing_nonbliss: set[str] = set()
     out_rows: list[dict] = []
@@ -186,10 +192,11 @@ def main() -> None:
             report.append(f"{surface}: SKIP (no lemma clue for {lemma})")
             continue
         clues: list[str] = []
+        clue_licenses: list[str] = []
         for _lm, tags in analyses:
             norm = {normalize_tag(t) for t in tags}
             third_person = bool(norm & {"3sg", "3pl"})
-            for source_clue in sources:
+            for source_clue, source_license in sources:
                 if len(clues) >= MAX_CLUES_PER_FORM:
                     break
                 if not _infinitive_led(source_clue, index):
@@ -208,6 +215,7 @@ def main() -> None:
                     continue
                 if text not in clues:
                     clues.append(text)
+                    clue_licenses.append(source_license)
         if not clues:
             report.append(f"{surface}: UNRECOVERED (no clean inflection from {len(sources)} source clues)")
             continue
@@ -217,11 +225,11 @@ def main() -> None:
         base["length"] = str(len(surface))
         base["frequency"] = str(freqs.get(surface, 0))
         base["source"] = "bliss"
-        base["source_license"] = "CC0-1.0"
         base["lemma"] = lemma
-        for i, clue in enumerate(clues):
+        for i, (clue, clue_license) in enumerate(zip(clues, clue_licenses)):
             row = dict(base)
             row["clue"] = clue
+            row["source_license"] = clue_license
             out_rows.append(row)
             added_rows += 1
         added_words += 1

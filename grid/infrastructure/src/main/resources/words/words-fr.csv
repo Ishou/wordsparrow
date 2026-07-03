@@ -119089,10 +119089,10 @@ id,fr,2,100000,,Idem,bliss,CC0-1.0,id
 dj,fr,2,100000,,Disc-jockey,bliss,CC0-1.0,dj
 arma,fr,4,249470,,Munit,bliss,CC0-1.0,armer
 dis,fr,3,5338372,,Énonces,bliss,CC0-1.0,dire
-dis,fr,3,5338372,,Énonces clairement,bliss,CC0-1.0,dire
+dis,fr,3,5338372,,Énonces clairement,bliss,MPL-2.0,dire
 dis,fr,3,5338372,,Énonce,bliss,CC0-1.0,dire
 dit,fr,3,116639936,,Énoncé,bliss,CC0-1.0,dire
-dit,fr,3,116639936,,Énoncé clairement,bliss,CC0-1.0,dire
+dit,fr,3,116639936,,Énoncé clairement,bliss,MPL-2.0,dire
 dit,fr,3,116639936,,Énonce,bliss,CC0-1.0,dire
 dora,fr,4,16090,,Brunit,bliss,CC0-1.0,dorer
 eus,fr,3,1070618,,Possédés,bliss,CC0-1.0,avoir
@@ -119103,21 +119103,21 @@ fit,fr,3,37522731,,Exécuta,bliss,CC0-1.0,faire
 fuma,fr,4,18531,,Consomma du tabac,bliss,CC0-1.0,fumer
 fus,fr,3,2871778,,Existas,bliss,CC0-1.0,être
 fêta,fr,4,24659,,Célébra,bliss,CC0-1.0,fêter
-fêta,fr,4,24659,,Marqua une occasion,bliss,CC0-1.0,fêter
+fêta,fr,4,24659,,Marqua une occasion,bliss,MPL-2.0,fêter
 gara,fr,4,27587,,Stationna,bliss,CC0-1.0,garer
-gara,fr,4,27587,,Mit la voiture,bliss,CC0-1.0,garer
+gara,fr,4,27587,,Mit la voiture,bliss,MPL-2.0,garer
 gâta,fr,4,24537,,Détériora,bliss,CC0-1.0,gâter
 géra,fr,4,18736,,Conduisit,bliss,CC0-1.0,gérer
 gêna,fr,4,33815,,Causa des troubles,bliss,CC0-1.0,gêner
 leva,fr,4,1699996,,Se dressa,bliss,CC0-1.0,lever
 loua,fr,4,175634,,Prit en location,bliss,CC0-1.0,louer
 lus,fr,3,619189,,Décryptés,bliss,CC0-1.0,lire
-lus,fr,3,619189,,Pris connaissance de,bliss,CC0-1.0,lire
+lus,fr,3,619189,,Pris connaissance de,bliss,MPL-2.0,lire
 lus,fr,3,619189,,Décryptas,bliss,CC0-1.0,lire
 lut,fr,3,1109260,,Décrypta,bliss,CC0-1.0,lire
-lut,fr,3,1109260,,Prit connaissance de,bliss,CC0-1.0,lire
+lut,fr,3,1109260,,Prit connaissance de,bliss,MPL-2.0,lire
 mima,fr,4,8015,,Imita,bliss,CC0-1.0,mimer
-mima,fr,4,8015,,Imita sans le dire,bliss,CC0-1.0,mimer
+mima,fr,4,8015,,Imita sans le dire,bliss,MPL-2.0,mimer
 mina,fr,4,213657,,Exploita,bliss,CC0-1.0,miner
 mis,fr,3,16417520,,Placé,bliss,CC0-1.0,mettre
 mis,fr,3,16417520,,Plaças,bliss,CC0-1.0,mettre
@@ -119125,22 +119125,22 @@ mit,fr,3,11099094,,Plaça,bliss,CC0-1.0,mettre
 mut,fr,3,51879,,Se déplaça,bliss,CC0-1.0,mouvoir
 noua,fr,4,251606,,Serra,bliss,CC0-1.0,nouer
 osa,fr,3,917227,,Franchit le pas,bliss,CC0-1.0,oser
-pua,fr,3,9195,,Sentit mauvais,bliss,CC0-1.0,puer
-put,fr,3,7534326,,Eut autorité,bliss,CC0-1.0,pouvoir
-rama,fr,4,20735,,Propulsa une galère,bliss,CC0-1.0,ramer
+pua,fr,3,9195,,Sentit mauvais,bliss,MPL-2.0,puer
+put,fr,3,7534326,,Eut autorité,bliss,MPL-2.0,pouvoir
+rama,fr,4,20735,,Propulsa une galère,bliss,MPL-2.0,ramer
 rima,fr,4,34853,,Rythma,bliss,CC0-1.0,rimer
-rima,fr,4,34853,,Correspondit en vers,bliss,CC0-1.0,rimer
-rit,fr,3,1059322,,S’esclaffe ou glousse,bliss,CC0-1.0,rire
-sapa,fr,4,6751,,Porta atteinte,bliss,CC0-1.0,saper
+rima,fr,4,34853,,Correspondit en vers,bliss,MPL-2.0,rimer
+rit,fr,3,1059322,,S’esclaffe ou glousse,bliss,MPL-2.0,rire
+sapa,fr,4,6751,,Porta atteinte,bliss,MPL-2.0,saper
 scia,fr,4,24130,,Tronçonna,bliss,CC0-1.0,scier
 sua,fr,3,1301933,,Transpira,bliss,CC0-1.0,suer
 sus,fr,3,1629229,,Maîtrisés,bliss,CC0-1.0,savoir
-sus,fr,3,1629229,,Connus,bliss,CC0-1.0,savoir
+sus,fr,3,1629229,,Connus,bliss,MPL-2.0,savoir
 sus,fr,3,1629229,,Maîtrisas,bliss,CC0-1.0,savoir
 sut,fr,3,2917438,,Maîtrisa,bliss,CC0-1.0,savoir
-sut,fr,3,2917438,,Connut,bliss,CC0-1.0,savoir
+sut,fr,3,2917438,,Connut,bliss,MPL-2.0,savoir
 tua,fr,3,664241,,Abattit,bliss,CC0-1.0,tuer
-tua,fr,3,664241,,Mit fin à la vie,bliss,CC0-1.0,tuer
+tua,fr,3,664241,,Mit fin à la vie,bliss,MPL-2.0,tuer
 vexa,fr,4,9552,,Énerva,bliss,CC0-1.0,vexer
 vida,fr,4,375940,,Débarrassa,bliss,CC0-1.0,vider
 vit,fr,3,6111724,,Perçut avec les yeux,bliss,CC0-1.0,voir
