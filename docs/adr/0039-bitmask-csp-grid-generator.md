@@ -176,3 +176,40 @@ orphaned on *both* axes. Measured effect (15x12, 120 grids): interlock 90.6% →
 ~79%, first-attempt success 114 → 106/120 (retry path via `GeneratePuzzleUseCase`
 still 200/200), word-length distribution unchanged — the change makes grids
 authentically half-checked, it does not shorten words.
+
+### Amendment (2026-07-03): dead-end words must be ≥ 5 letters
+
+A word whose last cell is a **dead end** — sealed ahead by a black cell and
+uncrossed on the perpendicular axis (black or border on both sides) — leaves
+its tip letter with no crossing to confirm it. On a short word that is unfair
+to the solver and reads as generator laziness. Measurement over 200 seeded
+28×20 layouts found ~2.2 short (< 5) dead-end pockets per layout, including
+2-letter culs-de-sac; ~95 % are fully interior, ~5 % hug one border with two
+black walls. Words ending flush at the grid border stay exempt: the forward
+wall must be an actual black cell (a border-forward pocket cannot arise —
+its perpendicular walls would be dead blacks and get cleaned up).
+
+Rule: **a word whose last cell is a dead end must be at least 5 letters**
+(`GridValidator.DEAD_END_MIN_LEN`, the canonical threshold — it lives in
+`validation` because Konsist forbids `validation → generation` imports).
+Enforcement mirrors C2 (triples) / C7 (clamps):
+
+- `GridValidator` gains a `ShortDeadEnd` violation (defense-in-depth net).
+- `BlackCellLayout.canPlaceBlack` gains **Check 7**: reject a placement that
+  walls or shortens a run into a short dead end (forward-wall, side-wall and
+  split-shortening cases; candidates are the four neighbours plus the far
+  tips of the split right/down runs).
+- `SlotRegistry.build` returns `null` for any slot ending in a short dead
+  end — the authoritative gate covering seed passes that bypass
+  `canPlaceBlack` (orphan repair, dead-black cleanup); the driver perturbs
+  as usual.
+- Bench regression gate: `GridDeadEndReproTest` (production corpus, default
+  28×20 constraints).
+
+Measured effect (28×20, 120 seeds, production corpus): before the rule
+**every** generated grid contained short dead-end words (104/104 grids,
+842 words, ~8 per grid). After: 0/102. Cost:
+first-attempt success 104 → 102/120, p50 latency 266 → 742 ms
+(mean 417 → 859 ms) — well within the generation budget; mean word
+length 3.79 → 3.87 and interlock 83.8 % → 84.9 % (both slightly up:
+culs-de-sac were short and uncrossed by definition).

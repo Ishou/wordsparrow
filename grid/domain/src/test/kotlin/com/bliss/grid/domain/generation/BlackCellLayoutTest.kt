@@ -487,4 +487,101 @@ class BlackCellLayoutTest {
             }
         }
     }
+
+    @Test
+    fun `isShortDeadEndTip detects an interior horizontal pocket tip`() {
+        // Row-2 run (2,0)..(2,3) is 4 long; walls (1,3), (3,3), (2,4) seal its tip.
+        val cells = CellArray(7, 5)
+        cells.set(1, 3, CellArray.BLACK)
+        cells.set(3, 3, CellArray.BLACK)
+        cells.set(2, 4, CellArray.BLACK)
+        assertThat(BlackCellLayout.isShortDeadEndTip(cells, 2, 3)).isTrue()
+    }
+
+    @Test
+    fun `isShortDeadEndTip detects an interior vertical pocket tip`() {
+        // Col-1 run (0,1)..(2,1) is 3 long; walls (2,0), (2,2), (3,1) seal its tip.
+        val cells = CellArray(3, 7)
+        cells.set(2, 0, CellArray.BLACK)
+        cells.set(2, 2, CellArray.BLACK)
+        cells.set(3, 1, CellArray.BLACK)
+        assertThat(BlackCellLayout.isShortDeadEndTip(cells, 2, 1)).isTrue()
+    }
+
+    @Test
+    fun `isShortDeadEndTip detects an edge pocket hugging the bottom border`() {
+        // Bottom-row run (4,0)..(4,3): black ahead (4,4), black above (3,3), border below.
+        val cells = CellArray(7, 5)
+        cells.set(3, 3, CellArray.BLACK)
+        cells.set(4, 4, CellArray.BLACK)
+        assertThat(BlackCellLayout.isShortDeadEndTip(cells, 4, 3)).isTrue()
+    }
+
+    @Test
+    fun `isShortDeadEndTip exempts a word ending at the border`() {
+        // Row-1 run (1,0)..(1,3) ends flush at the right border: no forward black.
+        val cells = CellArray(4, 3)
+        cells.set(0, 3, CellArray.BLACK)
+        cells.set(2, 3, CellArray.BLACK)
+        assertThat(BlackCellLayout.isShortDeadEndTip(cells, 1, 3)).isFalse()
+    }
+
+    @Test
+    fun `isShortDeadEndTip exempts a crossed tip`() {
+        // (1,3) white above the tip gives (2,3) a length-2 vertical crossing.
+        val cells = CellArray(7, 5)
+        cells.set(3, 3, CellArray.BLACK)
+        cells.set(2, 4, CellArray.BLACK)
+        assertThat(BlackCellLayout.isShortDeadEndTip(cells, 2, 3)).isFalse()
+    }
+
+    @Test
+    fun `isShortDeadEndTip exempts a dead end of length five`() {
+        // Row-2 run (2,0)..(2,4) is 5 long — long enough to earn its dead end.
+        val cells = CellArray(9, 5)
+        cells.set(1, 4, CellArray.BLACK)
+        cells.set(3, 4, CellArray.BLACK)
+        cells.set(2, 5, CellArray.BLACK)
+        assertThat(BlackCellLayout.isShortDeadEndTip(cells, 2, 4)).isFalse()
+    }
+
+    @Test
+    fun `canPlaceBlack rejects the forward wall that completes a short dead end`() {
+        // (1,3), (3,3) already wall the tip (2,3) of the 4-long row-2 run;
+        // placing (2,4) would seal its last open side. Check 7 fires.
+        val cells = CellArray(7, 5)
+        cells.set(1, 3, CellArray.BLACK)
+        cells.set(3, 3, CellArray.BLACK)
+        assertThat(BlackCellLayout.canPlaceBlack(cells, 2, 4, 2)).isFalse()
+    }
+
+    @Test
+    fun `canPlaceBlack rejects the side wall that completes a short dead end`() {
+        // (1,3) above and (2,4) ahead already wall the tip (2,3);
+        // placing (3,3) below removes its last crossing. Check 7 fires.
+        val cells = CellArray(7, 5)
+        cells.set(1, 3, CellArray.BLACK)
+        cells.set(2, 4, CellArray.BLACK)
+        assertThat(BlackCellLayout.canPlaceBlack(cells, 3, 3, 2)).isFalse()
+    }
+
+    @Test
+    fun `canPlaceBlack rejects a split that shortens a dead-end word below five`() {
+        // Row-2 run (2,0)..(2,7) ends in a walled tip at (2,7) — legal at length 8.
+        // Splitting at (2,3) would leave the tip's word only 4 long.
+        val cells = CellArray(10, 5)
+        cells.set(1, 7, CellArray.BLACK)
+        cells.set(3, 7, CellArray.BLACK)
+        cells.set(2, 8, CellArray.BLACK)
+        assertThat(BlackCellLayout.canPlaceBlack(cells, 2, 3, 2)).isFalse()
+    }
+
+    @Test
+    fun `canPlaceBlack allows sealing a dead end of length five`() {
+        // Row-2 run (2,0)..(2,4) is 5 long; sealing its tip at (2,5) is legal.
+        val cells = CellArray(9, 5)
+        cells.set(1, 4, CellArray.BLACK)
+        cells.set(3, 4, CellArray.BLACK)
+        assertThat(BlackCellLayout.canPlaceBlack(cells, 2, 5, 2)).isTrue()
+    }
 }

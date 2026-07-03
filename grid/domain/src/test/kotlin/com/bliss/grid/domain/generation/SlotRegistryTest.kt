@@ -224,4 +224,67 @@ class SlotRegistryTest {
         val build = SlotRegistry.build(cells, lexFor5x5, minLen = 2)
         assertThat(build).isNull()
     }
+
+    private val lexUpTo7 =
+        mkLexicon(
+            listOf(
+                "AB",
+                "CD",
+                "EF",
+                "GH",
+                "IJ",
+                "KL",
+                "MN",
+                "OP",
+                "ABC",
+                "DEF",
+                "GHI",
+                "JKL",
+                "ABCD",
+                "EFGH",
+                "IJKL",
+                "ABCDE",
+                "FGHIJ",
+                "ABCDEF",
+                "GHIJKL",
+                "ABCDEFG",
+                "HIJKLMN",
+            ),
+        )
+
+    @Test
+    fun `build accepts a layout whose dead-end tips are all crossed or long enough`() {
+        // Control for the dead-end rejection below: identical layout except
+        // (3,2) is white, so the row-2 tip (2,2) keeps a vertical crossing.
+        val cells =
+            cellsFrom(
+                """
+            #.#.#.#
+            ..#....
+            #..#...
+            .......
+            #......
+            """,
+            )
+        val build = SlotRegistry.build(cells, lexUpTo7, minLen = 2)
+        assertThat(build).isNotNull()
+    }
+
+    @Test
+    fun `build returns null when a word ends in a dead end shorter than five`() {
+        // Row-2 slot (2,1)..(2,2) is 2 long; its tip (2,2) is walled by
+        // (1,2), (3,2) and (2,3) — a short dead end.
+        val cells =
+            cellsFrom(
+                """
+            #.#.#.#
+            ..#....
+            #..#...
+            ..#....
+            #......
+            """,
+            )
+        val build = SlotRegistry.build(cells, lexUpTo7, minLen = 2)
+        assertThat(build).isNull()
+    }
 }

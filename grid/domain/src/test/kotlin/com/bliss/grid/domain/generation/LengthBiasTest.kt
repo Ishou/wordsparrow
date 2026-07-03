@@ -84,12 +84,18 @@ class LengthBiasTest {
         var lowAvg = 0.0
         var highAvg = 0.0
         val trials = 25
-        for (seed in 1L..trials.toLong()) {
-            lowAvg += meanSlotLength(buildSlots(lex, 0.0, lUseful, Random(seed)))
-            highAvg += meanSlotLength(buildSlots(lex, 0.4, lUseful, Random(seed)))
+        var used = 0
+        // A raw seed may fail SlotRegistry (driver perturbs in production); skip the pair to keep low/high seeds matched.
+        for (seed in 1L..(trials * 2).toLong()) {
+            if (used == trials) break
+            val low = buildSlots(lex, 0.0, lUseful, Random(seed)) ?: continue
+            val high = buildSlots(lex, 0.4, lUseful, Random(seed)) ?: continue
+            lowAvg += meanSlotLength(low)
+            highAvg += meanSlotLength(high)
+            used++
         }
-        lowAvg /= trials
-        highAvg /= trials
+        lowAvg /= used
+        highAvg /= used
         // Spec §4.5.2 measured table: bias 0.0 ~ 3.9 letters, bias 0.4 ~ 4.4.
         // Use a conservative delta to avoid flakes on different corpora.
         assertThat(highAvg).isGreaterThanOrEqualTo(lowAvg + 0.2)
@@ -100,7 +106,7 @@ class LengthBiasTest {
         bias: Double,
         lUseful: Int,
         random: Random,
-    ): SlotRegistry.Build {
+    ): SlotRegistry.Build? {
         val lTarget = lTargetFor(bias, lUseful, 2)
         val cells =
             BlackCellLayout.seed(
@@ -113,7 +119,7 @@ class LengthBiasTest {
                 random = random,
                 lMinGood = lMinGood(bias, lUseful, 2),
             )
-        return SlotRegistry.build(cells, lex, 2) ?: error("layout invalid")
+        return SlotRegistry.build(cells, lex, 2)
     }
 
     private fun meanSlotLength(build: SlotRegistry.Build): Double {

@@ -326,4 +326,108 @@ class GridValidatorTest {
         val grid = Grid.fromPlacements(width = 3, height = 1, placements = listOf(placement))
         assertThat(validator.validate(grid).filterIsInstance<GridViolation.ClosedClamp>()).isEmpty()
     }
+
+    private fun deadEndFixture(
+        width: Int,
+        height: Int,
+        word: String,
+        extraCells: Map<Position, Cell>,
+    ): Grid {
+        // Horizontal word at row 1 starting col 1, clue at (1,0).
+        val placement = WordPlacement(Word(word, "x"), Position(Row(1), Column(0)), Direction.RIGHT)
+        val cells = mutableMapOf<Position, Cell>(Position(Row(1), Column(0)) to ClueCell(listOf(Clue("x", Direction.RIGHT))))
+        word.forEachIndexed { i, ch -> cells[Position(Row(1), Column(1 + i))] = LetterCell(ch) }
+        cells += extraCells
+        return Grid(width = width, height = height, cells = cells, placements = listOf(placement))
+    }
+
+    @Test
+    fun `short word ending in an interior dead end is reported`() {
+        // Tip (1,3) sealed by clue cells above, below and ahead.
+        val grid =
+            deadEndFixture(
+                width = 5,
+                height = 3,
+                word = "ABC",
+                extraCells =
+                    mapOf(
+                        Position(Row(0), Column(3)) to ClueCell(listOf(Clue("a", Direction.DOWN))),
+                        Position(Row(2), Column(3)) to ClueCell(listOf(Clue("b", Direction.DOWN))),
+                        Position(Row(1), Column(4)) to ClueCell(listOf(Clue("c", Direction.DOWN))),
+                    ),
+            )
+        assertThat(validator.validate(grid)).contains(
+            GridViolation.ShortDeadEnd(Position(Row(1), Column(3)), WordAxis.HORIZONTAL, length = 3),
+        )
+    }
+
+    @Test
+    fun `short vertical word ending in an edge dead end is reported`() {
+        // Vertical AB in col 0; tip (2,0) walled by the left border, (2,1) and (3,0).
+        val placement = WordPlacement(Word("AB", "x"), Position(Row(0), Column(0)), Direction.DOWN)
+        val cells: Map<Position, Cell> =
+            mapOf(
+                Position(Row(0), Column(0)) to ClueCell(listOf(Clue("x", Direction.DOWN))),
+                Position(Row(1), Column(0)) to LetterCell('A'),
+                Position(Row(2), Column(0)) to LetterCell('B'),
+                Position(Row(2), Column(1)) to ClueCell(listOf(Clue("y", Direction.DOWN))),
+                Position(Row(3), Column(0)) to ClueCell(listOf(Clue("z", Direction.RIGHT))),
+            )
+        val grid = Grid(width = 3, height = 4, cells = cells, placements = listOf(placement))
+        assertThat(validator.validate(grid)).contains(
+            GridViolation.ShortDeadEnd(Position(Row(2), Column(0)), WordAxis.VERTICAL, length = 2),
+        )
+    }
+
+    @Test
+    fun `short word ending at the grid border is not a dead end`() {
+        // Tip (1,3) is flush against the right border: exempt.
+        val grid =
+            deadEndFixture(
+                width = 4,
+                height = 3,
+                word = "ABC",
+                extraCells =
+                    mapOf(
+                        Position(Row(0), Column(3)) to ClueCell(listOf(Clue("a", Direction.DOWN))),
+                        Position(Row(2), Column(3)) to ClueCell(listOf(Clue("b", Direction.DOWN))),
+                    ),
+            )
+        assertThat(validator.validate(grid).filterIsInstance<GridViolation.ShortDeadEnd>()).isEmpty()
+    }
+
+    @Test
+    fun `short word with a crossed tip is not a dead end`() {
+        // (0,3) is a letter cell: the tip keeps a vertical crossing.
+        val grid =
+            deadEndFixture(
+                width = 5,
+                height = 3,
+                word = "ABC",
+                extraCells =
+                    mapOf(
+                        Position(Row(0), Column(3)) to LetterCell('Z'),
+                        Position(Row(2), Column(3)) to ClueCell(listOf(Clue("b", Direction.DOWN))),
+                        Position(Row(1), Column(4)) to ClueCell(listOf(Clue("c", Direction.DOWN))),
+                    ),
+            )
+        assertThat(validator.validate(grid).filterIsInstance<GridViolation.ShortDeadEnd>()).isEmpty()
+    }
+
+    @Test
+    fun `five-letter word ending in a dead end is not reported`() {
+        val grid =
+            deadEndFixture(
+                width = 7,
+                height = 3,
+                word = "ABCDE",
+                extraCells =
+                    mapOf(
+                        Position(Row(0), Column(5)) to ClueCell(listOf(Clue("a", Direction.DOWN))),
+                        Position(Row(2), Column(5)) to ClueCell(listOf(Clue("b", Direction.DOWN))),
+                        Position(Row(1), Column(6)) to ClueCell(listOf(Clue("c", Direction.DOWN))),
+                    ),
+            )
+        assertThat(validator.validate(grid).filterIsInstance<GridViolation.ShortDeadEnd>()).isEmpty()
+    }
 }
