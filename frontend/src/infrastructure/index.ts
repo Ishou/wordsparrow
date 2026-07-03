@@ -11,6 +11,7 @@ export {
   type GridApiClient,
   type GridApiClientOptions,
 } from './api/grid/client';
+export { createDedupedPuzzleRepository } from './api/grid/DedupedPuzzleRepository';
 export {
   createHttpPuzzleRepository,
   type HttpPuzzleRepositoryOptions,
