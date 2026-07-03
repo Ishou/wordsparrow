@@ -1,4 +1,4 @@
-import { canNativeShare } from '@/ui/lib/shareInvite';
+import { canNativeShare, type ShareInviteResult } from '@/ui/lib/shareInvite';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowsClockwise, Copy, Eye, EyeSlash, SignOut } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
@@ -35,7 +35,9 @@ export interface SalonScreenProps {
   readonly onSetGridConfig: (width: number, height: number) => void;
   readonly onStart: () => void;
   readonly onRotateCode: () => void;
-  readonly onCopyShareUrl: () => void;
+  // Resolves to the branch the share actually took; the "Lien copié !"
+  // feedback below is gated on `'copied'`, not on platform capability.
+  readonly onCopyShareUrl: () => Promise<ShareInviteResult | null>;
   readonly onLeave: () => void;
   readonly onClearPseudonymError?: () => void;
 }
@@ -272,11 +274,13 @@ export function SalonScreen({
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current); }, []);
   const handleCopy = () => {
-    onCopyShareUrl();
-    if (canNativeShare()) return;
-    if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
-    setJustCopied(true);
-    copyTimerRef.current = setTimeout(() => { setJustCopied(false); copyTimerRef.current = null; }, COPY_FEEDBACK_MS);
+    void (async () => {
+      const result = await onCopyShareUrl();
+      if (result !== 'copied') return;
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
+      setJustCopied(true);
+      copyTimerRef.current = setTimeout(() => { setJustCopied(false); copyTimerRef.current = null; }, COPY_FEEDBACK_MS);
+    })();
   };
 
   const [editing, setEditing] = useState(false);

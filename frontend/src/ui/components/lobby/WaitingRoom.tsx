@@ -1,4 +1,4 @@
-import { canNativeShare } from '@/ui/lib/shareInvite';
+import { canNativeShare, type ShareInviteResult } from '@/ui/lib/shareInvite';
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
 import { MAX_PSEUDONYM_LENGTH, type Lobby, type Pseudonym, type SessionId } from '@/domain/game';
@@ -41,7 +41,9 @@ export interface WaitingRoomProps {
   readonly onRename: (newPseudonym: Pseudonym) => void;
   readonly onSetGridConfig: (width: number, height: number) => void;
   readonly onStart: () => void;
-  readonly onCopyShareUrl: () => void;
+  // Resolves to the branch the share actually took; the "Lien copié !"
+  // feedback below is gated on `'copied'`, not on platform capability.
+  readonly onCopyShareUrl: () => Promise<ShareInviteResult | null>;
   // Server-side rename rejection surfaced inline below the editor.
   // The parent route subscribes to `gameClient` `error` frames with
   // `errorType === 'https://bliss.example/errors/invalid-pseudonym'`
@@ -157,14 +159,16 @@ export function WaitingRoom({
     [],
   );
   const handleCopyClick = () => {
-    onCopyShareUrl();
-    if (canNativeShare()) return;
-    if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
-    setJustCopied(true);
-    copyTimerRef.current = setTimeout(() => {
-      setJustCopied(false);
-      copyTimerRef.current = null;
-    }, COPY_FEEDBACK_MS);
+    void (async () => {
+      const result = await onCopyShareUrl();
+      if (result !== 'copied') return;
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
+      setJustCopied(true);
+      copyTimerRef.current = setTimeout(() => {
+        setJustCopied(false);
+        copyTimerRef.current = null;
+      }, COPY_FEEDBACK_MS);
+    })();
   };
   // ADR-0027 §"WaitingRoom code visibility toggle" — default-masked
   // (streamer-safe). The eye toggle is the single visibility

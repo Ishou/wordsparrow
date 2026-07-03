@@ -199,14 +199,16 @@ function LobbyRow({ lobby }: { readonly lobby: LobbySummary }) {
   const handleCopy = () => {
     // ADR-0027: invite URL is `/join/$code`, not the bare code.
     const shareUrl = `${window.location.origin}/join/${lobby.code}`;
-    void shareOrCopyInviteUrl(shareUrl);
-    if (canNativeShare()) return;
-    if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
-    setJustCopied(true);
-    copyTimerRef.current = setTimeout(() => {
-      setJustCopied(false);
-      copyTimerRef.current = null;
-    }, COPY_FEEDBACK_MS);
+    void (async () => {
+      const result = await shareOrCopyInviteUrl(shareUrl);
+      if (result !== 'copied') return;
+      if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
+      setJustCopied(true);
+      copyTimerRef.current = setTimeout(() => {
+        setJustCopied(false);
+        copyTimerRef.current = null;
+      }, COPY_FEEDBACK_MS);
+    })();
   };
 
   return (
