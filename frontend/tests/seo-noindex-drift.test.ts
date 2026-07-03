@@ -11,8 +11,7 @@ interface ScannedRoute {
   readonly noindex: boolean;
 }
 
-// Static scan of the eager route halves: a route emits noindex when its head()
-// calls noindexHead(...) or buildHead({ ..., noindex: true }).
+// Static scan: a route is noindex if its file calls noindexHead(...) or passes noindex: true.
 function scanRoutes(): ScannedRoute[] {
   const out: ScannedRoute[] = [];
   for (const name of readdirSync(ROUTES_DIR)) {
