@@ -180,6 +180,41 @@ describe('v2 LiveCoopScreen', () => {
     expect(cellWrap(0, 1).style.animationDelay).toBe('');
   });
 
+  it('does not let a stale rejoin-replay snapshot clobber an unconfirmed local write', () => {
+    const { props, cellStream, rerenderScreen } = renderScreen();
+    const input = letterInput(0, 1);
+    act(() => {
+      input.focus();
+    });
+    act(() => {
+      fireEvent.keyDown(input, { key: 'O' });
+    });
+    expect(input.value).toBe('O');
+    // A pre-flush `lobbyState` snapshot lands after reconnect — it predates the local write reaching the server.
+    act(() => {
+      rerenderScreen({ initialEntries: [{ row: 0, column: 1, letter: '' }] });
+    });
+    expect(letterInput(0, 1).value).toBe('O');
+    // The server's own-write echo confirms the value; a later snapshot matching it is a no-op.
+    cellStream.dispatch({
+      type: 'cellUpdated',
+      sessionId: props.sessionId,
+      row: 0,
+      column: 1,
+      letter: 'O',
+      writtenAt: '2026-06-27T15:31:00Z',
+    } as GameEvent);
+    act(() => {
+      rerenderScreen({ initialEntries: [{ row: 0, column: 1, letter: 'O' }] });
+    });
+    expect(letterInput(0, 1).value).toBe('O');
+    // Once confirmed, a genuinely newer snapshot (e.g. a peer's later overwrite) still applies.
+    act(() => {
+      rerenderScreen({ initialEntries: [{ row: 0, column: 1, letter: 'U' }] });
+    });
+    expect(letterInput(0, 1).value).toBe('U');
+  });
+
   it('wires the leave control', () => {
     const { props } = renderScreen();
     fireEvent.click(screen.getByRole('button', { name: 'Quitter la partie' }));
