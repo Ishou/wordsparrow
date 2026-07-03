@@ -79,6 +79,27 @@ describe('DailyCalendar', () => {
     expect(props.onPaywalledSelect).toHaveBeenCalledOnce();
   });
 
+  it('keeps a started grid playable in the middle of a paywalled range and splits the band around it', async () => {
+    // 9-12 juin, all past the free window; 11 juin is started by the player and splits the band.
+    const infos = deriveDayInfos(
+      [summary('2026-06-09', 'pw-0'), summary('2026-06-10', 'pw-a'), summary('2026-06-11', 'kept'), summary('2026-06-12', 'pw-b')],
+      (id) => (id === 'kept' ? { locked: 3, started: true } : { locked: 0, started: false }),
+      TODAY,
+      true,
+    );
+    renderCalendar({ infos });
+    expect(await screen.findByRole('button', { name: "Grille réservée à l'abonnement — Mercredi 10 juin" })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Reprendre — Jeudi 11 juin — 30 %' })).toBeTruthy();
+    // Cap classes derive from paywalled neighbours: 9 = run start (left cap), 10 = run end (right cap),
+    // 12 = isolated (both caps). jsdom applies no stylesheets, so assert on the class sets.
+    const classesOf = (re: RegExp) => new Set(screen.getByRole('button', { name: re }).className.split(' '));
+    const start = classesOf(/9 juin/);
+    const end = classesOf(/10 juin/);
+    const isolated = classesOf(/12 juin/);
+    expect(start).not.toEqual(end);
+    expect(isolated).toEqual(new Set([...start, ...end]));
+  });
+
   it('renders days without a grid as non-interactive and clamps month nav', async () => {
     renderCalendar();
     await screen.findByRole('button', { name: 'Mois précédent' });
