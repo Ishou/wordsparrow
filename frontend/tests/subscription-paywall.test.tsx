@@ -31,6 +31,9 @@ function authClientFor(whoami: WhoAmIResult): AuthClient {
     updateMe: async () => {},
     deleteMe: async () => {},
     logout: async () => {},
+    logoutAll: async () => {},
+    startEmailOtp: async () => 'sent' as const,
+    verifyEmailOtp: async () => 'ok' as const,
     signInUrl: (provider, returnTo) => `https://auth.test/${provider}?return_to=${returnTo}`,
   };
 }

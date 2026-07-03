@@ -18,6 +18,9 @@ function fakeAuthClient(whoami: WhoAmIResult | null): AuthClient {
     async updateMe() {},
     async deleteMe() {},
     async logout() {},
+    async logoutAll() {},
+    async startEmailOtp() { return 'sent' as const; },
+    async verifyEmailOtp() { return 'ok' as const; },
     signInUrl() {
       return 'https://auth.test';
     },

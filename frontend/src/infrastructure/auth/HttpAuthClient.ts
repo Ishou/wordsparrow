@@ -94,6 +94,41 @@ export function createHttpAuthClient(
       }
     },
 
+    async logoutAll() {
+      const { error, response } = await client.POST('/v1/auth/logout-all', {
+        credentials: 'include',
+      });
+      if (response.status === 401) return; // already signed out
+      if (error) {
+        const detail = error.detail ?? error.title ?? `HTTP ${response.status}`;
+        throw new Error(`logoutAll failed: ${detail}`);
+      }
+    },
+
+    async startEmailOtp(email: string) {
+      const { error, response } = await client.POST('/v1/auth/email/start', {
+        credentials: 'include',
+        body: { email },
+      });
+      if (response.status === 202) return 'sent' as const;
+      if (response.status === 429) return 'rate_limited' as const;
+      if (response.status === 400) return 'invalid' as const;
+      const detail = error?.detail ?? error?.title ?? `HTTP ${response.status}`;
+      throw new Error(`startEmailOtp failed: ${detail}`);
+    },
+
+    async verifyEmailOtp(email: string, code: string) {
+      const { error, response } = await client.POST('/v1/auth/email/verify', {
+        credentials: 'include',
+        body: { email, code },
+      });
+      if (response.status === 200) return 'ok' as const;
+      // Route maps every bad/expired/locked code to a uniform 400/401 — both mean "invalid".
+      if (response.status === 400 || response.status === 401) return 'invalid' as const;
+      const detail = error?.detail ?? error?.title ?? `HTTP ${response.status}`;
+      throw new Error(`verifyEmailOtp failed: ${detail}`);
+    },
+
     signInUrl(provider: 'google' | 'apple', returnTo: string): string {
       const url = new URL(`/v1/auth/${provider}/login`, baseUrl);
       url.searchParams.set('return_to', returnTo);
