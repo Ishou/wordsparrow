@@ -23,7 +23,7 @@
               }
             ],
             "filter": {
-              "expression": "service.name = frontend AND name IN ('window.error', 'window.unhandledrejection')"
+              "expression": "service.name = 'frontend' AND name IN ('window.error', 'window.unhandledrejection')"
             },
             "having": {
               "expression": ""
