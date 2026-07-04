@@ -7,6 +7,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import com.bliss.billing.application.ports.NoValidMandateException
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.SubscriptionStatus
@@ -359,6 +360,74 @@ class MollieBillingAdapterTest {
 
             assertThat(refs.map { it.externalRef }).containsExactly("cust_1:sub_a", "cust_2:sub_b")
             assertThat(refs.first().userId).isEqualTo(userId)
+        }
+
+    @Test
+    fun `reactivate reuses a valid mandate and creates a deferred no-charge recurring subscription`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.mandatesByCustomer["cust_x"] =
+                listOf(MollieMandate("mdt_invalid", "invalid"), MollieMandate("mdt_valid", "valid"))
+            client.subscriptions["sub_old"] = MollieSubscription("sub_old", "cust_x", "canceled", null, metadata("yearly"))
+            val nextPayment = Instant.parse("2026-08-01T00:00:00Z")
+            client.nextSubscription = MollieSubscription("sub_new", "cust_x", "active", nextPayment, metadata("yearly"))
+            val startDate = Instant.parse("2026-08-01T00:00:00Z")
+
+            val state = adapter(client, InMemoryMollieCustomerStore()).reactivate(userId, "cust_x:sub_old", tier, startDate)
+
+            assertThat(client.lastListMandatesCustomerId).isEqualTo("cust_x")
+            assertThat(client.lastSubscriptionMandateId).isEqualTo("mdt_valid")
+            // No first payment is created; only the recurring subscription, deferred to the current period end.
+            assertThat(client.lastSubscriptionStartDate).isEqualTo(LocalDate.parse("2026-08-01"))
+            assertThat(client.lastSubscriptionAmount).isEqualTo("20.00")
+            assertThat(client.lastSubscriptionInterval).isEqualTo("12 months")
+            assertThat(state.externalRef).isEqualTo("cust_x:sub_new")
+            assertThat(state.status).isEqualTo(SubscriptionStatus.ACTIVE)
+            assertThat(state.periodEnd).isEqualTo(nextPayment)
+        }
+
+    @Test
+    fun `reactivate defaults to monthly when the old subscription cadence is unreadable`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.mandatesByCustomer["cust_x"] = listOf(MollieMandate("mdt_valid", "valid"))
+            val startDate = Instant.parse("2026-08-01T00:00:00Z")
+
+            adapter(client, InMemoryMollieCustomerStore()).reactivate(userId, "cust_x:sub_old", tier, startDate)
+
+            assertThat(client.lastSubscriptionAmount).isEqualTo("2.00")
+            assertThat(client.lastSubscriptionInterval).isEqualTo("1 month")
+        }
+
+    @Test
+    fun `reactivate resolves the customer from the store when the ref is not a subscription composite`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.mandatesByCustomer["cust_stored"] = listOf(MollieMandate("mdt_valid", "valid"))
+            val store = InMemoryMollieCustomerStore(mapOf(userId to "cust_stored"))
+
+            adapter(client, store).reactivate(userId, "tr_first", tier, Instant.parse("2026-08-01T00:00:00Z"))
+
+            assertThat(client.lastListMandatesCustomerId).isEqualTo("cust_stored")
+            assertThat(client.lastSubscriptionMandateId).isEqualTo("mdt_valid")
+        }
+
+    @Test
+    fun `reactivate fails with no valid mandate when the customer has none`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.mandatesByCustomer["cust_x"] = listOf(MollieMandate("mdt_invalid", "invalid"))
+
+            val result =
+                runCatching {
+                    adapter(
+                        client,
+                        InMemoryMollieCustomerStore(),
+                    ).reactivate(userId, "cust_x:sub_old", tier, Instant.parse("2026-08-01T00:00:00Z"))
+                }
+
+            assertThat(result.exceptionOrNull()).isNotNull().isInstanceOf(NoValidMandateException::class)
+            assertThat(client.createdSubscriptions).isEmpty()
         }
 
     @Test

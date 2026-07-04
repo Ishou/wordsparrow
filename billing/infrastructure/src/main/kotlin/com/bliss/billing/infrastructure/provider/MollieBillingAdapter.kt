@@ -2,6 +2,7 @@ package com.bliss.billing.infrastructure.provider
 
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.CheckoutUrls
+import com.bliss.billing.application.ports.NoValidMandateException
 import com.bliss.billing.application.ports.ProviderSubscriptionRef
 import com.bliss.billing.application.ports.ProviderSubscriptionState
 import com.bliss.billing.domain.BillingSource
@@ -9,7 +10,9 @@ import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.Tier
 import org.slf4j.LoggerFactory
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 
 /** Mollie [BillingProviderPort] implementation (ADR-0078): hosted SAQ-A checkout, re-fetch-by-id webhook auth. */
@@ -107,6 +110,60 @@ class MollieBillingAdapter(
         }
     }
 
+    override suspend fun reactivate(
+        userId: UUID,
+        currentExternalRef: String,
+        tier: Tier,
+        startDate: Instant,
+    ): ProviderSubscriptionState {
+        val customerId = resolveCustomerId(userId, currentExternalRef)
+        val mandateId =
+            client.listMandates(customerId).firstOrNull { it.status == VALID_MANDATE }?.id
+                ?: throw NoValidMandateException("customer $customerId has no valid mandate to reactivate")
+        val cadence = cadenceForReactivation(currentExternalRef)
+        val subscription =
+            client.createSubscription(
+                customerId = customerId,
+                mandateId = mandateId,
+                amountValue = config.subscriptionAmountFor(cadence),
+                currency = config.currency,
+                interval = config.subscriptionIntervalFor(cadence),
+                // Resume with the first recurring charge deferred to the current period end, so reactivation never charges now (CGV Art. 14.1).
+                startDate = LocalDate.ofInstant(startDate, ZoneOffset.UTC),
+                description = config.descriptionFor(cadence),
+                webhookUrl = config.webhookUrl,
+                metadata = metadataOf(userId, tier, cadence),
+            )
+        val status =
+            checkNotNull(MollieStatusMapping.fromSubscriptionStatus(subscription.status)) {
+                "reactivated subscription ${subscription.id} has non-actionable status ${subscription.status}"
+            }
+        return ProviderSubscriptionState(
+            externalRef = MollieReference.subscription(subscription.customerId, subscription.id),
+            userId = userId,
+            tier = tier,
+            status = status,
+            source = BillingSource.MOLLIE,
+            periodEnd = subscription.nextPaymentDate,
+            cadence = cadence,
+        )
+    }
+
+    private suspend fun resolveCustomerId(
+        userId: UUID,
+        currentExternalRef: String,
+    ): String =
+        (MollieReference.decode(currentExternalRef) as? MollieReference.Subscription)?.customerId
+            ?: customerStore.findCustomerId(userId)
+            ?: throw NoValidMandateException("no Mollie customer resolvable for user $userId")
+
+    // The old (now-cancelled) subscription still carries the cadence in its metadata; default to monthly if it can no longer be read.
+    private suspend fun cadenceForReactivation(currentExternalRef: String): Cadence =
+        (MollieReference.decode(currentExternalRef) as? MollieReference.Subscription)
+            ?.let { client.getSubscription(it.customerId, it.subscriptionId)?.metadata }
+            ?.let { cadenceFrom(it) }
+            ?: Cadence.default
+
     override suspend fun listActiveSubscriptions(): List<ProviderSubscriptionRef> =
         client
             .listAllSubscriptions()
@@ -177,5 +234,6 @@ class MollieBillingAdapter(
         const val USER_ID_KEY = "userId"
         const val TIER_KEY = "tier"
         const val CADENCE_KEY = "cadence"
+        const val VALID_MANDATE = "valid"
     }
 }

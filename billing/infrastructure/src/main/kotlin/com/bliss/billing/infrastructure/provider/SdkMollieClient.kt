@@ -18,6 +18,7 @@ import com.mollie.mollie.models.errors.APIException
 import com.mollie.mollie.models.operations.GetPaymentRequest
 import com.mollie.mollie.models.operations.ListAllSubscriptionsRequest
 import com.mollie.mollie.models.operations.ListCustomerPaymentsRequest
+import com.mollie.mollie.models.operations.ListMandatesRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.openapitools.jackson.nullable.JsonNullable
@@ -221,6 +222,24 @@ class SdkMollieClient(
                     .map { it.toDto() }
                     .orElse(null)
             }
+        }
+
+    override suspend fun listMandates(customerId: String): List<MollieMandate> =
+        withContext(Dispatchers.IO) {
+            sdk
+                .mandates()
+                .list()
+                .request(ListMandatesRequest.builder().customerId(customerId).build())
+                .callAsIterable()
+                .asSequence()
+                .flatMap { page ->
+                    page
+                        .`object`()
+                        .map { it.embedded().mandates() }
+                        .orElse(emptyList())
+                        .asSequence()
+                }.map { MollieMandate(id = it.id(), status = it.status().value()) }
+                .toList()
         }
 
     override suspend fun listAllSubscriptions(): List<MollieSubscription> =

@@ -278,6 +278,13 @@ class UserDeletedConsumerTest {
             if (externalRef in failRefs) throw RuntimeException("provider down")
         }
 
+        override suspend fun reactivate(
+            userId: UUID,
+            currentExternalRef: String,
+            tier: Tier,
+            startDate: Instant,
+        ): ProviderSubscriptionState = error("unused")
+
         override suspend fun listActiveSubscriptions(): List<ProviderSubscriptionRef> = emptyList()
     }
 

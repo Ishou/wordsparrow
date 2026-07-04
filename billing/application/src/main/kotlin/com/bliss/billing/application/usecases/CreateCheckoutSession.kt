@@ -32,7 +32,8 @@ class CreateCheckoutSession(
         email: String?,
         consent: CheckoutConsent?,
     ): CreateCheckoutSessionOutcome {
-        if (repository.findByUserId(userId)?.status?.isLive() == true) {
+        // A scheduled non-renewal past its paid period no longer blocks a fresh subscribe, else the user is stranded once access lapses.
+        if (repository.findByUserId(userId)?.blocksNewSubscription(clock.now()) == true) {
             return CreateCheckoutSessionOutcome.AlreadySubscribed
         }
         if (consent != null) {

@@ -29,6 +29,12 @@ data class MolliePaymentPage(
     val nextCursor: String?,
 )
 
+/** Provider mandate snapshot, reduced to primitives at the SDK boundary; [status] is the Mollie spelling (`valid`/`pending`/`invalid`), the reactivation reuse a "valid" mandate (ADR-0078). */
+data class MollieMandate(
+    val id: String,
+    val status: String,
+)
+
 /** Provider subscription snapshot, reduced to primitives at the SDK boundary (ADR-0078). */
 data class MollieSubscription(
     val id: String,
@@ -91,6 +97,9 @@ interface MollieClient {
         customerId: String,
         subscriptionId: String,
     ): MollieSubscription?
+
+    /** The customer's mandates (auto-paginated); reactivation reuses the first `valid` one to create a recurring subscription without a new checkout (ADR-0078). */
+    suspend fun listMandates(customerId: String): List<MollieMandate>
 
     /** Every subscription across the organization (auto-paginated); the reconciliation backstop filters these by provider status. */
     suspend fun listAllSubscriptions(): List<MollieSubscription>

@@ -97,6 +97,14 @@ class FakeMollieClient : MollieClient {
         subscriptionId: String,
     ): MollieSubscription? = subscriptions[subscriptionId]
 
+    val mandatesByCustomer = mutableMapOf<String, List<MollieMandate>>()
+    var lastListMandatesCustomerId: String? = null
+
+    override suspend fun listMandates(customerId: String): List<MollieMandate> {
+        lastListMandatesCustomerId = customerId
+        return mandatesByCustomer[customerId] ?: emptyList()
+    }
+
     override suspend fun listAllSubscriptions(): List<MollieSubscription> = allSubscriptions
 
     override suspend fun cancelSubscription(

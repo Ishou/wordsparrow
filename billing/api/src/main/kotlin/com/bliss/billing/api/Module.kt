@@ -6,6 +6,7 @@ import com.bliss.billing.api.dto.ProblemDetails
 import com.bliss.billing.api.routes.cancelSubscriptionRoute
 import com.bliss.billing.api.routes.checkoutSessionRoute
 import com.bliss.billing.api.routes.healthRoute
+import com.bliss.billing.api.routes.reactivateSubscriptionRoute
 import com.bliss.billing.api.routes.receiptsRoute
 import com.bliss.billing.api.routes.subscriptionRoute
 import com.bliss.billing.api.routes.webhookRoute
@@ -76,6 +77,7 @@ fun Application.billingApiModule(
         healthRoute()
         checkoutSessionRoute(wiring.createCheckoutSession, wiring.fetchEmail)
         cancelSubscriptionRoute(wiring.cancelSubscription)
+        reactivateSubscriptionRoute(wiring.reactivateSubscription)
         webhookRoute(wiring.ingestProviderEvent)
         subscriptionRoute(wiring.subscriptionQuery)
         receiptsRoute(wiring.listReceipts)

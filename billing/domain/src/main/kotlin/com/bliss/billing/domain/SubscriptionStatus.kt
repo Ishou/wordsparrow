@@ -21,14 +21,14 @@ enum class SubscriptionStatus(
         return target
     }
 
-    // PENDING_CANCELLATION is the deletion-cancellation tombstone (ADR-0078): reachable from any live state, sole precursor to CANCELED.
+    // PENDING_CANCELLATION is the scheduled-non-renewal state (ADR-0078, CGV Art. 14.1): reachable from any live state, sole precursor to CANCELED, and reversible back to ACTIVE (reactivation) or forward to EXPIRED once its paid period lapses.
     private val allowedTransitions: Set<SubscriptionStatus>
         get() =
             when (this) {
                 ACTIVE -> setOf(PAST_DUE, EXPIRED, PENDING_CANCELLATION)
                 PAST_DUE -> setOf(ACTIVE, EXPIRED, PENDING_CANCELLATION)
                 EXPIRED -> setOf(ACTIVE)
-                PENDING_CANCELLATION -> setOf(CANCELED)
+                PENDING_CANCELLATION -> setOf(CANCELED, ACTIVE, EXPIRED)
                 CANCELED -> emptySet()
             }
 

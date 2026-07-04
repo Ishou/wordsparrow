@@ -11,6 +11,7 @@ import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
 import com.bliss.billing.application.testdoubles.FixedClock
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.CheckoutConsent
+import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
@@ -100,6 +101,34 @@ class CreateCheckoutSessionTest {
             val outcome = useCase.execute(userId, tier, Cadence.MONTHLY, email = null, consent = null)
 
             assertThat(outcome).isEqualTo(CreateCheckoutSessionOutcome.AlreadySubscribed)
+        }
+
+    @Test
+    fun `blocks a pending cancellation whose paid period is still running`() =
+        runTest {
+            repository.save(
+                subscription(userId = userId, status = SubscriptionStatus.PENDING_CANCELLATION, periodEnd = acceptedAt.plusSeconds(86_400)),
+            )
+
+            val outcome = useCase.execute(userId, tier, Cadence.MONTHLY, email = null, consent = null)
+
+            assertThat(outcome).isEqualTo(CreateCheckoutSessionOutcome.AlreadySubscribed)
+        }
+
+    @Test
+    fun `allows a fresh subscribe once a pending cancellation has lapsed past its period`() =
+        runTest {
+            repository.save(
+                subscription(
+                    userId = userId,
+                    status = SubscriptionStatus.PENDING_CANCELLATION,
+                    periodEnd = acceptedAt.minusSeconds(86_400),
+                ),
+            )
+
+            val outcome = useCase.execute(userId, tier, Cadence.MONTHLY, email = null, consent = null)
+
+            assertThat(outcome).isInstanceOf(CreateCheckoutSessionOutcome.Success::class)
         }
 
     @Test

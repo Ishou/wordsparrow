@@ -101,6 +101,55 @@ class SubscriptionTest {
     }
 
     @Test
+    fun `reactivate returns a pending cancellation to active with the new ref and period`() {
+        val newEnd = period.plusSeconds(3600)
+        val reactivated =
+            subscription(SubscriptionStatus.PENDING_CANCELLATION, externalRef = "cust:sub_old").reactivate("cust:sub_new", newEnd)
+
+        assertThat(reactivated.status).isEqualTo(SubscriptionStatus.ACTIVE)
+        assertThat(reactivated.externalRef).isEqualTo("cust:sub_new")
+        assertThat(reactivated.periodEnd).isEqualTo(newEnd)
+    }
+
+    @Test
+    fun `reactivate is rejected on an already active subscription`() {
+        assertThrows<IllegalArgumentException> { subscription(SubscriptionStatus.ACTIVE).reactivate("cust:sub_new", period) }
+    }
+
+    @Test
+    fun `reactivate is rejected on a canceled subscription`() {
+        assertThrows<IllegalArgumentException> { subscription(SubscriptionStatus.CANCELED).reactivate("cust:sub_new", period) }
+    }
+
+    @Test
+    fun `blocksNewSubscription is true for a live subscription that is not pending cancellation`() {
+        assertThat(subscription(SubscriptionStatus.ACTIVE).blocksNewSubscription(period)).isEqualTo(true)
+        assertThat(subscription(SubscriptionStatus.PAST_DUE).blocksNewSubscription(period)).isEqualTo(true)
+    }
+
+    @Test
+    fun `blocksNewSubscription is true for a pending cancellation whose period has not lapsed`() {
+        val now = period.minusSeconds(3600)
+        assertThat(subscription(SubscriptionStatus.PENDING_CANCELLATION, periodEnd = period).blocksNewSubscription(now))
+            .isEqualTo(true)
+    }
+
+    @Test
+    fun `blocksNewSubscription is false for a pending cancellation whose period has lapsed`() {
+        val now = period.plusSeconds(3600)
+        assertThat(subscription(SubscriptionStatus.PENDING_CANCELLATION, periodEnd = period).blocksNewSubscription(now))
+            .isEqualTo(false)
+        assertThat(subscription(SubscriptionStatus.PENDING_CANCELLATION, periodEnd = null).blocksNewSubscription(now))
+            .isEqualTo(false)
+    }
+
+    @Test
+    fun `blocksNewSubscription is false for terminal states`() {
+        assertThat(subscription(SubscriptionStatus.CANCELED).blocksNewSubscription(period)).isEqualTo(false)
+        assertThat(subscription(SubscriptionStatus.EXPIRED).blocksNewSubscription(period)).isEqualTo(false)
+    }
+
+    @Test
     fun `statusView projects the current state`() {
         val active = subscription(SubscriptionStatus.ACTIVE)
         assertThat(active.statusView()).isEqualTo(SubscriptionStatusView.from(active))
