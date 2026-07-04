@@ -14,8 +14,8 @@ import kotlin.random.Random
 // stay open until a separator lands). Blacks are emitted where words end, never pre-committed.
 @Tag("bench")
 class CoGenerationProbeTest {
-    private val width = 15
-    private val height = 12
+    private val width = 28
+    private val height = 20
     private val minLen = 2
     private val DEAD_END_MIN = 5
     private val MAX_LEN2_SHARE = 0.24
@@ -162,17 +162,28 @@ class CoGenerationProbeTest {
         var attempts = 0
         var valid = 0
         var deepestSeen = 0
+        var lastFillAudit = ""
         var best: Sweep? = null
-        while (System.currentTimeMillis() < deadline && best == null) {
+        var fills = 0
+        var minViol = Int.MAX_VALUE
+        var totalViol = 0
+        var bestSweep: Sweep? = null
+        while (System.currentTimeMillis() < deadline) {
             attempts++
             val sweep = Sweep(lexicon, Random(4321L + attempts), HashSet())
-            if (sweep.runBanded()) {
-                valid++
-                best = sweep
-            }
+            val v = sweep.fillAndCount()
             if (sweep.deepest > deepestSeen) deepestSeen = sweep.deepest
+            if (v >= 0) {
+                fills++
+                totalViol += v
+                if (v < minViol) { minViol = v; bestSweep = sweep }
+                if (v == 0) { valid++; best = sweep }
+            }
         }
+        println("BANDFILL attempts=$attempts fills=$fills minViol=${if (minViol==Int.MAX_VALUE) -1 else minViol} avgViol=${if (fills>0) totalViol/fills else -1}")
+        bestSweep?.let { println("BEST viol=${it.violationCount()} blacks=${it.blackCount()}"); println(it.render()) }
         println("BANDED attempts=$attempts valid=$valid deepestRow=${deepestSeen / width}")
+        if (valid == 0 && lastFillAudit.isNotEmpty()) { println("FILLAUDIT:"); println(lastFillAudit.take(1400)) }
         val b = best
         if (b != null) {
             var blacks = 0
@@ -181,6 +192,41 @@ class CoGenerationProbeTest {
             println("BANDED histogram: " + b.words.groupingBy { it.length }.eachCount().toSortedMap())
             println(b.render())
         }
+    }
+
+    // GROUND TRUTH for the band solver at 28x20: take real production-generator boards,
+    // blank a mid-grid band, reconstruct the column state above it, and (a) force the
+    // original band to check the solver ACCEPTS it, (b) free-solve to check it FINDS one.
+    // forcedOk high + resolved low => search efficiency; forcedOk low => solver rule bug.
+    @Test
+    fun `band solver re-solves real board mid bands`() {
+        val repo = loadRepository()
+        val lexicon = Lexicon(repo, maxLen = 17)
+        val generator = GridGenerator(repo)
+        var tried = 0; var forcedOk = 0; var resolved = 0; var attempt = 0
+        val top = 6; val bh = 3
+        while (tried < 8 && attempt < 40) {
+            attempt++
+            val g = generator.generate(GridConstraints(width = width, height = height), Random(8000L + attempt)) ?: continue
+            tried++
+            val sweep = Sweep(lexicon, Random(11L * attempt), HashSet())
+            for (r in 0 until height) for (c in 0 until width) {
+                val cell = g.cells[Position(com.bliss.grid.domain.model.Row(r), com.bliss.grid.domain.model.Column(c))]
+                sweep.grid[r][c] = if (cell is LetterCell) cell.letter else '#'
+            }
+            val original = Array(bh) { r -> CharArray(width) { c -> sweep.grid[top + r][c] } }
+            for (r in top until top + bh) for (c in 0 until width) sweep.grid[r][c] = '.'
+            if (!sweep.reconstructAbove(top)) { println("REALBAND attempt=$attempt reconstruct failed"); continue }
+            if (sweep.bandForcedAccepts(top, bh, original)) forcedOk++
+            else if (attempt <= 3) {
+                println("REALBAND attempt=$attempt REJECTED:")
+                for (r in 0 until top + bh) println("  " + sweep.grid[r].concatToString().replace('.', '?').let { if (it.contains('?')) String(original[r - top]) else it })
+                println("  WHY: ${sweep.lastForcedFail}")
+            }
+            sweep.reconstructAbove(top)
+            if (sweep.bandSolve(top, bh) != null) resolved++
+        }
+        println("REALBAND tried=$tried forcedOk=$forcedOk resolved=$resolved")
     }
 
     // Fast isolated test for the N-row band solver: set up row 0, solve a mid-grid band,
@@ -627,6 +673,48 @@ class CoGenerationProbeTest {
                 if (col.text.length == 1) col.lastSingle = runLenAt(height - 3, c) == 1
             }
             return true
+        }
+
+        // Reconstruct columns[] entering row `top` from committed grid rows 0..top-1.
+        fun reconstructAbove(top: Int): Boolean {
+            words.clear(); used.clear()
+            for (r in 0 until top) {
+                var c = 0
+                while (c < width) {
+                    if (grid[r][c] == '#') { c++; continue }
+                    val st = c
+                    while (c < width && grid[r][c] != '#') c++
+                    if (c - st >= minLen) { val w = String(CharArray(c - st) { grid[r][st + it] }); words.add(w); used.add(w) }
+                }
+            }
+            for (c in 0 until width) {
+                var st = top
+                var r = top - 1
+                while (r >= 0 && grid[r][c] != '#') { st = r; r-- }
+                val col = columns[c]
+                col.reset(height - st, null)
+                for (i in st until top) {
+                    val ch = grid[i][c]
+                    if (col.continueLetters(height - i) and (1 shl (ch - 'A')) == 0) return false
+                    col.apply(ch)
+                }
+                // Do NOT register/reserve the in-progress prefix: a mid-band column may complete
+                // at a black INSIDE the band, so leave it for the band solver to finish.
+                if (col.text.length == 1) col.lastSingle = if (top >= 2) runLenAt(top - 1, c) == 1 else false
+            }
+            return true
+        }
+
+        // Force the solver down the original band rows: returns true iff its rules accept them.
+        var lastForcedFail = ""
+        fun bandForcedAccepts(top: Int, bh: Int, rows: Array<CharArray>): Boolean {
+            val entry = Array(width) { columns[it].snapshot() }
+            val ctx = BandCtx(bh)
+            ctx.forced = rows
+            val ok = bandCol(ctx, top, 0)
+            lastForcedFail = ctx.failMsg
+            for (c in 0 until width) columns[c].restore(entry[c])
+            return ok
         }
 
         fun replayOriginalBottom(original: String): Boolean {
@@ -1111,6 +1199,23 @@ class CoGenerationProbeTest {
             return true
         }
 
+        fun violationCount(): Int {
+            val cells = toCellArray()
+            var v = 0
+            for (r in 0 until height) for (c in 0 until width) {
+                if (!cells.isBlack(r, c)) {
+                    if (BlackCellLayout.isShortDeadEndTip(cells, r, c)) v++
+                    continue
+                }
+                val hostsAcross = c + 2 < width && !cells.isBlack(r, c + 1) && !cells.isBlack(r, c + 2)
+                val hostsDown = r + 2 < height && !cells.isBlack(r + 1, c) && !cells.isBlack(r + 2, c)
+                val bendH = c == 0 && r + 1 < height && !cells.isBlack(r + 1, 0) && width > 1 && !cells.isBlack(r + 1, 1)
+                val bendV = r == 0 && c + 1 < width && !cells.isBlack(1, c + 1) && height > 1 && !cells.isBlack(0, c + 1)
+                if (!hostsAcross && !hostsDown && !bendH && !bendV) v++
+            }
+            return v
+        }
+
         private fun auditBoard(): String {
             val cells = toCellArray()
             val sb = StringBuilder()
@@ -1212,6 +1317,9 @@ class CoGenerationProbeTest {
             val hRow = Array(bh) { Prefix(lexicon) }
             val openRow = BooleanArray(bh)
             val startHosted = BooleanArray(bh)
+            var forced: Array<CharArray>? = null
+            var failMsg = ""
+            var failRC = -1
             val usedLocal = HashSet<String>(used)
             var budget = 500_000
             var deepCol = 0
@@ -1292,9 +1400,38 @@ class CoGenerationProbeTest {
             }
         }
 
+        var lastFillAudit = ""
         fun runBanded(): Boolean {
             if (!setupTopForProbe()) return false
             return solveBandsFrom(1)
+        }
+
+        // Fill the grid greedily (k=1 per band, no deep backtracking) and return the violation
+        // count of the filled board, or -1 if the fill couldn't complete.
+        fun fillAndCount(): Int {
+            if (!setupTopForProbe()) return -1
+            if (!fillBandsFrom(1)) return -1
+            return violationCount()
+        }
+
+        private fun fillBandsFrom(top: Int): Boolean {
+            if (top >= height - 2) {
+                if (!solveEndgame()) return false
+                deepest = height * width
+                return true
+            }
+            val bh = minOf(3, height - 2 - top)
+            val snap = captureState()
+            repeat(2) {
+                restoreState(snap)
+                val cells = bandSolve(top, bh)
+                if (cells != null && applyBand(top, bh, cells)) {
+                    deepest = maxOf(deepest, (top + bh) * width)
+                    if (fillBandsFrom(top + bh)) return true
+                }
+            }
+            restoreState(snap)
+            return false
         }
 
         // Band-level DFS with backtracking: each band tries up to K solutions and recurses;
@@ -1304,7 +1441,9 @@ class CoGenerationProbeTest {
             if (top >= height - 2) {
                 if (!solveEndgame()) return false
                 deepest = height * width
-                return SlotRegistry.build(toCellArray(), lexicon, minLen) != null
+                if (SlotRegistry.build(toCellArray(), lexicon, minLen) != null) return true
+                if (lastFillAudit.isEmpty()) lastFillAudit = auditBoard().ifEmpty { "NO-VIOLATIONS-BUT-NULL" } + "\n" + render()
+                return false
             }
             val bh = minOf(3, height - 2 - top)
             val snap = captureState()
@@ -1393,10 +1532,21 @@ class CoGenerationProbeTest {
             val hosted = bandLetterHostedStart(ctx, top, r, c)
             // A length-1 unhosted run open here is a pending single: it must close now (black).
             val forceBlack = ctx.openRow[r] && !ctx.startHosted[r]
+            val forcedCh = ctx.forced?.get(r)?.get(c)
 
-            if (!forceBlack) {
+            if (forcedCh != null && ctx.forced != null && c * ctx.bh + r > ctx.failRC) {
+                ctx.failRC = c * ctx.bh + r
+                val hBits0 = if (ctx.openRow[r]) across.continueLetters(width - c) else -1
+                val bit = if (forcedCh != '#') (1 shl (forcedCh - 'A')) else 0
+                ctx.failMsg = "r=$r c=$c forced='$forcedCh' open=${ctx.openRow[r]} hosted=$hosted " +
+                    "startHosted=${ctx.startHosted[r]} forceBlackSingle=$forceBlack " +
+                    "vLetHas=${forcedCh == '#' || (vLet and bit) != 0} hHas=${forcedCh == '#' || (hBits0 and bit) != 0} " +
+                    "colEmpty=${col.isEmpty} colLen=${col.text.length}"
+            }
+            if (!forceBlack && forcedCh != '#') {
                 val hBits = if (ctx.openRow[r]) across.continueLetters(width - c) else -1
-                val letters = letterList(vLet and hBits)
+                var letters = letterList(vLet and hBits)
+                if (forcedCh != null) letters = if (forcedCh in letters) arrayListOf(forcedCh) else arrayListOf()
                 letters.shuffle(random)
                 for (ch in letters.take(8)) {
                     val colSnap = col.snapshot()
@@ -1421,14 +1571,20 @@ class CoGenerationProbeTest {
             }
 
             // --- black at (r, c) ---
+            if (forcedCh != null && forcedCh != '#') return false
             run {
                 val colSnap = col.snapshot()
                 val hSnap = across.snapshot()
                 val wasOpen = ctx.openRow[r]
                 val wasHosted = ctx.startHosted[r]
-                // vertical word above must complete (len>=2) — a len-1 vertical can't be blacked,
-                // which forces singles to be crossed vertically.
-                val vWord = if (!col.isEmpty) (col.completeWord(ctx.usedLocal) ?: return@run) else null
+                // A vertical run of length >=2 must complete as a word; a length-1 vertical is
+                // a vertical-single (the cell is crossed horizontally) — allowed, build() rejects
+                // the degenerate uncrossed-both-ways case.
+                val vWord =
+                    when {
+                        col.isEmpty || col.text.length < minLen -> null
+                        else -> col.completeWord(ctx.usedLocal) ?: return@run
+                    }
                 val hWord: String?
                 if (ctx.openRow[r] && across.text.length >= 2) {
                     if (!ctx.startHosted[r]) return@run
