@@ -39,6 +39,7 @@ class BillingBrevoEmailSender(
                     BrevoEmailRequest(
                         sender = BrevoSender(name = config.senderName, email = config.senderEmail),
                         to = listOf(BrevoRecipient(email = email.to)),
+                        replyTo = BrevoReplyTo(email = config.replyTo),
                         subject = email.subject,
                         htmlContent = email.htmlBody,
                         textContent = email.textBody,
@@ -59,6 +60,7 @@ class BillingBrevoEmailSender(
 private data class BrevoEmailRequest(
     val sender: BrevoSender,
     val to: List<BrevoRecipient>,
+    val replyTo: BrevoReplyTo,
     val subject: String,
     val htmlContent: String,
     val textContent: String,
@@ -72,5 +74,10 @@ private data class BrevoSender(
 
 @Serializable
 private data class BrevoRecipient(
+    val email: String,
+)
+
+@Serializable
+private data class BrevoReplyTo(
     val email: String,
 )

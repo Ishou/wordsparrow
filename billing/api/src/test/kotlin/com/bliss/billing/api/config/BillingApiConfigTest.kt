@@ -42,18 +42,34 @@ class BillingApiConfigTest {
     }
 
     @Test
-    fun `enabling email with full Brevo config builds the sender config`() {
+    fun `enabling email with only the shared key applies the sender defaults`() {
         val env =
             mapOf(
                 "IDENTITY_API_URL" to "https://auth.example",
                 "BILLING_EMAIL_ENABLED" to "true",
                 "BREVO_API_KEY" to "xkeysib-test",
-                "BREVO_SENDER_EMAIL" to "facturation@wordsparrow.io",
-                "BREVO_SENDER_NAME" to "WordSparrow",
             ).let { m -> { k: String -> m[k] } }
         val config = BillingApiConfig.load(env)
         assertThat(config.emailEnabled).isEqualTo(true)
-        assertThat(config.brevo?.senderEmail ?: "").isEqualTo("facturation@wordsparrow.io")
+        assertThat(config.brevo?.apiKey ?: "").isEqualTo("xkeysib-test")
+        assertThat(config.brevo?.senderEmail ?: "").isEqualTo("abonnement@wordsparrow.io")
+        assertThat(config.brevo?.senderName ?: "").isEqualTo("WordSparrow – Abonnement")
+        assertThat(config.brevo?.replyTo ?: "").isEqualTo("contact@wordsparrow.io")
+    }
+
+    @Test
+    fun `sender identity is env-overridable`() {
+        val env =
+            mapOf(
+                "IDENTITY_API_URL" to "https://auth.example",
+                "BILLING_EMAIL_ENABLED" to "true",
+                "BREVO_API_KEY" to "xkeysib-test",
+                "BREVO_SENDER_EMAIL" to "custom@wordsparrow.io",
+                "BREVO_REPLY_TO" to "sav@wordsparrow.io",
+            ).let { m -> { k: String -> m[k] } }
+        val config = BillingApiConfig.load(env)
+        assertThat(config.brevo?.senderEmail ?: "").isEqualTo("custom@wordsparrow.io")
+        assertThat(config.brevo?.replyTo ?: "").isEqualTo("sav@wordsparrow.io")
     }
 
     @Test

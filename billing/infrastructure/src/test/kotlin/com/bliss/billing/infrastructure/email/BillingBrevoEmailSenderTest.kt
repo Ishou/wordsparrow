@@ -20,8 +20,9 @@ class BillingBrevoEmailSenderTest {
     private val config =
         BillingBrevoConfig(
             apiKey = "xkeysib-test-key",
-            senderEmail = "facturation@wordsparrow.io",
-            senderName = "WordSparrow",
+            senderEmail = "abonnement@wordsparrow.io",
+            senderName = "WordSparrow – Abonnement",
+            replyTo = "contact@wordsparrow.io",
         )
 
     private data class CapturedRequest(
@@ -77,7 +78,8 @@ class BillingBrevoEmailSenderTest {
             assertThat(request.apiKey).isEqualTo("xkeysib-test-key")
             assertThat(request.contentType).isEqualTo(ContentType.Application.Json.toString())
             assertThat(request.body).contains("\"email\":\"joueuse@example.com\"")
-            assertThat(request.body).contains("facturation@wordsparrow.io")
+            assertThat(request.body).contains("abonnement@wordsparrow.io")
+            assertThat(request.body).contains("contact@wordsparrow.io")
             assertThat(request.body).contains("Confirmation de ton abonnement WordSparrow")
         }
 

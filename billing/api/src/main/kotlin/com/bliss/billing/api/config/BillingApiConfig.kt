@@ -32,10 +32,12 @@ data class BillingApiConfig(
                     if (!emailEnabled) {
                         null
                     } else {
+                        // Shares identity's BREVO_API_KEY (same account); sender identity defaults are baked in and env-overridable so provisioning only needs the shared key.
                         BillingBrevoConfig(
                             apiKey = required(env, "BREVO_API_KEY"),
-                            senderEmail = required(env, "BREVO_SENDER_EMAIL"),
-                            senderName = required(env, "BREVO_SENDER_NAME"),
+                            senderEmail = env("BREVO_SENDER_EMAIL") ?: "abonnement@wordsparrow.io",
+                            senderName = env("BREVO_SENDER_NAME") ?: "WordSparrow – Abonnement",
+                            replyTo = env("BREVO_REPLY_TO") ?: "contact@wordsparrow.io",
                         )
                     },
             )
