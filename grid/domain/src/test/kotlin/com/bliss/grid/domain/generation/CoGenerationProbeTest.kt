@@ -153,6 +153,36 @@ class CoGenerationProbeTest {
         println(best.render())
     }
 
+    // Integration test for the sliding-band generator at the real 28x20 size: does the
+    // N-row solver produce full SlotRegistry-valid boards where the greedy beam walled at row 7?
+    @Test
+    fun `banded march produces valid boards`() {
+        val lexicon = Lexicon(loadRepository(), maxLen = 17)
+        val deadline = System.currentTimeMillis() + 120_000
+        var attempts = 0
+        var valid = 0
+        var deepestSeen = 0
+        var best: Sweep? = null
+        while (System.currentTimeMillis() < deadline && best == null) {
+            attempts++
+            val sweep = Sweep(lexicon, Random(4321L + attempts), HashSet())
+            if (sweep.runBanded()) {
+                valid++
+                best = sweep
+            }
+            if (sweep.deepest > deepestSeen) deepestSeen = sweep.deepest
+        }
+        println("BANDED attempts=$attempts valid=$valid deepestRow=${deepestSeen / width}")
+        val b = best
+        if (b != null) {
+            var blacks = 0
+            for (r in 0 until height) for (c in 0 until width) if (b.grid[r][c] == '#') blacks++
+            println("BANDED OK blacks=$blacks (%.1f%%) words=%d len2=%d".format(100.0 * blacks / (width * height), b.words.size, b.words.count { it.length == 2 }))
+            println("BANDED histogram: " + b.words.groupingBy { it.length }.eachCount().toSortedMap())
+            println(b.render())
+        }
+    }
+
     // Fast isolated test for the N-row band solver: set up row 0, solve a mid-grid band,
     // and verify every across word is a real lexicon word and no word repeats. Iterates in
     // ~1s so the solver can be debugged with tight feedback (unlike full 120s runs).
@@ -162,15 +192,28 @@ class CoGenerationProbeTest {
         var solved = 0
         var acrossOk = 0
         var acrossBad = 0
+        var band1ok = 0
+        var band2ok = 0
+        var band2fail = 0
         var dumpShown = false
         repeat(30) { i ->
             val sweep = Sweep(lexicon, Random(700L + i), HashSet())
             if (!sweep.setupTopForProbe()) return@repeat
             val bh = 5
-            val cells = sweep.bandSolve(1, bh) ?: return@repeat
+            val b1 = sweep.bandSolve(1, bh) ?: return@repeat
+            band1ok++
+            for (r in 0 until bh) for (c in 0 until width) sweep.grid[1 + r][c] = b1[r][c]
+            sweep.registerBandForProbe(1, bh)
+            val b2 = sweep.bandSolve(6, bh)
+            if (b2 == null) {
+                band2fail++
+                if (band2fail <= 4) println("BAND2FAIL deepCol=${sweep.lastBandDeepCol}/$width budgetOut=${sweep.lastBandBudgetOut}")
+                return@repeat
+            }
+            band2ok++
+            for (r in 0 until bh) for (c in 0 until width) sweep.grid[6 + r][c] = b2[r][c]
             solved++
-            // write into the grid for inspection
-            for (r in 0 until bh) for (c in 0 until width) sweep.grid[1 + r][c] = cells[r][c]
+            val cells = b1
             // check across words in the band rows
             var localBad = false
             val seen = HashSet<String>()
@@ -194,7 +237,7 @@ class CoGenerationProbeTest {
                 println((0 until 1 + bh).joinToString("\n") { sweep.grid[it].concatToString() })
             }
         }
-        println("BANDTEST solved=$solved/30 acrossOk=$acrossOk acrossBad=$acrossBad")
+        println("BANDTEST solved=$solved/30 band1ok=$band1ok band2ok=$band2ok band2fail=$band2fail acrossOk=$acrossOk acrossBad=$acrossBad")
     }
 
     // Discrimination probe: rows 0..17 faked (row 17 all black, all columns fresh), so the
@@ -1168,8 +1211,11 @@ class CoGenerationProbeTest {
             val cells = Array(bh) { CharArray(width) { '.' } }
             val hRow = Array(bh) { Prefix(lexicon) }
             val openRow = BooleanArray(bh)
+            val startHosted = BooleanArray(bh)
             val usedLocal = HashSet<String>(used)
-            var budget = 400_000
+            var budget = 500_000
+            var deepCol = 0
+            var budgetOut = false
         }
 
         // Solve rows [top, top+bh). On success columns[] hold outgoing states and the bh
@@ -1195,16 +1241,100 @@ class CoGenerationProbeTest {
             return true
         }
 
+        // Commit a solved band to the grid and register its completed across + vertical words
+        // (verticals that END at a black inside the band; ones continuing below register later).
+        private fun applyBand(
+            top: Int,
+            bh: Int,
+            cells: Array<CharArray>,
+        ): Boolean {
+            for (r in 0 until bh) for (c in 0 until width) grid[top + r][c] = cells[r][c]
+            for (r in top until top + bh) {
+                var c = 0
+                while (c < width) {
+                    if (grid[r][c] == '#') { c++; continue }
+                    val st = c
+                    while (c < width && grid[r][c] != '#') c++
+                    if (c - st >= minLen) {
+                        val w = String(CharArray(c - st) { grid[r][st + it] })
+                        if (w in used) return false
+                        words.add(w); used.add(w)
+                    }
+                }
+            }
+            for (c in 0 until width) {
+                for (r in top until top + bh) {
+                    if (grid[r][c] != '#' || r == 0 || grid[r - 1][c] == '#') continue
+                    var st = r - 1
+                    while (st > 0 && grid[st - 1][c] != '#') st--
+                    if (r - st >= minLen) {
+                        val w = String(CharArray(r - st) { grid[st + it][c] })
+                        if (w in used) return false
+                        words.add(w); used.add(w)
+                    }
+                }
+            }
+            return true
+        }
+
+        // Full generation via the sliding-band solver: row 0, then mid-grid bands marching
+        // down, then the joint endgame for the last two rows. SlotRegistry validates.
+        fun registerBandForProbe(top: Int, bh: Int) {
+            // grid already written by the test; register words like applyBand's word pass.
+            for (r in top until top + bh) {
+                var c = 0
+                while (c < width) {
+                    if (grid[r][c] == '#') { c++; continue }
+                    val st = c
+                    while (c < width && grid[r][c] != '#') c++
+                    if (c - st >= minLen) { val w = String(CharArray(c - st) { grid[r][st + it] }); words.add(w); used.add(w) }
+                }
+            }
+        }
+
+        fun runBanded(): Boolean {
+            if (!setupTopForProbe()) return false
+            return solveBandsFrom(1)
+        }
+
+        // Band-level DFS with backtracking: each band tries up to K solutions and recurses;
+        // if the rest of the grid can't be completed, it backs up and tries another band here.
+        // This removes the greedy-between-bands myopia (band 1's exits dooming band 2).
+        private fun solveBandsFrom(top: Int): Boolean {
+            if (top >= height - 2) {
+                if (!solveEndgame()) return false
+                deepest = height * width
+                return SlotRegistry.build(toCellArray(), lexicon, minLen) != null
+            }
+            val bh = minOf(3, height - 2 - top)
+            val snap = captureState()
+            val k = if (top == 1) 6 else 4
+            repeat(k) {
+                restoreState(snap)
+                val cells = bandSolve(top, bh)
+                if (cells != null && applyBand(top, bh, cells)) {
+                    deepest = maxOf(deepest, (top + bh) * width)
+                    if (solveBandsFrom(top + bh)) return true
+                }
+            }
+            restoreState(snap)
+            return false
+        }
+
+        var lastBandDeepCol = 0
+        var lastBandBudgetOut = false
+
         fun bandSolve(
             top: Int,
             bh: Int,
         ): Array<CharArray>? {
             val entry = Array(width) { columns[it].snapshot() }
-            repeat(8) {
-                val ctx = BandCtx(bh)
-                if (bandCol(ctx, top, 0)) return ctx.cells
-                for (c in 0 until width) columns[c].restore(entry[c])
-            }
+            val ctx = BandCtx(bh)
+            val ok = bandCol(ctx, top, 0)
+            lastBandDeepCol = ctx.deepCol
+            lastBandBudgetOut = ctx.budgetOut
+            if (ok) return ctx.cells
+            for (c in 0 until width) columns[c].restore(entry[c])
             return null
         }
 
@@ -1213,14 +1343,20 @@ class CoGenerationProbeTest {
             top: Int,
             c: Int,
         ): Boolean {
-            if (ctx.budget-- <= 0) return false
+            if (ctx.budget-- <= 0) { ctx.budgetOut = true; return false }
             nodes++
+            if (c > ctx.deepCol) ctx.deepCol = c
             if (c == width) {
-                // Every across word open at the right border must be a complete word.
+                // Close each row at the right border: a run of length >=2 must be a hosted
+                // valid word; a length-1 run is a single (crossed vertically); a row ending
+                // in a black is fine.
                 for (r in 0 until ctx.bh) {
-                    if (!ctx.openRow[r]) return false
-                    val w = ctx.hRow[r].completeWord(ctx.usedLocal) ?: return false
-                    ctx.usedLocal.add(w)
+                    if (!ctx.openRow[r]) continue
+                    if (ctx.hRow[r].text.length >= 2) {
+                        if (!ctx.startHosted[r]) return false
+                        val w = ctx.hRow[r].completeWord(ctx.usedLocal) ?: return false
+                        ctx.usedLocal.add(w)
+                    }
                 }
                 return true
             }
@@ -1246,73 +1382,72 @@ class CoGenerationProbeTest {
             c: Int,
             r: Int,
         ): Boolean {
-            if (ctx.budget-- <= 0) return false
+            if (ctx.budget-- <= 0) { ctx.budgetOut = true; return false }
             if (r == ctx.bh) return bandCol(ctx, top, c + 1)
             val col = columns[c]
             val gridRow = top + r
             val rowsBelow = height - gridRow - 1
-            // Letters the column can take at this cell (keeps a valid vertical word reachable).
+            // Letters keeping a valid vertical word reachable at this cell.
             val vLet = col.continueLetters(rowsBelow + 1)
             val across = ctx.hRow[r]
-            val hostedStart = bandLetterHostedStart(ctx, top, r, c)
-            val hLet =
-                if (ctx.openRow[r]) across.continueLetters(width - c) else if (hostedStart) -1 else 0
+            val hosted = bandLetterHostedStart(ctx, top, r, c)
+            // A length-1 unhosted run open here is a pending single: it must close now (black).
+            val forceBlack = ctx.openRow[r] && !ctx.startHosted[r]
 
-            // Option list: letters (vertical & across viable) then a black.
-            val letters = letterList(vLet and hLet)
-            letters.shuffle(random)
-
-            // --- try letters ---
-            for (ch in letters.take(8)) {
-                val colSnap = col.snapshot()
-                val hSnap = across.snapshot()
-                val wasOpen = ctx.openRow[r]
-                var added: String? = null
-                // vertical apply
-                col.apply(ch)
-                // horizontal apply
-                if (!ctx.openRow[r]) {
-                    across.reset(width - c, null)
-                    ctx.openRow[r] = true
+            if (!forceBlack) {
+                val hBits = if (ctx.openRow[r]) across.continueLetters(width - c) else -1
+                val letters = letterList(vLet and hBits)
+                letters.shuffle(random)
+                for (ch in letters.take(8)) {
+                    val colSnap = col.snapshot()
+                    val hSnap = across.snapshot()
+                    val wasOpen = ctx.openRow[r]
+                    val wasHosted = ctx.startHosted[r]
+                    col.apply(ch)
+                    if (!ctx.openRow[r]) {
+                        across.reset(width - c, null)
+                        ctx.startHosted[r] = hosted
+                        ctx.openRow[r] = true
+                    }
+                    across.apply(ch)
+                    ctx.cells[r][c] = ch
+                    if (bandDescend(ctx, top, c, r + 1)) return true
+                    ctx.cells[r][c] = '.'
+                    col.restore(colSnap)
+                    across.restore(hSnap)
+                    ctx.openRow[r] = wasOpen
+                    ctx.startHosted[r] = wasHosted
                 }
-                across.apply(ch)
-                ctx.cells[r][c] = ch
-                if (bandDescend(ctx, top, c, r + 1)) return true
-                // undo
-                ctx.cells[r][c] = '.'
-                col.restore(colSnap)
-                across.restore(hSnap)
-                ctx.openRow[r] = wasOpen
-                if (added != null) ctx.usedLocal.remove(added)
             }
 
-            // --- try a black ---
+            // --- black at (r, c) ---
             run {
                 val colSnap = col.snapshot()
                 val hSnap = across.snapshot()
                 val wasOpen = ctx.openRow[r]
-                val vWord: String?
-                if (!col.isEmpty) {
-                    vWord = col.completeWord(ctx.usedLocal) ?: return@run
-                } else {
-                    vWord = null
-                }
+                val wasHosted = ctx.startHosted[r]
+                // vertical word above must complete (len>=2) — a len-1 vertical can't be blacked,
+                // which forces singles to be crossed vertically.
+                val vWord = if (!col.isEmpty) (col.completeWord(ctx.usedLocal) ?: return@run) else null
                 val hWord: String?
-                if (ctx.openRow[r]) {
+                if (ctx.openRow[r] && across.text.length >= 2) {
+                    if (!ctx.startHosted[r]) return@run
                     hWord = across.completeWord(ctx.usedLocal) ?: return@run
                 } else {
-                    hWord = null
+                    hWord = null // len 1 = single, or no open run
                 }
                 if (vWord != null) ctx.usedLocal.add(vWord)
                 if (hWord != null) ctx.usedLocal.add(hWord)
                 col.reset(rowsBelow, null)
                 ctx.openRow[r] = false
+                ctx.startHosted[r] = false
                 ctx.cells[r][c] = '#'
                 if (bandDescend(ctx, top, c, r + 1)) return true
                 ctx.cells[r][c] = '.'
                 col.restore(colSnap)
                 across.restore(hSnap)
                 ctx.openRow[r] = wasOpen
+                ctx.startHosted[r] = wasHosted
                 if (vWord != null) ctx.usedLocal.remove(vWord)
                 if (hWord != null) ctx.usedLocal.remove(hWord)
             }
