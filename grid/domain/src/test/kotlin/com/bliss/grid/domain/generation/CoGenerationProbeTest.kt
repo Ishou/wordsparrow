@@ -306,6 +306,45 @@ class CoGenerationProbeTest {
         println("BANDTEST solved=$solved/30 band1ok=$band1ok band2ok=$band2ok band2fail=$band2fail acrossOk=$acrossOk acrossBad=$acrossBad")
     }
 
+    // Seam-join crux test for the block-assembly idea: take a real board, keep the top block
+    // (rows 0..top-1) and bottom block (rows top+bh..) FIXED, blank a bh-row seam, and try to
+    // re-solve just the seam so the whole grid re-validates. Measures how tight the seam is:
+    // if a free seam almost never reconnects two fixed blocks, seams need explicit guidance
+    // (the inflection lever); if it reconnects sometimes, block assembly is tractable.
+    @Test
+    fun `seam join reconnects two fixed blocks`() {
+        val repo = loadRepository()
+        val lexicon = Lexicon(repo, maxLen = 17)
+        val generator = GridGenerator(repo)
+        val top = 9; val bh = 2
+        var tried = 0; var joined = 0; var attempt = 0
+        var totalSeamSolves = 0
+        while (tried < 10 && attempt < 40) {
+            attempt++
+            val g = generator.generate(GridConstraints(width = width, height = height), Random(6000L + attempt)) ?: continue
+            tried++
+            val sweep = Sweep(lexicon, Random(17L * attempt), HashSet())
+            for (r in 0 until height) for (c in 0 until width) {
+                val cell = g.cells[Position(com.bliss.grid.domain.model.Row(r), com.bliss.grid.domain.model.Column(c))]
+                sweep.grid[r][c] = if (cell is LetterCell) cell.letter else '#'
+            }
+            for (r in top until top + bh) for (c in 0 until width) sweep.grid[r][c] = '.'
+            var ok = false
+            repeat(200) {
+                if (!ok) {
+                    if (!sweep.reconstructAbove(top)) return@repeat
+                    totalSeamSolves++
+                    val cells = sweep.bandSolve(top, bh) ?: return@repeat
+                    for (r in 0 until bh) for (c in 0 until width) sweep.grid[top + r][c] = cells[r][c]
+                    if (SlotRegistry.build(sweep.toCellArray(), lexicon, minLen) != null) ok = true
+                    else for (r in top until top + bh) for (c in 0 until width) sweep.grid[r][c] = '.'
+                }
+            }
+            if (ok) joined++
+        }
+        println("SEAMJOIN top=$top bh=$bh tried=$tried joined=$joined seamSolves=$totalSeamSolves")
+    }
+
     // Discrimination probe: rows 0..17 faked (row 17 all black, all columns fresh), so the
     // joint 2-row walk faces a maximally free endgame that certainly has solutions.
     @Test
