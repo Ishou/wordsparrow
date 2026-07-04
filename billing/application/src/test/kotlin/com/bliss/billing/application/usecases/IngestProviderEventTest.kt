@@ -10,6 +10,7 @@ import com.bliss.billing.application.testdoubles.FakeBillingProvider
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
 import com.bliss.billing.application.testdoubles.FixedClock
 import com.bliss.billing.application.testdoubles.InMemoryProcessedEventLedger
+import com.bliss.billing.application.testdoubles.RecordingContractConfirmationNotifier
 import com.bliss.billing.application.testdoubles.RecordingSubscriptionPublisher
 import com.bliss.billing.application.testdoubles.SequentialEventIdGenerator
 import com.bliss.billing.domain.SubscriptionStatus
@@ -25,7 +26,8 @@ class IngestProviderEventTest {
     private val ledger = InMemoryProcessedEventLedger()
     private val clock = FixedClock(FIXED_NOW)
     private val eventIds = SequentialEventIdGenerator()
-    private val useCase = IngestProviderEvent(provider, repository, publisher, ledger, clock, eventIds)
+    private val notifier = RecordingContractConfirmationNotifier()
+    private val useCase = IngestProviderEvent(provider, repository, publisher, ledger, clock, eventIds, notifier)
 
     private val userId = UUID.randomUUID()
     private val subscriptionRef = "cust_x:sub_1"
@@ -173,6 +175,69 @@ class IngestProviderEventTest {
             val outcome = useCase.execute(subscriptionRef)
 
             assertThat(outcome).isEqualTo(IngestOutcome.Unchanged)
+            assertThat(publisher.events).hasSize(1)
+        }
+
+    @Test
+    fun `sends a contract confirmation on the first payment and no renewal receipt`() =
+        runTest {
+            seedFirstPayment()
+
+            useCase.execute("tr_1")
+
+            assertThat(notifier.contractConfirmations).hasSize(1)
+            assertThat(notifier.contractConfirmations.single().userId).isEqualTo(userId)
+            assertThat(notifier.renewalReceipts).isEmpty()
+        }
+
+    @Test
+    fun `does not re-send the confirmation on a redelivered first payment`() =
+        runTest {
+            seedFirstPayment()
+            useCase.execute("tr_1")
+
+            useCase.execute("tr_1")
+
+            assertThat(notifier.contractConfirmations).hasSize(1)
+        }
+
+    @Test
+    fun `sends a renewal receipt when the period advances, not a contract confirmation`() =
+        runTest {
+            seedFirstPayment()
+            useCase.execute("tr_1")
+
+            val laterEnd = PERIOD_END.plusSeconds(86_400)
+            provider.seed(providerState(userId, externalRef = subscriptionRef, periodEnd = laterEnd))
+            useCase.execute(subscriptionRef)
+
+            assertThat(notifier.renewalReceipts).hasSize(1)
+            assertThat(notifier.renewalReceipts.single().periodEnd).isEqualTo(laterEnd)
+            assertThat(notifier.contractConfirmations).hasSize(1)
+        }
+
+    @Test
+    fun `does not send a receipt on a non-renewal transition`() =
+        runTest {
+            seedFirstPayment()
+            useCase.execute("tr_1")
+
+            provider.seed(providerState(userId, externalRef = subscriptionRef, status = SubscriptionStatus.PAST_DUE))
+            useCase.execute(subscriptionRef)
+
+            assertThat(notifier.renewalReceipts).isEmpty()
+        }
+
+    @Test
+    fun `a notifier failure never fails the webhook or subscription creation`() =
+        runTest {
+            seedFirstPayment()
+            notifier.failOnce = true
+
+            val outcome = useCase.execute("tr_1")
+
+            assertThat(outcome).isInstanceOf(IngestOutcome.Applied::class)
+            assertThat(repository.findByUserId(userId)!!.externalRef).isEqualTo(subscriptionRef)
             assertThat(publisher.events).hasSize(1)
         }
 

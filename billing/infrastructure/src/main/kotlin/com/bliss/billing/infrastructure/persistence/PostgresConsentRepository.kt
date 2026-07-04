@@ -35,10 +35,34 @@ class PostgresConsentRepository(
         }
     }
 
+    override suspend fun findLatest(userId: UUID): CheckoutConsent? =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(SELECT_LATEST_SQL).use { stmt ->
+                    stmt.setObject(1, userId)
+                    stmt.executeQuery().use { rs ->
+                        if (!rs.next()) {
+                            null
+                        } else {
+                            CheckoutConsent(
+                                cgvAccepted = rs.getBoolean("cgv_accepted"),
+                                cgvVersion = rs.getString("cgv_version"),
+                                withdrawalWaiver = rs.getBoolean("withdrawal_waiver"),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
     companion object {
         private const val INSERT_SQL =
             "INSERT INTO billing_checkout_consents " +
                 "(user_id, cgv_accepted, cgv_version, withdrawal_waiver, accepted_at, created_at) " +
                 "VALUES (?, ?, ?, ?, ?, ?)"
+
+        private const val SELECT_LATEST_SQL =
+            "SELECT cgv_accepted, cgv_version, withdrawal_waiver FROM billing_checkout_consents " +
+                "WHERE user_id = ? ORDER BY accepted_at DESC, id DESC LIMIT 1"
     }
 }

@@ -82,8 +82,12 @@ class MollieBillingAdapter(
             status = status,
             source = BillingSource.MOLLIE,
             periodEnd = subscription.nextPaymentDate,
+            cadence = cadence,
         )
     }
+
+    override suspend fun fetchCustomerEmail(userId: UUID): String? =
+        customerStore.findCustomerId(userId)?.let { client.getCustomerEmail(it) }
 
     override suspend fun fetchByReference(externalRef: String): ProviderSubscriptionState? =
         when (val ref = MollieReference.decode(externalRef)) {
@@ -133,6 +137,7 @@ class MollieBillingAdapter(
             status = mapped,
             source = BillingSource.MOLLIE,
             periodEnd = null,
+            cadence = cadenceFrom(metadata),
         )
     }
 
@@ -146,6 +151,7 @@ class MollieBillingAdapter(
             status = mapped,
             source = BillingSource.MOLLIE,
             periodEnd = nextPaymentDate,
+            cadence = cadenceFrom(metadata),
         )
     }
 

@@ -60,6 +60,9 @@ spec:
               value: {{ required "checkout.cancelUrl is required (see values-prod.yaml / values-local.yaml)" .Values.checkout.cancelUrl | quote }}
             - name: BILLING_WEBHOOK_URL
               value: {{ required "checkout.webhookUrl is required (see values-prod.yaml / values-local.yaml)" .Values.checkout.webhookUrl | quote }}
+            # Legal email (ADR-0094 §2); sender identity defaults in-code, shared BREVO_API_KEY rides in envFromSecret only when email.enabled flips bright.
+            - name: BILLING_EMAIL_ENABLED
+              value: {{ .Values.email.enabled | quote }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

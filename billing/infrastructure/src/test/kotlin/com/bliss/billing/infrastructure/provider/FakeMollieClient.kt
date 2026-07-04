@@ -53,6 +53,10 @@ class FakeMollieClient : MollieClient {
 
     override suspend fun getPayment(paymentId: String): MolliePayment? = payments[paymentId]
 
+    val customerEmails = mutableMapOf<String, String?>()
+
+    override suspend fun getCustomerEmail(customerId: String): String? = customerEmails[customerId]
+
     var customerPayments: MolliePaymentPage = MolliePaymentPage(emptyList(), null)
     var lastListCustomerId: String? = null
     var lastListFrom: String? = null

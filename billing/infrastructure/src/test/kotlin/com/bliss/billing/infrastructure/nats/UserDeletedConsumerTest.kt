@@ -271,6 +271,8 @@ class UserDeletedConsumerTest {
 
         override suspend fun fetchByReference(externalRef: String): ProviderSubscriptionState? = null
 
+        override suspend fun fetchCustomerEmail(userId: UUID): String? = null
+
         override suspend fun cancel(externalRef: String) {
             cancelCalls += externalRef
             if (externalRef in failRefs) throw RuntimeException("provider down")

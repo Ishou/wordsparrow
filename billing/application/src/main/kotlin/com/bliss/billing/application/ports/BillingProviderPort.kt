@@ -22,6 +22,8 @@ data class ProviderSubscriptionState(
     val status: SubscriptionStatus,
     val source: BillingSource,
     val periodEnd: Instant?,
+    // The checkout cadence, recovered from provider metadata; drives the receipt price/périodicité, null on legacy states pre-dating cadence capture.
+    val cadence: Cadence? = null,
 )
 
 /** Lean provider-side handle enumerated by the reconciliation backstop; only the opaque [externalRef] is load-bearing, [userId] aids log correlation (ADR-0078). */
@@ -49,6 +51,9 @@ interface BillingProviderPort {
 
     /** Re-fetch the authoritative state by opaque reference; used to authenticate webhooks (re-fetch-by-id) and reconcile. Null when the provider has no such resource. */
     suspend fun fetchByReference(externalRef: String): ProviderSubscriptionState?
+
+    /** The customer's contact email from the provider Customer (captured at checkout); passed through for receipts, never stored (ADR-0082). Null when unknown or unavailable. */
+    suspend fun fetchCustomerEmail(userId: UUID): String?
 
     /** Cancel at the provider. Idempotent: cancelling an already-cancelled subscription is a no-op (ADR-0078 deletion-cancellation invariant). */
     suspend fun cancel(externalRef: String)

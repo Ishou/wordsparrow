@@ -2,6 +2,7 @@ package com.bliss.billing.application.usecases
 
 import com.bliss.billing.application.ports.ProviderSubscriptionState
 import com.bliss.billing.domain.BillingSource
+import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.Subscription
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
@@ -33,6 +34,7 @@ internal fun providerState(
     tier: Tier = Tier.of("supporter"),
     status: SubscriptionStatus = SubscriptionStatus.ACTIVE,
     periodEnd: Instant? = PERIOD_END,
+    cadence: Cadence? = Cadence.MONTHLY,
 ): ProviderSubscriptionState =
     ProviderSubscriptionState(
         externalRef = externalRef,
@@ -41,4 +43,5 @@ internal fun providerState(
         status = status,
         source = BillingSource.MOLLIE,
         periodEnd = periodEnd,
+        cadence = cadence,
     )

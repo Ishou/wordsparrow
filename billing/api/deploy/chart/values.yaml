@@ -108,5 +108,8 @@ env:
     value: "20.00"
   - name: BILLING_YEARLY_INTERVAL
     value: "12 months"
-# Kubernetes Secret to envFrom; carries MOLLIE_API_KEY. Bootstrapped per ADR-0009 §10.
+# Legally-mandated durable-medium email (ADR-0094 §2) ships dark; bright = email.enabled=true once the shared BREVO_API_KEY is in the env Secret. Sender address/name/reply-to default in-code (abonnement@ / WordSparrow – Abonnement / contact@), env-overridable.
+email:
+  enabled: false
+# Kubernetes Secret to envFrom; carries MOLLIE_API_KEY (and the shared BREVO_API_KEY once email.enabled — same value as identity). Bootstrapped per ADR-0009 §10.
 envFromSecret: ""

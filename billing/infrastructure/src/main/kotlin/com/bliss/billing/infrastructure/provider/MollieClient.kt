@@ -64,6 +64,9 @@ interface MollieClient {
 
     suspend fun getPayment(paymentId: String): MolliePayment?
 
+    /** The email on the provider Customer (set at checkout), or null when the customer or email is absent; billing never stores it (ADR-0082). */
+    suspend fun getCustomerEmail(customerId: String): String?
+
     /** One page of a customer's payments newest-first, paging by the opaque `from` cursor (a payment id); [limit] is clamped by the caller. */
     suspend fun listCustomerPayments(
         customerId: String,

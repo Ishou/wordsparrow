@@ -360,4 +360,19 @@ class MollieBillingAdapterTest {
             assertThat(refs.map { it.externalRef }).containsExactly("cust_1:sub_a", "cust_2:sub_b")
             assertThat(refs.first().userId).isEqualTo(userId)
         }
+
+    @Test
+    fun `fetchCustomerEmail resolves the mollie customer id and returns its email`() =
+        runTest {
+            val client = FakeMollieClient().apply { customerEmails["cust_1"] = "joueur@example.com" }
+            val store = InMemoryMollieCustomerStore(mapOf(userId to "cust_1"))
+
+            assertThat(adapter(client, store).fetchCustomerEmail(userId)).isEqualTo("joueur@example.com")
+        }
+
+    @Test
+    fun `fetchCustomerEmail is null when the user has no mollie customer`() =
+        runTest {
+            assertThat(adapter(FakeMollieClient(), InMemoryMollieCustomerStore()).fetchCustomerEmail(userId)).isEqualTo(null)
+        }
 }
