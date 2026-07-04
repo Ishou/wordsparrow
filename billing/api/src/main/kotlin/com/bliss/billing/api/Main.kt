@@ -14,6 +14,7 @@ import com.bliss.billing.infrastructure.nats.MaxDeliveriesDlqRepublisher
 import com.bliss.billing.infrastructure.nats.NatsSubscriptionPublisher
 import com.bliss.billing.infrastructure.nats.UserDeletedConsumer
 import com.bliss.billing.infrastructure.persistence.BillingDatabase
+import com.bliss.billing.infrastructure.persistence.PostgresConsentRepository
 import com.bliss.billing.infrastructure.persistence.PostgresMollieCustomerStore
 import com.bliss.billing.infrastructure.persistence.PostgresProcessedEventLedger
 import com.bliss.billing.infrastructure.persistence.PostgresSubscriptionRepository
@@ -38,6 +39,7 @@ fun main() {
     val dataSource = db.dataSource() ?: error("BillingDatabase did not produce a DataSource.")
 
     val subscriptions = PostgresSubscriptionRepository(dataSource)
+    val consents = PostgresConsentRepository(dataSource)
     val ledger = PostgresProcessedEventLedger(dataSource)
     val customerStore = PostgresMollieCustomerStore(dataSource)
     val mollieClient = SdkMollieClient(mollieConfig)
@@ -71,7 +73,7 @@ fun main() {
         Wiring(
             verifySession = { cookie -> identityClient.verifySession(cookie) },
             fetchEmail = { cookie -> identityClient.fetchEmail(cookie) },
-            createCheckoutSession = CreateCheckoutSession(provider, subscriptions),
+            createCheckoutSession = CreateCheckoutSession(provider, subscriptions, consents, clock),
             cancelSubscription = CancelSubscription(provider, subscriptions, publisher, clock, eventIds),
             ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds),
             subscriptionQuery = SubscriptionQuery(subscriptions),

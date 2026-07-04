@@ -2,6 +2,7 @@ package com.bliss.billing.api.routes
 
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import com.bliss.billing.api.WIRE_JSON
 import com.bliss.billing.api.auth.SESSION_COOKIE_NAME
@@ -9,10 +10,13 @@ import com.bliss.billing.api.auth.SUBSCRIBE_CAPABILITY
 import com.bliss.billing.api.auth.SessionMiddleware
 import com.bliss.billing.api.auth.SessionPrincipal
 import com.bliss.billing.application.testdoubles.FakeBillingProvider
+import com.bliss.billing.application.testdoubles.FakeConsentRepository
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
+import com.bliss.billing.application.testdoubles.FixedClock
 import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.Cadence
+import com.bliss.billing.domain.CheckoutConsent
 import com.bliss.billing.domain.Subscription
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
@@ -30,6 +34,7 @@ import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import org.junit.jupiter.api.Test
+import java.time.Instant
 import java.util.UUID
 
 class CheckoutSessionRouteTest {
@@ -41,7 +46,7 @@ class CheckoutSessionRouteTest {
     fun `caller with billing subscribe gets 201 with checkout urls`() =
         testApplication {
             val provider = FakeBillingProvider()
-            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
+            install(subscriber, checkout(provider))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -58,7 +63,7 @@ class CheckoutSessionRouteTest {
     fun `omitted cadence defaults to monthly`() =
         testApplication {
             val provider = FakeBillingProvider()
-            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
+            install(subscriber, checkout(provider))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -73,7 +78,7 @@ class CheckoutSessionRouteTest {
     fun `session-derived email is passed through to the checkout use case`() =
         testApplication {
             val provider = FakeBillingProvider()
-            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()), email = "player@example.com")
+            install(subscriber, checkout(provider), email = "player@example.com")
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -88,7 +93,7 @@ class CheckoutSessionRouteTest {
     fun `absent email still completes checkout`() =
         testApplication {
             val provider = FakeBillingProvider()
-            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()), email = null)
+            install(subscriber, checkout(provider), email = null)
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -103,7 +108,7 @@ class CheckoutSessionRouteTest {
     fun `yearly cadence is forwarded to the use case`() =
         testApplication {
             val provider = FakeBillingProvider()
-            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
+            install(subscriber, checkout(provider))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -117,7 +122,7 @@ class CheckoutSessionRouteTest {
     @Test
     fun `unknown cadence yields 400`() =
         testApplication {
-            install(subscriber, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
+            install(subscriber, checkout())
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -131,7 +136,7 @@ class CheckoutSessionRouteTest {
     @Test
     fun `caller without billing subscribe is rejected with 403`() =
         testApplication {
-            install(withoutCapability, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
+            install(withoutCapability, checkout())
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -145,7 +150,7 @@ class CheckoutSessionRouteTest {
     @Test
     fun `anonymous caller is rejected with 401`() =
         testApplication {
-            install(null, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
+            install(null, checkout())
             val resp =
                 client.post("/v1/checkout-session") {
                     contentType(ContentType.Application.Json)
@@ -162,7 +167,7 @@ class CheckoutSessionRouteTest {
             repo.save(
                 Subscription(userId, Tier.of("supporter"), SubscriptionStatus.ACTIVE, BillingSource.MOLLIE, "cust:sub_1", null),
             )
-            install(subscriber, CreateCheckoutSession(FakeBillingProvider(), repo))
+            install(subscriber, checkout(repo = repo))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -177,7 +182,7 @@ class CheckoutSessionRouteTest {
     fun `provider unavailable yields 503`() =
         testApplication {
             val provider = FakeBillingProvider().apply { failCheckoutOnce = true }
-            install(subscriber, CreateCheckoutSession(provider, FakeSubscriptionRepository()))
+            install(subscriber, checkout(provider))
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -191,7 +196,7 @@ class CheckoutSessionRouteTest {
     @Test
     fun `blank tier yields 400`() =
         testApplication {
-            install(subscriber, CreateCheckoutSession(FakeBillingProvider(), FakeSubscriptionRepository()))
+            install(subscriber, checkout())
             val resp =
                 client.post("/v1/checkout-session") {
                     cookie(SESSION_COOKIE_NAME, "valid")
@@ -201,6 +206,48 @@ class CheckoutSessionRouteTest {
             assertThat(resp.status).isEqualTo(HttpStatusCode.BadRequest)
             assertThat(resp.bodyAsText()).contains("errors/invalid-checkout-request")
         }
+
+    @Test
+    fun `valid consent is accepted and recorded with server time`() =
+        testApplication {
+            val consents = FakeConsentRepository()
+            val clock = FixedClock(Instant.parse("2026-07-04T10:15:30Z"))
+            install(subscriber, checkout(consents = consents, clock = clock))
+            val resp =
+                client.post("/v1/checkout-session") {
+                    cookie(SESSION_COOKIE_NAME, "valid")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"tier":"supporter","consent":{"cgvAccepted":true,"cgvVersion":"1.0","withdrawalWaiver":true}}""")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Created)
+            assertThat(
+                consents.records.single().consent,
+            ).isEqualTo(CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = true))
+            assertThat(consents.records.single().acceptedAt).isEqualTo(Instant.parse("2026-07-04T10:15:30Z"))
+        }
+
+    @Test
+    fun `consent with cgv not accepted yields 400 and records nothing`() =
+        testApplication {
+            val consents = FakeConsentRepository()
+            install(subscriber, checkout(consents = consents))
+            val resp =
+                client.post("/v1/checkout-session") {
+                    cookie(SESSION_COOKIE_NAME, "valid")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"tier":"supporter","consent":{"cgvAccepted":false,"cgvVersion":"1.0","withdrawalWaiver":true}}""")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.BadRequest)
+            assertThat(resp.bodyAsText()).contains("errors/invalid-checkout-request")
+            assertThat(consents.records).isEmpty()
+        }
+
+    private fun checkout(
+        provider: FakeBillingProvider = FakeBillingProvider(),
+        repo: FakeSubscriptionRepository = FakeSubscriptionRepository(),
+        consents: FakeConsentRepository = FakeConsentRepository(),
+        clock: FixedClock = FixedClock(Instant.EPOCH),
+    ) = CreateCheckoutSession(provider, repo, consents, clock)
 
     private fun ApplicationTestBuilder.install(
         principal: SessionPrincipal?,
