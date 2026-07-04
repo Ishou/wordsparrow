@@ -17,6 +17,7 @@ import com.bliss.billing.application.ports.SubscriptionOffer
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.OutboundEmailKind
 import com.bliss.billing.domain.OutboundEmailStatus
+import com.bliss.billing.domain.Tier
 import com.bliss.billing.domain.VatBreakdown
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -52,7 +53,7 @@ class LegalEmailNotifier(
             OutboundEmailKind.CONTRACT,
             dedupeKey(OutboundEmailKind.CONTRACT, confirmation.userId, confirmation.periodEnd),
             contractEmail(
-                confirmation.tier.value,
+                confirmation.tier,
                 confirmation.cadence,
                 price,
                 confirmation.formedAt,
@@ -68,7 +69,7 @@ class LegalEmailNotifier(
             receipt.userId,
             OutboundEmailKind.RENEWAL,
             dedupeKey(OutboundEmailKind.RENEWAL, receipt.userId, receipt.periodEnd),
-            renewalEmail(receipt.tier.value, receipt.cadence, price, receipt.chargedAt, receipt.periodEnd),
+            renewalEmail(receipt.tier, receipt.cadence, price, receipt.chargedAt, receipt.periodEnd),
         )
     }
 
@@ -77,7 +78,7 @@ class LegalEmailNotifier(
             confirmation.userId,
             OutboundEmailKind.CANCEL,
             dedupeKey(OutboundEmailKind.CANCEL, confirmation.userId, confirmation.periodEnd),
-            cancellationEmail(confirmation.tier.value, confirmation.canceledAt, confirmation.periodEnd),
+            cancellationEmail(confirmation.tier, confirmation.canceledAt, confirmation.periodEnd),
         )
     }
 
@@ -87,7 +88,7 @@ class LegalEmailNotifier(
             notice.userId,
             OutboundEmailKind.CHATEL,
             dedupeKey(OutboundEmailKind.CHATEL, notice.userId, notice.periodEnd),
-            preRenewalEmail(notice.tier.value, notice.cadence, price, notice.periodEnd),
+            preRenewalEmail(notice.tier, notice.cadence, price, notice.periodEnd),
         )
     }
 
@@ -150,7 +151,7 @@ class LegalEmailNotifier(
     }
 
     private fun contractEmail(
-        tier: String,
+        tier: Tier,
         cadence: Cadence,
         price: OfferPrice,
         formedAt: Instant,
@@ -160,7 +161,7 @@ class LegalEmailNotifier(
         val vat = VatBreakdown.ofTtc(price.ttcMinorUnits)
         val lines = mutableListOf<String>()
         lines += "Merci ! Ton abonnement WordSparrow est confirmé."
-        lines += "Formule : $tier"
+        lines += "Formule : ${formuleLabel(tier)}"
         lines += "Cadence : ${cadenceLabel(cadence)}"
         lines += "Prix : ${money(price)} TTC ${perPeriod(cadence)}"
         lines +=
@@ -182,7 +183,7 @@ class LegalEmailNotifier(
     }
 
     private fun renewalEmail(
-        tier: String,
+        tier: Tier,
         cadence: Cadence,
         price: OfferPrice,
         chargedAt: Instant,
@@ -190,7 +191,7 @@ class LegalEmailNotifier(
     ): RenderedEmail {
         val vat = VatBreakdown.ofTtc(price.ttcMinorUnits)
         val lines = mutableListOf<String>()
-        lines += "Ton abonnement WordSparrow ($tier) a été renouvelé."
+        lines += "Ton abonnement WordSparrow (${formuleLabel(tier)}) a été renouvelé."
         lines +=
             "Montant : ${money(
                 price,
@@ -205,12 +206,12 @@ class LegalEmailNotifier(
     }
 
     private fun cancellationEmail(
-        tier: String,
+        tier: Tier,
         canceledAt: Instant,
         periodEnd: Instant?,
     ): RenderedEmail {
         val lines = mutableListOf<String>()
-        lines += "Ta demande de résiliation de l'abonnement WordSparrow ($tier) a bien été prise en compte."
+        lines += "Ta demande de résiliation de l'abonnement WordSparrow (${formuleLabel(tier)}) a bien été prise en compte."
         lines += "Date de la demande : ${date(canceledAt)}"
         if (periodEnd != null) {
             lines += "Date de fin d'effet : ${date(periodEnd)}"
@@ -222,13 +223,13 @@ class LegalEmailNotifier(
     }
 
     private fun preRenewalEmail(
-        tier: String,
+        tier: Tier,
         cadence: Cadence,
         price: OfferPrice,
         periodEnd: Instant,
     ): RenderedEmail {
         val lines = mutableListOf<String>()
-        lines += "Ton abonnement WordSparrow ($tier) arrive à échéance le ${date(periodEnd)}."
+        lines += "Ton abonnement WordSparrow (${formuleLabel(tier)}) arrive à échéance le ${date(periodEnd)}."
         lines +=
             "Sauf action de ta part, il sera reconduit tacitement pour une nouvelle période ${perPeriodNoun(
                 cadence,
@@ -250,6 +251,9 @@ class LegalEmailNotifier(
         val amount = String.format(Locale.FRANCE, "%,.2f", minorUnits / 100.0)
         return if (currency == "EUR") "$amount €" else "$amount $currency"
     }
+
+    // French formule label for the durable-medium copy; the paid tier set is config-driven (ADR-0078), so any non-free tier reads as full access.
+    private fun formuleLabel(tier: Tier): String = if (tier == Tier.free) "Version gratuite" else "Accès complet"
 
     private fun cadenceLabel(cadence: Cadence): String = if (cadence == Cadence.YEARLY) "annuel" else "mensuel"
 
