@@ -71,10 +71,7 @@ interface MollieClient {
         limit: Int,
     ): MolliePaymentPage
 
-    /**
-     * Create the recurring subscription against an existing mandate; the first payment must already be paid.
-     * [startDate] (YYYY-MM-DD, null = Mollie default of today) defers the first recurring charge so the paid first payment already covers period one.
-     */
+    /** Create the recurring subscription against an existing mandate (first payment must already be paid); [startDate] (YYYY-MM-DD, null = today) defers the first recurring charge to avoid double-billing period one. */
     suspend fun createSubscription(
         customerId: String,
         mandateId: String,

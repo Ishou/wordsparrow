@@ -34,10 +34,7 @@ data class MollieConfig(
     /** One interval as a [Period]; the subscription starts this far after the first payment so period one is not billed twice. */
     fun startOffsetFor(cadence: Cadence): Period = parseInterval(subscriptionIntervalFor(cadence))
 
-    /**
-     * Customer-facing checkout label that discloses the recurrence up front (French consumer law, ADR-0080 factual framing):
-     * e.g. "Abonnement WordSparrow — 20 €/an, renouvellement automatique".
-     */
+    /** Customer-facing checkout label disclosing recurrence up front (ADR-0080 factual framing), e.g. "... — 20 €/an, renouvellement automatique". */
     fun descriptionFor(cadence: Cadence): String = "$description — ${priceLabelFor(cadence)}, renouvellement automatique"
 
     private fun priceLabelFor(cadence: Cadence): String {
