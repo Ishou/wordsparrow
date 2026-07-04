@@ -41,6 +41,13 @@ interface ImportMetaEnv {
    * (MANIFESTO: expired flags fail CI).
    */
   readonly VITE_FEATURE_MULTIPLAYER: 'true' | 'false';
+  /**
+   * Passwordless email-OTP feature flag (ADR-0091). When `'true'`, the
+   * `/connexion` two-step email→code route is registered and the Google
+   * sign-in surfaces link to it. Defaults to `'false'` in every
+   * environment; ships dark, releases bright. Flag retirement: 2026-10-01.
+   */
+  readonly VITE_FEATURE_EMAIL_AUTH: 'true' | 'false';
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

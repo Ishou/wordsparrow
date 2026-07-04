@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useRouteContext } from '@tanstack/react-router';
+import { Link, useRouteContext } from '@tanstack/react-router';
 import { ArrowsClockwise, Check, CircleNotch, Envelope, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { InvalidDisplayNameError, type GetMeResult } from '@/application/auth';
@@ -44,6 +44,10 @@ const groupNote = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold'
 const googleBtn = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', height: '50px', borderRadius: '14px', bg: 'ws.jadeInk', color: 'ws.onJadeInk', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', textDecoration: 'none', cursor: 'pointer', transition: 'opacity 120ms', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const spin = css({ animation: 'wsSpin 0.7s linear infinite' });
 const srOnly = css({ srOnly: true });
+const emailAuthLink = css({ display: 'inline-block', marginTop: '14px', fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.jadeInk', textDecoration: 'underline', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px', borderRadius: '2px' } });
+
+// Email-OTP sign-in surface (ADR-0091), off until the flag flips bright. Flag retirement: 2026-10-01.
+const emailAuthEnabled = import.meta.env.VITE_FEATURE_EMAIL_AUTH === 'true';
 
 type SyncState = 'idle' | 'syncing' | 'done' | 'error';
 const SYNC_SUB: Record<SyncState, string> = {
@@ -272,6 +276,11 @@ function SignInPrompt() {
             </>
           )}
         </a>
+        {emailAuthEnabled ? (
+          <Link to="/connexion" search={{ returnTo: '/compte' }} className={emailAuthLink}>
+            … ou connecte-toi avec ton adresse e-mail
+          </Link>
+        ) : null}
         <p className={signInDisclosure}>
           En te connectant, ton adresse e-mail Google est enregistrée pour la facturation
           d’un éventuel abonnement.

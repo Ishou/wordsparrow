@@ -9,6 +9,7 @@ import { Route as GrillesRoute } from './routes/grilles';
 import { Route as ReglagesRoute } from './routes/reglages';
 import { Route as AideRoute } from './routes/aide';
 import { Route as CompteRoute } from './routes/compte';
+import { Route as ConnexionRoute } from './routes/connexion';
 import { Route as AbonnementRoute } from './routes/abonnement';
 import { Route as AbonnementSuccesRoute } from './routes/abonnement.succes';
 import { Route as AbonnementAnnuleRoute } from './routes/abonnement.annule';
@@ -35,9 +36,11 @@ import {
 export interface CreateAppRouterOptions {
   readonly context: AppRouterContext;
   readonly multiplayer: boolean;
+  // Email-OTP flag (ADR-0091) gates the /connexion route so it stays unreachable while dark.
+  readonly emailAuth: boolean;
 }
 
-export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions) {
+export function createAppRouter({ context, multiplayer, emailAuth }: CreateAppRouterOptions) {
   // Multiplayer-flag-gated lobby/join need the game-api adapter (ADR-0018 §10); design-system + lockup stay dev-only (ADR-0072).
   const appChildren = [
     IndexRoute,
@@ -57,6 +60,7 @@ export function createAppRouter({ context, multiplayer }: CreateAppRouterOptions
     MenuRedirectRoute,
     PrivacyRedirectRoute,
     ...(multiplayer ? [LobbyRoute, JoinRoute] : []),
+    ...(emailAuth ? [ConnexionRoute] : []),
     ...(import.meta.env.DEV ? [DesignSystemRoute, LockupRoute] : []),
   ];
   // Contribuer parents RootRoute (v1 ContentPage shell owns its own chrome; reparenting would break the lazy-route ids).

@@ -20,7 +20,8 @@ const CLIENT_REDIRECT_PATHS = new Set(['/accueil', '/grille', '/menu', '/privacy
 const DEV_ONLY_PATHS = new Set(['/design-system', '/lockup']);
 
 function registeredPaths(): ReadonlyArray<string> {
-  const router = createAppRouter({ context: {} as AppRouterContext, multiplayer: true });
+  // emailAuth stays off: /connexion ships dark (ADR-0091), its cold-load shell lands with the bright release.
+  const router = createAppRouter({ context: {} as AppRouterContext, multiplayer: true, emailAuth: false });
   const paths = Object.values(router.routesById as Record<string, { fullPath?: string }>)
     .map((r) => r.fullPath)
     .filter((p): p is string => typeof p === 'string' && p.length > 0)
