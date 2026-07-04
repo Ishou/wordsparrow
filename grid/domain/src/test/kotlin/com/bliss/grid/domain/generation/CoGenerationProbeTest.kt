@@ -22,13 +22,13 @@ class CoGenerationProbeTest {
 
     // Bump when sweep semantics change: persisted nogoods are only valid for the rule set
     // and corpus they were certified under.
-    private val engineVersion = "v7-col0tip"
+    private val engineVersion = "v8-run1"
     private val bandVersion = "v3-tipfree"
 
     @Test
     fun `co-generation sweep produces a valid sparse board`() {
         val lexicon = Lexicon(loadRepository(), maxLen = 17)
-        val deadline = System.currentTimeMillis() + 300_000
+        val deadline = System.currentTimeMillis() + 480_000
         var attempts = 0
         var best: Sweep? = null
         var deepestSeen = -1
@@ -66,7 +66,7 @@ class CoGenerationProbeTest {
             } else {
                 if (band == null && sweep.deepest >= 10 * width) {
                     val donated = (0 until 6).joinToString("|") { sweep.grid[it].concatToString() }
-                    if (!donated.contains('.')) newBands.add(donated)
+                    if (!donated.contains('.') && sweep.bandTipFree()) newBands.add(donated)
                 }
                 if (sweep.deepest > deepestSeen) {
                 deepestSeen = sweep.deepest
@@ -615,6 +615,14 @@ class CoGenerationProbeTest {
                 if (ctx.deepest > jwBest) {
                     jwBest = ctx.deepest
                     jwBestDump = "a18='${ctx.deepA18}' a19='${ctx.deepA19}'"
+                }
+                if (!ok && ctx.deepest == 0 && jwBestDump.length < 400) {
+                    val col = columns[0]
+                    val v = col.text.length
+                    val c2 = col.masks[v + 2]?.let { lexicon.lettersAt(v + 2, v, it) } ?: 0
+                    jwBestDump += "|C0DEAD v=$v keys=${col.masks.keys.sorted()} c2=${Integer.bitCount(c2)}" +
+                        (if (col.reserved) "R" else "") + (if (col.forcedBlackNext) "F" else "") +
+                        (if (col.isEmpty) "E" else "") + " above=${grid[height - 3][0]}"
                 }
                 if (ok) return ctx.a18.copyOf() to ctx.a19.copyOf()
             }
@@ -1260,7 +1268,9 @@ class CoGenerationProbeTest {
                 foundEndgame = null
                 if (realizeRow(r, facts, reach)) {
                     val score =
-                        if (stateSignature(r + 1) in nogoods || !nextRowFeasible(r)) {
+                        if (stateSignature(r + 1) in nogoods ||
+                            (r != height - 3 && !nextRowFeasible(r))
+                        ) {
                             Int.MIN_VALUE / 2
                         } else {
                             var sc = futureFlexibility(r)
@@ -1362,6 +1372,20 @@ class CoGenerationProbeTest {
 
         // Reconstruct full state from a donated opening (6 rows): columns from letters below the
         // last black, across + completed vertical words from geometry, reservations re-derived.
+        // Donated top bands must not freeze dead-end tips into the library.
+        fun bandTipFree(): Boolean {
+            for (r in 2..5) {
+                for (c in 0 until width) {
+                    if (grid[r][c] == '#' && grid[r - 1][c] != '#' &&
+                        runLenUp(r - 1, c) < DEAD_END_MIN && runLenAt(r - 1, c) == 1
+                    ) {
+                        return false
+                    }
+                }
+            }
+            return true
+        }
+
         fun replayBand(band: String): Boolean {
             val rows = band.split("|")
             if (rows.size != 6 || rows.any { it.length != width }) return false
@@ -1508,8 +1532,7 @@ class CoGenerationProbeTest {
                     }
                     blackAllowed[c] = col.hostDebt == 0 &&
                         (col.isEmpty || col.forcedBlackNext || col.reserved || col.completeWord(used) != null) &&
-                        !(r >= height - 2 && c >= width - 2) &&
-                        !(c == 0 && !col.isEmpty && !col.forcedBlackNext && col.lastSingle && col.text.length < DEAD_END_MIN)
+                        !(r >= height - 2 && c >= width - 2)
                     forcedBlack[c] = col.forcedBlackNext
                     vClumpBlocked[c] = r > 1 && grid[r - 1][c] == '#' && grid[r - 2][c] == '#'
                     singleOk[c] = true
@@ -1580,11 +1603,12 @@ class CoGenerationProbeTest {
         // Higher = the next rows have more landing options: columns terminable within 2 rows,
         // empty columns, and no long stretch without a prospective landing.
         private fun futureFlexibility(r: Int): Int {
-            // Hard corner check: next row's position 0 must have a legal move —
-            // hosted (black at (r,0)), or col0/col1 landing within one row.
+            // Hard corner check: next row's position 0 must have a legal move — hosted
+            // (black at (r,0)), a landing, or a mid-run col-0 single continuation.
             if (r + 1 < height) {
                 val corner =
-                    grid[r][0] == '#' || landsWithin(columns[0], 0) || landsWithin(columns[1], 0)
+                    grid[r][0] == '#' || landsWithin(columns[0], 0) || landsWithin(columns[1], 0) ||
+                        columns[0].continueLetters(height - r - 1) != 0
                 if (!corner) return Int.MIN_VALUE / 2
             }
             var score = 0
@@ -1593,7 +1617,7 @@ class CoGenerationProbeTest {
                 for (c in 0 until width) {
                     if (grid[r][c] == '#' && grid[r - 1][c] != '#') {
                         val vRun = runLenUp(r - 1, c)
-                        if (vRun < DEAD_END_MIN && runLenAt(r - 1, c) == 1) score -= 60
+                        if (vRun < DEAD_END_MIN && runLenAt(r - 1, c) == 1) score -= 250
                     }
                 }
             }
@@ -1934,6 +1958,18 @@ class CoGenerationProbeTest {
             c: Int,
             maxTotal: Int,
         ) {
+            // Col 0: a run's last letter is always an across-single (no bend mid-run), so
+            // legal runs are >= DEAD_END_MIN ending at height-3 (bend then serves the bottom
+            // rows) or exactly bottom-reaching. Commit to ONE target: flexible ends never
+            // reserve, so the endgame would otherwise never see a completed corner.
+            if (c == 0) {
+                val l9 = maxTotal - 2
+                val keep = if (l9 >= DEAD_END_MIN && random.nextInt(5) < 3) l9 else maxTotal
+                for (l in columns[0].masks.keys.toList()) {
+                    if (l != keep) columns[0].forbidLength(l)
+                }
+                return
+            }
             if (c < width - 2) return
             columns[c].forbidLength(maxTotal - 1)
             columns[c].forbidLength(maxTotal - 2)
@@ -1945,11 +1981,6 @@ class CoGenerationProbeTest {
             acrossHosted: Boolean,
         ): Boolean {
             val col = columns[c]
-            // Col 0 is where every observed dead-end tip lives (left-border singles whose
-            // short vertical then ends): refuse exactly that, nothing global.
-            if (c == 0 && !col.isEmpty && !col.forcedBlackNext && col.lastSingle && col.text.length < DEAD_END_MIN) {
-                return false
-            }
             if (!col.isEmpty && !col.forcedBlackNext && !col.reserved) {
                 if (col.text.length >= minLen) {
                     val w = col.completeWord(used) ?: return false
@@ -2018,8 +2049,8 @@ class CoGenerationProbeTest {
             c: Int,
             r: Int,
         ): IntRange {
-            // Left column runs long: its cells host row-starts as singles, and a single may
-            // never be the last letter of a short vertical (dead-end tip) — length buys cover.
+            // Col-0 verticals must reach 5+ or the bottom: an across run at col 0 is only
+            // hostable right after a col-0 black, so a mid-run last letter is always a single.
             if (c == 0) return 5..7
             // Top band mirrors print: columns starting in rows 0-1 are mostly short, so rows
             // 2-3 inherit plentiful staggered landings instead of impossible long spans.
