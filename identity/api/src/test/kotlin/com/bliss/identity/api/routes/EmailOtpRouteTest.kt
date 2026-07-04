@@ -69,7 +69,7 @@ class EmailOtpRouteTest {
         val random = SecureRandomFactory()
         val idGen = UuidV7IdGenerator()
         val whoAmI = WhoAmIUseCase(users, sessions, clock, Duration.ofDays(7))
-        val requestEmailOtp = RequestEmailOtpUseCase(challenges, emailSender, hasher, random, idGen, clock)
+        val requestEmailOtp = RequestEmailOtpUseCase(challenges, emailSender, hasher, random, idGen, clock, users)
         val verifyEmailOtp = VerifyEmailOtpUseCase(challenges, hasher, users, userProviders, sessions, idGen, clock)
         val recorder = emailSender as? RecordingEmailSender ?: RecordingEmailSender()
         return Fixture(
