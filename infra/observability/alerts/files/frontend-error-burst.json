@@ -1,0 +1,75 @@
+{
+  "alert": "BlissFrontendErrorBurst",
+  "alertType": "TRACES_BASED_ALERT",
+  "description": "More than 5 browser JS errors (window.error / window.unhandledrejection) in 5m.",
+  "ruleType": "threshold_rule",
+  "version": "v5",
+  "schemaVersion": "v2alpha1",
+  "condition": {
+    "compositeQuery": {
+      "queryType": "builder",
+      "panelType": "graph",
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "stepInterval": 0,
+            "signal": "traces",
+            "source": "",
+            "aggregations": [
+              {
+                "expression": "count()"
+              }
+            ],
+            "filter": {
+              "expression": "serviceName = 'frontend' AND name IN ('window.error', 'window.unhandledrejection')"
+            },
+            "having": {
+              "expression": ""
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "warning",
+          "op": "above",
+          "matchType": "in_total",
+          "target": 5,
+          "channels": [
+            "alerts@wordsparrow.io"
+          ]
+        }
+      ]
+    }
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "5m",
+      "frequency": "1m"
+    }
+  },
+  "labels": {
+    "severity": "warning",
+    "component": "frontend"
+  },
+  "annotations": {
+    "summary": "Burst of browser JS errors on the frontend",
+    "description": "{{$value}} uncaught browser errors (window.error / window.unhandledrejection spans) in 5m - real users are hitting JS crashes. These spans bypass the 10% sampler, so the count is exact. Check the 'Frontend / Browser Errors' dashboard for the affected page (url.path) and exception type."
+  },
+  "notificationSettings": {
+    "renotify": {
+      "enabled": true,
+      "interval": "2h",
+      "alertStates": [
+        "firing"
+      ]
+    }
+  }
+}

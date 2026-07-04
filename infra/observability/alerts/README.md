@@ -17,10 +17,15 @@ The external workflow (`apply-signoz-alerts.yml`) and `apply.sh` have been remov
 | [`files/nats-consumer-lag-warning.json`](./files/nats-consumer-lag-warning.json)   | `jetstream_consumer_num_pending` (max by consumer + stream)              | `> 100`   | 5m     | warning  |
 | [`files/nats-consumer-lag-critical.json`](./files/nats-consumer-lag-critical.json) | `jetstream_consumer_num_pending` (max by consumer + stream)              | `> 1000`  | 1m     | critical |
 | [`files/nats-dlq-non-empty.json`](./files/nats-dlq-non-empty.json)                 | `jetstream_stream_total_messages{stream_name="WORDSPARROW_USER_EVENTS_DLQ"}` | `> 0`     | 1m     | warning  |
+| [`files/frontend-error-burst.json`](./files/frontend-error-burst.json)             | traces builder: `count()` of `window.error` + `window.unhandledrejection` spans on `service.name=frontend` | `> 5` (in_total) | 5m | warning |
 
-All three are `threshold_rule` with `compositeQuery.queryType=promql`,
-`op="1"` (greater-than), and `matchType="1"` (at-least-once during the
-window). Notification channel binding is out-of-band in the SigNoz UI
+The NATS three are `promql_rule` with `compositeQuery.queryType=promql`;
+`frontend-error-burst` is a `threshold_rule` over the traces signal
+(builder query, shape copied from the live `frontend-error-rate-high`
+rule). It is a deliberate subset of that UI-created rule — same window
+and threshold, but only uncaught JS errors, no fetch-4xx/5xx noise — so
+its email means "users' browsers are crashing", not "the API had a bad
+minute". Notification channel binding is out-of-band in the SigNoz UI
 (see the sibling `api-5xx-error-rate.md` for the `gmail-relay` channel).
 
 The sibling `*.md` specs document alerts that live in the SigNoz UI
