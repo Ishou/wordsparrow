@@ -17,7 +17,7 @@ The external workflow (`apply-signoz-alerts.yml`) and `apply.sh` have been remov
 | [`files/nats-consumer-lag-warning.json`](./files/nats-consumer-lag-warning.json)   | `jetstream_consumer_num_pending` (max by consumer + stream)              | `> 100`   | 5m     | warning  |
 | [`files/nats-consumer-lag-critical.json`](./files/nats-consumer-lag-critical.json) | `jetstream_consumer_num_pending` (max by consumer + stream)              | `> 1000`  | 1m     | critical |
 | [`files/nats-dlq-non-empty.json`](./files/nats-dlq-non-empty.json)                 | `jetstream_stream_total_messages{stream_name="WORDSPARROW_USER_EVENTS_DLQ"}` | `> 0`     | 1m     | warning  |
-| [`files/frontend-error-burst.json`](./files/frontend-error-burst.json)             | traces builder: `count()` of `window.error` + `window.unhandledrejection` spans on `service.name=frontend` (#1356) | `> 5` (in_total) | 5m | warning |
+| [`files/frontend-error-burst.json`](./files/frontend-error-burst.json)             | traces builder: `count()` of `window.error` + `window.unhandledrejection` spans on `service.name=frontend` | `> 5` (in_total) | 5m | warning |
 
 The NATS three are `promql_rule` with `compositeQuery.queryType=promql`;
 `frontend-error-burst` is a `threshold_rule` over the traces signal

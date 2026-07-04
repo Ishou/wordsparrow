@@ -1,6 +1,6 @@
 {
   "title": "Frontend / Browser Errors",
-  "description": "Browser-side JS errors: window.error + window.unhandledrejection spans on service frontend (#1356). These spans bypass the 10% sampler (ErrorAwareSampler, ADR-0033) so counts are true counts; url.path/url.full enrichment shipped 2026-07-04. First draft — refine through usage.",
+  "description": "Browser-side JS errors: window.error + window.unhandledrejection spans on service frontend. These spans bypass the 10% sampler (ErrorAwareSampler, ADR-0033) so counts are true counts; url.path/url.full enrichment shipped 2026-07-04. First draft — refine through usage.",
   "tags": ["frontend", "errors", "traces"],
   "version": "v5",
   "uploadedGrafana": false,
