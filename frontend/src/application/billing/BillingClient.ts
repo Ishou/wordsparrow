@@ -69,6 +69,7 @@ export interface BillingClient {
     consent: CheckoutConsent,
   ): Promise<CheckoutSession>;
   cancelSubscription(): Promise<SubscriptionView>;
+  reactivateSubscription(): Promise<SubscriptionView>;
   getSubscription(): Promise<SubscriptionView>;
   listReceipts(cursor?: string): Promise<ReceiptsPage>;
 }

@@ -90,6 +90,36 @@ describe('HttpBillingClient.cancelSubscription', () => {
   });
 });
 
+describe('HttpBillingClient.reactivateSubscription', () => {
+  it('returns the updated subscription on 200', async () => {
+    server.use(
+      http.post(`${BASE_URL}/v1/subscription/reactivate`, () => HttpResponse.json(subscription)),
+    );
+
+    const view = await makeClient().reactivateSubscription();
+
+    expect(view).toEqual(subscription);
+  });
+
+  it('maps 404 to a typed no-active-subscription BillingError', async () => {
+    server.use(http.post(`${BASE_URL}/v1/subscription/reactivate`, () => problem(404, 'no-active-subscription')));
+
+    await expect(makeClient().reactivateSubscription()).rejects.toMatchObject({
+      kind: 'no-active-subscription',
+      status: 404,
+    });
+  });
+
+  it('maps 503 to a typed provider-unavailable BillingError', async () => {
+    server.use(http.post(`${BASE_URL}/v1/subscription/reactivate`, () => problem(503, 'provider-unavailable')));
+
+    await expect(makeClient().reactivateSubscription()).rejects.toMatchObject({
+      kind: 'provider-unavailable',
+      status: 503,
+    });
+  });
+});
+
 describe('HttpBillingClient.getSubscription', () => {
   it('returns the caller subscription on 200', async () => {
     server.use(http.get(`${BASE_URL}/v1/subscription`, () => HttpResponse.json(subscription)));

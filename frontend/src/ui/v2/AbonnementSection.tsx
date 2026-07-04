@@ -28,6 +28,7 @@ const actionPad = css({ padding: '13px 15px 16px', display: 'flex', flexDirectio
 const note = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, lineHeight: '1.4' });
 const inlineError = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'bold', color: 'ws.sakuraDark', lineHeight: '1.4' });
 const primaryLink = css({ display: 'block', width: '100%', textAlign: 'center', textDecoration: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', padding: '13px', borderRadius: '13px', boxShadow: '0 8px 18px rgba(190,73,112,0.30)' });
+const primaryButton = css({ display: 'block', width: '100%', textAlign: 'center', border: 'none', cursor: 'pointer', bg: 'ws.jade', color: 'ws.clueSurface', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', padding: '13px', borderRadius: '13px', boxShadow: '0 8px 18px rgba(33,75,64,0.22)', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' }, _disabled: { opacity: 0.6, cursor: 'default' } });
 const loadingRow = css({ padding: '16px 15px', fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85 });
 
 // cancel confirmation dialog buttons -------------------------------------
@@ -80,11 +81,23 @@ function cancelErrorMessage(error: unknown): string {
   return 'La résiliation a échoué. Réessaie dans un instant.';
 }
 
+function reactivateErrorMessage(error: unknown): string {
+  if (error instanceof BillingError && error.kind === 'no-active-subscription') {
+    return "Il n'y a pas d'abonnement à reprendre.";
+  }
+  if (error instanceof BillingError && error.kind === 'provider-unavailable') {
+    return 'Le service est momentanément indisponible. Réessaie dans un instant.';
+  }
+  return 'La reprise a échoué. Réessaie dans un instant.';
+}
+
 function AbonnementPanel({ client }: { readonly client: BillingClient }) {
   const { subscription, loading, error, refetch } = useSubscription(client);
   const [confirming, setConfirming] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [reactivating, setReactivating] = useState(false);
+  const [reactivateError, setReactivateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (confirming) setCancelError(null);
@@ -101,6 +114,19 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
       setCancelError(cancelErrorMessage(cause));
     } finally {
       setCanceling(false);
+    }
+  }
+
+  async function reactivate() {
+    setReactivating(true);
+    setReactivateError(null);
+    try {
+      await client.reactivateSubscription();
+      refetch();
+    } catch (cause) {
+      setReactivateError(reactivateErrorMessage(cause));
+    } finally {
+      setReactivating(false);
     }
   }
 
@@ -152,8 +178,21 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
               <div className={actionPad}>
                 <p className={note}>
                   Tu gardes l&apos;accès jusqu&apos;à la fin de la période. Rien ne te sera plus
-                  prélevé ensuite.
+                  prélevé ensuite. Tu reprends là où tu t&apos;étais arrêté, sans nouveau paiement.
                 </p>
+                {reactivateError !== null ? (
+                  <p className={inlineError} role="alert">
+                    {reactivateError}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className={primaryButton}
+                  disabled={reactivating}
+                  onClick={() => void reactivate()}
+                >
+                  {reactivating ? 'Reprise…' : 'Reprendre mon abonnement'}
+                </button>
               </div>
             ) : null}
 

@@ -54,6 +54,7 @@ function fakeBillingClient(overrides: Partial<BillingClient> = {}): BillingClien
       cancelUrl: 'https://wordsparrow.io/abonnement',
     }),
     cancelSubscription: vi.fn(),
+    reactivateSubscription: vi.fn(),
     listReceipts: vi.fn().mockResolvedValue({ receipts: [], nextCursor: null }),
     ...overrides,
   };

@@ -62,6 +62,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/subscription/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume the caller's scheduled non-renewal at no charge.
+         * @description Reverses a résiliation (`POST /v1/subscription/cancel`) while the paid
+         *     period is still running: the caller's `pending_cancellation`
+         *     subscription resumes renewing off the payment mandate already on file,
+         *     with the next charge deferred to the current `periodEnd` — so
+         *     reactivation never charges the caller now (CGV Art. 14.1). The caller is
+         *     identified by the `__Secure-ws_session` cookie; `userId` is resolved
+         *     server-side (never taken from the body).
+         *
+         *     Only a `pending_cancellation` whose `periodEnd` is still in the future
+         *     can be resumed; once the period has lapsed the caller subscribes afresh
+         *     via checkout, and this endpoint returns 404.
+         */
+        post: operations["reactivateSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/webhook": {
         parameters: {
             query?: never;
@@ -576,6 +606,81 @@ export interface operations {
             /**
              * @description The payment provider is unavailable, so the cancellation could not
              *     be confirmed; the caller may retry later. RFC 7807;
+             *     `type` is `https://bliss.example/errors/provider-unavailable`.
+             */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reactivateSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description Reactivation accepted. Body is the caller's updated subscription
+             *     (status back to `active`; `periodEnd` unchanged).
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionView"];
+                };
+            };
+            /**
+             * @description No valid `__Secure-ws_session` cookie. RFC 7807;
+             *     `type` is `https://bliss.example/errors/auth-required`.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description Authenticated caller lacks the `billing:subscribe` capability this
+             *     endpoint requires (ADR-0078 / ADR-0060 amendments). RFC 7807;
+             *     `type` is `https://bliss.example/errors/forbidden`.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The caller has no scheduled non-renewal with a paid period still
+             *     running to resume. RFC 7807;
+             *     `type` is `https://bliss.example/errors/not-reactivatable`.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The payment provider is unavailable or the mandate could not be
+             *     reused, so the reactivation could not be completed; the caller may
+             *     retry later. RFC 7807;
              *     `type` is `https://bliss.example/errors/provider-unavailable`.
              */
             503: {
