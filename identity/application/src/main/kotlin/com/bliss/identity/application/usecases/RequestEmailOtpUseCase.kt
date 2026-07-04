@@ -6,6 +6,7 @@ import com.bliss.identity.application.ports.EmailSender
 import com.bliss.identity.application.ports.IdGenerator
 import com.bliss.identity.application.ports.RandomFactory
 import com.bliss.identity.application.ports.TokenHasher
+import com.bliss.identity.application.ports.UserRepository
 import com.bliss.identity.domain.auth.EmailOtpChallenge
 import com.bliss.identity.domain.user.EmailAddress
 import org.slf4j.LoggerFactory
@@ -34,10 +35,13 @@ class RequestEmailOtpUseCase(
     private val randomFactory: RandomFactory,
     private val idGenerator: IdGenerator,
     private val clock: Clock,
+    private val users: UserRepository,
     private val ttl: Duration = Duration.ofMinutes(10),
     private val cooldown: Duration = Duration.ofSeconds(60),
     private val dailyCap: Int = 8,
     private val monthlyCap: Int = 4500,
+    private val dailyBudget: Int = 150,
+    private val newAccountDailyBudget: Int = 50,
 ) {
     suspend fun execute(command: RequestEmailOtpCommand): RequestEmailOtpResult {
         val email = EmailAddress.of(command.email)
@@ -53,6 +57,23 @@ class RequestEmailOtpUseCase(
         val monthlyCount = challenges.countAllCreatedSince(monthStart)
         if (monthlyCount >= monthlyCap) {
             log.warn("otp_monthly_budget_exhausted cap={} count={}", monthlyCap, monthlyCount)
+            return RequestEmailOtpResult.BudgetExhausted
+        }
+
+        val dayStart =
+            now
+                .atZone(ZoneOffset.UTC)
+                .toLocalDate()
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+        if (challenges.countAllCreatedSince(dayStart) >= dailyBudget) {
+            log.warn("otp_daily_budget_exhausted cap={}", dailyBudget)
+            return RequestEmailOtpResult.BudgetExhausted
+        }
+
+        val accountExisted = users.findByEmail(email).isNotEmpty()
+        if (!accountExisted && challenges.countNewAccountCreatedSince(dayStart) >= newAccountDailyBudget) {
+            log.warn("otp_new_account_budget_exhausted cap={}", newAccountDailyBudget)
             return RequestEmailOtpResult.BudgetExhausted
         }
 
@@ -73,6 +94,7 @@ class RequestEmailOtpUseCase(
                 codeHash = hasher.hash(code.value),
                 bindingHash = hasher.hash(secret.value),
                 attempts = 0,
+                accountExisted = accountExisted,
                 createdAt = now,
                 expiresAt = now.plus(ttl),
                 consumedAt = null,
