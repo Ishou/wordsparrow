@@ -1,0 +1,48 @@
+word,language,length,frequency,difficulty,clue,source,source_license,lemma
+om,fr,2,100000,,Club de Marseille,bliss-fleches,CC0-1.0,om
+qi,fr,2,100000,,Énergie vitale chinoise,bliss-fleches,CC0-1.0,qi
+vé,fr,2,100000,,Lettre V épelée,bliss-fleches,CC0-1.0,vé
+ud,fr,2,100000,,Luth oriental,bliss-fleches,CC0-1.0,ud
+rn,fr,2,100000,,Symbole du radon,bliss-fleches,CC0-1.0,rn
+net,fr,3,100000,,Clair et précis,bliss-fleches,CC0-1.0,net
+tel,fr,3,100000,,"Pareil, semblable",bliss-fleches,CC0-1.0,tel
+née,fr,3,100000,,Venue au monde,bliss-fleches,CC0-1.0,née
+vie,fr,3,100000,,Existence,bliss-fleches,CC0-1.0,vie
+peu,fr,3,100000,,Pas beaucoup,bliss-fleches,CC0-1.0,peu
+dés,fr,3,100000,,Cubes à jouer,bliss-fleches,CC0-1.0,dés
+chi,fr,3,100000,,Lettre grecque,bliss-fleches,CC0-1.0,chi
+sos,fr,3,100000,,Appel de détresse,bliss-fleches,CC0-1.0,sos
+adn,fr,3,100000,,Molécule du génome,bliss-fleches,CC0-1.0,adn
+pib,fr,3,100000,,Richesse d'un pays,bliss-fleches,CC0-1.0,pib
+fmi,fr,3,100000,,Fonds monétaire international,bliss-fleches,CC0-1.0,fmi
+pdg,fr,3,100000,,Patron d'entreprise,bliss-fleches,CC0-1.0,pdg
+psg,fr,3,100000,,Club parisien,bliss-fleches,CC0-1.0,psg
+ogc,fr,3,100000,,Club niçois (sigle),bliss-fleches,CC0-1.0,ogc
+asm,fr,3,100000,,Club clermontois,bliss-fleches,CC0-1.0,asm
+cac,fr,3,100000,,Indice boursier parisien,bliss-fleches,CC0-1.0,cac
+tgv,fr,3,100000,,Train très rapide,bliss-fleches,CC0-1.0,tgv
+edf,fr,3,100000,,Électricien national,bliss-fleches,CC0-1.0,edf
+cia,fr,3,100000,,Renseignement américain,bliss-fleches,CC0-1.0,cia
+fbi,fr,3,100000,,Police fédérale américaine,bliss-fleches,CC0-1.0,fbi
+rda,fr,3,100000,,Ex-Allemagne de l'Est,bliss-fleches,CC0-1.0,rda
+rfa,fr,3,100000,,Ex-Allemagne de l'Ouest,bliss-fleches,CC0-1.0,rfa
+onu,fr,3,100000,,Instance internationale,bliss-fleches,CC0-1.0,onu
+sncf,fr,4,100000,,Chemins de fer français,bliss-fleches,CC0-1.0,sncf
+ratp,fr,4,100000,,Métro parisien,bliss-fleches,CC0-1.0,ratp
+urss,fr,4,100000,,Ex-empire soviétique,bliss-fleches,CC0-1.0,urss
+smic,fr,4,100000,,Salaire minimum,bliss-fleches,CC0-1.0,smic
+cnrs,fr,4,100000,,Organisme de recherche,bliss-fleches,CC0-1.0,cnrs
+cned,fr,4,100000,,Enseignement à distance,bliss-fleches,CC0-1.0,cned
+ifop,fr,4,100000,,Institut de sondage,bliss-fleches,CC0-1.0,ifop
+inra,fr,4,100000,,Recherche agronomique,bliss-fleches,CC0-1.0,inra
+anpe,fr,4,100000,,Ex-agence pour l'emploi,bliss-fleches,CC0-1.0,anpe
+asse,fr,4,100000,,Club stéphanois,bliss-fleches,CC0-1.0,asse
+losc,fr,4,100000,,Club lillois,bliss-fleches,CC0-1.0,losc
+ogcn,fr,4,100000,,Club niçois,bliss-fleches,CC0-1.0,ogcn
+eelv,fr,4,100000,,Parti écologiste,bliss-fleches,CC0-1.0,eelv
+dgse,fr,4,100000,,Renseignement extérieur,bliss-fleches,CC0-1.0,dgse
+dgsi,fr,4,100000,,Renseignement intérieur,bliss-fleches,CC0-1.0,dgsi
+fdj,fr,3,100000,,Loterie nationale,bliss-fleches,CC0-1.0,fdj
+vélo,fr,4,100000,,Petite reine,bliss-fleches,CC0-1.0,vélo
+ânes,fr,4,100000,,Baudets,bliss-fleches,CC0-1.0,ânes
+nées,fr,4,100000,,Venues au monde,bliss-fleches,CC0-1.0,nées

@@ -1,5 +1,6 @@
 package com.bliss.grid.domain.generation
 
+import com.bliss.grid.domain.model.ClueCell
 import com.bliss.grid.domain.model.LetterCell
 import com.bliss.grid.domain.model.Position
 import com.bliss.grid.domain.model.Word
@@ -153,6 +154,28 @@ class CoGenerationProbeTest {
         println(best.render())
     }
 
+    // Density probe: does the PROVEN BitmaskCsp fill sparse layouts, or does the starved
+    // 200-backtrack budget force perturbation (densification)? Run max-bias (sparsest seed)
+    // and measure achieved black %. Compare across BASE_BUDGET_BACKTRACKS settings.
+    @Test
+    fun `sparse density probe`() {
+        val repo = loadRepository()
+        val generator = GridGenerator(repo)
+        val area = 28 * 20
+        println("PROBE base=${GenerationKnobs.BASE_BUDGET_BACKTRACKS} corpus2=${repo.countByLength(2)} corpus3=${repo.countByLength(3)} corpus4=${repo.countByLength(4)}")
+        for (bias in listOf(0.0, 0.3, 0.5, 0.7)) {
+            var n = 0; var totalBlack = 0; var minBlack = Int.MAX_VALUE
+            for (i in 0 until 12) {
+                val g = generator.generate(GridConstraints(width = 28, height = 20, longWordBias = bias), Random(700L + i)) ?: continue
+                var b = 0
+                for ((_, cell) in g.cells) if (cell is ClueCell) b++
+                n++; totalBlack += b; minBlack = minOf(minBlack, b)
+            }
+            println("DENSITY bias=$bias n=$n/12 avg=%.1f%% min=%.1f%%".format(
+                if (n>0) 100.0 * totalBlack / n / area else -1.0, if (n>0) 100.0 * minBlack / area else -1.0))
+        }
+    }
+
     // Integration test for the sliding-band generator at the real 28x20 size: does the
     // N-row solver produce full SlotRegistry-valid boards where the greedy beam walled at row 7?
     @Test
@@ -164,24 +187,21 @@ class CoGenerationProbeTest {
         var deepestSeen = 0
         var lastFillAudit = ""
         var best: Sweep? = null
-        var fills = 0
-        var minViol = Int.MAX_VALUE
-        var totalViol = 0
-        var bestSweep: Sweep? = null
-        while (System.currentTimeMillis() < deadline) {
+        while (System.currentTimeMillis() < deadline && best == null) {
             attempts++
             val sweep = Sweep(lexicon, Random(4321L + attempts), HashSet())
-            val v = sweep.fillAndCount()
+            if (sweep.runBanded()) { valid++; best = sweep }
             if (sweep.deepest > deepestSeen) deepestSeen = sweep.deepest
-            if (v >= 0) {
-                fills++
-                totalViol += v
-                if (v < minViol) { minViol = v; bestSweep = sweep }
-                if (v == 0) { valid++; best = sweep }
-            }
+            if (sweep.lastFillAudit.isNotEmpty() && lastFillAudit.isEmpty()) lastFillAudit = sweep.lastFillAudit
         }
-        println("BANDFILL attempts=$attempts fills=$fills minViol=${if (minViol==Int.MAX_VALUE) -1 else minViol} avgViol=${if (fills>0) totalViol/fills else -1}")
-        bestSweep?.let { println("BEST viol=${it.violationCount()} blacks=${it.blackCount()}"); println(it.render()) }
+        println("BANDED attempts=$attempts valid=$valid deepestRow=${deepestSeen / width}")
+        best?.let {
+            var blacks = 0
+            for (r in 0 until height) for (c in 0 until width) if (it.grid[r][c] == '#') blacks++
+            println("BANDED VALID blacks=$blacks (%.1f%%) words=%d len2=%d".format(100.0 * blacks / (width * height), it.words.size, it.words.count { w -> w.length == 2 }))
+            println(it.render())
+        }
+        if (valid == 0 && lastFillAudit.isNotEmpty()) { println("FILLAUDIT viol-sample:"); println(lastFillAudit.take(400)) }
         println("BANDED attempts=$attempts valid=$valid deepestRow=${deepestSeen / width}")
         if (valid == 0 && lastFillAudit.isNotEmpty()) { println("FILLAUDIT:"); println(lastFillAudit.take(1400)) }
         val b = best
@@ -1321,7 +1341,7 @@ class CoGenerationProbeTest {
             var failMsg = ""
             var failRC = -1
             val usedLocal = HashSet<String>(used)
-            var budget = 500_000
+            var budget = 8_000_000
             var deepCol = 0
             var budgetOut = false
         }
@@ -1445,9 +1465,9 @@ class CoGenerationProbeTest {
                 if (lastFillAudit.isEmpty()) lastFillAudit = auditBoard().ifEmpty { "NO-VIOLATIONS-BUT-NULL" } + "\n" + render()
                 return false
             }
-            val bh = minOf(3, height - 2 - top)
+            val bh = height - 2 - top // one big band: the whole middle as a single column-coupled DFS
             val snap = captureState()
-            val k = if (top == 1) 6 else 4
+            val k = 30
             repeat(k) {
                 restoreState(snap)
                 val cells = bandSolve(top, bh)
@@ -1497,9 +1517,53 @@ class CoGenerationProbeTest {
                         ctx.usedLocal.add(w)
                     }
                 }
-                return true
+                return bandRegionValid(ctx, top)
             }
             return bandDescend(ctx, top, c, 0)
+        }
+
+        // Conservative validity check on a completed band: reject bands with a PROVABLY dead
+        // black or a determined dead-end tip. Never rejects a valid band (only checks cells
+        // whose perpendicular run terminates within the determined region), so real bands still
+        // pass; build() remains the backstop for boundary cases into the next (unfilled) band.
+        private fun bandRegionValid(
+            ctx: BandCtx,
+            top: Int,
+        ): Boolean {
+            val bot = top + ctx.bh
+            fun cell(r: Int, c: Int): Char = if (r in top until bot) ctx.cells[r - top][c] else grid[r][c]
+            fun hRun(r: Int, c: Int): Int {
+                if (cell(r, c) == '#') return 0
+                var st = c; while (st > 0 && cell(r, st - 1) != '#') st--
+                var en = c; while (en < width - 1 && cell(r, en + 1) != '#') en++
+                return en - st + 1
+            }
+            // Vertical run length through (r,c), or -1 if it extends below the determined region.
+            fun vRunDet(r: Int, c: Int): Int {
+                if (cell(r, c) == '#') return 0
+                var st = r; while (st > 0 && cell(st - 1, c) != '#') st--
+                var en = r; while (en < bot - 1 && cell(en + 1, c) != '#') en++
+                if (en == bot - 1 && bot < height) return -1 // may continue below the band
+                return en - st + 1
+            }
+            for (r in top until bot) {
+                for (c in 0 until width) {
+                    if (cell(r, c) == '#') {
+                        // Dead black: no >=2 across word to the right AND no letter below to host a down word.
+                        val hostsAcross = c + 1 < width && hRun(r, c + 1) >= 2
+                        val hostsDown = r + 1 < height && cell(r + 1, c) != '#'
+                        if (!hostsAcross && !hostsDown) return false
+                    } else {
+                        // Dead-end tip: a short run ending at an in-bounds black with the tip cell
+                        // uncrossed the other way. Only when the perpendicular run is determined.
+                        val hr = hRun(r, c)
+                        val vr = vRunDet(r, c)
+                        if (c + 1 < width && cell(r, c + 1) == '#' && hr < DEAD_END_MIN && vr == 1) return false
+                        if (r + 1 < height && cell(r + 1, c) == '#' && vr in 1 until DEAD_END_MIN && hr == 1) return false
+                    }
+                }
+            }
+            return true
         }
 
         // Can an across word START at band-row r, column c? (Needs a hosting black to the left,
@@ -2675,24 +2739,33 @@ class CoGenerationProbeTest {
     // === corpus ===
 
     private fun loadRepository(): WordRepository {
-        val csv =
-            sequenceOf(
-                File("../infrastructure/src/main/resources/words/words-fr.csv"),
-                File("grid/infrastructure/src/main/resources/words/words-fr.csv"),
-            ).first { it.exists() }
         val byText = LinkedHashMap<String, Word>()
-        csv.useLines { lines ->
-            lines.drop(1).forEach { line ->
-                val cols = splitCsv(line)
-                if (cols.size < 9 || cols[5].isBlank()) return@forEach
-                val folded = fold(cols[0])
-                if (folded.isEmpty() || folded.any { it !in 'A'..'Z' } || folded.length > 17) return@forEach
-                byText.getOrPut(folded) {
-                    Word(
-                        folded,
-                        cols[5],
-                        fold(cols[8]).takeIf { it.isNotEmpty() && it.all { ch -> ch in 'A'..'Z' } } ?: folded,
-                    )
+        val sources =
+            listOfNotNull(
+                sequenceOf(
+                    File("../infrastructure/src/main/resources/words/words-fr.csv"),
+                    File("grid/infrastructure/src/main/resources/words/words-fr.csv"),
+                ).firstOrNull { it.exists() },
+                // Curated mots-fléchés short fillers (acronyms, sigles, missing common short words).
+                sequenceOf(
+                    File("../../data/curated/mots_fleches_short_fr.csv"),
+                    File("data/curated/mots_fleches_short_fr.csv"),
+                ).firstOrNull { it.exists() },
+            )
+        for (csv in sources) {
+            csv.useLines { lines ->
+                lines.drop(1).forEach { line ->
+                    val cols = splitCsv(line)
+                    if (cols.size < 9 || cols[5].isBlank()) return@forEach
+                    val folded = fold(cols[0])
+                    if (folded.isEmpty() || folded.any { it !in 'A'..'Z' } || folded.length > 17) return@forEach
+                    byText.getOrPut(folded) {
+                        Word(
+                            folded,
+                            cols[5],
+                            fold(cols[8]).takeIf { it.isNotEmpty() && it.all { ch -> ch in 'A'..'Z' } } ?: folded,
+                        )
+                    }
                 }
             }
         }
