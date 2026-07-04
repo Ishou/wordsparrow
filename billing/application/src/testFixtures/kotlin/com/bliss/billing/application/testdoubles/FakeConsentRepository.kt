@@ -10,6 +10,7 @@ class FakeConsentRepository : ConsentRepository {
     data class Recorded(
         val userId: UUID,
         val consent: CheckoutConsent,
+        val email: String?,
         val acceptedAt: Instant,
     )
 
@@ -18,11 +19,15 @@ class FakeConsentRepository : ConsentRepository {
     override suspend fun record(
         userId: UUID,
         consent: CheckoutConsent,
+        email: String?,
         acceptedAt: Instant,
     ) {
-        records += Recorded(userId, consent, acceptedAt)
+        records += Recorded(userId, consent, email, acceptedAt)
     }
 
     override suspend fun findLatest(userId: UUID): CheckoutConsent? =
         records.filter { it.userId == userId }.maxByOrNull { it.acceptedAt }?.consent
+
+    override suspend fun findLatestEmail(userId: UUID): String? =
+        records.filter { it.userId == userId }.maxByOrNull { it.acceptedAt }?.email
 }

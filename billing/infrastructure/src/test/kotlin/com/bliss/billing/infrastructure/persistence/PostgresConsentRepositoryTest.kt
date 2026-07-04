@@ -74,15 +74,27 @@ class PostgresConsentRepositoryTest {
     }
 
     @Test
-    fun `record persists the consent row with server timestamps`() =
+    fun `record persists the consent row with server timestamps and email`() =
         runTest {
             val userId = UUID.randomUUID()
-            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = true), acceptedAt)
+            repo.record(
+                userId,
+                CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = true),
+                "player@example.com",
+                acceptedAt,
+            )
 
             val rows = rowsFor(userId)
             assertThat(rows).isEqualTo(
                 listOf(
-                    Row(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = true, acceptedAt = acceptedAt, createdAt = createdAt),
+                    Row(
+                        cgvAccepted = true,
+                        cgvVersion = "1.0",
+                        withdrawalWaiver = true,
+                        acceptedAt = acceptedAt,
+                        createdAt = createdAt,
+                        email = "player@example.com",
+                    ),
                 ),
             )
         }
@@ -91,17 +103,26 @@ class PostgresConsentRepositoryTest {
     fun `record persists a declined withdrawal waiver`() =
         runTest {
             val userId = UUID.randomUUID()
-            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = false), acceptedAt)
+            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = false), null, acceptedAt)
 
             assertThat(rowsFor(userId).single().withdrawalWaiver).isEqualTo(false)
+        }
+
+    @Test
+    fun `record persists a null email`() =
+        runTest {
+            val userId = UUID.randomUUID()
+            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = true), null, acceptedAt)
+
+            assertThat(rowsFor(userId).single().email).isEqualTo(null)
         }
 
     @Test
     fun `record is append-only for the same user`() =
         runTest {
             val userId = UUID.randomUUID()
-            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = true), acceptedAt)
-            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = false), acceptedAt)
+            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = true), null, acceptedAt)
+            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = false), null, acceptedAt)
 
             assertThat(rowsFor(userId).map { it.cgvVersion }).isEqualTo(listOf("1.0", "2.0"))
         }
@@ -110,8 +131,13 @@ class PostgresConsentRepositoryTest {
     fun `findLatest returns the most recently accepted consent`() =
         runTest {
             val userId = UUID.randomUUID()
-            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = false), acceptedAt)
-            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = true), acceptedAt.plusSeconds(1))
+            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = false), null, acceptedAt)
+            repo.record(
+                userId,
+                CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = true),
+                null,
+                acceptedAt.plusSeconds(1),
+            )
 
             assertThat(repo.findLatest(userId)).isEqualTo(
                 CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = true),
@@ -124,19 +150,66 @@ class PostgresConsentRepositoryTest {
             assertThat(repo.findLatest(UUID.randomUUID())).isEqualTo(null)
         }
 
+    @Test
+    fun `findLatestEmail returns the email of the most recently accepted consent`() =
+        runTest {
+            val userId = UUID.randomUUID()
+            repo.record(
+                userId,
+                CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = false),
+                "old@example.com",
+                acceptedAt,
+            )
+            repo.record(
+                userId,
+                CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = true),
+                "new@example.com",
+                acceptedAt.plusSeconds(1),
+            )
+
+            assertThat(repo.findLatestEmail(userId)).isEqualTo("new@example.com")
+        }
+
+    @Test
+    fun `findLatestEmail is null when the user has no consent`() =
+        runTest {
+            assertThat(repo.findLatestEmail(UUID.randomUUID())).isEqualTo(null)
+        }
+
+    @Test
+    fun `findLatestEmail is null when the latest consent row has no email`() =
+        runTest {
+            val userId = UUID.randomUUID()
+            repo.record(
+                userId,
+                CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = false),
+                "old@example.com",
+                acceptedAt,
+            )
+            repo.record(
+                userId,
+                CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = true),
+                null,
+                acceptedAt.plusSeconds(1),
+            )
+
+            assertThat(repo.findLatestEmail(userId)).isEqualTo(null)
+        }
+
     private data class Row(
         val cgvAccepted: Boolean,
         val cgvVersion: String,
         val withdrawalWaiver: Boolean,
         val acceptedAt: Instant,
         val createdAt: Instant,
+        val email: String?,
     )
 
     private fun rowsFor(userId: UUID): List<Row> =
         dataSource.connection.use { conn ->
             conn
                 .prepareStatement(
-                    "SELECT cgv_accepted, cgv_version, withdrawal_waiver, accepted_at, created_at " +
+                    "SELECT cgv_accepted, cgv_version, withdrawal_waiver, accepted_at, created_at, email " +
                         "FROM billing_checkout_consents WHERE user_id = ? ORDER BY id",
                 ).use { stmt ->
                     stmt.setObject(1, userId)
@@ -150,6 +223,7 @@ class PostgresConsentRepositoryTest {
                                         withdrawalWaiver = rs.getBoolean("withdrawal_waiver"),
                                         acceptedAt = rs.getObject("accepted_at", OffsetDateTime::class.java).toInstant(),
                                         createdAt = rs.getObject("created_at", OffsetDateTime::class.java).toInstant(),
+                                        email = rs.getString("email"),
                                     ),
                                 )
                             }
