@@ -147,6 +147,19 @@ class SendRenewalNoticesTest {
         }
 
     @Test
+    fun `dark-launch notifier leaves the ledger empty so the real send happens once bright`() =
+        runTest {
+            seed("sub_annual", Cadence.YEARLY, inWindowEnd)
+            val darkLaunchUseCase =
+                SendRenewalNotices(repository, provider, NoOpContractConfirmationNotifier(), ledger, FixedClock(now), ChatelWindow.DEFAULT)
+
+            val summary = darkLaunchUseCase.execute()
+
+            assertThat(ledger.entries).isEmpty()
+            assertThat(summary).isEqualTo(RenewalNoticeSummary(annualInWindow = 1, noticesSent = 0, alreadyNotified = 0))
+        }
+
+    @Test
     fun `excludes a non-active annual subscription`() =
         runTest {
             seed("sub_pending", Cadence.YEARLY, inWindowEnd, status = SubscriptionStatus.PENDING_CANCELLATION)
