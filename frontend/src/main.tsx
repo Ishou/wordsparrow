@@ -347,7 +347,8 @@ enableMocks()
           };
         })()
       : { ...baseContext, puzzleRepository, puzzleSolver, wordsRepository, sessionClient, soloEntriesStore, tourSeenStore };
-    const router = createAppRouter({ context, multiplayer });
+    const emailAuth = import.meta.env.VITE_FEATURE_EMAIL_AUTH === 'true';
+    const router = createAppRouter({ context, multiplayer, emailAuth });
 
     // Track page views on every route resolution. `onResolved` fires after
     // a navigation completes (initial mount included), giving us the canonical
