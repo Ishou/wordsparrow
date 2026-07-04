@@ -1,7 +1,11 @@
-import { ROOT_CONTEXT, SpanKind } from '@opentelemetry/api';
+import { ROOT_CONTEXT, SpanKind, type Tracer } from '@opentelemetry/api';
 import { SamplingDecision, type Sampler } from '@opentelemetry/sdk-trace-web';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ErrorAwareSampler, readOtelConfigFromEnv } from '@/infrastructure/observability/otelTracer';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  ErrorAwareSampler,
+  attachUncaughtErrorReporting,
+  readOtelConfigFromEnv,
+} from '@/infrastructure/observability/otelTracer';
 
 function makeBase(decision: SamplingDecision): Sampler {
   return {
@@ -149,5 +153,92 @@ describe('readOtelConfigFromEnv', () => {
     vi.stubEnv('VITE_OTEL_SERVICE_NAME', 'my-service');
 
     expect(readOtelConfigFromEnv()!.serviceName).toBe('my-service');
+  });
+});
+
+describe('attachUncaughtErrorReporting', () => {
+  const setStatus = vi.fn();
+  const end = vi.fn();
+  const startSpan = vi.fn().mockReturnValue({ setStatus, end });
+  const tracer = { startSpan } as unknown as Tracer;
+
+  // Attached once for the whole describe: the module-level guard makes re-attachment a no-op.
+  attachUncaughtErrorReporting(tracer);
+
+  beforeEach(() => {
+    window.history.pushState({}, '', '/grilles?onglet=archives');
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    window.history.pushState({}, '', '/');
+  });
+
+  function dispatchRejection(reason: unknown): void {
+    const event = new Event('unhandledrejection') as Event & { reason: unknown };
+    event.reason = reason;
+    window.dispatchEvent(event);
+  }
+
+  it('records url.full and url.path on window.error spans', () => {
+    window.dispatchEvent(
+      new ErrorEvent('error', {
+        message: 'boom',
+        error: new TypeError('boom'),
+        filename: 'https://wordsparrow.io/assets/app.js',
+        lineno: 12,
+        colno: 34,
+      }),
+    );
+
+    expect(startSpan).toHaveBeenCalledOnce();
+    const [name, options] = startSpan.mock.calls[0] as [string, { attributes: Record<string, unknown> }];
+    expect(name).toBe('window.error');
+    expect(options.attributes['url.full']).toBe(window.location.href);
+    expect(options.attributes['url.full']).toContain('/grilles?onglet=archives');
+    expect(options.attributes['url.path']).toBe('/grilles');
+    expect(options.attributes['exception.type']).toBe('TypeError');
+    expect(options.attributes['exception.message']).toBe('boom');
+    expect(end).toHaveBeenCalledOnce();
+  });
+
+  it('records url.full and url.path on unhandledrejection spans with an Error reason', () => {
+    dispatchRejection(new Error('nope'));
+
+    expect(startSpan).toHaveBeenCalledOnce();
+    const [name, options] = startSpan.mock.calls[0] as [string, { attributes: Record<string, unknown> }];
+    expect(name).toBe('window.unhandledrejection');
+    expect(options.attributes['url.full']).toBe(window.location.href);
+    expect(options.attributes['url.path']).toBe('/grilles');
+    expect(options.attributes['exception.type']).toBe('Error');
+    expect(options.attributes['exception.message']).toBe('nope');
+    expect(end).toHaveBeenCalledOnce();
+  });
+
+  it('handles a string rejection reason and keeps the raw message', () => {
+    dispatchRejection('plain string failure');
+
+    const [, options] = startSpan.mock.calls[0] as [string, { attributes: Record<string, unknown> }];
+    expect(options.attributes['exception.type']).toBe('string');
+    expect(options.attributes['exception.message']).toBe('plain string failure');
+    expect(options.attributes['url.path']).toBe('/grilles');
+    expect(end).toHaveBeenCalledOnce();
+  });
+
+  it('handles a null rejection reason without throwing', () => {
+    dispatchRejection(null);
+
+    const [, options] = startSpan.mock.calls[0] as [string, { attributes: Record<string, unknown> }];
+    expect(options.attributes['exception.type']).toBe('object');
+    expect(options.attributes['exception.message']).toBe('unknown');
+    expect(options.attributes['url.path']).toBe('/grilles');
+  });
+
+  it('does not attach listeners twice when called again', () => {
+    attachUncaughtErrorReporting(tracer);
+
+    dispatchRejection(new Error('once'));
+
+    expect(startSpan).toHaveBeenCalledOnce();
   });
 });

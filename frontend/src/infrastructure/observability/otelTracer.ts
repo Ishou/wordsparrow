@@ -114,22 +114,31 @@ export class ErrorAwareSampler implements Sampler {
 // double-emit spans and corrupt alert threshold math.
 let errorsAttached = false;
 
+// Route context read at crash time; without it error spans can't be tied to a screen.
+function pageContextAttributes(): Record<string, string> {
+  return {
+    'url.full': window.location.href,
+    'url.path': window.location.pathname,
+  };
+}
+
 // Cached at init so `reportCaughtError` can emit spans without re-resolving the tracer each call.
 let cachedTracer: Tracer | null = null;
 
 /**
  * Wire `window.error` and `window.unhandledrejection` to emit OTel
  * spans with `status.code = ERROR`. Captures are scoped tight: just
- * the message, source location, and stack — no DOM contents, no
- * cookies, no localStorage. ADR-0027 §8 redaction posture.
+ * the message, source location, stack, and page URL — no DOM contents,
+ * no cookies, no localStorage. ADR-0027 §8 redaction posture.
  */
-function attachUncaughtErrorReporting(tracer: Tracer): void {
+export function attachUncaughtErrorReporting(tracer: Tracer): void {
   if (errorsAttached) return;
   errorsAttached = true;
 
   window.addEventListener('error', (event) => {
     const span = tracer.startSpan(`${ERROR_SPAN_NAME_PREFIX}error`, {
       attributes: {
+        ...pageContextAttributes(),
         'exception.type': event.error?.name ?? 'Error',
         'exception.message': event.message,
         'exception.stacktrace': event.error?.stack,
@@ -147,6 +156,7 @@ function attachUncaughtErrorReporting(tracer: Tracer): void {
     const isError = reason instanceof Error;
     const span = tracer.startSpan(`${ERROR_SPAN_NAME_PREFIX}unhandledrejection`, {
       attributes: {
+        ...pageContextAttributes(),
         'exception.type': isError ? reason.name : typeof reason,
         'exception.message': isError
           ? reason.message
@@ -168,6 +178,7 @@ export function reportCaughtError(error: unknown, kind: string): void {
   const isError = error instanceof Error;
   const span = cachedTracer.startSpan(`${ERROR_SPAN_NAME_PREFIX}${kind}`, {
     attributes: {
+      ...pageContextAttributes(),
       'exception.type': isError ? error.name : typeof error,
       'exception.message': isError ? error.message : String(error ?? 'unknown'),
       'exception.stacktrace': isError ? error.stack : undefined,
