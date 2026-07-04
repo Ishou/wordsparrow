@@ -22,6 +22,7 @@ class EmailOtpChallengeTest {
         codeHash = "hash-code",
         bindingHash = "hash-binding",
         attempts = attempts,
+        accountExisted = false,
         createdAt = createdAt,
         expiresAt = expiresAt,
         consumedAt = consumedAt,
