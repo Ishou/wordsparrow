@@ -1,10 +1,14 @@
-import { createRoute } from '@tanstack/react-router';
+import { Navigate, createRoute } from '@tanstack/react-router';
 // Sanctioned app→module bridge (ADR-0072).
 import { ConnexionScreen } from '@/ui/v2/ConnexionScreen';
+import { useAuth } from '@/ui/components/auth';
 import { Route as AppLayoutRoute } from './app-layout';
 
 function ConnexionRouteComponent() {
   const { returnTo } = Route.useSearch();
+  const { status } = useAuth();
+  // Already signed in — the OTP flow would be a dead end, so bounce to the destination.
+  if (status === 'authed') return <Navigate to={returnTo ?? '/'} replace />;
   return <ConnexionScreen returnTo={returnTo ?? '/'} />;
 }
 
