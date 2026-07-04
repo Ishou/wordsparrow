@@ -18,6 +18,7 @@ class CoGenerationProbeTest {
     private val height = 12
     private val minLen = 2
     private val DEAD_END_MIN = 5
+    private val MAX_LEN2_SHARE = 0.24
     private val nodeBudget = 1_200_000
 
     // Bump when sweep semantics change: persisted nogoods are only valid for the rule set
@@ -43,6 +44,9 @@ class CoGenerationProbeTest {
         var allBestDump = ""
         var egTotal = 0
         var allCacheFails = ""
+        var validBoards = 0
+        var bestShare = 1.0
+        var bestShareDump = ""
 
         while (best == null && System.currentTimeMillis() < deadline) {
             attempts++
@@ -62,7 +66,17 @@ class CoGenerationProbeTest {
                 allBestDump = sweep.jwBestDump
             }
             if (okRun) {
-                best = sweep
+                validBoards++
+                val n = sweep.words.size
+                val l2 = sweep.words.count { it.length == 2 }
+                val share = if (n > 0) l2.toDouble() / n else 1.0
+                if (share < bestShare) {
+                    bestShare = share
+                    bestShareDump = "len2=$l2/$n (%.0f%%) blacks=%d".format(share * 100, sweep.blackCount())
+                }
+                if (share <= MAX_LEN2_SHARE) {
+                    best = sweep
+                }
             } else {
                 if (band == null && sweep.deepest >= 10 * width) {
                     val donated = (0 until 6).joinToString("|") { sweep.grid[it].concatToString() }
@@ -79,6 +93,7 @@ class CoGenerationProbeTest {
         if (best == null && deepestDump.isNotEmpty()) println(deepestDump)
         if (best == null) {
             println("COGEN v1 INFEASIBLE in 120s ($attempts attempts)")
+            println("QUALITY: validBoards=$validBoards bestShare=$bestShareDump (gate<=${(MAX_LEN2_SHARE*100).toInt()}%)")
             println("JW TOTAL walks=$allWalks best=$allBest eg=$egTotal cacheFails=$allCacheFails $allBestDump")
             return
         }
@@ -1130,7 +1145,14 @@ class CoGenerationProbeTest {
                             (end == width || (bBlackOk[end] && end + 1 < width && canStart[end + 1]))
                     }
                 if (lengths.isEmpty()) return null
-                val len = lengths[random.nextInt(lengths.size)]
+                // Weight toward longer bottom words (len^2) so the densest row isn't 2-letter fill.
+                val lw = lengths.map { it * it }
+                var pick = random.nextInt(lw.sum())
+                var len = lengths.last()
+                for ((i, w) in lw.withIndex()) {
+                    if (pick < w) { len = lengths[i]; break }
+                    pick -= w
+                }
                 val m = lexicon.initialMask(len)
                 for (i in 0 until len) {
                     val union = lexicon.unionMaskForLetters(len, i, bMask[c + i])
@@ -1453,6 +1475,12 @@ class CoGenerationProbeTest {
             return true
         }
 
+        fun blackCount(): Int {
+            var b = 0
+            for (r in 0 until height) for (c in 0 until width) if (grid[r][c] == '#') b++
+            return b
+        }
+
         fun toCellArray(): CellArray {
             val cells = CellArray(width, height)
             for (r in 0 until height) for (c in 0 until width) if (grid[r][c] == '#') cells.set(r, c, CellArray.BLACK)
@@ -1618,6 +1646,20 @@ class CoGenerationProbeTest {
                     if (grid[r][c] == '#' && grid[r - 1][c] != '#') {
                         val vRun = runLenUp(r - 1, c)
                         if (vRun < DEAD_END_MIN && runLenAt(r - 1, c) == 1) score -= 250
+                    }
+                }
+            }
+            // Reward length: penalize each freshly-closed 2-letter word (across ending at r,
+            // or vertical closing above) to keep short words as genuine last-resort fillers.
+            if (r >= 1) {
+                for (c in 0 until width) {
+                    if (grid[r][c] == '#') {
+                        if (c >= 2 && grid[r][c - 1] != '#' && grid[r][c - 2] != '#' &&
+                            (c < 3 || grid[r][c - 3] == '#')
+                        ) {
+                            score -= 12
+                        }
+                        if (grid[r - 1][c] != '#' && runLenUp(r - 1, c) == 2) score -= 12
                     }
                 }
             }
@@ -1872,11 +1914,12 @@ class CoGenerationProbeTest {
                 }
                 val weights = options.map { o ->
                     when {
-                        o.type == 1 && o.len in 4..7 -> 6
-                        o.type == 1 && o.len == 3 -> 3
-                        o.type == 1 && o.len >= 8 -> 2
-                        o.type == 1 -> 1
-                        o.type == 0 -> 3
+                        o.type == 1 && o.len in 5..9 -> 30
+                        o.type == 1 && o.len == 4 -> 14
+                        o.type == 1 && o.len == 3 -> 4
+                        o.type == 1 && o.len >= 10 -> 6
+                        o.type == 1 -> 1 // len 2: last resort
+                        o.type == 0 -> 2
                         else -> 1
                     }
                 }
@@ -2054,12 +2097,12 @@ class CoGenerationProbeTest {
             if (c == 0) return 5..7
             // Top band mirrors print: columns starting in rows 0-1 are mostly short, so rows
             // 2-3 inherit plentiful staggered landings instead of impossible long spans.
-            if (r <= 1) return if (random.nextInt(3) < 2) 2..4 else 3..6
+            if (r <= 1) return if (random.nextInt(3) < 2) 3..5 else 4..7
             // Bottom band mirrors print too: late starters stay short so everyone lands by the border.
-            if (r >= height - 5) return 2..4
-            // ~30% short columns (2-4): the landing lubricant for middle rows.
-            if ((c + r) % 3 == 0) return 2..4
-            val base = 3 + ((c * 2 + r + random.nextInt(2)) % 4)
+            if (r >= height - 5) return 3..5
+            // ~20% short columns: the landing lubricant for middle rows.
+            if ((c + r) % 5 == 0) return 3..4
+            val base = 4 + ((c * 2 + r + random.nextInt(2)) % 4)
             return base..base + 2
         }
     }
