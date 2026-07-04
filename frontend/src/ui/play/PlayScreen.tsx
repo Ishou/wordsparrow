@@ -5,6 +5,7 @@ import { css } from 'styled-system/css';
 import type { Position, Puzzle } from '@/domain';
 import type { PuzzleSolver, RevealedWordCell } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
+import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import { Button, ClueRail, Lockup } from '@/design-system';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
@@ -20,6 +21,7 @@ import { usePuzzleValidation } from '@/ui/components/grid/usePuzzleValidation';
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
 import { HintCooldown } from '@/ui/components/grid/HintCooldown';
 import { WinScreen } from './WinScreen';
+import { useGridSounds } from './useGridSounds';
 import { formatClock } from '@/ui/lib/formatClock';
 import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
@@ -153,9 +155,10 @@ export interface PlayScreenProps {
   readonly puzzle: Puzzle;
   readonly puzzleSolver: PuzzleSolver;
   readonly soloEntriesStore: SoloEntriesStore;
+  readonly soundPlayer?: SoundPlayer;
 }
 
-export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScreenProps) {
+export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer }: PlayScreenProps) {
   // Resume from the persisted elapsed time (synced across devices via the progress blob) instead of restarting at 0.
   const [seconds, setSeconds] = useState(() => soloEntriesStore.loadElapsed(puzzle.id));
   const [winDismissed, setWinDismissed] = useState(false);
@@ -297,6 +300,8 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore }: PlayScree
 
   // Shared focus-advance firewall: after a word validates, move the cursor to the next word.
   const advance = useAdvanceOnValidation({ puzzle, nav, validatedPositions, currentClue: nav.currentClue, completed: won });
+
+  useGridSounds({ validatedCount: validatedPositions.size, won, userActedRef, soundPlayer });
 
   // Clues ordered across-then-down; drives the ClueRail counter and the focus firewall.
   const orderedClues = useMemo(() => orderClues(puzzle), [puzzle]);
