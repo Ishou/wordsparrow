@@ -14,11 +14,11 @@ import kotlin.random.Random
 // stay open until a separator lands). Blacks are emitted where words end, never pre-committed.
 @Tag("bench")
 class CoGenerationProbeTest {
-    private val width = 15
-    private val height = 12
+    private val width = 28
+    private val height = 20
     private val minLen = 2
     private val DEAD_END_MIN = 5
-    private val MAX_LEN2_SHARE = 0.24
+    private val MAX_LEN2_SHARE = 0.20
     private val nodeBudget = 1_200_000
 
     // Bump when sweep semantics change: persisted nogoods are only valid for the rule set
@@ -78,7 +78,9 @@ class CoGenerationProbeTest {
                     best = sweep
                 }
             } else {
-                if (band == null && sweep.deepest >= 10 * width) {
+                // Donate the top band from any attempt that clears row 6 — bootstraps the
+                // library on deep grids where the old row-10 threshold was never reached.
+                if (band == null && sweep.deepest >= 6 * width) {
                     val donated = (0 until 6).joinToString("|") { sweep.grid[it].concatToString() }
                     if (!donated.contains('.') && sweep.bandTipFree()) newBands.add(donated)
                 }
@@ -2001,13 +2003,29 @@ class CoGenerationProbeTest {
             c: Int,
             maxTotal: Int,
         ) {
-            // Col 0: a run's last letter is always an across-single (no bend mid-run), so
-            // legal runs are >= DEAD_END_MIN ending at height-3 (bend then serves the bottom
-            // rows) or exactly bottom-reaching. Commit to ONE target: flexible ends never
-            // reserve, so the endgame would otherwise never see a completed corner.
+            // Col 0: a run's last letter is always an across-single (no bend mid-run), so a
+            // legal run is length L with L in [DEAD_END_MIN, maxLength], and either L ==
+            // maxTotal (reaches bottom) or L <= maxTotal-2 (a col-0 black fits below to host
+            // the next run). Commit to ONE length so the run reserves at a known row (flexible
+            // ends never reserve, and the endgame must see a completed corner). Stacked runs
+            // work because each col-0 black triggers a fresh reset + commit.
             if (c == 0) {
-                val l9 = maxTotal - 2
-                val keep = if (l9 >= DEAD_END_MIN && random.nextInt(5) < 3) l9 else maxTotal
+                val legal =
+                    (DEAD_END_MIN..minOf(lexicon.maxLength, maxTotal)).filter { l ->
+                        (l == maxTotal || l <= maxTotal - 2) && columns[0].masks.containsKey(l)
+                    }
+                if (legal.isEmpty()) {
+                    for (l in columns[0].masks.keys.toList()) columns[0].forbidLength(l)
+                    return
+                }
+                // Prefer moderate lengths (weight ~ 1/(|l-7|+1)) so col 0 isn't all long spans.
+                val w = legal.map { 6 - minOf(5, kotlin.math.abs(it - 7)) }
+                var pick = random.nextInt(w.sum().coerceAtLeast(1))
+                var keep = legal.first()
+                for ((i, wi) in w.withIndex()) {
+                    if (pick < wi) { keep = legal[i]; break }
+                    pick -= wi
+                }
                 for (l in columns[0].masks.keys.toList()) {
                     if (l != keep) columns[0].forbidLength(l)
                 }
@@ -2095,13 +2113,21 @@ class CoGenerationProbeTest {
             // Col-0 verticals must reach 5+ or the bottom: an across run at col 0 is only
             // hostable right after a col-0 black, so a mid-run last letter is always a single.
             if (c == 0) return 5..7
-            // Top band mirrors print: columns starting in rows 0-1 are mostly short, so rows
-            // 2-3 inherit plentiful staggered landings instead of impossible long spans.
-            if (r <= 1) return if (random.nextInt(3) < 2) 3..5 else 4..7
-            // Bottom band mirrors print too: late starters stay short so everyone lands by the border.
-            if (r >= height - 5) return 3..5
-            // ~20% short columns: the landing lubricant for middle rows.
-            if ((c + r) % 5 == 0) return 3..4
+            // Top band: ~1 column in 3 is a short stub (2-3) that completes early and hosts a
+            // black at rows 2-3 — the landing lubricant a wide row needs to be tileable. The
+            // rest run 4-7. Too few stubs and early rows have no interior blacks (infeasible);
+            // too many and short words dominate (poor quality).
+            if (r <= 1) {
+                return when (random.nextInt(3)) {
+                    0 -> 2..3
+                    1 -> 4..6
+                    else -> 4..7
+                }
+            }
+            // Bottom band: late starters stay short so everyone lands by the border.
+            if (r >= height - 5) return 2..4
+            // ~30% landing columns in the middle rows keep interior blacks available.
+            if ((c + r) % 3 == 0) return 2..4
             val base = 4 + ((c * 2 + r + random.nextInt(2)) % 4)
             return base..base + 2
         }
