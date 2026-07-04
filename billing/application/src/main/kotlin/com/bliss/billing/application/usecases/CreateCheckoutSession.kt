@@ -2,8 +2,11 @@ package com.bliss.billing.application.usecases
 
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.CheckoutUrls
+import com.bliss.billing.application.ports.Clock
+import com.bliss.billing.application.ports.ConsentRepository
 import com.bliss.billing.application.ports.SubscriptionRepository
 import com.bliss.billing.domain.Cadence
+import com.bliss.billing.domain.CheckoutConsent
 import com.bliss.billing.domain.Tier
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
@@ -19,15 +22,21 @@ sealed interface CreateCheckoutSessionOutcome {
 class CreateCheckoutSession(
     private val provider: BillingProviderPort,
     private val repository: SubscriptionRepository,
+    private val consentRepository: ConsentRepository,
+    private val clock: Clock,
 ) {
     suspend fun execute(
         userId: UUID,
         tier: Tier,
         cadence: Cadence,
         email: String?,
+        consent: CheckoutConsent?,
     ): CreateCheckoutSessionOutcome {
         if (repository.findByUserId(userId)?.status?.isLive() == true) {
             return CreateCheckoutSessionOutcome.AlreadySubscribed
+        }
+        if (consent != null) {
+            consentRepository.record(userId, consent, clock.now())
         }
         val urls =
             try {

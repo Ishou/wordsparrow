@@ -3,6 +3,7 @@ package com.bliss.billing.api.routes
 import com.bliss.billing.api.ProblemTypes
 import com.bliss.billing.api.auth.SESSION_COOKIE_NAME
 import com.bliss.billing.api.auth.SUBSCRIBE_CAPABILITY
+import com.bliss.billing.api.dto.CheckoutConsentDto
 import com.bliss.billing.api.dto.CheckoutSessionRequest
 import com.bliss.billing.api.dto.CheckoutSessionResponse
 import com.bliss.billing.api.requireCapability
@@ -11,6 +12,7 @@ import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.application.usecases.CreateCheckoutSessionOutcome
 import com.bliss.billing.application.usecases.ProviderUnavailable
 import com.bliss.billing.domain.Cadence
+import com.bliss.billing.domain.CheckoutConsent
 import com.bliss.billing.domain.Tier
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
@@ -32,7 +34,7 @@ fun Route.checkoutSessionRoute(
 
         val outcome =
             try {
-                createCheckoutSession.execute(principal.userId, request.tier, request.cadence, email)
+                createCheckoutSession.execute(principal.userId, request.tier, request.cadence, email, request.consent)
             } catch (e: ProviderUnavailable) {
                 return@post call.respondProblem(
                     HttpStatusCode.ServiceUnavailable,
@@ -64,17 +66,24 @@ fun Route.checkoutSessionRoute(
 private data class ParsedCheckout(
     val tier: Tier,
     val cadence: Cadence,
+    val consent: CheckoutConsent?,
 )
 
-// Parses tier + cadence from the body; responds 400 (and returns null) on a missing/unknown tier or an unknown cadence. An absent cadence defaults to monthly (ADR-0080 expand phase).
+// Parses tier + cadence + consent from the body; responds 400 (and returns null) on a missing/unknown tier, an unknown cadence, or a present-but-invalid consent. An absent cadence defaults to monthly (ADR-0080); an absent consent is allowed in this expand phase (ADR-0094).
 private suspend fun io.ktor.server.application.ApplicationCall.parseCheckoutRequest(): ParsedCheckout? {
     val body = runCatching { receive<CheckoutSessionRequest>() }.getOrNull()
     val tier = body?.tier?.let { runCatching { Tier.of(it) }.getOrNull() }
     // A supplied-but-unknown cadence is a client error; absence is the monthly default.
     val cadence = body?.cadence?.let { runCatching { Cadence.fromWire(it) }.getOrNull() ?: return badCheckout() } ?: Cadence.default
     if (tier == null) return badCheckout()
-    return ParsedCheckout(tier, cadence)
+    // A supplied-but-invalid consent (cgvAccepted false or blank version) is a client error; absence is allowed in the expand phase.
+    val consent = body.consent?.let { it.toDomain() ?: return badCheckout() }
+    return ParsedCheckout(tier, cadence, consent)
 }
+
+// null when the consent is invalid (cgvAccepted must be true, version non-blank) — the caller maps that to a 400.
+private fun CheckoutConsentDto.toDomain(): CheckoutConsent? =
+    runCatching { CheckoutConsent(cgvAccepted, cgvVersion, withdrawalWaiver) }.getOrNull()
 
 private suspend fun io.ktor.server.application.ApplicationCall.badCheckout(): Nothing? {
     respondProblem(HttpStatusCode.BadRequest, ProblemTypes.INVALID_CHECKOUT_REQUEST, "missing or unknown tier or cadence")
