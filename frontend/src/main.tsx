@@ -1,5 +1,9 @@
 import { applyThemePreference, loadThemePreference, saveThemePreference, watchSystemTheme } from '@/infrastructure/session/localStorageTheme';
 import type { ThemeStore } from '@/application/session/ThemeStore';
+import { loadSoundEnabled, saveSoundEnabled } from '@/infrastructure/session/localStorageSound';
+import { createWebAudioSoundPlayer } from '@/infrastructure/session/webAudioSoundPlayer';
+import type { SoundStore } from '@/application/session/SoundStore';
+import type { SoundPlayer } from '@/application/session/SoundPlayer';
 // Composition root for the Bliss frontend bundle. This file is the only
 // place where the ui and infrastructure layers are wired together; it is
 // excluded from the layered architecture rules in eslint.config.js.
@@ -254,6 +258,12 @@ enableMocks()
       },
     };
 
+    // Grid sound effects (on by default). Same port indirection as the theme
+    // preference — Réglages consumes the store; the play route consumes the
+    // player, which self-gates on the store so the mute check lives in one place.
+    const soundStore: SoundStore = { load: loadSoundEnabled, set: saveSoundEnabled };
+    const soundPlayer: SoundPlayer = createWebAudioSoundPlayer(loadSoundEnabled);
+
     // Cookieless Matomo tracker (ADR-0025). No-op when env vars are unset
     // (local dev / preview / pre-Matomo prod).
     const tracker = createMatomoTracker(readMatomoConfigFromEnv());
@@ -305,7 +315,7 @@ enableMocks()
         tracker.trackEvent(category, action, name, value);
       },
     };
-    const baseContext = { authClient, getPseudonym, surveyClient, surveyAnonStore: surveyAnonRatedStore, analytics, progressSyncService, billingClient, themeStore };
+    const baseContext = { authClient, getPseudonym, surveyClient, surveyAnonStore: surveyAnonRatedStore, analytics, progressSyncService, billingClient, themeStore, soundStore, soundPlayer };
     const context = multiplayer
       ? (() => {
           const gameApiBaseUrl = import.meta.env.VITE_GAME_API_BASE_URL;
