@@ -333,6 +333,8 @@ class CoGenerationProbeTest {
             repeat(200) {
                 if (!ok) {
                     if (!sweep.reconstructAbove(top)) return@repeat
+                    // NOTE: applyBelowConstraint (rigid continuous-crossing pin) over-restricts
+                    // -> 0/10; blind seam handles seam-blacks correctly -> 4/10. Softer guidance TBD.
                     totalSeamSolves++
                     val cells = sweep.bandSolve(top, bh) ?: return@repeat
                     for (r in 0 until bh) for (c in 0 until width) sweep.grid[top + r][c] = cells[r][c]
@@ -762,6 +764,36 @@ class CoGenerationProbeTest {
                 if (col.text.length == 1) col.lastSingle = if (top >= 2) runLenAt(top - 1, c) == 1 else false
             }
             return true
+        }
+
+        // Constrain the seam so each column's word connects into the FIXED block below:
+        // a continuing column is pinned to the exact length+suffix of block B's crossing word;
+        // a column black below is capped to complete within the seam. This is the inflection
+        // lever in direct form — the seam picks letters that make the crossing word valid.
+        fun applyBelowConstraint(top: Int, bh: Int) {
+            val below = top + bh
+            if (below >= height) return
+            for (c in 0 until width) {
+                val col = columns[c]
+                if (grid[below][c] != '#') {
+                    var r = below
+                    val sb = StringBuilder()
+                    while (r < height && grid[r][c] != '#') { sb.append(grid[r][c]); r++ }
+                    val suffix = sb.toString()
+                    val target = col.text.length + bh + suffix.length
+                    val keep = col.masks[target]
+                    col.masks.keys.toList().forEach { if (it != target) col.masks.remove(it) }
+                    if (keep != null) {
+                        for ((i, ch) in suffix.withIndex()) {
+                            if (ch in 'A'..'Z') lexicon.filterByLetterInPlace(target, col.text.length + bh + i, ch, keep)
+                        }
+                        if (lexicon.popcount(keep) == 0) col.masks.remove(target)
+                    }
+                } else {
+                    val cap = col.text.length + bh
+                    col.masks.keys.toList().forEach { if (it > cap) col.masks.remove(it) }
+                }
+            }
         }
 
         // Force the solver down the original band rows: returns true iff its rules accept them.
