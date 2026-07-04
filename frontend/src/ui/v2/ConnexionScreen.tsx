@@ -22,6 +22,7 @@ const spin = css({ animation: 'wsSpin 0.7s linear infinite' });
 const COOLDOWN_COPY = 'Trop de tentatives, réessaie dans une minute.';
 const INVALID_EMAIL_COPY = 'Cette adresse e-mail n’est pas valide.';
 const SEND_FAILED_COPY = 'L’envoi a échoué, réessaie.';
+const VERIFY_FAILED_COPY = 'La vérification a échoué, réessaie.';
 const CODE_INVALID_COPY = 'Code incorrect ou expiré.';
 
 export interface ConnexionScreenProps {
@@ -92,8 +93,8 @@ export function ConnexionScreen({ returnTo }: ConnexionScreenProps) {
         say(CODE_INVALID_COPY, { assertive: true });
       }
     } catch {
-      setCodeError(SEND_FAILED_COPY);
-      say(SEND_FAILED_COPY, { assertive: true });
+      setCodeError(VERIFY_FAILED_COPY);
+      say(VERIFY_FAILED_COPY, { assertive: true });
     } finally {
       setVerifying(false);
     }
@@ -165,6 +166,7 @@ export function ConnexionScreen({ returnTo }: ConnexionScreenProps) {
                 Modifier l’adresse e-mail
               </button>
             </div>
+            {emailError ? <p className={errText} role="alert">{emailError}</p> : null}
           </div>
         </>
       )}
