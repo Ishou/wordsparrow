@@ -33,4 +33,11 @@ class CheckoutConsentTest {
             CheckoutConsent(cgvAccepted = true, cgvVersion = "  ", withdrawalWaiver = true)
         }
     }
+
+    @Test
+    fun `rejects a CGV version past the schema's 32-character limit`() {
+        assertThrows<IllegalArgumentException> {
+            CheckoutConsent(cgvAccepted = true, cgvVersion = "1".repeat(33), withdrawalWaiver = true)
+        }
+    }
 }

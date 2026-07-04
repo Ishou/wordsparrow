@@ -9,5 +9,6 @@ data class CheckoutConsent(
     init {
         require(cgvAccepted) { "CGV must be accepted for a consent record to exist." }
         require(cgvVersion.isNotBlank()) { "CGV version must not be blank." }
+        require(cgvVersion.length <= 32) { "CGV version must not exceed 32 characters." }
     }
 }
