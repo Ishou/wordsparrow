@@ -31,7 +31,13 @@ export function MentionsLegalesScreen() {
         <section className={contentCard}>
           <h2 className={sectionHeading}>Éditeur</h2>
           <p className={sectionBody}>
-            WordSparrow est édité par <strong>Colin Auberger</strong>, contact :{' '}
+            WordSparrow est édité par <strong>ISHO IT</strong>, EURL au capital de 1 000 €, dont le
+            siège social est situé 32 rue Avaulée, 92240 Malakoff (France). Immatriculée au{' '}
+            <strong>RCS de Nanterre</strong> sous le n° 851 880 401 — SIRET 851 880 401 00019 — TVA
+            intracommunautaire FR63 851880401.
+          </p>
+          <p className={sectionBody}>
+            Directeur de la publication : <strong>Colin Auberger</strong>. Contact :{' '}
             <a className={link} href="mailto:contact@wordsparrow.io">
               contact@wordsparrow.io
             </a>
@@ -73,6 +79,26 @@ export function MentionsLegalesScreen() {
               politique de confidentialité
             </Link>
             .
+          </p>
+        </section>
+
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Médiation de la consommation</h2>
+          <p className={sectionBody}>
+            Conformément aux articles L611-1 et suivants du Code de la consommation, tu peux recourir
+            gratuitement à un médiateur de la consommation pour la résolution amiable d&apos;un
+            litige, après avoir tenté de le régler directement avec nous. Le médiateur compétent est{' '}
+            <strong>AME Conso</strong> (Association des Médiateurs Européens), 197 boulevard
+            Saint-Germain, 75007 Paris (
+            <a
+              className={link}
+              href="https://www.mediationconso-ame.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              mediationconso-ame.com
+            </a>
+            ).
           </p>
         </section>
 
