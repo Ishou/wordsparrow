@@ -69,7 +69,7 @@ function periodLabelFor(etat: Etat, periodEnd: string | null): string | null {
 // Only an actually-ended subscription gets a badge; never-subscribed stays a neutral, unbadged "Version gratuite".
 function StatusPill({ etat }: { readonly etat: Etat }) {
   if (etat === 'actif') return <span className={cx(pill, pillActif)}>Actif</span>;
-  if (etat === 'pending') return <span className={cx(pill, pillPending)}>Résiliation programmée</span>;
+  if (etat === 'pending') return <span className={cx(pill, pillPending)}>Résilié</span>;
   if (etat === 'expire') return <span className={cx(pill, pillMuted)}>Terminé</span>;
   return null;
 }
