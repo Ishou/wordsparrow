@@ -21,6 +21,8 @@ const problem = (status: number, type: string) =>
     { status, headers: { 'content-type': 'application/problem+json' } },
   );
 
+const consent = { cgvAccepted: true, cgvVersion: '1.0', withdrawalWaiver: true };
+
 const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -30,7 +32,7 @@ afterAll(() => server.close());
 const makeClient = () => createHttpBillingClient({ baseUrl: BASE_URL });
 
 describe('HttpBillingClient.createCheckoutSession', () => {
-  it('posts the chosen cadence and returns the hosted-checkout URLs on 201', async () => {
+  it('posts the chosen cadence and consent and returns the hosted-checkout URLs on 201', async () => {
     let body: unknown;
     server.use(
       http.post(`${BASE_URL}/v1/checkout-session`, async ({ request }) => {
@@ -39,16 +41,16 @@ describe('HttpBillingClient.createCheckoutSession', () => {
       }),
     );
 
-    const session = await makeClient().createCheckoutSession('supporter', 'yearly');
+    const session = await makeClient().createCheckoutSession('supporter', 'yearly', consent);
 
     expect(session).toEqual(checkout);
-    expect(body).toEqual({ tier: 'supporter', cadence: 'yearly' });
+    expect(body).toEqual({ tier: 'supporter', cadence: 'yearly', consent });
   });
 
   it('maps 409 to a typed already-subscribed BillingError', async () => {
     server.use(http.post(`${BASE_URL}/v1/checkout-session`, () => problem(409, 'already-subscribed')));
 
-    await expect(makeClient().createCheckoutSession('supporter', 'monthly')).rejects.toMatchObject({
+    await expect(makeClient().createCheckoutSession('supporter', 'monthly', consent)).rejects.toMatchObject({
       name: 'BillingError',
       kind: 'already-subscribed',
       status: 409,
@@ -58,7 +60,7 @@ describe('HttpBillingClient.createCheckoutSession', () => {
   it('maps 403 to a typed forbidden BillingError', async () => {
     server.use(http.post(`${BASE_URL}/v1/checkout-session`, () => problem(403, 'forbidden')));
 
-    await expect(makeClient().createCheckoutSession('supporter', 'monthly')).rejects.toMatchObject({
+    await expect(makeClient().createCheckoutSession('supporter', 'monthly', consent)).rejects.toMatchObject({
       kind: 'forbidden',
       status: 403,
     });

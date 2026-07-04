@@ -164,10 +164,11 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * @description Request body for `POST /v1/checkout-session`. Carries the target `tier`
-         *     and, optionally, the billing `cadence` (monthly or yearly); `userId` is
-         *     session-derived and intentionally NOT part of the body (ADR-0078 threat
-         *     model).
+         * @description Request body for `POST /v1/checkout-session`. Carries the target `tier`,
+         *     optionally the billing `cadence` (monthly or yearly), and the
+         *     pre-contractual `consent` (CGV acceptance + Art. 13 waiver, ADR-0094);
+         *     `userId` is session-derived and intentionally NOT part of the body
+         *     (ADR-0078 threat model).
          */
         CheckoutSessionRequest: {
             /**
@@ -191,6 +192,43 @@ export interface components {
              * @enum {string}
              */
             cadence?: "monthly" | "yearly";
+            consent?: components["schemas"]["CheckoutConsent"];
+        };
+        /**
+         * @description Pre-contractual consent captured at checkout for French consumer-law
+         *     conformity (ADR-0094; CGV Art. 1, 7, 13). The server records it with the
+         *     acceptance timestamp and binds it to the subscription; the durable-medium
+         *     confirmation email reflects it. Optional for this expand phase
+         *     (expand-and-contract): the frontend consent UI has not landed yet, so
+         *     existing callers omit it. Once that consumer ships, a checkout without
+         *     `consent` is rejected with a 400 and this moves toward required.
+         */
+        CheckoutConsent: {
+            /**
+             * @description The consumer ticked the dedicated « j'accepte les CGV » box (CGV
+             *     Art. 1 / 7). Must be `true`; `false` is rejected with a 400 — the
+             *     contract cannot form without CGV acceptance.
+             * @example true
+             */
+            cgvAccepted: boolean;
+            /**
+             * @description Version identifier of the exact CGV text shown and accepted (e.g.
+             *     `1.0`), so the recorded consent is bound to a specific contract
+             *     version. Echoed from what the client rendered; stored with the
+             *     consent.
+             * @example 1.0
+             */
+            cgvVersion: string;
+            /**
+             * @description Art. L221-28 double-consent for immediate access (CGV Art. 13): the
+             *     consumer expressly requested immediate performance AND acknowledged
+             *     losing the 14-day droit de rétractation. `true` ⇒ access is immediate
+             *     and the withdrawal right is lost at first delivery; `false` ⇒ the
+             *     withdrawal right is preserved (access may be deferred). Recorded on
+             *     durable medium.
+             * @example true
+             */
+            withdrawalWaiver: boolean;
         };
         /**
          * @description Response body for `POST /v1/checkout-session` on a 201. The client

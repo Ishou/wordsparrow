@@ -19,6 +19,13 @@ export interface CheckoutSession {
   readonly cancelUrl: string;
 }
 
+// Pre-contractual consent captured at checkout (ADR-0094; CGV Art. 7 & 13).
+export interface CheckoutConsent {
+  readonly cgvAccepted: boolean;
+  readonly cgvVersion: string;
+  readonly withdrawalWaiver: boolean;
+}
+
 // Provider payment record surfaced as opaque, non-identifying facts (ADR-0078); receiptUrl is null when the provider exposes no hosted receipt.
 export interface Receipt {
   readonly paidAt: string;
@@ -56,7 +63,11 @@ export class BillingError extends Error {
 
 // Cookie-bearing; adapter sets credentials:'include' per ADR-0077.
 export interface BillingClient {
-  createCheckoutSession(tier: BillingTier, cadence: BillingCadence): Promise<CheckoutSession>;
+  createCheckoutSession(
+    tier: BillingTier,
+    cadence: BillingCadence,
+    consent: CheckoutConsent,
+  ): Promise<CheckoutSession>;
   cancelSubscription(): Promise<SubscriptionView>;
   getSubscription(): Promise<SubscriptionView>;
   listReceipts(cursor?: string): Promise<ReceiptsPage>;
