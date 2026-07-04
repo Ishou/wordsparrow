@@ -1,5 +1,6 @@
 package com.bliss.billing.application.testdoubles
 
+import com.bliss.billing.application.ports.CancellationConfirmation
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.ContractConfirmationNotifier
 import com.bliss.billing.application.ports.RenewalReceipt
@@ -8,6 +9,7 @@ import com.bliss.billing.application.ports.RenewalReceipt
 class RecordingContractConfirmationNotifier : ContractConfirmationNotifier {
     val contractConfirmations = mutableListOf<ContractConfirmation>()
     val renewalReceipts = mutableListOf<RenewalReceipt>()
+    val cancellationConfirmations = mutableListOf<CancellationConfirmation>()
     var failOnce = false
 
     override suspend fun confirmContractFormation(confirmation: ContractConfirmation) {
@@ -18,6 +20,11 @@ class RecordingContractConfirmationNotifier : ContractConfirmationNotifier {
     override suspend fun confirmRenewal(receipt: RenewalReceipt) {
         maybeFail()
         renewalReceipts += receipt
+    }
+
+    override suspend fun confirmCancellation(confirmation: CancellationConfirmation) {
+        maybeFail()
+        cancellationConfirmations += confirmation
     }
 
     private fun maybeFail() {

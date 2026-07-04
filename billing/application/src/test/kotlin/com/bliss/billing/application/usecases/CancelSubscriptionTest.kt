@@ -8,6 +8,7 @@ import assertk.assertions.isNotNull
 import com.bliss.billing.application.testdoubles.FakeBillingProvider
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
 import com.bliss.billing.application.testdoubles.FixedClock
+import com.bliss.billing.application.testdoubles.RecordingContractConfirmationNotifier
 import com.bliss.billing.application.testdoubles.RecordingSubscriptionPublisher
 import com.bliss.billing.application.testdoubles.SequentialEventIdGenerator
 import com.bliss.billing.domain.SubscriptionStatus
@@ -21,7 +22,8 @@ class CancelSubscriptionTest {
     private val publisher = RecordingSubscriptionPublisher()
     private val clock = FixedClock(FIXED_NOW)
     private val eventIds = SequentialEventIdGenerator()
-    private val useCase = CancelSubscription(provider, repository, publisher, clock, eventIds)
+    private val notifier = RecordingContractConfirmationNotifier()
+    private val useCase = CancelSubscription(provider, repository, publisher, clock, eventIds, notifier)
 
     private val userId = UUID.randomUUID()
 
@@ -73,5 +75,40 @@ class CancelSubscriptionTest {
 
             assertThat(repository.findByUserId(userId)!!.status).isEqualTo(SubscriptionStatus.PENDING_CANCELLATION)
             assertThat(publisher.events).hasSize(0)
+            assertThat(notifier.cancellationConfirmations).hasSize(0)
+        }
+
+    @Test
+    fun `sends a resiliation confirmation carrying the end-of-effect date on success`() =
+        runTest {
+            repository.save(subscription(userId = userId, externalRef = "sub_1", periodEnd = PERIOD_END))
+
+            useCase.execute(userId)
+
+            val confirmation = notifier.cancellationConfirmations.single()
+            assertThat(confirmation.userId).isEqualTo(userId)
+            assertThat(confirmation.periodEnd).isEqualTo(PERIOD_END)
+            assertThat(confirmation.canceledAt).isEqualTo(FIXED_NOW)
+        }
+
+    @Test
+    fun `swallows a confirmation send failure and still returns cancelled`() =
+        runTest {
+            repository.save(subscription(userId = userId, externalRef = "sub_1"))
+            notifier.failOnce = true
+
+            val outcome = useCase.execute(userId)
+
+            assertThat(outcome).isInstanceOf(CancelSubscriptionOutcome.Cancelled::class)
+            assertThat(repository.findByUserId(userId)!!.status).isEqualTo(SubscriptionStatus.CANCELED)
+            assertThat(notifier.cancellationConfirmations).hasSize(0)
+        }
+
+    @Test
+    fun `sends no confirmation when there is nothing to cancel`() =
+        runTest {
+            useCase.execute(userId)
+
+            assertThat(notifier.cancellationConfirmations).hasSize(0)
         }
 }
