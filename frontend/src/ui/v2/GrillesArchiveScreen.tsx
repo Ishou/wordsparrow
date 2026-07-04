@@ -219,6 +219,7 @@ export function GrillesArchiveScreen({
         onPrev={() => setMonth(prevMonth(month))}
         onNext={() => setMonth(nextMonth(month))}
         onPaywalledSelect={() => setSheet({ open: true, context: 'grid' })}
+        showPaywallLegend={canSubscribe}
       />
       {canSubscribe ? (
         <div className={bannerWrap}>

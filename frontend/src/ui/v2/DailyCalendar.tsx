@@ -159,9 +159,11 @@ export interface DailyCalendarProps {
   readonly onPrev: () => void;
   readonly onNext: () => void;
   readonly onPaywalledSelect: () => void;
+  // Matches the gate that produces paywalled cells (deriveDayInfos): subscribers see neither the band nor its key.
+  readonly showPaywallLegend: boolean;
 }
 
-export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, onPaywalledSelect }: DailyCalendarProps) {
+export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, onPaywalledSelect, showPaywallLegend }: DailyCalendarProps) {
   return (
     <div className={cardWrap}>
       <div className={header}>
@@ -224,8 +226,13 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
       <p className={legend}>
         <span className={cx(swatch, cellDone)} aria-hidden="true" /> terminée ·{' '}
         <span className={swatch} style={{ background: progressRingBackground(66) }} aria-hidden="true" /> en cours ·{' '}
-        <span className={cx(swatch, cellNew)} aria-hidden="true" /> à jouer ·{' '}
-        <span className={cx(swatch, swatchBand)} aria-hidden="true" /> réservées à l&apos;abonnement
+        <span className={cx(swatch, cellNew)} aria-hidden="true" /> à jouer
+        {showPaywallLegend ? (
+          <>
+            {' · '}
+            <span className={cx(swatch, swatchBand)} aria-hidden="true" /> réservées à l&apos;abonnement
+          </>
+        ) : null}
       </p>
     </div>
   );

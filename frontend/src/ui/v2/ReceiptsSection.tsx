@@ -13,7 +13,7 @@ const rowMain = css({ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'col
 const dateText = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk' });
 const amountText = css({ flex: 'none', fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '15px', color: 'ws.jadeInk' });
 
-const pillPaid = css({ color: 'ws.clueSurface', bg: 'ws.jade' });
+const pillPaid = css({ color: 'ws.onJadeInk', bg: 'ws.jadeInk' });
 const pillAlert = css({ color: 'ws.sakuraDark', bg: 'rgba(190,73,112,0.12)' });
 
 const divider = css({ height: '1px', bg: 'ws.hairline' });
