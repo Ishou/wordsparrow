@@ -1,12 +1,12 @@
 package com.bliss.billing.infrastructure.provider
 
 import com.bliss.billing.domain.Cadence
+import java.time.Period
 
 /** Mollie adapter configuration: API key (`test_…`/`live_…`) is the sole test-vs-live switch; no code path differs (ADR-0078). */
 data class MollieConfig(
     val apiKey: String,
     val currency: String,
-    val firstPaymentAmount: String,
     val description: String,
     val successUrl: String,
     val cancelUrl: String,
@@ -31,6 +31,35 @@ data class MollieConfig(
             Cadence.YEARLY -> yearlyInterval
         }
 
+    /** One interval as a [Period]; the subscription starts this far after the first payment so period one is not billed twice. */
+    fun startOffsetFor(cadence: Cadence): Period = parseInterval(subscriptionIntervalFor(cadence))
+
+    /**
+     * Customer-facing checkout label that discloses the recurrence up front (French consumer law, ADR-0080 factual framing):
+     * e.g. "Abonnement WordSparrow — 20 €/an, renouvellement automatique".
+     */
+    fun descriptionFor(cadence: Cadence): String = "$description — ${priceLabelFor(cadence)}, renouvellement automatique"
+
+    private fun priceLabelFor(cadence: Cadence): String {
+        val amount = subscriptionAmountFor(cadence).removeSuffix(".00").replace('.', ',')
+        val unit = if (currency == "EUR") "€" else currency
+        val period = if (cadence == Cadence.YEARLY) "an" else "mois"
+        return "$amount $unit/$period"
+    }
+
+    private fun parseInterval(interval: String): Period {
+        val parts = interval.trim().split(Regex("\\s+"), limit = 2)
+        val count = parts.getOrNull(0)?.toIntOrNull()
+        require(parts.size == 2 && count != null) { "Unsupported Mollie interval: $interval" }
+        return when {
+            parts[1].startsWith("year") -> Period.ofYears(count)
+            parts[1].startsWith("month") -> Period.ofMonths(count)
+            parts[1].startsWith("week") -> Period.ofWeeks(count)
+            parts[1].startsWith("day") -> Period.ofDays(count)
+            else -> throw IllegalArgumentException("Unsupported Mollie interval unit: $interval")
+        }
+    }
+
     companion object {
         private fun env(key: String): String? = System.getenv(key) ?: System.getProperty(key)
 
@@ -44,7 +73,6 @@ data class MollieConfig(
             return MollieConfig(
                 apiKey = apiKey,
                 currency = env("BILLING_CHECKOUT_CURRENCY") ?: "EUR",
-                firstPaymentAmount = env("BILLING_CHECKOUT_AMOUNT") ?: "0.00",
                 description = env("BILLING_CHECKOUT_DESCRIPTION") ?: "Abonnement WordSparrow",
                 successUrl = successUrl,
                 cancelUrl = cancelUrl,

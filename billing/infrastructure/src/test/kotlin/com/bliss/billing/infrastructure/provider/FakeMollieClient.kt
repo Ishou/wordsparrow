@@ -14,6 +14,7 @@ class FakeMollieClient : MollieClient {
     var lastPaymentCustomerId: String? = null
     var lastPaymentMetadata: Map<String, String> = emptyMap()
     var lastPaymentAmount: String? = null
+    var lastPaymentDescription: String? = null
 
     val createdSubscriptions = mutableListOf<MollieSubscription>()
     var allSubscriptions: List<MollieSubscription> = emptyList()
@@ -21,6 +22,7 @@ class FakeMollieClient : MollieClient {
     var lastSubscriptionMandateId: String? = null
     var lastSubscriptionInterval: String? = null
     var lastSubscriptionAmount: String? = null
+    var lastSubscriptionStartDate: java.time.LocalDate? = null
     var lastSubscriptionMetadata: Map<String, String> = emptyMap()
 
     override suspend fun createCustomer(
@@ -45,6 +47,7 @@ class FakeMollieClient : MollieClient {
         lastPaymentCustomerId = customerId
         lastPaymentMetadata = metadata
         lastPaymentAmount = amountValue
+        lastPaymentDescription = description
         return firstPayment
     }
 
@@ -72,6 +75,7 @@ class FakeMollieClient : MollieClient {
         amountValue: String,
         currency: String,
         interval: String,
+        startDate: java.time.LocalDate?,
         description: String,
         webhookUrl: String,
         metadata: Map<String, String>,
@@ -79,6 +83,7 @@ class FakeMollieClient : MollieClient {
         lastSubscriptionMandateId = mandateId
         lastSubscriptionInterval = interval
         lastSubscriptionAmount = amountValue
+        lastSubscriptionStartDate = startDate
         lastSubscriptionMetadata = metadata
         return nextSubscription.also { createdSubscriptions.add(it) }
     }

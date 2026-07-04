@@ -8,6 +8,8 @@ import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.Tier
 import org.slf4j.LoggerFactory
+import java.time.Clock
+import java.time.LocalDate
 import java.util.UUID
 
 /** Mollie [BillingProviderPort] implementation (ADR-0078): hosted SAQ-A checkout, re-fetch-by-id webhook auth. */
@@ -15,6 +17,7 @@ class MollieBillingAdapter(
     private val client: MollieClient,
     private val customerStore: MollieCustomerStore,
     private val config: MollieConfig,
+    private val clock: Clock = Clock.systemUTC(),
 ) : BillingProviderPort {
     private val log = LoggerFactory.getLogger(MollieBillingAdapter::class.java)
 
@@ -28,9 +31,10 @@ class MollieBillingAdapter(
         val payment =
             client.createFirstPayment(
                 customerId = customerId,
-                amountValue = config.firstPaymentAmount,
+                // The first payment already covers period one, so it is charged at the cadence's real price (the recurring subscription then starts one interval later).
+                amountValue = config.subscriptionAmountFor(cadence),
                 currency = config.currency,
-                description = config.description,
+                description = config.descriptionFor(cadence),
                 redirectUrl = config.successUrl,
                 cancelUrl = config.cancelUrl,
                 webhookUrl = config.webhookUrl,
@@ -61,7 +65,9 @@ class MollieBillingAdapter(
                 amountValue = config.subscriptionAmountFor(cadence),
                 currency = config.currency,
                 interval = config.subscriptionIntervalFor(cadence),
-                description = config.description,
+                // Defer the first recurring charge by one interval: the paid first payment already covers period one, so charging today would double-bill.
+                startDate = LocalDate.now(clock).plus(config.startOffsetFor(cadence)),
+                description = config.descriptionFor(cadence),
                 webhookUrl = config.webhookUrl,
                 metadata = metadataOf(userId, tier, cadence),
             )

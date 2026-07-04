@@ -93,7 +93,7 @@ env:
   # Identity-api base URL for session-cookie verification (billing:subscribe gate).
   - name: IDENTITY_API_URL
     value: "http://wordsparrow-identity-api.wordsparrow:8082"
-  # Mollie checkout currency; first-payment amount + description default in MollieConfig.
+  # Mollie checkout currency; the first payment is charged at the cadence's recurring price (below), never a separate amount.
   - name: BILLING_CHECKOUT_CURRENCY
     value: "EUR"
   # Statement/Mollie-page label shown to the customer.

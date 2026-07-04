@@ -88,6 +88,8 @@ const optCadence = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'blac
 const cta = css({ width: '100%', border: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', padding: '14px', borderRadius: '14px', cursor: 'pointer', boxShadow: '0 8px 18px rgba(190,73,112,0.34)', _hover: { opacity: 0.94 }, _disabled: { opacity: 0.5, cursor: 'not-allowed' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const reassure = css({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: 'wsUi', fontSize: '11.5px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, textAlign: 'center', lineHeight: '1.4' });
 const conditionsNote = css({ marginTop: '8px', fontFamily: 'wsUi', fontSize: '11.5px', fontWeight: 'semibold', color: 'ws.khaki', textAlign: 'center', lineHeight: '1.4', '& a': { color: 'ws.sakuraDark', fontWeight: 'bold', textDecoration: 'underline' } });
+// Explicit auto-renewal disclosure (French consumer law / tacite reconduction), stated plainly with the selected price — ADR-0080 factual framing.
+const renewalNote = css({ fontFamily: 'wsUi', fontSize: '11.5px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, textAlign: 'center', lineHeight: '1.4', margin: 0 });
 const reassureIcon = css({ flex: 'none', display: 'flex' });
 const errText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', margin: '2px 0 0', textAlign: 'center' });
 
@@ -181,6 +183,7 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
   const [cadence, setCadence] = useState<Cadence>('mensuel');
   const [pending, setPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const selected = CADENCES.find((option) => option.id === cadence) ?? CADENCES[0];
 
   const onSubscribe = useCallback(async () => {
     setActionError(null);
@@ -216,6 +219,9 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
         <button type="button" className={cta} onClick={() => void onSubscribe()} disabled={pending}>
           S&apos;abonner
         </button>
+        <p className={renewalNote}>
+          Ton abonnement se renouvelle automatiquement à {selected.price}{selected.cadence}, jusqu&apos;à ce que tu résilies.
+        </p>
         <p className={conditionsNote}>
           En t&apos;abonnant, tu acceptes les{' '}
           <Link to="/conditions-abonnement">Conditions de vente</Link>.
