@@ -31,5 +31,7 @@ ingress:
     nginx.ingress.kubernetes.io/limit-rps: "5"
     nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
     nginx.ingress.kubernetes.io/limit-connections: "30"
+# Dedicated Secret for the Brevo transactional API key (same value as identity); own lifecycle, survives an env-bag re-bootstrap.
+brevoApiKeySecret: "bliss-brevo-api"
 # Bootstrapped per ADR-0009 §10; carries MOLLIE_API_KEY (test_… during ADR-0078 test phase).
 envFromSecret: "bliss-billing-api-env"
