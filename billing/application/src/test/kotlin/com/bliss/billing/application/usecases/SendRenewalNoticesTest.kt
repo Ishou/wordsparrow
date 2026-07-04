@@ -118,6 +118,24 @@ class SendRenewalNoticesTest {
         }
 
     @Test
+    fun `does not record the ledger when the notice cannot be delivered, so the next run retries`() =
+        runTest {
+            seed("sub_annual", Cadence.YEARLY, inWindowEnd)
+            notifier.chatelSendSucceeds = false
+
+            val summary = useCase.execute()
+
+            assertThat(ledger.entries).isEmpty()
+            assertThat(summary).isEqualTo(RenewalNoticeSummary(annualInWindow = 1, noticesSent = 0, alreadyNotified = 0))
+
+            notifier.chatelSendSucceeds = true
+            val retrySummary = useCase.execute()
+
+            assertThat(notifier.preRenewalNotices).hasSize(1)
+            assertThat(retrySummary).isEqualTo(RenewalNoticeSummary(annualInWindow = 1, noticesSent = 1, alreadyNotified = 0))
+        }
+
+    @Test
     fun `running twice sends only one notice`() =
         runTest {
             seed("sub_annual", Cadence.YEARLY, inWindowEnd)

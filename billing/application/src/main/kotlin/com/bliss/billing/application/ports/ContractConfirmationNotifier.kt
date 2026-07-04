@@ -47,5 +47,6 @@ interface ContractConfirmationNotifier {
 
     suspend fun confirmCancellation(confirmation: CancellationConfirmation)
 
-    suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice)
+    /** Returns true once the notice was actually delivered; false means the caller must not mark this notice period as sent. */
+    suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice): Boolean
 }

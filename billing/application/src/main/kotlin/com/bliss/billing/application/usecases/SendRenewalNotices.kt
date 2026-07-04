@@ -45,7 +45,10 @@ class SendRenewalNotices(
                 alreadyNotified++
                 continue
             }
-            notifier.sendChatelPreRenewalNotice(candidate)
+            if (!notifier.sendChatelPreRenewalNotice(candidate)) {
+                log.warn("event=send_renewal_notice_undelivered user_id={} period_end={}", subscription.userId, candidate.periodEnd)
+                continue
+            }
             ledger.record(subscription.userId, subscription.externalRef, candidate.periodEnd, RenewalNoticeKind.CHATEL_PRE_RENEWAL, now)
             noticesSent++
         }

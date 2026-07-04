@@ -59,10 +59,11 @@ class LegalEmailNotifier(
         emailSender.send(cancellationEmail(to, confirmation.tier.value, confirmation.canceledAt, confirmation.periodEnd))
     }
 
-    override suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice) {
-        val price = priceOrNull(notice.userId, notice.cadence) ?: return
-        val to = emailOrNull(notice.userId) ?: return
+    override suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice): Boolean {
+        val price = priceOrNull(notice.userId, notice.cadence) ?: return false
+        val to = emailOrNull(notice.userId) ?: return false
         emailSender.send(preRenewalEmail(to, notice.tier.value, notice.cadence, price, notice.periodEnd))
+        return true
     }
 
     private suspend fun emailOrNull(userId: UUID): String? {

@@ -23,7 +23,8 @@ class NoOpContractConfirmationNotifier : ContractConfirmationNotifier {
         log.info("billing_email_disabled kind=cancellation_confirmation user_id={}", confirmation.userId)
     }
 
-    override suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice) {
+    override suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice): Boolean {
         log.info("billing_email_disabled kind=chatel_pre_renewal user_id={} period_end={}", notice.userId, notice.periodEnd)
+        return true
     }
 }
