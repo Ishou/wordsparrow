@@ -90,4 +90,19 @@ describe('/connexion — already-authenticated guard', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Adresse e-mail')).toBeInTheDocument());
   });
+
+  it('withholds the sign-in form while the initial whoami() is still pending', async () => {
+    let resolveWhoami: (value: { userId: string; displayName: string } | null) => void = () => {};
+    const whoamiPromise = new Promise<{ userId: string; displayName: string } | null>((resolve) => {
+      resolveWhoami = resolve;
+    });
+    const authClient = stubAuth({ whoami: vi.fn().mockReturnValue(whoamiPromise) });
+    const { router } = renderConnexion(authClient, '/connexion?returnTo=%2Fcompte');
+
+    expect(screen.queryByLabelText('Adresse e-mail')).not.toBeInTheDocument();
+
+    resolveWhoami({ userId: USER_ID, displayName: 'Lapin 472' });
+    await waitFor(() => expect(router.state.location.pathname).toBe('/compte'));
+    expect(screen.queryByLabelText('Adresse e-mail')).not.toBeInTheDocument();
+  });
 });

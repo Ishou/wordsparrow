@@ -7,6 +7,9 @@ import { Route as AppLayoutRoute } from './app-layout';
 function ConnexionRouteComponent() {
   const { returnTo } = Route.useSearch();
   const { status } = useAuth();
+  // Withhold the form until the initial whoami() resolves — otherwise an
+  // already-authed visitor sees the OTP form flash before the redirect.
+  if (status === 'loading') return null;
   // Already signed in — the OTP flow would be a dead end, so bounce to the destination.
   if (status === 'authed') return <Navigate to={returnTo ?? '/'} replace />;
   return <ConnexionScreen returnTo={returnTo ?? '/'} />;
