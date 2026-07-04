@@ -143,6 +143,7 @@ jobs:
             # ensure-dailies CronJob (ADR-0042); empty for contexts that
             # don't ship a worker so the download/resolve steps no-op.
             worker-digest-artifact: image-digest-grid-worker
+            worker-digest-set: ensureDailies.image.digest
             health-url: https://api.wordsparrow.io/v1/health
             # grid's CNPG cluster is still owned by its api chart;
             # the split mirrors game-api but is a follow-up PR. Empty
@@ -210,7 +211,8 @@ jobs:
             chart-path: billing/api/deploy/chart/
             values-file: billing/api/deploy/chart/values-prod.yaml
             digest-artifact: image-digest-billing
-            worker-digest-artifact: ""
+            worker-digest-artifact: image-digest-billing-worker
+            worker-digest-set: renewalNotices.image.digest
             health-url: https://billing.wordsparrow.io/v1/health
             db-release-name: wordsparrow-billing-api-pg
             db-chart-path: billing/api/deploy/db-chart/
@@ -402,6 +404,8 @@ jobs:
           # Empty for rows without a worker (game); the conditional `--set`
           # below skips the flag in that case.
           WORKER_DIGEST: ${{ steps.worker-digest.outputs.digest }}
+          # Per-context helm value path for the worker digest (grid=ensureDailies, billing=renewalNotices).
+          WORKER_SET: ${{ matrix.worker-digest-set }}
           RELEASE: ${{ matrix.release-name }}
           CHART: ${{ matrix.chart-path }}
           VALUES: ${{ matrix.values-file }}
@@ -430,7 +434,7 @@ jobs:
             -f "$VALUES" \
             --set image.digest="$DIGEST"
           if [ -n "$WORKER_DIGEST" ]; then
-            set -- "$@" --set "ensureDailies.image.digest=$WORKER_DIGEST"
+            set -- "$@" --set "$WORKER_SET=$WORKER_DIGEST"
           fi
           # Inject identity maintainer UUID(s) only when the secret is set, keeping the privileged id out of git.
           if [ -n "${MAINTAINER_USER_IDS:-}" ]; then
