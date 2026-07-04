@@ -158,6 +158,15 @@ class PostgresEmailOtpChallengeRepositoryTest {
         }
 
     @Test
+    fun `countAllCreatedSince counts rows at or after the boundary across all emails`() =
+        runTest {
+            repo.create(challenge(email = alice, createdAt = now.minusSeconds(30)))
+            repo.create(challenge(email = bob, createdAt = now.minusSeconds(30)))
+            repo.create(challenge(email = alice, createdAt = now.minusSeconds(90)))
+            assertThat(repo.countAllCreatedSince(now.minusSeconds(60))).isEqualTo(2)
+        }
+
+    @Test
     fun `latestCreatedAt returns the most recent creation for the email`() =
         runTest {
             repo.create(challenge(createdAt = now.minusSeconds(120)))

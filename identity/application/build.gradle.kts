@@ -10,6 +10,7 @@ kotlin {
 dependencies {
     implementation(project(":identity:domain"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+    implementation("org.slf4j:slf4j-api:2.0.18")
 
     testFixturesImplementation(project(":identity:domain"))
     testFixturesImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")

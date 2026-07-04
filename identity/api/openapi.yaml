@@ -154,6 +154,7 @@ paths:
         '400': { $ref: '#/components/responses/ProblemDetails' }
         '429': { $ref: '#/components/responses/ProblemDetails' }
         '502': { $ref: '#/components/responses/ProblemDetails' }
+        '503': { $ref: '#/components/responses/ProblemDetails' }
 
   /v1/auth/email/verify:
     post:
