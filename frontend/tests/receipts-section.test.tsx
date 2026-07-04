@@ -17,6 +17,7 @@ function fakeBillingClient(listReceipts: BillingClient['listReceipts']): Billing
     getSubscription: vi.fn(),
     createCheckoutSession: vi.fn(),
     cancelSubscription: vi.fn(),
+    reactivateSubscription: vi.fn(),
     listReceipts,
   };
 }

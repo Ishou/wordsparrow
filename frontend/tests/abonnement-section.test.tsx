@@ -31,6 +31,7 @@ function fakeBillingClient(getSubscription: BillingClient['getSubscription'], ov
     getSubscription,
     createCheckoutSession: vi.fn(),
     cancelSubscription: vi.fn(),
+    reactivateSubscription: vi.fn(),
     listReceipts: vi.fn().mockResolvedValue({ receipts: [], nextCursor: null }),
     ...overrides,
   };
@@ -89,6 +90,7 @@ describe('AbonnementSection états', () => {
     expect(screen.getByText('Actif')).toBeInTheDocument();
     expect(screen.getByText(/Renouvellement le 1 août 2026/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Résilier l'abonnement/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reprendre mon abonnement' })).toBeNull();
   });
 
   it('renders the pending_cancellation état with the access-until note and no résilier action', async () => {
@@ -98,6 +100,8 @@ describe('AbonnementSection états', () => {
     expect(await screen.findByText('Résiliation programmée')).toBeInTheDocument();
     expect(screen.getByText(/Accès actif jusqu'au 1 août 2026/)).toBeInTheDocument();
     expect(screen.getByText(/Rien ne te sera plus\s+prélevé/)).toBeInTheDocument();
+    expect(screen.getByText(/sans nouveau paiement/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reprendre mon abonnement' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Résilier l'abonnement/ })).toBeNull();
   });
 
@@ -110,6 +114,7 @@ describe('AbonnementSection états', () => {
     expect(screen.getByText(/tes\s+grilles commencées restent à toi/)).toBeInTheDocument();
     expect(screen.getByText(/sans pression/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Me réabonner' }).getAttribute('href')).toBe('/abonnement');
+    expect(screen.queryByRole('button', { name: 'Reprendre mon abonnement' })).toBeNull();
   });
 
   it('renders the never-subscribed free état neutrally, without an ended badge', async () => {
@@ -121,6 +126,46 @@ describe('AbonnementSection états', () => {
     expect(screen.queryByText('Terminé')).toBeNull();
     expect(screen.queryByText('Sans abonnement')).toBeNull();
     expect(screen.getByRole('link', { name: /Découvre l'abonnement/ }).getAttribute('href')).toBe('/abonnement');
+    expect(screen.queryByRole('button', { name: 'Reprendre mon abonnement' })).toBeNull();
+  });
+});
+
+describe('AbonnementSection réactivation flow', () => {
+  beforeEach(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+  });
+
+  it('reactivates then refetches and reflects the actif state', async () => {
+    const getSubscription = vi
+      .fn<BillingClient['getSubscription']>()
+      .mockResolvedValueOnce(PENDING_VIEW)
+      .mockResolvedValue(ACTIVE_VIEW);
+    const reactivateSubscription = vi
+      .fn<BillingClient['reactivateSubscription']>()
+      .mockResolvedValue(ACTIVE_VIEW);
+    const client = fakeBillingClient(getSubscription, { reactivateSubscription });
+    render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reprendre mon abonnement' }));
+
+    await waitFor(() => expect(reactivateSubscription).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('Actif')).toBeInTheDocument();
+    expect(screen.getByText(/Renouvellement le 1 août 2026/)).toBeInTheDocument();
+    expect(getSubscription).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows an inline error when reactivation fails and stays on the pending state', async () => {
+    const getSubscription = vi.fn<BillingClient['getSubscription']>().mockResolvedValue(PENDING_VIEW);
+    const reactivateSubscription = vi
+      .fn<BillingClient['reactivateSubscription']>()
+      .mockRejectedValue(new BillingError('provider-unavailable', 503));
+    const client = fakeBillingClient(getSubscription, { reactivateSubscription });
+    render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reprendre mon abonnement' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/momentanément indisponible/);
+    expect(screen.getByText('Résiliation programmée')).toBeInTheDocument();
   });
 });
 

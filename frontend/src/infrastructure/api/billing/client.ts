@@ -80,6 +80,14 @@ export function createHttpBillingClient(options: HttpBillingClientOptions): Bill
       return toSubscriptionView(data);
     },
 
+    async reactivateSubscription() {
+      const { data, error, response } = await client.POST('/v1/subscription/reactivate', {
+        credentials: 'include',
+      });
+      if (error || !data) throw billingError(response.status, error?.detail ?? error?.title);
+      return toSubscriptionView(data);
+    },
+
     async getSubscription() {
       const { data, error, response } = await client.GET('/v1/subscription', {
         credentials: 'include',
