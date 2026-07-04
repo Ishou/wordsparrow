@@ -199,6 +199,28 @@ describe('AbonnementOffer', () => {
     expect(assign).toHaveBeenCalledWith('https://checkout.test/session/abc');
   });
 
+  it('re-enables the CTA after returning from the provider via the back-forward cache', async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: 'http://localhost/abonnement', origin: 'http://localhost', assign },
+    });
+    const client = fakeBillingClient();
+    render(<AbonnementOffer client={client} />, { wrapper: withAuth(ELIGIBLE) });
+
+    await acceptAndConfirm();
+    expect(screen.getByRole('button', { name: 'Confirmer et payer' })).toBeDisabled();
+
+    // Browser restores this page from the bfcache when the user presses back from Mollie.
+    await act(async () => {
+      const pageshow = new Event('pageshow');
+      Object.defineProperty(pageshow, 'persisted', { value: true });
+      window.dispatchEvent(pageshow);
+    });
+
+    expect(screen.getByRole('button', { name: 'Confirmer et payer' })).not.toBeDisabled();
+  });
+
   it('shows an inline message when checkout fails with a BillingError', async () => {
     const client = fakeBillingClient({
       createCheckoutSession: vi.fn().mockRejectedValue(new BillingError('provider-unavailable', 503)),
