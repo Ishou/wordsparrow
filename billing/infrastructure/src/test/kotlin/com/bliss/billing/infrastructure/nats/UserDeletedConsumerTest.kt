@@ -278,6 +278,13 @@ class UserDeletedConsumerTest {
             if (externalRef in failRefs) throw RuntimeException("provider down")
         }
 
+        override suspend fun reactivate(
+            userId: UUID,
+            currentExternalRef: String,
+            tier: Tier,
+            startDate: Instant,
+        ): ProviderSubscriptionState = error("unused")
+
         override suspend fun listActiveSubscriptions(): List<ProviderSubscriptionRef> = emptyList()
     }
 
@@ -301,6 +308,11 @@ class UserDeletedConsumerTest {
 
         override suspend fun listPendingCancellationBefore(cutoff: Instant): List<Subscription> =
             byUser.values.filter { it.status == SubscriptionStatus.PENDING_CANCELLATION }
+
+        override suspend fun listPendingCancellationExpiredAt(now: Instant): List<Subscription> =
+            byUser.values.filter {
+                it.status == SubscriptionStatus.PENDING_CANCELLATION && it.periodEnd?.isAfter(now) == false
+            }
     }
 
     private class RecordingPublisher : SubscriptionPublisher {

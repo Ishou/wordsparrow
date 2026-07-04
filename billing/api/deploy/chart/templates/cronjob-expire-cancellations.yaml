@@ -1,0 +1,66 @@
+{{- if .Values.expireCancellations.enabled -}}
+{{/*
+Scheduled-non-renewal expiry sweep (CGV Art. 14.1, ADR-0078).
+
+Runs the `:billing:worker` `--expire-lapsed-cancellations` CLI on a daily
+CronJob (ADR-0042 pattern). Identity maps subscription status alone to
+entitlement (no periodEnd), so a résiliation that stays `pending_cancellation`
+would keep a user premium forever; this sweep flips lapsed rows to `expired`
+and publishes SubscriptionChanged so identity drops them to FREE at period_end.
+Needs only the DB + NATS (no Mollie/email wiring). Not gated by email.enabled —
+this is entitlement correctness, not a legal-email path.
+*/}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "bliss-billing-api.fullname" . }}-expire-cancellations
+  labels: {{- include "bliss-billing-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: expire-cancellations
+spec:
+  schedule: {{ .Values.expireCancellations.schedule | quote }}
+  # Forbid: the sweep is idempotent (only pending_cancellation rows are selected), but an overlap wastes a DB pass.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: {{ .Values.expireCancellations.activeDeadlineSeconds }}
+      # No retries: the next day's CronJob re-selects any row still lapsed, and the transition is idempotent.
+      backoffLimit: 0
+      template:
+        metadata:
+          labels: {{- include "bliss-billing-api.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: expire-cancellations
+        spec:
+          serviceAccountName: {{ include "bliss-billing-api.serviceAccountName" . }}
+          restartPolicy: Never
+          securityContext: {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: worker
+              image: {{ include "bliss-billing-api.workerImage" . | quote }}
+              imagePullPolicy: {{ .Values.renewalNotices.image.pullPolicy }}
+              securityContext: {{- toYaml .Values.containerSecurityContext | nindent 16 }}
+              command: ["/app/bin/billing-worker"]
+              args: ["--expire-lapsed-cancellations"]
+              env:
+                # CNPG-managed connection string (same key the api Deployment uses).
+                - name: BILLING_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.database.clusterName }}-app
+                      key: uri
+                # JetStream endpoint the sweep publishes SubscriptionChanged(expired) to; mirrors the api Deployment's NATS_URL.
+                - name: NATS_URL
+                  value: {{ .Values.expireCancellations.natsUrl | quote }}
+                {{- with .Values.renewalNotices.env }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              {{- with .Values.expireCancellations.resources }}
+              resources: {{- toYaml . | nindent 16 }}
+              {{- end }}
+              # readOnlyRootFilesystem requires a writable /tmp (JVM PerfData etc).
+              volumeMounts:
+                - {name: tmp, mountPath: /tmp}
+          volumes:
+            - {name: tmp, emptyDir: {}}
+{{- end }}

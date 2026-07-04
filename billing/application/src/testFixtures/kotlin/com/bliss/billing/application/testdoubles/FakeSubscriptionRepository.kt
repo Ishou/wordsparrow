@@ -37,4 +37,10 @@ class FakeSubscriptionRepository : SubscriptionRepository {
             it.status == SubscriptionStatus.PENDING_CANCELLATION &&
                 (updatedAt[it.userId] ?: Instant.EPOCH).isBefore(cutoff)
         }
+
+    override suspend fun listPendingCancellationExpiredAt(now: Instant): List<Subscription> =
+        byUserId.values.filter {
+            it.status == SubscriptionStatus.PENDING_CANCELLATION &&
+                it.periodEnd?.isAfter(now) == false
+        }
 }

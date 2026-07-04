@@ -2,12 +2,14 @@ package com.bliss.billing.application.testdoubles
 
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.CheckoutUrls
+import com.bliss.billing.application.ports.NoValidMandateException
 import com.bliss.billing.application.ports.ProviderSubscriptionRef
 import com.bliss.billing.application.ports.ProviderSubscriptionState
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
+import java.time.Instant
 import java.util.UUID
 
 /** In-memory BillingProviderPort: states are seeded per reference; `cancel` is idempotent and records calls; failures are configurable per reference. */
@@ -96,6 +98,50 @@ class FakeBillingProvider : BillingProviderPort {
     override suspend fun cancel(externalRef: String) {
         if (externalRef in cancelFailures) throw IllegalStateException("provider cancel failed for $externalRef")
         cancelCalls.add(externalRef)
+    }
+
+    data class ReactivateCall(
+        val userId: UUID,
+        val currentExternalRef: String,
+        val tier: Tier,
+        val startDate: Instant,
+    )
+
+    val reactivateCalls = mutableListOf<ReactivateCall>()
+
+    /** The state `reactivate` returns; defaults to an active subscription keyed by a fresh composite ref. */
+    var subscriptionToReactivate: ProviderSubscriptionState? = null
+
+    /** When true, the next `reactivate` throws [NoValidMandateException] and resets this flag, simulating a customer with no reusable mandate. */
+    var failReactivateNoMandateOnce = false
+
+    /** When true, the next `reactivate` throws a transient failure and resets this flag. */
+    var failReactivateOnce = false
+
+    override suspend fun reactivate(
+        userId: UUID,
+        currentExternalRef: String,
+        tier: Tier,
+        startDate: Instant,
+    ): ProviderSubscriptionState {
+        reactivateCalls.add(ReactivateCall(userId, currentExternalRef, tier, startDate))
+        if (failReactivateNoMandateOnce) {
+            failReactivateNoMandateOnce = false
+            throw NoValidMandateException("no valid mandate for $userId")
+        }
+        if (failReactivateOnce) {
+            failReactivateOnce = false
+            throw IllegalStateException("provider reactivate failed (simulated)")
+        }
+        return subscriptionToReactivate
+            ?: ProviderSubscriptionState(
+                externalRef = "cust:sub_reactivated",
+                userId = userId,
+                tier = tier,
+                status = SubscriptionStatus.ACTIVE,
+                source = BillingSource.MOLLIE,
+                periodEnd = startDate,
+            )
     }
 
     override suspend fun listActiveSubscriptions(): List<ProviderSubscriptionRef> = activeSubscriptions.toList()

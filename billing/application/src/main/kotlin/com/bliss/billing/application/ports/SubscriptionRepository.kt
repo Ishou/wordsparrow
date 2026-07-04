@@ -21,4 +21,7 @@ interface SubscriptionRepository {
 
     /** PENDING_CANCELLATION rows last touched before [cutoff]; a stuck row means a deleted user may still be billable, so the backstop alerts on it (ADR-0078, ADR-0032). */
     suspend fun listPendingCancellationBefore(cutoff: Instant): List<Subscription>
+
+    /** Scheduled non-renewals whose paid period has ended at or before [now]; the expiry sweep flips these to EXPIRED so identity drops entitlement (CGV Art. 14.1). */
+    suspend fun listPendingCancellationExpiredAt(now: Instant): List<Subscription>
 }

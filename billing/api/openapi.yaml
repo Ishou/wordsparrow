@@ -210,6 +210,71 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /v1/subscription/reactivate:
+    post:
+      operationId: reactivateSubscription
+      summary: Resume the caller's scheduled non-renewal at no charge.
+      description: |
+        Reverses a résiliation (`POST /v1/subscription/cancel`) while the paid
+        period is still running: the caller's `pending_cancellation`
+        subscription resumes renewing off the payment mandate already on file,
+        with the next charge deferred to the current `periodEnd` — so
+        reactivation never charges the caller now (CGV Art. 14.1). The caller is
+        identified by the `__Secure-ws_session` cookie; `userId` is resolved
+        server-side (never taken from the body).
+
+        Only a `pending_cancellation` whose `periodEnd` is still in the future
+        can be resumed; once the period has lapsed the caller subscribes afresh
+        via checkout, and this endpoint returns 404.
+      tags: [subscription]
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: |
+            Reactivation accepted. Body is the caller's updated subscription
+            (status back to `active`; `periodEnd` unchanged).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionView'
+        '401':
+          description: |
+            No valid `__Secure-ws_session` cookie. RFC 7807;
+            `type` is `https://bliss.example/errors/auth-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: |
+            Authenticated caller lacks the `billing:subscribe` capability this
+            endpoint requires (ADR-0078 / ADR-0060 amendments). RFC 7807;
+            `type` is `https://bliss.example/errors/forbidden`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: |
+            The caller has no scheduled non-renewal with a paid period still
+            running to resume. RFC 7807;
+            `type` is `https://bliss.example/errors/not-reactivatable`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: |
+            The payment provider is unavailable or the mandate could not be
+            reused, so the reactivation could not be completed; the caller may
+            retry later. RFC 7807;
+            `type` is `https://bliss.example/errors/provider-unavailable`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /v1/webhook:
     post:
       operationId: receiveProviderWebhook

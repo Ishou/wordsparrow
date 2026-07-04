@@ -242,6 +242,20 @@ class IngestProviderEventTest {
         }
 
     @Test
+    fun `a stray renewal webhook does not resurrect a scheduled non-renewal`() =
+        runTest {
+            val pending = subscription(userId = userId, status = SubscriptionStatus.PENDING_CANCELLATION, externalRef = subscriptionRef)
+            repository.save(pending)
+            provider.seed(providerState(userId, externalRef = subscriptionRef, status = SubscriptionStatus.ACTIVE))
+
+            val outcome = useCase.execute(subscriptionRef)
+
+            assertThat(outcome).isEqualTo(IngestOutcome.Unchanged)
+            assertThat(repository.findByExternalRef(subscriptionRef)!!.status).isEqualTo(SubscriptionStatus.PENDING_CANCELLATION)
+            assertThat(publisher.events).isEmpty()
+        }
+
+    @Test
     fun `drops an illegal transition without mutating or re-publishing`() =
         runTest {
             seedFirstPayment()

@@ -28,7 +28,7 @@ class CancelSubscriptionTest {
     private val userId = UUID.randomUUID()
 
     @Test
-    fun `cancels at the provider and reflects canceled while keeping the row`() =
+    fun `stops renewal at the provider and leaves the row pending cancellation until period end`() =
         runTest {
             repository.save(subscription(userId = userId, externalRef = "sub_1"))
 
@@ -36,12 +36,22 @@ class CancelSubscriptionTest {
 
             assertThat(outcome).isInstanceOf(CancelSubscriptionOutcome.Cancelled::class)
             val cancelled = outcome as CancelSubscriptionOutcome.Cancelled
-            assertThat(cancelled.subscriptionView.status).isEqualTo(SubscriptionStatus.CANCELED)
+            assertThat(cancelled.subscriptionView.status).isEqualTo(SubscriptionStatus.PENDING_CANCELLATION)
             assertThat(provider.cancelCalls).isEqualTo(listOf("sub_1"))
             val survivor = repository.findByUserId(userId)
             assertThat(survivor).isNotNull()
-            assertThat(survivor!!.status).isEqualTo(SubscriptionStatus.CANCELED)
-            assertThat(publisher.events.single().status).isEqualTo(SubscriptionStatus.CANCELED)
+            assertThat(survivor!!.status).isEqualTo(SubscriptionStatus.PENDING_CANCELLATION)
+            assertThat(publisher.events.single().status).isEqualTo(SubscriptionStatus.PENDING_CANCELLATION)
+        }
+
+    @Test
+    fun `never tombstones the subscription to canceled - deletion owns that transition`() =
+        runTest {
+            repository.save(subscription(userId = userId, externalRef = "sub_1"))
+
+            useCase.execute(userId)
+
+            assertThat(repository.findByUserId(userId)!!.status).isEqualTo(SubscriptionStatus.PENDING_CANCELLATION)
         }
 
     @Test
@@ -100,7 +110,7 @@ class CancelSubscriptionTest {
             val outcome = useCase.execute(userId)
 
             assertThat(outcome).isInstanceOf(CancelSubscriptionOutcome.Cancelled::class)
-            assertThat(repository.findByUserId(userId)!!.status).isEqualTo(SubscriptionStatus.CANCELED)
+            assertThat(repository.findByUserId(userId)!!.status).isEqualTo(SubscriptionStatus.PENDING_CANCELLATION)
             assertThat(notifier.cancellationConfirmations).hasSize(0)
         }
 

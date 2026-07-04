@@ -15,6 +15,7 @@ internal object ProblemTypes {
     const val INVALID_CHECKOUT_REQUEST = "https://bliss.example/errors/invalid-checkout-request"
     const val ALREADY_SUBSCRIBED = "https://bliss.example/errors/already-subscribed"
     const val NO_ACTIVE_SUBSCRIPTION = "https://bliss.example/errors/no-active-subscription"
+    const val NOT_REACTIVATABLE = "https://bliss.example/errors/not-reactivatable"
     const val PROVIDER_UNAVAILABLE = "https://bliss.example/errors/provider-unavailable"
     const val INVALID_WEBHOOK_BODY = "https://bliss.example/errors/invalid-webhook-body"
 }

@@ -14,6 +14,7 @@ import com.bliss.billing.application.usecases.IngestProviderEvent
 import com.bliss.billing.application.usecases.LegalEmailNotifier
 import com.bliss.billing.application.usecases.ListReceipts
 import com.bliss.billing.application.usecases.NoOpContractConfirmationNotifier
+import com.bliss.billing.application.usecases.ReactivateSubscription
 import com.bliss.billing.application.usecases.SubscriberEmailResolver
 import com.bliss.billing.application.usecases.SubscriptionQuery
 import com.bliss.billing.domain.Cadence
@@ -108,6 +109,7 @@ fun main() {
             fetchEmail = { cookie -> identityClient.fetchEmail(cookie) },
             createCheckoutSession = CreateCheckoutSession(provider, subscriptions, consents, clock),
             cancelSubscription = CancelSubscription(provider, subscriptions, publisher, clock, eventIds, contractNotifier),
+            reactivateSubscription = ReactivateSubscription(provider, subscriptions, publisher, clock, eventIds),
             ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds, contractNotifier),
             subscriptionQuery = SubscriptionQuery(subscriptions),
             listReceipts = ListReceipts(receiptProvider),

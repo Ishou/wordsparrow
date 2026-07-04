@@ -29,6 +29,9 @@ dependencies {
     // CIO client engine for the billing Brevo email adapter when the renewal-notice command runs bright (ADR-0094 §2).
     implementation("io.ktor:ktor-client-core:$ktorVersion")
     implementation("io.ktor:ktor-client-cio:$ktorVersion")
+    // JetStream publisher + UUIDv7 event ids for the expiry sweep's SubscriptionChanged (same coords as the api module).
+    implementation("io.nats:jnats:2.25.3")
+    implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")

@@ -5,6 +5,7 @@ import com.bliss.billing.application.usecases.CancelSubscription
 import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.application.usecases.IngestProviderEvent
 import com.bliss.billing.application.usecases.ListReceipts
+import com.bliss.billing.application.usecases.ReactivateSubscription
 import com.bliss.billing.application.usecases.SubscriptionQuery
 
 // Hand-rolled DI graph; no framework injection.
@@ -14,6 +15,7 @@ class Wiring(
     val fetchEmail: suspend (String?) -> String?,
     val createCheckoutSession: CreateCheckoutSession,
     val cancelSubscription: CancelSubscription,
+    val reactivateSubscription: ReactivateSubscription,
     val ingestProviderEvent: IngestProviderEvent,
     val subscriptionQuery: SubscriptionQuery,
     val listReceipts: ListReceipts,

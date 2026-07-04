@@ -4,12 +4,15 @@ import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.Clock
 import com.bliss.billing.application.ports.ContractConfirmationNotifier
 import com.bliss.billing.application.ports.EmailSender
+import com.bliss.billing.application.ports.EventIdGenerator
 import com.bliss.billing.application.ports.OfferPrice
 import com.bliss.billing.application.ports.OutboundEmailStore
 import com.bliss.billing.application.ports.RenewalNoticeLedger
 import com.bliss.billing.application.ports.SubscriptionOffer
+import com.bliss.billing.application.ports.SubscriptionPublisher
 import com.bliss.billing.application.ports.SubscriptionRepository
 import com.bliss.billing.application.usecases.DrainEmailOutbox
+import com.bliss.billing.application.usecases.ExpireLapsedCancellations
 import com.bliss.billing.application.usecases.LegalEmailNotifier
 import com.bliss.billing.application.usecases.NoOpContractConfirmationNotifier
 import com.bliss.billing.application.usecases.ReconcileSubscriptions
@@ -19,6 +22,7 @@ import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.ChatelWindow
 import com.bliss.billing.infrastructure.email.BillingBrevoConfig
 import com.bliss.billing.infrastructure.email.BillingBrevoEmailSender
+import com.bliss.billing.infrastructure.nats.NatsSubscriptionPublisher
 import com.bliss.billing.infrastructure.persistence.BillingDatabase
 import com.bliss.billing.infrastructure.persistence.PostgresConsentRepository
 import com.bliss.billing.infrastructure.persistence.PostgresMollieCustomerStore
@@ -28,7 +32,9 @@ import com.bliss.billing.infrastructure.persistence.PostgresSubscriptionReposito
 import com.bliss.billing.infrastructure.provider.MollieBillingAdapter
 import com.bliss.billing.infrastructure.provider.MollieConfig
 import com.bliss.billing.infrastructure.provider.SdkMollieClient
+import com.fasterxml.uuid.Generators
 import io.ktor.client.engine.cio.CIO
+import io.nats.client.Nats
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -50,6 +56,7 @@ fun main(args: Array<String>) {
             }
             args.contains("--send-renewal-notices") -> runSendRenewalNotices()
             args.contains("--drain-email-outbox") -> runDrainEmailOutbox()
+            args.contains("--expire-lapsed-cancellations") -> runExpireLapsedCancellations()
             args.isEmpty() || args.contains("--reconcile") -> runReconcile()
             else -> {
                 log.error("event=worker_unknown_arguments args=\"{}\"", args.joinToString(separator = " "))
@@ -61,7 +68,9 @@ fun main(args: Array<String>) {
 }
 
 private fun printUsage() {
-    log.info("usage: billing-worker [--reconcile] | [--send-renewal-notices] | [--drain-email-outbox] | --help")
+    log.info(
+        "usage: billing-worker [--reconcile] | [--send-renewal-notices] | [--drain-email-outbox] | [--expire-lapsed-cancellations] | --help",
+    )
 }
 
 private fun runReconcile(): Int {
@@ -117,6 +126,27 @@ private fun runDrainEmailOutbox(): Int {
         database.stop()
     }
 }
+
+// Expiry sweep: needs only the DB + NATS (no Mollie provider); publishes SubscriptionChanged(status=expired) so identity drops entitlement at period_end.
+private fun runExpireLapsedCancellations(): Int {
+    val database = BillingDatabase(poolName = "billing-worker", maxPoolSize = 2, requireUrl = true).apply { start() }
+    val natsConnection = Nats.connect(natsUrl())
+    return try {
+        val dataSource = database.dataSource() ?: error("BILLING_DATABASE_URL produced a null DataSource")
+        val publisher = NatsSubscriptionPublisher(natsConnection.jetStream())
+        val eventIds = EventIdGenerator { Generators.timeBasedEpochGenerator().generate() }
+        val exit =
+            expireLapsedCancellationsAndExit(PostgresSubscriptionRepository(dataSource), publisher, Clock { Instant.now() }, eventIds)
+        // Async publishes must reach the server before this short-lived Job exits, or the expiry events are lost.
+        natsConnection.flush(Duration.ofSeconds(5))
+        exit
+    } finally {
+        natsConnection.close()
+        database.stop()
+    }
+}
+
+private fun natsUrl(): String = System.getenv("NATS_URL") ?: "nats://bliss-nats.wordsparrow:4222"
 
 private fun agingThreshold(): Duration = Duration.ofHours(System.getenv("BILLING_RECONCILE_AGING_HOURS")?.toLongOrNull() ?: 24L)
 
@@ -189,6 +219,18 @@ internal fun reconcileAndExit(
             summary.orphansCancelled,
             summary.agingPendingCancellations,
         )
+        0
+    }
+
+internal fun expireLapsedCancellationsAndExit(
+    repository: SubscriptionRepository,
+    publisher: SubscriptionPublisher,
+    clock: Clock,
+    eventIds: EventIdGenerator,
+): Int =
+    runBlocking {
+        val summary = ExpireLapsedCancellations(repository, publisher, clock, eventIds).execute()
+        log.info("event=billing_expire_lapsed_cancellations_done expired={}", summary.expired)
         0
     }
 

@@ -93,6 +93,18 @@ class PostgresSubscriptionRepository(
             }
         }
 
+    override suspend fun listPendingCancellationExpiredAt(now: Instant): List<Subscription> =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(SELECT_LAPSED_PENDING_SQL).use { stmt ->
+                    stmt.setObject(1, now.atOffset(ZoneOffset.UTC))
+                    stmt.executeQuery().use { rs ->
+                        buildList { while (rs.next()) add(rs.toSubscription()) }
+                    }
+                }
+            }
+        }
+
     private fun ResultSet.toSubscription(): Subscription =
         Subscription(
             userId = getObject("user_id", UUID::class.java),
@@ -117,6 +129,11 @@ class PostgresSubscriptionRepository(
         // Aging deletion tombstones: pending_cancellation rows the backstop alerts on (ADR-0078, ADR-0032).
         private const val SELECT_AGING_PENDING_SQL =
             "SELECT $COLUMNS FROM billing_subscriptions WHERE status = 'pending_cancellation' AND updated_at < ?"
+
+        // Lapsed scheduled non-renewals: pending_cancellation rows whose paid period has ended; the sweep expires them (CGV Art. 14.1).
+        private const val SELECT_LAPSED_PENDING_SQL =
+            "SELECT $COLUMNS FROM billing_subscriptions " +
+                "WHERE status = 'pending_cancellation' AND period_end IS NOT NULL AND period_end <= ?"
         private const val DELETE_SQL =
             "DELETE FROM billing_subscriptions WHERE user_id = ?"
         private const val UPSERT_SQL =

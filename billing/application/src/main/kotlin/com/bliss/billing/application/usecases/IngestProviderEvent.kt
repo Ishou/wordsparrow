@@ -149,6 +149,8 @@ class IngestProviderEvent(
     private fun Subscription.advanceTo(state: ProviderSubscriptionState): Subscription =
         when {
             state.status == status -> copy(tier = state.tier, periodEnd = state.periodEnd)
+            // A scheduled non-renewal is resumed only via reactivate() (explicit user intent + mandate re-validation) — a stray webhook on the stale ref must stay a no-op, not resurrect it through the domain's raw PENDING_CANCELLATION -> ACTIVE transition.
+            status == SubscriptionStatus.PENDING_CANCELLATION && state.status == SubscriptionStatus.ACTIVE -> this
             status.canTransitionTo(state.status) ->
                 copy(status = status.transition(state.status), tier = state.tier, periodEnd = state.periodEnd)
             else -> this

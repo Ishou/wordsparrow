@@ -159,6 +159,23 @@ emailOutboxDrain:
   resources:
     requests: {cpu: 100m, memory: 256Mi}
     limits: {cpu: 500m, memory: 512Mi}
+# Scheduled-non-renewal expiry sweep (CGV Art. 14.1, ADR-0078). Runs the :billing:worker
+# `--expire-lapsed-cancellations` CLI daily; `templates/cronjob-expire-cancellations.yaml` owns
+# rendering. Flips lapsed pending_cancellation rows to expired and publishes SubscriptionChanged
+# so identity drops entitlement at period_end (identity is status-based, no periodEnd). Off by
+# default so local installs don't pull a worker image; prod enables. NOT gated by email.enabled —
+# this is entitlement correctness, not a legal-email path.
+expireCancellations:
+  enabled: false
+  # 04:30 UTC — after renewal-notices (04:00) so the two daily worker passes don't overlap.
+  schedule: "30 4 * * *"
+  # 5 minutes: one indexed DB scan plus one JetStream publish per lapsed row; generous for the test-phase volume.
+  activeDeadlineSeconds: 300
+  # JetStream endpoint; mirrors the api Deployment's NATS_URL env (bliss-nats in the wordsparrow namespace, ADR-0049).
+  natsUrl: "nats://bliss-nats.wordsparrow:4222"
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
 # Dedicated Secret holding the Brevo transactional API key (key BREVO_API_KEY; same value as identity). Own lifecycle, separate from the bootstrapped envFromSecret. Empty ⇒ not wired (dark).
 brevoApiKeySecret: ""
 # Kubernetes Secret to envFrom; carries MOLLIE_API_KEY. Bootstrapped per ADR-0009 §10.

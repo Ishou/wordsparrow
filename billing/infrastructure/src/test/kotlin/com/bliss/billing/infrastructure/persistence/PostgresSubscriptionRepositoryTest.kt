@@ -161,6 +161,20 @@ class PostgresSubscriptionRepositoryTest {
         }
 
     @Test
+    fun `listPendingCancellationExpiredAt returns only pending cancellation rows whose period has lapsed`() =
+        runTest {
+            val lapsed = sub(status = SubscriptionStatus.PENDING_CANCELLATION, end = now.minusSeconds(1))
+            val atBoundary = sub(status = SubscriptionStatus.PENDING_CANCELLATION, end = now)
+            val running = sub(status = SubscriptionStatus.PENDING_CANCELLATION, end = now.plusSeconds(1))
+            val noPeriod = sub(status = SubscriptionStatus.PENDING_CANCELLATION, end = null)
+            val activePast = sub(status = SubscriptionStatus.ACTIVE, end = now.minusSeconds(1))
+            listOf(lapsed, atBoundary, running, noPeriod, activePast).forEach { repo.save(it) }
+
+            assertThat(repo.listPendingCancellationExpiredAt(now).map { it.userId })
+                .containsExactlyInAnyOrder(lapsed.userId, atBoundary.userId)
+        }
+
+    @Test
     fun `enum wire casing round-trips through a raw lowercase insert`() =
         runTest {
             val userId = UUID.randomUUID()

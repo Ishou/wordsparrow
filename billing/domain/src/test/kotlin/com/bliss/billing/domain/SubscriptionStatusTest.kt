@@ -23,6 +23,8 @@ class SubscriptionStatusTest {
             PAST_DUE to PENDING_CANCELLATION,
             EXPIRED to ACTIVE,
             PENDING_CANCELLATION to CANCELED,
+            PENDING_CANCELLATION to ACTIVE,
+            PENDING_CANCELLATION to EXPIRED,
         )
 
     @Test
@@ -49,6 +51,12 @@ class SubscriptionStatusTest {
     fun `pending cancellation is reachable from every live state`() {
         assertThat(ACTIVE.canTransitionTo(PENDING_CANCELLATION)).isTrue()
         assertThat(PAST_DUE.canTransitionTo(PENDING_CANCELLATION)).isTrue()
+    }
+
+    @Test
+    fun `pending cancellation is reversible to active and forward to expired`() {
+        assertThat(PENDING_CANCELLATION.canTransitionTo(ACTIVE)).isTrue()
+        assertThat(PENDING_CANCELLATION.canTransitionTo(EXPIRED)).isTrue()
     }
 
     @Test
