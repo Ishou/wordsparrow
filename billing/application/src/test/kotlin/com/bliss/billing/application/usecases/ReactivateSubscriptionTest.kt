@@ -1,6 +1,7 @@
 package com.bliss.billing.application.usecases
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
@@ -96,6 +97,45 @@ class ReactivateSubscriptionTest {
 
             assertThat(outcome).isEqualTo(ReactivateSubscriptionOutcome.NotReactivatable)
             assertThat(provider.reactivateCalls).hasSize(0)
+        }
+
+    @Test
+    fun `loses a concurrent reactivate race and cancels its own now-orphaned subscription`() =
+        runTest {
+            repository.save(
+                subscription(
+                    userId = userId,
+                    status = SubscriptionStatus.PENDING_CANCELLATION,
+                    externalRef = "cust:sub_old",
+                    periodEnd = PERIOD_END,
+                ),
+            )
+            provider.subscriptionToReactivate =
+                providerState(userId = userId, externalRef = "cust:sub_new", periodEnd = PERIOD_END)
+            // Simulate a concurrent reactivate request whose own write already committed while our provider call was in flight.
+            provider.onReactivate = {
+                repository.save(
+                    subscription(
+                        userId = userId,
+                        status = SubscriptionStatus.ACTIVE,
+                        externalRef = "cust:sub_winner",
+                        periodEnd = PERIOD_END,
+                    ),
+                )
+            }
+
+            val outcome = useCase.execute(userId)
+
+            assertThat(outcome).isInstanceOf(ReactivateSubscriptionOutcome.Reactivated::class)
+            val reactivated = outcome as ReactivateSubscriptionOutcome.Reactivated
+            assertThat(reactivated.subscriptionView.status).isEqualTo(SubscriptionStatus.ACTIVE)
+
+            // Our own duplicate Mollie subscription is cancelled immediately, not left orphaned for the next reconcile pass.
+            assertThat(provider.cancelCalls).containsExactly("cust:sub_new")
+            val stored = repository.findByUserId(userId)
+            assertThat(stored).isNotNull()
+            assertThat(stored!!.externalRef).isEqualTo("cust:sub_winner")
+            assertThat(publisher.events).hasSize(0)
         }
 
     @Test

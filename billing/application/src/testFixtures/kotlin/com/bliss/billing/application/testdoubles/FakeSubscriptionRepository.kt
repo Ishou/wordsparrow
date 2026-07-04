@@ -24,6 +24,13 @@ class FakeSubscriptionRepository : SubscriptionRepository {
         updatedAt[subscription.userId] = saveStamp
     }
 
+    override suspend fun saveIfPendingCancellation(subscription: Subscription): Boolean {
+        val current = byUserId[subscription.userId]
+        if (current != null && current.status != SubscriptionStatus.PENDING_CANCELLATION) return false
+        save(subscription)
+        return true
+    }
+
     override suspend fun delete(userId: UUID) {
         byUserId.remove(userId)
         updatedAt.remove(userId)

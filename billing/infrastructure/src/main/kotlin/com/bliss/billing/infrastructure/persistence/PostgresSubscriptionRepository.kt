@@ -59,6 +59,24 @@ class PostgresSubscriptionRepository(
         }
     }
 
+    override suspend fun saveIfPendingCancellation(subscription: Subscription): Boolean =
+        withContext(Dispatchers.IO) {
+            val ts = now().truncatedTo(ChronoUnit.MICROS).atOffset(ZoneOffset.UTC)
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(CAS_UPSERT_SQL).use { stmt ->
+                    stmt.setObject(1, subscription.userId)
+                    stmt.setString(2, subscription.tier.value)
+                    stmt.setString(3, subscription.status.wire)
+                    stmt.setString(4, subscription.source.wire)
+                    stmt.setString(5, subscription.externalRef)
+                    stmt.setObject(6, subscription.periodEnd?.truncatedTo(ChronoUnit.MICROS)?.atOffset(ZoneOffset.UTC))
+                    stmt.setObject(7, ts)
+                    stmt.setObject(8, ts)
+                    stmt.executeUpdate() > 0
+                }
+            }
+        }
+
     override suspend fun delete(userId: UUID) {
         withContext(Dispatchers.IO) {
             dataSource.connection.use { conn ->
@@ -143,5 +161,16 @@ class PostgresSubscriptionRepository(
                 "ON CONFLICT (user_id) DO UPDATE SET " +
                 "tier = EXCLUDED.tier, status = EXCLUDED.status, source = EXCLUDED.source, " +
                 "external_ref = EXCLUDED.external_ref, period_end = EXCLUDED.period_end, updated_at = EXCLUDED.updated_at"
+
+        // The WHERE guards only the DO UPDATE branch; a fresh insert (no conflicting row) always proceeds, which matches
+        // reactivate's precondition of an existing pending_cancellation row (ADR-0078 reactivate race guard).
+        private const val CAS_UPSERT_SQL =
+            "INSERT INTO billing_subscriptions " +
+                "(user_id, tier, status, source, external_ref, period_end, created_at, updated_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
+                "ON CONFLICT (user_id) DO UPDATE SET " +
+                "tier = EXCLUDED.tier, status = EXCLUDED.status, source = EXCLUDED.source, " +
+                "external_ref = EXCLUDED.external_ref, period_end = EXCLUDED.period_end, updated_at = EXCLUDED.updated_at " +
+                "WHERE billing_subscriptions.status = 'pending_cancellation'"
     }
 }

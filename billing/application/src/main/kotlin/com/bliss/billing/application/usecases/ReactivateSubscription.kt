@@ -9,6 +9,7 @@ import com.bliss.billing.application.ports.SubscriptionRepository
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.SubscriptionStatusView
 import com.bliss.billing.domain.Tier
+import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
@@ -31,6 +32,8 @@ class ReactivateSubscription(
     private val clock: Clock,
     private val eventIds: EventIdGenerator,
 ) {
+    private val log = LoggerFactory.getLogger(ReactivateSubscription::class.java)
+
     suspend fun execute(userId: UUID): ReactivateSubscriptionOutcome {
         val subscription = repository.findByUserId(userId) ?: return ReactivateSubscriptionOutcome.NotReactivatable
         if (subscription.status != SubscriptionStatus.PENDING_CANCELLATION) return ReactivateSubscriptionOutcome.NotReactivatable
@@ -38,9 +41,15 @@ class ReactivateSubscription(
         if (!periodEnd.isAfter(clock.now())) return ReactivateSubscriptionOutcome.NotReactivatable
 
         val newState = reactivateAtProvider(userId, subscription.externalRef, subscription.tier, periodEnd)
-
         val reactivated = subscription.reactivate(newState.externalRef, periodEnd)
-        repository.save(reactivated)
+
+        // provider.reactivate isn't idempotent: losing this CAS means a concurrent call already won, and ours just created a duplicate live subscription — cancel it now rather than leaving it orphaned until the next reconcile pass.
+        if (!repository.saveIfPendingCancellation(reactivated)) {
+            runCatching { provider.cancel(newState.externalRef) }
+                .onFailure { log.error("billing_reactivate_orphan_cancel_failed external_ref={}", newState.externalRef, it) }
+            return existingReactivationOutcome(userId)
+        }
+
         publisher.publish(
             SubscriptionChanged(
                 eventId = eventIds.newEventId(),
@@ -53,6 +62,15 @@ class ReactivateSubscription(
             ),
         )
         return ReactivateSubscriptionOutcome.Reactivated(reactivated.statusView())
+    }
+
+    private suspend fun existingReactivationOutcome(userId: UUID): ReactivateSubscriptionOutcome {
+        val winner = repository.findByUserId(userId)
+        return if (winner?.status == SubscriptionStatus.ACTIVE) {
+            ReactivateSubscriptionOutcome.Reactivated(winner.statusView())
+        } else {
+            ReactivateSubscriptionOutcome.NotReactivatable
+        }
     }
 
     private suspend fun reactivateAtProvider(

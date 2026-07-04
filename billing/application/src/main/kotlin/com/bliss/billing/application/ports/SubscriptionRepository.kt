@@ -13,6 +13,9 @@ interface SubscriptionRepository {
     /** Idempotent upsert keyed by userId. */
     suspend fun save(subscription: Subscription)
 
+    /** CAS write for reactivate: persists [subscription] only if the stored row is still `pending_cancellation`; returns false when a concurrent reactivate already won the race, so the caller can cancel its own now-orphaned provider subscription instead of leaving it stranded until the next reconcile pass. */
+    suspend fun saveIfPendingCancellation(subscription: Subscription): Boolean
+
     /** No-op if no projection exists for [userId]. */
     suspend fun delete(userId: UUID)
 

@@ -118,6 +118,9 @@ class FakeBillingProvider : BillingProviderPort {
     /** When true, the next `reactivate` throws a transient failure and resets this flag. */
     var failReactivateOnce = false
 
+    /** Invoked synchronously inside `reactivate`, before it returns; lets tests simulate a concurrent request winning the reactivation race while this call is in flight. */
+    var onReactivate: (suspend () -> Unit)? = null
+
     override suspend fun reactivate(
         userId: UUID,
         currentExternalRef: String,
@@ -125,6 +128,7 @@ class FakeBillingProvider : BillingProviderPort {
         startDate: Instant,
     ): ProviderSubscriptionState {
         reactivateCalls.add(ReactivateCall(userId, currentExternalRef, tier, startDate))
+        onReactivate?.invoke()
         if (failReactivateNoMandateOnce) {
             failReactivateNoMandateOnce = false
             throw NoValidMandateException("no valid mandate for $userId")

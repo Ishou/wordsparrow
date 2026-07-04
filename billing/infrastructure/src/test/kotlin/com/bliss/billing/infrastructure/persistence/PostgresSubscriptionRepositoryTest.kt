@@ -112,6 +112,33 @@ class PostgresSubscriptionRepositoryTest {
         }
 
     @Test
+    fun `saveIfPendingCancellation writes when the stored row is still pending_cancellation`() =
+        runTest {
+            val original = sub(status = SubscriptionStatus.PENDING_CANCELLATION)
+            repo.save(original)
+            val reactivated = original.copy(status = SubscriptionStatus.ACTIVE, externalRef = "sub_new")
+
+            val won = repo.saveIfPendingCancellation(reactivated)
+
+            assertThat(won).isEqualTo(true)
+            assertThat(repo.findByUserId(original.userId)).isEqualTo(reactivated)
+        }
+
+    @Test
+    fun `saveIfPendingCancellation rejects when a concurrent writer already moved the row off pending_cancellation`() =
+        runTest {
+            val original = sub(status = SubscriptionStatus.PENDING_CANCELLATION)
+            repo.save(original)
+            repo.save(original.copy(status = SubscriptionStatus.ACTIVE, externalRef = "sub_winner"))
+            val loser = original.copy(status = SubscriptionStatus.ACTIVE, externalRef = "sub_loser")
+
+            val won = repo.saveIfPendingCancellation(loser)
+
+            assertThat(won).isEqualTo(false)
+            assertThat(repo.findByUserId(original.userId)?.externalRef).isEqualTo("sub_winner")
+        }
+
+    @Test
     fun `findByExternalRef returns the matching subscription`() =
         runTest {
             val subscription = sub(externalRef = "sub_abc123")
