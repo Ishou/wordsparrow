@@ -306,6 +306,54 @@ class CoGenerationProbeTest {
         println("BANDTEST solved=$solved/30 band1ok=$band1ok band2ok=$band2ok band2fail=$band2fail acrossOk=$acrossOk acrossBad=$acrossBad")
     }
 
+    // The make-or-break for block assembly: join a top block from grid X with a bottom block
+    // from a DIFFERENT grid Y (independently generated) via a re-solved seam. If independent
+    // blocks join, an end-to-end block-stacking generator is viable; if not, blocks must be
+    // co-designed for their seams.
+    @Test
+    fun `seam join reconnects two INDEPENDENT blocks`() {
+        val repo = loadRepository()
+        val lexicon = Lexicon(repo, maxLen = 17)
+        val generator = GridGenerator(repo)
+        val top = 9; val bh = 2
+        fun cellOf(g: com.bliss.grid.domain.model.Grid, r: Int, c: Int): Char {
+            val cell = g.cells[Position(com.bliss.grid.domain.model.Row(r), com.bliss.grid.domain.model.Column(c))]
+            return if (cell is LetterCell) cell.letter else '#'
+        }
+        // Pre-generate a small pool of grids ONCE (generation is the slow part), then pair them.
+        val pool = ArrayList<com.bliss.grid.domain.model.Grid>()
+        var gseed = 0
+        while (pool.size < 5 && gseed < 12) {
+            gseed++
+            generator.generate(GridConstraints(width = width, height = height), Random(7100L + gseed), timeoutMs = 3_000)?.let { pool.add(it) }
+        }
+        println("SEAMINDEP pool=${pool.size}")
+        var tried = 0; var joined = 0; var seamSolves = 0
+        for (i in 0 until minOf(4, pool.size - 1)) {
+            val gx = pool[i]; val gy = pool[i + 1]
+            tried++
+            val sweep = Sweep(lexicon, Random(23L * (i + 1)), HashSet())
+            for (c in 0 until width) {
+                for (r in 0 until top) sweep.grid[r][c] = cellOf(gx, r, c)
+                for (r in top + bh until height) sweep.grid[r][c] = cellOf(gy, r, c)
+                for (r in top until top + bh) sweep.grid[r][c] = '.'
+            }
+            var ok = false
+            repeat(60) {
+                if (!ok) {
+                    if (!sweep.reconstructAbove(top)) return@repeat
+                    seamSolves++
+                    val cells = sweep.bandSolve(top, bh) ?: return@repeat
+                    for (r in 0 until bh) for (c in 0 until width) sweep.grid[top + r][c] = cells[r][c]
+                    if (SlotRegistry.build(sweep.toCellArray(), lexicon, minLen) != null) ok = true
+                    else for (r in top until top + bh) for (c in 0 until width) sweep.grid[r][c] = '.'
+                }
+            }
+            if (ok) joined++
+        }
+        println("SEAMINDEP top=$top bh=$bh tried=$tried joined=$joined seamSolves=$seamSolves")
+    }
+
     // Seam-join crux test for the block-assembly idea: take a real board, keep the top block
     // (rows 0..top-1) and bottom block (rows top+bh..) FIXED, blank a bh-row seam, and try to
     // re-solve just the seam so the whole grid re-validates. Measures how tight the seam is:
