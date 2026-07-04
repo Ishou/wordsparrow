@@ -15,6 +15,7 @@ application {
 val logbackVersion = "1.5.34"
 val logstashEncoderVersion = "9.0"
 val konsistVersion = "0.17.3"
+val ktorVersion = "3.5.0"
 
 dependencies {
     implementation(project(":billing:domain"))
@@ -25,6 +26,9 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.18")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("net.logstash.logback:logstash-logback-encoder:$logstashEncoderVersion")
+    // CIO client engine for the billing Brevo email adapter when the renewal-notice command runs bright (ADR-0094 §2).
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio:$ktorVersion")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")

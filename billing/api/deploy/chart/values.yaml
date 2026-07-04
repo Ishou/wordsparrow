@@ -111,6 +111,42 @@ env:
 # Legally-mandated durable-medium email (ADR-0094 §2) ships dark; bright = email.enabled=true. Sender address/name/reply-to default in-code (abonnement@ / WordSparrow – Abonnement / contact@), env-overridable.
 email:
   enabled: false
+# Chatel pre-renewal notice scheduler (ADR-0094 §3; art. L215-1). Runs the :billing:worker
+# `--send-renewal-notices` CLI daily; `templates/cronjob-renewal-notices.yaml` owns rendering.
+# Off by default so local installs don't pull a worker image; prod enables. Sends nothing while
+# email.enabled=false (the notifier no-ops) — the CronJob still runs.
+renewalNotices:
+  enabled: false
+  # 04:00 UTC — after the api backup window and the 03:00 grid ensure-dailies run.
+  schedule: "0 4 * * *"
+  # 15 minutes: a state re-fetch per active annual sub plus one email each; generous for the test-phase volume.
+  activeDeadlineSeconds: 900
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+  # Worker image; built independently of the api image (billing/worker/Dockerfile). Pin to digest in prod.
+  image:
+    repository: ghcr.io/ishou/bliss/wordsparrow-billing-worker
+    tag: "main"
+    digest: ""
+    pullPolicy: IfNotPresent
+    requireDigest: false
+  # Inline env beyond DB + email (wired in the template). OTel agent baked into the worker image (ADR-0027).
+  env:
+    - name: JAVA_TOOL_OPTIONS
+      value: "-javaagent:/app/otel.jar -XX:MaxRAMPercentage=75.0"
+    - name: OTEL_SERVICE_NAME
+      value: "billing-worker"
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: "bounded_context=billing"
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      value: "http://observability-signoz-otel-collector.observability:4317"
+    - name: OTEL_EXPORTER_OTLP_PROTOCOL
+      value: "grpc"
+    - name: OTEL_TRACES_SAMPLER
+      value: "parentbased_traceidratio"
+    - name: OTEL_TRACES_SAMPLER_ARG
+      value: "1.0"
 # Dedicated Secret holding the Brevo transactional API key (key BREVO_API_KEY; same value as identity). Own lifecycle, separate from the bootstrapped envFromSecret. Empty ⇒ not wired (dark).
 brevoApiKeySecret: ""
 # Kubernetes Secret to envFrom; carries MOLLIE_API_KEY. Bootstrapped per ADR-0009 §10.

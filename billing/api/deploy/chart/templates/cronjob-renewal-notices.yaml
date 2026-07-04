@@ -1,0 +1,85 @@
+{{- if .Values.renewalNotices.enabled -}}
+{{/*
+Chatel pre-renewal notice scheduler (art. L215-1, ADR-0094 §3).
+
+Runs the `:billing:worker` `--send-renewal-notices` CLI on a daily
+CronJob (ADR-0042 pattern) — the billing worker was previously unwired.
+Reuses the CNPG-issued `<cluster>-app` Secret for the DB connection and
+the MOLLIE_API_KEY envFromSecret + Mollie URLs the api Deployment uses
+(the provider is system-of-record for cadence + échéance). Stays dark
+while email.enabled=false: the worker runs and the notifier no-ops.
+*/}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "bliss-billing-api.fullname" . }}-renewal-notices
+  labels: {{- include "bliss-billing-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: renewal-notices
+spec:
+  schedule: {{ .Values.renewalNotices.schedule | quote }}
+  # Forbid: the run is idempotent per period but an overlap would waste provider calls; one pass a day is enough.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: {{ .Values.renewalNotices.activeDeadlineSeconds }}
+      # No retries: the next day's CronJob re-attempts any sub still in-window, and the ledger prevents a double-send.
+      backoffLimit: 0
+      template:
+        metadata:
+          labels: {{- include "bliss-billing-api.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: renewal-notices
+        spec:
+          serviceAccountName: {{ include "bliss-billing-api.serviceAccountName" . }}
+          restartPolicy: Never
+          securityContext: {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: worker
+              image: {{ include "bliss-billing-api.workerImage" . | quote }}
+              imagePullPolicy: {{ .Values.renewalNotices.image.pullPolicy }}
+              securityContext: {{- toYaml .Values.containerSecurityContext | nindent 16 }}
+              command: ["/app/bin/billing-worker"]
+              args: ["--send-renewal-notices"]
+              env:
+                # CNPG-managed connection string (same key the api Deployment uses).
+                - name: BILLING_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.database.clusterName }}-app
+                      key: uri
+                # Mollie URLs are required at boot by MollieConfig.fromEnv even though this command only reads state.
+                - name: BILLING_CHECKOUT_SUCCESS_URL
+                  value: {{ required "checkout.successUrl is required" .Values.checkout.successUrl | quote }}
+                - name: BILLING_CHECKOUT_CANCEL_URL
+                  value: {{ required "checkout.cancelUrl is required" .Values.checkout.cancelUrl | quote }}
+                - name: BILLING_WEBHOOK_URL
+                  value: {{ required "checkout.webhookUrl is required" .Values.checkout.webhookUrl | quote }}
+                # Legal email (ADR-0094 §2/§3); dark until email.enabled=true. BREVO_API_KEY from the dedicated Secret.
+                - name: BILLING_EMAIL_ENABLED
+                  value: {{ .Values.email.enabled | quote }}
+                {{- with .Values.brevoApiKeySecret }}
+                - name: BREVO_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ . }}
+                      key: BREVO_API_KEY
+                      optional: true
+                {{- end }}
+                {{- with .Values.renewalNotices.env }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              {{- with .Values.envFromSecret }}
+              envFrom:
+                # Secret carries MOLLIE_API_KEY; bootstrapped per ADR-0009 §10.
+                - secretRef: {name: {{ . }}}
+              {{- end }}
+              {{- with .Values.renewalNotices.resources }}
+              resources: {{- toYaml . | nindent 16 }}
+              {{- end }}
+              # readOnlyRootFilesystem requires a writable /tmp (JVM PerfData etc).
+              volumeMounts:
+                - {name: tmp, mountPath: /tmp}
+          volumes:
+            - {name: tmp, emptyDir: {}}
+{{- end }}

@@ -47,3 +47,15 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- printf "%s:%s" .Values.image.repository .Values.image.tag -}}
 {{- end -}}
 {{- end -}}
+{{/* :billing:worker image (ADR-0094 §3 renewal-notice CronJob). Same digest-or-tag pattern as the api image, own repository. */}}
+{{- define "bliss-billing-api.workerImage" -}}
+{{- $img := .Values.renewalNotices.image -}}
+{{- if and (not $img.digest) $img.requireDigest -}}
+{{- fail "renewalNotices.image.digest must be set for production — MANIFESTO reproducible builds" -}}
+{{- end -}}
+{{- if $img.digest -}}
+{{- printf "%s@%s" $img.repository $img.digest -}}
+{{- else -}}
+{{- printf "%s:%s" $img.repository $img.tag -}}
+{{- end -}}
+{{- end -}}

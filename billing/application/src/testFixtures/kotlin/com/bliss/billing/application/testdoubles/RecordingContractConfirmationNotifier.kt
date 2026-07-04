@@ -3,6 +3,7 @@ package com.bliss.billing.application.testdoubles
 import com.bliss.billing.application.ports.CancellationConfirmation
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.ContractConfirmationNotifier
+import com.bliss.billing.application.ports.PreRenewalNotice
 import com.bliss.billing.application.ports.RenewalReceipt
 
 /** Records notifier calls; [failOnce] throws once to prove send failures never break webhook handling. */
@@ -10,6 +11,7 @@ class RecordingContractConfirmationNotifier : ContractConfirmationNotifier {
     val contractConfirmations = mutableListOf<ContractConfirmation>()
     val renewalReceipts = mutableListOf<RenewalReceipt>()
     val cancellationConfirmations = mutableListOf<CancellationConfirmation>()
+    val preRenewalNotices = mutableListOf<PreRenewalNotice>()
     var failOnce = false
 
     override suspend fun confirmContractFormation(confirmation: ContractConfirmation) {
@@ -25,6 +27,11 @@ class RecordingContractConfirmationNotifier : ContractConfirmationNotifier {
     override suspend fun confirmCancellation(confirmation: CancellationConfirmation) {
         maybeFail()
         cancellationConfirmations += confirmation
+    }
+
+    override suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice) {
+        maybeFail()
+        preRenewalNotices += notice
     }
 
     private fun maybeFail() {
