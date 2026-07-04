@@ -53,7 +53,6 @@ envFromSecret: "bliss-identity-api-env"
 maintainerRoleBootstrap:
   enabled: true
   userIds: ""
-# Bright release (ADR-0091): flip email-OTP ON in prod. Map override merges with the
-# base emailOtp (senderEmail/senderName). Backend goes bright before the frontend flag.
+# Bright release (ADR-0091): flip email-OTP ON (map-merges with base senderEmail/senderName).
 emailOtp:
   enabled: true
