@@ -41,6 +41,9 @@ renewalNotices:
     # Fail-fast guard once enabled: helm aborts if digest is empty (see _helpers.tpl).
     requireDigest: true
     digest: ""
+# Legally-mandated durable-medium emails (ADR-0094 §1-2): contract confirmation, per-charge receipt, résiliation — live in prod. Send failures are logged and swallowed, never blocking checkout/webhook/cancel.
+email:
+  enabled: true
 # Dedicated Secret for the Brevo transactional API key (same value as identity); own lifecycle, survives an env-bag re-bootstrap.
 brevoApiKeySecret: "bliss-brevo-api"
 # Bootstrapped per ADR-0009 §10; carries MOLLIE_API_KEY (test_… during ADR-0078 test phase).
