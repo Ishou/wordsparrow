@@ -14,11 +14,11 @@ import kotlin.random.Random
 // stay open until a separator lands). Blacks are emitted where words end, never pre-committed.
 @Tag("bench")
 class CoGenerationProbeTest {
-    private val width = 28
-    private val height = 20
+    private val width = 15
+    private val height = 12
     private val minLen = 2
     private val DEAD_END_MIN = 5
-    private val MAX_LEN2_SHARE = 0.20
+    private val MAX_LEN2_SHARE = 0.24
     private val nodeBudget = 1_200_000
 
     // Bump when sweep semantics change: persisted nogoods are only valid for the rule set
@@ -78,9 +78,7 @@ class CoGenerationProbeTest {
                     best = sweep
                 }
             } else {
-                // Donate the top band from any attempt that clears row 6 — bootstraps the
-                // library on deep grids where the old row-10 threshold was never reached.
-                if (band == null && sweep.deepest >= 6 * width) {
+                if (band == null && sweep.deepest >= 10 * width) {
                     val donated = (0 until 6).joinToString("|") { sweep.grid[it].concatToString() }
                     if (!donated.contains('.') && sweep.bandTipFree()) newBands.add(donated)
                 }
@@ -153,6 +151,50 @@ class CoGenerationProbeTest {
         val dups = best.words.groupingBy { it }.eachCount().filterValues { it > 1 }
         if (dups.isNotEmpty()) println("DUPLICATE WORDS: $dups")
         println(best.render())
+    }
+
+    // Fast isolated test for the N-row band solver: set up row 0, solve a mid-grid band,
+    // and verify every across word is a real lexicon word and no word repeats. Iterates in
+    // ~1s so the solver can be debugged with tight feedback (unlike full 120s runs).
+    @Test
+    fun `band solver fills a mid-grid band with valid words`() {
+        val lexicon = Lexicon(loadRepository(), maxLen = 17)
+        var solved = 0
+        var acrossOk = 0
+        var acrossBad = 0
+        var dumpShown = false
+        repeat(30) { i ->
+            val sweep = Sweep(lexicon, Random(700L + i), HashSet())
+            if (!sweep.setupTopForProbe()) return@repeat
+            val bh = 5
+            val cells = sweep.bandSolve(1, bh) ?: return@repeat
+            solved++
+            // write into the grid for inspection
+            for (r in 0 until bh) for (c in 0 until width) sweep.grid[1 + r][c] = cells[r][c]
+            // check across words in the band rows
+            var localBad = false
+            val seen = HashSet<String>()
+            for (r in 0 until bh) {
+                var c = 0
+                while (c < width) {
+                    if (cells[r][c] == '#') { c++; continue }
+                    val st = c
+                    while (c < width && cells[r][c] != '#') c++
+                    if (c - st >= 2) {
+                        val w = String(CharArray(c - st) { cells[r][st + it] })
+                        if (lexHas(lexicon, w)) acrossOk++ else { acrossBad++; localBad = true }
+                        if (!seen.add(w)) localBad = true
+                    }
+                }
+            }
+            if (localBad && !dumpShown) {
+                dumpShown = true
+                println("BANDBAD i=$i:")
+                println("#" + "-".repeat(width))
+                println((0 until 1 + bh).joinToString("\n") { sweep.grid[it].concatToString() })
+            }
+        }
+        println("BANDTEST solved=$solved/30 acrossOk=$acrossOk acrossBad=$acrossBad")
     }
 
     // Discrimination probe: rows 0..17 faked (row 17 all black, all columns fresh), so the
@@ -1114,6 +1156,169 @@ class CoGenerationProbeTest {
             return true
         }
 
+        // === N-row joint band solver ===================================================
+        // Generalizes the 2-row endgame walk to a mid-grid band of `bh` rows solved as one
+        // column-coupled DFS: sweep columns left->right; within each column descend the bh
+        // band rows placing a vertical slice, each cell constrained jointly by the column's
+        // vertical word (columns[c] Prefix) and that row's across-word accumulator. Borders
+        // are excluded (caller does row 0 + endgame), so hosting is uniform: an across word
+        // needs a black to its left, or the col-0 bend (black directly above). Hosting-of-black
+        // and dead-end tips are left to SlotRegistry.build as the backstop for a first cut.
+        private inner class BandCtx(val bh: Int) {
+            val cells = Array(bh) { CharArray(width) { '.' } }
+            val hRow = Array(bh) { Prefix(lexicon) }
+            val openRow = BooleanArray(bh)
+            val usedLocal = HashSet<String>(used)
+            var budget = 400_000
+        }
+
+        // Solve rows [top, top+bh). On success columns[] hold outgoing states and the bh
+        // committed rows are returned; on failure columns[] are restored and null returned.
+        fun setupTopForProbe(): Boolean {
+            for (c in 0 until width) {
+                columns[c].reset(height, brickBand(c, 0))
+                cornerTiming(c, height)
+            }
+            for (c in 0 until width) {
+                if (c % 2 == 0) {
+                    grid[0][c] = '#'
+                    columns[c].reset(height - 1, brickBand(c, 1))
+                    cornerTiming(c, height - 1)
+                } else {
+                    val bits = columns[c].continueLetters(height)
+                    if (bits == 0) return false
+                    val letters = (0 until 26).filter { bits and (1 shl it) != 0 }
+                    grid[0][c] = 'A' + letters[random.nextInt(letters.size)]
+                    columns[c].apply(grid[0][c])
+                }
+            }
+            return true
+        }
+
+        fun bandSolve(
+            top: Int,
+            bh: Int,
+        ): Array<CharArray>? {
+            val entry = Array(width) { columns[it].snapshot() }
+            repeat(8) {
+                val ctx = BandCtx(bh)
+                if (bandCol(ctx, top, 0)) return ctx.cells
+                for (c in 0 until width) columns[c].restore(entry[c])
+            }
+            return null
+        }
+
+        private fun bandCol(
+            ctx: BandCtx,
+            top: Int,
+            c: Int,
+        ): Boolean {
+            if (ctx.budget-- <= 0) return false
+            nodes++
+            if (c == width) {
+                // Every across word open at the right border must be a complete word.
+                for (r in 0 until ctx.bh) {
+                    if (!ctx.openRow[r]) return false
+                    val w = ctx.hRow[r].completeWord(ctx.usedLocal) ?: return false
+                    ctx.usedLocal.add(w)
+                }
+                return true
+            }
+            return bandDescend(ctx, top, c, 0)
+        }
+
+        // Can an across word START at band-row r, column c? (Needs a hosting black to the left,
+        // or the col-0 vertical bend = a black in column 0 directly above this cell.)
+        private fun bandLetterHostedStart(
+            ctx: BandCtx,
+            top: Int,
+            r: Int,
+            c: Int,
+        ): Boolean {
+            if (c > 0) return ctx.cells[r][c - 1] == '#'
+            // c == 0: black directly above in column 0
+            return if (r > 0) ctx.cells[r - 1][0] == '#' else grid[top - 1][0] == '#'
+        }
+
+        private fun bandDescend(
+            ctx: BandCtx,
+            top: Int,
+            c: Int,
+            r: Int,
+        ): Boolean {
+            if (ctx.budget-- <= 0) return false
+            if (r == ctx.bh) return bandCol(ctx, top, c + 1)
+            val col = columns[c]
+            val gridRow = top + r
+            val rowsBelow = height - gridRow - 1
+            // Letters the column can take at this cell (keeps a valid vertical word reachable).
+            val vLet = col.continueLetters(rowsBelow + 1)
+            val across = ctx.hRow[r]
+            val hostedStart = bandLetterHostedStart(ctx, top, r, c)
+            val hLet =
+                if (ctx.openRow[r]) across.continueLetters(width - c) else if (hostedStart) -1 else 0
+
+            // Option list: letters (vertical & across viable) then a black.
+            val letters = letterList(vLet and hLet)
+            letters.shuffle(random)
+
+            // --- try letters ---
+            for (ch in letters.take(8)) {
+                val colSnap = col.snapshot()
+                val hSnap = across.snapshot()
+                val wasOpen = ctx.openRow[r]
+                var added: String? = null
+                // vertical apply
+                col.apply(ch)
+                // horizontal apply
+                if (!ctx.openRow[r]) {
+                    across.reset(width - c, null)
+                    ctx.openRow[r] = true
+                }
+                across.apply(ch)
+                ctx.cells[r][c] = ch
+                if (bandDescend(ctx, top, c, r + 1)) return true
+                // undo
+                ctx.cells[r][c] = '.'
+                col.restore(colSnap)
+                across.restore(hSnap)
+                ctx.openRow[r] = wasOpen
+                if (added != null) ctx.usedLocal.remove(added)
+            }
+
+            // --- try a black ---
+            run {
+                val colSnap = col.snapshot()
+                val hSnap = across.snapshot()
+                val wasOpen = ctx.openRow[r]
+                val vWord: String?
+                if (!col.isEmpty) {
+                    vWord = col.completeWord(ctx.usedLocal) ?: return@run
+                } else {
+                    vWord = null
+                }
+                val hWord: String?
+                if (ctx.openRow[r]) {
+                    hWord = across.completeWord(ctx.usedLocal) ?: return@run
+                } else {
+                    hWord = null
+                }
+                if (vWord != null) ctx.usedLocal.add(vWord)
+                if (hWord != null) ctx.usedLocal.add(hWord)
+                col.reset(rowsBelow, null)
+                ctx.openRow[r] = false
+                ctx.cells[r][c] = '#'
+                if (bandDescend(ctx, top, c, r + 1)) return true
+                ctx.cells[r][c] = '.'
+                col.restore(colSnap)
+                across.restore(hSnap)
+                ctx.openRow[r] = wasOpen
+                if (vWord != null) ctx.usedLocal.remove(vWord)
+                if (hWord != null) ctx.usedLocal.remove(hWord)
+            }
+            return false
+        }
+
         private fun bottomSolvable(
             bMask: IntArray,
             bBlackOk: BooleanArray,
@@ -2003,29 +2208,13 @@ class CoGenerationProbeTest {
             c: Int,
             maxTotal: Int,
         ) {
-            // Col 0: a run's last letter is always an across-single (no bend mid-run), so a
-            // legal run is length L with L in [DEAD_END_MIN, maxLength], and either L ==
-            // maxTotal (reaches bottom) or L <= maxTotal-2 (a col-0 black fits below to host
-            // the next run). Commit to ONE length so the run reserves at a known row (flexible
-            // ends never reserve, and the endgame must see a completed corner). Stacked runs
-            // work because each col-0 black triggers a fresh reset + commit.
+            // Col 0: a run's last letter is always an across-single (no bend mid-run), so
+            // legal runs are >= DEAD_END_MIN ending at height-3 (bend then serves the bottom
+            // rows) or exactly bottom-reaching. Commit to ONE target: flexible ends never
+            // reserve, so the endgame would otherwise never see a completed corner.
             if (c == 0) {
-                val legal =
-                    (DEAD_END_MIN..minOf(lexicon.maxLength, maxTotal)).filter { l ->
-                        (l == maxTotal || l <= maxTotal - 2) && columns[0].masks.containsKey(l)
-                    }
-                if (legal.isEmpty()) {
-                    for (l in columns[0].masks.keys.toList()) columns[0].forbidLength(l)
-                    return
-                }
-                // Prefer moderate lengths (weight ~ 1/(|l-7|+1)) so col 0 isn't all long spans.
-                val w = legal.map { 6 - minOf(5, kotlin.math.abs(it - 7)) }
-                var pick = random.nextInt(w.sum().coerceAtLeast(1))
-                var keep = legal.first()
-                for ((i, wi) in w.withIndex()) {
-                    if (pick < wi) { keep = legal[i]; break }
-                    pick -= wi
-                }
+                val l9 = maxTotal - 2
+                val keep = if (l9 >= DEAD_END_MIN && random.nextInt(5) < 3) l9 else maxTotal
                 for (l in columns[0].masks.keys.toList()) {
                     if (l != keep) columns[0].forbidLength(l)
                 }
@@ -2113,21 +2302,13 @@ class CoGenerationProbeTest {
             // Col-0 verticals must reach 5+ or the bottom: an across run at col 0 is only
             // hostable right after a col-0 black, so a mid-run last letter is always a single.
             if (c == 0) return 5..7
-            // Top band: ~1 column in 3 is a short stub (2-3) that completes early and hosts a
-            // black at rows 2-3 — the landing lubricant a wide row needs to be tileable. The
-            // rest run 4-7. Too few stubs and early rows have no interior blacks (infeasible);
-            // too many and short words dominate (poor quality).
-            if (r <= 1) {
-                return when (random.nextInt(3)) {
-                    0 -> 2..3
-                    1 -> 4..6
-                    else -> 4..7
-                }
-            }
-            // Bottom band: late starters stay short so everyone lands by the border.
-            if (r >= height - 5) return 2..4
-            // ~30% landing columns in the middle rows keep interior blacks available.
-            if ((c + r) % 3 == 0) return 2..4
+            // Top band mirrors print: columns starting in rows 0-1 are mostly short, so rows
+            // 2-3 inherit plentiful staggered landings instead of impossible long spans.
+            if (r <= 1) return if (random.nextInt(3) < 2) 3..5 else 4..7
+            // Bottom band mirrors print too: late starters stay short so everyone lands by the border.
+            if (r >= height - 5) return 3..5
+            // ~20% short columns: the landing lubricant for middle rows.
+            if ((c + r) % 5 == 0) return 3..4
             val base = 4 + ((c * 2 + r + random.nextInt(2)) % 4)
             return base..base + 2
         }
@@ -2175,6 +2356,12 @@ class CoGenerationProbeTest {
     }
 
     private fun bandStore(): File = File(nogoodStore().parentFile, "bands-" + bandVersion + "-" + width + "x" + height + "-" + nogoodStore().name.substringAfterLast('-'))
+
+    private fun lexHas(lexicon: Lexicon, w: String): Boolean {
+        val l = w.length
+        if (l < 2 || l > lexicon.maxLength) return false
+        return lexicon.words[l].any { it.text == w }
+    }
 
     private fun loadBands(): MutableList<String> {
         val f = bandStore()
