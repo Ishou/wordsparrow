@@ -111,10 +111,7 @@ env:
 # Legally-mandated durable-medium email (ADR-0094 §2) ships dark; bright = email.enabled=true. Sender address/name/reply-to default in-code (abonnement@ / WordSparrow – Abonnement / contact@), env-overridable.
 email:
   enabled: false
-# Chatel pre-renewal notice scheduler (ADR-0094 §3; art. L215-1). Runs the :billing:worker
-# `--send-renewal-notices` CLI daily; `templates/cronjob-renewal-notices.yaml` owns rendering.
-# Off by default so local installs don't pull a worker image; prod enables. Sends nothing while
-# email.enabled=false (the notifier no-ops) — the CronJob still runs.
+# Chatel pre-renewal notice scheduler (ADR-0094 §3, art. L215-1); daily :billing:worker --send-renewal-notices, off by default so local installs don't pull a worker image.
 renewalNotices:
   enabled: false
   # 04:00 UTC — after the api backup window and the 03:00 grid ensure-dailies run.

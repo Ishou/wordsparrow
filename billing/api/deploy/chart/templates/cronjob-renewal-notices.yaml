@@ -1,14 +1,5 @@
 {{- if .Values.renewalNotices.enabled -}}
-{{/*
-Chatel pre-renewal notice scheduler (art. L215-1, ADR-0094 §3).
-
-Runs the `:billing:worker` `--send-renewal-notices` CLI on a daily
-CronJob (ADR-0042 pattern) — the billing worker was previously unwired.
-Reuses the CNPG-issued `<cluster>-app` Secret for the DB connection and
-the MOLLIE_API_KEY envFromSecret + Mollie URLs the api Deployment uses
-(the provider is system-of-record for cadence + échéance). Stays dark
-while email.enabled=false: the worker runs and the notifier no-ops.
-*/}}
+{{/* Chatel pre-renewal notice scheduler (art. L215-1, ADR-0094 §3); daily `:billing:worker --send-renewal-notices`, dark while email.enabled=false. */}}
 apiVersion: batch/v1
 kind: CronJob
 metadata:

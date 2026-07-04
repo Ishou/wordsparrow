@@ -31,10 +31,7 @@ ingress:
     nginx.ingress.kubernetes.io/limit-rps: "5"
     nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
     nginx.ingress.kubernetes.io/limit-connections: "30"
-# Chatel pre-renewal notice scheduler (ADR-0094 §3). Held dark until the billing-worker image
-# ships: enabling needs a `billing-worker` row in build-and-push-image.yml plus a
-# `renewalNotices.image.digest` injection in deploy-api-k8s.yml (both cross-cutting workflow
-# edits, out of this workstream's billing/** scope). Flip enabled:true with those in place.
+# Chatel pre-renewal notice scheduler (ADR-0094 §3); held dark until build-and-push-image.yml/deploy-api-k8s.yml wire the billing-worker image (out of this workstream's billing/** scope).
 renewalNotices:
   enabled: false
   image:
