@@ -308,6 +308,11 @@ class UserDeletedConsumerTest {
 
         override suspend fun listPendingCancellationBefore(cutoff: Instant): List<Subscription> =
             byUser.values.filter { it.status == SubscriptionStatus.PENDING_CANCELLATION }
+
+        override suspend fun listPendingCancellationExpiredAt(now: Instant): List<Subscription> =
+            byUser.values.filter {
+                it.status == SubscriptionStatus.PENDING_CANCELLATION && it.periodEnd?.isAfter(now) == false
+            }
     }
 
     private class RecordingPublisher : SubscriptionPublisher {

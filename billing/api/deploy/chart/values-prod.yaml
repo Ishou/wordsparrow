@@ -43,6 +43,9 @@ renewalNotices:
 # Outbox drain (ADR-0094; art. L221-13 delivery duty): every 10 min, retries any legal email whose immediate send failed, guaranteeing eventual delivery. Reuses the renewalNotices worker image digest.
 emailOutboxDrain:
   enabled: true
+# Scheduled-non-renewal expiry sweep (CGV Art. 14.1, ADR-0078): daily, ends a résiliation at period_end so identity drops the user to FREE (status-based entitlement). Reuses the renewalNotices worker image digest; publishes to the same NATS as the api Deployment.
+expireCancellations:
+  enabled: true
 # Legally-mandated durable-medium emails (ADR-0094 §1-2): contract confirmation, per-charge receipt, résiliation — live in prod. The outbox (above) guarantees delivery; an immediate send never blocks checkout/webhook/cancel.
 email:
   enabled: true
