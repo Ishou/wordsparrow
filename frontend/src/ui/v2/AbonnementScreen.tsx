@@ -87,6 +87,7 @@ const optCadence = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'blac
 // ws.sakuraDark (not ws.sakura) clears WCAG AA for white text — known palette gotcha.
 const cta = css({ width: '100%', border: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', padding: '14px', borderRadius: '14px', cursor: 'pointer', boxShadow: '0 8px 18px rgba(190,73,112,0.34)', _hover: { opacity: 0.94 }, _disabled: { opacity: 0.5, cursor: 'not-allowed' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const reassure = css({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: 'wsUi', fontSize: '11.5px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, textAlign: 'center', lineHeight: '1.4' });
+const conditionsNote = css({ marginTop: '8px', fontFamily: 'wsUi', fontSize: '11.5px', fontWeight: 'semibold', color: 'ws.khaki', textAlign: 'center', lineHeight: '1.4', '& a': { color: 'ws.sakuraDark', fontWeight: 'bold', textDecoration: 'underline' } });
 const reassureIcon = css({ flex: 'none', display: 'flex' });
 const errText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', margin: '2px 0 0', textAlign: 'center' });
 
@@ -212,10 +213,13 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
           ))}
         </div>
         <CadenceSelector value={cadence} onChange={setCadence} />
-        {/* TODO(W3-follow-up): consent link once /conditions-abonnement lands */}
         <button type="button" className={cta} onClick={() => void onSubscribe()} disabled={pending}>
           S&apos;abonner
         </button>
+        <p className={conditionsNote}>
+          En t&apos;abonnant, tu acceptes les{' '}
+          <Link to="/conditions-abonnement">Conditions de vente</Link>.
+        </p>
         {actionError ? (
           <p className={errText} role="alert">
             {actionError}

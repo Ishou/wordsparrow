@@ -186,7 +186,14 @@ export function ReglagesScreen() {
           <div className={groupLabel}>Confidentialité &amp; légal</div>
           <ul className={listCard}>
             <SettingsRow icon={Lock} tone="soft" to="/confidentialite" label="Confidentialité" />
-            <SettingsRow icon={FileText} tone="soft" to="/mentions-legales" label="Mentions légales" last />
+            <SettingsRow icon={FileText} tone="soft" to="/mentions-legales" label="Mentions légales" />
+            <SettingsRow
+              icon={FileText}
+              tone="soft"
+              to="/conditions-abonnement"
+              label="Conditions de vente"
+              last
+            />
           </ul>
         </nav>
 

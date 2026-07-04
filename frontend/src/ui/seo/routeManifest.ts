@@ -61,6 +61,13 @@ export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
     description: 'Politique de confidentialité de WordSparrow.',
     ogImagePath: '/og-confidentialite.png',
   },
+  {
+    path: '/conditions-abonnement',
+    title: "Conditions générales de vente — WordSparrow",
+    description: "Conditions générales de vente de l'abonnement WordSparrow.",
+    // reuse mentions-légales OG until a dedicated card ships
+    ogImagePath: '/og-mentions-legales.png',
+  },
 ];
 
 export interface PrerenderRoute {
