@@ -2,8 +2,9 @@
 
 This directory declares the platform-side resources Bliss owns:
 
-- **Cloudflare Pages** project + custom domain attachments for the
-  frontend static bundle (ADR-0004).
+- **Cloudflare Pages** project — since the ADR-0090 Workers cutover it
+  only serves the `bliss-cb4.pages.dev` 301 redirect; deleted on
+  2026-08-04. Custom domains moved to `frontend/wrangler.jsonc`.
 - **Cloudflare DNS** CNAME for `api.wordsparrow.io`. Originally pointed
   at the Fly.io app (ADR-0007); ADR-0007 was superseded by ADR-0009 and
   the Fly app was torn down. The CNAME resource is retained until
@@ -21,9 +22,9 @@ Prerequisites:
 
 - A Cloudflare account (created manually; this is the platform-tenancy
   boundary called out in ADR-0004 Notes).
-- A Cloudflare API token scoped per `docs/deploy.md` (Account → Cloudflare
-  Pages → Edit; User → Memberships → Read; plus Zone → DNS → Edit and
-  Zone → Zone → Read on `wordsparrow.io` for the API CNAME).
+- A Cloudflare API token: use the scope list in `docs/deploy.md`'s
+  "Required Cloudflare API token scopes", plus Zone → Zone → Read on
+  `wordsparrow.io` for the API CNAME.
 - The Cloudflare account ID (visible in the Cloudflare dashboard URL or
   account home page).
 
@@ -40,7 +41,7 @@ tofu -chdir=terraform/ apply \
 The apply creates the Pages project plus the `api.wordsparrow.io`
 CNAME. After it succeeds:
 
-- `pages_subdomain` output names the live `*.pages.dev` URL.
+- `pages_subdomain` output names the legacy `*.pages.dev` URL (301 stub).
 - `production_url` output is the canonical frontend URL.
 
 Commit the generated `.terraform.lock.hcl` (it pins provider digests

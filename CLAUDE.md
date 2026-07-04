@@ -116,8 +116,9 @@ Never bypass: no `--no-verify`, no `--no-gpg-sign`, no force-push to
 
 ## Deployment
 
-- **Frontend** → Cloudflare Pages (ADR-0004) via
-  `.github/workflows/deploy-frontend.yml`.
+- **Frontend** → Cloudflare Workers static assets (ADR-0090, amends
+  ADR-0004) via `.github/workflows/deploy-frontend.yml`. The retired
+  Pages project serves a 301 redirect until its 2026-08-04 deletion.
 - **API + worker** → self-managed k3s on Hetzner (ADR-0009) via
   `.github/workflows/deploy-api-k8s.yml`. Helm charts in
   `infra/platform/charts/`. Provisioning is OpenTofu in `terraform/`
