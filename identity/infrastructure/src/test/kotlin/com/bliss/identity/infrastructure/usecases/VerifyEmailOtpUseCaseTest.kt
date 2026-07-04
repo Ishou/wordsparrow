@@ -59,6 +59,7 @@ class VerifyEmailOtpUseCaseTest {
             codeHash = hasher.hash(correctCode),
             bindingHash = hasher.hash(correctSecret),
             attempts = attempts,
+            accountExisted = false,
             createdAt = createdAt,
             expiresAt = expiresAt,
             consumedAt = consumedAt,
@@ -328,6 +329,8 @@ class VerifyEmailOtpUseCaseTest {
         ): Int = 0
 
         override suspend fun countAllCreatedSince(since: Instant): Int = 0
+
+        override suspend fun countNewAccountCreatedSince(since: Instant): Int = 0
 
         override suspend fun latestCreatedAt(email: EmailAddress): Instant? = null
 

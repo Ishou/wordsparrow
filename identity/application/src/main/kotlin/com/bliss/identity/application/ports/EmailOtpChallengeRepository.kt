@@ -21,6 +21,9 @@ interface EmailOtpChallengeRepository {
         since: Instant,
     ): Int
 
+    /** Count of challenges created since [since] classified as new-account (account_existed = false). */
+    suspend fun countNewAccountCreatedSince(since: Instant): Int
+
     /** Global send-budget proxy: challenges created since [since] across all emails. */
     suspend fun countAllCreatedSince(since: Instant): Int
 

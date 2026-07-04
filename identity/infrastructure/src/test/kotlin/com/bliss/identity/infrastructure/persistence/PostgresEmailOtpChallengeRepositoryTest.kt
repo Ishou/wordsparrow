@@ -42,6 +42,7 @@ class PostgresEmailOtpChallengeRepositoryTest {
         createdAt: Instant = now,
         expiresAt: Instant = now.plusSeconds(600),
         consumedAt: Instant? = null,
+        accountExisted: Boolean = false,
     ): EmailOtpChallenge =
         EmailOtpChallenge(
             id = ChallengeId(id),
@@ -49,6 +50,7 @@ class PostgresEmailOtpChallengeRepositoryTest {
             codeHash = codeHash,
             bindingHash = bindingHash,
             attempts = attempts,
+            accountExisted = accountExisted,
             createdAt = createdAt,
             expiresAt = expiresAt,
             consumedAt = consumedAt,
@@ -164,6 +166,44 @@ class PostgresEmailOtpChallengeRepositoryTest {
             repo.create(challenge(email = bob, createdAt = now.minusSeconds(30)))
             repo.create(challenge(email = alice, createdAt = now.minusSeconds(90)))
             assertThat(repo.countAllCreatedSince(now.minusSeconds(60))).isEqualTo(2)
+        }
+
+    @Test
+    fun `create then findActiveByEmail preserves accountExisted`() =
+        runTest {
+            val registered = challenge(accountExisted = true)
+            repo.create(registered)
+            assertThat(repo.findActiveByEmail(alice, now)).isEqualTo(registered)
+        }
+
+    @Test
+    fun `countNewAccountCreatedSince counts only new-account rows since the boundary`() =
+        runTest {
+            repo.create(challenge(email = alice, accountExisted = false, createdAt = now))
+            repo.create(challenge(email = bob, accountExisted = false, createdAt = now))
+            repo.create(challenge(email = alice, accountExisted = true, createdAt = now))
+            repo.create(challenge(email = bob, accountExisted = false, createdAt = now.minusSeconds(90)))
+            assertThat(repo.countNewAccountCreatedSince(now.minusSeconds(1))).isEqualTo(2)
+        }
+
+    @Test
+    fun `countNewAccountCreatedSince treats a pre-migration NULL row as not-counted`() =
+        runTest {
+            dataSource.connection.use { conn ->
+                conn
+                    .prepareStatement(
+                        "INSERT INTO identity_email_otp_challenges " +
+                            "(challenge_id, email, code_hash, binding_hash, attempts, created_at, expires_at) " +
+                            "VALUES (?, ?, 'h', 'h', 0, ?, ?)",
+                    ).use { stmt ->
+                        stmt.setObject(1, UUID.randomUUID())
+                        stmt.setString(2, alice.value)
+                        stmt.setObject(3, now.atOffset(java.time.ZoneOffset.UTC))
+                        stmt.setObject(4, now.plusSeconds(600).atOffset(java.time.ZoneOffset.UTC))
+                        stmt.executeUpdate()
+                    }
+            }
+            assertThat(repo.countNewAccountCreatedSince(now.minusSeconds(1))).isEqualTo(0)
         }
 
     @Test

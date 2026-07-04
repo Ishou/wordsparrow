@@ -10,6 +10,8 @@ data class EmailOtpChallenge(
     val codeHash: String,
     val bindingHash: String,
     val attempts: Int,
+    // Non-null in the domain; the DB column is nullable only to tolerate pre-V11 rows (ADR-0093).
+    val accountExisted: Boolean,
     val createdAt: Instant,
     val expiresAt: Instant,
     val consumedAt: Instant?,

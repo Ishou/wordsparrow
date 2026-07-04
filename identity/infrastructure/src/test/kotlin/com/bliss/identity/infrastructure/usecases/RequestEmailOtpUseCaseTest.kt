@@ -15,7 +15,11 @@ import com.bliss.identity.domain.auth.ChallengeId
 import com.bliss.identity.domain.auth.ChallengeSecret
 import com.bliss.identity.domain.auth.EmailOtpChallenge
 import com.bliss.identity.domain.auth.OtpCode
+import com.bliss.identity.domain.user.DisplayName
 import com.bliss.identity.domain.user.EmailAddress
+import com.bliss.identity.domain.user.User
+import com.bliss.identity.domain.user.UserId
+import com.bliss.identity.infrastructure.persistence.InMemoryUserRepository
 import com.bliss.identity.infrastructure.testdoubles.FakeTokenHasher
 import com.bliss.identity.infrastructure.testdoubles.FixedClock
 import com.bliss.identity.infrastructure.testdoubles.FixedIdGenerator
@@ -39,6 +43,7 @@ class RequestEmailOtpUseCaseTest {
 
     private class Fixture(
         val repo: InMemoryEmailOtpChallengeRepository,
+        val users: InMemoryUserRepository,
         val sender: RecordingEmailSender,
         val hasher: FakeTokenHasher,
         val clock: FixedClock,
@@ -52,8 +57,11 @@ class RequestEmailOtpUseCaseTest {
         cooldown: Duration = Duration.ofSeconds(60),
         dailyCap: Int = 8,
         monthlyCap: Int = 4500,
+        dailyBudget: Int = 150,
+        newAccountDailyBudget: Int = 50,
     ): Fixture {
         val repo = InMemoryEmailOtpChallengeRepository()
+        val users = InMemoryUserRepository()
         val sender = RecordingEmailSender()
         val hasher = FakeTokenHasher()
         val clock = FixedClock(now)
@@ -65,12 +73,43 @@ class RequestEmailOtpUseCaseTest {
                 randomFactory = FixedRandomFactory(otpCodes = codes, challengeSecrets = secrets),
                 idGenerator = FixedIdGenerator(challengeIds = challengeIds),
                 clock = clock,
+                users = users,
                 cooldown = cooldown,
                 dailyCap = dailyCap,
                 monthlyCap = monthlyCap,
+                dailyBudget = dailyBudget,
+                newAccountDailyBudget = newAccountDailyBudget,
             )
-        return Fixture(repo, sender, hasher, clock, useCase)
+        return Fixture(repo, users, sender, hasher, clock, useCase)
     }
+
+    private suspend fun InMemoryUserRepository.register(email: String) =
+        create(
+            User(
+                id = UserId(UUID.randomUUID()),
+                displayName = DisplayName.of("Registered"),
+                createdAt = now.minusSeconds(86_400),
+                lastSeenAt = now.minusSeconds(86_400),
+                email = email,
+            ),
+        )
+
+    private suspend fun InMemoryEmailOtpChallengeRepository.seedNewAccount(count: Int) =
+        repeat(count) {
+            create(
+                EmailOtpChallenge(
+                    id = ChallengeId(UUID.randomUUID()),
+                    email = EmailAddress.of("flood$it@example.com"),
+                    codeHash = "h",
+                    bindingHash = "h",
+                    attempts = 0,
+                    accountExisted = false,
+                    createdAt = now,
+                    expiresAt = now.plus(Duration.ofMinutes(10)),
+                    consumedAt = null,
+                ),
+            )
+        }
 
     private fun seededChallenge(id: UUID): EmailOtpChallenge =
         EmailOtpChallenge(
@@ -79,6 +118,7 @@ class RequestEmailOtpUseCaseTest {
             codeHash = "seed-code-hash",
             bindingHash = "seed-binding-hash",
             attempts = 0,
+            accountExisted = false,
             createdAt = now,
             expiresAt = now.plus(Duration.ofMinutes(10)),
             consumedAt = null,
@@ -174,6 +214,69 @@ class RequestEmailOtpUseCaseTest {
             assertThat(result).isInstanceOf(RequestEmailOtpResult.Sent::class)
             assertThat(f.sender.sent).hasSize(1)
             assertThat(f.repo.countAllCreatedSince(Instant.EPOCH)).isEqualTo(2)
+        }
+
+    @Test
+    fun `registered email is sent even when the new-account bucket is full`() =
+        runTest {
+            val f = fixture(newAccountDailyBudget = 50)
+            f.repo.seedNewAccount(50)
+            f.users.register("player@example.com")
+
+            val result = f.useCase.execute(RequestEmailOtpCommand("player@example.com"))
+
+            assertThat(result).isInstanceOf(RequestEmailOtpResult.Sent::class)
+            assertThat(f.sender.sent).hasSize(1)
+        }
+
+    @Test
+    fun `new email is budget exhausted at the new-account cap`() =
+        runTest {
+            val f = fixture(newAccountDailyBudget = 50)
+            f.repo.seedNewAccount(50)
+
+            val result = f.useCase.execute(RequestEmailOtpCommand("newcomer@example.com"))
+
+            assertThat(result).isEqualTo(RequestEmailOtpResult.BudgetExhausted)
+            assertThat(f.sender.sent).isEmpty()
+        }
+
+    @Test
+    fun `any email is budget exhausted at the daily total even when registered`() =
+        runTest {
+            val f = fixture(dailyBudget = 2)
+            f.repo.seedNewAccount(2)
+            f.users.register("player@example.com")
+
+            val result = f.useCase.execute(RequestEmailOtpCommand("player@example.com"))
+
+            assertThat(result).isEqualTo(RequestEmailOtpResult.BudgetExhausted)
+            assertThat(f.sender.sent).isEmpty()
+        }
+
+    @Test
+    fun `challenge records accountExisted true for a registered email`() =
+        runTest {
+            val f = fixture()
+            f.users.register("player@example.com")
+
+            f.useCase.execute(RequestEmailOtpCommand("player@example.com"))
+
+            val stored = f.repo.findActiveByEmail(EmailAddress.of("player@example.com"), now)
+            assertThat(stored).isNotNull()
+            assertThat(stored!!.accountExisted).isEqualTo(true)
+        }
+
+    @Test
+    fun `challenge records accountExisted false for a new email`() =
+        runTest {
+            val f = fixture()
+
+            f.useCase.execute(RequestEmailOtpCommand("newcomer@example.com"))
+
+            val stored = f.repo.findActiveByEmail(EmailAddress.of("newcomer@example.com"), now)
+            assertThat(stored).isNotNull()
+            assertThat(stored!!.accountExisted).isEqualTo(false)
         }
 
     @Test

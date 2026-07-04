@@ -213,7 +213,21 @@ class Wiring private constructor(
                 val hasher = Sha256TokenHasher()
                 val emailSender = BrevoEmailSender(httpClientEngine, brevo)
                 val monthlyCap = System.getenv("IDENTITY_OTP_MONTHLY_CAP")?.toIntOrNull() ?: 4500
-                requestEmailOtp = RequestEmailOtpUseCase(challenges, emailSender, hasher, random, idGen, clock, monthlyCap = monthlyCap)
+                val dailyBudget = System.getenv("IDENTITY_OTP_DAILY_CAP")?.toIntOrNull() ?: 150
+                val newAccountDailyBudget = System.getenv("IDENTITY_OTP_NEW_ACCOUNT_DAILY_CAP")?.toIntOrNull() ?: 50
+                requestEmailOtp =
+                    RequestEmailOtpUseCase(
+                        challenges,
+                        emailSender,
+                        hasher,
+                        random,
+                        idGen,
+                        clock,
+                        users = users,
+                        monthlyCap = monthlyCap,
+                        dailyBudget = dailyBudget,
+                        newAccountDailyBudget = newAccountDailyBudget,
+                    )
                 verifyEmailOtp = VerifyEmailOtpUseCase(challenges, hasher, users, userProviders, sessions, idGen, clock)
             }
 
