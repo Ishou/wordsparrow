@@ -3,6 +3,7 @@ package com.bliss.billing.application.usecases
 import com.bliss.billing.application.ports.CancellationConfirmation
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.ContractConfirmationNotifier
+import com.bliss.billing.application.ports.PreRenewalNotice
 import com.bliss.billing.application.ports.RenewalReceipt
 import org.slf4j.LoggerFactory
 
@@ -20,5 +21,9 @@ class NoOpContractConfirmationNotifier : ContractConfirmationNotifier {
 
     override suspend fun confirmCancellation(confirmation: CancellationConfirmation) {
         log.info("billing_email_disabled kind=cancellation_confirmation user_id={}", confirmation.userId)
+    }
+
+    override suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice) {
+        log.info("billing_email_disabled kind=chatel_pre_renewal user_id={} period_end={}", notice.userId, notice.periodEnd)
     }
 }

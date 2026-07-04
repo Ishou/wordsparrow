@@ -2,20 +2,35 @@ package com.bliss.billing.worker
 
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.Clock
+import com.bliss.billing.application.ports.ContractConfirmationNotifier
+import com.bliss.billing.application.ports.OfferPrice
+import com.bliss.billing.application.ports.RenewalNoticeLedger
+import com.bliss.billing.application.ports.SubscriptionOffer
 import com.bliss.billing.application.ports.SubscriptionRepository
+import com.bliss.billing.application.usecases.LegalEmailNotifier
+import com.bliss.billing.application.usecases.NoOpContractConfirmationNotifier
 import com.bliss.billing.application.usecases.ReconcileSubscriptions
+import com.bliss.billing.application.usecases.SendRenewalNotices
+import com.bliss.billing.domain.Cadence
+import com.bliss.billing.domain.ChatelWindow
+import com.bliss.billing.infrastructure.email.BillingBrevoConfig
+import com.bliss.billing.infrastructure.email.BillingBrevoEmailSender
 import com.bliss.billing.infrastructure.persistence.BillingDatabase
+import com.bliss.billing.infrastructure.persistence.PostgresConsentRepository
 import com.bliss.billing.infrastructure.persistence.PostgresMollieCustomerStore
+import com.bliss.billing.infrastructure.persistence.PostgresRenewalNoticeLedger
 import com.bliss.billing.infrastructure.persistence.PostgresSubscriptionRepository
 import com.bliss.billing.infrastructure.provider.MollieBillingAdapter
 import com.bliss.billing.infrastructure.provider.MollieConfig
 import com.bliss.billing.infrastructure.provider.SdkMollieClient
+import io.ktor.client.engine.cio.CIO
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import javax.sql.DataSource
 import kotlin.system.exitProcess
 
 private val log = LoggerFactory.getLogger("com.bliss.billing.worker.Main")
@@ -28,6 +43,7 @@ fun main(args: Array<String>) {
                 printUsage()
                 0
             }
+            args.contains("--send-renewal-notices") -> runSendRenewalNotices()
             args.isEmpty() || args.contains("--reconcile") -> runReconcile()
             else -> {
                 log.error("event=worker_unknown_arguments args=\"{}\"", args.joinToString(separator = " "))
@@ -39,7 +55,7 @@ fun main(args: Array<String>) {
 }
 
 private fun printUsage() {
-    log.info("usage: billing-worker [--reconcile] | --help")
+    log.info("usage: billing-worker [--reconcile] | [--send-renewal-notices] | --help")
 }
 
 private fun runReconcile(): Int {
@@ -54,7 +70,78 @@ private fun runReconcile(): Int {
     }
 }
 
+private fun runSendRenewalNotices(): Int {
+    val database = BillingDatabase(poolName = "billing-worker", maxPoolSize = 2, requireUrl = true).apply { start() }
+    return try {
+        val dataSource = database.dataSource() ?: error("BILLING_DATABASE_URL produced a null DataSource")
+        val config = MollieConfig.fromEnv()
+        val provider = MollieBillingAdapter(SdkMollieClient(config), PostgresMollieCustomerStore(dataSource), config)
+        sendRenewalNoticesAndExit(
+            PostgresSubscriptionRepository(dataSource),
+            provider,
+            renewalNotifier(dataSource, provider, config),
+            PostgresRenewalNoticeLedger(dataSource),
+            Clock { Instant.now() },
+            chatelWindow(),
+        )
+    } finally {
+        database.stop()
+    }
+}
+
 private fun agingThreshold(): Duration = Duration.ofHours(System.getenv("BILLING_RECONCILE_AGING_HOURS")?.toLongOrNull() ?: 24L)
+
+private fun chatelWindow(): ChatelWindow {
+    val minDays = System.getenv("BILLING_CHATEL_MIN_DAYS")?.toLongOrNull()
+    val maxDays = System.getenv("BILLING_CHATEL_MAX_DAYS")?.toLongOrNull()
+    return if (minDays == null && maxDays == null) {
+        ChatelWindow.DEFAULT
+    } else {
+        ChatelWindow(Duration.ofDays(minDays ?: 30L), Duration.ofDays(maxDays ?: 45L))
+    }
+}
+
+// Recurring prices come from the same env as the Mollie charge so the notice can never misstate what will be billed (ADR-0094 §3).
+private fun offerFor(config: MollieConfig): SubscriptionOffer {
+    val toMinorUnits: (String) -> Long = { it.toBigDecimal().movePointRight(2).toLong() }
+    return SubscriptionOffer(
+        mapOf(
+            Cadence.MONTHLY to OfferPrice(toMinorUnits(config.subscriptionAmountFor(Cadence.MONTHLY)), config.currency),
+            Cadence.YEARLY to OfferPrice(toMinorUnits(config.subscriptionAmountFor(Cadence.YEARLY)), config.currency),
+        ),
+    )
+}
+
+// Dark unless BILLING_EMAIL_ENABLED=true with a Brevo key present; otherwise the no-op notifier logs and sends nothing (ADR-0094 §2).
+private fun renewalNotifier(
+    dataSource: DataSource,
+    provider: BillingProviderPort,
+    config: MollieConfig,
+): ContractConfirmationNotifier {
+    val brevo = brevoConfigOrNull()
+    return if (brevo == null) {
+        NoOpContractConfirmationNotifier()
+    } else {
+        LegalEmailNotifier(
+            BillingBrevoEmailSender(CIO.create(), brevo),
+            provider,
+            PostgresConsentRepository(dataSource),
+            offerFor(config),
+        )
+    }
+}
+
+private fun brevoConfigOrNull(): BillingBrevoConfig? {
+    if (System.getenv("BILLING_EMAIL_ENABLED")?.toBooleanStrictOrNull() != true) return null
+    val apiKey = System.getenv("BREVO_API_KEY")
+    if (apiKey.isNullOrBlank()) return null
+    return BillingBrevoConfig(
+        apiKey = apiKey,
+        senderEmail = System.getenv("BREVO_SENDER_EMAIL") ?: "abonnement@wordsparrow.io",
+        senderName = System.getenv("BREVO_SENDER_NAME") ?: "WordSparrow – Abonnement",
+        replyTo = System.getenv("BREVO_REPLY_TO") ?: "contact@wordsparrow.io",
+    )
+}
 
 internal fun reconcileAndExit(
     provider: BillingProviderPort,
@@ -69,6 +156,25 @@ internal fun reconcileAndExit(
             summary.providerActiveCount,
             summary.orphansCancelled,
             summary.agingPendingCancellations,
+        )
+        0
+    }
+
+internal fun sendRenewalNoticesAndExit(
+    repository: SubscriptionRepository,
+    provider: BillingProviderPort,
+    notifier: ContractConfirmationNotifier,
+    ledger: RenewalNoticeLedger,
+    clock: Clock,
+    window: ChatelWindow,
+): Int =
+    runBlocking {
+        val summary = SendRenewalNotices(repository, provider, notifier, ledger, clock, window).execute()
+        log.info(
+            "event=billing_renewal_notices_done annual_in_window={} notices_sent={} already_notified={}",
+            summary.annualInWindow,
+            summary.noticesSent,
+            summary.alreadyNotified,
         )
         0
     }

@@ -31,11 +31,21 @@ data class CancellationConfirmation(
     val periodEnd: Instant?,
 )
 
-/** Sends the legally-mandated durable-medium emails on contract formation, on each renewal charge, and on résiliation (ADR-0094 §1-2, §5). */
+/** Facts for the annual Chatel pre-renewal notice (art. L215-1, ADR-0094 §3, CGV Art. 9). [periodEnd] is the upcoming échéance the tacit reconduction lands on. */
+data class PreRenewalNotice(
+    val userId: UUID,
+    val tier: Tier,
+    val cadence: Cadence,
+    val periodEnd: Instant,
+)
+
+/** Sends the legally-mandated durable-medium emails on contract formation, each renewal charge, résiliation, and before an annual reconduction (ADR-0094 §1-3, §5). */
 interface ContractConfirmationNotifier {
     suspend fun confirmContractFormation(confirmation: ContractConfirmation)
 
     suspend fun confirmRenewal(receipt: RenewalReceipt)
 
     suspend fun confirmCancellation(confirmation: CancellationConfirmation)
+
+    suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice)
 }

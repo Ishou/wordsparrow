@@ -8,6 +8,7 @@ import com.bliss.billing.application.ports.ContractConfirmationNotifier
 import com.bliss.billing.application.ports.EmailSender
 import com.bliss.billing.application.ports.OfferPrice
 import com.bliss.billing.application.ports.OutboundEmail
+import com.bliss.billing.application.ports.PreRenewalNotice
 import com.bliss.billing.application.ports.RenewalReceipt
 import com.bliss.billing.application.ports.SellerIdentity
 import com.bliss.billing.application.ports.SubscriptionOffer
@@ -56,6 +57,12 @@ class LegalEmailNotifier(
     override suspend fun confirmCancellation(confirmation: CancellationConfirmation) {
         val to = emailOrNull(confirmation.userId) ?: return
         emailSender.send(cancellationEmail(to, confirmation.tier.value, confirmation.canceledAt, confirmation.periodEnd))
+    }
+
+    override suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice) {
+        val price = priceOrNull(notice.userId, notice.cadence) ?: return
+        val to = emailOrNull(notice.userId) ?: return
+        emailSender.send(preRenewalEmail(to, notice.tier.value, notice.cadence, price, notice.periodEnd))
     }
 
     private suspend fun emailOrNull(userId: UUID): String? {
@@ -164,6 +171,32 @@ class LegalEmailNotifier(
         )
     }
 
+    private fun preRenewalEmail(
+        to: String,
+        tier: String,
+        cadence: Cadence,
+        price: OfferPrice,
+        periodEnd: Instant,
+    ): OutboundEmail {
+        val lines = mutableListOf<String>()
+        lines += "Ton abonnement WordSparrow ($tier) arrive à échéance le ${date(periodEnd)}."
+        lines +=
+            "Sauf action de ta part, il sera reconduit tacitement pour une nouvelle période ${perPeriodNoun(
+                cadence,
+            )} au prix de ${money(price)} TTC, prélevé le ${date(periodEnd)}."
+        lines +=
+            "Tu peux choisir de ne pas le reconduire : résilie à tout moment, sans frais, depuis tes réglages avant l'échéance."
+        lines +=
+            "Information légale (art. L215-1 du Code de la consommation) : tu es informé·e de ta faculté de ne pas reconduire ton abonnement."
+        lines += sellerLine()
+        return OutboundEmail(
+            to = to,
+            subject = "Ton abonnement WordSparrow arrive bientôt à échéance",
+            htmlBody = html(lines),
+            textBody = text(lines),
+        )
+    }
+
     private fun money(price: OfferPrice): String = money(price.ttcMinorUnits, price.currency)
 
     private fun money(
@@ -177,6 +210,8 @@ class LegalEmailNotifier(
     private fun cadenceLabel(cadence: Cadence): String = if (cadence == Cadence.YEARLY) "annuel" else "mensuel"
 
     private fun perPeriod(cadence: Cadence): String = if (cadence == Cadence.YEARLY) "par an" else "par mois"
+
+    private fun perPeriodNoun(cadence: Cadence): String = if (cadence == Cadence.YEARLY) "annuelle" else "mensuelle"
 
     private fun date(instant: Instant): String = DATE_FORMAT.format(instant)
 

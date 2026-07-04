@@ -31,6 +31,16 @@ ingress:
     nginx.ingress.kubernetes.io/limit-rps: "5"
     nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
     nginx.ingress.kubernetes.io/limit-connections: "30"
+# Chatel pre-renewal notice scheduler (ADR-0094 §3). Held dark until the billing-worker image
+# ships: enabling needs a `billing-worker` row in build-and-push-image.yml plus a
+# `renewalNotices.image.digest` injection in deploy-api-k8s.yml (both cross-cutting workflow
+# edits, out of this workstream's billing/** scope). Flip enabled:true with those in place.
+renewalNotices:
+  enabled: false
+  image:
+    # Fail-fast guard once enabled: helm aborts if digest is empty (see _helpers.tpl).
+    requireDigest: true
+    digest: ""
 # Dedicated Secret for the Brevo transactional API key (same value as identity); own lifecycle, survives an env-bag re-bootstrap.
 brevoApiKeySecret: "bliss-brevo-api"
 # Bootstrapped per ADR-0009 §10; carries MOLLIE_API_KEY (test_… during ADR-0078 test phase).
