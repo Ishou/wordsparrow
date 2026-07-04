@@ -78,6 +78,12 @@ spec:
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+            - name: IDENTITY_EMAIL_OTP_ENABLED
+              value: {{ .Values.emailOtp.enabled | quote }}
+            - name: BREVO_SENDER_EMAIL
+              value: {{ .Values.emailOtp.senderEmail | quote }}
+            - name: BREVO_SENDER_NAME
+              value: {{ .Values.emailOtp.senderName | quote }}
           {{- with .Values.envFromSecret }}
           envFrom:
             # Operator-supplied envs (OIDC client credentials, cookie

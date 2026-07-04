@@ -101,6 +101,11 @@ env:
   # chart in the `wordsparrow` namespace (Phase 6c.0, PR #523).
   - name: NATS_URL
     value: "nats://bliss-nats.wordsparrow:4222"
+# Passwordless email-OTP (ADR-0091) ships dark; bright = set emailOtp.enabled=true in values-prod.yaml. Flag retirement: 2026-10-01.
+emailOtp:
+  enabled: false
+  senderEmail: "no-reply@wordsparrow.io"
+  senderName: "WordSparrow"
 # Name of a Kubernetes Secret to envFrom into the pod. ADR-0009 §10:
 # bootstrapped via `kubectl create secret`, never committed. Carries OIDC
 # client credentials (Google + Apple), COOKIE_DOMAIN, and
