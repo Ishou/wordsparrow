@@ -98,7 +98,7 @@ metadata:
     {{- end }}
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: {{ .Values.ingress.authSecretName | quote }}
-    nginx.ingress.kubernetes.io/auth-realm: "WordSparrow ops — analytics"
+    nginx.ingress.kubernetes.io/auth-realm: "WordSparrow ops - analytics"
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   {{- if .Values.ingress.tlsSecretName }}
