@@ -1,7 +1,10 @@
 # Deployment
 
 How Bliss reaches production. The frontend (static bundle) ships to
-Cloudflare Pages per [ADR-0004](./adr/0004-hello-world-deployment.md);
+Cloudflare Workers static assets per
+[ADR-0090](./adr/0090-frontend-hosting-workers-static-assets.md), which
+amends [ADR-0004](./adr/0004-hello-world-deployment.md); the retired
+Pages project serves a 301 redirect until its 2026-08-04 deletion;
 the JVM API runs on a self-managed Hetzner k3s cluster per
 [ADR-0009](./adr/0009-self-managed-k8s-deployment.md). ADR-0007's
 Fly.io deployment was superseded by ADR-0009 and never reached
@@ -12,12 +15,15 @@ and ADR-0009.
 ## Pipeline
 
 `.github/workflows/deploy-frontend.yml` builds `frontend/` on push to `main`
-(production) or on any PR (preview) and uploads the static bundle to
-Cloudflare Pages via Direct Upload. Cloudflare itself does not clone the
-repo.
+(production: `wrangler deploy` of the assets-only Worker
+`wordsparrow-frontend`, custom domains applied from `frontend/wrangler.jsonc`)
+or on any PR (preview: `wrangler versions upload`, preview URL posted as a
+sticky PR comment). A manual `workflow_dispatch` with `legacy_redirect=true`
+publishes the 301 stub to the grace-period Pages project. Cloudflare itself
+does not clone the repo.
 
-The Pages project is declared as Terraform in `terraform/`; see
-`terraform/README.md` for the bootstrap procedure.
+The grace-period Pages project is still declared as Terraform in
+`terraform/`; see `terraform/README.md`.
 
 ## Secrets bound by the workflow
 
@@ -26,9 +32,9 @@ only the *values* are injected at runtime via GitHub Actions Secrets.
 
 | Secret | Bound at | What it is | Secret? |
 |---|---|---|---|
-| `CLOUDFLARE_API_TOKEN` | `cloudflare/pages-action` step `apiToken` | Cloudflare API token scoped to the Pages project. | Yes |
-| `CLOUDFLARE_ACCOUNT_ID` | `cloudflare/pages-action` step `accountId` | Cloudflare account UUID. Not secret in itself; stored alongside the token for convenience. | No (but treated as such for symmetry) |
-| `GITHUB_TOKEN` | `cloudflare/pages-action` step `gitHubToken` | Auto-issued by GitHub Actions; lets the action comment the preview URL on the PR. | Managed |
+| `CLOUDFLARE_API_TOKEN` | `cloudflare/wrangler-action` step `apiToken` | Cloudflare API token; scopes below. | Yes |
+| `CLOUDFLARE_ACCOUNT_ID` | `cloudflare/wrangler-action` step `accountId` | Cloudflare account UUID. Not secret in itself; stored alongside the token for convenience. | No (but treated as such for symmetry) |
+| `GITHUB_TOKEN` | `actions/github-script` preview-comment step | Auto-issued by GitHub Actions; posts/updates the sticky preview-URL comment. | Managed |
 
 ## Required Cloudflare API token scopes
 
@@ -36,10 +42,21 @@ When creating the token in the Cloudflare dashboard
 (My Profile -> API Tokens -> Create Token, *Custom Token*), grant the
 minimum needed for Direct Upload:
 
-- **Account -> Cloudflare Pages -> Edit** (create deployments, list
-  projects).
+- **Account -> Workers Scripts -> Edit** (upload the Worker + assets,
+  preview versions).
+- **Zone -> Workers Routes -> Edit** on `wordsparrow.io` (the pre-attach
+  route conflict check).
+- **Zone -> DNS -> Edit** on `wordsparrow.io` (custom-domain attach
+  creates the DNS records).
+- **Account -> Cloudflare Pages -> Edit** (legacy 301 stub deploys, until
+  the 2026-08-04 Pages deletion).
 - **User -> Memberships -> Read** (the action verifies token ownership at
   startup).
+
+Hard-won 2026-07-04 rule: after any token change, verify each capability
+with a direct API call before trusting the dashboard — the token editor
+can silently drop rows, and wrangler's stdout masks API error bodies
+(the ADR-0090 cutover burned ~30 min of 522 on exactly this).
 
 Restrict the token's *Account Resources* to the single Cloudflare account
 that owns the Pages project. Set an expiry; rotate before it lapses.
@@ -105,10 +122,10 @@ Per ADR-0004 §5:
 - **Primary:** revert the offending commit on `main` via PR + squash-merge.
   The deploy workflow re-runs and pushes the prior bundle. GitOps-pure:
   repo state matches live state.
-- **Escape hatch:** Cloudflare Pages dashboard -> *Deployments* -> select
-  a prior deployment -> *Rollback*. Use only when reverting in git is
-  blocked (e.g. broken build, dependency yanked). Introduces drift; open
-  a follow-up PR to make the repo match.
+- **Escape hatch:** `wrangler rollback` (or Workers dashboard ->
+  *Deployments* -> roll back to a prior version). Use only when reverting
+  in git is blocked (e.g. broken build, dependency yanked). Introduces
+  drift; open a follow-up PR to make the repo match.
 
 ## Deploy provenance
 
