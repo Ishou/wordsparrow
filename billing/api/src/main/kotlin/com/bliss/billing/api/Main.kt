@@ -103,7 +103,7 @@ fun main() {
             verifySession = { cookie -> identityClient.verifySession(cookie) },
             fetchEmail = { cookie -> identityClient.fetchEmail(cookie) },
             createCheckoutSession = CreateCheckoutSession(provider, subscriptions, consents, clock),
-            cancelSubscription = CancelSubscription(provider, subscriptions, publisher, clock, eventIds),
+            cancelSubscription = CancelSubscription(provider, subscriptions, publisher, clock, eventIds, contractNotifier),
             ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds, contractNotifier),
             subscriptionQuery = SubscriptionQuery(subscriptions),
             listReceipts = ListReceipts(receiptProvider),

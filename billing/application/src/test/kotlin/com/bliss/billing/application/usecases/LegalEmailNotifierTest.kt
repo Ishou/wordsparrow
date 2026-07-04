@@ -6,6 +6,7 @@ import assertk.assertions.doesNotContain
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
+import com.bliss.billing.application.ports.CancellationConfirmation
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.OfferPrice
 import com.bliss.billing.application.ports.RenewalReceipt
@@ -99,6 +100,47 @@ class LegalEmailNotifierTest {
             assertThat(email.textBody).contains("2,00 €")
             assertThat(email.textBody).contains("TVA (20 %)")
             assertThat(email.textBody).contains("851 880 401 00019")
+        }
+
+    @Test
+    fun `cancellation confirmation states the end-of-effect date, retained access and seller identity`() =
+        runTest {
+            notifier.confirmCancellation(
+                CancellationConfirmation(userId, Tier.of("premium"), formedAt, Instant.parse("2026-08-04T00:00:00Z")),
+            )
+
+            val email = sender.sent.single()
+            assertThat(email.to).isEqualTo("joueuse@example.com")
+            assertThat(email.subject).isEqualTo("Confirmation de la résiliation de ton abonnement WordSparrow")
+            assertThat(email.textBody).contains("prise en compte")
+            assertThat(email.textBody).contains("Date de fin d'effet : 4 août 2026")
+            assertThat(email.textBody).contains("jusqu'à cette date")
+            assertThat(email.textBody).contains("n'est pas remboursée")
+            assertThat(email.textBody).contains("851 880 401 00019")
+            assertThat(email.textBody).contains("FR63 851880401")
+        }
+
+    @Test
+    fun `cancellation confirmation addresses the player with tutoiement`() =
+        runTest {
+            notifier.confirmCancellation(
+                CancellationConfirmation(userId, Tier.of("premium"), formedAt, Instant.parse("2026-08-04T00:00:00Z")),
+            )
+
+            val body = sender.sent.single().textBody
+            assertThat(Regex("\\bvous\\b", RegexOption.IGNORE_CASE).find(body)).isNull()
+        }
+
+    @Test
+    fun `no cancellation email is sent when the address cannot be resolved`() =
+        runTest {
+            provider.setCustomerEmail(userId, null)
+
+            notifier.confirmCancellation(
+                CancellationConfirmation(userId, Tier.of("premium"), formedAt, Instant.parse("2026-08-04T00:00:00Z")),
+            )
+
+            assertThat(sender.sent).isEmpty()
         }
 
     @Test

@@ -1,13 +1,17 @@
 package com.bliss.billing.application.usecases
 
 import com.bliss.billing.application.ports.BillingProviderPort
+import com.bliss.billing.application.ports.CancellationConfirmation
 import com.bliss.billing.application.ports.Clock
+import com.bliss.billing.application.ports.ContractConfirmationNotifier
 import com.bliss.billing.application.ports.EventIdGenerator
 import com.bliss.billing.application.ports.SubscriptionChanged
 import com.bliss.billing.application.ports.SubscriptionPublisher
 import com.bliss.billing.application.ports.SubscriptionRepository
+import com.bliss.billing.domain.Subscription
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.SubscriptionStatusView
+import org.slf4j.LoggerFactory
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -33,7 +37,10 @@ class CancelSubscription(
     private val publisher: SubscriptionPublisher,
     private val clock: Clock,
     private val eventIds: EventIdGenerator,
+    private val notifier: ContractConfirmationNotifier = NoOpContractConfirmationNotifier(),
 ) {
+    private val log = LoggerFactory.getLogger(CancelSubscription::class.java)
+
     suspend fun execute(userId: UUID): CancelSubscriptionOutcome {
         val subscription = repository.findByUserId(userId) ?: return CancelSubscriptionOutcome.NoActiveSubscription
         if (subscription.status !in CANCELLABLE) return CancelSubscriptionOutcome.NoActiveSubscription
@@ -66,7 +73,17 @@ class CancelSubscription(
                 changedAt = clock.now(),
             ),
         )
+        notifyCancellation(cancelled)
         return CancelSubscriptionOutcome.Cancelled(cancelled.statusView())
+    }
+
+    // Best-effort (ADR-0094, CGV Art. 14.1): the durable-medium confirmation must never turn a completed cancel into a failure, so send errors are logged and swallowed.
+    private suspend fun notifyCancellation(cancelled: Subscription) {
+        runCatching {
+            notifier.confirmCancellation(
+                CancellationConfirmation(cancelled.userId, cancelled.tier, clock.now(), cancelled.periodEnd),
+            )
+        }.onFailure { log.error("billing_email_failed kind=cancellation_confirmation user_id={}", cancelled.userId, it) }
     }
 
     private companion object {

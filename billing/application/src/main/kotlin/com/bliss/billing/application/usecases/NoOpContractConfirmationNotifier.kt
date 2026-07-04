@@ -1,5 +1,6 @@
 package com.bliss.billing.application.usecases
 
+import com.bliss.billing.application.ports.CancellationConfirmation
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.ContractConfirmationNotifier
 import com.bliss.billing.application.ports.RenewalReceipt
@@ -15,5 +16,9 @@ class NoOpContractConfirmationNotifier : ContractConfirmationNotifier {
 
     override suspend fun confirmRenewal(receipt: RenewalReceipt) {
         log.info("billing_email_disabled kind=renewal_receipt user_id={}", receipt.userId)
+    }
+
+    override suspend fun confirmCancellation(confirmation: CancellationConfirmation) {
+        log.info("billing_email_disabled kind=cancellation_confirmation user_id={}", confirmation.userId)
     }
 }

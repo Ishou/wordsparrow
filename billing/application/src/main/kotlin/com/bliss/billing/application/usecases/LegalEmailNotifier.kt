@@ -1,6 +1,7 @@
 package com.bliss.billing.application.usecases
 
 import com.bliss.billing.application.ports.BillingProviderPort
+import com.bliss.billing.application.ports.CancellationConfirmation
 import com.bliss.billing.application.ports.ConsentRepository
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.ContractConfirmationNotifier
@@ -50,6 +51,11 @@ class LegalEmailNotifier(
         val price = priceOrNull(receipt.userId, receipt.cadence) ?: return
         val to = emailOrNull(receipt.userId) ?: return
         emailSender.send(renewalEmail(to, receipt.tier.value, receipt.cadence, price, receipt.chargedAt, receipt.periodEnd))
+    }
+
+    override suspend fun confirmCancellation(confirmation: CancellationConfirmation) {
+        val to = emailOrNull(confirmation.userId) ?: return
+        emailSender.send(cancellationEmail(to, confirmation.tier.value, confirmation.canceledAt, confirmation.periodEnd))
     }
 
     private suspend fun emailOrNull(userId: UUID): String? {
@@ -133,6 +139,29 @@ class LegalEmailNotifier(
         if (periodEnd != null) lines += "Prochaine échéance : ${date(periodEnd)}"
         lines += sellerLine()
         return OutboundEmail(to = to, subject = "Reçu de ton abonnement WordSparrow", htmlBody = html(lines), textBody = text(lines))
+    }
+
+    private fun cancellationEmail(
+        to: String,
+        tier: String,
+        canceledAt: Instant,
+        periodEnd: Instant?,
+    ): OutboundEmail {
+        val lines = mutableListOf<String>()
+        lines += "Ta demande de résiliation de l'abonnement WordSparrow ($tier) a bien été prise en compte."
+        lines += "Date de la demande : ${date(canceledAt)}"
+        if (periodEnd != null) {
+            lines += "Date de fin d'effet : ${date(periodEnd)}"
+            lines += "Tu gardes l'accès à toutes tes grilles jusqu'à cette date ; la période en cours n'est pas remboursée."
+        }
+        lines += "Aucune action de ta part n'est nécessaire ; ton abonnement ne sera pas reconduit."
+        lines += sellerLine()
+        return OutboundEmail(
+            to = to,
+            subject = "Confirmation de la résiliation de ton abonnement WordSparrow",
+            htmlBody = html(lines),
+            textBody = text(lines),
+        )
     }
 
     private fun money(price: OfferPrice): String = money(price.ttcMinorUnits, price.currency)
