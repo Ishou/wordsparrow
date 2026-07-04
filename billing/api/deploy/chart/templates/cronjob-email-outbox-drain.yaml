@@ -1,0 +1,83 @@
+{{- if .Values.emailOutboxDrain.enabled -}}
+{{/*
+Outbound-email outbox drain (ADR-0094; art. L221-13 makes delivery a legal
+duty). Runs the `:billing:worker` `--drain-email-outbox` CLI every 10 min to
+guarantee eventual delivery of any legal email whose immediate send failed or
+had no resolvable address. Reuses the worker image, the CNPG `<cluster>-app`
+Secret for the DB, and the same Mollie + Brevo wiring as the renewal-notices
+CronJob. Stays dark while email.enabled=false: the drain command no-ops.
+*/}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "bliss-billing-api.fullname" . }}-email-outbox-drain
+  labels: {{- include "bliss-billing-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: email-outbox-drain
+spec:
+  schedule: {{ .Values.emailOutboxDrain.schedule | quote }}
+  # Forbid: a slow pass must not overlap the next tick; claimDue + per-row send is idempotent but overlap wastes provider calls.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: {{ .Values.emailOutboxDrain.activeDeadlineSeconds }}
+      # No retries: the next tick (10 min) re-claims any still-pending row; per-row backoff lives in the row itself.
+      backoffLimit: 0
+      template:
+        metadata:
+          labels: {{- include "bliss-billing-api.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: email-outbox-drain
+        spec:
+          serviceAccountName: {{ include "bliss-billing-api.serviceAccountName" . }}
+          restartPolicy: Never
+          securityContext: {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: worker
+              image: {{ include "bliss-billing-api.workerImage" . | quote }}
+              imagePullPolicy: {{ .Values.renewalNotices.image.pullPolicy }}
+              securityContext: {{- toYaml .Values.containerSecurityContext | nindent 16 }}
+              command: ["/app/bin/billing-worker"]
+              args: ["--drain-email-outbox"]
+              env:
+                # CNPG-managed connection string (same key the api Deployment uses).
+                - name: BILLING_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.database.clusterName }}-app
+                      key: uri
+                # Mollie URLs are required at boot by MollieConfig.fromEnv; the drain only reads customer email for address fallback.
+                - name: BILLING_CHECKOUT_SUCCESS_URL
+                  value: {{ required "checkout.successUrl is required" .Values.checkout.successUrl | quote }}
+                - name: BILLING_CHECKOUT_CANCEL_URL
+                  value: {{ required "checkout.cancelUrl is required" .Values.checkout.cancelUrl | quote }}
+                - name: BILLING_WEBHOOK_URL
+                  value: {{ required "checkout.webhookUrl is required" .Values.checkout.webhookUrl | quote }}
+                # Legal email (ADR-0094); dark until email.enabled=true. BREVO_API_KEY from the dedicated Secret.
+                - name: BILLING_EMAIL_ENABLED
+                  value: {{ .Values.email.enabled | quote }}
+                {{- with .Values.brevoApiKeySecret }}
+                - name: BREVO_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ . }}
+                      key: BREVO_API_KEY
+                      optional: true
+                {{- end }}
+                {{- with .Values.renewalNotices.env }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              {{- with .Values.envFromSecret }}
+              envFrom:
+                # Secret carries MOLLIE_API_KEY; bootstrapped per ADR-0009 §10.
+                - secretRef: {name: {{ . }}}
+              {{- end }}
+              {{- with .Values.emailOutboxDrain.resources }}
+              resources: {{- toYaml . | nindent 16 }}
+              {{- end }}
+              # readOnlyRootFilesystem requires a writable /tmp (JVM PerfData etc).
+              volumeMounts:
+                - {name: tmp, mountPath: /tmp}
+          volumes:
+            - {name: tmp, emptyDir: {}}
+{{- end }}

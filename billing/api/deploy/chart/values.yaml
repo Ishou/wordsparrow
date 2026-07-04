@@ -147,6 +147,18 @@ renewalNotices:
       value: "parentbased_traceidratio"
     - name: OTEL_TRACES_SAMPLER_ARG
       value: "1.0"
+# Outbound-email outbox drain (ADR-0094; art. L221-13 delivery duty). Runs the :billing:worker
+# `--drain-email-outbox` CLI every 10 min to guarantee eventual delivery of legal emails whose
+# immediate send failed. Reuses the worker image + DB/email wiring; `templates/cronjob-email-outbox-drain.yaml`
+# owns rendering. Off by default; prod enables. No-op while email.enabled=false (the drain command exits early).
+emailOutboxDrain:
+  enabled: false
+  schedule: "*/10 * * * *"
+  # 5 minutes: claimDue is a small batch and each send is one HTTP call; generous for the test-phase volume.
+  activeDeadlineSeconds: 300
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
 # Dedicated Secret holding the Brevo transactional API key (key BREVO_API_KEY; same value as identity). Own lifecycle, separate from the bootstrapped envFromSecret. Empty ⇒ not wired (dark).
 brevoApiKeySecret: ""
 # Kubernetes Secret to envFrom; carries MOLLIE_API_KEY. Bootstrapped per ADR-0009 §10.

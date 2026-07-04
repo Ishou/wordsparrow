@@ -3,10 +3,13 @@ package com.bliss.billing.application.usecases
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.doesNotContain
+import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import com.bliss.billing.application.ports.CancellationConfirmation
+import com.bliss.billing.application.ports.Clock
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.OfferPrice
 import com.bliss.billing.application.ports.PreRenewalNotice
@@ -15,8 +18,10 @@ import com.bliss.billing.application.ports.SubscriptionOffer
 import com.bliss.billing.application.testdoubles.FakeBillingProvider
 import com.bliss.billing.application.testdoubles.FakeConsentRepository
 import com.bliss.billing.application.testdoubles.FakeEmailSender
+import com.bliss.billing.application.testdoubles.InMemoryOutboundEmailStore
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.CheckoutConsent
+import com.bliss.billing.domain.OutboundEmailStatus
 import com.bliss.billing.domain.Tier
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
@@ -26,7 +31,9 @@ import java.util.UUID
 class LegalEmailNotifierTest {
     private val userId = UUID.randomUUID()
     private val formedAt = Instant.parse("2026-07-04T09:30:00Z")
+    private val now = Instant.parse("2026-07-04T10:00:00Z")
 
+    private val store = InMemoryOutboundEmailStore()
     private val sender = FakeEmailSender()
     private val consents = FakeConsentRepository()
     private val provider = FakeBillingProvider().apply { defaultCustomerEmail = "joueuse@example.com" }
@@ -37,7 +44,8 @@ class LegalEmailNotifierTest {
                 Cadence.YEARLY to OfferPrice(2000, "EUR"),
             ),
         )
-    private val notifier = LegalEmailNotifier(sender, provider, consents, offer)
+    private val notifier =
+        LegalEmailNotifier(store, sender, SubscriberEmailResolver(consents, provider), consents, offer, Clock { now })
 
     private fun contract(cadence: Cadence = Cadence.MONTHLY) =
         ContractConfirmation(userId, Tier.of("premium"), cadence, formedAt, Instant.parse("2026-08-04T00:00:00Z"))
@@ -258,5 +266,89 @@ class LegalEmailNotifierTest {
             )
 
             assertThat(sender.sent.single().to).isEqualTo("checkout@example.com")
+        }
+
+    @Test
+    fun `contract confirmation enqueues one row and immediate send marks it sent`() =
+        runTest {
+            recordConsent(waiver = false)
+
+            notifier.confirmContractFormation(contract())
+
+            val row = store.rows.single()
+            assertThat(row.dedupeKey).isEqualTo("contract:$userId:${contract().periodEnd?.toEpochMilli()}")
+            assertThat(row.status).isEqualTo(OutboundEmailStatus.SENT)
+            assertThat(row.sentAt).isEqualTo(now)
+            assertThat(sender.sent).hasSize(1)
+        }
+
+    @Test
+    fun `renewal receipt enqueues and sends exactly one row`() =
+        runTest {
+            notifier.confirmRenewal(
+                RenewalReceipt(userId, Tier.of("premium"), Cadence.MONTHLY, formedAt, Instant.parse("2026-09-04T00:00:00Z")),
+            )
+
+            assertThat(store.rows.single().status).isEqualTo(OutboundEmailStatus.SENT)
+        }
+
+    @Test
+    fun `cancellation confirmation enqueues and sends exactly one row`() =
+        runTest {
+            notifier.confirmCancellation(
+                CancellationConfirmation(userId, Tier.of("premium"), formedAt, Instant.parse("2026-08-04T00:00:00Z")),
+            )
+
+            assertThat(store.rows.single().status).isEqualTo(OutboundEmailStatus.SENT)
+        }
+
+    @Test
+    fun `chatel notice enqueues and sends exactly one row`() =
+        runTest {
+            notifier.sendChatelPreRenewalNotice(
+                PreRenewalNotice(userId, Tier.of("premium"), Cadence.YEARLY, Instant.parse("2026-08-15T00:00:00Z")),
+            )
+
+            assertThat(store.rows.single().status).isEqualTo(OutboundEmailStatus.SENT)
+        }
+
+    @Test
+    fun `a repeated notification enqueues only one row and does not resend`() =
+        runTest {
+            recordConsent(waiver = false)
+
+            notifier.confirmContractFormation(contract())
+            notifier.confirmContractFormation(contract())
+
+            assertThat(store.rows).hasSize(1)
+            assertThat(sender.sent).hasSize(1)
+        }
+
+    @Test
+    fun `a send failure leaves the row pending with a backed-off next attempt`() =
+        runTest {
+            recordConsent(waiver = false)
+            sender.failOnce = true
+
+            notifier.confirmContractFormation(contract())
+
+            val row = store.rows.single()
+            assertThat(row.status).isEqualTo(OutboundEmailStatus.PENDING)
+            assertThat(row.attempts).isEqualTo(1)
+            assertThat(row.nextAttemptAt).isEqualTo(now.plus(EmailRetryPolicy.backoffAfter(1)))
+            assertThat(row.lastError).isNotNull()
+        }
+
+    @Test
+    fun `an unresolvable address leaves the enqueued row pending for the drain`() =
+        runTest {
+            provider.setCustomerEmail(userId, null)
+            recordConsent(waiver = false)
+
+            notifier.confirmContractFormation(contract())
+
+            val row = store.rows.single()
+            assertThat(row.status).isEqualTo(OutboundEmailStatus.PENDING)
+            assertThat(sender.sent).isEmpty()
         }
 }

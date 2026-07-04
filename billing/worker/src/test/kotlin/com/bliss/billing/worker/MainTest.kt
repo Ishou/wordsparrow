@@ -4,16 +4,23 @@ import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
+import com.bliss.billing.application.ports.OutboundEmailRecord
 import com.bliss.billing.application.ports.ProviderSubscriptionRef
 import com.bliss.billing.application.ports.ProviderSubscriptionState
 import com.bliss.billing.application.testdoubles.FakeBillingProvider
+import com.bliss.billing.application.testdoubles.FakeConsentRepository
+import com.bliss.billing.application.testdoubles.FakeEmailSender
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
 import com.bliss.billing.application.testdoubles.FixedClock
+import com.bliss.billing.application.testdoubles.InMemoryOutboundEmailStore
 import com.bliss.billing.application.testdoubles.InMemoryRenewalNoticeLedger
 import com.bliss.billing.application.testdoubles.RecordingContractConfirmationNotifier
+import com.bliss.billing.application.usecases.SubscriberEmailResolver
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.ChatelWindow
+import com.bliss.billing.domain.OutboundEmailKind
+import com.bliss.billing.domain.OutboundEmailStatus
 import com.bliss.billing.domain.Subscription
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
@@ -27,6 +34,7 @@ class MainTest {
     private val provider = FakeBillingProvider()
     private val repository = FakeSubscriptionRepository()
     private val clock = FixedClock(Instant.parse("2026-06-29T12:00:00Z"))
+    private val orphanUser = UUID.randomUUID()
 
     @Test
     fun `reconcileAndExit cancels orphans and returns success`() {
@@ -78,6 +86,52 @@ class MainTest {
 
             assertThat(exit).isEqualTo(0)
             assertThat(notifier.preRenewalNotices).hasSize(1)
+        }
+
+    @Test
+    fun `drainEmailOutboxAndExit delivers a due pending row and returns success`() =
+        runTest {
+            val store = InMemoryOutboundEmailStore()
+            val sender = FakeEmailSender()
+            val consents = FakeConsentRepository()
+            provider.setCustomerEmail(userId = orphanUser, email = "joueuse@example.com")
+            store.enqueue(
+                OutboundEmailRecord(
+                    id = UUID.randomUUID(),
+                    userId = orphanUser,
+                    kind = OutboundEmailKind.CONTRACT,
+                    dedupeKey = "contract:$orphanUser:1",
+                    subject = "Sujet",
+                    htmlBody = "<p>corps</p>",
+                    textBody = "corps",
+                    status = OutboundEmailStatus.PENDING,
+                    attempts = 0,
+                    nextAttemptAt = clock.now(),
+                    lastError = null,
+                    createdAt = clock.now(),
+                    sentAt = null,
+                ),
+            )
+
+            val exit = drainEmailOutboxAndExit(store, sender, SubscriberEmailResolver(consents, provider), clock)
+
+            assertThat(exit).isEqualTo(0)
+            assertThat(sender.sent).hasSize(1)
+            assertThat(store.rows.single().status).isEqualTo(OutboundEmailStatus.SENT)
+        }
+
+    @Test
+    fun `drainEmailOutboxAndExit returns success with an empty outbox`() =
+        runTest {
+            val exit =
+                drainEmailOutboxAndExit(
+                    InMemoryOutboundEmailStore(),
+                    FakeEmailSender(),
+                    SubscriberEmailResolver(FakeConsentRepository(), provider),
+                    clock,
+                )
+
+            assertThat(exit).isEqualTo(0)
         }
 
     @Test
