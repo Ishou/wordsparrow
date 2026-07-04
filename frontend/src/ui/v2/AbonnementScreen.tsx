@@ -29,6 +29,19 @@ const CADENCES: ReadonlyArray<CadenceOption> = [
   { id: 'annuel', label: 'Annuel', note: 'Deux mois offerts', price: '20 €', cadence: '/an' },
 ];
 
+// CGV version rendered on this screen; must match the /conditions-abonnement page's "Version 1.0".
+const CGV_VERSION = '1.0';
+
+interface Recap {
+  readonly price: string;
+  readonly period: string;
+  readonly renewal: string;
+}
+const RECAP_BY_CADENCE: Readonly<Record<Cadence, Recap>> = {
+  mensuel: { price: '2 € TTC', period: 'par mois', renewal: 'Reconduction tacite chaque mois' },
+  annuel: { price: '20 € TTC', period: 'par an', renewal: 'Reconduction tacite chaque année' },
+};
+
 const ACCES_COMPLET_FEATURES: ReadonlyArray<string> = [
   'Toutes les grilles, sans limite',
   "Tout l'historique, jusqu'à la première",
@@ -87,8 +100,24 @@ const optCadence = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'blac
 // ws.sakuraDark (not ws.sakura) clears WCAG AA for white text — known palette gotcha.
 const cta = css({ width: '100%', border: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', padding: '14px', borderRadius: '14px', cursor: 'pointer', boxShadow: '0 8px 18px rgba(190,73,112,0.34)', _hover: { opacity: 0.94 }, _disabled: { opacity: 0.5, cursor: 'not-allowed' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const reassure = css({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: 'wsUi', fontSize: '11.5px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, textAlign: 'center', lineHeight: '1.4' });
-const conditionsNote = css({ marginTop: '8px', fontFamily: 'wsUi', fontSize: '11.5px', fontWeight: 'semibold', color: 'ws.khaki', textAlign: 'center', lineHeight: '1.4', '& a': { color: 'ws.sakuraDark', fontWeight: 'bold', textDecoration: 'underline' } });
 const reassureIcon = css({ flex: 'none', display: 'flex' });
+
+// CGV Art. 7 récapitulatif shown before payment (ADR-0094).
+const recap = css({ bg: 'ws.chipFaint', borderRadius: '13px', padding: '13px 14px', display: 'flex', flexDirection: 'column', gap: '8px' });
+const recapTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '15px', color: 'ws.jadeInk', margin: 0 });
+const recapRow = css({ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', fontFamily: 'wsUi', fontSize: '12.5px', lineHeight: '1.35' });
+const recapKey = css({ fontWeight: 'semibold', color: 'ws.khaki', flex: 'none' });
+const recapVal = css({ fontWeight: 'bold', color: 'ws.jadeInk', textAlign: 'right' });
+const recapNote = css({ fontFamily: 'wsUi', fontSize: '11.5px', fontWeight: 'semibold', color: 'ws.khaki', lineHeight: '1.4', margin: 0 });
+
+// CGV Art. 7 + 13 double-consent checkboxes (ADR-0094).
+const consentGroup = css({ display: 'flex', flexDirection: 'column', gap: '11px' });
+const consentRow = css({ display: 'flex', alignItems: 'flex-start', gap: '10px' });
+const checkbox = css({ flex: 'none', width: '20px', height: '20px', marginTop: '1px', accentColor: 'token(colors.ws.sakuraDark)', cursor: 'pointer', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const consentLabel = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'semibold', color: 'ws.jadeInk', lineHeight: '1.4', cursor: 'pointer', '& a': { color: 'ws.sakuraDark', fontWeight: 'bold', textDecoration: 'underline' } });
+
+const confirmHint = css({ fontFamily: 'wsUi', fontSize: '11.5px', fontWeight: 'bold', color: 'ws.khaki', textAlign: 'center', lineHeight: '1.4', margin: 0 });
+const secondaryCta = css({ width: '100%', border: '1.6px solid token(colors.ws.khaki)', bg: 'transparent', color: 'ws.jadeInk', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', padding: '11px', borderRadius: '14px', cursor: 'pointer', _hover: { bg: 'ws.chipFaint' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const errText = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', margin: '2px 0 0', textAlign: 'center' });
 
 const subscribedCard = css({ bg: 'ws.card', borderRadius: '18px', padding: '18px', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'center' });
@@ -179,20 +208,49 @@ function SubscribedState() {
 
 export function AbonnementOffer({ client }: { readonly client: BillingClient }) {
   const [cadence, setCadence] = useState<Cadence>('mensuel');
+  const [cgvAccepted, setCgvAccepted] = useState(false);
+  const [withdrawalWaiver, setWithdrawalWaiver] = useState(false);
+  const [step, setStep] = useState<'review' | 'confirm'>('review');
   const [pending, setPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const onSubscribe = useCallback(async () => {
+  const bothAccepted = cgvAccepted && withdrawalWaiver;
+  const info = RECAP_BY_CADENCE[cadence];
+
+  // Any change to the choices reopens the double-clic review (art. 1127-2 — re-confirm after a correction).
+  const selectCadence = useCallback((next: Cadence) => {
+    setCadence(next);
+    setStep('review');
+  }, []);
+  const toggleCgv = useCallback((checked: boolean) => {
+    setCgvAccepted(checked);
+    setStep('review');
+  }, []);
+  const toggleWaiver = useCallback((checked: boolean) => {
+    setWithdrawalWaiver(checked);
+    setStep('review');
+  }, []);
+
+  const onPrimary = useCallback(async () => {
+    if (!bothAccepted) return;
+    if (step === 'review') {
+      setStep('confirm');
+      return;
+    }
     setActionError(null);
     setPending(true);
     try {
-      const session = await client.createCheckoutSession('subscriber', WIRE_CADENCE[cadence]);
+      const session = await client.createCheckoutSession('subscriber', WIRE_CADENCE[cadence], {
+        cgvAccepted: true,
+        cgvVersion: CGV_VERSION,
+        withdrawalWaiver: true,
+      });
       window.location.assign(session.checkoutUrl);
     } catch (cause) {
       setActionError(messageFor(cause));
       setPending(false);
     }
-  }, [client, cadence]);
+  }, [bothAccepted, step, client, cadence]);
 
   return (
     <div className={content}>
@@ -212,14 +270,78 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
             <Feature key={feature} label={feature} />
           ))}
         </div>
-        <CadenceSelector value={cadence} onChange={setCadence} />
-        <button type="button" className={cta} onClick={() => void onSubscribe()} disabled={pending}>
-          S&apos;abonner
+        <CadenceSelector value={cadence} onChange={selectCadence} />
+
+        <section className={recap} aria-label="Récapitulatif">
+          <h3 className={recapTitle}>Ton récapitulatif</h3>
+          <div className={recapRow}>
+            <span className={recapKey}>Offre</span>
+            <span className={recapVal}>Accès complet</span>
+          </div>
+          <div className={recapRow}>
+            <span className={recapKey}>Prix</span>
+            <span className={recapVal}>{info.price} {info.period}</span>
+          </div>
+          <div className={recapRow}>
+            <span className={recapKey}>Premier prélèvement</span>
+            <span className={recapVal}>Aujourd&apos;hui</span>
+          </div>
+          <div className={recapRow}>
+            <span className={recapKey}>Reconduction</span>
+            <span className={recapVal}>{info.renewal}</span>
+          </div>
+          <p className={recapNote}>
+            Ton accès est immédiat. L&apos;abonnement se renouvelle tout seul {info.period} ; tu résilies quand tu veux depuis tes Réglages.
+          </p>
+        </section>
+
+        <div className={consentGroup}>
+          <div className={consentRow}>
+            <input
+              id="consent-cgv"
+              type="checkbox"
+              className={checkbox}
+              checked={cgvAccepted}
+              onChange={(event) => toggleCgv(event.target.checked)}
+            />
+            <label htmlFor="consent-cgv" className={consentLabel}>
+              J&apos;accepte les{' '}
+              <Link to="/conditions-abonnement" onClick={(event) => event.stopPropagation()}>
+                Conditions de vente
+              </Link>
+              .
+            </label>
+          </div>
+          <div className={consentRow}>
+            <input
+              id="consent-waiver"
+              type="checkbox"
+              className={checkbox}
+              checked={withdrawalWaiver}
+              onChange={(event) => toggleWaiver(event.target.checked)}
+            />
+            <label htmlFor="consent-waiver" className={consentLabel}>
+              Je demande l&apos;accès immédiat au contenu et je reconnais renoncer à mon droit de rétractation de 14 jours.
+            </label>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className={cta}
+          onClick={() => void onPrimary()}
+          disabled={!bothAccepted || pending}
+        >
+          {step === 'confirm' ? 'Confirmer et payer' : "S'abonner"}
         </button>
-        <p className={conditionsNote}>
-          En t&apos;abonnant, tu acceptes les{' '}
-          <Link to="/conditions-abonnement">Conditions de vente</Link>.
-        </p>
+        {step === 'confirm' ? (
+          <>
+            <p className={confirmHint}>Vérifie ton récapitulatif, puis confirme pour payer.</p>
+            <button type="button" className={secondaryCta} onClick={() => setStep('review')} disabled={pending}>
+              Modifier
+            </button>
+          </>
+        ) : null}
         {actionError ? (
           <p className={errText} role="alert">
             {actionError}

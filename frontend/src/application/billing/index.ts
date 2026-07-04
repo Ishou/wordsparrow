@@ -3,6 +3,7 @@ export type {
   BillingCadence,
   BillingClient,
   BillingErrorKind,
+  CheckoutConsent,
   CheckoutSession,
   Receipt,
   ReceiptsPage,

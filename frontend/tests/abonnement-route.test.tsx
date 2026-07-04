@@ -26,6 +26,20 @@ const { AbonnementOffer, AbonnementScreen } = await import('@/ui/v2/AbonnementSc
 
 const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 
+const CONSENT = { cgvAccepted: true, cgvVersion: '1.0', withdrawalWaiver: true };
+
+// Tick both consent boxes, then run the double-clic (S'abonner → Confirmer et payer).
+async function acceptAndConfirm() {
+  fireEvent.click(screen.getByRole('checkbox', { name: /Conditions de vente/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /droit de rétractation/ }));
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: "S'abonner" }));
+  });
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmer et payer' }));
+  });
+}
+
 function fakeAuthClient(whoami: WhoAmIResult | null): AuthClient {
   return {
     whoami: vi.fn().mockResolvedValue(whoami),
@@ -160,12 +174,11 @@ describe('AbonnementOffer', () => {
     render(<AbonnementOffer client={client} />, { wrapper: withAuth(ELIGIBLE) });
 
     fireEvent.click(screen.getByRole('radio', { name: /Annuel/ }));
-    const button = screen.getByRole('button', { name: /S'abonner/ });
-    await act(async () => {
-      fireEvent.click(button);
-    });
+    await acceptAndConfirm();
 
-    await waitFor(() => expect(client.createCheckoutSession).toHaveBeenCalledWith('subscriber', 'yearly'));
+    await waitFor(() =>
+      expect(client.createCheckoutSession).toHaveBeenCalledWith('subscriber', 'yearly', CONSENT),
+    );
     expect(assign).toHaveBeenCalledWith('https://checkout.test/session/abc');
   });
 
@@ -178,11 +191,11 @@ describe('AbonnementOffer', () => {
     const client = fakeBillingClient();
     render(<AbonnementOffer client={client} />, { wrapper: withAuth(ELIGIBLE) });
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /S'abonner/ }));
-    });
+    await acceptAndConfirm();
 
-    await waitFor(() => expect(client.createCheckoutSession).toHaveBeenCalledWith('subscriber', 'monthly'));
+    await waitFor(() =>
+      expect(client.createCheckoutSession).toHaveBeenCalledWith('subscriber', 'monthly', CONSENT),
+    );
     expect(assign).toHaveBeenCalledWith('https://checkout.test/session/abc');
   });
 
@@ -192,9 +205,7 @@ describe('AbonnementOffer', () => {
     });
     render(<AbonnementOffer client={client} />, { wrapper: withAuth(ELIGIBLE) });
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /S'abonner/ }));
-    });
+    await acceptAndConfirm();
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/service de paiement/i));
   });
