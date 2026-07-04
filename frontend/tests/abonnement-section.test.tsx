@@ -97,7 +97,7 @@ describe('AbonnementSection états', () => {
     const client = fakeBillingClient(vi.fn().mockResolvedValue(PENDING_VIEW));
     render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
-    expect(await screen.findByText('Résiliation programmée')).toBeInTheDocument();
+    expect(await screen.findByText('Résilié')).toBeInTheDocument();
     expect(screen.getByText(/Accès actif jusqu'au 1 août 2026/)).toBeInTheDocument();
     expect(screen.getByText(/Rien ne te sera plus\s+prélevé/)).toBeInTheDocument();
     expect(screen.getByText(/sans nouveau paiement/)).toBeInTheDocument();
@@ -165,7 +165,7 @@ describe('AbonnementSection réactivation flow', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Reprendre mon abonnement' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/momentanément indisponible/);
-    expect(screen.getByText('Résiliation programmée')).toBeInTheDocument();
+    expect(screen.getByText('Résilié')).toBeInTheDocument();
   });
 });
 
@@ -189,7 +189,7 @@ describe('AbonnementSection résiliation flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Oui, résilier' }));
 
     await waitFor(() => expect(cancelSubscription).toHaveBeenCalledTimes(1));
-    expect(await screen.findByText('Résiliation programmée')).toBeInTheDocument();
+    expect(await screen.findByText('Résilié')).toBeInTheDocument();
     expect(getSubscription).toHaveBeenCalledTimes(2);
   });
 
