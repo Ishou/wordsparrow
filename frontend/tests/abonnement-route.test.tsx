@@ -107,6 +107,7 @@ describe('AbonnementOffer', () => {
     expect(
       screen.getByText(/Paiement sécurisé · sans engagement · résiliable à tout moment/),
     ).toBeInTheDocument();
+    expect(screen.getByText(/se renouvelle automatiquement à 2 €\/mois/)).toBeInTheDocument();
   });
 
   it('toggles the selected cadence between mensuel and annuel', () => {
@@ -120,6 +121,7 @@ describe('AbonnementOffer', () => {
     fireEvent.click(annuel);
     expect(annuel).toHaveAttribute('aria-checked', 'true');
     expect(mensuel).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByText(/se renouvelle automatiquement à 20 €\/an/)).toBeInTheDocument();
   });
 
   it('arrow-right moves the cadence selection forward and shifts the tabbable radio', () => {
