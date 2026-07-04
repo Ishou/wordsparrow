@@ -109,7 +109,7 @@ metadata:
     # except for break-glass debugging.
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: {{ $.Values.ingress.authSecretName | quote }}
-    nginx.ingress.kubernetes.io/auth-realm: "WordSparrow ops — observability"
+    nginx.ingress.kubernetes.io/auth-realm: "WordSparrow ops - observability"
     {{- end }}
 spec:
   ingressClassName: {{ $.Values.ingress.className | quote }}
