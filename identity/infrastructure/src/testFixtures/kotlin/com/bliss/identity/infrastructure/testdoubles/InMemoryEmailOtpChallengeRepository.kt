@@ -32,6 +32,9 @@ class InMemoryEmailOtpChallengeRepository : EmailOtpChallengeRepository {
 
     override suspend fun countAllCreatedSince(since: Instant): Int = byId.values.count { !it.createdAt.isBefore(since) }
 
+    override suspend fun countNewAccountCreatedSince(since: Instant): Int =
+        byId.values.count { !it.accountExisted && !it.createdAt.isBefore(since) }
+
     override suspend fun latestCreatedAt(email: EmailAddress): Instant? =
         byId.values.filter { it.email == email }.maxOfOrNull { it.createdAt }
 
