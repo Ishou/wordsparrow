@@ -68,6 +68,7 @@ on:
       - 'billing/domain/**'
       - 'billing/application/**'
       - 'billing/infrastructure/**'
+      - 'billing/worker/**'
       - 'gradle/**'
       - 'gradlew'
       - 'settings.gradle.kts'
@@ -97,6 +98,7 @@ on:
       - 'billing/domain/**'
       - 'billing/application/**'
       - 'billing/infrastructure/**'
+      - 'billing/worker/**'
       - 'gradle/**'
       - 'gradlew'
       - 'settings.gradle.kts'
@@ -158,6 +160,12 @@ jobs:
             dockerfile: grid/worker/Dockerfile
             image-name: wordsparrow-worker
             digest-artifact: image-digest-grid-worker
+          # ADR-0094 §3: :billing:worker Chatel pre-renewal notice CLI shipped as a
+          # CronJob (billing/api/deploy/chart/templates/cronjob-renewal-notices.yaml).
+          - context: billing-worker
+            dockerfile: billing/worker/Dockerfile
+            image-name: wordsparrow-billing-worker
+            digest-artifact: image-digest-billing-worker
     permissions:
       contents: read
       packages: write
@@ -300,6 +308,9 @@ jobs:
           - context: grid-worker
             image-name: wordsparrow-worker
             digest-artifact: image-digest-grid-worker
+          - context: billing-worker
+            image-name: wordsparrow-billing-worker
+            digest-artifact: image-digest-billing-worker
     steps:
       - name: Log in to GHCR
         # Defensive: required if the GHCR package visibility is still private.

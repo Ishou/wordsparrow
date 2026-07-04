@@ -31,12 +31,11 @@ ingress:
     nginx.ingress.kubernetes.io/limit-rps: "5"
     nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
     nginx.ingress.kubernetes.io/limit-connections: "30"
-# Chatel pre-renewal notice scheduler (ADR-0094 §3). Held dark until the billing-worker image
-# ships: enabling needs a `billing-worker` row in build-and-push-image.yml plus a
-# `renewalNotices.image.digest` injection in deploy-api-k8s.yml (both cross-cutting workflow
-# edits, out of this workstream's billing/** scope). Flip enabled:true with those in place.
+# Chatel pre-renewal notice scheduler (ADR-0094 §3). The billing-worker image is built by
+# build-and-push-image.yml and its digest injected by deploy-api-k8s.yml; the CronJob sends
+# nothing until an annual sub enters the pre-renewal window (and only when email.enabled).
 renewalNotices:
-  enabled: false
+  enabled: true
   image:
     # Fail-fast guard once enabled: helm aborts if digest is empty (see _helpers.tpl).
     requireDigest: true
