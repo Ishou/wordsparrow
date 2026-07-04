@@ -338,10 +338,14 @@ class CoGenerationProbeTest {
                 for (r in top + bh until height) sweep.grid[r][c] = cellOf(gy, r, c)
                 for (r in top until top + bh) sweep.grid[r][c] = '.'
             }
+            // Reconstruct the columns above the seam ONCE (expensive: rebuilds all masks),
+            // snapshot, then cheaply restore per attempt instead of reconstructing 400x.
+            if (!sweep.reconstructAbove(top)) continue
+            val snap = sweep.captureStateForProbe()
             var ok = false
-            repeat(60) {
+            repeat(40) {
                 if (!ok) {
-                    if (!sweep.reconstructAbove(top)) return@repeat
+                    sweep.restoreStateForProbe(snap)
                     seamSolves++
                     val cells = sweep.bandSolve(top, bh) ?: return@repeat
                     for (r in 0 until bh) for (c in 0 until width) sweep.grid[top + r][c] = cells[r][c]
@@ -783,6 +787,10 @@ class CoGenerationProbeTest {
             }
             return true
         }
+
+        fun captureStateForProbe(): Any = captureState()
+
+        fun restoreStateForProbe(st: Any) = restoreState(st as BoardState)
 
         // Reconstruct columns[] entering row `top` from committed grid rows 0..top-1.
         fun reconstructAbove(top: Int): Boolean {
