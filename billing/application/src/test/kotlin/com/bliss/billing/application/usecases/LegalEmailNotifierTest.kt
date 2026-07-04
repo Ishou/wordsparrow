@@ -42,11 +42,8 @@ class LegalEmailNotifierTest {
     private fun contract(cadence: Cadence = Cadence.MONTHLY) =
         ContractConfirmation(userId, Tier.of("premium"), cadence, formedAt, Instant.parse("2026-08-04T00:00:00Z"))
 
-    private suspend fun recordConsent(
-        waiver: Boolean,
-        email: String? = null,
-    ) {
-        consents.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = waiver), email, formedAt)
+    private suspend fun recordConsent(waiver: Boolean) {
+        consents.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = waiver), formedAt)
     }
 
     @Test
@@ -197,66 +194,5 @@ class LegalEmailNotifierTest {
 
             val body = sender.sent.single().textBody
             assertThat(Regex("\\bvous\\b", RegexOption.IGNORE_CASE).find(body)).isNull()
-        }
-
-    @Test
-    fun `contract confirmation prefers the stored checkout email over the provider`() =
-        runTest {
-            provider.setCustomerEmail(userId, "stale@example.com")
-            recordConsent(waiver = false, email = "checkout@example.com")
-
-            notifier.confirmContractFormation(contract())
-
-            assertThat(sender.sent.single().to).isEqualTo("checkout@example.com")
-        }
-
-    @Test
-    fun `contract confirmation falls back to the provider when no email was stored`() =
-        runTest {
-            provider.setCustomerEmail(userId, "provider@example.com")
-            recordConsent(waiver = false, email = null)
-
-            notifier.confirmContractFormation(contract())
-
-            assertThat(sender.sent.single().to).isEqualTo("provider@example.com")
-        }
-
-    @Test
-    fun `renewal receipt prefers the stored checkout email over the provider`() =
-        runTest {
-            provider.setCustomerEmail(userId, "stale@example.com")
-            recordConsent(waiver = false, email = "checkout@example.com")
-
-            notifier.confirmRenewal(
-                RenewalReceipt(userId, Tier.of("premium"), Cadence.MONTHLY, formedAt, Instant.parse("2026-09-04T00:00:00Z")),
-            )
-
-            assertThat(sender.sent.single().to).isEqualTo("checkout@example.com")
-        }
-
-    @Test
-    fun `cancellation confirmation prefers the stored checkout email over the provider`() =
-        runTest {
-            provider.setCustomerEmail(userId, "stale@example.com")
-            recordConsent(waiver = false, email = "checkout@example.com")
-
-            notifier.confirmCancellation(
-                CancellationConfirmation(userId, Tier.of("premium"), formedAt, Instant.parse("2026-08-04T00:00:00Z")),
-            )
-
-            assertThat(sender.sent.single().to).isEqualTo("checkout@example.com")
-        }
-
-    @Test
-    fun `chatel pre-renewal notice prefers the stored checkout email over the provider`() =
-        runTest {
-            provider.setCustomerEmail(userId, "stale@example.com")
-            recordConsent(waiver = false, email = "checkout@example.com")
-
-            notifier.sendChatelPreRenewalNotice(
-                PreRenewalNotice(userId, Tier.of("premium"), Cadence.YEARLY, Instant.parse("2026-08-15T00:00:00Z")),
-            )
-
-            assertThat(sender.sent.single().to).isEqualTo("checkout@example.com")
         }
 }

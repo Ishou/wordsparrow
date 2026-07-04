@@ -57,6 +57,16 @@ class FakeMollieClient : MollieClient {
 
     override suspend fun getCustomerEmail(customerId: String): String? = customerEmails[customerId]
 
+    val updatedCustomerEmails = mutableListOf<Pair<String, String>>()
+
+    override suspend fun updateCustomerEmail(
+        customerId: String,
+        email: String,
+    ) {
+        updatedCustomerEmails.add(customerId to email)
+        customerEmails[customerId] = email
+    }
+
     var customerPayments: MolliePaymentPage = MolliePaymentPage(emptyList(), null)
     var lastListCustomerId: String? = null
     var lastListFrom: String? = null

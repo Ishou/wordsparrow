@@ -27,7 +27,12 @@ class MollieBillingAdapter(
         cadence: Cadence,
         email: String?,
     ): CheckoutUrls {
-        val customerId = customerStore.findOrCreate(userId) { client.createCustomer(userId.toString(), email) }
+        val existingCustomerId = customerStore.findCustomerId(userId)
+        val customerId = existingCustomerId ?: customerStore.findOrCreate(userId) { client.createCustomer(userId.toString(), email) }
+        // Backfills a customer created before the email was known (ADR-0082: create-once, pass-through, never stored here).
+        if (existingCustomerId != null && !email.isNullOrBlank()) {
+            client.updateCustomerEmail(existingCustomerId, email)
+        }
         val payment =
             client.createFirstPayment(
                 customerId = customerId,

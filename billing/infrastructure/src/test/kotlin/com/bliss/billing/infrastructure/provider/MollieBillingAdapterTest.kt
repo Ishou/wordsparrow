@@ -57,6 +57,7 @@ class MollieBillingAdapterTest {
             assertThat(client.lastPaymentCustomerId).isEqualTo("cust_new")
             assertThat(client.lastPaymentMetadata).isEqualTo(metadata())
             assertThat(client.lastPaymentAmount).isEqualTo("2.00")
+            assertThat(client.updatedCustomerEmails).isEmpty()
         }
 
     @Test
@@ -111,6 +112,29 @@ class MollieBillingAdapterTest {
 
             assertThat(client.createdCustomers).isEmpty()
             assertThat(client.lastPaymentCustomerId).isEqualTo("cust_existing")
+            assertThat(client.updatedCustomerEmails).isEmpty()
+        }
+
+    @Test
+    fun `createCheckout backfills the email onto a returning customer created before the email was known`() =
+        runTest {
+            val client = FakeMollieClient()
+            val store = InMemoryMollieCustomerStore(mapOf(userId to "cust_existing"))
+
+            adapter(client, store).createCheckout(userId, tier, Cadence.MONTHLY, "player@example.com")
+
+            assertThat(client.updatedCustomerEmails).containsExactly("cust_existing" to "player@example.com")
+        }
+
+    @Test
+    fun `createCheckout does not backfill when the returning caller still has no email`() =
+        runTest {
+            val client = FakeMollieClient()
+            val store = InMemoryMollieCustomerStore(mapOf(userId to "cust_existing"))
+
+            adapter(client, store).createCheckout(userId, tier, Cadence.MONTHLY, null)
+
+            assertThat(client.updatedCustomerEmails).isEmpty()
         }
 
     @Test

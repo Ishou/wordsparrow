@@ -66,7 +66,7 @@ class LegalEmailNotifier(
     }
 
     private suspend fun emailOrNull(userId: UUID): String? {
-        val email = consents.findLatestEmail(userId) ?: provider.fetchCustomerEmail(userId)
+        val email = provider.fetchCustomerEmail(userId)
         if (email.isNullOrBlank()) {
             log.warn("billing_email_skipped_no_address user_id={}", userId)
             return null

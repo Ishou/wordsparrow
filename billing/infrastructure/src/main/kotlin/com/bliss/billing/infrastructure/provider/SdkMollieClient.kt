@@ -18,6 +18,7 @@ import com.mollie.mollie.models.errors.APIException
 import com.mollie.mollie.models.operations.GetPaymentRequest
 import com.mollie.mollie.models.operations.ListAllSubscriptionsRequest
 import com.mollie.mollie.models.operations.ListCustomerPaymentsRequest
+import com.mollie.mollie.models.operations.UpdateCustomerRequestBody
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.openapitools.jackson.nullable.JsonNullable
@@ -123,6 +124,20 @@ class SdkMollieClient(
                     .orElse(null)
             }
         }
+
+    override suspend fun updateCustomerEmail(
+        customerId: String,
+        email: String,
+    ) {
+        withContext(Dispatchers.IO) {
+            sdk
+                .customers()
+                .update()
+                .customerId(customerId)
+                .requestBody(UpdateCustomerRequestBody.builder().email(email).build())
+                .call()
+        }
+    }
 
     override suspend fun listCustomerPayments(
         customerId: String,

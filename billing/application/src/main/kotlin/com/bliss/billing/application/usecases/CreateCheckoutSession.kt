@@ -36,7 +36,7 @@ class CreateCheckoutSession(
             return CreateCheckoutSessionOutcome.AlreadySubscribed
         }
         if (consent != null) {
-            consentRepository.record(userId, consent, email, clock.now())
+            consentRepository.record(userId, consent, clock.now())
         }
         val urls =
             try {

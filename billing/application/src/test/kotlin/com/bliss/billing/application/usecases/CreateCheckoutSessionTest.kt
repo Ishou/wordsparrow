@@ -60,17 +60,7 @@ class CreateCheckoutSessionTest {
             useCase.execute(userId, tier, Cadence.MONTHLY, email = null, consent = consent)
 
             assertThat(consents.records).isEqualTo(
-                listOf(FakeConsentRepository.Recorded(userId, consent, email = null, acceptedAt)),
-            )
-        }
-
-    @Test
-    fun `stores the checkout email on the consent record`() =
-        runTest {
-            useCase.execute(userId, tier, Cadence.MONTHLY, email = "player@example.com", consent = consent)
-
-            assertThat(consents.records).isEqualTo(
-                listOf(FakeConsentRepository.Recorded(userId, consent, email = "player@example.com", acceptedAt)),
+                listOf(FakeConsentRepository.Recorded(userId, consent, acceptedAt)),
             )
         }
 

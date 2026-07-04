@@ -18,7 +18,6 @@ class PostgresConsentRepository(
     override suspend fun record(
         userId: UUID,
         consent: CheckoutConsent,
-        email: String?,
         acceptedAt: Instant,
     ) {
         withContext(Dispatchers.IO) {
@@ -30,7 +29,6 @@ class PostgresConsentRepository(
                     stmt.setBoolean(4, consent.withdrawalWaiver)
                     stmt.setObject(5, acceptedAt.truncatedTo(ChronoUnit.MICROS).atOffset(ZoneOffset.UTC))
                     stmt.setObject(6, now().truncatedTo(ChronoUnit.MICROS).atOffset(ZoneOffset.UTC))
-                    stmt.setString(7, email)
                     stmt.executeUpdate()
                 }
             }
@@ -57,30 +55,14 @@ class PostgresConsentRepository(
             }
         }
 
-    override suspend fun findLatestEmail(userId: UUID): String? =
-        withContext(Dispatchers.IO) {
-            dataSource.connection.use { conn ->
-                conn.prepareStatement(SELECT_LATEST_EMAIL_SQL).use { stmt ->
-                    stmt.setObject(1, userId)
-                    stmt.executeQuery().use { rs ->
-                        if (!rs.next()) null else rs.getString("email")
-                    }
-                }
-            }
-        }
-
     companion object {
         private const val INSERT_SQL =
             "INSERT INTO billing_checkout_consents " +
-                "(user_id, cgv_accepted, cgv_version, withdrawal_waiver, accepted_at, created_at, email) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)"
+                "(user_id, cgv_accepted, cgv_version, withdrawal_waiver, accepted_at, created_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?)"
 
         private const val SELECT_LATEST_SQL =
             "SELECT cgv_accepted, cgv_version, withdrawal_waiver FROM billing_checkout_consents " +
-                "WHERE user_id = ? ORDER BY accepted_at DESC, id DESC LIMIT 1"
-
-        private const val SELECT_LATEST_EMAIL_SQL =
-            "SELECT email FROM billing_checkout_consents " +
                 "WHERE user_id = ? ORDER BY accepted_at DESC, id DESC LIMIT 1"
     }
 }
