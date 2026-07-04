@@ -13,7 +13,10 @@ import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 
 class MollieBillingAdapterTest {
@@ -23,17 +26,17 @@ class MollieBillingAdapterTest {
         MollieConfig(
             apiKey = "test_dummy",
             currency = "EUR",
-            firstPaymentAmount = "0.00",
             description = "WordSparrow abonnement",
             successUrl = "https://app.test/merci",
             cancelUrl = "https://app.test/abonnement",
             webhookUrl = "https://api.test/v1/billing/webhook",
         )
+    private val clock = Clock.fixed(Instant.parse("2026-07-04T10:00:00Z"), ZoneOffset.UTC)
 
     private fun adapter(
         client: FakeMollieClient,
         store: InMemoryMollieCustomerStore,
-    ) = MollieBillingAdapter(client, store, config)
+    ) = MollieBillingAdapter(client, store, config, clock)
 
     private fun metadata(cadence: String = "monthly") = mapOf("userId" to userId.toString(), "tier" to "premium", "cadence" to cadence)
 
@@ -53,7 +56,7 @@ class MollieBillingAdapterTest {
             assertThat(store.saved[userId]).isEqualTo("cust_new")
             assertThat(client.lastPaymentCustomerId).isEqualTo("cust_new")
             assertThat(client.lastPaymentMetadata).isEqualTo(metadata())
-            assertThat(client.lastPaymentAmount).isEqualTo("0.00")
+            assertThat(client.lastPaymentAmount).isEqualTo("2.00")
         }
 
     @Test
@@ -64,6 +67,28 @@ class MollieBillingAdapterTest {
             adapter(client, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.YEARLY, null)
 
             assertThat(client.lastPaymentMetadata).isEqualTo(metadata("yearly"))
+        }
+
+    @Test
+    fun `createCheckout charges the cadence price as the first payment so annual is not the monthly rate`() =
+        runTest {
+            val monthly = FakeMollieClient()
+            adapter(monthly, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.MONTHLY, null)
+            assertThat(monthly.lastPaymentAmount).isEqualTo("2.00")
+
+            val yearly = FakeMollieClient()
+            adapter(yearly, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.YEARLY, null)
+            assertThat(yearly.lastPaymentAmount).isEqualTo("20.00")
+        }
+
+    @Test
+    fun `createCheckout discloses the cadence price and automatic renewal in the checkout description`() =
+        runTest {
+            val client = FakeMollieClient()
+
+            adapter(client, InMemoryMollieCustomerStore()).createCheckout(userId, tier, Cadence.YEARLY, null)
+
+            assertThat(client.lastPaymentDescription).isEqualTo("WordSparrow abonnement — 20 €/an, renouvellement automatique")
         }
 
     @Test
@@ -130,6 +155,8 @@ class MollieBillingAdapterTest {
             assertThat(client.lastSubscriptionAmount).isEqualTo("2.00")
             assertThat(client.lastSubscriptionInterval).isEqualTo("1 month")
             assertThat(client.lastSubscriptionMetadata).isEqualTo(metadata("monthly"))
+            // First payment (2026-07-04) covers period one; the recurring charge starts one interval later, not today.
+            assertThat(client.lastSubscriptionStartDate).isEqualTo(LocalDate.parse("2026-08-04"))
         }
 
     @Test
@@ -143,6 +170,8 @@ class MollieBillingAdapterTest {
             assertThat(client.lastSubscriptionAmount).isEqualTo("20.00")
             assertThat(client.lastSubscriptionInterval).isEqualTo("12 months")
             assertThat(client.lastSubscriptionMetadata).isEqualTo(metadata("yearly"))
+            // Annual first payment (2026-07-04) covers year one; the recurring charge starts twelve months later.
+            assertThat(client.lastSubscriptionStartDate).isEqualTo(LocalDate.parse("2027-07-04"))
         }
 
     @Test

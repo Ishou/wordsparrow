@@ -158,6 +158,7 @@ class SdkMollieClient(
         amountValue: String,
         currency: String,
         interval: String,
+        startDate: LocalDate?,
         description: String,
         webhookUrl: String,
         metadata: Map<String, String>,
@@ -173,6 +174,7 @@ class SdkMollieClient(
                             .value(amountValue)
                             .build(),
                     ).interval(interval)
+                    .apply { startDate?.let { startDate(it.toString()) } }
                     .description(description)
                     .mandateId(mandateId)
                     .webhookUrl(webhookUrl)

@@ -71,13 +71,14 @@ interface MollieClient {
         limit: Int,
     ): MolliePaymentPage
 
-    /** Create the recurring subscription against an existing mandate; the first payment must already be paid. */
+    /** Create the recurring subscription against an existing mandate (first payment must already be paid); [startDate] (YYYY-MM-DD, null = today) defers the first recurring charge to avoid double-billing period one. */
     suspend fun createSubscription(
         customerId: String,
         mandateId: String,
         amountValue: String,
         currency: String,
         interval: String,
+        startDate: java.time.LocalDate?,
         description: String,
         webhookUrl: String,
         metadata: Map<String, String>,
