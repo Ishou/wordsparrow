@@ -244,6 +244,12 @@ ADR-0091  identity/infrastructure/**/db/migration/V9__*.sql  Expand identity_use
 ADR-0092  identity/infrastructure/**/email/BrevoEmailSender.kt   Brevo transactional adapter (Ktor HttpClient → POST /v3/smtp/email; no vendor SDK)
 ADR-0092  identity/api/**/config/IdentityApiConfig.kt            Reads BREVO_API_KEY (nullable; required fail-fast only when IDENTITY_EMAIL_OTP_ENABLED)
 # ADR-0092: paid service (maintainer-approved 2026-07-03, Starter plan); EU data residency; SPF/DKIM/DMARC domain-auth is the deliverability lever; swappable behind the EmailSender port
+ADR-0093  identity/application/**/usecases/RequestEmailOtpUseCase.kt  Nested daily send budget: daily total (150) + new-account sub-cap (50) → 100/day registered floor; classifies via UserRepository.findByEmail; gates before per-email throttles
+ADR-0093  identity/application/**/ports/EmailOtpChallengeRepository.kt  countNewAccountCreatedSince(since) over account_existed = false (daily total reuses countAllCreatedSince)
+ADR-0093  identity/domain/**/auth/EmailOtpChallenge.kt  accountExisted: Boolean recorded at creation (point-in-time classification)
+ADR-0093  identity/infrastructure/**/db/migration/V11__*.sql  Nullable account_existed column (expand-and-contract)
+ADR-0093  identity/api/**/Wiring.kt  IDENTITY_OTP_DAILY_CAP (150) + IDENTITY_OTP_NEW_ACCOUNT_DAILY_CAP (50) env overrides
+# ADR-0093: amends ADR-0091 enumeration-safety — accepts a bounded 202-vs-503 account-existence oracle in the degraded (new-bucket-exhausted) state; mitigates the #1357 shared-budget DoS by reserving a registered floor; OIDC unaffected, ADR-0032-alerted, env-tunable
 ```
 
 ## Adding entries
