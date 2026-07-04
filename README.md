@@ -42,7 +42,8 @@ Bounded contexts, each hexagonally layered
   ([ADR-0078](./docs/adr/0078-billing-subscription-context.md)).
 - **`frontend/`** — Vite + React 19 + TypeScript + Panda CSS +
   TanStack Router. Player UI, deployed as a static bundle to
-  Cloudflare Pages ([ADR-0002](./docs/adr/0002-frontend-stack.md)).
+  Cloudflare Workers static assets ([ADR-0002](./docs/adr/0002-frontend-stack.md),
+  [ADR-0090](./docs/adr/0090-frontend-hosting-workers-static-assets.md)).
 
 JVM is Kotlin 2.x on JDK 21 with Ktor for HTTP/WS
 ([ADR-0006](./docs/adr/0006-jvm-http-framework.md)) and Postgres via
@@ -177,8 +178,11 @@ flowchart LR
 - **Cloud + DNS** — OpenTofu manages a self-hosted Hetzner k3s cluster
   ([ADR-0009](./docs/adr/0009-self-managed-k8s-deployment.md),
   [ADR-0011](./docs/adr/0011-opentofu-for-k8s-subtree.md)), Cloudflare
-  DNS records, and the Cloudflare Pages project for the frontend
-  ([ADR-0004](./docs/adr/0004-hello-world-deployment.md)). Roots in
+  DNS records, and the Cloudflare Workers static-assets project for the
+  frontend ([ADR-0004](./docs/adr/0004-hello-world-deployment.md),
+  [ADR-0090](./docs/adr/0090-frontend-hosting-workers-static-assets.md)).
+  The retired Cloudflare Pages project survives as a 301 grace stub
+  until its 2026-08-04 deletion. Roots in
   [`terraform/`](./terraform/) (Cloudflare) and
   [`terraform/k8s/`](./terraform/k8s/) (provider-agnostic cluster
   module). State is remote
@@ -200,7 +204,7 @@ flowchart LR
   rather than `kubectl port-forward` from a GitHub Action.
 - **Deploy pipelines** — frontend via
   [`.github/workflows/deploy-frontend.yml`](./.github/workflows/deploy-frontend.yml)
-  to Cloudflare Pages; APIs + workers via
+  to Cloudflare Workers static assets; APIs + workers via
   [`.github/workflows/deploy-api-k8s.yml`](./.github/workflows/deploy-api-k8s.yml)
   using `helm upgrade --install`. Container images are pinned by digest.
 

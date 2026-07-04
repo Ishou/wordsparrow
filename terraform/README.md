@@ -22,9 +22,9 @@ Prerequisites:
 
 - A Cloudflare account (created manually; this is the platform-tenancy
   boundary called out in ADR-0004 Notes).
-- A Cloudflare API token scoped per `docs/deploy.md` (Account → Cloudflare
-  Pages → Edit; User → Memberships → Read; plus Zone → DNS → Edit and
-  Zone → Zone → Read on `wordsparrow.io` for the API CNAME).
+- A Cloudflare API token: use the scope list in `docs/deploy.md`'s
+  "Required Cloudflare API token scopes", plus Zone → Zone → Read on
+  `wordsparrow.io` for the API CNAME.
 - The Cloudflare account ID (visible in the Cloudflare dashboard URL or
   account home page).
 

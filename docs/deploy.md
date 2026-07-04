@@ -40,7 +40,7 @@ only the *values* are injected at runtime via GitHub Actions Secrets.
 
 When creating the token in the Cloudflare dashboard
 (My Profile -> API Tokens -> Create Token, *Custom Token*), grant the
-minimum needed for Direct Upload:
+minimum needed for the Workers deploy pipeline:
 
 - **Account -> Workers Scripts -> Edit** (upload the Worker + assets,
   preview versions).
