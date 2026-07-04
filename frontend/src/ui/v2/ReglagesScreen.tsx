@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useRouteContext } from '@tanstack/react-router';
-import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User } from '@phosphor-icons/react';
+import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User, SpeakerHigh } from '@phosphor-icons/react';
+import { Switch } from '@ark-ui/react/switch';
 import { css, cx } from 'styled-system/css';
 import type { ThemePreference, ThemeStore } from '@/application/session/ThemeStore';
+import type { SoundStore } from '@/application/session/SoundStore';
 import { useAuth } from '@/ui/components/auth';
 import { useInstallPrompt } from '@/ui/lib/useInstallPrompt';
 import { Skeleton } from '@/design-system';
@@ -100,6 +102,67 @@ function ThemeGroup({ themeStore }: { readonly themeStore: ThemeStore }) {
   );
 }
 
+const soundCard = css({ bg: 'ws.card', borderRadius: '18px', padding: '4px', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
+const soundRow = css({ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', minHeight: '52px', padding: '12px 14px', cursor: 'pointer' });
+const soundTile = css({ flex: 'none', width: '34px', height: '34px', borderRadius: '10px', bg: 'ws.jade', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'ws.jadeInk' });
+const soundBody = css({ display: 'flex', flexDirection: 'column', minWidth: 0 });
+const soundLabel = css({ fontSize: '14.5px', fontWeight: 'bold', color: 'ws.jadeInk' });
+const soundSub = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85, marginTop: '1px' });
+const switchControl = css({
+  marginLeft: 'auto',
+  flex: 'none',
+  width: '44px',
+  height: '26px',
+  borderRadius: '999px',
+  padding: '3px',
+  bg: 'ws.sable',
+  transition: 'background 160ms ease',
+  '&[data-state=checked]': { bg: 'ws.jade' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+});
+const switchThumb = css({
+  display: 'block',
+  width: '20px',
+  height: '20px',
+  borderRadius: '50%',
+  bg: 'white',
+  boxShadow: '0 1px 2px rgba(33,75,64,0.3)',
+  transition: 'transform 160ms ease',
+  '&[data-state=checked]': { transform: 'translateX(18px)' },
+});
+
+function SoundGroup({ soundStore }: { readonly soundStore: SoundStore }) {
+  const [on, setOn] = useState<boolean>(() => soundStore.load());
+  return (
+    <section aria-label="Son">
+      <div className={groupLabel}>Son</div>
+      <div className={soundCard}>
+        <Switch.Root
+          checked={on}
+          onCheckedChange={(details) => {
+            soundStore.set(details.checked);
+            setOn(details.checked);
+          }}
+          className={soundRow}
+        >
+          <span className={soundTile}>
+            <SpeakerHigh size={18} weight="bold" aria-hidden="true" />
+          </span>
+          <span className={soundBody}>
+            <Switch.Label className={soundLabel}>Sons</Switch.Label>
+            <span className={soundSub}>Effets sonores de la grille</span>
+          </span>
+          <Switch.Control className={switchControl}>
+            <Switch.Thumb className={switchThumb} />
+          </Switch.Control>
+          {/* role=switch: an on/off toggle, not a tri-state checkbox (Ark's default input role). */}
+          <Switch.HiddenInput role="switch" />
+        </Switch.Root>
+      </div>
+    </section>
+  );
+}
+
 const foot = css({ fontFamily: 'wsMono', fontSize: '11px', color: 'ws.khaki', opacity: 0.85, textAlign: 'center', paddingTop: '10px' });
 
 function initialFor(displayName: string): string {
@@ -157,7 +220,7 @@ function ProfileCard() {
 
 export function ReglagesScreen() {
   const { canInstall, promptInstall } = useInstallPrompt();
-  const { themeStore } = useRouteContext({ from: '__root__' });
+  const { themeStore, soundStore } = useRouteContext({ from: '__root__' });
   return (
     <PhoneShell header={<BackHeader to="/" />} backTo="/">
       <div className={stack}>
@@ -166,6 +229,8 @@ export function ReglagesScreen() {
         <ProfileCard />
 
         {themeStore ? <ThemeGroup themeStore={themeStore} /> : null}
+
+        {soundStore ? <SoundGroup soundStore={soundStore} /> : null}
 
         {canInstall ? (
           <nav aria-label="Application">

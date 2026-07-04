@@ -3,6 +3,7 @@ import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/rea
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthClient } from '@/application/auth';
 import type { ThemeStore } from '@/application/session/ThemeStore';
+import type { SoundStore } from '@/application/session/SoundStore';
 import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
@@ -27,7 +28,7 @@ function stubAuth(overrides: Partial<AuthClient> = {}): AuthClient {
   };
 }
 
-function renderReglages(authClient: AuthClient, themeStore?: ThemeStore) {
+function renderReglages(authClient: AuthClient, themeStore?: ThemeStore, soundStore?: SoundStore) {
   const routeTree = RootRoute.addChildren([AppLayoutRoute.addChildren([ReglagesRoute])]);
   const router = createRouter({
     routeTree,
@@ -61,6 +62,7 @@ function renderReglages(authClient: AuthClient, themeStore?: ThemeStore) {
       },
       tourSeenStore: { get: () => true, set: () => {}, clear: () => {} },
       themeStore,
+      soundStore,
     },
   });
   return render(
@@ -90,6 +92,30 @@ describe('v2 réglages screen', () => {
     sombre.click();
     await waitFor(() => expect(themeStore.set).toHaveBeenCalledWith('sombre'));
     expect(sombre.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('renders the sound toggle when a soundStore is wired and persists a change', async () => {
+    const soundStore: SoundStore = { load: vi.fn().mockReturnValue(true), set: vi.fn() };
+    renderReglages(stubAuth(), undefined, soundStore);
+    await screen.findByRole('heading', { level: 1, name: 'Réglages' });
+    const toggle = screen.getByRole('switch', { name: 'Sons' }) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    toggle.click();
+    await waitFor(() => expect(soundStore.set).toHaveBeenCalledWith(false));
+    expect(toggle.checked).toBe(false);
+  });
+
+  it('omits the sound toggle when no soundStore is in context', async () => {
+    renderReglages(stubAuth());
+    await screen.findByRole('heading', { level: 1, name: 'Réglages' });
+    expect(screen.queryByRole('switch', { name: 'Sons' })).toBeNull();
+  });
+
+  it('is axe-clean with the sound toggle present (ADR-0050)', async () => {
+    const soundStore: SoundStore = { load: () => true, set: () => {} };
+    const { container } = renderReglages(stubAuth(), undefined, soundStore);
+    await screen.findByRole('switch', { name: 'Sons' });
+    await expectAxeClean(container);
   });
 
   it('omits the theme control when no themeStore is in context', async () => {
