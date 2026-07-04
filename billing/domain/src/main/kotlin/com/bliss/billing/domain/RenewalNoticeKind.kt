@@ -8,10 +8,4 @@ enum class RenewalNoticeKind(
     ;
 
     override fun toString(): String = wire
-
-    companion object {
-        fun fromWire(raw: String): RenewalNoticeKind =
-            entries.firstOrNull { it.wire == raw.trim() }
-                ?: throw IllegalArgumentException("Unknown renewal notice kind: $raw")
-    }
 }
