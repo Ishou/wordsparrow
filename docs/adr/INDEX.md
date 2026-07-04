@@ -252,7 +252,7 @@ ADR-0093  identity/api/**/Wiring.kt  IDENTITY_OTP_DAILY_CAP (150) + IDENTITY_OTP
 # ADR-0093: amends ADR-0091 enumeration-safety — accepts a bounded 202-vs-503 account-existence oracle in the degraded (new-bucket-exhausted) state; mitigates the #1357 shared-budget DoS by reserving a registered floor; OIDC unaffected, ADR-0032-alerted, env-tunable
 ADR-0094  billing/**                                     Consumer-law posture: billing MAY store consent records + send its OWN transactional email (dedicated Brevo adapter, NO send-budget cap); receipt-not-facture; Chatel(annual)/price/CGV-change notices
 ADR-0094  frontend/src/infrastructure/analytics/matomoTracker.ts  Cookieless CNIL-exempt audience measurement ⇒ NO cookie consent banner; adding a non-exempt/ad tracker re-opens this
-ADR-0094  frontend/src/ui/v2/ConditionsAbonnementScreen.tsx  CGV page = the linked contract text (Art. 1/7 acceptance); checkout consent must link here
+ADR-0094  frontend/src/ui/v2/ConditionsAbonnementScreen.tsx  CGV page = the linked contract text (Art. 1/7 acceptance); checkout consent must link here (file does not exist yet — created by follow-on workstream 3)
 # ADR-0094: consumer-law conformity umbrella — extends ADR-0078/0082 billing PII posture (consent + billing-sent uncapped email); Chatel=annual only; no cookie banner; B2C receipt-not-facture (<25€ TTC tripwire), on-request factures + e-reporting via Qonto (registered Plateforme Agréée, not Mollie)
 ```
 

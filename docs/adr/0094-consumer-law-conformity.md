@@ -101,7 +101,10 @@ not meet, and the authoritative specification is the **CGV v1.0**
   confirmation-email mentions; Qonto API enablement.
 - **Follow-on workstreams (each its own PR, gated on this ADR):**
   (3) checkout consent capture — schema-first (`CheckoutSessionRequest`
-  gains consent fields) + double-clic récap + two checkboxes;
+  gains consent fields) + double-clic récap + two checkboxes, **plus the
+  CGV page itself** (`frontend/src/ui/v2/ConditionsAbonnementScreen.tsx`
+  does not exist yet; this workstream creates it as the linked contract
+  text the checkboxes reference);
   (4) confirmation/receipt email + billing Brevo adapter;
   (5) résiliation confirmation email;
   (6) Chatel / price-change / CGV-change scheduler;
