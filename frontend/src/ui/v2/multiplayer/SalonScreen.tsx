@@ -216,7 +216,7 @@ const startButton = css({
   transition: 'background-color 120ms ease-out, opacity 120ms ease-out',
   _hover: { bg: '#A63C61' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
-  _disabled: { bg: '#E0DAC8', color: '#7A7560', boxShadow: 'none', cursor: 'not-allowed' },
+  _disabled: { bg: 'ws.ctaDisabledBg', color: 'ws.ctaDisabledFg', boxShadow: 'none', cursor: 'not-allowed' },
 });
 const leaveButton = css({
   display: 'flex',
