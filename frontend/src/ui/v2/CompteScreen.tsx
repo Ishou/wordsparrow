@@ -6,6 +6,7 @@ import { InvalidDisplayNameError, type GetMeResult } from '@/application/auth';
 import { useAuth } from '@/ui/components/auth';
 import { useToast } from '@/ui/components/primitives';
 import { useSubscriber } from '@/ui/components/billing';
+import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { Skeleton } from '@/design-system';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
@@ -66,6 +67,7 @@ function AuthedCompte() {
   const { state, refresh } = useAuth();
   const { authClient, progressSyncService, billingClient } = useRouteContext({ from: '__root__' });
   const subscriber = useSubscriber();
+  const announcer = useAnnouncer();
   const [me, setMe] = useState<GetMeResult | null>(null);
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const { show: showToast } = useToast();
@@ -116,6 +118,16 @@ function AuthedCompte() {
       await refresh();
     } catch (cause) {
       console.warn('logout failed', cause);
+    }
+  };
+  const logoutAll = async () => {
+    if (!authClient) return;
+    try {
+      await authClient.logoutAll();
+      await refresh();
+      announcer.say('Déconnecté·e de tous les appareils.');
+    } catch (cause) {
+      console.warn('logout-all failed', cause);
     }
   };
   const sync = async () => {
@@ -212,7 +224,8 @@ function AuthedCompte() {
             label="Google"
             sub={me ? (google ? 'Compte connecté' : 'Non connecté') : <Skeleton tone="onCard" width={90} height={11} radius={6} />}
           />
-          <SettingsRow icon={SignOut} label="Se déconnecter" onClick={() => void logout()} last />
+          <SettingsRow icon={SignOut} label="Se déconnecter" onClick={() => void logout()} />
+          <SettingsRow icon={SignOut} label="Se déconnecter de tous les appareils" onClick={() => void logoutAll()} last />
         </ul>
       </nav>
 
