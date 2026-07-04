@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useRouteContext } from '@tanstack/react-router';
 import { css, cx } from 'styled-system/css';
 import { Check, ShieldCheck } from '@phosphor-icons/react';
@@ -216,6 +216,15 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
 
   const bothAccepted = cgvAccepted && withdrawalWaiver;
   const info = RECAP_BY_CADENCE[cadence];
+
+  // Back from the hosted checkout restores this page from the bfcache with pending frozen true (assign never unwinds it); reset so the CTA works again.
+  useEffect(() => {
+    const reEnableOnRestore = (event: PageTransitionEvent) => {
+      if (event.persisted) setPending(false);
+    };
+    window.addEventListener('pageshow', reEnableOnRestore);
+    return () => window.removeEventListener('pageshow', reEnableOnRestore);
+  }, []);
 
   // Any change to the choices reopens the double-clic review (art. 1127-2 — re-confirm after a correction).
   const selectCadence = useCallback((next: Cadence) => {
