@@ -19,7 +19,7 @@ const tierLine = css({ display: 'flex', alignItems: 'center', gap: '8px', flexWr
 const tierName = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '17px', color: 'ws.jadeInk' });
 const periodLine = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9 });
 
-const pillActif = css({ color: 'ws.clueSurface', bg: 'ws.jade' });
+const pillActif = css({ color: 'ws.onJadeInk', bg: 'ws.jadeInk' });
 
 const divider = css({ height: '1px', bg: 'ws.hairline' });
 const cancelRow = css({ display: 'flex', alignItems: 'center', width: '100%', minHeight: '50px', padding: '11px 15px', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '14px', color: 'ws.sakuraDark', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' } });

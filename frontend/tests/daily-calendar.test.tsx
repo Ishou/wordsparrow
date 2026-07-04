@@ -39,6 +39,7 @@ function renderCalendar(over: Partial<DailyCalendarProps> = {}) {
     onPrev: vi.fn(),
     onNext: vi.fn(),
     onPaywalledSelect: vi.fn(),
+    showPaywallLegend: true,
     ...over,
   };
   const root = createRootRoute({ component: () => <Outlet /> });
@@ -98,6 +99,13 @@ describe('DailyCalendar', () => {
     const isolated = classesOf(/12 juin/);
     expect(start).not.toEqual(end);
     expect(isolated).toEqual(new Set([...start, ...end]));
+  });
+
+  it('drops the paywall key for a subscriber (showPaywallLegend=false)', async () => {
+    renderCalendar({ showPaywallLegend: false });
+    await screen.findByRole('button', { name: 'Mois précédent' });
+    expect(screen.getByText('à jouer', { exact: false })).toBeTruthy();
+    expect(screen.queryByText(/réservées à l'abonnement/)).toBeNull();
   });
 
   it('renders days without a grid as non-interactive and clamps month nav', async () => {
