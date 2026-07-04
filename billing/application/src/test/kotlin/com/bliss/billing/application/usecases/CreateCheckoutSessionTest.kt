@@ -101,4 +101,14 @@ class CreateCheckoutSessionTest {
 
             assertThat(error).isNotNull().isInstanceOf(ProviderUnavailable::class)
         }
+
+    @Test
+    fun `records no consent when the provider checkout call fails`() =
+        runTest {
+            provider.failCheckoutOnce = true
+
+            runCatching { useCase.execute(userId, tier, Cadence.MONTHLY, email = null, consent = consent) }
+
+            assertThat(consents.records).isEmpty()
+        }
 }

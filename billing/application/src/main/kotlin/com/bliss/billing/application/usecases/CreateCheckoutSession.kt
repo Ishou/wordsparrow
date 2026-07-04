@@ -35,9 +35,6 @@ class CreateCheckoutSession(
         if (repository.findByUserId(userId)?.status?.isLive() == true) {
             return CreateCheckoutSessionOutcome.AlreadySubscribed
         }
-        if (consent != null) {
-            consentRepository.record(userId, consent, clock.now())
-        }
         val urls =
             try {
                 provider.createCheckout(userId, tier, cadence, email)
@@ -46,6 +43,9 @@ class CreateCheckoutSession(
             } catch (e: Exception) {
                 throw ProviderUnavailable(e)
             }
+        if (consent != null) {
+            consentRepository.record(userId, consent, clock.now())
+        }
         return CreateCheckoutSessionOutcome.Success(urls)
     }
 }
