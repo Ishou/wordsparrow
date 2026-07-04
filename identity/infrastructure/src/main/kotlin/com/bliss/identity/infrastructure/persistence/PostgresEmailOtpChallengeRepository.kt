@@ -36,6 +36,7 @@ class PostgresEmailOtpChallengeRepository(
                     stmt.setObject(6, challenge.createdAt.atUtc())
                     stmt.setObject(7, challenge.expiresAt.atUtc())
                     stmt.setConsumedAt(8, challenge.consumedAt)
+                    stmt.setBoolean(9, challenge.accountExisted)
                     stmt.executeUpdate()
                 }
             }
@@ -91,6 +92,16 @@ class PostgresEmailOtpChallengeRepository(
             }
         }
 
+    override suspend fun countNewAccountCreatedSince(since: Instant): Int =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(COUNT_NEW_ACCOUNT_SINCE_SQL).use { stmt ->
+                    stmt.setObject(1, since.atUtc())
+                    stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
+                }
+            }
+        }
+
     override suspend fun latestCreatedAt(email: EmailAddress): Instant? =
         withContext(Dispatchers.IO) {
             dataSource.connection.use { conn ->
@@ -136,13 +147,14 @@ class PostgresEmailOtpChallengeRepository(
             createdAt = getObject("created_at", OffsetDateTime::class.java).toInstant(),
             expiresAt = getObject("expires_at", OffsetDateTime::class.java).toInstant(),
             consumedAt = getObject("consumed_at", OffsetDateTime::class.java)?.toInstant(),
+            accountExisted = getObject("account_existed", java.lang.Boolean::class.java) == true,
         )
 
     companion object {
         private const val COLUMNS =
-            "challenge_id, email, code_hash, binding_hash, attempts, created_at, expires_at, consumed_at"
+            "challenge_id, email, code_hash, binding_hash, attempts, created_at, expires_at, consumed_at, account_existed"
         private const val INSERT_SQL =
-            "INSERT INTO identity_email_otp_challenges ($COLUMNS) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO identity_email_otp_challenges ($COLUMNS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         private const val SELECT_ACTIVE_SQL =
             "SELECT $COLUMNS FROM identity_email_otp_challenges " +
                 "WHERE email = ? AND expires_at > ? AND consumed_at IS NULL " +
@@ -153,6 +165,9 @@ class PostgresEmailOtpChallengeRepository(
             "SELECT count(*) FROM identity_email_otp_challenges WHERE email = ? AND created_at >= ?"
         private const val COUNT_ALL_SINCE_SQL =
             "SELECT count(*) FROM identity_email_otp_challenges WHERE created_at >= ?"
+        private const val COUNT_NEW_ACCOUNT_SINCE_SQL =
+            "SELECT count(*) FROM identity_email_otp_challenges " +
+                "WHERE created_at >= ? AND account_existed = false"
         private const val LATEST_CREATED_SQL =
             "SELECT max(created_at) FROM identity_email_otp_challenges WHERE email = ?"
         private const val DELETE_EXPIRED_SQL =
