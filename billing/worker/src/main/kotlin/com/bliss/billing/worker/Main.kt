@@ -3,14 +3,18 @@ package com.bliss.billing.worker
 import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.Clock
 import com.bliss.billing.application.ports.ContractConfirmationNotifier
+import com.bliss.billing.application.ports.EmailSender
 import com.bliss.billing.application.ports.OfferPrice
+import com.bliss.billing.application.ports.OutboundEmailStore
 import com.bliss.billing.application.ports.RenewalNoticeLedger
 import com.bliss.billing.application.ports.SubscriptionOffer
 import com.bliss.billing.application.ports.SubscriptionRepository
+import com.bliss.billing.application.usecases.DrainEmailOutbox
 import com.bliss.billing.application.usecases.LegalEmailNotifier
 import com.bliss.billing.application.usecases.NoOpContractConfirmationNotifier
 import com.bliss.billing.application.usecases.ReconcileSubscriptions
 import com.bliss.billing.application.usecases.SendRenewalNotices
+import com.bliss.billing.application.usecases.SubscriberEmailResolver
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.ChatelWindow
 import com.bliss.billing.infrastructure.email.BillingBrevoConfig
@@ -18,6 +22,7 @@ import com.bliss.billing.infrastructure.email.BillingBrevoEmailSender
 import com.bliss.billing.infrastructure.persistence.BillingDatabase
 import com.bliss.billing.infrastructure.persistence.PostgresConsentRepository
 import com.bliss.billing.infrastructure.persistence.PostgresMollieCustomerStore
+import com.bliss.billing.infrastructure.persistence.PostgresOutboundEmailStore
 import com.bliss.billing.infrastructure.persistence.PostgresRenewalNoticeLedger
 import com.bliss.billing.infrastructure.persistence.PostgresSubscriptionRepository
 import com.bliss.billing.infrastructure.provider.MollieBillingAdapter
@@ -44,6 +49,7 @@ fun main(args: Array<String>) {
                 0
             }
             args.contains("--send-renewal-notices") -> runSendRenewalNotices()
+            args.contains("--drain-email-outbox") -> runDrainEmailOutbox()
             args.isEmpty() || args.contains("--reconcile") -> runReconcile()
             else -> {
                 log.error("event=worker_unknown_arguments args=\"{}\"", args.joinToString(separator = " "))
@@ -55,7 +61,7 @@ fun main(args: Array<String>) {
 }
 
 private fun printUsage() {
-    log.info("usage: billing-worker [--reconcile] | [--send-renewal-notices] | --help")
+    log.info("usage: billing-worker [--reconcile] | [--send-renewal-notices] | [--drain-email-outbox] | --help")
 }
 
 private fun runReconcile(): Int {
@@ -83,6 +89,29 @@ private fun runSendRenewalNotices(): Int {
             PostgresRenewalNoticeLedger(dataSource),
             Clock { Instant.now() },
             chatelWindow(),
+        )
+    } finally {
+        database.stop()
+    }
+}
+
+// Dark unless BILLING_EMAIL_ENABLED=true with a Brevo key; otherwise the drain is a no-op (nothing is enqueued while email is off, so there is nothing to deliver).
+private fun runDrainEmailOutbox(): Int {
+    val brevo = brevoConfigOrNull()
+    if (brevo == null) {
+        log.info("event=billing_drain_email_outbox_disabled")
+        return 0
+    }
+    val database = BillingDatabase(poolName = "billing-worker", maxPoolSize = 2, requireUrl = true).apply { start() }
+    return try {
+        val dataSource = database.dataSource() ?: error("BILLING_DATABASE_URL produced a null DataSource")
+        val config = MollieConfig.fromEnv()
+        val provider = MollieBillingAdapter(SdkMollieClient(config), PostgresMollieCustomerStore(dataSource), config)
+        drainEmailOutboxAndExit(
+            PostgresOutboundEmailStore(dataSource),
+            BillingBrevoEmailSender(CIO.create(), brevo),
+            SubscriberEmailResolver(PostgresConsentRepository(dataSource), provider),
+            Clock { Instant.now() },
         )
     } finally {
         database.stop()
@@ -122,11 +151,14 @@ private fun renewalNotifier(
     return if (brevo == null) {
         NoOpContractConfirmationNotifier()
     } else {
+        val consents = PostgresConsentRepository(dataSource)
         LegalEmailNotifier(
+            PostgresOutboundEmailStore(dataSource),
             BillingBrevoEmailSender(CIO.create(), brevo),
-            provider,
-            PostgresConsentRepository(dataSource),
+            SubscriberEmailResolver(consents, provider),
+            consents,
             offerFor(config),
+            Clock { Instant.now() },
         )
     }
 }
@@ -156,6 +188,24 @@ internal fun reconcileAndExit(
             summary.providerActiveCount,
             summary.orphansCancelled,
             summary.agingPendingCancellations,
+        )
+        0
+    }
+
+internal fun drainEmailOutboxAndExit(
+    store: OutboundEmailStore,
+    emailSender: EmailSender,
+    resolver: SubscriberEmailResolver,
+    clock: Clock,
+): Int =
+    runBlocking {
+        val summary = DrainEmailOutbox(store, emailSender, resolver, clock).execute()
+        log.info(
+            "event=billing_drain_email_outbox_done claimed={} sent={} deferred={} undeliverable={}",
+            summary.claimed,
+            summary.sent,
+            summary.deferred,
+            summary.undeliverable,
         )
         0
     }

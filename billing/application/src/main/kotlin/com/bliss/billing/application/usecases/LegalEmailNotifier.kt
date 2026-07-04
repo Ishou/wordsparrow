@@ -1,18 +1,22 @@
 package com.bliss.billing.application.usecases
 
-import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.CancellationConfirmation
+import com.bliss.billing.application.ports.Clock
 import com.bliss.billing.application.ports.ConsentRepository
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.ContractConfirmationNotifier
 import com.bliss.billing.application.ports.EmailSender
 import com.bliss.billing.application.ports.OfferPrice
 import com.bliss.billing.application.ports.OutboundEmail
+import com.bliss.billing.application.ports.OutboundEmailRecord
+import com.bliss.billing.application.ports.OutboundEmailStore
 import com.bliss.billing.application.ports.PreRenewalNotice
 import com.bliss.billing.application.ports.RenewalReceipt
 import com.bliss.billing.application.ports.SellerIdentity
 import com.bliss.billing.application.ports.SubscriptionOffer
 import com.bliss.billing.domain.Cadence
+import com.bliss.billing.domain.OutboundEmailKind
+import com.bliss.billing.domain.OutboundEmailStatus
 import com.bliss.billing.domain.VatBreakdown
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -21,23 +25,33 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 
-/** Composes and sends the durable-medium contract-confirmation and renewal-receipt emails (ADR-0094 §1-2, CGV Art. 7 & 13). Copy is tutoiement; the seller block is factual. */
+/** Content of one durable-medium email before the recipient is known; the address is resolved at send time. */
+data class RenderedEmail(
+    val subject: String,
+    val htmlBody: String,
+    val textBody: String,
+)
+
+/** Composes the durable-medium legal emails (ADR-0094 §1-3, §5, CGV Art. 7/9/13/14.1) and hands them to the outbox for guaranteed delivery: each kind renders once, enqueues idempotently, then sends immediately; a failed or address-less send stays pending for the drain to retry. Copy is tutoiement; the seller block is factual. */
 class LegalEmailNotifier(
+    private val store: OutboundEmailStore,
     private val emailSender: EmailSender,
-    private val provider: BillingProviderPort,
+    private val resolver: SubscriberEmailResolver,
     private val consents: ConsentRepository,
     private val offer: SubscriptionOffer,
+    private val clock: Clock,
     private val seller: SellerIdentity = SellerIdentity(),
 ) : ContractConfirmationNotifier {
     private val log = LoggerFactory.getLogger(LegalEmailNotifier::class.java)
 
     override suspend fun confirmContractFormation(confirmation: ContractConfirmation) {
         val price = priceOrNull(confirmation.userId, confirmation.cadence) ?: return
-        val to = emailOrNull(confirmation.userId) ?: return
         val waiverAcknowledged = consents.findLatest(confirmation.userId)?.withdrawalWaiver == true
-        emailSender.send(
+        enqueueAndSend(
+            confirmation.userId,
+            OutboundEmailKind.CONTRACT,
+            dedupeKey(OutboundEmailKind.CONTRACT, confirmation.userId, confirmation.periodEnd),
             contractEmail(
-                to,
                 confirmation.tier.value,
                 confirmation.cadence,
                 price,
@@ -50,29 +64,78 @@ class LegalEmailNotifier(
 
     override suspend fun confirmRenewal(receipt: RenewalReceipt) {
         val price = priceOrNull(receipt.userId, receipt.cadence) ?: return
-        val to = emailOrNull(receipt.userId) ?: return
-        emailSender.send(renewalEmail(to, receipt.tier.value, receipt.cadence, price, receipt.chargedAt, receipt.periodEnd))
+        enqueueAndSend(
+            receipt.userId,
+            OutboundEmailKind.RENEWAL,
+            dedupeKey(OutboundEmailKind.RENEWAL, receipt.userId, receipt.periodEnd),
+            renewalEmail(receipt.tier.value, receipt.cadence, price, receipt.chargedAt, receipt.periodEnd),
+        )
     }
 
     override suspend fun confirmCancellation(confirmation: CancellationConfirmation) {
-        val to = emailOrNull(confirmation.userId) ?: return
-        emailSender.send(cancellationEmail(to, confirmation.tier.value, confirmation.canceledAt, confirmation.periodEnd))
+        enqueueAndSend(
+            confirmation.userId,
+            OutboundEmailKind.CANCEL,
+            dedupeKey(OutboundEmailKind.CANCEL, confirmation.userId, confirmation.periodEnd),
+            cancellationEmail(confirmation.tier.value, confirmation.canceledAt, confirmation.periodEnd),
+        )
     }
 
     override suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice) {
         val price = priceOrNull(notice.userId, notice.cadence) ?: return
-        val to = emailOrNull(notice.userId) ?: return
-        emailSender.send(preRenewalEmail(to, notice.tier.value, notice.cadence, price, notice.periodEnd))
+        enqueueAndSend(
+            notice.userId,
+            OutboundEmailKind.CHATEL,
+            dedupeKey(OutboundEmailKind.CHATEL, notice.userId, notice.periodEnd),
+            preRenewalEmail(notice.tier.value, notice.cadence, price, notice.periodEnd),
+        )
     }
 
-    private suspend fun emailOrNull(userId: UUID): String? {
-        val email = consents.findLatestEmail(userId) ?: provider.fetchCustomerEmail(userId)
-        if (email.isNullOrBlank()) {
-            log.warn("billing_email_skipped_no_address user_id={}", userId)
-            return null
+    // Enqueue is the durable commitment (idempotent across webhook redeliveries); the immediate send is a best-effort head start that never blocks — the drain owns guaranteed delivery.
+    private suspend fun enqueueAndSend(
+        userId: UUID,
+        kind: OutboundEmailKind,
+        dedupeKey: String,
+        rendered: RenderedEmail,
+    ) {
+        val now = clock.now()
+        val record =
+            OutboundEmailRecord(
+                id = UUID.randomUUID(),
+                userId = userId,
+                kind = kind,
+                dedupeKey = dedupeKey,
+                subject = rendered.subject,
+                htmlBody = rendered.htmlBody,
+                textBody = rendered.textBody,
+                status = OutboundEmailStatus.PENDING,
+                attempts = 0,
+                nextAttemptAt = now,
+                lastError = null,
+                createdAt = now,
+                sentAt = null,
+            )
+        if (!store.enqueue(record)) return
+        val to = resolver.resolve(userId)
+        if (to == null) {
+            log.warn("billing_email_pending_no_address kind={} user_id={}", kind.wire, userId)
+            return
         }
-        return email
+        runCatching { emailSender.send(OutboundEmail(to, rendered.subject, rendered.htmlBody, rendered.textBody)) }
+            .onSuccess { store.markSent(record.id, clock.now()) }
+            .onFailure { error ->
+                store.recordFailure(record.id, 1, clock.now().plus(EmailRetryPolicy.backoffAfter(1)), errorText(error))
+                log.warn("billing_email_deferred kind={} user_id={} attempt=1", kind.wire, userId, error)
+            }
     }
+
+    private fun dedupeKey(
+        kind: OutboundEmailKind,
+        userId: UUID,
+        periodEnd: Instant?,
+    ): String = "${kind.wire}:$userId:${periodEnd?.toEpochMilli() ?: "none"}"
+
+    private fun errorText(error: Throwable): String = error.message ?: error.javaClass.simpleName
 
     private fun priceOrNull(
         userId: UUID,
@@ -87,14 +150,13 @@ class LegalEmailNotifier(
     }
 
     private fun contractEmail(
-        to: String,
         tier: String,
         cadence: Cadence,
         price: OfferPrice,
         formedAt: Instant,
         periodEnd: Instant?,
         waiverAcknowledged: Boolean,
-    ): OutboundEmail {
+    ): RenderedEmail {
         val vat = VatBreakdown.ofTtc(price.ttcMinorUnits)
         val lines = mutableListOf<String>()
         lines += "Merci ! Ton abonnement WordSparrow est confirmé."
@@ -116,22 +178,16 @@ class LegalEmailNotifier(
         }
         lines += cgvLine()
         lines += sellerLine()
-        return OutboundEmail(
-            to = to,
-            subject = "Confirmation de ton abonnement WordSparrow",
-            htmlBody = html(lines),
-            textBody = text(lines),
-        )
+        return rendered("Confirmation de ton abonnement WordSparrow", lines)
     }
 
     private fun renewalEmail(
-        to: String,
         tier: String,
         cadence: Cadence,
         price: OfferPrice,
         chargedAt: Instant,
         periodEnd: Instant?,
-    ): OutboundEmail {
+    ): RenderedEmail {
         val vat = VatBreakdown.ofTtc(price.ttcMinorUnits)
         val lines = mutableListOf<String>()
         lines += "Ton abonnement WordSparrow ($tier) a été renouvelé."
@@ -145,15 +201,14 @@ class LegalEmailNotifier(
         lines += "Date : ${date(chargedAt)}"
         if (periodEnd != null) lines += "Prochaine échéance : ${date(periodEnd)}"
         lines += sellerLine()
-        return OutboundEmail(to = to, subject = "Reçu de ton abonnement WordSparrow", htmlBody = html(lines), textBody = text(lines))
+        return rendered("Reçu de ton abonnement WordSparrow", lines)
     }
 
     private fun cancellationEmail(
-        to: String,
         tier: String,
         canceledAt: Instant,
         periodEnd: Instant?,
-    ): OutboundEmail {
+    ): RenderedEmail {
         val lines = mutableListOf<String>()
         lines += "Ta demande de résiliation de l'abonnement WordSparrow ($tier) a bien été prise en compte."
         lines += "Date de la demande : ${date(canceledAt)}"
@@ -163,21 +218,15 @@ class LegalEmailNotifier(
         }
         lines += "Aucune action de ta part n'est nécessaire ; ton abonnement ne sera pas reconduit."
         lines += sellerLine()
-        return OutboundEmail(
-            to = to,
-            subject = "Confirmation de la résiliation de ton abonnement WordSparrow",
-            htmlBody = html(lines),
-            textBody = text(lines),
-        )
+        return rendered("Confirmation de la résiliation de ton abonnement WordSparrow", lines)
     }
 
     private fun preRenewalEmail(
-        to: String,
         tier: String,
         cadence: Cadence,
         price: OfferPrice,
         periodEnd: Instant,
-    ): OutboundEmail {
+    ): RenderedEmail {
         val lines = mutableListOf<String>()
         lines += "Ton abonnement WordSparrow ($tier) arrive à échéance le ${date(periodEnd)}."
         lines +=
@@ -189,12 +238,7 @@ class LegalEmailNotifier(
         lines +=
             "Information légale (art. L215-1 du Code de la consommation) : tu es informé·e de ta faculté de ne pas reconduire ton abonnement."
         lines += sellerLine()
-        return OutboundEmail(
-            to = to,
-            subject = "Ton abonnement WordSparrow arrive bientôt à échéance",
-            htmlBody = html(lines),
-            textBody = text(lines),
-        )
+        return rendered("Ton abonnement WordSparrow arrive bientôt à échéance", lines)
     }
 
     private fun money(price: OfferPrice): String = money(price.ttcMinorUnits, price.currency)
@@ -219,9 +263,10 @@ class LegalEmailNotifier(
 
     private fun sellerLine(): String = "Vendeur : ${seller.legalName} — SIRET ${seller.siret} — TVA ${seller.vatNumber}"
 
-    private fun text(lines: List<String>): String = lines.joinToString("\n")
-
-    private fun html(lines: List<String>): String = lines.joinToString(separator = "") { "<p>$it</p>" }
+    private fun rendered(
+        subject: String,
+        lines: List<String>,
+    ): RenderedEmail = RenderedEmail(subject, lines.joinToString(separator = "") { "<p>$it</p>" }, lines.joinToString("\n"))
 
     private companion object {
         val DATE_FORMAT: DateTimeFormatter =

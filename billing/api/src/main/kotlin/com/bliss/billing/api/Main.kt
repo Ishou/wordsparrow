@@ -14,6 +14,7 @@ import com.bliss.billing.application.usecases.IngestProviderEvent
 import com.bliss.billing.application.usecases.LegalEmailNotifier
 import com.bliss.billing.application.usecases.ListReceipts
 import com.bliss.billing.application.usecases.NoOpContractConfirmationNotifier
+import com.bliss.billing.application.usecases.SubscriberEmailResolver
 import com.bliss.billing.application.usecases.SubscriptionQuery
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.infrastructure.email.BillingBrevoEmailSender
@@ -23,6 +24,7 @@ import com.bliss.billing.infrastructure.nats.UserDeletedConsumer
 import com.bliss.billing.infrastructure.persistence.BillingDatabase
 import com.bliss.billing.infrastructure.persistence.PostgresConsentRepository
 import com.bliss.billing.infrastructure.persistence.PostgresMollieCustomerStore
+import com.bliss.billing.infrastructure.persistence.PostgresOutboundEmailStore
 import com.bliss.billing.infrastructure.persistence.PostgresProcessedEventLedger
 import com.bliss.billing.infrastructure.persistence.PostgresSubscriptionRepository
 import com.bliss.billing.infrastructure.provider.MollieBillingAdapter
@@ -89,10 +91,12 @@ fun main() {
     val contractNotifier: ContractConfirmationNotifier =
         if (config.emailEnabled && config.brevo != null) {
             LegalEmailNotifier(
+                PostgresOutboundEmailStore(dataSource),
                 BillingBrevoEmailSender(ClientCIO.create(), config.brevo),
-                provider,
+                SubscriberEmailResolver(consents, provider),
                 consents,
                 offer,
+                clock,
             )
         } else {
             NoOpContractConfirmationNotifier()
