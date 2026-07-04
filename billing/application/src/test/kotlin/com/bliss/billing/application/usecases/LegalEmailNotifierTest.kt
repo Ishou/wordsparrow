@@ -10,8 +10,8 @@ import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.OfferPrice
 import com.bliss.billing.application.ports.RenewalReceipt
 import com.bliss.billing.application.ports.SubscriptionOffer
+import com.bliss.billing.application.testdoubles.FakeBillingProvider
 import com.bliss.billing.application.testdoubles.FakeConsentRepository
-import com.bliss.billing.application.testdoubles.FakeCustomerEmailLookup
 import com.bliss.billing.application.testdoubles.FakeEmailSender
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.CheckoutConsent
@@ -27,7 +27,7 @@ class LegalEmailNotifierTest {
 
     private val sender = FakeEmailSender()
     private val consents = FakeConsentRepository()
-    private val lookup = FakeCustomerEmailLookup(defaultEmail = "joueuse@example.com")
+    private val provider = FakeBillingProvider().apply { defaultCustomerEmail = "joueuse@example.com" }
     private val offer =
         SubscriptionOffer(
             mapOf(
@@ -35,7 +35,7 @@ class LegalEmailNotifierTest {
                 Cadence.YEARLY to OfferPrice(2000, "EUR"),
             ),
         )
-    private val notifier = LegalEmailNotifier(sender, lookup, consents, offer)
+    private val notifier = LegalEmailNotifier(sender, provider, consents, offer)
 
     private fun contract(cadence: Cadence = Cadence.MONTHLY) =
         ContractConfirmation(userId, Tier.of("premium"), cadence, formedAt, Instant.parse("2026-08-04T00:00:00Z"))
@@ -104,7 +104,7 @@ class LegalEmailNotifierTest {
     @Test
     fun `no email is sent when the address cannot be resolved`() =
         runTest {
-            lookup.setEmail(userId, null)
+            provider.setCustomerEmail(userId, null)
             recordConsent(waiver = true)
 
             notifier.confirmContractFormation(contract())

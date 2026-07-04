@@ -79,6 +79,20 @@ class FakeBillingProvider : BillingProviderPort {
 
     override suspend fun fetchByReference(externalRef: String): ProviderSubscriptionState? = states[externalRef]
 
+    /** Provider-held customer email per user; defaults to [defaultCustomerEmail], overridable (incl. to null) via [setCustomerEmail]. */
+    var defaultCustomerEmail: String? = "joueur@example.com"
+    private val customerEmails = mutableMapOf<UUID, String?>()
+
+    fun setCustomerEmail(
+        userId: UUID,
+        email: String?,
+    ) {
+        customerEmails[userId] = email
+    }
+
+    override suspend fun fetchCustomerEmail(userId: UUID): String? =
+        if (customerEmails.containsKey(userId)) customerEmails[userId] else defaultCustomerEmail
+
     override suspend fun cancel(externalRef: String) {
         if (externalRef in cancelFailures) throw IllegalStateException("provider cancel failed for $externalRef")
         cancelCalls.add(externalRef)

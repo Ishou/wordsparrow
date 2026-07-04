@@ -110,6 +110,20 @@ class SdkMollieClient(
             }
         }
 
+    override suspend fun getCustomerEmail(customerId: String): String? =
+        withContext(Dispatchers.IO) {
+            notFoundToNull {
+                sdk
+                    .customers()
+                    .get()
+                    .customerId(customerId)
+                    .call()
+                    .customerResponse()
+                    .flatMap { it.email() }
+                    .orElse(null)
+            }
+        }
+
     override suspend fun listCustomerPayments(
         customerId: String,
         from: String?,

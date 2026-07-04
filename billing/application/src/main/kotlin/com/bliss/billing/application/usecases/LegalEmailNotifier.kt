@@ -1,9 +1,9 @@
 package com.bliss.billing.application.usecases
 
+import com.bliss.billing.application.ports.BillingProviderPort
 import com.bliss.billing.application.ports.ConsentRepository
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.ContractConfirmationNotifier
-import com.bliss.billing.application.ports.CustomerEmailLookup
 import com.bliss.billing.application.ports.EmailSender
 import com.bliss.billing.application.ports.OfferPrice
 import com.bliss.billing.application.ports.OutboundEmail
@@ -22,7 +22,7 @@ import java.util.UUID
 /** Composes and sends the durable-medium contract-confirmation and renewal-receipt emails (ADR-0094 §1-2, CGV Art. 7 & 13). Copy is tutoiement; the seller block is factual. */
 class LegalEmailNotifier(
     private val emailSender: EmailSender,
-    private val emailLookup: CustomerEmailLookup,
+    private val provider: BillingProviderPort,
     private val consents: ConsentRepository,
     private val offer: SubscriptionOffer,
     private val seller: SellerIdentity = SellerIdentity(),
@@ -53,7 +53,7 @@ class LegalEmailNotifier(
     }
 
     private suspend fun emailOrNull(userId: UUID): String? {
-        val email = emailLookup.emailFor(userId)
+        val email = provider.fetchCustomerEmail(userId)
         if (email.isNullOrBlank()) {
             log.warn("billing_email_skipped_no_address user_id={}", userId)
             return null

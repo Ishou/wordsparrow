@@ -61,14 +61,6 @@ class IdentityClient(
         }.getOrNull()
     }
 
-    // Service-to-service email lookup by user id for webhook-side legal mail, where no session cookie exists (ADR-0094 §2). Best-effort: null on any non-OK or network failure.
-    suspend fun fetchEmail(userId: UUID): String? =
-        runCatching {
-            val response = client.get("$baseUrl/v1/users/$userId/email")
-            if (response.status != HttpStatusCode.OK) return@runCatching null
-            response.body<MeDto>().email
-        }.getOrNull()
-
     fun close() {
         client.close()
     }

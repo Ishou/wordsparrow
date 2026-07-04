@@ -2,7 +2,6 @@ package com.bliss.billing.api
 
 import com.bliss.billing.api.config.BillingApiConfig
 import com.bliss.billing.api.identity.IdentityClient
-import com.bliss.billing.api.identity.IdentityCustomerEmailLookup
 import com.bliss.billing.application.ports.Clock
 import com.bliss.billing.application.ports.ContractConfirmationNotifier
 import com.bliss.billing.application.ports.EventIdGenerator
@@ -91,7 +90,7 @@ fun main() {
         if (config.emailEnabled && config.brevo != null) {
             LegalEmailNotifier(
                 BillingBrevoEmailSender(ClientCIO.create(), config.brevo),
-                IdentityCustomerEmailLookup(identityClient),
+                provider,
                 consents,
                 offer,
             )

@@ -86,6 +86,9 @@ class MollieBillingAdapter(
         )
     }
 
+    override suspend fun fetchCustomerEmail(userId: UUID): String? =
+        customerStore.findCustomerId(userId)?.let { client.getCustomerEmail(it) }
+
     override suspend fun fetchByReference(externalRef: String): ProviderSubscriptionState? =
         when (val ref = MollieReference.decode(externalRef)) {
             is MollieReference.Subscription ->
