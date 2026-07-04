@@ -21,6 +21,9 @@ interface EmailOtpChallengeRepository {
         since: Instant,
     ): Int
 
+    /** Global send-budget proxy: challenges created since [since] across all emails. */
+    suspend fun countAllCreatedSince(since: Instant): Int
+
     suspend fun latestCreatedAt(email: EmailAddress): Instant?
 
     suspend fun deleteExpired(now: Instant)

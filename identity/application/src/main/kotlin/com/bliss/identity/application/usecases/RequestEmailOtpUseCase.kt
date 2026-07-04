@@ -8,7 +8,9 @@ import com.bliss.identity.application.ports.RandomFactory
 import com.bliss.identity.application.ports.TokenHasher
 import com.bliss.identity.domain.auth.EmailOtpChallenge
 import com.bliss.identity.domain.user.EmailAddress
+import org.slf4j.LoggerFactory
 import java.time.Duration
+import java.time.ZoneOffset
 
 data class RequestEmailOtpCommand(
     val email: String,
@@ -20,6 +22,8 @@ sealed interface RequestEmailOtpResult {
     ) : RequestEmailOtpResult
 
     data object RateLimited : RequestEmailOtpResult
+
+    data object BudgetExhausted : RequestEmailOtpResult
 }
 
 // Enumeration-safe start step (ADR-0091): abuse is throttled per-email here; per-IP limiting is ingress-nginx's job.
@@ -33,10 +37,24 @@ class RequestEmailOtpUseCase(
     private val ttl: Duration = Duration.ofMinutes(10),
     private val cooldown: Duration = Duration.ofSeconds(60),
     private val dailyCap: Int = 8,
+    private val monthlyCap: Int = 4500,
 ) {
     suspend fun execute(command: RequestEmailOtpCommand): RequestEmailOtpResult {
         val email = EmailAddress.of(command.email)
         val now = clock.now()
+
+        val monthStart =
+            now
+                .atZone(ZoneOffset.UTC)
+                .toLocalDate()
+                .withDayOfMonth(1)
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+        val monthlyCount = challenges.countAllCreatedSince(monthStart)
+        if (monthlyCount >= monthlyCap) {
+            log.warn("otp_monthly_budget_exhausted cap={} count={}", monthlyCap, monthlyCount)
+            return RequestEmailOtpResult.BudgetExhausted
+        }
 
         val latestCreatedAt = challenges.latestCreatedAt(email)
         if (latestCreatedAt != null && latestCreatedAt.isAfter(now.minus(cooldown))) {
@@ -66,5 +84,6 @@ class RequestEmailOtpUseCase(
 
     companion object {
         private val DAILY_WINDOW: Duration = Duration.ofHours(24)
+        private val log = LoggerFactory.getLogger(RequestEmailOtpUseCase::class.java)
     }
 }

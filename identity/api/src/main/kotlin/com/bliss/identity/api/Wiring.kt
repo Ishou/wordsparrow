@@ -212,7 +212,8 @@ class Wiring private constructor(
                 val challenges = PostgresEmailOtpChallengeRepository(dataSource)
                 val hasher = Sha256TokenHasher()
                 val emailSender = BrevoEmailSender(httpClientEngine, brevo)
-                requestEmailOtp = RequestEmailOtpUseCase(challenges, emailSender, hasher, random, idGen, clock)
+                val monthlyCap = System.getenv("IDENTITY_OTP_MONTHLY_CAP")?.toIntOrNull() ?: 4500
+                requestEmailOtp = RequestEmailOtpUseCase(challenges, emailSender, hasher, random, idGen, clock, monthlyCap = monthlyCap)
                 verifyEmailOtp = VerifyEmailOtpUseCase(challenges, hasher, users, userProviders, sessions, idGen, clock)
             }
 

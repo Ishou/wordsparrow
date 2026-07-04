@@ -327,6 +327,8 @@ class VerifyEmailOtpUseCaseTest {
             since: Instant,
         ): Int = 0
 
+        override suspend fun countAllCreatedSince(since: Instant): Int = 0
+
         override suspend fun latestCreatedAt(email: EmailAddress): Instant? = null
 
         override suspend fun deleteExpired(now: Instant) = Unit

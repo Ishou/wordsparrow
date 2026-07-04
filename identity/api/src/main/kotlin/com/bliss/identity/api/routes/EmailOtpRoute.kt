@@ -53,6 +53,13 @@ fun Route.emailOtp(
         when (result) {
             is RequestEmailOtpResult.RateLimited ->
                 call.problem(json, HttpStatusCode.TooManyRequests, "rate_limited", "Too many requests for this email; try again later.")
+            is RequestEmailOtpResult.BudgetExhausted ->
+                call.problem(
+                    json,
+                    HttpStatusCode.ServiceUnavailable,
+                    "email_temporarily_unavailable",
+                    "La connexion par e-mail est momentanément indisponible, utilise Google ou Apple.",
+                )
             is RequestEmailOtpResult.Sent -> {
                 ChallengeCookies.issue(call, result.challengeSecret)
                 call.respond(HttpStatusCode.Accepted)

@@ -3,6 +3,7 @@ package com.bliss.identity.infrastructure.usecases
 import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
@@ -10,7 +11,9 @@ import assertk.assertions.isNull
 import com.bliss.identity.application.usecases.RequestEmailOtpCommand
 import com.bliss.identity.application.usecases.RequestEmailOtpResult
 import com.bliss.identity.application.usecases.RequestEmailOtpUseCase
+import com.bliss.identity.domain.auth.ChallengeId
 import com.bliss.identity.domain.auth.ChallengeSecret
+import com.bliss.identity.domain.auth.EmailOtpChallenge
 import com.bliss.identity.domain.auth.OtpCode
 import com.bliss.identity.domain.user.EmailAddress
 import com.bliss.identity.infrastructure.testdoubles.FakeTokenHasher
@@ -48,6 +51,7 @@ class RequestEmailOtpUseCaseTest {
         challengeIds: List<UUID> = listOf(challengeId),
         cooldown: Duration = Duration.ofSeconds(60),
         dailyCap: Int = 8,
+        monthlyCap: Int = 4500,
     ): Fixture {
         val repo = InMemoryEmailOtpChallengeRepository()
         val sender = RecordingEmailSender()
@@ -63,9 +67,22 @@ class RequestEmailOtpUseCaseTest {
                 clock = clock,
                 cooldown = cooldown,
                 dailyCap = dailyCap,
+                monthlyCap = monthlyCap,
             )
         return Fixture(repo, sender, hasher, clock, useCase)
     }
+
+    private fun seededChallenge(id: UUID): EmailOtpChallenge =
+        EmailOtpChallenge(
+            id = ChallengeId(id),
+            email = EmailAddress.of("seed@example.com"),
+            codeHash = "seed-code-hash",
+            bindingHash = "seed-binding-hash",
+            attempts = 0,
+            createdAt = now,
+            expiresAt = now.plus(Duration.ofMinutes(10)),
+            consumedAt = null,
+        )
 
     @Test
     fun `sends the code and stores the hashed code and binding secret`() =
@@ -130,6 +147,33 @@ class RequestEmailOtpUseCaseTest {
 
             assertThat(third).isEqualTo(RequestEmailOtpResult.RateLimited)
             assertThat(f.sender.sent).hasSize(2)
+        }
+
+    @Test
+    fun `request past the monthly budget is budget exhausted and sends nothing`() =
+        runTest {
+            val f = fixture(monthlyCap = 2)
+            f.repo.create(seededChallenge(UUID.fromString("01890c5e-0000-7000-8000-0000000c0b01")))
+            f.repo.create(seededChallenge(UUID.fromString("01890c5e-0000-7000-8000-0000000c0b02")))
+
+            val result = f.useCase.execute(RequestEmailOtpCommand("player@example.com"))
+
+            assertThat(result).isEqualTo(RequestEmailOtpResult.BudgetExhausted)
+            assertThat(f.sender.sent).isEmpty()
+            assertThat(f.repo.countAllCreatedSince(Instant.EPOCH)).isEqualTo(2)
+        }
+
+    @Test
+    fun `request below the monthly budget still sends`() =
+        runTest {
+            val f = fixture(monthlyCap = 2)
+            f.repo.create(seededChallenge(UUID.fromString("01890c5e-0000-7000-8000-0000000c0b01")))
+
+            val result = f.useCase.execute(RequestEmailOtpCommand("player@example.com"))
+
+            assertThat(result).isInstanceOf(RequestEmailOtpResult.Sent::class)
+            assertThat(f.sender.sent).hasSize(1)
+            assertThat(f.repo.countAllCreatedSince(Instant.EPOCH)).isEqualTo(2)
         }
 
     @Test

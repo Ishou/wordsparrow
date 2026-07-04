@@ -81,6 +81,16 @@ class PostgresEmailOtpChallengeRepository(
             }
         }
 
+    override suspend fun countAllCreatedSince(since: Instant): Int =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(COUNT_ALL_SINCE_SQL).use { stmt ->
+                    stmt.setObject(1, since.atUtc())
+                    stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
+                }
+            }
+        }
+
     override suspend fun latestCreatedAt(email: EmailAddress): Instant? =
         withContext(Dispatchers.IO) {
             dataSource.connection.use { conn ->
@@ -141,6 +151,8 @@ class PostgresEmailOtpChallengeRepository(
             "UPDATE identity_email_otp_challenges SET attempts = ?, consumed_at = ? WHERE challenge_id = ?"
         private const val COUNT_SINCE_SQL =
             "SELECT count(*) FROM identity_email_otp_challenges WHERE email = ? AND created_at >= ?"
+        private const val COUNT_ALL_SINCE_SQL =
+            "SELECT count(*) FROM identity_email_otp_challenges WHERE created_at >= ?"
         private const val LATEST_CREATED_SQL =
             "SELECT max(created_at) FROM identity_email_otp_challenges WHERE email = ?"
         private const val DELETE_EXPIRED_SQL =
