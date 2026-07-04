@@ -9,6 +9,7 @@ import assertk.assertions.isNull
 import com.bliss.billing.application.ports.CancellationConfirmation
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.OfferPrice
+import com.bliss.billing.application.ports.PreRenewalNotice
 import com.bliss.billing.application.ports.RenewalReceipt
 import com.bliss.billing.application.ports.SubscriptionOffer
 import com.bliss.billing.application.testdoubles.FakeBillingProvider
@@ -132,12 +133,42 @@ class LegalEmailNotifierTest {
         }
 
     @Test
+    fun `chatel pre-renewal notice states reconduction, the right not to renew, amount, echeance and seller`() =
+        runTest {
+            notifier.sendChatelPreRenewalNotice(
+                PreRenewalNotice(userId, Tier.of("premium"), Cadence.YEARLY, Instant.parse("2026-08-15T00:00:00Z")),
+            )
+
+            val email = sender.sent.single()
+            assertThat(email.subject).isEqualTo("Ton abonnement WordSparrow arrive bientôt à échéance")
+            assertThat(email.textBody).contains("reconduit tacitement")
+            assertThat(email.textBody).contains("ne pas le reconduire")
+            assertThat(email.textBody).contains("20,00 €")
+            assertThat(email.textBody).contains("15 août 2026")
+            assertThat(email.textBody).contains("L215-1")
+            assertThat(email.textBody).contains("851 880 401 00019")
+            assertThat(Regex("\\bvous\\b", RegexOption.IGNORE_CASE).find(email.textBody)).isNull()
+        }
+
+    @Test
     fun `no cancellation email is sent when the address cannot be resolved`() =
         runTest {
             provider.setCustomerEmail(userId, null)
 
             notifier.confirmCancellation(
                 CancellationConfirmation(userId, Tier.of("premium"), formedAt, Instant.parse("2026-08-04T00:00:00Z")),
+            )
+
+            assertThat(sender.sent).isEmpty()
+        }
+
+    @Test
+    fun `no pre-renewal notice is sent when the address cannot be resolved`() =
+        runTest {
+            provider.setCustomerEmail(userId, null)
+
+            notifier.sendChatelPreRenewalNotice(
+                PreRenewalNotice(userId, Tier.of("premium"), Cadence.YEARLY, Instant.parse("2026-08-15T00:00:00Z")),
             )
 
             assertThat(sender.sent).isEmpty()
