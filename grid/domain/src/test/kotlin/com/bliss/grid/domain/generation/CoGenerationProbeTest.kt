@@ -306,6 +306,42 @@ class CoGenerationProbeTest {
         println("BANDTEST solved=$solved/30 band1ok=$band1ok band2ok=$band2ok band2fail=$band2fail acrossOk=$acrossOk acrossBad=$acrossBad")
     }
 
+    // Timing probe: where does the ~3s/seam-attempt go? Time bandSolve vs SlotRegistry.build
+    // separately over a handful of attempts on one real board.
+    @Test
+    fun `seam timing probe`() {
+        val repo = loadRepository()
+        val lexicon = Lexicon(repo, maxLen = 17)
+        val generator = GridGenerator(repo)
+        val top = 9; val bh = 2
+        val g = generator.generate(GridConstraints(width = width, height = height), Random(6001L)) ?: return
+        val sweep = Sweep(lexicon, Random(1L), HashSet())
+        for (r in 0 until height) for (c in 0 until width) {
+            val cell = g.cells[Position(com.bliss.grid.domain.model.Row(r), com.bliss.grid.domain.model.Column(c))]
+            sweep.grid[r][c] = if (cell is LetterCell) cell.letter else '#'
+        }
+        for (r in top until top + bh) for (c in 0 until width) sweep.grid[r][c] = '.'
+        sweep.reconstructAbove(top)
+        val snap = sweep.captureStateForProbe()
+        var solveMs = 0L; var buildMs = 0L; var reconMs = 0L; var nSolve = 0; var nBuild = 0
+        repeat(20) {
+            var t = System.currentTimeMillis()
+            sweep.restoreStateForProbe(snap)
+            reconMs += System.currentTimeMillis() - t
+            t = System.currentTimeMillis()
+            val cells = sweep.bandSolve(top, bh)
+            solveMs += System.currentTimeMillis() - t; nSolve++
+            if (cells != null) {
+                for (r in 0 until bh) for (c in 0 until width) sweep.grid[top + r][c] = cells[r][c]
+                t = System.currentTimeMillis()
+                SlotRegistry.build(sweep.toCellArray(), lexicon, minLen)
+                buildMs += System.currentTimeMillis() - t; nBuild++
+                for (r in top until top + bh) for (c in 0 until width) sweep.grid[r][c] = '.'
+            }
+        }
+        println("TIMING restore=${reconMs}ms/20  bandSolve=${solveMs}ms/${nSolve}(${if(nSolve>0)solveMs/nSolve else 0}ea)  build=${buildMs}ms/${nBuild}(${if(nBuild>0)buildMs/nBuild else 0}ea)")
+    }
+
     // The make-or-break for block assembly: join a top block from grid X with a bottom block
     // from a DIFFERENT grid Y (independently generated) via a re-solved seam. If independent
     // blocks join, an end-to-end block-stacking generator is viable; if not, blocks must be
