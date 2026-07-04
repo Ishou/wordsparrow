@@ -22,4 +22,7 @@ class FakeConsentRepository : ConsentRepository {
     ) {
         records += Recorded(userId, consent, acceptedAt)
     }
+
+    override suspend fun findLatest(userId: UUID): CheckoutConsent? =
+        records.filter { it.userId == userId }.maxByOrNull { it.acceptedAt }?.consent
 }

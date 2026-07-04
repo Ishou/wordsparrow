@@ -82,6 +82,7 @@ class MollieBillingAdapter(
             status = status,
             source = BillingSource.MOLLIE,
             periodEnd = subscription.nextPaymentDate,
+            cadence = cadence,
         )
     }
 
@@ -133,6 +134,7 @@ class MollieBillingAdapter(
             status = mapped,
             source = BillingSource.MOLLIE,
             periodEnd = null,
+            cadence = cadenceFrom(metadata),
         )
     }
 
@@ -146,6 +148,7 @@ class MollieBillingAdapter(
             status = mapped,
             source = BillingSource.MOLLIE,
             periodEnd = nextPaymentDate,
+            cadence = cadenceFrom(metadata),
         )
     }
 

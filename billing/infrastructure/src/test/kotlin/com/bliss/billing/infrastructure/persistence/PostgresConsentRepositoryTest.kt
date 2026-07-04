@@ -106,6 +106,24 @@ class PostgresConsentRepositoryTest {
             assertThat(rowsFor(userId).map { it.cgvVersion }).isEqualTo(listOf("1.0", "2.0"))
         }
 
+    @Test
+    fun `findLatest returns the most recently accepted consent`() =
+        runTest {
+            val userId = UUID.randomUUID()
+            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "1.0", withdrawalWaiver = false), acceptedAt)
+            repo.record(userId, CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = true), acceptedAt.plusSeconds(1))
+
+            assertThat(repo.findLatest(userId)).isEqualTo(
+                CheckoutConsent(cgvAccepted = true, cgvVersion = "2.0", withdrawalWaiver = true),
+            )
+        }
+
+    @Test
+    fun `findLatest is null when the user has no consent`() =
+        runTest {
+            assertThat(repo.findLatest(UUID.randomUUID())).isEqualTo(null)
+        }
+
     private data class Row(
         val cgvAccepted: Boolean,
         val cgvVersion: String,

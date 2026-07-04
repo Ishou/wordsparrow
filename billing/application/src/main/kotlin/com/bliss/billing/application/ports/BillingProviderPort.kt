@@ -22,6 +22,8 @@ data class ProviderSubscriptionState(
     val status: SubscriptionStatus,
     val source: BillingSource,
     val periodEnd: Instant?,
+    // The checkout cadence, recovered from provider metadata; drives the receipt price/périodicité, null on legacy states pre-dating cadence capture.
+    val cadence: Cadence? = null,
 )
 
 /** Lean provider-side handle enumerated by the reconciliation backstop; only the opaque [externalRef] is load-bearing, [userId] aids log correlation (ADR-0078). */

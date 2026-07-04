@@ -8,10 +8,17 @@ kotlin {
 }
 
 val testcontainersVersion = "1.21.4"
+val ktorVersion = "3.5.0"
 
 dependencies {
     implementation(project(":billing:domain"))
     implementation(project(":billing:application"))
+
+    // Ktor client — billing's Brevo transactional email adapter (ADR-0094 §2); no vendor SDK.
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
 
     implementation("org.postgresql:postgresql:42.7.11")
     implementation("com.zaxxer:HikariCP:7.1.0")
@@ -35,6 +42,7 @@ dependencies {
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.28.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("com.lemonappdev:konsist:0.17.3")
+    testImplementation("io.ktor:ktor-client-mock:$ktorVersion")
 
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")

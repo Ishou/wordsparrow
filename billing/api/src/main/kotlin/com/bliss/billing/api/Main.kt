@@ -2,14 +2,22 @@ package com.bliss.billing.api
 
 import com.bliss.billing.api.config.BillingApiConfig
 import com.bliss.billing.api.identity.IdentityClient
+import com.bliss.billing.api.identity.IdentityCustomerEmailLookup
 import com.bliss.billing.application.ports.Clock
+import com.bliss.billing.application.ports.ContractConfirmationNotifier
 import com.bliss.billing.application.ports.EventIdGenerator
+import com.bliss.billing.application.ports.OfferPrice
+import com.bliss.billing.application.ports.SubscriptionOffer
 import com.bliss.billing.application.usecases.CancelSubscription
 import com.bliss.billing.application.usecases.CreateCheckoutSession
 import com.bliss.billing.application.usecases.HandleUserDeleted
 import com.bliss.billing.application.usecases.IngestProviderEvent
+import com.bliss.billing.application.usecases.LegalEmailNotifier
 import com.bliss.billing.application.usecases.ListReceipts
+import com.bliss.billing.application.usecases.NoOpContractConfirmationNotifier
 import com.bliss.billing.application.usecases.SubscriptionQuery
+import com.bliss.billing.domain.Cadence
+import com.bliss.billing.infrastructure.email.BillingBrevoEmailSender
 import com.bliss.billing.infrastructure.nats.MaxDeliveriesDlqRepublisher
 import com.bliss.billing.infrastructure.nats.NatsSubscriptionPublisher
 import com.bliss.billing.infrastructure.nats.UserDeletedConsumer
@@ -29,6 +37,7 @@ import io.nats.client.Nats
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import java.time.Instant
+import io.ktor.client.engine.cio.CIO as ClientCIO
 
 // Production entry-point.
 fun main() {
@@ -69,13 +78,34 @@ fun main() {
 
     val identityClient = IdentityClient(config.identityBaseUrl)
 
+    // Receipt prices derive from the same source as the Mollie charge so the durable-medium receipt can never misstate what was billed (ADR-0094 §5).
+    val toMinorUnits: (String) -> Long = { it.toBigDecimal().movePointRight(2).toLong() }
+    val offer =
+        SubscriptionOffer(
+            mapOf(
+                Cadence.MONTHLY to OfferPrice(toMinorUnits(mollieConfig.subscriptionAmountFor(Cadence.MONTHLY)), mollieConfig.currency),
+                Cadence.YEARLY to OfferPrice(toMinorUnits(mollieConfig.subscriptionAmountFor(Cadence.YEARLY)), mollieConfig.currency),
+            ),
+        )
+    val contractNotifier: ContractConfirmationNotifier =
+        if (config.emailEnabled && config.brevo != null) {
+            LegalEmailNotifier(
+                BillingBrevoEmailSender(ClientCIO.create(), config.brevo),
+                IdentityCustomerEmailLookup(identityClient),
+                consents,
+                offer,
+            )
+        } else {
+            NoOpContractConfirmationNotifier()
+        }
+
     val wiring =
         Wiring(
             verifySession = { cookie -> identityClient.verifySession(cookie) },
             fetchEmail = { cookie -> identityClient.fetchEmail(cookie) },
             createCheckoutSession = CreateCheckoutSession(provider, subscriptions, consents, clock),
             cancelSubscription = CancelSubscription(provider, subscriptions, publisher, clock, eventIds),
-            ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds),
+            ingestProviderEvent = IngestProviderEvent(provider, subscriptions, publisher, ledger, clock, eventIds, contractNotifier),
             subscriptionQuery = SubscriptionQuery(subscriptions),
             listReceipts = ListReceipts(receiptProvider),
             closeNats = {
