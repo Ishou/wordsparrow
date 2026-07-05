@@ -157,21 +157,54 @@ class CsvWordRepository(
          */
         fun frenchFromClasspath(): CsvWordRepository = fromClasspath(FRENCH_RESOURCE_PATH, FRENCH_THEMED_OVERLAY_PATHS)
 
+        // Resolves a corpus-relative path (e.g. "/words/words-fr.csv") to a stream, or null if absent.
+        private val CLASSPATH_RESOLVER: (String) -> java.io.InputStream? =
+            { path -> CsvWordRepository::class.java.getResourceAsStream(path) }
+
+        // Reads the corpus from a directory volume mirroring the classpath layout (ADR-0097).
+        fun frenchFromDir(dir: java.nio.file.Path): CsvWordRepository {
+            val resolver: (String) -> java.io.InputStream? = { path ->
+                val file = dir.resolve(path.removePrefix("/")).toFile()
+                if (file.isFile) file.inputStream() else null
+            }
+            return load(FRENCH_RESOURCE_PATH, FRENCH_THEMED_OVERLAY_PATHS, resolver)
+        }
+
+        const val CORPUS_DIR_ENV = "CORPUS_DIR"
+
+        // $CORPUS_DIR volume when set, else the bundled classpath copy (transitional, ADR-0097).
+        fun frenchCorpus(): CsvWordRepository {
+            val dir = System.getenv(CORPUS_DIR_ENV)?.takeIf { it.isNotBlank() }
+            return if (dir != null) {
+                frenchFromDir(
+                    java.nio.file.Path
+                        .of(dir),
+                )
+            } else {
+                frenchFromClasspath()
+            }
+        }
+
         fun fromClasspath(
             path: String,
             themedOverlayPaths: List<Pair<String, String>> = emptyList(),
+        ): CsvWordRepository = load(path, themedOverlayPaths, CLASSPATH_RESOLVER)
+
+        private fun load(
+            path: String,
+            themedOverlayPaths: List<Pair<String, String>>,
+            resolver: (String) -> java.io.InputStream?,
         ): CsvWordRepository {
             // Load theme overlays first so we can apply them while parsing the
-            // main CSV. Each overlay is `(theme, classpath-path)` — the CSV
-            // there carries the same schema as the main words file, but every
-            // word listed gets stamped with the overlay's theme. Curated rows
-            // are the source of truth; a word in two overlays (e.g. AG in
-            // chem + sigle) keeps a themed clue from each (see loadThemeOverlays).
-            val overlay = loadThemeOverlays(themedOverlayPaths)
+            // main CSV. Each overlay is `(theme, path)` — same schema as the
+            // main words file, but every word listed gets stamped with the
+            // overlay's theme. Curated rows are the source of truth; a word in
+            // two overlays (e.g. AG in chem + sigle) keeps a clue from each.
+            val overlay = loadThemeOverlays(themedOverlayPaths, resolver)
 
             val stream =
-                CsvWordRepository::class.java.getResourceAsStream(path)
-                    ?: error("Word CSV not found on classpath: $path")
+                resolver(path)
+                    ?: error("Word CSV not found: $path")
             return stream.use { input ->
                 InputStreamReader(input, StandardCharsets.UTF_8).use { reader ->
                     // setHeader() with no args = auto-detect from the first CSV row,
@@ -239,11 +272,14 @@ class CsvWordRepository(
          * are tolerated (silently skipped) so a partial deploy doesn't
          * brick the repository.
          */
-        private fun loadThemeOverlays(paths: List<Pair<String, String>>): Map<String, Word> {
+        private fun loadThemeOverlays(
+            paths: List<Pair<String, String>>,
+            resolver: (String) -> java.io.InputStream?,
+        ): Map<String, Word> {
             if (paths.isEmpty()) return emptyMap()
             val out = HashMap<String, Word>()
             for ((theme, path) in paths) {
-                val stream = CsvWordRepository::class.java.getResourceAsStream(path) ?: continue
+                val stream = resolver(path) ?: continue
                 stream.use { input ->
                     InputStreamReader(input, StandardCharsets.UTF_8).use { reader ->
                         val format =
