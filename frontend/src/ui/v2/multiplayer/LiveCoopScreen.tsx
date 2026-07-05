@@ -176,8 +176,7 @@ export function LiveCoopScreen({
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
 
-  // Word pulses as cells lock (any player's). The win cue fires at the lobby route on the
-  // COMPLETED transition — this screen unmounts into Résultats, so it never sees the win.
+  // Word pulses as cells lock (any player's); the win cue fires at the lobby route (this screen unmounts into Résultats).
   useGridSounds({ validatedCount: validatedPositions.size, won: false, soundPlayer });
 
   // Discreet "checking…" pulse on a word the local player just completed, until the server locks it (or a safety window passes).

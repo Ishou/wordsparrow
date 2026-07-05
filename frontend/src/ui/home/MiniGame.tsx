@@ -50,8 +50,7 @@ const input = css({
   '&::-webkit-search-cancel-button': { display: 'none' },
   '&::-webkit-search-decoration': { display: 'none' },
 });
-// Reserved row below the word holding the discreet mute shortcut (always present, so it
-// also anchors the height) and the skip button when it unlocks — neither shifts the layout.
+// Reserved row below the word: always-present mute shortcut (anchors the height) + skip button, no layout shift.
 const skipRow = css({ minHeight: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' });
 const soundBtn = css({
   border: 'none',

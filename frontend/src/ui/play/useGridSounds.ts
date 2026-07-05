@@ -4,9 +4,7 @@ import type { SoundPlayer } from '@/application/session/SoundPlayer';
 export interface UseGridSoundsArgs {
   readonly validatedCount: number;
   readonly won: boolean;
-  // Solo passes the interaction gate that suppresses the mount-time win celebration;
-  // coop omits it (it celebrates every server lock, and the ref-seed below already
-  // absorbs the hydration set on join).
+  // Solo passes its mount-gate; coop omits it (the ref-seed below already absorbs the join hydration set).
   readonly userActedRef?: { readonly current: boolean };
   readonly soundPlayer?: SoundPlayer;
 }

@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { SpeakerHigh, SpeakerSlash } from '@phosphor-icons/react';
 import type { SoundStore } from '@/application/session/SoundStore';
 
-// One-tap mute shortcut on the grid chrome; shares the localStorage preference
-// with the Réglages toggle (each surface reads it on mount, the player per-play).
+// One-tap mute shortcut sharing the localStorage preference with the Réglages toggle.
 export function GridSoundToggle({ soundStore, className }: { readonly soundStore: SoundStore; readonly className?: string }) {
   const [on, setOn] = useState(() => soundStore.load());
   const Icon = on ? SpeakerHigh : SpeakerSlash;

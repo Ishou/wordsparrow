@@ -136,8 +136,7 @@ function V2LobbyPage() {
 
   const lobby = view.lobby;
 
-  // Coop win cue: this screen unmounts into Résultats on completion, so play it here
-  // on the live IN_PROGRESS→COMPLETED transition (silent when loading a finished lobby).
+  // Coop win cue on the live IN_PROGRESS→COMPLETED transition (screen unmounts into Résultats; silent on cold-load of a finished lobby).
   const prevLobbyStateRef = useRef(lobby.state);
   useEffect(() => {
     if (prevLobbyStateRef.current === 'IN_PROGRESS' && lobby.state === 'COMPLETED') {

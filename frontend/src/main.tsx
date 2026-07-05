@@ -258,9 +258,7 @@ enableMocks()
       },
     };
 
-    // Grid sound effects (on by default). Same port indirection as the theme
-    // preference — Réglages consumes the store; the play route consumes the
-    // player, which self-gates on the store so the mute check lives in one place.
+    // Grid sound effects (on by default), same port indirection as the theme preference; the player self-gates on the store.
     const soundStore: SoundStore = { load: loadSoundEnabled, set: saveSoundEnabled };
     const soundPlayer: SoundPlayer = createWebAudioSoundPlayer(loadSoundEnabled);
 
