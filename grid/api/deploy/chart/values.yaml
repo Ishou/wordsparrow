@@ -197,3 +197,16 @@ regenerateDailies:
   enabled: false
   # Appended after --regenerate-dailies, e.g. ["--start-offset", "-7", "--window-days", "14"].
   extraArgs: []
+# ADR-0097: fetch the clue corpus from the private Hetzner Object Storage
+# bucket into a shared volume via an initContainer; the app reads it through
+# $CORPUS_DIR instead of the classpath so no definitions ship in the public
+# image. Off by default — the bucket must be populated (the private repo's
+# sync job does the upload) before flipping this on with
+# `--set corpus.objectStore.enabled=true`.
+corpus:
+  objectStore:
+    enabled: false
+    endpoint: "https://fsn1.your-objectstorage.com"
+    bucket: "bliss-clue-corpus"
+    secretName: "wordsparrow-corpus-s3" # keys: access_key, secret_key
+    fetchImage: "quay.io/minio/mc:latest" # pin to a digest before enabling (manifesto)

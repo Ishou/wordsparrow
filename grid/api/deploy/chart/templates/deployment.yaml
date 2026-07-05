@@ -29,6 +29,28 @@ spec:
                 labelSelector:
                   matchLabels: {{- include "wordsparrow-api.selectorLabels" . | nindent 20 }}
       {{- end }}
+      {{- if .Values.corpus.objectStore.enabled }}
+      # ADR-0097: pull the clue corpus from the private Hetzner Object Storage
+      # bucket into a shared volume; the app reads it via $CORPUS_DIR instead
+      # of the (removed) classpath copy, so no definitions ship in the image.
+      initContainers:
+        - name: fetch-corpus
+          image: {{ .Values.corpus.objectStore.fetchImage | quote }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - >
+              mc alias set store "$S3_ENDPOINT" "$S3_ACCESS_KEY" "$S3_SECRET_KEY" &&
+              mc cp --recursive "store/{{ .Values.corpus.objectStore.bucket }}/words" /corpus/
+          env:
+            - {name: S3_ENDPOINT, value: {{ .Values.corpus.objectStore.endpoint | quote }}}
+            - name: S3_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: {{ .Values.corpus.objectStore.secretName }}, key: access_key}}
+            - name: S3_SECRET_KEY
+              valueFrom: {secretKeyRef: {name: {{ .Values.corpus.objectStore.secretName }}, key: secret_key}}
+          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - {name: corpus, mountPath: /corpus}
+      {{- end }}
       containers:
         - name: api
           image: {{ include "wordsparrow-api.image" . | quote }}
@@ -51,6 +73,9 @@ spec:
                   key: uri
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.corpus.objectStore.enabled }}
+            - {name: CORPUS_DIR, value: /corpus}
             {{- end }}
           {{- with .Values.envFromSecret }}
           envFrom:
@@ -84,5 +109,11 @@ spec:
           # readOnlyRootFilesystem requires a writable /tmp (JVM PerfData etc).
           volumeMounts:
             - {name: tmp, mountPath: /tmp}
+            {{- if .Values.corpus.objectStore.enabled }}
+            - {name: corpus, mountPath: /corpus, readOnly: true}
+            {{- end }}
       volumes:
         - {name: tmp, emptyDir: {}}
+        {{- if .Values.corpus.objectStore.enabled }}
+        - {name: corpus, emptyDir: {}}
+        {{- end }}
