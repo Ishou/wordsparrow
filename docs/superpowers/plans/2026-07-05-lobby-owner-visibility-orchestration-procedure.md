@@ -47,7 +47,10 @@ Tick logic:
    - OPEN → open-PR decision tree.
    - MERGED → **rollout complete**: append the completion line to the log,
      `CronDelete` self, exit.
-5. Append every action to the log file.
+5. Append every action to the log file. Commit the append with
+   `docs(plans): log <what happened>` (bounded-context scope is mandatory —
+   five straight ticks in this PR shipped a bare `docs:` subject with no
+   scope; don't repeat it).
 
 ## Phase A agent prompt template
 
