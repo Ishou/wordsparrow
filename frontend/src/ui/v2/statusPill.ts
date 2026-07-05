@@ -4,3 +4,5 @@ import { css } from 'styled-system/css';
 export const pill = css({ display: 'inline-flex', alignItems: 'center', lineHeight: 1, fontFamily: 'wsUi', fontSize: '9.5px', fontWeight: 'black', letterSpacing: '0.04em', textTransform: 'uppercase', borderRadius: '999px', padding: '4px 8px' });
 export const pillPending = css({ color: 'ws.orInk', bg: 'ws.or' });
 export const pillMuted = css({ color: 'ws.khaki', bg: 'rgba(33,75,64,0.08)' });
+// Attention state (a failed renewal): gold ink on gold, AA-clear like pillPending.
+export const pillWarn = css({ color: 'ws.orInk', bg: 'ws.or' });
