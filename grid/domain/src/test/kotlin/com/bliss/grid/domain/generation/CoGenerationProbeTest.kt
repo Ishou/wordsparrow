@@ -169,8 +169,8 @@ class CoGenerationProbeTest {
             var sample: String? = null
             for (t in 0 until 12) {
                 var bestGrid: com.bliss.grid.domain.model.Grid? = null; var bestBlack = Int.MAX_VALUE
-                for (k in 0 until 4) {
-                    val g = generator.generate(cons, Random(1000L + t * 4L + k)) ?: continue
+                for (k in 0 until 8) {
+                    val g = generator.generate(cons, Random(1000L + t * 8L + k)) ?: continue
                     var b = 0; for ((_, cell) in g.cells) if (cell is ClueCell) b++
                     if (b < bestBlack) { bestBlack = b; bestGrid = g }
                 }
@@ -184,7 +184,7 @@ class CoGenerationProbeTest {
                 for (c in 0 until 28) { var r = 0; while (r < 20) { if (grid[r][c] == '#') { r++; continue }; val st = r; while (r < 20 && grid[r][c] != '#') r++; val L = r - st; if (L >= 2) { words++; lenHist[L] = (lenHist[L] ?: 0) + 1; if (L == 2) len2++ } } }
                 if (sample == null && curated) sample = grid.joinToString("\n") { it.concatToString() }
             }
-            println("BO4 curated=$curated n=$succeeded/$trials black=%.1f%%(min %.1f%% max %.1f%%) len2Share=%.1f%%".format(
+            println("BO8 curated=$curated n=$succeeded/$trials black=%.1f%%(min %.1f%% max %.1f%%) len2Share=%.1f%%".format(
                 if (succeeded > 0) 100.0 * blackSum / succeeded / area else -1.0,
                 if (succeeded > 0) 100.0 * minBlack / area else -1.0, 100.0 * maxBlack / area,
                 if (words > 0) 100.0 * len2 / words else 0.0))
