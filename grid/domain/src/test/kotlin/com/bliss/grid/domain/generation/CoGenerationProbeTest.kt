@@ -154,6 +154,43 @@ class CoGenerationProbeTest {
         println(best.render())
     }
 
+    // Config sweep (Track B): push anchor + per-axis lTarget harder to find the lowest
+    // density floor that still fills reliably, on the clued corpus + curated, best-of-8.
+    @Test
+    fun `config sweep for lower density`() {
+        val area = 28 * 20
+        val repo = loadRepository(curated = true, cluedOnly = true)
+        val generator = GridGenerator(repo)
+        val configs = listOf(
+            Triple(3, 11, 8), Triple(4, 12, 9), Triple(4, 13, 10), Triple(5, 13, 10), Triple(5, 14, 11),
+        )
+        for ((ac, lh, lv) in configs) {
+            val cons = GridConstraints(width = 28, height = 20, anchorCount = ac, anchorLength = 15, lTargetHorizontal = lh, lTargetVertical = lv)
+            var trials = 0; var succeeded = 0; var blackSum = 0L; var minBlack = Int.MAX_VALUE
+            var len2 = 0L; var words = 0L
+            for (t in 0 until 10) {
+                var bestGrid: com.bliss.grid.domain.model.Grid? = null; var bestBlack = Int.MAX_VALUE
+                for (k in 0 until 8) {
+                    val g = generator.generate(cons, Random(3000L + t * 8L + k)) ?: continue
+                    var b = 0; for ((_, cell) in g.cells) if (cell is ClueCell) b++
+                    if (b < bestBlack) { bestBlack = b; bestGrid = g }
+                }
+                trials++
+                val g = bestGrid ?: continue
+                succeeded++
+                blackSum += bestBlack; minBlack = minOf(minBlack, bestBlack)
+                val grid = Array(20) { CharArray(28) { '#' } }
+                for ((pos, cell) in g.cells) if (cell is LetterCell) grid[pos.row.value][pos.column.value] = cell.letter
+                for (r in 0 until 20) { var c = 0; while (c < 28) { if (grid[r][c] == '#') { c++; continue }; val st = c; while (c < 28 && grid[r][c] != '#') c++; if (c - st >= 2) { words++; if (c - st == 2) len2++ } } }
+                for (c in 0 until 28) { var r = 0; while (r < 20) { if (grid[r][c] == '#') { r++; continue }; val st = r; while (r < 20 && grid[r][c] != '#') r++; if (r - st >= 2) { words++; if (r - st == 2) len2++ } } }
+            }
+            println("SWEEP ac=$ac lH=$lh lV=$lv n=$succeeded/$trials black=%.1f%%(min %.1f%%) len2Share=%.1f%%".format(
+                if (succeeded > 0) 100.0 * blackSum / succeeded / area else -1.0,
+                if (succeeded > 0) 100.0 * minBlack / area else -1.0,
+                if (words > 0) 100.0 * len2 / words else 0.0))
+        }
+    }
+
     // Confirm the density results are on the CLUED corpus (what production can place),
     // and quantify how much the unclued words would have inflated them. bo-4 + anchor +
     // curated, clued-only vs full corpus.
