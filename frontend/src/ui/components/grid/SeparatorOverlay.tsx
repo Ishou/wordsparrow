@@ -9,13 +9,11 @@ const slot = css({
   justifyContent: 'center',
   pointerEvents: 'none',
   overflow: 'visible',
-  // Above the letter cells (boardGrid is zIndex 1) so the bar's overflow into
-  // the adjacent cells isn't occluded.
+  // Above boardGrid's zIndex 1 so overflow into adjacent cells isn't occluded.
   zIndex: 6,
 });
 
-// Gold "trait d'union" chip — miel (secondary) gradient, its own token vocabulary
-// distinct from the pink clue arrows; a capsule straddling the two joined cells.
+// Gold "trait d'union" chip — miel (secondary) gradient, distinct from the pink clue arrows.
 const chip = css({
   // The slot is only GAP-wide on one axis; without this the flex item shrinks to it.
   flexShrink: 0,
