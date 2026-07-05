@@ -50,7 +50,7 @@ removing public exposure.
    is a fresh cold pull and a transient object-storage error during that pull
    hard-fails the restart (not only a total cache+bucket miss). A PVC cache is
    not a one-line swap: `wordsparrow-api` runs `replicaCount: 2` with node
-   anti-affinity, and the cluster's only StorageClass (`hcloud-csi`) is
+   anti-affinity, and the cluster's only StorageClass (`hcloud-volumes`) is
    ReadWriteOnce, so a single shared PVC would fail to attach on the second
    node. Making the cache real needs a `StatefulSet` (per-replica
    `volumeClaimTemplate`) or an RWX-capable storage class — tracked as a
