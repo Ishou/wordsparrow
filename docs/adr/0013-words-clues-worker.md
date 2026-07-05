@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted.
+Accepted. **§8 (CSV-in-repo/classpath read path) superseded by
+[ADR-0097](./0097-private-corpus-object-storage.md)**: the production
+read path is no longer the committed CSV on the classpath — it is a
+private Hetzner Object Storage bucket, sourced from the private
+`wordsparrow-clue-data` repo. The remaining sections (word source,
+schema, worker pipeline shape) are unaffected.
 
 ## Context
 
