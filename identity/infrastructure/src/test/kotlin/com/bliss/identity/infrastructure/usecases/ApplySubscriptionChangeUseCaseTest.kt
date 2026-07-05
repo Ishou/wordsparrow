@@ -4,6 +4,11 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
+import assertk.assertions.isTrue
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.bliss.identity.application.usecases.ApplySubscriptionChangeUseCase
 import com.bliss.identity.application.usecases.SubscriptionChange
 import com.bliss.identity.application.usecases.SubscriptionChangeOutcome
@@ -15,6 +20,7 @@ import com.bliss.identity.infrastructure.persistence.InMemorySubscriptionTierRep
 import com.bliss.identity.infrastructure.persistence.InMemoryUserRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
 
@@ -93,4 +99,39 @@ class ApplySubscriptionChangeUseCaseTest {
             assertThat(outcome).isEqualTo(SubscriptionChangeOutcome.Applied(SubscriptionTier.FREE))
             assertThat(subscriptions.find(userId)?.tier).isEqualTo(SubscriptionTier.FREE)
         }
+
+    // An unrecognized (future/renamed) paid tier must fall back to FREE loudly, not silently, so drift is ADR-0032-alertable.
+    @Test
+    fun `an unrecognized tier falls back to free and logs the drift warning`() =
+        runTest {
+            val appender = attachAppender()
+            try {
+                val (sut, _, subscriptions) = newCase()
+                val outcome = sut.execute(change("premium_annual", "active", now))
+                assertThat(outcome).isEqualTo(SubscriptionChangeOutcome.Applied(SubscriptionTier.FREE))
+                assertThat(subscriptions.find(userId)?.tier).isEqualTo(SubscriptionTier.FREE)
+                assertThat(
+                    appender.list.any {
+                        it.level == Level.WARN &&
+                            it.formattedMessage.startsWith("subscription_tier_unrecognized") &&
+                            it.formattedMessage.contains("premium_annual")
+                    },
+                ).isTrue()
+            } finally {
+                detachAppender(appender)
+            }
+        }
+
+    private fun useCaseLogger(): Logger = LoggerFactory.getLogger(ApplySubscriptionChangeUseCase::class.java) as Logger
+
+    private fun attachAppender(): ListAppender<ILoggingEvent> {
+        val appender = ListAppender<ILoggingEvent>()
+        appender.start()
+        useCaseLogger().addAppender(appender)
+        return appender
+    }
+
+    private fun detachAppender(appender: ListAppender<ILoggingEvent>) {
+        useCaseLogger().detachAppender(appender)
+    }
 }
