@@ -36,10 +36,10 @@ spec:
           image: {{ include "wordsparrow-api.fetchCorpusImage" . | quote }}
           command: ["/bin/sh", "-ec"]
           args:
-            # MC_HOST_store keeps credentials out of this process's argv (unlike `mc alias set <user> <pass>`).
+            # MC_HOST_store avoids argv credentials; trailing slashes on SRC/DST copy words/ contents into $CORPUS_DIR/words (frenchFromDir's layout).
             - >
               export MC_HOST_store="https://${S3_ACCESS_KEY}:${S3_SECRET_KEY}@${S3_ENDPOINT#https://}" &&
-              mc cp --recursive "store/{{ .Values.corpus.objectStore.bucket }}/words" /corpus/
+              mc cp --recursive "store/{{ .Values.corpus.objectStore.bucket }}/words/" /corpus/words/
           env:
             - {name: S3_ENDPOINT, value: {{ .Values.corpus.objectStore.endpoint | quote }}}
             - name: S3_ACCESS_KEY
