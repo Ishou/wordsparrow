@@ -16,13 +16,13 @@ const stack = css({ display: 'flex', flexDirection: 'column', gap: '14px' });
 
 const link = css({ color: 'ws.sakuraDark', fontWeight: 'bold', textDecoration: 'underline' });
 
-const introCard = css({
+const thanksCard = css({
   bg: 'ws.sakuraBlush',
   borderRadius: '18px',
   padding: '18px 20px',
 });
 
-const introText = css({
+const thanksText = css({
   fontFamily: 'wsUi',
   fontSize: '15px',
   lineHeight: '1.65',
@@ -41,29 +41,45 @@ const closing = css({
   paddingTop: '4px',
 });
 
-export function RemerciementsScreen() {
+export function AProposScreen() {
   return (
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
-          <h1 className={title}>Merci</h1>
-          <p className={lede}>Derrière chaque grille, il y a le travail partagé d&apos;autres.</p>
+          <h1 className={title}>À propos</h1>
+          <p className={lede}>Un petit jeu de mots fléchés à la française, fait avec soin.</p>
         </header>
 
-        <section className={introCard}>
-          <p className={introText}>
-            WordSparrow n&apos;existerait pas seul. On l&apos;a construit sur des logiciels libres,
-            avec des fontes offertes au monde et des mots patiemment rassemblés par des bénévoles.
-            Rien de tout ça ne nous appartient vraiment — on en hérite, et on en prend soin.
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>Le projet</h2>
+          <p className={sectionBody}>
+            WordSparrow est un jeu de mots fléchés imaginé et développé par <strong>ISHO IT</strong>,
+            une petite entreprise indépendante installée en France.
           </p>
-          <p className={introText}>Voici celles et ceux à qui l&apos;on doit un grand merci.</p>
+          <p className={sectionBody}>
+            Pas de grande équipe derrière : quelques mains, beaucoup de patience, et l&apos;envie de
+            faire un jeu qu&apos;on ait plaisir à ouvrir chaque matin.
+          </p>
+        </section>
+
+        <section className={thanksCard}>
+          <h2 className={sectionHeading}>Remerciements</h2>
+          <p className={thanksText}>
+            WordSparrow ne tient pas debout tout seul. Il repose sur des logiciels libres, sur des
+            polices d&apos;écriture offertes à tous, et sur un français patiemment recensé au fil des
+            années.
+          </p>
+          <p className={thanksText}>
+            Rien de tout cela ne nous appartient vraiment : on en hérite, et on essaie d&apos;en
+            prendre soin. Voici celles et ceux à qui l&apos;on doit un grand merci.
+          </p>
         </section>
 
         <section className={contentCard}>
           <h2 className={sectionHeading}>Le code et les outils</h2>
           <p className={sectionBody}>
-            Le jeu tourne sur des logiciels libres, écrits et entretenus par une foule de gens qu&apos;on
-            ne croisera jamais.
+            Le jeu tourne grâce à des logiciels libres, écrits et entretenus par une foule de gens
+            qu&apos;on ne croisera jamais.
           </p>
           <p className={sectionBody}>
             Merci à{' '}
@@ -126,18 +142,18 @@ export function RemerciementsScreen() {
             <a className={link} href="https://www.mollie.com" target="_blank" rel="noopener noreferrer">
               Mollie
             </a>{' '}
-            — et à tout l&apos;écosystème qui les entoure.
+            — et à tout l&apos;écosystème qui gravite autour.
           </p>
         </section>
 
         <section className={contentCard}>
           <h2 className={sectionHeading}>Les lettres</h2>
           <p className={sectionBody}>
-            Les mots méritent de belles lettres. Nos fontes viennent de créateurs typographiques qui
-            les ont libérées sous licence SIL Open Font, pour que chacun puisse les faire vivre.
+            Les mots méritent de belles lettres. Nos polices d&apos;écriture ont été dessinées puis
+            partagées librement, sous licence SIL Open Font, par des créateurs typographiques.
           </p>
           <p className={sectionBody}>
-            Merci aux fontes{' '}
+            Merci aux polices{' '}
             <a
               className={link}
               href="https://fonts.google.com/specimen/Fredoka"
@@ -173,15 +189,15 @@ export function RemerciementsScreen() {
             >
               Spline Sans Mono
             </a>
-            , et aux gens patients qui les ont dessinées.
+            , et aux mains patientes qui les ont tracées.
           </p>
         </section>
 
         <section className={contentCard}>
           <h2 className={sectionHeading}>La langue et les mots</h2>
           <p className={sectionBody}>
-            Sans dictionnaire, pas de grille. On doit notre vocabulaire à des lexicographes bénévoles
-            qui recensent et corrigent le français, mot après mot, depuis des années.
+            Sans dictionnaire, pas de grille. Notre vocabulaire vient d&apos;un travail de longue
+            haleine sur le français, recensé et corrigé mot après mot, année après année.
           </p>
           <p className={sectionBody}>
             Merci à{' '}
@@ -202,16 +218,7 @@ export function RemerciementsScreen() {
             >
               Dicollecte
             </a>
-            , au dictionnaire <strong>Hunspell français</strong>, et à{' '}
-            <a
-              className={link}
-              href="https://kaiko.getalp.org/about-dbnary/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              DBnary
-            </a>
-            .
+            , et au dictionnaire <strong>Hunspell français</strong>.
           </p>
         </section>
 

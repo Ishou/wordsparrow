@@ -73,7 +73,7 @@ const PRERENDERED_ROUTE_PATHS = [
   '/mentions-legales',
   '/confidentialite',
   '/conditions-abonnement',
-  '/remerciements',
+  '/a-propos',
   '/compte',
   '/reglages',
   '/finish',
