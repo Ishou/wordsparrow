@@ -1,6 +1,13 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheLicenseResourceTransformer
+import com.github.jengelman.gradle.plugins.shadow.transformers.ApacheNoticeResourceTransformer
+
 plugins {
     kotlin("jvm") version "2.3.21" apply false
     id("com.diffplug.spotless") version "8.6.0"
+    // apply false puts Shadow on the root script classpath so the shadowJar block below can name its transformer types.
+    id("com.gradleup.shadow") version "9.4.2" apply false
+    id("com.github.jk1.dependency-license-report") version "2.9" apply false
 }
 
 allprojects {
@@ -57,6 +64,30 @@ subprojects {
                     "org.apache.logging.log4j:log4j-core" -> useVersion("2.25.4")
                     "org.codehaus.plexus:plexus-utils" -> useVersion("4.0.3")
                 }
+            }
+        }
+    }
+
+    // Shadow clobbers same-path META-INF/LICENSE*/NOTICE* when it merges the ~40 bundled jars; restore them plus an aggregated list so each fat jar keeps its Apache-2.0 §4(d) / MIT / BSD redistribution notices.
+    plugins.withId("com.gradleup.shadow") {
+        apply(plugin = "com.github.jk1.dependency-license-report")
+
+        val thirdPartyLicenses =
+            layout.buildDirectory.file("reports/dependency-license/THIRD-PARTY-LICENSES.txt")
+
+        extensions.configure<com.github.jk1.license.LicenseReportExtension> {
+            configurations = arrayOf("runtimeClasspath")
+            renderers = arrayOf(com.github.jk1.license.render.TextReportRenderer("THIRD-PARTY-LICENSES.txt"))
+        }
+
+        tasks.named<ShadowJar>("shadowJar") {
+            dependsOn("generateLicenseReport")
+            // Merge (not clobber) the license/notice files the jars do carry.
+            transform<ApacheLicenseResourceTransformer>()
+            transform<ApacheNoticeResourceTransformer>()
+            // Aggregated fallback for MIT/BSD deps whose jars omit a bundled license.
+            from(thirdPartyLicenses) {
+                into("META-INF")
             }
         }
     }
