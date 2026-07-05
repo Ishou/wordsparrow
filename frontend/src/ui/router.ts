@@ -16,7 +16,7 @@ import { Route as AbonnementAnnuleRoute } from './routes/abonnement.annule';
 import { Route as ConfidentialiteRoute } from './routes/confidentialite';
 import { Route as MentionsLegalesRoute } from './routes/mentions-legales';
 import { Route as ConditionsAbonnementRoute } from './routes/conditions-abonnement';
-import { Route as RemerciementsRoute } from './routes/remerciements';
+import { Route as AProposRoute } from './routes/a-propos';
 import { Route as LobbyRoute } from './routes/lobby.$lobbyId';
 import { Route as JoinRoute } from './routes/join.$code';
 import { Route as DesignSystemRoute } from './routes/design-system';
@@ -58,7 +58,7 @@ export function createAppRouter({ context, multiplayer, emailAuth }: CreateAppRo
     ConfidentialiteRoute,
     MentionsLegalesRoute,
     ConditionsAbonnementRoute,
-    RemerciementsRoute,
+    AProposRoute,
     AccueilRedirectRoute,
     GrilleRedirectRoute,
     MenuRedirectRoute,

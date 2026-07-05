@@ -1,6 +1,6 @@
 ---
 name: clue-ai
-description: Implement, train, evaluate, or fix the French clue-generation AI pipeline. THE SOLE GENERATION + TRAINING LANE IS MODAL CLOUD-GPU COMMAND-R (ADR-0057 as amended by ADR-0087) — QLoRA/RAFT training on A100 (`modal_jobs/`), generation via `modal_jobs/04_generate_command_r.py`, gating via `scripts/clue_generation/pipeline_v2/` filters + an LLM judge. The legacy local MLX lane (mlx-lm training/inference, `run_production.sh`, CamemBERT filter as shipping gate) was RETIRED 2026-06-23 — never invoke it or propose it. Still live and lane-independent: grammalecte morphology + lemma→surface inflation, the Python `validate_clue` runtime guards, DBnary handling, and the Kotlin `bliss-worker` (`clue_candidates` Postgres table + CSV export). Use when the task touches `modal_jobs/`, `scripts/clue_generation/`, `scripts/eval/`, `scripts/dbnary/`, `data/{eval,lora,lora_filter,lora_dpo,dbnary,curated}/`, `models/`, `grid/worker/src/main/kotlin/com/bliss/grid/worker/{clues,dbnary}/`, the Python validator/morphology helpers, the eval logbook at `docs/eval/clue-gen-v0.md`, or when changing what gets emitted into `grid/api/src/main/resources/words/words-fr.csv`. Encodes ADR-0013 (offline batch worker), ADR-0023 (DBnary CC BY-SA constraints), ADR-0024 (synonym-lemma narrow relaxation), ADR-0087 (MLX retirement), the eval methodology from `docs/eval/clue-gen-v0.md`, and the licence + leak failure modes that have actually bitten this repo.
+description: Implement, train, evaluate, or fix the French clue-generation AI pipeline. THE SOLE GENERATION + TRAINING LANE IS MODAL CLOUD-GPU COMMAND-R (ADR-0057 as amended by ADR-0087) — QLoRA/RAFT training on A100 (`modal_jobs/`), generation via `modal_jobs/04_generate_command_r.py`, gating via `scripts/clue_generation/pipeline_v2/` filters + an LLM judge. The legacy local MLX lane (mlx-lm training/inference, `run_production.sh`, CamemBERT filter as shipping gate) was RETIRED 2026-06-23 — never invoke it or propose it. Still live and lane-independent: grammalecte morphology + lemma→surface inflation, the Python `validate_clue` runtime guards, DBnary handling, and the Kotlin `bliss-worker` (`clue_candidates` Postgres table + CSV export). Use when the task touches `modal_jobs/`, `scripts/clue_generation/`, `scripts/eval/`, `scripts/dbnary/`, `data/{eval,lora,lora_filter,lora_dpo,dbnary,curated}/`, `models/`, `grid/worker/src/main/kotlin/com/bliss/grid/worker/{clues,dbnary}/`, the Python validator/morphology helpers, the eval logbook at `docs/eval/clue-gen-v0.md`, or when changing what gets emitted into `grid/infrastructure/src/main/resources/words/words-fr.csv`. Encodes ADR-0013 (offline batch worker), ADR-0023 (DBnary CC BY-SA constraints), ADR-0024 (synonym-lemma narrow relaxation), ADR-0087 (MLX retirement), the eval methodology from `docs/eval/clue-gen-v0.md`, and the licence + leak failure modes that have actually bitten this repo.
 paths: ["modal_jobs/**", "scripts/clue_generation/**", "scripts/eval/**", "scripts/dbnary/**", "grid/worker/src/main/kotlin/com/bliss/grid/worker/clues/**", "grid/worker/src/main/kotlin/com/bliss/grid/worker/dbnary/**", "grid/application/src/main/kotlin/com/bliss/grid/application/lexicon/**", "grid/domain/src/main/kotlin/com/bliss/grid/domain/lexicon/**", "data/eval/**", "data/lora/**", "data/lora_filter/**", "data/lora_dpo/**", "data/dbnary/**", "data/curated/**", "models/**", "docs/eval/**"]
 ---
 
@@ -53,7 +53,7 @@ scripts/clue_generation/build_surface_clues.py   (lemma→surface inflation:
 scripts/clue_generation/merge_clues_into_wordlist.py   (ADDITIVE merge —
         │             fill blank placeholders only, never overwrite shipped clues)
         ▼
-grid/api/src/main/resources/words/words-fr.csv (committed; prod read path)
+grid/infrastructure/src/main/resources/words/words-fr.csv (committed; prod read path)
         ▲
         └── runtime guards: scripts/eval/test_runtime_csv_pleonasms.py + pytest scripts/eval/
 ```
@@ -331,7 +331,7 @@ The LoRA generates clues at **lemma form** — citation form, i.e. infinitive ve
 | `no-target-pos` | surface POS not in {nom, adj, verbe}. |
 | `no-owner` | no `(lemma, pos)` candidate has a clue in `lemma_clues_shipped.csv`. |
 
-3. **`scripts/clue_generation/merge_clues_into_wordlist.py`** — final assembly. Reads `surface_clues.csv`, keeps `validation_flag == ok` rows above the filter threshold, replaces the placeholder `clue == word` field in the runtime `grid/api/src/main/resources/words/words-fr.csv`. Rows without a high-confidence surface clue keep the placeholder (the grid generator still works; the renderer treats `clue == word` as "no clue available"). The `source` / `source_license` columns describe the **word** provenance (grammalecte, MPL-2.0) — the clue's CC0 LoRA provenance is not surfaced per-field today.
+3. **`scripts/clue_generation/merge_clues_into_wordlist.py`** — final assembly. Reads `surface_clues.csv`, keeps `validation_flag == ok` rows above the filter threshold, replaces the placeholder `clue == word` field in the runtime `grid/infrastructure/src/main/resources/words/words-fr.csv`. Rows without a high-confidence surface clue keep the placeholder (the grid generator still works; the renderer treats `clue == word` as "no clue available"). The `source` / `source_license` columns describe the **word** provenance (grammalecte, MPL-2.0) — the clue's CC0 LoRA provenance is not surfaced per-field today.
 
 ### Hard-won inflation gotchas (fixed in PR #192 + #193 — keep regressions out)
 
@@ -344,7 +344,7 @@ The LoRA generates clues at **lemma form** — citation form, i.e. infinitive ve
 ### Runtime guard
 
 `scripts/eval/test_runtime_csv_pleonasms.py` is the regression test that asserts:
-1. No row in the shipped `grid/api/src/main/resources/words/words-fr.csv` trips `validate_clue._find_pleonasm`.
+1. No row in the shipped `grid/infrastructure/src/main/resources/words/words-fr.csv` trips `validate_clue._find_pleonasm`.
 2. `lemma_clues_shipped.csv` and `surface_clues.csv` both hold zero pleonasm rows.
 
 It's the gate against the "merged-but-not-validated artefact" failure mode (someone hand-edits the CSV and skips the validator). It runs as part of `pytest scripts/eval/`. If it fires, run `python scripts/clue_generation/strip_pleonastic_clues.py` and re-export — don't silence the test.
@@ -377,7 +377,7 @@ Subcommands relevant to clue-AI work — see `grid/worker/src/main/kotlin/com/bl
 - `ingest-dbnary` — parses `data/dbnary/dbnary_fr.csv` into the `dbnary` table.
 - `derive-synonym-clues` — SQL-only synonym derivation per ADR-0024.
 - `ingest-clue-candidates` — bulk-loads the LoRA-generated CSV into `clue_candidates`. Required columns: `lemma, clue_text, source`. Optional: `model_version, confidence`. `--truncate` deletes existing rows for the given `--source` before inserting (idempotent re-runs); `--source <override>` and `--model-version <override>` set those columns globally. **This is the only ingestion path for LoRA output** — there's no in-worker generation lane.
-- `export-words` — selects the per-lemma top candidate per `findTopBySourcePriority`, writes the committed CSV (`grid/api/src/main/resources/words/words-<lang>.csv`). Sorted by `(language, word)` for stable git diffs. Idempotent.
+- `export-words` — selects the per-lemma top candidate per `findTopBySourcePriority`, writes the committed CSV (`grid/infrastructure/src/main/resources/words/words-<lang>.csv`). Sorted by `(language, word)` for stable git diffs. Idempotent.
 
 Cross-layer rules in this corner are the same as for the rest of the JVM backend (see the `jvm-backend` skill): `domain` types like `ClueCandidate` are pure Kotlin, `application` defines the ports, `infrastructure` provides JDBC adapters, `worker` wires Clikt subcommands to use cases.
 

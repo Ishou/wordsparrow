@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useRouteContext } from '@tanstack/react-router';
-import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User, SpeakerHigh, Heart } from '@phosphor-icons/react';
+import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User, SpeakerHigh, Info } from '@phosphor-icons/react';
 import { Switch } from '@ark-ui/react/switch';
 import { css, cx } from 'styled-system/css';
 import type { ThemePreference, ThemeStore } from '@/application/session/ThemeStore';
@@ -265,7 +265,7 @@ export function ReglagesScreen() {
         <nav aria-label="À propos">
           <div className={groupLabel}>À propos</div>
           <ul className={listCard}>
-            <SettingsRow icon={Heart} tone="soft" to="/remerciements" label="Remerciements" last />
+            <SettingsRow icon={Info} tone="soft" to="/a-propos" label="À propos" last />
           </ul>
         </nav>
 

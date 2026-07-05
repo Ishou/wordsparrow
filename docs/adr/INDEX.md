@@ -83,6 +83,7 @@ ADR-0058  data/dbnary/**                           DBnary SA-acceptance + distri
 ADR-0058  scripts/clue_generation/**               Training/filter paths must classify per ADR-0058 matrix
 ADR-0058  scripts/eval/**                          Same — eval paths that feed training must classify
 ADR-0058  modal_jobs/**                            Training/inference on Modal must classify per ADR-0058 (incl. the Command-R base model)
+# ADR-0058: amendment 2026-07-05 (license-audit correction) — Grammalecte/Dicollecte lexicon data reclassified GPL 3.0 → MPL-2.0, redistribute forbidden → permitted (with NOTICE.md attribution); Lexique3 label corrected CC BY-NC-SA 4.0 → CC BY-SA 4.0 (no NC clause upstream), `forbidden` verdict retained pending maintainer confirmation since the NC-clause rationale no longer holds. No new binding paths — corrections land in the matrix above.
 ADR-0059  survey/**/persistence/**                 Campaign lifecycle: campaigns table, partial-unique open invariant
 ADR-0059  survey/**/usecases/SubmitRatingUseCase.kt           Locked arm + campaign_id stamping
 ADR-0059  survey/**/usecases/SubmitPairRatingUseCase.kt       Locked arm + campaign_id stamping
