@@ -63,6 +63,8 @@ class GridGenerator(
         val bias = clampedBias(constraints.longWordBias)
         val biasedLTarget = lTargetFor(bias, lUseful, constraints.minWordLength)
         val lTarget = min(maxOf(GenerationKnobs.DEFAULT_L_TARGET, biasedLTarget), lUseful)
+        val lTargetH = (constraints.lTargetHorizontal ?: lTarget).coerceIn(constraints.minWordLength, lUseful)
+        val lTargetV = (constraints.lTargetVertical ?: lTarget).coerceIn(constraints.minWordLength, lUseful)
         val lMinGood = lMinGood(bias, lUseful, constraints.minWordLength)
         val effectiveBlackRatio = GenerationKnobs.DEFAULT_BLACK_RATIO * densityFactor(bias)
         val whitenP = whitenProbability(bias)
@@ -82,7 +84,12 @@ class GridGenerator(
                 random = random,
                 lMinGood = lMinGood,
                 lengthTwoPenalty = constraints.lengthTwoPenalty,
+                lTargetHorizontal = lTargetH,
+                lTargetVertical = lTargetV,
             )
+        if (constraints.anchorCount > 0) {
+            LayoutAnchorer.carve(cells, constraints.minWordLength, lUseful, lex, constraints.anchorCount, constraints.anchorLength)
+        }
         metrics?.skeletonMs = (clock.nanoTime() - layoutStart) / NS_PER_MS
 
         val searchStart = clock.nanoTime()
@@ -103,6 +110,8 @@ class GridGenerator(
                         constraints.minWordLength,
                         lTarget,
                         lUseful,
+                        lTargetH = lTargetH,
+                        lTargetV = lTargetV,
                         hotCells = emptyList(),
                         consecFails = consecFails,
                         random = random,
@@ -110,6 +119,9 @@ class GridGenerator(
                         lMinGood = lMinGood,
                         whitenP = whitenP,
                         lengthTwoPenalty = constraints.lengthTwoPenalty,
+                        lex = lex,
+                        anchorCount = constraints.anchorCount,
+                        anchorLength = constraints.anchorLength,
                     )
                 perturbations++
                 continue
@@ -126,6 +138,8 @@ class GridGenerator(
                         constraints.minWordLength,
                         lTarget,
                         lUseful,
+                        lTargetH = lTargetH,
+                        lTargetV = lTargetV,
                         hotCells = emptyList(),
                         consecFails = consecFails,
                         random = random,
@@ -133,6 +147,9 @@ class GridGenerator(
                         lMinGood = lMinGood,
                         whitenP = whitenP,
                         lengthTwoPenalty = constraints.lengthTwoPenalty,
+                        lex = lex,
+                        anchorCount = constraints.anchorCount,
+                        anchorLength = constraints.anchorLength,
                     )
                 perturbations++
                 continue
@@ -173,6 +190,8 @@ class GridGenerator(
                     constraints.minWordLength,
                     lTarget,
                     lUseful,
+                    lTargetH = lTargetH,
+                    lTargetV = lTargetV,
                     hotCells = hot,
                     consecFails = consecFails,
                     random = random,
@@ -180,6 +199,9 @@ class GridGenerator(
                     lMinGood = lMinGood,
                     whitenP = whitenP,
                     lengthTwoPenalty = constraints.lengthTwoPenalty,
+                    lex = lex,
+                    anchorCount = constraints.anchorCount,
+                    anchorLength = constraints.anchorLength,
                 )
             perturbations++
         }
@@ -189,13 +211,16 @@ class GridGenerator(
         return null
     }
 
-    private fun reseedOrPerturb(
+    /** Internal rather than private so tests can drive the full-re-seed branch directly. */
+    internal fun reseedOrPerturb(
         cells: CellArray,
         w: Int,
         h: Int,
         minLen: Int,
         lTarget: Int,
         lUseful: Int,
+        lTargetH: Int = lTarget,
+        lTargetV: Int = lTarget,
         hotCells: List<Pair<Int, Int>>,
         consecFails: Int,
         random: Random,
@@ -203,19 +228,29 @@ class GridGenerator(
         lMinGood: Int,
         whitenP: Double,
         lengthTwoPenalty: Double,
+        lex: Lexicon,
+        anchorCount: Int,
+        anchorLength: Int,
     ): CellArray {
         if (consecFails > 0 && consecFails % GenerationKnobs.CONSEC_RESEED == 0) {
-            return BlackCellLayout.seed(
-                width = w,
-                height = h,
-                minLen = minLen,
-                lTarget = lTarget,
-                lUseful = lUseful,
-                blackRatio = blackRatio,
-                random = random,
-                lMinGood = lMinGood,
-                lengthTwoPenalty = lengthTwoPenalty,
-            )
+            val reseeded =
+                BlackCellLayout.seed(
+                    width = w,
+                    height = h,
+                    minLen = minLen,
+                    lTarget = lTarget,
+                    lUseful = lUseful,
+                    blackRatio = blackRatio,
+                    random = random,
+                    lMinGood = lMinGood,
+                    lengthTwoPenalty = lengthTwoPenalty,
+                    lTargetHorizontal = lTargetH,
+                    lTargetVertical = lTargetV,
+                )
+            if (anchorCount > 0) {
+                LayoutAnchorer.carve(reseeded, minLen, lUseful, lex, anchorCount, anchorLength)
+            }
+            return reseeded
         }
         BlackCellLayout.perturb(
             cells = cells,
