@@ -390,8 +390,7 @@ class PostgresLobbyRepositoryTest {
             assertThat(result.map { it.id }).containsExactly(anonIdle.id)
         }
 
-    // ADR-0055/0066 regression: after the leave-grace drops the owner seat, only owner_user_id
-    // marks the lobby as authed — the GC must not delete it despite there being no authed seat.
+    // ADR-0055/0066 regression: after the leave-grace drops the owner seat, only owner_user_id marks the lobby as authed — the GC must not delete it despite there being no authed seat.
     @Test
     fun `findIdleCompleted excludes an owner-owned lobby after the owner seat is gone`() =
         runTest {
@@ -447,8 +446,7 @@ class PostgresLobbyRepositoryTest {
             assertThat(result).isEmpty()
         }
 
-    // ADR-0066 amendment 2026-07-05 regression: after the leave-grace drops the owner's
-    // lobby_players seat, the owner arm keeps the started lobby visible on the user tab.
+    // ADR-0066 amendment 2026-07-05 regression: after the leave-grace drops the owner's lobby_players seat, the owner arm keeps the started lobby visible on the user tab.
     @Test
     fun `findByUserId still returns an owner-owned lobby after the owner leaves lobby_players`() =
         runTest {
@@ -626,8 +624,7 @@ class PostgresLobbyRepositoryTest {
             }
         }
 
-    // ADR-0039 erasure regression: owner_user_id must follow the new owner, not linger on the
-    // erased user, else findByUserId(erasedUser) keeps surfacing the lobby after erasure.
+    // ADR-0039 erasure regression: owner_user_id must follow the new owner, not linger on the erased user, else findByUserId(erasedUser) keeps surfacing the lobby after erasure.
     @Test
     fun `eraseSession rule 2 - owner_user_id transfers to the new owner and no longer surfaces the erased user`() =
         runTest {

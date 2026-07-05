@@ -125,8 +125,7 @@ class InMemoryLobbyRepository : LobbyRepository {
                 val newOwnerSession: SessionId
                 val newOwnerUserId: UserId?
                 if (current.isOwner(sessionId)) {
-                    // Rule 2: owner + others. Earliest-joined remaining player inherits;
-                    // owner_user_id follows the inheritor's seat (null if anon) so the erased user's UserId cannot linger (ADR-0039 erasure).
+                    // Rule 2: earliest-joined remaining player inherits; owner_user_id follows their seat (null if anon) so the erased user's UserId cannot linger (ADR-0039 erasure).
                     transferredLobbies += 1
                     val inheritor = remaining.values.minBy { it.joinedAt }
                     newOwnerSession = inheritor.sessionId

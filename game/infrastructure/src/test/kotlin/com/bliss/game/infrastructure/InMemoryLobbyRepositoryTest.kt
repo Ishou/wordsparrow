@@ -485,8 +485,7 @@ class InMemoryLobbyRepositoryTest {
             assertThat(touchedAgain).isEmpty()
         }
 
-    // ADR-0066 amendment 2026-07-05 regression: the owner arm keeps a started lobby on the
-    // user tab after the leave-grace drops the owner's seat (no seat then carries the userId).
+    // ADR-0066 amendment 2026-07-05 regression: the owner arm keeps a started lobby on the user tab after the leave-grace drops the owner's seat (no seat then carries the userId).
     @Test
     fun `findByUserId still returns an owner-owned lobby after the owner leaves`() =
         runTest {
@@ -502,8 +501,7 @@ class InMemoryLobbyRepositoryTest {
             assertThat(repo.findByUserId(userA).map { it.id }).containsExactlyInAnyOrder(lobby.id)
         }
 
-    // ADR-0055/0066 regression: once the leave-grace drops the owner seat, only ownerUserId marks
-    // the lobby as authed — the GC must not collect it despite there being no authed seat.
+    // ADR-0055/0066 regression: once the leave-grace drops the owner seat, only ownerUserId marks the lobby as authed — the GC must not collect it despite there being no authed seat.
     @Test
     fun `findIdleCompleted excludes an owner-owned lobby after the owner seat is gone`() =
         runTest {

@@ -665,8 +665,7 @@ class PostgresLobbyRepository(
                   last_activity_at = EXCLUDED.last_activity_at,
                   completed_at     = EXCLUDED.completed_at
                 """.trimIndent(),
-                // owner_user_id is intentionally absent from the DO UPDATE list — write-once at create,
-                // so a post-leave save (owner seat gone) must not null it (ADR-0066 amendment 2026-07-05).
+                // owner_user_id excluded from DO UPDATE — write-once at create; a post-leave save must not null it (ADR-0066 amendment 2026-07-05).
             ).use { ps ->
                 ps.setString(1, lobby.id.value)
                 ps.setString(2, lobby.code.value)
