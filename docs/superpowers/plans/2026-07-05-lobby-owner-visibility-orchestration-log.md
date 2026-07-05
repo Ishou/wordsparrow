@@ -35,3 +35,7 @@ Append-only ledger for human review. Procedure:
   V3 `owner_user_id` migration, `Lobby.ownerUserId` write-once, owner arm on
   `findByUserId` (both adapters), regression test (leave-grace → findByUserId).
   Cron **re-armed** (2-min) to drive Phase B review→merge.
+- **2026-07-05** — Phase B implementer opened **PR #1413**
+  (`fix/lobby-owner-visibility`, `fix(game): keep authed-owned lobbies
+  visible after leave-grace`), MERGEABLE, CI running. Waiting on blocking
+  checks + §6a review.
