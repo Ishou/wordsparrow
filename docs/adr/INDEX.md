@@ -257,6 +257,7 @@ ADR-0094  frontend/src/ui/v2/ConditionsAbonnementScreen.tsx  CGV page = the link
 # ADR-0094: consumer-law conformity umbrella — extends ADR-0078/0082 billing PII posture (consent + billing-sent uncapped email); Chatel=annual only; no cookie banner; B2C receipt-not-facture (<25€ TTC tripwire), on-request factures + e-reporting via Qonto (registered Plateforme Agréée, not Mollie)
 ADR-0095  grid/domain/src/main/kotlin/com/bliss/grid/domain/generation/LayoutAnchorer.kt  Low-density daily generation: anchored long runs (carve K targeted long horizontal runs, perturbation stays on so board stays fillable). Rejected LayoutDistiller (disables perturbation → unfillable). Daily config anchorCount=3 + best-of-N; depends on sigle short-word overlay
 ADR-0095  grid/domain/src/main/kotlin/com/bliss/grid/domain/generation/GridConstraints.kt  Per-axis run caps lTargetHorizontal/lTargetVertical + anchorCount/anchorLength (default off; daily = 11/8, anchor 3). Do NOT re-add distillBudget (falsified: distiller disables perturbation)
+ADR-0095  grid/application/src/main/kotlin/com/bliss/grid/application/puzzle/PuzzleConstraints.kt  Daily size split: dailyPuzzleConstraints() = 22×15 (re-scaled knobs anchor 3/len 10, lH 9/lV 6), distinct from defaultPuzzleConstraints() 28×20 API default
 # ADR-0095: low-density daily generation — LayoutAnchorer carves K targeted long horizontal runs into fresh seeds so perturbation stays on and boards stay fillable; rejected LayoutDistiller (disables perturbation, Konsist-unsafe currentTimeMillis)
 ```
 
