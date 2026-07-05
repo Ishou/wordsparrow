@@ -185,3 +185,112 @@ additive, backward-compatible migration is required — expand-and-contract:
 the column is nullable, no existing row is rewritten, and the read arm
 tolerates `NULL`. The migration lands in the implementation PR that this
 amendment governs (ADR-0001 §7: this ADR merges first).
+
+## Amendment 2026-07-05 (b) — authed cross-device rejoin
+
+### Problem the original decision missed
+
+The (a) amendment fixed the READ path: an authed user now SEES a lobby
+they own or joined from any device, because `findByUserId` gained an
+owner arm keyed on `owner_user_id`. But the JOIN path was left untouched
+and remains `sessionId`-only. `JoinLobbyUseCase` recognizes an
+owner/member solely by `sessionId` — `hasJoined(sessionId)` for the
+reconnect bypass, `isOwner(sessionId)` for the owner bypass, otherwise
+the `code != lobby.code.value` check that yields `WrongCode`.
+
+Rejoining from the `À plusieurs` tab sends no code (the user does not
+have it; it belongs to the original host device). On a second device the
+current `sessionId` is neither the stored `ownerSessionId` nor any
+existing seat's `sessionId`, so the join falls through to the code check
+and the server rejects with `WrongCode` ("demandez le code à
+l'organisateur"). The net user-visible bug: **you can see your
+cross-device lobby but cannot rejoin it.** Confirmed in production
+2026-07-05.
+
+### Decision
+
+The socket already cookie-verifies on connect and binds
+`whoAmI.userId` to the connection (`LobbyWebSocketRoute`, via
+`sessionManager.bindUserId`). Thread that server-verified `userId` into
+the join.
+
+1. **The WebSocket join passes the socket's server-verified `userId`**
+   — obtained from the connect-time identity-api cookie verification,
+   **never** read from the client join frame — into `JoinLobbyUseCase`.
+   `dispatchJoin` currently calls `joinLobby(lobbyId, sid, pseudo, code)`
+   without it.
+
+2. **Recognition rules**, evaluated inside the mutator BEFORE the code
+   check (so they preserve the existing reconnect/owner bypass posture):
+
+   - `userId == lobby.ownerUserId` → **owner rejoin**: rebind
+     `ownerSessionId` to the caller's current `sessionId`, upsert the
+     owner's seat (stamped with `userId`), bypass the code. Rebinding
+     `ownerSessionId` is what keeps every existing `isOwner(sessionId)`
+     check — StartGame, RotateCode, SetGridConfig, kick — working
+     unchanged: no per-use-case auth edit is needed.
+   - `userId` matches an existing seat's `userId` → **member rejoin**:
+     seat the current session (stamped with `userId`), bypass the code.
+   - otherwise → **unchanged**: anon/guest callers still need a valid
+     code; the `WrongCode` failure is preserved verbatim.
+
+### Threat model (required — auth-boundary change, CLAUDE.md)
+
+STRIDE pass over the new recognition arms:
+
+- **Spoofing / forged identity** *(Spoofing)*: the `userId` is taken
+  from server-side cookie verification (identity-api whoami) performed at
+  connect time, never from the client frame. A client cannot assert a
+  `userId` it did not authenticate as, so the owner/member arms cannot be
+  driven by a forged value. This is strictly stronger than the existing
+  `sessionId` credential, which *is* client-supplied (ADR-0018 §7).
+- **Elevation of privilege**: matching `owner_user_id` is stronger proof
+  of entitlement than knowing the shareable join code — a cookie the
+  identity provider issued to that user, versus a short string anyone
+  with the URL can be told. The member arm grants exactly the capability
+  a code-holder already has (a seat); it adds no new capability. The
+  owner arm additionally rebinds ownership, but **only** the
+  cookie-verified owner (`userId == ownerUserId`) can trigger it — no
+  code-holder, anon, or other authed user reaches that branch.
+- **Reconnect-window takeover** *(EoP)*: unchanged. A different
+  `sessionId` presenting a non-matching `userId` still joins only as a
+  regular player and never inherits owner status (ADR-0018 §7 posture
+  intact).
+- **Information disclosure / enumeration** *(Info disclosure)*: none.
+  Join still requires knowing the `lobbyId`, exactly as today; no arm
+  leaks lobby existence or lets an attacker probe the `owner_user_id`
+  space. Anon and guest flows are byte-for-byte unchanged.
+
+Residual risk is bounded by the identity cookie's own integrity — the
+same trust root the (a) amendment's read path already relies on.
+
+### Consequences
+
+- **Ownership FOLLOWS the authed owner's current device on rejoin.**
+  When the owner returns from a second device, `ownerSessionId` is
+  rebound to that device's session. It is the same human, so this is
+  invisible to the user, but it is a deliberate, bounded exception to
+  ADR-0055 §f's rule that **ownership transfer happens only via RGPD
+  erasure** (`EraseSessionUseCase`; see also `LeaveLobbyUseCase`'s
+  header). The distinction: ADR-0055 §f forbids transferring ownership to a
+  *different principal*; this rebind keeps ownership with the *same*
+  authenticated `userId` and merely moves which `sessionId` represents
+  them. Documented here and cross-referenced from ADR-0055 §f's intent.
+- **Owner-gated use cases are untouched.** Because the rebind updates
+  `ownerSessionId`, StartGame / RotateCode / SetGridConfig / kick keep
+  their `isOwner(sessionId)` guards verbatim — zero auth surface added
+  outside `JoinLobbyUseCase`.
+- **Localized change.** The edit is confined to the join path
+  (`LobbyWebSocketRoute.dispatchJoin` + `JoinLobbyUseCase`); no schema
+  change, no new endpoint, no migration beyond the `owner_user_id`
+  column the (a) amendment already introduces.
+
+### References (this amendment)
+
+- **ADR-0018 §7** — the `sessionId` two-tier authz surface this
+  amendment strengthens with a server-verified `userId`.
+- **ADR-0055 §f** — "ownership transfer only via RGPD erasure"; this
+  amendment documents the same-principal owner-rebind as a bounded
+  exception.
+- **ADR-0083** — hosting entitlement; every new lobby is authed, so
+  `ownerUserId` is populated in practice.
