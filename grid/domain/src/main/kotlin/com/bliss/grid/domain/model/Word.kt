@@ -24,6 +24,7 @@ data class Word private constructor(
      * lemma data — equivalent to surface-form-only dedup.
      */
     val lemma: String,
+    val separators: List<Int> = emptyList(),
 ) {
     init {
         require(text.isNotEmpty()) { "Word text must not be empty" }
@@ -31,6 +32,12 @@ data class Word private constructor(
         require(lemma.isNotEmpty()) { "Word lemma must not be empty (defaults to text)" }
         require(lemma.all { it in 'A'..'Z' }) { "Word lemma must be A-Z, was '$lemma'" }
         require(clues.isNotEmpty()) { "Word must carry at least one WordClue" }
+        require(separators.all { it in 1 until text.length }) {
+            "Word separators must be in 1..${text.length - 1}, was $separators for '$text'"
+        }
+        require(separators.zipWithNext().all { (a, b) -> a < b }) {
+            "Word separators must be strictly increasing, was $separators"
+        }
     }
 
     /**
@@ -47,12 +54,14 @@ data class Word private constructor(
             definition: String,
             lemma: String? = null,
             theme: String? = null,
+            separators: List<Int> = emptyList(),
         ): Word {
             val foldedText = text.uppercase()
             return Word(
                 foldedText,
                 listOf(WordClue(definition, theme)),
                 lemma?.uppercase() ?: foldedText,
+                separators,
             )
         }
 
@@ -60,10 +69,25 @@ data class Word private constructor(
             text: String,
             clues: List<WordClue>,
             lemma: String? = null,
+            separators: List<Int> = emptyList(),
         ): Word {
             require(clues.isNotEmpty()) { "Word must carry at least one WordClue" }
             val foldedText = text.uppercase()
-            return Word(foldedText, clues, lemma?.uppercase() ?: foldedText)
+            return Word(foldedText, clues, lemma?.uppercase() ?: foldedText, separators)
+        }
+
+        /** Builds a Word from a raw hyphenated surface, folding hyphens into separators. */
+        fun fromSurface(
+            text: String,
+            definition: String,
+            lemma: String? = null,
+            theme: String? = null,
+        ): Word {
+            val (letters, separators) =
+                HyphenSurface.split(text.uppercase())
+                    ?: throw IllegalArgumentException("Word.fromSurface: not a hyphenated A-Z surface: '$text'")
+            val foldedLemma = lemma?.let { HyphenSurface.split(it.uppercase())?.first } ?: letters
+            return invoke(letters, definition, foldedLemma, theme, separators)
         }
     }
 }

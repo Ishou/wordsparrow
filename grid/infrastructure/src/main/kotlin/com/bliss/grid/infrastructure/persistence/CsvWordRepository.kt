@@ -1,6 +1,7 @@
 package com.bliss.grid.infrastructure.persistence
 
 import com.bliss.grid.domain.generation.WordRepository
+import com.bliss.grid.domain.model.HyphenSurface
 import com.bliss.grid.domain.model.Word
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
@@ -217,6 +218,7 @@ class CsvWordRepository(
                                             text = w.text,
                                             clues = w.clues + themed.clues,
                                             lemma = w.lemma,
+                                            separators = w.separators,
                                         )
                                     else -> w
                                 }
@@ -265,6 +267,7 @@ class CsvWordRepository(
                                         text = w.text,
                                         clues = themedClues,
                                         lemma = w.lemma,
+                                        separators = w.separators,
                                     )
                                 // Merge, don't overwrite — a surface in two overlays (e.g. AG) must keep a themed clue from each.
                                 val existing = out[withTheme.text]
@@ -315,10 +318,8 @@ class CsvWordRepository(
             // Mots fléchés convention: grid cells are unaccented uppercase ASCII (Word's A-Z
             // invariant in domain). The clue keeps the original accented form for display.
             val folded = foldToAscii(text)
-            // Drop entries whose word can't be placed in A-Z cells (rare Unicode that doesn't
-            // fold — e.g. ℓ, ß, Greek letters smuggled in via the corpus). Silent skip is fine
-            // here: the corpus is large enough that a handful of dropped rows is invisible.
-            if (!folded.all { it in 'A'..'Z' }) return null
+            // Interior hyphens fold into separator offsets; other non-A-Z chars still drop the row.
+            val (letters, separators) = HyphenSurface.split(folded) ?: return null
             // Lemma column is optional (legacy CSVs predate it). When present-and-foldable,
             // store it folded so dedup compares like-with-like; otherwise fall back to the
             // word itself, which makes lemma-dedup degenerate to surface-form dedup.
@@ -327,8 +328,8 @@ class CsvWordRepository(
                 rawLemma
                     ?.takeIf { it.isNotBlank() }
                     ?.let(::foldToAscii)
-                    ?.takeIf { it.all { ch -> ch in 'A'..'Z' } }
-                    ?: folded
+                    ?.let { HyphenSurface.split(it)?.first }
+                    ?: letters
             // Theme: read explicit column value if present; otherwise null
             // (= no theme, uncapped). The runtime overlays per-theme curated
             // files at load time (see [loadThemeOverlays]) — those are the
@@ -342,10 +343,11 @@ class CsvWordRepository(
                     null
                 }
             return Word(
-                text = folded,
+                text = letters,
                 definition = clue,
                 lemma = foldedLemma,
                 theme = theme,
+                separators = separators,
             ) to frequency
             // Note: the Word(text, definition, lemma, theme) overload wraps
             // (definition, theme) into a single-clue list — the loader's
