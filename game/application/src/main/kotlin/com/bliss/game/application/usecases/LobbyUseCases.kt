@@ -151,9 +151,16 @@ class JoinLobbyUseCase(
             val now = clock.now()
             val player = Player(sessionId, pseudonym, now, userId = seatUserId)
             emitted = LobbyEvent.PlayerJoined(player)
+            // Moves the seat rather than duplicating it: an authed rejoin from a new device replaces any stale seat for the same userId (ADR-0066 (b)).
+            val withoutStaleSeat =
+                if (seatUserId != null) {
+                    lobby.players.filterValues { it.userId != seatUserId }
+                } else {
+                    lobby.players
+                }
             return lobby.copy(
                 ownerSessionId = if (rebindOwner) sessionId else lobby.ownerSessionId,
-                players = lobby.players + (sessionId to player),
+                players = withoutStaleSeat + (sessionId to player),
                 lastActivityAt = now,
             )
         }

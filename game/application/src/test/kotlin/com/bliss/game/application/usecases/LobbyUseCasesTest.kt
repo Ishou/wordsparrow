@@ -342,6 +342,8 @@ class LobbyUseCasesTest {
             val out = h.joinWithUserId(lobby.id, newDevice, bob, code = null, userId = userB).requireSuccess()
 
             assertThat(out.value.players[newDevice]?.userId).isEqualTo(userB)
+            assertThat(out.value.players[oldMemberSession]).isNull()
+            assertThat(out.value.players).hasSize(2)
             assertThat(out.value.ownerSessionId).isEqualTo(sessionA)
             assertThat(out.events).hasSize(1)
         }
