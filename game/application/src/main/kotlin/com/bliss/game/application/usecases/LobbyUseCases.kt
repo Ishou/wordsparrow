@@ -84,6 +84,7 @@ class CreateLobbyUseCase(
                 game = null,
                 lastActivityAt = now,
                 code = code,
+                ownerUserId = ownerUserId,
             )
         val saved = repo.save(lobby)
         analyticsEventSink.record(AnalyticsEvent.LobbyCreated(saved.gridConfig.toLabel()), ownerSessionId)

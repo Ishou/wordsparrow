@@ -109,7 +109,7 @@ class PostgresLobbyRepository(
             }
         }
 
-    // ADR-0066: seat-scoped user union; no owner arm (see LobbyRepository.findByUserId doc).
+    // ADR-0066 amendment 2026-07-05: owner arm mirrors findBySessionId so a lobby stays visible after the leave-grace drops the owner's seat.
     override suspend fun findByUserId(userId: UserId): List<Lobby> =
         withContext(Dispatchers.IO) {
             ds.connection.use { conn ->
@@ -117,14 +117,16 @@ class PostgresLobbyRepository(
                 conn
                     .prepareStatement(
                         "SELECT l.id FROM lobbies l " +
-                            "WHERE EXISTS (" +
+                            "WHERE (l.owner_user_id = ? OR EXISTS (" +
                             "  SELECT 1 FROM lobby_players lp " +
                             "  WHERE lp.lobby_id = l.id AND lp.user_id = ?" +
-                            ") " +
+                            ")) " +
                             "AND l.state IN ('IN_PROGRESS', 'COMPLETED') " +
                             "ORDER BY l.last_activity_at DESC",
                     ).use { ps ->
-                        ps.setObject(1, UUID.fromString(userId.value))
+                        val uidUuid = UUID.fromString(userId.value)
+                        ps.setObject(1, uidUuid)
+                        ps.setObject(2, uidUuid)
                         ps.executeQuery().use { rs ->
                             while (rs.next()) ids += LobbyId(rs.getString("id"))
                         }
@@ -288,11 +290,17 @@ class PostgresLobbyRepository(
             // Rule 2: transfer ownership to earliest-joined remaining player.
             if (ownsLobby) {
                 val newOwner = remainingPlayers.minBy { it.second }.first
+                // owner_user_id follows the new owner's seat (NULL if anon) so the erased user's UserId cannot linger in findByUserId (ADR-0039 erasure).
                 conn
-                    .prepareStatement("UPDATE lobbies SET owner_session_id = ? WHERE id = ?")
-                    .use { ps ->
+                    .prepareStatement(
+                        "UPDATE lobbies SET owner_session_id = ?, " +
+                            "owner_user_id = (SELECT user_id FROM lobby_players WHERE lobby_id = ? AND session_id = ?) " +
+                            "WHERE id = ?",
+                    ).use { ps ->
                         ps.setObject(1, newOwner)
                         ps.setString(2, id.value)
+                        ps.setObject(3, newOwner)
+                        ps.setString(4, id.value)
                         ps.executeUpdate()
                     }
                 transferredLobbies += 1
@@ -397,6 +405,7 @@ class PostgresLobbyRepository(
         withContext(Dispatchers.IO) {
             ds.connection.use { conn ->
                 val ids = mutableListOf<LobbyId>()
+                // owner arm mirrors findByUserId so an authed-owned COMPLETED lobby is not GC'd after the leave-grace drops the owner seat (ADR-0055/0066).
                 conn
                     .prepareStatement(
                         "SELECT l.id FROM lobbies l " +
@@ -404,7 +413,7 @@ class PostgresLobbyRepository(
                             "AND NOT EXISTS (" +
                             "  SELECT 1 FROM lobby_players lp " +
                             "  WHERE lp.lobby_id = l.id AND lp.user_id IS NOT NULL" +
-                            ")",
+                            ") AND l.owner_user_id IS NULL",
                     ).use { ps ->
                         ps.setTimestamp(1, Timestamp.from(cutoff))
                         ps.executeQuery().use { rs ->
@@ -524,7 +533,7 @@ class PostgresLobbyRepository(
     ): Lobby? =
         conn
             .prepareStatement(
-                "SELECT id, code, owner_session_id, state, grid_width, grid_height, " +
+                "SELECT id, code, owner_session_id, owner_user_id, state, grid_width, grid_height, " +
                     "title, game_payload, last_activity_at, completed_at " +
                     "FROM lobbies WHERE id = ?",
             ).use { ps ->
@@ -540,7 +549,7 @@ class PostgresLobbyRepository(
     ): Lobby? =
         conn
             .prepareStatement(
-                "SELECT id, code, owner_session_id, state, grid_width, grid_height, " +
+                "SELECT id, code, owner_session_id, owner_user_id, state, grid_width, grid_height, " +
                     "title, game_payload, last_activity_at, completed_at " +
                     "FROM lobbies WHERE id = ? FOR UPDATE",
             ).use { ps ->
@@ -563,6 +572,7 @@ class PostgresLobbyRepository(
             id = id,
             code = LobbyCode(rs.getString("code")),
             ownerSessionId = SessionId(rs.getObject("owner_session_id", UUID::class.java).toString()),
+            ownerUserId = rs.getObject("owner_user_id", UUID::class.java)?.let { UserId(it.toString()) },
             state = LobbyLifecycleState.valueOf(rs.getString("state")),
             gridConfig = GridConfig(rs.getInt("grid_width"), rs.getInt("grid_height")),
             title = rs.getString("title")?.let { LobbyTitle(it) },
@@ -641,9 +651,9 @@ class PostgresLobbyRepository(
             .prepareStatement(
                 """
                 INSERT INTO lobbies
-                  (id, code, owner_session_id, state, grid_width, grid_height,
+                  (id, code, owner_session_id, owner_user_id, state, grid_width, grid_height,
                    title, game_payload, last_activity_at, completed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                   code             = EXCLUDED.code,
                   owner_session_id = EXCLUDED.owner_session_id,
@@ -655,20 +665,23 @@ class PostgresLobbyRepository(
                   last_activity_at = EXCLUDED.last_activity_at,
                   completed_at     = EXCLUDED.completed_at
                 """.trimIndent(),
+                // owner_user_id excluded from DO UPDATE — write-once at create; a post-leave save must not null it (ADR-0066 amendment 2026-07-05).
             ).use { ps ->
                 ps.setString(1, lobby.id.value)
                 ps.setString(2, lobby.code.value)
                 ps.setObject(3, UUID.fromString(lobby.ownerSessionId.value))
-                ps.setString(4, lobby.state.name)
-                ps.setInt(5, lobby.gridConfig.width)
-                ps.setInt(6, lobby.gridConfig.height)
+                val ownerUserId = lobby.ownerUserId
+                if (ownerUserId != null) ps.setObject(4, UUID.fromString(ownerUserId.value)) else ps.setNull(4, java.sql.Types.OTHER)
+                ps.setString(5, lobby.state.name)
+                ps.setInt(6, lobby.gridConfig.width)
+                ps.setInt(7, lobby.gridConfig.height)
                 val title = lobby.title
-                if (title != null) ps.setString(7, title.value) else ps.setNull(7, java.sql.Types.VARCHAR)
+                if (title != null) ps.setString(8, title.value) else ps.setNull(8, java.sql.Types.VARCHAR)
                 val game = lobby.game
-                if (game != null) ps.setObject(8, jsonbOf(game)) else ps.setNull(8, java.sql.Types.OTHER)
-                ps.setTimestamp(9, Timestamp.from(lobby.lastActivityAt))
+                if (game != null) ps.setObject(9, jsonbOf(game)) else ps.setNull(9, java.sql.Types.OTHER)
+                ps.setTimestamp(10, Timestamp.from(lobby.lastActivityAt))
                 val completedAt = game?.completedAt
-                if (completedAt != null) ps.setTimestamp(10, Timestamp.from(completedAt)) else ps.setNull(10, java.sql.Types.TIMESTAMP)
+                if (completedAt != null) ps.setTimestamp(11, Timestamp.from(completedAt)) else ps.setNull(11, java.sql.Types.TIMESTAMP)
                 ps.executeUpdate()
             }
     }

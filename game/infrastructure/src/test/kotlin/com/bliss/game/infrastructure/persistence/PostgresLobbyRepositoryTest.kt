@@ -390,6 +390,27 @@ class PostgresLobbyRepositoryTest {
             assertThat(result.map { it.id }).containsExactly(anonIdle.id)
         }
 
+    // ADR-0055/0066 regression: after the leave-grace drops the owner seat, only owner_user_id marks the lobby as authed — the GC must not delete it despite there being no authed seat.
+    @Test
+    fun `findIdleCompleted excludes an owner-owned lobby after the owner seat is gone`() =
+        runTest {
+            val ownerUserId = UserId("66666666-6666-6666-6666-666666666666")
+            val ownerOwned =
+                completedLobby(id = LobbyId.generate(), owner = sessionA)
+                    .copy(ownerUserId = ownerUserId, lastActivityAt = baseInstant.minusSeconds(3600))
+            repo.save(ownerOwned)
+            // Leave-grace equivalent: the owner's seat is dropped, keeping the row and owner_user_id.
+            repo.mutate(ownerOwned.id) { it.copy(players = it.players - sessionA) }
+            val anonIdle =
+                completedLobby(id = LobbyId.generate(), owner = sessionB)
+                    .copy(lastActivityAt = baseInstant.minusSeconds(3600))
+            repo.save(anonIdle)
+
+            val result = repo.findIdleCompleted(baseInstant)
+
+            assertThat(result.map { it.id }).containsExactly(anonIdle.id)
+        }
+
     // ADR-0066: cross-device union keyed by the seat userId stamped at rebind.
     @Test
     fun `findByUserId unions seats across sessions and keeps the state filter and ordering`() =
@@ -423,6 +444,23 @@ class PostgresLobbyRepositoryTest {
             val result = repo.findByUserId(UserId("33333333-3333-3333-3333-333333333333"))
 
             assertThat(result).isEmpty()
+        }
+
+    // ADR-0066 amendment 2026-07-05 regression: after the leave-grace drops the owner's lobby_players seat, the owner arm keeps the started lobby visible on the user tab.
+    @Test
+    fun `findByUserId still returns an owner-owned lobby after the owner leaves lobby_players`() =
+        runTest {
+            val userId = UserId("55555555-5555-5555-5555-555555555555")
+            val lobby = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userId)
+            repo.save(lobby)
+
+            // Leave-grace equivalent: LeaveLobbyUseCase drops the owner's seat, keeping the row.
+            val afterLeave = repo.mutate(lobby.id) { it.copy(players = it.players - sessionA) }
+
+            assertThat(afterLeave).isNotNull()
+            assertThat(afterLeave!!.players).isEmpty()
+            assertThat(afterLeave.ownerUserId).isEqualTo(userId)
+            assertThat(repo.findByUserId(userId).map { it.id }).containsExactly(lobby.id)
         }
 
     @Test
@@ -584,6 +622,32 @@ class PostgresLobbyRepositoryTest {
             after.game!!.entries.values.forEach {
                 assertThat(it.sessionId).isEqualTo(SessionId.ANON)
             }
+        }
+
+    // ADR-0039 erasure regression: owner_user_id must follow the new owner, not linger on the erased user, else findByUserId(erasedUser) keeps surfacing the lobby after erasure.
+    @Test
+    fun `eraseSession rule 2 - owner_user_id transfers to the new owner and no longer surfaces the erased user`() =
+        runTest {
+            val erasedUserId = UserId("77777777-7777-7777-7777-777777777777")
+            val newOwnerUserId = UserId("88888888-8888-8888-8888-888888888888")
+            val base = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = erasedUserId)
+            val withOther =
+                base.copy(
+                    players =
+                        base.players +
+                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = newOwnerUserId)),
+                )
+            repo.save(withOther)
+
+            val result = repo.eraseSession(sessionA)
+
+            assertThat(result.transferredLobbies).isEqualTo(1)
+            val after = repo.findById(withOther.id)
+            assertThat(after).isNotNull()
+            assertThat(after!!.ownerSessionId).isEqualTo(sessionB)
+            assertThat(after.ownerUserId).isEqualTo(newOwnerUserId)
+            // The erased user's UserId must no longer surface the lobby via the owner arm.
+            assertThat(repo.findByUserId(erasedUserId)).isEmpty()
         }
 
     @Test
@@ -891,6 +955,7 @@ class PostgresLobbyRepositoryTest {
         return Lobby(
             id = id,
             ownerSessionId = owner,
+            ownerUserId = ownerUserId,
             players = mapOf(owner to ownerPlayer),
             state = LobbyLifecycleState.WAITING,
             gridConfig = GridConfig(10, 10),
@@ -916,6 +981,7 @@ class PostgresLobbyRepositoryTest {
         return Lobby(
             id = id,
             ownerSessionId = owner,
+            ownerUserId = ownerUserId,
             players = mapOf(owner to ownerPlayer),
             state = LobbyLifecycleState.IN_PROGRESS,
             gridConfig = GridConfig(puzzle.width, puzzle.height),

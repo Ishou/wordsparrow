@@ -55,6 +55,7 @@ class InMemoryLobbyRepositoryTest {
         Lobby(
             id = id,
             ownerSessionId = ownerSessionId,
+            ownerUserId = ownerUserId,
             players = mapOf(ownerSessionId to Player(ownerSessionId, alice, joinedAt, userId = ownerUserId)),
             state = state,
             gridConfig = gridConfig,
@@ -323,6 +324,7 @@ class InMemoryLobbyRepositoryTest {
     private fun completedLobbyAt(
         id: LobbyId,
         ownerSessionId: SessionId = sessionA,
+        ownerUserId: UserId? = null,
         lastActivityAt: Instant = baseInstant,
     ): Lobby {
         val puzzle =
@@ -339,7 +341,8 @@ class InMemoryLobbyRepositoryTest {
         return Lobby(
             id = id,
             ownerSessionId = ownerSessionId,
-            players = mapOf(ownerSessionId to Player(ownerSessionId, alice, baseInstant)),
+            ownerUserId = ownerUserId,
+            players = mapOf(ownerSessionId to Player(ownerSessionId, alice, baseInstant, userId = ownerUserId)),
             state = LobbyLifecycleState.COMPLETED,
             gridConfig = gridConfig,
             game =
@@ -480,5 +483,70 @@ class InMemoryLobbyRepositoryTest {
             val touchedAgain = repo.refreshUserPseudonym(STUB_CONN, userIdAlice, renamedPseudonym)
 
             assertThat(touchedAgain).isEmpty()
+        }
+
+    // ADR-0066 amendment 2026-07-05 regression: the owner arm keeps a started lobby on the user tab after the leave-grace drops the owner's seat (no seat then carries the userId).
+    @Test
+    fun `findByUserId still returns an owner-owned lobby after the owner leaves`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val lobby = completedLobbyAt(LobbyId.generate(), ownerSessionId = sessionA, ownerUserId = userA)
+            repo.save(lobby)
+
+            // Leave-grace equivalent: LeaveLobbyUseCase drops the owner's seat, keeping the row.
+            val afterLeave = repo.mutate(lobby.id) { it.copy(players = it.players - sessionA) }
+
+            assertThat(afterLeave).isNotNull()
+            assertThat(afterLeave!!.players).isEmpty()
+            assertThat(repo.findByUserId(userA).map { it.id }).containsExactlyInAnyOrder(lobby.id)
+        }
+
+    // ADR-0055/0066 regression: once the leave-grace drops the owner seat, only ownerUserId marks the lobby as authed — the GC must not collect it despite there being no authed seat.
+    @Test
+    fun `findIdleCompleted excludes an owner-owned lobby after the owner seat is gone`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val ownerOwned = completedLobbyAt(LobbyId.generate(), ownerUserId = userA, lastActivityAt = baseInstant)
+            repo.save(ownerOwned)
+            // Leave-grace equivalent: the owner's seat is dropped, keeping the row and ownerUserId.
+            repo.mutate(ownerOwned.id) { it.copy(players = it.players - sessionA) }
+            val anonIdle = completedLobbyAt(LobbyId.generate(), lastActivityAt = baseInstant)
+            repo.save(anonIdle)
+
+            val idle = repo.findIdleCompleted(baseInstant.plusSeconds(60))
+
+            assertThat(idle.map { it.id }).containsExactlyInAnyOrder(anonIdle.id)
+        }
+
+    // ADR-0039 erasure parity with Postgres: ownerUserId follows the new owner, not the erased user.
+    @Test
+    fun `eraseSession rule 2 reassigns ownerUserId off the erased owner`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val sessionB = SessionId("0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5")
+            val newOwnerUserId = UserId("99999999-9999-9999-9999-999999999999")
+            val lobby =
+                Lobby(
+                    id = LobbyId.generate(),
+                    ownerSessionId = sessionA,
+                    ownerUserId = userA,
+                    players =
+                        mapOf(
+                            sessionA to Player(sessionA, alice, baseInstant, userId = userA),
+                            sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = newOwnerUserId),
+                        ),
+                    state = LobbyLifecycleState.WAITING,
+                    gridConfig = gridConfig,
+                    game = null,
+                    lastActivityAt = baseInstant,
+                    code = LobbyCode.generate(),
+                )
+            repo.save(lobby)
+
+            repo.eraseSession(sessionA)
+
+            val after = repo.findById(lobby.id)!!
+            assertThat(after.ownerSessionId).isEqualTo(sessionB)
+            assertThat(after.ownerUserId).isEqualTo(newOwnerUserId)
         }
 }

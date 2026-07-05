@@ -57,6 +57,25 @@ class LobbyUseCasesTest {
             assertThat(result.value.gridConfig).isEqualTo(GridConfig(28, 20))
         }
 
+    // ADR-0066 amendment 2026-07-05: ownerUserId is stamped at create so it survives the leave-grace.
+    @Test
+    fun `CreateLobby stamps ownerUserId on the created lobby`() =
+        runTest {
+            val h = harness()
+            val result = h.create(sessionA, alice, userA)
+
+            assertThat(result.value.ownerUserId).isEqualTo(userA)
+        }
+
+    @Test
+    fun `CreateLobby leaves ownerUserId null for an anonymous owner`() =
+        runTest {
+            val h = harness()
+            val result = h.create(sessionA, alice)
+
+            assertThat(result.value.ownerUserId).isNull()
+        }
+
     // ADR-0083 free-player quota: reopens the owner's existing WAITING lobby instead of minting a second.
     @Test
     fun `CreateLobby reopens the free player's existing WAITING lobby keyed per userId`() =
