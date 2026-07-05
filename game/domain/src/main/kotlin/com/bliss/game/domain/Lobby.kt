@@ -102,6 +102,8 @@ data class Lobby(
     val lastActivityAt: Instant,
     val code: LobbyCode,
     val title: LobbyTitle? = null,
+    // Set once at create; survives the leave-grace that drops the owner's seat, so findByUserId stays visible (ADR-0066 amendment 2026-07-05).
+    val ownerUserId: UserId? = null,
 ) {
     init {
         require(players.size <= MAX_PLAYERS) {

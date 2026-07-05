@@ -36,10 +36,11 @@ class InMemoryLobbyRepository : LobbyRepository {
                     it.state != LobbyLifecycleState.WAITING
             }.sortedByDescending { it.lastActivityAt }
 
+    // owner arm mirrors findBySessionId; ownership survives leave-grace (ADR-0066 amendment 2026-07-05).
     override suspend fun findByUserId(userId: UserId): List<Lobby> =
         store.values
             .filter { lobby ->
-                lobby.players.values.any { it.userId == userId } &&
+                (lobby.ownerUserId == userId || lobby.players.values.any { it.userId == userId }) &&
                     lobby.state != LobbyLifecycleState.WAITING
             }.sortedByDescending { it.lastActivityAt }
 

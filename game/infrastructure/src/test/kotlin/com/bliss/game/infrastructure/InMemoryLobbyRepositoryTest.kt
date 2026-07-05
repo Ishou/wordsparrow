@@ -55,6 +55,7 @@ class InMemoryLobbyRepositoryTest {
         Lobby(
             id = id,
             ownerSessionId = ownerSessionId,
+            ownerUserId = ownerUserId,
             players = mapOf(ownerSessionId to Player(ownerSessionId, alice, joinedAt, userId = ownerUserId)),
             state = state,
             gridConfig = gridConfig,
@@ -323,6 +324,7 @@ class InMemoryLobbyRepositoryTest {
     private fun completedLobbyAt(
         id: LobbyId,
         ownerSessionId: SessionId = sessionA,
+        ownerUserId: UserId? = null,
         lastActivityAt: Instant = baseInstant,
     ): Lobby {
         val puzzle =
@@ -339,7 +341,8 @@ class InMemoryLobbyRepositoryTest {
         return Lobby(
             id = id,
             ownerSessionId = ownerSessionId,
-            players = mapOf(ownerSessionId to Player(ownerSessionId, alice, baseInstant)),
+            ownerUserId = ownerUserId,
+            players = mapOf(ownerSessionId to Player(ownerSessionId, alice, baseInstant, userId = ownerUserId)),
             state = LobbyLifecycleState.COMPLETED,
             gridConfig = gridConfig,
             game =
@@ -480,5 +483,22 @@ class InMemoryLobbyRepositoryTest {
             val touchedAgain = repo.refreshUserPseudonym(STUB_CONN, userIdAlice, renamedPseudonym)
 
             assertThat(touchedAgain).isEmpty()
+        }
+
+    // ADR-0066 amendment 2026-07-05 regression: the owner arm keeps a started lobby on the
+    // user tab after the leave-grace drops the owner's seat (no seat then carries the userId).
+    @Test
+    fun `findByUserId still returns an owner-owned lobby after the owner leaves`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val lobby = completedLobbyAt(LobbyId.generate(), ownerSessionId = sessionA, ownerUserId = userA)
+            repo.save(lobby)
+
+            // Leave-grace equivalent: LeaveLobbyUseCase drops the owner's seat, keeping the row.
+            val afterLeave = repo.mutate(lobby.id) { it.copy(players = it.players - sessionA) }
+
+            assertThat(afterLeave).isNotNull()
+            assertThat(afterLeave!!.players).isEmpty()
+            assertThat(repo.findByUserId(userA).map { it.id }).containsExactlyInAnyOrder(lobby.id)
         }
 }

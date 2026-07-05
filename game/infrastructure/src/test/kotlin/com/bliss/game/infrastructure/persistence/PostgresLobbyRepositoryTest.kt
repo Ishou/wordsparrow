@@ -425,6 +425,24 @@ class PostgresLobbyRepositoryTest {
             assertThat(result).isEmpty()
         }
 
+    // ADR-0066 amendment 2026-07-05 regression: after the leave-grace drops the owner's
+    // lobby_players seat, the owner arm keeps the started lobby visible on the user tab.
+    @Test
+    fun `findByUserId still returns an owner-owned lobby after the owner leaves lobby_players`() =
+        runTest {
+            val userId = UserId("55555555-5555-5555-5555-555555555555")
+            val lobby = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userId)
+            repo.save(lobby)
+
+            // Leave-grace equivalent: LeaveLobbyUseCase drops the owner's seat, keeping the row.
+            val afterLeave = repo.mutate(lobby.id) { it.copy(players = it.players - sessionA) }
+
+            assertThat(afterLeave).isNotNull()
+            assertThat(afterLeave!!.players).isEmpty()
+            assertThat(afterLeave.ownerUserId).isEqualTo(userId)
+            assertThat(repo.findByUserId(userId).map { it.id }).containsExactly(lobby.id)
+        }
+
     @Test
     fun `findBySessionId returns empty when the session is not in any lobby`() =
         runTest {
@@ -891,6 +909,7 @@ class PostgresLobbyRepositoryTest {
         return Lobby(
             id = id,
             ownerSessionId = owner,
+            ownerUserId = ownerUserId,
             players = mapOf(owner to ownerPlayer),
             state = LobbyLifecycleState.WAITING,
             gridConfig = GridConfig(10, 10),
@@ -916,6 +935,7 @@ class PostgresLobbyRepositoryTest {
         return Lobby(
             id = id,
             ownerSessionId = owner,
+            ownerUserId = ownerUserId,
             players = mapOf(owner to ownerPlayer),
             state = LobbyLifecycleState.IN_PROGRESS,
             gridConfig = GridConfig(puzzle.width, puzzle.height),
