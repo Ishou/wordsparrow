@@ -27,11 +27,20 @@ interface OutboundEmailStore {
     /** Idempotent insert keyed by [OutboundEmailRecord.dedupeKey] (ON CONFLICT DO NOTHING); returns true only when this call inserted the row, so a webhook redelivery never triggers a second immediate send. */
     suspend fun enqueue(record: OutboundEmailRecord): Boolean
 
-    /** Up to [limit] pending rows whose next_attempt_at is at or before [now], oldest-due first — the drain's work batch. */
+    /** Atomically claims up to [limit] due pending rows (FOR UPDATE SKIP LOCKED + a lease that pushes next_attempt_at forward), oldest-due first, so two concurrent drains never both claim the same row and a crashed send auto-retries once the lease lapses. */
     suspend fun claimDue(
         now: Instant,
         limit: Int,
     ): List<OutboundEmailRecord>
+
+    /** Atomically leases the single due pending row [id] for the immediate-send head-start; returns false when a drain already claimed it, so the immediate send never double-sends. */
+    suspend fun claim(
+        id: UUID,
+        now: Instant,
+    ): Boolean
+
+    /** Count of undelivered (pending) rows — the outbox backlog an alert keys on for a growing delivery deficit. */
+    suspend fun pendingBacklog(): Int
 
     suspend fun markSent(
         id: UUID,

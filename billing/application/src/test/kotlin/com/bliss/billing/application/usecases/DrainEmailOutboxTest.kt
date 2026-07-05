@@ -141,6 +141,18 @@ class DrainEmailOutboxTest {
         }
 
     @Test
+    fun `reports the pending backlog remaining after the pass`() =
+        runTest {
+            store.enqueue(row())
+            store.enqueue(row(nextAttemptAt = now.plusSeconds(600)))
+
+            val summary = drain.execute()
+
+            assertThat(summary.sent).isEqualTo(1)
+            assertThat(summary.backlog).isEqualTo(1)
+        }
+
+    @Test
     fun `backoff is exponential up to the six hour cap`() {
         assertThat(EmailRetryPolicy.backoffAfter(2)).isEqualTo(EmailRetryPolicy.BASE_DELAY.multipliedBy(2))
         assertThat(EmailRetryPolicy.backoffAfter(EmailRetryPolicy.MAX_ATTEMPTS)).isEqualTo(EmailRetryPolicy.MAX_DELAY)

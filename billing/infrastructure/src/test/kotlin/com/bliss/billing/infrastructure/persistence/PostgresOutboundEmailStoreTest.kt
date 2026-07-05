@@ -194,6 +194,67 @@ class PostgresOutboundEmailStoreTest {
             assertThat(row.createdAt).isNotNull()
         }
 
+    @Test
+    fun `claimDue leases claimed rows so a second claim in the same window returns nothing`() =
+        runTest {
+            store.enqueue(record("leased"))
+
+            assertThat(store.claimDue(now, 10)).hasSize(1)
+            // The lease pushes next_attempt_at forward, so a concurrent drain at the same instant claims nothing.
+            assertThat(store.claimDue(now, 10)).hasSize(0)
+        }
+
+    @Test
+    fun `claimDue skips a row already locked by another transaction`() =
+        runTest {
+            store.enqueue(record("locked"))
+
+            dataSource.connection.use { locker ->
+                locker.autoCommit = false
+                locker
+                    .prepareStatement("SELECT id FROM billing_outbound_emails WHERE dedupe_key = ? FOR UPDATE")
+                    .use { stmt ->
+                        stmt.setString(1, "locked")
+                        stmt.executeQuery().use { rs -> assertThat(rs.next()).isTrue() }
+                    }
+
+                // FOR UPDATE SKIP LOCKED means the drain steps over the row another transaction holds instead of blocking or double-claiming.
+                assertThat(store.claimDue(now, 10)).hasSize(0)
+                locker.rollback()
+            }
+        }
+
+    @Test
+    fun `claim wins a due pending row once and loses the second time`() =
+        runTest {
+            val row = record("claimable")
+            store.enqueue(row)
+
+            assertThat(store.claim(row.id, now)).isTrue()
+            assertThat(store.claim(row.id, now)).isFalse()
+        }
+
+    @Test
+    fun `claim loses when the row is no longer pending`() =
+        runTest {
+            val row = record("sent-then-claim")
+            store.enqueue(row)
+            store.markSent(row.id, now)
+
+            assertThat(store.claim(row.id, now)).isFalse()
+        }
+
+    @Test
+    fun `pendingBacklog counts only pending rows`() =
+        runTest {
+            store.enqueue(record("pending-a"))
+            val delivered = record("delivered")
+            store.enqueue(delivered)
+            store.markSent(delivered.id, now)
+
+            assertThat(store.pendingBacklog()).isEqualTo(1)
+        }
+
     // Reads a row back directly by id regardless of status (claimDue only returns pending rows).
     private fun reload(id: UUID): OutboundEmailRecord =
         dataSource.connection.use { conn ->

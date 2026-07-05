@@ -1,6 +1,7 @@
 package com.bliss.billing.worker
 
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
@@ -133,6 +134,30 @@ class MainTest {
 
             assertThat(exit).isEqualTo(0)
         }
+
+    @Test
+    fun `resolveBrevoConfig is null when email is disabled`() {
+        assertThat(resolveBrevoConfig { null }).isEqualTo(null)
+    }
+
+    @Test
+    fun `resolveBrevoConfig fails fast when email is enabled without a key`() {
+        val env = mapOf("BILLING_EMAIL_ENABLED" to "true").let { m -> { k: String -> m[k] } }
+        val result = runCatching { resolveBrevoConfig(env) }
+        assertThat(result.exceptionOrNull()?.message ?: "").contains("BREVO_API_KEY")
+    }
+
+    @Test
+    fun `resolveBrevoConfig builds the config with sender defaults when the key is present`() {
+        val env =
+            mapOf(
+                "BILLING_EMAIL_ENABLED" to "true",
+                "BREVO_API_KEY" to "xkeysib-test",
+            ).let { m -> { k: String -> m[k] } }
+        val config = resolveBrevoConfig(env)
+        assertThat(config?.apiKey ?: "").isEqualTo("xkeysib-test")
+        assertThat(config?.senderEmail ?: "").isEqualTo("abonnement@wordsparrow.io")
+    }
 
     @Test
     fun `sendRenewalNoticesAndExit returns success with nothing to send`() =
