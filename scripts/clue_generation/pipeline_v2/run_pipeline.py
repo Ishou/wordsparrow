@@ -17,6 +17,7 @@ _log = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 from . import filters as F  # noqa: E402
+from . import llm_judge as J  # noqa: E402
 from . import normalizers as N  # noqa: E402
 from .llm_judge_mock import juge_mock  # noqa: E402
 
@@ -120,6 +121,25 @@ def traiter_ligne(row: dict) -> dict:
         "_traces": filter_traces,
         "_warnings": warnings,
     }
+
+
+def apply_ship_gate(rows_out: list[dict], *,
+                    call: "J.JudgeCall | None" = None) -> dict[str, list[dict]]:
+    """Gate de ship batch : les lignes non-rejetées passent au juge Opus, GOOD ship / BORDERLINE revue / BAD drop."""
+    candidats = [r for r in rows_out if r["pipeline_status"] != "reject"]
+    buckets: dict[str, list[dict]] = {J.SHIP: [], J.CURATED_REVIEW: [], J.DROP: []}
+    for row, verdict in J.judge_batch(candidats, call=call):
+        row["ship_verdict"] = verdict.verdict
+        row["ship_reason"] = verdict.reason
+        row["ship_route"] = verdict.route
+        buckets[verdict.route].append(row)
+        _log.info(json.dumps({
+            "event": "ship_gate_verdict",
+            "mot": row.get("mot"),
+            "verdict": verdict.verdict,
+            "route": verdict.route,
+        }))
+    return buckets
 
 
 def charger_csv(path: Path) -> list[dict]:
@@ -308,6 +328,21 @@ def main(argv: list[str]) -> int:
         action="store_true",
         help="Écrire les fichiers de sortie (sans, mode preview)"
     )
+    parser.add_argument(
+        "--ship-gate",
+        action="store_true",
+        help="Juge Opus committé sur les non-rejetés : GOOD ship / BORDERLINE revue / BAD drop (appel API réel)"
+    )
+    parser.add_argument(
+        "--ship-out",
+        default="data/eval/production/ship_good.csv",
+        help="CSV des GOOD embarqués (avec --ship-gate)"
+    )
+    parser.add_argument(
+        "--curated-review-out",
+        default="data/eval/production/ship_borderline_review.csv",
+        help="CSV des BORDERLINE renvoyés en revue curée (avec --ship-gate)"
+    )
     args = parser.parse_args(argv)
 
     input_path = ROOT / args.input
@@ -346,6 +381,19 @@ def main(argv: list[str]) -> int:
 
     # Affichage console
     afficher_console(rows_out, stats)
+
+    # Gate de ship Opus (opt-in, appel API réel)
+    if args.ship_gate:
+        buckets = apply_ship_gate(rows_out)
+        ship_path = ROOT / args.ship_out
+        review_path = ROOT / args.curated_review_out
+        ecrire_csv_sortie(buckets[J.SHIP], ship_path)
+        ecrire_csv_sortie(buckets[J.CURATED_REVIEW], review_path)
+        print(f"\nGate de ship : {len(buckets[J.SHIP])} GOOD → "
+              f"{ship_path.relative_to(ROOT)}")
+        print(f"               {len(buckets[J.CURATED_REVIEW])} BORDERLINE → "
+              f"{review_path.relative_to(ROOT)}")
+        print(f"               {len(buckets[J.DROP])} BAD écartés")
 
     if not args.apply:
         print("\nMode preview — relance avec --apply pour écrire le "
