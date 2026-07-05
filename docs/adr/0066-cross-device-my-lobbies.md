@@ -270,12 +270,12 @@ same trust root the (a) amendment's read path already relies on.
   When the owner returns from a second device, `ownerSessionId` is
   rebound to that device's session. It is the same human, so this is
   invisible to the user, but it is a deliberate, bounded exception to
-  ADR-0039's rule that **ownership transfer happens only via RGPD
+  ADR-0055 §f's rule that **ownership transfer happens only via RGPD
   erasure** (`EraseSessionUseCase`; see also `LeaveLobbyUseCase`'s
-  header). The distinction: ADR-0039 forbids transferring ownership to a
+  header). The distinction: ADR-0055 §f forbids transferring ownership to a
   *different principal*; this rebind keeps ownership with the *same*
   authenticated `userId` and merely moves which `sessionId` represents
-  them. Documented here and cross-referenced from ADR-0039's intent.
+  them. Documented here and cross-referenced from ADR-0055 §f's intent.
 - **Owner-gated use cases are untouched.** Because the rebind updates
   `ownerSessionId`, StartGame / RotateCode / SetGridConfig / kick keep
   their `isOwner(sessionId)` guards verbatim — zero auth surface added
@@ -289,7 +289,7 @@ same trust root the (a) amendment's read path already relies on.
 
 - **ADR-0018 §7** — the `sessionId` two-tier authz surface this
   amendment strengthens with a server-verified `userId`.
-- **ADR-0039** — "ownership transfer only via RGPD erasure"; this
+- **ADR-0055 §f** — "ownership transfer only via RGPD erasure"; this
   amendment documents the same-principal owner-rebind as a bounded
   exception.
 - **ADR-0083** — hosting entitlement; every new lobby is authed, so
