@@ -1,0 +1,4 @@
+word,language,length,frequency,difficulty,clue,source,source_license,lemma
+arc-en-ciel,fr,9,50000,easy,Phénomène coloré après la pluie,test,test,arc-en-ciel
+chat,fr,4,90000,easy,Félin domestique,test,test,chat
+c'est-à-dire,fr,10,40000,easy,Autrement dit,test,test,c'est-à-dire

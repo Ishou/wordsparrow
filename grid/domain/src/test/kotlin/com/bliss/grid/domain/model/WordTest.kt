@@ -42,4 +42,32 @@ class WordTest {
     fun `Word equality is structural`() {
         assertThat(Word("CHAT", "x")).isEqualTo(Word("chat", "x"))
     }
+
+    @Test
+    fun `Word defaults to no separators`() {
+        assertThat(Word("CHAT", "x").separators).isEqualTo(emptyList<Int>())
+    }
+
+    @Test
+    fun `fromSurface folds hyphens into separators and keeps an A-Z letter run`() {
+        val w = Word.fromSurface("arc-en-ciel", "Phénomène coloré")
+        assertThat(w.text).isEqualTo("ARCENCIEL")
+        assertThat(w.separators).isEqualTo(listOf(3, 5))
+    }
+
+    @Test
+    fun `fromSurface folds hyphens out of the lemma too`() {
+        val w = Word.fromSurface("arc-en-ciel", "x", lemma = "arc-en-ciel")
+        assertThat(w.lemma).isEqualTo("ARCENCIEL")
+    }
+
+    @Test
+    fun `Word rejects a separator offset out of range`() {
+        assertFailure { Word("ABC", "x", separators = listOf(3)) }
+    }
+
+    @Test
+    fun `Word rejects non-increasing separators`() {
+        assertFailure { Word("ABCDE", "x", separators = listOf(2, 2)) }
+    }
 }
