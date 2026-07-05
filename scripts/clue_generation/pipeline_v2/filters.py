@@ -347,6 +347,16 @@ _STEM_LEAK_FUNCTION_WORDS = frozenset({
 
 _STEM_LEAK_TOKEN_RE = re.compile(r"[\wÀ-ÿŒœŸ]+", re.UNICODE)
 
+# Suffixes déverbaux fermés : un nom/agent dérivé du verbe-réponse fuite le radical (usure↔user, sueur↔suer)
+_DEVERBAL_SUFFIXES = (
+    "ations", "ements", "ances", "ences", "eries",
+    "ation", "ement", "ance", "ence", "erie", "tion",
+    "ure", "age", "eur", "euse", "ment", "oir",
+)
+_VERB_INFINITIVE_ENDINGS = ("oir", "er", "ir", "re")
+# Radical minimal : 2 chars (les réponses courtes comme « user » ont un radical « us »)
+_SHORT_ROOT_MIN_STEM = 2
+
 
 def _longest_common_prefix(a: str, b: str) -> int:
     """Retourne la longueur du plus long préfixe commun à a et b."""
@@ -357,11 +367,40 @@ def _longest_common_prefix(a: str, b: str) -> int:
     return n
 
 
+def _short_root_stems(target: str) -> set[str]:
+    """Radicaux plausibles d'une réponse courte : forme brute + infinitif dépouillé + flexion légère."""
+    stems = {target}
+    for end in _VERB_INFINITIVE_ENDINGS:
+        if target.endswith(end) and len(target) - len(end) >= _SHORT_ROOT_MIN_STEM:
+            stems.add(target[: -len(end)])
+            break
+    for end in ("es", "s", "e"):
+        if target.endswith(end) and len(target) - len(end) >= _SHORT_ROOT_MIN_STEM:
+            stems.add(target[: -len(end)])
+            break
+    return stems
+
+
+def _short_root_deverbal_leak(clue: str, target: str) -> str | None:
+    """Réponse sous le seuil : détecte un token = radical(réponse) + suffixe déverbal fermé (usure↔user)."""
+    stems = _short_root_stems(target)
+    for tok in _STEM_LEAK_TOKEN_RE.findall(clue):
+        tl = tok.lower()
+        if tl in _STEM_LEAK_FUNCTION_WORDS or tl in stems:
+            continue
+        for suf in _DEVERBAL_SUFFIXES:
+            if (tl.endswith(suf)
+                    and len(tl) - len(suf) >= _SHORT_ROOT_MIN_STEM
+                    and tl[: -len(suf)] in stems):
+                return tok
+    return None
+
+
 def _stem_leak_match(clue: str, target_lemma: str) -> str | None:
-    """Retourne le token leakant si LCP ≥ 5 OU sous-chaîne mutuelle, sinon None."""
+    """Retourne le token leakant si LCP ≥ 5, sous-chaîne mutuelle, ou (réponse courte) dérivé déverbal, sinon None."""
     target = target_lemma.lower().strip()
     if len(target) < _STEM_LEAK_MIN:
-        return None
+        return _short_root_deverbal_leak(clue, target)
     for tok in _STEM_LEAK_TOKEN_RE.findall(clue):
         tl = tok.lower()
         if tl in _STEM_LEAK_FUNCTION_WORDS or len(tl) < _STEM_LEAK_MIN:
@@ -377,13 +416,13 @@ def _stem_leak_match(clue: str, target_lemma: str) -> str | None:
 
 
 def filter_9_stem_leak(row: dict) -> FilterResult:
-    """Filtre 9 : reject si un token de la définition partage un radical ≥ 5 chars avec le mot."""
+    """Filtre 9 : reject si un token partage un radical ≥ 5 chars avec le mot, ou (mot court) un dérivé déverbal."""
     leak = _stem_leak_match(row["definition"], row["mot"])
     if leak is None:
         return FilterResult("accept")
     return FilterResult(
         "reject",
-        f"stem-leak : token « {leak} » partage un radical ≥ 5 chars "
+        f"stem-leak : token « {leak} » partage un radical "
         f"avec le mot « {row['mot']} »",
     )
 
