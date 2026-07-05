@@ -814,9 +814,10 @@ private data class PositionPayload(
 private data class LockedCellPayload(
     val row: Int,
     val column: Int,
-    val lockedBy: String,
+    // legacy payloads pre-ADR-0086 have no owner; absent -> unknown (SessionId.ANON)
+    val lockedBy: String? = null,
 ) {
-    fun toDomain(): Pair<Position, SessionId> = Position(row, column) to SessionId(lockedBy)
+    fun toDomain(): Pair<Position, SessionId> = Position(row, column) to (lockedBy?.let { SessionId(it) } ?: SessionId.ANON)
 }
 
 @Serializable

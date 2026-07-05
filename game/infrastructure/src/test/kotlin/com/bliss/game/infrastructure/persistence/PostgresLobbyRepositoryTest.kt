@@ -52,6 +52,7 @@ import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.Connection
+import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
@@ -138,6 +139,35 @@ class PostgresLobbyRepositoryTest {
             assertThat(loadedGame).isNotNull()
             assertThat(loadedGame!!.entries).isEqualTo(originalGame!!.entries)
             assertThat(loadedGame.lockedPositions).isEqualTo(originalGame.lockedPositions)
+        }
+
+    // ADR-0086 back-compat: legacy game_payload has lockedPositions entries with no `lockedBy`; the reader must hydrate them (absent -> SessionId.ANON) instead of 400ing the my-lobbies read.
+    @Test
+    fun `findById tolerates a legacy game_payload whose lockedPositions omit lockedBy`() =
+        runTest {
+            val id = LobbyId.generate()
+            val ownerUserId = UserId("99999999-9999-4999-8999-999999999999")
+            insertLegacyLobbyRow(id, ownerUserId, legacyPayloadWithoutLockedBy())
+
+            val loaded = repo.findById(id)
+
+            assertThat(loaded).isNotNull()
+            val game = loaded!!.game
+            assertThat(game).isNotNull()
+            assertThat(game!!.lockedPositions).isEqualTo(mapOf(Position(0, 0) to SessionId.ANON))
+        }
+
+    @Test
+    fun `findByUserId tolerates a legacy game_payload whose lockedPositions omit lockedBy`() =
+        runTest {
+            val id = LobbyId.generate()
+            val ownerUserId = UserId("99999999-9999-4999-8999-999999999999")
+            insertLegacyLobbyRow(id, ownerUserId, legacyPayloadWithoutLockedBy())
+
+            val result = repo.findByUserId(ownerUserId)
+
+            assertThat(result.map { it.id }).containsExactly(id)
+            assertThat(result[0].game!!.lockedPositions).isEqualTo(mapOf(Position(0, 0) to SessionId.ANON))
         }
 
     @Test
@@ -1009,6 +1039,48 @@ class PostgresLobbyRepositoryTest {
             state = LobbyLifecycleState.COMPLETED,
             game = base.game!!.copy(completedAt = completedAt),
         )
+    }
+
+    // Pre-ADR-0086 write: lockedPositions entry has no lockedBy key (owner was never persisted).
+    private fun legacyPayloadWithoutLockedBy(): String =
+        """
+        {
+          "puzzle": {
+            "id": "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5b00",
+            "title": "Legacy",
+            "language": "fr",
+            "width": 5,
+            "height": 5,
+            "cells": [],
+            "clues": [],
+            "createdAt": "2026-05-11T09:58:00Z"
+          },
+          "startedAt": "2026-05-11T10:00:00Z",
+          "lockedPositions": [ { "row": 0, "column": 0 } ]
+        }
+        """.trimIndent()
+
+    private fun insertLegacyLobbyRow(
+        id: LobbyId,
+        ownerUserId: UserId,
+        payloadJson: String,
+    ) {
+        dataSource.connection.use { conn ->
+            conn
+                .prepareStatement(
+                    "INSERT INTO lobbies (id, code, owner_session_id, owner_user_id, state, " +
+                        "grid_width, grid_height, game_payload, last_activity_at) " +
+                        "VALUES (?, ?, ?, ?, 'IN_PROGRESS', 5, 5, CAST(? AS jsonb), ?)",
+                ).use { ps ->
+                    ps.setString(1, id.value)
+                    ps.setString(2, LobbyCode.generate().value)
+                    ps.setObject(3, UUID.fromString(sessionA.value))
+                    ps.setObject(4, UUID.fromString(ownerUserId.value))
+                    ps.setString(5, payloadJson)
+                    ps.setTimestamp(6, Timestamp.from(baseInstant))
+                    ps.executeUpdate()
+                }
+        }
     }
 
     private fun samplePuzzle(): GamePuzzle {
