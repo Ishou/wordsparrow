@@ -174,8 +174,7 @@ class LobbyWebSocketRouteTest {
             assertThat(code).matches(Regex("^[A-HJKM-NP-Z2-9]{6}$"))
         }
 
-    // ADR-0066 (b) — proves the connect-time verified userId (from the cookie, not the client
-    // join frame) reaches joinLobby: an authed owner rejoins cross-device with no code.
+    // ADR-0066 (b): the connect-time verified cookie userId reaches joinLobby, not the client frame.
     @Test
     fun `authed owner rejoins cross-device without code via the connect-time verified cookie`() =
         testApplication {

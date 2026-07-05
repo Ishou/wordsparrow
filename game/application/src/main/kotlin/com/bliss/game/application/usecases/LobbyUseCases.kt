@@ -125,12 +125,7 @@ class RotateLobbyCodeUseCase(
     }
 }
 
-/**
- * Idempotent join — reconnects, owner re-entries, and authed owner/member
- * rejoins bypass the code check; anonymous outsiders still need a valid code.
- * [userId] is the socket's server-verified identity (ADR-0066 (b)), never a
- * client-supplied value.
- */
+/** Idempotent join — reconnects, owner/member rejoins (ADR-0066 (b)), and owner re-entries bypass the code check; outsiders need a valid code. */
 class JoinLobbyUseCase(
     private val repo: LobbyRepository,
     private val clock: Clock,

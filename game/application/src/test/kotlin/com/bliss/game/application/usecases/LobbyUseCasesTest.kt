@@ -305,10 +305,7 @@ class LobbyUseCasesTest {
             assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.LobbyFull)
         }
 
-    // ADR-0066 (b) — authed cross-device rejoin. A server-verified userId
-    // matching the owner or an existing seat bypasses the code from a new
-    // device; anon/guest callers stay code-gated.
-
+    // ADR-0066 (b): a server-verified userId bypasses the code for the owner/member; anon stays code-gated.
     @Test
     fun `JoinLobby authed owner rejoins cross-device without code, ownership follows the new session`() =
         runTest {
