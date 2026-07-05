@@ -7,6 +7,10 @@ export const STRIDE = CELL + GAP;
 // Breathing gap at the pan extreme, mirroring padTop's gap above the first row.
 export const BOARD_BOTTOM_GAP = 14;
 
+// Per-letter stagger for the solve celebration (flatten ripple / mini-game glow),
+// shared so every surface — and its sound pulse — celebrates at one cadence.
+export const SOLVE_STAGGER_MS = 45;
+
 export function posKey(row: number, col: number): string {
   return `${row},${col}`;
 }

@@ -6,8 +6,9 @@ interface Note {
   readonly dur: number;
 }
 
-// Mirrors PuzzleBoard's flatten ripple (`i * 45ms` per newly-solved cell) so the
-// sound pulses letter-by-letter in lockstep with the keycap drops.
+// Seconds form of ui SOLVE_STAGGER_MS (45ms) — kept in sync by hand since
+// infrastructure can't import ui. The solve celebration staggers each cell by
+// this much, so the sound pulses letter-by-letter in lockstep with it.
 const RIPPLE_STAGGER = 0.045;
 // D-major pentatonic (D5 E5 F#5 A5 B5): a soft rolling run for any word length.
 const PENTATONIC: readonly number[] = [587.33, 659.25, 739.99, 880.0, 987.77];

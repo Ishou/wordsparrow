@@ -17,7 +17,7 @@ import { playerColorVars } from '@/ui/lib/playerColor';
 import { type CellHighlight, type GridNavigation } from './useGridNavigation';
 import { GRID_INPUT_GUARDS } from './gridInputGuards';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
-import { CELL, GAP, STRIDE, posKey, exitsRight } from './playLayout';
+import { CELL, GAP, STRIDE, SOLVE_STAGGER_MS, posKey, exitsRight } from './playLayout';
 import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
 
 const boardWrap = css({ position: 'relative', width: 'max-content' });
@@ -272,10 +272,10 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
     // Flatten ripple: stagger the keycap drop across the newly-solved cells, then clear.
     const ripple = new Map<string, number>();
-    added.forEach((k, i) => ripple.set(k, i * 45));
+    added.forEach((k, i) => ripple.set(k, i * SOLVE_STAGGER_MS));
     setSolveDelays(ripple);
     if (rippleTimerRef.current) window.clearTimeout(rippleTimerRef.current);
-    rippleTimerRef.current = window.setTimeout(() => setSolveDelays(new Map()), (added.length - 1) * 45 + 340);
+    rippleTimerRef.current = window.setTimeout(() => setSolveDelays(new Map()), (added.length - 1) * SOLVE_STAGGER_MS + 340);
     if (reduceMotionRef.current) {
       // Microtask defer so the parent's solve-firewall effect (which queues the advance) runs first.
       queueMicrotask(() => onBeatCompleteRef.current?.(addedPositions));

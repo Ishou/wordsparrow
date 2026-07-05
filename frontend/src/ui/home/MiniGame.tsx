@@ -3,6 +3,7 @@ import { CaretDown } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { Cell, DefCell, Skeleton } from '@/design-system';
 import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
+import { SOLVE_STAGGER_MS } from '@/ui/components/grid/playLayout';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import { Keyboard } from '@/ui/play/Keyboard';
 import { useBackDismiss } from '@/ui/lib/useBackDismiss';
@@ -346,7 +347,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
               key={i}
               className={cx(box, solved && glow, wrong && shake, showPulse && validatingPulse)}
               data-validating={showPulse ? 'true' : undefined}
-              style={solved ? { animationDelay: `${i * 60}ms` } : undefined}
+              style={solved ? { animationDelay: `${i * SOLVE_STAGGER_MS}ms` } : undefined}
             >
               <Cell state={state} letter={letters[i]} />
               <input
