@@ -1,7 +1,7 @@
 // Multiplayer-gated `/lobby/$lobbyId` (ADR-0018 §10); smart container over `useLobbyConnection`.
 
 import { createRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { LobbyClientError } from '@/application/game';
 import type { Lobby, LobbyId } from '@/domain/game';
 import { createLoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
@@ -136,6 +136,16 @@ function V2LobbyPage() {
 
   const lobby = view.lobby;
 
+  // Coop win cue: this screen unmounts into Résultats on completion, so play it here
+  // on the live IN_PROGRESS→COMPLETED transition (silent when loading a finished lobby).
+  const prevLobbyStateRef = useRef(lobby.state);
+  useEffect(() => {
+    if (prevLobbyStateRef.current === 'IN_PROGRESS' && lobby.state === 'COMPLETED') {
+      ctx.soundPlayer?.playPuzzleSolved();
+    }
+    prevLobbyStateRef.current = lobby.state;
+  }, [lobby.state, ctx.soundPlayer]);
+
   const handleLeave = useCallback(() => {
     actions.leave();
     void navigate({ to: '/' });
@@ -209,6 +219,8 @@ function V2LobbyPage() {
         subscribeToRemoteCellUpdates={actions.subscribeToRemoteCellUpdates}
         subscribeToRemotePresence={actions.subscribeToRemotePresence}
         onLeave={handleLeave}
+        soundPlayer={ctx.soundPlayer}
+        soundStore={ctx.soundStore}
       />
     );
   }
