@@ -154,6 +154,44 @@ class CoGenerationProbeTest {
         println(best.render())
     }
 
+    // Retry the (previously falsified) distiller WITH the curated words. Distiller greedily
+    // whitens blacks while the board stays valid -> lower density; it failed before because
+    // sparse distilled layouts couldn't fill. Curated short words may rescue it. best-of-8.
+    @Test
+    fun `distiller with curated words`() {
+        val area = 28 * 20
+        val repo = loadRepository(true)
+        val generator = GridGenerator(repo)
+        for (db in listOf(10, 20, 35)) {
+            val cons = GridConstraints(width = 28, height = 20, distillBudget = db)
+            var trials = 0; var succeeded = 0; var blackSum = 0L; var minBlack = Int.MAX_VALUE; var maxBlack = 0
+            var len2 = 0L; var words = 0L
+            var sample: String? = null
+            for (t in 0 until 8) {
+                var bestGrid: com.bliss.grid.domain.model.Grid? = null; var bestBlack = Int.MAX_VALUE
+                for (k in 0 until 4) {
+                    val g = generator.generate(cons, Random(2000L + t * 4L + k)) ?: continue
+                    var b = 0; for ((_, cell) in g.cells) if (cell is ClueCell) b++
+                    if (b < bestBlack) { bestBlack = b; bestGrid = g }
+                }
+                trials++
+                val g = bestGrid ?: continue
+                succeeded++
+                blackSum += bestBlack; minBlack = minOf(minBlack, bestBlack); maxBlack = maxOf(maxBlack, bestBlack)
+                val grid = Array(20) { CharArray(28) { '#' } }
+                for ((pos, cell) in g.cells) if (cell is LetterCell) grid[pos.row.value][pos.column.value] = cell.letter
+                for (r in 0 until 20) { var c = 0; while (c < 28) { if (grid[r][c] == '#') { c++; continue }; val st = c; while (c < 28 && grid[r][c] != '#') c++; val L = c - st; if (L >= 2) { words++; if (L == 2) len2++ } } }
+                for (c in 0 until 28) { var r = 0; while (r < 20) { if (grid[r][c] == '#') { r++; continue }; val st = r; while (r < 20 && grid[r][c] != '#') r++; val L = r - st; if (L >= 2) { words++; if (L == 2) len2++ } } }
+                if (sample == null && db == 20) sample = grid.joinToString("\n") { it.concatToString() }
+            }
+            println("DISTILL db=$db n=$succeeded/$trials black=%.1f%%(min %.1f%% max %.1f%%) len2Share=%.1f%%".format(
+                if (succeeded > 0) 100.0 * blackSum / succeeded / area else -1.0,
+                if (succeeded > 0) 100.0 * minBlack / area else -1.0, 100.0 * maxBlack / area,
+                if (words > 0) 100.0 * len2 / words else 0.0))
+            sample?.let { println("  sample:\n$it") }
+        }
+    }
+
     // Interim candidate: "stack" (anchorCount=3 long-run anchors + per-axis lTarget 11/8)
     // with best-of-4 selection (generate 4, keep the sparsest), WITH the curated words.
     @Test
