@@ -74,7 +74,7 @@ export function MentionsLegalesScreen() {
               Licences des logiciels tiers
             </a>{' '}
             embarqués dans l&apos;application — et nos{' '}
-            <Link className={link} to="/remerciements">
+            <Link className={link} to="/a-propos">
               remerciements
             </Link>{' '}
             à celles et ceux qui les font vivre.

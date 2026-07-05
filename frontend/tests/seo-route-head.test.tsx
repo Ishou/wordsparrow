@@ -7,7 +7,7 @@ import { Route as AideRoute } from '@/ui/routes/aide';
 import { Route as MentionsLegalesRoute } from '@/ui/routes/mentions-legales';
 import { Route as ConfidentialiteRoute } from '@/ui/routes/confidentialite';
 import { Route as ConditionsAbonnementRoute } from '@/ui/routes/conditions-abonnement';
-import { Route as RemerciementsRoute } from '@/ui/routes/remerciements';
+import { Route as AProposRoute } from '@/ui/routes/a-propos';
 import { Route as CompteRoute } from '@/ui/routes/compte';
 import { Route as LobbyRoute } from '@/ui/routes/lobby.$lobbyId';
 import { Route as JoinRoute } from '@/ui/routes/join.$code';
@@ -23,7 +23,7 @@ const ROUTE_BY_PATH: Record<string, { options: { head?: () => unknown } }> = {
   '/conditions-abonnement': ConditionsAbonnementRoute as unknown as {
     options: { head?: () => unknown };
   },
-  '/remerciements': RemerciementsRoute as unknown as { options: { head?: () => unknown } },
+  '/a-propos': AProposRoute as unknown as { options: { head?: () => unknown } },
 };
 
 interface Head {

@@ -69,10 +69,10 @@ export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
     ogImagePath: '/og-mentions-legales.png',
   },
   {
-    path: '/remerciements',
-    title: 'Remerciements — WordSparrow',
+    path: '/a-propos',
+    title: 'À propos — WordSparrow',
     description:
-      'Merci aux logiciels libres, aux fontes et aux dictionnaires bénévoles qui font vivre WordSparrow.',
+      'WordSparrow, un jeu de mots fléchés édité par ISHO IT — et un grand merci aux logiciels libres, polices et dictionnaires qui le font vivre.',
     // reuse mentions-légales OG until a dedicated card ships
     ogImagePath: '/og-mentions-legales.png',
   },
