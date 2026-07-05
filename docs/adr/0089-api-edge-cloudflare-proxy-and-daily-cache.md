@@ -85,6 +85,18 @@ gray. Pre-flight checked at flip time: the zone SSL mode is Full (strict).
 purge is exact-URL and the endpoint's query-string variants are unbounded, so a cached copy
 could not be reliably purged.
 
+*Amended 2026-07-05.* The exact-URL purge set (§5) must cover two variant axes the original note
+missed, both found serving stale after a regen in prod. First, the **canonical no-date URL**
+`…/v1/puzzles/daily` (the frontend's "today" request; the server derives the UTC date) is a
+distinct cache key from every `…?date=<d>` and must be purged alongside them. Second, the daily
+response carries **`Vary: Origin`** because CORS is credentialed (`Module.kt`: `allowCredentials =
+true`, so `Access-Control-Allow-Origin` reflects the request origin) — Cloudflare therefore
+caches a **separate object per Origin value**, and a plain `{"files":["<url>"]}` purge clears only
+the default (no-Origin) variant. Each daily URL is purged as the default variant **and** once per
+credentialed prod browser origin (`https://wordsparrow.io`, `https://www.wordsparrow.io`) via the
+header-scoped `{"files":[{"url":…,"headers":{"Origin":…}}]}` form. `Vary: Origin` is required by
+credentialed CORS and must not be dropped (ADR-0034/0048); the fix is purge coverage only.
+
 ### 4. Edge cache rule (Terraform)
 A net-new `terraform/cloudflare-cache-rules.tf` declares one `cloudflare_ruleset` in phase
 `http_request_cache_settings` (provider `cloudflare ~> 5.20` is already pinned at root,
@@ -94,10 +106,13 @@ eligible for cache with "respect origin TTL", bypassing whenever the request coo
 
 ### 5. Purge-on-regen
 The grid worker purges the edge after every generation run (ensure + regen paths): exact URLs
-`…/v1/puzzles/daily` and `…/v1/puzzles/daily?date=<d>` for each persisted date. A purge
-failure logs an error but does not fail the Job — worst-case staleness is bounded by the
-until-midnight edge TTL, and a manual one-line purge is documented. A new k8s Secret carries a
-Cloudflare API token scoped to `Zone.Cache Purge` only.
+`…/v1/puzzles/daily` (no-date) and `…/v1/puzzles/daily?date=<d>` for each persisted date, each
+purged as the default variant plus one header-scoped `Origin` variant per credentialed prod
+browser origin (see the §3 amendment for the no-date and `Vary: Origin` coverage). Entries are
+chunked to the free-plan 30-file-per-call cap. A purge failure logs an error but does not fail
+the Job — worst-case staleness is bounded by the until-midnight edge TTL, and a manual one-line
+purge is documented. A new k8s Secret carries a Cloudflare API token scoped to `Zone.Cache
+Purge` only.
 
 ### 6. Timing-Allow-Origin for RUM
 All five services add
