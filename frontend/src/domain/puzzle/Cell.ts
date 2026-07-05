@@ -26,6 +26,8 @@ export interface LetterCell {
 export interface DefinitionClue {
   readonly text: string;
   readonly arrow: ArrowDirection;
+  // Offsets where a hyphen precedes the answer cell, for hyphenated compounds.
+  readonly separators?: readonly number[];
 }
 
 // A clue cell. Carries one or two clues per ADR-0005 §3a. Dual cells most

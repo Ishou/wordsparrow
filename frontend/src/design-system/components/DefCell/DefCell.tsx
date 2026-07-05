@@ -59,6 +59,9 @@ export interface DefCellProps {
   // Per-clue arrows; `arrow` is the single-clue shorthand. Defaults: right / down.
   readonly arrow?: DefArrow;
   readonly arrows?: readonly DefArrow[];
+  // Per-clue flag: this clue's answer is a hyphenated compound word. Folds a
+  // "mot composé" indication into that clue's accessible name.
+  readonly compoundClues?: readonly boolean[];
   readonly active?: boolean;
   // All of this cell's clue word(s) are solved → subtly lighter "done" surface.
   readonly validated?: boolean;
@@ -120,8 +123,13 @@ function useFitText(text: string) {
   return ref;
 }
 
-function Clue({ text }: { text: string }) {
-  return <span ref={useFitText(text)} className={clue}>{text}</span>;
+// hideFromA11y avoids a double announcement: the enclosing group's aria-label already carries the text.
+function Clue({ text, hideFromA11y }: { text: string; hideFromA11y?: boolean }) {
+  return (
+    <span ref={useFitText(text)} className={clue} aria-hidden={hideFromA11y || undefined}>
+      {text}
+    </span>
+  );
 }
 
 function Tab({ arrow, place }: { arrow: DefArrow; place: string }) {
@@ -140,14 +148,24 @@ function pad(right: boolean, bottom: boolean): string {
   return `${bottom ? 3 : 5}px ${right ? 14 : 8}px ${bottom ? 11 : 5}px 7px`;
 }
 
-export function DefCell({ clues, arrow = 'right', arrows, active = false, validated = false }: DefCellProps) {
+export function DefCell({ clues, arrow = 'right', arrows, compoundClues, active = false, validated = false }: DefCellProps) {
+  // Explicit group accessible name so "mot composé" reads once, right after the clue text.
+  const groupProps = (i: number) =>
+    compoundClues?.[i]
+      ? { role: 'group' as const, 'aria-label': `${clues[i]}, mot composé, trait d’union` }
+      : {};
   const isSplit = clues.length >= 2;
   if (!isSplit) {
     const a = arrows?.[0] ?? arrow;
     const r = exitsRight(a);
     return (
-      <div data-defcell="single" className={cx(cell, validated && cellValidated, active && cellActive, flushTop)} style={{ padding: pad(r, !r), color: validated ? DONE_TEXT : undefined }}>
-        <Clue text={clues[0]} />
+      <div
+        data-defcell="single"
+        {...groupProps(0)}
+        className={cx(cell, validated && cellValidated, active && cellActive, flushTop)}
+        style={{ padding: pad(r, !r), color: validated ? DONE_TEXT : undefined }}
+      >
+        <Clue text={clues[0]} hideFromA11y={compoundClues?.[0]} />
         <Tab arrow={a} place={r ? atRightMid : atBottom} />
       </div>
     );
@@ -157,12 +175,12 @@ export function DefCell({ clues, arrow = 'right', arrows, active = false, valida
   // The bottom tab lives at the cell's bottom edge, so the lower half always clears it.
   return (
     <div data-defcell="split" className={cx(cell, validated && cellValidated, active && cellActive, split)} style={validated ? { color: DONE_TEXT } : undefined}>
-      <div className={halfBox} style={{ padding: pad(exitsRight(a0), false) }}>
-        <Clue text={clues[0]} />
+      <div className={halfBox} {...groupProps(0)} style={{ padding: pad(exitsRight(a0), false) }}>
+        <Clue text={clues[0]} hideFromA11y={compoundClues?.[0]} />
       </div>
       <div className={divider} />
-      <div className={halfBox} style={{ padding: pad(exitsRight(a1), true) }}>
-        <Clue text={clues[1]} />
+      <div className={halfBox} {...groupProps(1)} style={{ padding: pad(exitsRight(a1), true) }}>
+        <Clue text={clues[1]} hideFromA11y={compoundClues?.[1]} />
       </div>
       <Tab arrow={a0} place={exitsRight(a0) ? atRightTop : atBottom} />
       <Tab arrow={a1} place={exitsRight(a1) ? atRightBot : atBottom} />

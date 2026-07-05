@@ -27,6 +27,8 @@ const toBlock = (cell: ApiBlockCell): Cell => ({
 
 const toClue = (cell: ApiDefinitionCell): DefinitionClue => ({
   text: cell.text, arrow: cell.arrow as ArrowDirection,
+  // CDN-cached pre-producer responses may omit `separators` despite the generated type being non-optional.
+  separators: cell.separators ?? [],
 });
 
 const isHorizontalArrow = (arrow: ArrowDirection): arrow is HorizontalArrow =>

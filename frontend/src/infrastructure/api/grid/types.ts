@@ -507,6 +507,16 @@ export interface components {
              */
             text: string;
             arrow: components["schemas"]["Arrow"];
+            /**
+             * @description Offsets into this clue's answer letter cells at which a hyphen
+             *     precedes the cell, for hyphenated compound answers
+             *     (e.g. ARC-EN-CIEL → [3, 5]). Always present; empty `[]` for plain words. Each
+             *     value is 1..(answer length - 1), strictly increasing. The hyphen
+             *     renders in the inter-cell gap along `arrow`; it is not a fillable
+             *     cell and does not affect answer length or validation.
+             * @default []
+             */
+            separators: number[];
         };
         /** @description Unfillable decorative cell. */
         BlockCell: {

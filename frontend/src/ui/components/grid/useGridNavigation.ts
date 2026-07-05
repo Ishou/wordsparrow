@@ -93,6 +93,8 @@ export interface GridNavigation {
   // target cell is not a registered letter input (out-of-bounds writes
   // from a stale broadcast are ignored).
   readonly applyRemoteCellUpdate: (row: number, col: number, letter: string | null) => void;
+  // Full clue set for renderers outside the focused-cell path (e.g. the compound-word hyphen overlay).
+  readonly allClues: readonly Clue[];
 }
 
 // Divergences from NYT-app behavior:
@@ -978,5 +980,6 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
     getEntryAt,
     localCursor,
     applyRemoteCellUpdate,
+    allClues: lookup.orderedClues,
   };
 }
