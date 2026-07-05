@@ -147,10 +147,6 @@ class JoinLobbyUseCase(
             seatUserId: UserId?,
             rebindOwner: Boolean,
         ): Lobby {
-            if (lobby.isFull()) return lobby
-            val now = clock.now()
-            val player = Player(sessionId, pseudonym, now, userId = seatUserId)
-            emitted = LobbyEvent.PlayerJoined(player)
             // Moves the seat rather than duplicating it: an authed rejoin from a new device replaces any stale seat for the same userId (ADR-0066 (b)).
             val withoutStaleSeat =
                 if (seatUserId != null) {
@@ -158,6 +154,11 @@ class JoinLobbyUseCase(
                 } else {
                     lobby.players
                 }
+            // Gate capacity on the post-removal count so replacing your own stale seat is a net-zero swap, not a rejected join.
+            if (withoutStaleSeat.size >= Lobby.MAX_PLAYERS) return lobby
+            val now = clock.now()
+            val player = Player(sessionId, pseudonym, now, userId = seatUserId)
+            emitted = LobbyEvent.PlayerJoined(player)
             return lobby.copy(
                 ownerSessionId = if (rebindOwner) sessionId else lobby.ownerSessionId,
                 players = withoutStaleSeat + (sessionId to player),

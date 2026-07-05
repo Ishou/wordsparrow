@@ -348,6 +348,33 @@ class LobbyUseCasesTest {
             assertThat(out.events).hasSize(1)
         }
 
+    // ADR-0066 (b): rejoining your OWN stale seat on a full lobby is a net-zero swap, so it must be admitted, not rejected as LobbyFull.
+    @Test
+    fun `JoinLobby authed member rejoins a full lobby by replacing their own stale seat`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userId = userA).value
+            val oldMemberSession = validSession(30)
+            // Fill to MAX_PLAYERS: owner + 6 anon + the caller's own stale userB seat under an old session.
+            val anon = (1..6).associate { i -> validSession(i) to Player(validSession(i), Pseudonym("P$i"), h.clock.now()) }
+            h.repo.save(
+                lobby.copy(
+                    players =
+                        lobby.players + anon +
+                            (oldMemberSession to Player(oldMemberSession, bob, h.clock.now(), userId = userB)),
+                ),
+            )
+            val newDevice = validSession(31)
+
+            val out = h.joinWithUserId(lobby.id, newDevice, bob, code = null, userId = userB).requireSuccess()
+
+            assertThat(out.value.players).hasSize(Lobby.MAX_PLAYERS)
+            assertThat(out.value.players[oldMemberSession]).isNull()
+            assertThat(out.value.players[newDevice]?.userId).isEqualTo(userB)
+            assertThat(out.value.ownerSessionId).isEqualTo(sessionA)
+            assertThat(out.events).hasSize(1)
+        }
+
     @Test
     fun `JoinLobby anon caller with wrong code is still WrongCode (userId null regression guard)`() =
         runTest {
