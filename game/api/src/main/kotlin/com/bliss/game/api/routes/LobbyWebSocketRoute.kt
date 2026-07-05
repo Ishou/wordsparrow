@@ -18,6 +18,7 @@ import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
+import com.bliss.game.domain.UserId
 import io.ktor.server.routing.Route
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.server.websocket.webSocket
@@ -105,17 +106,17 @@ fun Route.lobbyWebSocketRoute(
 
         sessionManager.register(lobbyId, this)
 
-        // Best-effort: verify failure → anonymous-for-this-socket (no force-disconnect on revocation).
-        if (cookieVerifier != null) {
-            val rawCookie = call.request.cookies[CookieNames.SESSION]
-            if (!rawCookie.isNullOrBlank()) {
-                runCatching { cookieVerifier.verify(rawCookie) }
-                    .getOrNull()
-                    ?.let { whoAmI ->
-                        sessionManager.bindUserId(lobbyId, this, whoAmI.userId)
-                    }
+        // Server-verified identity for the authed rejoin arms — never from a client frame (ADR-0066 (b)); verify failure means anonymous-for-this-socket.
+        val verifiedUserId: UserId? =
+            if (cookieVerifier != null) {
+                call.request.cookies[CookieNames.SESSION]
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { rawCookie -> runCatching { cookieVerifier.verify(rawCookie) }.getOrNull() }
+                    ?.userId
+            } else {
+                null
             }
-        }
+        verifiedUserId?.let { sessionManager.bindUserId(lobbyId, this, it) }
         // Initial snapshot to this socket only — bootstrap signal for the UI.
         // Carries the current ephemeral presence map so a refreshing client
         // sees peer cursors immediately, before any cellFocus traffic flows.
@@ -144,6 +145,7 @@ fun Route.lobbyWebSocketRoute(
                         this,
                         memberSessionId,
                         presenceAggregator,
+                        verifiedUserId,
                     )
             }
         } finally {
@@ -210,12 +212,13 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
     session: DefaultWebSocketServerSession,
     memberSessionId: String?,
     presenceAggregator: PresenceAggregator?,
+    verifiedUserId: UserId?,
 ): String? {
     val effectiveId =
         if (memberSessionId.isNullOrEmpty()) null else memberSessionId
     return when (parsed) {
         is ClientToServerFrame.JoinLobby ->
-            dispatchJoin(parsed, lobbyId, useCases, sessionManager, session) ?: effectiveId
+            dispatchJoin(parsed, lobbyId, useCases, sessionManager, session, verifiedUserId) ?: effectiveId
         is ClientToServerFrame.RenameSelf -> {
             val sid =
                 effectiveId ?: run {
@@ -356,6 +359,7 @@ private suspend fun DefaultWebSocketServerSession.dispatchJoin(
     useCases: LobbyUseCases,
     sessionManager: SessionManager,
     session: DefaultWebSocketServerSession,
+    verifiedUserId: UserId?,
 ): String? {
     val sid =
         try {
@@ -371,7 +375,8 @@ private suspend fun DefaultWebSocketServerSession.dispatchJoin(
             sendInvalidPseudonym(cause.message ?: "pseudonym failed validation")
             return null
         }
-    val outcome = useCases.joinLobby(lobbyId, sid, pseudo, parsed.code)
+    // Server-verified identity from connect-time cookie verification — the client join frame carries no userId (ADR-0066 (b)).
+    val outcome = useCases.joinLobby(lobbyId, sid, pseudo, parsed.code, verifiedUserId)
     handleOutcome(outcome, lobbyId, sessionManager)
     return if (outcome is UseCaseOutcome.Success) {
         // Bind the socket to the player's sessionId so a subsequent

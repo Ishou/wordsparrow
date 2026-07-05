@@ -24,6 +24,7 @@ import com.bliss.game.domain.Letter
 import com.bliss.game.domain.Lobby
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
+import com.bliss.game.domain.Player
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -302,6 +303,69 @@ class LobbyUseCasesTest {
             }
             val out = h.joinWithCode(lobby.id, sessionA, alice, code = null)
             assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.LobbyFull)
+        }
+
+    // ADR-0066 (b) — authed cross-device rejoin. A server-verified userId
+    // matching the owner or an existing seat bypasses the code from a new
+    // device; anon/guest callers stay code-gated.
+
+    @Test
+    fun `JoinLobby authed owner rejoins cross-device without code, ownership follows the new session`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userId = userA).value
+            // Owner's original seat is gone (leave-grace), but ownerUserId survives.
+            h.leave(lobby.id, sessionA).requireSuccess()
+            val newDevice = validSession(20)
+
+            val out = h.joinWithUserId(lobby.id, newDevice, alice, code = null, userId = userA).requireSuccess()
+
+            assertThat(out.value.ownerSessionId).isEqualTo(newDevice)
+            assertThat(out.value.players[newDevice]?.userId).isEqualTo(userA)
+            assertThat(out.events).hasSize(1)
+            assertThat(out.events[0]).isInstanceOf(LobbyEvent.PlayerJoined::class)
+            // The rebind makes the new device the owner, so owner-gated actions work verbatim.
+            h.rotate(lobby.id, newDevice).requireSuccess()
+        }
+
+    @Test
+    fun `JoinLobby authed member rejoins cross-device by userId without code, ownership unchanged`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userId = userA).value
+            // A seat carries userB under an old session (e.g. a prior seat-rebind).
+            val oldMemberSession = validSession(30)
+            h.repo.save(
+                lobby.copy(
+                    players = lobby.players + (oldMemberSession to Player(oldMemberSession, bob, h.clock.now(), userId = userB)),
+                ),
+            )
+            val newDevice = validSession(31)
+
+            val out = h.joinWithUserId(lobby.id, newDevice, bob, code = null, userId = userB).requireSuccess()
+
+            assertThat(out.value.players[newDevice]?.userId).isEqualTo(userB)
+            assertThat(out.value.ownerSessionId).isEqualTo(sessionA)
+            assertThat(out.events).hasSize(1)
+        }
+
+    @Test
+    fun `JoinLobby anon caller with wrong code is still WrongCode (userId null regression guard)`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userId = userA).value
+            val out = h.joinWithUserId(lobby.id, sessionB, bob, code = "WRONG2", userId = null)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.WrongCode)
+        }
+
+    @Test
+    fun `JoinLobby authed caller matching neither owner nor any seat stays code-gated`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userId = userA).value
+            // userB owns no seat here and is not the owner, so no arm bypasses the code.
+            val out = h.joinWithUserId(lobby.id, validSession(40), Pseudonym("Mallory"), code = null, userId = userB)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.WrongCode)
         }
 
     // ADR-0029 — owner-only rotation. Tests verify the owner gate, the
@@ -652,6 +716,14 @@ internal class Harness(
         p: Pseudonym,
         code: String?,
     ) = join.invoke(l, s, p, code)
+
+    suspend fun joinWithUserId(
+        l: LobbyId,
+        s: SessionId,
+        p: Pseudonym,
+        code: String?,
+        userId: UserId?,
+    ) = join.invoke(l, s, p, code, userId)
 
     suspend fun rename(
         l: LobbyId,

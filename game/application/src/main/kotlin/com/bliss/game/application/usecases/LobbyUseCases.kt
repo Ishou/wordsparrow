@@ -125,7 +125,12 @@ class RotateLobbyCodeUseCase(
     }
 }
 
-/** Idempotent join — reconnects and owner re-entries bypass the code check; outsiders need a valid code. */
+/**
+ * Idempotent join — reconnects, owner re-entries, and authed owner/member
+ * rejoins bypass the code check; anonymous outsiders still need a valid code.
+ * [userId] is the socket's server-verified identity (ADR-0066 (b)), never a
+ * client-supplied value.
+ */
 class JoinLobbyUseCase(
     private val repo: LobbyRepository,
     private val clock: Clock,
@@ -136,9 +141,28 @@ class JoinLobbyUseCase(
         sessionId: SessionId,
         pseudonym: Pseudonym,
         code: String?,
+        userId: UserId? = null,
     ): UseCaseOutcome<Lobby> {
         var emitted: LobbyEvent? = null
         var wrongCode = false
+
+        // Capacity-guarded seat: no-op when full so the outer LobbyFull check fires; may rebind ownership to the caller.
+        fun seat(
+            lobby: Lobby,
+            seatUserId: UserId?,
+            rebindOwner: Boolean,
+        ): Lobby {
+            if (lobby.isFull()) return lobby
+            val now = clock.now()
+            val player = Player(sessionId, pseudonym, now, userId = seatUserId)
+            emitted = LobbyEvent.PlayerJoined(player)
+            return lobby.copy(
+                ownerSessionId = if (rebindOwner) sessionId else lobby.ownerSessionId,
+                players = lobby.players + (sessionId to player),
+                lastActivityAt = now,
+            )
+        }
+
         val updated =
             repo.mutate(lobbyId) { lobby ->
                 when {
@@ -146,27 +170,17 @@ class JoinLobbyUseCase(
                     // Code is intentionally NOT checked here — see ADR-0027.
                     lobby.hasJoined(sessionId) -> lobby.touched(clock.now())
                     // Owner re-entry bypass (ADR-0039): auth by ownerSessionId match, same posture as reconnect.
-                    lobby.isOwner(sessionId) -> {
-                        if (lobby.isFull()) {
-                            lobby
-                        } else {
-                            val now = clock.now()
-                            val player = Player(sessionId, pseudonym, now)
-                            emitted = LobbyEvent.PlayerJoined(player)
-                            lobby.copy(players = lobby.players + (sessionId to player), lastActivityAt = now)
-                        }
-                    }
+                    lobby.isOwner(sessionId) -> seat(lobby, seatUserId = null, rebindOwner = false)
+                    // Authed owner rejoin (ADR-0066 (b)): rebind ownerSessionId to the returning device — same-principal exception to ADR-0055 §f.
+                    userId != null && userId == lobby.ownerUserId -> seat(lobby, seatUserId = userId, rebindOwner = true)
+                    // Authed member rejoin (ADR-0066 (b)): a seat already carries this verified userId.
+                    userId != null && lobby.players.values.any { it.userId == userId } ->
+                        seat(lobby, seatUserId = userId, rebindOwner = false)
                     code != lobby.code.value -> {
                         wrongCode = true
                         lobby
                     }
-                    lobby.isFull() -> lobby
-                    else -> {
-                        val now = clock.now()
-                        val player = Player(sessionId, pseudonym, now)
-                        emitted = LobbyEvent.PlayerJoined(player)
-                        lobby.copy(players = lobby.players + (sessionId to player), lastActivityAt = now)
-                    }
+                    else -> seat(lobby, seatUserId = null, rebindOwner = false)
                 }
             } ?: return failure(UseCaseError.LobbyNotFound)
         if (wrongCode) return failure(UseCaseError.WrongCode)
