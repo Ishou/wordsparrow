@@ -43,6 +43,12 @@ fun Route.reactivateSubscriptionRoute(reactivate: ReactivateSubscription) {
                     ProblemTypes.NO_PAYMENT_METHOD,
                     "no reusable payment method on file; subscribe afresh",
                 )
+            ReactivateSubscriptionOutcome.CadenceUnresolvable ->
+                call.respondProblem(
+                    HttpStatusCode.Conflict,
+                    ProblemTypes.CADENCE_UNRESOLVABLE,
+                    "cannot resolve the prior billing cadence; subscribe afresh",
+                )
         }
     }
 }

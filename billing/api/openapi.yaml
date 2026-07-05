@@ -266,10 +266,15 @@ paths:
                 $ref: '#/components/schemas/Problem'
         '409':
           description: |
-            The caller has no reusable payment mandate on file, so a no-charge
-            resume is not possible; they must subscribe afresh via checkout.
-            This is a terminal client-side condition, never retried. RFC 7807;
-            `type` is `https://bliss.example/errors/no-payment-method`.
+            A terminal client-side condition: no no-charge resume is
+            possible, so the caller must subscribe afresh via checkout.
+            Never retried. RFC 7807; `type` is one of:
+              - `https://bliss.example/errors/no-payment-method` — no
+                reusable payment mandate on file.
+              - `https://bliss.example/errors/cadence-unresolvable` — the
+                prior subscription's billing cadence (monthly/annual)
+                can't be recovered, so resuming would risk a silent
+                annual→monthly downgrade.
           content:
             application/problem+json:
               schema:
@@ -277,8 +282,8 @@ paths:
         '503':
           description: |
             The payment provider is unavailable, so the reactivation could not
-            be completed; the caller may retry later. A missing mandate is 409,
-            not this. RFC 7807;
+            be completed; the caller may retry later. A missing mandate or an
+            unresolvable cadence is 409, not this. RFC 7807;
             `type` is `https://bliss.example/errors/provider-unavailable`.
           content:
             application/problem+json:

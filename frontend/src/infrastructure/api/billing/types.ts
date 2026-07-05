@@ -678,9 +678,28 @@ export interface operations {
                 };
             };
             /**
-             * @description The payment provider is unavailable or the mandate could not be
-             *     reused, so the reactivation could not be completed; the caller may
-             *     retry later. RFC 7807;
+             * @description A terminal client-side condition: no no-charge resume is
+             *     possible, so the caller must subscribe afresh via checkout.
+             *     Never retried. RFC 7807; `type` is one of:
+             *       - `https://bliss.example/errors/no-payment-method` — no
+             *         reusable payment mandate on file.
+             *       - `https://bliss.example/errors/cadence-unresolvable` — the
+             *         prior subscription's billing cadence (monthly/annual)
+             *         can't be recovered, so resuming would risk a silent
+             *         annual→monthly downgrade.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The payment provider is unavailable, so the reactivation could not
+             *     be completed; the caller may retry later. A missing mandate or an
+             *     unresolvable cadence is 409, not this. RFC 7807;
              *     `type` is `https://bliss.example/errors/provider-unavailable`.
              */
             503: {

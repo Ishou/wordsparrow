@@ -90,6 +90,27 @@ class ReactivateSubscriptionRouteTest {
         }
 
     @Test
+    fun `unresolvable cadence yields 409 not a retry-forever 503`() =
+        testApplication {
+            val repo = FakeSubscriptionRepository()
+            repo.save(
+                Subscription(
+                    userId,
+                    Tier.of("supporter"),
+                    SubscriptionStatus.PENDING_CANCELLATION,
+                    BillingSource.MOLLIE,
+                    "cust:sub_old",
+                    futureEnd,
+                ),
+            )
+            val provider = FakeBillingProvider().apply { failReactivateCadenceUnresolvableOnce = true }
+            install(subscriber, repo, provider)
+            val resp = client.post("/v1/subscription/reactivate") { cookie(SESSION_COOKIE_NAME, "valid") }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Conflict)
+            assertThat(resp.bodyAsText()).contains("errors/cadence-unresolvable")
+        }
+
+    @Test
     fun `caller without billing subscribe is rejected with 403`() =
         testApplication {
             install(withoutCapability, FakeSubscriptionRepository(), FakeBillingProvider())

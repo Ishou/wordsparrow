@@ -5,6 +5,7 @@ import com.bliss.billing.application.ports.Clock
 import com.bliss.billing.application.ports.EventIdGenerator
 import com.bliss.billing.application.ports.NoValidMandateException
 import com.bliss.billing.application.ports.ProviderSubscriptionState
+import com.bliss.billing.application.ports.ReactivationCadenceUnresolvableException
 import com.bliss.billing.application.ports.SubscriptionChanged
 import com.bliss.billing.application.ports.SubscriptionPublisher
 import com.bliss.billing.application.ports.SubscriptionRepository
@@ -27,6 +28,9 @@ sealed interface ReactivateSubscriptionOutcome {
 
     /** No reusable payment mandate on file, so no no-charge resume is possible; the caller must subscribe afresh — the route maps this to 409, never a retry-forever 503. */
     data object NoPaymentMethod : ReactivateSubscriptionOutcome
+
+    /** The old subscription's billing cadence can't be recovered, so resuming would risk a silent annual→monthly downgrade; the caller must subscribe afresh — the route maps this to 409, never a retry-forever 503. */
+    data object CadenceUnresolvable : ReactivateSubscriptionOutcome
 }
 
 /** No-charge résiliation reversal for `POST /v1/subscription/reactivate`: for a `pending_cancellation` whose paid period is still running, create a fresh recurring subscription off the surviving mandate (deferred to `periodEnd`) and return the projection to `active` (CGV Art. 14.1). */
@@ -49,6 +53,7 @@ class ReactivateSubscription(
             when (val result = reactivateAtProvider(userId, subscription.externalRef, subscription.tier, periodEnd)) {
                 is ProviderReactivation.Created -> result.state
                 ProviderReactivation.NoMandate -> return ReactivateSubscriptionOutcome.NoPaymentMethod
+                ProviderReactivation.CadenceUnresolvable -> return ReactivateSubscriptionOutcome.CadenceUnresolvable
             }
 
         val reactivated = subscription.reactivate(newState.externalRef, periodEnd)
@@ -99,6 +104,8 @@ class ReactivateSubscription(
             throw e
         } catch (e: NoValidMandateException) {
             ProviderReactivation.NoMandate
+        } catch (e: ReactivationCadenceUnresolvableException) {
+            ProviderReactivation.CadenceUnresolvable
         } catch (e: Exception) {
             throw ProviderUnavailable(e)
         }
@@ -109,5 +116,7 @@ class ReactivateSubscription(
         ) : ProviderReactivation
 
         data object NoMandate : ProviderReactivation
+
+        data object CadenceUnresolvable : ProviderReactivation
     }
 }

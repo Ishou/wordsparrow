@@ -5,6 +5,7 @@ import com.bliss.billing.application.ports.CheckoutUrls
 import com.bliss.billing.application.ports.NoValidMandateException
 import com.bliss.billing.application.ports.ProviderSubscriptionRef
 import com.bliss.billing.application.ports.ProviderSubscriptionState
+import com.bliss.billing.application.ports.ReactivationCadenceUnresolvableException
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.SubscriptionStatus
@@ -115,6 +116,9 @@ class FakeBillingProvider : BillingProviderPort {
     /** When true, the next `reactivate` throws [NoValidMandateException] and resets this flag, simulating a customer with no reusable mandate. */
     var failReactivateNoMandateOnce = false
 
+    /** When true, the next `reactivate` throws [ReactivationCadenceUnresolvableException] and resets this flag, simulating an old subscription whose cadence can't be recovered. */
+    var failReactivateCadenceUnresolvableOnce = false
+
     /** When true, the next `reactivate` throws a transient failure and resets this flag. */
     var failReactivateOnce = false
 
@@ -128,6 +132,10 @@ class FakeBillingProvider : BillingProviderPort {
         if (failReactivateNoMandateOnce) {
             failReactivateNoMandateOnce = false
             throw NoValidMandateException("no valid mandate for $userId")
+        }
+        if (failReactivateCadenceUnresolvableOnce) {
+            failReactivateCadenceUnresolvableOnce = false
+            throw ReactivationCadenceUnresolvableException("cannot resolve cadence for $userId")
         }
         if (failReactivateOnce) {
             failReactivateOnce = false

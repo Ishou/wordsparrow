@@ -130,6 +130,21 @@ class ReactivateSubscriptionTest {
         }
 
     @Test
+    fun `unresolvable cadence surfaces as CadenceUnresolvable and leaves the row pending`() =
+        runTest {
+            repository.save(
+                subscription(userId = userId, status = SubscriptionStatus.PENDING_CANCELLATION, periodEnd = PERIOD_END),
+            )
+            provider.failReactivateCadenceUnresolvableOnce = true
+
+            val outcome = useCase.execute(userId)
+
+            assertThat(outcome).isEqualTo(ReactivateSubscriptionOutcome.CadenceUnresolvable)
+            assertThat(repository.findByUserId(userId)!!.status).isEqualTo(SubscriptionStatus.PENDING_CANCELLATION)
+            assertThat(publisher.events).hasSize(0)
+        }
+
+    @Test
     fun `a concurrent reactivate that lost the CAS cancels its orphan sub and returns idempotently`() =
         runTest {
             repository.save(
