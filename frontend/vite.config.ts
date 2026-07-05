@@ -1,8 +1,66 @@
 import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, appendFileSync } from 'node:fs';
 import { VitePWA } from 'vite-plugin-pwa';
+import license from 'rollup-plugin-license';
+
+// Redistribution notice (ADR-0090). rollup-plugin-license only scans JS modules,
+// so fonts embedded through CSS url() (Hanken Grotesk, Spline Sans Mono) are invisible
+// to it. This file receives the aggregate; the companion plugin below tops it up.
+const LICENSE_OUTPUT_FILE = path.resolve(__dirname, 'dist/third-party-licenses.txt');
+
+// Append the OFL notice of every embedded-font package the JS scan missed, keyed off
+// each emitted .woff2 asset's source path. General: any CSS-embedded font is covered.
+function embeddedFontLicenses(): Plugin {
+  return {
+    name: 'embedded-font-licenses',
+    writeBundle(_options, bundle) {
+      if (!existsSync(LICENSE_OUTPUT_FILE)) return;
+      const already = readFileSync(LICENSE_OUTPUT_FILE, 'utf8');
+      const packageDirs = new Set<string>();
+      for (const asset of Object.values(bundle)) {
+        if (asset.type !== 'asset') continue;
+        const sources = asset.originalFileNames ?? [];
+        for (const source of sources) {
+          if (!/\.(woff2?|ttf|otf)$/.test(source)) continue;
+          let dir = path.dirname(path.resolve(__dirname, source));
+          while (dir !== path.dirname(dir)) {
+            if (existsSync(path.join(dir, 'package.json'))) {
+              packageDirs.add(dir);
+              break;
+            }
+            dir = path.dirname(dir);
+          }
+        }
+      }
+      const missing = [...packageDirs]
+        .map((dir) => {
+          const pkg = JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8'));
+          const licenseFile = ['LICENSE', 'LICENSE.txt', 'LICENSE.md', 'OFL.txt'].find((name) =>
+            existsSync(path.join(dir, name)),
+          );
+          return {
+            name: pkg.name as string,
+            version: pkg.version as string,
+            license: (pkg.license as string) ?? 'OFL-1.1',
+            dir,
+            licenseFile,
+          };
+        })
+        .filter((p) => p.licenseFile != null && !already.includes(`Name: ${p.name}\n`))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      if (missing.length === 0) return;
+      const blocks = missing.map((p) => {
+        const text = readFileSync(path.join(p.dir, p.licenseFile as string), 'utf8').trimEnd();
+        return `\n---\n\nName: ${p.name}\nVersion: ${p.version}\nLicense: ${p.license}\n\n${text}\n`;
+      });
+      const header =
+        '\n\n===\n\nEmbedded fonts (referenced from CSS, redistributed as .woff2 in this bundle):\n';
+      appendFileSync(LICENSE_OUTPUT_FILE, header + blocks.join(''), 'utf8');
+    },
+  };
+}
 
 // Vite + React 19 config for the Bliss frontend bounded context.
 // See ADR-0002 for the stack rationale. v2 faces (ADR-0072) ship with font-display: block + a render-gate in main.tsx.
@@ -15,6 +73,7 @@ const PRERENDERED_ROUTE_PATHS = [
   '/mentions-legales',
   '/confidentialite',
   '/conditions-abonnement',
+  '/remerciements',
   '/compte',
   '/reglages',
   '/finish',
@@ -92,6 +151,8 @@ export default defineConfig({
           /^\/v1\//,
           /^\/robots\.txt$/,
           /^\/sitemap\.xml$/,
+          // Static redistribution notice must reach the network, not the SPA shell.
+          /^\/third-party-licenses\.txt$/,
           ...PRERENDER_NAV_DENYLIST,
         ],
         cleanupOutdatedCaches: true,
@@ -144,6 +205,16 @@ export default defineConfig({
     // hand can.
     sourcemap: true,
     rollupOptions: {
+      // The prod bundle is a redistribution (ADR-0090); ship every bundled dependency's license + copyright, including the OFL font notices.
+      plugins: [
+        license({
+          thirdParty: {
+            includePrivate: false,
+            output: { file: LICENSE_OUTPUT_FILE, encoding: 'utf-8' },
+          },
+        }),
+        embeddedFontLicenses(),
+      ],
       output: {
         // Manual vendor splits. Goal: keep stable third-party code in
         // its own long-lived chunks so a deploy of app-only changes

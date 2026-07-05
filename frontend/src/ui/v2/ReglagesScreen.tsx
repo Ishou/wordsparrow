@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useRouteContext } from '@tanstack/react-router';
-import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User } from '@phosphor-icons/react';
+import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User, Heart } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import type { ThemePreference, ThemeStore } from '@/application/session/ThemeStore';
 import { useAuth } from '@/ui/components/auth';
@@ -194,6 +194,13 @@ export function ReglagesScreen() {
               label="Conditions de vente"
               last
             />
+          </ul>
+        </nav>
+
+        <nav aria-label="À propos">
+          <div className={groupLabel}>À propos</div>
+          <ul className={listCard}>
+            <SettingsRow icon={Heart} tone="soft" to="/remerciements" label="Remerciements" last />
           </ul>
         </nav>
 
