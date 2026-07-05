@@ -45,6 +45,16 @@ removing public exposure.
 4. **Startup resilience.** The last-good corpus is cached on a small PVC; a transient
    object-storage error falls back to the cached copy so pods still boot. A cold start
    with no cache and no bucket is the only hard-fail (alertable).
+   **Deferred (2026-07-05):** the initial chart ships the corpus volume as an
+   `emptyDir`, not a PVC, so there is no cached fallback yet — every pod restart
+   is a fresh cold pull and a transient object-storage error during that pull
+   hard-fails the restart (not only a total cache+bucket miss). A PVC cache is
+   not a one-line swap: `wordsparrow-api` runs `replicaCount: 2` with node
+   anti-affinity, and the cluster's only StorageClass (`hcloud-volumes`) is
+   ReadWriteOnce, so a single shared PVC would fail to attach on the second
+   node. Making the cache real needs a `StatefulSet` (per-replica
+   `volumeClaimTemplate`) or an RWX-capable storage class — tracked as a
+   follow-up.
 5. **Provisioning.** Bucket + a least-privilege key pair (read-only for the apps,
    write for the sync job) are OpenTofu resources in `terraform/` (ADR-0010/0011);
    keys are inventoried in `docs/secrets.md`.

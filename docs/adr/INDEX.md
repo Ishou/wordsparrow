@@ -273,6 +273,8 @@ ADR-0097  grid/infrastructure/src/main/kotlin/com/bliss/grid/infrastructure/pers
 ADR-0097  grid/infrastructure/src/main/resources/words/words-fr.csv  Corpus + themed overlays leave the public repo/image; source of truth is the private wordsparrow-clue-data repo, runtime copy is a private Hetzner bucket
 ADR-0097  terraform/**  Private Hetzner Object Storage bucket + scoped read-only/write keys (OpenTofu); key inventoried in docs/secrets.md
 ADR-0097  data/curated/**  Clue training/eval data moves to the private wordsparrow-clue-data repo; not a public artefact
+ADR-0097  grid/api/deploy/chart/templates/**  fetch-corpus initContainer pulls the bucket via MC_HOST_store (no writable $HOME needed); emptyDir cache only, PVC resilience deferred (§4)
+ADR-0097  grid/api/deploy/chart/values*.yaml  corpus.objectStore.* config surface; fetchCorpusImage pinned to digest via the chart's guard pattern
 ```
 
 ## Adding entries

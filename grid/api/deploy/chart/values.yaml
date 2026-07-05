@@ -197,3 +197,16 @@ regenerateDailies:
   enabled: false
   # Appended after --regenerate-dailies, e.g. ["--start-offset", "-7", "--window-days", "14"].
   extraArgs: []
+# ADR-0097: corpus.objectStore fetches the clue corpus from private Hetzner Object Storage via an initContainer; off by default until the bucket is populated.
+corpus:
+  objectStore:
+    enabled: false
+    endpoint: "https://fsn1.your-objectstorage.com"
+    bucket: "bliss-clue-corpus"
+    secretName: "wordsparrow-corpus-s3" # keys: access_key, secret_key
+    fetchImage:
+      repository: quay.io/minio/mc
+      tag: "latest"
+      digest: ""
+      # When true, helm install/upgrade fails fast if digest is empty (mirrors the other image guards).
+      requireDigest: false

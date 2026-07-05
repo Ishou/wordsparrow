@@ -74,3 +74,15 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- printf "%s:%s" $img.repository $img.tag -}}
 {{- end -}}
 {{- end -}}
+{{/* corpus-fetch initContainer image (ADR-0097). Same digest-or-tag pattern as the other images. */}}
+{{- define "wordsparrow-api.fetchCorpusImage" -}}
+{{- $img := .Values.corpus.objectStore.fetchImage -}}
+{{- if and (not $img.digest) $img.requireDigest -}}
+{{- fail "corpus.objectStore.fetchImage.digest must be set for production — MANIFESTO reproducible builds" -}}
+{{- end -}}
+{{- if $img.digest -}}
+{{- printf "%s@%s" $img.repository $img.digest -}}
+{{- else -}}
+{{- printf "%s:%s" $img.repository $img.tag -}}
+{{- end -}}
+{{- end -}}
