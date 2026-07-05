@@ -108,4 +108,27 @@ class ExpireLapsedCancellationsTest {
             assertThat(second.expired).isEqualTo(0)
             assertThat(publisher.events.map { it.status }).containsExactly(SubscriptionStatus.EXPIRED)
         }
+
+    @Test
+    fun `skips a row a concurrent reactivate flipped to active and never clobbers it to expired`() =
+        runTest {
+            repository.save(
+                subscription(
+                    userId = userId,
+                    status = SubscriptionStatus.PENDING_CANCELLATION,
+                    periodEnd = FIXED_NOW.minusSeconds(60),
+                ),
+            )
+            // The row is listed as lapsed, then a concurrent reactivate wins before the sweep's CAS write.
+            repository.beforeCompareAndSet = {
+                repository.save(subscription(userId = userId, status = SubscriptionStatus.ACTIVE, periodEnd = PERIOD_END))
+                repository.beforeCompareAndSet = null
+            }
+
+            val summary = useCase.execute()
+
+            assertThat(summary.expired).isEqualTo(0)
+            assertThat(repository.findByUserId(userId)!!.status).isEqualTo(SubscriptionStatus.ACTIVE)
+            assertThat(publisher.events).hasSize(0)
+        }
 }

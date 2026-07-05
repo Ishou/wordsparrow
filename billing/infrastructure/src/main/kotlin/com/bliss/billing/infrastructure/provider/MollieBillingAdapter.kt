@@ -5,6 +5,7 @@ import com.bliss.billing.application.ports.CheckoutUrls
 import com.bliss.billing.application.ports.NoValidMandateException
 import com.bliss.billing.application.ports.ProviderSubscriptionRef
 import com.bliss.billing.application.ports.ProviderSubscriptionState
+import com.bliss.billing.application.ports.ReactivationCadenceUnresolvableException
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.Tier
@@ -118,7 +119,12 @@ class MollieBillingAdapter(
     ): ProviderSubscriptionState {
         val customerId = resolveCustomerId(userId, currentExternalRef)
         val mandateId =
-            client.listMandates(customerId).firstOrNull { it.status == VALID_MANDATE }?.id
+            client
+                .listMandates(customerId)
+                .filter { it.status == VALID_MANDATE }
+                // Mollie lists mandates oldest-first; pick the most recent so a refreshed card binds, not the stale original (nulls sort last).
+                .maxWithOrNull(compareBy(nullsFirst()) { it.createdAt })
+                ?.id
                 ?: throw NoValidMandateException("customer $customerId has no valid mandate to reactivate")
         val cadence = cadenceForReactivation(currentExternalRef)
         val subscription =
@@ -157,12 +163,19 @@ class MollieBillingAdapter(
             ?: customerStore.findCustomerId(userId)
             ?: throw NoValidMandateException("no Mollie customer resolvable for user $userId")
 
-    // The old (now-cancelled) subscription still carries the cadence in its metadata; default to monthly if it can no longer be read.
-    private suspend fun cadenceForReactivation(currentExternalRef: String): Cadence =
-        (MollieReference.decode(currentExternalRef) as? MollieReference.Subscription)
-            ?.let { client.getSubscription(it.customerId, it.subscriptionId)?.metadata }
-            ?.let { cadenceFrom(it) }
-            ?: Cadence.default
+    // The old (now-cancelled) subscription carries the cadence in its metadata; fail rather than guess, so a resume never silently downgrades annual→monthly (ADR-0080).
+    private suspend fun cadenceForReactivation(currentExternalRef: String): Cadence {
+        val ref =
+            MollieReference.decode(currentExternalRef) as? MollieReference.Subscription
+                ?: throw ReactivationCadenceUnresolvableException(
+                    "cannot resolve cadence: $currentExternalRef is not a subscription reference",
+                )
+        val metadata =
+            client.getSubscription(ref.customerId, ref.subscriptionId)?.metadata
+                ?: throw ReactivationCadenceUnresolvableException("cannot resolve cadence: subscription ${ref.subscriptionId} not found")
+        return metadata[CADENCE_KEY]?.let { runCatching { Cadence.fromWire(it) }.getOrNull() }
+            ?: throw ReactivationCadenceUnresolvableException("cannot resolve cadence from subscription ${ref.subscriptionId} metadata")
+    }
 
     override suspend fun listActiveSubscriptions(): List<ProviderSubscriptionRef> =
         client
