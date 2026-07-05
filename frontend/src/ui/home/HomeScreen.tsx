@@ -208,7 +208,7 @@ export function HomeScreen({
   const [coopPending, setCoopPending] = useState(false);
   const [hostSignInOpen, setHostSignInOpen] = useState(false);
   const auth = useOptionalAuth();
-  const { authClient, soundPlayer } = useRouteContext({ from: '__root__' });
+  const { authClient, soundPlayer, soundStore } = useRouteContext({ from: '__root__' });
 
   const multiplayerOn = lobbyClient != null && getSession != null;
   // Hosting is entitlement-gated server-side (ADR-0083): guests get 401. Prompt sign-in before the call so they don't hit a silent failure; joining stays open.
@@ -344,6 +344,7 @@ export function HomeScreen({
                   onStreak={(cur, best) => setStreak({ cur, best })}
                   onKeyboardToggle={setMiniGameTyping}
                   soundPlayer={soundPlayer}
+                  soundStore={soundStore}
                 />
               </div>
               <div className={dailyBand}>

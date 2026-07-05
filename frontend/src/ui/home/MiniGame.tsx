@@ -4,11 +4,13 @@ import { css, cx } from 'styled-system/css';
 import { Cell, DefCell, Skeleton } from '@/design-system';
 import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
 import { SOLVE_STAGGER_MS } from '@/ui/components/grid/playLayout';
+import { GridSoundToggle } from '@/ui/play/GridSoundToggle';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import { Keyboard } from '@/ui/play/Keyboard';
 import { useBackDismiss } from '@/ui/lib/useBackDismiss';
 import type { SampleWord, WordsRepository } from '@/application';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
+import type { SoundStore } from '@/application/session/SoundStore';
 
 
 const BATCH_OPTS = { minLen: 3, maxLen: 6, count: 24 } as const;
@@ -48,8 +50,27 @@ const input = css({
   '&::-webkit-search-cancel-button': { display: 'none' },
   '&::-webkit-search-decoration': { display: 'none' },
 });
-// Reserved row below the word so the skip button appears without a layout shift.
-const skipRow = css({ height: '20px', display: 'flex', alignItems: 'center' });
+// Reserved row below the word holding the discreet mute shortcut (always present, so it
+// also anchors the height) and the skip button when it unlocks — neither shifts the layout.
+const skipRow = css({ minHeight: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' });
+const soundBtn = css({
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '24px',
+  height: '24px',
+  borderRadius: '50%',
+  color: 'ws.khaki',
+  opacity: 0.6,
+  fontSize: '16px',
+  transition: 'opacity 120ms',
+  _hover: { opacity: 1 },
+  _active: { opacity: 1 },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+});
 const skipBtn = css({
   border: 'none',
   background: 'transparent',
@@ -91,9 +112,11 @@ export interface MiniGameProps {
   readonly onKeyboardToggle?: (open: boolean) => void;
   // Plays the shared word-validated cue on a correct guess; self-gates on the mute preference.
   readonly soundPlayer?: SoundPlayer;
+  // Backs the one-tap mute shortcut under the word; shares the global sound preference.
+  readonly soundStore?: SoundStore;
 }
 
-export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPlayer }: MiniGameProps) {
+export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPlayer, soundStore }: MiniGameProps) {
   const touchPrimary = useTouchPrimary();
   const [pool, setPool] = useState<ReadonlyArray<SampleWord>>([]);
   // Always start in the skeleton; the prerender has no repository, so a hard-coded clue would flash before the real one loads.
@@ -378,6 +401,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
         })}
       </div>
       <div className={skipRow}>
+        {soundStore ? <GridSoundToggle soundStore={soundStore} className={soundBtn} /> : null}
         {passerUnlocked ? (
           <button type="button" className={skipBtn} onClick={skip}>
             Passer ›

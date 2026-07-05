@@ -65,6 +65,16 @@ describe('MiniGame server verification (ADR-0076)', () => {
     expect(soundPlayer.playPuzzleSolved).not.toHaveBeenCalled();
   });
 
+  it('shows the one-tap mute shortcut near the word when a soundStore is wired', async () => {
+    const soundStore = { load: () => true, set: vi.fn() };
+    render(<MiniGame wordsRepository={repo(vi.fn().mockResolvedValue(false))} soundStore={soundStore} />);
+    await waitFor(() => expect(screen.queryByLabelText('Chargement du mot du jour')).toBeNull());
+    const toggle = screen.getByRole('button', { name: 'Couper les sons' });
+    fireEvent.click(toggle);
+    expect(soundStore.set).toHaveBeenCalledWith(false);
+    expect(screen.getByRole('button', { name: 'Activer les sons' })).toBeTruthy();
+  });
+
   it('stays silent on a wrong guess', async () => {
     const soundPlayer = { playWordValidated: vi.fn(), playPuzzleSolved: vi.fn() };
     render(<MiniGame wordsRepository={repo(vi.fn().mockResolvedValue(false))} soundPlayer={soundPlayer} />);
