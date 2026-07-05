@@ -66,6 +66,11 @@ export function AProposScreen() {
             public. Le jour où WordSparrow gagnera de l&apos;argent, je veux le consacrer à de vraies
             plumes : des auteurs payés pour écrire les définitions.
           </p>
+          <p className={sectionBody}>
+            Tout ça a un coût pour l&apos;environnement — de l&apos;énergie, de l&apos;eau. Je
+            n&apos;ai pas de chiffres à te vendre, mais les définitions sont générées une fois, par
+            lots, puis figées.
+          </p>
         </section>
 
         <section className={thanksCard}>
