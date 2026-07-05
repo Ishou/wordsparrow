@@ -1,7 +1,7 @@
 // Multiplayer-gated `/lobby/$lobbyId` (ADR-0018 §10); smart container over `useLobbyConnection`.
 
 import { createRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LobbyClientError } from '@/application/game';
 import type { Lobby, LobbyId } from '@/domain/game';
 import { createLoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
@@ -15,6 +15,7 @@ import { SparrowState } from '@/ui/v2/SparrowState';
 import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { SalonScreen } from '@/ui/v2/multiplayer/SalonScreen';
 import { LiveCoopScreen } from '@/ui/v2/multiplayer/LiveCoopScreen';
+import { useCoopWinCue } from '@/ui/v2/multiplayer/useCoopWinCue';
 import { ResultatsScreen } from '@/ui/v2/multiplayer/ResultatsScreen';
 import { css } from 'styled-system/css';
 import { noindexHead } from '@/ui/seo';
@@ -136,14 +137,8 @@ function V2LobbyPage() {
 
   const lobby = view.lobby;
 
-  // Coop win cue on the live IN_PROGRESS→COMPLETED transition (screen unmounts into Résultats; silent on cold-load of a finished lobby).
-  const prevLobbyStateRef = useRef(lobby.state);
-  useEffect(() => {
-    if (prevLobbyStateRef.current === 'IN_PROGRESS' && lobby.state === 'COMPLETED') {
-      ctx.soundPlayer?.playPuzzleSolved();
-    }
-    prevLobbyStateRef.current = lobby.state;
-  }, [lobby.state, ctx.soundPlayer]);
+  // Coop win cue on the live IN_PROGRESS→COMPLETED transition (the screen unmounts into Résultats).
+  useCoopWinCue(lobby.state, ctx.soundPlayer);
 
   const handleLeave = useCallback(() => {
     actions.leave();
