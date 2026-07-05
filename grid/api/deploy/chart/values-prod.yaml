@@ -72,3 +72,9 @@ ensureDailies:
     # matrix row's `image-digest-grid-worker` artifact.
     requireDigest: true
     digest: ""
+# ADR-0097: guard set ahead of enabling — corpus.objectStore.enabled is still false in prod (see values.yaml).
+corpus:
+  objectStore:
+    fetchImage:
+      requireDigest: true
+      digest: ""

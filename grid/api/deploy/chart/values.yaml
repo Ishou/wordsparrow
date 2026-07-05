@@ -209,4 +209,9 @@ corpus:
     endpoint: "https://fsn1.your-objectstorage.com"
     bucket: "bliss-clue-corpus"
     secretName: "wordsparrow-corpus-s3" # keys: access_key, secret_key
-    fetchImage: "quay.io/minio/mc:latest" # pin to a digest before enabling (manifesto)
+    fetchImage:
+      repository: quay.io/minio/mc
+      tag: "latest"
+      digest: ""
+      # When true, helm install/upgrade fails fast if digest is empty (mirrors the other image guards).
+      requireDigest: false
