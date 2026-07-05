@@ -13,6 +13,9 @@ interface SubscriptionRepository {
     /** Idempotent upsert keyed by userId. */
     suspend fun save(subscription: Subscription)
 
+    /** Compare-and-set a still-`pending_cancellation` row to [next]; applies (and returns true) only if the persisted row is STILL `pending_cancellation`, else no write and false. Guards reactivate and the expiry sweep from clobbering each other under concurrency (ADR-0078). */
+    suspend fun compareAndSetFromPendingCancellation(next: Subscription): Boolean
+
     /** No-op if no projection exists for [userId]. */
     suspend fun delete(userId: UUID)
 

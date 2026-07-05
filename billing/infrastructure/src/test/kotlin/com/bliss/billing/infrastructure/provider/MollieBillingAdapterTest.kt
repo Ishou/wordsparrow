@@ -8,6 +8,7 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import com.bliss.billing.application.ports.NoValidMandateException
+import com.bliss.billing.application.ports.ReactivationCadenceUnresolvableException
 import com.bliss.billing.domain.BillingSource
 import com.bliss.billing.domain.Cadence
 import com.bliss.billing.domain.SubscriptionStatus
@@ -387,29 +388,55 @@ class MollieBillingAdapterTest {
         }
 
     @Test
-    fun `reactivate defaults to monthly when the old subscription cadence is unreadable`() =
+    fun `reactivate binds the most recent valid mandate so a refreshed card wins`() =
+        runTest {
+            val client = FakeMollieClient()
+            client.mandatesByCustomer["cust_x"] =
+                listOf(
+                    MollieMandate("mdt_old", "valid", Instant.parse("2026-01-01T00:00:00Z")),
+                    MollieMandate("mdt_new", "valid", Instant.parse("2026-06-01T00:00:00Z")),
+                    MollieMandate("mdt_invalid", "invalid", Instant.parse("2026-07-01T00:00:00Z")),
+                )
+            client.subscriptions["sub_old"] = MollieSubscription("sub_old", "cust_x", "canceled", null, metadata("monthly"))
+
+            adapter(client, InMemoryMollieCustomerStore())
+                .reactivate(userId, "cust_x:sub_old", tier, Instant.parse("2026-08-01T00:00:00Z"))
+
+            assertThat(client.lastSubscriptionMandateId).isEqualTo("mdt_new")
+        }
+
+    @Test
+    fun `reactivate fails rather than downgrade when the old subscription cadence is unreadable`() =
         runTest {
             val client = FakeMollieClient()
             client.mandatesByCustomer["cust_x"] = listOf(MollieMandate("mdt_valid", "valid"))
             val startDate = Instant.parse("2026-08-01T00:00:00Z")
 
-            adapter(client, InMemoryMollieCustomerStore()).reactivate(userId, "cust_x:sub_old", tier, startDate)
+            val result =
+                runCatching {
+                    adapter(client, InMemoryMollieCustomerStore()).reactivate(userId, "cust_x:sub_old", tier, startDate)
+                }
 
-            assertThat(client.lastSubscriptionAmount).isEqualTo("2.00")
-            assertThat(client.lastSubscriptionInterval).isEqualTo("1 month")
+            assertThat(result.exceptionOrNull()).isNotNull().isInstanceOf(ReactivationCadenceUnresolvableException::class)
+            assertThat(client.createdSubscriptions).isEmpty()
         }
 
     @Test
-    fun `reactivate resolves the customer from the store when the ref is not a subscription composite`() =
+    fun `reactivate fails rather than downgrade when the ref cannot identify the old subscription`() =
         runTest {
             val client = FakeMollieClient()
             client.mandatesByCustomer["cust_stored"] = listOf(MollieMandate("mdt_valid", "valid"))
             val store = InMemoryMollieCustomerStore(mapOf(userId to "cust_stored"))
 
-            adapter(client, store).reactivate(userId, "tr_first", tier, Instant.parse("2026-08-01T00:00:00Z"))
+            val result =
+                runCatching {
+                    adapter(client, store).reactivate(userId, "tr_first", tier, Instant.parse("2026-08-01T00:00:00Z"))
+                }
 
+            // The customer still resolves from the store, but a non-composite ref hides the old cadence, so we fail closed rather than guess monthly.
             assertThat(client.lastListMandatesCustomerId).isEqualTo("cust_stored")
-            assertThat(client.lastSubscriptionMandateId).isEqualTo("mdt_valid")
+            assertThat(result.exceptionOrNull()).isNotNull().isInstanceOf(ReactivationCadenceUnresolvableException::class)
+            assertThat(client.createdSubscriptions).isEmpty()
         }
 
     @Test

@@ -14,6 +14,9 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     /** updated_at stamp applied on the next [save]; tests advance it to age a row past the backstop threshold. */
     var saveStamp: Instant = Instant.EPOCH
 
+    /** Test seam: run before [compareAndSetFromPendingCancellation] reads the row, letting a test simulate a concurrent writer winning the race. */
+    var beforeCompareAndSet: (suspend () -> Unit)? = null
+
     override suspend fun findByUserId(userId: UUID): Subscription? = byUserId[userId]
 
     override suspend fun findByExternalRef(externalRef: String): Subscription? =
@@ -22,6 +25,15 @@ class FakeSubscriptionRepository : SubscriptionRepository {
     override suspend fun save(subscription: Subscription) {
         byUserId[subscription.userId] = subscription
         updatedAt[subscription.userId] = saveStamp
+    }
+
+    override suspend fun compareAndSetFromPendingCancellation(next: Subscription): Boolean {
+        beforeCompareAndSet?.invoke()
+        val current = byUserId[next.userId] ?: return false
+        if (current.status != SubscriptionStatus.PENDING_CANCELLATION) return false
+        byUserId[next.userId] = next
+        updatedAt[next.userId] = saveStamp
+        return true
     }
 
     override suspend fun delete(userId: UUID) {

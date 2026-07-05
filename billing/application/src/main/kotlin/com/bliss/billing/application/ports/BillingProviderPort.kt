@@ -37,6 +37,11 @@ class NoValidMandateException(
     message: String,
 ) : RuntimeException(message)
 
+/** Raised by [BillingProviderPort.reactivate] when the cancelled subscription's cadence can't be recovered; re-subscribing at a guessed interval would silently downgrade annual→monthly, so we fail instead (ADR-0080). */
+class ReactivationCadenceUnresolvableException(
+    message: String,
+) : RuntimeException(message)
+
 /** Anti-corruption port over the payment provider; only infrastructure knows a provider exists, and provider payload shapes never leak past it (ADR-0078). */
 interface BillingProviderPort {
     /** Start hosted checkout; [email] (session-derived, nullable) is passed through to the provider customer for receipts/invoices, never stored (ADR-0082). */

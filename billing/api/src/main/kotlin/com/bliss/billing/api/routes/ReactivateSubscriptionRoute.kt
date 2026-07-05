@@ -37,6 +37,12 @@ fun Route.reactivateSubscriptionRoute(reactivate: ReactivateSubscription) {
                     ProblemTypes.NOT_REACTIVATABLE,
                     "no scheduled non-renewal to resume",
                 )
+            ReactivateSubscriptionOutcome.NoPaymentMethod ->
+                call.respondProblem(
+                    HttpStatusCode.Conflict,
+                    ProblemTypes.NO_PAYMENT_METHOD,
+                    "no reusable payment method on file; subscribe afresh",
+                )
         }
     }
 }

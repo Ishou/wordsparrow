@@ -300,6 +300,13 @@ class UserDeletedConsumerTest {
             byUser[subscription.userId] = subscription
         }
 
+        override suspend fun compareAndSetFromPendingCancellation(next: Subscription): Boolean {
+            val current = byUser[next.userId] ?: return false
+            if (current.status != SubscriptionStatus.PENDING_CANCELLATION) return false
+            byUser[next.userId] = next
+            return true
+        }
+
         override suspend fun delete(userId: UUID) {
             byUser.remove(userId)
         }

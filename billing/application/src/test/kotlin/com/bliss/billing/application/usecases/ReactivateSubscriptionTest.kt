@@ -1,6 +1,7 @@
 package com.bliss.billing.application.usecases
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
@@ -114,17 +115,83 @@ class ReactivateSubscriptionTest {
         }
 
     @Test
-    fun `no reusable mandate surfaces as ProviderUnavailable and leaves the row pending`() =
+    fun `no reusable mandate surfaces as NoPaymentMethod and leaves the row pending`() =
         runTest {
             repository.save(
                 subscription(userId = userId, status = SubscriptionStatus.PENDING_CANCELLATION, periodEnd = PERIOD_END),
             )
             provider.failReactivateNoMandateOnce = true
 
-            val error = runCatching { useCase.execute(userId) }.exceptionOrNull()
+            val outcome = useCase.execute(userId)
 
-            assertThat(error).isNotNull().isInstanceOf(ProviderUnavailable::class)
+            assertThat(outcome).isEqualTo(ReactivateSubscriptionOutcome.NoPaymentMethod)
             assertThat(repository.findByUserId(userId)!!.status).isEqualTo(SubscriptionStatus.PENDING_CANCELLATION)
+            assertThat(publisher.events).hasSize(0)
+        }
+
+    @Test
+    fun `a concurrent reactivate that lost the CAS cancels its orphan sub and returns idempotently`() =
+        runTest {
+            repository.save(
+                subscription(
+                    userId = userId,
+                    status = SubscriptionStatus.PENDING_CANCELLATION,
+                    externalRef = "cust:sub_old",
+                    periodEnd = PERIOD_END,
+                ),
+            )
+            provider.subscriptionToReactivate =
+                providerState(userId = userId, externalRef = "cust:sub_loser", periodEnd = PERIOD_END)
+            // Simulate a concurrent reactivate that already won: the row is active off the winner's sub before this attempt's CAS runs.
+            repository.beforeCompareAndSet = {
+                repository.save(
+                    subscription(
+                        userId = userId,
+                        status = SubscriptionStatus.ACTIVE,
+                        externalRef = "cust:sub_winner",
+                        periodEnd = PERIOD_END,
+                    ),
+                )
+                repository.beforeCompareAndSet = null
+            }
+
+            val outcome = useCase.execute(userId)
+
+            assertThat(outcome).isInstanceOf(ReactivateSubscriptionOutcome.Reactivated::class)
+            // The winner's sub survives; the loser's just-created orphan is cancelled so it can never double-charge.
+            assertThat(provider.cancelCalls).containsExactly("cust:sub_loser")
+            val stored = repository.findByUserId(userId)!!
+            assertThat(stored.status).isEqualTo(SubscriptionStatus.ACTIVE)
+            assertThat(stored.externalRef).isEqualTo("cust:sub_winner")
+            assertThat(publisher.events).hasSize(0)
+        }
+
+    @Test
+    fun `reactivate racing the expiry sweep does not clobber a row already expired`() =
+        runTest {
+            repository.save(
+                subscription(
+                    userId = userId,
+                    status = SubscriptionStatus.PENDING_CANCELLATION,
+                    externalRef = "cust:sub_old",
+                    periodEnd = PERIOD_END,
+                ),
+            )
+            provider.subscriptionToReactivate =
+                providerState(userId = userId, externalRef = "cust:sub_loser", periodEnd = PERIOD_END)
+            // The expiry sweep wins the race: the row is expired before this reactivate's CAS runs.
+            repository.beforeCompareAndSet = {
+                repository.save(
+                    subscription(userId = userId, status = SubscriptionStatus.EXPIRED, periodEnd = PERIOD_END),
+                )
+                repository.beforeCompareAndSet = null
+            }
+
+            val outcome = useCase.execute(userId)
+
+            assertThat(outcome).isEqualTo(ReactivateSubscriptionOutcome.NotReactivatable)
+            assertThat(provider.cancelCalls).containsExactly("cust:sub_loser")
+            assertThat(repository.findByUserId(userId)!!.status).isEqualTo(SubscriptionStatus.EXPIRED)
             assertThat(publisher.events).hasSize(0)
         }
 }

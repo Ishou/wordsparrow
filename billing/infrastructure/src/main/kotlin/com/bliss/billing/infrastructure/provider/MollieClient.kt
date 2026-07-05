@@ -29,10 +29,11 @@ data class MolliePaymentPage(
     val nextCursor: String?,
 )
 
-/** Provider mandate snapshot, reduced to primitives at the SDK boundary; [status] is the Mollie spelling (`valid`/`pending`/`invalid`), the reactivation reuse a "valid" mandate (ADR-0078). */
+/** Provider mandate snapshot, reduced to primitives at the SDK boundary; [status] is the Mollie spelling (`valid`/`pending`/`invalid`), reactivation reuses the most recent "valid" mandate by [createdAt] so a refreshed card wins (ADR-0078). */
 data class MollieMandate(
     val id: String,
     val status: String,
+    val createdAt: Instant? = null,
 )
 
 /** Provider subscription snapshot, reduced to primitives at the SDK boundary (ADR-0078). */

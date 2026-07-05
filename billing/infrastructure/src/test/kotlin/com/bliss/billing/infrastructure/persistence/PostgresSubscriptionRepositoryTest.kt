@@ -112,6 +112,28 @@ class PostgresSubscriptionRepositoryTest {
         }
 
     @Test
+    fun `compareAndSetFromPendingCancellation applies only while the row is still pending_cancellation`() =
+        runTest {
+            val pending = sub(status = SubscriptionStatus.PENDING_CANCELLATION, externalRef = "cust:sub_old")
+            repo.save(pending)
+            val reactivated = pending.copy(status = SubscriptionStatus.ACTIVE, externalRef = "cust:sub_new")
+
+            assertThat(repo.compareAndSetFromPendingCancellation(reactivated)).isEqualTo(true)
+            assertThat(repo.findByUserId(pending.userId)).isEqualTo(reactivated)
+
+            // Second CAS is a no-op: the row is no longer pending_cancellation, so a losing concurrent writer cannot clobber it.
+            val loser = pending.copy(status = SubscriptionStatus.ACTIVE, externalRef = "cust:sub_loser")
+            assertThat(repo.compareAndSetFromPendingCancellation(loser)).isEqualTo(false)
+            assertThat(repo.findByUserId(pending.userId)!!.externalRef).isEqualTo("cust:sub_new")
+        }
+
+    @Test
+    fun `compareAndSetFromPendingCancellation is a no-op when no row exists`() =
+        runTest {
+            assertThat(repo.compareAndSetFromPendingCancellation(sub(status = SubscriptionStatus.ACTIVE))).isEqualTo(false)
+        }
+
+    @Test
     fun `findByExternalRef returns the matching subscription`() =
         runTest {
             val subscription = sub(externalRef = "sub_abc123")

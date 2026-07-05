@@ -59,6 +59,23 @@ class PostgresSubscriptionRepository(
         }
     }
 
+    override suspend fun compareAndSetFromPendingCancellation(next: Subscription): Boolean =
+        withContext(Dispatchers.IO) {
+            val ts = now().truncatedTo(ChronoUnit.MICROS).atOffset(ZoneOffset.UTC)
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(CAS_FROM_PENDING_SQL).use { stmt ->
+                    stmt.setString(1, next.tier.value)
+                    stmt.setString(2, next.status.wire)
+                    stmt.setString(3, next.source.wire)
+                    stmt.setString(4, next.externalRef)
+                    stmt.setObject(5, next.periodEnd?.truncatedTo(ChronoUnit.MICROS)?.atOffset(ZoneOffset.UTC))
+                    stmt.setObject(6, ts)
+                    stmt.setObject(7, next.userId)
+                    stmt.executeUpdate() > 0
+                }
+            }
+        }
+
     override suspend fun delete(userId: UUID) {
         withContext(Dispatchers.IO) {
             dataSource.connection.use { conn ->
@@ -134,6 +151,12 @@ class PostgresSubscriptionRepository(
         private const val SELECT_LAPSED_PENDING_SQL =
             "SELECT $COLUMNS FROM billing_subscriptions " +
                 "WHERE status = 'pending_cancellation' AND period_end IS NOT NULL AND period_end <= ?"
+
+        // Conditional reactivate/expire transition: only writes while the row is still a scheduled non-renewal (ADR-0078 concurrency guard).
+        private const val CAS_FROM_PENDING_SQL =
+            "UPDATE billing_subscriptions SET " +
+                "tier = ?, status = ?, source = ?, external_ref = ?, period_end = ?, updated_at = ? " +
+                "WHERE user_id = ? AND status = 'pending_cancellation'"
         private const val DELETE_SQL =
             "DELETE FROM billing_subscriptions WHERE user_id = ?"
         private const val UPSERT_SQL =
