@@ -14,6 +14,7 @@ import com.bliss.game.api.LobbyUseCases
 import com.bliss.game.api.PresencePosition
 import com.bliss.game.api.SessionManager
 import com.bliss.game.api.SystemClock
+import com.bliss.game.api.auth.CookieNames
 import com.bliss.game.application.ports.Clock
 import com.bliss.game.application.ports.LobbyEvent
 import com.bliss.game.application.ports.PresenceBroadcaster
@@ -34,11 +35,14 @@ import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
+import com.bliss.game.domain.UserId
 import com.bliss.game.infrastructure.InMemoryLobbyRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocket
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
 import io.ktor.server.application.install
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
@@ -168,6 +172,60 @@ class LobbyWebSocketRouteTest {
             // future regression edits even though this test deliberately
             // omits it from the wire frame.
             assertThat(code).matches(Regex("^[A-HJKM-NP-Z2-9]{6}$"))
+        }
+
+    // ADR-0066 (b): the connect-time verified cookie userId reaches joinLobby, not the client frame.
+    @Test
+    fun `authed owner rejoins cross-device without code via the connect-time verified cookie`() =
+        testApplication {
+            val clock: Clock = SystemClock
+            val repo = InMemoryLobbyRepository()
+            val ownerUser = UserId("11111111-1111-1111-1111-111111111111")
+            val createLobby = CreateLobbyUseCase(repo, clock)
+            val useCases =
+                LobbyUseCases(
+                    createLobby = createLobby,
+                    joinLobby = JoinLobbyUseCase(repo, clock),
+                    renameSelf = RenameSelfUseCase(repo, clock),
+                    setGridConfig = SetGridConfigUseCase(repo, clock),
+                    startGame = StartGameUseCase(repo, NullPuzzleProvider, clock),
+                    updateCell = UpdateCellUseCase(repo, clock, NullWordValidator),
+                    leaveLobby = LeaveLobbyUseCase(repo, clock),
+                    rotateCode = RotateLobbyCodeUseCase(repo, clock),
+                )
+            val sessionManager = SessionManager()
+            val backgroundJob = SupervisorJob()
+            application {
+                install(ServerWebSockets)
+                routing {
+                    lobbyWebSocketRoute(
+                        sessionManager,
+                        useCases,
+                        repo,
+                        backgroundScope = CoroutineScope(backgroundJob + Dispatchers.Default),
+                        reconnectGrace = Duration.ZERO,
+                        cookieVerifier = FixedCookieVerifier("owner-cookie", ownerUser),
+                    )
+                }
+            }
+            val client = createClient { install(WebSockets) }
+            try {
+                val lobbyId = createLobby(SessionId(sessionA), Pseudonym(pseudoA), ownerUserId = ownerUser).value.id
+                val newDevice = "0190e3c9-9f88-7a11-8b22-c3d4e5f60718"
+                client.webSocket(
+                    "/v1/lobbies/${lobbyId.value}/ws",
+                    request = { header(HttpHeaders.Cookie, "${CookieNames.SESSION}=owner-cookie") },
+                ) {
+                    receiveText()
+                    // New device, no code — only the verified cookie identifies the owner.
+                    sendText("""{"type":"joinLobby","sessionId":"$newDevice","pseudonym":"$pseudoA"}""")
+                    // Reaching a playerJoined (not an error) frame is the success signal.
+                    drainUntil("playerJoined")
+                }
+                assertThat(repo.findById(lobbyId)?.ownerSessionId).isEqualTo(SessionId(newDevice))
+            } finally {
+                backgroundJob.cancel()
+            }
         }
 
     @Test
@@ -1095,6 +1153,32 @@ class LobbyWebSocketRouteTest {
             puzzleId: java.util.UUID,
             word: Map<com.bliss.game.domain.Position, com.bliss.game.domain.Letter>,
         ): Boolean = true
+    }
+
+    /** Inert puzzle provider — StartGameUseCase needs an instance for construction but is not exercised here. */
+    private object NullPuzzleProvider : PuzzleProvider {
+        override suspend fun fetch(
+            width: Int,
+            height: Int,
+        ): GamePuzzle = SamplePuzzles.tiny()
+    }
+
+    /** Returns [user] only for the exact [expectedCookie]; models identity-api whoami for one authed principal. */
+    private class FixedCookieVerifier(
+        private val expectedCookie: String,
+        private val user: com.bliss.game.domain.UserId,
+    ) : com.bliss.game.application.auth.CookieVerifier {
+        private fun who(raw: String?): com.bliss.game.application.auth.WhoAmI? =
+            if (raw == expectedCookie) {
+                com.bliss.game.application.auth
+                    .WhoAmI(user, Pseudonym("Alice"))
+            } else {
+                null
+            }
+
+        override suspend fun verify(rawCookieValue: String?): com.bliss.game.application.auth.WhoAmI? = who(rawCookieValue)
+
+        override suspend fun verifyFresh(rawCookieValue: String?): com.bliss.game.application.auth.WhoAmI? = who(rawCookieValue)
     }
 
     private object SamplePuzzles {
