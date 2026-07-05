@@ -88,6 +88,9 @@ class GridGenerator(
                 lTargetVertical = lTargetV,
             )
         if (constraints.distillBudget > 0) LayoutDistiller.distill(cells, constraints.minWordLength, lUseful, lex, constraints.distillBudget)
+        if (constraints.anchorCount > 0) {
+            LayoutAnchorer.carve(cells, constraints.minWordLength, lUseful, lex, constraints.anchorCount, constraints.anchorLength)
+        }
         metrics?.skeletonMs = (clock.nanoTime() - layoutStart) / NS_PER_MS
 
         val searchStart = clock.nanoTime()

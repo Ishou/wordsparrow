@@ -154,6 +154,45 @@ class CoGenerationProbeTest {
         println(best.render())
     }
 
+    // Interim candidate: "stack" (anchorCount=3 long-run anchors + per-axis lTarget 11/8)
+    // with best-of-4 selection (generate 4, keep the sparsest), WITH the curated words.
+    @Test
+    fun `stack best-of-4 with curated words`() {
+        val area = 28 * 20
+        for (curated in listOf(false, true)) {
+            val repo = loadRepository(curated)
+            val generator = GridGenerator(repo)
+            val cons = GridConstraints(width = 28, height = 20, anchorCount = 3, anchorLength = 13, lTargetHorizontal = 11, lTargetVertical = 8)
+            var trials = 0; var succeeded = 0; var blackSum = 0L; var minBlack = Int.MAX_VALUE; var maxBlack = 0
+            var len2 = 0L; var words = 0L
+            val lenHist = sortedMapOf<Int, Int>()
+            var sample: String? = null
+            for (t in 0 until 12) {
+                var bestGrid: com.bliss.grid.domain.model.Grid? = null; var bestBlack = Int.MAX_VALUE
+                for (k in 0 until 4) {
+                    val g = generator.generate(cons, Random(1000L + t * 4L + k)) ?: continue
+                    var b = 0; for ((_, cell) in g.cells) if (cell is ClueCell) b++
+                    if (b < bestBlack) { bestBlack = b; bestGrid = g }
+                }
+                trials++
+                val g = bestGrid ?: continue
+                succeeded++
+                blackSum += bestBlack; minBlack = minOf(minBlack, bestBlack); maxBlack = maxOf(maxBlack, bestBlack)
+                val grid = Array(20) { CharArray(28) { '#' } }
+                for ((pos, cell) in g.cells) if (cell is LetterCell) grid[pos.row.value][pos.column.value] = cell.letter
+                for (r in 0 until 20) { var c = 0; while (c < 28) { if (grid[r][c] == '#') { c++; continue }; val st = c; while (c < 28 && grid[r][c] != '#') c++; val L = c - st; if (L >= 2) { words++; lenHist[L] = (lenHist[L] ?: 0) + 1; if (L == 2) len2++ } } }
+                for (c in 0 until 28) { var r = 0; while (r < 20) { if (grid[r][c] == '#') { r++; continue }; val st = r; while (r < 20 && grid[r][c] != '#') r++; val L = r - st; if (L >= 2) { words++; lenHist[L] = (lenHist[L] ?: 0) + 1; if (L == 2) len2++ } } }
+                if (sample == null && curated) sample = grid.joinToString("\n") { it.concatToString() }
+            }
+            println("BO4 curated=$curated n=$succeeded/$trials black=%.1f%%(min %.1f%% max %.1f%%) len2Share=%.1f%%".format(
+                if (succeeded > 0) 100.0 * blackSum / succeeded / area else -1.0,
+                if (succeeded > 0) 100.0 * minBlack / area else -1.0, 100.0 * maxBlack / area,
+                if (words > 0) 100.0 * len2 / words else 0.0))
+            println("  lenHist=$lenHist")
+            sample?.let { println("  sample:\n$it") }
+        }
+    }
+
     // Origin/main generation algorithm (default GridConstraints -> no anchors/distill/bias,
     // identical to main) at 28x20, WITH vs WITHOUT the curated 2/3/4-letter words. Reports
     // success rate, black density, and word-length quality (incl. 2-letter share).
