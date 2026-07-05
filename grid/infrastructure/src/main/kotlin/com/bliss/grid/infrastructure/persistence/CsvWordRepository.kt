@@ -161,12 +161,7 @@ class CsvWordRepository(
         private val CLASSPATH_RESOLVER: (String) -> java.io.InputStream? =
             { path -> CsvWordRepository::class.java.getResourceAsStream(path) }
 
-        /**
-         * Loads the French corpus from a directory whose layout mirrors the
-         * classpath (`words/words-fr.csv` and `words/themed/` overlays under
-         * [dir]) — e.g. a volume an initContainer populated from the private
-         * Hetzner Object Storage bucket (ADR-0097).
-         */
+        // Reads the corpus from a directory volume mirroring the classpath layout (ADR-0097).
         fun frenchFromDir(dir: java.nio.file.Path): CsvWordRepository {
             val resolver: (String) -> java.io.InputStream? = { path ->
                 val file = dir.resolve(path.removePrefix("/")).toFile()
@@ -177,11 +172,7 @@ class CsvWordRepository(
 
         const val CORPUS_DIR_ENV = "CORPUS_DIR"
 
-        /**
-         * Production entry point: read the corpus from `$CORPUS_DIR` (a volume
-         * populated from the private object-storage bucket, ADR-0097) when set,
-         * else fall back to the bundled classpath copy (transitional).
-         */
+        // $CORPUS_DIR volume when set, else the bundled classpath copy (transitional, ADR-0097).
         fun frenchCorpus(): CsvWordRepository {
             val dir = System.getenv(CORPUS_DIR_ENV)?.takeIf { it.isNotBlank() }
             return if (dir != null) {
