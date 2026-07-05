@@ -29,3 +29,9 @@ Append-only ledger for human review. Procedure:
 - **2026-07-05** — Phase A dispatched (ADR-0066 amendment agent). Opened
   **PR #1407** (`docs/adr-0066-owner-visibility-parity`), MERGEABLE, CI
   running. Waiting on blocking checks + §6a review before merge.
+- **2026-07-05 13:00Z** — Maintainer added `Bash(gh pr merge:*)` grant and
+  said "go"; **PR #1407 squash-merged to `main`**. Phase A complete.
+- **2026-07-05** — Phase B implementer dispatched (`fix/lobby-owner-visibility`):
+  V3 `owner_user_id` migration, `Lobby.ownerUserId` write-once, owner arm on
+  `findByUserId` (both adapters), regression test (leave-grace → findByUserId).
+  Cron **re-armed** (2-min) to drive Phase B review→merge.
