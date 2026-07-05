@@ -4,6 +4,8 @@ import { css } from 'styled-system/css';
 import type { Position, Puzzle } from '@/domain';
 import type { GameEvent, Unsubscribe } from '@/application/game';
 import type { Player, SessionId } from '@/domain/game';
+import type { SoundPlayer } from '@/application/session/SoundPlayer';
+import type { SoundStore } from '@/application/session/SoundStore';
 import { ClueRail, Lockup } from '@/design-system';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { SkipLink } from '@/ui/v2/SkipLink';
@@ -13,6 +15,8 @@ import { CELL, GAP, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLa
 import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
 import { useAdvanceOnValidation } from '@/ui/components/grid/useAdvanceOnValidation';
 import { Keyboard } from '@/ui/play/Keyboard';
+import { useGridSounds } from '@/ui/play/useGridSounds';
+import { GridSoundToggle } from '@/ui/play/GridSoundToggle';
 import { usePresenceState } from '@/ui/components/grid/usePresenceState';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { useCoopValidating } from './useCoopValidating';
@@ -108,6 +112,8 @@ export interface LiveCoopScreenProps {
   readonly subscribeToRemoteCellUpdates: (handler: (event: GameEvent) => void) => Unsubscribe;
   readonly subscribeToRemotePresence: (handler: (event: GameEvent) => void) => Unsubscribe;
   readonly onLeave: () => void;
+  readonly soundPlayer?: SoundPlayer;
+  readonly soundStore?: SoundStore;
 }
 
 export function LiveCoopScreen({
@@ -125,6 +131,8 @@ export function LiveCoopScreen({
   subscribeToRemoteCellUpdates,
   subscribeToRemotePresence,
   onLeave,
+  soundPlayer,
+  soundStore,
 }: LiveCoopScreenProps) {
   const boardRef = useRef<PuzzleBoardHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -167,6 +175,9 @@ export function LiveCoopScreen({
 
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
+
+  // Word pulses as cells lock (any player's); the win cue fires at the lobby route (this screen unmounts into Résultats).
+  useGridSounds({ validatedCount: validatedPositions.size, won: false, soundPlayer });
 
   // Discreet "checking…" pulse on a word the local player just completed, until the server locks it (or a safety window passes).
   const { validating, rejecting, noteLocalFill, noteServerReject } = useCoopValidating(puzzle, validatedPositions);
@@ -272,7 +283,14 @@ export function LiveCoopScreen({
     <main id="main-content" tabIndex={-1} className={shell} lang="fr">
       {isDesktop ? (
         <>
-          <DesktopAppBar trailing={<LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />} />
+          <DesktopAppBar
+            trailing={
+              <>
+                <LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />
+                {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
+              </>
+            }
+          />
           <div className={coopPresence}>
             <PlayerStrip
               players={players}
@@ -292,6 +310,7 @@ export function LiveCoopScreen({
             <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
             <span className={headerSpacer} />
             <LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />
+            {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
             <button type="button" className={iconBtn} onClick={onLeave} aria-label="Quitter">
               <SignOut aria-hidden="true" weight="bold" />
             </button>

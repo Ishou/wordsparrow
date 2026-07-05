@@ -15,6 +15,7 @@ import { SparrowState } from '@/ui/v2/SparrowState';
 import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { SalonScreen } from '@/ui/v2/multiplayer/SalonScreen';
 import { LiveCoopScreen } from '@/ui/v2/multiplayer/LiveCoopScreen';
+import { useCoopWinCue } from '@/ui/v2/multiplayer/useCoopWinCue';
 import { ResultatsScreen } from '@/ui/v2/multiplayer/ResultatsScreen';
 import { css } from 'styled-system/css';
 import { noindexHead } from '@/ui/seo';
@@ -136,6 +137,9 @@ function V2LobbyPage() {
 
   const lobby = view.lobby;
 
+  // Coop win cue on the live IN_PROGRESS→COMPLETED transition (the screen unmounts into Résultats).
+  useCoopWinCue(lobby.state, ctx.soundPlayer);
+
   const handleLeave = useCallback(() => {
     actions.leave();
     void navigate({ to: '/' });
@@ -209,6 +213,8 @@ function V2LobbyPage() {
         subscribeToRemoteCellUpdates={actions.subscribeToRemoteCellUpdates}
         subscribeToRemotePresence={actions.subscribeToRemotePresence}
         onLeave={handleLeave}
+        soundPlayer={ctx.soundPlayer}
+        soundStore={ctx.soundStore}
       />
     );
   }

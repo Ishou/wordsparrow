@@ -3,10 +3,14 @@ import { CaretDown } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { Cell, DefCell, Skeleton } from '@/design-system';
 import { GRID_INPUT_GUARDS } from '@/ui/components/grid/gridInputGuards';
+import { SOLVE_STAGGER_MS } from '@/ui/components/grid/playLayout';
+import { GridSoundToggle } from '@/ui/play/GridSoundToggle';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import { Keyboard } from '@/ui/play/Keyboard';
 import { useBackDismiss } from '@/ui/lib/useBackDismiss';
 import type { SampleWord, WordsRepository } from '@/application';
+import type { SoundPlayer } from '@/application/session/SoundPlayer';
+import type { SoundStore } from '@/application/session/SoundStore';
 
 
 const BATCH_OPTS = { minLen: 3, maxLen: 6, count: 24 } as const;
@@ -46,8 +50,26 @@ const input = css({
   '&::-webkit-search-cancel-button': { display: 'none' },
   '&::-webkit-search-decoration': { display: 'none' },
 });
-// Reserved row below the word so the skip button appears without a layout shift.
-const skipRow = css({ height: '20px', display: 'flex', alignItems: 'center' });
+// Reserved row below the word: always-present mute shortcut (anchors the height) + skip button, no layout shift.
+const skipRow = css({ minHeight: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' });
+const soundBtn = css({
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '24px',
+  height: '24px',
+  borderRadius: '50%',
+  color: 'ws.khaki',
+  opacity: 0.6,
+  fontSize: '16px',
+  transition: 'opacity 120ms',
+  _hover: { opacity: 1 },
+  _active: { opacity: 1 },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+});
 const skipBtn = css({
   border: 'none',
   background: 'transparent',
@@ -87,9 +109,13 @@ export interface MiniGameProps {
   readonly wordsRepository?: WordsRepository;
   // Signals when the on-screen keyboard is docked so the host can hide the bottom nav it would overlap.
   readonly onKeyboardToggle?: (open: boolean) => void;
+  // Plays the shared word-validated cue on a correct guess; self-gates on the mute preference.
+  readonly soundPlayer?: SoundPlayer;
+  // Backs the one-tap mute shortcut under the word; shares the global sound preference.
+  readonly soundStore?: SoundStore;
 }
 
-export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGameProps) {
+export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPlayer, soundStore }: MiniGameProps) {
   const touchPrimary = useTouchPrimary();
   const [pool, setPool] = useState<ReadonlyArray<SampleWord>>([]);
   // Always start in the skeleton; the prerender has no repository, so a hard-coded clue would flash before the real one loads.
@@ -107,7 +133,6 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
   // Discreet "checking…" pulse while a slow server validation is in flight (gated by a short delay so fast checks never flash it).
   const [validating, setValidating] = useState(false);
   const validateTimer = useRef<number | null>(null);
-  const [passerUnlocked, setPasserUnlocked] = useState(false);
   const streakRef = useRef(0);
   const bestRef = useRef(0);
   const refs = useRef<Array<HTMLInputElement | null>>([]);
@@ -177,7 +202,6 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
     setIdx(toIdx);
     setSolved(false);
     setWrong(false);
-    // passerUnlocked is intentionally NOT reset: once a wrong guess reveals Passer, it stays for the session.
   };
 
   // Queue a fresh shuffled batch when the pool nears exhaustion so the game never runs out; a failure just retries later.
@@ -223,14 +247,14 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
     setWrong(false);
     setFocus(null);
     refs.current[i]?.blur();
+    soundPlayer?.playWordValidated(n);
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
     timer.current = window.setTimeout(advance, 900);
   };
-  // Wrong on completion: wobble + reveal Passer. The streak breaks on skip, not on a wrong guess.
+  // Wrong on completion: wobble. The streak breaks on skip, not on a wrong guess.
   const onWrong = () => {
     if (timer.current) window.clearTimeout(timer.current);
     setWrong(true);
-    setPasserUnlocked(true);
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([0, 28, 38, 28]);
     timer.current = window.setTimeout(() => setWrong(false), 460);
   };
@@ -346,7 +370,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
               key={i}
               className={cx(box, solved && glow, wrong && shake, showPulse && validatingPulse)}
               data-validating={showPulse ? 'true' : undefined}
-              style={solved ? { animationDelay: `${i * 60}ms` } : undefined}
+              style={solved ? { animationDelay: `${i * SOLVE_STAGGER_MS}ms` } : undefined}
             >
               <Cell state={state} letter={letters[i]} />
               <input
@@ -373,11 +397,10 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
         })}
       </div>
       <div className={skipRow}>
-        {passerUnlocked ? (
-          <button type="button" className={skipBtn} onClick={skip}>
-            Passer ›
-          </button>
-        ) : null}
+        <button type="button" className={skipBtn} onClick={skip}>
+          Passer ›
+        </button>
+        {soundStore ? <GridSoundToggle soundStore={soundStore} className={soundBtn} /> : null}
       </div>
     </div>
     {kbOpen ? (

@@ -107,6 +107,31 @@ describe('v2 LiveCoopScreen', () => {
     expect(within(roster).getByText('Amie')).toBeTruthy();
   });
 
+  it('pulses the word-validated cue when cells lock, sized to the newly-locked count', () => {
+    const soundPlayer = { playWordValidated: vi.fn(), playPuzzleSolved: vi.fn() };
+    const { rerenderScreen } = renderScreen({ soundPlayer });
+    expect(soundPlayer.playWordValidated).not.toHaveBeenCalled();
+    act(() => {
+      rerenderScreen({
+        lockedPositions: [
+          { row: 0, column: 1, lockedBy: selfId },
+          { row: 0, column: 2, lockedBy: selfId },
+        ],
+      });
+    });
+    expect(soundPlayer.playWordValidated).toHaveBeenCalledWith(2);
+    expect(soundPlayer.playPuzzleSolved).not.toHaveBeenCalled();
+  });
+
+  it('shows the one-tap mute button when a soundStore is wired, and omits it otherwise', () => {
+    const { rerenderScreen } = renderScreen();
+    expect(screen.queryByRole('button', { name: /les sons/ })).toBeNull();
+    act(() => {
+      rerenderScreen({ soundStore: { load: () => true, set: vi.fn() } });
+    });
+    expect(screen.getByRole('button', { name: 'Couper les sons' })).toBeTruthy();
+  });
+
   it('broadcasts a local edit via onCellChange', () => {
     const { props } = renderScreen();
     const input = letterInput(0, 1);
