@@ -154,6 +154,42 @@ class CoGenerationProbeTest {
         println(best.render())
     }
 
+    // Origin/main generation algorithm (default GridConstraints -> no anchors/distill/bias,
+    // identical to main) at 28x20, WITH vs WITHOUT the curated 2/3/4-letter words. Reports
+    // success rate, black density, and word-length quality (incl. 2-letter share).
+    @Test
+    fun `main algo behaviour with curated words`() {
+        val area = 28 * 20
+        for (curated in listOf(false, true)) {
+            val repo = loadRepository(curated)
+            val generator = GridGenerator(repo)
+            var n = 0; var blackSum = 0L; var minBlack = Int.MAX_VALUE; var maxBlack = 0
+            var words = 0L; var len2 = 0L
+            val lenHist = sortedMapOf<Int, Int>()
+            var sample: String? = null
+            for (i in 0 until 20) {
+                val g = generator.generate(GridConstraints(width = 28, height = 20), Random(500L + i)) ?: continue
+                n++
+                val grid = Array(20) { CharArray(28) { '#' } }
+                var b = 0
+                for ((pos, cell) in g.cells) {
+                    val r = pos.row.value; val c = pos.column.value
+                    if (cell is LetterCell) grid[r][c] = cell.letter else b++
+                }
+                blackSum += b; minBlack = minOf(minBlack, b); maxBlack = maxOf(maxBlack, b)
+                // count words by letter runs
+                for (r in 0 until 20) { var c = 0; while (c < 28) { if (grid[r][c] == '#') { c++; continue }; val st = c; while (c < 28 && grid[r][c] != '#') c++; val L = c - st; if (L >= 2) { words++; lenHist[L] = (lenHist[L] ?: 0) + 1; if (L == 2) len2++ } } }
+                for (c in 0 until 28) { var r = 0; while (r < 20) { if (grid[r][c] == '#') { r++; continue }; val st = r; while (r < 20 && grid[r][c] != '#') r++; val L = r - st; if (L >= 2) { words++; lenHist[L] = (lenHist[L] ?: 0) + 1; if (L == 2) len2++ } } }
+                if (sample == null && curated) sample = grid.joinToString("\n") { it.concatToString() }
+            }
+            println("MAINALGO curated=$curated n=$n/20 black=%.1f%%(min %.1f%% max %.1f%%) wordsAvg=%d len2Share=%.1f%%".format(
+                100.0 * blackSum / n / area, 100.0 * minBlack / area, 100.0 * maxBlack / area,
+                words / n, 100.0 * len2 / words))
+            println("  lenHist(total)=$lenHist")
+            sample?.let { println("  sample:\n$it") }
+        }
+    }
+
     // Density probe: does the PROVEN BitmaskCsp fill sparse layouts, or does the starved
     // 200-backtrack budget force perturbation (densification)? Run max-bias (sparsest seed)
     // and measure achieved black %. Compare across BASE_BUDGET_BACKTRACKS settings.
@@ -2901,7 +2937,7 @@ class CoGenerationProbeTest {
 
     // === corpus ===
 
-    private fun loadRepository(): WordRepository {
+    private fun loadRepository(curated: Boolean = true): WordRepository {
         val byText = LinkedHashMap<String, Word>()
         val sources =
             listOfNotNull(
@@ -2910,7 +2946,7 @@ class CoGenerationProbeTest {
                     File("grid/infrastructure/src/main/resources/words/words-fr.csv"),
                 ).firstOrNull { it.exists() },
                 // Curated mots-fléchés short fillers (acronyms, sigles, missing common short words).
-                sequenceOf(
+                if (!curated) null else sequenceOf(
                     File("../../data/curated/mots_fleches_short_fr.csv"),
                     File("data/curated/mots_fleches_short_fr.csv"),
                 ).firstOrNull { it.exists() },
