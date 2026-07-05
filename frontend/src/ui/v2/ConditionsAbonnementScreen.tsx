@@ -63,7 +63,7 @@ export function ConditionsAbonnementScreen() {
         <header>
           <h1 className={title}>Conditions générales de vente</h1>
           <p className={lede}>Abonnement WordSparrow — les règles de la souscription payante.</p>
-          <p className={updated}>Dernière mise à jour : 4 juillet 2026 — Version {CGV_VERSION}</p>
+          <p className={updated}>Dernière mise à jour : 5 juillet 2026 — Version {CGV_VERSION}</p>
         </header>
 
         <Article heading="Article 1 — Objet et champ d'application">
@@ -267,9 +267,9 @@ export function ConditionsAbonnementScreen() {
           <P>
             Lorsque ces conditions sont réunies, l&apos;Abonné perd son droit de rétractation dès le
             début de la fourniture du Contenu Abonné ; la confirmation de cet accord lui est adressée
-            sur support durable. À défaut d&apos;un tel consentement, l&apos;accès est différé
-            jusqu&apos;à l&apos;expiration du délai de rétractation, ou l&apos;Abonné conserve son droit
-            de rétractation dans les conditions de droit commun.
+            sur support durable. Le Contenu Abonné étant fourni immédiatement, ce double consentement
+            conditionne la validation de la commande : à défaut, l&apos;Abonnement ne peut être
+            souscrit. L&apos;Abonné demeure libre de ne pas souscrire.
           </P>
         </Article>
 
