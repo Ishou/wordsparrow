@@ -68,6 +68,14 @@ export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
     // reuse mentions-légales OG until a dedicated card ships
     ogImagePath: '/og-mentions-legales.png',
   },
+  {
+    path: '/remerciements',
+    title: 'Remerciements — WordSparrow',
+    description:
+      'Merci aux logiciels libres, aux fontes et aux dictionnaires bénévoles qui font vivre WordSparrow.',
+    // reuse mentions-légales OG until a dedicated card ships
+    ogImagePath: '/og-mentions-legales.png',
+  },
 ];
 
 export interface PrerenderRoute {

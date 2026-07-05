@@ -66,8 +66,18 @@ export function MentionsLegalesScreen() {
           <h2 className={sectionHeading}>Propriété intellectuelle</h2>
           <p className={sectionBody}>
             Le code source de WordSparrow est publié sous licence FSL-1.1-MIT (Functional Source
-            License 1.1, Apache MIT future). Voir le dépôt public du projet pour les conditions
+            License 1.1, MIT dans le futur). Voir le dépôt public du projet pour les conditions
             d&apos;utilisation, de modification et de redistribution.
+          </p>
+          <p className={sectionBody}>
+            <a className={link} href="/third-party-licenses.txt">
+              Licences des logiciels tiers
+            </a>{' '}
+            embarqués dans l&apos;application — et nos{' '}
+            <Link className={link} to="/remerciements">
+              remerciements
+            </Link>{' '}
+            à celles et ceux qui les font vivre.
           </p>
         </section>
 
