@@ -377,7 +377,7 @@ Subcommands relevant to clue-AI work — see `grid/worker/src/main/kotlin/com/bl
 - `ingest-dbnary` — parses `data/dbnary/dbnary_fr.csv` into the `dbnary` table.
 - `derive-synonym-clues` — SQL-only synonym derivation per ADR-0024.
 - `ingest-clue-candidates` — bulk-loads the LoRA-generated CSV into `clue_candidates`. Required columns: `lemma, clue_text, source`. Optional: `model_version, confidence`. `--truncate` deletes existing rows for the given `--source` before inserting (idempotent re-runs); `--source <override>` and `--model-version <override>` set those columns globally. **This is the only ingestion path for LoRA output** — there's no in-worker generation lane.
-- `export-words` — selects the per-lemma top candidate per `findTopBySourcePriority`, writes the committed CSV (`grid/api/src/main/resources/words/words-<lang>.csv`). Sorted by `(language, word)` for stable git diffs. Idempotent.
+- `export-words` — selects the per-lemma top candidate per `findTopBySourcePriority`, writes the committed CSV (`grid/infrastructure/src/main/resources/words/words-<lang>.csv`). Sorted by `(language, word)` for stable git diffs. Idempotent.
 
 Cross-layer rules in this corner are the same as for the rest of the JVM backend (see the `jvm-backend` skill): `domain` types like `ClueCandidate` are pure Kotlin, `application` defines the ports, `infrastructure` provides JDBC adapters, `worker` wires Clikt subcommands to use cases.
 
