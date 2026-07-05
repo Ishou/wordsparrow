@@ -259,6 +259,10 @@ ADR-0095  grid/domain/src/main/kotlin/com/bliss/grid/domain/generation/LayoutAnc
 ADR-0095  grid/domain/src/main/kotlin/com/bliss/grid/domain/generation/GridConstraints.kt  Per-axis run caps lTargetHorizontal/lTargetVertical + anchorCount/anchorLength (default off; daily = 11/8, anchor 3). Do NOT re-add distillBudget (falsified: distiller disables perturbation)
 ADR-0095  grid/application/src/main/kotlin/com/bliss/grid/application/puzzle/PuzzleConstraints.kt  Daily size split: dailyPuzzleConstraints() = 22×15 (re-scaled knobs anchor 3/len 10, lH 9/lV 6), distinct from defaultPuzzleConstraints() 28×20 API default
 # ADR-0095: low-density daily generation — LayoutAnchorer carves K targeted long horizontal runs into fresh seeds so perturbation stays on and boards stay fillable; rejected LayoutDistiller (disables perturbation, Konsist-unsafe currentTimeMillis)
+ADR-0096  grid/domain/src/main/kotlin/com/bliss/grid/domain/model/Word.kt  Word.separators: A-Z letter run + hyphen offset metadata (1..len-1, strictly increasing); compound display only, not cells/validation
+ADR-0096  grid/infrastructure/src/main/kotlin/com/bliss/grid/infrastructure/persistence/CsvWordRepository.kt  Ingest folds interior hyphens into separator offsets (was: drop non-A-Z); other non-A-Z chars still drop
+ADR-0096  grid/api/openapi.yaml  DefinitionCell.separators (offsets, default []); Clue unchanged
+ADR-0096  frontend/src/ui/components/grid/PuzzleBoard.tsx  Hyphen overlay drawn in the inter-cell GAP along the arrow axis
 ```
 
 ## Adding entries
