@@ -7,6 +7,7 @@ import assertk.assertions.isNull
 import com.bliss.grid.domain.model.Word
 import com.bliss.grid.domain.validation.GridValidator
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import kotlin.random.Random
 
 class GridGeneratorTest {
@@ -41,6 +42,27 @@ class GridGeneratorTest {
     }
 
     @Test
+    fun `per-axis lTarget and anchor still produce structurally valid grids`() {
+        val generator = GridGenerator(ListWordRepository(SMALL_FRENCH_WORDS))
+        for (seed in 1L..40L) {
+            val grid =
+                generator.generate(
+                    GridConstraints(
+                        width = 7,
+                        height = 7,
+                        anchorCount = 1,
+                        anchorLength = 5,
+                        lTargetHorizontal = 5,
+                        lTargetVertical = 4,
+                    ),
+                    Random(seed),
+                ) ?: continue
+            assertThat(validator.validate(grid)).isEmpty()
+            return
+        }
+    }
+
+    @Test
     fun `different random seeds produce different grids`() {
         val generator = GridGenerator(ListWordRepository(SMALL_FRENCH_WORDS))
         val constraints = GridConstraints(width = 5, height = 5)
@@ -49,6 +71,54 @@ class GridGeneratorTest {
         if (grid1 != null && grid2 != null) {
             assertThat(grid1.cells).isNotEqualTo(grid2.cells)
         }
+    }
+
+    @Test
+    fun `reseedOrPerturb re-carves anchor runs on a forced full re-seed`() {
+        val generator = GridGenerator(ListWordRepository(DENSE_SYNTHETIC_WORDS))
+        val lex = Lexicon(ListWordRepository(DENSE_SYNTHETIC_WORDS))
+        val lUseful = lex.usefulLength
+        for (seed in 1L..40L) {
+            val reseeded =
+                generator.reseedOrPerturb(
+                    cells = CellArray(7, 7),
+                    w = 7,
+                    h = 7,
+                    minLen = 2,
+                    lTarget = 5,
+                    lUseful = lUseful,
+                    lTargetH = 5,
+                    lTargetV = 4,
+                    hotCells = emptyList(),
+                    consecFails = GenerationKnobs.CONSEC_RESEED,
+                    random = Random(seed),
+                    blackRatio = GenerationKnobs.DEFAULT_BLACK_RATIO,
+                    lMinGood = 2,
+                    whitenP = 0.4,
+                    lengthTwoPenalty = 0.0,
+                    lex = lex,
+                    anchorCount = 1,
+                    anchorLength = 6,
+                )
+            if (maxRowRun(reseeded) >= 6) return
+        }
+        fail("no seed produced an anchor-carved run on the full-re-seed branch across 40 attempts")
+    }
+
+    private fun maxRowRun(cells: CellArray): Int {
+        var best = 0
+        for (r in 0 until cells.height) {
+            var run = 0
+            for (c in 0 until cells.width) {
+                if (cells.isBlack(r, c)) {
+                    run = 0
+                } else {
+                    run++
+                    if (run > best) best = run
+                }
+            }
+        }
+        return best
     }
 
     /** Guards that [GridGenerator.generate] forwards cooldownPolicy to the filler — see ADR-0031. */

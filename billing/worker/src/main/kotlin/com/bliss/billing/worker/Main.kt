@@ -156,7 +156,7 @@ private fun chatelWindow(): ChatelWindow {
     return if (minDays == null && maxDays == null) {
         ChatelWindow.DEFAULT
     } else {
-        ChatelWindow(Duration.ofDays(minDays ?: 30L), Duration.ofDays(maxDays ?: 45L))
+        ChatelWindow(Duration.ofDays(minDays ?: 30L), Duration.ofDays(maxDays ?: 60L))
     }
 }
 
@@ -193,15 +193,18 @@ private fun renewalNotifier(
     }
 }
 
-private fun brevoConfigOrNull(): BillingBrevoConfig? {
-    if (System.getenv("BILLING_EMAIL_ENABLED")?.toBooleanStrictOrNull() != true) return null
-    val apiKey = System.getenv("BREVO_API_KEY")
-    if (apiKey.isNullOrBlank()) return null
+private fun brevoConfigOrNull(): BillingBrevoConfig? = resolveBrevoConfig()
+
+// Email-enabled implies Brevo is required: a missing/blank BREVO_API_KEY with the flag on is a loud boot error, never a silent no-op that drops legally-mandated mail (ADR-0007 fail-fast, mirrors BillingApiConfig).
+internal fun resolveBrevoConfig(env: (String) -> String? = System::getenv): BillingBrevoConfig? {
+    if (env("BILLING_EMAIL_ENABLED")?.toBooleanStrictOrNull() != true) return null
+    val apiKey = env("BREVO_API_KEY")
+    if (apiKey.isNullOrBlank()) error("BILLING_EMAIL_ENABLED=true requires BREVO_API_KEY")
     return BillingBrevoConfig(
         apiKey = apiKey,
-        senderEmail = System.getenv("BREVO_SENDER_EMAIL") ?: "abonnement@wordsparrow.io",
-        senderName = System.getenv("BREVO_SENDER_NAME") ?: "WordSparrow – Abonnement",
-        replyTo = System.getenv("BREVO_REPLY_TO") ?: "contact@wordsparrow.io",
+        senderEmail = env("BREVO_SENDER_EMAIL") ?: "abonnement@wordsparrow.io",
+        senderName = env("BREVO_SENDER_NAME") ?: "WordSparrow – Abonnement",
+        replyTo = env("BREVO_REPLY_TO") ?: "contact@wordsparrow.io",
     )
 }
 

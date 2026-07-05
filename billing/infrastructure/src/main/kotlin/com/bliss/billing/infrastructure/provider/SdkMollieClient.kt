@@ -238,8 +238,14 @@ class SdkMollieClient(
                         .map { it.embedded().mandates() }
                         .orElse(emptyList())
                         .asSequence()
-                }.map { MollieMandate(id = it.id(), status = it.status().value()) }
-                .toList()
+                }.map {
+                    MollieMandate(
+                        id = it.id(),
+                        status = it.status().value(),
+                        // Mollie createdAt carries an explicit offset (e.g. +00:00); tolerate a malformed value so mandate selection never throws on a parse.
+                        createdAt = runCatching { OffsetDateTime.parse(it.createdAt()).toInstant() }.getOrNull(),
+                    )
+                }.toList()
         }
 
     override suspend fun listAllSubscriptions(): List<MollieSubscription> =

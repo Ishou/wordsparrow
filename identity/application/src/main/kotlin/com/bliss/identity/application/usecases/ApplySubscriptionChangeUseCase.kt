@@ -5,6 +5,7 @@ import com.bliss.identity.application.ports.UserRepository
 import com.bliss.identity.domain.user.SubscriptionTier
 import com.bliss.identity.domain.user.UserId
 import com.bliss.identity.domain.user.UserSubscription
+import org.slf4j.LoggerFactory
 import java.time.Instant
 
 data class SubscriptionChange(
@@ -37,13 +38,18 @@ class ApplySubscriptionChangeUseCase(
             if (change.status.lowercase() in TERMINAL_STATUSES) {
                 SubscriptionTier.FREE
             } else {
-                SubscriptionTier.fromWire(change.tier)
+                SubscriptionTier.fromWireOrNull(change.tier) ?: run {
+                    log.warn("subscription_tier_unrecognized user_id={} tier={}", change.userId.value, change.tier)
+                    SubscriptionTier.FREE
+                }
             }
         subscriptions.upsert(UserSubscription(change.userId, tier, change.changedAt))
         return SubscriptionChangeOutcome.Applied(tier)
     }
 
     private companion object {
+        val log = LoggerFactory.getLogger(ApplySubscriptionChangeUseCase::class.java)
+
         // Terminal status drops the user to free regardless of tier (ADR-0080); "canceled" matches billing's wire spelling.
         val TERMINAL_STATUSES = setOf("canceled", "expired")
     }

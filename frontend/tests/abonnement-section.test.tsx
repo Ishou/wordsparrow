@@ -25,6 +25,7 @@ const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 const ACTIVE_VIEW: SubscriptionView = { tier: 'subscriber', status: 'active', periodEnd: '2026-08-01T00:00:00Z' };
 const PENDING_VIEW: SubscriptionView = { tier: 'subscriber', status: 'pending_cancellation', periodEnd: '2026-08-01T00:00:00Z' };
 const CANCELED_VIEW: SubscriptionView = { tier: 'subscriber', status: 'canceled', periodEnd: '2026-07-14T00:00:00Z' };
+const PAST_DUE_VIEW: SubscriptionView = { tier: 'subscriber', status: 'past_due', periodEnd: '2026-08-01T00:00:00Z' };
 
 function fakeBillingClient(getSubscription: BillingClient['getSubscription'], overrides: Partial<BillingClient> = {}): BillingClient {
   return {
@@ -115,6 +116,21 @@ describe('AbonnementSection états', () => {
     expect(screen.getByText(/sans pression/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Me réabonner' }).getAttribute('href')).toBe('/abonnement');
     expect(screen.queryByRole('button', { name: 'Reprendre mon abonnement' })).toBeNull();
+  });
+
+  it('renders the past_due état truthfully: still Accès complet, a recovery note, and a résilier action', async () => {
+    const client = fakeBillingClient(vi.fn().mockResolvedValue(PAST_DUE_VIEW));
+    render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
+
+    expect(await screen.findByText('Accès complet')).toBeInTheDocument();
+    expect(screen.getByText('Paiement en attente')).toBeInTheDocument();
+    expect(screen.getByText(/ton dernier prélèvement a échoué/)).toBeInTheDocument();
+    expect(screen.getByText(/on réessaie\s+automatiquement/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'contact@wordsparrow.io' }).getAttribute('href')).toBe('mailto:contact@wordsparrow.io');
+    // never silently "Version gratuite" — a paying-but-failed customer keeps the subscriber framing.
+    expect(screen.queryByText('Version gratuite')).toBeNull();
+    // résilier stays reachable in past_due (backend allows PAST_DUE → pending_cancellation).
+    expect(screen.getByRole('button', { name: /Résilier l'abonnement/ })).toBeInTheDocument();
   });
 
   it('renders the never-subscribed free état neutrally, without an ended badge', async () => {

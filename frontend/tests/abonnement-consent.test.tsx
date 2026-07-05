@@ -147,6 +147,18 @@ describe('AbonnementOffer consent gate (ADR-0094)', () => {
     expect(assign).toHaveBeenCalledWith('https://checkout.test/session/abc');
   });
 
+  it('announces the confirmation step to screen readers via a status region', async () => {
+    render(<AbonnementOffer client={fakeBillingClient()} />, { wrapper: Wrapper });
+
+    fireEvent.click(cgvBox());
+    fireEvent.click(waiverBox());
+    await act(async () => {
+      fireEvent.click(subscribeButton());
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent(/Étape de confirmation/);
+  });
+
   it('reopens the review step when a choice changes after reaching confirm', async () => {
     render(<AbonnementOffer client={fakeBillingClient()} />, { wrapper: Wrapper });
 

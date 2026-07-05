@@ -177,7 +177,7 @@ class PostgresConsentRepositoryTest {
         }
 
     @Test
-    fun `findLatestEmail is null when the latest consent row has no email`() =
+    fun `findLatestEmail returns the latest non-null email even when a newer row has none`() =
         runTest {
             val userId = UUID.randomUUID()
             repo.record(
@@ -193,7 +193,7 @@ class PostgresConsentRepositoryTest {
                 acceptedAt.plusSeconds(1),
             )
 
-            assertThat(repo.findLatestEmail(userId)).isEqualTo(null)
+            assertThat(repo.findLatestEmail(userId)).isEqualTo("old@example.com")
         }
 
     private data class Row(

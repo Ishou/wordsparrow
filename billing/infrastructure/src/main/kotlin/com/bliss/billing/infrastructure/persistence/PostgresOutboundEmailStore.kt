@@ -49,10 +49,37 @@ class PostgresOutboundEmailStore(
                 conn.prepareStatement(CLAIM_DUE_SQL).use { stmt ->
                     stmt.setObject(1, toOffset(now))
                     stmt.setInt(2, limit)
+                    stmt.setObject(3, toOffset(now.plus(CLAIM_LEASE)))
                     stmt.executeQuery().use { rs ->
                         buildList {
                             while (rs.next()) add(rs.toRecord())
                         }
+                    }
+                }
+            }
+        }
+
+    override suspend fun claim(
+        id: UUID,
+        now: Instant,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(CLAIM_ONE_SQL).use { stmt ->
+                    stmt.setObject(1, toOffset(now.plus(CLAIM_LEASE)))
+                    stmt.setObject(2, id)
+                    stmt.setObject(3, toOffset(now))
+                    stmt.executeUpdate() > 0
+                }
+            }
+        }
+
+    override suspend fun pendingBacklog(): Int =
+        withContext(Dispatchers.IO) {
+            dataSource.connection.use { conn ->
+                conn.prepareStatement(BACKLOG_SQL).use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) rs.getInt(1) else 0
                     }
                 }
             }
@@ -134,9 +161,21 @@ class PostgresOutboundEmailStore(
         private const val INSERT_SQL =
             "INSERT INTO billing_outbound_emails ($COLUMNS) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (dedupe_key) DO NOTHING"
+
+        // FOR UPDATE SKIP LOCKED + a next_attempt_at lease is the canonical Postgres claim: the CTE locks a batch no concurrent drain can see, then the UPDATE leases them forward so the same rows are not re-claimed until markSent/recordFailure/markFailed or the lease lapses.
+        private val CLAIM_LEASE: java.time.Duration = java.time.Duration.ofMinutes(5)
         private const val CLAIM_DUE_SQL =
-            "SELECT $COLUMNS FROM billing_outbound_emails " +
-                "WHERE status = 'pending' AND next_attempt_at <= ? ORDER BY next_attempt_at ASC LIMIT ?"
+            "WITH due AS (" +
+                "SELECT id FROM billing_outbound_emails " +
+                "WHERE status = 'pending' AND next_attempt_at <= ? ORDER BY next_attempt_at ASC LIMIT ? " +
+                "FOR UPDATE SKIP LOCKED) " +
+                "UPDATE billing_outbound_emails o SET next_attempt_at = ? FROM due WHERE o.id = due.id " +
+                "RETURNING o.*"
+        private const val CLAIM_ONE_SQL =
+            "UPDATE billing_outbound_emails SET next_attempt_at = ? " +
+                "WHERE id = ? AND status = 'pending' AND next_attempt_at <= ?"
+        private const val BACKLOG_SQL =
+            "SELECT count(*) FROM billing_outbound_emails WHERE status = 'pending'"
         private const val MARK_SENT_SQL =
             "UPDATE billing_outbound_emails SET status = 'sent', sent_at = ?, next_attempt_at = NULL WHERE id = ?"
         private const val RECORD_FAILURE_SQL =

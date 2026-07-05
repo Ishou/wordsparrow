@@ -49,6 +49,8 @@ dependencies {
     testImplementation("io.kotest:kotest-property:6.1.11")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("com.lemonappdev:konsist:0.17.3")
+    // slf4j binding on the test classpath so a ListAppender can assert structured-log emission.
+    testImplementation("ch.qos.logback:logback-classic:1.5.34")
 
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")

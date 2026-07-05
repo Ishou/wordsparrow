@@ -24,9 +24,12 @@ class ExpireLapsedCancellations(
     suspend fun execute(): ExpireLapsedCancellationsSummary {
         val now = clock.now()
         val lapsed = repository.listPendingCancellationExpiredAt(now)
+        var expiredCount = 0
         for (subscription in lapsed) {
             val expired = subscription.expire()
-            repository.save(expired)
+            // Compare-and-set: skip a row a concurrent reactivate has flipped back to active between the list and this write, so the sweep never clobbers active→expired.
+            if (!repository.compareAndSetFromPendingCancellation(expired)) continue
+            expiredCount++
             publisher.publish(
                 SubscriptionChanged(
                     eventId = eventIds.newEventId(),
@@ -39,7 +42,7 @@ class ExpireLapsedCancellations(
                 ),
             )
         }
-        log.info("event=billing_expire_lapsed_cancellations_done expired={}", lapsed.size)
-        return ExpireLapsedCancellationsSummary(lapsed.size)
+        log.info("event=billing_expire_lapsed_cancellations_done expired={}", expiredCount)
+        return ExpireLapsedCancellationsSummary(expiredCount)
     }
 }

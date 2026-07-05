@@ -88,7 +88,7 @@ class SendRenewalNoticesTest {
     @Test
     fun `excludes an annual subscription whose term is still too far off`() =
         runTest {
-            seed("sub_far", Cadence.YEARLY, now.plus(Duration.ofDays(60)))
+            seed("sub_far", Cadence.YEARLY, now.plus(Duration.ofDays(90)))
 
             useCase.execute()
 

@@ -7,6 +7,7 @@ import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isLessThan
 import com.bliss.grid.domain.generation.ClueCooldownPolicy
+import com.bliss.grid.domain.model.ClueCell
 import com.bliss.grid.domain.model.Column
 import com.bliss.grid.domain.model.Direction
 import com.bliss.grid.domain.model.Grid
@@ -171,6 +172,57 @@ class EnsureUpcomingDailiesUseCaseTest {
     }
 
     @Test
+    fun `best-of-N keeps the sparsest of N candidate grids`() {
+        val repo = TrackingPuzzleRepository()
+        val definitionCellCounts = listOf(5, 2, 4)
+        val innerAttempts = 100
+        val port =
+            RecordingPort(
+                grids = { call ->
+                    val candidateIndex = (call.seed - today.toEpochDay() * 1_000_000_000L) / innerAttempts
+                    gridWithClueCellCount(definitionCellCounts[candidateIndex.toInt()])
+                },
+            )
+        val useCase =
+            EnsureUpcomingDailiesUseCase(
+                puzzleRepository = repo,
+                gridGenerationPort = port,
+                dailyPuzzleSelector = selector,
+                windowDays = 1,
+                maxAttempts = 1,
+                innerAttempts = innerAttempts,
+                bestOfN = 3,
+            )
+
+        useCase.execute(today)
+
+        assertThat(port.calls).hasSize(3)
+        val persistedClueCells =
+            repo
+                .getCurrentForDate(today)
+                ?.puzzle
+                ?.grid
+                ?.cells
+                ?.values
+                ?.count { it is ClueCell }
+        assertThat(persistedClueCells).isEqualTo(2)
+    }
+
+    @Test
+    fun `candidate times maxAttempts plus attempt composition avoids seed collisions across candidates`() {
+        val useCase = newUseCase(TrackingPuzzleRepository(), RecordingPort(grids = { _ -> null }))
+        val maxAttempts = EnsureUpcomingDailiesUseCase.DEFAULT_MAX_ATTEMPTS
+        val innerAttempts = EnsureUpcomingDailiesUseCase.DEFAULT_INNER_ATTEMPTS
+
+        val candidate0LastAttempt = 0 * maxAttempts + (maxAttempts - 1)
+        val candidate1FirstAttempt = 1 * maxAttempts + 0
+        val seedCandidate0Last = useCase.seedFor(today, candidate0LastAttempt) + (innerAttempts - 1)
+        val seedCandidate1First = useCase.seedFor(today, candidate1FirstAttempt)
+
+        assertThat(seedCandidate0Last).isLessThan(seedCandidate1First)
+    }
+
+    @Test
     fun `first day failure stops loop and remaining days are skipped not failed`() {
         val repo = TrackingPuzzleRepository()
         val port = RecordingPort(grids = { _ -> null })
@@ -205,6 +257,20 @@ class EnsureUpcomingDailiesUseCaseTest {
                 chosenClue = word.clues.first(),
             )
         return Grid.fromPlacements(width = 5, height = 5, placements = listOf(placement))
+    }
+
+    private fun gridWithClueCellCount(count: Int): Grid {
+        val placements =
+            (0 until count).map { i ->
+                val word = Word(text = "W${'A' + i}", definition = "test")
+                WordPlacement(
+                    word = word,
+                    cluePosition = Position(Row(i), Column(0)),
+                    direction = Direction.RIGHT,
+                    chosenClue = word.clues.first(),
+                )
+            }
+        return Grid.fromPlacements(width = 5, height = count.coerceAtLeast(1), placements = placements)
     }
 
     private fun newStoredPuzzle(): StoredPuzzle =

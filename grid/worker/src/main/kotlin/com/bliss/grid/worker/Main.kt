@@ -51,6 +51,8 @@ fun main(args: Array<String>) {
     exitProcess(exit)
 }
 
+private const val DAILY_BEST_OF_N: Int = 8
+
 private fun printUsage() {
     log.info(
         "usage: grid-worker --ensure-dailies | --regenerate-dailies [--start-offset N] [--window-days N] | --help",
@@ -129,6 +131,8 @@ internal fun executeAndExit(
             cooldownRepository = cooldownRepository,
             cooldownMax = cooldownMax,
             windowDays = windowDays,
+            // Offline pre-gen can afford best-of-N -> keep the sparsest daily grid (ADR-0095).
+            bestOfN = DAILY_BEST_OF_N,
         )
     val summary = useCase.execute(today, force = force)
     log.info(

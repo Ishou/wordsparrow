@@ -10,6 +10,7 @@ import { BackHeader } from './BackHeader';
 import { NotFoundScreen } from './NotFoundScreen';
 import { GateLoadingScreen } from './GateLoadingScreen';
 import { useBillingGate } from './useBillingGate';
+import { CGV_VERSION } from './cgv';
 
 type Cadence = 'mensuel' | 'annuel';
 
@@ -28,9 +29,6 @@ const CADENCES: ReadonlyArray<CadenceOption> = [
   { id: 'mensuel', label: 'Mensuel', note: 'Tu arrêtes quand tu veux', price: '2 €', cadence: '/mois' },
   { id: 'annuel', label: 'Annuel', note: 'Deux mois offerts', price: '20 €', cadence: '/an' },
 ];
-
-// CGV version rendered on this screen; must match the /conditions-abonnement page's "Version 1.0".
-const CGV_VERSION = '1.0';
 
 interface Recap {
   readonly price: string;
@@ -282,7 +280,7 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
         <CadenceSelector value={cadence} onChange={selectCadence} />
 
         <section className={recap} aria-label="Récapitulatif">
-          <h3 className={recapTitle}>Ton récapitulatif</h3>
+          <h2 className={recapTitle}>Ton récapitulatif</h2>
           <div className={recapRow}>
             <span className={recapKey}>Offre</span>
             <span className={recapVal}>Accès complet</span>
@@ -345,7 +343,7 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
         </button>
         {step === 'confirm' ? (
           <>
-            <p className={confirmHint}>Vérifie ton récapitulatif, puis confirme pour payer.</p>
+            <p className={confirmHint} role="status">Étape de confirmation : vérifie ton récapitulatif, puis confirme pour payer.</p>
             <button type="button" className={secondaryCta} onClick={() => setStep('review')} disabled={pending}>
               Modifier
             </button>

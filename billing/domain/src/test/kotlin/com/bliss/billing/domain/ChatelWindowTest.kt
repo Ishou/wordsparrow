@@ -15,9 +15,15 @@ class ChatelWindowTest {
     private fun periodEndIn(days: Long): Instant = now.plus(Duration.ofDays(days))
 
     @Test
-    fun `default window spans one to one-and-a-half months before the term`() {
+    fun `default window spans one to two months before the term`() {
         assertThat(ChatelWindow.DEFAULT.minLead).isEqualTo(Duration.ofDays(30))
-        assertThat(ChatelWindow.DEFAULT.maxLead).isEqualTo(Duration.ofDays(45))
+        assertThat(ChatelWindow.DEFAULT.maxLead).isEqualTo(Duration.ofDays(60))
+    }
+
+    @Test
+    fun `default window stays inside the legal one-to-three-month bound`() {
+        assertThat(ChatelWindow.DEFAULT.minLead >= Duration.ofDays(30)).isTrue()
+        assertThat(ChatelWindow.DEFAULT.maxLead <= Duration.ofDays(90)).isTrue()
     }
 
     @Test
@@ -26,8 +32,8 @@ class ChatelWindowTest {
     }
 
     @Test
-    fun `sends at the earliest edge exactly forty-five days before`() {
-        assertThat(window.shouldSend(now, periodEndIn(45))).isTrue()
+    fun `sends at the earliest edge exactly sixty days before`() {
+        assertThat(window.shouldSend(now, periodEndIn(60))).isTrue()
     }
 
     @Test
@@ -37,7 +43,7 @@ class ChatelWindowTest {
 
     @Test
     fun `does not send when the term is still too far off`() {
-        assertThat(window.shouldSend(now, periodEndIn(46))).isFalse()
+        assertThat(window.shouldSend(now, periodEndIn(61))).isFalse()
     }
 
     @Test

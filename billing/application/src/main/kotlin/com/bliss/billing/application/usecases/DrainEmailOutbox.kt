@@ -7,12 +7,13 @@ import com.bliss.billing.application.ports.OutboundEmailRecord
 import com.bliss.billing.application.ports.OutboundEmailStore
 import org.slf4j.LoggerFactory
 
-/** Counters from one drain pass; the worker logs them as its run summary. */
+/** Counters from one drain pass; the worker logs them as its run summary. [backlog] is the pending rows still undelivered after the pass — the signal an alert keys on for a growing delivery deficit. */
 data class DrainSummary(
     val claimed: Int,
     val sent: Int,
     val deferred: Int,
     val undeliverable: Int,
+    val backlog: Int,
 )
 
 /** Retry-drains the outbox (ADR-0094): claims due pending rows, resolves the address at send time, sends via the same [EmailSender], and on failure backs off — giving up into a terminal `failed` + a `billing_email_undeliverable` alert-log (ADR-0032 symptom) after [EmailRetryPolicy.MAX_ATTEMPTS]. Guarantees eventual delivery of the legally-mandated durable-medium emails. */
@@ -47,6 +48,7 @@ class DrainEmailOutbox(
                     if (fail(row, error.message ?: error.javaClass.simpleName)) undeliverable++ else deferred++
                 }
         }
+        val backlog = store.pendingBacklog()
         log.info(
             "event=billing_drain_email_outbox_summary claimed={} sent={} deferred={} undeliverable={}",
             due.size,
@@ -54,7 +56,9 @@ class DrainEmailOutbox(
             deferred,
             undeliverable,
         )
-        return DrainSummary(due.size, sent, deferred, undeliverable)
+        // Separate structured line so a backlog alert can key on a single stable metric.
+        log.info("event=billing_email_outbox_backlog count={}", backlog)
+        return DrainSummary(due.size, sent, deferred, undeliverable, backlog)
     }
 
     // Returns true when the row hit the terminal `failed` state (alert-logged), false when it stays pending for another retry.

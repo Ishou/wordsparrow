@@ -54,6 +54,8 @@ name: Deploy API (k8s)
 #       - bliss/wordsparrow-game-api     (already public)
 #       - bliss/wordsparrow-identity-api (NEW — must be flipped after first push)
 #       - bliss/wordsparrow-billing-api  (NEW — must be flipped after first push)
+#       - bliss/wordsparrow-billing-worker (NEW — :billing:worker CronJob image; if it
+#                                          stays private every billing worker CronJob ImagePullBackOffs)
 
 on:
   workflow_run:
@@ -79,7 +81,7 @@ on:
         required: true
         type: string
       worker-digest:
-        description: ':grid:worker image digest, format "sha256:..." — required when context=grid (ensure-dailies CronJob, ADR-0042). Ignored otherwise.'
+        description: 'worker image digest, format "sha256:..." — required for grid (ensure-dailies CronJob, ADR-0042) and billing (renewal-notice CronJob, ADR-0094); any context that ships a worker. Ignored otherwise.'
         required: false
         type: string
         default: ""
@@ -333,7 +335,7 @@ jobs:
             digest="$(cat worker-artifact/digest.txt)"
           fi
           if [ -z "$digest" ]; then
-            echo "::error::worker digest is empty — pass 'worker-digest' input on dispatch (required for grid)"
+            echo "::error::worker digest is empty — pass 'worker-digest' input on dispatch (required for grid and billing)"
             exit 1
           fi
           case "$digest" in

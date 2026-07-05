@@ -8,11 +8,13 @@ data class OfferPrice(
     val currency: String,
 )
 
-/** Seller identity mentions the durable-medium receipt must carry (ADR-0094 §5, CGV Art. 7). Defaults are ISHO IT's legal identifiers. */
+/** Seller identity mentions the durable-medium confirmation must carry (ADR-0094 §5, CGV Art. 2 and 7; art. L221-5). Defaults are ISHO IT's legal identifiers. */
 data class SellerIdentity(
     val legalName: String = "ISHO IT",
+    val postalAddress: String = "32 rue Avaulée, 92240 Malakoff, France",
     val siret: String = "851 880 401 00019",
     val vatNumber: String = "FR63 851880401",
+    val contactEmail: String = "contact@wordsparrow.io",
     val cgvUrl: String = "https://wordsparrow.io/conditions-abonnement",
 )
 
