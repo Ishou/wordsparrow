@@ -41,6 +41,27 @@ class GridGeneratorTest {
     }
 
     @Test
+    fun `per-axis lTarget and anchor still produce structurally valid grids`() {
+        val generator = GridGenerator(ListWordRepository(SMALL_FRENCH_WORDS))
+        for (seed in 1L..40L) {
+            val grid =
+                generator.generate(
+                    GridConstraints(
+                        width = 7,
+                        height = 7,
+                        anchorCount = 1,
+                        anchorLength = 5,
+                        lTargetHorizontal = 5,
+                        lTargetVertical = 4,
+                    ),
+                    Random(seed),
+                ) ?: continue
+            assertThat(validator.validate(grid)).isEmpty()
+            return
+        }
+    }
+
+    @Test
     fun `different random seeds produce different grids`() {
         val generator = GridGenerator(ListWordRepository(SMALL_FRENCH_WORDS))
         val constraints = GridConstraints(width = 5, height = 5)
