@@ -36,6 +36,8 @@ name: Build and Push Image
 #   - bliss/wordsparrow-identity-api  (NEW — first main push will create it;
 #                                      flip after PR 4.5d merges)
 #   - bliss/wordsparrow-billing-api   (NEW — created on first main push; flip visibility after #1180 merges)
+#   - bliss/wordsparrow-billing-worker (NEW — :billing:worker CronJob image; cluster pulls anonymously, so
+#                                      leaving it private ImagePullBackOffs every billing worker CronJob)
 
 on:
   push:

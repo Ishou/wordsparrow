@@ -865,6 +865,19 @@ Visit
 scroll to **Danger Zone → Change package visibility**, select
 **Public**, confirm. This is a one-time step per package.
 
+The same one-time flip is required for every package the build matrix
+creates (`build-and-push-image.yml`'s header holds the authoritative
+list). Worker-image packages are the easiest to miss because nothing
+serves live traffic from them — they back CronJobs, so a package left
+private surfaces as `ImagePullBackOff` on the Job pod, not a failed
+deploy:
+
+- `bliss/wordsparrow-worker` (grid) — daily-puzzle ensure-dailies
+  CronJob (ADR-0042).
+- `bliss/wordsparrow-billing-worker` (billing) — Chatel renewal-notice,
+  email-outbox-drain, and cancellation-expiry CronJobs (ADR-0078,
+  ADR-0094 §3). If it stays private all three silently never run.
+
 ## 5. Verify
 
 ```sh
