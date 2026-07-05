@@ -19,3 +19,6 @@ Append-only ledger for human review. Procedure:
 
 - **2026-07-05** — Orchestration bootstrapped; plan + procedure + log files
   authored on `chore/lobby-owner-visibility-setup`; cron created.
+- **2026-07-05** — Phase A dispatched (ADR-0066 amendment agent). Opened
+  **PR #1407** (`docs/adr-0066-owner-visibility-parity`), MERGEABLE, CI
+  running. Waiting on blocking checks + §6a review before merge.
