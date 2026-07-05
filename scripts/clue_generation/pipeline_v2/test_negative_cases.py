@@ -7,6 +7,8 @@ import sys
 import unicodedata
 from pathlib import Path
 
+import pytest
+
 from . import filters as F
 from . import normalizers as N
 from .run_pipeline import (
@@ -157,19 +159,19 @@ run_filter_test("F7-2",
                 "filter_7_tautologie", "warning",
                 "étiquette + qualificatif faible « Animal commun »")
 
-# --- Filtre 8 — LLM-juge mock (enum check) ---
+# --- Filtre 8 — juge shadow (enum check) ---
 run_filter_test("F8-1",
                 make_row("PAIN", "Aliment de base", pos="invalid_pos"),
-                "filter_8_llm_juge_mock", "reject",
+                "filter_8_judge_shadow", "reject",
                 "pos invalide")
 run_filter_test("F8-2",
                 make_row("PAIN", "Aliment de base",
                          style="invalid_style"),
-                "filter_8_llm_juge_mock", "reject",
+                "filter_8_judge_shadow", "reject",
                 "style invalide")
 run_filter_test("F8-3",
                 make_row("PAIN", "Aliment de base", force=10),
-                "filter_8_llm_juge_mock", "reject",
+                "filter_8_judge_shadow", "reject",
                 "force hors plage [1,5]")
 
 
@@ -333,3 +335,76 @@ def test_filter_10_pleonasm_accepts_legitimate_two_phrase_clue():
     r = make_row("DEPART", "Quitter en partant")
     out = F.filter_10_pleonasm(r)
     assert out.action == "accept", out.reason
+
+
+# Cas de production réels (8) — inventaire déterministe vs juge
+
+def _rejected(mot: str, definition: str, **kw) -> dict:
+    """Statut pipeline bout-en-bout d'une ligne de production."""
+    return traiter_ligne(make_row(mot, definition, **kw))
+
+
+def test_prod_uses_short_root_stem_leak_rejected():
+    """USES/user → « ...l'usure » : fuite de radical déverbal sous le seuil 5 (filtre 9)."""
+    out = _rejected("USER", "Porter jusqu’à l’usure", pos="verbe_infinitif")
+    assert out["pipeline_status"] == "reject"
+    assert out["_traces"]["filter_9_stem_leak"]["action"] == "reject"
+
+
+def test_prod_uses_short_root_stem_leak_rejected_surface_form():
+    """Forme de surface « uses » → même fuite « usure » attrapée."""
+    out = F.filter_9_stem_leak(make_row("USES", "Portes jusqu’à l’usure"))
+    assert out.action == "reject"
+
+
+def test_prod_item_bare_category_rejected():
+    """ITEM → « Objet » : étiquette catégorielle nue (filtre 7)."""
+    out = _rejected("ITEM", "Objet")
+    assert out["pipeline_status"] == "reject"
+    assert out["_traces"]["filter_7_tautologie"]["action"] == "reject"
+
+
+def test_prod_tir_action_de_prefix_rejected():
+    """TIR → « Action de viser » : préfixe stéréotype IA (filtre 4)."""
+    out = _rejected("TIR", "Action de viser")
+    assert out["pipeline_status"] == "reject"
+    assert out["_traces"]["filter_4_stereotypes_ia"]["action"] == "reject"
+
+
+# --- Différés au juge sémantique : passent tous les gates déterministes ---
+
+@pytest.mark.xfail(reason="judge-only : calque anglais 'step'→'Étape'; "
+                          "lingua non fiable sur token isolé",
+                   strict=False)
+def test_prod_step_bare_translation_judge_only():
+    """STEP → « Étape » : traduction nue d'un emprunt ; pas de gate déterministe précis."""
+    assert _rejected("STEP", "Étape")["pipeline_status"] == "reject"
+
+
+@pytest.mark.xfail(reason="judge-only : faux-ami 'faste'≠'fast'; "
+                          "'Rapide' est un mot FR valide",
+                   strict=False)
+def test_prod_faste_false_friend_judge_only():
+    """FASTE → « Rapide » : calque de l'anglais 'fast' ; erreur de sens pure."""
+    assert _rejected("FASTE", "Rapide")["pipeline_status"] == "reject"
+
+
+@pytest.mark.xfail(reason="judge-only : garble d'accord sujet-verbe issu de l'inflation",
+                   strict=False)
+def test_prod_transpireras_agreement_garble_judge_only():
+    """TRANSPIRERAS → « La sueur apparaîtras » : désaccord 3sg/2sg (artefact d'inflation)."""
+    assert _rejected("TRANSPIRERAS", "La sueur apparaîtras")["pipeline_status"] == "reject"
+
+
+@pytest.mark.xfail(reason="judge-only : garble de temps issu de l'inflation",
+                   strict=False)
+def test_prod_considerai_tense_garble_judge_only():
+    """CONSIDERAI → « Tins compte de » : passé simple malformé (artefact d'inflation)."""
+    assert _rejected("CONSIDERAI", "Tins compte de")["pipeline_status"] == "reject"
+
+
+@pytest.mark.xfail(reason="judge-only : clue inflechie malformée (artefact d'inflation)",
+                   strict=False)
+def test_prod_inflection_garble_judge_only():
+    """FIGE → « Ne plus bouge » (famille « Mises fines à la vie ») : inflexion tête malformée."""
+    assert _rejected("FIGE", "Ne plus bouge")["pipeline_status"] == "reject"
