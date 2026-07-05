@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "eval")
 from build_surface_clues import (  # noqa: E402
     _verb_number,
     classify_inflection,
+    classify_surface_inflection,
 )
 from morphology_index import MorphologyIndex  # noqa: E402
 
@@ -59,3 +60,50 @@ def test_singular_surface_with_singular_clue_is_kept() -> None:
     surface_tags = {"ipre", "3sg", "v1_itxq__a"}
     _clue, status = classify_inflection("Placer", surface_tags, idx)
     assert status == "inflected", status
+
+
+def _tenir_index() -> MorphologyIndex:
+    """`Tenir compte de` — head `tenir`, with the passé-simple rows that make `considérai/considéras` inflate to the archaic `Tins compte de`."""
+    idx = MorphologyIndex()
+    _add(idx, "tenir", "tenir", "v3__t___zz infi")
+    _add(idx, "tenir", "tins", "v3__t___zz ipsi 1sg 2sg")
+    _add(idx, "tenir", "tint", "v3__t___zz ipsi 3sg")
+    _add(idx, "tenir", "tinrent", "v3__t___zz ipsi 3pl")
+    return idx
+
+
+def test_passe_simple_first_person_is_dropped() -> None:
+    """`considérai` (1sg ipsi) cluing `Tenir compte de` inflates to the archaic `Tins compte de` — routed to `passe-simple-person` (dropped)."""
+    idx = _tenir_index()
+    clue, status = classify_surface_inflection(
+        "Tenir compte de", {"ipsi", "1sg", "v3__t___zz"}, idx)
+    assert status == "passe-simple-person", (clue, status)
+    assert clue == "Tins compte de"  # the archaic form we refuse to ship
+
+
+def test_passe_simple_second_person_is_dropped() -> None:
+    idx = _tenir_index()
+    _clue, status = classify_surface_inflection(
+        "Tenir compte de", {"ipsi", "2sg", "v3__t___zz"}, idx)
+    assert status == "passe-simple-person", status
+
+
+def test_passe_simple_third_person_is_kept() -> None:
+    """3rd-person passé simple is narrative-standard, not archaic — `considéra → "Tint compte de"` still ships."""
+    idx = _tenir_index()
+    clue, status = classify_surface_inflection(
+        "Tenir compte de", {"ipsi", "3sg", "v3__t___zz"}, idx)
+    assert status == "inflected", (clue, status)
+    assert clue == "Tint compte de"
+
+
+def test_subject_person_mismatch_flows_through_to_surface_status() -> None:
+    """The `inflect_clue` subject guard surfaces as a droppable status through the surface-tier wrapper too."""
+    idx = MorphologyIndex()
+    _add(idx, "sueur", "sueur", "nom fem sg")
+    _add(idx, "apparaître", "apparaître", "v3__i___zz infi")
+    _add(idx, "apparaître", "apparaît", "v3__i___zz ipre 3sg")
+    _add(idx, "apparaître", "apparaîtras", "v3__i___zz ifut 2sg")
+    _clue, status = classify_surface_inflection(
+        "La sueur apparaît", {"ifut", "2sg", "v3__i___zz"}, idx)
+    assert status == "subject-person-mismatch", status

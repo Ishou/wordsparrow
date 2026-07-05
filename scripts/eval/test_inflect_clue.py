@@ -690,3 +690,55 @@ def test_negation_past_participle_is_skipped() -> None:
     """`bougé → "Ne pas resté en place"`: a ppas can't restructure to a clean simple-negation, so drop it — the higher-freq present sibling supplies the grid clue (`bouge → "Se met en mouvement"`)."""
     res = inflect_clue("Ne pas rester en place", {"v1__i___zz", "ppas", "mas", "sg"}, _rester_index())
     assert res.flag == "neg-nonfinite-skipped"
+
+
+# --- Subject-bearing clue: forcing the surface person/number strands a
+# --- subject-verb disagreement inside the clue (`La sueur apparaîtras`). -----
+
+
+def _apparaitre_index() -> MorphologyIndex:
+    """`La sueur apparaît` — a subject-bearing clue whose head is the finite verb `apparaît`, preceded by the 3sg nominal subject `sueur`."""
+    idx = MorphologyIndex()
+    _add(idx, "sueur", "sueur", "nom fem sg")
+    _add(idx, "sueur", "sueurs", "nom fem pl")
+    _add(idx, "apparaître", "apparaître", "v3__i___zz infi")
+    _add(idx, "apparaître", "apparaît", "v3__i___zz ipre 3sg")
+    _add(idx, "apparaîtra", "apparaîtra", "v3__i___zz ifut 3sg")
+    _add(idx, "apparaître", "apparaîtra", "v3__i___zz ifut 3sg")
+    _add(idx, "apparaître", "apparaîtras", "v3__i___zz ifut 2sg")
+    _add(idx, "apparaître", "apparaîtront", "v3__i___zz ifut 3pl")
+    return idx
+
+
+def test_subject_bearing_clue_drops_second_person() -> None:
+    """`transpireras` (2sg ifut) cluing `La sueur apparaît` must NOT force the
+    head to 2sg (`La sueur apparaîtras` — the subject `la sueur` is 3rd person)."""
+    idx = _apparaitre_index()
+    res = inflect_clue("La sueur apparaît", {"v3__i___zz", "ifut", "2sg"}, idx)
+    assert res.flag == "subject-person-mismatch", res
+    assert res.text == "La sueur apparaît"  # original preserved for the placeholder
+
+
+def test_subject_bearing_clue_drops_number_mismatch() -> None:
+    """Same clue against a 3pl surface (`transpireront`): the singular subject `la sueur` disagrees in number with a plural head (`apparaîtront`)."""
+    idx = _apparaitre_index()
+    res = inflect_clue("La sueur apparaît", {"v3__i___zz", "ifut", "3pl"}, idx)
+    assert res.flag == "subject-person-mismatch", res
+
+
+def test_subject_bearing_clue_ships_when_person_and_number_agree() -> None:
+    """The guard must NOT fire on the agreeing case: a 3sg surface (`transpirera`) keeps the subject's person and number (`La sueur apparaîtra`)."""
+    idx = _apparaitre_index()
+    res = inflect_clue("La sueur apparaît", {"v3__i___zz", "ifut", "3sg"}, idx)
+    assert res.flag == "", res
+    assert res.text == "La sueur apparaîtra"
+
+
+def test_subjectless_clue_still_takes_second_person() -> None:
+    """No internal subject → a direct 2nd-person clue is legitimate mots-fléchés (`apparaîtras → "Viendras au jour"`); the guard must not fire."""
+    idx = MorphologyIndex()
+    _add(idx, "venir", "venir", "v3__i___zz infi")
+    _add(idx, "venir", "viendras", "v3__i___zz ifut 2sg")
+    res = inflect_clue("Venir au jour", {"v3__i___zz", "ifut", "2sg"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Viendras au jour"

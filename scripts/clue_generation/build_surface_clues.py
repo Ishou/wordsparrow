@@ -27,6 +27,13 @@ inflection_status values:
                               surface's number (singular inversion form posè
                               inflated to plural head Placent). Routed to
                               dropped — a plural clue on a singular answer.
+  - "subject-person-mismatch": clue carries its own 3rd-person nominal subject
+                              (La sueur apparaît) but the surface forced a
+                              1st/2nd person (transpireras). Routed to dropped
+                              — the person disagrees inside the clue.
+  - "passe-simple-person"   : 1st/2nd-person passé-simple surface (considérai).
+                              Routed to dropped — the inflated head reads as
+                              archaic (Tins compte de); 3rd person is kept.
   - "head-pos-mismatch"     : no clue head matches surface POS
   - "no-target-pos"         : surface POS not in {nom, adj, verbe}
   - "no-owner"              : no (lemma, pos) candidate has a clue in corpus
@@ -48,6 +55,8 @@ POS_PRECEDENCE = {"nom": 0, "adj": 1, "adv": 2, "verbe": 3}
 _NUMBER_TOK_RE = re.compile(r"[\wÀ-ÿŒœŸ]+", re.UNICODE)
 # Finite-verb person tags, incl. the inversion persons PERSON_TOKENS omits.
 _PERSON_TAGS = {"1sg", "2sg", "3sg", "1pl", "2pl", "3pl", "1isg", "2isg", "3isg"}
+# Passé-simple 1st/2nd person reads as archaic in a clue (`considérai → "Tins compte de"`); 3rd person stays (narrative-standard).
+_PASSE_SIMPLE_PERSON = {"1sg", "2sg", "1pl", "2pl", "1isg", "2isg"}
 
 
 def _verb_number(tags) -> str | None:
@@ -89,6 +98,20 @@ def classify_inflection(
         if surf_n and head_numbers and surf_n not in head_numbers:
             return res.text, "agreement-mismatch"
     return res.text, status
+
+
+def classify_surface_inflection(
+    source_clue: str, surface_tags: set[str], index: MorphologyIndex,
+) -> tuple[str, str]:
+    """`classify_inflection` plus the surface-tier passé-simple person drop: a
+    1st/2nd-person passé-simple head reads as archaic (`considérai → "Tins
+    compte de"`). The recover lane calls the raw `classify_inflection` and so
+    deliberately opts out of this drop for its curated short-form homographs."""
+    text, status = classify_inflection(source_clue, surface_tags, index)
+    if (status in ("inflected", "identity") and "ipsi" in surface_tags
+            and (surface_tags & _PASSE_SIMPLE_PERSON)):
+        return text, "passe-simple-person"
+    return text, status
 
 
 def lemma_pos_freq(lexique: Path) -> dict[tuple[str, str], int]:
@@ -227,7 +250,7 @@ def main() -> None:
                 status = "verbatim"
             else:
                 norm_tags = {normalize_tag(t) for t in winner_tags}
-                clue, status = classify_inflection(source_clue, norm_tags, index)
+                clue, status = classify_surface_inflection(source_clue, norm_tags, index)
 
             # Char-cap + wrap gate. Inflation can lengthen ("Récit imaginaire"
             # → "Récits imaginaires" gains 2 chars), so we re-check
@@ -268,9 +291,12 @@ def main() -> None:
         # to the lemma-form infinitive — shipping would re-introduce the
         # `tira → "Extraire"` tense-disagreement bug.
         # `agreement-mismatch`: inflated head number disagrees with the surface.
+        # `subject-person-mismatch`: clue's own subject disagrees with the forced surface person/number.
+        # `passe-simple-person`: 1st/2nd-person passé-simple head reads as archaic (`considérai → "Tins compte de"`).
         skipped = r.get("inflection_status") in (
             "pp-only-skipped", "pp-reflexive-skipped", "neg-nonfinite-skipped",
             "no-inflection-finite", "agreement-mismatch",
+            "subject-person-mismatch", "passe-simple-person",
         )
         if skipped or s < args.threshold:
             dropped.append(r)

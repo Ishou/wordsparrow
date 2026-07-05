@@ -135,7 +135,7 @@ class InflectionResult:
     flag: str  # '' | 'no-target-pos' | 'no-head' | 'no-inflection'
                # | 'no-inflection-finite' | 'identity' | 'head-pos-mismatch'
                # | 'pp-only-skipped' | 'pp-reflexive-skipped'
-               # | 'neg-nonfinite-skipped' | 'empty'
+               # | 'neg-nonfinite-skipped' | 'subject-person-mismatch' | 'empty'
                #
                # `no-inflection-finite` is a stricter sibling of `no-inflection`
                # for finite-verb targets (no `ppas` in target tags). When the
@@ -147,6 +147,30 @@ class InflectionResult:
                # step routes these to dropped so the runtime keeps the
                # placeholder. Non-finite defective targets (ppas/nominal/adj)
                # still emit plain `no-inflection` and ship the lemma form.
+
+
+def _nominal_subject_number(
+    tokens: list[str], head_idx: int, index: MorphologyIndex,
+) -> tuple[bool, str]:
+    """`(has_subject, number)` for a content noun preceding the head verb — the
+    clue carries its own 3rd-person grammatical subject (`La sueur apparaît`).
+    `number` is 'sg'/'pl', or '' when the noun's number is indeterminate."""
+    for tok in tokens[:head_idx]:
+        if not _is_alpha_token(tok):
+            continue
+        lo = tok.lower()
+        if lo in _FUNCTION_WORDS:
+            continue
+        if "nom" not in index.pos_classes_of_form(lo):
+            continue
+        for _lemma, tags in index.lookup_form(lo):
+            nums = tags & NUMBER_TOKENS
+            if "sg" in nums:
+                return True, "sg"
+            if "pl" in nums:
+                return True, "pl"
+        return True, ""
+    return False, ""
 
 
 def _has_reflexive_head(tokens: list[str]) -> bool:
@@ -319,6 +343,19 @@ def inflect_clue(
         # the surface morphology (e.g. surface is a verb but the clue head is
         # a noun, like "Astre du jour" cluing a verb form). Leave verbatim.
         return InflectionResult(_capitalize_first(clue), "head-pos-mismatch")
+
+    # Subject guard: a clue with its own 3rd-person nominal subject can only take a finite head that stays 3rd person and keeps the subject's number — else the surface's person/number strands a disagreement inside the clue (`La sueur apparaîtras`). Skip to placeholder; indeterminate subject number falls back to person-only.
+    if target_pos == "verbe" and (target & _FINITE_MOODS):
+        has_subject, subject_number = _nominal_subject_number(tokens, head_idx, index)
+        surface_person = target & PERSON_TOKENS
+        agrees = (
+            (subject_number == "sg" and "3sg" in surface_person)
+            or (subject_number == "pl" and "3pl" in surface_person)
+            or (not subject_number and bool(surface_person)
+                and surface_person <= {"3sg", "3pl"})
+        )
+        if has_subject and not agrees:
+            return InflectionResult(_capitalize_first(clue), "subject-person-mismatch")
 
     # PP+DObj guard: when the surface is a past participle adjectival use
     # (`forée`, `accordée`) and the lemma clue is shaped `verb + DObj`
