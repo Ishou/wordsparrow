@@ -56,3 +56,13 @@ enriched corpus.
   CronJob (a handful of puzzles/day); the interactive on-demand path keeps N=1.
 - The density win depends on the enriched short-word corpus (the sigle
   overlay); without it, aggressive anchors densify rather than thin.
+- **Daily grids are 22×15, decoupled from the 28×20 API default.** The daily
+  path builds `dailyPuzzleConstraints()` (its own size + knobs), while the
+  on-demand API generator keeps `defaultPuzzleConstraints()` at 28×20. The
+  low-density knobs are re-scaled to the smaller board — `anchorCount = 3`,
+  `anchorLength = 10`, `lTargetHorizontal = 9`, `lTargetVertical = 6` (per-axis
+  caps kept near the same fraction of each dimension as the 28×20 config).
+  Feasibility gate on the clued corpus: 12/12 fill, ~24.7% avg / 23.0% best
+  definition-cell density, <70 ms/gen — comparable to the 28×20 result.
+  Regenerating already-persisted dailies at the new size is an operator step
+  (`grid-worker --regenerate-dailies`), not part of the config change.
