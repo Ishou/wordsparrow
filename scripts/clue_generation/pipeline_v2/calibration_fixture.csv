@@ -1,0 +1,35 @@
+lemma,clue,expected_verdict,source
+STEP,Étape,BAD,cited
+ITEM,Objet,BAD,cited
+FASTE,Rapide,BAD,cited
+TIR,Action de viser,BAD,cited
+TRANSPIRERAS,La sueur apparaîtras,BAD,cited
+CONSIDERAI,Tins compte de,BAD,cited
+ALLA,Se rendit quelque part,GOOD,cited
+STEP,Cours de gym rythmée,GOOD,cited
+ITEM,Article d’un questionnaire,GOOD,cited
+ecorce,Enveloppe d’un arbre,GOOD,round11
+gite,Location de vacances,GOOD,round11
+garer,Mettre la voiture,GOOD,round11
+resumer,Raconter brièvement,GOOD,round11
+etiage,Période de basses eaux,GOOD,round11
+attenter,Porter atteinte,GOOD,round11
+camera,Enregistre les images,GOOD,round11
+derober,Enlever avec ruse,GOOD,round11
+jean,Tissu ou prénom,GOOD,round11
+glaive,Arme romaine,GOOD,round11
+rimer,Versifier,BORDERLINE,round11
+redite,Récidive ennuyeuse,BORDERLINE,round11
+planer,Glisser sans avancer,BORDERLINE,round11
+pile,Sans un écart,BORDERLINE,round11
+fierte,Digne d’orgueil,BORDERLINE,round11
+econome,Ménageur de moyens,BORDERLINE,round11
+code,Règles d’un langage,BORDERLINE,round11
+civil,Citoyen ou urbain,BAD,round11
+pature,Style d’écriture,BAD,round11
+renard,Voisin d’Astérix,BAD,round11
+roof,Couverture d’immeuble,BAD,round11
+ardoise,Style en noir,BAD,round11
+roseau,Paille du blé,BAD,round11
+cruche,Piche ou pêne,BAD,round11
+hanovrien,Style de piano,BAD,round11

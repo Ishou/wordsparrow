@@ -41,3 +41,41 @@ matrix).
 No new external data source. Training pairs come from the survey DB
 (maintainer-authored). CamemBERT backbone is the same one used by the
 existing filter lane. No DBnary definitions enter the judge artifact.
+
+## Amendment (2026-07-05): Opus-as-judge is the committed ship gate
+
+The learned CamemBERT probe never reached enforcement — held-out AUROC
+plateaued at 0.73, too weak to gate on. Meanwhile the round-11/12 eval
+work (`docs/eval/clue-gen-v0.md`) already used Opus-as-judge as the *de
+facto* ship gate, applied as one-off labeling passes
+(`data/eval/round11_opus_labels.csv`). This amendment formalizes that:
+**the committed ship gate for a round is a real Anthropic Opus call, not
+the probe.**
+
+### Decision
+- `scripts/clue_generation/pipeline_v2/llm_judge.py` is the committed
+  gate: a batched Opus call over candidates that pass the deterministic
+  `filter_1..10`, driven by a versioned rubric embedding the maintainer's
+  finalized rulings (cross-lingual/foreign-sense, sense correctness with
+  quality-over-quantity, inflection/agreement). It returns a structured
+  **GOOD / BORDERLINE / BAD** verdict per `(lemma, clue)`.
+- **Ship policy is GOOD-only.** GOOD → ship; BORDERLINE → curated-review
+  sink; BAD → drop. It is a **batch gate over candidates, not an inline
+  per-serve call.**
+- The 3rd-person passé-simple carve-out matches the C-workstream inflater
+  drop (`passe-simple-person` drops only 1st/2nd person), so the judge and
+  inflater never contradict.
+- The learned probe (`judge.py`, `filter_8_judge_shadow`) is **demoted to
+  shadow only** — score-and-log, never gates. Not removed; it remains a
+  drift signal.
+- Not a new third-party service: the Anthropic API is the established
+  judge from round-11. The API key is injected at runtime from the env,
+  never committed.
+
+### Calibration
+`scripts/clue_generation/pipeline_v2/calibration_fixture.csv` pins the 8
+cited maintainer rulings plus a stratified sample of
+`round11_opus_labels.csv` with expected verdicts;
+`test_llm_judge.py` asserts the verdict-parsing and GOOD-only ship routing
+against a mock and, when `ANTHROPIC_API_KEY` is set, runs a live confusion
+pass over the fixture (the operator's proof the rubric labels correctly).

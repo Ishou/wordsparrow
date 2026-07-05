@@ -106,7 +106,10 @@ ADR-0062  frontend/src/infrastructure/api/survey/types.ts    Pos enum regenerate
 ADR-0062  frontend/src/application/survey/types.ts           Hand-maintained Pos type drops verbe_conjugue
 ADR-0062  frontend/src/ui/components/sondage/labels.ts       POS label map drops verbe_conjugue entry
 ADR-0063  scripts/clue_generation/*judge*          Learned clue-quality judge: CamemBERT-probe shadow pre-filter at filter_8 ahead of human rating; human stays reward signal
-ADR-0063  scripts/clue_generation/pipeline_v2/judge.py  Judge pre-filter insertion point; shadow mode (score + log, accept all) until enforcement flip
+ADR-0063  scripts/clue_generation/pipeline_v2/judge.py  Learned CamemBERT probe judge — DEMOTED to shadow only (AUROC 0.73, never gates); score + log
+ADR-0063  scripts/clue_generation/pipeline_v2/llm_judge.py  Committed Opus-as-judge ship gate: GOOD/BORDERLINE/BAD verdict; GOOD-only ships, BORDERLINE→curated-review, BAD→drop; batch not inline
+ADR-0063  scripts/clue_generation/pipeline_v2/calibration_fixture.csv  8 cited maintainer rulings + round11 sample with expected verdicts; live-calibration proof of the rubric
+ADR-0063  scripts/clue_generation/pipeline_v2/run_pipeline.py  apply_ship_gate + --ship-gate flag wire the Opus judge after deterministic filter_1..10
 ADR-0064  frontend/lighthouserc.cjs                Lighthouse perf/best-practices/SEO assertions; a11y category disabled (axe canonical per ADR-0050)
 ADR-0064  .github/workflows/lighthouse.yml         Lighthouse perf baseline workflow; workflow_run on Deploy Frontend; audits the Cloudflare Pages preview URL or wordsparrow.io
 ADR-0064  .github/workflows/deploy-frontend.yml    Emits lighthouse-handoff artifact consumed by lighthouse.yml
