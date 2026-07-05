@@ -30,9 +30,7 @@ spec:
                   matchLabels: {{- include "wordsparrow-api.selectorLabels" . | nindent 20 }}
       {{- end }}
       {{- if .Values.corpus.objectStore.enabled }}
-      # ADR-0097: pull the clue corpus from the private Hetzner Object Storage
-      # bucket into a shared volume; the app reads it via $CORPUS_DIR instead
-      # of the (removed) classpath copy, so no definitions ship in the image.
+      # ADR-0097: corpus fetched from private object storage into $CORPUS_DIR; no definitions ship in the image.
       initContainers:
         - name: fetch-corpus
           image: {{ include "wordsparrow-api.fetchCorpusImage" . | quote }}
