@@ -48,7 +48,11 @@ spec:
               valueFrom: {secretKeyRef: {name: {{ .Values.corpus.objectStore.secretName }}, key: secret_key}}
             # /corpus is the only writable mount under readOnlyRootFilesystem — see volumeMounts below.
             - {name: MC_CONFIG_DIR, value: /corpus/.mc}
-          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+            # mc's image defaults to root; the runAsNonRoot pod policy needs an explicit non-root UID (fsGroup 1000 keeps /corpus writable).
+            runAsNonRoot: true
+            runAsUser: 1000
           volumeMounts:
             - {name: corpus, mountPath: /corpus}
       {{- end }}
