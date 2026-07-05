@@ -7,8 +7,8 @@ templates. Blueprint: `2026-07-05-lobby-owner-visibility.md`.
 
 ## Standing maintainer authorization (2026-07-05)
 
-Maintainer (colinutor@hotmail.com) said **"lgtm go for it + cron pls"** on
-the fix approach in the design session.
+Maintainer said **"lgtm go for it + cron pls"** on the fix approach in the
+design session (2026-07-05).
 
 - **Merge authority granted.** The orchestrator merges a phase PR when:
   every blocking check is `SUCCESS`, `mergeable: MERGEABLE`,
