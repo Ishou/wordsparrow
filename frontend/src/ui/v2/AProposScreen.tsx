@@ -43,12 +43,28 @@ export function AProposScreen() {
         <section className={contentCard}>
           <h2 className={sectionHeading}>Le projet</h2>
           <p className={sectionBody}>
-            WordSparrow est un jeu de mots fléchés imaginé et développé par{' '}
-            <strong>Colin Auberger</strong>, en indépendant, en France.
+            Je m&apos;appelle <strong>Colin Auberger</strong> et je développe WordSparrow seul, en
+            France.
           </p>
           <p className={sectionBody}>
-            Pas de grande équipe derrière : deux mains, beaucoup de patience, et l&apos;envie de faire
-            un jeu qu&apos;on ait plaisir à ouvrir chaque matin.
+            C&apos;est autant un jeu qu&apos;un terrain d&apos;apprentissage : je le fais pour
+            progresser, pour le plaisir du travail soigné, et avec l&apos;envie qu&apos;on ait plaisir
+            à l&apos;ouvrir chaque matin. Pas de grande équipe derrière — deux mains, beaucoup de
+            patience.
+          </p>
+        </section>
+
+        <section className={contentCard}>
+          <h2 className={sectionHeading}>L&apos;intelligence artificielle</h2>
+          <p className={sectionBody}>
+            Autant être clair sur la fabrication des définitions : elles sont rédigées par un modèle
+            de langage, que j&apos;entraîne et affine au fil du temps. Le résultat n&apos;est pas
+            encore parfait — il reste des définitions maladroites — et je continue de le peaufiner.
+          </p>
+          <p className={sectionBody}>
+            L&apos;IA me permet de faire vivre le projet à moindre coût, le temps qu&apos;il trouve son
+            public. Le jour où WordSparrow gagnera de l&apos;argent, je veux le consacrer à de vraies
+            plumes : des auteurs payés pour écrire les définitions.
           </p>
         </section>
 
