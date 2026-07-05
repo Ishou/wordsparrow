@@ -80,7 +80,8 @@ internal object LayoutAnchorer {
             i++
         }
         val valid =
-            h <= lUseful && vLen <= lUseful &&
+            h <= lUseful &&
+                vLen <= lUseful &&
                 (h >= minLen || vLen >= minLen) &&
                 SlotRegistry.build(cells, lexicon, minLen) != null
         if (!valid) cells.set(r, c, CellArray.BLACK)

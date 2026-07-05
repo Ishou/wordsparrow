@@ -119,6 +119,9 @@ class GridGenerator(
                         lMinGood = lMinGood,
                         whitenP = whitenP,
                         lengthTwoPenalty = constraints.lengthTwoPenalty,
+                        lex = lex,
+                        anchorCount = constraints.anchorCount,
+                        anchorLength = constraints.anchorLength,
                     )
                 perturbations++
                 continue
@@ -144,6 +147,9 @@ class GridGenerator(
                         lMinGood = lMinGood,
                         whitenP = whitenP,
                         lengthTwoPenalty = constraints.lengthTwoPenalty,
+                        lex = lex,
+                        anchorCount = constraints.anchorCount,
+                        anchorLength = constraints.anchorLength,
                     )
                 perturbations++
                 continue
@@ -193,6 +199,9 @@ class GridGenerator(
                     lMinGood = lMinGood,
                     whitenP = whitenP,
                     lengthTwoPenalty = constraints.lengthTwoPenalty,
+                    lex = lex,
+                    anchorCount = constraints.anchorCount,
+                    anchorLength = constraints.anchorLength,
                 )
             perturbations++
         }
@@ -202,7 +211,8 @@ class GridGenerator(
         return null
     }
 
-    private fun reseedOrPerturb(
+    /** Internal rather than private so tests can drive the full-re-seed branch directly. */
+    internal fun reseedOrPerturb(
         cells: CellArray,
         w: Int,
         h: Int,
@@ -218,21 +228,29 @@ class GridGenerator(
         lMinGood: Int,
         whitenP: Double,
         lengthTwoPenalty: Double,
+        lex: Lexicon,
+        anchorCount: Int,
+        anchorLength: Int,
     ): CellArray {
         if (consecFails > 0 && consecFails % GenerationKnobs.CONSEC_RESEED == 0) {
-            return BlackCellLayout.seed(
-                width = w,
-                height = h,
-                minLen = minLen,
-                lTarget = lTarget,
-                lUseful = lUseful,
-                blackRatio = blackRatio,
-                random = random,
-                lMinGood = lMinGood,
-                lengthTwoPenalty = lengthTwoPenalty,
-                lTargetHorizontal = lTargetH,
-                lTargetVertical = lTargetV,
-            )
+            val reseeded =
+                BlackCellLayout.seed(
+                    width = w,
+                    height = h,
+                    minLen = minLen,
+                    lTarget = lTarget,
+                    lUseful = lUseful,
+                    blackRatio = blackRatio,
+                    random = random,
+                    lMinGood = lMinGood,
+                    lengthTwoPenalty = lengthTwoPenalty,
+                    lTargetHorizontal = lTargetH,
+                    lTargetVertical = lTargetV,
+                )
+            if (anchorCount > 0) {
+                LayoutAnchorer.carve(reseeded, minLen, lUseful, lex, anchorCount, anchorLength)
+            }
+            return reseeded
         }
         BlackCellLayout.perturb(
             cells = cells,
