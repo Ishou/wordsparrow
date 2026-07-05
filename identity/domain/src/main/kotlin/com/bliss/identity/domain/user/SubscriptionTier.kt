@@ -10,6 +10,9 @@ enum class SubscriptionTier(
 
     companion object {
         /** Unknown or absent tier grants nothing, so it collapses to FREE. */
-        fun fromWire(raw: String): SubscriptionTier = entries.firstOrNull { it.wire == raw } ?: FREE
+        fun fromWire(raw: String): SubscriptionTier = fromWireOrNull(raw) ?: FREE
+
+        /** Null signals an unrecognized wire value so callers can surface billing↔identity drift before defaulting to FREE. */
+        fun fromWireOrNull(raw: String): SubscriptionTier? = entries.firstOrNull { it.wire == raw }
     }
 }
