@@ -36,6 +36,8 @@ data class PuzzlePayload(
         val cluePositionRow: Int,
         val cluePositionColumn: Int,
         val direction: SerializedDirection,
+        // Default keeps pre-ADR-0096 stored payloads (no field) deserializing as plain words.
+        val separators: List<Int> = emptyList(),
     )
 
     @Serializable
@@ -60,6 +62,7 @@ data class PuzzlePayload(
                         text = sp.wordText,
                         clues = sp.clues.map { WordClue(it.text, it.theme) },
                         lemma = sp.wordLemma,
+                        separators = sp.separators,
                     )
                 require(sp.chosenClueIndex in word.clues.indices) {
                     "chosenClueIndex ${sp.chosenClueIndex} out of range for ${word.clues.size} clues"
@@ -93,6 +96,7 @@ data class PuzzlePayload(
                             cluePositionRow = p.cluePosition.row.value,
                             cluePositionColumn = p.cluePosition.column.value,
                             direction = p.direction.toSerialized(),
+                            separators = p.word.separators,
                         )
                     },
             )
