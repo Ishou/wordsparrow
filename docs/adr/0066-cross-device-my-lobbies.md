@@ -138,3 +138,50 @@ PRs land in parallel.
 - **ADR-0060** — identity user roles; clarifies the cookie-authed
   principal shape consumed by `sessionCookie`.
 - **ADR-0001 §3** — schemas-first parallel-PR workflow.
+
+## Amendment 2026-07-05 — owner-visibility parity
+
+### Problem the original decision missed
+
+§1 defines the user-scoped union purely over seats where
+`userId == cookie.userId`, and §3 declared "No data migration". Both
+assumptions break for the one case that matters most on this surface: a
+lobby the signed-in player owns.
+
+Authed players are the only ones who can create a lobby (ADR-0083 gates
+`POST /v1/lobbies` on a valid cookie), so the `À plusieurs` tab always
+loads via this user-scoped path. But the owner's `lobby_players` seat is
+DELETED by the 30s WebSocket reconnect grace — `LeaveLobbyUseCase`,
+dispatched from `LobbyWebSocketRoute` when the owner navigates away or
+closes the tab. Other joiners have `user_id = NULL` (the join path never
+stamps a `userId` onto their seats). So once the owner's leave-grace
+elapses, **no seat in the lobby carries the owner's `userId`**, and
+`findByUserId` — which, unlike `findBySessionId`, has no owner arm —
+returns nothing. The started lobby disappears from the `À plusieurs` tab
+permanently. Observed in production 2026-07-05, reproducing on every
+return visit.
+
+The session-scoped path is unaffected because `findBySessionId` already
+carries an owner arm (`WHERE l.owner_session_id = ? OR EXISTS(seat.session_id = ?)`)
+that keeps the lobby visible after the leave-grace drops the owner seat.
+The user-scoped path structurally cannot mirror it: there is no
+`owner_user_id` to match against.
+
+### Decision
+
+Add a nullable `owner_user_id` column on `lobbies`, set once at lobby
+creation and never overwritten by a later save (deriving it from the
+owner's seat at save time is wrong — that seat is exactly what the leave
+we are fixing deletes). Give `findByUserId` an owner arm —
+`WHERE (owner_user_id = ? OR EXISTS(seat.user_id = ?))` — mirroring the
+existing `findBySessionId` owner arm. Legacy anon-owned rows keep
+`owner_user_id = NULL`; ADR-0083 makes every new lobby authed, so in
+practice the column is always set going forward.
+
+### Supersession
+
+This supersedes §3 ("No data migration") for this follow-up. A single
+additive, backward-compatible migration is required — expand-and-contract:
+the column is nullable, no existing row is rewritten, and the read arm
+tolerates `NULL`. The migration lands in the implementation PR that this
+amendment governs (ADR-0001 §7: this ADR merges first).

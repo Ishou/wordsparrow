@@ -121,6 +121,7 @@ ADR-0066  game/api/openapi.yaml                    Cross-device "Mes parties": n
 ADR-0066  frontend/src/ui/routes/accueil.tsx       Accueil loader picks listLobbiesForUser when auth.status === 'authed'; falls back to session-scoped listMyLobbies otherwise
 ADR-0066  frontend/src/application/game/LobbyClient.ts   LobbyClient port gains listMyLobbiesForUser() alongside listMyLobbies(sessionId)
 # ADR-0066: status flipped to Accepted — schema-first step 1 (GET /v1/users/me/lobbies) shipped in game/api/openapi.yaml. No new binding paths; existing entries above already cover it.
+ADR-0066  game/infrastructure/**/db/migration/V3__lobbies_owner_user_id.sql   Amendment 2026-07-05 owner-visibility parity: nullable owner_user_id on lobbies (set once at create, never overwritten); findByUserId gains owner arm mirroring findBySessionId; expand-and-contract (supersedes §3 "No data migration")
 ADR-0067  infra/tools-upgrade-sources.yaml           Superseded by ADR-0068; see ADR-0068 row
 ADR-0068  scripts/breaking-bump/**                   Deterministic core of the breaking-bump pipeline (routing, schema, identity)
 ADR-0068  .github/workflows/breaking-bump-*.yml      Breaking-bump dispatcher + pipeline + tests workflows; implementer forks `chore/claude-<dep>-v<to>`
