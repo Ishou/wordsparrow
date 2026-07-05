@@ -104,6 +104,7 @@ class GridToPuzzleMapper {
                                     clueId = clueIdByPlacement.getValue(placement),
                                     text = clue.definition,
                                     arrow = clue.direction.toApiArrow(),
+                                    separators = placement.word.separators,
                                 )
                         }
                     }

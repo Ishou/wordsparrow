@@ -19,6 +19,7 @@ import { GRID_INPUT_GUARDS } from './gridInputGuards';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import { CELL, GAP, STRIDE, SOLVE_STAGGER_MS, posKey, exitsRight } from './playLayout';
 import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
+import { SeparatorOverlay } from './SeparatorOverlay';
 
 const boardWrap = css({ position: 'relative', width: 'max-content' });
 const boardGrid = css({ display: 'grid', position: 'relative', zIndex: 1 });
@@ -325,6 +326,7 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
                   key={i}
                   clues={sorted.map((c) => c.text)}
                   arrows={sorted.map((c) => c.arrow)}
+                  compoundClues={sorted.map((c) => (c.separators?.length ?? 0) > 0)}
                   active={active}
                   validated={solvedDefCells?.has(posKey(row, col))}
                 />
@@ -354,6 +356,7 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
             return <div key={i} className={spacer} />;
           })}
         </div>
+        <SeparatorOverlay clues={nav.allClues} />
         {overlay}
       </div>
     </PanZoom>

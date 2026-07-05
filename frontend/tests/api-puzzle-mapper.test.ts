@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { apiPuzzleToDomain } from '@/infrastructure/api/grid/mapper';
 import type { components } from '@/infrastructure/api/grid/types';
+import type { DefinitionCell } from '@/domain';
 
 type ApiPuzzle = components['schemas']['Puzzle'];
 const baseHeader: Omit<ApiPuzzle, 'width' | 'height' | 'cells'> = {
@@ -35,7 +36,7 @@ describe('apiPuzzleToDomain', () => {
         { kind: 'block', position: { row: 0, column: 0 } },
         {
           kind: 'definition', position: { row: 0, column: 1 },
-          clueId: 'c1', text: 'Capitale', arrow: 'right',
+          clueId: 'c1', text: 'Capitale', arrow: 'right', separators: [],
         },
         { kind: 'letter', position: { row: 0, column: 2 } },
         { kind: 'letter', position: { row: 0, column: 3 } },
@@ -46,7 +47,7 @@ describe('apiPuzzleToDomain', () => {
       { kind: 'block', position: { row: 0, col: 0 } },
       {
         kind: 'definition', position: { row: 0, col: 1 },
-        clues: [{ text: 'Capitale', arrow: 'right' }],
+        clues: [{ text: 'Capitale', arrow: 'right', separators: [] }],
       },
       { kind: 'letter', position: { row: 0, col: 2 }, entry: '' },
       { kind: 'letter', position: { row: 0, col: 3 }, entry: '' },
@@ -59,9 +60,9 @@ describe('apiPuzzleToDomain', () => {
     const api: ApiPuzzle = {
       ...baseHeader, width: 2, height: 2,
       cells: [
-        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c2', text: 'Saison', arrow: 'down' },
+        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c2', text: 'Saison', arrow: 'down', separators: [] },
         { kind: 'letter', position: { row: 0, column: 1 } },
-        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c1', text: 'Astre', arrow: 'right' },
+        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c1', text: 'Astre', arrow: 'right', separators: [] },
         { kind: 'letter', position: { row: 1, column: 0 } },
       ],
     };
@@ -72,8 +73,8 @@ describe('apiPuzzleToDomain', () => {
     expect(def.kind).toBe('definition');
     if (def.kind !== 'definition') return;
     expect(def.clues).toEqual([
-      { text: 'Astre', arrow: 'right' },
-      { text: 'Saison', arrow: 'down' },
+      { text: 'Astre', arrow: 'right', separators: [] },
+      { text: 'Saison', arrow: 'down', separators: [] },
     ]);
   });
 
@@ -83,8 +84,8 @@ describe('apiPuzzleToDomain', () => {
     const api: ApiPuzzle = {
       ...baseHeader, width: 3, height: 1,
       cells: [
-        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c1', text: 'Animaux', arrow: 'down-right' },
-        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c2', text: 'Couleur', arrow: 'right' },
+        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c1', text: 'Animaux', arrow: 'down-right', separators: [] },
+        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c2', text: 'Couleur', arrow: 'right', separators: [] },
         { kind: 'letter', position: { row: 0, column: 1 } },
         { kind: 'letter', position: { row: 0, column: 2 } },
       ],
@@ -96,8 +97,8 @@ describe('apiPuzzleToDomain', () => {
     expect(def.kind).toBe('definition');
     if (def.kind !== 'definition') return;
     expect(def.clues).toEqual([
-      { text: 'Animaux', arrow: 'down-right' },
-      { text: 'Couleur', arrow: 'right' },
+      { text: 'Animaux', arrow: 'down-right', separators: [] },
+      { text: 'Couleur', arrow: 'right', separators: [] },
     ]);
   });
 
@@ -107,8 +108,8 @@ describe('apiPuzzleToDomain', () => {
     const api: ApiPuzzle = {
       ...baseHeader, width: 1, height: 3,
       cells: [
-        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c1', text: 'Planète', arrow: 'right-down' },
-        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c2', text: 'Fleuve', arrow: 'down' },
+        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c1', text: 'Planète', arrow: 'right-down', separators: [] },
+        { kind: 'definition', position: { row: 0, column: 0 }, clueId: 'c2', text: 'Fleuve', arrow: 'down', separators: [] },
         { kind: 'letter', position: { row: 1, column: 0 } },
         { kind: 'letter', position: { row: 2, column: 0 } },
       ],
@@ -120,8 +121,28 @@ describe('apiPuzzleToDomain', () => {
     expect(def.kind).toBe('definition');
     if (def.kind !== 'definition') return;
     expect(def.clues).toEqual([
-      { text: 'Planète', arrow: 'right-down' },
-      { text: 'Fleuve', arrow: 'down' },
+      { text: 'Planète', arrow: 'right-down', separators: [] },
+      { text: 'Fleuve', arrow: 'down', separators: [] },
     ]);
+  });
+
+  it('carries DefinitionCell.separators onto the domain clue', () => {
+    // ARC-EN-CIEL-style compound: hyphens precede the answer's 4th and 6th letters.
+    const oneAcrossCompoundPuzzle = (): ApiPuzzle => ({
+      ...baseHeader, width: 4, height: 1,
+      cells: [
+        {
+          kind: 'definition', position: { row: 0, column: 0 },
+          clueId: 'c1', text: 'Composé', arrow: 'right', separators: [3, 5],
+        },
+        { kind: 'letter', position: { row: 0, column: 1 } },
+        { kind: 'letter', position: { row: 0, column: 2 } },
+        { kind: 'letter', position: { row: 0, column: 3 } },
+      ],
+    });
+    const api = oneAcrossCompoundPuzzle();
+    const puzzle = apiPuzzleToDomain(api);
+    const def = puzzle.cells.find((c) => c?.kind === 'definition') as DefinitionCell;
+    expect(def.clues[0].separators).toEqual([3, 5]);
   });
 });

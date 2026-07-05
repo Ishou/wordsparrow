@@ -1,5 +1,6 @@
 package com.bliss.grid.api.dto
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -80,6 +81,7 @@ data class LetterCellDto(
     override val position: CellDto.PositionDto,
 ) : CellDto
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @SerialName("definition")
 data class DefinitionCellDto(
@@ -87,6 +89,9 @@ data class DefinitionCellDto(
     val clueId: String,
     val text: String,
     val arrow: String,
+    // Force-emit []: kotlinx omits a default list, but the generated frontend type is non-optional (schema `default: []`).
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    val separators: List<Int> = emptyList(),
 ) : CellDto
 
 @Serializable
