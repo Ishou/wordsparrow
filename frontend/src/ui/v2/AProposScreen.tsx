@@ -31,16 +31,6 @@ const thanksText = css({
   '& + &': { marginTop: '10px' },
 });
 
-const closing = css({
-  fontFamily: 'wsUi',
-  fontSize: '14px',
-  lineHeight: '1.6',
-  color: 'ws.khaki',
-  textAlign: 'center',
-  margin: 0,
-  paddingTop: '4px',
-});
-
 export function AProposScreen() {
   return (
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
@@ -53,21 +43,20 @@ export function AProposScreen() {
         <section className={contentCard}>
           <h2 className={sectionHeading}>Le projet</h2>
           <p className={sectionBody}>
-            WordSparrow est un jeu de mots fléchés imaginé et développé par <strong>ISHO IT</strong>,
-            une petite entreprise indépendante installée en France.
+            WordSparrow est un jeu de mots fléchés imaginé et développé par{' '}
+            <strong>Colin Auberger</strong>, en indépendant, en France.
           </p>
           <p className={sectionBody}>
-            Pas de grande équipe derrière : quelques mains, beaucoup de patience, et l&apos;envie de
-            faire un jeu qu&apos;on ait plaisir à ouvrir chaque matin.
+            Pas de grande équipe derrière : deux mains, beaucoup de patience, et l&apos;envie de faire
+            un jeu qu&apos;on ait plaisir à ouvrir chaque matin.
           </p>
         </section>
 
         <section className={thanksCard}>
           <h2 className={sectionHeading}>Remerciements</h2>
           <p className={thanksText}>
-            WordSparrow ne tient pas debout tout seul. Il repose sur des logiciels libres, sur des
-            polices d&apos;écriture offertes à tous, et sur un français patiemment recensé au fil des
-            années.
+            WordSparrow ne tient pas debout tout seul. Il repose sur des logiciels libres et sur des
+            polices d&apos;écriture offertes à tous.
           </p>
           <p className={thanksText}>
             Rien de tout cela ne nous appartient vraiment : on en hérite, et on essaie d&apos;en
@@ -82,67 +71,11 @@ export function AProposScreen() {
             qu&apos;on ne croisera jamais.
           </p>
           <p className={sectionBody}>
-            Merci à{' '}
-            <a className={link} href="https://react.dev" target="_blank" rel="noopener noreferrer">
-              React
-            </a>
-            ,{' '}
-            <a
-              className={link}
-              href="https://tanstack.com/router"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              TanStack Router
-            </a>
-            ,{' '}
-            <a className={link} href="https://panda-css.com" target="_blank" rel="noopener noreferrer">
-              Panda CSS
-            </a>
-            ,{' '}
-            <a className={link} href="https://ark-ui.com" target="_blank" rel="noopener noreferrer">
-              Ark UI
-            </a>
-            ,{' '}
-            <a
-              className={link}
-              href="https://phosphoricons.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Phosphor Icons
-            </a>
-            ,{' '}
-            <a
-              className={link}
-              href="https://opentelemetry.io"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              OpenTelemetry
-            </a>
-            ,{' '}
-            <a className={link} href="https://kotlinlang.org" target="_blank" rel="noopener noreferrer">
-              Kotlin
+            Ils sont bien trop nombreux pour tenir ici :{' '}
+            <a className={link} href="/third-party-licenses.txt">
+              la liste complète des licences
             </a>{' '}
-            &amp;{' '}
-            <a className={link} href="https://ktor.io" target="_blank" rel="noopener noreferrer">
-              Ktor
-            </a>
-            ,{' '}
-            <a
-              className={link}
-              href="https://www.postgresql.org"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              PostgreSQL
-            </a>
-            ,{' '}
-            <a className={link} href="https://www.mollie.com" target="_blank" rel="noopener noreferrer">
-              Mollie
-            </a>{' '}
-            — et à tout l&apos;écosystème qui gravite autour.
+            les cite un à un.
           </p>
         </section>
 
@@ -196,8 +129,8 @@ export function AProposScreen() {
         <section className={contentCard}>
           <h2 className={sectionHeading}>La langue et les mots</h2>
           <p className={sectionBody}>
-            Sans dictionnaire, pas de grille. Notre vocabulaire vient d&apos;un travail de longue
-            haleine sur le français, recensé et corrigé mot après mot, année après année.
+            Sans dictionnaire, pas de grille. Notre vocabulaire vient d&apos;un long travail de
+            recensement du français, mot après mot, année après année.
           </p>
           <p className={sectionBody}>
             Merci à{' '}
@@ -209,26 +142,18 @@ export function AProposScreen() {
             >
               Grammalecte
             </a>{' '}
-            et au projet{' '}
+            et à son dictionnaire français, au <strong>Hunspell français</strong>, et à{' '}
             <a
               className={link}
-              href="https://grammalecte.net/home.php?prj=fr"
+              href="https://kaiko.getalp.org/about-dbnary/"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Dicollecte
+              DBnary
             </a>
-            , et au dictionnaire <strong>Hunspell français</strong>.
+            , le Wiktionnaire mis en données ouvertes.
           </p>
         </section>
-
-        <p className={closing}>
-          On ne raconte ici qu&apos;une partie de l&apos;histoire :{' '}
-          <a className={link} href="/third-party-licenses.txt">
-            la liste complète des licences
-          </a>{' '}
-          est là si tu veux le détail.
-        </p>
       </article>
     </PhoneShell>
   );

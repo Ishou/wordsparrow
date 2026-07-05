@@ -247,8 +247,8 @@ export function ReglagesScreen() {
           </nav>
         ) : null}
 
-        <nav aria-label="Confidentialité &amp; légal">
-          <div className={groupLabel}>Confidentialité &amp; légal</div>
+        <nav aria-label="À propos">
+          <div className={groupLabel}>À propos</div>
           <ul className={listCard}>
             <SettingsRow icon={Lock} tone="soft" to="/confidentialite" label="Confidentialité" />
             <SettingsRow icon={FileText} tone="soft" to="/mentions-legales" label="Mentions légales" />
@@ -257,14 +257,7 @@ export function ReglagesScreen() {
               tone="soft"
               to="/conditions-abonnement"
               label="Conditions de vente"
-              last
             />
-          </ul>
-        </nav>
-
-        <nav aria-label="À propos">
-          <div className={groupLabel}>À propos</div>
-          <ul className={listCard}>
             <SettingsRow icon={Info} tone="soft" to="/a-propos" label="À propos" last />
           </ul>
         </nav>

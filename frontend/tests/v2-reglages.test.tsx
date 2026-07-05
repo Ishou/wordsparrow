@@ -76,7 +76,7 @@ describe('v2 réglages screen', () => {
   it('renders the title, the legal and help groups', async () => {
     renderReglages(stubAuth());
     expect(await screen.findByRole('heading', { level: 1, name: 'Réglages' })).toBeTruthy();
-    expect(screen.getByRole('navigation', { name: 'Confidentialité & légal' })).toBeTruthy();
+    expect(screen.getByRole('navigation', { name: 'À propos' })).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Aide' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Retour/ })).toBeTruthy();
   });
