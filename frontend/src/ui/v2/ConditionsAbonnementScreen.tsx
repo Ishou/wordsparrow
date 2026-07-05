@@ -4,6 +4,7 @@ import { css } from 'styled-system/css';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { contentCard, lede, sectionBody, sectionHeading } from './contentPage';
+import { CGV_VERSION } from './cgv';
 
 const title = css({
   fontFamily: 'wsDisplay',
@@ -62,7 +63,7 @@ export function ConditionsAbonnementScreen() {
         <header>
           <h1 className={title}>Conditions générales de vente</h1>
           <p className={lede}>Abonnement WordSparrow — les règles de la souscription payante.</p>
-          <p className={updated}>Dernière mise à jour : 4 juillet 2026 — Version 1.0</p>
+          <p className={updated}>Dernière mise à jour : 4 juillet 2026 — Version {CGV_VERSION}</p>
         </header>
 
         <Article heading="Article 1 — Objet et champ d'application">

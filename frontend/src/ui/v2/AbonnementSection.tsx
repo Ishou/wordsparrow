@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Sparkle } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
-import { pill, pillMuted, pillPending } from './statusPill';
+import { pill, pillMuted, pillPending, pillWarn } from './statusPill';
 import { BillingError, type BillingClient, type SubscriptionView } from '@/application/billing';
 import { useSubscription } from '@/ui/components/billing';
 import { Dialog, DialogDescription } from '@/ui/components/primitives';
 import { useBillingGate } from './useBillingGate';
 
-type Etat = 'free' | 'actif' | 'pending' | 'expire';
+type Etat = 'free' | 'actif' | 'pending' | 'expire' | 'past_due';
 
 const groupLabel = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'ws.eyebrow', margin: '0 6px 7px' });
 const cardWrap = css({ bg: 'ws.card', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)' });
@@ -26,9 +26,11 @@ const cancelRow = css({ display: 'flex', alignItems: 'center', width: '100%', mi
 
 const actionPad = css({ padding: '13px 15px 16px', display: 'flex', flexDirection: 'column', gap: '9px' });
 const note = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, lineHeight: '1.4' });
+const contactLink = css({ color: 'ws.sakuraDark', fontWeight: 'bold', textDecoration: 'underline' });
 const inlineError = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'bold', color: 'ws.sakuraDark', lineHeight: '1.4' });
 const primaryLink = css({ display: 'block', width: '100%', textAlign: 'center', textDecoration: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', padding: '13px', borderRadius: '13px', boxShadow: '0 8px 18px rgba(190,73,112,0.30)' });
-const primaryButton = css({ display: 'block', width: '100%', textAlign: 'center', border: 'none', cursor: 'pointer', bg: 'ws.jade', color: 'ws.clueSurface', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', padding: '13px', borderRadius: '13px', boxShadow: '0 8px 18px rgba(33,75,64,0.22)', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' }, _disabled: { opacity: 0.6, cursor: 'default' } });
+// jadeInk fill + onJadeInk (white) text clears WCAG AA; the former jade/clueSurface pairing was ~4.17:1.
+const primaryButton = css({ display: 'block', width: '100%', textAlign: 'center', border: 'none', cursor: 'pointer', bg: 'ws.jadeInk', color: 'ws.onJadeInk', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', padding: '13px', borderRadius: '13px', boxShadow: '0 8px 18px rgba(33,75,64,0.22)', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' }, _disabled: { opacity: 0.6, cursor: 'default' } });
 const loadingRow = css({ padding: '16px 15px', fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.85 });
 
 // cancel confirmation dialog buttons -------------------------------------
@@ -40,6 +42,9 @@ function etatFor(subscription: SubscriptionView | null): Etat {
   switch (subscription.status) {
     case 'active':
       return 'actif';
+    // Failed renewal; identity keeps the user on SUBSCRIBER so access continues while retries run.
+    case 'past_due':
+      return 'past_due';
     case 'pending_cancellation':
       return 'pending';
     // billing spells the ended state 'canceled' (one l); accept both.
@@ -51,7 +56,7 @@ function etatFor(subscription: SubscriptionView | null): Etat {
   }
 }
 
-const TIER_LABEL: Record<Etat, string> = { actif: 'Accès complet', pending: 'Accès complet', expire: 'Version gratuite', free: 'Version gratuite' };
+const TIER_LABEL: Record<Etat, string> = { actif: 'Accès complet', pending: 'Accès complet', past_due: 'Accès complet', expire: 'Version gratuite', free: 'Version gratuite' };
 
 function periodDateFr(iso: string): string {
   return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso));
@@ -69,6 +74,7 @@ function periodLabelFor(etat: Etat, periodEnd: string | null): string | null {
 // Only an actually-ended subscription gets a badge; never-subscribed stays a neutral, unbadged "Version gratuite".
 function StatusPill({ etat }: { readonly etat: Etat }) {
   if (etat === 'actif') return <span className={cx(pill, pillActif)}>Actif</span>;
+  if (etat === 'past_due') return <span className={cx(pill, pillWarn)}>Paiement en attente</span>;
   if (etat === 'pending') return <span className={cx(pill, pillPending)}>Résilié</span>;
   if (etat === 'expire') return <span className={cx(pill, pillMuted)}>Terminé</span>;
   return null;
@@ -165,7 +171,21 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
               </span>
             </div>
 
-            {etat === 'actif' ? (
+            {etat === 'past_due' ? (
+              <div className={actionPad}>
+                <p className={note}>
+                  Paiement en attente — ton dernier prélèvement a échoué. On réessaie
+                  automatiquement, et tu gardes ton accès en attendant. Si le problème persiste,
+                  écris-nous à{' '}
+                  <a className={contactLink} href="mailto:contact@wordsparrow.io">
+                    contact@wordsparrow.io
+                  </a>
+                  .
+                </p>
+              </div>
+            ) : null}
+
+            {etat === 'actif' || etat === 'past_due' ? (
               <>
                 <div className={divider} />
                 <button type="button" className={cancelRow} onClick={() => setConfirming(true)}>
