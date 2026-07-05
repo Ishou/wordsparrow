@@ -51,7 +51,8 @@ describe('MiniGame server verification (ADR-0076)', () => {
     await waitFor(() => {
       expect(document.querySelectorAll('[data-cell-state="solved"]').length).toBe(4);
     });
-    expect(screen.queryByRole('button', { name: /Passer/ })).toBeNull();
+    // Passer is always available now (no longer gated on a wrong guess).
+    expect(screen.getByRole('button', { name: /Passer/ })).toBeTruthy();
   });
 
   it('plays the word-validated cue (sized to the answer) only on a correct guess', async () => {
@@ -77,16 +78,17 @@ describe('MiniGame server verification (ADR-0076)', () => {
 
   it('stays silent on a wrong guess', async () => {
     const soundPlayer = { playWordValidated: vi.fn(), playPuzzleSolved: vi.fn() };
-    render(<MiniGame wordsRepository={repo(vi.fn().mockResolvedValue(false))} soundPlayer={soundPlayer} />);
+    const verifySample = vi.fn().mockResolvedValue(false);
+    render(<MiniGame wordsRepository={repo(verifySample)} soundPlayer={soundPlayer} />);
     await waitFor(() => expect(screen.queryByLabelText('Chargement du mot du jour')).toBeNull());
 
     typeWord('XYZW');
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /Passer/ })).toBeTruthy());
+    await waitFor(() => expect(verifySample).toHaveBeenCalledWith('tok-LUNE', 'XYZW'));
     expect(soundPlayer.playWordValidated).not.toHaveBeenCalled();
   });
 
-  it('drives the wrong path (Passer appears) when verifySample resolves false', async () => {
+  it('leaves the word unsolved when verifySample resolves false', async () => {
     const verifySample = vi.fn().mockResolvedValue(false);
     await renderWithWord(repo(verifySample));
 
@@ -94,9 +96,6 @@ describe('MiniGame server verification (ADR-0076)', () => {
 
     await waitFor(() => {
       expect(verifySample).toHaveBeenCalledWith('tok-LUNE', 'XYZW');
-    });
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Passer/ })).toBeTruthy();
     });
     expect(document.querySelectorAll('[data-cell-state="solved"]').length).toBe(0);
   });
@@ -130,7 +129,7 @@ describe('MiniGame server verification (ADR-0076)', () => {
 
     typeWord('XYZW');
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /Passer/ })).toBeTruthy());
+    await waitFor(() => expect(verifySample).toHaveBeenCalledWith('tok-LUNE', 'XYZW'));
     expect(document.querySelectorAll('[data-validating="true"]').length).toBe(0);
   });
 
@@ -141,7 +140,7 @@ describe('MiniGame server verification (ADR-0076)', () => {
     typeWord('XYZW');
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Passer/ })).toBeTruthy();
+      expect(verifySample).toHaveBeenCalledWith('tok-LUNE', 'XYZW');
     });
     expect(document.querySelectorAll('[data-cell-state="solved"]').length).toBe(0);
   });

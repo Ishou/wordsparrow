@@ -134,7 +134,6 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
   // Discreet "checking…" pulse while a slow server validation is in flight (gated by a short delay so fast checks never flash it).
   const [validating, setValidating] = useState(false);
   const validateTimer = useRef<number | null>(null);
-  const [passerUnlocked, setPasserUnlocked] = useState(false);
   const streakRef = useRef(0);
   const bestRef = useRef(0);
   const refs = useRef<Array<HTMLInputElement | null>>([]);
@@ -204,7 +203,6 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
     setIdx(toIdx);
     setSolved(false);
     setWrong(false);
-    // passerUnlocked is intentionally NOT reset: once a wrong guess reveals Passer, it stays for the session.
   };
 
   // Queue a fresh shuffled batch when the pool nears exhaustion so the game never runs out; a failure just retries later.
@@ -254,11 +252,10 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
     timer.current = window.setTimeout(advance, 900);
   };
-  // Wrong on completion: wobble + reveal Passer. The streak breaks on skip, not on a wrong guess.
+  // Wrong on completion: wobble. The streak breaks on skip, not on a wrong guess.
   const onWrong = () => {
     if (timer.current) window.clearTimeout(timer.current);
     setWrong(true);
-    setPasserUnlocked(true);
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([0, 28, 38, 28]);
     timer.current = window.setTimeout(() => setWrong(false), 460);
   };
@@ -401,12 +398,10 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
         })}
       </div>
       <div className={skipRow}>
+        <button type="button" className={skipBtn} onClick={skip}>
+          Passer ›
+        </button>
         {soundStore ? <GridSoundToggle soundStore={soundStore} className={soundBtn} /> : null}
-        {passerUnlocked ? (
-          <button type="button" className={skipBtn} onClick={skip}>
-            Passer ›
-          </button>
-        ) : null}
       </div>
     </div>
     {kbOpen ? (
