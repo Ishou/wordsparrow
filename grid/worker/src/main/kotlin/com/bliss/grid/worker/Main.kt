@@ -101,7 +101,7 @@ private fun runDailies(
 }
 
 private fun productionGridGenerationPort(): GridGenerationPort {
-    val wordRepository = CsvWordRepository.frenchFromClasspath()
+    val wordRepository = CsvWordRepository.frenchCorpus()
     // Per-call overrides from EnsureUpcomingDailiesUseCase replace the constructor maxAttempts at runtime.
     val generatePuzzle =
         GeneratePuzzleUseCase(

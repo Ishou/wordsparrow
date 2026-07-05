@@ -164,7 +164,7 @@ fun Application.module() {
             ?: System.getProperty("grid.api.version")
             ?: "unknown"
 
-    val wordRepository = CsvWordRepository.frenchFromClasspath()
+    val wordRepository = CsvWordRepository.frenchCorpus()
     val generatePuzzle = GeneratePuzzleUseCase(wordRepository, defaultPuzzleConstraints())
     // ADR-0076: prod injects GRID_TEASER_TOKEN_KEY via a k8s Secret; dev falls back to a fixed key.
     val teaserTokenKey =
