@@ -17,7 +17,7 @@ describe('useGridSounds', () => {
     expect(soundPlayer.playWordValidated).not.toHaveBeenCalled();
   });
 
-  it('chimes once when a word validates after a user action', () => {
+  it('pulses with the count of newly-validated cells after a user action', () => {
     const soundPlayer = makePlayer();
     const userActedRef = { current: true };
     const { rerender } = renderHook((props) => useGridSounds(props), {
@@ -25,6 +25,7 @@ describe('useGridSounds', () => {
     });
     rerender({ validatedCount: 10, won: false, userActedRef, soundPlayer });
     expect(soundPlayer.playWordValidated).toHaveBeenCalledTimes(1);
+    expect(soundPlayer.playWordValidated).toHaveBeenCalledWith(5);
   });
 
   it('plays the win cue (not the word chime) on the winning transition', () => {

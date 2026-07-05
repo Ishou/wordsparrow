@@ -13,12 +13,12 @@ export function useGridSounds({ validatedCount, won, userActedRef, soundPlayer }
   const prevCount = useRef(validatedCount);
   const prevWon = useRef(won);
   useEffect(() => {
-    const grew = validatedCount > prevCount.current;
+    const added = validatedCount - prevCount.current;
     const justWon = won && !prevWon.current;
     prevCount.current = validatedCount;
     prevWon.current = won;
     if (!soundPlayer || !userActedRef.current) return;
     if (justWon) soundPlayer.playPuzzleSolved();
-    else if (grew && !won) soundPlayer.playWordValidated();
+    else if (added > 0 && !won) soundPlayer.playWordValidated(added);
   }, [validatedCount, won, soundPlayer, userActedRef]);
 }

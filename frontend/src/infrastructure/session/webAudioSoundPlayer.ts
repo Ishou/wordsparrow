@@ -6,11 +6,20 @@ interface Note {
   readonly dur: number;
 }
 
-// D5 → A5 (a perfect fifth up): a small, consonant "click into place".
-const WORD_NOTES: readonly Note[] = [
-  { freq: 587.33, start: 0, dur: 0.12 },
-  { freq: 880.0, start: 0.06, dur: 0.14 },
-];
+// Mirrors PuzzleBoard's flatten ripple (`i * 45ms` per newly-solved cell) so the
+// sound pulses letter-by-letter in lockstep with the keycap drops.
+const RIPPLE_STAGGER = 0.045;
+// D-major pentatonic (D5 E5 F#5 A5 B5): a soft rolling run for any word length.
+const PENTATONIC: readonly number[] = [587.33, 659.25, 739.99, 880.0, 987.77];
+
+function wordPulse(cellCount: number): readonly Note[] {
+  const n = Math.max(1, cellCount);
+  const notes: Note[] = [];
+  for (let i = 0; i < n; i++) {
+    notes.push({ freq: PENTATONIC[i % PENTATONIC.length], start: i * RIPPLE_STAGGER, dur: 0.09 });
+  }
+  return notes;
+}
 
 // D5 → F#5 → A5 (an ascending major triad): a warm "done" without fanfare.
 const WIN_NOTES: readonly Note[] = [
@@ -19,7 +28,7 @@ const WIN_NOTES: readonly Note[] = [
   { freq: 880.0, start: 0.24, dur: 0.3 },
 ];
 
-const PEAK_GAIN = 0.15;
+const PEAK_GAIN = 0.13;
 
 type AudioContextCtor = new () => AudioContext;
 
@@ -62,7 +71,7 @@ export function createWebAudioSoundPlayer(isEnabled: () => boolean): SoundPlayer
   }
 
   return {
-    playWordValidated: () => play(WORD_NOTES),
+    playWordValidated: (cellCount: number) => play(wordPulse(cellCount)),
     playPuzzleSolved: () => play(WIN_NOTES),
   };
 }

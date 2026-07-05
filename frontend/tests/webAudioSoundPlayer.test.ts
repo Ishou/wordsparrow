@@ -48,15 +48,21 @@ afterEach(() => {
 describe('webAudioSoundPlayer', () => {
   it('plays nothing while muted', () => {
     const player = createWebAudioSoundPlayer(() => false);
-    player.playWordValidated();
+    player.playWordValidated(4);
     player.playPuzzleSolved();
     expect(created).toHaveLength(0);
   });
 
-  it('emits a two-note chime for a validated word', () => {
+  it('emits one tick per validated cell, matching the ripple', () => {
     const player = createWebAudioSoundPlayer(() => true);
-    player.playWordValidated();
-    expect(created[0]?.createOscillator).toHaveBeenCalledTimes(2);
+    player.playWordValidated(5);
+    expect(created[0]?.createOscillator).toHaveBeenCalledTimes(5);
+  });
+
+  it('always emits at least one tick even for a zero count', () => {
+    const player = createWebAudioSoundPlayer(() => true);
+    player.playWordValidated(0);
+    expect(created[0]?.createOscillator).toHaveBeenCalledTimes(1);
   });
 
   it('emits a three-note arpeggio for a solved puzzle', () => {
@@ -67,7 +73,7 @@ describe('webAudioSoundPlayer', () => {
 
   it('reuses a single AudioContext across plays', () => {
     const player = createWebAudioSoundPlayer(() => true);
-    player.playWordValidated();
+    player.playWordValidated(3);
     player.playPuzzleSolved();
     expect(created).toHaveLength(1);
   });
@@ -76,6 +82,6 @@ describe('webAudioSoundPlayer', () => {
     // @ts-expect-error simulate an environment without Web Audio
     globalThis.AudioContext = undefined;
     const player = createWebAudioSoundPlayer(() => true);
-    expect(() => player.playWordValidated()).not.toThrow();
+    expect(() => player.playWordValidated(4)).not.toThrow();
   });
 });
