@@ -11,11 +11,7 @@ import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import kotlin.random.Random
 
-/**
- * ADR-0095 feasibility gate for the 22×15 daily grid: proves the shipped
- * [dailyPuzzleConstraints] fill on the production corpus and reports the
- * definition-cell density. Opt-in via the `bench` tag.
- */
+/** ADR-0095 feasibility gate for the 22×15 daily grid — see ADR-0095 Consequences. */
 @Tag("bench")
 class DailyGridFeasibilityProbeTest {
     private val log = LoggerFactory.getLogger(DailyGridFeasibilityProbeTest::class.java)

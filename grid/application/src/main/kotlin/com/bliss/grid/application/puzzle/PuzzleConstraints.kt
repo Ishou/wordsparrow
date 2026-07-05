@@ -13,8 +13,7 @@ const val PUZZLE_ANCHOR_COUNT: Int = 3
 const val PUZZLE_LTARGET_HORIZONTAL: Int = 11
 const val PUZZLE_LTARGET_VERTICAL: Int = 8
 
-// Daily grids run smaller than the 28×20 API default; the low-density knobs are re-scaled to
-// 22×15 (per-axis caps kept near the same fraction of each dimension — see ADR-0095 Consequences).
+// Daily grid: re-scaled ADR-0095 knobs at 22×15 — see ADR-0095 Consequences.
 const val DAILY_PUZZLE_WIDTH: Int = 22
 const val DAILY_PUZZLE_HEIGHT: Int = 15
 const val DAILY_PUZZLE_ANCHOR_COUNT: Int = 3
