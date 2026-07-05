@@ -271,8 +271,8 @@ ADR-0096  grid/api/openapi.yaml  DefinitionCell.separators (offsets, default [])
 ADR-0096  frontend/src/ui/components/grid/PuzzleBoard.tsx  Hyphen overlay drawn in the inter-cell GAP along the arrow axis
 ADR-0097  grid/infrastructure/src/main/kotlin/com/bliss/grid/infrastructure/persistence/CsvWordRepository.kt  Corpus read path is Hetzner Object Storage via fromStream(), not the classpath CSV (supersedes ADR-0013 §8); startup fetch + cached-file fallback
 ADR-0097  grid/infrastructure/src/main/resources/words/words-fr.csv  Corpus + themed overlays leave the public repo/image; source of truth is the private wordsparrow-clue-data repo, runtime copy is a private Hetzner bucket
-ADR-0097  terraform/  Private Hetzner Object Storage bucket + scoped read-only/write keys (OpenTofu); key inventoried in docs/secrets.md
-ADR-0097  data/curated/  Clue training/eval data moves to the private wordsparrow-clue-data repo; not a public artefact
+ADR-0097  terraform/**  Private Hetzner Object Storage bucket + scoped read-only/write keys (OpenTofu); key inventoried in docs/secrets.md
+ADR-0097  data/curated/**  Clue training/eval data moves to the private wordsparrow-clue-data repo; not a public artefact
 ```
 
 ## Adding entries

@@ -71,9 +71,11 @@ CSV; it is the Hetzner bucket, sourced from the private repo.
 - **Harder:** a runtime dependency on object storage (mitigated by the cached
   fallback) and a startup fetch; one more credential to manage; the corpus no longer
   diffs in the *public* repo (it diffs in the private one).
-- **Licensing (ADR-0058):** the word list is grammalecte-derived (MPL-2.0), clues are
-  bliss-authored (CC0). Moving to private storage only *reduces* distribution; MPL-2.0
-  source-availability obligations bind on distribution and are unaffected. No new
-  external data source is introduced.
+- **Licensing (ADR-0058):** the word list is grammalecte-derived (MPL-2.0); clues are
+  bliss-authored, but ADR-0058's DBnary ShareAlike posture and mitigations (no verbatim
+  re-emission, no external weight publication) continue to apply unchanged since this
+  ADR only relocates storage, not provenance — the SA-taint question ADR-0058 leaves
+  open is not resolved here. MPL-2.0 source-availability obligations bind on
+  distribution and are unaffected. No new external data source is introduced.
 - **History scrub** force-pushes public `main`, invalidating existing clones/forks and
   requiring open PRs to rebase — a one-time, announced disruption.
