@@ -54,6 +54,28 @@ describe('MiniGame server verification (ADR-0076)', () => {
     expect(screen.queryByRole('button', { name: /Passer/ })).toBeNull();
   });
 
+  it('plays the word-validated cue (sized to the answer) only on a correct guess', async () => {
+    const soundPlayer = { playWordValidated: vi.fn(), playPuzzleSolved: vi.fn() };
+    render(<MiniGame wordsRepository={repo(vi.fn().mockResolvedValue(true))} soundPlayer={soundPlayer} />);
+    await waitFor(() => expect(screen.queryByLabelText('Chargement du mot du jour')).toBeNull());
+
+    typeWord('XYZW');
+
+    await waitFor(() => expect(soundPlayer.playWordValidated).toHaveBeenCalledWith(4));
+    expect(soundPlayer.playPuzzleSolved).not.toHaveBeenCalled();
+  });
+
+  it('stays silent on a wrong guess', async () => {
+    const soundPlayer = { playWordValidated: vi.fn(), playPuzzleSolved: vi.fn() };
+    render(<MiniGame wordsRepository={repo(vi.fn().mockResolvedValue(false))} soundPlayer={soundPlayer} />);
+    await waitFor(() => expect(screen.queryByLabelText('Chargement du mot du jour')).toBeNull());
+
+    typeWord('XYZW');
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Passer/ })).toBeTruthy());
+    expect(soundPlayer.playWordValidated).not.toHaveBeenCalled();
+  });
+
   it('drives the wrong path (Passer appears) when verifySample resolves false', async () => {
     const verifySample = vi.fn().mockResolvedValue(false);
     await renderWithWord(repo(verifySample));

@@ -48,6 +48,20 @@ describe('useGridSounds', () => {
     expect(soundPlayer.playPuzzleSolved).not.toHaveBeenCalled();
   });
 
+  it('without a userActedRef (coop), stays silent on the mount seed but pulses on later locks', () => {
+    const soundPlayer = makePlayer();
+    const { rerender } = renderHook((props) => useGridSounds(props), {
+      initialProps: { validatedCount: 12, won: false, soundPlayer },
+    });
+    // A word locks after join → pulses with the newly-added cell count.
+    rerender({ validatedCount: 17, won: false, soundPlayer });
+    expect(soundPlayer.playWordValidated).toHaveBeenCalledTimes(1);
+    expect(soundPlayer.playWordValidated).toHaveBeenCalledWith(5);
+    // Grid completes → win cue.
+    rerender({ validatedCount: 40, won: true, soundPlayer });
+    expect(soundPlayer.playPuzzleSolved).toHaveBeenCalledTimes(1);
+  });
+
   it('never throws when no player is provided', () => {
     const userActedRef = { current: true };
     expect(() =>

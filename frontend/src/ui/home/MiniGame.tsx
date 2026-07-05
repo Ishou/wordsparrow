@@ -8,6 +8,7 @@ import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import { Keyboard } from '@/ui/play/Keyboard';
 import { useBackDismiss } from '@/ui/lib/useBackDismiss';
 import type { SampleWord, WordsRepository } from '@/application';
+import type { SoundPlayer } from '@/application/session/SoundPlayer';
 
 
 const BATCH_OPTS = { minLen: 3, maxLen: 6, count: 24 } as const;
@@ -88,9 +89,11 @@ export interface MiniGameProps {
   readonly wordsRepository?: WordsRepository;
   // Signals when the on-screen keyboard is docked so the host can hide the bottom nav it would overlap.
   readonly onKeyboardToggle?: (open: boolean) => void;
+  // Plays the shared word-validated cue on a correct guess; self-gates on the mute preference.
+  readonly soundPlayer?: SoundPlayer;
 }
 
-export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGameProps) {
+export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPlayer }: MiniGameProps) {
   const touchPrimary = useTouchPrimary();
   const [pool, setPool] = useState<ReadonlyArray<SampleWord>>([]);
   // Always start in the skeleton; the prerender has no repository, so a hard-coded clue would flash before the real one loads.
@@ -224,6 +227,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle }: MiniGa
     setWrong(false);
     setFocus(null);
     refs.current[i]?.blur();
+    soundPlayer?.playWordValidated(n);
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
     timer.current = window.setTimeout(advance, 900);
   };

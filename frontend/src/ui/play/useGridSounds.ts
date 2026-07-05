@@ -4,8 +4,10 @@ import type { SoundPlayer } from '@/application/session/SoundPlayer';
 export interface UseGridSoundsArgs {
   readonly validatedCount: number;
   readonly won: boolean;
-  // Reads the same interaction gate PlayScreen uses to suppress the mount-time win celebration.
-  readonly userActedRef: { readonly current: boolean };
+  // Solo passes the interaction gate that suppresses the mount-time win celebration;
+  // coop omits it (it celebrates every server lock, and the ref-seed below already
+  // absorbs the hydration set on join).
+  readonly userActedRef?: { readonly current: boolean };
   readonly soundPlayer?: SoundPlayer;
 }
 
@@ -17,7 +19,8 @@ export function useGridSounds({ validatedCount, won, userActedRef, soundPlayer }
     const justWon = won && !prevWon.current;
     prevCount.current = validatedCount;
     prevWon.current = won;
-    if (!soundPlayer || !userActedRef.current) return;
+    const acted = userActedRef ? userActedRef.current : true;
+    if (!soundPlayer || !acted) return;
     if (justWon) soundPlayer.playPuzzleSolved();
     else if (added > 0 && !won) soundPlayer.playWordValidated(added);
   }, [validatedCount, won, soundPlayer, userActedRef]);
