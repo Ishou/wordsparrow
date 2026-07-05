@@ -1041,8 +1041,7 @@ class PostgresLobbyRepositoryTest {
         )
     }
 
-    // Minimal valid GameSessionPayload JSON shaped like a pre-ADR-0086 write: a
-    // lockedPositions entry with no `lockedBy` key (owner was never persisted).
+    // Pre-ADR-0086 write: lockedPositions entry has no lockedBy key (owner was never persisted).
     private fun legacyPayloadWithoutLockedBy(): String =
         """
         {
