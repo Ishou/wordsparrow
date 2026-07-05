@@ -5,13 +5,10 @@ import { existsSync, readFileSync, appendFileSync } from 'node:fs';
 import { VitePWA } from 'vite-plugin-pwa';
 import license from 'rollup-plugin-license';
 
-// Redistribution notice (ADR-0090). rollup-plugin-license only scans JS modules,
-// so fonts embedded through CSS url() (Hanken Grotesk, Spline Sans Mono) are invisible
-// to it. This file receives the aggregate; the companion plugin below tops it up.
+// Redistribution notice (ADR-0090); rollup-plugin-license misses CSS-url() fonts — embeddedFontLicenses() below tops up the aggregate.
 const LICENSE_OUTPUT_FILE = path.resolve(__dirname, 'dist/third-party-licenses.txt');
 
-// Append the OFL notice of every embedded-font package the JS scan missed, keyed off
-// each emitted .woff2 asset's source path. General: any CSS-embedded font is covered.
+// Tops up LICENSE_OUTPUT_FILE with the OFL notice of every embedded-font package the JS scan missed.
 function embeddedFontLicenses(): Plugin {
   return {
     name: 'embedded-font-licenses',
