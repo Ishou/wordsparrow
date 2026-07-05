@@ -20,9 +20,11 @@ const chip = css({
   // The slot is only GAP-wide on one axis; without this the flex item shrinks to it.
   flexShrink: 0,
   borderRadius: 'full',
-  background: 'linear-gradient(135deg, #f0d29a 0%, #c89456 48%, #9c6a30 100%)',
-  boxShadow: '0 1px 2.5px rgba(90,58,20,0.45), inset 0 1px 0 rgba(255,255,255,0.55)',
-  border: '0.5px solid #7a4e1a',
+  background:
+    'linear-gradient(135deg, token(colors.secondary.200) 0%, token(colors.secondary.500) 48%, token(colors.secondary.700) 100%)',
+  boxShadow:
+    '0 1px 2.5px color-mix(in srgb, token(colors.secondary.800) 45%, transparent), inset 0 1px 0 rgba(255,255,255,0.55)',
+  border: '0.5px solid token(colors.secondary.700)',
 });
 
 // Always a horizontal hyphen bar, regardless of the word's axis.
