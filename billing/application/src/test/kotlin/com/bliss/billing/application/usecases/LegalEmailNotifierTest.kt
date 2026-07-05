@@ -12,6 +12,7 @@ import com.bliss.billing.application.ports.CancellationConfirmation
 import com.bliss.billing.application.ports.Clock
 import com.bliss.billing.application.ports.ContractConfirmation
 import com.bliss.billing.application.ports.OfferPrice
+import com.bliss.billing.application.ports.OutboundEmailStore
 import com.bliss.billing.application.ports.PreRenewalNotice
 import com.bliss.billing.application.ports.RenewalReceipt
 import com.bliss.billing.application.ports.SubscriptionOffer
@@ -362,6 +363,92 @@ class LegalEmailNotifierTest {
 
             val row = store.rows.single()
             assertThat(row.status).isEqualTo(OutboundEmailStatus.PENDING)
+            assertThat(sender.sent).isEmpty()
+        }
+
+    @Test
+    fun `contract confirmation carries the full L221-5 trader identity, mediation and legal guarantee`() =
+        runTest {
+            recordConsent(waiver = false)
+
+            notifier.confirmContractFormation(contract())
+
+            val body = sender.sent.single().textBody
+            assertThat(body).contains("ISHO IT")
+            assertThat(body).contains("32 rue Avaulée, 92240 Malakoff, France")
+            assertThat(body).contains("Contact : contact@wordsparrow.io")
+            assertThat(body).contains("AME Conso")
+            assertThat(body).contains("mediationconso-ame.com")
+            assertThat(body).contains("garantie légale de conformité")
+            assertThat(body).contains("L224-25-1")
+            assertThat(body).contains("https://wordsparrow.io/conditions-abonnement")
+        }
+
+    @Test
+    fun `a second cancellation in the same period sends a distinct confirmation`() =
+        runTest {
+            val periodEnd = Instant.parse("2026-08-04T00:00:00Z")
+            val firstCancel = Instant.parse("2026-07-04T10:00:00Z")
+            val secondCancel = Instant.parse("2026-07-20T10:00:00Z")
+
+            notifier.confirmCancellation(CancellationConfirmation(userId, Tier.of("premium"), firstCancel, periodEnd))
+            notifier.confirmCancellation(CancellationConfirmation(userId, Tier.of("premium"), secondCancel, periodEnd))
+
+            assertThat(store.rows).hasSize(2)
+            assertThat(sender.sent).hasSize(2)
+        }
+
+    @Test
+    fun `a redelivered cancellation with the same timestamp does not resend`() =
+        runTest {
+            val periodEnd = Instant.parse("2026-08-04T00:00:00Z")
+            val canceledAt = Instant.parse("2026-07-04T10:00:00Z")
+
+            notifier.confirmCancellation(CancellationConfirmation(userId, Tier.of("premium"), canceledAt, periodEnd))
+            notifier.confirmCancellation(CancellationConfirmation(userId, Tier.of("premium"), canceledAt, periodEnd))
+
+            assertThat(store.rows).hasSize(1)
+            assertThat(sender.sent).hasSize(1)
+        }
+
+    @Test
+    fun `a missing price does not silently drop but signals undeliverable without enqueuing`() =
+        runTest {
+            val pricelessNotifier =
+                LegalEmailNotifier(
+                    store,
+                    sender,
+                    SubscriberEmailResolver(consents, provider),
+                    consents,
+                    SubscriptionOffer(emptyMap()),
+                    Clock { now },
+                )
+            recordConsent(waiver = false)
+
+            pricelessNotifier.confirmContractFormation(contract())
+
+            assertThat(store.rows).isEmpty()
+            assertThat(sender.sent).isEmpty()
+        }
+
+    @Test
+    fun `an immediate send lost to a concurrent drain claim leaves delivery to the drain`() =
+        runTest {
+            // A store whose claim always loses models a drain having claimed the freshly-enqueued row first.
+            val lostClaimStore =
+                object : OutboundEmailStore by store {
+                    override suspend fun claim(
+                        id: UUID,
+                        now: Instant,
+                    ): Boolean = false
+                }
+            val notifierLosingClaim =
+                LegalEmailNotifier(lostClaimStore, sender, SubscriberEmailResolver(consents, provider), consents, offer, Clock { now })
+            recordConsent(waiver = false)
+
+            notifierLosingClaim.confirmContractFormation(contract())
+
+            assertThat(store.rows.single().status).isEqualTo(OutboundEmailStatus.PENDING)
             assertThat(sender.sent).isEmpty()
         }
 }

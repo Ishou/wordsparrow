@@ -46,7 +46,7 @@ class LegalEmailNotifier(
     private val log = LoggerFactory.getLogger(LegalEmailNotifier::class.java)
 
     override suspend fun confirmContractFormation(confirmation: ContractConfirmation) {
-        val price = priceOrNull(confirmation.userId, confirmation.cadence) ?: return
+        val price = requirePrice(confirmation.userId, confirmation.cadence, OutboundEmailKind.CONTRACT) ?: return
         val waiverAcknowledged = consents.findLatest(confirmation.userId)?.withdrawalWaiver == true
         enqueueAndSend(
             confirmation.userId,
@@ -64,7 +64,7 @@ class LegalEmailNotifier(
     }
 
     override suspend fun confirmRenewal(receipt: RenewalReceipt) {
-        val price = priceOrNull(receipt.userId, receipt.cadence) ?: return
+        val price = requirePrice(receipt.userId, receipt.cadence, OutboundEmailKind.RENEWAL) ?: return
         enqueueAndSend(
             receipt.userId,
             OutboundEmailKind.RENEWAL,
@@ -77,13 +77,19 @@ class LegalEmailNotifier(
         enqueueAndSend(
             confirmation.userId,
             OutboundEmailKind.CANCEL,
-            dedupeKey(OutboundEmailKind.CANCEL, confirmation.userId, confirmation.periodEnd),
+            // canceledAt discriminates each résiliation event: cancel→reactivate→cancel keeps the same periodEnd, so without it the legally-required 2nd confirmation would collide on the dedupe key and never send.
+            dedupeKey(
+                OutboundEmailKind.CANCEL,
+                confirmation.userId,
+                confirmation.periodEnd,
+                confirmation.canceledAt.toEpochMilli().toString(),
+            ),
             cancellationEmail(confirmation.tier, confirmation.canceledAt, confirmation.periodEnd),
         )
     }
 
     override suspend fun sendChatelPreRenewalNotice(notice: PreRenewalNotice) {
-        val price = priceOrNull(notice.userId, notice.cadence) ?: return
+        val price = requirePrice(notice.userId, notice.cadence, OutboundEmailKind.CHATEL) ?: return
         enqueueAndSend(
             notice.userId,
             OutboundEmailKind.CHATEL,
@@ -122,6 +128,11 @@ class LegalEmailNotifier(
             log.warn("billing_email_pending_no_address kind={} user_id={}", kind.wire, userId)
             return
         }
+        // Claim the row before the immediate send so a concurrent drain cannot also send it; a lost claim means the drain already owns delivery.
+        if (!store.claim(record.id, now)) {
+            log.info("billing_email_claim_lost_to_drain kind={} user_id={}", kind.wire, userId)
+            return
+        }
         runCatching { emailSender.send(OutboundEmail(to, rendered.subject, rendered.htmlBody, rendered.textBody)) }
             .onSuccess { store.markSent(record.id, clock.now()) }
             .onFailure { error ->
@@ -134,18 +145,28 @@ class LegalEmailNotifier(
         kind: OutboundEmailKind,
         userId: UUID,
         periodEnd: Instant?,
-    ): String = "${kind.wire}:$userId:${periodEnd?.toEpochMilli() ?: "none"}"
+        discriminator: String? = null,
+    ): String =
+        buildString {
+            append(kind.wire)
+                .append(':')
+                .append(userId)
+                .append(':')
+                .append(periodEnd?.toEpochMilli() ?: "none")
+            if (discriminator != null) append(':').append(discriminator)
+        }
 
     private fun errorText(error: Throwable): String = error.message ?: error.javaClass.simpleName
 
-    private fun priceOrNull(
+    // A missing price is un-renderable (a config regression: the offer must price both cadences). Do NOT enqueue — a poisoned dedupe key would block the corrected email after a redeploy — but fire the delivery-failure symptom (ADR-0032) so the mandated non-delivery is observable and a webhook redelivery re-sends once fixed.
+    private fun requirePrice(
         userId: UUID,
         cadence: Cadence,
+        kind: OutboundEmailKind,
     ): OfferPrice? {
         val price = offer.priceFor(cadence)
         if (price == null) {
-            log.error("billing_email_skipped_no_price user_id={} cadence={}", userId, cadence.wire)
-            return null
+            log.error("billing_email_undeliverable kind={} user_id={} cadence={} reason=no_price", kind.wire, userId, cadence.wire)
         }
         return price
     }
@@ -178,6 +199,8 @@ class LegalEmailNotifier(
                 "Tu as demandé expressément que ton abonnement démarre immédiatement et tu as renoncé à ton droit de rétractation de 14 jours (art. L221-28 du Code de la consommation)."
         }
         lines += cgvLine()
+        lines += mediationLine()
+        lines += legalGuaranteeLine()
         lines += sellerLine()
         return rendered("Confirmation de ton abonnement WordSparrow", lines)
     }
@@ -265,7 +288,16 @@ class LegalEmailNotifier(
 
     private fun cgvLine(): String = "Conditions générales de vente : ${seller.cgvUrl}"
 
-    private fun sellerLine(): String = "Vendeur : ${seller.legalName} — SIRET ${seller.siret} — TVA ${seller.vatNumber}"
+    private fun mediationLine(): String =
+        "En cas de litige non résolu, tu peux recourir gratuitement au médiateur de la consommation AME Conso, " +
+            "197 boulevard Saint-Germain, 75007 Paris (https://www.mediationconso-ame.com)."
+
+    private fun legalGuaranteeLine(): String =
+        "Ton abonnement bénéficie de la garantie légale de conformité (art. L224-25-1 du Code de la consommation)."
+
+    private fun sellerLine(): String =
+        "Vendeur : ${seller.legalName}, ${seller.postalAddress} — SIRET ${seller.siret} — TVA ${seller.vatNumber} — " +
+            "Contact : ${seller.contactEmail}"
 
     private fun rendered(
         subject: String,

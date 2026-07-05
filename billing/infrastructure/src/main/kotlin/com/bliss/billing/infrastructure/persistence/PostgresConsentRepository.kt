@@ -79,8 +79,9 @@ class PostgresConsentRepository(
             "SELECT cgv_accepted, cgv_version, withdrawal_waiver FROM billing_checkout_consents " +
                 "WHERE user_id = ? ORDER BY accepted_at DESC, id DESC LIMIT 1"
 
+        // email IS NOT NULL: a later consent row without an email must not shadow an earlier one that captured it.
         private const val SELECT_LATEST_EMAIL_SQL =
             "SELECT email FROM billing_checkout_consents " +
-                "WHERE user_id = ? ORDER BY accepted_at DESC, id DESC LIMIT 1"
+                "WHERE user_id = ? AND email IS NOT NULL ORDER BY accepted_at DESC, id DESC LIMIT 1"
     }
 }

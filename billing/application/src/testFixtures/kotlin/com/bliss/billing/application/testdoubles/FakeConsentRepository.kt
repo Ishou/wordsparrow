@@ -29,5 +29,5 @@ class FakeConsentRepository : ConsentRepository {
         records.filter { it.userId == userId }.maxByOrNull { it.acceptedAt }?.consent
 
     override suspend fun findLatestEmail(userId: UUID): String? =
-        records.filter { it.userId == userId }.maxByOrNull { it.acceptedAt }?.email
+        records.filter { it.userId == userId && it.email != null }.maxByOrNull { it.acceptedAt }?.email
 }
