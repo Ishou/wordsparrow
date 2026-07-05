@@ -6,6 +6,7 @@ import type { Position, Puzzle } from '@/domain';
 import type { PuzzleSolver, RevealedWordCell } from '@/application';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
+import type { SoundStore } from '@/application/session/SoundStore';
 import { Button, ClueRail, Lockup } from '@/design-system';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
@@ -22,6 +23,7 @@ import { useHintRequest } from '@/ui/components/grid/useHintRequest';
 import { HintCooldown } from '@/ui/components/grid/HintCooldown';
 import { WinScreen } from './WinScreen';
 import { useGridSounds } from './useGridSounds';
+import { GridSoundToggle } from './GridSoundToggle';
 import { formatClock } from '@/ui/lib/formatClock';
 import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
@@ -156,9 +158,10 @@ export interface PlayScreenProps {
   readonly puzzleSolver: PuzzleSolver;
   readonly soloEntriesStore: SoloEntriesStore;
   readonly soundPlayer?: SoundPlayer;
+  readonly soundStore?: SoundStore;
 }
 
-export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer }: PlayScreenProps) {
+export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer, soundStore }: PlayScreenProps) {
   // Resume from the persisted elapsed time (synced across devices via the progress blob) instead of restarting at 0.
   const [seconds, setSeconds] = useState(() => soloEntriesStore.loadElapsed(puzzle.id));
   const [winDismissed, setWinDismissed] = useState(false);
@@ -459,10 +462,13 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
       {isDesktop ? (
         <DesktopAppBar
           trailing={
-            <span className={headerTimer} aria-label={`Temps ${timeLabel}`}>
-              <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
-              {timeLabel}
-            </span>
+            <>
+              <span className={headerTimer} aria-label={`Temps ${timeLabel}`}>
+                <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
+                {timeLabel}
+              </span>
+              {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
+            </>
           }
         />
       ) : (
@@ -479,6 +485,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
               <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
               {timeLabel}
             </span>
+            {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
             <button type="button" className={iconBtn} onClick={() => setMenuOpen(true)} aria-label="Réglages">
               <DotsThreeVertical aria-hidden="true" weight="bold" />
             </button>
