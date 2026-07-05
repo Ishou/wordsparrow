@@ -3,6 +3,7 @@ package com.bliss.grid.application.puzzle
 import com.bliss.grid.domain.generation.ClueCooldownPolicy
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.domain.generation.ClueId
+import com.bliss.grid.domain.model.ClueCell
 import com.bliss.grid.domain.model.Grid
 import org.slf4j.LoggerFactory
 import java.time.Clock
@@ -25,6 +26,7 @@ class EnsureUpcomingDailiesUseCase(
     private val windowDays: Int = DEFAULT_WINDOW_DAYS,
     private val innerAttempts: Int = DEFAULT_INNER_ATTEMPTS,
     private val perAttemptTimeoutMs: Long = DEFAULT_PER_ATTEMPT_TIMEOUT_MS,
+    private val bestOfN: Int = DEFAULT_BEST_OF_N,
 ) {
     private val log = LoggerFactory.getLogger(EnsureUpcomingDailiesUseCase::class.java)
 
@@ -86,17 +88,32 @@ class EnsureUpcomingDailiesUseCase(
 
     private fun generateForDate(date: LocalDate): Pair<Grid?, Int> {
         val cooldownPolicy = cooldownPolicyFor()
-        for (attempt in 0 until maxAttempts) {
-            val grid =
-                gridGenerationPort.generate(
-                    randomSeed = seedFor(date, attempt),
-                    cooldownPolicy = cooldownPolicy,
-                    attempts = innerAttempts,
-                    perAttemptTimeoutMs = perAttemptTimeoutMs,
-                )
-            if (grid != null) return grid to (attempt + 1)
+        // Best-of-N (offline pre-gen only): generate up to N candidates and keep the sparsest
+        // (fewest definition cells) for airier grids. bestOfN = 1 preserves the old single-shot.
+        var best: Grid? = null
+        var bestBlack = Int.MAX_VALUE
+        var totalAttempts = 0
+        for (candidate in 0 until bestOfN.coerceAtLeast(1)) {
+            for (attempt in 0 until maxAttempts) {
+                totalAttempts++
+                val grid =
+                    gridGenerationPort.generate(
+                        randomSeed = seedFor(date, candidate * maxAttempts + attempt),
+                        cooldownPolicy = cooldownPolicy,
+                        attempts = innerAttempts,
+                        perAttemptTimeoutMs = perAttemptTimeoutMs,
+                    )
+                if (grid != null) {
+                    val definitionCells = grid.cells.values.count { it is ClueCell }
+                    if (definitionCells < bestBlack) {
+                        bestBlack = definitionCells
+                        best = grid
+                    }
+                    break
+                }
+            }
         }
-        return null to maxAttempts
+        return best to totalAttempts
     }
 
     private fun cooldownPolicyFor(): ClueCooldownPolicy {
@@ -151,6 +168,9 @@ class EnsureUpcomingDailiesUseCase(
         const val DEFAULT_WINDOW_DAYS: Int = 7
         const val DEFAULT_MAX_ATTEMPTS: Int = 20
         const val SEED_DAY_MULTIPLIER: Long = 1_000_000_000L
+
+        /** 1 preserves single-shot; the daily worker overrides to 8 (ADR-0095). */
+        const val DEFAULT_BEST_OF_N: Int = 1
 
         /** Cron has time; 50 inner Luby restarts per outer seed is the production-grade budget. */
         const val DEFAULT_INNER_ATTEMPTS: Int = 50
