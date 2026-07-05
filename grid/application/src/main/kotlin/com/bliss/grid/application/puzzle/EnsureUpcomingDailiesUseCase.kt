@@ -169,8 +169,10 @@ class EnsureUpcomingDailiesUseCase(
         const val DEFAULT_MAX_ATTEMPTS: Int = 20
         const val SEED_DAY_MULTIPLIER: Long = 1_000_000_000L
 
-        /** Cron has time; 50 inner Luby restarts per outer seed is the production-grade budget. */
+        /** 1 preserves single-shot; the daily worker overrides to 8 (ADR-0095). */
         const val DEFAULT_BEST_OF_N: Int = 1
+
+        /** Cron has time; 50 inner Luby restarts per outer seed is the production-grade budget. */
         const val DEFAULT_INNER_ATTEMPTS: Int = 50
 
         /** Cron-friendly per-attempt timeout (vs production route's 5s default). */
