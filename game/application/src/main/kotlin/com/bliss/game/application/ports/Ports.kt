@@ -43,7 +43,7 @@ interface LobbyRepository {
      */
     suspend fun findBySessionId(sessionId: SessionId): List<Lobby>
 
-    /** Cross-device "Mes parties" (ADR-0066): seats whose userId matches; same WAITING exclusion + ordering as [findBySessionId]; seats only, no owner arm. */
+    /** Cross-device "Mes parties" (ADR-0066): seats whose userId matches, OR the lobby's owner_user_id (ADR-0066 amendment 2026-07-05, keeps an authed-owned lobby visible after the leave-grace drops the owner seat); same WAITING exclusion + ordering as [findBySessionId]. */
     suspend fun findByUserId(userId: UserId): List<Lobby>
 
     /**

@@ -290,11 +290,17 @@ class PostgresLobbyRepository(
             // Rule 2: transfer ownership to earliest-joined remaining player.
             if (ownsLobby) {
                 val newOwner = remainingPlayers.minBy { it.second }.first
+                // owner_user_id follows the new owner's seat (NULL if anon) so the erased user's UserId cannot linger in findByUserId (ADR-0039 erasure).
                 conn
-                    .prepareStatement("UPDATE lobbies SET owner_session_id = ? WHERE id = ?")
-                    .use { ps ->
+                    .prepareStatement(
+                        "UPDATE lobbies SET owner_session_id = ?, " +
+                            "owner_user_id = (SELECT user_id FROM lobby_players WHERE lobby_id = ? AND session_id = ?) " +
+                            "WHERE id = ?",
+                    ).use { ps ->
                         ps.setObject(1, newOwner)
                         ps.setString(2, id.value)
+                        ps.setObject(3, newOwner)
+                        ps.setString(4, id.value)
                         ps.executeUpdate()
                     }
                 transferredLobbies += 1
@@ -399,6 +405,7 @@ class PostgresLobbyRepository(
         withContext(Dispatchers.IO) {
             ds.connection.use { conn ->
                 val ids = mutableListOf<LobbyId>()
+                // owner arm mirrors findByUserId so an authed-owned COMPLETED lobby is not GC'd after the leave-grace drops the owner seat (ADR-0055/0066).
                 conn
                     .prepareStatement(
                         "SELECT l.id FROM lobbies l " +
@@ -406,7 +413,7 @@ class PostgresLobbyRepository(
                             "AND NOT EXISTS (" +
                             "  SELECT 1 FROM lobby_players lp " +
                             "  WHERE lp.lobby_id = l.id AND lp.user_id IS NOT NULL" +
-                            ")",
+                            ") AND l.owner_user_id IS NULL",
                     ).use { ps ->
                         ps.setTimestamp(1, Timestamp.from(cutoff))
                         ps.executeQuery().use { rs ->

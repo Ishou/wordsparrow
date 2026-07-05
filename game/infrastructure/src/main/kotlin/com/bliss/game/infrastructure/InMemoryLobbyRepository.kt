@@ -89,10 +89,12 @@ class InMemoryLobbyRepository : LobbyRepository {
     override suspend fun findIdleWaiting(cutoff: Instant): List<Lobby> =
         store.values.filter { it.state == LobbyLifecycleState.WAITING && !it.lastActivityAt.isAfter(cutoff) }
 
+    // owner arm mirrors findByUserId so an authed-owned COMPLETED lobby is not GC'd after the leave-grace drops the owner seat (ADR-0055/0066).
     override suspend fun findIdleCompleted(cutoff: Instant): List<Lobby> =
         store.values.filter { lobby ->
             lobby.state == LobbyLifecycleState.COMPLETED &&
                 !lobby.lastActivityAt.isAfter(cutoff) &&
+                lobby.ownerUserId == null &&
                 lobby.players.values.none { it.userId != null }
         }
 
@@ -120,15 +122,20 @@ class InMemoryLobbyRepository : LobbyRepository {
                     return@withLock
                 }
                 removedPlayerships += 1
-                val newOwner =
-                    if (current.isOwner(sessionId)) {
-                        // Rule 2: owner + others. Earliest-joined remaining player inherits.
-                        transferredLobbies += 1
-                        remaining.values.minBy { it.joinedAt }.sessionId
-                    } else {
-                        // Rule 3: non-owner. Ownership unchanged.
-                        current.ownerSessionId
-                    }
+                val newOwnerSession: SessionId
+                val newOwnerUserId: UserId?
+                if (current.isOwner(sessionId)) {
+                    // Rule 2: owner + others. Earliest-joined remaining player inherits;
+                    // owner_user_id follows the inheritor's seat (null if anon) so the erased user's UserId cannot linger (ADR-0039 erasure).
+                    transferredLobbies += 1
+                    val inheritor = remaining.values.minBy { it.joinedAt }
+                    newOwnerSession = inheritor.sessionId
+                    newOwnerUserId = inheritor.userId
+                } else {
+                    // Rule 3: non-owner. Ownership unchanged.
+                    newOwnerSession = current.ownerSessionId
+                    newOwnerUserId = current.ownerUserId
+                }
                 val newGame =
                     current.game?.let { game ->
                         var count = 0
@@ -147,7 +154,8 @@ class InMemoryLobbyRepository : LobbyRepository {
                 store[id] =
                     current.copy(
                         players = remaining,
-                        ownerSessionId = newOwner,
+                        ownerSessionId = newOwnerSession,
+                        ownerUserId = newOwnerUserId,
                         game = newGame,
                     )
             }
