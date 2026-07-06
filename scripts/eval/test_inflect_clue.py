@@ -771,3 +771,57 @@ def test_prepositional_object_noun_not_pluralised() -> None:
     res = inflect_clue("Coup de pied", {"nom", "mas", "pl"}, idx)
     assert res.flag == "", res
     assert res.text == "Coups de pied"
+
+
+def test_comma_separated_synonyms_both_inflect() -> None:
+    """`Lambiner, tarder` → passé simple 3sg conjugates BOTH verbs, not just the
+    head → `Lambina, tarda` (the walk treats a comma as a co-head boundary)."""
+    idx = MorphologyIndex()
+    _add(idx, "lambiner", "lambiner", "v1_it_q__a infi")
+    _add(idx, "lambiner", "lambina", "v1_it_q__a ipsi 3sg")
+    _add(idx, "tarder", "tarder", "v1_it_q__a infi")
+    _add(idx, "tarder", "tarda", "v1_it_q__a ipsi 3sg")
+    res = inflect_clue("Lambiner, tarder", {"v1_it_q__a", "ipsi", "3sg"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Lambina, tarda"
+
+
+def test_pp_action_copula_head_skipped() -> None:
+    """A copula-headed clue can't become a past participle (`Être digne de` →
+    `Été digne de`)."""
+    idx = MorphologyIndex()
+    _add(idx, "être", "être", "v0e____zzz infi")
+    _add(idx, "être", "été", "v0e____zzz ppas")
+    _add(idx, "digne", "digne", "adj epi sg")
+    res = inflect_clue("Être digne de", {"v1_it_q__a", "ppas", "fem", "sg"}, idx)
+    assert res.flag == "pp-action-skipped", res
+
+
+def test_pp_action_object_pronoun_skipped() -> None:
+    """`Informer quelqu'un` → PP strands the object (`Informée quelqu'un`)."""
+    idx = MorphologyIndex()
+    _add(idx, "informer", "informer", "v1_it_q__a infi")
+    _add(idx, "informer", "informée", "v1_it_q__a ppas fem sg")
+    res = inflect_clue("Informer quelqu'un", {"v1_it_q__a", "ppas", "fem", "sg"}, idx)
+    assert res.flag == "pp-action-skipped", res
+
+
+def test_pp_action_infinitive_complement_skipped() -> None:
+    """`Commencer à exister` → PP reads awkward (`Commencées à exister`)."""
+    idx = MorphologyIndex()
+    _add(idx, "commencer", "commencer", "v1_it_q__a infi")
+    _add(idx, "commencer", "commencées", "v1_it_q__a ppas fem pl")
+    _add(idx, "exister", "exister", "v1__i__zzz infi")
+    res = inflect_clue("Commencer à exister", {"v1_it_q__a", "ppas", "fem", "pl"}, idx)
+    assert res.flag == "pp-action-skipped", res
+
+
+def test_pp_clean_verb_still_inflects() -> None:
+    """A plain lexical-verb clue still PP-inflates (`Posséder` → `Possédé`); the
+    action-frame guard must not over-fire."""
+    idx = MorphologyIndex()
+    _add(idx, "posséder", "posséder", "v1_it_q__a infi")
+    _add(idx, "posséder", "possédé", "v1_it_q__a ppas mas sg")
+    res = inflect_clue("Posséder", {"v1_it_q__a", "ppas", "mas", "sg"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Possédé"

@@ -292,6 +292,35 @@ def _capitalize_first(s: str) -> str:
     return s[:1].upper() + s[1:] if s else s
 
 
+_COPULA_LEMMAS = frozenset({"être", "avoir"})
+_PP_OBJECT_TOKENS = frozenset({"quelqu", "quelque", "quelques", "qqn", "qqch"})
+_PREP_BEFORE_INFINITIVE = frozenset({"à", "au", "aux", "de", "d", "du"})
+
+
+def _pp_action_definition(
+    tokens: list[str],
+    head_idx: int,
+    head_lemma: str,
+    index: "MorphologyIndex",
+) -> bool:
+    """True when a clue defines the *action* rather than a *state*, so it can't
+    be inflected to a past participle. Three deterministic signals: the head is
+    a copula/auxiliary (`Être digne de`), an object pronoun follows the head
+    (`Informer quelqu'un`), or a preposition + infinitive complement follows
+    (`Commencer à exister`)."""
+    if head_lemma.lower() in _COPULA_LEMMAS:
+        return True
+    tail = [t.lower() for t in tokens[head_idx + 1:] if _is_alpha_token(t)]
+    if any(t in _PP_OBJECT_TOKENS for t in tail):
+        return True
+    for j in range(len(tail) - 1):
+        if tail[j] in _PREP_BEFORE_INFINITIVE and any(
+            "infi" in tags for _, tags in index.lookup_form(tail[j + 1])
+        ):
+            return True
+    return False
+
+
 def inflect_clue(
     clue: str,
     surface_tags: set[str],
@@ -384,6 +413,15 @@ def inflect_clue(
             and _negation_frame(tokens) is not None):
         return InflectionResult(_capitalize_first(clue), "neg-nonfinite-skipped")
 
+    # A past participle clues a STATE of the answer (adjectival). A clue that
+    # defines the ACTION doesn't survive the conversion: copula-headed
+    # (`Être digne de` → `Été digne de`), governing an object pronoun
+    # (`Informer quelqu'un` → `Informée quelqu'un`), or taking an infinitival
+    # complement (`Commencer à exister` → `Commencées à exister`). Skip.
+    if (target_pos == "verbe" and "ppas" in target
+            and _pp_action_definition(tokens, head_idx, head_lemma, index)):
+        return InflectionResult(_capitalize_first(clue), "pp-action-skipped")
+
     # For nominal targets, gender relaxation is best-effort: try strict
     # gender first so a paradigm with both masc and fem forms (voleur →
     # voleuse) flips correctly. Only drop the gender constraint if no
@@ -457,6 +495,13 @@ def inflect_clue(
     while i < len(new_tokens):
         tok = new_tokens[i]
         if not _is_alpha_token(tok):
+            # A comma between synonyms is a co-head boundary — keep walking so
+            # the next verb/noun also inflects ("Lambiner, tarder" → "Lambina,
+            # tarda"; "Bien, patrimoine" → "Biens, patrimoines").
+            if tok == ",":
+                saw_coord = True
+                i += 1
+                continue
             break
         lo = tok.lower()
         classes = index.pos_classes_of_form(lo)
@@ -539,6 +584,10 @@ def inflect_clue(
     while i >= 0:
         tok = new_tokens[i]
         if not _is_alpha_token(tok):
+            if tok == ",":
+                saw_coord = True
+                i -= 1
+                continue
             break
         lo = tok.lower()
         if lo in _COORD_WALKTHROUGH:
