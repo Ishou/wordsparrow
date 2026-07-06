@@ -21,7 +21,8 @@ fun capabilitiesFor(
 private fun roleCapabilities(role: Role?): Set<Capability> =
     when (role) {
         null -> emptySet()
-        Role.PLAYER -> setOf(Capability.HINT)
+        // GA promotion per ADR-0079's promotion note: players now hold billing:subscribe.
+        Role.PLAYER -> setOf(Capability.HINT, Capability.BILLING_SUBSCRIBE)
         Role.MAINTAINER -> setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE)
     }
 

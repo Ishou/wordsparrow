@@ -96,7 +96,7 @@ class GetMeUseCaseTest {
                     createdAt = now.minusSeconds(3600),
                     lastSeenAt = now.minusSeconds(60),
                     role = Role.PLAYER,
-                    capabilities = setOf(Capability.HINT),
+                    capabilities = setOf(Capability.HINT, Capability.BILLING_SUBSCRIBE),
                     linkedProviders = emptyList(),
                     email = null,
                 ),
@@ -143,6 +143,7 @@ class GetMeUseCaseTest {
             assertThat(result.capabilities)
                 .containsExactlyInAnyOrder(
                     Capability.HINT,
+                    Capability.BILLING_SUBSCRIBE,
                     Capability.GRILLES_ALL,
                     Capability.GRILLES_GENERATE,
                     Capability.MULTIPLAYER_HOST_UNLIMITED,
