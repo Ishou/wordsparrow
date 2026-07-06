@@ -742,3 +742,32 @@ def test_subjectless_clue_still_takes_second_person() -> None:
     res = inflect_clue("Venir au jour", {"v3__i___zz", "ifut", "2sg"}, idx)
     assert res.flag == "", res
     assert res.text == "Viendras au jour"
+
+
+def test_appositive_noun_takes_head_number_keeps_own_gender() -> None:
+    """`Légume racine blanc` → mas-pl: the apposition `racine` pluralises to the
+    head's number while keeping its own (fem) gender, and the trailing adjective
+    `blanc` still agrees with the head → `Légumes racines blancs`."""
+    idx = MorphologyIndex()
+    _add(idx, "légume", "légume", "nom mas sg")
+    _add(idx, "légume", "légumes", "nom mas pl")
+    _add(idx, "racine", "racine", "nom fem sg")
+    _add(idx, "racine", "racines", "nom fem pl")
+    _add(idx, "blanc", "blanc", "adj mas sg")
+    _add(idx, "blanc", "blancs", "adj mas pl")
+    res = inflect_clue("Légume racine blanc", {"nom", "mas", "pl"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Légumes racines blancs"
+
+
+def test_prepositional_object_noun_not_pluralised() -> None:
+    """`Coup de pied` → mas-pl keeps `pied` singular (it's a prepositional
+    object, not an apposition) → `Coups de pied`."""
+    idx = MorphologyIndex()
+    _add(idx, "coup", "coup", "nom mas sg")
+    _add(idx, "coup", "coups", "nom mas pl")
+    _add(idx, "pied", "pied", "nom mas sg")
+    _add(idx, "pied", "pieds", "nom mas pl")
+    res = inflect_clue("Coup de pied", {"nom", "mas", "pl"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Coups de pied"

@@ -195,7 +195,9 @@ def main() -> None:
             if not surface or not surface.isalpha():
                 continue
             L = len(surface)
-            if not (4 <= L <= 15):
+            # 2-letter floor: short verb forms (eu/vu/lu/pu) and short gold
+            # lemmas need clues too; single letters aren't grid words.
+            if not (2 <= L <= 15):
                 continue
             analyses = index.lookup_form(surface)
             if not analyses:
