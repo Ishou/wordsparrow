@@ -2,7 +2,6 @@ package com.bliss.grid.api
 
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.GridGenerator
-import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -17,8 +16,8 @@ import kotlin.system.measureTimeMillis
 @Tag("stress")
 class GenerationStressTest {
     @Test
-    fun `30 puzzles end-to-end on the production corpus`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+    fun `30 puzzles end-to-end on the mock corpus`() {
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints = defaultPuzzleConstraints()
         val sampleSize = 30

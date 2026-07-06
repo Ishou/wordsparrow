@@ -5,7 +5,6 @@ import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.GenerationMetrics
 import com.bliss.grid.domain.generation.GridGenerator
 import com.bliss.grid.domain.generation.GridShapeHash
-import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -35,8 +34,8 @@ class GridGenBenchmarkTest {
     private val log = LoggerFactory.getLogger(GridGenBenchmarkTest::class.java)
 
     @Test
-    fun `200 puzzles per-phase metrics on the production corpus`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+    fun `200 puzzles per-phase metrics on the mock corpus`() {
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints = defaultPuzzleConstraints()
 
@@ -153,7 +152,7 @@ class GridGenBenchmarkTest {
      */
     @Test
     fun `200 puzzles via self-calibrating GeneratePuzzleUseCase`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val constraints = defaultPuzzleConstraints()
         val useCase = GeneratePuzzleUseCase(repo, constraints)
 
@@ -190,16 +189,17 @@ class GridGenBenchmarkTest {
 
     /**
      * Algorithm-integrity smoke test: generates a single 5×5 grid with the
-     * real French corpus. Must succeed in under ~1s when the algorithm is
-     * working. Failure here means the integrated search is broken at small
-     * sizes — re-running the 25-gen bench would be a waste of 2:30.
+     * committed mock corpus (ADR-0097). Must succeed in under ~1s when the
+     * algorithm is working. Failure here means the integrated search is
+     * broken at small sizes — re-running the 25-gen bench would be a waste
+     * of 2:30.
      *
      * Intended to be invoked manually before any other `@Tag("bench")` run
      * as a fast pre-flight.
      */
     @Test
-    fun `5x5 smoke test on real corpus`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+    fun `5x5 smoke test on mock corpus`() {
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints =
             com.bliss.grid.domain.generation
@@ -278,7 +278,7 @@ class GridGenBenchmarkTest {
         n: Int,
         label: String,
     ) {
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         // EXPERIMENT: temporarily 10×10 to compare random-length-bias policy.
         val constraints =

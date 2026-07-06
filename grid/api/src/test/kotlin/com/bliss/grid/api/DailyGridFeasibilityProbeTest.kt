@@ -4,7 +4,6 @@ import com.bliss.grid.application.puzzle.dailyPuzzleConstraints
 import com.bliss.grid.domain.generation.GridConstraints
 import com.bliss.grid.domain.generation.GridGenerator
 import com.bliss.grid.domain.model.LetterCell
-import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -17,8 +16,8 @@ class DailyGridFeasibilityProbeTest {
     private val log = LoggerFactory.getLogger(DailyGridFeasibilityProbeTest::class.java)
 
     @Test
-    fun `22x15 daily constraints fill airy grids on the production corpus`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+    fun `22x15 daily constraints fill airy grids on the mock corpus`() {
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints = dailyPuzzleConstraints()
         val area = constraints.width * constraints.height

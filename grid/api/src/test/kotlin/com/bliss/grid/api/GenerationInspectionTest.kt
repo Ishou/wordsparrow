@@ -6,7 +6,6 @@ import com.bliss.grid.api.dto.LetterCellDto
 import com.bliss.grid.api.mapper.GridToPuzzleMapper
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.GridGenerator
-import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.UUID
@@ -28,7 +27,7 @@ import kotlin.random.Random
 class GenerationInspectionTest {
     @Test
     fun `cell counts add up - letter cells plus distinct clue positions equals grid area`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val mapper = GridToPuzzleMapper()
         val constraints = defaultPuzzleConstraints()
@@ -68,7 +67,7 @@ class GenerationInspectionTest {
         // cell, walk along the arrow until hitting a non-letter or boundary. Every letter
         // cell in the response must appear in at least one clue's walk — otherwise the
         // player has no clue context for it and can't fill it in.
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val mapper = GridToPuzzleMapper()
         val constraints = defaultPuzzleConstraints()

@@ -5,6 +5,7 @@ import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.matches
 import assertk.assertions.startsWith
+import com.bliss.grid.api.TestCorpus
 import com.bliss.grid.application.auth.WhoAmI
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
@@ -12,7 +13,6 @@ import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
 import com.bliss.grid.application.puzzle.ValidateWordUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
-import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
@@ -60,7 +60,7 @@ class HintsRouteTest {
             }
             val puzzleRepo = InMemoryPuzzleRepository()
             val hintUsageRepo = InMemoryHintUsageRepository()
-            val gen = GeneratePuzzleUseCase(CsvWordRepository.frenchFromClasspath(), defaultPuzzleConstraints())
+            val gen = GeneratePuzzleUseCase(TestCorpus.load(), defaultPuzzleConstraints())
             routing {
                 puzzles(
                     loadOrGenerate = LoadOrGeneratePuzzleUseCase(puzzleRepo, gen),

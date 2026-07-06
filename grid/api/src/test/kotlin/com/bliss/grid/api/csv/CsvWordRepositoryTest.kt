@@ -7,13 +7,14 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThanOrEqualTo
 import assertk.assertions.isNotEmpty
 import assertk.assertions.isTrue
+import com.bliss.grid.api.TestCorpus
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 /** Verifies the bundled words-fr.csv loads and exposes the WordRepository surface. */
 class CsvWordRepositoryTest {
-    private val repo = CsvWordRepository.frenchFromClasspath()
+    private val repo = TestCorpus.load()
 
     @Test
     fun `loads at least 80 words with uppercase A-Z text and non-blank clues`() {
