@@ -21,7 +21,7 @@ const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 const SUBSCRIBER: WhoAmIResult = { userId: USER_ID, displayName: 'Lapin 472', role: 'player', capabilities: ['grilles:all'] };
 // Subscribe-eligible free player: can reach /abonnement, so promo surfaces apply.
 const CAN_SUBSCRIBE: WhoAmIResult = { userId: USER_ID, displayName: 'Lapin 472', role: 'player', capabilities: ['billing:subscribe'] };
-// Test-phase free player: no billing:subscribe → /abonnement is 404, so no promo surfaces.
+// Free player, no billing:subscribe capability: promo surfaces apply the same as CAN_SUBSCRIBE.
 const FREE: WhoAmIResult = { userId: USER_ID, displayName: 'Lapin 472', role: 'player', capabilities: [] };
 
 function authClientFor(whoami: WhoAmIResult): AuthClient {
@@ -198,10 +198,10 @@ describe('home upsell teaser (ADR-0080 W5a)', () => {
     expect(screen.getByText('Abonne-toi et joue sans limite')).toBeTruthy();
   });
 
-  it('hides the teaser for a free player without billing:subscribe', async () => {
+  it('renders the teaser for a free player without billing:subscribe', async () => {
     renderHome(FREE);
-    await screen.findByRole('button', { name: /Bientôt disponible|Jouer|Chargement/i });
-    await waitFor(() => expect(screen.queryByText('Débloque toutes les grilles')).toBeNull());
+    expect(await screen.findByText('Débloque toutes les grilles')).toBeTruthy();
+    expect(screen.getByText('Abonne-toi et joue sans limite')).toBeTruthy();
   });
 
   it('hides the teaser for a subscriber', async () => {

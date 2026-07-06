@@ -257,20 +257,25 @@ describe('AbonnementScreen', () => {
     expect(screen.queryByRole('button', { name: /S'abonner/ })).toBeNull();
   });
 
-  it('renders the standard 404 for an anonymous visitor', async () => {
+  it('renders the offer with a sign-in CTA for an anonymous visitor', async () => {
     routeContext = { billingClient: fakeBillingClient() };
     render(<AbonnementScreen />, { wrapper: withAuth(null) });
 
-    expect(await screen.findByText("Cette page s'est envolée")).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 1, name: 'Joue toutes les grilles' })).toBeNull();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Joue toutes les grilles' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Se connecter pour s'abonner" })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /Conditions de vente/ })).toBeNull();
   });
 
-  it('renders the standard 404 for an authed user without the capability', async () => {
+  it('renders the offer with a subscribe CTA for an authed user without the capability', async () => {
     routeContext = { billingClient: fakeBillingClient() };
     render(<AbonnementScreen />, { wrapper: withAuth(PLAYER) });
 
-    expect(await screen.findByText("Cette page s'est envolée")).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 1, name: 'Joue toutes les grilles' })).toBeNull();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Joue toutes les grilles' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /S'abonner/ })).toBeInTheDocument();
   });
 
   it('shows a neutral loading state with no page title while the session resolves', async () => {
