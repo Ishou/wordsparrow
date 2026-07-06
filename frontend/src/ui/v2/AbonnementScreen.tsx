@@ -5,11 +5,10 @@ import { Check, ShieldCheck } from '@phosphor-icons/react';
 import type { BillingCadence, BillingClient } from '@/application/billing';
 import { BillingError } from '@/application/billing';
 import { useSubscriber } from '@/ui/components/billing';
+import { useOptionalAuth } from '@/ui/components/auth';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
-import { NotFoundScreen } from './NotFoundScreen';
 import { GateLoadingScreen } from './GateLoadingScreen';
-import { useBillingGate } from './useBillingGate';
 import { CGV_VERSION } from './cgv';
 
 type Cadence = 'mensuel' | 'annuel';
@@ -215,6 +214,12 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
   const bothAccepted = cgvAccepted && withdrawalWaiver;
   const info = RECAP_BY_CADENCE[cadence];
 
+  const auth = useOptionalAuth();
+  const { authClient } = useRouteContext({ from: '__root__' });
+  // Only a confirmed-anon visitor is a guest; during the session load we show
+  // the normal flow so an authed player never flickers through the guest CTA.
+  const isGuest = auth?.state.status === 'anon';
+
   // Back from the hosted checkout restores this page from the bfcache with pending frozen true (assign never unwinds it); reset so the CTA works again.
   useEffect(() => {
     const reEnableOnRestore = (event: PageTransitionEvent) => {
@@ -239,6 +244,12 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
   }, []);
 
   const onPrimary = useCallback(async () => {
+    if (isGuest) {
+      // Guests must sign in before checkout (session-derived userId, ADR-0078); return to the offer to complete it.
+      const signInUrl = authClient?.signInUrl('google', '/abonnement');
+      if (signInUrl) window.location.assign(signInUrl);
+      return;
+    }
     if (!bothAccepted) return;
     if (step === 'review') {
       setStep('confirm');
@@ -257,7 +268,7 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
       setActionError(messageFor(cause));
       setPending(false);
     }
-  }, [bothAccepted, step, client, cadence]);
+  }, [isGuest, authClient, bothAccepted, step, client, cadence]);
 
   return (
     <div className={content}>
@@ -302,6 +313,7 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
           </p>
         </section>
 
+        {isGuest ? null : (
         <div className={consentGroup}>
           <div className={consentRow}>
             <input
@@ -332,14 +344,15 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
             </label>
           </div>
         </div>
+        )}
 
         <button
           type="button"
           className={cta}
           onClick={() => void onPrimary()}
-          disabled={!bothAccepted || pending}
+          disabled={isGuest ? pending : !bothAccepted || pending}
         >
-          {step === 'confirm' ? 'Confirmer et payer' : "S'abonner"}
+          {isGuest ? "Se connecter pour s'abonner" : step === 'confirm' ? 'Confirmer et payer' : "S'abonner"}
         </button>
         {step === 'confirm' ? (
           <>
@@ -379,11 +392,12 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
 }
 
 export function AbonnementScreen() {
-  const gate = useBillingGate();
+  const auth = useOptionalAuth();
   const { billingClient } = useRouteContext({ from: '__root__' });
   const subscribed = useSubscriber();
-  if (gate === 'loading') return <GateLoadingScreen />;
-  if (gate === 'denied') return <NotFoundScreen />;
+  // Paywall is visible to everyone (guests + free players); checkout is auth-
+  // + capability-gated server-side (ADR-0078). Await only the session load.
+  if (auth?.state.status === 'loading') return <GateLoadingScreen />;
   return (
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       {subscribed ? (

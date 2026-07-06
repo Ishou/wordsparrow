@@ -83,6 +83,18 @@ afterEach(() => {
 });
 
 describe('AbonnementOffer consent gate (ADR-0094)', () => {
+  it('shows a sign-in CTA and hides consent for a guest (anon) visitor', async () => {
+    const anon: AuthClient = { ...fakeAuthClient(), whoami: vi.fn().mockResolvedValue(null) };
+    render(
+      <AuthProvider authClient={anon} getPseudonym={() => 'Renard 423'}>
+        <AbonnementOffer client={fakeBillingClient()} />
+      </AuthProvider>,
+    );
+    const cta = await screen.findByRole('button', { name: /Se connecter pour s'abonner/ });
+    expect(cta).toBeEnabled();
+    expect(screen.queryByRole('checkbox', { name: /Conditions de vente/ })).toBeNull();
+  });
+
   it('shows the récapitulatif before payment with price, first-charge date and renewal terms', () => {
     render(<AbonnementOffer client={fakeBillingClient()} />, { wrapper: Wrapper });
 
