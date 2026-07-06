@@ -112,7 +112,7 @@ class WhoAmIRouteTest {
             assertThat(body).contains("\"userId\":\"${userId.value}\"")
             assertThat(body).contains("\"displayName\":\"Alice\"")
             assertThat(body).contains("\"role\":\"player\"")
-            assertThat(body).contains("\"capabilities\":[\"hint\"]")
+            assertThat(body).contains("\"capabilities\":[\"billing:subscribe\",\"hint\"]")
         }
 
     @Test
@@ -139,7 +139,11 @@ class WhoAmIRouteTest {
                 }
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
             val body = response.bodyAsText()
-            assertThat(body).contains("\"capabilities\":[\"grilles:all\",\"grilles:generate\",\"hint\",\"multiplayer:host-unlimited\"]")
+            assertThat(
+                body,
+            ).contains(
+                "\"capabilities\":[\"billing:subscribe\",\"grilles:all\",\"grilles:generate\",\"hint\",\"multiplayer:host-unlimited\"]",
+            )
             assertThat(body).doesNotContain("tier")
         }
 }

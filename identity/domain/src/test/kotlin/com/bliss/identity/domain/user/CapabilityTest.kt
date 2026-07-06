@@ -24,9 +24,11 @@ class CapabilityTest {
     }
 
     @Test
-    fun `player holds only hint`() {
-        assertThat(capabilitiesFor(Role.PLAYER)).containsExactlyInAnyOrder(Capability.HINT)
-        assertThat(capabilitiesFor(Role.PLAYER).map { it.wire }).containsExactlyInAnyOrder("hint")
+    fun `player holds hint and billing subscribe`() {
+        assertThat(capabilitiesFor(Role.PLAYER))
+            .containsExactlyInAnyOrder(Capability.HINT, Capability.BILLING_SUBSCRIBE)
+        assertThat(capabilitiesFor(Role.PLAYER).map { it.wire })
+            .containsExactlyInAnyOrder("hint", "billing:subscribe")
     }
 
     @Test
@@ -40,7 +42,7 @@ class CapabilityTest {
     @Test
     fun `free tier adds no capability to a player`() {
         assertThat(capabilitiesFor(Role.PLAYER, SubscriptionTier.FREE))
-            .containsExactlyInAnyOrder(Capability.HINT)
+            .containsExactlyInAnyOrder(Capability.HINT, Capability.BILLING_SUBSCRIBE)
     }
 
     @Test
@@ -48,12 +50,19 @@ class CapabilityTest {
         assertThat(capabilitiesFor(Role.PLAYER, SubscriptionTier.SUBSCRIBER))
             .containsExactlyInAnyOrder(
                 Capability.HINT,
+                Capability.BILLING_SUBSCRIBE,
                 Capability.GRILLES_ALL,
                 Capability.GRILLES_GENERATE,
                 Capability.MULTIPLAYER_HOST_UNLIMITED,
             )
         assertThat(capabilitiesFor(Role.PLAYER, SubscriptionTier.SUBSCRIBER).map { it.wire })
-            .containsExactlyInAnyOrder("hint", "grilles:all", "grilles:generate", "multiplayer:host-unlimited")
+            .containsExactlyInAnyOrder(
+                "hint",
+                "billing:subscribe",
+                "grilles:all",
+                "grilles:generate",
+                "multiplayer:host-unlimited",
+            )
     }
 
     @Test

@@ -124,6 +124,7 @@ class SubscriptionChangedConsumerTest {
             assertThat(result.capabilities)
                 .containsExactlyInAnyOrder(
                     Capability.HINT,
+                    Capability.BILLING_SUBSCRIBE,
                     Capability.GRILLES_ALL,
                     Capability.GRILLES_GENERATE,
                     Capability.MULTIPLAYER_HOST_UNLIMITED,

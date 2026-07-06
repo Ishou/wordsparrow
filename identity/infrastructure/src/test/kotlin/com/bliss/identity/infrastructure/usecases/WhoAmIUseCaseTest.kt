@@ -94,7 +94,9 @@ class WhoAmIUseCaseTest {
             val exactlyAtLimit = now.minus(sessionMaxAge)
             seedUserAndSession(users, sessions, createdAt = exactlyAtLimit)
             val result = sut.execute(WhoAmIQuery(sessionId))
-            assertThat(result).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice"), Role.PLAYER, setOf(Capability.HINT)))
+            assertThat(
+                result,
+            ).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice"), Role.PLAYER, setOf(Capability.HINT, Capability.BILLING_SUBSCRIBE)))
         }
 
     @Test
@@ -103,7 +105,9 @@ class WhoAmIUseCaseTest {
             val (sut, users, sessions) = newCase()
             seedUserAndSession(users, sessions)
             val result = sut.execute(WhoAmIQuery(sessionId))
-            assertThat(result).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice"), Role.PLAYER, setOf(Capability.HINT)))
+            assertThat(
+                result,
+            ).isEqualTo(WhoAmIResult(userId, DisplayName.of("Alice"), Role.PLAYER, setOf(Capability.HINT, Capability.BILLING_SUBSCRIBE)))
         }
 
     @Test
@@ -118,12 +122,12 @@ class WhoAmIUseCaseTest {
         }
 
     @Test
-    fun `player session carries only the hint capability`() =
+    fun `player session carries hint and billing subscribe`() =
         runTest {
             val (sut, users, sessions) = newCase()
             seedUserAndSession(users, sessions)
             val result = sut.execute(WhoAmIQuery(sessionId))
-            assertThat(result.capabilities).isEqualTo(setOf(Capability.HINT))
+            assertThat(result.capabilities).isEqualTo(setOf(Capability.HINT, Capability.BILLING_SUBSCRIBE))
         }
 
     @Test

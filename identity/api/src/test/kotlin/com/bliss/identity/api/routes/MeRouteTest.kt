@@ -103,7 +103,7 @@ class MeRouteTest {
             assertThat(body).contains("\"createdAt\":\"$now\"")
             assertThat(body).contains("\"providers\":[]")
             assertThat(body).contains("\"role\":\"player\"")
-            assertThat(body).contains("\"capabilities\":[\"hint\"]")
+            assertThat(body).contains("\"capabilities\":[\"billing:subscribe\",\"hint\"]")
         }
 
     @Test
