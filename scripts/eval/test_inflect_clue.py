@@ -21,7 +21,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from inflect_clue import _decompose_targets, inflect_clue  # noqa: E402
+from inflect_clue import _decompose_targets, _pp_action_definition, inflect_clue  # noqa: E402
 from morphology_index import MorphologyIndex  # noqa: E402
 
 
@@ -814,6 +814,14 @@ def test_pp_action_infinitive_complement_skipped() -> None:
     _add(idx, "exister", "exister", "v1__i__zzz infi")
     res = inflect_clue("Commencer à exister", {"v1_it_q__a", "ppas", "fem", "pl"}, idx)
     assert res.flag == "pp-action-skipped", res
+
+
+def test_pp_action_prep_scan_stops_at_comma() -> None:
+    """`Manquer de, rater`: `de` must not scan across the comma into `rater` as an infinitival complement of `manquer`."""
+    idx = MorphologyIndex()
+    _add(idx, "rater", "rater", "v1_it_q__a infi")
+    tokens = ["Manquer", "de", ",", "rater"]
+    assert _pp_action_definition(tokens, 0, "manquer", idx) is False
 
 
 def test_pp_clean_verb_still_inflects() -> None:

@@ -303,14 +303,16 @@ def _pp_action_definition(
     head_lemma: str,
     index: "MorphologyIndex",
 ) -> bool:
-    """True when a clue defines the *action* rather than a *state*, so it can't
-    be inflected to a past participle. Three deterministic signals: the head is
-    a copula/auxiliary (`Être digne de`), an object pronoun follows the head
-    (`Informer quelqu'un`), or a preposition + infinitive complement follows
-    (`Commencer à exister`)."""
+    """True when a clue defines the *action* rather than a *state* (copula head, object pronoun, or prep + infinitive complement) and so can't be inflected to a past participle."""
     if head_lemma.lower() in _COPULA_LEMMAS:
         return True
-    tail = [t.lower() for t in tokens[head_idx + 1:] if _is_alpha_token(t)]
+    # Stop at a comma/coordinator co-head boundary so a second synonym isn't misread as the head's infinitival complement.
+    tail: list[str] = []
+    for tok in tokens[head_idx + 1:]:
+        if tok == "," or tok.lower() in _COORD_WALKTHROUGH:
+            break
+        if _is_alpha_token(tok):
+            tail.append(tok.lower())
     if any(t in _PP_OBJECT_TOKENS for t in tail):
         return True
     for j in range(len(tail) - 1):
@@ -413,11 +415,7 @@ def inflect_clue(
             and _negation_frame(tokens) is not None):
         return InflectionResult(_capitalize_first(clue), "neg-nonfinite-skipped")
 
-    # A past participle clues a STATE of the answer (adjectival). A clue that
-    # defines the ACTION doesn't survive the conversion: copula-headed
-    # (`Être digne de` → `Été digne de`), governing an object pronoun
-    # (`Informer quelqu'un` → `Informée quelqu'un`), or taking an infinitival
-    # complement (`Commencer à exister` → `Commencées à exister`). Skip.
+    # A past participle clues a STATE (`Été digne de`); an action-definition clue can't convert (`Commencer à exister` → `*Commencées à exister`). Skip.
     if (target_pos == "verbe" and "ppas" in target
             and _pp_action_definition(tokens, head_idx, head_lemma, index)):
         return InflectionResult(_capitalize_first(clue), "pp-action-skipped")
