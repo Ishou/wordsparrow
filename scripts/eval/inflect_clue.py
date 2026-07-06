@@ -292,6 +292,51 @@ def _capitalize_first(s: str) -> str:
     return s[:1].upper() + s[1:] if s else s
 
 
+_COPULA_LEMMAS = frozenset({"être", "avoir"})
+_PP_OBJECT_TOKENS = frozenset({"quelqu", "quelque", "quelques", "qqn", "qqch"})
+_PREP_BEFORE_INFINITIVE = frozenset({"à", "au", "aux", "de", "d", "du"})
+
+_SUBJUNCTIVE_MOODS = frozenset({"spre", "simp"})
+# Que + subject pronoun, with elision before a vowel (Qu’il / Qu’ils).
+_SUBJ_PREFIX = {
+    "1sg": "Que je", "2sg": "Que tu", "3sg": "Qu’il",
+    "1pl": "Que nous", "2pl": "Que vous", "3pl": "Qu’ils",
+}
+
+
+def _subjunctive_prefix(target: set[str]) -> str:
+    for person in ("3sg", "3pl", "1sg", "2sg", "1pl", "2pl"):
+        if person in target:
+            return _SUBJ_PREFIX[person]
+    return "Qu’il"
+
+
+def _pp_action_definition(
+    tokens: list[str],
+    head_idx: int,
+    head_lemma: str,
+    index: "MorphologyIndex",
+) -> bool:
+    """True when a clue defines the *action* rather than a *state* (copula head, object pronoun, or prep + infinitive complement) and so can't be inflected to a past participle."""
+    if head_lemma.lower() in _COPULA_LEMMAS:
+        return True
+    # Stop at a comma/coordinator co-head boundary so a second synonym isn't misread as the head's infinitival complement.
+    tail: list[str] = []
+    for tok in tokens[head_idx + 1:]:
+        if tok == "," or tok.lower() in _COORD_WALKTHROUGH:
+            break
+        if _is_alpha_token(tok):
+            tail.append(tok.lower())
+    if any(t in _PP_OBJECT_TOKENS for t in tail):
+        return True
+    for j in range(len(tail) - 1):
+        if tail[j] in _PREP_BEFORE_INFINITIVE and any(
+            "infi" in tags for _, tags in index.lookup_form(tail[j + 1])
+        ):
+            return True
+    return False
+
+
 def inflect_clue(
     clue: str,
     surface_tags: set[str],
@@ -305,6 +350,17 @@ def inflect_clue(
     target = extract_inflection_target(surface_tags)
     if not target:
         return InflectionResult(_capitalize_first(clue), "no-target-pos")
+
+    # Subjunctive-only surface: pin to one person (prefer 3sg) so the Qu' marker agrees.
+    if (
+        target_pos == "verbe"
+        and "ipre" not in surface_tags
+        and (surface_tags & _SUBJUNCTIVE_MOODS)
+    ):
+        for person in ("3sg", "3pl", "1sg", "2sg", "1pl", "2pl"):
+            if person in target:
+                target = (target - PERSON_TOKENS - MOOD_TOKENS) | {"spre", person}
+                break
 
     # Exact-or-skip on person: skip rather than guess when the surface's person is unrepresentable (e.g. the `Nisg` inversion person for `posè-je`, dropped by `PERSON_TOKENS`), since matching would otherwise return an arbitrary-person head (`posè → Placent`).
     if (target_pos == "verbe" and (target & _FINITE_MOODS)
@@ -343,6 +399,10 @@ def inflect_clue(
         # the surface morphology (e.g. surface is a verb but the clue head is
         # a noun, like "Astre du jour" cluing a verb form). Leave verbatim.
         return InflectionResult(_capitalize_first(clue), "head-pos-mismatch")
+
+    # Copula-as-genus guard: a NOMINAL surface headed by être/avoir uses the noun, not the verb — ship verbatim.
+    if target_pos != "verbe" and head_lemma.lower() in _COPULA_LEMMAS:
+        return InflectionResult(_capitalize_first(clue), "verbatim")
 
     # Subject guard: a clue with its own 3rd-person nominal subject can only take a finite head that stays 3rd person and keeps the subject's number — else the surface's person/number strands a disagreement inside the clue (`La sueur apparaîtras`). Skip to placeholder; indeterminate subject number falls back to person-only.
     if target_pos == "verbe" and (target & _FINITE_MOODS):
@@ -383,6 +443,11 @@ def inflect_clue(
     if (target_pos == "verbe" and "ppas" in target
             and _negation_frame(tokens) is not None):
         return InflectionResult(_capitalize_first(clue), "neg-nonfinite-skipped")
+
+    # A past participle clues a STATE (`Été digne de`); an action-definition clue can't convert (`Commencer à exister` → `*Commencées à exister`). Skip.
+    if (target_pos == "verbe" and "ppas" in target
+            and _pp_action_definition(tokens, head_idx, head_lemma, index)):
+        return InflectionResult(_capitalize_first(clue), "pp-action-skipped")
 
     # For nominal targets, gender relaxation is best-effort: try strict
     # gender first so a paradigm with both masc and fem forms (voleur →
@@ -457,6 +522,11 @@ def inflect_clue(
     while i < len(new_tokens):
         tok = new_tokens[i]
         if not _is_alpha_token(tok):
+            # Comma is a co-head boundary — keep walking so the next synonym also inflects.
+            if tok == ",":
+                saw_coord = True
+                i += 1
+                continue
             break
         lo = tok.lower()
         classes = index.pos_classes_of_form(lo)
@@ -539,6 +609,10 @@ def inflect_clue(
     while i >= 0:
         tok = new_tokens[i]
         if not _is_alpha_token(tok):
+            if tok == ",":
+                saw_coord = True
+                i -= 1
+                continue
             break
         lo = tok.lower()
         if lo in _COORD_WALKTHROUGH:
@@ -584,6 +658,16 @@ def inflect_clue(
         return InflectionResult(_capitalize_first(clue), "identity")
 
     rebuilt = _detokenize(new_tokens)
+
+    # Subjunctive-only surface: prepend the mood marker so it doesn't read as present tense.
+    if (
+        "ipre" not in surface_tags
+        and (chosen_target & _SUBJUNCTIVE_MOODS)
+        and not rebuilt.lower().startswith(("que ", "qu'", "qu’"))
+    ):
+        rebuilt = f"{_subjunctive_prefix(chosen_target)} {rebuilt[:1].lower()}{rebuilt[1:]}"
+        return InflectionResult(rebuilt, "")
+
     return InflectionResult(_capitalize_first(rebuilt), "")
 
 
