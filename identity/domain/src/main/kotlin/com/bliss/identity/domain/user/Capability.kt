@@ -21,8 +21,7 @@ fun capabilitiesFor(
 private fun roleCapabilities(role: Role?): Set<Capability> =
     when (role) {
         null -> emptySet()
-        // Billing is GA (2026-07-06): any signed-in player can subscribe. Guests
-        // must sign in first; the SUBSCRIBER tier caps still gate on paying.
+        // GA promotion per ADR-0079's promotion note: players now hold billing:subscribe.
         Role.PLAYER -> setOf(Capability.HINT, Capability.BILLING_SUBSCRIBE)
         Role.MAINTAINER -> setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE)
     }
