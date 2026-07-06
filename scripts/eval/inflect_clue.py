@@ -296,6 +296,20 @@ _COPULA_LEMMAS = frozenset({"être", "avoir"})
 _PP_OBJECT_TOKENS = frozenset({"quelqu", "quelque", "quelques", "qqn", "qqch"})
 _PREP_BEFORE_INFINITIVE = frozenset({"à", "au", "aux", "de", "d", "du"})
 
+_SUBJUNCTIVE_MOODS = frozenset({"spre", "sima"})
+# Que + subject pronoun, with elision before a vowel (Qu'il / Qu'ils).
+_SUBJ_PREFIX = {
+    "1sg": "Que je", "2sg": "Que tu", "3sg": "Qu'il",
+    "1pl": "Que nous", "2pl": "Que vous", "3pl": "Qu'ils",
+}
+
+
+def _subjunctive_prefix(target: set[str]) -> str:
+    for person in ("3sg", "3pl", "1sg", "2sg", "1pl", "2pl"):
+        if person in target:
+            return _SUBJ_PREFIX[person]
+    return "Qu'il"
+
 
 def _pp_action_definition(
     tokens: list[str],
@@ -337,6 +351,20 @@ def inflect_clue(
     if not target:
         return InflectionResult(_capitalize_first(clue), "no-target-pos")
 
+    # Subjunctive-only surface (no indicative reading, e.g. `veuille`, `ait`):
+    # pin to one person — prefer 3sg — so the "Qu'il/Qu'ils…" marker (added at
+    # the end) agrees with the verb. Without this, the 2sg person preference
+    # produces a conflated "Que tu désires" for a 1sg/3sg form.
+    if (
+        target_pos == "verbe"
+        and "ipre" not in surface_tags
+        and (surface_tags & _SUBJUNCTIVE_MOODS)
+    ):
+        for person in ("3sg", "3pl", "1sg", "2sg", "1pl", "2pl"):
+            if person in target:
+                target = (target - PERSON_TOKENS - MOOD_TOKENS) | {"spre", person}
+                break
+
     # Exact-or-skip on person: skip rather than guess when the surface's person is unrepresentable (e.g. the `Nisg` inversion person for `posè-je`, dropped by `PERSON_TOKENS`), since matching would otherwise return an arbitrary-person head (`posè → Placent`).
     if (target_pos == "verbe" and (target & _FINITE_MOODS)
             and not (target & PERSON_TOKENS)):
@@ -374,6 +402,12 @@ def inflect_clue(
         # the surface morphology (e.g. surface is a verb but the clue head is
         # a noun, like "Astre du jour" cluing a verb form). Leave verbatim.
         return InflectionResult(_capitalize_first(clue), "head-pos-mismatch")
+
+    # Copula-as-genus guard: for a NOMINAL surface, a clue headed by `être`/
+    # `avoir` uses the *noun* (`un être vivant`), not the verb — conjugating it
+    # yields `Été vivants` for `créatures`. Ship the clue verbatim instead.
+    if target_pos != "verbe" and head_lemma.lower() in _COPULA_LEMMAS:
+        return InflectionResult(_capitalize_first(clue), "verbatim")
 
     # Subject guard: a clue with its own 3rd-person nominal subject can only take a finite head that stays 3rd person and keeps the subject's number — else the surface's person/number strands a disagreement inside the clue (`La sueur apparaîtras`). Skip to placeholder; indeterminate subject number falls back to person-only.
     if target_pos == "verbe" and (target & _FINITE_MOODS):
@@ -629,6 +663,18 @@ def inflect_clue(
         return InflectionResult(_capitalize_first(clue), "identity")
 
     rebuilt = _detokenize(new_tokens)
+
+    # Subjunctive-only surface: the inflected clue reads as plain present
+    # ("Désire ardemment" for `veuille`). Prepend the mood marker so it cues the
+    # subjunctive — the crossword convention ("Qu'il désire ardemment").
+    if (
+        "ipre" not in surface_tags
+        and (chosen_target & _SUBJUNCTIVE_MOODS)
+        and not rebuilt.lower().startswith(("que ", "qu'"))
+    ):
+        rebuilt = f"{_subjunctive_prefix(chosen_target)} {rebuilt[:1].lower()}{rebuilt[1:]}"
+        return InflectionResult(rebuilt, "")
+
     return InflectionResult(_capitalize_first(rebuilt), "")
 
 
