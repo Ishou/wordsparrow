@@ -139,7 +139,7 @@ class SubscriptionChangedConsumerTest {
             publish("subscriber", "canceled", now.plusSeconds(60))
             awaitTier(subscriptions, SubscriptionTier.FREE)
             assertThat(whoAmI.execute(WhoAmIQuery(sessionId)).capabilities)
-                .containsExactlyInAnyOrder(Capability.HINT)
+                .containsExactlyInAnyOrder(Capability.HINT, Capability.BILLING_SUBSCRIBE)
 
             consumer.stop()
         }
