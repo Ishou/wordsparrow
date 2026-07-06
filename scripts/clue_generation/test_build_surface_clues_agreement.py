@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "eval"))
 
 from build_surface_clues import (  # noqa: E402
+    _surface_length_ok,
     _verb_number,
     classify_inflection,
     classify_surface_inflection,
@@ -28,6 +29,17 @@ def _placer_index() -> MorphologyIndex:
     _add(idx, "placer", "placent", "v1__tnq__a ipre 3pl")
     _add(idx, "placer", "place", "v1__tnq__a ipre 1sg 2sg 3sg")
     return idx
+
+
+def test_surface_length_floor_admits_two_letter_forms() -> None:
+    """`eu`/`vu`/`lu`/`pu` (2 chars) must reach the inflater; single letters aren't grid words."""
+    assert _surface_length_ok(2) is True
+    assert _surface_length_ok(1) is False
+
+
+def test_surface_length_ceiling_unchanged() -> None:
+    assert _surface_length_ok(15) is True
+    assert _surface_length_ok(16) is False
 
 
 def test_verb_number_maps_inversion_person_to_singular() -> None:

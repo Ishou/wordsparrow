@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build a per-surface clue table from the (lemma, pos)-keyed corpus.
 
-For each surface form in words-fr.csv (4-15 chars), determine the owning
+For each surface form in words-fr.csv (2-15 chars), determine the owning
 (lemma, pos) by grammalecte total-occurrences (with POS precedence
 nom > adj > adv > verbe on ties), then either copy the lemma's clue
 verbatim (if surface == lemma) or inflect the clue's head token to
@@ -51,6 +51,16 @@ from clue_metrics import MAX_CLUE_CHARS, fits_single_cell  # noqa: E402
 from derive_adverb_clue import adverbialise, base_adjective  # noqa: E402
 
 POS_PRECEDENCE = {"nom": 0, "adj": 1, "adv": 2, "verbe": 3}
+
+# 2-letter floor: short verb forms (eu/vu/lu/pu) and short gold lemmas need
+# clues too; single letters aren't grid words.
+MIN_SURFACE_LEN = 2
+MAX_SURFACE_LEN = 15
+
+
+def _surface_length_ok(length: int) -> bool:
+    return MIN_SURFACE_LEN <= length <= MAX_SURFACE_LEN
+
 
 _NUMBER_TOK_RE = re.compile(r"[\wÀ-ÿŒœŸ]+", re.UNICODE)
 # Finite-verb person tags, incl. the inversion persons PERSON_TOKENS omits.
@@ -195,9 +205,7 @@ def main() -> None:
             if not surface or not surface.isalpha():
                 continue
             L = len(surface)
-            # 2-letter floor: short verb forms (eu/vu/lu/pu) and short gold
-            # lemmas need clues too; single letters aren't grid words.
-            if not (2 <= L <= 15):
+            if not _surface_length_ok(L):
                 continue
             analyses = index.lookup_form(surface)
             if not analyses:
