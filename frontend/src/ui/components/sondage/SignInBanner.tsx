@@ -1,8 +1,11 @@
 // Anon visitor sign-in banner for /sondage — OAuth href mirrors SignInButton.
 
 import { useEffect, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import type { AuthClient } from '@/application/auth';
+
+const emailAuthEnabled = import.meta.env.VITE_FEATURE_EMAIL_AUTH === 'true';
 
 const bannerStyles = css({
   display: 'flex',
@@ -52,6 +55,20 @@ const ctaStyles = css({
   '&[aria-disabled="true"]': { opacity: 0.6, cursor: 'not-allowed' },
 });
 
+const emailLinkStyles = css({
+  fontFamily: 'body',
+  fontSize: 'xxs',
+  fontWeight: 'medium',
+  color: 'fgMuted',
+  textDecoration: 'underline',
+  _hover: { color: 'fg' },
+  _focusVisible: {
+    outline: '2px solid token(colors.focusRing)',
+    outlineOffset: '2px',
+    borderRadius: '2px',
+  },
+});
+
 export interface SignInBannerProps {
   readonly authClient: AuthClient;
   readonly onClick: () => void;
@@ -60,8 +77,10 @@ export interface SignInBannerProps {
 export function SignInBanner({ authClient, onClick }: SignInBannerProps) {
   // Compute returnTo post-hydration so prerender HTML doesn't bake a stale URL.
   const [returnTo, setReturnTo] = useState('');
+  const [returnPath, setReturnPath] = useState('/');
   useEffect(() => {
     setReturnTo(window.location.href);
+    setReturnPath(window.location.pathname + window.location.search);
   }, []);
   const href = returnTo ? authClient.signInUrl('google', returnTo) : '#';
 
@@ -70,7 +89,7 @@ export function SignInBanner({ authClient, onClick }: SignInBannerProps) {
       <p className={textStyles}>
         Connectez-vous pour proposer vos propres indices et suivre vos contributions.
         <span className={disclosureStyles}>
-          Votre adresse e-mail Google est alors enregistrée pour la facturation d’un
+          Votre adresse e-mail est alors enregistrée pour la facturation d’un
           éventuel abonnement.
         </span>
       </p>
@@ -82,6 +101,11 @@ export function SignInBanner({ authClient, onClick }: SignInBannerProps) {
       >
         Se connecter
       </a>
+      {emailAuthEnabled ? (
+        <Link to="/connexion" search={{ returnTo: returnPath }} className={emailLinkStyles}>
+          … ou avec votre e-mail
+        </Link>
+      ) : null}
     </aside>
   );
 }

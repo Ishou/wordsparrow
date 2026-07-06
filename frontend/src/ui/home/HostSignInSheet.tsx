@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Dialog } from '@ark-ui/react/dialog';
 import { Portal } from '@ark-ui/react/portal';
+import { Link } from '@tanstack/react-router';
 import { UsersThree, GoogleLogo, CircleNotch } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import type { AuthClient } from '@/application/auth';
+
+const emailAuthEnabled = import.meta.env.VITE_FEATURE_EMAIL_AUTH === 'true';
 
 // Mirrors AbonnementSheet: phone/tablet bottom-sheet, desktop centred modal.
 const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out', '&[data-state="closed"]': { animation: 'wsFadeOut 180ms ease-out forwards' } });
@@ -40,6 +43,7 @@ const text = css({ fontFamily: 'wsUi', fontSize: '13.5px', fontWeight: 'bold', c
 const googleBtn = css({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', height: '50px', borderRadius: '14px', bg: 'ws.jadeInk', color: 'ws.onJadeInk', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15px', textDecoration: 'none', cursor: 'pointer', transition: 'opacity 120ms', marginTop: '2px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const disclosure = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki', lineHeight: '1.4', maxWidth: '300px', margin: 0 });
 const secondary = css({ width: '100%', border: 'none', background: 'transparent', color: 'ws.khaki', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', padding: '6px', cursor: 'pointer', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const emailLink = css({ color: 'ws.jadeInk', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '13.5px', textDecoration: 'underline', cursor: 'pointer', padding: '2px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px', borderRadius: '2px' } });
 const spin = css({ animation: 'wsSpin 0.7s linear infinite' });
 
 export function HostSignInSheet({
@@ -53,8 +57,12 @@ export function HostSignInSheet({
 }) {
   // returnTo is computed post-mount so the prerender HTML never bakes a stale URL.
   const [returnTo, setReturnTo] = useState('');
+  const [returnPath, setReturnPath] = useState('/');
   const [redirecting, setRedirecting] = useState(false);
-  useEffect(() => setReturnTo(window.location.href), []);
+  useEffect(() => {
+    setReturnTo(window.location.href);
+    setReturnPath(window.location.pathname + window.location.search);
+  }, []);
   const href = authClient && returnTo ? authClient.signInUrl('google', returnTo) : '#';
   const disabled = href === '#' || redirecting;
   return (
@@ -90,8 +98,13 @@ export function HostSignInSheet({
                 </>
               )}
             </a>
+            {emailAuthEnabled ? (
+              <Link to="/connexion" search={{ returnTo: returnPath }} className={emailLink} onClick={onClose}>
+                … ou avec ton e-mail
+              </Link>
+            ) : null}
             <p className={disclosure}>
-              Ton adresse e-mail Google est alors enregistrée pour la facturation d’un éventuel abonnement.
+              Ton adresse e-mail est alors enregistrée pour la facturation d’un éventuel abonnement.
             </p>
             <button type="button" className={secondary} onClick={onClose}>
               Plus tard

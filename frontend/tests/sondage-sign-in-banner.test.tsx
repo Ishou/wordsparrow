@@ -43,7 +43,7 @@ describe('SignInBanner', () => {
     const authClient = stubAuthClient();
     await act(async () => { render(<SignInBanner authClient={authClient} onClick={() => {}} />); });
     expect(
-      screen.getByText(/adresse e-mail Google est alors enregistrée pour la facturation/i),
+      screen.getByText(/adresse e-mail est alors enregistrée pour la facturation/i),
     ).toBeInTheDocument();
   });
 });
