@@ -351,10 +351,7 @@ def inflect_clue(
     if not target:
         return InflectionResult(_capitalize_first(clue), "no-target-pos")
 
-    # Subjunctive-only surface (no indicative reading, e.g. `veuille`, `ait`):
-    # pin to one person — prefer 3sg — so the "Qu'il/Qu'ils…" marker (added at
-    # the end) agrees with the verb. Without this, the 2sg person preference
-    # produces a conflated "Que tu désires" for a 1sg/3sg form.
+    # Subjunctive-only surface: pin to one person (prefer 3sg) so the Qu' marker agrees.
     if (
         target_pos == "verbe"
         and "ipre" not in surface_tags
@@ -403,9 +400,7 @@ def inflect_clue(
         # a noun, like "Astre du jour" cluing a verb form). Leave verbatim.
         return InflectionResult(_capitalize_first(clue), "head-pos-mismatch")
 
-    # Copula-as-genus guard: for a NOMINAL surface, a clue headed by `être`/
-    # `avoir` uses the *noun* (`un être vivant`), not the verb — conjugating it
-    # yields `Été vivants` for `créatures`. Ship the clue verbatim instead.
+    # Copula-as-genus guard: a NOMINAL surface headed by être/avoir uses the noun, not the verb — ship verbatim.
     if target_pos != "verbe" and head_lemma.lower() in _COPULA_LEMMAS:
         return InflectionResult(_capitalize_first(clue), "verbatim")
 
@@ -664,9 +659,7 @@ def inflect_clue(
 
     rebuilt = _detokenize(new_tokens)
 
-    # Subjunctive-only surface: the inflected clue reads as plain present
-    # ("Désire ardemment" for `veuille`). Prepend the mood marker so it cues the
-    # subjunctive — the crossword convention ("Qu'il désire ardemment").
+    # Subjunctive-only surface: prepend the mood marker so it doesn't read as present tense.
     if (
         "ipre" not in surface_tags
         and (chosen_target & _SUBJUNCTIVE_MOODS)
