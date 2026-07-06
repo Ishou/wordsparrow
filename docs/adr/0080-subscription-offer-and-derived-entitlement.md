@@ -191,6 +191,14 @@ learn billing exists.
     view.
 
 - **Unchanged:** ADR-0078's deletion-cancellation invariant, hosted-checkout /
-  SAQ-A posture, retention, multi-source design, and test-phase gating
-  (`billing:subscribe`) all stand. This ADR only adds the offer + the tier axis
-  ADR-0079 left out of scope.
+  SAQ-A posture, retention, and multi-source design all stand. This ADR only
+  adds the offer + the tier axis ADR-0079 left out of scope.
+
+- **Amended (billing GA, 2026-07-06):** the test-phase `billing:subscribe`
+  gate on offer *visibility* is lifted. The subscribe offer (promo surfaces +
+  the `/abonnement` page) now renders to every non-subscriber — guests and free
+  players alike — so it can convert them. **Checkout enforcement is unchanged:**
+  `requireCapability(billing:subscribe)` still guards the billing routes
+  server-side (ADR-0078); the client only decides *visibility*, and guests are
+  routed through sign-in before any checkout. Billing GA promotes the
+  capability to all players (see ADR-0079 / identity `capabilitiesFor`).
