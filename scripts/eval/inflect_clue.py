@@ -493,9 +493,7 @@ def inflect_clue(
     while i < len(new_tokens):
         tok = new_tokens[i]
         if not _is_alpha_token(tok):
-            # A comma between synonyms is a co-head boundary — keep walking so
-            # the next verb/noun also inflects ("Lambiner, tarder" → "Lambina,
-            # tarda"; "Bien, patrimoine" → "Biens, patrimoines").
+            # Comma is a co-head boundary — keep walking so the next synonym also inflects.
             if tok == ",":
                 saw_coord = True
                 i += 1
