@@ -16,7 +16,9 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
       </a>
     ),
     useNavigate: () => vi.fn(),
-    useRouteContext: () => ({}),
+    useRouteContext: () => ({
+      authClient: { signInUrl: (provider: string, returnTo: string) => `https://auth.test/${provider}?return_to=${returnTo}` },
+    }),
   };
 });
 
@@ -83,6 +85,26 @@ afterEach(() => {
 });
 
 describe('AbonnementOffer consent gate (ADR-0094)', () => {
+  it('routes a guest through sign-in on the CTA, with no consent step', async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: 'http://localhost/abonnement', origin: 'http://localhost', assign },
+    });
+    const anon: AuthClient = { ...fakeAuthClient(), whoami: vi.fn().mockResolvedValue(null) };
+    render(
+      <AuthProvider authClient={anon} getPseudonym={() => 'Renard 423'}>
+        <AbonnementOffer client={fakeBillingClient()} />
+      </AuthProvider>,
+    );
+    const cta = await screen.findByRole('button', { name: /Se connecter pour s'abonner/ });
+    expect(screen.queryByRole('checkbox', { name: /Conditions de vente/ })).toBeNull();
+    await act(async () => {
+      fireEvent.click(cta);
+    });
+    expect(assign).toHaveBeenCalledWith('https://auth.test/google?return_to=/abonnement');
+  });
+
   it('shows the récapitulatif before payment with price, first-charge date and renewal terms', () => {
     render(<AbonnementOffer client={fakeBillingClient()} />, { wrapper: Wrapper });
 
