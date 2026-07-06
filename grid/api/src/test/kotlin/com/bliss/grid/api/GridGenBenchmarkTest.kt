@@ -34,7 +34,7 @@ class GridGenBenchmarkTest {
     private val log = LoggerFactory.getLogger(GridGenBenchmarkTest::class.java)
 
     @Test
-    fun `200 puzzles per-phase metrics on the production corpus`() {
+    fun `200 puzzles per-phase metrics on the mock corpus`() {
         val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints = defaultPuzzleConstraints()
@@ -189,15 +189,16 @@ class GridGenBenchmarkTest {
 
     /**
      * Algorithm-integrity smoke test: generates a single 5×5 grid with the
-     * real French corpus. Must succeed in under ~1s when the algorithm is
-     * working. Failure here means the integrated search is broken at small
-     * sizes — re-running the 25-gen bench would be a waste of 2:30.
+     * committed mock corpus (ADR-0097). Must succeed in under ~1s when the
+     * algorithm is working. Failure here means the integrated search is
+     * broken at small sizes — re-running the 25-gen bench would be a waste
+     * of 2:30.
      *
      * Intended to be invoked manually before any other `@Tag("bench")` run
      * as a fast pre-flight.
      */
     @Test
-    fun `5x5 smoke test on real corpus`() {
+    fun `5x5 smoke test on mock corpus`() {
         val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints =

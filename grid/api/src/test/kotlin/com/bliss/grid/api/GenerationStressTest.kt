@@ -16,7 +16,7 @@ import kotlin.system.measureTimeMillis
 @Tag("stress")
 class GenerationStressTest {
     @Test
-    fun `30 puzzles end-to-end on the production corpus`() {
+    fun `30 puzzles end-to-end on the mock corpus`() {
         val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints = defaultPuzzleConstraints()

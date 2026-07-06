@@ -16,7 +16,7 @@ class DailyGridFeasibilityProbeTest {
     private val log = LoggerFactory.getLogger(DailyGridFeasibilityProbeTest::class.java)
 
     @Test
-    fun `22x15 daily constraints fill airy grids on the production corpus`() {
+    fun `22x15 daily constraints fill airy grids on the mock corpus`() {
         val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints = dailyPuzzleConstraints()

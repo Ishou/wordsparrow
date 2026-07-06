@@ -155,17 +155,15 @@ dependencies {
 
 tasks.test {
     // Default lane: skip `@Tag("stress")` and `@Tag("bench")` tests. Those
-    // exercise the production corpus end-to-end and dominate CI wall time
-    // (the stress test alone takes >20 min). Run them on demand via the
-    // dedicated `stressTest` / `benchTest` tasks below.
+    // exercise the full generation pipeline end-to-end (mock corpus, ADR-0097)
+    // and dominate CI wall time (the stress test alone takes >20 min). Run
+    // them on demand via the dedicated `stressTest` / `benchTest` tasks below.
     useJUnitPlatform {
         excludeTags("stress", "bench")
     }
 }
 
-// The Ktor Module loads the clue corpus from $CORPUS_DIR (ADR-0097), which is
-// no longer bundled on the classpath. Point every test JVM at the committed
-// mock corpus (real words, placeholder clues) so the app boots in tests.
+// Corpus no longer on the classpath (ADR-0097); point test JVMs at the committed mock.
 tasks.withType<Test>().configureEach {
     environment(
         "CORPUS_DIR",
@@ -177,7 +175,7 @@ tasks.withType<Test>().configureEach {
 }
 
 val stressTest by tasks.registering(Test::class) {
-    description = "Runs @Tag(\"stress\") tests against the production corpus."
+    description = "Runs @Tag(\"stress\") tests against the committed mock corpus (ADR-0097; not production-scale)."
     group = "verification"
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
@@ -188,7 +186,7 @@ val stressTest by tasks.registering(Test::class) {
 }
 
 val benchTest by tasks.registering(Test::class) {
-    description = "Runs @Tag(\"bench\") tests against the production corpus."
+    description = "Runs @Tag(\"bench\") tests against the committed mock corpus (ADR-0097; not production-scale)."
     group = "verification"
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
