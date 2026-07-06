@@ -216,8 +216,7 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
 
   const auth = useOptionalAuth();
   const { authClient } = useRouteContext({ from: '__root__' });
-  // Only a confirmed-anon visitor is a guest; during the session load we show
-  // the normal flow so an authed player never flickers through the guest CTA.
+  // Only a confirmed-anon visitor is a guest (loading shows the normal flow, no flicker).
   const isGuest = auth?.state.status === 'anon';
 
   // Back from the hosted checkout restores this page from the bfcache with pending frozen true (assign never unwinds it); reset so the CTA works again.
@@ -395,8 +394,7 @@ export function AbonnementScreen() {
   const auth = useOptionalAuth();
   const { billingClient } = useRouteContext({ from: '__root__' });
   const subscribed = useSubscriber();
-  // Paywall is visible to everyone (guests + free players); checkout is auth-
-  // + capability-gated server-side (ADR-0078). Await only the session load.
+  // Visible to everyone; checkout stays auth- + capability-gated server-side (ADR-0078).
   if (auth?.state.status === 'loading') return <GateLoadingScreen />;
   return (
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
