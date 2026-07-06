@@ -6,7 +6,6 @@ import com.bliss.grid.api.dto.LetterCellDto
 import com.bliss.grid.api.mapper.GridToPuzzleMapper
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.GridGenerator
-import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -21,7 +20,7 @@ import kotlin.random.Random
 class GridSmokePrintTest {
     @Test
     fun `print one generated puzzle for visual inspection`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val mapper = GridToPuzzleMapper()
         val constraints = defaultPuzzleConstraints()

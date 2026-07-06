@@ -3,6 +3,7 @@ package com.bliss.grid.api.routes
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
+import com.bliss.grid.api.TestCorpus
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
@@ -17,7 +18,6 @@ import com.bliss.grid.domain.model.Position
 import com.bliss.grid.domain.model.Row
 import com.bliss.grid.domain.model.Word
 import com.bliss.grid.domain.model.WordPlacement
-import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
@@ -82,7 +82,7 @@ class ValidateWordRouteTest {
                 )
             }
             val hintUsageRepo = InMemoryHintUsageRepository()
-            val gen = GeneratePuzzleUseCase(CsvWordRepository.frenchFromClasspath(), defaultPuzzleConstraints())
+            val gen = GeneratePuzzleUseCase(TestCorpus.load(), defaultPuzzleConstraints())
             routing {
                 puzzles(
                     loadOrGenerate = LoadOrGeneratePuzzleUseCase(puzzleRepo, gen),

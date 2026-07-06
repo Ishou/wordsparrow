@@ -3,7 +3,6 @@ package com.bliss.grid.api
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.GridGenerator
 import com.bliss.grid.domain.model.LetterCell
-import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -14,7 +13,7 @@ import kotlin.random.Random
 class GridConnectivityReproTest {
     @Test
     fun `no generated grid has a closed block over many seeds`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints = defaultPuzzleConstraints()
 

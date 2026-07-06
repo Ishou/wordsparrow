@@ -163,6 +163,19 @@ tasks.test {
     }
 }
 
+// The Ktor Module loads the clue corpus from $CORPUS_DIR (ADR-0097), which is
+// no longer bundled on the classpath. Point every test JVM at the committed
+// mock corpus (real words, placeholder clues) so the app boots in tests.
+tasks.withType<Test>().configureEach {
+    environment(
+        "CORPUS_DIR",
+        layout.buildDirectory
+            .dir("resources/test/mock-corpus")
+            .get()
+            .asFile.absolutePath,
+    )
+}
+
 val stressTest by tasks.registering(Test::class) {
     description = "Runs @Tag(\"stress\") tests against the production corpus."
     group = "verification"

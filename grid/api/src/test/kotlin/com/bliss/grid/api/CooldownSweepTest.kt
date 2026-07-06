@@ -25,7 +25,7 @@ class CooldownSweepTest {
 
     @Test
     fun `28x20 daily generation survives accumulating clue cooldowns at cm=8`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val results = intArrayOf(2, 4, 8).map { cm -> sweep(repo, cm) }
 
         println()

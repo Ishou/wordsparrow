@@ -5,7 +5,6 @@ import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.GenerationMetrics
 import com.bliss.grid.domain.generation.GridGenerator
 import com.bliss.grid.domain.generation.GridShapeHash
-import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -36,7 +35,7 @@ class GridGenBenchmarkTest {
 
     @Test
     fun `200 puzzles per-phase metrics on the production corpus`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints = defaultPuzzleConstraints()
 
@@ -153,7 +152,7 @@ class GridGenBenchmarkTest {
      */
     @Test
     fun `200 puzzles via self-calibrating GeneratePuzzleUseCase`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val constraints = defaultPuzzleConstraints()
         val useCase = GeneratePuzzleUseCase(repo, constraints)
 
@@ -199,7 +198,7 @@ class GridGenBenchmarkTest {
      */
     @Test
     fun `5x5 smoke test on real corpus`() {
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         val constraints =
             com.bliss.grid.domain.generation
@@ -278,7 +277,7 @@ class GridGenBenchmarkTest {
         n: Int,
         label: String,
     ) {
-        val repo = CsvWordRepository.frenchFromClasspath()
+        val repo = TestCorpus.load()
         val generator = GridGenerator(repo)
         // EXPERIMENT: temporarily 10×10 to compare random-length-bias policy.
         val constraints =

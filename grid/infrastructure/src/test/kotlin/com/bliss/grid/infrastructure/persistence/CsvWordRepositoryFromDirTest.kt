@@ -3,6 +3,8 @@ package com.bliss.grid.infrastructure.persistence
 import assertk.assertThat
 import assertk.assertions.isNotEmpty
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,10 +30,10 @@ class CsvWordRepositoryFromDirTest {
     }
 
     @Test
-    fun `frenchCorpus falls back to the classpath corpus when CORPUS_DIR is unset`() {
-        // The test JVM has no CORPUS_DIR, so this exercises the transitional classpath path.
-        val repo = CsvWordRepository.frenchCorpus()
-
-        assertThat(repo.findByLength(5)).isNotEmpty()
+    @DisabledIfEnvironmentVariable(named = "CORPUS_DIR", matches = ".+")
+    fun `frenchCorpus fails fast when CORPUS_DIR is unset`() {
+        // ADR-0097: the corpus is served from object storage, not the classpath.
+        // With no CORPUS_DIR there is nothing to load, so it must throw.
+        assertThrows<IllegalStateException> { CsvWordRepository.frenchCorpus() }
     }
 }
