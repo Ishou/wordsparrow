@@ -514,6 +514,21 @@ def inflect_clue(
                     new_tokens[i] = new_form
             i += 1
             continue
+        # Appositive noun in NP state (`Légume racine blanc`): take the head's
+        # number but keep the apposition's own gender (`racine` stays fem).
+        # `gn` is left on the head so trailing adjectives still agree with it
+        # (`blanc` → `blancs`, not `blanches`).
+        if not in_pp and gn is not None and "nom" in classes:
+            noun_lemma = index.lemma_of_form(lo, prefer_pos="nom")
+            if noun_lemma:
+                own = _noun_agreement_from_form(lo, noun_lemma, index) or set()
+                agr = (own & GENDER_TOKENS) | (gn & NUMBER_TOKENS)
+                if own & GENDER_TOKENS and gn & NUMBER_TOKENS:
+                    new_form = index.inflect(noun_lemma, frozenset(agr), prefer_pos="nom")
+                    if new_form and new_form.lower() != lo:
+                        new_tokens[i] = new_form
+            i += 1
+            continue
         break
 
     # Backward walk: pre-head co-heads / adjectives. Symmetry with the
