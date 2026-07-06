@@ -296,11 +296,11 @@ _COPULA_LEMMAS = frozenset({"être", "avoir"})
 _PP_OBJECT_TOKENS = frozenset({"quelqu", "quelque", "quelques", "qqn", "qqch"})
 _PREP_BEFORE_INFINITIVE = frozenset({"à", "au", "aux", "de", "d", "du"})
 
-_SUBJUNCTIVE_MOODS = frozenset({"spre", "sima"})
-# Que + subject pronoun, with elision before a vowel (Qu'il / Qu'ils).
+_SUBJUNCTIVE_MOODS = frozenset({"spre", "simp"})
+# Que + subject pronoun, with elision before a vowel (Qu’il / Qu’ils).
 _SUBJ_PREFIX = {
-    "1sg": "Que je", "2sg": "Que tu", "3sg": "Qu'il",
-    "1pl": "Que nous", "2pl": "Que vous", "3pl": "Qu'ils",
+    "1sg": "Que je", "2sg": "Que tu", "3sg": "Qu’il",
+    "1pl": "Que nous", "2pl": "Que vous", "3pl": "Qu’ils",
 }
 
 
@@ -308,7 +308,7 @@ def _subjunctive_prefix(target: set[str]) -> str:
     for person in ("3sg", "3pl", "1sg", "2sg", "1pl", "2pl"):
         if person in target:
             return _SUBJ_PREFIX[person]
-    return "Qu'il"
+    return "Qu’il"
 
 
 def _pp_action_definition(
@@ -670,7 +670,7 @@ def inflect_clue(
     if (
         "ipre" not in surface_tags
         and (chosen_target & _SUBJUNCTIVE_MOODS)
-        and not rebuilt.lower().startswith(("que ", "qu'"))
+        and not rebuilt.lower().startswith(("que ", "qu'", "qu’"))
     ):
         rebuilt = f"{_subjunctive_prefix(chosen_target)} {rebuilt[:1].lower()}{rebuilt[1:]}"
         return InflectionResult(rebuilt, "")

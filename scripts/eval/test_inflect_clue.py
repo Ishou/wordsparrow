@@ -837,14 +837,14 @@ def test_pp_clean_verb_still_inflects() -> None:
 
 def test_subjunctive_only_gets_qu_marker_3sg() -> None:
     """A subjunctive-only surface (`veuille`) is pinned to 3sg and marked with
-    the mood so it doesn't read as present → `Qu'il désire ardemment`."""
+    the mood so it doesn't read as present → `Qu’il désire ardemment`."""
     idx = MorphologyIndex()
     _add(idx, "désirer", "désirer", "v1_it_q__a infi")
     _add(idx, "désirer", "désire", "v1_it_q__a spre 3sg")
     # veuille: subjunctive 1sg/3sg (no indicative reading)
     res = inflect_clue("Désirer ardemment", {"v1_it_q__a", "spre", "1sg", "3sg"}, idx)
     assert res.flag == "", res
-    assert res.text == "Qu'il désire ardemment"
+    assert res.text == "Qu’il désire ardemment"
 
 
 def test_subjunctive_plural_marker() -> None:
@@ -852,12 +852,24 @@ def test_subjunctive_plural_marker() -> None:
     _add(idx, "désirer", "désirer", "v1_it_q__a infi")
     _add(idx, "désirer", "désirent", "v1_it_q__a spre 3pl")
     res = inflect_clue("Désirer ardemment", {"v1_it_q__a", "spre", "3pl"}, idx)
-    assert res.text == "Qu'ils désirent ardemment", res
+    assert res.text == "Qu’ils désirent ardemment", res
+
+
+def test_subjunctive_imperfect_gets_qu_marker() -> None:
+    """A `simp`-tagged surface (subjonctif imparfait, e.g. `voulût`) is the
+    other subjunctive mood alongside `spre` — must trigger the same pin +
+    marker, not silently fall through as present tense. The pin retargets
+    to the far more common `spre` paradigm row, same as a `spre` surface."""
+    idx = MorphologyIndex()
+    _add(idx, "désirer", "désirer", "v1_it_q__a infi")
+    _add(idx, "désirer", "désire", "v1_it_q__a spre 3sg")
+    res = inflect_clue("Désirer ardemment", {"v1_it_q__a", "simp", "3sg"}, idx)
+    assert res.text == "Qu’il désire ardemment", res
 
 
 def test_syncretic_present_subjunctive_not_marked() -> None:
     """A form that is BOTH present indicative and subjunctive (`abaisse`) clues
-    as present — no `Qu'` marker."""
+    as present — no `Qu’` marker."""
     idx = MorphologyIndex()
     _add(idx, "abaisser", "abaisser", "v1_it_q__a infi")
     _add(idx, "abaisser", "abaisse", "v1_it_q__a ipre spre 3sg")
