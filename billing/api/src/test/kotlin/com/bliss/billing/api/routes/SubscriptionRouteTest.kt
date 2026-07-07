@@ -41,13 +41,15 @@ class SubscriptionRouteTest {
         }
 
     @Test
-    fun `never-subscribed authed caller gets the free projection with null periodEnd`() =
+    fun `never-subscribed authed caller gets the none projection with null periodEnd`() =
         testApplication {
             install(authed, FakeSubscriptionRepository())
             val resp = client.get("/v1/subscription") { cookie(SESSION_COOKIE_NAME, "valid") }
             assertThat(resp.status).isEqualTo(HttpStatusCode.OK)
             val body = resp.bodyAsText()
             assertThat(body).contains("\"tier\":\"free\"")
+            // Never subscribed is "none", not "expired" — the latter is a genuinely lapsed subscription.
+            assertThat(body).contains("\"status\":\"none\"")
             // periodEnd null must be present on the wire, not absent (ADR-0003 §6); capabilities are gone.
             assertThat(body).contains("\"periodEnd\":null")
             assertThat(body).doesNotContain("capabilities")
