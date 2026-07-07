@@ -35,6 +35,19 @@ const offerList = css({
   '& strong': { fontWeight: 'bold', color: 'ws.jadeInk' },
 });
 
+const saisineList = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px',
+  margin: '2px 0 0',
+  paddingLeft: '20px',
+  listStyle: 'disc',
+  fontFamily: 'wsUi',
+  fontSize: '14px',
+  lineHeight: '1.5',
+  color: 'ws.contentInk',
+});
+
 const updated = css({
   fontFamily: 'wsUi',
   fontSize: '12px',
@@ -63,7 +76,7 @@ export function ConditionsAbonnementScreen() {
         <header>
           <h1 className={title}>Conditions générales de vente</h1>
           <p className={lede}>Abonnement WordSparrow — les règles de la souscription payante.</p>
-          <p className={updated}>Dernière mise à jour : 5 juillet 2026 — Version {CGV_VERSION}</p>
+          <p className={updated}>Dernière mise à jour : 6 juillet 2026 — Version {CGV_VERSION}</p>
         </header>
 
         <Article heading="Article 1 — Objet et champ d'application">
@@ -336,20 +349,40 @@ export function ConditionsAbonnementScreen() {
           </P>
           <P>
             Conformément aux articles L611-1 et suivants du Code de la consommation, l&apos;Abonné peut
-            recourir gratuitement à un médiateur de la consommation, après une réclamation écrite
-            préalable restée sans réponse satisfaisante et dans un délai d&apos;un an. Le médiateur
-            compétent est AME Conso (Association des Médiateurs Européens), 197 boulevard Saint-Germain,
-            75007 Paris —{' '}
-            <a
-              className={link}
-              href="https://www.mediationconso-ame.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              mediationconso-ame.com
-            </a>
-            . Pour les litiges transfrontaliers, les consommateurs résidant dans l&apos;Union
-            européenne peuvent s&apos;adresser au Centre Européen des Consommateurs France.
+            recourir gratuitement à un médiateur de la consommation dans les conditions suivantes :
+          </P>
+          <P>
+            «&nbsp;En cas de litige entre le professionnel et le consommateur, ceux-ci
+            s&apos;efforceront de trouver une solution amiable.
+          </P>
+          <P>
+            A défaut d&apos;accord amiable, le consommateur a la possibilité de saisir gratuitement le
+            médiateur de la consommation dont relève le professionnel, à savoir l&apos;AME CONSO, dans
+            un délai d&apos;un an à compter de la réclamation écrite adressée au professionnel.
+          </P>
+          <P>La saisine du médiateur de la consommation devra s&apos;effectuer :</P>
+          <ul className={saisineList}>
+            <li>
+              soit en complétant le formulaire prévu à cet effet sur le site internet de
+              l&apos;AME CONSO :{' '}
+              <a
+                className={link}
+                href="https://www.mediationconso-ame.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                www.mediationconso-ame.com
+              </a>{' '}
+              ;
+            </li>
+            <li>
+              soit par courrier adressé à l&apos;AME CONSO, 197 Boulevard Saint-Germain - 75007
+              PARIS.&nbsp;»
+            </li>
+          </ul>
+          <P>
+            Pour les litiges transfrontaliers, les consommateurs résidant dans l&apos;Union européenne
+            peuvent s&apos;adresser au Centre Européen des Consommateurs France.
           </P>
         </Article>
 
