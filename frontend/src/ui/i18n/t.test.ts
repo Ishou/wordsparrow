@@ -26,6 +26,10 @@ describe('t() accessor', () => {
   it('falls back to the key when it is missing', () => {
     expect(t('does.not.exist' as MessageKey)).toBe('does.not.exist');
   });
+
+  it('throws in dev when a required param is missing (no {{x}} in speech)', () => {
+    expect(() => t('home.cell.aria.started')).toThrow(/unresolved placeholder/);
+  });
 });
 
 describe('interpolate()', () => {

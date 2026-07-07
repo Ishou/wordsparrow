@@ -42,5 +42,10 @@ function resolveRawKey(key: string, params?: TParams): string {
 export function t(key: MessageKey, params?: TParams): string {
   const template = (fr as Record<string, string>)[resolveRawKey(key, params)];
   if (template === undefined) return key;
-  return interpolate(template, params);
+  const text = interpolate(template, params);
+  // Fail fast in dev so a forgotten param never speaks a literal "{{x}}" through an aria-label.
+  if (import.meta.env.DEV && text.includes('{{')) {
+    throw new Error(`i18n: unresolved placeholder in "${key}" → "${text}"`);
+  }
+  return text;
 }
