@@ -28,6 +28,8 @@ const CANCELED_VIEW: SubscriptionView = { tier: 'subscriber', status: 'canceled'
 const PAST_DUE_VIEW: SubscriptionView = { tier: 'subscriber', status: 'past_due', periodEnd: '2026-08-01T00:00:00Z' };
 // What GET /v1/subscription actually returns for a never-subscribed user (SubscriptionQuery.FREE): expired + null periodEnd, 200 (not a 404).
 const NEVER_SUBSCRIBED_VIEW: SubscriptionView = { tier: 'free', status: 'expired', periodEnd: null };
+// A real subscriber whose renewal payment failed: MolliePayment.toState() also produces a null periodEnd, but tier stays their paid tier.
+const LAPSED_PAYMENT_FAILURE_VIEW: SubscriptionView = { tier: 'subscriber', status: 'expired', periodEnd: null };
 
 function fakeBillingClient(getSubscription: BillingClient['getSubscription'], overrides: Partial<BillingClient> = {}): BillingClient {
   return {
@@ -156,6 +158,16 @@ describe('AbonnementSection états', () => {
     expect(screen.queryByText('Terminé')).toBeNull();
     expect(screen.queryByRole('link', { name: 'Me réabonner' })).toBeNull();
     expect(screen.getByRole('link', { name: /Découvre l'abonnement/ }).getAttribute('href')).toBe('/abonnement');
+  });
+
+  it('keeps a real subscriber on the lapsed état when a failed renewal payment also nulls periodEnd', async () => {
+    const client = fakeBillingClient(vi.fn().mockResolvedValue(LAPSED_PAYMENT_FAILURE_VIEW));
+    render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
+
+    // tier (not periodEnd) is the discriminant: a non-'free' tier is a real subscriber, never the free projection.
+    expect(await screen.findByText('Terminé')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Me réabonner' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Découvre l'abonnement/ })).toBeNull();
   });
 });
 
