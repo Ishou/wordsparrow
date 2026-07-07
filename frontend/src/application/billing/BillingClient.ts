@@ -71,5 +71,5 @@ export interface BillingClient {
   cancelSubscription(): Promise<SubscriptionView>;
   reactivateSubscription(): Promise<SubscriptionView>;
   getSubscription(): Promise<SubscriptionView>;
-  listReceipts(cursor?: string): Promise<ReceiptsPage>;
+  listReceipts(cursor?: string, limit?: number): Promise<ReceiptsPage>;
 }

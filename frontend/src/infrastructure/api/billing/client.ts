@@ -96,10 +96,13 @@ export function createHttpBillingClient(options: HttpBillingClientOptions): Bill
       return toSubscriptionView(data);
     },
 
-    async listReceipts(cursor) {
+    async listReceipts(cursor, limit) {
+      const query: { cursor?: string; limit?: number } = {};
+      if (cursor !== undefined) query.cursor = cursor;
+      if (limit !== undefined) query.limit = limit;
       const { data, error, response } = await client.GET('/v1/receipts', {
         credentials: 'include',
-        params: { query: cursor !== undefined ? { cursor } : {} },
+        params: { query },
       });
       if (error || !data) throw billingError(response.status, error?.detail ?? error?.title);
       return toReceiptsPage(data);
