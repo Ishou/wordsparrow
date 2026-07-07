@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { css, cx } from 'styled-system/css';
 import { normalizeForMatch } from '@/application/survey';
+import { t } from '@/ui/i18n';
 
 const fieldStyles = css({
   display: 'flex',
@@ -217,7 +218,7 @@ export function SenseInput({
         ) : null}
       </div>
       {repeatsLemma ? (
-        <p className={hintStyles} role="alert">Le sens ne doit pas répéter le mot.</p>
+        <p className={hintStyles} role="alert">{t('sondage.sense.repeatError')}</p>
       ) : null}
     </div>
   );

@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 import { css } from 'styled-system/css';
 import type { SurveyCategorie } from '@/application/survey';
 import { CATEGORIE_OPTIONS, categorieLabel } from './labels';
+import { t } from '@/ui/i18n';
 
 const fieldsetStyles = css({
   display: 'flex',
@@ -95,7 +96,7 @@ export function CategorieMultiSelect({
       // The min-1 floor keeps the seed selection from being fully cleared.
       if (value.length <= minItems) return;
       onChange(value.filter((c) => c !== cat));
-      setAnnounce(`${categorieLabel(cat)} retirée`);
+      setAnnounce(t('sondage.categorie.sr.removed', { label: categorieLabel(cat) }));
       return;
     }
     if (cat === exclusiveValue) {
@@ -103,8 +104,8 @@ export function CategorieMultiSelect({
       onChange([cat]);
       setAnnounce(
         hadOthers
-          ? `${categorieLabel(cat)} sélectionnée, autres catégories retirées`
-          : `${categorieLabel(cat)} ajoutée`,
+          ? t('sondage.categorie.sr.exclusiveSelected', { label: categorieLabel(cat) })
+          : t('sondage.categorie.sr.added', { label: categorieLabel(cat) }),
       );
       return;
     }
@@ -114,8 +115,11 @@ export function CategorieMultiSelect({
     onChange([...base, cat]);
     setAnnounce(
       hadExclusive
-        ? `${categorieLabel(cat)} ajoutée, ${categorieLabel(exclusiveValue!)} retirée`
-        : `${categorieLabel(cat)} ajoutée`,
+        ? t('sondage.categorie.sr.addedExclusiveRemoved', {
+            label: categorieLabel(cat),
+            other: categorieLabel(exclusiveValue!),
+          })
+        : t('sondage.categorie.sr.added', { label: categorieLabel(cat) }),
     );
   }
 

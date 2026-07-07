@@ -3,6 +3,7 @@ import { Portal } from '@ark-ui/react/portal';
 import { css } from 'styled-system/css';
 import { styleLabel } from './labels';
 import { STYLE_COPY } from './styleCopy';
+import { t } from '@/ui/i18n';
 
 const wrapStyles = css({
   display: 'inline-flex',
@@ -80,7 +81,7 @@ export function StyleTooltip({ style, definition, mot, labelHidden = false }: St
   if (!copy) {
     return (
       <span className={wrapStyles}>
-        {labelHidden ? null : 'Style : '}
+        {labelHidden ? null : t('sondage.style.prefix')}
         <span className={css({ color: 'fg', fontWeight: 'semibold' })}>{label}</span>
       </span>
     );
@@ -88,10 +89,10 @@ export function StyleTooltip({ style, definition, mot, labelHidden = false }: St
   return (
     <Tooltip.Root openDelay={150} closeDelay={100}>
       <span className={wrapStyles}>
-        {labelHidden ? null : 'Style : '}
+        {labelHidden ? null : t('sondage.style.prefix')}
         <Tooltip.Trigger
           className={triggerStyles}
-          aria-label={`En savoir plus sur le style ${label}`}
+          aria-label={t('sondage.style.aria.moreInfo', { label })}
         >
           {label}
         </Tooltip.Trigger>
@@ -102,10 +103,10 @@ export function StyleTooltip({ style, definition, mot, labelHidden = false }: St
             <Tooltip.Arrow className={arrowStyles}>
               <Tooltip.ArrowTip />
             </Tooltip.Arrow>
-            <span className={headerStyles}>Style : {label}</span>
+            <span className={headerStyles}>{t('sondage.style.header', { label })}</span>
             <span>{copy.definition}</span>
-            <span className={exampleLabelStyles}>Exemple</span>
-            <span className={exampleStyles}>« {definition} » → {mot}</span>
+            <span className={exampleLabelStyles}>{t('sondage.style.example')}</span>
+            <span className={exampleStyles}>{t('sondage.style.exampleLine', { definition, mot })}</span>
           </Tooltip.Content>
         </Tooltip.Positioner>
       </Portal>

@@ -5,6 +5,7 @@ import { css, cx } from 'styled-system/css';
 import type { ItemPair, PairVerdict } from '@/application/survey';
 import { categorieLabel, posLabel } from './labels';
 import { StyleTooltip } from './StyleTooltip';
+import { t } from '@/ui/i18n';
 
 const cardStyles = css({
   bg: 'surface',
@@ -197,8 +198,8 @@ const kbdStyles = css({
 function AnnouncedDifficulty({ value }: { readonly value: number }) {
   return (
     <p className={difficultyRowStyles}>
-      Difficulté annoncée
-      <span className={difficultyDotsStyles} aria-label={`${value} sur 5`} role="img">
+      {t('sondage.pair.difficultyAnnounced')}
+      <span className={difficultyDotsStyles} aria-label={t('sondage.difficulty.aria.scoreOfFive', { score: value })} role="img">
         {[1, 2, 3, 4, 5].map((score) => (
           <span key={score} className={difficultyDotStyles} data-filled={score <= value} aria-hidden="true" />
         ))}
@@ -252,8 +253,8 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
     <article className={cardStyles} aria-live="polite" data-testid="pair-card">
       <h2 className={titleStyles}>{pair.mot}</h2>
       <div className={pairGridStyles}>
-        <section className={sideStyles} aria-label="Définition de gauche" data-side="left">
-          <h3 className={sideHeadingStyles}>Gauche</h3>
+        <section className={sideStyles} aria-label={t('sondage.pair.aria.left')} data-side="left">
+          <h3 className={sideHeadingStyles}>{t('sondage.pair.heading.left')}</h3>
           <p className={chipRowStyles}>
             <span className={chipStyles} data-chip="pos">{posLabel(pair.left.pos)}</span>
             <span className={categoriePillStyles} data-chip="categorie">
@@ -264,8 +265,8 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
           <StyleTooltip style={pair.left.style} definition={pair.left.definition} mot={pair.mot} />
           <AnnouncedDifficulty value={pair.left.forceClaimed} />
         </section>
-        <section className={sideStyles} aria-label="Définition de droite" data-side="right">
-          <h3 className={sideHeadingStyles}>Droite</h3>
+        <section className={sideStyles} aria-label={t('sondage.pair.aria.right')} data-side="right">
+          <h3 className={sideHeadingStyles}>{t('sondage.pair.heading.right')}</h3>
           <p className={chipRowStyles}>
             <span className={chipStyles} data-chip="pos">{posLabel(pair.right.pos)}</span>
             <span className={categoriePillStyles} data-chip="categorie">
@@ -281,62 +282,62 @@ export function PairCard({ pair, onVerdict, disabled = false }: PairCardProps) {
       <div
         className={verdictRowStyles}
         role="group"
-        aria-label="Comparaison des deux définitions"
+        aria-label={t('sondage.pair.aria.compare')}
         aria-keyshortcuts="g d j k l space escape"
       >
         <button
           type="button"
           className={cx(verdictButtonBase, verdictLeftStyles)}
-          aria-label="Préférer la définition de gauche"
+          aria-label={t('sondage.pair.aria.preferLeft')}
           aria-disabled={disabled || undefined}
           data-verdict="LEFT_WINS"
           onClick={() => submit('LEFT_WINS')}
         >
-          <span>← Préférer celle-ci</span>
+          <span>{t('sondage.pair.verdict.left')}</span>
           <kbd className={kbdStyles}>G</kbd>
         </button>
         <button
           type="button"
           className={cx(verdictButtonBase, verdictRightStyles)}
-          aria-label="Préférer la définition de droite"
+          aria-label={t('sondage.pair.aria.preferRight')}
           aria-disabled={disabled || undefined}
           data-verdict="RIGHT_WINS"
           onClick={() => submit('RIGHT_WINS')}
         >
-          <span>Préférer celle-ci →</span>
+          <span>{t('sondage.pair.verdict.right')}</span>
           <kbd className={kbdStyles}>D</kbd>
         </button>
         <button
           type="button"
           className={cx(verdictButtonBase, verdictBothBadStyles)}
-          aria-label="Les deux définitions sont mauvaises"
+          aria-label={t('sondage.pair.aria.bothBad')}
           aria-disabled={disabled || undefined}
           data-verdict="BOTH_BAD"
           onClick={() => submit('BOTH_BAD')}
         >
-          <span>Les deux mauvaises</span>
+          <span>{t('sondage.pair.verdict.bothBad')}</span>
           <kbd className={kbdStyles}>J</kbd>
         </button>
         <button
           type="button"
           className={cx(verdictButtonBase, verdictSkipStyles)}
-          aria-label="Passer cette paire"
+          aria-label={t('sondage.pair.aria.skip')}
           aria-disabled={disabled || undefined}
           data-verdict="SKIP"
           onClick={() => submit('SKIP')}
         >
-          <span>Passer</span>
+          <span>{t('sondage.verdict.passer')}</span>
           <kbd className={kbdStyles}>K</kbd>
         </button>
         <button
           type="button"
           className={cx(verdictButtonBase, verdictBothGoodStyles)}
-          aria-label="Les deux définitions sont bonnes"
+          aria-label={t('sondage.pair.aria.bothGood')}
           aria-disabled={disabled || undefined}
           data-verdict="BOTH_GOOD"
           onClick={() => submit('BOTH_GOOD')}
         >
-          <span>Les deux bonnes</span>
+          <span>{t('sondage.pair.verdict.bothGood')}</span>
           <kbd className={kbdStyles}>L</kbd>
         </button>
       </div>

@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { css, cx } from 'styled-system/css';
 import { normalizeForMatch } from '@/application/survey';
+import { t } from '@/ui/i18n';
 
 const fieldStyles = css({
   display: 'flex',
@@ -180,7 +181,7 @@ export function GlossChipInput({
     }
     const next = [...value, trimmed];
     onChange(next);
-    setAnnounce(`Ajouté : ${trimmed}`);
+    setAnnounce(t('sondage.gloss.sr.added', { value: trimmed }));
     setTyped('');
     setActiveIndex(0);
   }
@@ -189,7 +190,7 @@ export function GlossChipInput({
     const removed = value[index];
     const next = value.filter((_, i) => i !== index);
     onChange(next);
-    setAnnounce(`Retiré : ${removed}`);
+    setAnnounce(t('sondage.gloss.sr.removed', { value: removed }));
     inputRef.current?.focus();
   }
 
@@ -247,7 +248,7 @@ export function GlossChipInput({
               <button
                 type="button"
                 className={chipRemoveStyles}
-                aria-label={`Retirer ${chip}`}
+                aria-label={t('sondage.gloss.aria.removeChip', { value: chip })}
                 onClick={() => removeAt(index)}
                 onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }}
               >
