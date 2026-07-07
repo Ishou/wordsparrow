@@ -118,6 +118,7 @@ channels:
           - { $ref: '#/components/messages/PlayerJoined' }
           - { $ref: '#/components/messages/PlayerLeft' }
           - { $ref: '#/components/messages/PlayerRenamed' }
+          - { $ref: '#/components/messages/OwnershipChanged' }
           - { $ref: '#/components/messages/GameStarted' }
           - { $ref: '#/components/messages/CellUpdated' }
           - { $ref: '#/components/messages/PresenceUpdated' }
@@ -144,6 +145,7 @@ components:
     PlayerJoined:   { name: playerJoined,   title: Player joined,                                                                                                                                  payload: { $ref: '#/components/schemas/PlayerJoinedPayload' } }
     PlayerLeft:     { name: playerLeft,     title: Player left,                                                                                                                                    payload: { $ref: '#/components/schemas/PlayerLeftPayload' } }
     PlayerRenamed:  { name: playerRenamed,  title: Player renamed,                                                                                                                                 payload: { $ref: '#/components/schemas/PlayerRenamedPayload' } }
+    OwnershipChanged: { name: ownershipChanged, title: Ownership changed,   summary: A lobby's owner changed — claimed, relinquished, or RGPD-vacated., payload: { $ref: '#/components/schemas/OwnershipChangedPayload' }, description: "ADR-0098. Broadcast to peers when ownership is claimed (both new-owner ids non-null) or the lobby becomes ownerless via relinquish or RGPD vacate (both null). Lets clients toggle owner-gated affordances and offer the claim action." }
     GameStarted:    { name: gameStarted,    title: Game started,                       summary: Server fetched a puzzle and transitioned to IN_PROGRESS.,                                          payload: { $ref: '#/components/schemas/GameStartedPayload' } }
     CellUpdated:    { name: cellUpdated,    title: Canonical cell update,              summary: Server-stamped broadcast of an accepted `cellUpdate`.,                                             payload: { $ref: '#/components/schemas/CellUpdatedPayload' },   description: Last-write-wins per ADR-0018; clients apply unconditionally. }
     PresenceUpdated: { name: presenceUpdated, title: Peer presence update,              summary: Broadcast of a peer's `cellFocus`; ephemeral cursor position.,                                     payload: { $ref: '#/components/schemas/PresenceUpdatedPayload' }, description: Ephemeral; carries no domain meaning and is not persisted. Cleared on `WAITING`/`COMPLETED` transitions. }
@@ -541,6 +543,20 @@ components:
         sessionId:    { $ref: '#/components/schemas/SessionId' }
         newPseudonym: { $ref: '#/components/schemas/Pseudonym' }
       example: { type: playerRenamed, sessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5, newPseudonym: Alice }
+    OwnershipChangedPayload:
+      type: object
+      required: [type, lobbyId, newOwnerSessionId, newOwnerUserId]
+      description: |
+        Owner-change broadcast (ADR-0098 §2). On a claim both new-owner ids
+        are non-null; when the lobby becomes ownerless (relinquish or RGPD
+        vacate) both are `null`. The ids are always emitted — `null` is the
+        meaningful "ownerless" value, so both stay in `required` (ADR-0003 §6).
+      properties:
+        type:              { type: string, enum: [ownershipChanged] }
+        lobbyId:           { $ref: '#/components/schemas/LobbyId' }
+        newOwnerSessionId: { $ref: '#/components/schemas/SessionId', nullable: true, description: Session id of the new owner; `null` when the lobby became ownerless. }
+        newOwnerUserId:    { type: string, nullable: true, description: User id of the new owner; `null` when the lobby became ownerless. }
+      example: { type: ownershipChanged, lobbyId: 7gQ2xK9p, newOwnerSessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5, newOwnerUserId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b }
     GameStartedPayload:
       type: object
       required: [type, puzzle, startedAt]
