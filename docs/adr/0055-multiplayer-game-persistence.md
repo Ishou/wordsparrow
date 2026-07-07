@@ -342,6 +342,46 @@ PR #416 takes the backend-bypass approach instead:
 3. The auth surface is unchanged: an outsider whose session id does not match
    `ownerSessionId` still hits the code-check path and earns `WrongCode`.
 
+## Amendment 2026-07-07 — RGPD rule 2 vacates instead of transfers; GC gains an ownerless sweep (ADR-0098)
+
+ADR-0098 (multiplayer ownership as a claimable lease) makes ownership something
+a user holds until they finish a game or **explicitly** relinquish it, and lets
+a relinquished game be *claimed* by any present player. Two parts of this ADR
+change as a consequence.
+
+**RGPD cascade rule 2 → vacate.** §f rule 2 previously *transferred* ownership to
+the earliest-joined remaining player. Under ADR-0098 the free-tier quota counts
+games by `owner_user_id`, so a transfer would conscript an unconsenting player
+into ownership and could push a free player over their one-active-game limit
+involuntarily. Rule 2 now **vacates** ownership instead:
+
+- `owner_user_id` is set to `NULL` — the lobby becomes *ownerless* and drops out
+  of every user's quota and "Mes parties".
+- `owner_session_id` is anonymised to the same zero-UUID sentinel §f already uses
+  for `written_by_session_id`, so **no erased identifier remains** on the row.
+  (This is strictly cleaner than the old transfer, which left a *real* other
+  user's id as owner.)
+- The erased user's playership is removed and their cell entries anonymised,
+  exactly as before. Cell letters are kept.
+- Any remaining player may then *claim* the lobby (ADR-0098) to restore
+  owner-gated actions. `EraseSessionResult.transferredLobbies` is renamed
+  `vacatedLobbies` (or kept with vacate semantics — reviewer's call; the wire
+  count is documented either way).
+
+Rules 1 (sole owner → delete) and 3 (non-owner → drop playership) are unchanged.
+The "only path that transfers ownership" statement (lines 162-171) is superseded:
+after ADR-0098 there is no ownership *transfer* at all — erasure vacates, and a
+living user reclaims by explicit claim.
+
+**GC matrix gains a fourth row.** The §c matrix gains:
+
+| State (ownerless)                    | TTL             | Notes                                                                 |
+|--------------------------------------|-----------------|-----------------------------------------------------------------------|
+| non-terminal & `owner_user_id IS NULL` | 7 days          | Relinquished or RGPD-vacated games idle beyond 7d are evicted. Keyed on `last_activity_at`. Prevents ownerless games (incl. abandoned `IN_PROGRESS`) accumulating. **Owned** `IN_PROGRESS` remains never-evicted-by-idle. |
+
+The port gains `findIdleOwnerless(cutoff)` alongside `findIdleWaiting` /
+`findIdleCompleted`; both adapters implement it.
+
 ## References
 
 - [ADR-0001 — Parallel-agent development workflow](./0001-parallel-agent-development-workflow.md)
