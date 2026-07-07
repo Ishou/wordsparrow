@@ -16,7 +16,7 @@ import java.time.Duration
 
 /**
  * Sweeps lobbies whose `lastActivityAt` is older than the state-specific TTL
- * (ADR-0039 GC matrix). Companion to [CreateLobbyUseCase]'s per-session
+ * (ADR-0055 GC matrix). Companion to [CreateLobbyUseCase]'s per-session
  * idempotency: idempotency stops the user-visible "create-on-every-click"
  * path; this GC mops up lobbies that linger after a tab close, network drop,
  * crash, or a finished game whose retention window has elapsed.
@@ -28,11 +28,13 @@ import java.time.Duration
  * heartbeat / reconnect ping will touch the lobby, and a truly silent client
  * is indistinguishable from an abandoned one.
  *
- * ADR-0039 GC matrix:
+ * ADR-0055 GC matrix (ADR-0098 §4 adds the ownerless row):
  *  - WAITING     → evict after [waitingTtl] (default 24h). Abandoned-lobby cleanup.
  *  - COMPLETED   → evict after [completedTtl] (default 7d). Finished-game retention.
- *  - IN_PROGRESS → NEVER evicted here. Neither query returns IN_PROGRESS rows;
- *                  in-progress lobbies are removed only when the last player leaves
+ *  - OWNERLESS   → evict non-terminal `owner_user_id IS NULL` lobbies after [ownerlessTtl]
+ *                  (default 7d). Reaps relinquished / RGPD-vacated games so they don't accrue.
+ *  - IN_PROGRESS → never evicted by idle while still owned. An owned in-progress lobby matches
+ *                  none of the three queries; it is removed only when the last player leaves
  *                  (see `LeaveLobbyUseCase`).
  */
 class LobbyGarbageCollector(
@@ -40,12 +42,13 @@ class LobbyGarbageCollector(
     private val clock: Clock,
     val waitingTtl: Duration = Duration.ofHours(24),
     val completedTtl: Duration = Duration.ofDays(7),
+    val ownerlessTtl: Duration = Duration.ofDays(7),
     val sweepInterval: Duration = Duration.ofMinutes(5),
     private val log: Logger = LoggerFactory.getLogger(LobbyGarbageCollector::class.java),
 ) {
     /**
      * Single-pass sweep. Runs once and returns the total number of lobbies evicted
-     * across both the WAITING and COMPLETED retention windows. Test-friendly
+     * across the WAITING, COMPLETED, and OWNERLESS retention windows. Test-friendly
      * entrypoint: pure suspend, no infinite loop. Production wires this into [run]
      * to call repeatedly.
      */
@@ -53,6 +56,7 @@ class LobbyGarbageCollector(
         val now = clock.now()
         val waitingCutoff = now.minus(waitingTtl)
         val completedCutoff = now.minus(completedTtl)
+        val ownerlessCutoff = now.minus(ownerlessTtl)
         var evicted = 0
         evicted +=
             evictAll(
@@ -68,12 +72,21 @@ class LobbyGarbageCollector(
                 // ADR-0055 amendment: an authed seat exempts; re-checked under the lock so a sign-in racing the scan cannot lose the lobby.
                 stillEligible = { lobby -> lobby.players.values.none { it.userId != null } },
             )
+        evicted +=
+            evictAll(
+                candidates = repo.findIdleOwnerless(ownerlessCutoff),
+                cutoff = ownerlessCutoff,
+                // Guarded by ownership, not a single state (ADR-0098 §4): non-terminal + still ownerless, re-checked so a claim racing the scan cannot lose the lobby.
+                requiredState = null,
+                stillEligible = { lobby -> lobby.isOwnerless() && lobby.state != LobbyLifecycleState.COMPLETED },
+            )
         if (evicted > 0) {
             log.info(
-                "lobby.gc.evicted count={} waitingTtlHours={} completedTtlDays={}",
+                "lobby.gc.evicted count={} waitingTtlHours={} completedTtlDays={} ownerlessTtlDays={}",
                 evicted,
                 waitingTtl.toHours(),
                 completedTtl.toDays(),
+                ownerlessTtl.toDays(),
             )
         }
         return evicted
@@ -82,17 +95,20 @@ class LobbyGarbageCollector(
     private suspend fun evictAll(
         candidates: List<com.bliss.game.domain.Lobby>,
         cutoff: java.time.Instant,
-        requiredState: LobbyLifecycleState,
+        requiredState: LobbyLifecycleState?,
         stillEligible: (com.bliss.game.domain.Lobby) -> Boolean = { true },
     ): Int {
         var evicted = 0
         for (candidate in candidates) {
             // Re-validate inside mutate(): a player could have joined / written / re-opened
             // between the snapshot scan and the eviction. Only delete (return null) when the
-            // lobby is still in [requiredState], still beyond the cutoff and still eligible.
+            // lobby still matches [requiredState] (any state when null), still beyond the cutoff and still eligible.
             var deleted = false
             repo.mutate(candidate.id) { current ->
-                if (current.state == requiredState && !current.lastActivityAt.isAfter(cutoff) && stillEligible(current)) {
+                if ((requiredState == null || current.state == requiredState) &&
+                    !current.lastActivityAt.isAfter(cutoff) &&
+                    stillEligible(current)
+                ) {
                     deleted = true
                     null // delete signal
                 } else {
@@ -114,9 +130,10 @@ class LobbyGarbageCollector(
     fun run(scope: CoroutineScope): Job =
         scope.launch(Dispatchers.Default) {
             log.info(
-                "lobby.gc.started waitingTtlHours={} completedTtlDays={} sweepIntervalMinutes={}",
+                "lobby.gc.started waitingTtlHours={} completedTtlDays={} ownerlessTtlDays={} sweepIntervalMinutes={}",
                 waitingTtl.toHours(),
                 completedTtl.toDays(),
+                ownerlessTtl.toDays(),
                 sweepInterval.toMinutes(),
             )
             while (isActive) {
