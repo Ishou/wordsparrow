@@ -23,20 +23,27 @@ const messagePad = css({ padding: '16px 15px' });
 const note = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, lineHeight: '1.4', margin: 0 });
 const inlineError = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', lineHeight: '1.4', margin: 0 });
 
+// Receipt status is the raw Mollie payment status (open string on the wire); map the full set so
+// an unmapped value never leaks the English word into the French UI.
 const STATUS_LABEL: Record<string, string> = {
   paid: 'Payé',
   pending: 'En attente',
+  open: 'En attente',
+  authorized: 'Autorisé',
   failed: 'Échoué',
+  expired: 'Expiré',
+  canceled: 'Annulé',
   refunded: 'Remboursé',
 };
 
 function statusLabel(status: string): string {
+  // Fallback is a last resort for an unforeseen provider status; the map above covers Mollie's set.
   return STATUS_LABEL[status] ?? status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function statusPillClass(status: string): string {
   if (status === 'paid') return cx(pill, pillPaid);
-  if (status === 'pending') return cx(pill, pillPending);
+  if (status === 'pending' || status === 'open' || status === 'authorized') return cx(pill, pillPending);
   if (status === 'failed') return cx(pill, pillAlert);
   return cx(pill, pillMuted);
 }

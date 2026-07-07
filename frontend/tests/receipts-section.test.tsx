@@ -82,6 +82,15 @@ describe('ReceiptsSection', () => {
     expect(screen.getByText('Payé')).toBeInTheDocument();
   });
 
+  it('translates a Mollie status instead of leaking the English word', async () => {
+    const expired: Receipt = { ...PAID, status: 'expired' };
+    const client = fakeBillingClient(vi.fn().mockResolvedValue({ receipts: [expired], nextCursor: null }));
+    render(<ReceiptsSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
+
+    expect(await screen.findByText('Expiré')).toBeInTheDocument();
+    expect(screen.queryByText('Expired')).toBeNull();
+  });
+
   it('never renders a link (Mollie exposes no per-payment receipt URL)', async () => {
     const client = fakeBillingClient(vi.fn().mockResolvedValue({ receipts: [PAID], nextCursor: null }));
     const { container } = render(<ReceiptsSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
