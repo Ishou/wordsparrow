@@ -24,9 +24,10 @@ const merciTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSi
 const merciText = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, lineHeight: '1.45', maxWidth: '280px' });
 const merciCta = css({ display: 'block', width: '100%', maxWidth: '300px', textAlign: 'center', textDecoration: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', padding: '14px', borderRadius: '14px', boxShadow: '0 8px 18px rgba(190,73,112,0.34)', marginTop: '4px' });
 
-// Mollie confirms via webhook (ADR-0078); poll whoami until grilles:all lands so the CTA never leads to a stale paywall.
+// Mollie confirms via webhook (ADR-0078); poll whoami until grilles:all lands (fast, then slow background re-check) so the CTA never leads to a stale paywall.
 const POLL_INTERVAL_MS = 2000;
-const MAX_ATTEMPTS = 5;
+const SLOW_POLL_INTERVAL_MS = 30_000;
+const TIMEOUT_AFTER_ATTEMPTS = 5;
 
 type ConfirmPhase = 'confirming' | 'active' | 'timeout';
 
@@ -74,23 +75,27 @@ export function CheckoutSuccessScreen() {
     return () => { cancelled = true; };
   }, [authClient]);
 
-  // Poll whoami until the capability lands or the cap is hit; `subscriber` flipping gates the CTA.
+  // Poll whoami until the capability lands; `subscriber` flipping gates the CTA. Fast burst, then a slow background re-check so a slow webhook self-heals in place.
   useEffect(() => {
     if (subscriber) return;
     let n = 0;
-    const id = setInterval(() => {
-      n += 1;
-      // A transient whoami() error mid-poll must not flip the whole app to signed-out.
-      void refresh({ preserveStateOnFailure: true });
-      setAttempts(n);
-      if (n >= MAX_ATTEMPTS) clearInterval(id);
-    }, POLL_INTERVAL_MS);
-    return () => clearInterval(id);
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = (delay: number) => {
+      timer = setTimeout(() => {
+        n += 1;
+        // A transient whoami() error mid-poll must not flip the whole app to signed-out.
+        void refresh({ preserveStateOnFailure: true });
+        setAttempts(n);
+        schedule(n >= TIMEOUT_AFTER_ATTEMPTS ? SLOW_POLL_INTERVAL_MS : POLL_INTERVAL_MS);
+      }, delay);
+    };
+    schedule(POLL_INTERVAL_MS);
+    return () => clearTimeout(timer);
   }, [subscriber, refresh]);
 
   const phase: ConfirmPhase = subscriber
     ? 'active'
-    : attempts >= MAX_ATTEMPTS
+    : attempts >= TIMEOUT_AFTER_ATTEMPTS
       ? 'timeout'
       : 'confirming';
 

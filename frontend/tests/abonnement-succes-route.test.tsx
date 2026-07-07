@@ -24,6 +24,8 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 const { CheckoutSuccessScreen, AbonnementSuccesScreen } = await import('@/ui/v2/AbonnementSuccesScreen');
 
 const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
+// Mirrors the screen's slow background re-check cadence.
+const SLOW_POLL_INTERVAL_MS = 30_000;
 
 // billing:subscribe lets the visitor reach the page; grilles:all is the paid capability the paywall
 // reads, so the success screen only shows the "active" CTA once whoami reports it.
@@ -138,6 +140,23 @@ describe('CheckoutSuccessScreen polling', () => {
 
     expect(screen.getByText(/plus de temps que prévu/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /retour à mon compte/i })).toHaveAttribute('href', '/compte');
+  });
+
+  it('keeps a slow background poll after the cap and self-heals when the capability finally lands', async () => {
+    const whoami = vi.fn<AuthClient['whoami']>().mockResolvedValue(NOT_YET_UNLOCKED);
+    render(<CheckoutSuccessScreen />, { wrapper: withAuth(fakeAuthClient(whoami)) });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10000);
+    });
+    expect(screen.getByText(/plus de temps que prévu/i)).toBeInTheDocument();
+
+    // The slow webhook finally lands the capability; the slow re-check should pick it up without a reload.
+    whoami.mockResolvedValue(UNLOCKED);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SLOW_POLL_INTERVAL_MS);
+    });
+    expect(screen.getByText(/te voilà abonné·e/i)).toBeInTheDocument();
   });
 
   it('shows the active state immediately when the capability is already present', async () => {
