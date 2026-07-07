@@ -116,8 +116,7 @@ export interface LiveCoopScreenProps {
   readonly subscribeToRemoteCellUpdates: (handler: (event: GameEvent) => void) => Unsubscribe;
   readonly subscribeToRemotePresence: (handler: (event: GameEvent) => void) => Unsubscribe;
   readonly onLeave: () => void;
-  // ADR-0098 §6: claim ownership of a now-ownerless game. Present only in
-  // the live co-op path; resolves once the server accepts the claim.
+  // ADR-0098 §6: claim ownership of a now-ownerless game.
   readonly onClaim?: () => Promise<void>;
   readonly soundPlayer?: SoundPlayer;
   readonly soundStore?: SoundStore;
@@ -251,8 +250,7 @@ export function LiveCoopScreen({
   const handleClaim = useCallback(() => {
     if (!onClaim || claiming) return;
     setClaiming(true);
-    // The server broadcasts an `ownershipChanged` with the new owner on
-    // success, which flips `isOwnerless` false and hides this button.
+    // ADR-0098 §6: success broadcasts `ownershipChanged`, flipping `isOwnerless` false and hiding this button.
     onClaim().finally(() => setClaiming(false));
   }, [onClaim, claiming]);
 
@@ -283,6 +281,11 @@ export function LiveCoopScreen({
       announcer.say('Grille résolue !');
     }
   }, [isCompleted, announcer]);
+
+  // ADR-0098 §6 / ADR-0050: the claim banner is a visual overlay, so announce the ownerless transition for screen readers.
+  useEffect(() => {
+    if (isOwnerless) announcer.say('Cette partie n’a plus d’hôte');
+  }, [isOwnerless, announcer]);
 
   const clue = nav.currentClue;
   // Shared focus-advance firewall: a server `wordLocked` advances the cursor to the next word, same as solo.

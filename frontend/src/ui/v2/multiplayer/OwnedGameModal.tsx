@@ -56,8 +56,7 @@ export function OwnedGameModal({
 }: {
   // Non-null opens the modal; `null` keeps it closed.
   readonly lobby: (Lobby & { readonly id: LobbyId }) | null;
-  // Whether to offer the sole-occupant fresh-start affordance (ADR-0098
-  // §6): relinquishing a populated room would strand its peers.
+  // ADR-0098 §6: relinquishing a populated room would strand its peers.
   readonly canStartNew: boolean;
   readonly onRejoindre: () => void;
   readonly onStartNew: () => void;
@@ -72,8 +71,8 @@ export function OwnedGameModal({
       modal
       lazyMount
       unmountOnExit
-      closeOnInteractOutside
-      closeOnEscape
+      closeOnInteractOutside={!startingNew}
+      closeOnEscape={!startingNew}
       preventScroll
     >
       <Portal>

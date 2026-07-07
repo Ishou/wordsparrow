@@ -146,12 +146,7 @@ function V2LobbyPage() {
     void navigate({ to: '/' });
   }, [actions, navigate]);
 
-  // Replaying resolves through the create-or-resume gate (ADR-0098 §6): a
-  // fresh create is WAITING, but if the player already owns another active
-  // game the server returns it IN_PROGRESS and the OwnedGameModal offers a
-  // rejoin. `gameClient` is intentionally omitted — the route's WS client is
-  // bound to *this* lobby's socket, so the sole-occupant relinquish path is
-  // not offered from here.
+  // ADR-0098 §6: gameClient omitted — this route's WS client is bound to this lobby's socket.
   const coop = useCreateOrResume({
     lobbyClient,
     getSession,
@@ -164,9 +159,7 @@ function V2LobbyPage() {
     void navigate({ to: '/' });
   }, [actions, navigate]);
 
-  // ADR-0098 §6: claim a now-ownerless game. On success the server
-  // broadcasts `ownershipChanged`, which LiveCoopScreen folds to hide the
-  // affordance; a 403/409 (already owned or over quota) surfaces a toast.
+  // ADR-0098 §6: claim a now-ownerless game; a 403/409 surfaces a toast.
   const handleClaim = useCallback(async () => {
     try {
       await lobbyClient.claimOwnership(lobbyId as LobbyId);

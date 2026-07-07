@@ -10,30 +10,24 @@ type OwnedLobby = Lobby & { readonly id: LobbyId };
 export interface UseCreateOrResumeArgs {
   readonly lobbyClient: LobbyClient;
   readonly getSession: () => { readonly sessionId: SessionId; readonly pseudonym: Pseudonym };
-  // Present only when the multiplayer flag is on; required for the
-  // sole-occupant "Démarrer une nouvelle partie" relinquish path.
+  // Required for the sole-occupant "Démarrer une nouvelle partie" relinquish path (ADR-0098 §6).
   readonly gameClient?: GameClient;
-  // Site-specific failure handling: re-open the host sign-in sheet on a
-  // 401, toast on the replay screen, etc.
+  // Site-specific failure handling: re-open the host sign-in sheet on a 401, toast on replay, etc.
   readonly onError?: (cause: unknown) => void;
 }
 
 export interface UseCreateOrResume {
-  // Kick off create-or-resume. Callers gate the anon → sign-in prompt
-  // upstream (ADR-0083); this runs only for a signed-in player.
+  // Callers gate the anon → sign-in prompt upstream (ADR-0083); this runs only for a signed-in player.
   readonly createOrResume: () => void;
   readonly pending: boolean;
-  // Non-null while the informational modal is open — the already-owned
-  // active game the create resolved to.
+  // Non-null while the informational modal is open — the already-owned active game the create resolved to.
   readonly ownedGame: OwnedLobby | null;
   readonly rejoindre: () => void;
   readonly startNewGame: () => void;
   readonly dismiss: () => void;
   // Relinquish-then-create in flight (the sole-occupant path).
   readonly startingNew: boolean;
-  // Whether the "Démarrer une nouvelle partie" affordance applies: sole
-  // occupant (relinquishing a populated room would strand peers) and a WS
-  // client is reachable to send the relinquish frame.
+  // ADR-0098 §6: offered only to a sole occupant with a reachable WS client.
   readonly canStartNew: boolean;
 }
 
@@ -80,8 +74,10 @@ export function useCreateOrResume({
   }, [ownedGame, goToLobby]);
 
   const dismiss = useCallback(() => {
+    // ADR-0098 §6: ignored mid-relinquish so a stray dismiss/Escape can't override startNewGame's pending navigation.
+    if (startingNew) return;
     setOwnedGame(null);
-  }, []);
+  }, [startingNew]);
 
   const startNewGame = useCallback(() => {
     const old = ownedGame;
