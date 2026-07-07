@@ -364,15 +364,10 @@ class PostgresLobbyRepositoryTest {
     @Test
     fun `findIdleOwnerless excludes COMPLETED ownerless lobbies`() =
         runTest {
+            // completedLobby defaults ownerUserId to null (inProgressLobby default), so it is ownerless.
             val completedOwnerless =
-                inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = null)
-                    .let {
-                        it.copy(
-                            state = LobbyLifecycleState.COMPLETED,
-                            game = it.game!!.copy(completedAt = baseInstant.minusSeconds(120)),
-                            lastActivityAt = baseInstant.minusSeconds(3600),
-                        )
-                    }
+                completedLobby(id = LobbyId.generate(), owner = sessionA)
+                    .copy(lastActivityAt = baseInstant.minusSeconds(3600))
             repo.save(completedOwnerless)
 
             assertThat(repo.findIdleOwnerless(baseInstant)).isEmpty()
