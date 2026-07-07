@@ -14,6 +14,7 @@ export type {
   GameStartedEvent,
   IdleEvent,
   LobbyStateEvent,
+  OwnershipChangedEvent,
   PlayerJoinedEvent,
   PlayerLeftEvent,
   PlayerRenamedEvent,

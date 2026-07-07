@@ -114,6 +114,12 @@ export function createHttpLobbyClient(
       );
       return wireToDomain(wire);
     },
+    async claimOwnership(lobbyId: LobbyId) {
+      const wire = await safeRequest(() =>
+        client.POST('/v1/lobbies/{lobbyId}/ownership', { params: { path: { lobbyId } } }),
+      );
+      return wireToDomain(wire);
+    },
     async findByCode(code: string) {
       const wire = await safeRequest(() =>
         client.GET('/v1/lobbies/by-code/{code}', { params: { path: { code } } }),

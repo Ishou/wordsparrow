@@ -1,12 +1,14 @@
 // Multiplayer-gated `/lobby/$lobbyId` (ADR-0018 §10); smart container over `useLobbyConnection`.
 
 import { createRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { LobbyClientError } from '@/application/game';
 import type { Lobby, LobbyId } from '@/domain/game';
 import { createLoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
 import { LoaderRetry } from '@/ui/v2/LoaderRetry';
 import { useLobbyConnection } from '@/ui/components/lobby/useLobbyConnection';
+import { useCreateOrResume } from '@/ui/components/lobby/useCreateOrResume';
+import { OwnedGameModal } from '@/ui/v2/multiplayer/OwnedGameModal';
 import { useToast } from '@/ui/components/primitives';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { PhoneShell } from '@/ui/v2/PhoneShell';
@@ -89,7 +91,6 @@ function V2LobbyPage() {
   const lobbyJoinCodeStash = ctx.lobbyJoinCodeStash!;
   const lobbyClient = ctx.lobbyClient!;
   const navigate = useNavigate();
-  const [isReplaying, setIsReplaying] = useState(false);
   // Destructure show/dismiss (not the wrapper object) — the object is recreated each render and would re-trigger the connection effect.
   const { show: showToast, dismiss: dismissToast } = useToast();
   const { say: announce } = useAnnouncer();
@@ -145,24 +146,27 @@ function V2LobbyPage() {
     void navigate({ to: '/' });
   }, [actions, navigate]);
 
-  const handleReplay = useCallback(() => {
-    setIsReplaying(true);
-    const { sessionId: ownerSessionId, pseudonym: ownerPseudonym } = getSession();
-    lobbyClient
-      .createLobby({ ownerSessionId, ownerPseudonym })
-      .then((created) =>
-        navigate({ to: '/lobby/$lobbyId', params: { lobbyId: created.id } }),
-      )
-      .catch(() => {
-        setIsReplaying(false);
-        showToast({ text: 'Impossible de créer une partie. Réessaie.', tone: 'error' });
-      });
-  }, [getSession, lobbyClient, navigate, showToast]);
+  // ADR-0098 §6: gameClient omitted — this route's WS client is bound to this lobby's socket.
+  const coop = useCreateOrResume({
+    lobbyClient,
+    getSession,
+    onError: () => showToast({ text: 'Impossible de créer une partie. Réessaie.', tone: 'error' }),
+  });
+  const handleReplay = coop.createOrResume;
 
   const handleHome = useCallback(() => {
     actions.leave();
     void navigate({ to: '/' });
   }, [actions, navigate]);
+
+  // ADR-0098 §6: claim a now-ownerless game; a 403/409 surfaces a toast.
+  const handleClaim = useCallback(async () => {
+    try {
+      await lobbyClient.claimOwnership(lobbyId as LobbyId);
+    } catch {
+      showToast({ text: 'Impossible de reprendre la partie.', tone: 'error' });
+    }
+  }, [lobbyClient, lobbyId, showToast]);
 
   // The only involuntary exits from the game surface: server-confirmed 404 or a freed seat (honest states).
   if (lobbyGone) {
@@ -213,6 +217,7 @@ function V2LobbyPage() {
         subscribeToRemoteCellUpdates={actions.subscribeToRemoteCellUpdates}
         subscribeToRemotePresence={actions.subscribeToRemotePresence}
         onLeave={handleLeave}
+        onClaim={handleClaim}
         soundPlayer={ctx.soundPlayer}
         soundStore={ctx.soundStore}
       />
@@ -227,9 +232,17 @@ function V2LobbyPage() {
           durationMs={view.durationMs ?? 0}
           players={lobby.players}
           ownerSessionId={lobby.ownerSessionId}
-          isReplaying={isReplaying}
+          isReplaying={coop.pending}
           onReplay={handleReplay}
           onHome={handleHome}
+        />
+        <OwnedGameModal
+          lobby={coop.ownedGame}
+          canStartNew={coop.canStartNew}
+          onRejoindre={coop.rejoindre}
+          onStartNew={coop.startNewGame}
+          onClose={coop.dismiss}
+          startingNew={coop.startingNew}
         />
       </PhoneShell>
     );

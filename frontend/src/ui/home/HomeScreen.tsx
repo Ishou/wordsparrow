@@ -5,8 +5,10 @@ import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
 import { extractLobbyCode, LOBBY_CODE_PATTERN } from '@/domain/game/lobbyCode';
 import type { DailySummary, PuzzleRepository, WordsRepository } from '@/application';
-import { LobbyClientError, type LobbyClient } from '@/application/game';
+import { LobbyClientError, type GameClient, type LobbyClient } from '@/application/game';
 import { useOptionalAuth } from '@/ui/components/auth';
+import { useCreateOrResume } from '@/ui/components/lobby/useCreateOrResume';
+import { OwnedGameModal } from '@/ui/v2/multiplayer/OwnedGameModal';
 import { HostSignInSheet } from './HostSignInSheet';
 import type { Pseudonym, SessionId } from '@/domain/game';
 import { countFilledCells, type SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
@@ -191,6 +193,7 @@ export function HomeScreen({
   soloEntriesStore,
   wordsRepository,
   lobbyClient,
+  gameClient,
   getSession,
 }: {
   readonly puzzleRepository: PuzzleRepository;
@@ -198,6 +201,7 @@ export function HomeScreen({
   readonly wordsRepository?: WordsRepository;
   // Present only when the multiplayer flag is on (ADR-0018 §10); gates the co-op entry.
   readonly lobbyClient?: LobbyClient;
+  readonly gameClient?: GameClient;
   readonly getSession?: () => HomeSession;
 }) {
   const navigate = useNavigate();
@@ -206,12 +210,21 @@ export function HomeScreen({
   const [menuOpen, setMenuOpen] = useState(false);
   // The mini-game docks our on-screen keyboard over the bottom nav; hide the nav while it's up.
   const [miniGameTyping, setMiniGameTyping] = useState(false);
-  const [coopPending, setCoopPending] = useState(false);
   const [hostSignInOpen, setHostSignInOpen] = useState(false);
   const auth = useOptionalAuth();
   const { authClient, soundPlayer, soundStore } = useRouteContext({ from: '__root__' });
 
   const multiplayerOn = lobbyClient != null && getSession != null;
+  const coop = useCreateOrResume({
+    lobbyClient: lobbyClient!,
+    getSession: getSession!,
+    gameClient,
+    // Safety net for a session that expired between load and tap (ADR-0083).
+    onError: (cause) => {
+      if (cause instanceof LobbyClientError && cause.kind === 'unauthorized') setHostSignInOpen(true);
+    },
+  });
+  const coopPending = coop.pending || coop.startingNew;
   // Hosting is entitlement-gated server-side (ADR-0083): guests get 401. Prompt sign-in before the call so they don't hit a silent failure; joining stays open.
   const handleCreateCoop = () => {
     if (!multiplayerOn || coopPending) return;
@@ -220,16 +233,7 @@ export function HomeScreen({
       setHostSignInOpen(true);
       return;
     }
-    setCoopPending(true);
-    const { sessionId: ownerSessionId, pseudonym: ownerPseudonym } = getSession();
-    lobbyClient
-      .createLobby({ ownerSessionId, ownerPseudonym })
-      .then((created) => navigate({ to: '/lobby/$lobbyId', params: { lobbyId: created.id } }))
-      .catch((cause) => {
-        setCoopPending(false);
-        // Safety net for a session that expired between load and tap (ADR-0083).
-        if (cause instanceof LobbyClientError && cause.kind === 'unauthorized') setHostSignInOpen(true);
-      });
+    coop.createOrResume();
   };
 
   const joinInputRef = useRef<HTMLInputElement>(null);
@@ -500,6 +504,14 @@ export function HomeScreen({
 
       <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} streak={streak.cur} />
       <HostSignInSheet open={hostSignInOpen} authClient={authClient} onClose={() => setHostSignInOpen(false)} />
+      <OwnedGameModal
+        lobby={coop.ownedGame}
+        canStartNew={coop.canStartNew}
+        onRejoindre={coop.rejoindre}
+        onStartNew={coop.startNewGame}
+        onClose={coop.dismiss}
+        startingNew={coop.startingNew}
+      />
     </main>
   );
 }

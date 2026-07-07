@@ -240,6 +240,32 @@ export const gameHandlers = [
           'Cookie missing, expired, or rejected by identity-api.',
         )),
 
+  // POST /v1/lobbies/:lobbyId/ownership — claim an ownerless lobby
+  // (ADR-0098 §2). Cookie-authed; no body. Returns the Lobby snapshot with
+  // the caller as owner. Must be registered before the `:lobbyId` GET so the
+  // `/ownership` suffix does not fall through to the snapshot handler.
+  http.post('*/v1/lobbies/:lobbyId/ownership', ({ params }) => {
+    const lobbyId = String(params.lobbyId);
+    if (!LOBBY_ID_PATTERN.test(lobbyId)) {
+      return problem(
+        400,
+        'https://bliss.example/errors/invalid-lobby-id',
+        'Invalid lobbyId',
+        `\`${lobbyId}\` does not match the base58 nanoid pattern.`,
+      );
+    }
+    const lobby = getLobby(lobbyId);
+    if (!lobby) {
+      return problem(
+        404,
+        'https://bliss.example/errors/lobby-not-found',
+        'Lobby not found',
+        `No lobby with id ${lobbyId}.`,
+      );
+    }
+    return HttpResponse.json(lobby);
+  }),
+
   // GET /v1/lobbies/:lobbyId — replay the persisted lobby.
   http.get('*/v1/lobbies/:lobbyId', ({ params }) => {
     // e2e seam: a dropped request (network error), NOT a 404 — the loader retry must recover from it silently.
