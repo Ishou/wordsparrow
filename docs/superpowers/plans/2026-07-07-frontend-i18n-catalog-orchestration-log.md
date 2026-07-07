@@ -26,3 +26,4 @@ Append-only log of decisions the orchestrator made during this rollout. For huma
 (entries appended chronologically by the cron)
 
 - 2026-07-07 · BOOTSTRAP · orchestration procedure + log authored; foundation #1449 merged; P1 (design-system) is the first phase to dispatch on the next tick.
+- 2026-07-07 · P1 design-system · DISPATCHED · implementer agent in worktree, branch refactor/i18n-design-system (copy-agnostic props + consumer ripple; split into P1a/P1b if over target)
