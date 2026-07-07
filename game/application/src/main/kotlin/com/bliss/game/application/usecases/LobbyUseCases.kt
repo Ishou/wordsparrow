@@ -49,9 +49,10 @@ private suspend fun mintUniqueCode(repo: LobbyRepository): LobbyCode {
 }
 
 /**
- * Bootstraps a new lobby in WAITING with the calling player as owner. Host quota by tier
- * (ADR-0083): [ownerUserId]'s existing WAITING lobby is reopened unless [hostUnlimited];
- * race-freedom depends on the api edge calling this inside `withUserLock(ownerUserId)`.
+ * Bootstraps a new lobby in WAITING with the calling player as owner. Active-game quota by tier
+ * (ADR-0083 + ADR-0098 §1): [ownerUserId]'s existing active (WAITING or IN_PROGRESS) owned game is
+ * reopened unless [hostUnlimited]; race-freedom depends on the api edge calling this inside
+ * `withUserLock(ownerUserId)`.
  */
 class CreateLobbyUseCase(
     private val repo: LobbyRepository,
@@ -65,9 +66,9 @@ class CreateLobbyUseCase(
         ownerUserId: UserId? = null,
         hostUnlimited: Boolean = false,
     ): UseCaseResult<Lobby> {
-        // Per-user "1 open lobby" quota; safe against concurrent double-create only under the route's withUserLock(ownerUserId) (ADR-0083).
+        // Per-user "1 active game" quota; safe against concurrent double-create only under the route's withUserLock(ownerUserId) (ADR-0083, ADR-0098 §1).
         if (!hostUnlimited && ownerUserId != null) {
-            repo.findWaitingByOwnerUser(ownerUserId)?.let { existing ->
+            repo.findActiveByOwnerUser(ownerUserId)?.let { existing ->
                 return UseCaseResult(existing, emptyList())
             }
         }
@@ -335,6 +336,75 @@ class LeaveLobbyUseCase(
         if (!playerWasPresent) return failure(UseCaseError.PlayerNotInLobby)
         analyticsEventSink.record(AnalyticsEvent.LobbyLeft, sessionId)
         return success(updated, events)
+    }
+}
+
+/**
+ * Explicit relinquish (ADR-0098 §2): the current owner gives up the game, which becomes ownerless,
+ * and their own seat is dropped. Only the owner may relinquish — the disconnect grace path (a plain
+ * [LeaveLobbyUseCase]) never touches ownership. Owner check is re-verified inside the mutator.
+ */
+class RelinquishOwnershipUseCase(
+    private val repo: LobbyRepository,
+    private val clock: Clock,
+) {
+    suspend operator fun invoke(
+        lobbyId: LobbyId,
+        sessionId: SessionId,
+    ): UseCaseOutcome<Lobby?> {
+        val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
+        if (!current.isOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        var notOwner = false
+        val updated =
+            repo.mutate(lobbyId) { lobby ->
+                if (!lobby.isOwner(sessionId)) {
+                    notOwner = true
+                    return@mutate lobby
+                }
+                lobby.relinquishOwner(clock.now()).copy(players = lobby.players - sessionId)
+            } ?: return failure(UseCaseError.LobbyNotFound)
+        if (notOwner) return failure(UseCaseError.NotOwner)
+        return success(updated, listOf(LobbyEvent.PlayerLeft(sessionId)))
+    }
+}
+
+/**
+ * Claim an ownerless game (ADR-0098 §2): a player present in a non-terminal, ownerless lobby takes
+ * ownership, quota-gated (ADR-0098 §1/§5) unless [hostUnlimited]. Presence and ownerless-ness are
+ * re-verified inside the mutator; the quota re-check runs under the api edge's `withUserLock(userId)`
+ * (it cannot enter the non-suspend mutator) so two claimers cannot both win.
+ */
+class ClaimLobbyOwnershipUseCase(
+    private val repo: LobbyRepository,
+    private val clock: Clock,
+) {
+    suspend operator fun invoke(
+        lobbyId: LobbyId,
+        sessionId: SessionId,
+        userId: UserId,
+        hostUnlimited: Boolean = false,
+    ): UseCaseOutcome<Lobby> {
+        val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
+        if (!current.hasJoined(sessionId)) return failure(UseCaseError.NotPresentInLobby)
+        if (!current.isOwnerless()) return failure(UseCaseError.AlreadyOwned)
+        if (!hostUnlimited && repo.findActiveByOwnerUser(userId) != null) return failure(UseCaseError.QuotaExceeded)
+        var lockError: UseCaseError? = null
+        val updated =
+            repo.mutate(lobbyId) { lobby ->
+                when {
+                    !lobby.hasJoined(sessionId) -> {
+                        lockError = UseCaseError.NotPresentInLobby
+                        lobby
+                    }
+                    !lobby.isOwnerless() -> {
+                        lockError = UseCaseError.AlreadyOwned
+                        lobby
+                    }
+                    else -> lobby.claimOwner(sessionId, userId, clock.now())
+                }
+            } ?: return failure(UseCaseError.LobbyNotFound)
+        lockError?.let { return failure(it) }
+        return success(updated, emptyList())
     }
 }
 

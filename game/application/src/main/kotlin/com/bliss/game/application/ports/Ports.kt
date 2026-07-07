@@ -5,6 +5,7 @@ import com.bliss.game.domain.Letter
 import com.bliss.game.domain.Lobby
 import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.LobbyId
+import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -86,6 +87,27 @@ interface LobbyRepository {
      * v1; the Postgres adapter joins `lobby_players.user_id` on the owner seat.
      */
     suspend fun findWaitingByOwnerUser(userId: UserId): Lobby?
+
+    /**
+     * Returns the non-terminal (WAITING or IN_PROGRESS) lobby owned by [userId], if one exists —
+     * the sticky-ownership active-game quota key (ADR-0098 §1). Ownership is counted by
+     * `owner_user_id`, so a disconnected owner still counts. The default composes the existing
+     * owner-keyed lookups; the persistence adapter overrides it with a single
+     * `state IN ('WAITING','IN_PROGRESS') AND owner_user_id = ?` query.
+     */
+    suspend fun findActiveByOwnerUser(userId: UserId): Lobby? =
+        findWaitingByOwnerUser(userId)
+            ?: findByUserId(userId).firstOrNull {
+                it.state == LobbyLifecycleState.IN_PROGRESS && it.ownerUserId == userId
+            }
+
+    /**
+     * Returns ownerless (`owner_user_id IS NULL`) non-terminal lobbies whose [Lobby.lastActivityAt]
+     * is at or before [cutoff] — the ADR-0098 §4 GC sweep for relinquished/RGPD-vacated games.
+     * Snapshot — callers must re-validate inside [mutate] (or [delete]) to avoid TOCTOU between the
+     * scan and the eviction. Default is empty (the sweep is not yet wired); the adapter overrides it.
+     */
+    suspend fun findIdleOwnerless(cutoff: Instant): List<Lobby> = emptyList()
 
     /**
      * Returns WAITING lobbies whose [Lobby.lastActivityAt] is at or before [cutoff].
