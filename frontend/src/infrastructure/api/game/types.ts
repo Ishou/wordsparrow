@@ -949,6 +949,18 @@ export interface operations {
                 };
             };
             /**
+             * @description Path parameter `lobbyId` does not match the base58 nanoid pattern.
+             *     RFC 7807; `type` is `https://bliss.example/errors/invalid-lobby-id`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
              * @description Claiming requires a signed-in player (ADR-0098 §2). A request with
              *     no `__Secure-ws_session` cookie, or a session revoked between the
              *     cached and fresh whoami lookups, is rejected. RFC 7807;

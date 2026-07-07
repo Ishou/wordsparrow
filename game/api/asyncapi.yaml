@@ -555,7 +555,7 @@ components:
         type:              { type: string, enum: [ownershipChanged] }
         lobbyId:           { $ref: '#/components/schemas/LobbyId' }
         newOwnerSessionId: { $ref: '#/components/schemas/SessionId', nullable: true, description: Session id of the new owner; `null` when the lobby became ownerless. }
-        newOwnerUserId:    { type: string, nullable: true, description: User id of the new owner; `null` when the lobby became ownerless. }
+        newOwnerUserId:    { type: string, format: uuid, nullable: true, description: User id of the new owner; `null` when the lobby became ownerless. }
       example: { type: ownershipChanged, lobbyId: 7gQ2xK9p, newOwnerSessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5, newOwnerUserId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b }
     GameStartedPayload:
       type: object

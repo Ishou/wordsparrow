@@ -228,6 +228,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Lobby'
+        '400':
+          description: |
+            Path parameter `lobbyId` does not match the base58 nanoid pattern.
+            RFC 7807; `type` is `https://bliss.example/errors/invalid-lobby-id`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '401':
           description: |
             Claiming requires a signed-in player (ADR-0098 §2). A request with
