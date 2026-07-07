@@ -23,6 +23,7 @@ import com.bliss.game.application.usecases.CreateLobbyUseCase
 import com.bliss.game.application.usecases.JoinLobbyUseCase
 import com.bliss.game.application.usecases.LeaveLobbyUseCase
 import com.bliss.game.application.usecases.PresenceAggregator
+import com.bliss.game.application.usecases.RelinquishOwnershipUseCase
 import com.bliss.game.application.usecases.RenameSelfUseCase
 import com.bliss.game.application.usecases.RotateLobbyCodeUseCase
 import com.bliss.game.application.usecases.SetGridConfigUseCase
@@ -192,6 +193,7 @@ class LobbyWebSocketRouteTest {
                     updateCell = UpdateCellUseCase(repo, clock, NullWordValidator),
                     leaveLobby = LeaveLobbyUseCase(repo, clock),
                     rotateCode = RotateLobbyCodeUseCase(repo, clock),
+                    relinquishOwnership = RelinquishOwnershipUseCase(repo, clock),
                 )
             val sessionManager = SessionManager()
             val backgroundJob = SupervisorJob()
@@ -519,6 +521,119 @@ class LobbyWebSocketRouteTest {
                 assertThat(text).contains("\"type\":\"playerLeft\"")
                 assertThat(text).contains(sessionB)
                 ownerJob.cancel()
+            }
+        }
+
+    // ADR-0098 §2: the explicit Quitter frame relinquishes ownership -> the lobby becomes ownerless.
+    @Test
+    fun `leaveLobby frame relinquishes ownership - lobby becomes ownerless and an ownershipChanged frame is broadcast`() =
+        runWith { harness ->
+            val ownerUser = UserId("11111111-1111-1111-1111-111111111111")
+            val lobbyId = harness.seedLobbyOwnedBy(ownerUser)
+            harness.client.webSocket("/v1/lobbies/${lobbyId.value}/ws?sessionId=$sessionA") {
+                receiveText() // initial snapshot
+                // Owner reconnect (bypasses the code gate), then explicitly quits.
+                sendText("""{"type":"joinLobby","sessionId":"$sessionA","pseudonym":"$pseudoA"}""")
+                sendText("""{"type":"leaveLobby"}""")
+                val frame =
+                    withTimeout(5_000) {
+                        var seen: String? = null
+                        while (seen == null) {
+                            val text = receiveText()
+                            if (text.contains("\"type\":\"ownershipChanged\"")) seen = text
+                        }
+                        seen
+                    }
+                assertThat(frame).contains("\"newOwnerUserId\":null")
+                assertThat(frame).contains("\"newOwnerSessionId\":null")
+            }
+            val lobby = harness.repo.findById(lobbyId)
+            assertThat(lobby).isNotNull()
+            assertThat(lobby!!.isOwnerless()).isTrue()
+            assertThat(lobby.ownerUserId).isNull()
+        }
+
+    // ADR-0098 §2: a non-owner's explicit Quitter frame is a plain seat-drop, not a relinquish.
+    @Test
+    fun `non-owner leaveLobby frame drops the seat without relinquishing ownership`() =
+        runWith { harness ->
+            val ownerUser = UserId("11111111-1111-1111-1111-111111111111")
+            val lobbyId = harness.seedLobbyOwnedBy(ownerUser)
+            val code = harness.codeFor(lobbyId)
+            val ownerSawCoPlayerLeft = CompletableDeferred<String>()
+            val coPlayerJoined = CompletableDeferred<Unit>()
+            coroutineScope {
+                val ownerJob =
+                    async {
+                        harness.client.webSocket("/v1/lobbies/${lobbyId.value}/ws?sessionId=$sessionA") {
+                            receiveText() // snapshot
+                            sendText("""{"type":"joinLobby","sessionId":"$sessionA","pseudonym":"$pseudoA"}""")
+                            coPlayerJoined.complete(Unit)
+                            while (!ownerSawCoPlayerLeft.isCompleted) {
+                                val text = receiveText()
+                                if (text.contains("\"type\":\"playerLeft\"") && text.contains(sessionB)) {
+                                    ownerSawCoPlayerLeft.complete(text)
+                                }
+                                assertThat(text).doesNotContain("\"type\":\"ownershipChanged\"")
+                            }
+                        }
+                    }
+                coPlayerJoined.await()
+                harness.client.webSocket("/v1/lobbies/${lobbyId.value}/ws") {
+                    receiveText() // snapshot
+                    sendText("""{"type":"joinLobby","sessionId":"$sessionB","pseudonym":"$pseudoB","code":"$code"}""")
+                    sendText("""{"type":"leaveLobby"}""")
+                }
+                withTimeout(5_000) { ownerSawCoPlayerLeft.await() }
+                ownerJob.cancel()
+            }
+            val lobby = harness.repo.findById(lobbyId)
+            assertThat(lobby).isNotNull()
+            assertThat(lobby!!.players.containsKey(SessionId(sessionB))).isFalse()
+            assertThat(lobby.ownerUserId).isEqualTo(ownerUser)
+            assertThat(lobby.isOwnerless()).isFalse()
+        }
+
+    // ADR-0098 §2: a disconnect (grace path) only drops presence and KEEPS owner_user_id -- it must never relinquish.
+    @Test
+    fun `owner disconnect keeps owner_user_id and does not relinquish ownership`() =
+        runWith(reconnectGrace = 200.milliseconds) { harness ->
+            val ownerUser = UserId("11111111-1111-1111-1111-111111111111")
+            val lobbyId = harness.seedLobbyOwnedBy(ownerUser)
+            val code = harness.codeFor(lobbyId)
+            val coPlayerSawOwnerLeft = CompletableDeferred<Unit>()
+            val coPlayerJoined = CompletableDeferred<Unit>()
+            coroutineScope {
+                // A co-player stays connected so the lobby survives the owner's departure.
+                val coPlayer =
+                    async {
+                        harness.client.webSocket("/v1/lobbies/${lobbyId.value}/ws") {
+                            receiveText() // snapshot
+                            sendText("""{"type":"joinLobby","sessionId":"$sessionB","pseudonym":"$pseudoB","code":"$code"}""")
+                            coPlayerJoined.complete(Unit)
+                            while (!coPlayerSawOwnerLeft.isCompleted) {
+                                val text = receiveText()
+                                if (text.contains("\"type\":\"playerLeft\"") && text.contains(sessionA)) {
+                                    coPlayerSawOwnerLeft.complete(Unit)
+                                }
+                            }
+                        }
+                    }
+                coPlayerJoined.await()
+
+                // Owner connects then drops WITHOUT a leaveLobby frame -- pure disconnect.
+                harness.client.webSocket("/v1/lobbies/${lobbyId.value}/ws?sessionId=$sessionA") {
+                    receiveText() // snapshot
+                    sendText("""{"type":"joinLobby","sessionId":"$sessionA","pseudonym":"$pseudoA"}""")
+                }
+                withTimeout(5_000) { coPlayerSawOwnerLeft.await() }
+
+                // Grace fired a presence-drop leaveLobby; owner_user_id must survive (ADR-0066/0098).
+                val lobby = harness.repo.findById(lobbyId)
+                assertThat(lobby).isNotNull()
+                assertThat(lobby!!.ownerUserId).isEqualTo(ownerUser)
+                assertThat(lobby.isOwnerless()).isFalse()
+                coPlayer.cancel()
             }
         }
 
@@ -1002,6 +1117,12 @@ class LobbyWebSocketRouteTest {
             return outcome.value.id
         }
 
+        /** Seeds a lobby whose owner seat carries [userId] so ownership (owner_user_id) can be asserted after leave/disconnect. */
+        suspend fun seedLobbyOwnedBy(userId: UserId): LobbyId {
+            val outcome = createLobby(SessionId("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b"), Pseudonym("Alice"), ownerUserId = userId)
+            return outcome.value.id
+        }
+
         /** Looks up the canonical join code for a seeded lobby (ADR-0027). */
         suspend fun codeFor(lobbyId: LobbyId): String = checkNotNull(repo.findById(lobbyId)) { "lobby $lobbyId was not seeded" }.code.value
 
@@ -1048,6 +1169,7 @@ class LobbyWebSocketRouteTest {
                 updateCell = updateCellUseCase,
                 leaveLobby = LeaveLobbyUseCase(repo, clock),
                 rotateCode = RotateLobbyCodeUseCase(repo, clock),
+                relinquishOwnership = RelinquishOwnershipUseCase(repo, clock),
             )
         val sessionManager = SessionManager()
         // Background scope for the reconnect-grace timer. SupervisorJob so a
@@ -1101,6 +1223,7 @@ class LobbyWebSocketRouteTest {
                     updateCell = updateCellUseCase,
                     leaveLobby = LeaveLobbyUseCase(repo, clock),
                     rotateCode = RotateLobbyCodeUseCase(repo, clock),
+                    relinquishOwnership = RelinquishOwnershipUseCase(repo, clock),
                 )
             val sessionManager = SessionManager()
             val presenceClock = AdjustableClock()

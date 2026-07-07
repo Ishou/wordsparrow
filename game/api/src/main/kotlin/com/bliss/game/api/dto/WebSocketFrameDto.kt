@@ -225,6 +225,15 @@ sealed class ServerToClientFrame {
         val finalEntries: List<CellEntryDto>,
     ) : ServerToClientFrame()
 
+    /** Owner changed - both newOwner* ids set on claim, both null on relinquish/RGPD-vacate. Mirrors OwnershipChangedPayload (ADR-0098 §2). */
+    @Serializable
+    @SerialName("ownershipChanged")
+    data class OwnershipChanged(
+        val lobbyId: String,
+        val newOwnerSessionId: String?,
+        val newOwnerUserId: String?,
+    ) : ServerToClientFrame()
+
     /**
      * RFC 7807-shaped error frame. Wire field is `errorType` (NOT `type`) so
      * the kotlinx-serialization discriminator does not collide with the URI.

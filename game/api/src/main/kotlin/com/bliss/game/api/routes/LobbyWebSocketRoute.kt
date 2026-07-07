@@ -10,6 +10,7 @@ import com.bliss.game.application.auth.CookieVerifier
 import com.bliss.game.application.ports.LobbyEvent
 import com.bliss.game.application.ports.LobbyRepository
 import com.bliss.game.application.usecases.PresenceAggregator
+import com.bliss.game.application.usecases.UseCaseError
 import com.bliss.game.application.usecases.UseCaseOutcome
 import com.bliss.game.domain.GridConfig
 import com.bliss.game.domain.Letter
@@ -338,16 +339,25 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
                     sendNotJoined()
                     return memberSessionId
                 }
-            dispatch(lobbyId, sessionManager) {
-                useCases.leaveLobby(lobbyId, SessionId(sid))
+            // ADR-0098 §2: the explicit Quitter frame relinquishes ownership when the caller is the owner; a non-owner's seat is just dropped, same as the disconnect-grace path.
+            val relinquished = useCases.relinquishOwnership(lobbyId, SessionId(sid))
+            val outcome =
+                if (relinquished is UseCaseOutcome.Failure && relinquished.error == UseCaseError.NotOwner) {
+                    useCases.leaveLobby(lobbyId, SessionId(sid))
+                } else {
+                    relinquished
+                }
+            handleOutcome(outcome, lobbyId, sessionManager)
+            if (relinquished is UseCaseOutcome.Success) {
+                sessionManager.broadcast(lobbyId, ServerToClientFrame.OwnershipChanged(lobbyId.value, null, null))
             }
             // Returning null here only prevents a grace timer when the session
             // was never bound (unregister returns null AND memberSessionId is
             // null → finally skips scheduleReconnectGrace). For a player who
             // completed joinLobby, unregister always returns the bound sessionId
-            // so a grace coroutine still fires; the second leaveLobby returns
-            // Failure(PlayerNotInLobby), which scheduleReconnectGrace silently
-            // swallows — no double broadcast.
+            // so a grace coroutine still fires; the grace-path leaveLobby returns
+            // Failure(PlayerNotInLobby) once the seat is gone, which
+            // scheduleReconnectGrace silently swallows — no double broadcast.
             null
         }
     }

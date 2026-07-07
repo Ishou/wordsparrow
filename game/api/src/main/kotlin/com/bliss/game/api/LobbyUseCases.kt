@@ -3,6 +3,7 @@ package com.bliss.game.api
 import com.bliss.game.application.usecases.CreateLobbyUseCase
 import com.bliss.game.application.usecases.JoinLobbyUseCase
 import com.bliss.game.application.usecases.LeaveLobbyUseCase
+import com.bliss.game.application.usecases.RelinquishOwnershipUseCase
 import com.bliss.game.application.usecases.RenameSelfUseCase
 import com.bliss.game.application.usecases.RotateLobbyCodeUseCase
 import com.bliss.game.application.usecases.SetGridConfigUseCase
@@ -23,4 +24,6 @@ data class LobbyUseCases(
     val updateCell: UpdateCellUseCase,
     val leaveLobby: LeaveLobbyUseCase,
     val rotateCode: RotateLobbyCodeUseCase,
+    // Explicit "Quitter la partie" relinquishes ownership -> ownerless (ADR-0098 §2); distinct from the disconnect-grace leaveLobby.
+    val relinquishOwnership: RelinquishOwnershipUseCase,
 )

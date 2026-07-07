@@ -11,6 +11,7 @@ import com.bliss.game.application.auth.CookieVerifier
 import com.bliss.game.application.lobby.LobbyWriteCoordinator
 import com.bliss.game.application.ports.AnalyticsEventSink
 import com.bliss.game.application.ports.LobbyRepository
+import com.bliss.game.application.usecases.ClaimLobbyOwnershipUseCase
 import com.bliss.game.application.usecases.CreateLobbyUseCase
 import com.bliss.game.application.usecases.EraseSessionUseCase
 import com.bliss.game.application.usecases.JoinLobbyUseCase
@@ -19,6 +20,7 @@ import com.bliss.game.application.usecases.ListLobbiesForSession
 import com.bliss.game.application.usecases.ListLobbiesForUser
 import com.bliss.game.application.usecases.LobbyGarbageCollector
 import com.bliss.game.application.usecases.PresenceAggregator
+import com.bliss.game.application.usecases.RelinquishOwnershipUseCase
 import com.bliss.game.application.usecases.RenameSelfUseCase
 import com.bliss.game.application.usecases.RotateLobbyCodeUseCase
 import com.bliss.game.application.usecases.SetGridConfigUseCase
@@ -301,7 +303,9 @@ fun Application.module() {
             updateCell = UpdateCellUseCase(lobbyRepository, SystemClock, wordValidator, analyticsEventSink = analyticsEventSink),
             leaveLobby = LeaveLobbyUseCase(lobbyRepository, SystemClock, analyticsEventSink = analyticsEventSink),
             rotateCode = RotateLobbyCodeUseCase(lobbyRepository, SystemClock, analyticsEventSink = analyticsEventSink),
+            relinquishOwnership = RelinquishOwnershipUseCase(lobbyRepository, SystemClock),
         )
+    val claimOwnership = ClaimLobbyOwnershipUseCase(lobbyRepository, SystemClock)
 
     // Lobby garbage collector — ADR-0039 GC matrix:
     //   - WAITING     → evicted after 24h. Replaces the v1 30-minute knob: with multi-day
@@ -335,6 +339,7 @@ fun Application.module() {
         health(APP_VERSION)
         lobbies(
             createLobby = useCases.createLobby,
+            claimOwnership = claimOwnership,
             repo = lobbyRepository,
             sessionManager = sessionManager,
             cookieVerifier = cookieVerifier,
