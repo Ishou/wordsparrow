@@ -2,7 +2,6 @@
 export const fr = {
   'home.previous.label': 'Grilles précédentes',
   'home.cell.aria.started': ' — commencée — {{pct}} %',
-  // — home —
   'home.greeting.matin.hi': 'Bonjour',
   'home.greeting.matin.sub': 'Une nouvelle grille pour bien commencer la journée.',
   'home.greeting.apresMidi.hi': 'Bel après-midi',
@@ -37,7 +36,7 @@ export const fr = {
   'home.cell.aria.solved': ' — terminée',
   'home.miniGame.aria.loading': 'Chargement du mot du jour',
   'home.miniGame.aria.hideKeyboard': 'Masquer le clavier',
-  'home.miniGame.aria.checking': 'Vérification du mot…',
+  'home.miniGame.sr.checking': 'Vérification du mot…',
   'home.miniGame.aria.cellSuffix': ' — lettre {{index}} sur {{total}}',
   'home.miniGame.skip': 'Passer ›',
   'home.host.signInPrompt': 'Connecte-toi pour créer une partie',

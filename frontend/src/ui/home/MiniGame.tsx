@@ -349,7 +349,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
     <>
     <div className={wrap}>
       <span role="status" aria-live="polite" className={css({ srOnly: true })}>
-        {showPulse ? t('home.miniGame.aria.checking') : ''}
+        {showPulse ? t('home.miniGame.sr.checking') : ''}
       </span>
       <div className={row}>
         <div className={defBox}>
