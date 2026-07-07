@@ -1,10 +1,12 @@
 package com.bliss.game.application.usecases
 
 import com.bliss.game.application.ports.AnalyticsEventSink
+import com.bliss.game.application.ports.ClaimOutcome
 import com.bliss.game.application.ports.Clock
 import com.bliss.game.application.ports.LobbyEvent
 import com.bliss.game.application.ports.LobbyRepository
 import com.bliss.game.application.ports.PuzzleProvider
+import com.bliss.game.application.ports.RelinquishOutcome
 import com.bliss.game.application.ports.WordValidator
 import com.bliss.game.domain.CellEntry
 import com.bliss.game.domain.GameSession
@@ -49,9 +51,10 @@ private suspend fun mintUniqueCode(repo: LobbyRepository): LobbyCode {
 }
 
 /**
- * Bootstraps a new lobby in WAITING with the calling player as owner. Host quota by tier
- * (ADR-0083): [ownerUserId]'s existing WAITING lobby is reopened unless [hostUnlimited];
- * race-freedom depends on the api edge calling this inside `withUserLock(ownerUserId)`.
+ * Bootstraps a new lobby in WAITING with the calling player as owner. Active-game quota by tier
+ * (ADR-0083 + ADR-0098 §1): [ownerUserId]'s existing active (WAITING or IN_PROGRESS) owned game is
+ * reopened unless [hostUnlimited]; race-freedom depends on the api edge calling this inside
+ * `withUserLock(ownerUserId)`.
  */
 class CreateLobbyUseCase(
     private val repo: LobbyRepository,
@@ -65,9 +68,9 @@ class CreateLobbyUseCase(
         ownerUserId: UserId? = null,
         hostUnlimited: Boolean = false,
     ): UseCaseResult<Lobby> {
-        // Per-user "1 open lobby" quota; safe against concurrent double-create only under the route's withUserLock(ownerUserId) (ADR-0083).
+        // Per-user "1 active game" quota; safe against concurrent double-create only under the route's withUserLock(ownerUserId) (ADR-0083, ADR-0098 §1).
         if (!hostUnlimited && ownerUserId != null) {
-            repo.findWaitingByOwnerUser(ownerUserId)?.let { existing ->
+            repo.findActiveByOwnerUser(ownerUserId)?.let { existing ->
                 return UseCaseResult(existing, emptyList())
             }
         }
@@ -110,12 +113,12 @@ class RotateLobbyCodeUseCase(
         sessionId: SessionId,
     ): UseCaseOutcome<Lobby> {
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
-        if (!current.isOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
         val newCode = mintUniqueCode(repo)
         var rotated = false
         val updated =
             repo.mutate(lobbyId) { lobby ->
-                if (!lobby.isOwner(sessionId)) return@mutate lobby
+                if (!lobby.isCurrentOwner(sessionId)) return@mutate lobby
                 rotated = true
                 lobby.copy(code = newCode, lastActivityAt = clock.now())
             } ?: return failure(UseCaseError.LobbyNotFound)
@@ -236,18 +239,18 @@ class SetGridConfigUseCase(
         config: GridConfig,
     ): UseCaseOutcome<Lobby> {
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
-        if (!current.isOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
         if (current.state != LobbyLifecycleState.WAITING) return failure(UseCaseError.InvalidState)
         var changed = false
         val updated =
             repo.mutate(lobbyId) { lobby ->
                 // Re-verify inside the lock: a concurrent startGame may have transitioned the lobby.
-                if (!lobby.isOwner(sessionId) || lobby.state != LobbyLifecycleState.WAITING) return@mutate lobby
+                if (!lobby.isCurrentOwner(sessionId) || lobby.state != LobbyLifecycleState.WAITING) return@mutate lobby
                 changed = true
                 lobby.copy(gridConfig = config, lastActivityAt = clock.now())
             } ?: return failure(UseCaseError.LobbyNotFound)
         if (!changed) {
-            return if (!updated.isOwner(sessionId)) failure(UseCaseError.NotOwner) else failure(UseCaseError.InvalidState)
+            return if (!updated.isCurrentOwner(sessionId)) failure(UseCaseError.NotOwner) else failure(UseCaseError.InvalidState)
         }
         return success(updated, listOf(LobbyEvent.GridConfigChanged(config)))
     }
@@ -265,7 +268,7 @@ class StartGameUseCase(
         sessionId: SessionId,
     ): UseCaseOutcome<Lobby> {
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
-        if (!current.isOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
         if (current.state != LobbyLifecycleState.WAITING) return failure(UseCaseError.InvalidState)
         // Fetch outside the lock — IO must not stall other lobbies' mutators.
         val puzzle = puzzleProvider.fetch(current.gridConfig.width, current.gridConfig.height)
@@ -274,7 +277,7 @@ class StartGameUseCase(
         var session: GameSession? = null
         val updated =
             repo.mutate(lobbyId) { lobby ->
-                if (!lobby.isOwner(sessionId) || lobby.state != LobbyLifecycleState.WAITING) return@mutate lobby
+                if (!lobby.isCurrentOwner(sessionId) || lobby.state != LobbyLifecycleState.WAITING) return@mutate lobby
                 val now = clock.now()
                 val s = GameSession(puzzle, emptyMap(), now, null)
                 session = s
@@ -335,6 +338,60 @@ class LeaveLobbyUseCase(
         if (!playerWasPresent) return failure(UseCaseError.PlayerNotInLobby)
         analyticsEventSink.record(AnalyticsEvent.LobbyLeft, sessionId)
         return success(updated, events)
+    }
+}
+
+/**
+ * Explicit relinquish (ADR-0098 §2): the current owner gives up the game, which becomes ownerless,
+ * and their own seat is dropped. Only the owner may relinquish — the disconnect grace path (a plain
+ * [LeaveLobbyUseCase]) never touches ownership. Owner check is re-verified inside
+ * [LobbyRepository.relinquishOwnership]'s lock, not here.
+ */
+class RelinquishOwnershipUseCase(
+    private val repo: LobbyRepository,
+    private val clock: Clock,
+) {
+    suspend operator fun invoke(
+        lobbyId: LobbyId,
+        sessionId: SessionId,
+    ): UseCaseOutcome<Lobby?> {
+        val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
+        if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        return when (val outcome = repo.relinquishOwnership(lobbyId, sessionId, clock.now())) {
+            is RelinquishOutcome.Relinquished -> success(outcome.lobby, listOf(LobbyEvent.PlayerLeft(sessionId)))
+            RelinquishOutcome.NotOwner -> failure(UseCaseError.NotOwner)
+            RelinquishOutcome.LobbyNotFound -> failure(UseCaseError.LobbyNotFound)
+        }
+    }
+}
+
+/**
+ * Claim an ownerless game (ADR-0098 §2): a player present in a non-terminal, ownerless lobby takes
+ * ownership, quota-gated (ADR-0098 §1/§5) unless [hostUnlimited]. Presence and ownerless-ness are
+ * re-verified inside [LobbyRepository.claimOwnership]'s lock; the quota re-check runs under the api
+ * edge's `withUserLock(userId)` (it cannot enter the non-suspend mutator) so two claimers cannot both
+ * win.
+ */
+class ClaimLobbyOwnershipUseCase(
+    private val repo: LobbyRepository,
+    private val clock: Clock,
+) {
+    suspend operator fun invoke(
+        lobbyId: LobbyId,
+        sessionId: SessionId,
+        userId: UserId,
+        hostUnlimited: Boolean = false,
+    ): UseCaseOutcome<Lobby> {
+        val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
+        if (!current.hasJoined(sessionId)) return failure(UseCaseError.NotPresentInLobby)
+        if (!current.isOwnerless()) return failure(UseCaseError.AlreadyOwned)
+        if (!hostUnlimited && repo.findActiveByOwnerUser(userId) != null) return failure(UseCaseError.QuotaExceeded)
+        return when (val outcome = repo.claimOwnership(lobbyId, sessionId, userId, clock.now())) {
+            is ClaimOutcome.Claimed -> success(outcome.lobby, emptyList())
+            ClaimOutcome.NotPresentInLobby -> failure(UseCaseError.NotPresentInLobby)
+            ClaimOutcome.AlreadyOwned -> failure(UseCaseError.AlreadyOwned)
+            ClaimOutcome.LobbyNotFound -> failure(UseCaseError.LobbyNotFound)
+        }
     }
 }
 

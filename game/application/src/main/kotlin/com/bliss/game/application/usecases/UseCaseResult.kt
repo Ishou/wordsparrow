@@ -25,6 +25,15 @@ sealed interface UseCaseError {
 
     data object PlayerNotInLobby : UseCaseError
 
+    /** Claim (ADR-0098 §2): the caller holds no seat in the lobby they tried to claim. */
+    data object NotPresentInLobby : UseCaseError
+
+    /** Claim (ADR-0098 §2): the lobby still has an owner, so it cannot be claimed. */
+    data object AlreadyOwned : UseCaseError
+
+    /** Create/claim (ADR-0098 §1): the user is already at their active-game limit. */
+    data object QuotaExceeded : UseCaseError
+
     /**
      * The new joiner did not present a valid lobby code, or presented a code
      * that does not match the lobby's. ADR-0027: the WS `joinLobby` frame is

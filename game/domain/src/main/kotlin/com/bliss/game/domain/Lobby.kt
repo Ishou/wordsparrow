@@ -131,6 +131,10 @@ data class Lobby(
     // Ownership is a claimable lease (ADR-0098 §2): a null ownerUserId means relinquished/vacated.
     fun isOwnerless(): Boolean = ownerUserId == null
 
+    // ADR-0098 §2: owner-gated actions go inert only once BOTH ownerless and unseated -- isOwnerless()
+    // alone over-fires for an anonymous owner, whose ownerUserId is null from creation, not relinquish.
+    fun isCurrentOwner(sessionId: SessionId): Boolean = isOwner(sessionId) && (hasJoined(sessionId) || !isOwnerless())
+
     /** Explicit relinquish (ADR-0098 §2): drop ownership to ownerless, leaving seat/state/game intact. */
     fun relinquishOwner(now: Instant): Lobby = copy(ownerUserId = null, lastActivityAt = now)
 

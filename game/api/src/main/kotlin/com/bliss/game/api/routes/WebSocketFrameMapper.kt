@@ -182,6 +182,24 @@ internal fun UseCaseError.toErrorFrame(): ServerToClientFrame.Error =
                 detail = detail,
                 status = 400,
             )
+        UseCaseError.NotPresentInLobby ->
+            ServerToClientFrame.Error(
+                errorType = "https://bliss.example/errors/not-present-in-lobby",
+                title = "Vous n'êtes pas dans ce salon",
+                status = 403,
+            )
+        UseCaseError.AlreadyOwned ->
+            ServerToClientFrame.Error(
+                errorType = "https://bliss.example/errors/already-owned",
+                title = "Cette partie a déjà un propriétaire",
+                status = 409,
+            )
+        UseCaseError.QuotaExceeded ->
+            ServerToClientFrame.Error(
+                errorType = "https://bliss.example/errors/quota-exceeded",
+                title = "Limite de parties actives atteinte",
+                status = 403,
+            )
     }
 
 internal fun protocolErrorFrame(

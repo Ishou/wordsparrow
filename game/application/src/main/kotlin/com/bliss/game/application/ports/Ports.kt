@@ -5,6 +5,7 @@ import com.bliss.game.domain.Letter
 import com.bliss.game.domain.Lobby
 import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.LobbyId
+import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -67,6 +68,65 @@ interface LobbyRepository {
         mutator: (Lobby) -> Lobby?,
     ): Lobby?
 
+    /**
+     * Relinquishes ownership (ADR-0098 §2) if [sessionId] still owns the lobby when the per-lobby
+     * lock is acquired: drops to ownerless and removes [sessionId]'s seat. A dedicated method, not
+     * a raw [mutate] call, because Postgres's upsert deliberately excludes `owner_user_id` from its
+     * `ON CONFLICT` update (write-once at create, ADR-0066 amendment 2026-07-05) -- writing this
+     * transition through the general save path would silently drop the clear. Default composes
+     * [mutate] (correct for the in-memory adapter, which replaces the whole row); the Postgres
+     * adapter must override with a purpose-built `owner_user_id` UPDATE that bypasses the upsert.
+     */
+    suspend fun relinquishOwnership(
+        id: LobbyId,
+        sessionId: SessionId,
+        now: Instant,
+    ): RelinquishOutcome {
+        var notOwner = false
+        val updated =
+            mutate(id) { lobby ->
+                if (!lobby.isCurrentOwner(sessionId)) {
+                    notOwner = true
+                    lobby
+                } else {
+                    lobby.relinquishOwner(now).copy(players = lobby.players - sessionId)
+                }
+            } ?: return RelinquishOutcome.LobbyNotFound
+        return if (notOwner) RelinquishOutcome.NotOwner else RelinquishOutcome.Relinquished(updated)
+    }
+
+    /**
+     * Claims an ownerless lobby (ADR-0098 §2) for [sessionId]/[userId] if [sessionId] is still
+     * present and the lobby is still ownerless when the per-lobby lock is acquired. Same dedicated-
+     * method rationale as [relinquishOwnership]: the general save path silently drops the
+     * `owner_user_id` write on Postgres. Default composes [mutate]; the Postgres adapter overrides
+     * with a purpose-built `owner_user_id` UPDATE.
+     */
+    suspend fun claimOwnership(
+        id: LobbyId,
+        sessionId: SessionId,
+        userId: UserId,
+        now: Instant,
+    ): ClaimOutcome {
+        var lockError: ClaimOutcome? = null
+        val updated =
+            mutate(id) { lobby ->
+                when {
+                    !lobby.hasJoined(sessionId) -> {
+                        lockError = ClaimOutcome.NotPresentInLobby
+                        lobby
+                    }
+                    !lobby.isOwnerless() -> {
+                        lockError = ClaimOutcome.AlreadyOwned
+                        lobby
+                    }
+                    else -> lobby.claimOwner(sessionId, userId, now)
+                }
+            } ?: return ClaimOutcome.LobbyNotFound
+        lockError?.let { return it }
+        return ClaimOutcome.Claimed(updated)
+    }
+
     suspend fun delete(id: LobbyId)
 
     /**
@@ -86,6 +146,27 @@ interface LobbyRepository {
      * v1; the Postgres adapter joins `lobby_players.user_id` on the owner seat.
      */
     suspend fun findWaitingByOwnerUser(userId: UserId): Lobby?
+
+    /**
+     * Returns the non-terminal (WAITING or IN_PROGRESS) lobby owned by [userId], if one exists —
+     * the sticky-ownership active-game quota key (ADR-0098 §1). Ownership is counted by
+     * `owner_user_id`, so a disconnected owner still counts. The default composes the existing
+     * owner-keyed lookups; the persistence adapter overrides it with a single
+     * `state IN ('WAITING','IN_PROGRESS') AND owner_user_id = ?` query.
+     */
+    suspend fun findActiveByOwnerUser(userId: UserId): Lobby? =
+        findWaitingByOwnerUser(userId)
+            ?: findByUserId(userId).firstOrNull {
+                it.state == LobbyLifecycleState.IN_PROGRESS && it.ownerUserId == userId
+            }
+
+    /**
+     * Returns ownerless (`owner_user_id IS NULL`) non-terminal lobbies whose [Lobby.lastActivityAt]
+     * is at or before [cutoff] — the ADR-0098 §4 GC sweep for relinquished/RGPD-vacated games.
+     * Snapshot — callers must re-validate inside [mutate] (or [delete]) to avoid TOCTOU between the
+     * scan and the eviction. Default is empty (the sweep is not yet wired); the adapter overrides it.
+     */
+    suspend fun findIdleOwnerless(cutoff: Instant): List<Lobby> = emptyList()
 
     /**
      * Returns WAITING lobbies whose [Lobby.lastActivityAt] is at or before [cutoff].
@@ -132,6 +213,30 @@ interface LobbyRepository {
         userId: UserId,
         newPseudonym: Pseudonym,
     ): Set<LobbyId>
+}
+
+/** Outcome of [LobbyRepository.relinquishOwnership]. */
+sealed interface RelinquishOutcome {
+    data class Relinquished(
+        val lobby: Lobby,
+    ) : RelinquishOutcome
+
+    data object NotOwner : RelinquishOutcome
+
+    data object LobbyNotFound : RelinquishOutcome
+}
+
+/** Outcome of [LobbyRepository.claimOwnership]. */
+sealed interface ClaimOutcome {
+    data class Claimed(
+        val lobby: Lobby,
+    ) : ClaimOutcome
+
+    data object NotPresentInLobby : ClaimOutcome
+
+    data object AlreadyOwned : ClaimOutcome
+
+    data object LobbyNotFound : ClaimOutcome
 }
 
 /**

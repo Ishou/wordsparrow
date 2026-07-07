@@ -102,18 +102,18 @@ class LobbyUseCasesTest {
             assertThat(second.events).hasSize(0)
         }
 
-    // Once the owner's lobby leaves WAITING (game starts) the next create call mints a fresh
-    // lobby — owner is back in the matchmaking flow with their old game still IN_PROGRESS.
+    // ADR-0098 §1: the active-game quota counts WAITING OR IN_PROGRESS owned by the user, so
+    // starting the game no longer frees the quota — a second create dedups to the in-progress game.
     @Test
-    fun `CreateLobby mints a new lobby when the owner's previous lobby has left WAITING`() =
+    fun `CreateLobby dedups to the owner's IN_PROGRESS game (active-game quota)`() =
         runTest {
             val h = harness()
             val first = h.create(sessionA, alice, userA).value
             h.start(first.id, sessionA).requireSuccess()
             val second = h.create(sessionA, alice, userA)
 
-            assertThat(second.value.id).isNotEqualTo(first.id)
-            assertThat(second.events).hasSize(1)
+            assertThat(second.value.id).isEqualTo(first.id)
+            assertThat(second.events).hasSize(0)
         }
 
     // ADR-0083 subscriber quota: `hostUnlimited` skips the dedup, so every create mints a distinct lobby.
@@ -125,6 +125,19 @@ class LobbyUseCasesTest {
             val second = h.create(sessionA, alice, userA, hostUnlimited = true)
 
             assertThat(second.value.id).isNotEqualTo(first.value.id)
+            assertThat(second.events).hasSize(1)
+        }
+
+    // ADR-0098 §1: hostUnlimited bypasses the active-game quota even when the owner's game is IN_PROGRESS.
+    @Test
+    fun `CreateLobby with hostUnlimited mints a new lobby past an IN_PROGRESS owned game`() =
+        runTest {
+            val h = harness()
+            val first = h.create(sessionA, alice, userA, hostUnlimited = true).value
+            h.start(first.id, sessionA).requireSuccess()
+            val second = h.create(sessionA, alice, userA, hostUnlimited = true)
+
+            assertThat(second.value.id).isNotEqualTo(first.id)
             assertThat(second.events).hasSize(1)
         }
 
@@ -428,6 +441,19 @@ class LobbyUseCasesTest {
             ).isEqualTo(before)
         }
 
+    // ADR-0098 §2: owner-gated actions go inert once ownerless; relinquish leaves ownerSessionId
+    // pointed at the ex-owner, so isOwner alone is not enough to re-authorize.
+    @Test
+    fun `RotateLobbyCode returns NotOwner after the owner relinquishes`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val out = h.rotate(lobby.id, sessionA)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
+        }
+
     @Test
     fun `RotateLobbyCode returns LobbyNotFound when missing`() =
         runTest {
@@ -505,6 +531,17 @@ class LobbyUseCasesTest {
         }
 
     @Test
+    fun `SetGridConfig returns NotOwner after the owner relinquishes`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val out = h.setConfig(lobby.id, sessionA, GridConfig(9, 9))
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
+        }
+
+    @Test
     fun `StartGame fetches puzzle, transitions to IN_PROGRESS, emits GameStarted`() =
         runTest {
             val h = harness()
@@ -529,6 +566,17 @@ class LobbyUseCasesTest {
             h.start(lobby.id, sessionA).requireSuccess()
             val twice = h.start(lobby.id, sessionA)
             assertThat((twice as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.InvalidState)
+        }
+
+    @Test
+    fun `StartGame returns NotOwner after the owner relinquishes`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val out = h.start(lobby.id, sessionA)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
         }
 
     @Test
@@ -675,6 +723,140 @@ class LobbyUseCasesTest {
             val out = h.write(lobby.id, sessionB, pPos, Letter('P'))
             assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.PlayerNotInLobby)
         }
+
+    // ADR-0098 "disconnect/leave keeps ownership; only explicit relinquish clears it": a plain
+    // leave by the owner must NOT null ownerUserId (ADR-0066 Mes-parties visibility depends on it).
+    @Test
+    fun `LeaveLobby keeps ownerUserId unchanged when the owner leaves`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.leave(lobby.id, sessionA).requireSuccess()
+
+            val after = h.repo.findById(lobby.id)
+            assertThat(after).isNotNull()
+            assertThat(after!!.ownerUserId).isEqualTo(userA)
+        }
+
+    // ADR-0098 §2: the current owner relinquishes to ownerless and drops their own seat.
+    @Test
+    fun `Relinquish clears ownerUserId, drops the owner seat, and emits PlayerLeft`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            val out = h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val relinquished = out.value!!
+            assertThat(relinquished.ownerUserId).isNull()
+            assertThat(relinquished.players.keys.contains(sessionA)).isEqualTo(false)
+            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
+        }
+
+    @Test
+    fun `Relinquish returns NotOwner when caller is not the owner`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.joinWithUserId(lobby.id, sessionB, bob, lobby.code.value, userB).requireSuccess()
+            val out = h.relinquish(lobby.id, sessionB)
+
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
+        }
+
+    // ADR-0098 §2: relinquishOwner() nulls ownerUserId but not ownerSessionId, so isOwner alone
+    // stays true for the ex-owner's session; the second relinquish must still be rejected.
+    @Test
+    fun `Relinquish returns NotOwner when called a second time by the same session`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val out = h.relinquish(lobby.id, sessionA)
+
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
+        }
+
+    @Test
+    fun `Relinquish returns LobbyNotFound for an unknown lobby`() =
+        runTest {
+            val h = harness()
+            val out = h.relinquish(LobbyId.generate(), sessionA)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.LobbyNotFound)
+        }
+
+    // ADR-0098 §2: a present player claims an ownerless game, rebinding owner_user_id and ownerSessionId.
+    @Test
+    fun `Claim rebinds ownership to a present player on an ownerless lobby`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.joinWithUserId(lobby.id, sessionB, bob, lobby.code.value, userB).requireSuccess()
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val claimed = h.claim(lobby.id, sessionB, userB).requireSuccess()
+
+            assertThat(claimed.value.ownerUserId).isEqualTo(userB)
+            assertThat(claimed.value.ownerSessionId).isEqualTo(sessionB)
+        }
+
+    @Test
+    fun `Claim returns NotPresentInLobby when the caller is not in the lobby`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.joinWithUserId(lobby.id, sessionB, bob, lobby.code.value, userB).requireSuccess()
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val out = h.claim(lobby.id, sessionC, userA)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotPresentInLobby)
+        }
+
+    @Test
+    fun `Claim returns AlreadyOwned when the lobby still has an owner`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.joinWithUserId(lobby.id, sessionB, bob, lobby.code.value, userB).requireSuccess()
+
+            val out = h.claim(lobby.id, sessionB, userB)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.AlreadyOwned)
+        }
+
+    // ADR-0098 §1/§5: claiming is quota-gated — a claimer already at their active-game limit is rejected.
+    @Test
+    fun `Claim returns QuotaExceeded when the claimer already owns an active game`() =
+        runTest {
+            val h = harness()
+            val abandoned = h.create(sessionA, alice, userA).value
+            h.joinWithUserId(abandoned.id, sessionB, bob, abandoned.code.value, userB).requireSuccess()
+            h.relinquish(abandoned.id, sessionA).requireSuccess()
+            h.create(sessionC, bob, userB)
+
+            val out = h.claim(abandoned.id, sessionB, userB)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.QuotaExceeded)
+        }
+
+    @Test
+    fun `Claim with hostUnlimited bypasses the active-game quota`() =
+        runTest {
+            val h = harness()
+            val abandoned = h.create(sessionA, alice, userA).value
+            h.joinWithUserId(abandoned.id, sessionB, bob, abandoned.code.value, userB).requireSuccess()
+            h.relinquish(abandoned.id, sessionA).requireSuccess()
+            h.create(sessionC, bob, userB)
+
+            val claimed = h.claim(abandoned.id, sessionB, userB, hostUnlimited = true).requireSuccess()
+            assertThat(claimed.value.ownerUserId).isEqualTo(userB)
+        }
+
+    @Test
+    fun `Claim returns LobbyNotFound for an unknown lobby`() =
+        runTest {
+            val h = harness()
+            val out = h.claim(LobbyId.generate(), sessionA, userA)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.LobbyNotFound)
+        }
 }
 
 /** Generates a UUIDv7 with deterministic-enough hex for max-capacity tests. */
@@ -711,6 +893,8 @@ internal class Harness(
     val update = UpdateCellUseCase(repo, clock, wordValidator)
     val leave = LeaveLobbyUseCase(repo, clock)
     val rotateCode = RotateLobbyCodeUseCase(repo, clock)
+    val claim = ClaimLobbyOwnershipUseCase(repo, clock)
+    val relinquish = RelinquishOwnershipUseCase(repo, clock)
 
     suspend fun create(
         s: SessionId,
@@ -784,6 +968,18 @@ internal class Harness(
         l: LobbyId,
         s: SessionId,
     ) = rotateCode.invoke(l, s)
+
+    suspend fun claim(
+        l: LobbyId,
+        s: SessionId,
+        userId: UserId,
+        hostUnlimited: Boolean = false,
+    ) = claim.invoke(l, s, userId, hostUnlimited)
+
+    suspend fun relinquish(
+        l: LobbyId,
+        s: SessionId,
+    ) = relinquish.invoke(l, s)
 }
 
 internal fun <T> UseCaseOutcome<T>.requireSuccess(): UseCaseResult<T> =
