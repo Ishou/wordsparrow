@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router';
 import { GameController, ArrowClockwise } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import type { Lobby, LobbyId } from '@/domain/game';
+import { t } from '@/ui/i18n';
 import { useCanSubscribe } from '@/ui/components/billing';
 
 // ADR-0098 §6: informational (not paywall) modal when a create resolves to the one active game you already own — rejoin, optional sole-occupant fresh-start, subtle subscriber hint. Accessible via the Ark Dialog primitive (ADR-0050).
@@ -81,29 +82,29 @@ export function OwnedGameModal({
           <Dialog.Content className={sheet}>
             <span aria-hidden="true" className={grab} />
             <span className={badge}><GameController size={24} weight="fill" aria-hidden="true" /></span>
-            <Dialog.Title className={title}>Vous avez déjà une partie en cours</Dialog.Title>
+            <Dialog.Title className={title}>{t('v2.multiplayer.owned.title')}</Dialog.Title>
             <Dialog.Description className={text}>
-              Le niveau gratuit permet une partie active à la fois. Rejoignez-la, ou reprenez à zéro.
+              {t('v2.multiplayer.owned.description')}
             </Dialog.Description>
             <button type="button" className={primaryBtn} onClick={onRejoindre} disabled={startingNew}>
-              Rejoindre ma partie
+              {t('v2.multiplayer.owned.rejoin')}
             </button>
             {canStartNew ? (
               <button type="button" className={secondary} onClick={onStartNew} disabled={startingNew} aria-busy={startingNew || undefined}>
                 <ArrowClockwise size={18} weight="bold" aria-hidden="true" />
-                {startingNew ? 'Création…' : 'Démarrer une nouvelle partie'}
+                {startingNew ? t('v2.multiplayer.creating') : t('v2.multiplayer.owned.startNew')}
               </button>
             ) : null}
             {canSubscribe ? (
               <p className={hint}>
-                Les abonnés peuvent créer plusieurs parties en même temps.{' '}
+                {t('v2.multiplayer.owned.subscriberHint')}{' '}
                 <Link to="/abonnement" className={hintLink} onClick={onClose}>
-                  En savoir plus
+                  {t('v2.multiplayer.owned.learnMore')}
                 </Link>
               </p>
             ) : null}
             <button type="button" className={dismiss} onClick={onClose}>
-              Plus tard
+              {t('v2.multiplayer.later')}
             </button>
           </Dialog.Content>
         </Dialog.Positioner>
