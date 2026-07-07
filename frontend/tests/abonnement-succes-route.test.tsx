@@ -104,6 +104,30 @@ describe('CheckoutSuccessScreen polling', () => {
     expect(screen.getByText(/te voilà abonné·e/i)).toBeInTheDocument();
   });
 
+  it('stays in the confirming state (not 404/anon) when whoami rejects once mid-poll', async () => {
+    const whoami = vi
+      .fn<AuthClient['whoami']>()
+      .mockResolvedValueOnce(NOT_YET_UNLOCKED)
+      .mockRejectedValueOnce(new Error('network blip'))
+      .mockResolvedValue(UNLOCKED);
+    render(<CheckoutSuccessScreen />, { wrapper: withAuth(fakeAuthClient(whoami)) });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText(/confirmation en cours/i)).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(screen.getByText(/confirmation en cours/i)).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(screen.getByText(/te voilà abonné·e/i)).toBeInTheDocument();
+  });
+
   it('shows the neutral timeout after the polling cap when the capability never lands', async () => {
     const whoami = vi.fn<AuthClient['whoami']>().mockResolvedValue(NOT_YET_UNLOCKED);
     render(<CheckoutSuccessScreen />, { wrapper: withAuth(fakeAuthClient(whoami)) });

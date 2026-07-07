@@ -24,9 +24,7 @@ const merciTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSi
 const merciText = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, lineHeight: '1.45', maxWidth: '280px' });
 const merciCta = css({ display: 'block', width: '100%', maxWidth: '300px', textAlign: 'center', textDecoration: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', padding: '14px', borderRadius: '14px', boxShadow: '0 8px 18px rgba(190,73,112,0.34)', marginTop: '4px' });
 
-// Mollie confirms the payment via webhook (ADR-0078) and identity then derives the paid `grilles:all`
-// capability the paywall reads — so we re-poll whoami until it lands, otherwise tapping through to
-// /grilles right after the redirect shows a stale paywall until a manual reload.
+// Mollie confirms via webhook (ADR-0078); poll whoami until grilles:all lands so the CTA never leads to a stale paywall.
 const POLL_INTERVAL_MS = 2000;
 const MAX_ATTEMPTS = 5;
 
@@ -76,14 +74,14 @@ export function CheckoutSuccessScreen() {
     return () => { cancelled = true; };
   }, [authClient]);
 
-  // Re-fetch whoami on a cadence until the paid capability lands (or the cap is hit); once it does,
-  // `subscriber` flips, so the CTA to /grilles is only ever shown when it's safe to follow.
+  // Poll whoami until the capability lands or the cap is hit; `subscriber` flipping gates the CTA.
   useEffect(() => {
     if (subscriber) return;
     let n = 0;
     const id = setInterval(() => {
       n += 1;
-      void refresh();
+      // A transient whoami() error mid-poll must not flip the whole app to signed-out.
+      void refresh({ preserveStateOnFailure: true });
       setAttempts(n);
       if (n >= MAX_ATTEMPTS) clearInterval(id);
     }, POLL_INTERVAL_MS);

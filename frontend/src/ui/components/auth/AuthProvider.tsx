@@ -21,10 +21,15 @@ export type AuthState =
   | { readonly status: 'anon' }
   | { readonly status: 'authed'; readonly whoami: WhoAmIResult };
 
+export interface RefreshOptions {
+  // Skip the anon fallback on a transient whoami() failure — for unattended pollers.
+  readonly preserveStateOnFailure?: boolean;
+}
+
 export interface AuthContextValue {
   readonly state: AuthState;
   readonly status: AuthState['status'];
-  readonly refresh: () => Promise<void>;
+  readonly refresh: (opts?: RefreshOptions) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -82,20 +87,21 @@ export function AuthProvider({
   // Set on every completed refresh (authed or anon) — records "we just asked", not "we are authed".
   const lastRefreshAt = useRef(0);
 
-  const checkSession = useCallback(async (): Promise<WhoAmIResult | null> => {
-    try {
-      return await authClient.whoami();
-    } catch {
-      // Network failure (CORS, offline) — treat as anon. The user can
-      // retry by signing in again; no UI value in surfacing a generic
-      // fetch error in the header.
-      return null;
-    }
+  // Lets whoami() throwing propagate, distinct from a confirmed 401 (resolves null).
+  const checkSession = useCallback((): Promise<WhoAmIResult | null> => {
+    return authClient.whoami();
   }, [authClient]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (opts?: RefreshOptions) => {
     try {
-      const whoami = await checkSession();
+      let whoami: WhoAmIResult | null;
+      try {
+        whoami = await checkSession();
+      } catch {
+        // Network failure (CORS, offline) — treat as anon unless the caller opted out.
+        if (!opts?.preserveStateOnFailure) setState({ status: 'anon' });
+        return;
+      }
       if (!whoami) {
         setState({ status: 'anon' });
         return;

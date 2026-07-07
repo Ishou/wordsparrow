@@ -1,7 +1,7 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthClient, WhoAmIResult } from '@/application/auth';
-import { AuthProvider, useAuth } from '@/ui/components/auth';
+import { AuthProvider, useAuth, type RefreshOptions } from '@/ui/components/auth';
 
 const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 
@@ -55,6 +55,16 @@ function Probe() {
   );
 }
 
+function ProbeWithRefreshButton({ opts }: { opts?: RefreshOptions }) {
+  const { state, refresh } = useAuth();
+  return (
+    <div>
+      <span data-testid="status">{state.status}</span>
+      <button onClick={() => void refresh(opts)}>refresh</button>
+    </div>
+  );
+}
+
 describe('AuthProvider', () => {
   beforeEach(() => {
     Object.defineProperty(document, 'visibilityState', {
@@ -99,6 +109,25 @@ describe('AuthProvider', () => {
       </AuthProvider>,
     );
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('anon'));
+  });
+
+  it('preserves authed state on a transient whoami error when preserveStateOnFailure is set', async () => {
+    const client = fakeAuthClient({
+      whoamiSeq: [
+        { userId: USER_ID, displayName: 'Lapin 472' },
+        new Error('network blip'),
+      ],
+    });
+    render(
+      <AuthProvider authClient={client} getPseudonym={() => 'Renard 423'}>
+        <ProbeWithRefreshButton opts={{ preserveStateOnFailure: true }} />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('authed'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'refresh' }));
+    await waitFor(() => expect(client._calls.whoami).toBe(2));
+    expect(screen.getByTestId('status').textContent).toBe('authed');
   });
 
   it('carries the anon pseudonym over on first sign-in when displayName=Joueur and local is a default', async () => {
