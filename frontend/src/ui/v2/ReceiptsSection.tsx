@@ -23,8 +23,7 @@ const messagePad = css({ padding: '16px 15px' });
 const note = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, lineHeight: '1.4', margin: 0 });
 const inlineError = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', lineHeight: '1.4', margin: 0 });
 
-// Receipt status is the raw Mollie payment status (open string on the wire); map the full set so
-// an unmapped value never leaks the English word into the French UI.
+// Receipt status is Mollie's open wire string; map the full set so no value leaks English.
 const STATUS_LABEL: Record<string, string> = {
   paid: 'Payé',
   pending: 'En attente',
