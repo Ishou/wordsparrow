@@ -48,7 +48,7 @@ class LobbyGarbageCollector(
 ) {
     /**
      * Single-pass sweep. Runs once and returns the total number of lobbies evicted
-     * across both the WAITING and COMPLETED retention windows. Test-friendly
+     * across the WAITING, COMPLETED, and OWNERLESS retention windows. Test-friendly
      * entrypoint: pure suspend, no infinite loop. Production wires this into [run]
      * to call repeatedly.
      */
