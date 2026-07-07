@@ -109,7 +109,7 @@ data class Lobby(
         require(players.size <= MAX_PLAYERS) {
             "Lobby may hold at most $MAX_PLAYERS players, was ${players.size}"
         }
-        // Per ADR-0039, the owner may be absent from `players` once they have left;
+        // Per ADR-0055, the owner may be absent from `players` once they have left;
         // ownership is a logical identifier preserved across the owner's
         // disconnect so they can return via My-games. Owner-only actions are
         // gated on isOwner(sessionId), not on player membership.
@@ -127,6 +127,19 @@ data class Lobby(
     }
 
     fun isOwner(sessionId: SessionId): Boolean = ownerSessionId == sessionId
+
+    // Ownership is a claimable lease (ADR-0098 §2): a null ownerUserId means relinquished/vacated.
+    fun isOwnerless(): Boolean = ownerUserId == null
+
+    /** Explicit relinquish (ADR-0098 §2): drop ownership to ownerless, leaving seat/state/game intact. */
+    fun relinquishOwner(now: Instant): Lobby = copy(ownerUserId = null, lastActivityAt = now)
+
+    /** Claim an ownerless lease (ADR-0098 §2): rebind ownership to the claiming session/user. */
+    fun claimOwner(
+        sessionId: SessionId,
+        userId: UserId,
+        now: Instant,
+    ): Lobby = copy(ownerUserId = userId, ownerSessionId = sessionId, lastActivityAt = now)
 
     fun isFull(): Boolean = players.size >= MAX_PLAYERS
 

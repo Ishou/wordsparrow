@@ -10,6 +10,8 @@ import com.bliss.game.domain.Fixtures.lobby
 import com.bliss.game.domain.Fixtures.player
 import com.bliss.game.domain.Fixtures.sessionA
 import com.bliss.game.domain.Fixtures.sessionB
+import com.bliss.game.domain.Fixtures.userA
+import com.bliss.game.domain.Fixtures.userB
 import org.junit.jupiter.api.Test
 
 class LobbyTest {
@@ -82,7 +84,7 @@ class LobbyTest {
 
     @Test
     fun `Lobby allows an owner that is not a current member`() {
-        // Per ADR-0039, the owner remains the owner after leaving via the
+        // Per ADR-0055, the owner remains the owner after leaving via the
         // regular leave path — they can return via My-games. Owner-only actions
         // are gated on isOwner(sessionId), not on player membership.
         val l =
@@ -127,5 +129,64 @@ class LobbyTest {
         val after = before.touched(Fixtures.later)
         assertThat(after.lastActivityAt).isEqualTo(Fixtures.later)
         assertThat(after.copy(lastActivityAt = before.lastActivityAt)).isEqualTo(before)
+    }
+
+    @Test
+    fun `isOwnerless is true when ownerUserId is null and false when set`() {
+        assertThat(lobby().copy(ownerUserId = null).isOwnerless()).isTrue()
+        assertThat(lobby().copy(ownerUserId = userA).isOwnerless()).isFalse()
+    }
+
+    @Test
+    fun `relinquishOwner clears ownerUserId and marks the lobby ownerless`() {
+        val owned = lobby(lastActivityAt = Fixtures.now).copy(ownerUserId = userA)
+        val after = owned.relinquishOwner(Fixtures.later)
+        assertThat(after.ownerUserId).isEqualTo(null)
+        assertThat(after.isOwnerless()).isTrue()
+        assertThat(after.lastActivityAt).isEqualTo(Fixtures.later)
+    }
+
+    @Test
+    fun `relinquishOwner leaves players ownerSessionId state and game untouched`() {
+        val owned =
+            lobby(state = LobbyLifecycleState.IN_PROGRESS, game = Fixtures.gameSession())
+                .copy(ownerUserId = userA)
+        val after = owned.relinquishOwner(Fixtures.later)
+        assertThat(after.players).isEqualTo(owned.players)
+        assertThat(after.ownerSessionId).isEqualTo(owned.ownerSessionId)
+        assertThat(after.state).isEqualTo(LobbyLifecycleState.IN_PROGRESS)
+        assertThat(after.game).isEqualTo(owned.game)
+    }
+
+    @Test
+    fun `relinquishOwner round-trips a WAITING lobby with state unchanged`() {
+        val owned = lobby(state = LobbyLifecycleState.WAITING).copy(ownerUserId = userA)
+        val after = owned.relinquishOwner(Fixtures.later)
+        assertThat(after.state).isEqualTo(LobbyLifecycleState.WAITING)
+        assertThat(after.isOwnerless()).isTrue()
+    }
+
+    @Test
+    fun `claimOwner sets ownerUserId rebinds ownerSessionId and bumps lastActivityAt`() {
+        val ownerless =
+            lobby(ownerSessionId = sessionA, lastActivityAt = Fixtures.now)
+                .copy(ownerUserId = null)
+        val after = ownerless.claimOwner(sessionB, userB, Fixtures.later)
+        assertThat(after.ownerUserId).isEqualTo(userB)
+        assertThat(after.ownerSessionId).isEqualTo(sessionB)
+        assertThat(after.isOwner(sessionB)).isTrue()
+        assertThat(after.isOwnerless()).isFalse()
+        assertThat(after.lastActivityAt).isEqualTo(Fixtures.later)
+    }
+
+    @Test
+    fun `claimOwner on an IN_PROGRESS lobby keeps state and game unchanged`() {
+        val ownerless =
+            lobby(state = LobbyLifecycleState.IN_PROGRESS, game = Fixtures.gameSession())
+                .copy(ownerUserId = null)
+        val after = ownerless.claimOwner(sessionB, userB, Fixtures.later)
+        assertThat(after.state).isEqualTo(LobbyLifecycleState.IN_PROGRESS)
+        assertThat(after.game).isEqualTo(ownerless.game)
+        assertThat(after.players).isEqualTo(ownerless.players)
     }
 }
