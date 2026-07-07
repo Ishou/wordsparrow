@@ -1,5 +1,6 @@
 package com.bliss.billing.api.routes
 
+import com.bliss.billing.api.mapper.NEVER_SUBSCRIBED_VIEW
 import com.bliss.billing.api.mapper.toView
 import com.bliss.billing.api.requireSession
 import com.bliss.billing.application.usecases.SubscriptionQuery
@@ -12,6 +13,6 @@ import io.ktor.server.routing.get
 fun Route.subscriptionRoute(query: SubscriptionQuery) {
     get("/v1/subscription") {
         val principal = call.requireSession() ?: return@get
-        call.respond(HttpStatusCode.OK, query.execute(principal.userId).toView())
+        call.respond(HttpStatusCode.OK, query.execute(principal.userId)?.toView() ?: NEVER_SUBSCRIBED_VIEW)
     }
 }

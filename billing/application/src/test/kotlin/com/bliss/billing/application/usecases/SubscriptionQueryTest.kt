@@ -2,6 +2,7 @@ package com.bliss.billing.application.usecases
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.bliss.billing.application.testdoubles.FakeSubscriptionRepository
 import com.bliss.billing.domain.SubscriptionStatus
 import com.bliss.billing.domain.Tier
@@ -14,12 +15,9 @@ class SubscriptionQueryTest {
     private val useCase = SubscriptionQuery(repository)
 
     @Test
-    fun `a never-subscribed user resolves to the free projection`() =
+    fun `a never-subscribed user resolves to null (no subscription, not a lapsed one)`() =
         runTest {
-            val view = useCase.execute(UUID.randomUUID())
-
-            assertThat(view.tier).isEqualTo(Tier.free)
-            assertThat(view.status).isEqualTo(SubscriptionStatus.EXPIRED)
+            assertThat(useCase.execute(UUID.randomUUID())).isNull()
         }
 
     @Test
@@ -28,7 +26,7 @@ class SubscriptionQueryTest {
             val userId = UUID.randomUUID()
             repository.save(subscription(userId = userId, tier = Tier.of("supporter")))
 
-            val view = useCase.execute(userId)
+            val view = requireNotNull(useCase.execute(userId))
 
             assertThat(view.tier).isEqualTo(Tier.of("supporter"))
             assertThat(view.status).isEqualTo(SubscriptionStatus.ACTIVE)
