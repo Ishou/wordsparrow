@@ -136,7 +136,7 @@ class InMemoryLobbyRepository : LobbyRepository {
     // RGPD erasure mirror of the production InMemoryLobbyRepository (ADR-0039).
     override suspend fun eraseSession(sessionId: SessionId): EraseSessionResult {
         var deletedLobbies = 0
-        var transferredLobbies = 0
+        var vacatedLobbies = 0
         var removedPlayerships = 0
         var anonymisedEntries = 0
         val targets =
@@ -157,11 +157,15 @@ class InMemoryLobbyRepository : LobbyRepository {
                     return@withLock
                 }
                 removedPlayerships += 1
+                val newOwnerUserId: com.bliss.game.domain.UserId?
                 val newOwner =
                     if (current.isOwner(sessionId)) {
-                        transferredLobbies += 1
-                        remaining.values.minBy { it.joinedAt }.sessionId
+                        // Rule 2 (ADR-0098 §3): vacate to ownerless rather than transfer.
+                        vacatedLobbies += 1
+                        newOwnerUserId = null
+                        com.bliss.game.domain.SessionId.ANON
                     } else {
+                        newOwnerUserId = current.ownerUserId
                         current.ownerSessionId
                     }
                 val newGame =
@@ -184,12 +188,13 @@ class InMemoryLobbyRepository : LobbyRepository {
                         current.copy(
                             players = remaining,
                             ownerSessionId = newOwner,
+                            ownerUserId = newOwnerUserId,
                             game = newGame,
                         )
                 }
             }
         }
-        return EraseSessionResult(deletedLobbies, transferredLobbies, removedPlayerships, anonymisedEntries)
+        return EraseSessionResult(deletedLobbies, vacatedLobbies, removedPlayerships, anonymisedEntries)
     }
 
     override suspend fun rebindAnonSeats(

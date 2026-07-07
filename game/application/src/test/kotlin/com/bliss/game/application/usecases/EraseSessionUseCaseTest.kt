@@ -26,8 +26,9 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * Three-rule cascade (ADR-0039) verified end-to-end through the EraseSessionUseCase
- * against the test in-memory adapter. Idempotency is asserted on the no-data path.
+ * Three-rule cascade (ADR-0055; rule 2 vacates per ADR-0098 §3) verified end-to-end
+ * through the EraseSessionUseCase against the test in-memory adapter. Idempotency is
+ * asserted on the no-data path.
  */
 class EraseSessionUseCaseTest {
     private val baseInstant: Instant = Instant.parse("2026-05-11T10:00:00Z")
@@ -46,14 +47,14 @@ class EraseSessionUseCaseTest {
             val result = erase(target)
 
             assertThat(result.deletedLobbies).isEqualTo(1)
-            assertThat(result.transferredLobbies).isEqualTo(0)
+            assertThat(result.vacatedLobbies).isEqualTo(0)
             assertThat(result.removedPlayerships).isEqualTo(0)
             assertThat(result.anonymisedEntries).isEqualTo(0)
             assertThat(repo.findById(id)).isNull()
         }
 
     @Test
-    fun `rule 2 - owner with remaining players - ownership transfers to earliest joined remaining player`() =
+    fun `rule 2 - owner with remaining players - lobby is vacated to ownerless`() =
         runTest {
             val repo = InMemoryLobbyRepository()
             val id = LobbyId.generate()
@@ -76,12 +77,13 @@ class EraseSessionUseCaseTest {
             val result = erase(target)
 
             assertThat(result.deletedLobbies).isEqualTo(0)
-            assertThat(result.transferredLobbies).isEqualTo(1)
+            assertThat(result.vacatedLobbies).isEqualTo(1)
             assertThat(result.removedPlayerships).isEqualTo(1)
             assertThat(result.anonymisedEntries).isEqualTo(2)
             val after = repo.findById(id)
             assertThat(after).isNotNull()
-            assertThat(after!!.ownerSessionId).isEqualTo(other)
+            assertThat(after!!.ownerUserId).isNull()
+            assertThat(after.ownerSessionId).isEqualTo(SessionId.ANON)
             assertThat(after.players.keys).containsOnly(other, third)
             val sessionIds =
                 after.game!!
@@ -110,7 +112,7 @@ class EraseSessionUseCaseTest {
             val result = erase(target)
 
             assertThat(result.deletedLobbies).isEqualTo(0)
-            assertThat(result.transferredLobbies).isEqualTo(0)
+            assertThat(result.vacatedLobbies).isEqualTo(0)
             assertThat(result.removedPlayerships).isEqualTo(1)
             assertThat(result.anonymisedEntries).isEqualTo(1)
             val after = repo.findById(id)
@@ -137,7 +139,7 @@ class EraseSessionUseCaseTest {
 
             assertThat(first.deletedLobbies).isEqualTo(1)
             assertThat(second.deletedLobbies).isEqualTo(0)
-            assertThat(second.transferredLobbies).isEqualTo(0)
+            assertThat(second.vacatedLobbies).isEqualTo(0)
             assertThat(second.removedPlayerships).isEqualTo(0)
             assertThat(second.anonymisedEntries).isEqualTo(0)
         }

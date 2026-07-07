@@ -48,9 +48,9 @@ interface LobbyRepository {
     suspend fun findByUserId(userId: UserId): List<Lobby>
 
     /**
-     * RGPD Article 17 erasure (ADR-0039). Atomic per lobby. Idempotent.
-     * This is the ONLY method that transfers lobby ownership — regular
-     * LeaveLobbyUseCase keeps ownerSessionId by design.
+     * RGPD Article 17 erasure (ADR-0055). Atomic per lobby. Idempotent.
+     * Rule 2 vacates an erased owner's lobby to ownerless rather than
+     * conscripting the earliest-joined player (ADR-0098 §3).
      */
     suspend fun eraseSession(sessionId: SessionId): EraseSessionResult
 
@@ -351,7 +351,8 @@ interface WordValidator {
  */
 data class EraseSessionResult(
     val deletedLobbies: Int,
-    val transferredLobbies: Int,
+    // Rule 2 now vacates ownership to ownerless rather than transferring it (ADR-0098 §3 amends ADR-0055).
+    val vacatedLobbies: Int,
     val removedPlayerships: Int,
     val anonymisedEntries: Int,
 ) {

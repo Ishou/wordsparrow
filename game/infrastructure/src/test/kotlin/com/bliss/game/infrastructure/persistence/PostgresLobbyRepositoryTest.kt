@@ -3,13 +3,17 @@ package com.bliss.game.infrastructure.persistence
 import assertk.assertThat
 import assertk.assertions.containsAtLeast
 import assertk.assertions.containsExactly
+import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.containsOnly
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
+import com.bliss.game.application.ports.ClaimOutcome
+import com.bliss.game.application.ports.RelinquishOutcome
 import com.bliss.game.domain.BlockCell
 import com.bliss.game.domain.CellEntry
 import com.bliss.game.domain.DefinitionCell
@@ -278,6 +282,100 @@ class PostgresLobbyRepositoryTest {
             repo.save(inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userId))
 
             assertThat(repo.findWaitingByOwnerUser(userId)).isNull()
+        }
+
+    // ADR-0098 §1: the active-game quota counts WAITING and IN_PROGRESS owned lobbies (invert the
+    // findWaitingByOwnerUser IN_PROGRESS exclusion above), keyed on owner_user_id.
+    @Test
+    fun `findActiveByOwnerUser returns a WAITING owned lobby`() =
+        runTest {
+            val userId = UserId("11111111-1111-1111-1111-111111111111")
+            val lobby = waitingLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userId)
+            repo.save(lobby)
+
+            assertThat(repo.findActiveByOwnerUser(userId)).isEqualTo(lobby)
+        }
+
+    @Test
+    fun `findActiveByOwnerUser returns an IN_PROGRESS owned lobby`() =
+        runTest {
+            val userId = UserId("11111111-1111-1111-1111-111111111111")
+            val lobby = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userId)
+            repo.save(lobby)
+
+            assertThat(repo.findActiveByOwnerUser(userId)!!.id).isEqualTo(lobby.id)
+        }
+
+    @Test
+    fun `findActiveByOwnerUser ignores a COMPLETED owned lobby`() =
+        runTest {
+            val userId = UserId("11111111-1111-1111-1111-111111111111")
+            val completed =
+                inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userId)
+                    .let {
+                        it.copy(
+                            state = LobbyLifecycleState.COMPLETED,
+                            game = it.game!!.copy(completedAt = baseInstant.plusSeconds(120)),
+                        )
+                    }
+            repo.save(completed)
+
+            assertThat(repo.findActiveByOwnerUser(userId)).isNull()
+        }
+
+    @Test
+    fun `findActiveByOwnerUser returns null for a relinquished (ownerless) lobby`() =
+        runTest {
+            val userId = UserId("11111111-1111-1111-1111-111111111111")
+            repo.save(inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = null))
+
+            assertThat(repo.findActiveByOwnerUser(userId)).isNull()
+        }
+
+    // ADR-0098 §4: ownerless (owner_user_id IS NULL) non-terminal lobbies idle past the cutoff.
+    @Test
+    fun `findIdleOwnerless returns ownerless non-terminal lobbies at or before the cutoff`() =
+        runTest {
+            val idleWaiting =
+                waitingLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = null)
+                    .copy(lastActivityAt = baseInstant.minusSeconds(3600))
+            val idleInProgress =
+                inProgressLobby(id = LobbyId.generate(), owner = sessionB, ownerUserId = null)
+                    .copy(lastActivityAt = baseInstant.minusSeconds(3600))
+            val ownedInProgress =
+                inProgressLobby(
+                    id = LobbyId.generate(),
+                    owner = sessionC,
+                    ownerUserId = UserId("11111111-1111-1111-1111-111111111111"),
+                ).copy(lastActivityAt = baseInstant.minusSeconds(3600))
+            val freshOwnerless =
+                waitingLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = null)
+                    .copy(lastActivityAt = baseInstant.plusSeconds(3600))
+            repo.save(idleWaiting)
+            repo.save(idleInProgress)
+            repo.save(ownedInProgress)
+            repo.save(freshOwnerless)
+
+            val result = repo.findIdleOwnerless(baseInstant)
+
+            assertThat(result.map { it.id }).containsExactlyInAnyOrder(idleWaiting.id, idleInProgress.id)
+        }
+
+    @Test
+    fun `findIdleOwnerless excludes COMPLETED ownerless lobbies`() =
+        runTest {
+            val completedOwnerless =
+                inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = null)
+                    .let {
+                        it.copy(
+                            state = LobbyLifecycleState.COMPLETED,
+                            game = it.game!!.copy(completedAt = baseInstant.minusSeconds(120)),
+                            lastActivityAt = baseInstant.minusSeconds(3600),
+                        )
+                    }
+            repo.save(completedOwnerless)
+
+            assertThat(repo.findIdleOwnerless(baseInstant)).isEmpty()
         }
 
     @Test
@@ -607,6 +705,128 @@ class PostgresLobbyRepositoryTest {
             assertThat(result).isNull()
         }
 
+    // ADR-0098 §2 LOAD-BEARING: relinquish must null owner_user_id in Postgres. The general upsert
+    // EXCLUDES owner_user_id from its ON CONFLICT (write-once, ADR-0066), so this can only work via
+    // the dedicated UPDATE; a mutate/save round-trip would silently keep the old owner_user_id.
+    @Test
+    fun `relinquishOwnership nulls owner_user_id and drops the owner seat, persisted through reload`() =
+        runTest {
+            val userA = UserId("11111111-1111-1111-1111-111111111111")
+            val base = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userA)
+            val withOther =
+                base.copy(
+                    players =
+                        base.players +
+                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                )
+            repo.save(withOther)
+            val now = baseInstant.plusSeconds(120)
+
+            val outcome = repo.relinquishOwnership(withOther.id, sessionA, now)
+
+            assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
+            val returned = (outcome as RelinquishOutcome.Relinquished).lobby
+            assertThat(returned.ownerUserId).isNull()
+            assertThat(returned.players.keys).containsOnly(sessionB)
+            // Reload from Postgres proves the owner_user_id clear survived (upsert would have kept it).
+            val reloaded = repo.findById(withOther.id)!!
+            assertThat(reloaded.ownerUserId).isNull()
+            assertThat(reloaded.lastActivityAt).isEqualTo(now)
+            assertThat(repo.findActiveByOwnerUser(userA)).isNull()
+        }
+
+    @Test
+    fun `relinquishOwnership returns NotOwner when the caller does not own the lobby`() =
+        runTest {
+            val userA = UserId("11111111-1111-1111-1111-111111111111")
+            val base = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userA)
+            val withOther =
+                base.copy(
+                    players =
+                        base.players +
+                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                )
+            repo.save(withOther)
+
+            val outcome = repo.relinquishOwnership(withOther.id, sessionB, baseInstant.plusSeconds(120))
+
+            assertThat(outcome).isEqualTo(RelinquishOutcome.NotOwner)
+            assertThat(repo.findById(withOther.id)!!.ownerUserId).isEqualTo(userA)
+        }
+
+    @Test
+    fun `relinquishOwnership returns LobbyNotFound for an unknown lobby`() =
+        runTest {
+            val outcome = repo.relinquishOwnership(LobbyId.generate(), sessionA, baseInstant)
+            assertThat(outcome).isEqualTo(RelinquishOutcome.LobbyNotFound)
+        }
+
+    // ADR-0098 §2 LOAD-BEARING: claim must write owner_user_id in Postgres despite the upsert exclusion.
+    @Test
+    fun `claimOwnership writes owner_user_id and owner_session_id on an ownerless lobby, persisted through reload`() =
+        runTest {
+            val userB = UserId("22222222-2222-2222-2222-222222222222")
+            // Ownerless in-progress lobby (relinquished/vacated shape): owner_user_id null, sessionB present.
+            val base = inProgressLobby(id = LobbyId.generate(), owner = SessionId.ANON, ownerUserId = null)
+            val ownerless =
+                base.copy(
+                    players =
+                        mapOf(
+                            sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = userB),
+                        ),
+                )
+            repo.save(ownerless)
+            val now = baseInstant.plusSeconds(200)
+
+            val outcome = repo.claimOwnership(ownerless.id, sessionB, userB, now)
+
+            assertThat(outcome).isInstanceOf(ClaimOutcome.Claimed::class)
+            val returned = (outcome as ClaimOutcome.Claimed).lobby
+            assertThat(returned.ownerUserId).isEqualTo(userB)
+            assertThat(returned.ownerSessionId).isEqualTo(sessionB)
+            // Reload proves the owner_user_id write survived (upsert would have dropped it).
+            val reloaded = repo.findById(ownerless.id)!!
+            assertThat(reloaded.ownerUserId).isEqualTo(userB)
+            assertThat(reloaded.ownerSessionId).isEqualTo(sessionB)
+            assertThat(reloaded.lastActivityAt).isEqualTo(now)
+            assertThat(repo.findActiveByOwnerUser(userB)!!.id).isEqualTo(ownerless.id)
+        }
+
+    @Test
+    fun `claimOwnership returns AlreadyOwned when the lobby still has an owner`() =
+        runTest {
+            val userA = UserId("11111111-1111-1111-1111-111111111111")
+            val userB = UserId("22222222-2222-2222-2222-222222222222")
+            val base = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userA)
+            val withOther =
+                base.copy(
+                    players =
+                        base.players +
+                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = userB)),
+                )
+            repo.save(withOther)
+
+            val outcome = repo.claimOwnership(withOther.id, sessionB, userB, baseInstant.plusSeconds(200))
+
+            assertThat(outcome).isEqualTo(ClaimOutcome.AlreadyOwned)
+            assertThat(repo.findById(withOther.id)!!.ownerUserId).isEqualTo(userA)
+        }
+
+    @Test
+    fun `claimOwnership returns NotPresentInLobby when the claimer has no seat`() =
+        runTest {
+            val userB = UserId("22222222-2222-2222-2222-222222222222")
+            val ownerless =
+                inProgressLobby(id = LobbyId.generate(), owner = SessionId.ANON, ownerUserId = null)
+                    .copy(players = mapOf(sessionA to Player(sessionA, Pseudonym("Alice"), baseInstant)))
+            repo.save(ownerless)
+
+            val outcome = repo.claimOwnership(ownerless.id, sessionB, userB, baseInstant.plusSeconds(200))
+
+            assertThat(outcome).isEqualTo(ClaimOutcome.NotPresentInLobby)
+            assertThat(repo.findById(ownerless.id)!!.ownerUserId).isNull()
+        }
+
     @Test
     fun `eraseSession rule 1 - sole-owner lobby is deleted and children cascade`() =
         runTest {
@@ -616,7 +836,7 @@ class PostgresLobbyRepositoryTest {
             val result = repo.eraseSession(sessionA)
 
             assertThat(result.deletedLobbies).isEqualTo(1)
-            assertThat(result.transferredLobbies).isEqualTo(0)
+            assertThat(result.vacatedLobbies).isEqualTo(0)
             assertThat(result.removedPlayerships).isEqualTo(0)
             assertThat(result.anonymisedEntries).isEqualTo(0)
             assertThat(repo.findById(lobby.id)).isNull()
@@ -625,7 +845,7 @@ class PostgresLobbyRepositoryTest {
         }
 
     @Test
-    fun `eraseSession rule 2 - owner with remaining players - ownership transfers to earliest joined`() =
+    fun `eraseSession rule 2 - owner with remaining players - lobby is vacated to ownerless`() =
         runTest {
             val base = inProgressLobby(id = LobbyId.generate(), owner = sessionA)
             val withOthers =
@@ -640,13 +860,15 @@ class PostgresLobbyRepositoryTest {
             val result = repo.eraseSession(sessionA)
 
             assertThat(result.deletedLobbies).isEqualTo(0)
-            assertThat(result.transferredLobbies).isEqualTo(1)
+            assertThat(result.vacatedLobbies).isEqualTo(1)
             assertThat(result.removedPlayerships).isEqualTo(1)
             // Both seeded entries authored by sessionA (Alice) get anonymised.
             assertThat(result.anonymisedEntries).isEqualTo(2)
             val after = repo.findById(withOthers.id)
             assertThat(after).isNotNull()
-            assertThat(after!!.ownerSessionId).isEqualTo(sessionB)
+            // Vacated to ownerless: owner_user_id cleared, owner_session_id points at the anon sentinel.
+            assertThat(after!!.ownerUserId).isNull()
+            assertThat(after.ownerSessionId).isEqualTo(SessionId.ANON)
             assertThat(after.players.keys.toList()).containsOnly(sessionB, sessionC)
             // After anonymisation, every entry's sessionId is the ANON sentinel.
             after.game!!.entries.values.forEach {
@@ -654,28 +876,29 @@ class PostgresLobbyRepositoryTest {
             }
         }
 
-    // ADR-0039 erasure regression: owner_user_id must follow the new owner, not linger on the erased user, else findByUserId(erasedUser) keeps surfacing the lobby after erasure.
+    // ADR-0098 §3 regression: vacating clears owner_user_id so the erased user cannot linger in findByUserId, and no unconsenting player is conscripted into ownership.
     @Test
-    fun `eraseSession rule 2 - owner_user_id transfers to the new owner and no longer surfaces the erased user`() =
+    fun `eraseSession rule 2 - owner_user_id is cleared and no longer surfaces the erased user`() =
         runTest {
             val erasedUserId = UserId("77777777-7777-7777-7777-777777777777")
-            val newOwnerUserId = UserId("88888888-8888-8888-8888-888888888888")
+            val remainingUserId = UserId("88888888-8888-8888-8888-888888888888")
             val base = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = erasedUserId)
             val withOther =
                 base.copy(
                     players =
                         base.players +
-                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = newOwnerUserId)),
+                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = remainingUserId)),
                 )
             repo.save(withOther)
 
             val result = repo.eraseSession(sessionA)
 
-            assertThat(result.transferredLobbies).isEqualTo(1)
+            assertThat(result.vacatedLobbies).isEqualTo(1)
             val after = repo.findById(withOther.id)
             assertThat(after).isNotNull()
-            assertThat(after!!.ownerSessionId).isEqualTo(sessionB)
-            assertThat(after.ownerUserId).isEqualTo(newOwnerUserId)
+            assertThat(after!!.ownerSessionId).isEqualTo(SessionId.ANON)
+            // Vacated, not conscripted: the remaining player is not made owner.
+            assertThat(after.ownerUserId).isNull()
             // The erased user's UserId must no longer surface the lobby via the owner arm.
             assertThat(repo.findByUserId(erasedUserId)).isEmpty()
         }
@@ -706,7 +929,7 @@ class PostgresLobbyRepositoryTest {
             val result = repo.eraseSession(sessionB)
 
             assertThat(result.deletedLobbies).isEqualTo(0)
-            assertThat(result.transferredLobbies).isEqualTo(0)
+            assertThat(result.vacatedLobbies).isEqualTo(0)
             assertThat(result.removedPlayerships).isEqualTo(1)
             assertThat(result.anonymisedEntries).isEqualTo(1)
             val after = repo.findById(withGuest.id)
@@ -731,7 +954,7 @@ class PostgresLobbyRepositoryTest {
 
             assertThat(first.deletedLobbies).isEqualTo(1)
             assertThat(second.deletedLobbies).isEqualTo(0)
-            assertThat(second.transferredLobbies).isEqualTo(0)
+            assertThat(second.vacatedLobbies).isEqualTo(0)
             assertThat(second.removedPlayerships).isEqualTo(0)
             assertThat(second.anonymisedEntries).isEqualTo(0)
         }

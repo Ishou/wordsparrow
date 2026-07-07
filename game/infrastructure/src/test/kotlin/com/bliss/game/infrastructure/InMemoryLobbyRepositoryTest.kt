@@ -5,8 +5,11 @@ import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import com.bliss.game.application.ports.ClaimOutcome
+import com.bliss.game.application.ports.RelinquishOutcome
 import com.bliss.game.domain.GamePuzzle
 import com.bliss.game.domain.GameSession
 import com.bliss.game.domain.GridConfig
@@ -357,6 +360,42 @@ class InMemoryLobbyRepositoryTest {
         )
     }
 
+    private fun inProgressLobbyAt(
+        id: LobbyId,
+        ownerSessionId: SessionId = sessionA,
+        ownerUserId: UserId? = null,
+        lastActivityAt: Instant = baseInstant,
+    ): Lobby {
+        val puzzle =
+            GamePuzzle(
+                id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5b00"),
+                title = "Sample",
+                language = "fr",
+                width = 5,
+                height = 5,
+                cells = emptyList(),
+                clues = emptyList(),
+                createdAt = baseInstant.minusSeconds(3600),
+            )
+        return Lobby(
+            id = id,
+            ownerSessionId = ownerSessionId,
+            ownerUserId = ownerUserId,
+            players = mapOf(ownerSessionId to Player(ownerSessionId, alice, baseInstant, userId = ownerUserId)),
+            state = LobbyLifecycleState.IN_PROGRESS,
+            gridConfig = gridConfig,
+            game =
+                GameSession(
+                    puzzle = puzzle,
+                    entries = emptyMap(),
+                    startedAt = baseInstant.minusSeconds(1800),
+                    completedAt = null,
+                ),
+            lastActivityAt = lastActivityAt,
+            code = LobbyCode.generate(),
+        )
+    }
+
     private val userIdAlice = UserId("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c")
     private val newDisplayName = Pseudonym("AliceSignedIn")
 
@@ -518,13 +557,13 @@ class InMemoryLobbyRepositoryTest {
             assertThat(idle.map { it.id }).containsExactlyInAnyOrder(anonIdle.id)
         }
 
-    // ADR-0039 erasure parity with Postgres: ownerUserId follows the new owner, not the erased user.
+    // ADR-0098 §3 erasure parity with Postgres: rule 2 vacates to ownerless rather than transferring.
     @Test
-    fun `eraseSession rule 2 reassigns ownerUserId off the erased owner`() =
+    fun `eraseSession rule 2 vacates ownership to ownerless`() =
         runTest {
             val repo = InMemoryLobbyRepository()
             val sessionB = SessionId("0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5")
-            val newOwnerUserId = UserId("99999999-9999-9999-9999-999999999999")
+            val remainingUserId = UserId("99999999-9999-9999-9999-999999999999")
             val lobby =
                 Lobby(
                     id = LobbyId.generate(),
@@ -533,7 +572,7 @@ class InMemoryLobbyRepositoryTest {
                     players =
                         mapOf(
                             sessionA to Player(sessionA, alice, baseInstant, userId = userA),
-                            sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = newOwnerUserId),
+                            sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = remainingUserId),
                         ),
                     state = LobbyLifecycleState.WAITING,
                     gridConfig = gridConfig,
@@ -543,10 +582,103 @@ class InMemoryLobbyRepositoryTest {
                 )
             repo.save(lobby)
 
-            repo.eraseSession(sessionA)
+            val result = repo.eraseSession(sessionA)
 
+            assertThat(result.vacatedLobbies).isEqualTo(1)
             val after = repo.findById(lobby.id)!!
+            assertThat(after.ownerUserId).isNull()
+            assertThat(after.ownerSessionId).isEqualTo(SessionId.ANON)
+            assertThat(after.players.keys).containsExactlyInAnyOrder(sessionB)
+        }
+
+    @Test
+    fun `findActiveByOwnerUser returns a WAITING or IN_PROGRESS owned lobby and ignores COMPLETED and ownerless`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val waiting = lobbyAt(LobbyId.generate(), ownerUserId = userA)
+            val inProgress = inProgressLobbyAt(LobbyId.generate(), ownerUserId = userA)
+            repo.save(waiting)
+
+            assertThat(repo.findActiveByOwnerUser(userA)!!.id).isEqualTo(waiting.id)
+
+            repo.delete(waiting.id)
+            repo.save(inProgress)
+            assertThat(repo.findActiveByOwnerUser(userA)!!.id).isEqualTo(inProgress.id)
+
+            repo.delete(inProgress.id)
+            repo.save(completedLobbyAt(LobbyId.generate(), ownerUserId = userA))
+            assertThat(repo.findActiveByOwnerUser(userA)).isNull()
+
+            repo.save(lobbyAt(LobbyId.generate(), ownerUserId = null))
+            assertThat(repo.findActiveByOwnerUser(userA)).isNull()
+        }
+
+    @Test
+    fun `findIdleOwnerless returns ownerless non-terminal lobbies at or before the cutoff`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val idle = lobbyAt(LobbyId.generate(), ownerUserId = null, lastActivityAt = baseInstant)
+            val owned = lobbyAt(LobbyId.generate(), ownerUserId = userA, lastActivityAt = baseInstant)
+            val fresh =
+                lobbyAt(LobbyId.generate(), ownerUserId = null, lastActivityAt = baseInstant.plusSeconds(3600))
+            val completedOwnerless = completedLobbyAt(LobbyId.generate(), ownerUserId = null, lastActivityAt = baseInstant)
+            repo.save(idle)
+            repo.save(owned)
+            repo.save(fresh)
+            repo.save(completedOwnerless)
+
+            val result = repo.findIdleOwnerless(baseInstant.plusSeconds(60))
+
+            assertThat(result.map { it.id }).containsExactlyInAnyOrder(idle.id)
+        }
+
+    // Default relinquish/claim (mutate composition) is correct for the in-memory adapter.
+    @Test
+    fun `relinquishOwnership drops the caller to ownerless and removes their seat`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val sessionB = SessionId("0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5")
+            val base = inProgressLobbyAt(LobbyId.generate(), ownerUserId = userA)
+            val withOther =
+                base.copy(
+                    players = base.players + (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                )
+            repo.save(withOther)
+
+            val now = baseInstant.plusSeconds(120)
+            val outcome = repo.relinquishOwnership(withOther.id, sessionA, now)
+
+            assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
+            val after = repo.findById(withOther.id)!!
+            assertThat(after.ownerUserId).isNull()
+            assertThat(after.players.keys).containsExactlyInAnyOrder(sessionB)
+            assertThat(repo.findActiveByOwnerUser(userA)).isNull()
+        }
+
+    @Test
+    fun `claimOwnership binds ownership to a present claimer on an ownerless lobby`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val sessionB = SessionId("0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5")
+            val userB = UserId("22222222-2222-2222-2222-222222222222")
+            val ownerless =
+                inProgressLobbyAt(LobbyId.generate(), ownerSessionId = SessionId.ANON, ownerUserId = null)
+                    .let {
+                        it.copy(
+                            players =
+                                mapOf(
+                                    sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = userB),
+                                ),
+                        )
+                    }
+            repo.save(ownerless)
+
+            val outcome = repo.claimOwnership(ownerless.id, sessionB, userB, baseInstant.plusSeconds(200))
+
+            assertThat(outcome).isInstanceOf(ClaimOutcome.Claimed::class)
+            val after = repo.findById(ownerless.id)!!
+            assertThat(after.ownerUserId).isEqualTo(userB)
             assertThat(after.ownerSessionId).isEqualTo(sessionB)
-            assertThat(after.ownerUserId).isEqualTo(newOwnerUserId)
+            assertThat(repo.findActiveByOwnerUser(userB)!!.id).isEqualTo(ownerless.id)
         }
 }
