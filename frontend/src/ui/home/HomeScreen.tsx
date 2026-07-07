@@ -23,6 +23,7 @@ import { progressRingBackground } from '@/ui/v2/DailyCalendar';
 import { HomeGreetingArt, bucketForHour, greetingForBucket } from './HomeGreetingArt';
 import { MiniGame } from './MiniGame';
 import { useDelayedFlag } from '@/ui/lib/useDelayedFlag';
+import { t } from '@/ui/i18n';
 
 type HomeSession = { readonly sessionId: SessionId; readonly pseudonym: Pseudonym };
 
@@ -158,7 +159,7 @@ const dayDotBtn = css({ width: '34px', height: '34px', borderRadius: '50%', disp
 const WD_LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'] as const;
 
 // Time-neutral greeting shown during prerender + first client paint (before the real time-of-day greeting resolves post-mount).
-const NEUTRAL_GREETING = { hi: 'Bonjour', sub: 'Une nouvelle grille rien que pour toi.' } as const;
+const NEUTRAL_GREETING = { hi: t('home.greeting.neutral.hi'), sub: t('home.greeting.neutral.sub') };
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -239,7 +240,7 @@ export function HomeScreen({
     e.preventDefault();
     const code = extractLobbyCode(joinInputRef.current?.value ?? '');
     if (!LOBBY_CODE_PATTERN.test(code)) {
-      setJoinError('Code à 6 caractères (lettres et chiffres).');
+      setJoinError(t('home.join.error.invalidCode'));
       return;
     }
     navigate({ to: '/join/$code', params: { code } });
@@ -350,7 +351,7 @@ export function HomeScreen({
               <div className={dailyBand}>
                 {daily.status === 'loading' ? (
                   showDailySkeleton ? (
-                    <div role="status" aria-busy="true" aria-label="Chargement de la grille du jour">
+                    <div role="status" aria-busy="true" aria-label={t('home.daily.aria.loading')}>
                       <Skeleton tone="onCard" width={130} height={11} style={{ margin: '0 auto 10px' }} />
                       <Skeleton tone="onCard" width={180} height={26} style={{ margin: '0 auto' }} />
                     </div>
@@ -359,10 +360,10 @@ export function HomeScreen({
                   <>
                     <div className={heroEyebrow}>
                       {daily.status === 'error'
-                        ? 'Chargement impossible'
-                        : `Grille du jour${daily.status === 'ok' && daily.puzzle.gridNumber != null ? ` · n°${daily.puzzle.gridNumber}` : ''}`}
+                        ? t('home.daily.eyebrow.error')
+                        : `${t('home.daily.eyebrow.title')}${daily.status === 'ok' && daily.puzzle.gridNumber != null ? t('home.daily.eyebrow.gridNumber', { number: daily.puzzle.gridNumber }) : ''}`}
                     </div>
-                    <div className={heroDate}>{daily.status === 'error' ? 'Oups, ça a coincé' : dateLabel}</div>
+                    <div className={heroDate}>{daily.status === 'error' ? t('home.daily.date.error') : dateLabel}</div>
                   </>
                 )}
               </div>
@@ -375,12 +376,12 @@ export function HomeScreen({
                 }}
               >
                 {daily.status === 'ok'
-                  ? 'Jouer'
+                  ? t('home.play.cta.play')
                   : daily.status === 'loading'
-                    ? 'Chargement…'
+                    ? t('home.play.cta.loading')
                     : daily.status === 'unavailable'
-                      ? 'Bientôt disponible'
-                      : 'Réessayer'}
+                      ? t('home.play.cta.unavailable')
+                      : t('home.play.cta.retry')}
               </PrimaryButton>
               {multiplayerOn ? (
                 <>
@@ -391,7 +392,7 @@ export function HomeScreen({
                     aria-busy={coopPending || undefined}
                   >
                     <UsersThree size={20} weight="bold" aria-hidden="true" />
-                    {coopPending ? 'Création…' : 'Jouer à plusieurs'}
+                    {coopPending ? t('home.coop.cta.creating') : t('home.coop.cta.create')}
                   </SecondaryButton>
                   <form className={joinRow} onSubmit={handleJoinCoop}>
                     <div className={joinField}>
@@ -407,8 +408,8 @@ export function HomeScreen({
                         data-1p-ignore=""
                         data-lpignore="true"
                         data-form-type="other"
-                        placeholder="Rejoindre avec un code"
-                        aria-label="Rejoindre une partie avec un code"
+                        placeholder={t('home.join.placeholder')}
+                        aria-label={t('home.join.aria.field')}
                         aria-invalid={joinError != null || undefined}
                         aria-describedby={joinError != null ? 'home-join-error' : undefined}
                         onInput={() => { if (joinError != null) setJoinError(null); }}
@@ -418,7 +419,7 @@ export function HomeScreen({
                         className={joinEyeBtn}
                         onClick={() => setJoinRevealed((v) => !v)}
                         aria-pressed={joinRevealed}
-                        aria-label={joinRevealed ? 'Masquer le code' : 'Afficher le code'}
+                        aria-label={t(joinRevealed ? 'home.join.aria.hide' : 'home.join.aria.reveal')}
                       >
                         {joinRevealed ? (
                           <EyeSlash size={18} weight="bold" aria-hidden="true" />
@@ -427,7 +428,7 @@ export function HomeScreen({
                         )}
                       </button>
                     </div>
-                    <button type="submit" className={joinGo} aria-label="Rejoindre la partie">
+                    <button type="submit" className={joinGo} aria-label={t('home.join.aria.submit')}>
                       <ArrowRight size={20} weight="bold" aria-hidden="true" />
                     </button>
                   </form>
@@ -440,7 +441,7 @@ export function HomeScreen({
           </section>
 
           <section className={prevWrap}>
-            <div className={prevLabel}>Grilles précédentes</div>
+            <div className={prevLabel}>{t('home.previous.label')}</div>
             <div className={prevCard} aria-busy={historyLoading || undefined}>
               <div className={prevRow}>
                 {week.map((d, i) => {
@@ -454,7 +455,13 @@ export function HomeScreen({
                           className={dayDotBtn}
                           style={dayDotStyle(d.today, cell.status, cell.pct)}
                           onClick={() => navigate({ to: '/play', search: { date: d.iso } })}
-                          aria-label={`${cell.label}${d.today ? " (aujourd'hui)" : ''}${cell.status === 'solved' ? ' — terminée' : cell.status === 'started' ? ` — commencée — ${cell.pct} %` : ''}`}
+                          aria-label={`${cell.label}${d.today ? t('home.cell.aria.today') : ''}${
+                            cell.status === 'solved'
+                              ? t('home.cell.aria.solved')
+                              : cell.status === 'started'
+                                ? t('home.cell.aria.started', { pct: cell.pct })
+                                : ''
+                          }`}
                         >
                           {d.num}
                         </button>
@@ -476,13 +483,13 @@ export function HomeScreen({
           </section>
           </div>
           <footer>
-            <nav className={legalNav} aria-label="Liens légaux">
+            <nav className={legalNav} aria-label={t('home.legalNav.aria.label')}>
               <Link className={legalLink} to="/confidentialite">
-                Confidentialité
+                {t('home.legalNav.privacy')}
               </Link>
               <span aria-hidden="true">·</span>
               <Link className={legalLink} to="/mentions-legales">
-                Mentions légales
+                {t('home.legalNav.terms')}
               </Link>
             </nav>
           </footer>

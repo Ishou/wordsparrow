@@ -1,5 +1,6 @@
 import { useId, useMemo, type ReactElement } from 'react';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 
 // ADR-0072: time-of-day illustration; moon phase is deterministic (synodic formula, no network).
 
@@ -15,13 +16,13 @@ export function bucketForHour(hour: number): DayBucket {
 export function greetingForBucket(bucket: DayBucket): { readonly hi: string; readonly sub: string } {
   switch (bucket) {
     case 'matin':
-      return { hi: 'Bonjour', sub: 'Une nouvelle grille pour bien commencer la journée.' };
+      return { hi: t('home.greeting.matin.hi'), sub: t('home.greeting.matin.sub') };
     case 'apresMidi':
-      return { hi: 'Bel après-midi', sub: 'Une grille pour souffler un peu.' };
+      return { hi: t('home.greeting.apresMidi.hi'), sub: t('home.greeting.apresMidi.sub') };
     case 'soir':
-      return { hi: 'Bonsoir', sub: "La grille du soir t'attend." };
+      return { hi: t('home.greeting.soir.hi'), sub: t('home.greeting.soir.sub') };
     case 'nuit':
-      return { hi: 'Encore debout ?', sub: 'La nuit est calme — parfaite pour quelques mots.' };
+      return { hi: t('home.greeting.nuit.hi'), sub: t('home.greeting.nuit.sub') };
   }
 }
 

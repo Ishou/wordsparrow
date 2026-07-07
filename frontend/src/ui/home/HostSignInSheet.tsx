@@ -4,6 +4,7 @@ import { Portal } from '@ark-ui/react/portal';
 import { Link } from '@tanstack/react-router';
 import { UsersThree, GoogleLogo, CircleNotch } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import type { AuthClient } from '@/application/auth';
 
 const emailAuthEnabled = import.meta.env.VITE_FEATURE_EMAIL_AUTH === 'true';
@@ -73,10 +74,8 @@ export function HostSignInSheet({
           <Dialog.Content className={sheet}>
             <span aria-hidden="true" className={grab} />
             <span className={badge}><UsersThree size={24} weight="fill" aria-hidden="true" /></span>
-            <Dialog.Title className={title}>Connecte-toi pour créer une partie</Dialog.Title>
-            <Dialog.Description className={text}>
-              Héberger une partie demande un compte. Rejoindre avec un code reste possible sans compte.
-            </Dialog.Description>
+            <Dialog.Title className={title}>{t('home.host.signInPrompt')}</Dialog.Title>
+            <Dialog.Description className={text}>{t('home.host.subtitle')}</Dialog.Description>
             {/* Anchor required: the browser must follow the 302 chain to accept the callback Set-Cookie. */}
             <a
               href={href}
@@ -89,25 +88,23 @@ export function HostSignInSheet({
               {redirecting ? (
                 <>
                   <CircleNotch size={20} weight="bold" aria-hidden="true" className={spin} />
-                  Connexion…
+                  {t('home.host.connecting')}
                 </>
               ) : (
                 <>
                   <GoogleLogo size={20} weight="bold" aria-hidden="true" />
-                  Se connecter avec Google
+                  {t('home.host.google')}
                 </>
               )}
             </a>
             {emailAuthEnabled ? (
               <Link to="/connexion" search={{ returnTo: returnPath }} className={emailLink} onClick={onClose}>
-                … ou avec ton e-mail
+                {t('home.host.emailLink')}
               </Link>
             ) : null}
-            <p className={disclosure}>
-              Ton adresse e-mail est alors enregistrée pour la facturation d’un éventuel abonnement.
-            </p>
+            <p className={disclosure}>{t('home.host.disclosure')}</p>
             <button type="button" className={secondary} onClick={onClose}>
-              Plus tard
+              {t('home.host.later')}
             </button>
           </Dialog.Content>
         </Dialog.Positioner>

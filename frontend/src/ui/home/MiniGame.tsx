@@ -8,6 +8,7 @@ import { GridSoundToggle } from '@/ui/play/GridSoundToggle';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import { Keyboard } from '@/ui/play/Keyboard';
 import { useBackDismiss } from '@/ui/lib/useBackDismiss';
+import { t } from '@/ui/i18n';
 import type { SampleWord, WordsRepository } from '@/application';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
@@ -329,7 +330,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
 
   if (loading || !current) {
     return (
-      <div className={wrap} role="status" aria-busy="true" aria-label="Chargement du mot du jour">
+      <div className={wrap} role="status" aria-busy="true" aria-label={t('home.miniGame.aria.loading')}>
         <div className={row}>
           <Skeleton tone="deep" width={63} height={63} radius={9} />
           <Skeleton tone="onCard" width={42} height={42} radius={9} />
@@ -348,7 +349,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
     <>
     <div className={wrap}>
       <span role="status" aria-live="polite" className={css({ srOnly: true })}>
-        {showPulse ? 'Vérification du mot…' : ''}
+        {showPulse ? t('home.miniGame.sr.checking') : ''}
       </span>
       <div className={row}>
         <div className={defBox}>
@@ -386,7 +387,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
                 tabIndex={i === (focus ?? 0) ? 0 : -1}
                 // Read-only on touch removes the editing caret/selection; letters come from the on-screen keyboard.
                 readOnly={solved || touchPrimary}
-                aria-label={`${current.clue} — lettre ${i + 1} sur ${n}`}
+                aria-label={`${current.clue}${t('home.miniGame.aria.cellSuffix', { index: i + 1, total: n })}`}
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 onFocus={() => setFocus(i)}
@@ -398,7 +399,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
       </div>
       <div className={skipRow}>
         <button type="button" className={skipBtn} onClick={skip}>
-          Passer ›
+          {t('home.miniGame.skip')}
         </button>
         {soundStore ? <GridSoundToggle soundStore={soundStore} className={soundBtn} /> : null}
       </div>
@@ -408,7 +409,7 @@ export function MiniGame({ onStreak, wordsRepository, onKeyboardToggle, soundPla
         <button
           type="button"
           className={kbCollapse}
-          aria-label="Masquer le clavier"
+          aria-label={t('home.miniGame.aria.hideKeyboard')}
           // preventDefault keeps the cell focused until our onClick blurs it explicitly.
           onMouseDown={(e) => e.preventDefault()}
           onClick={dismissKeyboard}
