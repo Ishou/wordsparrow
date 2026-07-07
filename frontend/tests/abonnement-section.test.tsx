@@ -26,6 +26,8 @@ const ACTIVE_VIEW: SubscriptionView = { tier: 'subscriber', status: 'active', pe
 const PENDING_VIEW: SubscriptionView = { tier: 'subscriber', status: 'pending_cancellation', periodEnd: '2026-08-01T00:00:00Z' };
 const CANCELED_VIEW: SubscriptionView = { tier: 'subscriber', status: 'canceled', periodEnd: '2026-07-14T00:00:00Z' };
 const PAST_DUE_VIEW: SubscriptionView = { tier: 'subscriber', status: 'past_due', periodEnd: '2026-08-01T00:00:00Z' };
+// What GET /v1/subscription actually returns for a never-subscribed user (SubscriptionQuery.FREE): expired + null periodEnd, 200 (not a 404).
+const NEVER_SUBSCRIBED_VIEW: SubscriptionView = { tier: 'free', status: 'expired', periodEnd: null };
 
 function fakeBillingClient(getSubscription: BillingClient['getSubscription'], overrides: Partial<BillingClient> = {}): BillingClient {
   return {
@@ -143,6 +145,17 @@ describe('AbonnementSection états', () => {
     expect(screen.queryByText('Sans abonnement')).toBeNull();
     expect(screen.getByRole('link', { name: /Découvre l'abonnement/ }).getAttribute('href')).toBe('/abonnement');
     expect(screen.queryByRole('button', { name: 'Reprendre mon abonnement' })).toBeNull();
+  });
+
+  it('treats the backend free projection (expired + null periodEnd) as never-subscribed, not a lapsed sub', async () => {
+    const client = fakeBillingClient(vi.fn().mockResolvedValue(NEVER_SUBSCRIBED_VIEW));
+    render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
+
+    expect(await screen.findByText('Version gratuite')).toBeInTheDocument();
+    // A fresh account must not see the ended badge or the re-subscribe CTA (reserved for a genuinely lapsed sub).
+    expect(screen.queryByText('Terminé')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Me réabonner' })).toBeNull();
+    expect(screen.getByRole('link', { name: /Découvre l'abonnement/ }).getAttribute('href')).toBe('/abonnement');
   });
 });
 

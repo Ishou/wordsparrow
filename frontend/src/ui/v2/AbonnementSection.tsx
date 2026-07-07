@@ -50,7 +50,8 @@ function etatFor(subscription: SubscriptionView | null): Etat {
     // billing spells the ended state 'canceled' (one l); accept both.
     case 'expired':
     case 'canceled':
-      return 'expire';
+      // The backend's never-subscribed projection is expired + null periodEnd (SubscriptionQuery.FREE); a genuinely lapsed subscription always carries its ended-period date.
+      return subscription.periodEnd === null ? 'free' : 'expire';
     default:
       return 'free';
   }
