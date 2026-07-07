@@ -29,3 +29,4 @@ Append-only log of decisions the orchestrator made during this rollout. For huma
 - 2026-07-07 · P1 design-system · DISPATCHED · implementer agent in worktree, branch refactor/i18n-design-system (copy-agnostic props + consumer ripple; split into P1a/P1b if over target)
 - 2026-07-07 · P1 design-system · OPENED · PR #1452 (refactor/i18n-design-system); build + claude-review pending, awaiting CI+§6a
 - 2026-07-07 · P1 design-system · MERGED · PR #1452 squash-merged (all blocking green, §6a LGTM). P2 play next.
+- 2026-07-07 · P2 play · DISPATCHED · implementer in worktree, branch refactor/i18n-play (ui/play literals)
