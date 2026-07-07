@@ -105,6 +105,29 @@ class LobbyTest {
     }
 
     @Test
+    fun `isCurrentOwner is true for an anonymous owner still seated even though ownerUserId is null`() {
+        val anon = lobby()
+        assertThat(anon.isOwnerless()).isTrue()
+        assertThat(anon.isCurrentOwner(sessionA)).isTrue()
+    }
+
+    @Test
+    fun `isCurrentOwner is false once ownerless and the caller's own seat has been dropped`() {
+        // Mirrors what RelinquishOwnershipUseCase composes: relinquishOwner() (nulls ownerUserId)
+        // plus dropping the caller's seat -- relinquishOwner() alone leaves players untouched.
+        val relinquished = lobby(players = emptyMap()).copy(ownerUserId = null)
+        assertThat(relinquished.isOwner(sessionA)).isTrue()
+        assertThat(relinquished.isCurrentOwner(sessionA)).isFalse()
+        assertThat(relinquished.isCurrentOwner(sessionB)).isFalse()
+    }
+
+    @Test
+    fun `isCurrentOwner stays true for an absent authenticated owner (plain leave keeps ownerUserId)`() {
+        val left = lobby(players = emptyMap()).copy(ownerUserId = userA)
+        assertThat(left.isCurrentOwner(sessionA)).isTrue()
+    }
+
+    @Test
     fun `isFull is true at 8 players and false below`() {
         val eight =
             (0 until 8).associate { i ->

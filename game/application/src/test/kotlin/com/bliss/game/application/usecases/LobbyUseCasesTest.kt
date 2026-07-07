@@ -441,6 +441,19 @@ class LobbyUseCasesTest {
             ).isEqualTo(before)
         }
 
+    // ADR-0098 §2: owner-gated actions go inert once ownerless; relinquish leaves ownerSessionId
+    // pointed at the ex-owner, so isOwner alone is not enough to re-authorize.
+    @Test
+    fun `RotateLobbyCode returns NotOwner after the owner relinquishes`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val out = h.rotate(lobby.id, sessionA)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
+        }
+
     @Test
     fun `RotateLobbyCode returns LobbyNotFound when missing`() =
         runTest {
@@ -518,6 +531,17 @@ class LobbyUseCasesTest {
         }
 
     @Test
+    fun `SetGridConfig returns NotOwner after the owner relinquishes`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val out = h.setConfig(lobby.id, sessionA, GridConfig(9, 9))
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
+        }
+
+    @Test
     fun `StartGame fetches puzzle, transitions to IN_PROGRESS, emits GameStarted`() =
         runTest {
             val h = harness()
@@ -542,6 +566,17 @@ class LobbyUseCasesTest {
             h.start(lobby.id, sessionA).requireSuccess()
             val twice = h.start(lobby.id, sessionA)
             assertThat((twice as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.InvalidState)
+        }
+
+    @Test
+    fun `StartGame returns NotOwner after the owner relinquishes`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val out = h.start(lobby.id, sessionA)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
         }
 
     @Test

@@ -113,12 +113,12 @@ class RotateLobbyCodeUseCase(
         sessionId: SessionId,
     ): UseCaseOutcome<Lobby> {
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
-        if (!current.isOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
         val newCode = mintUniqueCode(repo)
         var rotated = false
         val updated =
             repo.mutate(lobbyId) { lobby ->
-                if (!lobby.isOwner(sessionId)) return@mutate lobby
+                if (!lobby.isCurrentOwner(sessionId)) return@mutate lobby
                 rotated = true
                 lobby.copy(code = newCode, lastActivityAt = clock.now())
             } ?: return failure(UseCaseError.LobbyNotFound)
@@ -239,18 +239,18 @@ class SetGridConfigUseCase(
         config: GridConfig,
     ): UseCaseOutcome<Lobby> {
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
-        if (!current.isOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
         if (current.state != LobbyLifecycleState.WAITING) return failure(UseCaseError.InvalidState)
         var changed = false
         val updated =
             repo.mutate(lobbyId) { lobby ->
                 // Re-verify inside the lock: a concurrent startGame may have transitioned the lobby.
-                if (!lobby.isOwner(sessionId) || lobby.state != LobbyLifecycleState.WAITING) return@mutate lobby
+                if (!lobby.isCurrentOwner(sessionId) || lobby.state != LobbyLifecycleState.WAITING) return@mutate lobby
                 changed = true
                 lobby.copy(gridConfig = config, lastActivityAt = clock.now())
             } ?: return failure(UseCaseError.LobbyNotFound)
         if (!changed) {
-            return if (!updated.isOwner(sessionId)) failure(UseCaseError.NotOwner) else failure(UseCaseError.InvalidState)
+            return if (!updated.isCurrentOwner(sessionId)) failure(UseCaseError.NotOwner) else failure(UseCaseError.InvalidState)
         }
         return success(updated, listOf(LobbyEvent.GridConfigChanged(config)))
     }
@@ -268,7 +268,7 @@ class StartGameUseCase(
         sessionId: SessionId,
     ): UseCaseOutcome<Lobby> {
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
-        if (!current.isOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
         if (current.state != LobbyLifecycleState.WAITING) return failure(UseCaseError.InvalidState)
         // Fetch outside the lock — IO must not stall other lobbies' mutators.
         val puzzle = puzzleProvider.fetch(current.gridConfig.width, current.gridConfig.height)
@@ -277,7 +277,7 @@ class StartGameUseCase(
         var session: GameSession? = null
         val updated =
             repo.mutate(lobbyId) { lobby ->
-                if (!lobby.isOwner(sessionId) || lobby.state != LobbyLifecycleState.WAITING) return@mutate lobby
+                if (!lobby.isCurrentOwner(sessionId) || lobby.state != LobbyLifecycleState.WAITING) return@mutate lobby
                 val now = clock.now()
                 val s = GameSession(puzzle, emptyMap(), now, null)
                 session = s
