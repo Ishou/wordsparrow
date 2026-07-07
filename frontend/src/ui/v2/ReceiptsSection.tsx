@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { css, cx } from 'styled-system/css';
 import { pill, pillMuted, pillPending } from './statusPill';
+import { t, type MessageKey } from '@/ui/i18n';
 import type { BillingClient, Receipt } from '@/application/billing';
 import { useBillingGate } from './useBillingGate';
 
@@ -24,20 +25,21 @@ const note = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', col
 const inlineError = css({ fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.sakuraDark', lineHeight: '1.4', margin: 0 });
 
 // Receipt status is Mollie's open wire string; map the full set so no value leaks English.
-const STATUS_LABEL: Record<string, string> = {
-  paid: 'Payé',
-  pending: 'En attente',
-  open: 'En attente',
-  authorized: 'Autorisé',
-  failed: 'Échoué',
-  expired: 'Expiré',
-  canceled: 'Annulé',
-  refunded: 'Remboursé',
+const STATUS_LABEL_KEY: Record<string, MessageKey> = {
+  paid: 'v2.abonnement.receipt.status.paid',
+  pending: 'v2.abonnement.receipt.status.pending',
+  open: 'v2.abonnement.receipt.status.pending',
+  authorized: 'v2.abonnement.receipt.status.authorized',
+  failed: 'v2.abonnement.receipt.status.failed',
+  expired: 'v2.abonnement.receipt.status.expired',
+  canceled: 'v2.abonnement.receipt.status.canceled',
+  refunded: 'v2.abonnement.receipt.status.refunded',
 };
 
 function statusLabel(status: string): string {
   // Fallback is a last resort for an unforeseen provider status; the map above covers Mollie's set.
-  return STATUS_LABEL[status] ?? status.charAt(0).toUpperCase() + status.slice(1);
+  const key = STATUS_LABEL_KEY[status];
+  return key ? t(key) : status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function statusPillClass(status: string): string {
@@ -98,22 +100,22 @@ function ReceiptsPanel({ client }: { readonly client: BillingClient }) {
   }
 
   return (
-    <nav aria-label="Mes reçus">
-      <div className={groupLabel}>Mes reçus</div>
+    <nav aria-label={t('v2.abonnement.receipt.section.title')}>
+      <div className={groupLabel}>{t('v2.abonnement.receipt.section.title')}</div>
       <div className={cardWrap}>
         {state === 'loading' ? (
           <div className={loadingRow} role="status" aria-busy="true">
-            Chargement de tes reçus…
+            {t('v2.abonnement.receipt.loading')}
           </div>
         ) : state === 'error' ? (
           <div className={messagePad}>
             <p className={inlineError} role="status">
-              Impossible de charger tes reçus pour le moment.
+              {t('v2.abonnement.receipt.loadError')}
             </p>
           </div>
         ) : receipts.length === 0 ? (
           <div className={messagePad}>
-            <p className={note}>Aucun reçu pour le moment.</p>
+            <p className={note}>{t('v2.abonnement.receipt.empty')}</p>
           </div>
         ) : (
           <>
@@ -132,7 +134,7 @@ function ReceiptsPanel({ client }: { readonly client: BillingClient }) {
               <>
                 <div className={divider} />
                 <button type="button" className={moreBtn} onClick={() => void loadMore()} disabled={loadingMore}>
-                  {loadingMore ? 'Chargement…' : 'Voir plus'}
+                  {loadingMore ? t('v2.abonnement.receipt.loadingMore') : t('v2.abonnement.receipt.more')}
                 </button>
               </>
             ) : null}

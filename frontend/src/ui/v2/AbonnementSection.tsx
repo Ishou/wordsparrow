@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { Sparkle } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { pill, pillMuted, pillPending, pillWarn } from './statusPill';
+import { t, type MessageKey } from '@/ui/i18n';
 import { BillingError, type BillingClient, type SubscriptionView } from '@/application/billing';
 import { useSubscription } from '@/ui/components/billing';
 import { Dialog, DialogDescription } from '@/ui/components/primitives';
@@ -56,7 +57,7 @@ function etatFor(subscription: SubscriptionView | null): Etat {
   }
 }
 
-const TIER_LABEL: Record<Etat, string> = { actif: 'Accès complet', pending: 'Accès complet', past_due: 'Accès complet', expire: 'Version gratuite', free: 'Version gratuite' };
+const TIER_LABEL: Record<Etat, MessageKey> = { actif: 'v2.abonnement.tier.complet', pending: 'v2.abonnement.tier.complet', past_due: 'v2.abonnement.tier.complet', expire: 'v2.abonnement.tier.gratuite', free: 'v2.abonnement.tier.gratuite' };
 
 function periodDateFr(iso: string): string {
   return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso));
@@ -65,36 +66,36 @@ function periodDateFr(iso: string): string {
 function periodLabelFor(etat: Etat, periodEnd: string | null): string | null {
   if (periodEnd === null) return null;
   const date = periodDateFr(periodEnd);
-  if (etat === 'actif') return `Renouvellement le ${date}`;
-  if (etat === 'pending') return `Accès actif jusqu'au ${date}`;
-  if (etat === 'expire') return `Terminé le ${date}`;
+  if (etat === 'actif') return t('v2.abonnement.period.renewal', { date });
+  if (etat === 'pending') return t('v2.abonnement.period.activeUntil', { date });
+  if (etat === 'expire') return t('v2.abonnement.period.ended', { date });
   return null;
 }
 
 // Only an actually-ended subscription gets a badge; never-subscribed stays a neutral, unbadged "Version gratuite".
 function StatusPill({ etat }: { readonly etat: Etat }) {
-  if (etat === 'actif') return <span className={cx(pill, pillActif)}>Actif</span>;
-  if (etat === 'past_due') return <span className={cx(pill, pillWarn)}>Paiement en attente</span>;
-  if (etat === 'pending') return <span className={cx(pill, pillPending)}>Résilié</span>;
-  if (etat === 'expire') return <span className={cx(pill, pillMuted)}>Terminé</span>;
+  if (etat === 'actif') return <span className={cx(pill, pillActif)}>{t('v2.abonnement.status.actif')}</span>;
+  if (etat === 'past_due') return <span className={cx(pill, pillWarn)}>{t('v2.abonnement.status.pastDue')}</span>;
+  if (etat === 'pending') return <span className={cx(pill, pillPending)}>{t('v2.abonnement.status.pending')}</span>;
+  if (etat === 'expire') return <span className={cx(pill, pillMuted)}>{t('v2.abonnement.status.expire')}</span>;
   return null;
 }
 
 function cancelErrorMessage(error: unknown): string {
   if (error instanceof BillingError && error.kind === 'no-active-subscription') {
-    return "Tu n'as pas d'abonnement actif à résilier.";
+    return t('v2.abonnement.cancel.error.noActive');
   }
-  return 'La résiliation a échoué. Réessaie dans un instant.';
+  return t('v2.abonnement.cancel.error.generic');
 }
 
 function reactivateErrorMessage(error: unknown): string {
   if (error instanceof BillingError && error.kind === 'no-active-subscription') {
-    return "Il n'y a pas d'abonnement à reprendre.";
+    return t('v2.abonnement.reactivate.error.noActive');
   }
   if (error instanceof BillingError && error.kind === 'provider-unavailable') {
-    return 'Le service est momentanément indisponible. Réessaie dans un instant.';
+    return t('v2.abonnement.reactivate.error.providerUnavailable');
   }
-  return 'La reprise a échoué. Réessaie dans un instant.';
+  return t('v2.abonnement.reactivate.error.generic');
 }
 
 function AbonnementPanel({ client }: { readonly client: BillingClient }) {
@@ -143,17 +144,17 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
   const periodLabel = periodLabelFor(etat, subscription?.periodEnd ?? null);
 
   return (
-    <nav aria-label="Ton abonnement">
-      <div className={groupLabel}>Ton abonnement</div>
+    <nav aria-label={t('v2.abonnement.section.title')}>
+      <div className={groupLabel}>{t('v2.abonnement.section.title')}</div>
       <div className={cardWrap}>
         {loading ? (
           <div className={loadingRow} role="status" aria-busy="true">
-            Chargement de ton abonnement…
+            {t('v2.abonnement.loading')}
           </div>
         ) : loadFailed ? (
           <div className={actionPad}>
             <p className={inlineError} role="status">
-              Impossible de charger ton abonnement pour le moment.
+              {t('v2.abonnement.loadError')}
             </p>
           </div>
         ) : (
@@ -164,7 +165,7 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
               </span>
               <span className={sumMid}>
                 <span className={tierLine}>
-                  <span className={tierName}>{TIER_LABEL[etat]}</span>
+                  <span className={tierName}>{t(TIER_LABEL[etat])}</span>
                   <StatusPill etat={etat} />
                 </span>
                 {periodLabel !== null ? <span className={periodLine}>{periodLabel}</span> : null}
@@ -174,9 +175,7 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
             {etat === 'past_due' ? (
               <div className={actionPad}>
                 <p className={note}>
-                  Paiement en attente — ton dernier prélèvement a échoué. On réessaie
-                  automatiquement, et tu gardes ton accès en attendant. Si le problème persiste,
-                  écris-nous à{' '}
+                  {t('v2.abonnement.pastDue.note')}{' '}
                   <a className={contactLink} href="mailto:contact@wordsparrow.io">
                     contact@wordsparrow.io
                   </a>
@@ -189,17 +188,14 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
               <>
                 <div className={divider} />
                 <button type="button" className={cancelRow} onClick={() => setConfirming(true)}>
-                  Résilier l&apos;abonnement
+                  {t('v2.abonnement.cancel.trigger')}
                 </button>
               </>
             ) : null}
 
             {etat === 'pending' ? (
               <div className={actionPad}>
-                <p className={note}>
-                  Tu gardes l&apos;accès jusqu&apos;à la fin de la période. Rien ne te sera plus
-                  prélevé ensuite. Tu reprends là où tu t&apos;étais arrêté, sans nouveau paiement.
-                </p>
+                <p className={note}>{t('v2.abonnement.pending.note')}</p>
                 {reactivateError !== null ? (
                   <p className={inlineError} role="alert">
                     {reactivateError}
@@ -211,31 +207,25 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
                   disabled={reactivating}
                   onClick={() => void reactivate()}
                 >
-                  {reactivating ? 'Reprise…' : 'Reprendre mon abonnement'}
+                  {reactivating ? t('v2.abonnement.reactivate.pending') : t('v2.abonnement.reactivate.cta')}
                 </button>
               </div>
             ) : null}
 
             {etat === 'expire' ? (
               <div className={actionPad}>
-                <p className={note}>
-                  Ton abonnement s&apos;est terminé — la grille du jour, les 7 derniers jours et tes
-                  grilles commencées restent à toi. Reviens quand tu veux, sans pression.
-                </p>
+                <p className={note}>{t('v2.abonnement.expire.note')}</p>
                 <Link to="/abonnement" className={primaryLink}>
-                  Me réabonner
+                  {t('v2.abonnement.expire.cta')}
                 </Link>
               </div>
             ) : null}
 
             {etat === 'free' ? (
               <div className={actionPad}>
-                <p className={note}>
-                  Tu joues avec la version gratuite. L&apos;abonnement débloque toutes les grilles et
-                  la génération.
-                </p>
+                <p className={note}>{t('v2.abonnement.free.note')}</p>
                 <Link to="/abonnement" className={primaryLink}>
-                  Découvre l&apos;abonnement
+                  {t('v2.abonnement.free.cta')}
                 </Link>
               </div>
             ) : null}
@@ -244,21 +234,18 @@ function AbonnementPanel({ client }: { readonly client: BillingClient }) {
       </div>
 
       {confirming ? (
-        <Dialog open onClose={() => setConfirming(false)} title="Résilier ton abonnement ?">
-          <DialogDescription>
-            Tu gardes l&apos;accès jusqu&apos;à la fin de la période en cours. Rien ne te sera
-            plus prélevé ensuite — tu pourras te réabonner quand tu veux.
-          </DialogDescription>
+        <Dialog open onClose={() => setConfirming(false)} title={t('v2.abonnement.cancelDialog.title')}>
+          <DialogDescription>{t('v2.abonnement.cancelDialog.body')}</DialogDescription>
           {cancelError !== null ? (
             <p className={inlineError} role="alert">
               {cancelError}
             </p>
           ) : null}
           <button type="button" className={dConfirm} disabled={canceling} onClick={() => void confirmCancel()}>
-            {canceling ? 'Résiliation…' : 'Oui, résilier'}
+            {canceling ? t('v2.abonnement.cancelDialog.confirming') : t('v2.abonnement.cancelDialog.confirm')}
           </button>
           <button type="button" className={dKeep} onClick={() => setConfirming(false)}>
-            Annuler
+            {t('v2.abonnement.cancelDialog.keep')}
           </button>
         </Dialog>
       ) : null}

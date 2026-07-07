@@ -3,6 +3,7 @@ import { Link, useRouteContext } from '@tanstack/react-router';
 import { CircleNotch } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { SparrowMark } from '@/design-system';
+import { t } from '@/ui/i18n';
 import { useAuth } from '@/ui/components/auth';
 import { useSubscriber } from '@/ui/components/billing';
 import { PhoneShell } from './PhoneShell';
@@ -46,14 +47,12 @@ function MerciConfirmation({ hasEmail }: { readonly hasEmail: boolean }) {
       <div className={merciMark}>
         <SparrowMark size={84} colorway="sakura" tile="dark" />
       </div>
-      <span className={merciKicker}>Abonnement activé</span>
-      <h1 className={merciTitle}>Te voilà abonné·e !</h1>
-      <p className={merciText}>
-        Toutes les grilles sont à toi, et tu peux en générer de nouvelles quand tu veux.
-      </p>
-      {hasEmail ? <p className={merciText}>Un reçu te sera envoyé par e-mail.</p> : null}
+      <span className={merciKicker}>{t('v2.abonnement.succes.kicker')}</span>
+      <h1 className={merciTitle}>{t('v2.abonnement.succes.title')}</h1>
+      <p className={merciText}>{t('v2.abonnement.succes.body')}</p>
+      {hasEmail ? <p className={merciText}>{t('v2.abonnement.succes.receipt')}</p> : null}
       <Link to="/grilles" className={merciCta}>
-        Découvrir toutes les grilles
+        {t('v2.abonnement.succes.cta')}
       </Link>
     </div>
   );
@@ -109,25 +108,24 @@ export function CheckoutSuccessScreen() {
 
   return (
     <SuccesShell>
-      <h1 className={title}>Abonnement</h1>
+      <h1 className={title}>{t('v2.abonnement.succes.heading')}</h1>
       {phase === 'timeout' ? (
         <p className={statusCard} role="status">
-          La confirmation prend plus de temps que prévu. Aucune action n'est nécessaire : ton accès
-          s'activera dès que le paiement sera confirmé.
+          {t('v2.abonnement.succes.timeout')}
         </p>
       ) : (
         <p className={statusCard} role="status">
           <CircleNotch size={20} weight="bold" aria-hidden="true" className={spin} />
-          Paiement reçu, confirmation en cours…
+          {t('v2.abonnement.succes.confirming')}
         </p>
       )}
       {phase === 'timeout' ? (
         <Link to="/compte" className={linkStyle}>
-          Retour à mon compte
+          {t('v2.abonnement.succes.backCompte')}
         </Link>
       ) : (
         <Link to="/abonnement" className={linkStyle}>
-          Revenir à mon abonnement
+          {t('v2.abonnement.annule.back')}
         </Link>
       )}
     </SuccesShell>
@@ -142,9 +140,9 @@ export function AbonnementSuccesScreen() {
   if (!billingClient) {
     return (
       <SuccesShell>
-        <h1 className={title}>Abonnement</h1>
+        <h1 className={title}>{t('v2.abonnement.succes.heading')}</h1>
         <p className={statusCard} role="status">
-          L'abonnement n'est pas disponible pour le moment.
+          {t('v2.abonnement.unavailable')}
         </p>
       </SuccesShell>
     );

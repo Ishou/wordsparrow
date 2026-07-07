@@ -3,6 +3,7 @@ import { Portal } from '@ark-ui/react/portal';
 import { Link } from '@tanstack/react-router';
 import { Lock, Sparkle, type Icon } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
+import { t, type MessageKey } from '@/ui/i18n';
 
 // Which gate triggered the sheet — picks the copy. Cosmetic only; the server enforces the lock (ADR-0080 W5b).
 export type SheetContext = 'grid' | 'generate';
@@ -42,16 +43,16 @@ const text = css({ fontFamily: 'wsUi', fontSize: '13.5px', fontWeight: 'bold', c
 const primary = css({ display: 'block', width: '100%', textAlign: 'center', textDecoration: 'none', border: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '15.5px', padding: '13px', borderRadius: '14px', cursor: 'pointer', boxShadow: '0 8px 18px rgba(190,73,112,0.34)', marginTop: '2px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const secondary = css({ width: '100%', border: 'none', background: 'transparent', color: 'ws.khaki', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '14px', padding: '6px', cursor: 'pointer', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 
-const COPY: Record<SheetContext, { readonly icon: Icon; readonly title: string; readonly text: string }> = {
+const COPY: Record<SheetContext, { readonly icon: Icon; readonly titleKey: MessageKey; readonly textKey: MessageKey }> = {
   grid: {
     icon: Lock,
-    title: 'Une grille réservée aux abonnés',
-    text: "Abonne-toi pour jouer toutes les grilles et tout l'historique. La grille du jour et les 7 derniers jours restent gratuits.",
+    titleKey: 'v2.abonnement.sheet.grid.title',
+    textKey: 'v2.abonnement.sheet.grid.text',
   },
   generate: {
     icon: Sparkle,
-    title: 'Génère une nouvelle grille',
-    text: "Une grille fraîche dès que l'envie te prend, autant que tu veux. C'est compris dans l'abonnement.",
+    titleKey: 'v2.abonnement.sheet.generate.title',
+    textKey: 'v2.abonnement.sheet.generate.text',
   },
 };
 
@@ -74,13 +75,13 @@ export function AbonnementSheet({
           <Dialog.Content className={sheet}>
             <span aria-hidden="true" className={grab} />
             <span className={badge}><Icon size={24} weight="fill" aria-hidden="true" /></span>
-            <Dialog.Title className={title}>{c.title}</Dialog.Title>
-            <Dialog.Description className={text}>{c.text}</Dialog.Description>
+            <Dialog.Title className={title}>{t(c.titleKey)}</Dialog.Title>
+            <Dialog.Description className={text}>{t(c.textKey)}</Dialog.Description>
             <Link to="/abonnement" className={primary} onClick={onClose}>
-              Voir l&apos;abonnement
+              {t('v2.abonnement.sheet.cta')}
             </Link>
             <button type="button" className={secondary} onClick={onClose}>
-              Plus tard
+              {t('v2.abonnement.sheet.later')}
             </button>
           </Dialog.Content>
         </Dialog.Positioner>

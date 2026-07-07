@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { CaretRight, Sparkle } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 
 // Ambient nudges shown only to free players (ADR-0080 W5a) — discreet, never a hard paywall. Both link to the offer.
 
@@ -16,7 +17,7 @@ function UpsellCard({ subline }: { readonly subline: string }) {
     <Link to="/abonnement" className={card}>
       <span className={tile}><Sparkle size={20} weight="fill" aria-hidden="true" /></span>
       <span className={mid}>
-        <span className={title}>Débloque toutes les grilles</span>
+        <span className={title}>{t('v2.abonnement.upsell.title')}</span>
         <span className={sub}>{subline}</span>
       </span>
       <span className={chevron}><CaretRight size={18} weight="bold" aria-hidden="true" /></span>
@@ -25,9 +26,9 @@ function UpsellCard({ subline }: { readonly subline: string }) {
 }
 
 export function HomeTeaser() {
-  return <UpsellCard subline="Abonne-toi et joue sans limite" />;
+  return <UpsellCard subline={t('v2.abonnement.upsell.home')} />;
 }
 
 export function ArchiveUpsellBanner() {
-  return <UpsellCard subline="Tout l'historique et les nouvelles grilles" />;
+  return <UpsellCard subline={t('v2.abonnement.upsell.archive')} />;
 }
