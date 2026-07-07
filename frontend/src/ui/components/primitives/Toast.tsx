@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { css, cx } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 
 // Toast primitive — single-slot, imperative API. `show()` replaces the
 // active toast (no stacking) so the user never has to dismiss a queue.
@@ -185,9 +186,9 @@ export function Toast() {
         type="button"
         className={dismissButtonStyles}
         onClick={ctx.dismiss}
-        aria-label="Fermer"
+        aria-label={t('toast.close')}
       >
-        Fermer
+        {t('toast.close')}
       </button>
     </div>
   );

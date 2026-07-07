@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 
 const footerOuterStyles = css({
   width: '100%',
@@ -49,18 +50,18 @@ export function Footer() {
     <footer className={footerOuterStyles}>
       <div className={footerInnerStyles}>
         <p className={copyStyles}>© WordSparrow</p>
-        <nav className={linkListStyles} aria-label="Liens légaux">
+        <nav className={linkListStyles} aria-label={t('home.legalNav.aria.label')}>
           <Link to="/confidentialite" className={linkStyles}>
-            Confidentialité
+            {t('home.legalNav.privacy')}
           </Link>
           <Link to="/mentions-legales" className={linkStyles}>
-            Mentions légales
+            {t('home.legalNav.terms')}
           </Link>
           <a
             href="mailto:contact@wordsparrow.io"
             className={linkStyles}
           >
-            Contact
+            {t('footer.contact')}
           </a>
         </nav>
       </div>

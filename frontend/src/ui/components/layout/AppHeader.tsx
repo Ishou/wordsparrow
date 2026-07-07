@@ -4,6 +4,7 @@ import { Lockup } from '@/ui/components/brand';
 import { HeaderAuthSlot } from '@/ui/components/auth';
 import { OverflowMenu } from '@/ui/components/primitives';
 import { HamburgerIcon } from '@/ui/components/icons';
+import { t } from '@/ui/i18n';
 
 // App-wide header — ADR-0005 §5 layout spec.
 //
@@ -26,10 +27,10 @@ interface NavLink {
 }
 
 const NAV_LINKS: readonly NavLink[] = [
-  { id: 'accueil', label: 'Accueil', href: '/' },
-  { id: 'grilles', label: 'Grilles', href: '/grilles' },
-  { id: 'contribuer', label: 'Contribuer', href: '/contribuer' },
-  { id: 'aide', label: 'Aide', href: '/aide' },
+  { id: 'accueil', label: t('appHeader.nav.home'), href: '/' },
+  { id: 'grilles', label: t('appHeader.nav.grids'), href: '/grilles' },
+  { id: 'contribuer', label: t('appHeader.nav.contribute'), href: '/contribuer' },
+  { id: 'aide', label: t('appHeader.nav.help'), href: '/aide' },
 ];
 
 // Outer band — full-width charcoal strip with the sticky position and
@@ -187,8 +188,8 @@ const GRID_ROUTE_PATTERNS = [/^\/grille(\/|$)/, /^\/lobby\//];
 
 function skipLinkLabelForPath(pathname: string): string {
   return GRID_ROUTE_PATTERNS.some((re) => re.test(pathname))
-    ? 'Aller à la grille'
-    : 'Aller au contenu';
+    ? t('appHeader.skip.grid')
+    : t('appHeader.skip.content');
 }
 
 // Resolve the active nav id from a pathname against `NAV_LINKS`. Exact
@@ -234,7 +235,7 @@ export function AppHeader({ activeNavId }: AppHeaderProps = {}) {
         <div className={lockupSlotStyles}>
         <Link
           to="/"
-          aria-label="Accueil WordSparrow"
+          aria-label={t('appHeader.aria.home')}
           className={css({
             display: 'inline-flex',
             textDecoration: 'none',
@@ -253,11 +254,11 @@ export function AppHeader({ activeNavId }: AppHeaderProps = {}) {
             <Lockup size="desktop" />
           </span>
         </Link>
-        <span className={alphaBadgeStyles} role="img" aria-label="version alpha">
+        <span className={alphaBadgeStyles} role="img" aria-label={t('appHeader.aria.versionAlpha')}>
           Alpha
         </span>
       </div>
-      <nav className={navStyles} aria-label="Navigation principale">
+      <nav className={navStyles} aria-label={t('appHeader.aria.nav')}>
         {NAV_LINKS.map((link) => {
           const isActive = link.id === resolvedActiveId;
           return (
@@ -277,7 +278,7 @@ export function AppHeader({ activeNavId }: AppHeaderProps = {}) {
           {authClient ? <HeaderAuthSlot authClient={authClient} onBeforeLogout={onBeforeLogout} /> : null}
           <span className={mobileNavSlotStyles}>
             <OverflowMenu
-              triggerLabel="Ouvrir le menu"
+              triggerLabel={t('appHeader.menu.open')}
               triggerIcon={<HamburgerIcon />}
               items={NAV_LINKS.map((link) => ({
                 id: link.id,

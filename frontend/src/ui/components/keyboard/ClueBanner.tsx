@@ -3,6 +3,7 @@ import { css } from 'styled-system/css';
 import { ArrowIcon, ARROW_COLOR, arrowLabel } from '@/ui/components/grid/ClueArrowIcon';
 import { LetterPreview } from '@/ui/components/grid/LetterPreview';
 import type { Clue } from '@/ui/components/grid/useGridNavigation';
+import { t } from '@/ui/i18n';
 
 // Fixed total height: outer banner is the ceiling; LetterPreview / alt chip intrinsically exceed minHeight.
 const banner = css({
@@ -121,7 +122,7 @@ export function ClueBanner({
     return (
       <div className={banner} aria-live="off">
         <div className={block}>
-          <span className={empty}>Touchez une case pour commencer</span>
+          <span className={empty}>{t('clueBanner.empty')}</span>
         </div>
         <AltPlaceholderRow />
       </div>
@@ -134,7 +135,7 @@ export function ClueBanner({
           className={arrowGlyph}
           style={{ color: ARROW_COLOR }}
           role="img"
-          aria-label={`définition ${arrowLabel[clue.clue.arrow]}`}
+          aria-label={t('clueBanner.aria.definition', { direction: arrowLabel[clue.clue.arrow] })}
         >
           <ArrowIcon arrow={clue.clue.arrow} />
         </span>
@@ -152,14 +153,14 @@ export function ClueBanner({
         <button
           type="button"
           className={`${block} ${altBlockTappable}`}
-          aria-label={`Basculer sur la définition ${arrowLabel[alternateClue.clue.arrow]}`}
+          aria-label={t('clueBanner.aria.toggle', { direction: arrowLabel[alternateClue.clue.arrow] })}
           onMouseDown={handleAltMouseDown}
           onClick={onToggleDirection}
         >
           <span
             className={`${arrowGlyph} ${arrowGlyphMuted}`}
             role="img"
-            aria-label={`alternative : définition ${arrowLabel[alternateClue.clue.arrow]}`}
+            aria-label={t('clueBanner.aria.alternate', { direction: arrowLabel[alternateClue.clue.arrow] })}
           >
             <ArrowIcon arrow={alternateClue.clue.arrow} />
           </span>
