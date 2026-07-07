@@ -86,6 +86,20 @@ class InMemoryLobbyRepository : LobbyRepository {
             it.state == LobbyLifecycleState.WAITING && it.players[it.ownerSessionId]?.userId == userId
         }
 
+    // ADR-0098 §1: sticky active-game quota keyed on ownerUserId; non-terminal (not COMPLETED) counts.
+    override suspend fun findActiveByOwnerUser(userId: UserId): Lobby? =
+        store.values.firstOrNull {
+            it.ownerUserId == userId && it.state != LobbyLifecycleState.COMPLETED
+        }
+
+    // ADR-0098 §4: ownerless non-terminal lobbies idle past the cutoff -- the relinquished/RGPD-vacated sweep.
+    override suspend fun findIdleOwnerless(cutoff: Instant): List<Lobby> =
+        store.values.filter {
+            it.ownerUserId == null &&
+                it.state != LobbyLifecycleState.COMPLETED &&
+                !it.lastActivityAt.isAfter(cutoff)
+        }
+
     override suspend fun findIdleWaiting(cutoff: Instant): List<Lobby> =
         store.values.filter { it.state == LobbyLifecycleState.WAITING && !it.lastActivityAt.isAfter(cutoff) }
 
@@ -105,7 +119,7 @@ class InMemoryLobbyRepository : LobbyRepository {
     // session (the client cleared its session id before issuing the DELETE).
     override suspend fun eraseSession(sessionId: SessionId): EraseSessionResult {
         var deletedLobbies = 0
-        var transferredLobbies = 0
+        var vacatedLobbies = 0
         var removedPlayerships = 0
         var anonymisedEntries = 0
         val targets = store.values.filter { it.players.containsKey(sessionId) }.map { it.id }
@@ -125,11 +139,10 @@ class InMemoryLobbyRepository : LobbyRepository {
                 val newOwnerSession: SessionId
                 val newOwnerUserId: UserId?
                 if (current.isOwner(sessionId)) {
-                    // Rule 2: earliest-joined remaining player inherits; owner_user_id follows their seat (null if anon) so the erased user's UserId cannot linger (ADR-0039 erasure).
-                    transferredLobbies += 1
-                    val inheritor = remaining.values.minBy { it.joinedAt }
-                    newOwnerSession = inheritor.sessionId
-                    newOwnerUserId = inheritor.userId
+                    // Rule 2 (ADR-0098 §3): vacate to ownerless - owner_user_id cleared, owner_session_id set to the anon sentinel.
+                    vacatedLobbies += 1
+                    newOwnerSession = SessionId.ANON
+                    newOwnerUserId = null
                 } else {
                     // Rule 3: non-owner. Ownership unchanged.
                     newOwnerSession = current.ownerSessionId
@@ -159,7 +172,7 @@ class InMemoryLobbyRepository : LobbyRepository {
                     )
             }
         }
-        return EraseSessionResult(deletedLobbies, transferredLobbies, removedPlayerships, anonymisedEntries)
+        return EraseSessionResult(deletedLobbies, vacatedLobbies, removedPlayerships, anonymisedEntries)
     }
 
     override suspend fun rebindAnonSeats(

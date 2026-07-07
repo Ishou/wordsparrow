@@ -62,7 +62,8 @@ fun Route.sessions(
             call.respond(
                 DeleteSessionResponseDto(
                     deletedLobbies = result.deletedLobbies,
-                    transferredLobbies = result.transferredLobbies,
+                    // Wire field keeps its ADR-0055 name; a rename is a schema-first change (ADR-0098 §3 vacate now feeds it).
+                    transferredLobbies = result.vacatedLobbies,
                     removedPlayerships = result.removedPlayerships,
                     anonymisedEntries = result.anonymisedEntries,
                 ),

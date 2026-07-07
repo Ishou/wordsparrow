@@ -1,7 +1,9 @@
 package com.bliss.game.infrastructure.persistence
 
+import com.bliss.game.application.ports.ClaimOutcome
 import com.bliss.game.application.ports.EraseSessionResult
 import com.bliss.game.application.ports.LobbyRepository
+import com.bliss.game.application.ports.RelinquishOutcome
 import com.bliss.game.domain.BlockCell
 import com.bliss.game.domain.CellEntry
 import com.bliss.game.domain.DefinitionCell
@@ -194,16 +196,109 @@ class PostgresLobbyRepository(
         }
     }
 
+    // ADR-0098 §2: upsert excludes owner_user_id (write-once) - relinquish/claim need a dedicated UPDATE, not mutate.
+    override suspend fun relinquishOwnership(
+        id: LobbyId,
+        sessionId: SessionId,
+        now: Instant,
+    ): RelinquishOutcome =
+        withContext(Dispatchers.IO) {
+            ds.connection.use { conn ->
+                conn.autoCommit = false
+                try {
+                    val current =
+                        lockAndLoad(conn, id) ?: run {
+                            conn.rollback()
+                            return@withContext RelinquishOutcome.LobbyNotFound
+                        }
+                    if (!current.isCurrentOwner(sessionId)) {
+                        conn.rollback()
+                        return@withContext RelinquishOutcome.NotOwner
+                    }
+                    conn
+                        .prepareStatement(
+                            "UPDATE lobbies SET owner_user_id = NULL, last_activity_at = ? WHERE id = ?",
+                        ).use { ps ->
+                            ps.setTimestamp(1, Timestamp.from(now))
+                            ps.setString(2, id.value)
+                            ps.executeUpdate()
+                        }
+                    conn
+                        .prepareStatement(
+                            "DELETE FROM lobby_players WHERE lobby_id = ? AND session_id = ?",
+                        ).use { ps ->
+                            ps.setString(1, id.value)
+                            ps.setObject(2, UUID.fromString(sessionId.value))
+                            ps.executeUpdate()
+                        }
+                    val reloaded = loadLobby(conn, id)!!
+                    conn.commit()
+                    RelinquishOutcome.Relinquished(reloaded)
+                } catch (e: Exception) {
+                    conn.rollback()
+                    throw e
+                } finally {
+                    conn.autoCommit = true
+                }
+            }
+        }
+
+    override suspend fun claimOwnership(
+        id: LobbyId,
+        sessionId: SessionId,
+        userId: UserId,
+        now: Instant,
+    ): ClaimOutcome =
+        withContext(Dispatchers.IO) {
+            ds.connection.use { conn ->
+                conn.autoCommit = false
+                try {
+                    val current =
+                        lockAndLoad(conn, id) ?: run {
+                            conn.rollback()
+                            return@withContext ClaimOutcome.LobbyNotFound
+                        }
+                    if (!current.hasJoined(sessionId)) {
+                        conn.rollback()
+                        return@withContext ClaimOutcome.NotPresentInLobby
+                    }
+                    if (!current.isOwnerless()) {
+                        conn.rollback()
+                        return@withContext ClaimOutcome.AlreadyOwned
+                    }
+                    conn
+                        .prepareStatement(
+                            "UPDATE lobbies SET owner_user_id = ?, owner_session_id = ?, last_activity_at = ? WHERE id = ?",
+                        ).use { ps ->
+                            ps.setObject(1, UUID.fromString(userId.value))
+                            ps.setObject(2, UUID.fromString(sessionId.value))
+                            ps.setTimestamp(3, Timestamp.from(now))
+                            ps.setString(4, id.value)
+                            ps.executeUpdate()
+                        }
+                    val reloaded = loadLobby(conn, id)!!
+                    conn.commit()
+                    ClaimOutcome.Claimed(reloaded)
+                } catch (e: Exception) {
+                    conn.rollback()
+                    throw e
+                } finally {
+                    conn.autoCommit = true
+                }
+            }
+        }
+
     /**
-     * RGPD Article 17 erasure (ADR-0039). Single transaction, all affected
+     * RGPD Article 17 erasure (ADR-0055). Single transaction, all affected
      * lobbies locked upfront with `SELECT ... FOR UPDATE` ordered by id to
      * prevent dead-locks against concurrent eraseSession or mutate calls.
      *
      * The three rules applied per lobby:
      *  1. Owner + sole player → DELETE the row (children cascade).
-     *  2. Owner + others      → UPDATE owner_session_id to the earliest-
-     *                           joined remaining player, DELETE the playership,
-     *                           NULL out cell-entry attribution (anonymise).
+     *  2. Owner + others      → vacate to ownerless: NULL owner_user_id and
+     *                           point owner_session_id at the anon sentinel
+     *                           (ADR-0098 §3), DELETE the playership, NULL out
+     *                           cell-entry attribution (anonymise).
      *  3. Non-owner           → DELETE the playership, NULL out attribution.
      */
     override suspend fun eraseSession(sessionId: SessionId): EraseSessionResult =
@@ -248,7 +343,7 @@ class PostgresLobbyRepository(
         if (lobbyIds.isEmpty()) return EraseSessionResult.Empty
 
         var deletedLobbies = 0
-        var transferredLobbies = 0
+        var vacatedLobbies = 0
         var removedPlayerships = 0
         var anonymisedEntries = 0
         for (id in lobbyIds) {
@@ -287,26 +382,20 @@ class PostgresLobbyRepository(
                         ps.setObject(2, sessionUuid)
                         ps.executeUpdate()
                     }
-            // Rule 2: transfer ownership to earliest-joined remaining player.
+            // Rule 2 (ADR-0098 §3): vacate to ownerless - owner_user_id cleared, owner_session_id set to the anon sentinel.
             if (ownsLobby) {
-                val newOwner = remainingPlayers.minBy { it.second }.first
-                // owner_user_id follows the new owner's seat (NULL if anon) so the erased user's UserId cannot linger in findByUserId (ADR-0039 erasure).
                 conn
                     .prepareStatement(
-                        "UPDATE lobbies SET owner_session_id = ?, " +
-                            "owner_user_id = (SELECT user_id FROM lobby_players WHERE lobby_id = ? AND session_id = ?) " +
-                            "WHERE id = ?",
+                        "UPDATE lobbies SET owner_session_id = ?, owner_user_id = NULL WHERE id = ?",
                     ).use { ps ->
-                        ps.setObject(1, newOwner)
+                        ps.setObject(1, UUID.fromString(SessionId.ANON.value))
                         ps.setString(2, id.value)
-                        ps.setObject(3, newOwner)
-                        ps.setString(4, id.value)
                         ps.executeUpdate()
                     }
-                transferredLobbies += 1
+                vacatedLobbies += 1
             }
         }
-        return EraseSessionResult(deletedLobbies, transferredLobbies, removedPlayerships, anonymisedEntries)
+        return EraseSessionResult(deletedLobbies, vacatedLobbies, removedPlayerships, anonymisedEntries)
     }
 
     /**
@@ -380,6 +469,46 @@ class PostgresLobbyRepository(
                             }
                         } ?: return@withContext null
                 loadLobby(conn, id)
+            }
+        }
+
+    // ADR-0098 §1: sticky active-game quota keyed on owner_user_id directly (not the owner-seat join),
+    // so a disconnected owner still counts; WAITING or IN_PROGRESS is "active".
+    override suspend fun findActiveByOwnerUser(userId: UserId): Lobby? =
+        withContext(Dispatchers.IO) {
+            ds.connection.use { conn ->
+                val id =
+                    conn
+                        .prepareStatement(
+                            "SELECT id FROM lobbies " +
+                                "WHERE owner_user_id = ? AND state IN ('WAITING', 'IN_PROGRESS') LIMIT 1",
+                        ).use { ps ->
+                            ps.setObject(1, UUID.fromString(userId.value))
+                            ps.executeQuery().use { rs ->
+                                if (rs.next()) LobbyId(rs.getString("id")) else null
+                            }
+                        } ?: return@withContext null
+                loadLobby(conn, id)
+            }
+        }
+
+    // ADR-0098 §4: ownerless non-terminal lobbies idle past the cutoff -- the relinquished/RGPD-vacated sweep.
+    override suspend fun findIdleOwnerless(cutoff: Instant): List<Lobby> =
+        withContext(Dispatchers.IO) {
+            ds.connection.use { conn ->
+                val ids = mutableListOf<LobbyId>()
+                conn
+                    .prepareStatement(
+                        "SELECT id FROM lobbies " +
+                            "WHERE owner_user_id IS NULL AND state IN ('WAITING', 'IN_PROGRESS') " +
+                            "AND last_activity_at <= ?",
+                    ).use { ps ->
+                        ps.setTimestamp(1, Timestamp.from(cutoff))
+                        ps.executeQuery().use { rs ->
+                            while (rs.next()) ids += LobbyId(rs.getString("id"))
+                        }
+                    }
+                ids.mapNotNull { loadLobby(conn, it) }
             }
         }
 
