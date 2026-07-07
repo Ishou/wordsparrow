@@ -84,6 +84,17 @@ drop a disconnected owner out of quota, contradicting the rule above.
 - **Ownerless games stay playable.** Co-players keep filling the grid and can
   complete the puzzle; only owner-gated actions (rotate code, kick) are inert
   until someone claims.
+- **Persistence: neither op goes through the general save path.**
+  `PostgresLobbyRepository.upsertLobby`'s `ON CONFLICT ... DO UPDATE` deliberately
+  excludes `owner_user_id` ("write-once at create; a post-leave save must not
+  null it", ADR-0066 amendment 2026-07-05), so a `relinquishOwner()`/`claimOwner()`
+  domain transition saved via the standard `repo.mutate()` path would silently
+  no-op the ownership write in Postgres. Relinquish and claim therefore need
+  dedicated repository methods (`relinquishOwnership(lobbyId)`,
+  `claimOwnership(lobbyId, userId)`) that issue a purpose-built
+  `UPDATE lobbies SET owner_user_id = ...` — the same pattern already used by
+  the RGPD erasure-cascade transfer/vacate write — bypassing `upsertLobby`
+  entirely.
 
 ### 3. RGPD erasure cascade rule 2 → vacate (amends ADR-0055)
 
