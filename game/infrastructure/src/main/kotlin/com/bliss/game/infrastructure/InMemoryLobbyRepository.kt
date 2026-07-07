@@ -139,8 +139,7 @@ class InMemoryLobbyRepository : LobbyRepository {
                 val newOwnerSession: SessionId
                 val newOwnerUserId: UserId?
                 if (current.isOwner(sessionId)) {
-                    // Rule 2 (ADR-0098 §3): vacate to ownerless. owner_user_id cleared so the erased
-                    // user cannot linger; owner_session_id set to the anon sentinel (non-null domain field).
+                    // Rule 2 (ADR-0098 §3): vacate to ownerless - owner_user_id cleared, owner_session_id set to the anon sentinel.
                     vacatedLobbies += 1
                     newOwnerSession = SessionId.ANON
                     newOwnerUserId = null

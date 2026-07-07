@@ -196,9 +196,7 @@ class PostgresLobbyRepository(
         }
     }
 
-    // Purpose-built owner_user_id write (ADR-0098 §2): the general upsert excludes owner_user_id
-    // from its ON CONFLICT (write-once, ADR-0066), so relinquish/claim cannot go through mutate on
-    // Postgres or the ownership write silently no-ops. Both re-verify state under FOR UPDATE.
+    // ADR-0098 §2: upsert excludes owner_user_id (write-once) - relinquish/claim need a dedicated UPDATE, not mutate.
     override suspend fun relinquishOwnership(
         id: LobbyId,
         sessionId: SessionId,
@@ -384,9 +382,7 @@ class PostgresLobbyRepository(
                         ps.setObject(2, sessionUuid)
                         ps.executeUpdate()
                     }
-            // Rule 2 (ADR-0098 §3): vacate to ownerless. owner_user_id -> NULL so the erased
-            // user's UserId cannot linger in findByUserId; owner_session_id -> anon sentinel (the
-            // column is NOT NULL, so it cannot be nulled) matching anonymised written_by_session_id.
+            // Rule 2 (ADR-0098 §3): vacate to ownerless - owner_user_id cleared, owner_session_id set to the anon sentinel.
             if (ownsLobby) {
                 conn
                     .prepareStatement(
