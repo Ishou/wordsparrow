@@ -30,3 +30,4 @@ Append-only log of decisions the orchestrator made during this rollout. For huma
 - 2026-07-07 · P1 design-system · OPENED · PR #1452 (refactor/i18n-design-system); build + claude-review pending, awaiting CI+§6a
 - 2026-07-07 · P1 design-system · MERGED · PR #1452 squash-merged (all blocking green, §6a LGTM). P2 play next.
 - 2026-07-07 · P2 play · DISPATCHED · implementer in worktree, branch refactor/i18n-play (ui/play literals)
+- 2026-07-07 · P2 play · MERGED · PR #1453 squash-merged (72/-34, all blocking green, §6a LGTM). P3 auth+lobby next.
