@@ -18,15 +18,7 @@ title = "Bliss gitleaks config"
 [extend]
 useDefault = true
 
-# False positive: the `generic-api-key` rule flags our i18n MessageKey
-# convention. Struct fields named `*Key` (labelKey, noteKey, suffixKey,
-# periodKey, renewalKey, ...) hold dotted catalog identifiers such as
-# "v2.abonnement.cadence.mensuel.label" — the "key"-suffixed field name
-# next to a quoted, moderate-entropy dotted string is exactly the shape
-# the rule looks for. These values are translation-catalog keys, checked
-# 1:1 against frontend/src/ui/i18n/messages.fr.ts, never secrets.
-# Scoped to this PR's exact namespace, not the whole `v2.*` key space, to
-# stay as narrow as possible (PR #1461, wave P5b of the i18n rollout).
+# False positive: `generic-api-key` misreads dotted i18n MessageKey identifiers (v2.abonnement.*) as secrets; see PR description for detail.
 [allowlist]
 description = "i18n v2.abonnement.* MessageKey identifiers misread as generic API keys"
 regexes = [
