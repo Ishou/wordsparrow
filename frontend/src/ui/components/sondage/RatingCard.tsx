@@ -8,6 +8,7 @@ import { MetadataBand } from './MetadataBand';
 import { StyleTooltip } from './StyleTooltip';
 import { useLemmaMeta } from './useLemmaMeta';
 import { useMetadataBand } from './useMetadataBand';
+import { t } from '@/ui/i18n';
 
 const EMPTY_LIST: ReadonlyArray<string> = Object.freeze([]);
 
@@ -391,7 +392,7 @@ export function RatingCard({
       {/* Authed contributors edit POS + see Style inside the metadata band; anon keeps them here. */}
       {!enrichable ? (
         <div className={topRowStyles}>
-          <label className={css({ srOnly: true })} htmlFor="pos-pill">Nature grammaticale</label>
+          <label className={css({ srOnly: true })} htmlFor="pos-pill">{t('sondage.aria.natureGrammaticale')}</label>
           <select
             id="pos-pill"
             className={posSelectStyles}
@@ -420,14 +421,14 @@ export function RatingCard({
               data-testid="corriger-trigger"
               onClick={() => setCorrectifText(item.definition)}
             >
-              <span aria-hidden="true">✎</span> Corriger la définition <kbd className={kbdStyles}>C</kbd>
+              <span aria-hidden="true">✎</span> {t('sondage.rating.corriger')} <kbd className={kbdStyles}>C</kbd>
             </button>
           )}
         </>
       ) : (
         <div className={correctifBoxStyles} data-testid="correctif-box">
           <label htmlFor="correctif-text" className={css({ srOnly: true })}>
-            Définition corrigée
+            {t('sondage.rating.correctif.label')}
           </label>
           <textarea
             id="correctif-text"
@@ -447,7 +448,7 @@ export function RatingCard({
             }}
           />
           <p className={correctifHintStyles}>
-            Soumise comme nouvelle entrée notée « bonne » automatiquement.
+            {t('sondage.rating.correctif.hint')}
           </p>
           <div className={correctifActionsStyles}>
             <button
@@ -455,7 +456,7 @@ export function RatingCard({
               className={cx(correctifButtonStyles, cancelButtonStyles)}
               onClick={() => setCorrectifText(null)}
             >
-              Annuler
+              {t('sondage.action.cancel')}
             </button>
             <button
               type="button"
@@ -463,44 +464,44 @@ export function RatingCard({
               data-testid="correctif-submit"
               onClick={submitCorrectif}
             >
-              Soumettre la correction
+              {t('sondage.rating.correctif.submit')}
             </button>
           </div>
         </div>
       )}
 
-      <div className={verdictRowStyles} role="group" aria-label="Verdict" aria-keyshortcuts="j k l">
+      <div className={verdictRowStyles} role="group" aria-label={t('sondage.rating.aria.verdict')} aria-keyshortcuts="j k l">
         <button
           type="button"
           className={cx(verdictButtonBase, verdictBadStyles)}
-          aria-label={`Mauvaise définition pour l'indice « ${item.definition} »`}
+          aria-label={t('sondage.rating.aria.bad', { definition: item.definition })}
           aria-disabled={disabled || undefined}
           data-verdict="BAD"
           onClick={() => submit('BAD')}
         >
-          <span>Mauvaise</span>
+          <span>{t('sondage.rating.verdict.bad')}</span>
           <kbd className={kbdStyles}>J</kbd>
         </button>
         <button
           type="button"
           className={cx(verdictButtonBase, verdictSkipStyles)}
-          aria-label={`Passer l'indice « ${item.definition} »`}
+          aria-label={t('sondage.rating.aria.skip', { definition: item.definition })}
           aria-disabled={disabled || undefined}
           data-verdict="SKIP"
           onClick={() => submit('SKIP')}
         >
-          <span>Passer</span>
+          <span>{t('sondage.verdict.passer')}</span>
           <kbd className={kbdStyles}>K</kbd>
         </button>
         <button
           type="button"
           className={cx(verdictButtonBase, verdictGoodStyles)}
-          aria-label={`Bonne définition pour l'indice « ${item.definition} »`}
+          aria-label={t('sondage.rating.aria.good', { definition: item.definition })}
           aria-disabled={disabled || undefined}
           data-verdict="GOOD"
           onClick={() => submit('GOOD')}
         >
-          <span>Bonne</span>
+          <span>{t('sondage.rating.verdict.good')}</span>
           <kbd className={kbdStyles}>L</kbd>
         </button>
       </div>
@@ -512,7 +513,7 @@ export function RatingCard({
           data-testid="signaler"
           onClick={() => onSignaler(Math.max(0, Math.round(performance.now() - startedAtRef.current)))}
         >
-          <span aria-hidden="true">⚐</span> Signaler <kbd className={kbdStyles}>S</kbd>
+          <span aria-hidden="true">⚐</span> {t('sondage.rating.signaler')} <kbd className={kbdStyles}>S</kbd>
         </button>
       ) : null}
 

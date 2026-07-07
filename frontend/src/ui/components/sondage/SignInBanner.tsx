@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import type { AuthClient } from '@/application/auth';
+import { t } from '@/ui/i18n';
 
 const emailAuthEnabled = import.meta.env.VITE_FEATURE_EMAIL_AUTH === 'true';
 
@@ -85,12 +86,11 @@ export function SignInBanner({ authClient, onClick }: SignInBannerProps) {
   const href = returnTo ? authClient.signInUrl('google', returnTo) : '#';
 
   return (
-    <aside className={bannerStyles} role="note" aria-label="Invitation à se connecter">
+    <aside className={bannerStyles} role="note" aria-label={t('sondage.signIn.aria.banner')}>
       <p className={textStyles}>
-        Connectez-vous pour proposer vos propres indices et suivre vos contributions.
+        {t('sondage.signIn.text')}
         <span className={disclosureStyles}>
-          Votre adresse e-mail est alors enregistrée pour la facturation d’un
-          éventuel abonnement.
+          {t('sondage.signIn.disclosure')}
         </span>
       </p>
       <a
@@ -99,11 +99,11 @@ export function SignInBanner({ authClient, onClick }: SignInBannerProps) {
         aria-disabled={returnTo ? undefined : true}
         onClick={onClick}
       >
-        Se connecter
+        {t('sondage.signIn.cta')}
       </a>
       {emailAuthEnabled ? (
         <Link to="/connexion" search={{ returnTo: returnPath }} className={emailLinkStyles}>
-          … ou avec votre e-mail
+          {t('sondage.signIn.emailLink')}
         </Link>
       ) : null}
     </aside>

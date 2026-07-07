@@ -1,6 +1,6 @@
 import { css } from 'styled-system/css';
 import type { Campaign } from '@/application/survey';
-import { LOCK_BANNER_TEXT } from './labels';
+import { t } from '@/ui/i18n';
 
 const bannerStyles = css({
   display: 'flex',
@@ -28,7 +28,7 @@ export function LockBanner({ campaign }: LockBannerProps) {
       data-testid="sondage-lock-banner"
       data-batch-label={campaign?.batchLabel ?? ''}
     >
-      <span>{LOCK_BANNER_TEXT}</span>
+      <span>{t('sondage.lockBanner')}</span>
     </div>
   );
 }

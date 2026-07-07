@@ -10,6 +10,7 @@ import { GlossChipInput } from './GlossChipInput';
 import { PerceivedDifficultyPicker } from './PerceivedDifficultyPicker';
 import { StyleTooltip } from './StyleTooltip';
 import type { MetadataBand as Band } from './useMetadataBand';
+import { t } from '@/ui/i18n';
 
 type FieldKey = 'sens' | 'motscles';
 
@@ -303,15 +304,15 @@ export interface MetadataBandProps {
 }
 
 function badgeText(state: Band['state']): string {
-  if (state === 'saved') return '✓ Enregistré';
-  if (state === 'modified') return '✦ Modifié · à enregistrer';
-  return '✦ Pré-rempli · à vérifier';
+  if (state === 'saved') return t('sondage.band.badge.saved');
+  if (state === 'modified') return t('sondage.band.badge.modified');
+  return t('sondage.band.badge.pristine');
 }
 
 function primaryLabel(state: Band['state']): string {
-  if (state === 'saved') return 'Enregistré';
-  if (state === 'modified') return 'Enregistrer';
-  return 'Confirmer';
+  if (state === 'saved') return t('sondage.band.primary.saved');
+  if (state === 'modified') return t('sondage.band.primary.modified');
+  return t('sondage.band.primary.pristine');
 }
 
 export function MetadataBand({
@@ -360,7 +361,7 @@ export function MetadataBand({
     if (selectedSet.has(cat)) {
       if (selected.length <= 1) return;
       band.setCategories(selected.filter((c) => c !== cat));
-      setAnnounce(`${categorieLabel(cat)} retirée`);
+      setAnnounce(t('sondage.categorie.sr.removed', { label: categorieLabel(cat) }));
       return;
     }
     if (cat === EXCLUSIVE_CATEGORIE) {
@@ -368,8 +369,8 @@ export function MetadataBand({
       band.setCategories([cat]);
       setAnnounce(
         hadOthers
-          ? `${categorieLabel(cat)} sélectionnée, autres catégories retirées`
-          : `${categorieLabel(cat)} ajoutée`,
+          ? t('sondage.categorie.sr.exclusiveSelected', { label: categorieLabel(cat) })
+          : t('sondage.categorie.sr.added', { label: categorieLabel(cat) }),
       );
       return;
     }
@@ -379,8 +380,11 @@ export function MetadataBand({
     band.setCategories([...base, cat]);
     setAnnounce(
       hadExclusive
-        ? `${categorieLabel(cat)} ajoutée, ${categorieLabel(EXCLUSIVE_CATEGORIE)} retirée`
-        : `${categorieLabel(cat)} ajoutée`,
+        ? t('sondage.categorie.sr.addedExclusiveRemoved', {
+            label: categorieLabel(cat),
+            other: categorieLabel(EXCLUSIVE_CATEGORIE),
+          })
+        : t('sondage.categorie.sr.added', { label: categorieLabel(cat) }),
     );
   }
 
@@ -392,8 +396,8 @@ export function MetadataBand({
       <div className={headerRowStyles}>
         <span className={markerCircleStyles} aria-hidden="true">✦</span>
         <span className={overlineStyles}>
-          Métadonnées{' '}
-          <span className={overlineNoteStyles}>· optionnel, aide l’entraînement</span>
+          {t('sondage.band.overline')}{' '}
+          <span className={overlineNoteStyles}>{t('sondage.band.overlineNote')}</span>
         </span>
         <span className={badgeStyles} data-state={band.state} data-testid="band-status-badge">
           {badgeText(band.state)}
@@ -402,12 +406,12 @@ export function MetadataBand({
 
       <div className={bodyStyles}>
         <dl className={gridStyles}>
-          <dt className={keyStyles}>Nature</dt>
+          <dt className={keyStyles}>{t('sondage.field.nature')}</dt>
           <dd className={valStyles}>
             {/* data-editor-region exempts the native select from the band's Space-to-confirm key handler. */}
             <div data-editor-region="Nature">
               <select
-                aria-label="Nature grammaticale"
+                aria-label={t('sondage.aria.natureGrammaticale')}
                 className={posSelectStyles}
                 data-testid="band-pos-select"
                 value={pos}
@@ -421,12 +425,12 @@ export function MetadataBand({
             </div>
           </dd>
 
-          <dt className={keyStyles}>Style</dt>
+          <dt className={keyStyles}>{t('sondage.field.style')}</dt>
           <dd className={valStyles}>
             <StyleTooltip style={item.style} definition={item.definition} mot={item.mot} labelHidden />
           </dd>
 
-          <dt className={keyStyles}>Catégories</dt>
+          <dt className={keyStyles}>{t('sondage.field.categories')}</dt>
           <dd className={valStyles}>
             {/* Always-edit (like difficulty): chips stay live; data-editor-region keeps Space from confirming the band. */}
             <div
@@ -444,7 +448,9 @@ export function MetadataBand({
                       className={prefilled ? suggestedChipStyles : addedChipStyles}
                       data-categorie={cat}
                       data-prefilled={prefilled}
-                      aria-label={`Retirer ${categorieLabel(cat)}${prefilled ? ' (pré-remplie)' : ' (ajoutée)'}`}
+                      aria-label={prefilled
+                        ? t('sondage.band.aria.removeCategoriePrefilled', { label: categorieLabel(cat) })
+                        : t('sondage.band.aria.removeCategorieAdded', { label: categorieLabel(cat) })}
                       onClick={() => toggleCategory(cat)}
                     >
                       <span aria-hidden="true">{prefilled ? '✦' : '✓'}</span> {categorieLabel(cat)}
@@ -458,7 +464,7 @@ export function MetadataBand({
                 aria-expanded={pickerOpen}
                 onClick={() => setPickerOpen((o) => !o)}
               >
-                {pickerOpen ? '– Réduire les catégories ▴' : '+ Toutes les catégories ▾'}
+                {pickerOpen ? t('sondage.band.categories.collapse') : t('sondage.band.categories.expand')}
               </button>
               {pickerOpen ? (
                 <p className={chipRowStyles}>
@@ -471,7 +477,7 @@ export function MetadataBand({
                         className={optionChipStyles}
                         data-categorie={cat}
                         disabled={cat !== EXCLUSIVE_CATEGORIE && selected.length >= MAX_CATEGORIES}
-                        aria-label={`Ajouter ${categorieLabel(cat)}`}
+                        aria-label={t('sondage.band.aria.addCategorie', { label: categorieLabel(cat) })}
                         onClick={() => toggleCategory(cat)}
                       >
                         {categorieLabel(cat)}
@@ -486,26 +492,26 @@ export function MetadataBand({
             </div>
           </dd>
 
-          <dt className={keyStyles}>Sens</dt>
+          <dt className={keyStyles}>{t('sondage.field.sens')}</dt>
           <dd className={valStyles}>
             <InlineEditableRow
-              label="Sens visé par cette définition"
+              label={t('sondage.band.sens.label')}
               isOpen={openField === 'sens'}
               onOpen={() => open('sens')}
               onCommit={commitField}
               onCancel={cancelField}
-              triggerAriaLabel={sense ? `Modifier le sens — ${sense}` : 'Ajouter le sens — vide'}
+              triggerAriaLabel={sense ? t('sondage.band.sens.aria.edit', { sense }) : t('sondage.band.sens.aria.add')}
               empty={sense === ''}
               testId="band-edit-sens"
-              renderDisplay={() => (sense ? sense : '+ préciser le sens…')}
+              renderDisplay={() => (sense ? sense : t('sondage.band.sens.empty'))}
               renderEditor={() => (
                 <SenseInput
                   value={band.values.targetSense}
                   onChange={band.setSense}
                   suggestions={senseSuggestions}
-                  label="Sens visé par cette définition"
+                  label={t('sondage.band.sens.label')}
                   labelHidden
-                  placeholder="ex. saison entre l’été et l’hiver…"
+                  placeholder={t('sondage.band.sens.placeholder')}
                   bannedTerm={item.mot}
                   autoFocus
                 />
@@ -513,25 +519,25 @@ export function MetadataBand({
             />
           </dd>
 
-          <dt className={keyStyles}>Mots-clés</dt>
+          <dt className={keyStyles}>{t('sondage.field.motscles')}</dt>
           <dd className={valStyles}>
             <InlineEditableRow
-              label="Mots-clés"
+              label={t('sondage.field.motscles')}
               isOpen={openField === 'motscles'}
               onOpen={() => open('motscles')}
               onCommit={commitField}
               onCancel={cancelField}
-              triggerAriaLabel={subTags.length > 0 ? `Modifier les mots-clés — ${subTags.join(', ')}` : 'Ajouter des mots-clés — vide'}
+              triggerAriaLabel={subTags.length > 0 ? t('sondage.band.motscles.aria.edit', { tags: subTags.join(', ') }) : t('sondage.band.motscles.aria.add')}
               empty={subTags.length === 0}
               testId="band-edit-motscles"
-              renderDisplay={() => (subTags.length > 0 ? <span className={tagListStyles}>{subTags.join(', ')}</span> : '+ ajouter…')}
+              renderDisplay={() => (subTags.length > 0 ? <span className={tagListStyles}>{subTags.join(', ')}</span> : t('sondage.band.motscles.placeholder'))}
               renderEditor={() => (
                 <GlossChipInput
                   value={[...subTags]}
                   onChange={band.setSubTags}
                   suggestions={subTagSuggestions}
-                  ariaLabel="Mots-clés"
-                  placeholder="+ ajouter…"
+                  ariaLabel={t('sondage.field.motscles')}
+                  placeholder={t('sondage.band.motscles.placeholder')}
                   maxItems={12}
                   maxLength={40}
                   autoFocus
@@ -540,7 +546,7 @@ export function MetadataBand({
             />
           </dd>
 
-          <dt className={difficultyKeyStyles}>Difficulté</dt>
+          <dt className={difficultyKeyStyles}>{t('sondage.difficulte')}</dt>
           <dd className={difficultyValStyles}>
             <PerceivedDifficultyPicker
               value={band.values.perceivedDifficulty}
@@ -561,7 +567,7 @@ export function MetadataBand({
             onClick={band.primaryAction}
           >
             {primaryLabel(band.state)}
-            <kbd className={kbdStyles}>Espace</kbd>
+            <kbd className={kbdStyles}>{t('sondage.band.kbd.space')}</kbd>
           </button>
           <button
             type="button"
@@ -570,7 +576,7 @@ export function MetadataBand({
             disabled={band.state === 'pristine' && pos === item.pos}
             onClick={() => { setOpenField(null); band.reset(); onPosChange(item.pos); }}
           >
-            <span aria-hidden="true">↺</span> Réinitialiser
+            <span aria-hidden="true">↺</span> {t('sondage.band.reset')}
           </button>
         </div>
       </div>

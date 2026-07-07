@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
 import type { SurveyCorrectif, SurveyStyle } from '@/application/survey';
+import { t } from '@/ui/i18n';
 
 const wrapperStyles = css({
   display: 'flex',
@@ -82,11 +83,11 @@ export function CorrectifField({ value, onChange }: CorrectifFieldProps) {
 
   return (
     <div className={wrapperStyles}>
-      <span className={labelStyles}>Proposer une meilleure définition (optionnel)</span>
+      <span className={labelStyles}>{t('sondage.correctif.title')}</span>
       <div className={fieldRowStyles}>
         <div className={css({ display: 'flex', flexDirection: 'column', gap: 'xs' })}>
           <label htmlFor={textId} className={css({ fontSize: 'sm', color: 'fgMuted' })}>
-            Définition alternative
+            {t('sondage.correctif.altLabel')}
           </label>
           <input
             id={textId}
@@ -96,7 +97,7 @@ export function CorrectifField({ value, onChange }: CorrectifFieldProps) {
             defaultValue={value?.text ?? ''}
             maxLength={60}
             minLength={2}
-            placeholder="ex. animal domestique à moustaches"
+            placeholder={t('sondage.correctif.placeholder')}
             onInput={(event) => {
               broadcast(event.currentTarget.value, style);
             }}
@@ -104,7 +105,7 @@ export function CorrectifField({ value, onChange }: CorrectifFieldProps) {
         </div>
         <div className={css({ display: 'flex', flexDirection: 'column', gap: 'xs' })}>
           <label htmlFor={styleId} className={css({ fontSize: 'sm', color: 'fgMuted' })}>
-            Style proposé
+            {t('sondage.correctif.styleLabel')}
           </label>
           <select
             id={styleId}
@@ -123,7 +124,7 @@ export function CorrectifField({ value, onChange }: CorrectifFieldProps) {
         </div>
       </div>
       <p className={noticeStyles}>
-        Les corrections proposées rejoignent notre corpus comme indices anonymes, sans lien avec votre compte.
+        {t('sondage.correctif.notice')}
       </p>
     </div>
   );

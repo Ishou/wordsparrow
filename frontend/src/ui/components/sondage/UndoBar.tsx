@@ -1,4 +1,5 @@
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 
 const barStyles = css({
   display: 'flex',
@@ -44,7 +45,7 @@ export interface UndoBarProps {
 export function UndoBar({ onUndo, busy = false }: UndoBarProps) {
   return (
     <div className={barStyles} data-testid="undo-bar">
-      <p className={labelStyles} role="status">Action enregistrée.</p>
+      <p className={labelStyles} role="status">{t('sondage.undo.status')}</p>
       <button
         type="button"
         className={buttonStyles}
@@ -52,7 +53,7 @@ export function UndoBar({ onUndo, busy = false }: UndoBarProps) {
         disabled={busy}
         data-testid="undo-button"
       >
-        Annuler
+        {t('sondage.action.cancel')}
       </button>
     </div>
   );

@@ -13,4 +13,4 @@ export { UndoBar, type UndoBarProps } from './UndoBar';
 export { useCampaignStatus, type CampaignStatus, type CampaignStatusApi } from './useCampaignStatus';
 export { clearLemmaMetaCache, useLemmaMeta, type LemmaMetaState } from './useLemmaMeta';
 export { GlossChipInput, type GlossChipInputProps } from './GlossChipInput';
-export { categorieLabel, CATEGORIE_OPTIONS, LOCK_BANNER_TEXT, posLabel, styleLabel } from './labels';
+export { categorieLabel, CATEGORIE_OPTIONS, posLabel, styleLabel } from './labels';

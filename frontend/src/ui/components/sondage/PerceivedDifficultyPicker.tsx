@@ -3,6 +3,7 @@
 import { useId, useRef } from 'react';
 import { css, cx } from 'styled-system/css';
 import type { LikertScore } from '@/application/survey';
+import { t } from '@/ui/i18n';
 
 const fieldStyles = css({
   display: 'flex',
@@ -110,13 +111,13 @@ export function PerceivedDifficultyPicker({ value, onChange, announced, labelHid
     <div className={fieldStyles} data-testid="perceived-difficulty">
       {labelHidden ? null : (
         <div className={labelRowStyles}>
-          <span id={`${groupId}-label`} className={labelStyles}>Difficulté</span>
+          <span id={`${groupId}-label`} className={labelStyles}>{t('sondage.difficulte')}</span>
         </div>
       )}
       <div
         className={labelHidden ? cx(dotsStyles, dotsFlushStyles) : dotsStyles}
         role="radiogroup"
-        aria-label={labelHidden ? 'Difficulté' : undefined}
+        aria-label={labelHidden ? t('sondage.difficulte') : undefined}
         aria-labelledby={labelHidden ? undefined : `${groupId}-label`}
       >
         {SCORES.map((score, index) => {
@@ -129,7 +130,7 @@ export function PerceivedDifficultyPicker({ value, onChange, announced, labelHid
               type="button"
               role="radio"
               aria-checked={isSelected}
-              aria-label={`${score} sur 5`}
+              aria-label={t('sondage.difficulty.aria.scoreOfFive', { score })}
               tabIndex={index === activeIndex ? 0 : -1}
               className={dotStyles}
               data-filled={filled}
