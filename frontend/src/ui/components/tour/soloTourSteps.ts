@@ -1,4 +1,5 @@
 import { Tour } from '@ark-ui/react/tour';
+import { t } from '@/ui/i18n';
 
 // 6-step solo onboarding tour (5 on mobile — the zoom step is desktop-
 // only because GridZoomControls is hidden via `display: { base: 'none',
@@ -30,8 +31,8 @@ export interface BuildStepsOptions {
 }
 
 const NEXT_PREV_ACTIONS: Tour.StepAction[] = [
-  { label: 'Précédent', action: 'prev' },
-  { label: 'Suivant', action: 'next' },
+  { label: t('tour.action.prev'), action: 'prev' },
+  { label: t('tour.action.next'), action: 'next' },
 ];
 
 export function buildSoloTourSteps({
@@ -41,19 +42,17 @@ export function buildSoloTourSteps({
     {
       id: 'welcome',
       type: 'dialog',
-      title: 'Bienvenue',
-      description:
-        'Quelques secondes pour découvrir comment jouer aux mots fléchés. Tu peux passer le tour à tout moment.',
+      title: t('tour.welcome.title'),
+      description: t('tour.welcome.body'),
       placement: 'center',
       backdrop: true,
-      actions: [{ label: 'Suivant', action: 'next' }],
+      actions: [{ label: t('tour.action.next'), action: 'next' }],
     },
     {
       id: 'clue-cells',
       type: 'tooltip',
-      title: "Cases d'indices",
-      description:
-        'Les cases roses contiennent les définitions du mot à trouver.',
+      title: t('tour.clueCells.title'),
+      description: t('tour.clueCells.body'),
       target: () => queryFirst(DEFINITION_CELL_SELECTOR),
       placement: 'bottom',
       arrow: true,
@@ -63,9 +62,8 @@ export function buildSoloTourSteps({
     {
       id: 'arrows',
       type: 'tooltip',
-      title: 'Suis les flèches',
-      description:
-        'Une petite flèche indique la direction et la première case de la réponse — → pour les mots horizontaux, ↓ pour les verticaux.',
+      title: t('tour.arrows.title'),
+      description: t('tour.arrows.body'),
       target: () => queryFirst(DEFINITION_CELL_SELECTOR),
       placement: 'bottom',
       arrow: true,
@@ -75,9 +73,8 @@ export function buildSoloTourSteps({
     {
       id: 'hints',
       type: 'tooltip',
-      title: 'Coup de pouce',
-      description:
-        "Bloqué·e sur un mot ? Le bouton d'indice révèle le mot entier sur lequel tu es — un nombre limité par grille.",
+      title: t('tour.hints.title'),
+      description: t('tour.hints.body'),
       target: () => queryFirst(HINT_BUTTON_SELECTOR),
       placement: 'bottom',
       arrow: true,
@@ -90,9 +87,8 @@ export function buildSoloTourSteps({
     steps.push({
       id: 'zoom',
       type: 'tooltip',
-      title: 'Ajuster le zoom',
-      description:
-        'Trois boutons sous la grille pour zoomer ou revenir à la vue de départ. La molette de la souris ajuste aussi le zoom — pratique pour confirmer une lettre serrée.',
+      title: t('tour.zoom.title'),
+      description: t('tour.zoom.body'),
       target: () => queryFirst(ZOOM_CONTROLS_SELECTOR),
       placement: 'top',
       arrow: true,
@@ -104,16 +100,15 @@ export function buildSoloTourSteps({
   steps.push({
     id: 'validation',
     type: 'tooltip',
-    title: 'Aperçu et validation',
-    description:
-      "L'aperçu de la grille suit ton avancée et montre les cases déjà remplies. En solo, rien ne se valide au fil de la saisie : une fois la grille complète, elle est vérifiée d'un coup, juste ou non.",
+    title: t('tour.validation.title'),
+    description: t('tour.validation.body'),
     target: () => queryFirst(MINIMAP_SELECTOR),
     placement: 'top',
     arrow: true,
     backdrop: true,
     actions: [
-      { label: 'Précédent', action: 'prev' },
-      { label: 'Terminer', action: 'dismiss' },
+      { label: t('tour.action.prev'), action: 'prev' },
+      { label: t('tour.action.finish'), action: 'dismiss' },
     ],
   });
 

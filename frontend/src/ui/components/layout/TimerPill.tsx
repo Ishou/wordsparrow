@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
 import { ClockIcon } from '@/ui/components/icons';
+import { t } from '@/ui/i18n';
 
 // Toolbar timer pill — ADR-0005 §6. Sage at 12 % alpha background +
 // sage text, clock icon, tabular numerals, pill-shaped.
@@ -111,7 +112,7 @@ export function TimerPill({ startedAt, frozenAtMs, fixedElapsedMs }: TimerPillPr
       className={pillStyles}
       role="timer"
       aria-live="off"
-      aria-label="temps écoulé"
+      aria-label={t('timerPill.aria.label')}
       data-testid="puzzle-timer"
     >
       <ClockIcon />

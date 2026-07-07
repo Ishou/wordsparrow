@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
 import type { SurveyClient, SurveyContribution } from '@/application/survey';
+import { t } from '@/ui/i18n';
 
 const listStyles = css({
   listStyle: 'none',
@@ -55,13 +56,13 @@ export function MyContributions({ surveyClient }: MyContributionsProps) {
   }, [surveyClient]);
 
   if (hasError) {
-    return <p className={statusStyles} role="alert">Impossible de charger vos contributions.</p>;
+    return <p className={statusStyles} role="alert">{t('compte.contributions.error')}</p>;
   }
   if (items === null) {
-    return <p className={statusStyles} role="status">Chargement…</p>;
+    return <p className={statusStyles} role="status">{t('compte.contributions.loading')}</p>;
   }
   if (items.length === 0) {
-    return <p className={statusStyles}>Vous n&apos;avez encore proposé aucune correction.</p>;
+    return <p className={statusStyles}>{t('compte.contributions.empty')}</p>;
   }
 
   return (
@@ -69,12 +70,12 @@ export function MyContributions({ surveyClient }: MyContributionsProps) {
       {items.map((c) => (
         <li key={c.itemId} className={itemStyles}>
           <strong>{c.mot}</strong> — « {c.definition} » ({c.categorie}, {c.style})
-          — couverture : {c.kCoverage}
+          — {t('compte.contributions.coverage')} {c.kCoverage}
           {c.optedOut ? (
             <>
               {' '}
               <em className={optedOutStyles}>
-                (sera supprimée en cas de suppression du compte)
+                {t('compte.contributions.optedOut')}
               </em>
             </>
           ) : null}

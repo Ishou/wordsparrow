@@ -6,6 +6,7 @@ import { GridMinimap } from '@/ui/components/grid/GridMinimap';
 import type { FocusedCell } from '@/ui/components/grid/focusedCell';
 import type { Clue, Direction } from '@/ui/components/grid/useGridNavigation';
 import { HintIcon } from '@/ui/components/icons';
+import { t } from '@/ui/i18n';
 import { AZERTY_ROWS } from './azertyLayout';
 import { ClueBanner } from './ClueBanner';
 import { DirectionArrowIcon } from './DirectionArrowIcon';
@@ -175,7 +176,7 @@ export function MobileKeyboard(props: MobileKeyboardProps) {
   const lettersInert = activeClue === null;
 
   return (
-    <div ref={panelRef} className={panel} role="group" aria-label="Clavier mots fléchés">
+    <div ref={panelRef} className={panel} role="group" aria-label={t('keyboard.aria.panel')}>
       <ClueBanner
         clue={activeClue}
         alternateClue={alternateClue}
@@ -204,7 +205,7 @@ export function MobileKeyboard(props: MobileKeyboardProps) {
         <div className={navCell}>
           <KeyboardKey
             label={<TabKeyIcon direction="previous" />}
-            ariaLabel="Indice précédent"
+            ariaLabel={t('clueRail.aria.prev')}
             variant="action"
             onPress={onPrevClue}
           />
@@ -212,7 +213,7 @@ export function MobileKeyboard(props: MobileKeyboardProps) {
         <div className={navCell}>
           <KeyboardKey
             label={<DirectionArrowIcon direction="up" />}
-            ariaLabel="Curseur haut"
+            ariaLabel={t('keyboard.aria.cursorUp')}
             variant="action"
             onPress={() => onMoveCursor('up')}
           />
@@ -220,7 +221,7 @@ export function MobileKeyboard(props: MobileKeyboardProps) {
         <div className={navCell}>
           <KeyboardKey
             label={<TabKeyIcon direction="next" />}
-            ariaLabel="Indice suivant"
+            ariaLabel={t('clueRail.aria.next')}
             variant="action"
             onPress={onNextClue}
           />
@@ -228,7 +229,7 @@ export function MobileKeyboard(props: MobileKeyboardProps) {
         <div className={navCell}>
           <KeyboardKey
             label={<DirectionArrowIcon direction="left" />}
-            ariaLabel="Curseur gauche"
+            ariaLabel={t('keyboard.aria.cursorLeft')}
             variant="action"
             onPress={() => onMoveCursor('left')}
           />
@@ -236,7 +237,7 @@ export function MobileKeyboard(props: MobileKeyboardProps) {
         <div className={navCell}>
           <KeyboardKey
             label={<DirectionArrowIcon direction="down" />}
-            ariaLabel="Curseur bas"
+            ariaLabel={t('keyboard.aria.cursorDown')}
             variant="action"
             onPress={() => onMoveCursor('down')}
           />
@@ -244,7 +245,7 @@ export function MobileKeyboard(props: MobileKeyboardProps) {
         <div className={navCell}>
           <KeyboardKey
             label={<DirectionArrowIcon direction="right" />}
-            ariaLabel="Curseur droite"
+            ariaLabel={t('keyboard.aria.cursorRight')}
             variant="action"
             onPress={() => onMoveCursor('right')}
           />
@@ -256,7 +257,7 @@ export function MobileKeyboard(props: MobileKeyboardProps) {
             <KeyboardKey
               key={ch}
               label={ch}
-              ariaLabel={`Lettre ${ch}`}
+              ariaLabel={t('keyboard.aria.letter', { letter: ch })}
               disabled={lettersInert}
               onPress={() => onLetter(ch)}
             />
@@ -269,14 +270,14 @@ export function MobileKeyboard(props: MobileKeyboardProps) {
                     <HintIcon />
                   </span>
                 }
-                ariaLabel={`Demander un indice, ${hintRemaining} restants`}
+                ariaLabel={t('keyboard.aria.hint', { remaining: hintRemaining })}
                 variant="action"
                 disabled={hintDisabled}
                 onPress={handleRequestHint}
               />
               <KeyboardKey
                 label="⌫"
-                ariaLabel="Effacer"
+                ariaLabel={t('keyboard.aria.backspace')}
                 variant="action"
                 onPress={onBackspace}
               />

@@ -1,6 +1,7 @@
 import { Portal } from '@ark-ui/react/portal';
 import { Tour, type UseTourReturn } from '@ark-ui/react/tour';
 import { Button } from '@/ui/components/primitives';
+import { t } from '@/ui/i18n';
 import { PaginationDots } from './PaginationDots';
 import {
   actionTriggerStyles,
@@ -72,12 +73,12 @@ export function SoloTour({ tour }: SoloTourProps) {
               @ark-ui/react's factory.
             */}
             <Tour.ActionTrigger
-              action={{ label: 'Passer le tour', action: 'dismiss' }}
-              aria-label="Passer le tour"
+              action={{ label: t('tour.skip'), action: 'dismiss' }}
+              aria-label={t('tour.skip')}
               asChild
             >
               <Button variant="ghost" className={actionTriggerStyles}>
-                Passer le tour
+                {t('tour.skip')}
               </Button>
             </Tour.ActionTrigger>
             <PaginationDots current={tour.stepIndex} total={tour.totalSteps} />

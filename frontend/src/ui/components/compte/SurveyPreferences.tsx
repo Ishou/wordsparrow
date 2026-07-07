@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { css } from 'styled-system/css';
 import { messageForApiError } from '@/application/errors';
 import type { SurveyClient } from '@/application/survey';
+import { t } from '@/ui/i18n';
 
 const fieldsetStyles = css({
   border: 'none',
@@ -61,7 +62,7 @@ export function SurveyPreferences({
     setDeleteOnErasure(next);
     try {
       await surveyClient.patchPreferences({ deleteProposedOnErasure: next });
-      setSavedAt('Enregistré.');
+      setSavedAt(t('compte.survey.saved'));
     } catch (cause) {
       setError(messageForApiError(cause));
       // Roll back the optimistic UI.
@@ -73,7 +74,7 @@ export function SurveyPreferences({
 
   return (
     <fieldset className={fieldsetStyles}>
-      <legend className={legendStyles}>Confidentialité du sondage</legend>
+      <legend className={legendStyles}>{t('compte.survey.legend')}</legend>
       <label className={rowStyles}>
         <input
           type="checkbox"
@@ -81,9 +82,7 @@ export function SurveyPreferences({
           disabled={saving}
           onChange={(event) => { void save(event.target.checked); }}
         />
-        <span>
-          Supprimer aussi mes corrections proposées en cas de suppression de mon compte.
-        </span>
+        <span>{t('compte.survey.deleteOnErasure')}</span>
       </label>
       {error !== null ? (
         <p className={alertStyles} role="alert">{error}</p>

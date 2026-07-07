@@ -1,6 +1,7 @@
 import { Tour, useTour } from '@ark-ui/react/tour';
 import { useEffect, useMemo, useRef } from 'react';
 import type { TourSeenStore } from '@/application/tour/TourSeenStore';
+import { t } from '@/ui/i18n';
 import { buildSoloTourSteps } from './soloTourSteps';
 
 // `md` breakpoint mirror of `panda.config.ts` — defaults to Panda's
@@ -90,13 +91,14 @@ export function useSoloTour({
     spotlightOffset: { x: 6, y: 6 },
     spotlightRadius: 10,
     translations: {
-      skip: 'Passer le tour',
-      nextStep: 'Suivant',
-      prevStep: 'Précédent',
-      close: 'Fermer',
+      skip: t('tour.skip'),
+      nextStep: t('tour.action.next'),
+      prevStep: t('tour.action.prev'),
+      close: t('tour.action.close'),
       // zag passes `current` as a 0-indexed step number; the user-facing
       // copy reads naturally as 1-indexed.
-      progressText: ({ current, total }) => `Étape ${current + 1} sur ${total}`,
+      progressText: ({ current, total }) =>
+        t('tour.progress', { current: current + 1, total }),
     },
     onStatusChange: (details: Tour.StatusChangeDetails) => {
       if (
