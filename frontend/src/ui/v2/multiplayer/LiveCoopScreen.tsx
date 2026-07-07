@@ -279,13 +279,13 @@ export function LiveCoopScreen({
   useEffect(() => {
     if (isCompleted && !announcedSolvedRef.current) {
       announcedSolvedRef.current = true;
-      announcer.say('Grille résolue !');
+      announcer.say(t('v2.multiplayer.coop.sr.solved'));
     }
   }, [isCompleted, announcer]);
 
   // ADR-0098 §6 / ADR-0050: the claim banner is a visual overlay, so announce the ownerless transition for screen readers.
   useEffect(() => {
-    if (isOwnerless) announcer.say('Cette partie n’a plus d’hôte');
+    if (isOwnerless) announcer.say(t('v2.multiplayer.coop.ownerless'));
   }, [isOwnerless, announcer]);
 
   const clue = nav.currentClue;
@@ -334,14 +334,14 @@ export function LiveCoopScreen({
       ) : (
         <header className={header}>
           <div className={headerBar}>
-            <button type="button" className={iconBtn} onClick={onLeave} aria-label="Quitter la partie">
+            <button type="button" className={iconBtn} onClick={onLeave} aria-label={t('v2.multiplayer.coop.aria.leaveGame')}>
               <CaretLeft aria-hidden="true" weight="bold" />
             </button>
             <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
             <span className={headerSpacer} />
             <LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />
             {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
-            <button type="button" className={iconBtn} onClick={onLeave} aria-label="Quitter">
+            <button type="button" className={iconBtn} onClick={onLeave} aria-label={t('v2.multiplayer.leave')}>
               <SignOut aria-hidden="true" weight="bold" />
             </button>
           </div>
@@ -358,9 +358,9 @@ export function LiveCoopScreen({
       {onClaim && isOwnerless ? (
         <div className={claimBanner}>
           <span className={claimPill}>
-            Cette partie n’a plus d’hôte
+            {t('v2.multiplayer.coop.ownerless')}
             <button type="button" className={claimBtn} onClick={handleClaim} disabled={claiming} aria-busy={claiming || undefined}>
-              {claiming ? 'Reprise…' : 'Reprendre la partie'}
+              {claiming ? t('v2.multiplayer.coop.claiming') : t('v2.multiplayer.coop.claim')}
             </button>
           </span>
         </div>

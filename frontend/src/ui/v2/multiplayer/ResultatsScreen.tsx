@@ -1,5 +1,6 @@
 import { css } from 'styled-system/css';
 import type { Player, SessionId } from '@/domain/game';
+import { t } from '@/ui/i18n';
 import { sparrowCelebrationScene } from '@/ui/v2/SparrowScenes';
 import { formatClock } from '@/ui/lib/formatClock';
 import { PlayerAvatar } from './PlayerAvatar';
@@ -106,22 +107,22 @@ export function ResultatsScreen({
   return (
     <div className={wrap}>
       <div className={art}>{sparrowCelebrationScene()}</div>
-      <h1 className={titleCss}>Résolue !</h1>
-      <p className={subCss}>Grille bouclée ensemble. Belle équipe !</p>
+      <h1 className={titleCss}>{t('v2.multiplayer.resultats.title')}</h1>
+      <p className={subCss}>{t('v2.multiplayer.resultats.subtitle')}</p>
 
-      <section className={timeCard} aria-label="Temps final">
-        <p className={timeLabel}>Temps</p>
-        <p className={timeValue} aria-label={`Temps final ${time}`}>{time}</p>
+      <section className={timeCard} aria-label={t('v2.multiplayer.resultats.aria.timeSection')}>
+        <p className={timeLabel}>{t('v2.multiplayer.resultats.timeLabel')}</p>
+        <p className={timeValue} aria-label={t('v2.multiplayer.resultats.aria.finalTime', { time })}>{time}</p>
       </section>
 
-      <section className={contribCard} aria-label="Participants">
-        <h2 className={contribTitle}>Avec ({players.length})</h2>
+      <section className={contribCard} aria-label={t('v2.multiplayer.resultats.aria.participants')}>
+        <h2 className={contribTitle}>{t('v2.multiplayer.resultats.withCount', { total: players.length })}</h2>
         <ul className={list}>
           {players.map((p) => (
             <li key={p.sessionId} className={playerRow}>
               <PlayerAvatar sessionId={p.sessionId} pseudonym={p.pseudonym} size={34} />
               <span className={playerName}>{p.pseudonym}</span>
-              {p.sessionId === ownerSessionId ? <span className={badge}>Hôte</span> : null}
+              {p.sessionId === ownerSessionId ? <span className={badge}>{t('v2.multiplayer.host.badge')}</span> : null}
             </li>
           ))}
         </ul>
@@ -134,10 +135,10 @@ export function ResultatsScreen({
         disabled={isReplaying}
         aria-busy={isReplaying || undefined}
       >
-        {isReplaying ? 'Création…' : 'Rejouer'}
+        {isReplaying ? t('v2.multiplayer.creating') : t('lobby.endGame.playAgain')}
       </button>
       <button type="button" className={homeButton} onClick={onHome}>
-        Retour à l&apos;accueil
+        {t('v2.multiplayer.resultats.home')}
       </button>
     </div>
   );

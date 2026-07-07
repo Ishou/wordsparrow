@@ -1,5 +1,6 @@
 import { css, cx } from 'styled-system/css';
 import type { Player, SessionId } from '@/domain/game';
+import { t } from '@/ui/i18n';
 import { PlayerAvatar } from './PlayerAvatar';
 
 // ADR-0072 compact co-op roster: dumb — takes the player list + derived presence sets, renders an avatar + status dot per peer.
@@ -56,10 +57,10 @@ function statusFor(
   idle: ReadonlySet<SessionId>,
   lost: ReadonlySet<SessionId>,
 ): { cls: string; label: string } {
-  if (lost.has(sessionId)) return { cls: dotLost, label: 'déconnecté' };
-  if (typing.has(sessionId)) return { cls: dotTyping, label: 'en train d’écrire' };
-  if (idle.has(sessionId)) return { cls: dotIdle, label: 'inactif' };
-  return { cls: dotConnected, label: 'en ligne' };
+  if (lost.has(sessionId)) return { cls: dotLost, label: t('lobby.playerList.aria.disconnected') };
+  if (typing.has(sessionId)) return { cls: dotTyping, label: t('v2.multiplayer.presence.typing') };
+  if (idle.has(sessionId)) return { cls: dotIdle, label: t('lobby.playerList.aria.idle') };
+  return { cls: dotConnected, label: t('v2.multiplayer.presence.online') };
 }
 
 export function PlayerStrip({
@@ -70,24 +71,24 @@ export function PlayerStrip({
   disconnectingSessionIds,
 }: PlayerStripProps) {
   return (
-    <ul className={strip} aria-label="Joueurs">
+    <ul className={strip} aria-label={t('v2.multiplayer.presence.aria.players')}>
       {players.map((p) => {
         const isSelf = p.sessionId === currentSessionId;
         // Self always reads "en ligne" — peer presence sets exclude the local session.
         const status = isSelf
-          ? { cls: dotConnected, label: 'en ligne' }
+          ? { cls: dotConnected, label: t('v2.multiplayer.presence.online') }
           : statusFor(p.sessionId, typingSessionIds, idleSessionIds, disconnectingSessionIds);
         return (
           <li key={p.sessionId} className={chip}>
             <PlayerAvatar sessionId={p.sessionId} pseudonym={p.pseudonym} size={24} />
             <span className={name}>
               {p.pseudonym}
-              {isSelf ? ' (toi)' : ''}
+              {isSelf ? t('v2.multiplayer.presence.youSuffix') : ''}
             </span>
             <span
               className={cx(dot, status.cls)}
               role="img"
-              aria-label={`${p.pseudonym} : ${status.label}`}
+              aria-label={t('v2.multiplayer.presence.aria.status', { name: p.pseudonym, status: status.label })}
             />
           </li>
         );

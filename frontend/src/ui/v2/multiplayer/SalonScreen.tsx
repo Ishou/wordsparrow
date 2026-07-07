@@ -9,6 +9,7 @@ import {
   type Pseudonym,
   type SessionId,
 } from '@/domain/game';
+import { t } from '@/ui/i18n';
 import { PlayerAvatar } from './PlayerAvatar';
 import { PhoneShell } from '@/ui/v2/PhoneShell';
 import { BackHeader } from '@/ui/v2/BackHeader';
@@ -241,12 +242,12 @@ const leaveButton = css({
 function connStateLabel(state: ConnectionState): { cls: string; label: string } {
   switch (state) {
     case 'connected':
-      return { cls: connDotOnline, label: 'connecté' };
+      return { cls: connDotOnline, label: t('v2.multiplayer.presence.connected') };
     case 'reconnecting':
     case 'connecting':
-      return { cls: connDotIdle, label: 'connexion' };
+      return { cls: connDotIdle, label: t('v2.multiplayer.presence.connecting') };
     case 'disconnected':
-      return { cls: connDotLost, label: 'déconnecté' };
+      return { cls: connDotLost, label: t('lobby.playerList.aria.disconnected') };
   }
 }
 
@@ -298,12 +299,12 @@ export function SalonScreen({
 
   return (
     <PhoneShell header={<BackHeader to="/" />}>
-      <h1 className={title}>Partie</h1>
-      <p className={lead}>Invite tes amis, puis lance la grille ensemble.</p>
+      <h1 className={title}>{t('v2.multiplayer.salon.title')}</h1>
+      <p className={lead}>{t('v2.multiplayer.salon.lead')}</p>
 
       {lobby.code != null ? (
-        <section className={card} aria-label="Code de partie">
-          <h2 className={cardTitle}>Code de partie</h2>
+        <section className={card} aria-label={t('lobby.waitingRoom.codeLabel')}>
+          <h2 className={cardTitle}>{t('lobby.waitingRoom.codeLabel')}</h2>
           <div className={codeRow}>
             <p className={codeRevealed ? codeText : cx(codeText, codeMasked)}>
               {codeRevealed ? lobby.code : '•'.repeat(lobby.code.length)}
@@ -313,7 +314,7 @@ export function SalonScreen({
               className={revealButton}
               onClick={() => setCodeRevealed((v) => !v)}
               aria-pressed={codeRevealed}
-              aria-label={codeRevealed ? 'Masquer le code' : 'Afficher le code'}
+              aria-label={codeRevealed ? t('lobby.aria.hideCode') : t('lobby.aria.showCode')}
             >
               {codeRevealed ? (
                 <EyeSlash size={20} weight="bold" aria-hidden="true" />
@@ -325,7 +326,7 @@ export function SalonScreen({
           <div className={cx(codeRow, css({ marginTop: '14px', flexWrap: 'wrap' }))}>
             <button type="button" className={pillButton} onClick={handleCopy}>
               <Copy size={16} weight="bold" aria-hidden="true" />
-              {canNativeShare() ? 'Partager le lien' : 'Copier le lien'}
+              {canNativeShare() ? t('lobby.waitingRoom.share') : t('lobby.waitingRoom.copy')}
             </button>
             {isOwner ? (
               <button
@@ -336,18 +337,18 @@ export function SalonScreen({
                 aria-busy={isRotating || undefined}
               >
                 <ArrowsClockwise size={16} weight="bold" aria-hidden="true" />
-                {isRotating ? 'Nouveau code…' : 'Nouveau code'}
+                {isRotating ? t('v2.multiplayer.salon.rotating') : t('v2.multiplayer.salon.rotate')}
               </button>
             ) : null}
             {justCopied ? (
-              <span role="status" aria-live="polite" className={copyFeedback}>Lien copié !</span>
+              <span role="status" aria-live="polite" className={copyFeedback}>{t('lobby.waitingRoom.copied')}</span>
             ) : null}
           </div>
         </section>
       ) : null}
 
-      <section className={card} aria-label="Joueurs">
-        <h2 className={cardTitle}>Joueurs ({lobby.players.length}/{MAX_PLAYERS})</h2>
+      <section className={card} aria-label={t('v2.multiplayer.presence.aria.players')}>
+        <h2 className={cardTitle}>{t('lobby.waitingRoom.playersHeading', { current: lobby.players.length, max: MAX_PLAYERS })}</h2>
         <ul className={list}>
           {lobby.players.map((p) => {
             const conn = connStateLabel(p.sessionId === sessionId ? connectionState : 'connected');
@@ -356,13 +357,13 @@ export function SalonScreen({
                 <PlayerAvatar sessionId={p.sessionId} pseudonym={p.pseudonym} size={34} />
                 <span className={playerName}>
                   {p.pseudonym}
-                  {p.sessionId === sessionId ? ' (toi)' : ''}
+                  {p.sessionId === sessionId ? t('v2.multiplayer.presence.youSuffix') : ''}
                 </span>
-                {p.sessionId === lobby.ownerSessionId ? <span className={badge}>Hôte</span> : null}
+                {p.sessionId === lobby.ownerSessionId ? <span className={badge}>{t('v2.multiplayer.host.badge')}</span> : null}
                 <span
                   className={cx(connDot, conn.cls)}
                   role="img"
-                  aria-label={`${p.pseudonym} : ${conn.label}`}
+                  aria-label={t('v2.multiplayer.presence.aria.status', { name: p.pseudonym, status: conn.label })}
                 />
               </li>
             );
@@ -374,7 +375,7 @@ export function SalonScreen({
             <>
               <input
                 className={fieldInput}
-                aria-label="Ton pseudonyme"
+                aria-label={t('v2.multiplayer.salon.aria.pseudonymField')}
                 value={draft}
                 maxLength={MAX_PSEUDONYM_LENGTH}
                 autoFocus
@@ -396,16 +397,16 @@ export function SalonScreen({
               className={renameButton}
               onClick={() => { setDraft(me.pseudonym); onClearPseudonymError?.(); setEditing(true); }}
             >
-              Changer mon pseudo
+              {t('v2.multiplayer.salon.changePseudo')}
             </button>
           )
         ) : null}
       </section>
 
       {isOwner ? (
-        <section className={card} aria-label="Taille de la grille">
-          <h2 className={cardTitle}>Taille de la grille</h2>
-          <div className={sizeGroup} role="group" aria-label="Taille de la grille">
+        <section className={card} aria-label={t('lobby.waitingRoom.gridSizeLabel')}>
+          <h2 className={cardTitle}>{t('lobby.waitingRoom.gridSizeLabel')}</h2>
+          <div className={sizeGroup} role="group" aria-label={t('lobby.waitingRoom.gridSizeLabel')}>
             {GRID_SIZE_OPTIONS.map((o) => (
               <button
                 key={o.value}
@@ -429,13 +430,13 @@ export function SalonScreen({
           disabled={isStarting}
           aria-busy={isStarting || undefined}
         >
-          {isStarting ? 'Démarrage…' : 'Jouer'}
+          {isStarting ? t('lobby.waitingRoom.starting') : t('v2.multiplayer.play')}
         </button>
       ) : null}
 
       <button type="button" className={leaveButton} onClick={onLeave}>
         <SignOut size={17} weight="bold" aria-hidden="true" />
-        Quitter
+        {t('v2.multiplayer.leave')}
       </button>
     </PhoneShell>
   );
