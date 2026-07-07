@@ -12,6 +12,7 @@ import com.bliss.game.application.usecases.Samples.bob
 import com.bliss.game.application.usecases.Samples.sessionA
 import com.bliss.game.application.usecases.Samples.sessionB
 import com.bliss.game.application.usecases.Samples.sessionC
+import com.bliss.game.application.usecases.Samples.userA
 import com.bliss.game.domain.GameSession
 import com.bliss.game.domain.GridConfig
 import com.bliss.game.domain.Lobby
@@ -42,9 +43,10 @@ import java.time.Instant
 class LobbyGarbageCollectorTest {
     private val waitingTtl: Duration = Duration.ofHours(24)
     private val completedTtl: Duration = Duration.ofDays(7)
+    private val ownerlessTtl: Duration = Duration.ofDays(7)
     private val sweepInterval: Duration = Duration.ofMinutes(5)
 
-    private fun harness(): GcHarness = GcHarness(waitingTtl, completedTtl, sweepInterval)
+    private fun harness(): GcHarness = GcHarness(waitingTtl, completedTtl, ownerlessTtl, sweepInterval)
 
     @Test
     fun `sweepOnce evicts a WAITING lobby older than the waiting TTL`() =
@@ -90,14 +92,45 @@ class LobbyGarbageCollectorTest {
         }
 
     @Test
-    fun `sweepOnce never evicts an IN_PROGRESS lobby even past every TTL`() =
+    fun `sweepOnce never evicts an owned IN_PROGRESS lobby even past every TTL`() =
+        runTest {
+            val h = harness()
+            val now = h.clock.now()
+            val id = LobbyId.generate()
+            val owned = inProgressLobby(id, ownerUserId = userA, lastActivityAt = now)
+            h.repo.save(owned)
+
+            // Beyond every idle window: waitingTtl (24h), completedTtl (7d) AND ownerlessTtl (7d).
+            h.clock.advance(completedTtl.plus(Duration.ofDays(30)))
+            val evicted = h.gc.sweepOnce()
+
+            assertThat(evicted).isEqualTo(0)
+            assertThat(h.repo.findById(id)).isNotNull()
+        }
+
+    @Test
+    fun `sweepOnce evicts an ownerless IN_PROGRESS lobby idle beyond the ownerless TTL`() =
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice).value
             h.start(lobby.id, sessionA).requireSuccess()
 
-            // Beyond both waitingTtl (24h) AND completedTtl (7d).
-            h.clock.advance(completedTtl.plus(Duration.ofDays(30)))
+            // An anonymous-created game has ownerUserId == null, so it is ownerless (ADR-0098 §4).
+            h.clock.advance(ownerlessTtl.plusMinutes(1))
+            val evicted = h.gc.sweepOnce()
+
+            assertThat(evicted).isEqualTo(1)
+            assertThat(h.repo.findById(lobby.id)).isNull()
+        }
+
+    @Test
+    fun `sweepOnce keeps a fresh ownerless IN_PROGRESS lobby within the ownerless TTL`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice).value
+            h.start(lobby.id, sessionA).requireSuccess()
+
+            h.clock.advance(ownerlessTtl.minusMinutes(1))
             val evicted = h.gc.sweepOnce()
 
             assertThat(evicted).isEqualTo(0)
@@ -319,11 +352,36 @@ class LobbyGarbageCollectorTest {
             assertThat(job.isCompleted).isEqualTo(true)
             supervisor.cancel()
         }
+
+    private fun inProgressLobby(
+        id: LobbyId,
+        ownerUserId: UserId?,
+        lastActivityAt: Instant,
+    ): Lobby =
+        Lobby(
+            id = id,
+            code = LobbyCode.generate(),
+            ownerSessionId = sessionA,
+            ownerUserId = ownerUserId,
+            state = LobbyLifecycleState.IN_PROGRESS,
+            gridConfig = GridConfig(5, 5),
+            title = null,
+            players = linkedMapOf(sessionA to Player(sessionA, alice, lastActivityAt, userId = ownerUserId)),
+            game =
+                GameSession(
+                    puzzle = Samples.puzzle(),
+                    entries = emptyMap(),
+                    startedAt = lastActivityAt,
+                    completedAt = null,
+                ),
+            lastActivityAt = lastActivityAt,
+        )
 }
 
 internal class GcHarness(
     waitingTtl: Duration,
     completedTtl: Duration,
+    ownerlessTtl: Duration,
     sweepInterval: Duration,
 ) {
     val clock = FakeClock()
@@ -338,6 +396,7 @@ internal class GcHarness(
             clock = clock,
             waitingTtl = waitingTtl,
             completedTtl = completedTtl,
+            ownerlessTtl = ownerlessTtl,
             sweepInterval = sweepInterval,
         )
 

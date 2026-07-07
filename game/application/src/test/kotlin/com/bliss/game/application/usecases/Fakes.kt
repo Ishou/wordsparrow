@@ -123,6 +123,17 @@ class InMemoryLobbyRepository : LobbyRepository {
                 .toList()
         }
 
+    // ADR-0098 §4: ownerless non-terminal lobbies idle past the cutoff -- the relinquished/RGPD-vacated sweep.
+    override suspend fun findIdleOwnerless(cutoff: Instant): List<Lobby> =
+        storeLock.withLock {
+            store.values
+                .filter { lobby ->
+                    lobby.ownerUserId == null &&
+                        lobby.state != LobbyLifecycleState.COMPLETED &&
+                        !lobby.lastActivityAt.isAfter(cutoff)
+                }.toList()
+        }
+
     override suspend fun findIdleCompleted(cutoff: Instant): List<Lobby> =
         storeLock.withLock {
             store.values
