@@ -226,6 +226,20 @@ sealed class ServerToClientFrame {
     ) : ServerToClientFrame()
 
     /**
+     * A lobby's owner changed (ADR-0098 §2). Both `newOwner*` fields are non-null on a claim and
+     * both null when the lobby became ownerless via relinquish or RGPD vacate. Mirrors
+     * `OwnershipChangedPayload` in `game/api/asyncapi.yaml`; peers toggle owner-gated affordances
+     * and surface the "Reprendre la partie" claim action off this frame.
+     */
+    @Serializable
+    @SerialName("ownershipChanged")
+    data class OwnershipChanged(
+        val lobbyId: String,
+        val newOwnerSessionId: String?,
+        val newOwnerUserId: String?,
+    ) : ServerToClientFrame()
+
+    /**
      * RFC 7807-shaped error frame. Wire field is `errorType` (NOT `type`) so
      * the kotlinx-serialization discriminator does not collide with the URI.
      */

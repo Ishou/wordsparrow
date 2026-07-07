@@ -3,6 +3,7 @@ package com.bliss.game.api.routes
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isNotEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.matches
@@ -14,8 +15,13 @@ import com.bliss.game.api.module
 import com.bliss.game.application.auth.CookieVerifier
 import com.bliss.game.application.auth.WhoAmI
 import com.bliss.game.application.ports.Clock
+import com.bliss.game.application.usecases.ClaimLobbyOwnershipUseCase
 import com.bliss.game.application.usecases.CreateLobbyUseCase
+import com.bliss.game.application.usecases.JoinLobbyUseCase
+import com.bliss.game.application.usecases.RelinquishOwnershipUseCase
+import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.Pseudonym
+import com.bliss.game.domain.SessionId
 import com.bliss.game.domain.UserId
 import com.bliss.game.infrastructure.InMemoryLobbyRepository
 import com.bliss.game.infrastructure.InMemoryLobbyWriteCoordinator
@@ -346,6 +352,122 @@ class LobbiesRouteTest {
             assertThat(response.bodyAsText()).contains("auth-required")
         }
 
+    // ---- claim-ownership endpoint (ADR-0098 §2) ----
+
+    private val userA = UserId("11111111-1111-1111-1111-111111111111")
+    private val userB = UserId("22222222-2222-2222-2222-222222222222")
+    private val userC = UserId("33333333-3333-3333-3333-333333333333")
+    private val sessionB = "0190e3b2-1c45-7d2e-9a3f-b0c1d2e3f4a5"
+    private val sessionC = "0190e3c9-9f88-7a11-8b22-c3d4e5f60718"
+    private val seedClock =
+        object : Clock {
+            override fun now(): Instant = Instant.parse("2026-05-18T12:00:00Z")
+        }
+
+    @Test
+    fun `POST ownership without a session returns 401 - guests cannot claim`() =
+        testApplicationWithVerifier(verifier = stubVerifier(null)) { client, repo ->
+            val lobbyId = seedOwnerlessLobby(repo)
+            val response = client.post("/v1/lobbies/${lobbyId.value}/ownership")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
+            assertThat(response.headers["Content-Type"]!!).startsWith("application/problem+json")
+            assertThat(response.bodyAsText()).contains("auth-required")
+        }
+
+    @Test
+    fun `POST ownership by a player not present in the lobby returns 403`() =
+        testApplicationWithVerifier(
+            verifier = stubVerifier(WhoAmI(userC, Pseudonym("Charlie"))),
+        ) { client, repo ->
+            val lobbyId = seedOwnerlessLobby(repo)
+            val response =
+                client.post("/v1/lobbies/${lobbyId.value}/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertProblem(response, HttpStatusCode.Forbidden, "https://bliss.example/errors/lobby-claim-forbidden")
+        }
+
+    @Test
+    fun `POST ownership on a still-owned lobby returns 403`() =
+        testApplicationWithVerifier(
+            verifier = stubVerifier(WhoAmI(userB, Pseudonym("Bob"))),
+        ) { client, repo ->
+            val lobbyId = seedOwnedLobbyWithMember(repo)
+            val response =
+                client.post("/v1/lobbies/${lobbyId.value}/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertProblem(response, HttpStatusCode.Forbidden, "https://bliss.example/errors/lobby-claim-forbidden")
+        }
+
+    @Test
+    fun `POST ownership when the claimer already owns an active game returns 409`() =
+        testApplicationWithVerifier(
+            verifier = stubVerifier(WhoAmI(userB, Pseudonym("Bob"))),
+        ) { client, repo ->
+            val lobbyId = seedOwnerlessLobby(repo)
+            // userB already owns another active (WAITING) game -> over quota.
+            CreateLobbyUseCase(repo, seedClock)(SessionId(sessionC), Pseudonym("Bob"), ownerUserId = userB)
+
+            val response =
+                client.post("/v1/lobbies/${lobbyId.value}/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertProblem(response, HttpStatusCode.Conflict, "https://bliss.example/errors/active-game-quota-exceeded")
+        }
+
+    @Test
+    fun `POST ownership on an ownerless lobby by a present player under quota returns 200 and sets the owner`() =
+        testApplicationWithVerifier(
+            verifier = stubVerifier(WhoAmI(userB, Pseudonym("Bob"))),
+        ) { client, repo ->
+            val lobbyId = seedOwnerlessLobby(repo)
+
+            val response =
+                client.post("/v1/lobbies/${lobbyId.value}/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val body = JSON.decodeFromString<LobbyResponseDto>(response.bodyAsText())
+            assertThat(body.ownerSessionId).isEqualTo(sessionB)
+            // owner_user_id is server-side only; assert it via the repository.
+            val saved = repo.findById(lobbyId)!!
+            assertThat(saved.ownerUserId).isEqualTo(userB)
+            assertThat(saved.isOwnerless()).isFalse()
+        }
+
+    /** Ownerless lobby: owner userA relinquishes after userB (sessionB) joins, leaving userB present and claimable. */
+    private suspend fun seedOwnerlessLobby(repo: InMemoryLobbyRepository): LobbyId {
+        val lobbyId = seedOwnedLobbyWithMember(repo)
+        RelinquishOwnershipUseCase(repo, seedClock)(lobbyId, SessionId(ownerSessionId))
+        return lobbyId
+    }
+
+    /**
+     * Lobby owned by userA (sessionA) with userB (sessionB) joined as a member whose seat carries userB
+     * (via the ADR-0066 rebind, so the cookie-only claim can resolve the seat by userId). Still owned.
+     */
+    private suspend fun seedOwnedLobbyWithMember(repo: InMemoryLobbyRepository): LobbyId {
+        val lobby = CreateLobbyUseCase(repo, seedClock)(SessionId(ownerSessionId), Pseudonym("Alice"), ownerUserId = userA).value
+        val code = repo.findById(lobby.id)!!.code.value
+        JoinLobbyUseCase(repo, seedClock)(lobby.id, SessionId(sessionB), Pseudonym("Bob"), code, userB)
+        repo.rebindAnonSeats(stubConnection, SessionId(sessionB), userB, Pseudonym("Bob"))
+        return lobby.id
+    }
+
+    // InMemory rebindAnonSeats ignores the JDBC connection; a no-op proxy satisfies the signature.
+    private val stubConnection: java.sql.Connection =
+        java.lang.reflect.Proxy
+            .newProxyInstance(
+                java.sql.Connection::class.java.classLoader,
+                arrayOf(java.sql.Connection::class.java),
+            ) { _, _, _ -> null } as java.sql.Connection
+
     private fun stubVerifier(returning: WhoAmI?): CookieVerifier =
         object : CookieVerifier {
             override suspend fun verify(rawCookieValue: String?): WhoAmI? = returning
@@ -373,6 +495,7 @@ class LobbiesRouteTest {
                 override fun now(): Instant = Instant.parse("2026-05-18T12:00:00Z")
             }
         val createLobby = CreateLobbyUseCase(repo, clock)
+        val claimOwnership = ClaimLobbyOwnershipUseCase(repo, clock)
         val sessionManager = SessionManager()
         application {
             // Uses production REST_JSON so encodeDefaults/explicitNulls wire-contract assertions hold (ADR-0003 §6).
@@ -380,6 +503,7 @@ class LobbiesRouteTest {
             routing {
                 lobbies(
                     createLobby = createLobby,
+                    claimOwnership = claimOwnership,
                     repo = repo,
                     sessionManager = sessionManager,
                     cookieVerifier = verifier,
