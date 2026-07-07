@@ -51,6 +51,9 @@ function amountFr(minorUnits: number, currency: string): string {
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
+// Receipts load a page at a time; "Voir plus" fetches the next page (ADR-0003 §6 cursor pagination).
+const PAGE_SIZE = 5;
+
 function ReceiptsPanel({ client }: { readonly client: BillingClient }) {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -61,7 +64,7 @@ function ReceiptsPanel({ client }: { readonly client: BillingClient }) {
     let cancelled = false;
     setState('loading');
     client
-      .listReceipts()
+      .listReceipts(undefined, PAGE_SIZE)
       .then((page) => {
         if (cancelled) return;
         setReceipts(page.receipts);
@@ -78,7 +81,7 @@ function ReceiptsPanel({ client }: { readonly client: BillingClient }) {
     if (nextCursor === null || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await client.listReceipts(nextCursor);
+      const page = await client.listReceipts(nextCursor, PAGE_SIZE);
       setReceipts((prev) => [...prev, ...page.receipts]);
       setNextCursor(page.nextCursor);
     } catch {

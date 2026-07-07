@@ -177,6 +177,22 @@ describe('HttpBillingClient.listReceipts', () => {
     expect(new URL(requestUrl).searchParams.get('cursor')).toBe('CURSOR2');
   });
 
+  it('passes the limit query when a page size is given', async () => {
+    let requestUrl = '';
+    server.use(
+      http.get(`${BASE_URL}/v1/receipts`, ({ request }) => {
+        requestUrl = request.url;
+        return HttpResponse.json({ receipts: [], nextCursor: null });
+      }),
+    );
+
+    await makeClient().listReceipts(undefined, 5);
+
+    const params = new URL(requestUrl).searchParams;
+    expect(params.get('limit')).toBe('5');
+    expect(params.has('cursor')).toBe(false);
+  });
+
   it('maps 401 to a typed auth-required BillingError', async () => {
     server.use(http.get(`${BASE_URL}/v1/receipts`, () => problem(401, 'auth-required')));
 

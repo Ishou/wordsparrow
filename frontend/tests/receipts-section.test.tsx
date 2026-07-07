@@ -124,6 +124,8 @@ describe('ReceiptsSection', () => {
     expect(screen.getByText('Remboursé')).toBeInTheDocument();
     // last page reached — no more "Voir plus"
     expect(screen.queryByRole('button', { name: 'Voir plus' })).toBeNull();
-    expect(listReceipts).toHaveBeenNthCalledWith(2, 'CURSOR2');
+    // both pages request 5 at a time (initial with no cursor, then the next page)
+    expect(listReceipts).toHaveBeenNthCalledWith(1, undefined, 5);
+    expect(listReceipts).toHaveBeenNthCalledWith(2, 'CURSOR2', 5);
   });
 });
