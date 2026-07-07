@@ -6,6 +6,8 @@ import java.util.UUID
 internal object Fixtures {
     val sessionA = SessionId("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b")
     val sessionB = SessionId("0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5")
+    val userA = UserId("0190e3c0-9d67-7e8f-a1b2-c3d4e5f6a7b8")
+    val userB = UserId("0190e3d1-ae78-7f90-b2c3-d4e5f6a7b8c9")
     val now: Instant = Instant.parse("2026-05-02T15:30:00Z")
     val later: Instant = Instant.parse("2026-05-02T15:33:04.250Z")
 
