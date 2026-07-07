@@ -44,9 +44,16 @@ export type ClueDirection = 'horizontal' | 'vertical';
 
 export interface ClueRailProps {
   readonly direction: ClueDirection;
+  readonly directionLabel: string;
   readonly clue: string;
   readonly index: number;
   readonly total: number;
+  readonly groupLabel: string;
+  readonly counterLabel: string;
+  readonly prevLabel: string;
+  readonly nextLabel: string;
+  readonly zoomInLabel: string;
+  readonly zoomOutLabel: string;
   readonly onPrev?: () => void;
   readonly onNext?: () => void;
   readonly onZoomIn?: () => void;
@@ -55,16 +62,14 @@ export interface ClueRailProps {
   readonly trailing?: ReactNode;
 }
 
-const DIRECTION_TEXT: Record<ClueDirection, string> = { horizontal: 'HORIZONTAL', vertical: 'VERTICAL' };
-
-export function ClueRail({ direction, clue, index, total, onPrev, onNext, onZoomIn, onZoomOut, trailing }: ClueRailProps) {
+export function ClueRail({ direction, directionLabel, clue, index, total, groupLabel, counterLabel, prevLabel, nextLabel, zoomInLabel, zoomOutLabel, onPrev, onNext, onZoomIn, onZoomOut, trailing }: ClueRailProps) {
   return (
-    <div className={rail} role="group" aria-label="Indice actif">
+    <div className={rail} role="group" aria-label={groupLabel}>
       <div className={topRow}>
         <div className={labelGroup}>
           <span aria-hidden="true" className={dot} />
           <span className={label}>
-            {DIRECTION_TEXT[direction]}
+            {directionLabel}
             {direction === 'horizontal'
               ? <CaretRight aria-hidden="true" weight="bold" />
               : <CaretDown aria-hidden="true" weight="bold" />}
@@ -72,23 +77,23 @@ export function ClueRail({ direction, clue, index, total, onPrev, onNext, onZoom
           {trailing ? null : (
             <>
               <span aria-hidden="true" className={sep} />
-              <span className={counter} aria-label={`Indice ${index} sur ${total}`}>{index} / {total}</span>
+              <span className={counter} aria-label={counterLabel}>{index} / {total}</span>
             </>
           )}
         </div>
         <div className={rightGroup}>
           {trailing}
           <div className={zoom}>
-            <button type="button" className={zoomBtn} onClick={onZoomOut} aria-label="Dézoomer"><Minus aria-hidden="true" weight="bold" /></button>
+            <button type="button" className={zoomBtn} onClick={onZoomOut} aria-label={zoomOutLabel}><Minus aria-hidden="true" weight="bold" /></button>
             <span aria-hidden="true" className={zoomSep} />
-            <button type="button" className={zoomBtn} onClick={onZoomIn} aria-label="Zoomer"><Plus aria-hidden="true" weight="bold" /></button>
+            <button type="button" className={zoomBtn} onClick={onZoomIn} aria-label={zoomInLabel}><Plus aria-hidden="true" weight="bold" /></button>
           </div>
         </div>
       </div>
       <div className={mainRow}>
-        <button type="button" className={stepper} onClick={onPrev} disabled={!onPrev || total <= 1} aria-label="Indice précédent"><CaretLeft aria-hidden="true" weight="bold" /></button>
+        <button type="button" className={stepper} onClick={onPrev} disabled={!onPrev || total <= 1} aria-label={prevLabel}><CaretLeft aria-hidden="true" weight="bold" /></button>
         <div className={clueText}>{clue}</div>
-        <button type="button" className={stepper} onClick={onNext} disabled={!onNext || total <= 1} aria-label="Indice suivant"><CaretRight aria-hidden="true" weight="bold" /></button>
+        <button type="button" className={stepper} onClick={onNext} disabled={!onNext || total <= 1} aria-label={nextLabel}><CaretRight aria-hidden="true" weight="bold" /></button>
       </div>
     </div>
   );

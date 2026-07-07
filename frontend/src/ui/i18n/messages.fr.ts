@@ -48,4 +48,12 @@ export const fr = {
   'home.host.later': 'Plus tard',
   'lobby.players_one': '{{count}} joueur',
   'lobby.players_other': '{{count}} joueurs',
+  'clueRail.aria.group': 'Indice actif',
+  'clueRail.aria.counter': 'Indice {{index}} sur {{total}}',
+  'clueRail.aria.prev': 'Indice précédent',
+  'clueRail.aria.next': 'Indice suivant',
+  'clueRail.aria.zoomIn': 'Zoomer',
+  'clueRail.aria.zoomOut': 'Dézoomer',
+  'clueRail.direction.horizontal': 'HORIZONTAL',
+  'clueRail.direction.vertical': 'VERTICAL',
 } as const;

@@ -22,11 +22,11 @@ const layout: GridLayout = {
 
 describe('Grid', () => {
   it('renders full and mini boards from a layout', async () => {
-    const { container, rerender } = render(<Grid layout={layout} size="full" />);
+    const { container, rerender } = render(<Grid layout={layout} ariaLabel="Grille de mots fléchés" size="full" />);
     expect(container.querySelector('[data-grid-size="full"]')).not.toBeNull();
     expect(container.querySelectorAll('[data-cell-state]')).toHaveLength(8);
     expect(container.querySelectorAll('[data-defcell]')).toHaveLength(2);
-    rerender(<Grid layout={layout} size="mini" />);
+    rerender(<Grid layout={layout} ariaLabel="Grille de mots fléchés" size="mini" />);
     expect(container.querySelector('[data-grid-size="mini"]')).not.toBeNull();
     await expectAxeClean(container);
   });

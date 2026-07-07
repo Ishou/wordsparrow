@@ -7,6 +7,9 @@ import { DifficultyDots, type DifficultyLevel } from '../DifficultyDots/Difficul
 export interface DailyCardProps {
   readonly date: string;
   readonly level: DifficultyLevel;
+  readonly ariaLabel: string;
+  readonly eyebrow: string;
+  readonly playLabel: string;
   readonly onPlay?: () => void;
 }
 
@@ -27,19 +30,19 @@ const teaserBox = css({ width: '42px', height: '42px' });
 const eyebrow = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#6B520F' });
 const date = css({ fontFamily: 'wsDisplay', fontSize: '27px', fontWeight: 'semibold', color: 'ws.jadeInk', margin: 0, lineHeight: '1.05' });
 
-export function DailyCard({ date: d, level, onPlay }: DailyCardProps) {
+export function DailyCard({ date: d, level, ariaLabel, eyebrow: eyebrowText, playLabel, onPlay }: DailyCardProps) {
   return (
-    <section className={card} aria-label="Grille du jour">
+    <section className={card} aria-label={ariaLabel}>
       <div className={teaser} aria-hidden="true">
         <div className={teaserBox}><DefCell clues={['Oiseau']} arrow="right" /></div>
         <div className={teaserBox}><Cell state="active" letter="P" /></div>
         <div className={teaserBox}><Cell state="active" letter="I" /></div>
         <div className={teaserBox}><Cell state="active" letter="E" /></div>
       </div>
-      <span className={eyebrow}>GRILLE DU JOUR</span>
+      <span className={eyebrow}>{eyebrowText}</span>
       <h2 className={date}>{d}</h2>
       <DifficultyDots level={level} />
-      <Button variant="primary" onClick={onPlay}>Jouer</Button>
+      <Button variant="primary" onClick={onPlay}>{playLabel}</Button>
     </section>
   );
 }

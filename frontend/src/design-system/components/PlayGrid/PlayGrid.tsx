@@ -76,16 +76,17 @@ export const DAILY_BOARD: GridLayout = {
 const board = css({ display: 'grid', gap: '5px', fontFamily: 'wsUi', width: 'max-content' });
 
 export interface PlayGridProps {
+  readonly ariaLabel: string;
   readonly layout?: GridLayout;
   readonly cellSize?: number;
 }
 
-export function PlayGrid({ layout = DAILY_BOARD, cellSize = 60 }: PlayGridProps) {
+export function PlayGrid({ ariaLabel, layout = DAILY_BOARD, cellSize = 60 }: PlayGridProps) {
   return (
     <div
       lang="fr"
       role="img"
-      aria-label="Grille de mots fléchés en cours"
+      aria-label={ariaLabel}
       className={board}
       style={{
         gridTemplateColumns: `repeat(${layout.columns}, ${cellSize}px)`,
