@@ -10,12 +10,25 @@
 # Policy:
 #   - Use the upstream default ruleset as-is. We add no project-specific
 #     rules until a real false-negative justifies one.
-#   - No allowlist entries. A `gitleaks detect` against the entire repo
-#     history reports zero findings as of this commit, so there is nothing
-#     legitimate to exempt. If a future false-positive appears, add the
-#     narrowest possible allowlist entry here and document why in a
-#     comment on the entry itself — never silence whole rules wholesale.
+#   - Allowlist entries are added only for confirmed false positives, kept
+#     as narrow as possible, and documented inline on the entry itself —
+#     never silence whole rules wholesale.
 title = "Bliss gitleaks config"
 
 [extend]
 useDefault = true
+
+# False positive: the `generic-api-key` rule flags our i18n MessageKey
+# convention. Struct fields named `*Key` (labelKey, noteKey, suffixKey,
+# periodKey, renewalKey, ...) hold dotted catalog identifiers such as
+# "v2.abonnement.cadence.mensuel.label" — the "key"-suffixed field name
+# next to a quoted, moderate-entropy dotted string is exactly the shape
+# the rule looks for. These values are translation-catalog keys, checked
+# 1:1 against frontend/src/ui/i18n/messages.fr.ts, never secrets.
+# Scoped to this PR's exact namespace, not the whole `v2.*` key space, to
+# stay as narrow as possible (PR #1461, wave P5b of the i18n rollout).
+[allowlist]
+description = "i18n v2.abonnement.* MessageKey identifiers misread as generic API keys"
+regexes = [
+  '''v2\.abonnement\.[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)+''',
+]
