@@ -43,7 +43,7 @@ const WS_OPEN = 1;
 // types per the spec's subscribe description).
 const SERVER_EVENT_TYPES = new Set<GameEvent['type']>([
   'lobbyState', 'playerJoined', 'playerLeft', 'playerRenamed',
-  'gameStarted', 'cellUpdated', 'presenceUpdated',
+  'ownershipChanged', 'gameStarted', 'cellUpdated', 'presenceUpdated',
   'typing', 'idle', 'connectionLost', 'cursorBumped',
   'wordLocked', 'wordRejected', 'gameSolved', 'error',
 ]);

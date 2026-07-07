@@ -137,6 +137,16 @@ export interface PlayerRenamedEvent {
   readonly newPseudonym: Pseudonym;
 }
 
+// ADR-0098: a lobby's owner changed. Both ids are non-null on a claim and
+// both `null` when the lobby became ownerless (relinquish or RGPD vacate),
+// so peers can toggle owner-gated affordances and offer the claim action.
+export interface OwnershipChangedEvent {
+  readonly type: 'ownershipChanged';
+  readonly lobbyId: LobbyId;
+  readonly newOwnerSessionId: SessionId | null;
+  readonly newOwnerUserId: string | null;
+}
+
 export interface GameStartedEvent {
   readonly type: 'gameStarted';
   readonly puzzle: GamePuzzle;
@@ -249,6 +259,7 @@ export type GameEvent =
   | PlayerJoinedEvent
   | PlayerLeftEvent
   | PlayerRenamedEvent
+  | OwnershipChangedEvent
   | GameStartedEvent
   | CellUpdatedEvent
   | PresenceUpdatedEvent

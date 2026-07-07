@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { GameEvent, Unsubscribe } from '@/application/game';
 import type { Instant, Player, Pseudonym, SessionId } from '@/domain/game';
@@ -295,5 +295,46 @@ describe('v2 CoopPresenceLayer', () => {
     // Only the peer tile(s) remain — self is filtered.
     const badges = container.querySelectorAll('span');
     expect(badges.length).toBeGreaterThanOrEqual(0);
+  });
+});
+
+const ownershipChanged = (newOwnerUserId: string | null): GameEvent =>
+  ({
+    type: 'ownershipChanged',
+    lobbyId: '7gQ2xK9p',
+    newOwnerSessionId: newOwnerUserId === null ? null : selfId,
+    newOwnerUserId,
+  }) as GameEvent;
+
+describe('v2 LiveCoopScreen — claim ownership (ADR-0098 §6)', () => {
+  it('hides the claim button until an ownershipChanged frame reports the game is ownerless', () => {
+    const { cellStream } = renderScreen({ onClaim: vi.fn().mockResolvedValue(undefined) });
+    expect(screen.queryByRole('button', { name: 'Reprendre la partie' })).toBeNull();
+    cellStream.dispatch(ownershipChanged(null));
+    expect(screen.getByRole('button', { name: 'Reprendre la partie' })).toBeTruthy();
+  });
+
+  it('calls onClaim when the claim button is pressed, then hides it once ownership is re-established', async () => {
+    const onClaim = vi.fn().mockResolvedValue(undefined);
+    const { cellStream } = renderScreen({ onClaim });
+    cellStream.dispatch(ownershipChanged(null));
+    fireEvent.click(screen.getByRole('button', { name: 'Reprendre la partie' }));
+    expect(onClaim).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Reprise/ })).toBeNull());
+    // The server broadcasts the new owner; the affordance disappears.
+    cellStream.dispatch(ownershipChanged('0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b'));
+    expect(screen.queryByRole('button', { name: 'Reprendre la partie' })).toBeNull();
+  });
+
+  it('never offers the claim affordance when no onClaim seam is wired', () => {
+    const { cellStream } = renderScreen();
+    cellStream.dispatch(ownershipChanged(null));
+    expect(screen.queryByRole('button', { name: 'Reprendre la partie' })).toBeNull();
+  });
+
+  it('the ownerless claim banner is axe-clean (ADR-0050)', async () => {
+    const { cellStream, container } = renderScreen({ onClaim: vi.fn().mockResolvedValue(undefined) });
+    cellStream.dispatch(ownershipChanged(null));
+    await expectAxeClean(container);
   });
 });

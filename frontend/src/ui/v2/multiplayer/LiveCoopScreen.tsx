@@ -92,6 +92,10 @@ const iconBtn = css({
   lg: { width: '44px', height: '44px', background: 'ws.glass', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', fontSize: '20px', _hover: { background: 'ws.glassHover' } },
 });
 const headerSpacer = css({ flex: 1 });
+// ADR-0098 §6: claim affordance for an ownerless game, non-invasive banner.
+const claimBanner = css({ position: 'absolute', top: '64px', left: 0, right: 0, zIndex: 5, display: 'flex', justifyContent: 'center', paddingInline: GUTTER, lg: { position: 'static', paddingTop: '8px' } });
+const claimPill = css({ display: 'inline-flex', alignItems: 'center', gap: '10px', bg: 'ws.card', border: '0.5px solid token(colors.ws.glassBorder)', borderRadius: '999px', padding: '6px 8px 6px 14px', boxShadow: '0 2px 12px rgba(33,75,64,0.16)', fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.jadeInk' });
+const claimBtn = css({ display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', borderRadius: '999px', bg: 'ws.jadeInk', color: 'ws.onJadeInk', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '13px', padding: '7px 14px', cursor: 'pointer', _disabled: { opacity: 0.6, cursor: 'default' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
 const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%' } });
 
 const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 4, display: 'flex', flexDirection: 'column', gap: '10px', padding: `8px ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { position: 'static', paddingBottom: '24px' } });
@@ -112,6 +116,9 @@ export interface LiveCoopScreenProps {
   readonly subscribeToRemoteCellUpdates: (handler: (event: GameEvent) => void) => Unsubscribe;
   readonly subscribeToRemotePresence: (handler: (event: GameEvent) => void) => Unsubscribe;
   readonly onLeave: () => void;
+  // ADR-0098 §6: claim ownership of a now-ownerless game. Present only in
+  // the live co-op path; resolves once the server accepts the claim.
+  readonly onClaim?: () => Promise<void>;
   readonly soundPlayer?: SoundPlayer;
   readonly soundStore?: SoundStore;
 }
@@ -131,6 +138,7 @@ export function LiveCoopScreen({
   subscribeToRemoteCellUpdates,
   subscribeToRemotePresence,
   onLeave,
+  onClaim,
   soundPlayer,
   soundStore,
 }: LiveCoopScreenProps) {
@@ -230,6 +238,24 @@ export function LiveCoopScreen({
     return unsubscribe;
   }, [subscribeToRemoteCellUpdates, applyRemoteCellUpdate, noteServerReject, sessionId]);
 
+  // ADR-0098 §6: the snapshot carries no `owner_user_id`, so ownerless is derived live from the `ownershipChanged` broadcast (`null` = ownerless, `undefined` = unknown ⇒ treated as owned).
+  const [ownerUserId, setOwnerUserId] = useState<string | null | undefined>(undefined);
+  const [claiming, setClaiming] = useState(false);
+  useEffect(() => {
+    const unsubscribe = subscribeToRemoteCellUpdates((event) => {
+      if (event.type === 'ownershipChanged') setOwnerUserId(event.newOwnerUserId);
+    });
+    return unsubscribe;
+  }, [subscribeToRemoteCellUpdates]);
+  const isOwnerless = ownerUserId === null;
+  const handleClaim = useCallback(() => {
+    if (!onClaim || claiming) return;
+    setClaiming(true);
+    // The server broadcasts an `ownershipChanged` with the new owner on
+    // success, which flips `isOwnerless` false and hides this button.
+    onClaim().finally(() => setClaiming(false));
+  }, [onClaim, claiming]);
+
   // Peer presence state → typing/idle/lost sets for the roster strip + grid badges.
   const presenceState = usePresenceState(subscribeToRemotePresence, sessionId);
   const typingSessionIds = useMemo(() => {
@@ -324,6 +350,17 @@ export function LiveCoopScreen({
           />
         </header>
       )}
+
+      {onClaim && isOwnerless ? (
+        <div className={claimBanner}>
+          <span className={claimPill}>
+            Cette partie n’a plus d’hôte
+            <button type="button" className={claimBtn} onClick={handleClaim} disabled={claiming} aria-busy={claiming || undefined}>
+              {claiming ? 'Reprise…' : 'Reprendre la partie'}
+            </button>
+          </span>
+        </div>
+      ) : null}
 
       <PuzzleBoard
         ref={boardRef}

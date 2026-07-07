@@ -24,6 +24,17 @@ export interface LobbyClient {
   }): Promise<Lobby & { readonly id: LobbyId }>;
 
   /**
+   * `POST /v1/lobbies/{lobbyId}/ownership`. Claims an ownerless
+   * (`owner_user_id IS NULL`) non-terminal lobby for the calling
+   * signed-in player (ADR-0098 §2), gated by the caller's active-game
+   * quota. Cookie-authed — no request body. Resolves with the `Lobby`
+   * snapshot carrying the caller as owner. Throws {@link LobbyClientError}
+   * with `kind: 'validation'` (403 forbidden — not present / already
+   * owned), `kind: 'unauthorized'` (401), or `kind: 'not-found'` (404).
+   */
+  claimOwnership(lobbyId: LobbyId): Promise<Lobby>;
+
+  /**
    * `GET /v1/lobbies/{lobbyId}`. Bootstraps the lobby route loader before
    * the WebSocket opens. Throws {@link LobbyClientError} with
    * `kind: 'not-found'` when the lobby has never existed or has been GC'd

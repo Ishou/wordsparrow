@@ -96,6 +96,7 @@ function renderLobbyRoute(getLobby: LobbyClient['getLobby']) {
   const lobbyClient: LobbyClient = {
     createLobby: vi.fn().mockResolvedValue(lobby),
     getLobby,
+    claimOwnership: vi.fn().mockResolvedValue(lobby),
     findByCode: vi.fn().mockResolvedValue(lobby),
     listMyLobbies: vi.fn().mockResolvedValue([]),
     listMyLobbiesForUser: vi.fn().mockResolvedValue([]),
