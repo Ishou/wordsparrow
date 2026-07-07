@@ -197,6 +197,88 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /v1/lobbies/{lobbyId}/ownership:
+    post:
+      operationId: claimLobbyOwnership
+      summary: Claim ownership of an ownerless lobby.
+      description: |
+        Claims an **ownerless** (`owner_user_id IS NULL`) non-terminal lobby
+        for the calling signed-in player, making them the owner (ADR-0098 §2).
+        Ownership is a claimable lease: a game relinquished by its previous
+        owner, or vacated by RGPD erasure, becomes ownerless and any player
+        present in it may take it over — for example via the "Reprendre la
+        partie" action (ADR-0098 §6).
+
+        Cookie-authed; identity comes from the `__Secure-ws_session` cookie,
+        so there is no request body. The claim is gated by the caller's
+        active-game quota and runs under the same per-user lock as create
+        (ADR-0098 §5): a free player may own at most one active game.
+
+        On success the full `Lobby` resource is returned with the caller as
+        owner.
+      tags: [lobbies]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/LobbyIdPath'
+      responses:
+        '200':
+          description: Ownership claimed. Body is the `Lobby` snapshot with the caller as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lobby'
+        '400':
+          description: |
+            Path parameter `lobbyId` does not match the base58 nanoid pattern.
+            RFC 7807; `type` is `https://bliss.example/errors/invalid-lobby-id`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: |
+            Claiming requires a signed-in player (ADR-0098 §2). A request with
+            no `__Secure-ws_session` cookie, or a session revoked between the
+            cached and fresh whoami lookups, is rejected. RFC 7807;
+            `type` is `https://bliss.example/errors/auth-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: |
+            The caller may not claim this lobby (ADR-0098 §2, threat model).
+            Variants:
+            - the caller is not present in the lobby, or
+            - the lobby is already owned (`owner_user_id` is not null).
+            RFC 7807; `type` is `https://bliss.example/errors/lobby-claim-forbidden`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: |
+            No lobby exists for the supplied id, or it has been
+            garbage-collected (ADR-0055 GC; ownerless non-terminal lobbies are
+            swept after a 7-day idle TTL per ADR-0098 §4). RFC 7807;
+            `type` is `https://bliss.example/errors/lobby-not-found`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: |
+            The caller already owns an active (`WAITING` or `IN_PROGRESS`)
+            game and would exceed the free-tier one-active-game quota
+            (ADR-0098 §1). Subscribers with `multiplayer:host-unlimited`
+            bypass this check. RFC 7807;
+            `type` is `https://bliss.example/errors/active-game-quota-exceeded`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /v1/sessions/{sessionId}/lobbies:
     get:
       operationId: listLobbiesForSession
