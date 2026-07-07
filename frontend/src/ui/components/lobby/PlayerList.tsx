@@ -1,5 +1,6 @@
 import { css } from 'styled-system/css';
 import type { Lobby, SessionId } from '@/domain/game';
+import { t } from '@/ui/i18n';
 import { playerColorVars, playerInitial } from '@/ui/lib/playerColor';
 
 // Pure prop-driven roster. Used in two layouts:
@@ -160,7 +161,7 @@ export function PlayerList({
 }: PlayerListProps): React.ReactElement {
   if (variant === 'inline') {
     return (
-      <ul className={styles.inlineList} aria-label="Liste des joueurs">
+      <ul className={styles.inlineList} aria-label={t('lobby.playerList.aria.list')}>
         {players.map((player) => {
           const isYou = player.sessionId === currentSessionId;
           const isTyping = typingSessionIds?.has(player.sessionId) ?? false;
@@ -169,11 +170,11 @@ export function PlayerList({
             disconnectingSessionIds?.has(player.sessionId) ?? false;
           const ariaLabel = [
             player.pseudonym,
-            isYou ? 'vous' : null,
-            player.sessionId === ownerSessionId ? 'propriétaire' : null,
-            isTyping ? 'en train d\'écrire' : null,
-            isIdle ? 'inactif' : null,
-            isDisconnecting ? 'déconnecté' : null,
+            isYou ? t('lobby.playerList.aria.you') : null,
+            player.sessionId === ownerSessionId ? t('lobby.playerList.aria.owner') : null,
+            isTyping ? t('lobby.playerList.aria.typing') : null,
+            isIdle ? t('lobby.playerList.aria.idle') : null,
+            isDisconnecting ? t('lobby.playerList.aria.disconnected') : null,
           ]
             .filter(Boolean)
             .join(' — ');
@@ -210,7 +211,7 @@ export function PlayerList({
 
   const emptySlots = Math.max(0, MAX_PLAYERS - players.length);
   return (
-    <ul className={styles.stackedList} aria-label="Liste des joueurs">
+    <ul className={styles.stackedList} aria-label={t('lobby.playerList.aria.list')}>
       {players.map((player) => (
         <li
           key={player.sessionId}
@@ -222,15 +223,15 @@ export function PlayerList({
           <span className={styles.stackedPseudonym}>{player.pseudonym}</span>
           <span className={styles.badgeGroup}>
             {player.sessionId === currentSessionId
-              ? <span className={styles.badge}>vous</span> : null}
+              ? <span className={styles.badge}>{t('lobby.playerList.badge.you')}</span> : null}
             {player.sessionId === ownerSessionId
-              ? <span className={styles.ownerBadge}>propriétaire</span> : null}
+              ? <span className={styles.ownerBadge}>{t('lobby.playerList.badge.owner')}</span> : null}
           </span>
         </li>
       ))}
       {Array.from({ length: emptySlots }).map((_, idx) => (
-        <li key={`empty-${idx}`} className={styles.emptySlot} aria-label="Place libre">
-          Place libre
+        <li key={`empty-${idx}`} className={styles.emptySlot} aria-label={t('lobby.playerList.aria.emptySlot')}>
+          {t('lobby.playerList.emptySlot')}
         </li>
       ))}
     </ul>

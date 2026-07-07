@@ -1,5 +1,6 @@
 import { css } from 'styled-system/css';
 import type { ConnectionState } from '@/application/game';
+import { t } from '@/ui/i18n';
 
 // Wave H PR #17 — top-of-page banner that surfaces transport health for
 // the multiplayer lobby. The component is purely prop-driven so the
@@ -115,15 +116,15 @@ const recoveryButtonStyles = css({
 
 const COPY: Record<BannerVariant, BannerCopy> = {
   connecting: {
-    text: 'Connexion en cours…',
+    text: t('lobby.connection.connecting'),
     className: connectingStyles,
   },
   disconnected: {
-    text: 'Connexion perdue.',
+    text: t('lobby.connection.disconnected'),
     className: disconnectedStyles,
   },
   reconnecting: {
-    text: 'Reconnexion…',
+    text: t('lobby.connection.reconnecting'),
     indicator: '↻',
     className: reconnectingStyles,
   },
@@ -158,7 +159,7 @@ export function ConnectionBanner({ state }: ConnectionBannerProps) {
             window.location.reload();
           }}
         >
-          Recharger
+          {t('lobby.connection.reload')}
         </button>
       ) : null}
     </div>

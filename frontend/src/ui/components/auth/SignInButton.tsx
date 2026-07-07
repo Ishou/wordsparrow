@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import type { AuthClient } from '@/application/auth';
+import { t } from '@/ui/i18n';
 
 const emailAuthEnabled = import.meta.env.VITE_FEATURE_EMAIL_AUTH === 'true';
 
@@ -80,15 +81,15 @@ export function SignInButton({ authClient }: SignInButtonProps) {
         href={href}
         aria-disabled={returnTo ? undefined : true}
       >
-        Se connecter
+        {t('auth.signIn.google')}
       </a>
       {emailAuthEnabled ? (
         <Link to="/connexion" search={{ returnTo: returnPath }} className={emailLinkStyles}>
-          … ou avec ton e-mail
+          {t('auth.signIn.emailLink')}
         </Link>
       ) : null}
       <a href="/confidentialite" className={disclosureLinkStyles}>
-        Confidentialité
+        {t('auth.signIn.privacy')}
       </a>
     </span>
   );

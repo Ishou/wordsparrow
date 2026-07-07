@@ -1,5 +1,6 @@
 import { css } from 'styled-system/css';
 import { Button, Dialog, DialogDescription } from '@/ui/components/primitives';
+import { t } from '@/ui/i18n';
 
 // End-of-game modal shown when the lobby receives a `gameSolved` event.
 // Pure prop-driven so the lobby route owns the open/close lifecycle and
@@ -66,11 +67,11 @@ export function EndGameModal({ durationMs, onPlayAgain, onClose }: EndGameModalP
     <Dialog
       open
       onClose={onClose}
-      title={<>Bravo&nbsp;! Grille terminée</>}
+      title={t('lobby.endGame.title')}
       backdropTestId="end-game-modal-backdrop"
       contentTestId="end-game-modal"
     >
-      <DialogDescription>Temps final&nbsp;:</DialogDescription>
+      <DialogDescription>{t('lobby.endGame.finalTime')}</DialogDescription>
       <p className={durationStyles} data-testid="end-game-modal-duration">
         {formatDuration(durationMs)}
       </p>
@@ -80,14 +81,14 @@ export function EndGameModal({ durationMs, onPlayAgain, onClose }: EndGameModalP
           onClick={onClose}
           data-testid="end-game-modal-close"
         >
-          Fermer
+          {t('lobby.endGame.close')}
         </Button>
         <Button
           variant="primary"
           onClick={onPlayAgain}
           data-testid="end-game-modal-play-again"
         >
-          Rejouer
+          {t('lobby.endGame.playAgain')}
         </Button>
       </div>
     </Dialog>

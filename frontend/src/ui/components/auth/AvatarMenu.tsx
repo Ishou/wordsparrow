@@ -4,6 +4,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { css } from 'styled-system/css';
 import type { AuthClient, WhoAmIResult } from '@/application/auth';
+import { t } from '@/ui/i18n';
 import { useAuth } from './AuthProvider';
 
 // Phase 5 sub-PR 4 — avatar popover (Ark UI). Trigger is the initial.
@@ -98,7 +99,7 @@ export function AvatarMenu({ authClient, whoami, onBeforeLogout }: AvatarMenuPro
     >
       <Popover.Trigger
         type="button"
-        aria-label="Compte"
+        aria-label={t('auth.avatar.aria.trigger')}
         className={triggerStyles}
       >
         {initialFor(whoami.displayName)}
@@ -114,14 +115,14 @@ export function AvatarMenu({ authClient, whoami, onBeforeLogout }: AvatarMenuPro
               className={itemBaseStyles}
               onClick={() => setOpen(false)}
             >
-              Mon compte
+              {t('auth.avatar.account')}
             </Link>
             <button
               type="button"
               className={itemBaseStyles}
               onClick={() => { void handleLogout(); }}
             >
-              Se déconnecter
+              {t('auth.avatar.logout')}
             </button>
           </Popover.Content>
         </Popover.Positioner>
