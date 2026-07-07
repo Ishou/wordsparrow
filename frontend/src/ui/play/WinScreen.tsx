@@ -2,6 +2,7 @@ import { Dialog } from '@ark-ui/react/dialog';
 import { X } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { Button } from '@/design-system';
+import { t } from '@/ui/i18n';
 
 const screen = css({
   position: 'absolute',
@@ -139,8 +140,8 @@ export interface WinScreenProps {
 export function WinScreen({ time, onReplay, onDismiss }: WinScreenProps) {
   return (
     <Dialog.Root open modal>
-      <Dialog.Content className={screen} aria-label="Grille terminée">
-      <button type="button" className={closeBtn} onClick={onDismiss} aria-label="Revoir la grille">
+      <Dialog.Content className={screen} aria-label={t('play.win.aria.dialog')}>
+      <button type="button" className={closeBtn} onClick={onDismiss} aria-label={t('play.win.aria.dismiss')}>
         <X aria-hidden="true" weight="bold" />
       </button>
       <div className={petalLayer} aria-hidden="true">
@@ -161,7 +162,7 @@ export function WinScreen({ time, onReplay, onDismiss }: WinScreenProps) {
           <div className={bloomCenter} />
         </div>
 
-        <h1 className={headline}>Grille terminée !</h1>
+        <h1 className={headline}>{t('play.win.headline')}</h1>
 
         <div className={gridCard} aria-hidden="true">
           <div className={miniGrid}>
@@ -174,16 +175,16 @@ export function WinScreen({ time, onReplay, onDismiss }: WinScreenProps) {
 
         <div className={statsBar}>
           <div className={statCol}>
-            <span className={statLabel}>Temps</span>
+            <span className={statLabel}>{t('play.win.stat.time')}</span>
             <span className={statValue}>{time}</span>
           </div>
         </div>
 
         <div className={actions}>
-          <Button variant="primary" className={fullBtn} onClick={onReplay}>Rejouer</Button>
+          <Button variant="primary" className={fullBtn} onClick={onReplay}>{t('play.win.replay')}</Button>
         </div>
 
-        <div className={quiet}>Nouvelle grille demain</div>
+        <div className={quiet}>{t('play.win.tomorrow')}</div>
       </div>
       </Dialog.Content>
     </Dialog.Root>
