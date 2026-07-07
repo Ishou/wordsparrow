@@ -276,6 +276,15 @@ ADR-0097  terraform/**  Private Hetzner Object Storage bucket + scoped read-only
 ADR-0097  data/curated/**  Clue training/eval data moves to the private wordsparrow-clue-data repo; not a public artefact
 ADR-0097  grid/api/deploy/chart/templates/**  fetch-corpus initContainer pulls the bucket via MC_HOST_store (no writable $HOME needed); emptyDir cache only, PVC resilience deferred (§4)
 ADR-0097  grid/api/deploy/chart/values*.yaml  corpus.objectStore.* config surface; fetchCorpusImage pinned to digest via the chart's guard pattern
+ADR-0098  game/application/src/main/kotlin/com/bliss/game/application/usecases/LobbyUseCases.kt  Quota = 1 active game (WAITING|IN_PROGRESS) by owner_user_id (findActiveByOwnerUser, supersedes findWaitingByOwnerUser); explicit relinquish nulls owner_user_id → ownerless; ClaimLobbyOwnershipUseCase quota-gated; LeaveLobbyUseCase must NOT touch owner_user_id (disconnect keeps ownership)
+ADR-0098  game/application/src/main/kotlin/com/bliss/game/application/usecases/LobbyGarbageCollector.kt  GC gains ownerless (owner_user_id IS NULL) non-terminal idle>7d sweep via findIdleOwnerless (amends ADR-0055 matrix)
+ADR-0098  game/domain/src/main/kotlin/com/bliss/game/domain/Lobby.kt  Ownership-lease transitions: isOwnerless()/relinquishOwner()/claimOwner(); owner_user_id null = ownerless
+ADR-0098  game/api/src/main/kotlin/com/bliss/game/api/routes/LobbiesRoute.kt  Create counts active OWNED games; POST /v1/lobbies/{id}/ownership claim route (quota-gated, present-only)
+ADR-0098  game/api/src/main/kotlin/com/bliss/game/api/routes/LobbyWebSocketRoute.kt  Explicit leaveLobby frame relinquishes ownership; disconnect grace path drops presence only, keeps owner_user_id
+ADR-0098  game/infrastructure/src/main/kotlin/com/bliss/game/infrastructure/persistence/PostgresLobbyRepository.kt  findActiveByOwnerUser + findIdleOwnerless; eraseSession rule 2 vacates (owner_user_id NULL + owner_session_id sentinel) instead of transferring
+ADR-0098  game/api/openapi.yaml  POST /v1/lobbies/{lobbyId}/ownership (claim): 200 lobby / 401 / 403 not-present-or-owned / 409 quota
+ADR-0098  frontend/src/ui/home/HomeScreen.tsx  handleCreateCoop → useCreateOrResume: IN_PROGRESS create-response ⇒ owned-game modal (rejoin / sole-occupant new / subtle subscribe hint), else navigate
+# ADR-0098: Multiplayer lobby ownership as a claimable lease — 1 active game by owner_user_id (sticky across disconnect); explicit relinquish→ownerless→claim; RGPD rule 2 vacates not transfers; 7d ownerless GC; amends ADR-0055 & ADR-0083
 ```
 
 ## Adding entries

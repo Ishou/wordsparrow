@@ -109,3 +109,30 @@ subscription-tier billing/payment integrity (ADR-0078).
   access gating (the open, separate W5b work), the create endpoint denies/limits
   regardless of client. Ungated solo grid generation remains a separate concern,
   out of scope here.
+
+## Amendment 2026-07-07 — quota is "1 active game", not "1 open lobby" (ADR-0098)
+
+The original free-tier limit — **1 `WAITING` lobby** — counted only un-started
+lobbies. Because the lifecycle is `WAITING → IN_PROGRESS → COMPLETED` and the
+quota ignored `IN_PROGRESS`, a free player who *started* a game dropped out of
+the count and could immediately host another, accumulating unlimited concurrent
+in-progress games. The Decision's phrasing ("once that lobby's game starts …
+they may host again") is the loophole.
+
+ADR-0098 (multiplayer ownership as a claimable lease) supersedes this:
+
+- Free player = **1 active game**, where *active* = non-terminal (`WAITING`
+  **or** `IN_PROGRESS`), counted by **`owner_user_id`** (sticky across
+  disconnect — you stay owner until you finish or explicitly leave), not by the
+  owner *seat*. The quota query moves from `findWaitingByOwnerUser` to
+  `findActiveByOwnerUser`.
+- A game leaves your quota only when it completes or you **explicitly relinquish**
+  it (a deliberate "Quitter"); disconnect/tab-close keeps you owner. A
+  relinquished game becomes *ownerless* and any present player may **claim** it
+  (claim is itself quota-gated).
+- The quota remains a create/claim-time gate (unchanged TOCTOU posture: same
+  `withUserLock`), never a DB uniqueness constraint.
+
+Guest = 0 and subscriber = unlimited (`multiplayer:host-unlimited`) are
+unchanged. See ADR-0098 for the full lease model, RGPD interaction, and the
+7-day ownerless GC sweep.
