@@ -147,4 +147,12 @@ describe('HttpAuthClient.signInUrl', () => {
     expect(parsed.pathname).toBe('/v1/auth/apple/login');
     expect(parsed.searchParams.get('return_to')).toBe('https://wordsparrow.io/');
   });
+
+  it('absolutizes a bare return_to path against the current origin', () => {
+    // A relative path (e.g. from a surface that passed pathname instead of href) would fail the
+    // identity origin allow-list with a 400; the adapter must promote it to an absolute URL.
+    const url = makeClient().signInUrl('google', '/abonnement');
+
+    expect(new URL(url).searchParams.get('return_to')).toBe(`${window.location.origin}/abonnement`);
+  });
 });

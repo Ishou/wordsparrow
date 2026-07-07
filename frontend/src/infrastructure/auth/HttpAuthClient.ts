@@ -131,7 +131,8 @@ export function createHttpAuthClient(
 
     signInUrl(provider: 'google' | 'apple', returnTo: string): string {
       const url = new URL(`/v1/auth/${provider}/login`, baseUrl);
-      url.searchParams.set('return_to', returnTo);
+      // return_to must be absolute: the identity API redirects the browser back to it after the IdP round-trip, so a bare path would resolve against the API host and get rejected by the origin allow-list (ADR-0044).
+      url.searchParams.set('return_to', new URL(returnTo, window.location.origin).toString());
       return url.toString();
     },
   };
