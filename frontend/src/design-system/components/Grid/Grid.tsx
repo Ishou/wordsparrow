@@ -20,6 +20,7 @@ export type GridSize = 'full' | 'mini';
 
 export interface GridProps {
   readonly layout: GridLayout;
+  readonly ariaLabel: string;
   readonly size?: GridSize;
 }
 
@@ -43,14 +44,14 @@ function mosaicKind(spec: GridCellSpec): keyof typeof byKind {
   return 'solved';
 }
 
-export function Grid({ layout, size = 'full' }: GridProps) {
+export function Grid({ layout, ariaLabel, size = 'full' }: GridProps) {
   const cells = resolveGrid(layout);
   const cols = `repeat(${layout.columns}, ${size === 'mini' ? '22px' : '1fr'})`;
   return (
     <div
       role="img"
       data-grid-size={size}
-      aria-label="Grille de mots fléchés"
+      aria-label={ariaLabel}
       className={size === 'mini' ? mosaic : board}
       style={{ gridTemplateColumns: cols }}
     >

@@ -2,7 +2,9 @@ import { css } from 'styled-system/css';
 
 export interface StatCardProps {
   readonly temps: string;
+  readonly tempsLabel: string;
   readonly serie: string;
+  readonly serieLabel: string;
 }
 
 // Single frosted-glass pill holding both stats, split by a hairline (design source of truth).
@@ -21,16 +23,16 @@ const sep = css({ width: '1px', height: '32px', bg: 'rgba(33,75,64,0.14)' });
 const label = css({ fontFamily: 'wsUi', fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'ws.khaki', opacity: 0.7 });
 const value = css({ fontFamily: 'wsDisplay', fontSize: '26px', fontWeight: 'semibold', color: 'ws.jadeInk', lineHeight: '1', whiteSpace: 'nowrap' });
 
-export function StatCard({ temps, serie }: StatCardProps) {
+export function StatCard({ temps, tempsLabel, serie, serieLabel }: StatCardProps) {
   return (
     <div className={card}>
       <div className={col}>
-        <span className={label}>Temps</span>
+        <span className={label}>{tempsLabel}</span>
         <span className={value}>{temps}</span>
       </div>
       <span aria-hidden="true" className={sep} />
       <div className={col}>
-        <span className={label}>Série</span>
+        <span className={label}>{serieLabel}</span>
         <span className={value}>{serie}</span>
       </div>
     </div>

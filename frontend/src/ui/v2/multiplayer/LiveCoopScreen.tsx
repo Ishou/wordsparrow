@@ -7,6 +7,7 @@ import type { Player, SessionId } from '@/domain/game';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
 import { ClueRail, Lockup } from '@/design-system';
+import { t } from '@/ui/i18n';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { SkipLink } from '@/ui/v2/SkipLink';
 import { useGridNavigation } from '@/ui/components/grid/useGridNavigation';
@@ -359,9 +360,16 @@ export function LiveCoopScreen({
         {clue && clueOrdinal >= 0 ? (
           <ClueRail
             direction={clue.direction === 'across' ? 'horizontal' : 'vertical'}
+            directionLabel={t(clue.direction === 'across' ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
             clue={clue.clue.text}
             index={clueOrdinal + 1}
             total={orderedClues.length}
+            groupLabel={t('clueRail.aria.group')}
+            counterLabel={t('clueRail.aria.counter', { index: clueOrdinal + 1, total: orderedClues.length })}
+            prevLabel={t('clueRail.aria.prev')}
+            nextLabel={t('clueRail.aria.next')}
+            zoomInLabel={t('clueRail.aria.zoomIn')}
+            zoomOutLabel={t('clueRail.aria.zoomOut')}
             onPrev={() => nav.cycleClue(-1)}
             onNext={() => nav.cycleClue(1)}
             onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}

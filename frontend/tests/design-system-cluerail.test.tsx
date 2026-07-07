@@ -3,12 +3,22 @@ import { describe, expect, it, vi } from 'vitest';
 import { ClueRail } from '@/design-system';
 import { expectAxeClean } from '@/test/a11y';
 
+const LABELS = {
+  directionLabel: 'HORIZONTAL',
+  groupLabel: 'Indice actif',
+  counterLabel: 'Indice 4 sur 18',
+  prevLabel: 'Indice précédent',
+  nextLabel: 'Indice suivant',
+  zoomInLabel: 'Zoomer',
+  zoomOutLabel: 'Dézoomer',
+};
+
 describe('ClueRail', () => {
   it('shows the clue + counter and fires steppers', async () => {
     const onPrev = vi.fn();
     const onNext = vi.fn();
     const { container } = render(
-      <ClueRail direction="horizontal" clue="Capitale de la France" index={4} total={18} onPrev={onPrev} onNext={onNext} />,
+      <ClueRail {...LABELS} direction="horizontal" clue="Capitale de la France" index={4} total={18} onPrev={onPrev} onNext={onNext} />,
     );
     expect(screen.getByText('Capitale de la France')).toBeTruthy();
     expect(screen.getByText('4 / 18')).toBeTruthy();
@@ -20,7 +30,7 @@ describe('ClueRail', () => {
   });
 
   it('disables both steppers when there is a single clue', () => {
-    render(<ClueRail direction="vertical" clue="Note" index={1} total={1} onPrev={vi.fn()} onNext={vi.fn()} />);
+    render(<ClueRail {...LABELS} direction="vertical" clue="Note" index={1} total={1} onPrev={vi.fn()} onNext={vi.fn()} />);
     expect((screen.getByLabelText('Indice précédent') as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByLabelText('Indice suivant') as HTMLButtonElement).disabled).toBe(true);
   });
@@ -29,12 +39,12 @@ describe('ClueRail', () => {
     const onPrev = vi.fn();
     const onNext = vi.fn();
     // First clue: prev must still fire (wraps to the last) — not disabled.
-    const { rerender } = render(<ClueRail direction="vertical" clue="A" index={1} total={18} onPrev={onPrev} onNext={onNext} />);
+    const { rerender } = render(<ClueRail {...LABELS} direction="vertical" clue="A" index={1} total={18} onPrev={onPrev} onNext={onNext} />);
     expect((screen.getByLabelText('Indice précédent') as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(screen.getByLabelText('Indice précédent'));
     expect(onPrev).toHaveBeenCalledOnce();
     // Last clue: next must still fire (wraps to the first).
-    rerender(<ClueRail direction="vertical" clue="A" index={18} total={18} onPrev={onPrev} onNext={onNext} />);
+    rerender(<ClueRail {...LABELS} direction="vertical" clue="A" index={18} total={18} onPrev={onPrev} onNext={onNext} />);
     expect((screen.getByLabelText('Indice suivant') as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(screen.getByLabelText('Indice suivant'));
     expect(onNext).toHaveBeenCalledOnce();

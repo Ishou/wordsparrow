@@ -8,6 +8,7 @@ import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
 import { Button, ClueRail, Lockup } from '@/design-system';
+import { t } from '@/ui/i18n';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { SkipLink } from '@/ui/v2/SkipLink';
@@ -537,9 +538,16 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
             {displayClue ? (
               <ClueRail
                 direction={displayClue.across ? 'horizontal' : 'vertical'}
+                directionLabel={t(displayClue.across ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
                 clue={displayClue.text}
                 index={displayOrdinal + 1}
                 total={orderedClues.length}
+                groupLabel={t('clueRail.aria.group')}
+                counterLabel={t('clueRail.aria.counter', { index: displayOrdinal + 1, total: orderedClues.length })}
+                prevLabel={t('clueRail.aria.prev')}
+                nextLabel={t('clueRail.aria.next')}
+                zoomInLabel={t('clueRail.aria.zoomIn')}
+                zoomOutLabel={t('clueRail.aria.zoomOut')}
                 onPrev={() => stepClue(-1)}
                 onNext={() => stepClue(1)}
                 onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}

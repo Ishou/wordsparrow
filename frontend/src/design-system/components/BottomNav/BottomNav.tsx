@@ -5,13 +5,15 @@ export type NavKey = 'accueil' | 'grilles' | 'compte';
 
 export interface BottomNavProps {
   readonly active: NavKey;
+  readonly ariaLabel: string;
+  readonly labels: Record<NavKey, string>;
   readonly onNavigate?: (key: NavKey) => void;
 }
 
-const ITEMS: ReadonlyArray<{ key: NavKey; label: string; icon: Icon }> = [
-  { key: 'accueil', label: 'Accueil', icon: House },
-  { key: 'grilles', label: 'Grilles', icon: GridFour },
-  { key: 'compte', label: 'Compte', icon: User },
+const ITEMS: ReadonlyArray<{ key: NavKey; icon: Icon }> = [
+  { key: 'accueil', icon: House },
+  { key: 'grilles', icon: GridFour },
+  { key: 'compte', icon: User },
 ];
 
 const nav = css({
@@ -40,10 +42,10 @@ const item = css({
 });
 const itemActive = css({ color: 'ws.sakura', opacity: 1, fontWeight: 'black' });
 
-export function BottomNav({ active, onNavigate }: BottomNavProps) {
+export function BottomNav({ active, ariaLabel, labels, onNavigate }: BottomNavProps) {
   return (
-    <nav className={nav} aria-label="Navigation principale">
-      {ITEMS.map(({ key, label, icon: Glyph }) => (
+    <nav className={nav} aria-label={ariaLabel}>
+      {ITEMS.map(({ key, icon: Glyph }) => (
         <button
           key={key}
           type="button"
@@ -52,7 +54,7 @@ export function BottomNav({ active, onNavigate }: BottomNavProps) {
           onClick={() => onNavigate?.(key)}
         >
           <Glyph aria-hidden="true" size={22} weight={key === active ? 'fill' : 'regular'} />
-          {label}
+          {labels[key]}
         </button>
       ))}
     </nav>

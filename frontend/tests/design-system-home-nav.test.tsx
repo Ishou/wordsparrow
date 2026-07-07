@@ -5,7 +5,7 @@ import { expectAxeClean } from '@/test/a11y';
 
 describe('home + nav components', () => {
   it('StatCard renders both stats, a11y clean', async () => {
-    const { container } = render(<StatCard temps="02:14" serie="🔥 8" />);
+    const { container } = render(<StatCard temps="02:14" tempsLabel="Temps" serie="🔥 8" serieLabel="Série" />);
     expect(screen.getByText('Temps')).toBeTruthy();
     expect(screen.getByText('02:14')).toBeTruthy();
     expect(screen.getByText('Série')).toBeTruthy();
@@ -32,7 +32,7 @@ describe('home + nav components', () => {
 
   it('BottomNav marks the active item and fires navigation', async () => {
     const onNavigate = vi.fn();
-    const { container } = render(<BottomNav active="accueil" onNavigate={onNavigate} />);
+    const { container } = render(<BottomNav active="accueil" ariaLabel="Navigation principale" labels={{ accueil: 'Accueil', grilles: 'Grilles', compte: 'Compte' }} onNavigate={onNavigate} />);
     expect(screen.getByRole('button', { name: /Accueil/ }).getAttribute('aria-current')).toBe('page');
     fireEvent.click(screen.getByRole('button', { name: /Grilles/ }));
     expect(onNavigate).toHaveBeenCalledWith('grilles');
@@ -41,7 +41,7 @@ describe('home + nav components', () => {
 
   it('DailyCard composes date + difficulty + play button', async () => {
     const onPlay = vi.fn();
-    const { container } = render(<DailyCard date="Mercredi 20 juin" level="moyen" onPlay={onPlay} />);
+    const { container } = render(<DailyCard date="Mercredi 20 juin" level="moyen" ariaLabel="Grille du jour" eyebrow="GRILLE DU JOUR" playLabel="Jouer" onPlay={onPlay} />);
     expect(screen.getByText('Mercredi 20 juin')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Jouer' }));
     expect(onPlay).toHaveBeenCalledOnce();

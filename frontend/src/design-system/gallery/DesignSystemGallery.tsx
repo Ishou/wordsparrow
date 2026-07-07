@@ -127,12 +127,12 @@ export function DesignSystemGallery() {
           <div className={css({ display: 'flex', flexWrap: 'wrap', gap: '26px', alignItems: 'flex-start' })}>
             <Var label="Full board — fenêtré · zoomable · déborde">
               <div style={{ position: 'relative', width: 328, height: 300, overflow: 'hidden', borderRadius: 14 }}>
-                <div style={{ width: 420, transform: 'translate(-30px,-12px)' }}><Grid layout={BOARD} size="full" /></div>
+                <div style={{ width: 420, transform: 'translate(-30px,-12px)' }}><Grid layout={BOARD} ariaLabel="Grille de mots fléchés" size="full" /></div>
                 <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', boxShadow: 'inset 28px 0 22px -18px #C4E5D3, inset -28px 0 22px -18px #C4E5D3, inset 0 18px 14px -12px #C4E5D3, inset 0 -18px 14px -12px #C4E5D3' }} />
               </div>
             </Var>
             <Var label="Mini / preview — teaser · mosaïque">
-              <Grid layout={BOARD} size="mini" />
+              <Grid layout={BOARD} ariaLabel="Grille de mots fléchés" size="mini" />
             </Var>
           </div>
         </Card>
@@ -140,14 +140,28 @@ export function DesignSystemGallery() {
         <Card name="PlayGrid" desc="Le plateau de jeu : tuiles à taille fixe, sans cadre — il déborde de sa fenêtre et se zoome d'un bloc. Mot actif PARIS (curseur sakura, reste en blush), indices auto-ajustés.">
           <div className={css({ bg: 'ws.jade', borderRadius: '13px', padding: '20px', display: 'flex', justifyContent: 'center' })}>
             <div style={{ width: 360, height: 380, overflow: 'hidden', borderRadius: 14, boxShadow: 'inset 0 0 0 1px rgba(33,75,64,0.06)' }}>
-              <div style={{ transform: 'translate(-44px,-32px)' }}><PlayGrid /></div>
+              <div style={{ transform: 'translate(-44px,-32px)' }}><PlayGrid ariaLabel="Grille de mots fléchés en cours" /></div>
             </div>
           </div>
         </Card>
 
         <Card name="ClueRail" desc="Label · indice actif · stepper ‹ › · compteur · zoom − +.">
           <div className={css({ bg: 'ws.jade', borderRadius: '13px', padding: '18px' })}>
-            <div style={{ maxWidth: 340 }}><ClueRail direction="horizontal" clue="Capitale de la France" index={4} total={18} /></div>
+            <div style={{ maxWidth: 340 }}>
+              <ClueRail
+                direction="horizontal"
+                directionLabel="HORIZONTAL"
+                clue="Capitale de la France"
+                index={4}
+                total={18}
+                groupLabel="Indice actif"
+                counterLabel="Indice 4 sur 18"
+                prevLabel="Indice précédent"
+                nextLabel="Indice suivant"
+                zoomInLabel="Zoomer"
+                zoomOutLabel="Dézoomer"
+              />
+            </div>
           </div>
         </Card>
 
@@ -169,7 +183,7 @@ export function DesignSystemGallery() {
 
         <Card name="StatCard · StreakPill" desc="Chiffres en Fredoka · pilule translucide.">
           <div className={css({ display: 'flex', flexWrap: 'wrap', gap: '22px', alignItems: 'flex-start', bg: 'ws.jade', borderRadius: '13px', padding: '18px' })}>
-            <Var label="StatCard"><StatCard temps="02:14" serie="🔥 8" /></Var>
+            <Var label="StatCard"><StatCard temps="02:14" tempsLabel="Temps" serie="🔥 8" serieLabel="Série" /></Var>
             <Var label="StreakPill · simple / + chrono">
               <div className={css({ display: 'flex', gap: '10px' })}>
                 <StreakPill streak={8} />
@@ -200,13 +214,13 @@ export function DesignSystemGallery() {
 
         <Card name="DailyCard" desc="Le héros de l'accueil : aperçu · date · niveau · CTA.">
           <div className={css({ bg: 'ws.jade', borderRadius: '13px', padding: '18px', display: 'flex', justifyContent: 'center' })}>
-            <div style={{ width: 330 }}><DailyCard date="Mercredi 20 juin" level="moyen" /></div>
+            <div style={{ width: 330 }}><DailyCard date="Mercredi 20 juin" level="moyen" ariaLabel="Grille du jour" eyebrow="GRILLE DU JOUR" playLabel="Jouer" /></div>
           </div>
         </Card>
 
         <Card name="BottomNav · SectionHeading" desc="Navigation : onglet actif en sakura. Titre de section.">
           <div className={css({ bg: 'ws.jade', borderRadius: '13px', padding: '18px' })}>
-            <div style={{ maxWidth: 360 }}><BottomNav active="accueil" /></div>
+            <div style={{ maxWidth: 360 }}><BottomNav active="accueil" ariaLabel="Navigation principale" labels={{ accueil: 'Accueil', grilles: 'Grilles', compte: 'Compte' }} /></div>
             <div className={css({ marginTop: '18px', bg: 'white', borderRadius: '12px', padding: '14px 16px' })}>
               <div className={css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.jadeInk' })}>Grilles précédentes</div>
             </div>

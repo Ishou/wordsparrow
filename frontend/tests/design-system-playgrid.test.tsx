@@ -5,7 +5,7 @@ import { expectAxeClean } from '@/test/a11y';
 
 describe('PlayGrid', () => {
   it('renders the daily board with a cursor cell, an active word and clue cells', async () => {
-    const { container } = render(<PlayGrid />);
+    const { container } = render(<PlayGrid ariaLabel="Grille de mots fléchés en cours" />);
     expect(container.querySelector('[aria-label="Grille de mots fléchés en cours"]')).not.toBeNull();
     expect(container.querySelector('[data-cell-state="active"]')?.textContent).toBe('P');
     expect(container.querySelectorAll('[data-cell-state="activeWord"]')).toHaveLength(4);
