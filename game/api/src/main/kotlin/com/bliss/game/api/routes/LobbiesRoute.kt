@@ -110,9 +110,7 @@ fun Route.lobbies(
             call.respond(HttpStatusCode.Created, lobby.toResponseDto())
         }
 
-        // Claim an ownerless lobby (ADR-0098 §2). Cookie-authed, no body; the seat is resolved from
-        // the verified userId. Runs under withUserLock(userId) so the quota re-check cannot race a
-        // concurrent create/claim from the same user (ADR-0098 §5 TOCTOU).
+        // Claim an ownerless lobby, cookie-authed, no body (ADR-0098 §2/§5).
         post("{lobbyId}/ownership") {
             val raw = call.parameters["lobbyId"].orEmpty()
             val lobbyId =

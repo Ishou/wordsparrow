@@ -225,12 +225,7 @@ sealed class ServerToClientFrame {
         val finalEntries: List<CellEntryDto>,
     ) : ServerToClientFrame()
 
-    /**
-     * A lobby's owner changed (ADR-0098 §2). Both `newOwner*` fields are non-null on a claim and
-     * both null when the lobby became ownerless via relinquish or RGPD vacate. Mirrors
-     * `OwnershipChangedPayload` in `game/api/asyncapi.yaml`; peers toggle owner-gated affordances
-     * and surface the "Reprendre la partie" claim action off this frame.
-     */
+    /** Owner changed - both newOwner* ids set on claim, both null on relinquish/RGPD-vacate. Mirrors OwnershipChangedPayload (ADR-0098 §2). */
     @Serializable
     @SerialName("ownershipChanged")
     data class OwnershipChanged(
