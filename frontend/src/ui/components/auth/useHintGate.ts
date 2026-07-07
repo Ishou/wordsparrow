@@ -1,8 +1,6 @@
 import { useCapability } from '@/ui/components/billing/useCapability';
+import { t } from '@/ui/i18n';
 import { useOptionalAuth } from './AuthProvider';
-
-const DISABLED_TOOLTIP_ANON = 'Connectez-vous pour utiliser les indices.';
-const DISABLED_TOOLTIP_LOADING = 'Chargement…';
 
 type GateProps = {
   readonly disabled: true;
@@ -15,8 +13,8 @@ export function useHintGate(): GateProps | null {
   const hasHint = useCapability('hint');
   if (!auth) return null;
   if (auth.state.status === 'loading') {
-    return { disabled: true, 'aria-disabled': true, title: DISABLED_TOOLTIP_LOADING };
+    return { disabled: true, 'aria-disabled': true, title: t('auth.hintGate.loading') };
   }
   if (hasHint) return null;
-  return { disabled: true, 'aria-disabled': true, title: DISABLED_TOOLTIP_ANON };
+  return { disabled: true, 'aria-disabled': true, title: t('auth.hintGate.anon') };
 }

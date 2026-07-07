@@ -11,6 +11,7 @@ import type {
   GameDefinitionCell,
   GamePuzzle,
 } from '@/domain/game';
+import { t } from '@/ui/i18n';
 
 // Adapter from the wire-shape `GamePuzzle` (mirrors AsyncAPI) to the
 // UI-shape `Puzzle` consumed by `Grid`. The two shapes belong to
@@ -113,22 +114,22 @@ export function multiAnnouncementFor(
   switch (event.type) {
     case 'playerJoined': {
       if (event.sessionId === ctx.localSessionId) return null;
-      return `${event.pseudonym} a rejoint la partie`;
+      return t('lobby.sr.playerJoined', { name: event.pseudonym });
     }
     case 'playerLeft': {
       if (event.sessionId === ctx.localSessionId) return null;
-      const name = ctx.pseudonymBySessionId.get(event.sessionId) ?? 'Un joueur';
-      return `${name} a quitté la partie`;
+      const name = ctx.pseudonymBySessionId.get(event.sessionId) ?? t('lobby.sr.unknownPlayer');
+      return t('lobby.sr.playerLeft', { name });
     }
     case 'gameStarted': {
-      return 'La partie commence';
+      return t('lobby.sr.gameStarted');
     }
     case 'wordLocked': {
       const word = event.positions
         .map((p) => read(p.row, p.column))
         .join('');
       if (word.length === 0) return null;
-      return `mot validé : ${word}`;
+      return t('lobby.sr.wordLocked', { word });
     }
     default:
       return null;

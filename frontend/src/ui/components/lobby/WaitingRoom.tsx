@@ -5,6 +5,7 @@ import { MAX_PSEUDONYM_LENGTH, type Lobby, type Pseudonym, type SessionId } from
 import { EyeIcon, EyeOffIcon } from '@/ui/components/icons';
 import { Button, TextField, ToggleGroup } from '@/ui/components/primitives';
 import { PinInput } from '@/ui/components/primitives/PinInput';
+import { t } from '@/ui/i18n';
 import { PlayerList, MAX_PLAYERS } from './PlayerList';
 
 // Pure prop-driven WaitingRoom rendered while `lobby.state === 'WAITING'`.
@@ -176,10 +177,10 @@ export function WaitingRoom({
   const [codeRevealed, setCodeRevealed] = useState(false);
 
   return (
-    <section className={styles.container} aria-label="Salle d'attente">
+    <section className={styles.container} aria-label={t('lobby.waitingRoom.aria.section')}>
       <div>
         <h2 className={styles.sectionTitle}>
-          Joueurs ({lobby.players.length}/{MAX_PLAYERS})
+          {t('lobby.waitingRoom.playersHeading', { current: lobby.players.length, max: MAX_PLAYERS })}
         </h2>
         <PlayerList
           players={lobby.players}
@@ -191,10 +192,10 @@ export function WaitingRoom({
 
       {lobby.code != null ? (
         <div className={styles.codeSection}>
-          <span className={styles.codeLabel}>Code de partie</span>
+          <span className={styles.codeLabel}>{t('lobby.waitingRoom.codeLabel')}</span>
           <div className={styles.codeRow}>
             <PinInput
-              label="Code de partie"
+              label={t('lobby.waitingRoom.codeLabel')}
               value={lobby.code}
               onValueChange={() => { /* readonly — no edits accepted */ }}
               mask={!codeRevealed}
@@ -203,7 +204,7 @@ export function WaitingRoom({
             <button
               type="button"
               className={styles.iconToggle}
-              aria-label={codeRevealed ? 'Masquer le code' : 'Afficher le code'}
+              aria-label={codeRevealed ? t('lobby.aria.hideCode') : t('lobby.aria.showCode')}
               aria-pressed={codeRevealed}
               onClick={() => setCodeRevealed((v) => !v)}
             >
@@ -217,7 +218,7 @@ export function WaitingRoom({
               disabled={isRotating}
               aria-busy={isRotating || undefined}
             >
-              {isRotating ? 'Régénération…' : 'Régénérer le code'}
+              {isRotating ? t('lobby.waitingRoom.rotating') : t('lobby.waitingRoom.rotateCode')}
             </Button>
           ) : null}
         </div>
@@ -225,11 +226,11 @@ export function WaitingRoom({
 
       <div className={styles.row}>
         <Button variant="ghost" onClick={handleCopyClick}>
-          {canNativeShare() ? 'Partager le lien' : 'Copier le lien'}
+          {canNativeShare() ? t('lobby.waitingRoom.share') : t('lobby.waitingRoom.copy')}
         </Button>
         {justCopied ? (
           <span role="status" aria-live="polite" className={styles.copyFeedback}>
-            Lien copié !
+            {t('lobby.waitingRoom.copied')}
           </span>
         ) : null}
       </div>
@@ -254,7 +255,7 @@ export function WaitingRoom({
           disabled={!canStart}
           aria-busy={isStarting || undefined}
         >
-          {isStarting ? 'Démarrage…' : 'Démarrer la partie'}
+          {isStarting ? t('lobby.waitingRoom.starting') : t('lobby.waitingRoom.start')}
         </Button>
       ) : null}
     </section>
@@ -293,7 +294,7 @@ function PseudonymEditor({
   if (!isEditing) {
     return (
       <div className={styles.row}>
-        <h2 className={styles.sectionTitle}>Votre pseudonyme</h2>
+        <h2 className={styles.sectionTitle}>{t('lobby.waitingRoom.pseudonymTitle')}</h2>
         <Button
           variant="ghost"
           onClick={() => {
@@ -301,7 +302,7 @@ function PseudonymEditor({
             onClearPseudonymError?.();
             setIsEditing(true);
           }}
-          aria-label={`Modifier votre pseudonyme : ${currentPseudonym}`}
+          aria-label={t('lobby.waitingRoom.aria.editPseudonym', { name: currentPseudonym })}
         >
           {currentPseudonym}
         </Button>
@@ -311,7 +312,7 @@ function PseudonymEditor({
 
   return (
     <TextField
-      label="Votre pseudonyme"
+      label={t('lobby.waitingRoom.pseudonymTitle')}
       value={draft}
       maxLength={MAX_PSEUDONYM_LENGTH}
       invalid={pseudonymError != null || isOverCap || undefined}
@@ -350,7 +351,7 @@ function GridSizePicker({
   const currentValue = (match?.value ?? '') as GridSize;
   return (
     <ToggleGroup<GridSize>
-      label="Taille de la grille"
+      label={t('lobby.waitingRoom.gridSizeLabel')}
       name="grid-size"
       value={currentValue}
       onValueChange={(value) => {

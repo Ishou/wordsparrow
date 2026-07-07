@@ -16,6 +16,7 @@ import type {
   SessionId,
 } from '@/domain/game';
 import type { ToastOptions } from '@/ui/components/primitives';
+import { t } from '@/ui/i18n';
 import { type LobbyView, deriveDurationMs, reduceLobby } from './lobbyView';
 import {
   type MultiAnnounceContext,
@@ -206,7 +207,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
         event.errorType === 'https://bliss.example/errors/wrong-code' &&
         !joinConfirmedRef.current) {
         // Pre-join denial: bounce home via the joinDenied effect so the lobby never reaches a non-member's DOM.
-        setJoinDenied(event.detail ?? 'Code invalide ou partie privée. Demandez le code à l’organisateur.');
+        setJoinDenied(event.detail ?? t('lobby.error.joinDenied'));
         lobbyJoinCodeStash.clear(lobbyId);
       }
       // Post-join denial = evicted while offline (ADR-0018 §5) — honest screen, not a misleading wrong-code bounce.
@@ -232,7 +233,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
         event.errorType === 'https://bliss.example/errors/protocol' &&
         !isLobbyGoneFrame(event) &&
         !joinConfirmedRef.current) {
-        setJoinDenied('Impossible de rejoindre cette partie. Réessaie.');
+        setJoinDenied(t('lobby.error.cannotJoin'));
         lobbyJoinCodeStash.clear(lobbyId);
       }
       // First `playerJoined` for our own sessionId confirms the WS join
@@ -299,14 +300,14 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
         if (connectionLostRef.current) {
           connectionLostRef.current = false;
           // show() replaces the sticky lost-toast (single-slot) and auto-dismisses; Toast owns its own aria-live region.
-          showToast({ text: 'Connexion rétablie', tone: 'info' });
+          showToast({ text: t('lobby.toast.reconnected'), tone: 'info' });
         }
         hasConnectedRef.current = true;
         return;
       }
       if (!hasConnectedRef.current || connectionLostRef.current) return;
       connectionLostRef.current = true;
-      showToast({ text: 'Connexion perdue — reconnexion en cours…', tone: 'info', duration: null });
+      showToast({ text: t('lobby.toast.connectionLost'), tone: 'info', duration: null });
     });
     // ADR-0027: read the code stash the navigation populated. Read is
     // non-destructive so React StrictMode's mount-unmount-remount
@@ -563,11 +564,11 @@ export function messageForGameErrorEvent(
   // When the click that's in flight is a Démarrer, the start-specific
   // copy beats the server's title — it stays grounded in the action the
   // user just took, even if the server's title is more abstract.
-  if (context.wasStarting) return 'Impossible de démarrer la partie. Réessayez.';
+  if (context.wasStarting) return t('lobby.error.cannotStart');
   // Otherwise prefer the server's `title`: backend error frames carry
   // French, context-specific titles which are strictly more useful than
   // the generic fallback. The fallback only kicks in for malformed /
   // blank-title frames.
   if (event.title.length > 0) return event.title;
-  return 'Une erreur est survenue. Réessayez.';
+  return t('lobby.error.generic');
 }

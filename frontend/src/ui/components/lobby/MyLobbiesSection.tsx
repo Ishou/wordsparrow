@@ -5,6 +5,7 @@ import { css } from 'styled-system/css';
 import type { LobbySummary } from '@/application/game';
 import { EyeIcon, EyeOffIcon } from '@/ui/components/icons';
 import { ProgressBar } from '@/ui/components/layout/ProgressBar';
+import { t } from '@/ui/i18n';
 
 // "Mes parties" surface (ADR-0039). Read-only list of the calling
 // session's lobbies, rendered inside the Accueil Multijoueur card below
@@ -154,23 +155,23 @@ function formatActivityDate(iso: string): string {
 function titleFor(lobby: LobbySummary): string {
   if (lobby.title != null && lobby.title.length > 0) return lobby.title;
   const when = formatActivityDate(lobby.lastActivityAt);
-  return when.length > 0 ? `Partie du ${when}` : 'Partie';
+  return when.length > 0 ? t('lobby.myLobbies.gameOfDate', { date: when }) : t('lobby.myLobbies.gameFallback');
 }
 
 export function MyLobbiesSection({ lobbies }: MyLobbiesSectionProps) {
   if (lobbies.length === 0) {
     return (
       <section className={sectionStyles} aria-labelledby="my-lobbies-heading">
-        <h3 id="my-lobbies-heading" className={headingStyles}>Mes parties</h3>
+        <h3 id="my-lobbies-heading" className={headingStyles}>{t('lobby.myLobbies.heading')}</h3>
         <p className={emptyTextStyles}>
-          Vos parties multijoueur en cours apparaîtront ici.
+          {t('lobby.myLobbies.empty')}
         </p>
       </section>
     );
   }
   return (
     <section className={sectionStyles} aria-labelledby="my-lobbies-heading">
-      <h3 id="my-lobbies-heading" className={headingStyles}>Mes parties</h3>
+      <h3 id="my-lobbies-heading" className={headingStyles}>{t('lobby.myLobbies.heading')}</h3>
       <ul className={listStyles}>
         {lobbies.map((lobby) => (
           <li key={lobby.id}>
@@ -226,7 +227,7 @@ function LobbyRow({ lobby }: { readonly lobby: LobbySummary }) {
             </span>
             <span>·</span>
             <span data-testid="lobby-players">
-              {lobby.connectedCount} / {lobby.playerCount} joueurs
+              {t('lobby.myLobbies.playerRatio', { connected: lobby.connectedCount, total: lobby.playerCount })}
             </span>
           </span>
         </Link>
@@ -241,7 +242,7 @@ function LobbyRow({ lobby }: { readonly lobby: LobbySummary }) {
           <button
             type="button"
             className={iconButtonStyles}
-            aria-label={revealed ? 'Masquer le code' : 'Afficher le code'}
+            aria-label={revealed ? t('lobby.aria.hideCode') : t('lobby.aria.showCode')}
             aria-pressed={revealed}
             onClick={handleToggle}
           >
@@ -250,14 +251,14 @@ function LobbyRow({ lobby }: { readonly lobby: LobbySummary }) {
           <button
             type="button"
             className={iconButtonStyles}
-            aria-label={canNativeShare() ? 'Partager le lien' : 'Copier le lien'}
+            aria-label={canNativeShare() ? t('lobby.myLobbies.aria.share') : t('lobby.myLobbies.aria.copy')}
             onClick={handleCopy}
           >
             <CopyGlyph />
           </button>
           {justCopied ? (
             <span role="status" aria-live="polite" className={copyFeedbackStyles}>
-              Copié
+              {t('lobby.myLobbies.copied')}
             </span>
           ) : null}
         </span>
@@ -265,7 +266,7 @@ function LobbyRow({ lobby }: { readonly lobby: LobbySummary }) {
       <ProgressBar
         value={lobby.progress.solvedCells}
         total={lobby.progress.totalCells}
-        label={`Progression : ${lobby.progress.solvedCells} / ${lobby.progress.totalCells} cases`}
+        label={t('lobby.myLobbies.aria.progress', { solved: lobby.progress.solvedCells, total: lobby.progress.totalCells })}
         showLabel={false}
       />
     </div>
