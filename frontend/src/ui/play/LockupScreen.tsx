@@ -1,5 +1,6 @@
 import { css } from 'styled-system/css';
 import { Lockup, SparrowMark, Wordmark } from '@/design-system';
+import { t } from '@/ui/i18n';
 
 // App Lockup design screen: sparrow-tile mark + bichrome wordmark, horizontal / vertical.
 
@@ -45,18 +46,18 @@ export function LockupScreen() {
         <div style={{ marginBottom: 36 }}>
           <div className={kicker}>
             <span aria-hidden="true" className={dot} />
-            <span className={kickerText}>WordSparrow · Identité · Lockup</span>
+            <span className={kickerText}>{t('play.lockup.kicker')}</span>
           </div>
-          <h1 className={h1}>Icône + titre</h1>
+          <h1 className={h1}>{t('play.lockup.title')}</h1>
           <p className={lede}>
-            La tuile-oiseau inclinée associée au mot-symbole bichrome — <Wordmark size={16} tone="jade" />. Horizontal, vertical, puis les trois contextes d&apos;usage.
+            {t('play.lockup.lede.pre')}<Wordmark size={16} tone="jade" />{t('play.lockup.lede.post')}
           </p>
         </div>
 
         {/* HORIZONTAL */}
         <div className={sectionHead}>
-          <h2 className={h2}>Horizontal</h2>
-          <span className={sub}>icône + nom · côte à côte</span>
+          <h2 className={h2}>{t('play.lockup.horizontal.title')}</h2>
+          <span className={sub}>{t('play.lockup.horizontal.sub')}</span>
         </div>
         <div className={card}>
           <div className={two} style={{ marginBottom: 22 }}>
@@ -69,17 +70,17 @@ export function LockupScreen() {
           </div>
           <div className={jadePanel} style={{ borderRadius: 12, padding: '14px 20px', justifyContent: 'space-between' }}>
             <Lockup orientation="horizontal" tone="jade" iconSize={34} textSize={22} gap={10} />
-            <span className={mono} style={{ fontSize: 10, color: '#214B40', opacity: 0.5 }}>≈ en-tête app</span>
+            <span className={mono} style={{ fontSize: 10, color: '#214B40', opacity: 0.5 }}>{t('play.lockup.appHeaderHint')}</span>
           </div>
           <div className={mono} style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#4C4824', opacity: 0.55, marginTop: 16 }}>
-            Fredoka 500 jade · 600 sakura · lettre-espacement −0.015em
+            {t('play.lockup.fontSpec')}
           </div>
         </div>
 
         {/* VERTICAL */}
         <div className={sectionHead}>
-          <h2 className={h2}>Vertical</h2>
-          <span className={sub}>icône au-dessus du nom · empilé</span>
+          <h2 className={h2}>{t('play.lockup.vertical.title')}</h2>
+          <span className={sub}>{t('play.lockup.vertical.sub')}</span>
         </div>
         <div className={card}>
           <div className={two}>
@@ -94,13 +95,13 @@ export function LockupScreen() {
 
         {/* CONTEXTES */}
         <div className={sectionHead}>
-          <h2 className={h2}>Contextes</h2>
-          <span className={sub}>barre d&apos;app · splash · App Store</span>
+          <h2 className={h2}>{t('play.lockup.contexts.title')}</h2>
+          <span className={sub}>{t('play.lockup.contexts.sub')}</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr 1fr', gap: 18 }}>
           {/* App bar */}
           <div className={contextCard}>
-            <div className={contextLabel}>Barre d&apos;application</div>
+            <div className={contextLabel}>{t('play.lockup.appBar.label')}</div>
             <div style={{ borderRadius: 13, overflow: 'hidden', boxShadow: '0 3px 12px rgba(33,75,64,0.14)' }}>
               <div style={{ background: 'linear-gradient(160deg,#2A5A4C,#1C4338)', padding: '10px 18px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className={mono} style={{ fontSize: 10, color: '#CDE9DA', opacity: 0.8 }}>9:41</span>
@@ -130,33 +131,33 @@ export function LockupScreen() {
 
           {/* Splash */}
           <div className={contextCard}>
-            <div className={contextLabel}>Écran de lancement</div>
+            <div className={contextLabel}>{t('play.lockup.splash.label')}</div>
             <div style={{ borderRadius: 20, background: 'linear-gradient(165deg,#2A5A4C,#1C4338)', padding: '48px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, boxShadow: '0 4px 18px rgba(33,75,64,0.22)' }}>
               <SparrowMark size={110} colorway="sakura" variant="strong" tilt />
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <Wordmark size={36} tone="dark" />
-                <span style={{ fontFamily: "'Nunito Variable', system-ui, sans-serif", fontSize: 13, color: '#CDE9DA', opacity: 0.75, letterSpacing: '0.04em' }}>Mots fléchés · chaque jour</span>
+                <span style={{ fontFamily: "'Nunito Variable', system-ui, sans-serif", fontSize: 13, color: '#CDE9DA', opacity: 0.75, letterSpacing: '0.04em' }}>{t('play.lockup.splash.tagline')}</span>
               </div>
             </div>
           </div>
 
           {/* App Store */}
           <div className={contextCard}>
-            <div className={contextLabel}>Fiche App Store</div>
+            <div className={contextLabel}>{t('play.lockup.appStore.label')}</div>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, paddingBottom: 18, borderBottom: '1px solid rgba(33,75,64,0.10)' }}>
               <SparrowMark size={54} colorway="sakura" variant="strong" tilt tile="jade" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 2 }}>
                 <Wordmark size={20} tone="jade" />
-                <span style={{ fontFamily: "'Nunito Variable', system-ui, sans-serif", fontSize: 12, color: '#4C4824', opacity: 0.7 }}>Mots fléchés quotidiens</span>
+                <span style={{ fontFamily: "'Nunito Variable', system-ui, sans-serif", fontSize: 12, color: '#4C4824', opacity: 0.7 }}>{t('play.lockup.appStore.tagline')}</span>
                 <Stars />
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontFamily: "'Nunito Variable', system-ui, sans-serif", fontSize: 11, fontWeight: 700, color: '#214B40' }}>Gratuit</span>
-                <span className={mono} style={{ fontSize: 9, color: '#4C4824', opacity: 0.55 }}>Jeux de mots · 4+</span>
+                <span style={{ fontFamily: "'Nunito Variable', system-ui, sans-serif", fontSize: 11, fontWeight: 700, color: '#214B40' }}>{t('play.lockup.appStore.free')}</span>
+                <span className={mono} style={{ fontSize: 9, color: '#4C4824', opacity: 0.55 }}>{t('play.lockup.appStore.category')}</span>
               </div>
-              <div style={{ background: '#D45D83', color: '#fff', fontFamily: "'Nunito Variable', system-ui, sans-serif", fontWeight: 800, fontSize: 13, padding: '8px 22px', borderRadius: 999, boxShadow: '0 2px 8px rgba(212,93,131,0.30)' }}>Obtenir</div>
+              <div style={{ background: '#D45D83', color: '#fff', fontFamily: "'Nunito Variable', system-ui, sans-serif", fontWeight: 800, fontSize: 13, padding: '8px 22px', borderRadius: 999, boxShadow: '0 2px 8px rgba(212,93,131,0.30)' }}>{t('play.lockup.appStore.get')}</div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <div style={{ flex: 1, height: 72, borderRadius: 8, background: 'linear-gradient(160deg,#CDE9DA,#BBE0CD)' }} />

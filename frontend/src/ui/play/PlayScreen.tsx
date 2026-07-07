@@ -464,7 +464,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
         <DesktopAppBar
           trailing={
             <>
-              <span className={headerTimer} aria-label={`Temps ${timeLabel}`}>
+              <span className={headerTimer} aria-label={t('play.aria.timer', { time: timeLabel })}>
                 <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
                 {timeLabel}
               </span>
@@ -475,19 +475,19 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
       ) : (
         <header className={header}>
           <div className={headerBar}>
-            <button type="button" className={iconBtn} onClick={() => navigate({ to: '/' })} aria-label="Quitter la grille">
+            <button type="button" className={iconBtn} onClick={() => navigate({ to: '/' })} aria-label={t('play.aria.exit')}>
               <CaretLeft aria-hidden="true" weight="bold" />
             </button>
-            <Link to="/" className={brandLink} aria-label="Accueil">
+            <Link to="/" className={brandLink} aria-label={t('play.aria.home')}>
               <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
             </Link>
             <span className={headerSpacer} />
-            <span className={headerTimer} aria-label={`Temps ${timeLabel}`}>
+            <span className={headerTimer} aria-label={t('play.aria.timer', { time: timeLabel })}>
               <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
               {timeLabel}
             </span>
             {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
-            <button type="button" className={iconBtn} onClick={() => setMenuOpen(true)} aria-label="Réglages">
+            <button type="button" className={iconBtn} onClick={() => setMenuOpen(true)} aria-label={t('play.aria.settings')}>
               <DotsThreeVertical aria-hidden="true" weight="bold" />
             </button>
           </div>
@@ -521,7 +521,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
         {won ? (
           <Button variant="secondary" className={resultsBtn} onClick={() => { setWonLive(true); setWinDismissed(false); }}>
             <Trophy aria-hidden="true" weight="fill" />
-            Voir les résultats
+            {t('play.results.cta')}
           </Button>
         ) : (
           <>
@@ -559,10 +559,10 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
                       className={hintBtn}
                       onClick={requestHint}
                       disabled={hint.pending || (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)}
-                      aria-label={`Indice — ${hint.hintsRemaining} restants`}
+                      aria-label={t('play.hint.aria.remaining', { remaining: hint.hintsRemaining })}
                     >
                       <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
-                      Indice · {hint.hintsRemaining}
+                      {t('play.hint.label', { remaining: hint.hintsRemaining })}
                     </button>
                     <HintCooldown
                       hintsRemaining={hint.hintsRemaining}
