@@ -553,6 +553,47 @@ class LobbyWebSocketRouteTest {
             assertThat(lobby.ownerUserId).isNull()
         }
 
+    // ADR-0098 §2: a non-owner's explicit Quitter frame is a plain seat-drop, not a relinquish.
+    @Test
+    fun `non-owner leaveLobby frame drops the seat without relinquishing ownership`() =
+        runWith { harness ->
+            val ownerUser = UserId("11111111-1111-1111-1111-111111111111")
+            val lobbyId = harness.seedLobbyOwnedBy(ownerUser)
+            val code = harness.codeFor(lobbyId)
+            val ownerSawCoPlayerLeft = CompletableDeferred<String>()
+            val coPlayerJoined = CompletableDeferred<Unit>()
+            coroutineScope {
+                val ownerJob =
+                    async {
+                        harness.client.webSocket("/v1/lobbies/${lobbyId.value}/ws?sessionId=$sessionA") {
+                            receiveText() // snapshot
+                            sendText("""{"type":"joinLobby","sessionId":"$sessionA","pseudonym":"$pseudoA"}""")
+                            coPlayerJoined.complete(Unit)
+                            while (!ownerSawCoPlayerLeft.isCompleted) {
+                                val text = receiveText()
+                                if (text.contains("\"type\":\"playerLeft\"") && text.contains(sessionB)) {
+                                    ownerSawCoPlayerLeft.complete(text)
+                                }
+                                assertThat(text).doesNotContain("\"type\":\"ownershipChanged\"")
+                            }
+                        }
+                    }
+                coPlayerJoined.await()
+                harness.client.webSocket("/v1/lobbies/${lobbyId.value}/ws") {
+                    receiveText() // snapshot
+                    sendText("""{"type":"joinLobby","sessionId":"$sessionB","pseudonym":"$pseudoB","code":"$code"}""")
+                    sendText("""{"type":"leaveLobby"}""")
+                }
+                withTimeout(5_000) { ownerSawCoPlayerLeft.await() }
+                ownerJob.cancel()
+            }
+            val lobby = harness.repo.findById(lobbyId)
+            assertThat(lobby).isNotNull()
+            assertThat(lobby!!.players.containsKey(SessionId(sessionB))).isFalse()
+            assertThat(lobby.ownerUserId).isEqualTo(ownerUser)
+            assertThat(lobby.isOwnerless()).isFalse()
+        }
+
     // ADR-0098 §2: a disconnect (grace path) only drops presence and KEEPS owner_user_id -- it must never relinquish.
     @Test
     fun `owner disconnect keeps owner_user_id and does not relinquish ownership`() =
