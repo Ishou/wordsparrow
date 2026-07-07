@@ -5,6 +5,7 @@ import {
   type PuzzleSolver,
   type RevealedWordCell,
 } from '@/application';
+import { t } from '@/ui/i18n';
 import { useCountdownTicker } from './useCountdownTicker';
 
 // Seeds from `Puzzle.hintsRemaining`; server overwrites on each POST; 429 flips exhausted; resets on puzzle change.
@@ -128,19 +129,19 @@ export function useHintRequest(
               setExhausted(true);
               setHintsRemaining(0);
               setServerSeconds(HINT_REFILL_SECONDS);
-              setErrorMessage('Indices épuisés');
+              setErrorMessage(t('grid.hint.error.exhausted'));
             } else if (err.kind === 'invalid-coord') {
               // Stale-focus race; silent no-op for the user, the linger
               // tick still fires so an in-flight pill clears.
               scheduleLinger();
               return;
             } else if (err.kind === 'auth-required') {
-              setErrorMessage('Connecte-toi pour utiliser les indices');
+              setErrorMessage(t('grid.hint.error.authRequired'));
             } else {
-              setErrorMessage('Erreur, réessayez');
+              setErrorMessage(t('grid.hint.error.generic'));
             }
           } else {
-            setErrorMessage('Erreur, réessayez');
+            setErrorMessage(t('grid.hint.error.generic'));
           }
           scheduleLinger();
         })

@@ -1,4 +1,5 @@
 import { css } from '../../../../styled-system/css';
+import { t } from '@/ui/i18n';
 
 // Hidden below md — touch pinch-zoom makes the cluster redundant; showing it costs ~52 px of grid height on mobile-tiny.
 const cluster = css({
@@ -45,7 +46,7 @@ export function GridZoomControls({
   onReset: () => void;
 }) {
   return (
-    <div className={cluster} role="group" aria-label="Zoom controls">
+    <div className={cluster} role="group" aria-label={t('grid.zoom.aria.controls')}>
       {/* onMouseDown preventDefault: stops browser focus-on-mousedown from blurring the focused cell input. */}
       <button
         type="button"
@@ -53,7 +54,7 @@ export function GridZoomControls({
         onMouseDown={(e) => e.preventDefault()}
         onClick={onZoomOut}
         disabled={!canZoomOut}
-        aria-label="Zoom out"
+        aria-label={t('grid.zoom.aria.out')}
       >
         −
       </button>
@@ -63,8 +64,8 @@ export function GridZoomControls({
         onMouseDown={(e) => e.preventDefault()}
         onClick={onReset}
         disabled={!canZoomOut}
-        aria-label="Reset zoom"
-        title="Reset zoom"
+        aria-label={t('grid.zoom.aria.reset')}
+        title={t('grid.zoom.aria.reset')}
       >
         1:1
       </button>
@@ -74,7 +75,7 @@ export function GridZoomControls({
         onMouseDown={(e) => e.preventDefault()}
         onClick={onZoomIn}
         disabled={!canZoomIn}
-        aria-label="Zoom in"
+        aria-label={t('grid.zoom.aria.in')}
       >
         +
       </button>
