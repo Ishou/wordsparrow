@@ -376,6 +376,40 @@ class LobbiesRouteTest {
         }
 
     @Test
+    fun `POST ownership returns 401 when verifyFresh diverges from verify (revoked session)`() =
+        testApplicationWithVerifier(
+            verifier =
+                divergentVerifier(
+                    cached = WhoAmI(userB, Pseudonym("Bob")),
+                    fresh = null,
+                ),
+        ) { client, repo ->
+            val lobbyId = seedOwnerlessLobby(repo)
+            val response =
+                client.post("/v1/lobbies/${lobbyId.value}/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stale-cookie")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
+            assertThat(response.headers["Content-Type"]!!).startsWith("application/problem+json")
+            assertThat(response.bodyAsText()).contains("auth-required")
+        }
+
+    @Test
+    fun `POST ownership against a non-existent lobbyId returns 404`() =
+        testApplicationWithVerifier(
+            verifier = stubVerifier(WhoAmI(userB, Pseudonym("Bob"))),
+        ) { client, _ ->
+            // Valid base58 nanoid pattern but no lobby was created with this id.
+            val response =
+                client.post("/v1/lobbies/abcdefgh/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertProblem(response, HttpStatusCode.NotFound, "https://bliss.example/errors/lobby-not-found")
+        }
+
+    @Test
     fun `POST ownership by a player not present in the lobby returns 403`() =
         testApplicationWithVerifier(
             verifier = stubVerifier(WhoAmI(userC, Pseudonym("Charlie"))),
