@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ArrowDirection, Cell, DefinitionCell, DefinitionClue, LetterCell, Position, Puzzle } from '@/domain';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
+import { t } from '@/ui/i18n';
 import { wordRange } from './wordRange';
 
 // 'across' === ArrowDirection 'right'; 'down' === 'down'.
@@ -299,15 +300,20 @@ function formatWordEntryAnnouncement(
 ): string {
   const cells = clue.cells;
   const direction = cells.every((c) => c.position.row === cells[0]!.position.row)
-    ? 'horizontal'
-    : 'vertical';
+    ? t('grid.wordEntry.direction.horizontal')
+    : t('grid.wordEntry.direction.vertical');
   const pattern = cells
     .map((c) => {
       const letter = getEntryAt(c.position.row, c.position.col);
-      return letter !== '' ? letter : 'point';
+      return letter !== '' ? letter : t('grid.wordEntry.emptyCell');
     })
     .join(', ');
-  return `« ${clue.clue.text} », mot ${direction} de ${cells.length} lettres : ${pattern}`;
+  return t('grid.sr.wordEntry', {
+    clue: clue.clue.text,
+    direction,
+    length: cells.length,
+    pattern,
+  });
 }
 
 export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOptions): GridNavigation {

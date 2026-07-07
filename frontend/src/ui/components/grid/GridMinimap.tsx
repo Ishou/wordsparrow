@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { css } from 'styled-system/css';
 import type { ReactZoomPanPinchContentRef } from 'react-zoom-pan-pinch';
 import type { Puzzle } from '@/domain';
+import { t } from '@/ui/i18n';
 import type { Direction } from './useGridNavigation';
 import {
   computeViewportRect,
@@ -277,7 +278,7 @@ export function GridMinimap({
     <div
       ref={minimapRef}
       role="img"
-      aria-label="Aperçu de la grille — la zone surlignée indique la partie visible"
+      aria-label={t('grid.minimap.aria.label')}
       className={isPanel ? panelContainer : overlayContainer}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

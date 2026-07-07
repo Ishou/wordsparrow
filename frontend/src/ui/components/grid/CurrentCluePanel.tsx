@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { ArrowIcon, arrowLabel } from './ClueArrowIcon';
 import { GRID_TRACK_WIDTH } from './layout';
 import { LetterPreview } from './LetterPreview';
@@ -270,7 +271,7 @@ export function CurrentCluePanel({
         data-testid="current-clue-panel"
       >
         <PointerIcon />
-        <span>Sélectionnez une case pour afficher la définition</span>
+        <span>{t('grid.clue.empty')}</span>
       </div>
     );
   }
@@ -293,7 +294,7 @@ export function CurrentCluePanel({
       <span className={clueGroup}>
         <span
           className={arrowChip}
-          aria-label={`définition ${arrowLabel[clue.clue.arrow]}`}
+          aria-label={t('clueBanner.aria.definition', { direction: arrowLabel[clue.clue.arrow] })}
           role="img"
         >
           <ArrowIcon arrow={clue.clue.arrow} />
@@ -314,7 +315,7 @@ export function CurrentCluePanel({
           <span className={altGroup}>
             <span
               className={altDirectionGlyph}
-              aria-label={`alternative : définition ${arrowLabel[alternateClue.clue.arrow]}`}
+              aria-label={t('clueBanner.aria.alternate', { direction: arrowLabel[alternateClue.clue.arrow] })}
               role="img"
             >
               <ArrowIcon arrow={alternateClue.clue.arrow} />
@@ -334,12 +335,12 @@ export function CurrentCluePanel({
             type="button"
             className={kbdChip}
             onClick={onSwitchDirection}
-            aria-label={`Basculer sur la définition ${arrowLabel[alternateClue.clue.arrow]} (raccourci : Espace)`}
+            aria-label={t('grid.clue.aria.switch', { direction: arrowLabel[alternateClue.clue.arrow] })}
             // mousedown.preventDefault keeps the focused cell focused so
             // typing can resume immediately after the toggle.
             onMouseDown={(e) => e.preventDefault()}
           >
-            Espace
+            {t('grid.clue.switchKey')}
           </button>
         </>
       ) : null}

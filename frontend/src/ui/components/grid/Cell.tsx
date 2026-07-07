@@ -7,7 +7,8 @@ import type {
   DefinitionClue,
   LetterCell,
 } from '@/domain';
-import { ARROW_COLOR } from './ClueArrowIcon';
+import { t } from '@/ui/i18n';
+import { ARROW_COLOR, arrowLabel } from './ClueArrowIcon';
 import { FitText } from './FitText';
 
 // Layout preprocessing for FitText. Two distinct paths:
@@ -330,16 +331,6 @@ type ArrowOrigin = 'right' | 'bottom';
 const arrowOriginOf = (a: ArrowDirection): ArrowOrigin =>
   a === 'right' || a === 'right-down' ? 'right' : 'bottom';
 
-// French direction label per arrow type — surfaced via aria-label on
-// every arrow render site (def cells, stacked clues, and the new
-// letter-cell arrows). Hoisted above `LetterArrow` because the latter
-// references it.
-const arrowLabel: Record<ArrowDirection, string> = {
-  right: 'horizontale',
-  down: 'verticale',
-  'down-right': 'horizontale',
-  'right-down': 'verticale',
-};
 
 // ADR-0005 §6 follow-up: arrows live ON THE LETTER CELL, not the clue
 // cell. A small SVG with `position: absolute` and `left: -7px` (for
@@ -476,7 +467,7 @@ function LetterArrow({ arrow }: { arrow: IncomingArrow }) {
       data-arrow={arrow.arrow}
       data-incoming-edge={arrow.edge}
       role="img"
-      aria-label={`définition ${arrowLabel[arrow.arrow]}`}
+      aria-label={t('clueBanner.aria.definition', { direction: arrowLabel[arrow.arrow] })}
     >
       <svg viewBox={glyph.viewBox} aria-hidden focusable="false">
         <path d={glyph.path} fill="currentColor" />
@@ -619,9 +610,6 @@ const letterInput = css({
   '&::-webkit-search-decoration': { display: 'none' },
   '&::-webkit-search-results-button': { display: 'none' },
 });
-
-// `arrowLabel` is hoisted above `LetterArrow` (search for it earlier
-// in this file) so both call sites share the single declaration.
 
 // Per-cell player presence resolved by the Grid (most-recent-wins across
 // all sessions, validated cells subtracted upstream). The Grid composes
@@ -886,7 +874,7 @@ function StackedClue({ clue, isCurrent }: { clue: DefinitionClue; isCurrent: boo
     <div
       className={`${defStackClue}${isCurrent ? ` ${defStackClueCurrent}` : ''}`}
       role="group"
-      aria-label={`définition ${arrowLabel[clue.arrow]}`}
+      aria-label={t('clueBanner.aria.definition', { direction: arrowLabel[clue.arrow] })}
       data-arrow={clue.arrow}
       data-current-clue={isCurrent ? 'true' : 'false'}
     >
@@ -958,7 +946,7 @@ export const DefinitionCellView = memo(function DefinitionCellView({
       data-clue-count="2"
       data-current-clue={currentArrow !== null ? 'true' : 'false'}
     >
-      <div className={defStack} role="group" aria-label="deux définitions">
+      <div className={defStack} role="group" aria-label={t('grid.clue.aria.twoDefinitions')}>
         <StackedClue clue={topClue} isCurrent={currentArrow === topClue.arrow} />
         <StackedClue clue={bottomClue} isCurrent={currentArrow === bottomClue.arrow} />
       </div>
