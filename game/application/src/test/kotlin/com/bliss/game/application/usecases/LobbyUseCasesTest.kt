@@ -763,6 +763,20 @@ class LobbyUseCasesTest {
             assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
         }
 
+    // ADR-0098 §2: relinquishOwner() nulls ownerUserId but not ownerSessionId, so isOwner alone
+    // stays true for the ex-owner's session; the second relinquish must still be rejected.
+    @Test
+    fun `Relinquish returns NotOwner when called a second time by the same session`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val out = h.relinquish(lobby.id, sessionA)
+
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
+        }
+
     @Test
     fun `Relinquish returns LobbyNotFound for an unknown lobby`() =
         runTest {

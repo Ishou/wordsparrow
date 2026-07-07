@@ -85,7 +85,7 @@ interface LobbyRepository {
         var notOwner = false
         val updated =
             mutate(id) { lobby ->
-                if (!lobby.isOwner(sessionId)) {
+                if (!lobby.isCurrentOwner(sessionId)) {
                     notOwner = true
                     lobby
                 } else {

@@ -356,7 +356,7 @@ class RelinquishOwnershipUseCase(
         sessionId: SessionId,
     ): UseCaseOutcome<Lobby?> {
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
-        if (!current.isOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
         return when (val outcome = repo.relinquishOwnership(lobbyId, sessionId, clock.now())) {
             is RelinquishOutcome.Relinquished -> success(outcome.lobby, listOf(LobbyEvent.PlayerLeft(sessionId)))
             RelinquishOutcome.NotOwner -> failure(UseCaseError.NotOwner)
