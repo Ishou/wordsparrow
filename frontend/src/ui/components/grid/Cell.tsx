@@ -611,9 +611,6 @@ const letterInput = css({
   '&::-webkit-search-results-button': { display: 'none' },
 });
 
-// `arrowLabel` is hoisted above `LetterArrow` (search for it earlier
-// in this file) so both call sites share the single declaration.
-
 // Per-cell player presence resolved by the Grid (most-recent-wins across
 // all sessions, validated cells subtracted upstream). The Grid composes
 // this from local-cursor state + remote presences and passes it down per
