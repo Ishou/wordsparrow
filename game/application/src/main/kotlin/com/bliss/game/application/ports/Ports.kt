@@ -68,6 +68,65 @@ interface LobbyRepository {
         mutator: (Lobby) -> Lobby?,
     ): Lobby?
 
+    /**
+     * Relinquishes ownership (ADR-0098 §2) if [sessionId] still owns the lobby when the per-lobby
+     * lock is acquired: drops to ownerless and removes [sessionId]'s seat. A dedicated method, not
+     * a raw [mutate] call, because Postgres's upsert deliberately excludes `owner_user_id` from its
+     * `ON CONFLICT` update (write-once at create, ADR-0066 amendment 2026-07-05) -- writing this
+     * transition through the general save path would silently drop the clear. Default composes
+     * [mutate] (correct for the in-memory adapter, which replaces the whole row); the Postgres
+     * adapter must override with a purpose-built `owner_user_id` UPDATE that bypasses the upsert.
+     */
+    suspend fun relinquishOwnership(
+        id: LobbyId,
+        sessionId: SessionId,
+        now: Instant,
+    ): RelinquishOutcome {
+        var notOwner = false
+        val updated =
+            mutate(id) { lobby ->
+                if (!lobby.isOwner(sessionId)) {
+                    notOwner = true
+                    lobby
+                } else {
+                    lobby.relinquishOwner(now).copy(players = lobby.players - sessionId)
+                }
+            } ?: return RelinquishOutcome.LobbyNotFound
+        return if (notOwner) RelinquishOutcome.NotOwner else RelinquishOutcome.Relinquished(updated)
+    }
+
+    /**
+     * Claims an ownerless lobby (ADR-0098 §2) for [sessionId]/[userId] if [sessionId] is still
+     * present and the lobby is still ownerless when the per-lobby lock is acquired. Same dedicated-
+     * method rationale as [relinquishOwnership]: the general save path silently drops the
+     * `owner_user_id` write on Postgres. Default composes [mutate]; the Postgres adapter overrides
+     * with a purpose-built `owner_user_id` UPDATE.
+     */
+    suspend fun claimOwnership(
+        id: LobbyId,
+        sessionId: SessionId,
+        userId: UserId,
+        now: Instant,
+    ): ClaimOutcome {
+        var lockError: ClaimOutcome? = null
+        val updated =
+            mutate(id) { lobby ->
+                when {
+                    !lobby.hasJoined(sessionId) -> {
+                        lockError = ClaimOutcome.NotPresentInLobby
+                        lobby
+                    }
+                    !lobby.isOwnerless() -> {
+                        lockError = ClaimOutcome.AlreadyOwned
+                        lobby
+                    }
+                    else -> lobby.claimOwner(sessionId, userId, now)
+                }
+            } ?: return ClaimOutcome.LobbyNotFound
+        lockError?.let { return it }
+        return ClaimOutcome.Claimed(updated)
+    }
+
     suspend fun delete(id: LobbyId)
 
     /**
@@ -154,6 +213,30 @@ interface LobbyRepository {
         userId: UserId,
         newPseudonym: Pseudonym,
     ): Set<LobbyId>
+}
+
+/** Outcome of [LobbyRepository.relinquishOwnership]. */
+sealed interface RelinquishOutcome {
+    data class Relinquished(
+        val lobby: Lobby,
+    ) : RelinquishOutcome
+
+    data object NotOwner : RelinquishOutcome
+
+    data object LobbyNotFound : RelinquishOutcome
+}
+
+/** Outcome of [LobbyRepository.claimOwnership]. */
+sealed interface ClaimOutcome {
+    data class Claimed(
+        val lobby: Lobby,
+    ) : ClaimOutcome
+
+    data object NotPresentInLobby : ClaimOutcome
+
+    data object AlreadyOwned : ClaimOutcome
+
+    data object LobbyNotFound : ClaimOutcome
 }
 
 /**

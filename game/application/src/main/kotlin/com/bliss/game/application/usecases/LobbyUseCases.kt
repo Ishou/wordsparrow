@@ -1,10 +1,12 @@
 package com.bliss.game.application.usecases
 
 import com.bliss.game.application.ports.AnalyticsEventSink
+import com.bliss.game.application.ports.ClaimOutcome
 import com.bliss.game.application.ports.Clock
 import com.bliss.game.application.ports.LobbyEvent
 import com.bliss.game.application.ports.LobbyRepository
 import com.bliss.game.application.ports.PuzzleProvider
+import com.bliss.game.application.ports.RelinquishOutcome
 import com.bliss.game.application.ports.WordValidator
 import com.bliss.game.domain.CellEntry
 import com.bliss.game.domain.GameSession
@@ -342,7 +344,8 @@ class LeaveLobbyUseCase(
 /**
  * Explicit relinquish (ADR-0098 §2): the current owner gives up the game, which becomes ownerless,
  * and their own seat is dropped. Only the owner may relinquish — the disconnect grace path (a plain
- * [LeaveLobbyUseCase]) never touches ownership. Owner check is re-verified inside the mutator.
+ * [LeaveLobbyUseCase]) never touches ownership. Owner check is re-verified inside
+ * [LobbyRepository.relinquishOwnership]'s lock, not here.
  */
 class RelinquishOwnershipUseCase(
     private val repo: LobbyRepository,
@@ -354,25 +357,20 @@ class RelinquishOwnershipUseCase(
     ): UseCaseOutcome<Lobby?> {
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
         if (!current.isOwner(sessionId)) return failure(UseCaseError.NotOwner)
-        var notOwner = false
-        val updated =
-            repo.mutate(lobbyId) { lobby ->
-                if (!lobby.isOwner(sessionId)) {
-                    notOwner = true
-                    return@mutate lobby
-                }
-                lobby.relinquishOwner(clock.now()).copy(players = lobby.players - sessionId)
-            } ?: return failure(UseCaseError.LobbyNotFound)
-        if (notOwner) return failure(UseCaseError.NotOwner)
-        return success(updated, listOf(LobbyEvent.PlayerLeft(sessionId)))
+        return when (val outcome = repo.relinquishOwnership(lobbyId, sessionId, clock.now())) {
+            is RelinquishOutcome.Relinquished -> success(outcome.lobby, listOf(LobbyEvent.PlayerLeft(sessionId)))
+            RelinquishOutcome.NotOwner -> failure(UseCaseError.NotOwner)
+            RelinquishOutcome.LobbyNotFound -> failure(UseCaseError.LobbyNotFound)
+        }
     }
 }
 
 /**
  * Claim an ownerless game (ADR-0098 §2): a player present in a non-terminal, ownerless lobby takes
  * ownership, quota-gated (ADR-0098 §1/§5) unless [hostUnlimited]. Presence and ownerless-ness are
- * re-verified inside the mutator; the quota re-check runs under the api edge's `withUserLock(userId)`
- * (it cannot enter the non-suspend mutator) so two claimers cannot both win.
+ * re-verified inside [LobbyRepository.claimOwnership]'s lock; the quota re-check runs under the api
+ * edge's `withUserLock(userId)` (it cannot enter the non-suspend mutator) so two claimers cannot both
+ * win.
  */
 class ClaimLobbyOwnershipUseCase(
     private val repo: LobbyRepository,
@@ -388,23 +386,12 @@ class ClaimLobbyOwnershipUseCase(
         if (!current.hasJoined(sessionId)) return failure(UseCaseError.NotPresentInLobby)
         if (!current.isOwnerless()) return failure(UseCaseError.AlreadyOwned)
         if (!hostUnlimited && repo.findActiveByOwnerUser(userId) != null) return failure(UseCaseError.QuotaExceeded)
-        var lockError: UseCaseError? = null
-        val updated =
-            repo.mutate(lobbyId) { lobby ->
-                when {
-                    !lobby.hasJoined(sessionId) -> {
-                        lockError = UseCaseError.NotPresentInLobby
-                        lobby
-                    }
-                    !lobby.isOwnerless() -> {
-                        lockError = UseCaseError.AlreadyOwned
-                        lobby
-                    }
-                    else -> lobby.claimOwner(sessionId, userId, clock.now())
-                }
-            } ?: return failure(UseCaseError.LobbyNotFound)
-        lockError?.let { return failure(it) }
-        return success(updated, emptyList())
+        return when (val outcome = repo.claimOwnership(lobbyId, sessionId, userId, clock.now())) {
+            is ClaimOutcome.Claimed -> success(outcome.lobby, emptyList())
+            ClaimOutcome.NotPresentInLobby -> failure(UseCaseError.NotPresentInLobby)
+            ClaimOutcome.AlreadyOwned -> failure(UseCaseError.AlreadyOwned)
+            ClaimOutcome.LobbyNotFound -> failure(UseCaseError.LobbyNotFound)
+        }
     }
 }
 
