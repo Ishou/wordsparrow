@@ -3,7 +3,8 @@ import { Link, useRouteContext } from '@tanstack/react-router';
 import { CircleNotch } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { SparrowMark } from '@/design-system';
-import type { BillingClient, SubscriptionView } from '@/application/billing';
+import { useAuth } from '@/ui/components/auth';
+import { useSubscriber } from '@/ui/components/billing';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { NotFoundScreen } from './NotFoundScreen';
@@ -23,14 +24,10 @@ const merciTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSi
 const merciText = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.khaki', opacity: 0.9, lineHeight: '1.45', maxWidth: '280px' });
 const merciCta = css({ display: 'block', width: '100%', maxWidth: '300px', textAlign: 'center', textDecoration: 'none', bg: 'ws.sakuraDark', color: 'white', fontFamily: 'wsUi', fontWeight: 'black', fontSize: '16px', padding: '14px', borderRadius: '14px', boxShadow: '0 8px 18px rgba(190,73,112,0.34)', marginTop: '4px' });
 
-const ACTIVE_STATUSES: ReadonlySet<string> = new Set(['active', 'pending_cancellation']);
-function hasActiveAccess(subscription: SubscriptionView | null): boolean {
-  return subscription !== null && ACTIVE_STATUSES.has(subscription.status);
-}
-
-// Mollie confirms the payment asynchronously via webhook (ADR-0078), so the tier lags the redirect by a few seconds.
+// Mollie confirms via webhook (ADR-0078); poll whoami until grilles:all lands (fast, then slow background re-check) so the CTA never leads to a stale paywall.
 const POLL_INTERVAL_MS = 2000;
-const MAX_ATTEMPTS = 5;
+const SLOW_POLL_INTERVAL_MS = 30_000;
+const TIMEOUT_AFTER_ATTEMPTS = 5;
 
 type ConfirmPhase = 'confirming' | 'active' | 'timeout';
 
@@ -62,9 +59,11 @@ function MerciConfirmation({ hasEmail }: { readonly hasEmail: boolean }) {
   );
 }
 
-export function CheckoutSuccessScreen({ client }: { readonly client: BillingClient }) {
+export function CheckoutSuccessScreen() {
   const { authClient } = useRouteContext({ from: '__root__' });
-  const [phase, setPhase] = useState<ConfirmPhase>('confirming');
+  const { refresh } = useAuth();
+  const subscriber = useSubscriber();
+  const [attempts, setAttempts] = useState(0);
   const [hasEmail, setHasEmail] = useState(false);
 
   useEffect(() => {
@@ -76,35 +75,29 @@ export function CheckoutSuccessScreen({ client }: { readonly client: BillingClie
     return () => { cancelled = true; };
   }, [authClient]);
 
+  // Poll whoami until the capability lands; `subscriber` flipping gates the CTA. Fast burst, then a slow background re-check so a slow webhook self-heals in place.
   useEffect(() => {
-    let cancelled = false;
-    let attempts = 0;
-    const poll = async () => {
-      attempts += 1;
-      let active = false;
-      try {
-        active = hasActiveAccess(await client.getSubscription());
-      } catch {
-        // Transient errors while the webhook is in flight don't end the poll; the cap does.
-      }
-      if (cancelled) return;
-      if (active) {
-        setPhase('active');
-        clearInterval(intervalId);
-        return;
-      }
-      if (attempts >= MAX_ATTEMPTS) {
-        setPhase('timeout');
-        clearInterval(intervalId);
-      }
+    if (subscriber) return;
+    let n = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = (delay: number) => {
+      timer = setTimeout(() => {
+        n += 1;
+        // A transient whoami() error mid-poll must not flip the whole app to signed-out.
+        void refresh({ preserveStateOnFailure: true });
+        setAttempts(n);
+        schedule(n >= TIMEOUT_AFTER_ATTEMPTS ? SLOW_POLL_INTERVAL_MS : POLL_INTERVAL_MS);
+      }, delay);
     };
-    const intervalId = setInterval(() => void poll(), POLL_INTERVAL_MS);
-    void poll();
-    return () => {
-      cancelled = true;
-      clearInterval(intervalId);
-    };
-  }, [client]);
+    schedule(POLL_INTERVAL_MS);
+    return () => clearTimeout(timer);
+  }, [subscriber, refresh]);
+
+  const phase: ConfirmPhase = subscriber
+    ? 'active'
+    : attempts >= TIMEOUT_AFTER_ATTEMPTS
+      ? 'timeout'
+      : 'confirming';
 
   if (phase === 'active') {
     return (
@@ -156,5 +149,5 @@ export function AbonnementSuccesScreen() {
       </SuccesShell>
     );
   }
-  return <CheckoutSuccessScreen client={billingClient} />;
+  return <CheckoutSuccessScreen />;
 }
