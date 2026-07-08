@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { NotFoundScreen } from './NotFoundScreen';
@@ -15,16 +16,13 @@ const linkStyle = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold'
 export function CheckoutCancelScreen() {
   return (
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
-      <h1 className={title}>Paiement annulé</h1>
+      <h1 className={title}>{t('v2.abonnement.annule.title')}</h1>
       <p className={statusCard} role="status">
-        Aucun montant n'a été débité.
+        {t('v2.abonnement.annule.status')}
       </p>
-      <p className={lede}>
-        WordSparrow reste gratuit. Si tu changes d'avis, tu peux relancer l'abonnement quand tu
-        veux.
-      </p>
+      <p className={lede}>{t('v2.abonnement.annule.lede')}</p>
       <Link to="/abonnement" className={linkStyle}>
-        Revenir à mon abonnement
+        {t('v2.abonnement.annule.back')}
       </Link>
     </PhoneShell>
   );

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useRouteContext } from '@tanstack/react-router';
 import { css, cx } from 'styled-system/css';
 import { Check, ShieldCheck } from '@phosphor-icons/react';
+import { t, type MessageKey } from '@/ui/i18n';
 import type { BillingCadence, BillingClient } from '@/application/billing';
 import { BillingError } from '@/application/billing';
 import { useSubscriber } from '@/ui/components/billing';
@@ -17,52 +18,53 @@ const WIRE_CADENCE: Readonly<Record<Cadence, BillingCadence>> = { mensuel: 'mont
 
 interface CadenceOption {
   readonly id: Cadence;
-  readonly label: string;
-  readonly note: string;
+  readonly labelKey: MessageKey;
+  readonly noteKey: MessageKey;
   readonly price: string;
-  readonly cadence: string;
+  readonly suffixKey: MessageKey;
 }
 
 // Round prices only, TTC (ADR-0080); 20 €/an = two months off the monthly rate.
 const CADENCES: ReadonlyArray<CadenceOption> = [
-  { id: 'mensuel', label: 'Mensuel', note: 'Tu arrêtes quand tu veux', price: '2 €', cadence: '/mois' },
-  { id: 'annuel', label: 'Annuel', note: 'Deux mois offerts', price: '20 €', cadence: '/an' },
+  { id: 'mensuel', labelKey: 'v2.abonnement.cadence.mensuel.label', noteKey: 'v2.abonnement.cadence.mensuel.note', price: '2 €', suffixKey: 'v2.abonnement.cadence.mensuel.suffix' },
+  { id: 'annuel', labelKey: 'v2.abonnement.cadence.annuel.label', noteKey: 'v2.abonnement.cadence.annuel.note', price: '20 €', suffixKey: 'v2.abonnement.cadence.annuel.suffix' },
 ];
 
 interface Recap {
   readonly price: string;
-  readonly period: string;
-  readonly renewal: string;
+  readonly periodKey: MessageKey;
+  readonly renewalKey: MessageKey;
 }
 const RECAP_BY_CADENCE: Readonly<Record<Cadence, Recap>> = {
-  mensuel: { price: '2 € TTC', period: 'par mois', renewal: 'Reconduction tacite chaque mois' },
-  annuel: { price: '20 € TTC', period: 'par an', renewal: 'Reconduction tacite chaque année' },
+  mensuel: { price: '2 € TTC', periodKey: 'v2.abonnement.recap.mensuel.period', renewalKey: 'v2.abonnement.recap.mensuel.renewal' },
+  annuel: { price: '20 € TTC', periodKey: 'v2.abonnement.recap.annuel.period', renewalKey: 'v2.abonnement.recap.annuel.renewal' },
 };
 
-const ACCES_COMPLET_FEATURES: ReadonlyArray<string> = [
-  'Toutes les grilles, sans limite',
-  "Tout l'historique, jusqu'à la première",
-  'Génère de nouvelles grilles quand tu veux',
-  'Et les nouveautés à venir',
+const ACCES_COMPLET_FEATURE_KEYS: ReadonlyArray<MessageKey> = [
+  'v2.abonnement.feature.complet.all',
+  'v2.abonnement.feature.complet.history',
+  'v2.abonnement.feature.complet.generate',
+  'v2.abonnement.feature.complet.future',
 ];
 
-const GRATUIT_FEATURES: ReadonlyArray<string> = [
-  'La grille du jour',
-  'Les 7 derniers jours',
-  'Tes grilles déjà commencées',
+const GRATUIT_FEATURE_KEYS: ReadonlyArray<MessageKey> = [
+  'v2.abonnement.feature.gratuit.daily',
+  'v2.abonnement.feature.gratuit.week',
+  'v2.abonnement.feature.gratuit.started',
 ];
 
-const ERROR_MESSAGE_BY_KIND: Readonly<Record<string, string>> = {
-  'already-subscribed': 'Tu as déjà un abonnement actif.',
-  'auth-required': 'Connecte-toi pour gérer ton abonnement.',
-  'provider-unavailable': 'Le service de paiement est momentanément indisponible. Réessaie dans un instant.',
-  'rate-limited': 'Trop de tentatives. Réessaie dans un instant.',
+const ERROR_MESSAGE_KEY_BY_KIND: Readonly<Record<string, MessageKey>> = {
+  'already-subscribed': 'v2.abonnement.error.alreadySubscribed',
+  'auth-required': 'v2.abonnement.error.authRequired',
+  'provider-unavailable': 'v2.abonnement.error.providerUnavailable',
+  'rate-limited': 'v2.abonnement.error.rateLimited',
 };
 function messageFor(error: unknown): string {
   if (error instanceof BillingError) {
-    return ERROR_MESSAGE_BY_KIND[error.kind] ?? 'Une erreur est survenue. Réessaie.';
+    const key = ERROR_MESSAGE_KEY_BY_KIND[error.kind];
+    return key ? t(key) : t('v2.abonnement.error.generic');
   }
-  return 'Une erreur est survenue. Réessaie.';
+  return t('v2.abonnement.error.generic');
 }
 
 const content = css({ display: 'flex', flexDirection: 'column', gap: '15px' });
@@ -162,7 +164,7 @@ function CadenceSelector({ value, onChange }: { readonly value: Cadence; readonl
   }
 
   return (
-    <div className={selector} role="radiogroup" aria-label="Formule">
+    <div className={selector} role="radiogroup" aria-label={t('v2.abonnement.selector.aria.group')}>
       {CADENCES.map((option, index) => {
         const on = option.id === value;
         return (
@@ -179,12 +181,12 @@ function CadenceSelector({ value, onChange }: { readonly value: Cadence; readonl
           >
             <span className={on ? cx(radio, radioOn) : radio}>{on ? <Check size={12} weight="bold" aria-hidden="true" /> : null}</span>
             <span className={optMid}>
-              <span className={optLabel}>{option.label}</span>
-              <span className={optNote}>{option.note}</span>
+              <span className={optLabel}>{t(option.labelKey)}</span>
+              <span className={optNote}>{t(option.noteKey)}</span>
             </span>
             <span className={optPriceWrap}>
               <span className={optPrice}>{option.price}</span>
-              <span className={optCadence}>{option.cadence}</span>
+              <span className={optCadence}>{t(option.suffixKey)}</span>
             </span>
           </button>
         );
@@ -196,9 +198,9 @@ function CadenceSelector({ value, onChange }: { readonly value: Cadence; readonl
 function SubscribedState() {
   return (
     <div className={subscribedCard}>
-      <h1 className={subscribedTitle}>Tu es abonné·e</h1>
-      <p className={subscribedBody}>Tu as accès à toutes les grilles et à la génération. Gère ton abonnement dans Réglages.</p>
-      <Link to="/reglages" className={manageLink}>Aller aux Réglages</Link>
+      <h1 className={subscribedTitle}>{t('v2.abonnement.subscribed.title')}</h1>
+      <p className={subscribedBody}>{t('v2.abonnement.subscribed.body')}</p>
+      <Link to="/reglages" className={manageLink}>{t('v2.abonnement.subscribed.manage')}</Link>
     </div>
   );
 }
@@ -272,43 +274,43 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
   return (
     <div className={content}>
       <div className={hero}>
-        <h1 className={heroTitle}>Joue toutes les grilles</h1>
-        <p className={heroSub}>Débloque tout l&apos;historique et génère de nouvelles grilles quand tu veux.</p>
+        <h1 className={heroTitle}>{t('v2.abonnement.offer.heroTitle')}</h1>
+        <p className={heroSub}>{t('v2.abonnement.offer.heroSub')}</p>
       </div>
 
-      <p className={ethos}>Le jeu reste entièrement gratuit. L&apos;abonnement débloque l&apos;Accès complet : toutes les grilles et la génération.</p>
+      <p className={ethos}>{t('v2.abonnement.offer.ethos')}</p>
 
-      <section className={cx(planCard, planComplet)} aria-label="Accès complet">
+      <section className={cx(planCard, planComplet)} aria-label={t('v2.abonnement.tier.complet')}>
         <div className={planHead}>
-          <span className={planName}>Accès complet</span>
+          <span className={planName}>{t('v2.abonnement.tier.complet')}</span>
         </div>
         <div className={featList}>
-          {ACCES_COMPLET_FEATURES.map((feature) => (
-            <Feature key={feature} label={feature} />
+          {ACCES_COMPLET_FEATURE_KEYS.map((key) => (
+            <Feature key={key} label={t(key)} />
           ))}
         </div>
         <CadenceSelector value={cadence} onChange={selectCadence} />
 
-        <section className={recap} aria-label="Récapitulatif">
-          <h2 className={recapTitle}>Ton récapitulatif</h2>
+        <section className={recap} aria-label={t('v2.abonnement.recap.aria')}>
+          <h2 className={recapTitle}>{t('v2.abonnement.recap.title')}</h2>
           <div className={recapRow}>
-            <span className={recapKey}>Offre</span>
-            <span className={recapVal}>Accès complet</span>
+            <span className={recapKey}>{t('v2.abonnement.recap.key.offre')}</span>
+            <span className={recapVal}>{t('v2.abonnement.tier.complet')}</span>
           </div>
           <div className={recapRow}>
-            <span className={recapKey}>Prix</span>
-            <span className={recapVal}>{info.price} {info.period}</span>
+            <span className={recapKey}>{t('v2.abonnement.recap.key.prix')}</span>
+            <span className={recapVal}>{info.price} {t(info.periodKey)}</span>
           </div>
           <div className={recapRow}>
-            <span className={recapKey}>Premier prélèvement</span>
-            <span className={recapVal}>Aujourd&apos;hui</span>
+            <span className={recapKey}>{t('v2.abonnement.recap.key.premierPrelevement')}</span>
+            <span className={recapVal}>{t('v2.abonnement.recap.val.aujourdhui')}</span>
           </div>
           <div className={recapRow}>
-            <span className={recapKey}>Reconduction</span>
-            <span className={recapVal}>{info.renewal}</span>
+            <span className={recapKey}>{t('v2.abonnement.recap.key.reconduction')}</span>
+            <span className={recapVal}>{t(info.renewalKey)}</span>
           </div>
           <p className={recapNote}>
-            Ton accès est immédiat. L&apos;abonnement se renouvelle tout seul {info.period} ; tu résilies quand tu veux depuis tes Réglages.
+            {t('v2.abonnement.recap.note', { period: t(info.periodKey) })}
           </p>
         </section>
 
@@ -323,9 +325,9 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
               onChange={(event) => toggleCgv(event.target.checked)}
             />
             <label htmlFor="consent-cgv" className={consentLabel}>
-              J&apos;accepte les{' '}
+              {t('v2.abonnement.consent.cgv.text')}{' '}
               <Link to="/conditions-abonnement" onClick={(event) => event.stopPropagation()}>
-                Conditions de vente
+                {t('v2.abonnement.consent.cgv.link')}
               </Link>
               .
             </label>
@@ -339,7 +341,7 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
               onChange={(event) => toggleWaiver(event.target.checked)}
             />
             <label htmlFor="consent-waiver" className={consentLabel}>
-              Je demande l&apos;accès immédiat au contenu et je reconnais renoncer à mon droit de rétractation de 14 jours.
+              {t('v2.abonnement.consent.waiver')}
             </label>
           </div>
         </div>
@@ -351,13 +353,13 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
           onClick={() => void onPrimary()}
           disabled={isGuest ? pending : !bothAccepted || pending}
         >
-          {isGuest ? "Se connecter pour s'abonner" : step === 'confirm' ? 'Confirmer et payer' : "S'abonner"}
+          {isGuest ? t('v2.abonnement.cta.signIn') : step === 'confirm' ? t('v2.abonnement.cta.confirm') : t('v2.abonnement.cta.subscribe')}
         </button>
         {step === 'confirm' ? (
           <>
-            <p className={confirmHint} role="status">Étape de confirmation : vérifie ton récapitulatif, puis confirme pour payer.</p>
+            <p className={confirmHint} role="status">{t('v2.abonnement.confirmHint')}</p>
             <button type="button" className={secondaryCta} onClick={() => setStep('review')} disabled={pending}>
-              Modifier
+              {t('v2.abonnement.confirm.modify')}
             </button>
           </>
         ) : null}
@@ -368,14 +370,14 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
         ) : null}
       </section>
 
-      <section className={planCard} aria-label="Gratuit">
+      <section className={planCard} aria-label={t('v2.abonnement.tier.gratuit')}>
         <div className={planHead}>
-          <span className={planName}>Gratuit</span>
-          <span className={tagFree}>Inclus pour tous</span>
+          <span className={planName}>{t('v2.abonnement.tier.gratuit')}</span>
+          <span className={tagFree}>{t('v2.abonnement.plan.gratuit.tag')}</span>
         </div>
         <div className={featList}>
-          {GRATUIT_FEATURES.map((feature) => (
-            <Feature key={feature} label={feature} />
+          {GRATUIT_FEATURE_KEYS.map((key) => (
+            <Feature key={key} label={t(key)} />
           ))}
         </div>
       </section>
@@ -384,7 +386,7 @@ export function AbonnementOffer({ client }: { readonly client: BillingClient }) 
         <span className={reassureIcon}>
           <ShieldCheck size={14} weight="fill" aria-hidden="true" />
         </span>
-        <span>Paiement sécurisé · sans engagement · résiliable à tout moment</span>
+        <span>{t('v2.abonnement.reassure')}</span>
       </p>
     </div>
   );
@@ -403,7 +405,7 @@ export function AbonnementScreen() {
       ) : !billingClient ? (
         <div className={subscribedCard}>
           <p className={subscribedBody} role="status">
-            L&apos;abonnement n&apos;est pas disponible pour le moment.
+            {t('v2.abonnement.unavailable')}
           </p>
         </div>
       ) : (
