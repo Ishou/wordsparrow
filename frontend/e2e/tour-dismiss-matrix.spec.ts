@@ -26,7 +26,7 @@
 import { type Page, expect, test } from '@playwright/test';
 
 const TOOLTIP_STEPS: ReadonlyArray<{ readonly index: number; readonly title: string }> = [
-  { index: 2, title: "Cases d'indices" },
+  { index: 2, title: 'Cases d’indices' },
   { index: 3, title: 'Suivez les flèches' },
   { index: 4, title: 'Coup de pouce' },
   { index: 5, title: 'Ajuster le zoom' },

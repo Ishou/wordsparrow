@@ -64,10 +64,10 @@ test('Suivant walks through all six desktop steps; Terminer closes and persists'
     page.getByRole('alertdialog', { name: 'Bienvenue' }),
   ).toBeVisible();
 
-  // Step 2: Cases d'indices.
+  // Step 2: Cases d’indices.
   await page.getByRole('button', { name: 'Suivant' }).click();
   await expect(
-    page.getByRole('alertdialog', { name: "Cases d'indices" }),
+    page.getByRole('alertdialog', { name: 'Cases d’indices' }),
   ).toBeVisible();
   await page.screenshot({ path: '/tmp/tour-step-2-clue-cells.png' });
 

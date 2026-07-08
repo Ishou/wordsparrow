@@ -28,12 +28,12 @@ const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 
 const CONSENT = { cgvAccepted: true, cgvVersion: '1.0', withdrawalWaiver: true };
 
-// Tick both consent boxes, then run the double-clic (S'abonner → Confirmer et payer).
+// Tick both consent boxes, then run the double-clic (S’abonner → Confirmer et payer).
 async function acceptAndConfirm() {
   fireEvent.click(screen.getByRole('checkbox', { name: /Conditions de vente/ }));
   fireEvent.click(screen.getByRole('checkbox', { name: /droit de rétractation/ }));
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: "S'abonner" }));
+    fireEvent.click(screen.getByRole('button', { name: "S’abonner" }));
   });
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirmer et payer' }));
@@ -242,7 +242,7 @@ describe('AbonnementScreen', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Joue toutes les grilles' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /S'abonner/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /S’abonner/ })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Gratuit' })).toBeInTheDocument();
   });
 
@@ -254,7 +254,7 @@ describe('AbonnementScreen', () => {
       await screen.findByRole('heading', { level: 1, name: 'Tu es abonné·e' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Aller aux Réglages' })).toHaveAttribute('href', '/reglages');
-    expect(screen.queryByRole('button', { name: /S'abonner/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /S’abonner/ })).toBeNull();
   });
 
   it('renders the offer with a sign-in CTA for an anonymous visitor', async () => {
@@ -264,7 +264,7 @@ describe('AbonnementScreen', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Joue toutes les grilles' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: "Se connecter pour s'abonner" })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Se connecter pour s’abonner' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: /Conditions de vente/ })).toBeNull();
   });
 
@@ -275,7 +275,7 @@ describe('AbonnementScreen', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Joue toutes les grilles' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /S'abonner/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /S’abonner/ })).toBeInTheDocument();
   });
 
   it('shows a neutral loading state with no page title while the session resolves', async () => {

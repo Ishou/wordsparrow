@@ -115,7 +115,7 @@ test('Mes parties renders an empty-state when the session has no lobbies', async
   const heading = page.getByRole('heading', { name: 'Mes parties', level: 3 });
   await expect(heading).toBeVisible();
   await expect(
-    page.getByText('Vos parties multijoueur en cours apparaîtront ici.'),
+    page.getByText('Tes parties multijoueur en cours apparaîtront ici.'),
   ).toBeVisible();
 });
 

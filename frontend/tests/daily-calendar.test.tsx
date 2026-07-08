@@ -76,7 +76,7 @@ describe('DailyCalendar', () => {
 
   it('opens the paywall handler for a locked day instead of navigating', async () => {
     const { props } = renderCalendar();
-    fireEvent.click(await screen.findByRole('button', { name: "Grille réservée à l'abonnement — Lundi 1 juin" }));
+    fireEvent.click(await screen.findByRole('button', { name: "Grille réservée à l’abonnement — Lundi 1 juin" }));
     expect(props.onPaywalledSelect).toHaveBeenCalledOnce();
   });
 
@@ -89,7 +89,7 @@ describe('DailyCalendar', () => {
       true,
     );
     renderCalendar({ infos });
-    expect(await screen.findByRole('button', { name: "Grille réservée à l'abonnement — Mercredi 10 juin" })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: "Grille réservée à l’abonnement — Mercredi 10 juin" })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Reprendre — Jeudi 11 juin — 30 %' })).toBeTruthy();
     // Cap classes derive from paywalled neighbours: 9 = run start (left cap), 10 = run end (right cap),
     // 12 = isolated (both caps). jsdom applies no stylesheets, so assert on the class sets.
@@ -105,7 +105,7 @@ describe('DailyCalendar', () => {
     renderCalendar({ showPaywallLegend: false });
     await screen.findByRole('button', { name: 'Mois précédent' });
     expect(screen.getByText('à jouer', { exact: false })).toBeTruthy();
-    expect(screen.queryByText(/réservées à l'abonnement/)).toBeNull();
+    expect(screen.queryByText(/réservées à l’abonnement/)).toBeNull();
   });
 
   it('renders days without a grid as non-interactive and clamps month nav', async () => {

@@ -468,7 +468,7 @@ describe('Contribuer route', () => {
 
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(
-        'Connectez-vous pour proposer une correction.',
+        'Connecte-toi pour proposer une correction.',
       ),
     );
     expect(surveyClient.submitRating).not.toHaveBeenCalled();

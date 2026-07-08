@@ -62,7 +62,7 @@ describe('CheckoutCancelScreen', () => {
   it('renders the cancelled copy and a link back to the abonnement screen', async () => {
     render(<CheckoutCancelScreen />, { wrapper: withAuth(SUBSCRIBER) });
 
-    expect(await screen.findByText("Aucun montant n'a été débité.")).toBeInTheDocument();
+    expect(await screen.findByText("Aucun montant n’a été débité.")).toBeInTheDocument();
     const back = screen.getByRole('link', { name: /Revenir à mon abonnement/ });
     expect(back).toHaveAttribute('href', '/abonnement');
   });
@@ -72,14 +72,14 @@ describe('AbonnementAnnuleScreen capability gate', () => {
   it('renders the cancelled screen for an authed user with billing:subscribe', async () => {
     render(<AbonnementAnnuleScreen />, { wrapper: withAuth(SUBSCRIBER) });
 
-    expect(await screen.findByText("Aucun montant n'a été débité.")).toBeInTheDocument();
+    expect(await screen.findByText("Aucun montant n’a été débité.")).toBeInTheDocument();
   });
 
   it('renders the standard 404 for an anonymous visitor', async () => {
     render(<AbonnementAnnuleScreen />, { wrapper: withAuth(null) });
 
     expect(await screen.findByText("Cette page s'est envolée")).toBeInTheDocument();
-    expect(screen.queryByText("Aucun montant n'a été débité.")).toBeNull();
+    expect(screen.queryByText("Aucun montant n’a été débité.")).toBeNull();
   });
 
   it('shows a neutral loading state with no page title while the session resolves', async () => {

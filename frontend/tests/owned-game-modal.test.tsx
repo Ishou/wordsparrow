@@ -117,7 +117,7 @@ describe('OwnedGameModal / useCreateOrResume (ADR-0098 §6)', () => {
     const { router } = renderHarness({ createLobby: vi.fn().mockResolvedValue(freshLobby) });
     await create();
     await waitFor(() => expect(router.state.location.pathname).toBe(`/lobby/${freshId}`));
-    expect(screen.queryByText(/Vous avez déjà une partie en cours/)).toBeNull();
+    expect(screen.queryByText(/Tu as déjà une partie en cours/)).toBeNull();
   });
 
   it('offers "Rejoindre ma partie" which navigates into the owned game', async () => {

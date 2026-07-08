@@ -49,7 +49,7 @@ describe('v2 legal screens', () => {
       await screen.findByRole('heading', { level: 1, name: 'Confidentialité' }),
     ).toBeTruthy();
     expect(screen.getByText(/On garde les choses simples/)).toBeTruthy();
-    expect(screen.getByRole('heading', { level: 2, name: /Ce que l'on collecte/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: /Ce que l’on collecte/ })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: 'Cookies' })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: 'Tes droits' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Gérer mes préférences' })).toBeTruthy();

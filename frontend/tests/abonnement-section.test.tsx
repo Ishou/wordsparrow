@@ -90,7 +90,7 @@ describe('AbonnementSection états', () => {
     expect(await screen.findByText('Accès complet')).toBeInTheDocument();
     expect(screen.getByText('Actif')).toBeInTheDocument();
     expect(screen.getByText(/Renouvellement le 1 août 2026/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Résilier l'abonnement/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Résilier l’abonnement/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reprendre mon abonnement' })).toBeNull();
   });
 
@@ -99,11 +99,11 @@ describe('AbonnementSection états', () => {
     render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
     expect(await screen.findByText('Résilié')).toBeInTheDocument();
-    expect(screen.getByText(/Accès actif jusqu'au 1 août 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Accès actif jusqu’au 1 août 2026/)).toBeInTheDocument();
     expect(screen.getByText(/Rien ne te sera plus\s+prélevé/)).toBeInTheDocument();
     expect(screen.getByText(/sans nouveau paiement/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reprendre mon abonnement' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Résilier l'abonnement/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Résilier l’abonnement/ })).toBeNull();
   });
 
   it('renders the gentle expiré état keeping started grids, no pressure, and a re-subscribe link', async () => {
@@ -111,7 +111,7 @@ describe('AbonnementSection états', () => {
     render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
     expect(await screen.findByText('Terminé')).toBeInTheDocument();
-    expect(screen.getByText(/Ton abonnement s'est terminé/)).toBeInTheDocument();
+    expect(screen.getByText(/Ton abonnement s’est terminé/)).toBeInTheDocument();
     expect(screen.getByText(/tes\s+grilles commencées restent à toi/)).toBeInTheDocument();
     expect(screen.getByText(/sans pression/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Me réabonner' }).getAttribute('href')).toBe('/abonnement');
@@ -130,7 +130,7 @@ describe('AbonnementSection états', () => {
     // never silently "Version gratuite" — a paying-but-failed customer keeps the subscriber framing.
     expect(screen.queryByText('Version gratuite')).toBeNull();
     // résilier stays reachable in past_due (backend allows PAST_DUE → pending_cancellation).
-    expect(screen.getByRole('button', { name: /Résilier l'abonnement/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Résilier l’abonnement/ })).toBeInTheDocument();
   });
 
   it('renders the never-subscribed free état neutrally, without an ended badge', async () => {
@@ -141,7 +141,7 @@ describe('AbonnementSection états', () => {
     // never-subscribed shows no ended badge; "Terminé" is reserved for a genuinely lapsed subscription.
     expect(screen.queryByText('Terminé')).toBeNull();
     expect(screen.queryByText('Sans abonnement')).toBeNull();
-    expect(screen.getByRole('link', { name: /Découvre l'abonnement/ }).getAttribute('href')).toBe('/abonnement');
+    expect(screen.getByRole('link', { name: /Découvre l’abonnement/ }).getAttribute('href')).toBe('/abonnement');
     expect(screen.queryByRole('button', { name: 'Reprendre mon abonnement' })).toBeNull();
   });
 });
@@ -199,7 +199,7 @@ describe('AbonnementSection résiliation flow', () => {
     const client = fakeBillingClient(getSubscription, { cancelSubscription });
     render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
-    fireEvent.click(await screen.findByRole('button', { name: /Résilier l'abonnement/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Résilier l’abonnement/ }));
     expect(screen.getByRole('dialog', { name: 'Résilier ton abonnement ?' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Oui, résilier' }));
@@ -217,9 +217,9 @@ describe('AbonnementSection résiliation flow', () => {
     const client = fakeBillingClient(getSubscription, { cancelSubscription });
     render(<AbonnementSection client={client} />, { wrapper: withAuth(SUBSCRIBER) });
 
-    fireEvent.click(await screen.findByRole('button', { name: /Résilier l'abonnement/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Résilier l’abonnement/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Oui, résilier' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/pas d'abonnement actif/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/pas d’abonnement actif/);
   });
 });

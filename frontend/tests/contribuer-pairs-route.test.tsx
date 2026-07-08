@@ -304,7 +304,7 @@ describe('Contribuer pairs route', () => {
     });
     renderContribuerPairs({ surveyClient });
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
-    expect(screen.getByRole('alert').textContent).toMatch(/réseau|connexion|réessayez/i);
+    expect(screen.getByRole('alert').textContent).toMatch(/réseau|connexion|réessaie/i);
   });
 
   it('shows the sign-in banner for anon visitors', async () => {

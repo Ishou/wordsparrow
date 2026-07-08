@@ -131,7 +131,7 @@ describe('archive paywall markers (ADR-0080 W5a)', () => {
 
     // Wait for the subscriber state to settle: the old-unstarted day is a normal link, not a lock.
     await screen.findByRole('link', { name: `Commencer — ${longDateFr(OLD)}` });
-    await waitFor(() => expect(screen.queryByRole('button', { name: /réservée à l'abonnement/i })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', { name: /réservée à l’abonnement/i })).toBeNull());
     expect(screen.queryByText('Débloque toutes les grilles')).toBeNull();
   });
 
@@ -140,7 +140,7 @@ describe('archive paywall markers (ADR-0080 W5a)', () => {
 
     // Test-phase free player: the calendar looks exactly as it did pre-subscription.
     await screen.findByRole('link', { name: `Commencer — ${longDateFr(OLD)}` });
-    expect(screen.queryByRole('button', { name: /réservée à l'abonnement/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /réservée à l’abonnement/i })).toBeNull();
     expect(screen.queryByText('Débloque toutes les grilles')).toBeNull();
     // All three days stay playable — none locked (OLD would lock only for a subscribe-eligible player).
     expect(screen.getAllByRole('link', { name: /Commencer/i })).toHaveLength(3);
@@ -150,11 +150,11 @@ describe('archive paywall markers (ADR-0080 W5a)', () => {
     renderArchive(CAN_SUBSCRIBE);
 
     // The lock lands on OLD (old + unstarted), not the recent or the already-started day.
-    const locked = await screen.findByRole('button', { name: `Grille réservée à l'abonnement — ${longDateFr(OLD)}` });
+    const locked = await screen.findByRole('button', { name: `Grille réservée à l’abonnement — ${longDateFr(OLD)}` });
     expect(locked).toBeTruthy();
 
     // Exactly one lock; the recent day and the old-but-started day stay playable.
-    expect(screen.getAllByRole('button', { name: /réservée à l'abonnement/i })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /réservée à l’abonnement/i })).toHaveLength(1);
     expect(screen.getByRole('link', { name: `Commencer — ${longDateFr(RECENT)}` })).toBeTruthy();
     expect(screen.getByRole('link', { name: `Commencer — ${longDateFr(OLD_STARTED)}` })).toBeTruthy();
   });
@@ -172,7 +172,7 @@ describe('archive paywall markers (ADR-0080 W5a)', () => {
   it('opens the gating sheet instead of navigating when a locked grid is tapped', async () => {
     const { router } = renderArchive(CAN_SUBSCRIBE);
 
-    const locked = await screen.findByRole('button', { name: /réservée à l'abonnement/i });
+    const locked = await screen.findByRole('button', { name: /réservée à l’abonnement/i });
     fireEvent.click(locked);
 
     const dialog = await screen.findByRole('dialog');
@@ -183,10 +183,10 @@ describe('archive paywall markers (ADR-0080 W5a)', () => {
 
   it('links the sheet CTA to the offer page', async () => {
     renderArchive(CAN_SUBSCRIBE);
-    fireEvent.click(await screen.findByRole('button', { name: /réservée à l'abonnement/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /réservée à l’abonnement/i }));
 
     const dialog = await screen.findByRole('dialog');
-    const cta = within(dialog).getByRole('link', { name: /Voir l'abonnement/i });
+    const cta = within(dialog).getByRole('link', { name: /Voir l’abonnement/i });
     expect(cta.getAttribute('href')).toContain('/abonnement');
   });
 });

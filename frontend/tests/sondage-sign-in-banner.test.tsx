@@ -23,7 +23,7 @@ describe('SignInBanner', () => {
     const authClient = stubAuthClient();
     await act(async () => { render(<SignInBanner authClient={authClient} onClick={() => {}} />); });
     expect(
-      screen.getByText(/Connectez-vous pour proposer vos propres indices/i),
+      screen.getByText(/Connecte-toi pour proposer tes propres indices/i),
     ).toBeInTheDocument();
     const cta = screen.getByRole('link', { name: /Se connecter/i });
     expect(cta.getAttribute('href')).toMatch(/^https:\/\/auth\.test\/google\?return=/);

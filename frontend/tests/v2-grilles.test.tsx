@@ -185,7 +185,7 @@ describe('v2 grilles — quotidiennes calendar', () => {
   it('opens the abonnement sheet on a paywalled day for a subscribable player', async () => {
     const { router } = renderGrilles({ capabilities: ['billing:subscribe'] });
     await findTodayCell();
-    const lockedName = `Grille réservée à l'abonnement — ${longDateFr(daysAgo(10))}`;
+    const lockedName = `Grille réservée à l’abonnement — ${longDateFr(daysAgo(10))}`;
     // the capability arrives async from whoami; the cell re-renders locked once it lands
     await waitFor(() => {
       if (screen.queryByRole('button', { name: lockedName }) == null) {

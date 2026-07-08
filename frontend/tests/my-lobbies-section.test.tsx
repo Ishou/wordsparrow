@@ -119,7 +119,7 @@ describe('<MyLobbiesSection> — empty state', () => {
   it('renders the empty-state blurb when no lobbies are present', async () => {
     renderAt(<MyLobbiesSection lobbies={[]} />);
     expect(
-      await screen.findByText(/vos parties multijoueur en cours apparaîtront ici/i),
+      await screen.findByText(/tes parties multijoueur en cours apparaîtront ici/i),
     ).toBeInTheDocument();
   });
 });

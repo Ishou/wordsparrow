@@ -92,7 +92,7 @@ describe('CGV version is single-sourced', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /Conditions de vente/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /droit de rétractation/ }));
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: "S'abonner" }));
+      fireEvent.click(screen.getByRole('button', { name: 'S’abonner' }));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Confirmer et payer' }));
