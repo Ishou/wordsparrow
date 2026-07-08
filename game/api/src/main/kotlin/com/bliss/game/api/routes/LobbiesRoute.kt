@@ -228,7 +228,7 @@ fun Route.lobbies(
                         HttpStatusCode.Unauthorized,
                         "Authentification requise",
                         AUTH_REQUIRED_TYPE,
-                        "Quitter une partie nécessite une connexion.",
+                        "Abandonner la partie nécessite une connexion.",
                     )
 
             // Authorize on the sticky owner_user_id (ADR-0098 §2): the home-screen caller does not hold the live owner seat.
