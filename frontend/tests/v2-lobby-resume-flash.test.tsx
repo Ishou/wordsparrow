@@ -102,8 +102,7 @@ function makeStubGameClient(): GameClient {
   };
 }
 
-// A `/` home route sits alongside the lobby so the test can navigate away and back —
-// reproducing the resume flow (Accueil → « Rejoindre ma partie » → /lobby/$id).
+// Home route lets the test navigate away and back, reproducing the resume flow.
 function makeRouter(getLobby: LobbyClient['getLobby']) {
   const lobbyClient: LobbyClient = {
     createLobby: vi.fn().mockResolvedValue(waitingLobby),
@@ -195,8 +194,7 @@ describe('v2 /lobby/$lobbyId — resuming an in-progress game shows no waiting-r
     // The owner has since started the game: the server now answers IN_PROGRESS (deferred).
     phase = 'in-progress';
 
-    // Resume: navigate back to the same lobby while the loader is in flight —
-    // the router must show the pending placeholder, NEVER the stale waiting room.
+    // Router must show the pending placeholder here, never the stale waiting room.
     let navPromise!: Promise<void>;
     await act(async () => {
       navPromise = goLobby(router) as unknown as Promise<void>;
