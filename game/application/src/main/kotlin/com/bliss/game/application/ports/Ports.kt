@@ -83,15 +83,26 @@ interface LobbyRepository {
         now: Instant,
     ): RelinquishOutcome {
         var notOwner = false
+        // Captured when the relinquish empties an ownerless lobby: the mutator returns null to delete the row,
+        // yet the outcome still carries the terminal snapshot so the wire keeps its 200 Lobby body (ADR-0055/0098).
+        var defunct: Lobby? = null
         val updated =
             mutate(id) { lobby ->
                 if (!lobby.isCurrentOwner(sessionId)) {
                     notOwner = true
                     lobby
                 } else {
-                    lobby.relinquishOwner(now).copy(players = lobby.players - sessionId)
+                    val next = lobby.relinquishOwner(now).copy(players = lobby.players - sessionId)
+                    if (next.isDefunct()) {
+                        defunct = next
+                        null
+                    } else {
+                        next
+                    }
                 }
-            } ?: return RelinquishOutcome.LobbyNotFound
+            }
+        defunct?.let { return RelinquishOutcome.Relinquished(it) }
+        updated ?: return RelinquishOutcome.LobbyNotFound
         return if (notOwner) RelinquishOutcome.NotOwner else RelinquishOutcome.Relinquished(updated)
     }
 
@@ -111,15 +122,25 @@ interface LobbyRepository {
         now: Instant,
     ): RelinquishOutcome {
         var notOwner = false
+        // See relinquishOwnership: an emptied ownerless lobby is deleted but still yields its terminal snapshot.
+        var defunct: Lobby? = null
         val updated =
             mutate(id) { lobby ->
                 if (lobby.ownerUserId != userId) {
                     notOwner = true
                     lobby
                 } else {
-                    lobby.relinquishOwner(now).copy(players = lobby.players - lobby.ownerSessionId)
+                    val next = lobby.relinquishOwner(now).copy(players = lobby.players - lobby.ownerSessionId)
+                    if (next.isDefunct()) {
+                        defunct = next
+                        null
+                    } else {
+                        next
+                    }
                 }
-            } ?: return RelinquishOutcome.LobbyNotFound
+            }
+        defunct?.let { return RelinquishOutcome.Relinquished(it) }
+        updated ?: return RelinquishOutcome.LobbyNotFound
         return if (notOwner) RelinquishOutcome.NotOwner else RelinquishOutcome.Relinquished(updated)
     }
 

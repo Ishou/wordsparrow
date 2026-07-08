@@ -232,6 +232,8 @@ class PostgresLobbyRepository(
                             ps.executeUpdate()
                         }
                     val reloaded = loadLobby(conn, id)!!
+                    // ADR-0055/0098: relinquishing a solo game leaves an ownerless empty ghost -- delete it now, children cascade.
+                    if (reloaded.isDefunct()) deleteLobbyRow(conn, id)
                     conn.commit()
                     RelinquishOutcome.Relinquished(reloaded)
                 } catch (e: Exception) {
@@ -280,6 +282,8 @@ class PostgresLobbyRepository(
                             ps.executeUpdate()
                         }
                     val reloaded = loadLobby(conn, id)!!
+                    // ADR-0055/0098: a REST relinquish of a solo game leaves an ownerless empty ghost -- delete it now.
+                    if (reloaded.isDefunct()) deleteLobbyRow(conn, id)
                     conn.commit()
                     RelinquishOutcome.Relinquished(reloaded)
                 } catch (e: Exception) {
@@ -399,8 +403,10 @@ class PostgresLobbyRepository(
             val (owner, remainingPlayers) = loadOwnerAndRemainingPlayers(conn, id, sessionUuid)
             if (owner == null) continue // lobby vanished between SELECT and now (impossible inside this tx, but safe).
             val ownsLobby = owner == sessionUuid
-            if (ownsLobby && remainingPlayers.isEmpty()) {
-                // Rule 1: cascade-delete.
+            val alreadyOwnerless = isOwnerless(conn, id)
+            // Rule 1 (sole owner) OR the last seat of an already-ownerless lobby: the erase empties a lobby nobody
+            // will own -> cascade-delete now rather than leave an ownerless ghost (ADR-0055/0098).
+            if (remainingPlayers.isEmpty() && (ownsLobby || alreadyOwnerless)) {
                 conn.prepareStatement("DELETE FROM lobbies WHERE id = ?").use { ps ->
                     ps.setString(1, id.value)
                     ps.executeUpdate()
@@ -445,6 +451,18 @@ class PostgresLobbyRepository(
         }
         return EraseSessionResult(deletedLobbies, vacatedLobbies, removedPlayerships, anonymisedEntries)
     }
+
+    // ADR-0098: owner_user_id IS NULL marks a relinquished/vacated (ownerless) lobby.
+    private fun isOwnerless(
+        conn: Connection,
+        id: LobbyId,
+    ): Boolean =
+        conn.prepareStatement("SELECT owner_user_id FROM lobbies WHERE id = ?").use { ps ->
+            ps.setString(1, id.value)
+            ps.executeQuery().use { rs ->
+                rs.next() && rs.getObject("owner_user_id", UUID::class.java) == null
+            }
+        }
 
     /**
      * Returns (ownerSessionUuid, remainingPlayers) where `remainingPlayers` is

@@ -524,9 +524,9 @@ class LobbyWebSocketRouteTest {
             }
         }
 
-    // ADR-0098 §2: the explicit Quitter frame relinquishes ownership -> the lobby becomes ownerless.
+    // ADR-0055/0098: a solo owner's explicit Quitter frame relinquishes and empties the lobby -> it is destroyed.
     @Test
-    fun `leaveLobby frame relinquishes ownership - lobby becomes ownerless and an ownershipChanged frame is broadcast`() =
+    fun `leaveLobby frame by a solo owner destroys the lobby and broadcasts ownershipChanged`() =
         runWith { harness ->
             val ownerUser = UserId("11111111-1111-1111-1111-111111111111")
             val lobbyId = harness.seedLobbyOwnedBy(ownerUser)
@@ -547,10 +547,7 @@ class LobbyWebSocketRouteTest {
                 assertThat(frame).contains("\"newOwnerUserId\":null")
                 assertThat(frame).contains("\"newOwnerSessionId\":null")
             }
-            val lobby = harness.repo.findById(lobbyId)
-            assertThat(lobby).isNotNull()
-            assertThat(lobby!!.isOwnerless()).isTrue()
-            assertThat(lobby.ownerUserId).isNull()
+            assertThat(harness.repo.findById(lobbyId)).isNull()
         }
 
     // ADR-0098 §2: a non-owner's explicit Quitter frame is a plain seat-drop, not a relinquish.

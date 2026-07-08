@@ -6,6 +6,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isNotEqualTo
 import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import assertk.assertions.matches
 import assertk.assertions.startsWith
@@ -562,6 +563,24 @@ class LobbiesRouteTest {
             val saved = repo.findById(lobbyId)!!
             assertThat(saved.ownerUserId).isEqualTo(null)
             assertThat(saved.isOwnerless()).isTrue()
+        }
+
+    // ADR-0055/0098: relinquishing a solo game destroys the lobby; the 200 body is the terminal ownerless snapshot.
+    @Test
+    fun `DELETE ownership by the sole owner destroys the lobby and returns 200`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userA, Pseudonym("Alice")))) { client, repo ->
+            val lobbyId =
+                CreateLobbyUseCase(repo, seedClock)(SessionId(ownerSessionId), Pseudonym("Alice"), ownerUserId = userA).value.id
+
+            val response =
+                client.delete("/v1/lobbies/${lobbyId.value}/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val body = JSON.decodeFromString<LobbyResponseDto>(response.bodyAsText())
+            assertThat(body.ownerless).isTrue()
+            assertThat(repo.findById(lobbyId)).isNull()
         }
 
     @Test

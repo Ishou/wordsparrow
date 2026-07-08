@@ -273,7 +273,8 @@ class LobbyUseCasesTest {
     fun `JoinLobby owner who left re-enters without code and is re-added as player`() =
         runTest {
             val h = harness()
-            val lobby = h.create(sessionA, alice).value
+            // Authed owner: leaving keeps the (owned) lobby alive so the owner can re-enter; an anonymous solo owner would destroy it.
+            val lobby = h.create(sessionA, alice, userA).value
             h.start(lobby.id, sessionA).requireSuccess()
             h.leave(lobby.id, sessionA).requireSuccess()
             // Owner is now absent from players but still the owner.
@@ -288,7 +289,7 @@ class LobbyUseCasesTest {
     fun `JoinLobby owner who left re-enters even when code is wrong`() =
         runTest {
             val h = harness()
-            val lobby = h.create(sessionA, alice).value
+            val lobby = h.create(sessionA, alice, userA).value
             h.start(lobby.id, sessionA).requireSuccess()
             h.leave(lobby.id, sessionA).requireSuccess()
             val out = h.joinWithCode(lobby.id, sessionA, alice, code = "WRONG2").requireSuccess()
@@ -308,7 +309,7 @@ class LobbyUseCasesTest {
     fun `JoinLobby owner who left cannot rejoin a full lobby and gets LobbyFull`() =
         runTest {
             val h = harness()
-            val lobby = h.create(sessionA, alice).value
+            val lobby = h.create(sessionA, alice, userA).value
             h.leave(lobby.id, sessionA).requireSuccess()
             // Fill all 8 slots with non-owner sessions.
             repeat(8) { i ->
@@ -448,6 +449,8 @@ class LobbyUseCasesTest {
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
+            // A co-player keeps the lobby alive as ownerless; a solo relinquish would destroy it (ADR-0055/0098).
+            h.join(lobby.id, sessionB, bob).requireSuccess()
             h.relinquish(lobby.id, sessionA).requireSuccess()
 
             val out = h.rotate(lobby.id, sessionA)
@@ -535,6 +538,8 @@ class LobbyUseCasesTest {
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
+            // A co-player keeps the lobby alive as ownerless; a solo relinquish would destroy it (ADR-0055/0098).
+            h.join(lobby.id, sessionB, bob).requireSuccess()
             h.relinquish(lobby.id, sessionA).requireSuccess()
 
             val out = h.setConfig(lobby.id, sessionA, GridConfig(9, 9))
@@ -573,6 +578,8 @@ class LobbyUseCasesTest {
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
+            // A co-player keeps the lobby alive as ownerless; a solo relinquish would destroy it (ADR-0055/0098).
+            h.join(lobby.id, sessionB, bob).requireSuccess()
             h.relinquish(lobby.id, sessionA).requireSuccess()
 
             val out = h.start(lobby.id, sessionA)
@@ -668,17 +675,43 @@ class LobbyUseCasesTest {
             assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
         }
 
+    // ADR-0055/0098: an anonymous owner is ownerless (ownerUserId null); the last player leaving destroys the ghost.
     @Test
-    fun `LeaveLobby keeps the lobby with empty players when last player leaves`() =
+    fun `LeaveLobby destroys an ownerless lobby when its last player leaves`() =
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice).value
             val out = h.leave(lobby.id, sessionA).requireSuccess()
-            val state = out.value ?: error("expected lobby to remain")
-            assertThat(state.players.keys).isEqualTo(emptySet())
-            assertThat(state.ownerSessionId).isEqualTo(sessionA)
-            // Only PlayerLeft is emitted; LobbyClosed is no longer emitted from the leave path.
+            assertThat(out.value).isNull()
             assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
+            assertThat(h.repo.findById(lobby.id)).isNull()
+        }
+
+    // ADR-0055/0098: after the owner relinquishes, the remaining co-player leaving empties the ownerless lobby -> destroyed.
+    @Test
+    fun `LeaveLobby destroys a relinquished lobby when the last co-player leaves`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.join(lobby.id, sessionB, bob).requireSuccess()
+            h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            val out = h.leave(lobby.id, sessionB).requireSuccess()
+
+            assertThat(out.value).isNull()
+            assertThat(h.repo.findById(lobby.id)).isNull()
+        }
+
+    // ADR-0055/0098 MUST-NOT: an owned lobby emptied by the owner disconnecting stays (owner_user_id is sticky).
+    @Test
+    fun `LeaveLobby keeps an owned lobby when the owner leaves it empty`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            val out = h.leave(lobby.id, sessionA).requireSuccess()
+
+            assertThat(out.value!!.players.keys).isEqualTo(emptySet())
+            assertThat(out.value!!.ownerUserId).isEqualTo(userA)
             assertThat(h.repo.findById(lobby.id)).isNotNull()
         }
 
@@ -738,18 +771,32 @@ class LobbyUseCasesTest {
             assertThat(after!!.ownerUserId).isEqualTo(userA)
         }
 
-    // ADR-0098 §2: the current owner relinquishes to ownerless and drops their own seat.
+    // ADR-0098 §2: the current owner relinquishes to ownerless and drops their own seat; a co-player keeps it alive.
     @Test
     fun `Relinquish clears ownerUserId, drops the owner seat, and emits PlayerLeft`() =
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
+            h.join(lobby.id, sessionB, bob).requireSuccess()
             val out = h.relinquish(lobby.id, sessionA).requireSuccess()
 
             val relinquished = out.value!!
             assertThat(relinquished.ownerUserId).isNull()
             assertThat(relinquished.players.keys.contains(sessionA)).isEqualTo(false)
+            assertThat(relinquished.players.keys.contains(sessionB)).isEqualTo(true)
             assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
+        }
+
+    // ADR-0055/0098: a sole owner relinquishing empties an ownerless lobby -> it is destroyed, not just ownerless.
+    @Test
+    fun `Relinquish destroys the lobby when the owner is the sole player`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            val out = h.relinquish(lobby.id, sessionA).requireSuccess()
+
+            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
+            assertThat(h.repo.findById(lobby.id)).isNull()
         }
 
     @Test
@@ -770,6 +817,8 @@ class LobbyUseCasesTest {
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
+            // A co-player keeps the lobby alive after the first relinquish; a solo relinquish would destroy it.
+            h.join(lobby.id, sessionB, bob).requireSuccess()
             h.relinquish(lobby.id, sessionA).requireSuccess()
 
             val out = h.relinquish(lobby.id, sessionA)
@@ -791,6 +840,8 @@ class LobbyUseCasesTest {
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
+            // A co-player keeps the lobby alive as ownerless; a solo relinquish would destroy it (ADR-0055/0098).
+            h.join(lobby.id, sessionB, bob).requireSuccess()
             val out = h.relinquishByUser(lobby.id, userA).requireSuccess()
 
             assertThat(out.value.ownerUserId).isNull()
@@ -798,6 +849,23 @@ class LobbyUseCasesTest {
                 out.value.players.keys
                     .contains(sessionA),
             ).isEqualTo(false)
+            assertThat(
+                out.value.players.keys
+                    .contains(sessionB),
+            ).isEqualTo(true)
+            assertThat(h.repo.findById(lobby.id)).isNotNull()
+        }
+
+    // ADR-0055/0098: the REST relinquish of a solo game destroys the lobby (findById -> null), not just ownerless.
+    @Test
+    fun `RelinquishByUser destroys the lobby when the owner is the sole player`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            val out = h.relinquishByUser(lobby.id, userA).requireSuccess()
+
+            assertThat(out.value.isOwnerless()).isEqualTo(true)
+            assertThat(h.repo.findById(lobby.id)).isNull()
         }
 
     @Test
@@ -816,6 +884,8 @@ class LobbyUseCasesTest {
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
+            // A co-player keeps the lobby alive after the first relinquish; a solo relinquish would destroy it.
+            h.join(lobby.id, sessionB, bob).requireSuccess()
             h.relinquishByUser(lobby.id, userA).requireSuccess()
 
             val out = h.relinquishByUser(lobby.id, userA)

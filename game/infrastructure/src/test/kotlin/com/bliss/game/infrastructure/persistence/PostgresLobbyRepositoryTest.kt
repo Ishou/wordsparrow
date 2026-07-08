@@ -756,6 +756,21 @@ class PostgresLobbyRepositoryTest {
             assertThat(outcome).isEqualTo(RelinquishOutcome.LobbyNotFound)
         }
 
+    // ADR-0055/0098: relinquishing a solo game empties an ownerless lobby -> it is destroyed (findById -> null).
+    @Test
+    fun `relinquishOwnership destroys the lobby when the owner is the sole player`() =
+        runTest {
+            val userA = UserId("11111111-1111-1111-1111-111111111111")
+            val solo = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userA)
+            repo.save(solo)
+
+            val outcome = repo.relinquishOwnership(solo.id, sessionA, baseInstant.plusSeconds(120))
+
+            assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
+            assertThat(repo.findById(solo.id)).isNull()
+            assertThat(countChildRows("lobby_players", solo.id)).isEqualTo(0)
+        }
+
     // ADR-0098 §2 (2026-07-08 amendment) LOAD-BEARING: REST relinquish authorizes by owner_user_id and
     // must null it in Postgres despite the upsert's write-once exclusion; a mutate/save would keep it.
     @Test
@@ -817,6 +832,21 @@ class PostgresLobbyRepositoryTest {
             val userA = UserId("11111111-1111-1111-1111-111111111111")
             val outcome = repo.relinquishOwnershipByUser(LobbyId.generate(), userA, baseInstant)
             assertThat(outcome).isEqualTo(RelinquishOutcome.LobbyNotFound)
+        }
+
+    // ADR-0055/0098: the REST relinquish of a solo game destroys the lobby (findById -> null).
+    @Test
+    fun `relinquishOwnershipByUser destroys the lobby when the owner is the sole player`() =
+        runTest {
+            val userA = UserId("11111111-1111-1111-1111-111111111111")
+            val solo = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userA)
+            repo.save(solo)
+
+            val outcome = repo.relinquishOwnershipByUser(solo.id, userA, baseInstant.plusSeconds(120))
+
+            assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
+            assertThat(repo.findById(solo.id)).isNull()
+            assertThat(countChildRows("lobby_players", solo.id)).isEqualTo(0)
         }
 
     // ADR-0098 §2 LOAD-BEARING: claim must write owner_user_id in Postgres despite the upsert exclusion.
@@ -999,6 +1029,22 @@ class PostgresLobbyRepositoryTest {
             assertThat(anonEntry!!.sessionId).isEqualTo(SessionId.ANON)
             // sessionA's entry remains attributed.
             assertThat(after.game!!.entries[Position(0, 0)]!!.sessionId).isEqualTo(sessionA)
+        }
+
+    // ADR-0055/0098: erasing the last player of an already-ownerless lobby leaves a ghost -> delete it, children cascade.
+    @Test
+    fun `eraseSession destroys an ownerless lobby when its last player is erased`() =
+        runTest {
+            val ownerless =
+                inProgressLobby(id = LobbyId.generate(), owner = SessionId.ANON, ownerUserId = null)
+                    .copy(players = mapOf(sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))))
+            repo.save(ownerless)
+
+            val result = repo.eraseSession(sessionB)
+
+            assertThat(result.deletedLobbies).isEqualTo(1)
+            assertThat(repo.findById(ownerless.id)).isNull()
+            assertThat(countChildRows("lobby_players", ownerless.id)).isEqualTo(0)
         }
 
     @Test

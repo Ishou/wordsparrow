@@ -319,21 +319,27 @@ class LeaveLobbyUseCase(
     ): UseCaseOutcome<Lobby?> {
         val events = mutableListOf<LobbyEvent>(LobbyEvent.PlayerLeft(sessionId))
         var playerWasPresent = false
+        var destroyed = false
         val updated =
             repo.mutate(lobbyId) { lobby ->
                 if (!lobby.hasJoined(sessionId)) return@mutate lobby
                 playerWasPresent = true
-                // Remove the player but keep ownerSessionId unchanged on every branch.
-                // The lobby persists even when emptied; GC TTLs (see [LobbyGarbageCollector]) handle cleanup.
-                lobby.copy(
-                    players = lobby.players - sessionId,
-                    lastActivityAt = clock.now(),
-                )
+                // Keep ownerSessionId unchanged; an owned lobby persists when emptied (owner returns via My-games).
+                val next = lobby.copy(players = lobby.players - sessionId, lastActivityAt = clock.now())
+                // ADR-0055/0098: the last player leaving an ownerless lobby leaves a ghost -- delete it now.
+                if (next.isDefunct()) {
+                    destroyed = true
+                    null
+                } else {
+                    next
+                }
             }
-        // mutate's mutator never returns null, so updated == null
-        // is unambiguously "lobby with this id does not exist" (the repo's only other
-        // null path). PlayerNotInLobby is signalled by playerWasPresent=false on a
-        // non-null mutate return — the mutator short-circuited without mutating.
+        // A destroyed lobby is a Success with no surviving snapshot; else updated == null is unambiguously
+        // "lobby does not exist", and playerWasPresent=false on a non-null return is a silent short-circuit.
+        if (destroyed) {
+            analyticsEventSink.record(AnalyticsEvent.LobbyLeft, sessionId)
+            return success(null, events)
+        }
         if (updated == null) return failure(UseCaseError.LobbyNotFound)
         if (!playerWasPresent) return failure(UseCaseError.PlayerNotInLobby)
         analyticsEventSink.record(AnalyticsEvent.LobbyLeft, sessionId)
