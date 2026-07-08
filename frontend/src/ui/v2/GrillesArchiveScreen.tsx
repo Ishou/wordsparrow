@@ -12,6 +12,7 @@ import { useAuth } from '@/ui/components/auth';
 import { useCanSubscribe } from '@/ui/components/billing';
 import { HostSignInSheet } from '@/ui/home/HostSignInSheet';
 import { useCreateOrResume } from '@/ui/components/lobby/useCreateOrResume';
+import { useToast } from '@/ui/components/primitives';
 import { OwnedGameModal } from './multiplayer/OwnedGameModal';
 import { DailyCalendar } from './DailyCalendar';
 import { bar, barFill, card, chevron, list, mid, rowMeta, rowTitle } from './listRowStyles';
@@ -93,6 +94,7 @@ export function GrillesArchiveScreen({
   const navigate = useNavigate();
   const canSubscribe = useCanSubscribe();
   const { status: authStatus } = useAuth();
+  const { show: showToast } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
   // Kept mounted (Ark animates its own close) and the context persists through the close transition.
   const [sheet, setSheet] = useState<{ open: boolean; context: SheetContext }>({ open: false, context: 'grid' });
@@ -111,16 +113,16 @@ export function GrillesArchiveScreen({
     },
   });
 
-  // ADR-0098 §6: an ownerless "Reprendre" row claims ownership, then navigates into the now-owned lobby.
+  // ADR-0098 §6: an ownerless "Reprendre" row claims ownership, then navigates into the now-owned lobby; a 403/409 surfaces a toast.
   const handleClaimLobby = useCallback(
     (lobbyId: LobbyId) => {
       if (lobbyClient == null) return;
       void lobbyClient
         .claimOwnership(lobbyId)
         .then(() => navigate({ to: '/lobby/$lobbyId', params: { lobbyId } }))
-        .catch(() => {});
+        .catch(() => showToast({ text: 'Impossible de reprendre la partie.', tone: 'error' }));
     },
-    [lobbyClient, navigate],
+    [lobbyClient, navigate, showToast],
   );
   const coopPending = coop.pending || coop.startingNew;
 
