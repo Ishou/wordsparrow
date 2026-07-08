@@ -162,16 +162,29 @@ export default tseslint.config(
     files: ['src/design-system/**/*.{ts,tsx}'],
     rules: { 'no-restricted-syntax': ['error', ...noHardcodedFrench] },
   },
-  // i18n rollout: catalog + deferred legal prose + dev-only gallery + co-located tests keep their French literals.
+  // i18n rollout: catalog + dev-only gallery + co-located tests keep their French literals.
   {
     files: [
       'src/ui/i18n/**',
-      'src/ui/components/PrivacyNotice.tsx',
-      'src/ui/v2/ConditionsAbonnementScreen.tsx',
       'src/design-system/gallery/**',
       'src/ui/**/*.test.{ts,tsx}',
       'src/design-system/**/*.{test,stories}.{ts,tsx}',
     ],
     rules: { 'no-restricted-syntax': 'off' },
+  },
+  // Deferred bilingual legal prose (PrivacyNotice, CGV): exempt from the French-copy
+  // guard only, not the whole rule — the Error.message UI guard above still applies.
+  {
+    files: ['src/ui/components/PrivacyNotice.tsx', 'src/ui/v2/ConditionsAbonnementScreen.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[property.name='message']",
+          message:
+            "Don't render `Error.message` in the UI — it leaks browser/English strings. Use `messageForApiError(cause)` from `@/ui/lib/apiErrorMessage`, or map typed errors to local French copy at the route. Justified exceptions need an eslint-disable-next-line with a one-line rationale.",
+        },
+      ],
+    },
   },
 );
