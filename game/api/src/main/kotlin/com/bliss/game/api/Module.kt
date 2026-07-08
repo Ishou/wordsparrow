@@ -20,6 +20,7 @@ import com.bliss.game.application.usecases.ListLobbiesForSession
 import com.bliss.game.application.usecases.ListLobbiesForUser
 import com.bliss.game.application.usecases.LobbyGarbageCollector
 import com.bliss.game.application.usecases.PresenceAggregator
+import com.bliss.game.application.usecases.RelinquishOwnershipByUserUseCase
 import com.bliss.game.application.usecases.RelinquishOwnershipUseCase
 import com.bliss.game.application.usecases.RenameSelfUseCase
 import com.bliss.game.application.usecases.RotateLobbyCodeUseCase
@@ -306,6 +307,8 @@ fun Application.module() {
             relinquishOwnership = RelinquishOwnershipUseCase(lobbyRepository, SystemClock),
         )
     val claimOwnership = ClaimLobbyOwnershipUseCase(lobbyRepository, SystemClock)
+    // REST DELETE .../ownership: userId-authorized relinquish (ADR-0098 §2 + 2026-07-08 amendment); distinct from the WS session-keyed path.
+    val relinquishByUser = RelinquishOwnershipByUserUseCase(lobbyRepository, SystemClock)
 
     // Lobby garbage collector — ADR-0039 GC matrix:
     //   - WAITING     → evicted after 24h. Replaces the v1 30-minute knob: with multi-day
@@ -340,6 +343,7 @@ fun Application.module() {
         lobbies(
             createLobby = useCases.createLobby,
             claimOwnership = claimOwnership,
+            relinquishOwnership = relinquishByUser,
             repo = lobbyRepository,
             sessionManager = sessionManager,
             cookieVerifier = cookieVerifier,

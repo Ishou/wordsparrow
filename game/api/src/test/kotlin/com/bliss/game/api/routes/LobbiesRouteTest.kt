@@ -6,6 +6,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isNotEqualTo
 import assertk.assertions.isNotNull
+import assertk.assertions.isTrue
 import assertk.assertions.matches
 import assertk.assertions.startsWith
 import com.bliss.game.api.SessionManager
@@ -18,6 +19,7 @@ import com.bliss.game.application.ports.Clock
 import com.bliss.game.application.usecases.ClaimLobbyOwnershipUseCase
 import com.bliss.game.application.usecases.CreateLobbyUseCase
 import com.bliss.game.application.usecases.JoinLobbyUseCase
+import com.bliss.game.application.usecases.RelinquishOwnershipByUserUseCase
 import com.bliss.game.application.usecases.RelinquishOwnershipUseCase
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.Pseudonym
@@ -27,6 +29,7 @@ import com.bliss.game.infrastructure.InMemoryLobbyRepository
 import com.bliss.game.infrastructure.InMemoryLobbyWriteCoordinator
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.cookie
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -104,6 +107,9 @@ class LobbiesRouteTest {
             val code = lobby.code
             assertThat(code).isNotNull()
             assertThat(code!!).matches(Regex("^[A-HJKM-NP-Z2-9]{6}$"))
+            // ADR-0098 §2: a freshly-created lobby has an owner, so ownerless is false and on the wire (required).
+            assertThat(json.containsKey("ownerless")).isEqualTo(true)
+            assertThat(lobby.ownerless).isFalse()
         }
 
     @Test
@@ -475,6 +481,102 @@ class LobbiesRouteTest {
             assertThat(saved.isOwnerless()).isFalse()
         }
 
+    // ---- relinquish-ownership endpoint (ADR-0098 §2 + 2026-07-08 amendment) ----
+
+    @Test
+    fun `DELETE ownership without a session returns 401 - guests cannot relinquish`() =
+        testApplicationWithVerifier(verifier = stubVerifier(null)) { client, repo ->
+            val lobbyId = seedOwnedLobbyWithMember(repo)
+            val response = client.delete("/v1/lobbies/${lobbyId.value}/ownership")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
+            assertThat(response.headers["Content-Type"]!!).startsWith("application/problem+json")
+            assertThat(response.bodyAsText()).contains("auth-required")
+        }
+
+    @Test
+    fun `DELETE ownership returns 401 when verifyFresh diverges from verify (revoked session)`() =
+        testApplicationWithVerifier(
+            verifier = divergentVerifier(cached = WhoAmI(userA, Pseudonym("Alice")), fresh = null),
+        ) { client, repo ->
+            val lobbyId = seedOwnedLobbyWithMember(repo)
+            val response =
+                client.delete("/v1/lobbies/${lobbyId.value}/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stale-cookie")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
+            assertThat(response.bodyAsText()).contains("auth-required")
+        }
+
+    @Test
+    fun `DELETE ownership against a non-existent lobbyId returns 404`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userA, Pseudonym("Alice")))) { client, _ ->
+            val response =
+                client.delete("/v1/lobbies/abcdefgh/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertProblem(response, HttpStatusCode.NotFound, "https://bliss.example/errors/lobby-not-found")
+        }
+
+    @Test
+    fun `DELETE ownership with an invalid lobbyId shape returns 400`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userA, Pseudonym("Alice")))) { client, _ ->
+            val response =
+                client.delete("/v1/lobbies/not-bs!/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertProblem(response, HttpStatusCode.BadRequest, "https://bliss.example/errors/invalid-lobby-id")
+        }
+
+    @Test
+    fun `DELETE ownership by a non-owner returns 403`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userC, Pseudonym("Charlie")))) { client, repo ->
+            val lobbyId = seedOwnedLobbyWithMember(repo)
+            val response =
+                client.delete("/v1/lobbies/${lobbyId.value}/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertProblem(response, HttpStatusCode.Forbidden, "https://bliss.example/errors/lobby-relinquish-forbidden")
+            // Ownership untouched by a rejected relinquish.
+            assertThat(repo.findById(lobbyId)!!.ownerUserId).isEqualTo(userA)
+        }
+
+    @Test
+    fun `DELETE ownership by the owner returns 200 with an ownerless lobby and nulls owner_user_id`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userA, Pseudonym("Alice")))) { client, repo ->
+            val lobbyId = seedOwnedLobbyWithMember(repo)
+
+            val response =
+                client.delete("/v1/lobbies/${lobbyId.value}/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val body = JSON.decodeFromString<LobbyResponseDto>(response.bodyAsText())
+            assertThat(body.ownerless).isTrue()
+            // owner_user_id is server-side only; reload proves the NULL persisted.
+            val saved = repo.findById(lobbyId)!!
+            assertThat(saved.ownerUserId).isEqualTo(null)
+            assertThat(saved.isOwnerless()).isTrue()
+        }
+
+    @Test
+    fun `DELETE ownership on an already-ownerless lobby returns 403`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userA, Pseudonym("Alice")))) { client, repo ->
+            val lobbyId = seedOwnerlessLobby(repo)
+
+            val response =
+                client.delete("/v1/lobbies/${lobbyId.value}/ownership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertProblem(response, HttpStatusCode.Forbidden, "https://bliss.example/errors/lobby-relinquish-forbidden")
+        }
+
     /** Ownerless lobby: owner userA relinquishes after userB (sessionB) joins, leaving userB present and claimable. */
     private suspend fun seedOwnerlessLobby(repo: InMemoryLobbyRepository): LobbyId {
         val lobbyId = seedOwnedLobbyWithMember(repo)
@@ -530,6 +632,7 @@ class LobbiesRouteTest {
             }
         val createLobby = CreateLobbyUseCase(repo, clock)
         val claimOwnership = ClaimLobbyOwnershipUseCase(repo, clock)
+        val relinquishOwnership = RelinquishOwnershipByUserUseCase(repo, clock)
         val sessionManager = SessionManager()
         application {
             // Uses production REST_JSON so encodeDefaults/explicitNulls wire-contract assertions hold (ADR-0003 §6).
@@ -538,6 +641,7 @@ class LobbiesRouteTest {
                 lobbies(
                     createLobby = createLobby,
                     claimOwnership = claimOwnership,
+                    relinquishOwnership = relinquishOwnership,
                     repo = repo,
                     sessionManager = sessionManager,
                     cookieVerifier = verifier,

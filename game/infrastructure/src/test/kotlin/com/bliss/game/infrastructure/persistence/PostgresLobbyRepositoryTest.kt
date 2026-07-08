@@ -756,6 +756,69 @@ class PostgresLobbyRepositoryTest {
             assertThat(outcome).isEqualTo(RelinquishOutcome.LobbyNotFound)
         }
 
+    // ADR-0098 §2 (2026-07-08 amendment) LOAD-BEARING: REST relinquish authorizes by owner_user_id and
+    // must null it in Postgres despite the upsert's write-once exclusion; a mutate/save would keep it.
+    @Test
+    fun `relinquishOwnershipByUser nulls owner_user_id by owner userId and drops the owner seat, persisted through reload`() =
+        runTest {
+            val userA = UserId("11111111-1111-1111-1111-111111111111")
+            val base = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userA)
+            val withOther =
+                base.copy(
+                    players =
+                        base.players +
+                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                )
+            repo.save(withOther)
+            val now = baseInstant.plusSeconds(120)
+
+            val outcome = repo.relinquishOwnershipByUser(withOther.id, userA, now)
+
+            assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
+            val returned = (outcome as RelinquishOutcome.Relinquished).lobby
+            assertThat(returned.ownerUserId).isNull()
+            assertThat(returned.players.keys).containsOnly(sessionB)
+            val reloaded = repo.findById(withOther.id)!!
+            assertThat(reloaded.ownerUserId).isNull()
+            assertThat(reloaded.lastActivityAt).isEqualTo(now)
+            assertThat(repo.findActiveByOwnerUser(userA)).isNull()
+        }
+
+    @Test
+    fun `relinquishOwnershipByUser returns NotOwner when the userId does not own the lobby`() =
+        runTest {
+            val userA = UserId("11111111-1111-1111-1111-111111111111")
+            val userB = UserId("22222222-2222-2222-2222-222222222222")
+            val base = inProgressLobby(id = LobbyId.generate(), owner = sessionA, ownerUserId = userA)
+            repo.save(base)
+
+            val outcome = repo.relinquishOwnershipByUser(base.id, userB, baseInstant.plusSeconds(120))
+
+            assertThat(outcome).isEqualTo(RelinquishOutcome.NotOwner)
+            assertThat(repo.findById(base.id)!!.ownerUserId).isEqualTo(userA)
+        }
+
+    @Test
+    fun `relinquishOwnershipByUser returns NotOwner on an already-ownerless lobby`() =
+        runTest {
+            val userA = UserId("11111111-1111-1111-1111-111111111111")
+            val ownerless = inProgressLobby(id = LobbyId.generate(), owner = SessionId.ANON, ownerUserId = null)
+            repo.save(ownerless)
+
+            val outcome = repo.relinquishOwnershipByUser(ownerless.id, userA, baseInstant.plusSeconds(120))
+
+            assertThat(outcome).isEqualTo(RelinquishOutcome.NotOwner)
+            assertThat(repo.findById(ownerless.id)!!.ownerUserId).isNull()
+        }
+
+    @Test
+    fun `relinquishOwnershipByUser returns LobbyNotFound for an unknown lobby`() =
+        runTest {
+            val userA = UserId("11111111-1111-1111-1111-111111111111")
+            val outcome = repo.relinquishOwnershipByUser(LobbyId.generate(), userA, baseInstant)
+            assertThat(outcome).isEqualTo(RelinquishOutcome.LobbyNotFound)
+        }
+
     // ADR-0098 §2 LOAD-BEARING: claim must write owner_user_id in Postgres despite the upsert exclusion.
     @Test
     fun `claimOwnership writes owner_user_id and owner_session_id on an ownerless lobby, persisted through reload`() =

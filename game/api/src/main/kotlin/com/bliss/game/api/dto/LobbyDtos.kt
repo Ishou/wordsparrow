@@ -19,6 +19,8 @@ data class LobbyResponseDto(
     val state: String,
     val gridConfig: GridConfigDto,
     val game: GameSessionDto?,
+    // True when owner_user_id is null: the lobby is claimable via POST .../ownership (ADR-0098 §2).
+    val ownerless: Boolean,
     // Human-friendly join code. Non-null for every lobby created after
     // PR #262; nullable here because the OpenAPI schema hasn't promoted
     // `code` to `required` yet (phase 3). `explicitNulls = false` omits
@@ -165,6 +167,8 @@ data class LobbySummaryDto(
     val playerCount: Int,
     val lastActivityAt: String,
     val progress: LobbyProgressDto,
+    // True when owner_user_id is null: the lobby is claimable via POST .../ownership (ADR-0098 §2).
+    val ownerless: Boolean,
     val title: String? = null,
 )
 

@@ -366,6 +366,32 @@ class RelinquishOwnershipUseCase(
 }
 
 /**
+ * Relinquish by owner userId (ADR-0098 §2, 2026-07-08 amendment): the REST `DELETE .../ownership`
+ * path. The home-screen caller does not hold the live owner seat, so authorization is on
+ * [Lobby.ownerUserId] (the sticky owner), not on `ownerSessionId`. An already-ownerless lobby has a
+ * null ownerUserId and so fails the owner check -> NotOwner, making relinquish idempotently
+ * rejected. Owner check is re-verified inside [LobbyRepository.relinquishOwnershipByUser]'s lock.
+ */
+class RelinquishOwnershipByUserUseCase(
+    private val repo: LobbyRepository,
+    private val clock: Clock,
+) {
+    suspend operator fun invoke(
+        lobbyId: LobbyId,
+        userId: UserId,
+    ): UseCaseOutcome<Lobby> {
+        val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
+        if (current.ownerUserId != userId) return failure(UseCaseError.NotOwner)
+        return when (val outcome = repo.relinquishOwnershipByUser(lobbyId, userId, clock.now())) {
+            is RelinquishOutcome.Relinquished ->
+                success(outcome.lobby, listOf(LobbyEvent.PlayerLeft(current.ownerSessionId)))
+            RelinquishOutcome.NotOwner -> failure(UseCaseError.NotOwner)
+            RelinquishOutcome.LobbyNotFound -> failure(UseCaseError.LobbyNotFound)
+        }
+    }
+}
+
+/**
  * Claim an ownerless game (ADR-0098 §2): a player present in a non-terminal, ownerless lobby takes
  * ownership, quota-gated (ADR-0098 §1/§5) unless [hostUnlimited]. Presence and ownerless-ness are
  * re-verified inside [LobbyRepository.claimOwnership]'s lock; the quota re-check runs under the api

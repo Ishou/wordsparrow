@@ -243,6 +243,54 @@ class PostgresLobbyRepository(
             }
         }
 
+    // ADR-0098 §2 (2026-07-08 amendment): REST relinquish authorizes by owner_user_id, drops the seat by owner_session_id; same upsert-bypass rationale as relinquishOwnership.
+    override suspend fun relinquishOwnershipByUser(
+        id: LobbyId,
+        userId: UserId,
+        now: Instant,
+    ): RelinquishOutcome =
+        withContext(Dispatchers.IO) {
+            ds.connection.use { conn ->
+                conn.autoCommit = false
+                try {
+                    val current =
+                        lockAndLoad(conn, id) ?: run {
+                            conn.rollback()
+                            return@withContext RelinquishOutcome.LobbyNotFound
+                        }
+                    if (current.ownerUserId != userId) {
+                        conn.rollback()
+                        return@withContext RelinquishOutcome.NotOwner
+                    }
+                    conn
+                        .prepareStatement(
+                            "UPDATE lobbies SET owner_user_id = NULL, last_activity_at = ? WHERE owner_user_id = ? AND id = ?",
+                        ).use { ps ->
+                            ps.setTimestamp(1, Timestamp.from(now))
+                            ps.setObject(2, UUID.fromString(userId.value))
+                            ps.setString(3, id.value)
+                            ps.executeUpdate()
+                        }
+                    conn
+                        .prepareStatement(
+                            "DELETE FROM lobby_players WHERE lobby_id = ? AND session_id = ?",
+                        ).use { ps ->
+                            ps.setString(1, id.value)
+                            ps.setObject(2, UUID.fromString(current.ownerSessionId.value))
+                            ps.executeUpdate()
+                        }
+                    val reloaded = loadLobby(conn, id)!!
+                    conn.commit()
+                    RelinquishOutcome.Relinquished(reloaded)
+                } catch (e: Exception) {
+                    conn.rollback()
+                    throw e
+                } finally {
+                    conn.autoCommit = true
+                }
+            }
+        }
+
     override suspend fun claimOwnership(
         id: LobbyId,
         sessionId: SessionId,
