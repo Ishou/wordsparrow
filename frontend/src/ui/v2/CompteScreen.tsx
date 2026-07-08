@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useRouteContext } from '@tanstack/react-router';
 import { ArrowsClockwise, Check, CircleNotch, Envelope, GoogleLogo, PencilSimple, SignOut, User, X } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { InvalidDisplayNameError, type GetMeResult } from '@/application/auth';
 import { useAuth } from '@/ui/components/auth';
 import { useToast } from '@/ui/components/primitives';
@@ -51,16 +52,16 @@ const emailAuthEnabled = import.meta.env.VITE_FEATURE_EMAIL_AUTH === 'true';
 
 type SyncState = 'idle' | 'syncing' | 'done' | 'error';
 const SYNC_SUB: Record<SyncState, string> = {
-  idle: 'Récupère ta progression sur cet appareil',
-  syncing: 'Synchronisation…',
-  done: 'Ta progression est à jour',
-  error: 'Échec — réessaie',
+  idle: t('v2.compte.sync.idle.sub'),
+  syncing: t('v2.compte.sync.syncing.sub'),
+  done: t('v2.compte.sync.done.sub'),
+  error: t('v2.compte.sync.error.sub'),
 };
 const SYNC_ANNOUNCE: Record<SyncState, string> = {
   idle: '',
-  syncing: 'Synchronisation en cours',
-  done: 'Synchronisation terminée',
-  error: 'La synchronisation a échoué',
+  syncing: t('v2.compte.sync.syncing.announce'),
+  done: t('v2.compte.sync.done.announce'),
+  error: t('v2.compte.sync.error.announce'),
 };
 
 function initialFor(name: string): string {
@@ -85,7 +86,7 @@ function AuthedCompte() {
     if (!authClient) return;
     let cancelled = false;
     authClient.getMe().then((r) => { if (!cancelled) setMe(r); }).catch(() => {
-      if (!cancelled) showToast({ text: 'Impossible de charger les détails du profil. Réessaie plus tard.', tone: 'error' });
+      if (!cancelled) showToast({ text: t('v2.compte.profileLoadError'), tone: 'error' });
     });
     return () => { cancelled = true; };
   }, [authClient, showToast]);
@@ -110,7 +111,7 @@ function AuthedCompte() {
       await refresh();
       setEditing(false);
     } catch (cause) {
-      setNameError(cause instanceof InvalidDisplayNameError ? 'Ce pseudonyme n’est pas valide.' : 'La mise à jour a échoué. Réessaie.');
+      setNameError(cause instanceof InvalidDisplayNameError ? t('v2.compte.name.invalid') : t('v2.compte.name.updateFailed'));
     } finally {
       setSaving(false);
     }
@@ -129,7 +130,7 @@ function AuthedCompte() {
     try {
       await authClient.logoutAll();
       await refresh();
-      announcer.say('Déconnecté·e de tous les appareils.');
+      announcer.say(t('v2.compte.logoutAllDone'));
     } catch (cause) {
       console.warn('logout-all failed', cause);
     }
@@ -160,13 +161,13 @@ function AuthedCompte() {
                 onKeyDown={(e) => { if (e.key === 'Enter') void save(); if (e.key === 'Escape') cancelEdit(); }}
                 maxLength={40}
                 autoComplete="off"
-                aria-label="Pseudonyme"
+                aria-label={t('v2.compte.aria.pseudonym')}
                 disabled={saving}
               />
-              <button type="button" className={saveBtn} onClick={() => void save()} disabled={saving || draft.trim().length === 0} aria-label="Enregistrer">
+              <button type="button" className={saveBtn} onClick={() => void save()} disabled={saving || draft.trim().length === 0} aria-label={t('v2.compte.aria.save')}>
                 <Check size={20} weight="bold" aria-hidden="true" />
               </button>
-              <button type="button" className={cancelBtn} onClick={cancelEdit} disabled={saving} aria-label="Annuler">
+              <button type="button" className={cancelBtn} onClick={cancelEdit} disabled={saving} aria-label={t('v2.compte.aria.cancel')}>
                 <X size={20} weight="bold" aria-hidden="true" />
               </button>
             </div>
@@ -175,9 +176,9 @@ function AuthedCompte() {
               <div className={heroMain}>
                 <div className={heroName}>{name}</div>
                 {/* Subscriber flag is synchronous from the identity session (ADR-0080); no skeleton needed. */}
-                <div className={heroMeta}>{subscriber ? 'Connecté · Abonné·e' : 'Connecté'}</div>
+                <div className={heroMeta}>{subscriber ? t('v2.compte.meta.subscribed') : t('v2.compte.meta.connected')}</div>
               </div>
-              <button type="button" className={iconBtn} onClick={startEdit} aria-label="Modifier le pseudonyme">
+              <button type="button" className={iconBtn} onClick={startEdit} aria-label={t('v2.compte.aria.editPseudonym')}>
                 <PencilSimple size={18} weight="bold" aria-hidden="true" />
               </button>
             </div>
@@ -190,26 +191,26 @@ function AuthedCompte() {
 
       {billingClient ? <ReceiptsSection client={billingClient} /> : null}
 
-      <nav aria-label="Facturation">
-        <div className={groupLabel}>Facturation</div>
+      <nav aria-label={t('v2.compte.group.facturation')}>
+        <div className={groupLabel}>{t('v2.compte.group.facturation')}</div>
         <ul className={card}>
           <SettingsRow
             icon={Envelope}
-            label="Adresse e-mail"
-            sub={me ? (me.email ?? 'Non renseignée') : <Skeleton tone="onCard" width={140} height={11} radius={6} />}
+            label={t('v2.compte.email.label')}
+            sub={me ? (me.email ?? t('v2.compte.email.empty')) : <Skeleton tone="onCard" width={140} height={11} radius={6} />}
             last
           />
         </ul>
-        <p className={groupNote}>Utilisée uniquement pour la facturation.</p>
+        <p className={groupNote}>{t('v2.compte.email.note')}</p>
       </nav>
 
       {progressSyncService ? (
-        <nav aria-label="Progression">
-          <div className={groupLabel}>Progression</div>
+        <nav aria-label={t('v2.compte.group.progression')}>
+          <div className={groupLabel}>{t('v2.compte.group.progression')}</div>
           <ul className={card}>
             <SettingsRow
               icon={ArrowsClockwise}
-              label="Synchroniser maintenant"
+              label={t('v2.compte.sync.action')}
               sub={SYNC_SUB[syncState]}
               onClick={() => void sync()}
               chevron={false}
@@ -220,21 +221,21 @@ function AuthedCompte() {
         </nav>
       ) : null}
 
-      <nav aria-label="Connexion">
-        <div className={groupLabel}>Connexion</div>
+      <nav aria-label={t('v2.compte.group.connexion')}>
+        <div className={groupLabel}>{t('v2.compte.group.connexion')}</div>
         <ul className={card}>
           <SettingsRow
             icon={GoogleLogo}
-            label="Google"
-            sub={me ? (google ? 'Compte connecté' : 'Non connecté') : <Skeleton tone="onCard" width={90} height={11} radius={6} />}
+            label={t('v2.compte.google.label')}
+            sub={me ? (google ? t('v2.compte.google.connected') : t('v2.compte.google.disconnected')) : <Skeleton tone="onCard" width={90} height={11} radius={6} />}
           />
-          <SettingsRow icon={SignOut} label="Se déconnecter" onClick={() => void logout()} />
-          <SettingsRow icon={SignOut} label="Se déconnecter de tous les appareils" onClick={() => void logoutAll()} last />
+          <SettingsRow icon={SignOut} label={t('v2.compte.logout')} onClick={() => void logout()} />
+          <SettingsRow icon={SignOut} label={t('v2.compte.logoutAll')} onClick={() => void logoutAll()} last />
         </ul>
       </nav>
 
-      <nav aria-label="Données" className={dangerWrap}>
-        <div className={groupLabel}>Tes données</div>
+      <nav aria-label={t('v2.compte.group.dataAria')} className={dangerWrap}>
+        <div className={groupLabel}>{t('v2.compte.group.data')}</div>
         <EraseData />
       </nav>
     </div>
@@ -254,7 +255,7 @@ function SignInPrompt() {
         <span className={cx(avatar, avatarAnon)} aria-hidden="true" style={{ margin: '0 auto' }}>
           <User size={28} weight="bold" />
         </span>
-        <p className={signInLede}>Connecte-toi pour retrouver ta progression sur tous tes appareils.</p>
+        <p className={signInLede}>{t('v2.compte.signIn.lede')}</p>
         {/* Anchor required: the browser must follow the 302 chain to accept Set-Cookie. */}
         <a
           href={href}
@@ -267,23 +268,22 @@ function SignInPrompt() {
           {redirecting ? (
             <>
               <CircleNotch size={20} weight="bold" aria-hidden="true" className={spin} />
-              Connexion…
+              {t('v2.compte.signIn.connecting')}
             </>
           ) : (
             <>
               <GoogleLogo size={20} weight="bold" aria-hidden="true" />
-              Se connecter avec Google
+              {t('v2.compte.signIn.google')}
             </>
           )}
         </a>
         {emailAuthEnabled ? (
           <Link to="/connexion" search={{ returnTo: '/compte' }} className={emailAuthLink}>
-            … ou connecte-toi avec ton adresse e-mail
+            {t('v2.compte.signIn.emailLink')}
           </Link>
         ) : null}
         <p className={signInDisclosure}>
-          En te connectant, ton adresse e-mail est enregistrée pour la facturation
-          d’un éventuel abonnement.
+          {t('v2.compte.signIn.disclosure')}
         </p>
       </div>
     </div>
@@ -294,7 +294,7 @@ export function CompteScreen() {
   const { state } = useAuth();
   return (
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
-      <h1 className={title}>Mon compte</h1>
+      <h1 className={title}>{t('v2.compte.title')}</h1>
       {state.status === 'loading' ? (
         <div className={stack}>
           <Skeleton tone="onCard" width="100%" height={98} radius={20} />

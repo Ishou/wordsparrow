@@ -3,6 +3,7 @@ import { Dialog } from '@ark-ui/react/dialog';
 import { Portal } from '@ark-ui/react/portal';
 import { useNavigate, useRouteContext } from '@tanstack/react-router';
 import { css, cx } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { useAuth } from '@/ui/components/auth';
 
 const dangerBtn = css({
@@ -91,16 +92,16 @@ export function EraseData() {
   return (
     <>
       <button type="button" className={dangerBtn} onClick={() => setOpen(true)}>
-        Effacer mes données
+        {t('v2.erase.title')}
       </button>
       <Dialog.Root open={open} onOpenChange={(d) => { if (!d.open) close(); }} modal closeOnEscape closeOnInteractOutside preventScroll>
         <Portal>
           <Dialog.Backdrop className={scrim} />
           <Dialog.Positioner className={positioner}>
             <Dialog.Content className={card}>
-              <Dialog.Title className={dlgTitle}>Effacer mes données</Dialog.Title>
+              <Dialog.Title className={dlgTitle}>{t('v2.erase.title')}</Dialog.Title>
               <Dialog.Description className={dlgDesc}>
-                Cette action est définitive et irréversible. Tape ton pseudonyme (<strong>{name}</strong>) pour confirmer.
+                {t('v2.erase.desc.pre')}<strong>{name}</strong>{t('v2.erase.desc.post')}
               </Dialog.Description>
               <input
                 className={input}
@@ -110,16 +111,16 @@ export function EraseData() {
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
-                aria-label="Confirmation du pseudonyme"
+                aria-label={t('v2.erase.aria.confirm')}
                 disabled={deleting}
               />
-              {failed ? <p role="alert" className={errText}>La suppression a échoué. Réessaie.</p> : null}
+              {failed ? <p role="alert" className={errText}>{t('v2.erase.failed')}</p> : null}
               <div className={dlgActions}>
                 <button type="button" className={ghostBtn} onClick={close} disabled={deleting}>
-                  Annuler
+                  {t('v2.erase.cancel')}
                 </button>
                 <button type="button" className={cx(dangerBtn, confirmBtn)} onClick={() => void confirm()} disabled={!canConfirm}>
-                  {deleting ? 'Suppression…' : 'Effacer définitivement'}
+                  {deleting ? t('v2.erase.deleting') : t('v2.erase.confirm')}
                 </button>
               </div>
             </Dialog.Content>
