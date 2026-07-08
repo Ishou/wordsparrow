@@ -1490,7 +1490,7 @@ describe('Grid mounts MobileKeyboard on touch-primary', () => {
       const r = render(<Grid puzzle={TEST_PUZZLE} />);
       expect(r.queryByRole('group', { name: 'Clavier mots fléchés' })).toBeTruthy();
       // Desktop bar is gated on !touchPrimary — no zoom-controls group on touch devices.
-      expect(r.queryByRole('group', { name: 'Zoom controls' })).toBeNull();
+      expect(r.queryByRole('group', { name: 'Contrôles du zoom' })).toBeNull();
     } finally {
       window.matchMedia = original;
     }

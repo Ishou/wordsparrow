@@ -36,11 +36,11 @@ async function gridReady(page: Page): Promise<void> {
 }
 
 async function zoomIn(page: Page, clicks = 2): Promise<void> {
-  // aria-label="Zoom in" — from GridZoomControls.tsx.
+  // aria-label="Zoomer" — from GridZoomControls.tsx.
   // Only visible at md+ breakpoints (≥ 768 px, GridZoomControls.tsx line 25).
   // Tests that set a sub-768-px viewport must either use a wider viewport
   // or invoke zoom via a different mechanism.
-  const zoomInBtn = page.getByRole('button', { name: /zoom in/i });
+  const zoomInBtn = page.getByRole('button', { name: /^zoomer$/i });
   for (let i = 0; i < clicks; i++) {
     await zoomInBtn.click();
     await page.waitForTimeout(180); // library animation is 150 ms
@@ -161,8 +161,8 @@ test.describe('Grid scrollbars + minimap', () => {
 
     await expect(page.getByRole('scrollbar', { name: /vertical/i })).toBeVisible();
 
-    // aria-label="Reset zoom" — GridZoomControls.tsx line 103
-    await page.getByRole('button', { name: /reset zoom/i }).click();
+    // aria-label="Réinitialiser le zoom" — GridZoomControls.tsx line 103
+    await page.getByRole('button', { name: /réinitialiser le zoom/i }).click();
     await page.waitForTimeout(250);
 
     await expect(page.getByRole('scrollbar')).toHaveCount(0);
