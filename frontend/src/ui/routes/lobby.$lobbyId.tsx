@@ -1,14 +1,16 @@
 // Multiplayer-gated `/lobby/$lobbyId` (ADR-0018 §10); smart container over `useLobbyConnection`.
 
 import { createRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LobbyClientError } from '@/application/game';
 import type { Lobby, LobbyId } from '@/domain/game';
 import { createLoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
 import { LoaderRetry } from '@/ui/v2/LoaderRetry';
+import { useOptionalAuth } from '@/ui/components/auth';
 import { useLobbyConnection } from '@/ui/components/lobby/useLobbyConnection';
 import { useCreateOrResume } from '@/ui/components/lobby/useCreateOrResume';
 import { OwnedGameModal } from '@/ui/v2/multiplayer/OwnedGameModal';
+import { HostSignInSheet } from '@/ui/home/HostSignInSheet';
 import { useToast } from '@/ui/components/primitives';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { PhoneShell } from '@/ui/v2/PhoneShell';
@@ -92,6 +94,8 @@ function V2LobbyPage() {
   const lobbyJoinCodeStash = ctx.lobbyJoinCodeStash!;
   const lobbyClient = ctx.lobbyClient!;
   const navigate = useNavigate();
+  const auth = useOptionalAuth();
+  const [hostSignInOpen, setHostSignInOpen] = useState(false);
   // Destructure show/dismiss (not the wrapper object) — the object is recreated each render and would re-trigger the connection effect.
   const { show: showToast, dismiss: dismissToast } = useToast();
   const { say: announce } = useAnnouncer();
@@ -165,14 +169,18 @@ function V2LobbyPage() {
     void navigate({ to: '/' });
   }, [actions, navigate]);
 
-  // ADR-0098 §6: claim a now-ownerless game; a 403/409 surfaces a toast.
+  // ADR-0098 §6 / ADR-0083: claiming needs an account, so a guest is prompted to sign in first (mirrors the create-coop gate — playing stays open); a signed-in claim hits the endpoint and a 403/409 surfaces a toast.
   const handleClaim = useCallback(async () => {
+    if (auth?.state.status === 'anon') {
+      setHostSignInOpen(true);
+      return;
+    }
     try {
       await lobbyClient.claimOwnership(lobbyId as LobbyId);
     } catch {
       showToast({ text: t('route.lobby.error.cannotClaim'), tone: 'error' });
     }
-  }, [lobbyClient, lobbyId, showToast]);
+  }, [auth, lobbyClient, lobbyId, showToast]);
 
   // The only involuntary exits from the game surface: server-confirmed 404 or a freed seat (honest states).
   if (lobbyGone) {
@@ -209,25 +217,28 @@ function V2LobbyPage() {
 
   if (lobby.state === 'IN_PROGRESS' && lobby.game && gridPuzzle) {
     return (
-      <LiveCoopScreen
-        puzzle={gridPuzzle}
-        startedAt={lobby.game.startedAt}
-        isCompleted={false}
-        sessionId={sessionId}
-        players={lobby.players}
-        playersBySessionId={playersBySessionId}
-        initialEntries={initialEntries}
-        lockedPositions={lobby.game.lockedPositions ?? []}
-        onCellChange={actions.cellUpdate}
-        onLocalFocusChange={actions.cellFocus}
-        subscribeToRemoteCellUpdates={actions.subscribeToRemoteCellUpdates}
-        subscribeToRemotePresence={actions.subscribeToRemotePresence}
-        onLeave={handleLeaveGame}
-        ownerless={lobby.ownerless}
-        onClaim={handleClaim}
-        soundPlayer={ctx.soundPlayer}
-        soundStore={ctx.soundStore}
-      />
+      <>
+        <LiveCoopScreen
+          puzzle={gridPuzzle}
+          startedAt={lobby.game.startedAt}
+          isCompleted={false}
+          sessionId={sessionId}
+          players={lobby.players}
+          playersBySessionId={playersBySessionId}
+          initialEntries={initialEntries}
+          lockedPositions={lobby.game.lockedPositions ?? []}
+          onCellChange={actions.cellUpdate}
+          onLocalFocusChange={actions.cellFocus}
+          subscribeToRemoteCellUpdates={actions.subscribeToRemoteCellUpdates}
+          subscribeToRemotePresence={actions.subscribeToRemotePresence}
+          onLeave={handleLeaveGame}
+          ownerless={lobby.ownerless}
+          onClaim={handleClaim}
+          soundPlayer={ctx.soundPlayer}
+          soundStore={ctx.soundStore}
+        />
+        <HostSignInSheet open={hostSignInOpen} authClient={ctx.authClient} onClose={() => setHostSignInOpen(false)} />
+      </>
     );
   }
 
@@ -245,7 +256,6 @@ function V2LobbyPage() {
         />
         <OwnedGameModal
           lobby={coop.ownedGame}
-          canStartNew={coop.canStartNew}
           onRejoindre={coop.rejoindre}
           onStartNew={coop.startNewGame}
           onClose={coop.dismiss}
