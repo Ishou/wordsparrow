@@ -404,8 +404,7 @@ class PostgresLobbyRepository(
             if (owner == null) continue // lobby vanished between SELECT and now (impossible inside this tx, but safe).
             val ownsLobby = owner == sessionUuid
             val alreadyOwnerless = isOwnerless(conn, id)
-            // Rule 1 (sole owner) OR the last seat of an already-ownerless lobby: the erase empties a lobby nobody
-            // will own -> cascade-delete now rather than leave an ownerless ghost (ADR-0055/0098).
+            // Erase empties a lobby nobody will own (sole owner or already-ownerless) -> cascade-delete (ADR-0055/0098).
             if (remainingPlayers.isEmpty() && (ownsLobby || alreadyOwnerless)) {
                 conn.prepareStatement("DELETE FROM lobbies WHERE id = ?").use { ps ->
                     ps.setString(1, id.value)

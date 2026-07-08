@@ -83,8 +83,7 @@ interface LobbyRepository {
         now: Instant,
     ): RelinquishOutcome {
         var notOwner = false
-        // Captured when the relinquish empties an ownerless lobby: the mutator returns null to delete the row,
-        // yet the outcome still carries the terminal snapshot so the wire keeps its 200 Lobby body (ADR-0055/0098).
+        // Empties to defunct: mutator returns null to delete, but the outcome still carries the terminal snapshot (ADR-0055/0098).
         var defunct: Lobby? = null
         val updated =
             mutate(id) { lobby ->

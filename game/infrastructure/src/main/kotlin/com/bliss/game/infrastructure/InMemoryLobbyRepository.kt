@@ -128,8 +128,7 @@ class InMemoryLobbyRepository : LobbyRepository {
                 val current = store[id] ?: return@withLock
                 if (!current.players.containsKey(sessionId)) return@withLock
                 val remaining = current.players - sessionId
-                // Rule 1 (sole owner) OR the last seat of an already-ownerless lobby: the erase empties a lobby
-                // nobody will own -> delete outright rather than leave an ownerless ghost (ADR-0055/0098).
+                // Erase empties a lobby nobody will own (sole owner or already-ownerless) -> delete outright (ADR-0055/0098).
                 if (remaining.isEmpty() && (current.isOwner(sessionId) || current.isOwnerless())) {
                     store.remove(id)
                     locks.remove(id)

@@ -295,8 +295,10 @@ class StartGameUseCase(
 /**
  * Removes a player from a lobby. Does NOT transfer ownership when the
  * owner leaves — the owner is expected to return via My-games
- * (ADR-0039). The lobby persists even when the last player leaves;
- * cleanup is handled by [LobbyGarbageCollector]'s state-specific TTL.
+ * (ADR-0039). An owned lobby persists when emptied, cleaned up by
+ * [LobbyGarbageCollector]'s state-specific TTL; an already-ownerless
+ * lobby emptied by the last player leaving is destroyed immediately
+ * instead (ADR-0055/0098).
  *
  * Manual ownership transfer is intentionally out of scope. The only
  * code path that transfers ownership is RGPD erasure (see ADR-0039 §f
@@ -334,8 +336,7 @@ class LeaveLobbyUseCase(
                     next
                 }
             }
-        // A destroyed lobby is a Success with no surviving snapshot; else updated == null is unambiguously
-        // "lobby does not exist", and playerWasPresent=false on a non-null return is a silent short-circuit.
+        // destroyed => Success(null); else updated == null unambiguously means "lobby does not exist".
         if (destroyed) {
             analyticsEventSink.record(AnalyticsEvent.LobbyLeft, sessionId)
             return success(null, events)
