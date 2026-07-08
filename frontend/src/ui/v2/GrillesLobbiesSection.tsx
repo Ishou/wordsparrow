@@ -4,6 +4,7 @@ import { CaretRight } from '@phosphor-icons/react';
 import { bar, barFill, card, chevron, list, mid, rowMeta, rowTitle } from './listRowStyles';
 import type { LobbySummary } from '@/application/game';
 import type { LobbyId } from '@/domain/game';
+import { LeaveGameButton } from '@/ui/components/lobby/LeaveGameButton';
 
 // Session-scoped read only (ADR-0066 §4); stays single-shape when the user-scoped endpoint lands.
 
@@ -39,14 +40,21 @@ function actionFor(lobby: LobbySummary): string {
 // Reset a <button> to look exactly like the anchor `card` so an ownerless claim row is visually identical to a navigate row.
 const cardButton = css({ appearance: 'none', textAlign: 'left', font: 'inherit', cursor: 'pointer' });
 
+// When a leave affordance is present the card and the leave button sit side by side; the row's bottom gap moves to the wrapper.
+const rowWrap = css({ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' });
+const cardGrow = css({ flex: 1, minWidth: 0 });
+
 // Headless card list — the caller supplies the heading (the /grilles tab) and decides emptiness.
-// ADR-0098 §6: `onClaim` (when supplied) turns an ownerless "Reprendre" row into a real claim instead of a plain navigate.
+// ADR-0098 §6: `onClaim` (when supplied) turns an ownerless "Reprendre" row into a real claim instead of a plain navigate;
+// `onLeave` (when supplied) adds a per-row quitter/supprimer affordance (2026-07-08 amendment).
 export function GrillesLobbiesSection({
   lobbies,
   onClaim,
+  onLeave,
 }: {
   readonly lobbies: readonly LobbySummary[];
   readonly onClaim?: (lobbyId: LobbyId) => void;
+  readonly onLeave?: (lobbyId: LobbyId) => void;
 }) {
   return (
     <ul className={list}>
@@ -69,16 +77,25 @@ export function GrillesLobbiesSection({
             </>
           );
           const isClaimable = lobby.ownerless === true && onClaim != null;
+          const cardClass = onLeave != null ? `${card} ${cardGrow}` : card;
+          const rowInner = isClaimable ? (
+            <button type="button" className={`${cardClass} ${cardButton}`} aria-label={label} onClick={() => onClaim(lobby.id)} style={onLeave != null ? { marginBottom: 0 } : undefined}>
+              {inner}
+            </button>
+          ) : (
+            <Link to="/lobby/$lobbyId" params={{ lobbyId: lobby.id }} className={cardClass} aria-label={label} style={onLeave != null ? { marginBottom: 0 } : undefined}>
+              {inner}
+            </Link>
+          );
           return (
             <li key={lobby.id}>
-              {isClaimable ? (
-                <button type="button" className={`${card} ${cardButton}`} aria-label={label} onClick={() => onClaim(lobby.id)}>
-                  {inner}
-                </button>
+              {onLeave != null ? (
+                <div className={rowWrap}>
+                  {rowInner}
+                  <LeaveGameButton playerCount={lobby.playerCount} onConfirm={() => onLeave(lobby.id)} />
+                </div>
               ) : (
-                <Link to="/lobby/$lobbyId" params={{ lobbyId: lobby.id }} className={card} aria-label={label}>
-                  {inner}
-                </Link>
+                rowInner
               )}
             </li>
           );

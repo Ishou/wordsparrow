@@ -76,6 +76,7 @@ function renderHarness(opts: {
     getLobby: vi.fn().mockResolvedValue(freshLobby),
     claimOwnership: vi.fn().mockResolvedValue(freshLobby),
     relinquishOwnership: opts.relinquishOwnership ?? vi.fn().mockResolvedValue(ownedGame([self])),
+    leaveLobby: vi.fn().mockResolvedValue(undefined),
     findByCode: vi.fn().mockResolvedValue(freshLobby),
     listMyLobbies: vi.fn().mockResolvedValue([]),
     listMyLobbiesForUser: vi.fn().mockResolvedValue([]),

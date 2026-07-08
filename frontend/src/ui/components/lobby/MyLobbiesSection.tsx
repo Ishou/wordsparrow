@@ -5,6 +5,8 @@ import { css } from 'styled-system/css';
 import type { LobbySummary } from '@/application/game';
 import { EyeIcon, EyeOffIcon } from '@/ui/components/icons';
 import { ProgressBar } from '@/ui/components/layout/ProgressBar';
+import { LeaveGameButton } from '@/ui/components/lobby/LeaveGameButton';
+import type { LobbyId } from '@/domain/game';
 import { t } from '@/ui/i18n';
 
 // "Mes parties" surface (ADR-0039). Read-only list of the calling
@@ -18,6 +20,9 @@ import { t } from '@/ui/i18n';
 
 export interface MyLobbiesSectionProps {
   readonly lobbies: readonly LobbySummary[];
+  // ADR-0098 §6 (2026-07-08): per-row quitter/supprimer affordance; the caller
+  // performs the `leaveLobby` call and refreshes the list. Absent ⇒ no button.
+  readonly onLeave?: (lobbyId: LobbyId) => void;
 }
 
 const sectionStyles = css({
@@ -158,7 +163,7 @@ function titleFor(lobby: LobbySummary): string {
   return when.length > 0 ? t('lobby.myLobbies.gameOfDate', { date: when }) : t('lobby.myLobbies.gameFallback');
 }
 
-export function MyLobbiesSection({ lobbies }: MyLobbiesSectionProps) {
+export function MyLobbiesSection({ lobbies, onLeave }: MyLobbiesSectionProps) {
   if (lobbies.length === 0) {
     return (
       <section className={sectionStyles} aria-labelledby="my-lobbies-heading">
@@ -175,7 +180,7 @@ export function MyLobbiesSection({ lobbies }: MyLobbiesSectionProps) {
       <ul className={listStyles}>
         {lobbies.map((lobby) => (
           <li key={lobby.id}>
-            <LobbyRow lobby={lobby} />
+            <LobbyRow lobby={lobby} onLeave={onLeave} />
           </li>
         ))}
       </ul>
@@ -183,7 +188,7 @@ export function MyLobbiesSection({ lobbies }: MyLobbiesSectionProps) {
   );
 }
 
-function LobbyRow({ lobby }: { readonly lobby: LobbySummary }) {
+function LobbyRow({ lobby, onLeave }: { readonly lobby: LobbySummary; readonly onLeave?: (lobbyId: LobbyId) => void }) {
   const [revealed, setRevealed] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -262,6 +267,9 @@ function LobbyRow({ lobby }: { readonly lobby: LobbySummary }) {
             </span>
           ) : null}
         </span>
+        {onLeave != null ? (
+          <LeaveGameButton playerCount={lobby.playerCount} onConfirm={() => onLeave(lobby.id)} />
+        ) : null}
       </div>
       <ProgressBar
         value={lobby.progress.solvedCells}

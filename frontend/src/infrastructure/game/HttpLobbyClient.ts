@@ -97,6 +97,27 @@ export function createHttpLobbyClient(
     return data;
   };
 
+  // No-content variant: resolves on a 2xx (204) with no body, or throws a
+  // typed `LobbyClientError` for problem-details responses and network
+  // rejections. Used by endpoints that answer 204 (e.g. `leaveLobby`).
+  const safeVoidRequest = async (
+    call: () => Promise<{ error?: WireProblem; response: Response }>,
+  ): Promise<void> => {
+    let result: Awaited<ReturnType<typeof call>>;
+    try {
+      result = await call();
+    } catch (cause) {
+      throw new LobbyClientError({
+        kind: 'upstream-unavailable',
+        status: null,
+        problem: null,
+        message: `lobby request failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+      });
+    }
+    const { error, response } = result;
+    if (!response.ok) throw liftProblem(error, response);
+  };
+
   return {
     async createLobby({ ownerSessionId, ownerPseudonym }) {
       const wire = await safeRequest(() =>
@@ -125,6 +146,11 @@ export function createHttpLobbyClient(
         client.DELETE('/v1/lobbies/{lobbyId}/ownership', { params: { path: { lobbyId } } }),
       );
       return wireToDomain(wire);
+    },
+    async leaveLobby(lobbyId: LobbyId) {
+      await safeVoidRequest(() =>
+        client.DELETE('/v1/lobbies/{lobbyId}/membership', { params: { path: { lobbyId } } }),
+      );
     },
     async findByCode(code: string) {
       const wire = await safeRequest(() =>

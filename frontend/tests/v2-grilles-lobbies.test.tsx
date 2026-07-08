@@ -92,6 +92,59 @@ describe('GrillesLobbiesSection', () => {
   });
 });
 
+describe('GrillesLobbiesSection — leave/delete affordance (ADR-0098 §6)', () => {
+  const ALONE: LobbySummary = { ...COMPLETED, playerCount: 1 };
+  const WITH_OTHERS: LobbySummary = { ...IN_PROGRESS, playerCount: 3 };
+
+  it('shows a "Supprimer" (delete) confirm for a solo row and calls onLeave on confirm', async () => {
+    const onLeave = vi.fn();
+    renderInRouter(<GrillesLobbiesSection lobbies={[ALONE]} onLeave={onLeave} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Supprimer cette partie' }));
+    // Dialog title + destructive confirm copy.
+    await screen.findByRole('dialog');
+    expect(screen.getByText('Supprimer cette partie ?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
+    expect(onLeave).toHaveBeenCalledWith(ALONE.id);
+  });
+
+  it('shows a "Quitter" (leave) confirm for a multi-player row and calls onLeave on confirm', async () => {
+    const onLeave = vi.fn();
+    renderInRouter(<GrillesLobbiesSection lobbies={[WITH_OTHERS]} onLeave={onLeave} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Quitter cette partie' }));
+    await screen.findByRole('dialog');
+    expect(screen.getByText('Quitter cette partie ?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Quitter' }));
+    expect(onLeave).toHaveBeenCalledWith(WITH_OTHERS.id);
+  });
+
+  it('cancelling the confirm does not call onLeave', async () => {
+    const onLeave = vi.fn();
+    renderInRouter(<GrillesLobbiesSection lobbies={[ALONE]} onLeave={onLeave} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Supprimer cette partie' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
+    expect(onLeave).not.toHaveBeenCalled();
+  });
+
+  it('tapping the leave button does not navigate the row', async () => {
+    const onLeave = vi.fn();
+    renderInRouter(<GrillesLobbiesSection lobbies={[WITH_OTHERS]} onLeave={onLeave} />);
+    const leave = await screen.findByRole('button', { name: 'Quitter cette partie' });
+    fireEvent.click(leave);
+    // Still on the list route — the lobby placeholder never rendered.
+    expect(screen.queryByText('lobby')).toBeNull();
+    // The navigate link is a distinct element, untouched.
+    expect(screen.getByRole('link', { name: 'Reprendre — Partie du 28 juin' })).toBeInTheDocument();
+  });
+
+  it('the open confirm dialog is axe-clean (ADR-0050)', async () => {
+    renderInRouter(<GrillesLobbiesSection lobbies={[ALONE]} onLeave={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Supprimer cette partie' }));
+    const dialog = await screen.findByRole('dialog');
+    await expectAxeClean(dialog);
+  });
+});
+
 describe('LobbiesEmptyState', () => {
   it('renders the empty state CTA when there are no lobbies', () => {
     const onCreate = vi.fn();

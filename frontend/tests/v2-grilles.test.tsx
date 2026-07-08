@@ -315,6 +315,35 @@ describe('v2 grilles — à plusieurs', () => {
     expect(await screen.findByText('Impossible de reprendre la partie.')).toBeTruthy();
   });
 
+  it('leaving a game confirms, calls leaveLobby and refetches the list so the row drops (ADR-0098 §6)', async () => {
+    const leaveLobby = vi.fn().mockResolvedValue(undefined);
+    const listMyLobbies = vi
+      .fn()
+      .mockResolvedValueOnce([LOBBY]) // initial load
+      .mockResolvedValue([]); // after leaving, the row is gone
+    const lobbyClient = { listMyLobbies, leaveLobby } as unknown as LobbyClient;
+    renderGrilles({ lobbyClient, initialEntry: '/grilles?onglet=plusieurs' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Quitter cette partie' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quitter' }));
+    await waitFor(() => expect(leaveLobby).toHaveBeenCalledWith(LOBBY.id));
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'Reprendre — Partie du 28 juin' })).toBeNull(),
+    );
+    expect(listMyLobbies).toHaveBeenCalledTimes(2);
+  });
+
+  it('surfaces a toast when leaving a game fails', async () => {
+    const leaveLobby = vi.fn().mockRejectedValue(new Error('boom'));
+    const lobbyClient = {
+      listMyLobbies: () => Promise.resolve([LOBBY]),
+      leaveLobby,
+    } as unknown as LobbyClient;
+    renderGrilles({ lobbyClient, initialEntry: '/grilles?onglet=plusieurs' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Quitter cette partie' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quitter' }));
+    expect(await screen.findByText('Impossible de quitter la partie. Réessaie.')).toBeTruthy();
+  });
+
   it('a guest (anon) tapping an ownerless row is prompted to sign in and never claims (ADR-0083)', async () => {
     const claimOwnership = vi.fn().mockResolvedValue(undefined);
     const lobbyClient = {
