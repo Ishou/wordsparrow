@@ -951,19 +951,6 @@ class LobbyUseCasesTest {
             assertThat(state.players.keys.contains(sessionA)).isEqualTo(true)
         }
 
-    // A guest seat carries no userId; it is resolved by the session-derived id (ADR-0078). Alone + host-less -> destroyed.
-    @Test
-    fun `LeaveMembership by a guest resolves the seat by session-derived id and destroys a solo host-less lobby`() =
-        runTest {
-            val h = harness()
-            val lobby = h.create(sessionA, alice, userId = null).value
-
-            val out = h.leaveMembership(lobby.id, UserId(sessionA.value)).requireSuccess()
-
-            assertThat(out.value.relinquishedOwnership).isEqualTo(false)
-            assertThat(h.repo.findById(lobby.id)).isNull()
-        }
-
     @Test
     fun `LeaveMembership returns NotPresentInLobby when the caller has no seat`() =
         runTest {

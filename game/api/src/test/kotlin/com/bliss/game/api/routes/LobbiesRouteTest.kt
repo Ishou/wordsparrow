@@ -369,8 +369,6 @@ class LobbiesRouteTest {
     private val sessionB = "0190e3b2-1c45-7d2e-9a3f-b0c1d2e3f4a5"
     private val sessionC = "0190e3c9-9f88-7a11-8b22-c3d4e5f60718"
 
-    // A guest's seat carries no userId; its session-derived id is a v7 UUID used both as the seat sessionId and the whoami userId (ADR-0078).
-    private val guestSession = "0190e3d0-1a2b-7c3d-8e4f-a5b6c7d8e9f0"
     private val seedClock =
         object : Clock {
             override fun now(): Instant = Instant.parse("2026-05-18T12:00:00Z")
@@ -688,24 +686,6 @@ class LobbiesRouteTest {
             assertThat(saved.ownerUserId).isEqualTo(userA)
             assertThat(saved.players.containsKey(SessionId(sessionB))).isFalse()
             assertThat(saved.players.containsKey(SessionId(ownerSessionId))).isTrue()
-        }
-
-    // A guest seat carries no userId; the caller is resolved by the session-derived id (ADR-0078). Alone + host-less -> destroyed.
-    @Test
-    fun `DELETE membership by a guest alone in a host-less lobby deletes it and returns 204`() =
-        testApplicationWithVerifier(
-            verifier = stubVerifier(WhoAmI(UserId(guestSession), Pseudonym("Gaston"))),
-        ) { client, repo ->
-            val lobbyId =
-                CreateLobbyUseCase(repo, seedClock)(SessionId(guestSession), Pseudonym("Gaston"), ownerUserId = null).value.id
-
-            val response =
-                client.delete("/v1/lobbies/${lobbyId.value}/membership") {
-                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
-                }
-
-            assertThat(response.status).isEqualTo(HttpStatusCode.NoContent)
-            assertThat(repo.findById(lobbyId)).isNull()
         }
 
     /** Ownerless lobby: owner userA relinquishes after userB (sessionB) joins, leaving userB present and claimable. */

@@ -403,8 +403,9 @@ class RelinquishOwnershipByUserUseCase(
  * and if they are the current owner ownership is relinquished too. Composed from the shipped
  * [RelinquishOwnershipByUserUseCase] (owner path) and [LeaveLobbyUseCase] (non-owner path); with the
  * ADR-0055 destroy-ownerless-and-empty rule this yields delete-if-alone / leave-if-others for owner
- * and non-owner callers alike. The caller's seat is resolved by verified userId, falling back to a
- * guest seat keyed by the session-derived id (ADR-0078) when the seat carries no userId.
+ * and non-owner callers alike. The caller's seat is resolved by verified userId; a caller not seated
+ * in this lobby (guests included -- whoami 401s them before the route ever calls this use case, per
+ * ADR-0060's 2026-06-29 amendment) gets [UseCaseError.NotPresentInLobby].
  */
 class LeaveMembershipUseCase(
     private val repo: LobbyRepository,
@@ -418,7 +419,6 @@ class LeaveMembershipUseCase(
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
         val seat =
             current.players.values.firstOrNull { it.userId == userId }
-                ?: runCatching { SessionId(userId.value) }.getOrNull()?.let { current.players[it] }
                 ?: return failure(UseCaseError.NotPresentInLobby)
         return if (current.ownerUserId == userId) {
             when (val outcome = relinquishByUser(lobbyId, userId)) {
