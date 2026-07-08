@@ -260,9 +260,13 @@ function V2LobbyPage() {
 export const Route = createRoute({
   getParentRoute: () => AppLayoutRoute,
   path: 'lobby/$lobbyId',
-  loader: ({ context, params }): Promise<Lobby> =>
-    // Asserted non-null: registered only when the multiplayer flag is on, so the composition root guarantees `lobbyClient`.
-    context.lobbyClient!.getLobby(params.lobbyId as LobbyId),
+  // `blocking` staleReloadMode: on re-entry the router must re-fetch and show the pendingComponent, not paint a cached WAITING snapshot before revalidating to IN_PROGRESS (resume flash).
+  loader: {
+    staleReloadMode: 'blocking',
+    handler: ({ context, params }): Promise<Lobby> =>
+      // Asserted non-null: registered only when the multiplayer flag is on, so the composition root guarantees `lobbyClient`.
+      context.lobbyClient!.getLobby(params.lobbyId as LobbyId),
+  },
   component: V2LobbyPage,
   pendingComponent: () => <V2LobbyPlaceholder text={t('route.lobby.placeholder.loading')} />,
   pendingMs: 0,
