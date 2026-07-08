@@ -256,6 +256,7 @@ function V2LobbyPage() {
         />
         <OwnedGameModal
           lobby={coop.ownedGame}
+          canStartNew={coop.canStartNew}
           onRejoindre={coop.rejoindre}
           onStartNew={coop.startNewGame}
           onClose={coop.dismiss}

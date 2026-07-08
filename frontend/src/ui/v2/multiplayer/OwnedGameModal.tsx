@@ -7,7 +7,7 @@ import type { Lobby, LobbyId } from '@/domain/game';
 import { t } from '@/ui/i18n';
 import { useCanSubscribe } from '@/ui/components/billing';
 
-// ADR-0098 §6: informational (not paywall) modal when a create resolves to the one active game you already own — rejoin, fresh-start (relinquish-then-create), subtle subscriber hint. Accessible via the Ark Dialog primitive (ADR-0050).
+// ADR-0098 §6: informational (not paywall) modal when a create resolves to the one active game you already own — rejoin, optional sole-occupant fresh-start, subtle subscriber hint. Accessible via the Ark Dialog primitive (ADR-0050).
 
 // Mirrors HostSignInSheet: phone/tablet bottom-sheet, desktop centred modal.
 const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out', '&[data-state="closed"]': { animation: 'wsFadeOut 180ms ease-out forwards' } });
@@ -49,6 +49,7 @@ const dismiss = css({ width: '100%', border: 'none', background: 'transparent', 
 
 export function OwnedGameModal({
   lobby,
+  canStartNew,
   onRejoindre,
   onStartNew,
   onClose,
@@ -56,6 +57,8 @@ export function OwnedGameModal({
 }: {
   // Non-null opens the modal; `null` keeps it closed.
   readonly lobby: (Lobby & { readonly id: LobbyId }) | null;
+  // ADR-0098 §6: relinquishing a populated room would strand its peers.
+  readonly canStartNew: boolean;
   readonly onRejoindre: () => void;
   readonly onStartNew: () => void;
   readonly onClose: () => void;
@@ -86,10 +89,12 @@ export function OwnedGameModal({
             <button type="button" className={primaryBtn} onClick={onRejoindre} disabled={startingNew}>
               {t('v2.multiplayer.owned.rejoin')}
             </button>
-            <button type="button" className={secondary} onClick={onStartNew} disabled={startingNew} aria-busy={startingNew || undefined}>
-              <ArrowClockwise size={18} weight="bold" aria-hidden="true" />
-              {startingNew ? t('v2.multiplayer.creating') : t('v2.multiplayer.owned.startNew')}
-            </button>
+            {canStartNew ? (
+              <button type="button" className={secondary} onClick={onStartNew} disabled={startingNew} aria-busy={startingNew || undefined}>
+                <ArrowClockwise size={18} weight="bold" aria-hidden="true" />
+                {startingNew ? t('v2.multiplayer.creating') : t('v2.multiplayer.owned.startNew')}
+              </button>
+            ) : null}
             {canSubscribe ? (
               <p className={hint}>
                 {t('v2.multiplayer.owned.subscriberHint')}{' '}

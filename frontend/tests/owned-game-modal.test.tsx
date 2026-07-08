@@ -58,6 +58,7 @@ function Harness({ lobbyClient }: { lobbyClient: LobbyClient }) {
       <button type="button" onClick={coop.createOrResume}>créer</button>
       <OwnedGameModal
         lobby={coop.ownedGame}
+        canStartNew={coop.canStartNew}
         onRejoindre={coop.rejoindre}
         onStartNew={coop.startNewGame}
         onClose={coop.dismiss}
@@ -126,7 +127,7 @@ describe('OwnedGameModal / useCreateOrResume (ADR-0098 §6)', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(`/lobby/${ownedId}`));
   });
 
-  it('always offers the fresh-start button, even when the owned game has co-players (ADR-0098 §6: quitting just makes it claimable)', async () => {
+  it('offers the sole-occupant fresh-start only when alone', async () => {
     const alone = renderHarness({ createLobby: vi.fn().mockResolvedValue(ownedGame([self])) });
     await create();
     expect(await screen.findByRole('button', { name: /Démarrer une nouvelle partie/ })).toBeTruthy();
@@ -135,20 +136,7 @@ describe('OwnedGameModal / useCreateOrResume (ADR-0098 §6)', () => {
     renderHarness({ createLobby: vi.fn().mockResolvedValue(ownedGame([self, peer])) });
     await create();
     await screen.findByRole('button', { name: 'Rejoindre ma partie' });
-    expect(screen.getByRole('button', { name: /Démarrer une nouvelle partie/ })).toBeTruthy();
-  });
-
-  it('relinquishes then creates from a populated lobby (>1 player) — the REST DELETE .../ownership is userId-authorized', async () => {
-    const relinquishOwnership = vi.fn().mockResolvedValue(ownedGame([self, peer]));
-    const createLobby = vi
-      .fn()
-      .mockResolvedValueOnce(ownedGame([self, peer]))
-      .mockResolvedValueOnce(freshLobby);
-    const { router } = renderHarness({ createLobby, relinquishOwnership });
-    await create();
-    fireEvent.click(await screen.findByRole('button', { name: /Démarrer une nouvelle partie/ }));
-    await waitFor(() => expect(router.state.location.pathname).toBe(`/lobby/${freshId}`));
-    expect(relinquishOwnership).toHaveBeenCalledWith(ownedId);
+    expect(screen.queryByRole('button', { name: /Démarrer une nouvelle partie/ })).toBeNull();
   });
 
   it('relinquishes via the REST endpoint, then creates and navigates to the new game', async () => {

@@ -23,8 +23,10 @@ export interface UseCreateOrResume {
   readonly rejoindre: () => void;
   readonly startNewGame: () => void;
   readonly dismiss: () => void;
-  // Relinquish-then-create in flight.
+  // Relinquish-then-create in flight (the sole-occupant path).
   readonly startingNew: boolean;
+  // ADR-0098 §6: offered only to a sole occupant (relinquishing a populated room would strand its peers).
+  readonly canStartNew: boolean;
 }
 
 export function useCreateOrResume({
@@ -99,5 +101,7 @@ export function useCreateOrResume({
       });
   }, [ownedGame, startingNew, getSession, lobbyClient, goToLobby, onError]);
 
-  return { createOrResume, pending, ownedGame, rejoindre, startNewGame, dismiss, startingNew };
+  const canStartNew = ownedGame != null && ownedGame.players.length === 1;
+
+  return { createOrResume, pending, ownedGame, rejoindre, startNewGame, dismiss, startingNew, canStartNew };
 }

@@ -331,6 +331,7 @@ export function GrillesArchiveScreen({
       <HostSignInSheet open={hostSignInOpen} authClient={authClient} onClose={() => setHostSignInOpen(false)} />
       <OwnedGameModal
         lobby={coop.ownedGame}
+        canStartNew={coop.canStartNew}
         onRejoindre={coop.rejoindre}
         onStartNew={coop.startNewGame}
         onClose={coop.dismiss}
