@@ -142,7 +142,7 @@ describe('/connexion — email-OTP screen', () => {
     await typeEmailAndSubmit('joueuse@exemple.fr');
 
     await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent('Trop de tentatives, réessaie dans une minute.'),
+      expect(screen.getByRole('alert')).toHaveTextContent('Trop de tentatives. Réessaie dans une minute.'),
     );
   });
 
