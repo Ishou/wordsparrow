@@ -203,7 +203,7 @@ test.describe('WCAG 2.2 A + AA accessibility', () => {
     // Zoom in twice — same aria-label and iteration pattern as zoomIn() in
     // grid-scrollbars-and-minimap.spec.ts.  Inline here to avoid coupling
     // the a11y suite to Task-5 helpers.
-    const zoomInBtn = page.getByRole('button', { name: /zoom in/i });
+    const zoomInBtn = page.getByRole('button', { name: /^zoomer$/i });
     for (let i = 0; i < 2; i++) {
       await zoomInBtn.click();
       await page.waitForTimeout(180); // library animation is 150 ms
