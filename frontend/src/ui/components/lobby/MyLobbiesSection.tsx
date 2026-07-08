@@ -3,7 +3,6 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
 import type { LobbySummary } from '@/application/game';
-import type { LobbyId } from '@/domain/game';
 import { EyeIcon, EyeOffIcon } from '@/ui/components/icons';
 import { ProgressBar } from '@/ui/components/layout/ProgressBar';
 import { t } from '@/ui/i18n';
@@ -19,8 +18,6 @@ import { t } from '@/ui/i18n';
 
 export interface MyLobbiesSectionProps {
   readonly lobbies: readonly LobbySummary[];
-  // ADR-0098 §6: when supplied, an ownerless row claims ownership rather than plain-navigating.
-  readonly onClaim?: (lobbyId: LobbyId) => void;
 }
 
 const sectionStyles = css({
@@ -137,16 +134,6 @@ const copyFeedbackStyles = css({
   color: 'accent',
 });
 
-// Reset a <button> so an ownerless claim row reads identically to the navigate Link.
-const claimButtonStyles = css({
-  appearance: 'none',
-  background: 'transparent',
-  border: 'none',
-  padding: 0,
-  font: 'inherit',
-  cursor: 'pointer',
-});
-
 // 6 bullets match LOBBY_CODE_LENGTH
 const MASK_GLYPHS = '••••••';
 
@@ -171,7 +158,7 @@ function titleFor(lobby: LobbySummary): string {
   return when.length > 0 ? t('lobby.myLobbies.gameOfDate', { date: when }) : t('lobby.myLobbies.gameFallback');
 }
 
-export function MyLobbiesSection({ lobbies, onClaim }: MyLobbiesSectionProps) {
+export function MyLobbiesSection({ lobbies }: MyLobbiesSectionProps) {
   if (lobbies.length === 0) {
     return (
       <section className={sectionStyles} aria-labelledby="my-lobbies-heading">
@@ -188,7 +175,7 @@ export function MyLobbiesSection({ lobbies, onClaim }: MyLobbiesSectionProps) {
       <ul className={listStyles}>
         {lobbies.map((lobby) => (
           <li key={lobby.id}>
-            <LobbyRow lobby={lobby} onClaim={onClaim} />
+            <LobbyRow lobby={lobby} />
           </li>
         ))}
       </ul>
@@ -196,7 +183,7 @@ export function MyLobbiesSection({ lobbies, onClaim }: MyLobbiesSectionProps) {
   );
 }
 
-function LobbyRow({ lobby, onClaim }: { readonly lobby: LobbySummary; readonly onClaim?: (lobbyId: LobbyId) => void }) {
+function LobbyRow({ lobby }: { readonly lobby: LobbySummary }) {
   const [revealed, setRevealed] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,23 +192,6 @@ function LobbyRow({ lobby, onClaim }: { readonly lobby: LobbySummary; readonly o
       if (copyTimerRef.current !== null) clearTimeout(copyTimerRef.current);
     },
     [],
-  );
-
-  // ADR-0098 §6: an ownerless row claims ownership; a plain row navigates via the Link.
-  const claimable = lobby.ownerless === true && onClaim != null;
-  const titleBody = (
-    <>
-      <span className={itemTitleStyles}>{titleFor(lobby)}</span>
-      <span className={itemMetaStyles}>
-        <span>
-          {lobby.gridConfig.width}×{lobby.gridConfig.height}
-        </span>
-        <span>·</span>
-        <span data-testid="lobby-players">
-          {t('lobby.myLobbies.playerRatio', { connected: lobby.connectedCount, total: lobby.playerCount })}
-        </span>
-      </span>
-    </>
   );
 
   const handleToggle = () => {
@@ -245,15 +215,22 @@ function LobbyRow({ lobby, onClaim }: { readonly lobby: LobbySummary; readonly o
   return (
     <div className={itemCardStyles}>
       <div className={itemHeaderStyles}>
-        {claimable ? (
-          <button type="button" className={`${itemLinkStyles} ${claimButtonStyles}`} onClick={() => onClaim(lobby.id)}>
-            {titleBody}
-          </button>
-        ) : (
-          <Link to="/lobby/$lobbyId" params={{ lobbyId: lobby.id }} className={itemLinkStyles}>
-            {titleBody}
-          </Link>
-        )}
+        <Link
+          to="/lobby/$lobbyId"
+          params={{ lobbyId: lobby.id }}
+          className={itemLinkStyles}
+        >
+          <span className={itemTitleStyles}>{titleFor(lobby)}</span>
+          <span className={itemMetaStyles}>
+            <span>
+              {lobby.gridConfig.width}×{lobby.gridConfig.height}
+            </span>
+            <span>·</span>
+            <span data-testid="lobby-players">
+              {t('lobby.myLobbies.playerRatio', { connected: lobby.connectedCount, total: lobby.playerCount })}
+            </span>
+          </span>
+        </Link>
         <span className={codeGroupStyles}>
           <span
             className={codeTextStyles}
