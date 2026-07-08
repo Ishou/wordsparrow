@@ -29,6 +29,7 @@ const lobbyFixture: WireLobby = {
   gridConfig: { width: 7, height: 7 },
   game: null,
   code: 'A2B3C4',
+  ownerless: false,
 };
 
 const problemBody = (status: number, detail: string, type: string): WireProblem => ({
@@ -187,6 +188,7 @@ describe('HttpLobbyClient.listMyLobbies', () => {
     lastActivityAt: '2026-05-10T18:00:00Z',
     progress: { solvedCells: 7, totalCells: 42 },
     title: 'Mardi soir',
+    ownerless: false,
   };
 
   it('GETs the user-scoped lobbies at /v1/users/me/lobbies and maps the body (ADR-0066)', async () => {
