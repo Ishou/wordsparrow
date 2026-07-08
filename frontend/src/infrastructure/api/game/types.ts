@@ -127,6 +127,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/lobbies/{lobbyId}/membership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Leave a lobby, deleting it if you were alone.
+         * @description Removes the calling player from the lobby (ADR-0098 amendment
+         *     2026-07-08). Powers the per-row "quitter" button on the multiplayer
+         *     game lists, where the client is not on the lobby's WebSocket and so
+         *     cannot send the `leaveLobby` WS frame: this REST call is the
+         *     list-side way out.
+         *
+         *     Semantics, composed from existing ADR-0098/ADR-0055 rules:
+         *     - the caller's seat is dropped from the lobby;
+         *     - if the caller is the current owner, ownership is also relinquished
+         *       (`owner_user_id` set to null), so the lobby becomes **ownerless**
+         *       and any remaining player may claim it (ADR-0098 §2);
+         *     - if the lobby then has no owner **and** no players it is destroyed
+         *       (ADR-0055 immediate-destroy amendment 2026-07-08).
+         *
+         *     Together these yield **delete-if-alone / leave-if-others** for owner
+         *     and non-owner callers alike, with no dedicated "delete game" verb.
+         *     The client refetches its list afterwards.
+         *
+         *     Cookie-authed; identity comes from the `__Secure-ws_session` cookie,
+         *     so there is no request body. Guests have a session cookie and may
+         *     leave — `401` is only for a missing or invalid session, never for
+         *     guest status.
+         */
+        delete: operations["leaveLobby"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sessions/{sessionId}/lobbies": {
         parameters: {
             query?: never;
@@ -1092,6 +1133,85 @@ export interface operations {
              * @description The caller is not the current owner of this lobby, so may not
              *     relinquish it (ADR-0098 §2, threat model). RFC 7807;
              *     `type` is `https://bliss.example/errors/lobby-relinquish-forbidden`.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description No lobby exists for the supplied id, or it has been
+             *     garbage-collected (ADR-0055 GC; ADR-0098 §4). RFC 7807;
+             *     `type` is `https://bliss.example/errors/lobby-not-found`.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    leaveLobby: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 8-char base58 nanoid identifying the lobby (ADR-0020). */
+                lobbyId: components["parameters"]["LobbyIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description The caller has left. Returned whether the lobby survived
+             *     host-less (others remain), stayed ownerless-and-empty pending GC,
+             *     or was destroyed outright (caller was alone). The client refetches
+             *     its "Mes parties" list rather than reading a body.
+             */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description Path parameter `lobbyId` does not match the base58 nanoid pattern.
+             *     RFC 7807; `type` is `https://bliss.example/errors/invalid-lobby-id`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The request carries no `__Secure-ws_session` cookie, or the
+             *     session was revoked between the cached and fresh whoami lookups.
+             *     Guests are signed-in enough to leave, so this is strictly a
+             *     missing/invalid-session case. RFC 7807;
+             *     `type` is `https://bliss.example/errors/auth-required`.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The caller holds no seat in this lobby, so there is nothing to
+             *     leave (ADR-0098 §2, threat model). RFC 7807;
+             *     `type` is `https://bliss.example/errors/lobby-membership-forbidden`.
              */
             403: {
                 headers: {
