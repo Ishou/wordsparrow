@@ -140,7 +140,7 @@ export default tseslint.config(
         {
           selector: "MemberExpression[property.name='message']",
           message:
-            "Don't render `Error.message` in the UI — it leaks browser/English strings. Use `messageForApiError(cause)` from `@/application/errors`, or map typed errors to local French copy at the route. Justified exceptions need an eslint-disable-next-line with a one-line rationale.",
+            "Don't render `Error.message` in the UI — it leaks browser/English strings. Use `messageForApiError(cause)` from `@/ui/lib/apiErrorMessage`, or map typed errors to local French copy at the route. Justified exceptions need an eslint-disable-next-line with a one-line rationale.",
         },
       ],
     },

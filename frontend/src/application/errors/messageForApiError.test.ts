@@ -1,45 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { messageForApiError } from './messageForApiError';
+import { apiErrorCode } from './messageForApiError';
 
-describe('messageForApiError', () => {
-  it('maps fetch TypeError to a French network message', () => {
+describe('apiErrorCode', () => {
+  it('maps fetch TypeError to the network code', () => {
     // Browser produces these literal strings on CORS rejection / offline.
-    expect(messageForApiError(new TypeError('Failed to fetch'))).toBe(
-      'Connexion impossible. Vérifiez votre réseau et réessayez.',
-    );
+    expect(apiErrorCode(new TypeError('Failed to fetch'))).toBe('network');
     expect(
-      messageForApiError(
-        new TypeError('NetworkError when attempting to fetch resource.'),
-      ),
-    ).toBe('Connexion impossible. Vérifiez votre réseau et réessayez.');
+      apiErrorCode(new TypeError('NetworkError when attempting to fetch resource.')),
+    ).toBe('network');
   });
 
-  it('maps any other Error to the generic French fallback', () => {
-    expect(messageForApiError(new Error('whatever'))).toBe(
-      'Une erreur est survenue. Réessayez.',
-    );
+  it('maps any other Error to the generic code', () => {
+    expect(apiErrorCode(new Error('whatever'))).toBe('generic');
+    expect(apiErrorCode(new Error('Internal Server Error'))).toBe('generic');
   });
 
-  it('maps non-Error throwables to the generic French fallback', () => {
-    expect(messageForApiError('a string')).toBe('Une erreur est survenue. Réessayez.');
-    expect(messageForApiError(undefined)).toBe('Une erreur est survenue. Réessayez.');
-    expect(messageForApiError(null)).toBe('Une erreur est survenue. Réessayez.');
-    expect(messageForApiError({ random: 'object' })).toBe(
-      'Une erreur est survenue. Réessayez.',
-    );
-  });
-
-  it('never returns an English string', () => {
-    const inputs: unknown[] = [
-      new TypeError('Failed to fetch'),
-      new Error('Bad Request'),
-      new Error('Internal Server Error'),
-      'NetworkError',
-      undefined,
-    ];
-    for (const input of inputs) {
-      const out = messageForApiError(input);
-      expect(out).toMatch(/[éèàù]/i); // any French diacritic ⇒ definitely not English
-    }
+  it('maps non-Error throwables to the generic code', () => {
+    expect(apiErrorCode('a string')).toBe('generic');
+    expect(apiErrorCode(undefined)).toBe('generic');
+    expect(apiErrorCode(null)).toBe('generic');
+    expect(apiErrorCode({ random: 'object' })).toBe('generic');
   });
 });

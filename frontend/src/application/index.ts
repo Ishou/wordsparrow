@@ -28,4 +28,5 @@ export type {
   WhoAmIResult,
 } from './auth';
 export { InvalidDisplayNameError } from './auth';
-export { messageForApiError } from './errors';
+export type { ApiErrorCode } from './errors';
+export { apiErrorCode } from './errors';
