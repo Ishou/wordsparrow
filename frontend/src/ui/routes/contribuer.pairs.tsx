@@ -4,6 +4,7 @@ import { createRoute } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import { ContentPage } from '@/ui/components/layout';
 import { buildHead, SITE_BASE_URL } from '@/ui/seo';
+import { t } from '@/ui/i18n';
 import { Route as RootRoute } from './__root';
 
 const skeletonArticleStyles = css({
@@ -20,11 +21,9 @@ function ContribuerPairsSkeleton() {
   return (
     <ContentPage>
       <article className={skeletonArticleStyles}>
-        <h1 className={skeletonHeadingStyles}>Campagne par paires</h1>
-        <p className={skeletonIntroStyles}>
-          Comparez deux définitions du même mot. Une préférence, ou aucune si les deux se valent.
-        </p>
-        <p className={skeletonStatusStyles} role="status">Chargement…</p>
+        <h1 className={skeletonHeadingStyles}>{t('route.contribuerPairs.skeletonHeading')}</h1>
+        <p className={skeletonIntroStyles}>{t('route.contribuerPairs.skeleton.intro')}</p>
+        <p className={skeletonStatusStyles} role="status">{t('route.contribuer.loading')}</p>
       </article>
     </ContentPage>
   );
@@ -37,9 +36,8 @@ export const Route = createRoute({
   pendingComponent: ContribuerPairsSkeleton,
   head: () =>
     buildHead({
-      title: 'Campagne par paires — WordSparrow',
-      description:
-        'Aidez à départager deux définitions générées pour le même mot.',
+      title: t('seo.noindex.contribuerPairs.title'),
+      description: t('seo.noindex.contribuerPairs.description'),
       canonical: `${SITE_BASE_URL}/contribuer/pairs`,
       noindex: true,
     }),

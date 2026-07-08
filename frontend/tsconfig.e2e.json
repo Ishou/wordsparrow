@@ -6,5 +6,5 @@
     "noEmit": true,
     "types": ["@playwright/test", "node"]
   },
-  "include": ["e2e", "playwright.config.ts", "src/ui/seo"]
+  "include": ["e2e", "playwright.config.ts", "src/ui/seo", "src/ui/i18n/messages.fr.ts"]
 }

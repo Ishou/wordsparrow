@@ -13,6 +13,7 @@ import { SparrowState } from '@/ui/v2/SparrowState';
 import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { css } from 'styled-system/css';
 import { noindexHead } from '@/ui/seo';
+import { t } from '@/ui/i18n';
 import { Route as AppLayoutRoute } from './app-layout';
 
 const message = css({
@@ -43,7 +44,7 @@ function V2JoinRedirect() {
 
   return (
     <PhoneShell header={<BackHeader to="/" />}>
-      <p className={message} role="status">Connexion à la partie…</p>
+      <p className={message} role="status">{t('route.join.connecting')}</p>
     </PhoneShell>
   );
 }
@@ -61,15 +62,15 @@ function V2JoinError({ error }: { readonly error: Error }) {
     (error instanceof LobbyClientError && error.kind === 'not-found');
   if (!badCode) {
     // Transient / upstream failure — auto-retry; never claim the code is bad.
-    return <LoaderRetry policy={joinLoaderRetryPolicy} silentText="Recherche de la partie…" />;
+    return <LoaderRetry policy={joinLoaderRetryPolicy} silentText={t('route.join.searching')} />;
   }
   return (
     <PhoneShell>
       <SparrowState
         scene={sparrowFlightScene()}
-        title="Partie introuvable"
-        body="Code invalide ou partie expirée."
-        cta={{ label: 'Accueil', onClick: () => void navigate({ to: '/' }) }}
+        title={t('route.join.notFound.title')}
+        body={t('route.join.notFound.body')}
+        cta={{ label: t('route.join.notFound.cta'), onClick: () => void navigate({ to: '/' }) }}
       />
     </PhoneShell>
   );
@@ -92,8 +93,8 @@ export const Route = createRoute({
   errorComponent: V2JoinError,
   pendingComponent: () => (
     <PhoneShell header={<BackHeader to="/" />}>
-      <p className={message} role="status">Recherche de la partie…</p>
+      <p className={message} role="status">{t('route.join.searching')}</p>
     </PhoneShell>
   ),
-  head: () => noindexHead('Rejoindre une partie — WordSparrow', 'Rejoins une partie de mots fléchés.'),
+  head: () => noindexHead(t('seo.shell.join.title'), t('seo.shell.join.description')),
 });

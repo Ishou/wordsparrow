@@ -6,6 +6,9 @@
 //
 // Adding an indexable route is a one-touch change here.
 
+// Read `fr` directly, not `t()`: the Node build scripts import this module without `import.meta.env` (t()'s dev guard) or the `@/` alias.
+import { fr } from '../i18n/messages.fr.ts';
+
 export const SITE_BASE_URL = 'https://wordsparrow.io';
 
 export interface IndexableRoute {
@@ -22,57 +25,52 @@ export interface IndexableRoute {
 export const INDEXABLE_ROUTES: ReadonlyArray<IndexableRoute> = [
   {
     path: '/',
-    title: 'WordSparrow — mots fléchés français en ligne',
-    description:
-      'Jouez aux mots fléchés en français, en solo ou en multijoueur. Gratuit, sans inscription.',
+    title: fr['seo.route.home.title'],
+    description: fr['seo.route.home.description'],
     ogImagePath: '/og-home.png',
   },
   {
     path: '/play',
-    title: 'Grille du jour — WordSparrow',
-    description: 'Résolvez la grille de mots fléchés du jour, en français.',
+    title: fr['seo.route.play.title'],
+    description: fr['seo.route.play.description'],
     ogImagePath: '/og-grille.png',
   },
   {
     path: '/grilles',
-    title: 'Anciennes grilles — WordSparrow',
-    description:
-      'Toutes les grilles passées de WordSparrow, avec votre progression.',
+    title: fr['seo.route.grilles.title'],
+    description: fr['seo.route.grilles.description'],
     // until a dedicated /grilles card ships
     ogImagePath: '/og-home.png',
   },
   {
     path: '/aide',
-    title: 'Aide — WordSparrow',
-    description:
-      'Comment jouer aux mots fléchés sur WordSparrow : règles, astuces, raccourcis.',
+    title: fr['seo.route.aide.title'],
+    description: fr['seo.route.aide.description'],
     ogImagePath: '/og-aide.png',
   },
   {
     path: '/mentions-legales',
-    title: 'Mentions légales — WordSparrow',
-    description:
-      'Mentions légales et informations éditoriales de WordSparrow.',
+    title: fr['seo.route.mentionsLegales.title'],
+    description: fr['seo.route.mentionsLegales.description'],
     ogImagePath: '/og-mentions-legales.png',
   },
   {
     path: '/confidentialite',
-    title: 'Confidentialité — WordSparrow',
-    description: 'Politique de confidentialité de WordSparrow.',
+    title: fr['seo.route.confidentialite.title'],
+    description: fr['seo.route.confidentialite.description'],
     ogImagePath: '/og-confidentialite.png',
   },
   {
     path: '/conditions-abonnement',
-    title: "Conditions générales de vente — WordSparrow",
-    description: "Conditions générales de vente de l'abonnement WordSparrow.",
+    title: fr['seo.route.conditionsAbonnement.title'],
+    description: fr['seo.route.conditionsAbonnement.description'],
     // reuse mentions-légales OG until a dedicated card ships
     ogImagePath: '/og-mentions-legales.png',
   },
   {
     path: '/a-propos',
-    title: 'À propos — WordSparrow',
-    description:
-      'WordSparrow, un jeu de mots fléchés édité par ISHO IT — et un grand merci aux logiciels libres, polices et dictionnaires qui le font vivre.',
+    title: fr['seo.route.aPropos.title'],
+    description: fr['seo.route.aPropos.description'],
     // reuse mentions-légales OG until a dedicated card ships
     ogImagePath: '/og-mentions-legales.png',
   },
@@ -85,14 +83,14 @@ export interface PrerenderRoute {
 
 // Noindex routes still prerendered so Cloudflare Pages serves the route's own shell, not the home shell.
 export const NOINDEX_PRERENDER_ROUTES: ReadonlyArray<PrerenderRoute> = [
-  { path: '/compte', title: 'Mon compte — WordSparrow' },
-  { path: '/contribuer', title: 'Campagne — WordSparrow' },
-  { path: '/contribuer/pairs', title: 'Campagne par paires — WordSparrow' },
-  { path: '/reglages', title: 'Réglages — WordSparrow' },
-  { path: '/finish', title: 'Partie terminée — WordSparrow' },
-  { path: '/abonnement', title: 'Abonnement — WordSparrow' },
-  { path: '/abonnement/succes', title: 'Merci — WordSparrow' },
-  { path: '/abonnement/annule', title: 'Paiement annulé — WordSparrow' },
+  { path: '/compte', title: fr['seo.noindex.compte.title'] },
+  { path: '/contribuer', title: fr['seo.noindex.contribuer.title'] },
+  { path: '/contribuer/pairs', title: fr['seo.noindex.contribuerPairs.title'] },
+  { path: '/reglages', title: fr['seo.noindex.reglages.title'] },
+  { path: '/finish', title: fr['seo.noindex.finish.title'] },
+  { path: '/abonnement', title: fr['seo.noindex.abonnement.title'] },
+  { path: '/abonnement/succes', title: fr['seo.noindex.abonnementSucces.title'] },
+  { path: '/abonnement/annule', title: fr['seo.noindex.abonnementAnnule.title'] },
 ];
 
 export interface ParamShellRoute {
@@ -113,15 +111,15 @@ export const PARAM_SHELL_ROUTES: ReadonlyArray<ParamShellRoute> = [
     routePath: '/lobby/$lobbyId',
     prerenderPath: '/lobby/7Hk2pQrS',
     outSlug: 'lobby-shell',
-    title: 'Partie — WordSparrow',
-    description: 'Partie de mots fléchés en multijoueur.',
+    title: fr['seo.shell.lobby.title'],
+    description: fr['seo.shell.lobby.description'],
   },
   {
     routePath: '/join/$code',
     prerenderPath: '/join/A2B3C4',
     outSlug: 'join-shell',
-    title: 'Rejoindre une partie — WordSparrow',
-    description: 'Rejoins une partie de mots fléchés.',
+    title: fr['seo.shell.join.title'],
+    description: fr['seo.shell.join.description'],
   },
 ];
 

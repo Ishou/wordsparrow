@@ -14,6 +14,7 @@ import type { RatingMeta, Verdict } from '@/ui/components/sondage';
 import { LockBanner, RatingCard, SignInBanner, UndoBar, useCampaignStatus } from '@/ui/components/sondage';
 import { NotFoundScreen } from '@/ui/v2/NotFoundScreen';
 import { useCapabilityGate } from '@/ui/v2/useCapabilityGate';
+import { t } from '@/ui/i18n';
 import { Route as ParentRoute } from './contribuer';
 
 const articleStyles = css({
@@ -153,7 +154,7 @@ export function ContribuerPage() {
   const loadNext = useCallback(async (): Promise<void> => {
     if (!surveyClient) {
       setLoading(false);
-      setError('Le sondage n’est pas disponible pour le moment.');
+      setError(t('route.contribuer.error.unavailable'));
       return;
     }
     setLoading(true);
@@ -264,7 +265,7 @@ export function ContribuerPage() {
   ): Promise<void> {
     if (!surveyClient || !item) return;
     if (!isAuth) {
-      setError('Connectez-vous pour proposer une correction.');
+      setError(t('route.contribuer.error.correctionAuth'));
       return;
     }
     const currentItem = item;
@@ -280,7 +281,7 @@ export function ContribuerPage() {
       const result = await surveyClient.submitRating(currentItem.itemId, payload);
       analytics.trackEvent('survey', 'correctif_proposed', `tier=${currentItem.tier}`);
       setStats((s) => ({ ...s, enriched: s.enriched + 1, streak: s.streak + 1 }));
-      showToast({ text: 'Correction proposée — merci !', tone: 'info' });
+      showToast({ text: t('route.contribuer.toast.correctionProposed'), tone: 'info' });
       if (result.undoToken) setLastAction({ token: result.undoToken, item: currentItem, kind: 'correctif' });
       await loadNext();
     } catch (cause) {
@@ -288,7 +289,10 @@ export function ContribuerPage() {
       if (name === 'CorrectifRejectedError') {
         const detail = (cause as { detail?: { filterId?: number; reason?: string } }).detail;
         setError(
-          `Correction rejetée par le filtre ${detail?.filterId ?? '?'} : ${detail?.reason ?? 'motif inconnu'}.`,
+          t('route.contribuer.error.correctifRejected', {
+            filterId: detail?.filterId ?? '?',
+            reason: detail?.reason ?? t('route.contribuer.error.reasonUnknown'),
+          }),
         );
         return;
       }
@@ -311,7 +315,7 @@ export function ContribuerPage() {
       surveyAnonStore?.add(currentItem.itemId);
     }
     setStats((s) => ({ ...s, streak: 0 }));
-    showToast({ text: 'Indice signalé. Merci de nous aider à corriger le tir.', tone: 'info' });
+    showToast({ text: t('route.contribuer.toast.signaled'), tone: 'info' });
     setLastAction(null);
     await loadNext();
   }
@@ -330,7 +334,7 @@ export function ContribuerPage() {
         enriched: kind === 'correctif' ? Math.max(0, s.enriched - 1) : s.enriched,
         streak: Math.max(0, s.streak - 1),
       }));
-      showToast({ text: 'Action annulée.', tone: 'info' });
+      showToast({ text: t('route.contribuer.toast.undone'), tone: 'info' });
       setLastAction(null);
       setError(null);
       setItem(stashedItem);
@@ -338,9 +342,9 @@ export function ContribuerPage() {
       const name = (cause as Error | undefined)?.name ?? '';
       setLastAction(null);
       if (name === 'UndoExpiredError') {
-        setError('Trop tard pour annuler : la campagne est terminée.');
+        setError(t('route.contribuer.error.undoExpired'));
       } else if (name === 'UndoUnavailableError') {
-        setError('Cette action ne peut plus être annulée.');
+        setError(t('route.contribuer.error.undoUnavailable'));
       } else {
         setError(messageForApiError(cause));
       }
@@ -357,7 +361,7 @@ export function ContribuerPage() {
     <ContentPage>
       <article className={articleStyles}>
         <header className={headerStyles}>
-          <h1 className={headingStyles}>Campagne de qualité des indices</h1>
+          <h1 className={headingStyles}>{t('route.contribuer.heading')}</h1>
           <p className={subtitleRowStyles}>
             {campaignStatus.status.kind === 'open' ? (
               <span data-testid="campaign-subtitle">
@@ -366,32 +370,29 @@ export function ContribuerPage() {
             ) : null}
             <span aria-hidden="true">·</span>
             <Link to={'/contribuer/pairs' as '/'} className={modeLinkStyles} data-testid="mode-switch-pairs">
-              Mode paires →
+              {t('route.contribuer.modePaires')}
             </Link>
           </p>
           {stats.rated + stats.enriched > 0 ? (
-            <dl className={statsRowStyles} aria-label="Statistiques de la session" data-testid="session-stats">
+            <dl className={statsRowStyles} aria-label={t('route.contribuer.stats.aria')} data-testid="session-stats">
               <div className={statStyles}>
-                <dt>Notées</dt>
+                <dt>{t('route.contribuer.stats.rated')}</dt>
                 <dd data-testid="stat-rated">{stats.rated}</dd>
               </div>
               {isAuth ? (
                 <div className={statStyles}>
-                  <dt>Enrichies</dt>
+                  <dt>{t('route.contribuer.stats.enriched')}</dt>
                   <dd data-testid="stat-enriched">{stats.enriched}</dd>
                 </div>
               ) : null}
               <div className={statStyles}>
-                <dt>Série</dt>
+                <dt>{t('route.contribuer.stats.streak')}</dt>
                 <dd data-testid="stat-streak">{stats.streak}</dd>
               </div>
             </dl>
           ) : null}
         </header>
-        <p className={introStyles}>
-          Lisez chaque définition et jugez si elle décrit bien le mot : notez-la bonne ou
-          mauvaise, corrigez-la, ou passez si vous ne pouvez pas trancher.
-        </p>
+        <p className={introStyles}>{t('route.contribuer.intro')}</p>
         {campaignStatus.status.kind === 'closed' ? (
           <LockBanner campaign={campaignStatus.status.campaign} />
         ) : null}
@@ -404,7 +405,7 @@ export function ContribuerPage() {
         ) : null}
 
         {loading || state.status === 'loading' ? (
-          <p className={statusStyles} role="status">Chargement…</p>
+          <p className={statusStyles} role="status">{t('route.contribuer.loading')}</p>
         ) : null}
 
         {error !== null ? (
@@ -412,9 +413,7 @@ export function ContribuerPage() {
         ) : null}
 
         {!loading && item === null && error === null ? (
-          <p className={statusStyles}>
-            Plus d&apos;indices à noter pour l&apos;instant. Merci !
-          </p>
+          <p className={statusStyles}>{t('route.contribuer.empty')}</p>
         ) : null}
 
         {item !== null && !isLocked ? (
@@ -432,10 +431,10 @@ export function ContribuerPage() {
 
         {lastAction !== null ? <UndoBar onUndo={onUndo} busy={undoBusy} /> : null}
 
-        <p className={legendStyles} aria-label="Raccourcis clavier">
-          <span><kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> noter</span>
-          <span><kbd>C</kbd> corriger</span>
-          <span><kbd>Espace</kbd> confirmer / enregistrer</span>
+        <p className={legendStyles} aria-label={t('route.contribuer.legend.aria')}>
+          <span><kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> {t('route.contribuer.legend.rate')}</span>
+          <span><kbd>C</kbd> {t('route.contribuer.legend.correct')}</span>
+          <span><kbd>{t('route.contribuer.kbd.espace')}</kbd> {t('route.contribuer.legend.confirm')}</span>
         </p>
       </article>
     </ContentPage>
@@ -448,7 +447,7 @@ export function ContribuerScreen() {
   if (gate === 'loading') {
     return (
       <ContentPage>
-        <p className={statusStyles} role="status">Chargement…</p>
+        <p className={statusStyles} role="status">{t('route.contribuer.loading')}</p>
       </ContentPage>
     );
   }

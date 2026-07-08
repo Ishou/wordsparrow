@@ -4,6 +4,7 @@ import { createRoute } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import { ContentPage } from '@/ui/components/layout';
 import { buildHead, SITE_BASE_URL } from '@/ui/seo';
+import { t } from '@/ui/i18n';
 import { Route as RootRoute } from './__root';
 
 const skeletonArticleStyles = css({
@@ -21,12 +22,9 @@ function ContribuerSkeleton() {
   return (
     <ContentPage>
       <article className={skeletonArticleStyles}>
-        <h1 className={skeletonHeadingStyles}>Campagne de qualité des indices</h1>
-        <p className={skeletonIntroStyles}>
-          Notez la qualité des définitions en un clic : mauvaise, à passer, ou bonne.
-          Vos retours alimentent la sélection des indices.
-        </p>
-        <p className={skeletonStatusStyles} role="status">Chargement…</p>
+        <h1 className={skeletonHeadingStyles}>{t('route.contribuer.heading')}</h1>
+        <p className={skeletonIntroStyles}>{t('route.contribuer.skeleton.intro')}</p>
+        <p className={skeletonStatusStyles} role="status">{t('route.contribuer.loading')}</p>
       </article>
     </ContentPage>
   );
@@ -39,9 +37,8 @@ export const Route = createRoute({
   pendingComponent: ContribuerSkeleton,
   head: () =>
     buildHead({
-      title: 'Campagne — WordSparrow',
-      description:
-        'Aidez à améliorer les indices de mots fléchés en notant les définitions générées.',
+      title: t('seo.noindex.contribuer.title'),
+      description: t('seo.noindex.contribuer.description'),
       canonical: `${SITE_BASE_URL}/contribuer`,
       noindex: true,
     }),

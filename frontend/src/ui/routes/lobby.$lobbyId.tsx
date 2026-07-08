@@ -21,6 +21,7 @@ import { useCoopWinCue } from '@/ui/v2/multiplayer/useCoopWinCue';
 import { ResultatsScreen } from '@/ui/v2/multiplayer/ResultatsScreen';
 import { css } from 'styled-system/css';
 import { noindexHead } from '@/ui/seo';
+import { t } from '@/ui/i18n';
 import { Route as AppLayoutRoute } from './app-layout';
 
 const placeholder = css({
@@ -47,9 +48,9 @@ function V2LobbyIntrouvable() {
     <PhoneShell>
       <SparrowState
         scene={sparrowFlightScene()}
-        title="Partie introuvable"
-        body={"Cette partie n'existe plus ou le lien a expiré."}
-        cta={{ label: 'Accueil', onClick: () => void navigate({ to: '/' }) }}
+        title={t('route.lobby.introuvable.title')}
+        body={t('route.lobby.introuvable.body')}
+        cta={{ label: t('route.lobby.introuvable.cta'), onClick: () => void navigate({ to: '/' }) }}
       />
     </PhoneShell>
   );
@@ -62,9 +63,9 @@ function V2LobbyEvicted() {
     <PhoneShell>
       <SparrowState
         scene={sparrowFlightScene()}
-        title="La partie a continué sans toi"
-        body="Ta connexion est restée coupée trop longtemps et ta place a été libérée. Demande un nouveau code pour revenir."
-        cta={{ label: 'Accueil', onClick: () => void navigate({ to: '/' }) }}
+        title={t('route.lobby.evicted.title')}
+        body={t('route.lobby.evicted.body')}
+        cta={{ label: t('route.lobby.evicted.cta'), onClick: () => void navigate({ to: '/' }) }}
       />
     </PhoneShell>
   );
@@ -77,7 +78,7 @@ export const lobbyLoaderRetryPolicy = createLoaderRetryPolicy();
 function V2LobbyError({ error }: { readonly error: Error }) {
   const notFound = error instanceof LobbyClientError && error.kind === 'not-found';
   if (notFound) return <V2LobbyIntrouvable />;
-  return <LoaderRetry policy={lobbyLoaderRetryPolicy} silentText="Chargement de la partie…" />;
+  return <LoaderRetry policy={lobbyLoaderRetryPolicy} silentText={t('route.lobby.placeholder.loading')} />;
 }
 
 function V2LobbyPage() {
@@ -155,7 +156,7 @@ function V2LobbyPage() {
   const coop = useCreateOrResume({
     lobbyClient,
     getSession,
-    onError: () => showToast({ text: 'Impossible de créer une partie. Réessaie.', tone: 'error' }),
+    onError: () => showToast({ text: t('route.lobby.error.cannotCreate'), tone: 'error' }),
   });
   const handleReplay = coop.createOrResume;
 
@@ -169,7 +170,7 @@ function V2LobbyPage() {
     try {
       await lobbyClient.claimOwnership(lobbyId as LobbyId);
     } catch {
-      showToast({ text: 'Impossible de reprendre la partie.', tone: 'error' });
+      showToast({ text: t('route.lobby.error.cannotClaim'), tone: 'error' });
     }
   }, [lobbyClient, lobbyId, showToast]);
 
@@ -183,7 +184,7 @@ function V2LobbyPage() {
   }
 
   if (!joinConfirmed || joinDenied != null) {
-    return <V2LobbyPlaceholder text="Connexion à la partie…" />;
+    return <V2LobbyPlaceholder text={t('route.lobby.placeholder.connecting')} />;
   }
 
   if (lobby.state === 'WAITING') {
@@ -253,7 +254,7 @@ function V2LobbyPage() {
       </PhoneShell>
     );
   }
-  return <V2LobbyPlaceholder text="La partie est en cours…" />;
+  return <V2LobbyPlaceholder text={t('route.lobby.placeholder.inProgress')} />;
 }
 
 export const Route = createRoute({
@@ -263,8 +264,8 @@ export const Route = createRoute({
     // Asserted non-null: registered only when the multiplayer flag is on, so the composition root guarantees `lobbyClient`.
     context.lobbyClient!.getLobby(params.lobbyId as LobbyId),
   component: V2LobbyPage,
-  pendingComponent: () => <V2LobbyPlaceholder text="Chargement de la partie…" />,
+  pendingComponent: () => <V2LobbyPlaceholder text={t('route.lobby.placeholder.loading')} />,
   pendingMs: 0,
   errorComponent: V2LobbyError,
-  head: () => noindexHead('Partie — WordSparrow', 'Partie de mots fléchés en multijoueur.'),
+  head: () => noindexHead(t('seo.shell.lobby.title'), t('seo.shell.lobby.description')),
 });

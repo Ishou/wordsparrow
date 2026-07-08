@@ -2,6 +2,7 @@ import { Navigate, createRoute } from '@tanstack/react-router';
 // Sanctioned app→module bridge (ADR-0072).
 import { ConnexionScreen } from '@/ui/v2/ConnexionScreen';
 import { useAuth } from '@/ui/components/auth';
+import { t } from '@/ui/i18n';
 import { Route as AppLayoutRoute } from './app-layout';
 
 function ConnexionRouteComponent() {
@@ -27,7 +28,7 @@ export const Route = createRoute({
   // Title (a11y) + robots-noindex only while dark; the full noindex head + prerender shell land in the manifest with the bright release (ADR-0091 Wave 5).
   head: () => ({
     meta: [
-      { title: 'Connexion — WordSparrow' },
+      { title: t('seo.noindex.connexion.title') },
       { name: 'robots', content: 'noindex,follow' },
     ],
   }),
