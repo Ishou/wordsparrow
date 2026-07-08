@@ -131,6 +131,7 @@ export function AProposScreen() {
             >
               Grammalecte
             </a>
+            {/* eslint-disable-next-line no-restricted-syntax -- proper noun, not translatable copy */}
             {t('v2.apropos.langue.p2.mid1')}<strong>Hunspell français</strong>{t('v2.apropos.langue.p2.mid2')}
             <a
               className={link}
