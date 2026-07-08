@@ -83,6 +83,7 @@ function renderJoin(initialEntry: string, lobbyClientOverrides: Partial<LobbyCli
     createLobby: vi.fn().mockResolvedValue(lobby),
     getLobby: vi.fn().mockResolvedValue(lobby),
     claimOwnership: vi.fn().mockResolvedValue(lobby),
+    relinquishOwnership: vi.fn().mockResolvedValue(lobby),
     findByCode: vi.fn().mockResolvedValue(lobby),
     listMyLobbies: vi.fn().mockResolvedValue([]),
     listMyLobbiesForUser: vi.fn().mockResolvedValue([]),

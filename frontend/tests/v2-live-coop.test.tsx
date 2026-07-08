@@ -332,6 +332,27 @@ describe('v2 LiveCoopScreen — claim ownership (ADR-0098 §6)', () => {
     expect(screen.queryByRole('button', { name: 'Reprendre la partie' })).toBeNull();
   });
 
+  it('shows the claim banner from the snapshot `ownerless` flag on mount — no live event needed (reload path)', () => {
+    renderScreen({ ownerless: true, onClaim: vi.fn().mockResolvedValue(undefined) });
+    expect(screen.getByRole('button', { name: 'Reprendre la partie' })).toBeTruthy();
+  });
+
+  it('hides the claim banner for a non-ownerless snapshot (owner does not see the claim for their own game)', () => {
+    renderScreen({ ownerless: false, onClaim: vi.fn().mockResolvedValue(undefined) });
+    expect(screen.queryByRole('button', { name: 'Reprendre la partie' })).toBeNull();
+  });
+
+  it('lets a live ownershipChanged frame override the snapshot flag', () => {
+    // Snapshot says owned, then a relinquish broadcast flips it ownerless.
+    const { cellStream } = renderScreen({ ownerless: false, onClaim: vi.fn().mockResolvedValue(undefined) });
+    expect(screen.queryByRole('button', { name: 'Reprendre la partie' })).toBeNull();
+    cellStream.dispatch(ownershipChanged(null));
+    expect(screen.getByRole('button', { name: 'Reprendre la partie' })).toBeTruthy();
+    // A subsequent claim broadcast (new owner) hides it again.
+    cellStream.dispatch(ownershipChanged('0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b'));
+    expect(screen.queryByRole('button', { name: 'Reprendre la partie' })).toBeNull();
+  });
+
   it('the ownerless claim banner is axe-clean (ADR-0050)', async () => {
     const { cellStream, container } = renderScreen({ onClaim: vi.fn().mockResolvedValue(undefined) });
     cellStream.dispatch(ownershipChanged(null));

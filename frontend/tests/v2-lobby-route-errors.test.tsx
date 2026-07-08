@@ -56,6 +56,7 @@ const emptyStore: SoloEntriesStore = {
 function makeStubGameClient() {
   const subscribers = new Set<(e: GameEvent) => void>();
   const connectionSubscribers = new Set<(s: ConnectionState) => void>();
+  const calls = { leaveLobby: 0, disconnect: 0 };
   const client: GameClient = {
     connect: () => Promise.resolve(),
     joinLobby: () => {},
@@ -64,9 +65,9 @@ function makeStubGameClient() {
     startGame: () => {},
     cellUpdate: () => {},
     cellFocus: () => {},
-    leaveLobby: () => {},
+    leaveLobby: () => { calls.leaveLobby += 1; },
     rotateCode: () => {},
-    disconnect: () => {},
+    disconnect: () => { calls.disconnect += 1; },
     subscribe: (h) => { subscribers.add(h); return () => { subscribers.delete(h); }; },
     subscribeConnectionState: (h) => {
       connectionSubscribers.add(h);
@@ -76,9 +77,35 @@ function makeStubGameClient() {
   };
   return {
     client,
+    calls,
     dispatch: (e: GameEvent) => { for (const h of [...subscribers]) h(e); },
   };
 }
+
+// Minimal 1×1 wire puzzle so an IN_PROGRESS lobby mounts LiveCoopScreen.
+const gamePuzzle = {
+  id: 'p1',
+  title: 'Test',
+  language: 'fr',
+  width: 1,
+  height: 1,
+  hintsAllowed: 0,
+  cells: [{ kind: 'letter', position: { row: 0, column: 0 }, letter: null }],
+  clues: [],
+  createdAt: '2026-06-27T15:31:00Z',
+};
+
+const inProgressLobby: Lobby & { readonly id: LobbyId } = {
+  ...lobby,
+  state: 'IN_PROGRESS',
+  game: {
+    puzzle: gamePuzzle,
+    entries: [],
+    lockedPositions: [],
+    startedAt: '2026-06-27T15:31:00Z',
+    completedAt: null,
+  } as unknown as Lobby['game'],
+};
 
 const stubAuthClient: AuthClient = {
   whoami: () => Promise.resolve(null),
@@ -97,6 +124,7 @@ function renderLobbyRoute(getLobby: LobbyClient['getLobby']) {
     createLobby: vi.fn().mockResolvedValue(lobby),
     getLobby,
     claimOwnership: vi.fn().mockResolvedValue(lobby),
+    relinquishOwnership: vi.fn().mockResolvedValue(lobby),
     findByCode: vi.fn().mockResolvedValue(lobby),
     listMyLobbies: vi.fn().mockResolvedValue([]),
     listMyLobbiesForUser: vi.fn().mockResolvedValue([]),
@@ -217,5 +245,25 @@ describe('v2 /lobby/$lobbyId loader error routing', () => {
     });
 
     expect(await screen.findByText('Partie introuvable')).toBeTruthy();
+  });
+});
+
+describe('v2 /lobby/$lobbyId — in-game back does not relinquish (ADR-0098 §2)', () => {
+  it('navigates home on the back arrow WITHOUT sending a leaveLobby frame', async () => {
+    const getLobby = vi.fn().mockResolvedValue(inProgressLobby);
+    const { router, stub } = renderLobbyRoute(getLobby);
+    const back = await screen.findByRole('button', { name: 'Quitter la partie' });
+    fireEvent.click(back);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    // Navigating away must not relinquish ownership — only disconnect on unmount.
+    expect(stub.calls.leaveLobby).toBe(0);
+    expect(stub.calls.disconnect).toBeGreaterThanOrEqual(1);
+  });
+
+  it('drives the ownerless claim banner from the REST snapshot flag on entry', async () => {
+    const getLobby = vi.fn().mockResolvedValue({ ...inProgressLobby, ownerless: true });
+    renderLobbyRoute(getLobby);
+    // No live ownershipChanged event is pushed — the banner comes from lobby.ownerless.
+    expect(await screen.findByRole('button', { name: 'Reprendre la partie' })).toBeTruthy();
   });
 });

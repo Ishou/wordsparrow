@@ -181,4 +181,6 @@ export interface Lobby {
   // it, so the lobby route preserves the value across snapshots from
   // the REST loader's initial response.
   readonly code?: string | null;
+  // ADR-0098: true when the lobby has no owner (relinquished or RGPD-vacated) — any present player may claim it. Absent ⇒ owned.
+  readonly ownerless?: boolean;
 }

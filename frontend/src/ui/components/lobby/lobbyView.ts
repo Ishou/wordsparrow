@@ -53,6 +53,8 @@ export function reduceLobby(current: LobbyView, event: GameEvent): LobbyView {
           players: event.players, ownerSessionId: event.ownerSessionId,
           state: event.state, gridConfig: event.gridConfig, game: event.game,
           code: event.code,
+          // ADR-0098: the WS snapshot carries no ownerless flag — preserve the REST loader's value so a reload-into-ownerless keeps the claim banner.
+          ...(current.lobby.ownerless ? { ownerless: true } : {}),
         },
         durationMs: derivedDurationMs,
       };

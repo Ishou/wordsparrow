@@ -289,6 +289,29 @@ describe('v2 grilles — à plusieurs', () => {
     renderGrilles({ initialEntry: '/grilles?onglet=plusieurs' });
     expect(await screen.findByRole('link', { name: 'Rejoindre avec un code' })).toBeTruthy();
   });
+
+  it('an ownerless row claims ownership and navigates on success (ADR-0098 §6)', async () => {
+    const claimOwnership = vi.fn().mockResolvedValue(undefined);
+    const lobbyClient = {
+      listMyLobbies: () => Promise.resolve([{ ...LOBBY, ownerless: true }]),
+      claimOwnership,
+    } as unknown as LobbyClient;
+    const { router } = renderGrilles({ lobbyClient, initialEntry: '/grilles?onglet=plusieurs' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Reprendre — Partie du 28 juin' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/lobby/${LOBBY.id}`));
+    expect(claimOwnership).toHaveBeenCalledWith(LOBBY.id);
+  });
+
+  it('surfaces a toast when claiming an ownerless row fails', async () => {
+    const claimOwnership = vi.fn().mockRejectedValue(new Error('conflict'));
+    const lobbyClient = {
+      listMyLobbies: () => Promise.resolve([{ ...LOBBY, ownerless: true }]),
+      claimOwnership,
+    } as unknown as LobbyClient;
+    renderGrilles({ lobbyClient, initialEntry: '/grilles?onglet=plusieurs' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Reprendre — Partie du 28 juin' }));
+    expect(await screen.findByText('Impossible de reprendre la partie.')).toBeTruthy();
+  });
 });
 
 describe('v2 grilles — a11y', () => {

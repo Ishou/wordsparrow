@@ -146,7 +146,12 @@ function V2LobbyPage() {
     void navigate({ to: '/' });
   }, [actions, navigate]);
 
-  // ADR-0098 §6: gameClient omitted — this route's WS client is bound to this lobby's socket.
+  // ADR-0098 §2: navigating away from an in-progress game must NOT relinquish — just leave the view and let unmount `disconnect()` (grace, keeps ownership). Only an explicit Quitter relinquishes.
+  const handleLeaveGame = useCallback(() => {
+    void navigate({ to: '/' });
+  }, [navigate]);
+
+  // ADR-0098 §6: the "Démarrer une nouvelle partie" relinquish now goes through the REST client synchronously (no WS frame).
   const coop = useCreateOrResume({
     lobbyClient,
     getSession,
@@ -216,7 +221,8 @@ function V2LobbyPage() {
         onLocalFocusChange={actions.cellFocus}
         subscribeToRemoteCellUpdates={actions.subscribeToRemoteCellUpdates}
         subscribeToRemotePresence={actions.subscribeToRemotePresence}
-        onLeave={handleLeave}
+        onLeave={handleLeaveGame}
+        ownerless={lobby.ownerless}
         onClaim={handleClaim}
         soundPlayer={ctx.soundPlayer}
         soundStore={ctx.soundStore}

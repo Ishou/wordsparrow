@@ -71,6 +71,25 @@ describe('GrillesLobbiesSection', () => {
     await screen.findByText('Grille du soir');
     await expectAxeClean(container);
   });
+
+  it('an ownerless "Reprendre" row claims ownership instead of navigating (ADR-0098 §6)', async () => {
+    const onClaim = vi.fn();
+    const OWNERLESS: LobbySummary = { ...IN_PROGRESS, ownerless: true };
+    renderInRouter(<GrillesLobbiesSection lobbies={[OWNERLESS]} onClaim={onClaim} />);
+    const claim = await screen.findByRole('button', { name: 'Reprendre — Partie du 28 juin' });
+    fireEvent.click(claim);
+    expect(onClaim).toHaveBeenCalledWith(OWNERLESS.id);
+    // No navigation link is rendered for the claimable row.
+    expect(screen.queryByRole('link', { name: 'Reprendre — Partie du 28 juin' })).toBeNull();
+  });
+
+  it('a non-ownerless "Reprendre" row stays a navigation link even when onClaim is supplied', async () => {
+    const onClaim = vi.fn();
+    renderInRouter(<GrillesLobbiesSection lobbies={[IN_PROGRESS]} onClaim={onClaim} />);
+    const resume = await screen.findByRole('link', { name: 'Reprendre — Partie du 28 juin' });
+    expect(resume.getAttribute('href')).toBe(`/lobby/${IN_PROGRESS.id}`);
+    expect(onClaim).not.toHaveBeenCalled();
+  });
 });
 
 describe('LobbiesEmptyState', () => {
