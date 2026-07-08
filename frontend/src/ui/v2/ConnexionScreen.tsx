@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useRouteContext } from '@tanstack/react-router';
 import { CircleNotch } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { useAuth } from '@/ui/components/auth';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { OtpCodeInput } from '@/ui/components/primitives/OtpCodeInput';
@@ -19,11 +20,11 @@ const linkRow = css({ display: 'flex', flexDirection: 'column', gap: '10px', mar
 const linkBtn = css({ border: 'none', bg: 'transparent', padding: 0, fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.jadeInk', textDecoration: 'underline', cursor: 'pointer', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px', borderRadius: '2px' }, _disabled: { opacity: 0.5, cursor: 'not-allowed' } });
 const spin = css({ animation: 'wsSpin 0.7s linear infinite' });
 
-const COOLDOWN_COPY = 'Trop de tentatives, réessaie dans une minute.';
-const INVALID_EMAIL_COPY = 'Cette adresse e-mail n’est pas valide.';
-const SEND_FAILED_COPY = 'L’envoi a échoué, réessaie.';
-const VERIFY_FAILED_COPY = 'La vérification a échoué, réessaie.';
-const CODE_INVALID_COPY = 'Code incorrect ou expiré.';
+const COOLDOWN_COPY = t('v2.connexion.error.cooldown');
+const INVALID_EMAIL_COPY = t('v2.connexion.error.invalidEmail');
+const SEND_FAILED_COPY = t('v2.connexion.error.sendFailed');
+const VERIFY_FAILED_COPY = t('v2.connexion.error.verifyFailed');
+const CODE_INVALID_COPY = t('v2.connexion.error.codeInvalid');
 
 export interface ConnexionScreenProps {
   // `?returnTo=` destination once authenticated; defaults to home at the route boundary.
@@ -56,7 +57,7 @@ export function ConnexionScreen({ returnTo }: ConnexionScreenProps) {
         setStep('code');
         setCode('');
         setCodeError(null);
-        say('Code envoyé par e-mail.');
+        say(t('v2.connexion.sr.codeSent'));
       } else if (result === 'rate_limited') {
         setEmailError(COOLDOWN_COPY);
         say(COOLDOWN_COPY, { assertive: true });
@@ -85,7 +86,7 @@ export function ConnexionScreen({ returnTo }: ConnexionScreenProps) {
       const result = await authClient.verifyEmailOtp(email.trim(), fullCode);
       if (result === 'ok') {
         await refresh();
-        say('Connexion réussie.');
+        say(t('v2.connexion.sr.success'));
         void navigate({ to: returnTo });
       } else {
         setCodeError(CODE_INVALID_COPY);
@@ -110,13 +111,13 @@ export function ConnexionScreen({ returnTo }: ConnexionScreenProps) {
     <PhoneShell header={<BackHeader to="/" />} backTo="/">
       {step === 'email' ? (
         <>
-          <h1 className={title}>Connexion</h1>
+          <h1 className={title}>{t('v2.connexion.title')}</h1>
           <p className={lede}>
-            Entre ton adresse e-mail : on t’envoie un code à six chiffres pour te connecter, sans mot de passe.
+            {t('v2.connexion.lede')}
           </p>
           <div className={card}>
             <form onSubmit={submitEmail} noValidate>
-              <label className={fieldLabel} htmlFor="connexion-email">Adresse e-mail</label>
+              <label className={fieldLabel} htmlFor="connexion-email">{t('v2.connexion.emailLabel')}</label>
               <input
                 id="connexion-email"
                 className={emailInput}
@@ -126,17 +127,17 @@ export function ConnexionScreen({ returnTo }: ConnexionScreenProps) {
                 autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="toi@exemple.fr"
+                placeholder={t('v2.connexion.emailPlaceholder')}
                 disabled={sending}
               />
               <button type="submit" className={submitBtn} disabled={sending || email.trim().length === 0} aria-busy={sending || undefined}>
                 {sending ? (
                   <>
                     <CircleNotch size={20} weight="bold" aria-hidden="true" className={spin} />
-                    Envoi…
+                    {t('v2.connexion.sending')}
                   </>
                 ) : (
-                  'Recevoir le code'
+                  t('v2.connexion.submit')
                 )}
               </button>
               {emailError ? <p className={errText} role="alert">{emailError}</p> : null}
@@ -145,13 +146,13 @@ export function ConnexionScreen({ returnTo }: ConnexionScreenProps) {
         </>
       ) : (
         <>
-          <h1 className={title}>Ton code</h1>
+          <h1 className={title}>{t('v2.connexion.code.title')}</h1>
           <p className={lede}>
-            On a envoyé un code à <strong>{email.trim()}</strong>. Saisis-le ci-dessous pour te connecter.
+            {t('v2.connexion.code.ledePre')}<strong>{email.trim()}</strong>{t('v2.connexion.code.ledePost')}
           </p>
           <div className={card}>
             <OtpCodeInput
-              label="Code de connexion"
+              label={t('v2.connexion.otpLabel')}
               value={code}
               onValueChange={onCodeChange}
               disabled={verifying}
@@ -160,10 +161,10 @@ export function ConnexionScreen({ returnTo }: ConnexionScreenProps) {
             />
             <div className={linkRow}>
               <button type="button" className={linkBtn} onClick={() => void sendCode()} disabled={sending}>
-                Renvoyer le code
+                {t('v2.connexion.resend')}
               </button>
               <button type="button" className={linkBtn} onClick={() => { setStep('email'); setCode(''); setCodeError(null); }} disabled={verifying}>
-                Modifier l’adresse e-mail
+                {t('v2.connexion.editEmail')}
               </button>
             </div>
             {emailError ? <p className={errText} role="alert">{emailError}</p> : null}

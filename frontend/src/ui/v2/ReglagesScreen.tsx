@@ -3,6 +3,7 @@ import { Link, useRouteContext } from '@tanstack/react-router';
 import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User, SpeakerHigh, Info } from '@phosphor-icons/react';
 import { Switch } from '@ark-ui/react/switch';
 import { css, cx } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import type { ThemePreference, ThemeStore } from '@/application/session/ThemeStore';
 import type { SoundStore } from '@/application/session/SoundStore';
 import { useAuth } from '@/ui/components/auth';
@@ -76,20 +77,20 @@ const chevron = css({ marginLeft: 'auto', flex: 'none', color: 'ws.khaki', opaci
 const themeCard = css({ bg: 'ws.card', borderRadius: '18px', padding: '8px', boxShadow: '0 1px 2px rgba(33,75,64,0.05)' });
 
 const THEME_OPTIONS: ReadonlyArray<{ id: ThemePreference; label: string }> = [
-  { id: 'clair', label: 'Clair' },
-  { id: 'sombre', label: 'Sombre' },
-  { id: 'auto', label: 'Auto' },
+  { id: 'clair', label: t('v2.reglages.theme.clair') },
+  { id: 'sombre', label: t('v2.reglages.theme.sombre') },
+  { id: 'auto', label: t('v2.reglages.theme.auto') },
 ];
 
 function ThemeGroup({ themeStore }: { readonly themeStore: ThemeStore }) {
   const [pref, setPref] = useState<ThemePreference>(() => themeStore.load());
   return (
-    <section aria-label="Apparence">
-      <div className={groupLabel}>Apparence</div>
+    <section aria-label={t('v2.reglages.appearance')}>
+      <div className={groupLabel}>{t('v2.reglages.appearance')}</div>
       <div className={themeCard}>
         <SegmentedControl
           mode="group"
-          ariaLabel="Thème"
+          ariaLabel={t('v2.reglages.aria.theme')}
           options={THEME_OPTIONS}
           value={pref}
           onChange={(id) => {
@@ -134,8 +135,8 @@ const switchThumb = css({
 function SoundGroup({ soundStore }: { readonly soundStore: SoundStore }) {
   const [on, setOn] = useState<boolean>(() => soundStore.load());
   return (
-    <section aria-label="Son">
-      <div className={groupLabel}>Son</div>
+    <section aria-label={t('v2.reglages.sound')}>
+      <div className={groupLabel}>{t('v2.reglages.sound')}</div>
       <div className={soundCard}>
         <Switch.Root
           checked={on}
@@ -149,8 +150,8 @@ function SoundGroup({ soundStore }: { readonly soundStore: SoundStore }) {
             <SpeakerHigh size={18} weight="bold" aria-hidden="true" />
           </span>
           <span className={soundBody}>
-            <Switch.Label className={soundLabel}>Sons</Switch.Label>
-            <span className={soundSub}>Effets sonores de la grille</span>
+            <Switch.Label className={soundLabel}>{t('v2.reglages.sound.label')}</Switch.Label>
+            <span className={soundSub}>{t('v2.reglages.sound.sub')}</span>
           </span>
           <Switch.Control className={switchControl}>
             <Switch.Thumb className={switchThumb} />
@@ -175,7 +176,7 @@ function ProfileCard() {
   // Skeleton while whoami resolves so the subtext never flips guest→name on first paint.
   if (state.status === 'loading') {
     return (
-      <div className={cx(profile)} role="status" aria-busy="true" aria-label="Chargement du compte">
+      <div className={cx(profile)} role="status" aria-busy="true" aria-label={t('v2.reglages.account.loading')}>
         <span className={avatar} aria-hidden="true">
           <User size={24} weight="bold" />
         </span>
@@ -193,7 +194,7 @@ function ProfileCard() {
         <span className={avatar} aria-hidden="true">{initialFor(state.whoami.displayName)}</span>
         <div>
           <div className={profileName}>{state.whoami.displayName}</div>
-          <div className={profileMeta}>Voir mon compte</div>
+          <div className={profileMeta}>{t('v2.reglages.profile.seeAccount')}</div>
         </div>
         <span className={chevron}>
           <CaretRight size={18} weight="bold" aria-hidden="true" />
@@ -208,8 +209,8 @@ function ProfileCard() {
         <User size={24} weight="bold" />
       </span>
       <div>
-        <div className={profileName}>Invité</div>
-        <div className={profileMeta}>Sans compte</div>
+        <div className={profileName}>{t('v2.reglages.profile.guest')}</div>
+        <div className={profileMeta}>{t('v2.reglages.profile.noAccount')}</div>
       </div>
       <span className={chevron}>
         <CaretRight size={18} weight="bold" aria-hidden="true" />
@@ -224,7 +225,7 @@ export function ReglagesScreen() {
   return (
     <PhoneShell header={<BackHeader to="/" />} backTo="/">
       <div className={stack}>
-        <h1 className={title}>Réglages</h1>
+        <h1 className={title}>{t('v2.reglages.title')}</h1>
 
         <ProfileCard />
 
@@ -233,13 +234,13 @@ export function ReglagesScreen() {
         {soundStore ? <SoundGroup soundStore={soundStore} /> : null}
 
         {canInstall ? (
-          <nav aria-label="Application">
-            <div className={groupLabel}>Application</div>
+          <nav aria-label={t('v2.reglages.app')}>
+            <div className={groupLabel}>{t('v2.reglages.app')}</div>
             <ul className={listCard}>
               <SettingsRow
                 icon={DownloadSimple}
-                label="Installer l'application"
-                sub="Sur ton écran d'accueil"
+                label={t('v2.reglages.install.label')}
+                sub={t('v2.reglages.install.sub')}
                 onClick={promptInstall}
                 last
               />
@@ -247,30 +248,30 @@ export function ReglagesScreen() {
           </nav>
         ) : null}
 
-        <nav aria-label="À propos">
-          <div className={groupLabel}>À propos</div>
+        <nav aria-label={t('v2.reglages.about')}>
+          <div className={groupLabel}>{t('v2.reglages.about')}</div>
           <ul className={listCard}>
-            <SettingsRow icon={Lock} tone="soft" to="/confidentialite" label="Confidentialité" />
-            <SettingsRow icon={FileText} tone="soft" to="/mentions-legales" label="Mentions légales" />
+            <SettingsRow icon={Lock} tone="soft" to="/confidentialite" label={t('v2.reglages.about.privacy')} />
+            <SettingsRow icon={FileText} tone="soft" to="/mentions-legales" label={t('v2.reglages.about.legal')} />
             <SettingsRow
               icon={FileText}
               tone="soft"
               to="/conditions-abonnement"
-              label="Conditions de vente"
+              label={t('v2.reglages.about.terms')}
             />
-            <SettingsRow icon={Info} tone="soft" to="/a-propos" label="À propos" last />
+            <SettingsRow icon={Info} tone="soft" to="/a-propos" label={t('v2.reglages.about')} last />
           </ul>
         </nav>
 
-        <nav aria-label="Aide">
-          <div className={groupLabel}>Aide</div>
+        <nav aria-label={t('v2.reglages.help')}>
+          <div className={groupLabel}>{t('v2.reglages.help')}</div>
           <ul className={listCard}>
-            <SettingsRow icon={Question} tone="soft" to="/aide" label="Aide & raccourcis" />
-            <SettingsRow icon={Envelope} href="mailto:contact@wordsparrow.io" label="Nous écrire" last />
+            <SettingsRow icon={Question} tone="soft" to="/aide" label={t('v2.reglages.help.shortcuts')} />
+            <SettingsRow icon={Envelope} href="mailto:contact@wordsparrow.io" label={t('v2.reglages.help.contact')} last />
           </ul>
         </nav>
 
-        <p className={foot}>WordSparrow · fait avec soin 🐦</p>
+        <p className={foot}>{t('v2.reglages.foot')}</p>
       </div>
     </PhoneShell>
   );
