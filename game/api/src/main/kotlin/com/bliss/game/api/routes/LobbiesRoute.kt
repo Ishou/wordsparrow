@@ -339,6 +339,10 @@ fun Route.lobbies(
                             )
                     }
                 is UseCaseOutcome.Success -> {
+                    // Tell any co-player still on the lobby's WebSocket that the caller's seat is gone.
+                    for (event in outcome.result.events) {
+                        event.toFrameOrNull()?.let { sessionManager.broadcast(lobbyId, it) }
+                    }
                     // A departing owner leaves the game ownerless; tell peers so their claim affordance appears (ADR-0098 §2/§6), mirroring the relinquish path.
                     if (outcome.result.value.relinquishedOwnership) {
                         sessionManager.broadcast(lobbyId, ServerToClientFrame.OwnershipChanged(lobbyId.value, null, null))
