@@ -150,6 +150,7 @@ export const gameHandlers = [
       // Mirror the server: every new lobby carries a Crockford-style
       // join code that the Accueil "Rejoindre avec un code" flow types.
       code: generateLobbyCode(),
+      ownerless: false,
     };
     putLobby(lobby);
 
@@ -801,6 +802,7 @@ export function lobbySummaryFixture(
     connectedCount: 1,
     lastActivityAt: '2026-05-10T18:00:00Z',
     progress: { solvedCells: 0, totalCells: 0 },
+    ownerless: false,
     ...overrides,
   };
 }

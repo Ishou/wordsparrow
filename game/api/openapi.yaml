@@ -278,6 +278,72 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+    delete:
+      operationId: relinquishLobbyOwnership
+      summary: Relinquish ownership of a lobby, making it ownerless.
+      description: |
+        Relinquishes the calling player's ownership of the lobby, setting
+        `owner_user_id` to null so the lobby becomes **ownerless** and any
+        present player may claim it via `POST .../ownership` (ADR-0098 §2).
+        A relinquished game leaves the owner's active-game quota and their
+        "Mes parties" listing; co-players keep playing in the now-ownerless
+        room.
+
+        Only the **current owner** (`owner_user_id == caller`) may relinquish
+        (ADR-0098 §2, threat model): the disconnect grace path never
+        relinquishes. Cookie-authed; identity comes from the
+        `__Secure-ws_session` cookie, so there is no request body. The write
+        is synchronous — on success the full `Lobby` resource is returned,
+        now ownerless — which fixes the racy relinquish-then-create flow that
+        the WS-frame-only path suffered.
+      tags: [lobbies]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/LobbyIdPath'
+      responses:
+        '200':
+          description: Ownership relinquished. Body is the `Lobby` snapshot, now ownerless.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lobby'
+        '400':
+          description: |
+            Path parameter `lobbyId` does not match the base58 nanoid pattern.
+            RFC 7807; `type` is `https://bliss.example/errors/invalid-lobby-id`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: |
+            Relinquishing requires a signed-in player (ADR-0098 §2). A request
+            with no `__Secure-ws_session` cookie, or a session revoked between
+            the cached and fresh whoami lookups, is rejected. RFC 7807;
+            `type` is `https://bliss.example/errors/auth-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: |
+            The caller is not the current owner of this lobby, so may not
+            relinquish it (ADR-0098 §2, threat model). RFC 7807;
+            `type` is `https://bliss.example/errors/lobby-relinquish-forbidden`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: |
+            No lobby exists for the supplied id, or it has been
+            garbage-collected (ADR-0055 GC; ADR-0098 §4). RFC 7807;
+            `type` is `https://bliss.example/errors/lobby-not-found`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 
   /v1/sessions/{sessionId}/lobbies:
     get:
@@ -934,7 +1000,7 @@ components:
 
     Lobby:
       type: object
-      required: [id, ownerSessionId, players, state, gridConfig, game]
+      required: [id, ownerSessionId, players, state, gridConfig, game, ownerless]
       description: |
         Full lobby snapshot. `game` is in `required` because the field is
         always present on the wire — `null` (state == WAITING) and a populated
@@ -963,6 +1029,11 @@ components:
             - $ref: '#/components/schemas/GameSession'
           nullable: true
           description: Null while WAITING; populated while IN_PROGRESS or COMPLETED.
+        ownerless:
+          type: boolean
+          description: >-
+            True when the lobby has no owner (owner_user_id is null) — it can be
+            claimed via POST .../ownership. ADR-0098.
         code:
           type: string
           minLength: 6
@@ -993,7 +1064,7 @@ components:
 
     LobbySummary:
       type: object
-      required: [id, code, state, gridConfig, playerCount, connectedCount, lastActivityAt, progress]
+      required: [id, code, state, gridConfig, playerCount, connectedCount, lastActivityAt, progress, ownerless]
       description: |
         Compact view of a lobby for the "Mes parties" listing. Carries just
         enough to render a row in the Accueil card (label, code, grid size,
@@ -1047,6 +1118,11 @@ components:
           $ref: '#/components/schemas/Instant'
         progress:
           $ref: '#/components/schemas/LobbyProgress'
+        ownerless:
+          type: boolean
+          description: >-
+            True when the lobby has no owner (owner_user_id is null) — it can be
+            claimed via POST .../ownership. ADR-0098.
         title:
           type: string
           minLength: 1

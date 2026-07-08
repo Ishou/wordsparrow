@@ -283,6 +283,7 @@ ADR-0098  game/api/src/main/kotlin/com/bliss/game/api/routes/LobbiesRoute.kt  Cr
 ADR-0098  game/api/src/main/kotlin/com/bliss/game/api/routes/LobbyWebSocketRoute.kt  Explicit leaveLobby frame relinquishes ownership; disconnect grace path drops presence only, keeps owner_user_id
 ADR-0098  game/infrastructure/src/main/kotlin/com/bliss/game/infrastructure/persistence/PostgresLobbyRepository.kt  findActiveByOwnerUser + findIdleOwnerless; eraseSession rule 2 vacates (owner_user_id NULL + owner_session_id sentinel) instead of transferring
 ADR-0098  game/api/openapi.yaml  POST /v1/lobbies/{lobbyId}/ownership (claim): 200 lobby / 401 / 403 not-present-or-owned / 409 quota
+ADR-0098  game/api/openapi.yaml  ownerless boolean on Lobby + LobbySummary (wire ownerless-ness, not inferred from ownershipChanged events); DELETE /v1/lobbies/{lobbyId}/ownership (relinquish): 200 ownerless-lobby / 401 / 403 not-owner / 404
 ADR-0098  frontend/src/ui/home/HomeScreen.tsx  handleCreateCoop → useCreateOrResume: IN_PROGRESS create-response ⇒ owned-game modal (rejoin / sole-occupant new / subtle subscribe hint), else navigate
 # ADR-0098: Multiplayer lobby ownership as a claimable lease — 1 active game by owner_user_id (sticky across disconnect); explicit relinquish→ownerless→claim; RGPD rule 2 vacates not transfers; 7d ownerless GC; amends ADR-0055 & ADR-0083
 ```

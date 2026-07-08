@@ -104,7 +104,24 @@ export interface paths {
          *     owner.
          */
         post: operations["claimLobbyOwnership"];
-        delete?: never;
+        /**
+         * Relinquish ownership of a lobby, making it ownerless.
+         * @description Relinquishes the calling player's ownership of the lobby, setting
+         *     `owner_user_id` to null so the lobby becomes **ownerless** and any
+         *     present player may claim it via `POST .../ownership` (ADR-0098 §2).
+         *     A relinquished game leaves the owner's active-game quota and their
+         *     "Mes parties" listing; co-players keep playing in the now-ownerless
+         *     room.
+         *
+         *     Only the **current owner** (`owner_user_id == caller`) may relinquish
+         *     (ADR-0098 §2, threat model): the disconnect grace path never
+         *     relinquishes. Cookie-authed; identity comes from the
+         *     `__Secure-ws_session` cookie, so there is no request body. The write
+         *     is synchronous — on success the full `Lobby` resource is returned,
+         *     now ownerless — which fixes the racy relinquish-then-create flow that
+         *     the WS-frame-only path suffered.
+         */
+        delete: operations["relinquishLobbyOwnership"];
         options?: never;
         head?: never;
         patch?: never;
@@ -574,6 +591,8 @@ export interface components {
             gridConfig: components["schemas"]["GridConfig"];
             /** @description Null while WAITING; populated while IN_PROGRESS or COMPLETED. */
             game: components["schemas"]["GameSession"] | null;
+            /** @description True when the lobby has no owner (owner_user_id is null) — it can be claimed via POST .../ownership. ADR-0098. */
+            ownerless: boolean;
             /**
              * @description Human-friendly join code surfaced to non-owner players (the
              *     Accueil "Rejoindre avec un code" flow renders this in the
@@ -639,6 +658,8 @@ export interface components {
             connectedCount: number;
             lastActivityAt: components["schemas"]["Instant"];
             progress: components["schemas"]["LobbyProgress"];
+            /** @description True when the lobby has no owner (owner_user_id is null) — it can be claimed via POST .../ownership. ADR-0098. */
+            ownerless: boolean;
             /**
              * @description Optional label mirroring `Lobby.title`. Absent when the owner
              *     did not set one at creation; never `null` on the wire.
@@ -1011,6 +1032,81 @@ export interface operations {
              *     `type` is `https://bliss.example/errors/active-game-quota-exceeded`.
              */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    relinquishLobbyOwnership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 8-char base58 nanoid identifying the lobby (ADR-0020). */
+                lobbyId: components["parameters"]["LobbyIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ownership relinquished. Body is the `Lobby` snapshot, now ownerless. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lobby"];
+                };
+            };
+            /**
+             * @description Path parameter `lobbyId` does not match the base58 nanoid pattern.
+             *     RFC 7807; `type` is `https://bliss.example/errors/invalid-lobby-id`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description Relinquishing requires a signed-in player (ADR-0098 §2). A request
+             *     with no `__Secure-ws_session` cookie, or a session revoked between
+             *     the cached and fresh whoami lookups, is rejected. RFC 7807;
+             *     `type` is `https://bliss.example/errors/auth-required`.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The caller is not the current owner of this lobby, so may not
+             *     relinquish it (ADR-0098 §2, threat model). RFC 7807;
+             *     `type` is `https://bliss.example/errors/lobby-relinquish-forbidden`.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description No lobby exists for the supplied id, or it has been
+             *     garbage-collected (ADR-0055 GC; ADR-0098 §4). RFC 7807;
+             *     `type` is `https://bliss.example/errors/lobby-not-found`.
+             */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

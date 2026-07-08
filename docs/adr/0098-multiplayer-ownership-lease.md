@@ -209,3 +209,14 @@ no column changes).
 **Registry:** `docs/adr/INDEX.md` gains ADR-0098 path bindings; ADR-0055 and
 ADR-0083 get amendment notes; the ADR-0039→0055 comment mislabel is corrected in
 touched files.
+
+## Amendments
+
+### 2026-07-08 — ownership on the wire + REST relinquish
+
+The shipped implementation inferred ownerless-ness from live `ownershipChanged`
+events only and relinquished via a WS frame; this broke reload-into-ownerless,
+list/claim discovery, and made relinquish-then-create racy. The `Lobby` and
+`LobbySummary` wire schemas gain `ownerless: boolean`, and a synchronous
+`DELETE /v1/lobbies/{lobbyId}/ownership` is added (authorized by
+`owner_user_id == caller`).
