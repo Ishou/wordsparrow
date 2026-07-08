@@ -72,7 +72,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 const cgvBox = () => screen.getByRole('checkbox', { name: /Conditions de vente/ });
 const waiverBox = () => screen.getByRole('checkbox', { name: /droit de rétractation/ });
-const subscribeButton = () => screen.getByRole('button', { name: "S'abonner" });
+const subscribeButton = () => screen.getByRole('button', { name: 'S’abonner' });
 
 const originalLocation = window.location;
 
@@ -97,7 +97,7 @@ describe('AbonnementOffer consent gate (ADR-0094)', () => {
         <AbonnementOffer client={fakeBillingClient()} />
       </AuthProvider>,
     );
-    const cta = await screen.findByRole('button', { name: /Se connecter pour s'abonner/ });
+    const cta = await screen.findByRole('button', { name: /Se connecter pour s’abonner/ });
     expect(screen.queryByRole('checkbox', { name: /Conditions de vente/ })).toBeNull();
     await act(async () => {
       fireEvent.click(cta);

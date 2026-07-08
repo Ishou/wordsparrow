@@ -161,7 +161,7 @@ describe('ClueBanner', () => {
         focusedPosition={null}
       />,
     );
-    expect(getByText(/Touchez une case/i)).toBeTruthy();
+    expect(getByText(/Touche une case/i)).toBeTruthy();
   });
 
   it('reserves the alt block when clue is null so the banner height does not collapse', () => {

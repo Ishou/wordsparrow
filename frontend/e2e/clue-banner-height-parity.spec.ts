@@ -25,7 +25,7 @@ test('banner height is identical across empty / single-clue / intersection focus
   await page.waitForSelector('[role="grid"]', { state: 'visible' });
   await expect(page.getByRole('group', { name: 'Clavier mots fléchés' })).toBeVisible();
 
-  // State A: empty — page loads with no cell focused; banner shows the "Touchez une case" placeholder.
+  // State A: empty — page loads with no cell focused; banner shows the "Touche une case" placeholder.
   const hEmpty = await bannerHeight(page);
 
   // State B/C: walk cells to capture the first single-clue and first intersection heights.

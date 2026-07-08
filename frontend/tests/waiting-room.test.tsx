@@ -47,12 +47,12 @@ describe('WaitingRoom — player list', () => {
     expect(within(list).getByText(peerPseudonym)).toBeInTheDocument();
   });
 
-  it('marks the local player with a "vous" badge', () => {
+  it('marks the local player with a "toi" badge', () => {
     render(
       <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
     );
-    // Exactly one "vous" badge — the row of the local player.
-    expect(screen.getAllByText('vous')).toHaveLength(1);
+    // Exactly one "toi" badge — the row of the local player.
+    expect(screen.getAllByText('toi')).toHaveLength(1);
   });
 
   it('marks the lobby owner with a "propriétaire" badge', () => {
@@ -128,8 +128,8 @@ describe('WaitingRoom — pseudonym editor', () => {
       <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} onRename={onRename} />,
     );
     // Enter edit mode by clicking the pseudonym button.
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier votre pseudonyme.*${ownerPseudonym}`, 'i') }));
-    const input = screen.getByLabelText(/votre pseudonyme/i) as HTMLInputElement;
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier ton pseudonyme.*${ownerPseudonym}`, 'i') }));
+    const input = screen.getByLabelText(/ton pseudonyme/i) as HTMLInputElement;
     fireEvent.change(input, { target: { value: '  Nouveau Pseudo  ' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(onRename).toHaveBeenCalledWith('Nouveau Pseudo');
@@ -142,8 +142,8 @@ describe('WaitingRoom — pseudonym editor', () => {
     render(
       <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier votre pseudonyme.*${ownerPseudonym}`, 'i') }));
-    const input = screen.getByLabelText(/votre pseudonyme/i) as HTMLInputElement;
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier ton pseudonyme.*${ownerPseudonym}`, 'i') }));
+    const input = screen.getByLabelText(/ton pseudonyme/i) as HTMLInputElement;
     expect(input.maxLength).toBe(32);
   });
 
@@ -155,8 +155,8 @@ describe('WaitingRoom — pseudonym editor', () => {
     render(
       <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} onRename={onRename} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier votre pseudonyme.*${ownerPseudonym}`, 'i') }));
-    const input = screen.getByLabelText(/votre pseudonyme/i) as HTMLInputElement;
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier ton pseudonyme.*${ownerPseudonym}`, 'i') }));
+    const input = screen.getByLabelText(/ton pseudonyme/i) as HTMLInputElement;
     // 33 chars - one over the 32 cap.
     const tooLong = 'a'.repeat(33);
     fireEvent.change(input, { target: { value: tooLong } });
@@ -173,7 +173,7 @@ describe('WaitingRoom — pseudonym editor', () => {
         pseudonymError="Pseudonym must be at most 32 chars, was 33"
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier votre pseudonyme.*${ownerPseudonym}`, 'i') }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier ton pseudonyme.*${ownerPseudonym}`, 'i') }));
     expect(screen.getByRole('alert')).toHaveTextContent(/at most 32 chars/i);
   });
 
@@ -190,9 +190,9 @@ describe('WaitingRoom — pseudonym editor', () => {
     );
     // Open the editor (also fires the clear so the error doesn't survive
     // the next attempt).
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier votre pseudonyme.*${ownerPseudonym}`, 'i') }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier ton pseudonyme.*${ownerPseudonym}`, 'i') }));
     onClearPseudonymError.mockClear();
-    const input = screen.getByLabelText(/votre pseudonyme/i) as HTMLInputElement;
+    const input = screen.getByLabelText(/ton pseudonyme/i) as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'Alice' } });
     expect(onClearPseudonymError).toHaveBeenCalled();
   });
@@ -484,7 +484,7 @@ describe('WaitingRoom — player row alignment', () => {
     );
     const ownerRow = screen.getAllByTestId('player-row')[0]!;
     const nameEl = within(ownerRow).getByText(ownerPseudonym);
-    const badgesEl = within(ownerRow).getByText(/vous/i);
+    const badgesEl = within(ownerRow).getByText(/toi/i);
     // Screen-reader order: pseudonym announces before the badge group.
     expect(
       nameEl.compareDocumentPosition(badgesEl) & Node.DOCUMENT_POSITION_FOLLOWING,

@@ -86,7 +86,7 @@ test('anon user sees the hint button disabled with the sign-in tooltip', async (
   await expect(hintButton).toBeDisabled();
   await expect(hintButton).toHaveAttribute(
     'title',
-    'Connectez-vous pour utiliser les indices.',
+    'Connecte-toi pour utiliser les indices.',
   );
   await expect(hintButton).toHaveAttribute('aria-disabled', 'true');
 });

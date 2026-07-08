@@ -39,7 +39,7 @@ describe('CurrentCluePanel (standalone)', () => {
   it('shows a placeholder when no clue is selected', () => {
     render(<CurrentCluePanel clue={null} />);
     expect(
-      screen.getByText(/sélectionnez une case pour afficher la définition/i),
+      screen.getByText(/sélectionne une case pour afficher la définition/i),
     ).toBeInTheDocument();
   });
 
@@ -64,7 +64,7 @@ describe('CurrentCluePanel (wired into Grid)', () => {
     const { container } = render(<Grid puzzle={TEST_PUZZLE} />);
     // Initial render: panel shows placeholder.
     expect(
-      screen.getByText(/sélectionnez une case pour afficher la définition/i),
+      screen.getByText(/sélectionne une case pour afficher la définition/i),
     ).toBeInTheDocument();
     // Focus a cell on `across-2`. Panel reflects the active across clue.
     const target = inputAt(container, 1, 1)!;

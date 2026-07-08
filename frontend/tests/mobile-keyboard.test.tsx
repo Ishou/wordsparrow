@@ -251,7 +251,7 @@ describe('MobileKeyboard banner + action row + direction', () => {
 
   it('shows empty-state hint when activeClue is null', () => {
     const { getByText } = render(<MobileKeyboard {...fullProps} activeClue={null} />);
-    expect(getByText(/Touchez une case/i)).toBeTruthy();
+    expect(getByText(/Touche une case/i)).toBeTruthy();
   });
 });
 

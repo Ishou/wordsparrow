@@ -58,7 +58,7 @@ describe('useHintGate', () => {
       expect(result.current).toMatchObject({
         disabled: true,
         'aria-disabled': true,
-        title: 'Connectez-vous pour utiliser les indices.',
+        title: 'Connecte-toi pour utiliser les indices.',
       }),
     );
   });
@@ -93,7 +93,7 @@ describe('useHintGate', () => {
       expect(result.current).toMatchObject({
         disabled: true,
         'aria-disabled': true,
-        title: 'Connectez-vous pour utiliser les indices.',
+        title: 'Connecte-toi pour utiliser les indices.',
       }),
     );
   });
