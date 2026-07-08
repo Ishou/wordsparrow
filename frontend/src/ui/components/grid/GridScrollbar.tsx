@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import { css } from 'styled-system/css';
 import type { ReactZoomPanPinchContentRef } from 'react-zoom-pan-pinch';
 import { computeThumbGeometry, thumbDeltaToPosition } from './transformMath';
+import { t } from '@/ui/i18n';
 
 const TRACK_THICKNESS_PX = 8;
 const TRACK_THICKNESS_PX_MOBILE = 6;
@@ -182,7 +183,7 @@ export function GridScrollbar({
       role="scrollbar"
       aria-orientation={orientation}
       aria-controls="puzzle-grid"
-      aria-label={isVertical ? 'Défilement vertical de la grille' : 'Défilement horizontal de la grille'}
+      aria-label={isVertical ? t('grid.scrollbar.aria.vertical') : t('grid.scrollbar.aria.horizontal')}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={progressPct}

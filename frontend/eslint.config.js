@@ -15,6 +15,17 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import importPlugin from 'eslint-plugin-import';
 import boundaries from 'eslint-plugin-boundaries';
 
+// i18n rollout guard: accented-French copy hardcoded in product JSX bypasses the t()/messages.fr.ts catalog.
+const FRENCH_ACCENT = '[éèêëàâäçùûüôöîïœæÿÉÈÊËÀÂÄÇÙÛÜÔÖÎÏŒÆŸ…]';
+const FRENCH_MSG = 'Hardcoded French copy — route it through t() / messages.fr.ts (i18n rollout).';
+const noHardcodedFrench = [
+  { selector: `JSXText[value=/${FRENCH_ACCENT}/]`, message: FRENCH_MSG },
+  {
+    selector: `JSXAttribute[name.name=/^(aria-label|placeholder|title)$/] Literal[value=/${FRENCH_ACCENT}/]`,
+    message: FRENCH_MSG,
+  },
+];
+
 export default tseslint.config(
   {
     ignores: [
@@ -142,7 +153,25 @@ export default tseslint.config(
           message:
             "Don't render `Error.message` in the UI — it leaks browser/English strings. Use `messageForApiError(cause)` from `@/ui/lib/apiErrorMessage`, or map typed errors to local French copy at the route. Justified exceptions need an eslint-disable-next-line with a one-line rationale.",
         },
+        ...noHardcodedFrench,
       ],
     },
+  },
+  // Same i18n guard for the standalone v2 design system (ADR-0072).
+  {
+    files: ['src/design-system/**/*.{ts,tsx}'],
+    rules: { 'no-restricted-syntax': ['error', ...noHardcodedFrench] },
+  },
+  // i18n rollout: catalog + deferred legal prose + dev-only gallery + co-located tests keep their French literals.
+  {
+    files: [
+      'src/ui/i18n/**',
+      'src/ui/components/PrivacyNotice.tsx',
+      'src/ui/v2/ConditionsAbonnementScreen.tsx',
+      'src/design-system/gallery/**',
+      'src/ui/**/*.test.{ts,tsx}',
+      'src/design-system/**/*.{test,stories}.{ts,tsx}',
+    ],
+    rules: { 'no-restricted-syntax': 'off' },
   },
 );

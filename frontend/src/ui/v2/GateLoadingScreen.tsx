@@ -1,4 +1,5 @@
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 
@@ -9,7 +10,7 @@ export function GateLoadingScreen() {
   return (
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <p className={statusCard} role="status">
-        Chargement…
+        {t('v2.gate.loading')}
       </p>
     </PhoneShell>
   );
