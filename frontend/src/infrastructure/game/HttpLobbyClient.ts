@@ -120,6 +120,12 @@ export function createHttpLobbyClient(
       );
       return wireToDomain(wire);
     },
+    async relinquishOwnership(lobbyId: LobbyId) {
+      const wire = await safeRequest(() =>
+        client.DELETE('/v1/lobbies/{lobbyId}/ownership', { params: { path: { lobbyId } } }),
+      );
+      return wireToDomain(wire);
+    },
     async findByCode(code: string) {
       const wire = await safeRequest(() =>
         client.GET('/v1/lobbies/by-code/{code}', { params: { path: { code } } }),
@@ -202,6 +208,8 @@ function wireToDomain(wire: WireLobby): Lobby {
     gridConfig: wire.gridConfig,
     game: wire.game as unknown as Lobby['game'],
     code: wire.code ?? null,
+    // Only carry the ownerless flag when set; absent ⇒ owned (keeps the shape minimal for owned lobbies).
+    ...(wire.ownerless ? { ownerless: true } : {}),
   };
 }
 
@@ -224,5 +232,6 @@ function wireToSummary(wire: WireLobbySummary): LobbySummary {
       totalCells: wire.progress.totalCells,
     },
     ...(wire.title != null ? { title: wire.title } : {}),
+    ...(wire.ownerless ? { ownerless: true } : {}),
   };
 }

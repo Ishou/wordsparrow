@@ -264,7 +264,36 @@ export const gameHandlers = [
         `No lobby with id ${lobbyId}.`,
       );
     }
-    return HttpResponse.json(lobby);
+    // Claim clears the ownerless flag; the caller becomes the owner.
+    const claimed = updateLobby(lobbyId, (current) => ({ ...current, ownerless: false }));
+    return HttpResponse.json(claimed ?? lobby);
+  }),
+
+  // DELETE /v1/lobbies/:lobbyId/ownership — relinquish (ADR-0098 §2 amendment).
+  // Synchronous REST write: nulls owner_user_id server-side and returns the
+  // now-ownerless snapshot, so the "Démarrer une nouvelle partie" flow can
+  // create without racing a WS frame.
+  http.delete('*/v1/lobbies/:lobbyId/ownership', ({ params }) => {
+    const lobbyId = String(params.lobbyId);
+    if (!LOBBY_ID_PATTERN.test(lobbyId)) {
+      return problem(
+        400,
+        'https://bliss.example/errors/invalid-lobby-id',
+        'Invalid lobbyId',
+        `\`${lobbyId}\` does not match the base58 nanoid pattern.`,
+      );
+    }
+    const lobby = getLobby(lobbyId);
+    if (!lobby) {
+      return problem(
+        404,
+        'https://bliss.example/errors/lobby-not-found',
+        'Lobby not found',
+        `No lobby with id ${lobbyId}.`,
+      );
+    }
+    const relinquished = updateLobby(lobbyId, (current) => ({ ...current, ownerless: true }));
+    return HttpResponse.json(relinquished ?? lobby);
   }),
 
   // GET /v1/lobbies/:lobbyId — replay the persisted lobby.

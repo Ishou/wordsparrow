@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { CaretRight } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { fetchAllDailySummaries, type DailySummary, type PuzzleRepository } from '@/application';
 import type { AuthClient } from '@/application/auth';
-import { LobbyClientError, type GameClient, type LobbyClient, type LobbySummary } from '@/application/game';
+import { LobbyClientError, type LobbyClient, type LobbySummary } from '@/application/game';
 import { countFilledCells, type SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
-import type { Pseudonym, SessionId } from '@/domain/game';
+import type { LobbyId, Pseudonym, SessionId } from '@/domain/game';
 import { Skeleton } from '@/design-system';
 import { useAuth } from '@/ui/components/auth';
 import { useCanSubscribe } from '@/ui/components/billing';
@@ -78,7 +78,6 @@ export function GrillesArchiveScreen({
   onglet,
   onOngletChange,
   lobbyClient,
-  gameClient,
   getSession,
   authClient,
 }: {
@@ -88,7 +87,6 @@ export function GrillesArchiveScreen({
   readonly onOngletChange: (onglet: GrillesOnglet) => void;
   // Multiplayer adapters are optional — absent when the flag is off (ADR-0018 §10).
   readonly lobbyClient?: LobbyClient;
-  readonly gameClient?: GameClient;
   readonly getSession?: () => GrillesSession;
   readonly authClient?: AuthClient;
 }) {
@@ -107,12 +105,23 @@ export function GrillesArchiveScreen({
   const coop = useCreateOrResume({
     lobbyClient: lobbyClient!,
     getSession: getSession!,
-    gameClient,
     // Safety net for a session that expired between load and tap (ADR-0083).
     onError: (cause) => {
       if (cause instanceof LobbyClientError && cause.kind === 'unauthorized') setHostSignInOpen(true);
     },
   });
+
+  // ADR-0098 §6: an ownerless "Reprendre" row claims ownership, then navigates into the now-owned lobby.
+  const handleClaimLobby = useCallback(
+    (lobbyId: LobbyId) => {
+      if (lobbyClient == null) return;
+      void lobbyClient
+        .claimOwnership(lobbyId)
+        .then(() => navigate({ to: '/lobby/$lobbyId', params: { lobbyId } }))
+        .catch(() => {});
+    },
+    [lobbyClient, navigate],
+  );
   const coopPending = coop.pending || coop.startingNew;
 
   const todayIso = useMemo(() => isoUtcDate(new Date()), []);
@@ -271,7 +280,7 @@ export function GrillesArchiveScreen({
 
   const plusieurs =
     lobbies.length > 0 ? (
-      <GrillesLobbiesSection lobbies={lobbies} />
+      <GrillesLobbiesSection lobbies={lobbies} onClaim={handleClaimLobby} />
     ) : (
       <>
         <LobbiesEmptyState onCreate={createParty} />

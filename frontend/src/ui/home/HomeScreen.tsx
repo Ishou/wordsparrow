@@ -5,7 +5,7 @@ import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
 import { extractLobbyCode, LOBBY_CODE_PATTERN } from '@/domain/game/lobbyCode';
 import type { DailySummary, PuzzleRepository, WordsRepository } from '@/application';
-import { LobbyClientError, type GameClient, type LobbyClient } from '@/application/game';
+import { LobbyClientError, type LobbyClient } from '@/application/game';
 import { useOptionalAuth } from '@/ui/components/auth';
 import { useCreateOrResume } from '@/ui/components/lobby/useCreateOrResume';
 import { OwnedGameModal } from '@/ui/v2/multiplayer/OwnedGameModal';
@@ -193,7 +193,6 @@ export function HomeScreen({
   soloEntriesStore,
   wordsRepository,
   lobbyClient,
-  gameClient,
   getSession,
 }: {
   readonly puzzleRepository: PuzzleRepository;
@@ -201,7 +200,6 @@ export function HomeScreen({
   readonly wordsRepository?: WordsRepository;
   // Present only when the multiplayer flag is on (ADR-0018 §10); gates the co-op entry.
   readonly lobbyClient?: LobbyClient;
-  readonly gameClient?: GameClient;
   readonly getSession?: () => HomeSession;
 }) {
   const navigate = useNavigate();
@@ -218,7 +216,6 @@ export function HomeScreen({
   const coop = useCreateOrResume({
     lobbyClient: lobbyClient!,
     getSession: getSession!,
-    gameClient,
     // Safety net for a session that expired between load and tap (ADR-0083).
     onError: (cause) => {
       if (cause instanceof LobbyClientError && cause.kind === 'unauthorized') setHostSignInOpen(true);

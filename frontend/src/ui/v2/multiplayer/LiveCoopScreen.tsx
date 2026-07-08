@@ -117,6 +117,8 @@ export interface LiveCoopScreenProps {
   readonly subscribeToRemoteCellUpdates: (handler: (event: GameEvent) => void) => Unsubscribe;
   readonly subscribeToRemotePresence: (handler: (event: GameEvent) => void) => Unsubscribe;
   readonly onLeave: () => void;
+  // ADR-0098 §6: snapshot-authoritative ownerless flag (drives the claim banner on reload/re-entry); live `ownershipChanged` is applied on top.
+  readonly ownerless?: boolean;
   // ADR-0098 §6: claim ownership of a now-ownerless game.
   readonly onClaim?: () => Promise<void>;
   readonly soundPlayer?: SoundPlayer;
@@ -138,6 +140,7 @@ export function LiveCoopScreen({
   subscribeToRemoteCellUpdates,
   subscribeToRemotePresence,
   onLeave,
+  ownerless = false,
   onClaim,
   soundPlayer,
   soundStore,
@@ -238,16 +241,16 @@ export function LiveCoopScreen({
     return unsubscribe;
   }, [subscribeToRemoteCellUpdates, applyRemoteCellUpdate, noteServerReject, sessionId]);
 
-  // ADR-0098 §6: the snapshot carries no `owner_user_id`, so ownerless is derived live from the `ownershipChanged` broadcast (`null` = ownerless, `undefined` = unknown ⇒ treated as owned).
-  const [ownerUserId, setOwnerUserId] = useState<string | null | undefined>(undefined);
+  // ADR-0098 §6: ownerless is snapshot-authoritative (works on reload/re-entry); a live `ownershipChanged` frame then overrides it (`undefined` = no live signal yet ⇒ fall back to the snapshot).
+  const [liveOwnerUserId, setLiveOwnerUserId] = useState<string | null | undefined>(undefined);
   const [claiming, setClaiming] = useState(false);
   useEffect(() => {
     const unsubscribe = subscribeToRemoteCellUpdates((event) => {
-      if (event.type === 'ownershipChanged') setOwnerUserId(event.newOwnerUserId);
+      if (event.type === 'ownershipChanged') setLiveOwnerUserId(event.newOwnerUserId);
     });
     return unsubscribe;
   }, [subscribeToRemoteCellUpdates]);
-  const isOwnerless = ownerUserId === null;
+  const isOwnerless = liveOwnerUserId !== undefined ? liveOwnerUserId === null : ownerless;
   const handleClaim = useCallback(() => {
     if (!onClaim || claiming) return;
     setClaiming(true);

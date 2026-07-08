@@ -115,6 +115,33 @@ describe('<MyLobbiesSection> — progress bar', () => {
   });
 });
 
+describe('<MyLobbiesSection> — ownerless claim (ADR-0098 §6)', () => {
+  const ownerless: LobbySummary = {
+    ...lobby,
+    state: 'IN_PROGRESS',
+    ownerless: true,
+  };
+
+  it('an ownerless row triggers claimOwnership instead of a plain navigate', async () => {
+    const onClaim = vi.fn();
+    renderAt(<MyLobbiesSection lobbies={[ownerless]} onClaim={onClaim} />);
+    // The title row is a button (claim), not a navigation link.
+    const claim = await screen.findByRole('button', { name: new RegExp(String(ownerless.gridConfig.width)) });
+    act(() => { fireEvent.click(claim); });
+    expect(onClaim).toHaveBeenCalledWith(ownerless.id);
+  });
+
+  it('a non-ownerless row stays a navigation link', async () => {
+    const onClaim = vi.fn();
+    renderAt(<MyLobbiesSection lobbies={[{ ...lobby, state: 'IN_PROGRESS' }]} onClaim={onClaim} />);
+    await screen.findByTestId('lobby-players');
+    expect(onClaim).not.toHaveBeenCalled();
+    // Title is rendered inside an anchor (Link), never a claim button.
+    const link = document.querySelector('a[href="/lobby/AAAA1111BBBB2222CCCC3333"]');
+    expect(link).toBeTruthy();
+  });
+});
+
 describe('<MyLobbiesSection> — empty state', () => {
   it('renders the empty-state blurb when no lobbies are present', async () => {
     renderAt(<MyLobbiesSection lobbies={[]} />);

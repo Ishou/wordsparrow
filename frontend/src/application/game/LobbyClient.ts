@@ -35,6 +35,18 @@ export interface LobbyClient {
   claimOwnership(lobbyId: LobbyId): Promise<Lobby>;
 
   /**
+   * `DELETE /v1/lobbies/{lobbyId}/ownership`. Relinquishes the calling
+   * owner's lease so the lobby becomes **ownerless** (ADR-0098 §2), leaving
+   * the caller's active-game quota synchronously. Cookie-authed — no request
+   * body. Resolves with the now-ownerless `Lobby` snapshot. This synchronous
+   * REST write replaces the racy WS `leaveLobby`-then-create dance the
+   * "Démarrer une nouvelle partie" flow used to run. Throws
+   * {@link LobbyClientError} with `kind: 'validation'` (403 — not the owner),
+   * `kind: 'unauthorized'` (401), or `kind: 'not-found'` (404).
+   */
+  relinquishOwnership(lobbyId: LobbyId): Promise<Lobby>;
+
+  /**
    * `GET /v1/lobbies/{lobbyId}`. Bootstraps the lobby route loader before
    * the WebSocket opens. Throws {@link LobbyClientError} with
    * `kind: 'not-found'` when the lobby has never existed or has been GC'd
@@ -106,6 +118,8 @@ export interface LobbySummary {
   readonly lastActivityAt: string;
   readonly progress: LobbyProgress;
   readonly title?: string;
+  // ADR-0098: true when the lobby is ownerless — the "Reprendre" row claims it rather than plain-navigating. Absent ⇒ owned.
+  readonly ownerless?: boolean;
 }
 
 export interface LobbyProgress {

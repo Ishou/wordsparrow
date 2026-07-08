@@ -6,7 +6,7 @@ import { Route as AppLayoutRoute } from './app-layout';
 
 function HomeRouteComponent() {
   // forward multiplayer adapters from context so HomeScreen shows co-op + join when the flag is on (undefined hides them)
-  const { puzzleRepository, soloEntriesStore, wordsRepository, lobbyClient, gameClient, getSession } =
+  const { puzzleRepository, soloEntriesStore, wordsRepository, lobbyClient, getSession } =
     Route.useRouteContext();
   return (
     <HomeScreen
@@ -14,7 +14,6 @@ function HomeRouteComponent() {
       soloEntriesStore={soloEntriesStore}
       wordsRepository={wordsRepository}
       lobbyClient={lobbyClient}
-      gameClient={gameClient}
       getSession={getSession}
     />
   );

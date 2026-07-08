@@ -177,6 +177,37 @@ describe('HttpLobbyClient.getLobby', () => {
   });
 });
 
+describe('HttpLobbyClient.relinquishOwnership', () => {
+  it('DELETEs the ownership subresource and maps the 200 body to a domain Lobby (ownerless)', async () => {
+    let method: string | null = null;
+    let calledUrl: string | null = null;
+    server.use(
+      http.delete(`${BASE_URL}/v1/lobbies/:lobbyId/ownership`, ({ request }) => {
+        method = request.method;
+        calledUrl = request.url;
+        return HttpResponse.json({ ...lobbyFixture, ownerless: true });
+      }),
+    );
+
+    const relinquished = await makeClient().relinquishOwnership(lobbyId);
+
+    expect(method).toBe('DELETE');
+    expect(calledUrl).toBe(`${BASE_URL}/v1/lobbies/${lobbyId}/ownership`);
+    expect(relinquished.ownerless).toBe(true);
+  });
+
+  it('lifts a 403 (not the owner) into LobbyClientError(kind: validation)', async () => {
+    const problem = problemBody(403, 'Only the owner may relinquish',
+      'https://bliss.example/errors/lobby-relinquish-forbidden');
+    server.use(
+      http.delete(`${BASE_URL}/v1/lobbies/:lobbyId/ownership`, () => respondProblem(403, problem)),
+    );
+
+    await expectError(makeClient().relinquishOwnership(lobbyId),
+      { kind: 'validation', status: 403, type: problem.type });
+  });
+});
+
 describe('HttpLobbyClient.listMyLobbies', () => {
   const summaryFixture: components['schemas']['LobbySummary'] = {
     id: '7Hk2pQrS',
@@ -226,6 +257,7 @@ describe('HttpLobbyClient.listMyLobbies', () => {
       state: summaryFixture.state,
       gridConfig: summaryFixture.gridConfig,
       playerCount: summaryFixture.playerCount,
+      connectedCount: summaryFixture.connectedCount,
       lastActivityAt: summaryFixture.lastActivityAt,
       progress: summaryFixture.progress,
       title: summaryFixture.title,

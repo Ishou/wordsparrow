@@ -7,7 +7,7 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
-import type { GameClient, LobbyClient } from '@/application/game';
+import type { LobbyClient } from '@/application/game';
 import type { Lobby, LobbyId, Player, Pseudonym, SessionId } from '@/domain/game';
 import { useCreateOrResume } from '@/ui/components/lobby/useCreateOrResume';
 import { OwnedGameModal } from '@/ui/v2/multiplayer/OwnedGameModal';
@@ -45,33 +45,13 @@ const freshLobby: Lobby & { readonly id: LobbyId } = {
   code: 'Z9Y8X7',
 };
 
-function makeGameClient(): { client: GameClient; calls: string[] } {
-  const calls: string[] = [];
-  const client: GameClient = {
-    connect: (args) => { calls.push(`connect:${args.lobbyId}`); return Promise.resolve(); },
-    joinLobby: () => {},
-    renameSelf: () => {},
-    setGridConfig: () => {},
-    startGame: () => {},
-    cellUpdate: () => {},
-    cellFocus: () => {},
-    leaveLobby: () => { calls.push('leaveLobby'); },
-    rotateCode: () => {},
-    disconnect: () => { calls.push('disconnect'); },
-    subscribe: () => () => {},
-    subscribeConnectionState: (h) => { h('connected'); return () => {}; },
-  };
-  return { client, calls };
-}
-
 // Minimal host: exposes the hook's create trigger and renders the modal
 // exactly as the real create sites do — no auth gate, so create runs once
 // per click and the once-mocks aren't drained by the whoami re-click dance.
-function Harness({ lobbyClient, gameClient }: { lobbyClient: LobbyClient; gameClient?: GameClient }) {
+function Harness({ lobbyClient }: { lobbyClient: LobbyClient }) {
   const coop = useCreateOrResume({
     lobbyClient,
     getSession: () => ({ sessionId, pseudonym }),
-    gameClient,
   });
   return (
     <>
@@ -88,25 +68,26 @@ function Harness({ lobbyClient, gameClient }: { lobbyClient: LobbyClient; gameCl
   );
 }
 
-function renderHarness(opts: { createLobby: LobbyClient['createLobby']; withGameClient?: boolean }) {
+function renderHarness(opts: {
+  createLobby: LobbyClient['createLobby'];
+  relinquishOwnership?: LobbyClient['relinquishOwnership'];
+}) {
   const lobbyClient: LobbyClient = {
     createLobby: opts.createLobby,
     getLobby: vi.fn().mockResolvedValue(freshLobby),
     claimOwnership: vi.fn().mockResolvedValue(freshLobby),
+    relinquishOwnership: opts.relinquishOwnership ?? vi.fn().mockResolvedValue(ownedGame([self])),
     findByCode: vi.fn().mockResolvedValue(freshLobby),
     listMyLobbies: vi.fn().mockResolvedValue([]),
     listMyLobbiesForUser: vi.fn().mockResolvedValue([]),
     rebindLobbySessions: vi.fn().mockResolvedValue(undefined),
     unbindLobbySessions: vi.fn().mockResolvedValue(undefined),
   };
-  const game = makeGameClient();
   const rootRoute = createRootRoute();
   const homeRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
-    component: () => (
-      <Harness lobbyClient={lobbyClient} gameClient={opts.withGameClient === false ? undefined : game.client} />
-    ),
+    component: () => <Harness lobbyClient={lobbyClient} />,
   });
   const lobbyRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -117,7 +98,7 @@ function renderHarness(opts: { createLobby: LobbyClient['createLobby']; withGame
     routeTree: rootRoute.addChildren([homeRoute, lobbyRoute]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
-  return { lobbyClient, game, router, ...render(<RouterProvider router={router} />) };
+  return { lobbyClient, router, ...render(<RouterProvider router={router} />) };
 }
 
 const create = async () => {
@@ -158,24 +139,36 @@ describe('OwnedGameModal / useCreateOrResume (ADR-0098 §6)', () => {
     expect(screen.queryByRole('button', { name: /Démarrer une nouvelle partie/ })).toBeNull();
   });
 
-  it('hides the fresh-start button when no game client is reachable', async () => {
-    renderHarness({ createLobby: vi.fn().mockResolvedValue(ownedGame([self])), withGameClient: false });
-    await create();
-    await screen.findByRole('button', { name: 'Rejoindre ma partie' });
-    expect(screen.queryByRole('button', { name: /Démarrer une nouvelle partie/ })).toBeNull();
-  });
-
-  it('relinquishes via the WS leaveLobby frame, then creates and navigates to a new game', async () => {
+  it('relinquishes via the REST endpoint, then creates and navigates to the new game', async () => {
+    const relinquishOwnership = vi.fn().mockResolvedValue(ownedGame([self]));
     const createLobby = vi
       .fn()
       .mockResolvedValueOnce(ownedGame([self]))
       .mockResolvedValueOnce(freshLobby);
-    const { game, router } = renderHarness({ createLobby });
+    const { router } = renderHarness({ createLobby, relinquishOwnership });
     await create();
     fireEvent.click(await screen.findByRole('button', { name: /Démarrer une nouvelle partie/ }));
     await waitFor(() => expect(router.state.location.pathname).toBe(`/lobby/${freshId}`));
-    expect(game.calls).toEqual([`connect:${ownedId}`, 'leaveLobby', 'disconnect']);
+    expect(relinquishOwnership).toHaveBeenCalledWith(ownedId);
     expect(createLobby).toHaveBeenCalledTimes(2);
+    // Relinquish must resolve before the second (fresh) create — no WS-vs-REST race.
+    expect(relinquishOwnership.mock.invocationCallOrder[0]).toBeLessThan(
+      createLobby.mock.invocationCallOrder[1],
+    );
+  });
+
+  it('re-opens the modal instead of navigating when the fresh create still returns an IN_PROGRESS game', async () => {
+    const relinquishOwnership = vi.fn().mockResolvedValue(ownedGame([self]));
+    const createLobby = vi
+      .fn()
+      .mockResolvedValueOnce(ownedGame([self]))
+      .mockResolvedValueOnce(ownedGame([self]));
+    const { router } = renderHarness({ createLobby, relinquishOwnership });
+    await create();
+    fireEvent.click(await screen.findByRole('button', { name: /Démarrer une nouvelle partie/ }));
+    await waitFor(() => expect(createLobby).toHaveBeenCalledTimes(2));
+    expect(router.state.location.pathname).toBe('/');
+    expect(await screen.findByRole('button', { name: 'Rejoindre ma partie' })).toBeTruthy();
   });
 
   it('the owned-game modal is axe-clean (ADR-0050)', async () => {
