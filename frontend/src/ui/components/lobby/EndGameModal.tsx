@@ -81,7 +81,7 @@ export function EndGameModal({ durationMs, onPlayAgain, onClose }: EndGameModalP
           onClick={onClose}
           data-testid="end-game-modal-close"
         >
-          {t('lobby.endGame.close')}
+          {t('common.close')}
         </Button>
         <Button
           variant="primary"

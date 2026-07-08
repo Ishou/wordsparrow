@@ -104,7 +104,7 @@ export function OwnedGameModal({
               </p>
             ) : null}
             <button type="button" className={dismiss} onClick={onClose}>
-              {t('v2.multiplayer.later')}
+              {t('common.later')}
             </button>
           </Dialog.Content>
         </Dialog.Positioner>

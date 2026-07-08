@@ -13,7 +13,7 @@ export function useHintGate(): GateProps | null {
   const hasHint = useCapability('hint');
   if (!auth) return null;
   if (auth.state.status === 'loading') {
-    return { disabled: true, 'aria-disabled': true, title: t('auth.hintGate.loading') };
+    return { disabled: true, 'aria-disabled': true, title: t('common.loading') };
   }
   if (hasHint) return null;
   return { disabled: true, 'aria-disabled': true, title: t('auth.hintGate.anon') };

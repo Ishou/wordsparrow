@@ -122,7 +122,7 @@ export function AvatarMenu({ authClient, whoami, onBeforeLogout }: AvatarMenuPro
               className={itemBaseStyles}
               onClick={() => { void handleLogout(); }}
             >
-              {t('auth.avatar.logout')}
+              {t('common.logout')}
             </button>
           </Popover.Content>
         </Popover.Positioner>

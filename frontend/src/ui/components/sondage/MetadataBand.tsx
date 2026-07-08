@@ -311,7 +311,7 @@ function badgeText(state: Band['state']): string {
 
 function primaryLabel(state: Band['state']): string {
   if (state === 'saved') return t('sondage.band.primary.saved');
-  if (state === 'modified') return t('sondage.band.primary.modified');
+  if (state === 'modified') return t('common.save');
   return t('sondage.band.primary.pristine');
 }
 

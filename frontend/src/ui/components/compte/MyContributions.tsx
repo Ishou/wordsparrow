@@ -59,7 +59,7 @@ export function MyContributions({ surveyClient }: MyContributionsProps) {
     return <p className={statusStyles} role="alert">{t('compte.contributions.error')}</p>;
   }
   if (items === null) {
-    return <p className={statusStyles} role="status">{t('compte.contributions.loading')}</p>;
+    return <p className={statusStyles} role="status">{t('common.loading')}</p>;
   }
   if (items.length === 0) {
     return <p className={statusStyles}>{t('compte.contributions.empty')}</p>;

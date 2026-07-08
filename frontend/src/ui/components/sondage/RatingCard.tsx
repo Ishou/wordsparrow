@@ -456,7 +456,7 @@ export function RatingCard({
               className={cx(correctifButtonStyles, cancelButtonStyles)}
               onClick={() => setCorrectifText(null)}
             >
-              {t('sondage.action.cancel')}
+              {t('common.cancel')}
             </button>
             <button
               type="button"

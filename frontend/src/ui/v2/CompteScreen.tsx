@@ -164,10 +164,10 @@ function AuthedCompte() {
                 aria-label={t('v2.compte.aria.pseudonym')}
                 disabled={saving}
               />
-              <button type="button" className={saveBtn} onClick={() => void save()} disabled={saving || draft.trim().length === 0} aria-label={t('v2.compte.aria.save')}>
+              <button type="button" className={saveBtn} onClick={() => void save()} disabled={saving || draft.trim().length === 0} aria-label={t('common.save')}>
                 <Check size={20} weight="bold" aria-hidden="true" />
               </button>
-              <button type="button" className={cancelBtn} onClick={cancelEdit} disabled={saving} aria-label={t('v2.compte.aria.cancel')}>
+              <button type="button" className={cancelBtn} onClick={cancelEdit} disabled={saving} aria-label={t('common.cancel')}>
                 <X size={20} weight="bold" aria-hidden="true" />
               </button>
             </div>
@@ -229,7 +229,7 @@ function AuthedCompte() {
             label={t('v2.compte.google.label')}
             sub={me ? (google ? t('v2.compte.google.connected') : t('v2.compte.google.disconnected')) : <Skeleton tone="onCard" width={90} height={11} radius={6} />}
           />
-          <SettingsRow icon={SignOut} label={t('v2.compte.logout')} onClick={() => void logout()} />
+          <SettingsRow icon={SignOut} label={t('common.logout')} onClick={() => void logout()} />
           <SettingsRow icon={SignOut} label={t('v2.compte.logoutAll')} onClick={() => void logoutAll()} last />
         </ul>
       </nav>

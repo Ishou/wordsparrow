@@ -104,7 +104,7 @@ export function HostSignInSheet({
             ) : null}
             <p className={disclosure}>{t('home.host.disclosure')}</p>
             <button type="button" className={secondary} onClick={onClose}>
-              {t('home.host.later')}
+              {t('common.later')}
             </button>
           </Dialog.Content>
         </Dialog.Positioner>

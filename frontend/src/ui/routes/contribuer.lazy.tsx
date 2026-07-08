@@ -405,7 +405,7 @@ export function ContribuerPage() {
         ) : null}
 
         {loading || state.status === 'loading' ? (
-          <p className={statusStyles} role="status">{t('route.contribuer.loading')}</p>
+          <p className={statusStyles} role="status">{t('common.loading')}</p>
         ) : null}
 
         {error !== null ? (
@@ -447,7 +447,7 @@ export function ContribuerScreen() {
   if (gate === 'loading') {
     return (
       <ContentPage>
-        <p className={statusStyles} role="status">{t('route.contribuer.loading')}</p>
+        <p className={statusStyles} role="status">{t('common.loading')}</p>
       </ContentPage>
     );
   }

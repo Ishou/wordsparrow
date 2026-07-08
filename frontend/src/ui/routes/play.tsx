@@ -55,7 +55,7 @@ function PlayLoadError() {
         scene={sparrowFlightScene()}
         title={t('route.play.loadError.title')}
         body={t('route.play.loadError.body')}
-        cta={{ label: t('route.play.loadError.cta'), onClick: () => void router.invalidate() }}
+        cta={{ label: t('common.retry'), onClick: () => void router.invalidate() }}
       />
     </PhoneShell>
   );
