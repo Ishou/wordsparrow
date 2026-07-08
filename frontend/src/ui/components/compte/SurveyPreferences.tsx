@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { css } from 'styled-system/css';
-import { messageForApiError } from '@/application/errors';
+import { messageForApiError } from '@/ui/lib/apiErrorMessage';
 import type { SurveyClient } from '@/application/survey';
 import { t } from '@/ui/i18n';
 

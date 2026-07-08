@@ -1,8 +1,6 @@
-// TypeError (fetch transport failure) → French network copy; anything else → generic French fallback.
+// TypeError (fetch transport failure) → network; anything else → generic.
+export type ApiErrorCode = 'network' | 'generic';
 
-export function messageForApiError(cause: unknown): string {
-  if (cause instanceof TypeError) {
-    return 'Connexion impossible. Vérifiez votre réseau et réessayez.';
-  }
-  return 'Une erreur est survenue. Réessayez.';
+export function apiErrorCode(cause: unknown): ApiErrorCode {
+  return cause instanceof TypeError ? 'network' : 'generic';
 }

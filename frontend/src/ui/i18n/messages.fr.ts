@@ -152,6 +152,8 @@ export const fr = {
   'lobby.error.cannotJoin': 'Impossible de rejoindre cette partie. Réessaie.',
   'lobby.error.cannotStart': 'Impossible de démarrer la partie. Réessayez.',
   'lobby.error.generic': 'Une erreur est survenue. Réessayez.',
+  'error.api.network': "Connexion impossible. Vérifiez votre réseau et réessayez.",
+  'error.api.generic': "Une erreur est survenue. Réessayez.",
   'appHeader.skip.grid': 'Aller à la grille',
   'appHeader.skip.content': 'Aller au contenu',
   'appHeader.aria.home': 'Accueil WordSparrow',

@@ -4,7 +4,7 @@ import { createLazyRoute, Link } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
 import { NOOP_ANALYTICS } from '@/application/analytics';
-import { messageForApiError } from '@/application/errors';
+import { messageForApiError } from '@/ui/lib/apiErrorMessage';
 import { campaignDisplayName } from '@/application/survey';
 import type {
   ItemPair,
