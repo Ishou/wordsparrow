@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import type { LobbyClient } from '@/application/game';
+import type { GameClient, LobbyClient } from '@/application/game';
 import type { Lobby, LobbyId, Pseudonym, SessionId } from '@/domain/game';
 
 // Shared "create a co-op game, or resume the one you already own" flow (ADR-0098 §6): a create response in IN_PROGRESS can only be a resume of the one active game you already own, so surface the modal instead of navigating.
@@ -10,6 +10,8 @@ type OwnedLobby = Lobby & { readonly id: LobbyId };
 export interface UseCreateOrResumeArgs {
   readonly lobbyClient: LobbyClient;
   readonly getSession: () => { readonly sessionId: SessionId; readonly pseudonym: Pseudonym };
+  // Required for the sole-occupant "Démarrer une nouvelle partie" relinquish path (ADR-0098 §6); relinquish stays WS-only until game/api ships DELETE /v1/lobbies/{id}/ownership.
+  readonly gameClient?: GameClient;
   // Site-specific failure handling: re-open the host sign-in sheet on a 401, toast on replay, etc.
   readonly onError?: (cause: unknown) => void;
 }
@@ -25,13 +27,14 @@ export interface UseCreateOrResume {
   readonly dismiss: () => void;
   // Relinquish-then-create in flight (the sole-occupant path).
   readonly startingNew: boolean;
-  // ADR-0098 §6: offered only to a sole occupant (relinquishing a populated room would strand its peers).
+  // ADR-0098 §6: offered only to a sole occupant with a reachable WS client.
   readonly canStartNew: boolean;
 }
 
 export function useCreateOrResume({
   lobbyClient,
   getSession,
+  gameClient,
   onError,
 }: UseCreateOrResumeArgs): UseCreateOrResume {
   const navigate = useNavigate();
@@ -78,13 +81,17 @@ export function useCreateOrResume({
 
   const startNewGame = useCallback(() => {
     const old = ownedGame;
-    if (!old || startingNew) return;
+    if (!old || !gameClient || startingNew) return;
     setStartingNew(true);
     const { sessionId, pseudonym } = getSession();
-    // ADR-0098 §6 amendment: synchronous REST relinquish frees quota BEFORE create, so create can't race the WS frame and hand back the same IN_PROGRESS game.
-    lobbyClient
-      .relinquishOwnership(old.id)
-      .then(() => lobbyClient.createLobby({ ownerSessionId: sessionId, ownerPseudonym: pseudonym }))
+    // Relinquish is WS-only (ADR-0098 §2) until game/api ships DELETE /v1/lobbies/{id}/ownership: the explicit `leaveLobby` frame nulls `owner_user_id` server-side, freeing quota for the create that follows.
+    gameClient
+      .connect({ lobbyId: old.id, sessionId, pseudonym })
+      .then(() => {
+        gameClient.leaveLobby();
+        gameClient.disconnect();
+        return lobbyClient.createLobby({ ownerSessionId: sessionId, ownerPseudonym: pseudonym });
+      })
       .then((created) => {
         setStartingNew(false);
         // Re-check: if create still resolved to an owned IN_PROGRESS game, keep the modal open rather than navigate into a grid.
@@ -99,9 +106,9 @@ export function useCreateOrResume({
         setStartingNew(false);
         onError?.(cause);
       });
-  }, [ownedGame, startingNew, getSession, lobbyClient, goToLobby, onError]);
+  }, [ownedGame, gameClient, startingNew, getSession, lobbyClient, goToLobby, onError]);
 
-  const canStartNew = ownedGame != null && ownedGame.players.length === 1;
+  const canStartNew = ownedGame != null && ownedGame.players.length === 1 && gameClient != null;
 
   return { createOrResume, pending, ownedGame, rejoindre, startNewGame, dismiss, startingNew, canStartNew };
 }

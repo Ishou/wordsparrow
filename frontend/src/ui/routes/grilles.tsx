@@ -6,7 +6,8 @@ import { Route as AppLayoutRoute } from './app-layout';
 
 function GrillesRouteComponent() {
   // forward multiplayer adapters from context so the À plusieurs tab shows when the flag is on (undefined hides it)
-  const { puzzleRepository, soloEntriesStore, lobbyClient, getSession, authClient } = Route.useRouteContext();
+  const { puzzleRepository, soloEntriesStore, lobbyClient, gameClient, getSession, authClient } =
+    Route.useRouteContext();
   const { onglet } = Route.useSearch();
   const navigate = useNavigate();
   return (
@@ -22,6 +23,7 @@ function GrillesRouteComponent() {
         })
       }
       lobbyClient={lobbyClient}
+      gameClient={gameClient}
       getSession={getSession}
       authClient={authClient}
     />

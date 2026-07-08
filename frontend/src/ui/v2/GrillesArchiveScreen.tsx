@@ -4,7 +4,7 @@ import { CaretRight } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { fetchAllDailySummaries, type DailySummary, type PuzzleRepository } from '@/application';
 import type { AuthClient } from '@/application/auth';
-import { LobbyClientError, type LobbyClient, type LobbySummary } from '@/application/game';
+import { LobbyClientError, type GameClient, type LobbyClient, type LobbySummary } from '@/application/game';
 import { countFilledCells, type SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { LobbyId, Pseudonym, SessionId } from '@/domain/game';
 import { Skeleton } from '@/design-system';
@@ -79,6 +79,7 @@ export function GrillesArchiveScreen({
   onglet,
   onOngletChange,
   lobbyClient,
+  gameClient,
   getSession,
   authClient,
 }: {
@@ -88,6 +89,7 @@ export function GrillesArchiveScreen({
   readonly onOngletChange: (onglet: GrillesOnglet) => void;
   // Multiplayer adapters are optional — absent when the flag is off (ADR-0018 §10).
   readonly lobbyClient?: LobbyClient;
+  readonly gameClient?: GameClient;
   readonly getSession?: () => GrillesSession;
   readonly authClient?: AuthClient;
 }) {
@@ -107,6 +109,7 @@ export function GrillesArchiveScreen({
   const coop = useCreateOrResume({
     lobbyClient: lobbyClient!,
     getSession: getSession!,
+    gameClient,
     // Safety net for a session that expired between load and tap (ADR-0083).
     onError: (cause) => {
       if (cause instanceof LobbyClientError && cause.kind === 'unauthorized') setHostSignInOpen(true);
