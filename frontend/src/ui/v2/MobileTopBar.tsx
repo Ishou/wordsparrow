@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { List } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { Lockup } from '@/design-system';
 
 export interface MobileTopBarProps {
@@ -26,13 +27,13 @@ const menuBtn = css({ marginLeft: 'auto', flex: 'none', width: '44px', height: '
 export function MobileTopBar({ onMenuClick }: MobileTopBarProps) {
   return (
     <header className={bar}>
-      <Link to="/" className={brandLink} aria-label="Accueil">
+      <Link to="/" className={brandLink} aria-label={t('v2.nav.brandAria')}>
         <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
       </Link>
       <button
         type="button"
         className={menuBtn}
-        aria-label="Ouvrir le menu"
+        aria-label={t('v2.nav.menuOpen')}
         aria-haspopup="dialog"
         onClick={onMenuClick}
       >

@@ -1,8 +1,9 @@
+import { t } from '@/ui/i18n';
 import { SparrowState } from './SparrowState';
 
 // Sparrow perched above an empty nest — the /grilles "no grids yet" state (mockups/error-states-v2.html #5).
 const nestScene = (
-  <svg width="150" height="132" viewBox="0 0 150 132" role="img" aria-label="Un moineau au-dessus d'un nid">
+  <svg width="150" height="132" viewBox="0 0 150 132" role="img" aria-label={t('v2.grilles.emptyScene.aria')}>
     <defs>
       <symbol id="gaNest" viewBox="0 0 64 40">
         <ellipse cx="32" cy="26" rx="26" ry="11" fill="#9A7B53" />
@@ -36,8 +37,8 @@ const nestScene = (
 
 // Copy depends on which view is empty: an empty archive vs a view with nothing to resume.
 const COPY: Record<'new' | 'progress', { readonly title: string; readonly body: string }> = {
-  new: { title: 'Tout est joué !', body: 'Aucune grille à commencer pour l’instant — reviens demain pour la prochaine.' },
-  progress: { title: 'Aucune grille en cours', body: 'Tu n’as pas de grille commencée à reprendre pour le moment.' },
+  new: { title: t('v2.grilles.empty.new.title'), body: t('v2.grilles.empty.new.body') },
+  progress: { title: t('v2.grilles.empty.progress.title'), body: t('v2.grilles.empty.progress.body') },
 };
 
 export function GrillesEmptyState({ onPlay, filter = 'new' }: { readonly onPlay: () => void; readonly filter?: 'new' | 'progress' }) {
@@ -47,7 +48,7 @@ export function GrillesEmptyState({ onPlay, filter = 'new' }: { readonly onPlay:
       scene={nestScene}
       title={copy.title}
       body={copy.body}
-      cta={{ label: 'Jouer la grille du jour', onClick: onPlay }}
+      cta={{ label: t('v2.grilles.empty.cta'), onClick: onPlay }}
       as="p"
     />
   );
@@ -57,9 +58,9 @@ export function LobbiesEmptyState({ onCreate }: { readonly onCreate: () => void 
   return (
     <SparrowState
       scene={nestScene}
-      title="Aucune partie à plusieurs"
-      body="Crée une partie et invite tes proches — vous remplissez la même grille ensemble. Sans compte, les parties terminées sont conservées 7 jours."
-      cta={{ label: 'Créer une partie', onClick: onCreate }}
+      title={t('v2.grilles.lobbiesEmpty.title')}
+      body={t('v2.grilles.lobbiesEmpty.body')}
+      cta={{ label: t('v2.grilles.lobbiesEmpty.cta'), onClick: onCreate }}
       as="p"
     />
   );

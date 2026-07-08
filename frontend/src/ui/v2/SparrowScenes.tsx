@@ -1,9 +1,10 @@
 import type { ReactElement } from 'react';
+import { t } from '@/ui/i18n';
 
 // shared sparrow flight for every error/empty state — one geometry so 404, bad lobby, and bad join can't drift
 export function sparrowFlightScene(badge?: string): ReactElement {
   return (
-    <svg width="150" height="130" viewBox="0 0 150 130" role="img" aria-label="Un moineau qui s'envole">
+    <svg width="150" height="130" viewBox="0 0 150 130" role="img" aria-label={t('v2.sparrow.flight.aria')}>
       <defs>
         <symbol id="sfBird" viewBox="0 0 64 64">
           <path d="M9 30 L24 33 L20 44 Z" fill="#214B40" />
@@ -29,7 +30,7 @@ export function sparrowFlightScene(badge?: string): ReactElement {
 // Celebratory perched sparrow singing over a blossom branch — co-op résultats / win motif.
 export function sparrowCelebrationScene(): ReactElement {
   return (
-    <svg width="148" height="120" viewBox="0 0 148 120" role="img" aria-label="Un moineau qui chante sur une branche fleurie">
+    <svg width="148" height="120" viewBox="0 0 148 120" role="img" aria-label={t('v2.sparrow.celebration.aria')}>
       <path d="M16 96 q44 -10 116 -30" stroke="#9CCBB1" strokeWidth="4" fill="none" strokeLinecap="round" />
       <path d="M44 89 v-4 M72 82 v-5 M100 75 v-5 M124 68 v-4" stroke="#9CCBB1" strokeWidth="2" strokeLinecap="round" />
       <circle cx="44" cy="83" r="5.5" fill="#F6C9D7" />
