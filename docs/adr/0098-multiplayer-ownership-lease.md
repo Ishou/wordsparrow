@@ -220,3 +220,16 @@ list/claim discovery, and made relinquish-then-create racy. The `Lobby` and
 `LobbySummary` wire schemas gain `ownerless: boolean`, and a synchronous
 `DELETE /v1/lobbies/{lobbyId}/ownership` is added (authorized by
 `owner_user_id == caller`).
+
+### 2026-07-08 — REST leave/delete a game from a list
+
+A `DELETE /v1/lobbies/{lobbyId}/membership` endpoint (`leaveLobby`) is added so
+a player can get out of a game from the multiplayer game lists, where the client
+is not on that lobby's WebSocket and so cannot send the explicit `leaveLobby` WS
+frame. It drops the caller's seat and, when the caller is the current owner, also
+relinquishes ownership (`owner_user_id → null`); composed with the ADR-0055
+2026-07-08 destroy-ownerless-and-empty rule this yields **delete-if-alone /
+leave-if-others** for owner and non-owner callers alike, with no dedicated
+delete verb. Cookie-authed; guests may leave (401 is only for a missing/invalid
+session). Responses: `204` (left), `401` auth-required, `403`
+lobby-membership-forbidden (no seat), `404` lobby-not-found.
