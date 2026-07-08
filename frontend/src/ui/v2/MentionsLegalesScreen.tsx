@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { contentCard, lede, sectionBody, sectionHeading } from './contentPage';
@@ -22,22 +23,17 @@ export function MentionsLegalesScreen() {
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
-          <h1 className={title}>Mentions légales</h1>
-          <p className={lede}>
-            L&apos;essentiel sur l&apos;éditeur du jeu, l&apos;hébergement et tes droits.
-          </p>
+          <h1 className={title}>{t('v2.mentions.title')}</h1>
+          <p className={lede}>{t('v2.mentions.lede')}</p>
         </header>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>Éditeur</h2>
+          <h2 className={sectionHeading}>{t('v2.mentions.editeur.heading')}</h2>
           <p className={sectionBody}>
-            WordSparrow est édité par <strong>ISHO IT</strong>, EURL au capital de 1 000 €, dont le
-            siège social est situé 32 rue Avaulée, 92240 Malakoff (France). Immatriculée au{' '}
-            <strong>RCS de Nanterre</strong> sous le n° 851 880 401 — SIRET 851 880 401 00019 — TVA
-            intracommunautaire FR63 851880401.
+            {t('v2.mentions.editeur.p1.pre')}<strong>ISHO IT</strong>{t('v2.mentions.editeur.p1.mid')}<strong>RCS de Nanterre</strong>{t('v2.mentions.editeur.p1.post')}
           </p>
           <p className={sectionBody}>
-            Directeur de la publication : <strong>Colin Auberger</strong>. Contact :{' '}
+            {t('v2.mentions.editeur.p2.pre')}<strong>Colin Auberger</strong>{t('v2.mentions.editeur.p2.mid')}
             <a className={link} href="mailto:contact@wordsparrow.io">
               contact@wordsparrow.io
             </a>
@@ -46,15 +42,13 @@ export function MentionsLegalesScreen() {
         </section>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>Hébergement</h2>
+          <h2 className={sectionHeading}>{t('v2.mentions.hebergement.heading')}</h2>
           <p className={sectionBody}>
-            Le service est hébergé par <strong>Hetzner Online GmbH</strong>, Industriestr. 25,
-            91710 Gunzenhausen, Allemagne (
+            {t('v2.mentions.hebergement.pre')}<strong>Hetzner Online GmbH</strong>{t('v2.mentions.hebergement.mid1')}
             <a className={link} href="https://www.hetzner.com" target="_blank" rel="noopener noreferrer">
               hetzner.com
             </a>
-            ). La diffusion du contenu statique et la résolution DNS sont assurées par{' '}
-            <strong>Cloudflare, Inc.</strong>, 101 Townsend St, San Francisco, CA 94107, États-Unis (
+            {t('v2.mentions.hebergement.mid2')}<strong>Cloudflare, Inc.</strong>{t('v2.mentions.hebergement.mid3')}
             <a className={link} href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer">
               cloudflare.com
             </a>
@@ -63,43 +57,35 @@ export function MentionsLegalesScreen() {
         </section>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>Propriété intellectuelle</h2>
-          <p className={sectionBody}>
-            Le code source de WordSparrow est publié sous licence FSL-1.1-MIT (Functional Source
-            License 1.1, MIT dans le futur). Voir le dépôt public du projet pour les conditions
-            d&apos;utilisation, de modification et de redistribution.
-          </p>
+          <h2 className={sectionHeading}>{t('v2.mentions.pi.heading')}</h2>
+          <p className={sectionBody}>{t('v2.mentions.pi.p1')}</p>
           <p className={sectionBody}>
             <a className={link} href="/third-party-licenses.txt">
-              Licences des logiciels tiers
-            </a>{' '}
-            embarqués dans l&apos;application — et nos{' '}
+              {t('v2.mentions.pi.p2.link1')}
+            </a>
+            {t('v2.mentions.pi.p2.mid')}
             <Link className={link} to="/a-propos">
-              remerciements
-            </Link>{' '}
-            à celles et ceux qui les font vivre.
+              {t('v2.mentions.pi.p2.link2')}
+            </Link>
+            {t('v2.mentions.pi.p2.post')}
           </p>
         </section>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>Données personnelles</h2>
+          <h2 className={sectionHeading}>{t('v2.mentions.donnees.heading')}</h2>
           <p className={sectionBody}>
-            Le traitement de tes données personnelles est décrit dans la{' '}
+            {t('v2.mentions.donnees.pre')}
             <Link className={link} to="/confidentialite">
-              politique de confidentialité
+              {t('v2.mentions.donnees.link')}
             </Link>
             .
           </p>
         </section>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>Médiation de la consommation</h2>
+          <h2 className={sectionHeading}>{t('v2.mentions.mediation.heading')}</h2>
           <p className={sectionBody}>
-            Conformément aux articles L611-1 et suivants du Code de la consommation, tu peux recourir
-            gratuitement à un médiateur de la consommation pour la résolution amiable d&apos;un
-            litige, après avoir tenté de le régler directement avec nous. Le médiateur compétent est{' '}
-            <strong>AME Conso</strong> (Association des Médiateurs Européens), 197 boulevard
-            Saint-Germain, 75007 Paris (
+            {t('v2.mentions.mediation.pre')}<strong>AME Conso</strong>{t('v2.mentions.mediation.post')}
             <a
               className={link}
               href="https://www.mediationconso-ame.com"
@@ -113,9 +99,9 @@ export function MentionsLegalesScreen() {
         </section>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>Signaler un problème</h2>
+          <h2 className={sectionHeading}>{t('v2.mentions.signaler.heading')}</h2>
           <p className={sectionBody}>
-            Pour signaler un contenu illicite, un bug ou une faille de sécurité, écris à{' '}
+            {t('v2.mentions.signaler.pre')}
             <a className={link} href="mailto:contact@wordsparrow.io">
               contact@wordsparrow.io
             </a>
