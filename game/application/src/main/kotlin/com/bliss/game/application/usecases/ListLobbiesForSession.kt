@@ -30,6 +30,8 @@ data class LobbySummary(
     val playerCount: Int,
     val lastActivityAt: Instant,
     val progress: LobbyProgress,
+    // ADR-0098 §2: null owner_user_id -> claimable ownerless game.
+    val ownerless: Boolean,
     val title: LobbyTitle?,
 )
 
@@ -84,6 +86,7 @@ private fun Lobby.toSummary(): LobbySummary =
         lastActivityAt = lastActivityAt,
         // WAITING is excluded above; IN_PROGRESS/COMPLETED always carry a GameSession.
         progress = game!!.toProgress(),
+        ownerless = isOwnerless(),
         title = title,
     )
 

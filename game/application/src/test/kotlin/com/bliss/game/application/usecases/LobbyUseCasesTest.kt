@@ -785,6 +785,52 @@ class LobbyUseCasesTest {
             assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.LobbyNotFound)
         }
 
+    // ADR-0098 §2 (2026-07-08 amendment): the REST path authorizes by owner_user_id, not the live owner seat.
+    @Test
+    fun `RelinquishByUser clears ownerUserId and drops the former owner seat`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            val out = h.relinquishByUser(lobby.id, userA).requireSuccess()
+
+            assertThat(out.value.ownerUserId).isNull()
+            assertThat(
+                out.value.players.keys
+                    .contains(sessionA),
+            ).isEqualTo(false)
+        }
+
+    @Test
+    fun `RelinquishByUser returns NotOwner when the userId does not own the lobby`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            val out = h.relinquishByUser(lobby.id, userB)
+
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
+        }
+
+    // Idempotent-reject: an already-ownerless lobby has a null owner_user_id, so the userId check fails.
+    @Test
+    fun `RelinquishByUser returns NotOwner on an already-ownerless lobby`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.relinquishByUser(lobby.id, userA).requireSuccess()
+
+            val out = h.relinquishByUser(lobby.id, userA)
+
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotOwner)
+        }
+
+    @Test
+    fun `RelinquishByUser returns LobbyNotFound for an unknown lobby`() =
+        runTest {
+            val h = harness()
+            val out = h.relinquishByUser(LobbyId.generate(), userA)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.LobbyNotFound)
+        }
+
     // ADR-0098 §2: a present player claims an ownerless game, rebinding owner_user_id and ownerSessionId.
     @Test
     fun `Claim rebinds ownership to a present player on an ownerless lobby`() =
@@ -895,6 +941,7 @@ internal class Harness(
     val rotateCode = RotateLobbyCodeUseCase(repo, clock)
     val claim = ClaimLobbyOwnershipUseCase(repo, clock)
     val relinquish = RelinquishOwnershipUseCase(repo, clock)
+    val relinquishByUser = RelinquishOwnershipByUserUseCase(repo, clock)
 
     suspend fun create(
         s: SessionId,
@@ -980,6 +1027,11 @@ internal class Harness(
         l: LobbyId,
         s: SessionId,
     ) = relinquish.invoke(l, s)
+
+    suspend fun relinquishByUser(
+        l: LobbyId,
+        u: UserId,
+    ) = relinquishByUser.invoke(l, u)
 }
 
 internal fun <T> UseCaseOutcome<T>.requireSuccess(): UseCaseResult<T> =

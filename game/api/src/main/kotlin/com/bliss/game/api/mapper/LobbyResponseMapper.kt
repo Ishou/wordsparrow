@@ -58,6 +58,7 @@ fun Lobby.toResponseDto(presence: Map<String, PresencePosition> = emptyMap()): L
         // the map (matches openapi `GameSession.presence` which is "absent or
         // empty when state is WAITING/COMPLETED").
         game = game?.toDto(if (state == LobbyLifecycleState.IN_PROGRESS) presence else emptyMap()),
+        ownerless = isOwnerless(),
         code = code.value,
     )
 
@@ -162,5 +163,6 @@ fun com.bliss.game.application.usecases.LobbySummary.toDto(): com.bliss.game.api
                     solvedCells = progress.solvedCells,
                     totalCells = progress.totalCells,
                 ),
+        ownerless = ownerless,
         title = title?.value,
     )

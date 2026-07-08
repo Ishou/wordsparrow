@@ -19,6 +19,7 @@ import com.bliss.game.application.lobby.LobbyWriteCoordinator
 import com.bliss.game.application.ports.LobbyRepository
 import com.bliss.game.application.usecases.ClaimLobbyOwnershipUseCase
 import com.bliss.game.application.usecases.CreateLobbyUseCase
+import com.bliss.game.application.usecases.RelinquishOwnershipByUserUseCase
 import com.bliss.game.application.usecases.UseCaseError
 import com.bliss.game.application.usecases.UseCaseOutcome
 import com.bliss.game.domain.LobbyCode
@@ -33,6 +34,7 @@ import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
@@ -45,6 +47,7 @@ private const val INVALID_LOBBY_CODE_TYPE = "https://bliss.example/errors/invali
 private const val LOBBY_NOT_FOUND_TYPE = "https://bliss.example/errors/lobby-not-found"
 private const val AUTH_REQUIRED_TYPE = "https://bliss.example/errors/auth-required"
 private const val CLAIM_FORBIDDEN_TYPE = "https://bliss.example/errors/lobby-claim-forbidden"
+private const val RELINQUISH_FORBIDDEN_TYPE = "https://bliss.example/errors/lobby-relinquish-forbidden"
 private const val QUOTA_EXCEEDED_TYPE = "https://bliss.example/errors/active-game-quota-exceeded"
 
 // Subscriber capability that lifts the one-open-lobby quota (ADR-0083); read only from the server-side whoami, never request input.
@@ -60,6 +63,7 @@ private const val HOST_UNLIMITED_CAPABILITY = "multiplayer:host-unlimited"
 fun Route.lobbies(
     createLobby: CreateLobbyUseCase,
     claimOwnership: ClaimLobbyOwnershipUseCase,
+    relinquishOwnership: RelinquishOwnershipByUserUseCase,
     repo: LobbyRepository,
     sessionManager: SessionManager,
     cookieVerifier: CookieVerifier,
@@ -199,6 +203,74 @@ fun Route.lobbies(
                             newOwnerUserId = lobby.ownerUserId?.value,
                         ),
                     )
+                    call.respond(HttpStatusCode.OK, lobby.toResponseDto(sessionManager.getPresence(lobbyId)))
+                }
+            }
+        }
+
+        // Relinquish ownership -> ownerless, cookie-authed by userId, no body (ADR-0098 §2 + 2026-07-08 amendment).
+        delete("{lobbyId}/ownership") {
+            val raw = call.parameters["lobbyId"].orEmpty()
+            val lobbyId =
+                runCatching { LobbyId(raw) }
+                    .getOrElse {
+                        return@delete call.respondProblem(
+                            HttpStatusCode.BadRequest,
+                            "Identifiant de salon invalide",
+                            INVALID_LOBBY_ID_TYPE,
+                            "Le paramètre lobbyId doit être un identifiant base58 de 8 caractères, reçu : '$raw'.",
+                        )
+                    }
+            val rawCookie = call.request.cookies[CookieNames.SESSION]
+            val whoAmI =
+                cookieVerifier.verify(rawCookie)
+                    ?: return@delete call.respondProblem(
+                        HttpStatusCode.Unauthorized,
+                        "Authentification requise",
+                        AUTH_REQUIRED_TYPE,
+                        "Quitter une partie nécessite une connexion.",
+                    )
+
+            // Authorize on the sticky owner_user_id (ADR-0098 §2): the home-screen caller does not hold the live owner seat.
+            val outcome: UseCaseOutcome<com.bliss.game.domain.Lobby>? =
+                coordinator.withUserLock(whoAmI.userId) { _ ->
+                    val fresh = cookieVerifier.verifyFresh(rawCookie)
+                    if (fresh == null || fresh.userId != whoAmI.userId) {
+                        null
+                    } else {
+                        relinquishOwnership(lobbyId, fresh.userId)
+                    }
+                }
+
+            when (outcome) {
+                null ->
+                    call.respondProblem(
+                        HttpStatusCode.Unauthorized,
+                        "Authentification requise",
+                        AUTH_REQUIRED_TYPE,
+                        "Votre session a été invalidée.",
+                    )
+                is UseCaseOutcome.Failure ->
+                    when (outcome.error) {
+                        UseCaseError.LobbyNotFound ->
+                            call.respondProblem(
+                                HttpStatusCode.NotFound,
+                                "Salon introuvable",
+                                LOBBY_NOT_FOUND_TYPE,
+                                "Aucun salon pour l'identifiant '${lobbyId.value}'.",
+                            )
+                        else ->
+                            call.respondProblem(
+                                HttpStatusCode.Forbidden,
+                                "Abandon impossible",
+                                RELINQUISH_FORBIDDEN_TYPE,
+                                "Vous n'êtes pas le propriétaire de ce salon.",
+                            )
+                    }
+                is UseCaseOutcome.Success -> {
+                    val lobby = outcome.result.value
+                    // Tell peers the game is now ownerless so their claim affordance appears (ADR-0098 §2/§6); mirrors the WS Quitter path.
+                    sessionManager.broadcast(lobbyId, ServerToClientFrame.OwnershipChanged(lobbyId.value, null, null))
                     call.respond(HttpStatusCode.OK, lobby.toResponseDto(sessionManager.getPresence(lobbyId)))
                 }
             }

@@ -96,6 +96,34 @@ interface LobbyRepository {
     }
 
     /**
+     * Relinquishes ownership by owner userId (ADR-0098 §2, 2026-07-08 amendment) if [userId] still
+     * holds `owner_user_id` when the per-lobby lock is acquired: drops to ownerless and removes the
+     * former owner's seat, keyed on the lobby's `owner_session_id`. This is the REST home-screen path,
+     * where the caller does not hold the live owner seat, so authorization is by userId, not session.
+     * Same dedicated-method rationale as [relinquishOwnership]: Postgres's upsert excludes
+     * `owner_user_id`, so the general save path would silently drop the clear. Default composes
+     * [mutate] (correct for the in-memory adapter); the Postgres adapter overrides with a purpose-built
+     * `owner_user_id` UPDATE guarded `WHERE owner_user_id = ?`.
+     */
+    suspend fun relinquishOwnershipByUser(
+        id: LobbyId,
+        userId: UserId,
+        now: Instant,
+    ): RelinquishOutcome {
+        var notOwner = false
+        val updated =
+            mutate(id) { lobby ->
+                if (lobby.ownerUserId != userId) {
+                    notOwner = true
+                    lobby
+                } else {
+                    lobby.relinquishOwner(now).copy(players = lobby.players - lobby.ownerSessionId)
+                }
+            } ?: return RelinquishOutcome.LobbyNotFound
+        return if (notOwner) RelinquishOutcome.NotOwner else RelinquishOutcome.Relinquished(updated)
+    }
+
+    /**
      * Claims an ownerless lobby (ADR-0098 §2) for [sessionId]/[userId] if [sessionId] is still
      * present and the lobby is still ownerless when the per-lobby lock is acquired. Same dedicated-
      * method rationale as [relinquishOwnership]: the general save path silently drops the

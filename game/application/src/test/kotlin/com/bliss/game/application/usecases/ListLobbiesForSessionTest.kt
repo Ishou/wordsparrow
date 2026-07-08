@@ -5,7 +5,9 @@ import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.bliss.game.application.usecases.Samples.alice
 import com.bliss.game.application.usecases.Samples.bob
 import com.bliss.game.application.usecases.Samples.pPos
@@ -27,6 +29,7 @@ import com.bliss.game.domain.Player
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
+import com.bliss.game.domain.UserId
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -86,6 +89,26 @@ class ListLobbiesForSessionTest {
             val out = useCase.invoke(sessionA)
 
             assertThat(out).isEmpty()
+        }
+
+    // ADR-0098 §2: the summary carries ownerless so the "Mes parties" card can show a claim affordance.
+    @Test
+    fun `summary marks an owned lobby ownerless false and a relinquished lobby ownerless true`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val owned =
+                lobby(LobbyId.generate(), sessionA, lastActivityAt = baseInstant.plusSeconds(20))
+                    .copy(ownerUserId = UserId("11111111-1111-1111-1111-111111111111"))
+            val ownerless =
+                lobby(LobbyId.generate(), sessionA, lastActivityAt = baseInstant.plusSeconds(10))
+                    .copy(ownerUserId = null)
+            repo.save(owned)
+            repo.save(ownerless)
+
+            val out = ListLobbiesForSession(repo).invoke(sessionA).associateBy { it.id }
+
+            assertThat(out.getValue(owned.id).ownerless).isFalse()
+            assertThat(out.getValue(ownerless.id).ownerless).isTrue()
         }
 
     // ADR-0039 amendment 2026-05-12: WAITING lobbies are excluded from the

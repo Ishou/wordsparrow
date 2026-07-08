@@ -656,6 +656,43 @@ class InMemoryLobbyRepositoryTest {
         }
 
     @Test
+    fun `relinquishOwnershipByUser drops to ownerless and removes the former owner seat`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val sessionB = SessionId("0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5")
+            val base = inProgressLobbyAt(LobbyId.generate(), ownerUserId = userA)
+            val withOther =
+                base.copy(
+                    players = base.players + (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                )
+            repo.save(withOther)
+
+            val now = baseInstant.plusSeconds(120)
+            val outcome = repo.relinquishOwnershipByUser(withOther.id, userA, now)
+
+            assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
+            val after = repo.findById(withOther.id)!!
+            assertThat(after.ownerUserId).isNull()
+            // Former owner seat (sessionA) dropped; the co-player keeps their seat.
+            assertThat(after.players.keys).containsExactlyInAnyOrder(sessionB)
+            assertThat(repo.findActiveByOwnerUser(userA)).isNull()
+        }
+
+    @Test
+    fun `relinquishOwnershipByUser returns NotOwner when the userId does not own the lobby`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val userB = UserId("22222222-2222-2222-2222-222222222222")
+            val base = inProgressLobbyAt(LobbyId.generate(), ownerUserId = userA)
+            repo.save(base)
+
+            val outcome = repo.relinquishOwnershipByUser(base.id, userB, baseInstant.plusSeconds(120))
+
+            assertThat(outcome).isEqualTo(RelinquishOutcome.NotOwner)
+            assertThat(repo.findById(base.id)!!.ownerUserId).isEqualTo(userA)
+        }
+
+    @Test
     fun `claimOwnership binds ownership to a present claimer on an ownerless lobby`() =
         runTest {
             val repo = InMemoryLobbyRepository()
