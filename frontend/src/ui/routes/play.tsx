@@ -7,11 +7,12 @@ import { PhoneShell } from '@/ui/v2/PhoneShell';
 import { SparrowState } from '@/ui/v2/SparrowState';
 import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { INDEXABLE_ROUTES, SITE_BASE_URL, breadcrumbJsonLd, gameJsonLd, indexableHead } from '@/ui/seo';
+import { t } from '@/ui/i18n';
 import { Route as AppLayoutRoute } from './app-layout';
 
 // Rising sun on the horizon with a sparrow above — the daily "bientôt" state.
 const sunriseScene = (
-  <svg width="150" height="120" viewBox="0 0 150 120" role="img" aria-label="Un lever de soleil">
+  <svg width="150" height="120" viewBox="0 0 150 120" role="img" aria-label={t('route.play.unavailable.sceneAria')}>
     <defs>
       <symbol id="puBird" viewBox="0 0 64 64">
         <path d="M9 30 L24 33 L20 44 Z" fill="#214B40" />
@@ -37,9 +38,9 @@ function PlayUnavailable() {
     <PhoneShell>
       <SparrowState
         scene={sunriseScene}
-        title="Bientôt disponible"
-        body="La grille du jour se prépare. Elle arrive au lever du soleil."
-        cta={{ label: 'Voir les grilles passées', onClick: () => void navigate({ to: '/grilles' }) }}
+        title={t('route.play.unavailable.title')}
+        body={t('route.play.unavailable.body')}
+        cta={{ label: t('route.play.unavailable.cta'), onClick: () => void navigate({ to: '/grilles' }) }}
       />
     </PhoneShell>
   );
@@ -52,9 +53,9 @@ function PlayLoadError() {
     <PhoneShell>
       <SparrowState
         scene={sparrowFlightScene()}
-        title="Connexion interrompue"
-        body="La grille n'a pas pu être chargée. Vérifie ta connexion et réessaie."
-        cta={{ label: 'Réessayer', onClick: () => void router.invalidate() }}
+        title={t('route.play.loadError.title')}
+        body={t('route.play.loadError.body')}
+        cta={{ label: t('route.play.loadError.cta'), onClick: () => void router.invalidate() }}
       />
     </PhoneShell>
   );
@@ -87,8 +88,8 @@ function PlayPending() {
   return (
     <PhoneShell>
       <title>{PLAY_TITLE}</title>
-      <div className={pendingCss} role="status" aria-busy="true" aria-label="Chargement de la grille">
-        Chargement de la grille…
+      <div className={pendingCss} role="status" aria-busy="true" aria-label={t('route.play.pending.aria')}>
+        {t('route.play.pending.text')}
       </div>
     </PhoneShell>
   );
@@ -124,16 +125,15 @@ export const Route = createRoute({
         {
           type: 'application/ld+json',
           children: breadcrumbJsonLd([
-            { name: 'Accueil', item: `${SITE_BASE_URL}/` },
+            { name: t('seo.breadcrumb.accueil'), item: `${SITE_BASE_URL}/` },
             { name: r.title, item: `${SITE_BASE_URL}/play` },
           ]),
         },
         {
           type: 'application/ld+json',
           children: gameJsonLd({
-            name: 'WordSparrow — mots fléchés du jour',
-            description:
-              'Grille de mots fléchés française quotidienne, jouable en ligne sans inscription.',
+            name: t('seo.play.game.name'),
+            description: t('seo.play.game.description'),
             url: `${SITE_BASE_URL}/play`,
           }),
         },

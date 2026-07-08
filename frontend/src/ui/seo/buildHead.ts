@@ -9,6 +9,8 @@
 
 import { DEFAULT_OG_IMAGE, INDEXABLE_ROUTES, SITE_BASE_URL } from './routeManifest.ts';
 import { breadcrumbJsonLd } from './jsonLd.ts';
+// Read `fr` directly, not `t()`: the Node build scripts import this module without `import.meta.env` (t()'s dev guard) or the `@/` alias.
+import { fr } from '../i18n/messages.fr.ts';
 
 export interface BuildHeadInput {
   readonly title: string;
@@ -85,7 +87,7 @@ export function indexableHeadWithBreadcrumb(path: string): RouteHead & {
       {
         type: 'application/ld+json',
         children: breadcrumbJsonLd([
-          { name: 'Accueil', item: `${SITE_BASE_URL}/` },
+          { name: fr['seo.breadcrumb.accueil'], item: `${SITE_BASE_URL}/` },
           { name: route.title, item: `${SITE_BASE_URL}${path}` },
         ]),
       },

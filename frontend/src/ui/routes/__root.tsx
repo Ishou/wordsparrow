@@ -21,6 +21,7 @@ import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { AnnouncerProvider } from '@/ui/components/a11y/Announcer';
 import { Toast, ToastProvider } from '@/ui/components/primitives';
 import { UpdatePrompt } from '@/ui/v2/UpdatePrompt';
+import { t } from '@/ui/i18n';
 
 // Router context surface — every route loader receives this object as
 // `ctx.context`. The composition root (`main.tsx`) is the only place
@@ -102,9 +103,9 @@ function RootErrorBoundary() {
     <main id="main-content" tabIndex={-1} className={errorPageStyles} lang="fr">
       <SparrowState
         scene={sparrowFlightScene()}
-        title="Une erreur est survenue"
-        body="Recharge la page pour réessayer."
-        cta={{ label: 'Recharger la page', onClick: () => window.location.reload() }}
+        title={t('route.rootError.title')}
+        body={t('route.rootError.body')}
+        cta={{ label: t('route.rootError.cta'), onClick: () => window.location.reload() }}
       />
     </main>
   );

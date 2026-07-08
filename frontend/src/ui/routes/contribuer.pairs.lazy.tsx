@@ -17,6 +17,7 @@ import { ContentPage } from '@/ui/components/layout';
 import { NotFoundScreen } from '@/ui/v2/NotFoundScreen';
 import { useCapabilityGate } from '@/ui/v2/useCapabilityGate';
 import { LockBanner, PairCard, SignInBanner, UndoBar, useCampaignStatus } from '@/ui/components/sondage';
+import { t } from '@/ui/i18n';
 import { Route as ParentRoute } from './contribuer.pairs';
 
 const articleStyles = css({
@@ -136,7 +137,7 @@ function ContribuerPairsPage() {
   const loadNext = useCallback(async (): Promise<void> => {
     if (!surveyClient) {
       setLoading(false);
-      setError('Le sondage n’est pas disponible pour le moment.');
+      setError(t('route.contribuer.error.unavailable'));
       return;
     }
     setLoading(true);
@@ -244,9 +245,9 @@ function ContribuerPairsPage() {
       const name = (cause as Error | undefined)?.name ?? '';
       setLastAction(null);
       if (name === 'UndoExpiredError') {
-        setError('Trop tard pour annuler : la campagne est terminée.');
+        setError(t('route.contribuer.error.undoExpired'));
       } else if (name === 'UndoUnavailableError') {
-        setError('Cette action ne peut plus être annulée.');
+        setError(t('route.contribuer.error.undoUnavailable'));
       } else {
         setError(messageForApiError(cause));
       }
@@ -263,7 +264,7 @@ function ContribuerPairsPage() {
     <ContentPage headerActiveNavId="contribuer">
       <article className={articleStyles}>
         <header className={headerStyles}>
-          <h1 className={headingStyles}>Campagne de qualité des indices</h1>
+          <h1 className={headingStyles}>{t('route.contribuer.heading')}</h1>
           <p className={subtitleRowStyles}>
             {campaignStatus.status.kind === 'open' ? (
               <span data-testid="campaign-subtitle">
@@ -272,14 +273,11 @@ function ContribuerPairsPage() {
             ) : null}
             <span aria-hidden="true">·</span>
             <Link to={'/contribuer' as '/'} className={modeLinkStyles} data-testid="mode-switch-binary">
-              Mode binaire →
+              {t('route.contribuerPairs.modeBinaire')}
             </Link>
           </p>
         </header>
-        <p className={introStyles}>
-          Comparez deux définitions du même mot. Choisissez votre préférée, marquez-les comme
-          toutes deux bonnes ou mauvaises, ou passez si vous ne pouvez pas trancher.
-        </p>
+        <p className={introStyles}>{t('route.contribuerPairs.intro')}</p>
         {campaignStatus.status.kind === 'closed' ? (
           <LockBanner campaign={campaignStatus.status.campaign} />
         ) : null}
@@ -292,7 +290,7 @@ function ContribuerPairsPage() {
         ) : null}
 
         {loading || state.status === 'loading' ? (
-          <p className={statusStyles} role="status">Chargement…</p>
+          <p className={statusStyles} role="status">{t('route.contribuer.loading')}</p>
         ) : null}
 
         {error !== null ? (
@@ -300,9 +298,7 @@ function ContribuerPairsPage() {
         ) : null}
 
         {!loading && pair === null && error === null ? (
-          <p className={statusStyles}>
-            Plus de paires à comparer pour l&apos;instant. Merci !
-          </p>
+          <p className={statusStyles}>{t('route.contribuerPairs.empty')}</p>
         ) : null}
 
         {pair !== null && !isLocked ? (
@@ -313,11 +309,11 @@ function ContribuerPairsPage() {
 
         {lastAction !== null ? <UndoBar onUndo={onUndo} busy={undoBusy} /> : null}
 
-        <p className={legendStyles} aria-label="Raccourcis clavier">
-          <span><kbd>G</kbd> <kbd>D</kbd> préférer</span>
-          <span><kbd>J</kbd> les deux mauvaises</span>
-          <span><kbd>K</kbd> passer</span>
-          <span><kbd>L</kbd> les deux bonnes</span>
+        <p className={legendStyles} aria-label={t('route.contribuer.legend.aria')}>
+          <span><kbd>G</kbd> <kbd>D</kbd> {t('route.contribuerPairs.legend.prefer')}</span>
+          <span><kbd>J</kbd> {t('route.contribuerPairs.legend.bothBad')}</span>
+          <span><kbd>K</kbd> {t('route.contribuerPairs.legend.skip')}</span>
+          <span><kbd>L</kbd> {t('route.contribuerPairs.legend.bothGood')}</span>
         </p>
       </article>
     </ContentPage>
@@ -330,7 +326,7 @@ export function ContribuerPairsScreen() {
   if (gate === 'loading') {
     return (
       <ContentPage>
-        <p className={statusStyles} role="status">Chargement…</p>
+        <p className={statusStyles} role="status">{t('route.contribuer.loading')}</p>
       </ContentPage>
     );
   }
