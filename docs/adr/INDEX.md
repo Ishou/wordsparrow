@@ -287,6 +287,7 @@ ADR-0098  game/api/openapi.yaml  POST /v1/lobbies/{lobbyId}/ownership (claim): 2
 ADR-0098  game/api/openapi.yaml  ownerless boolean on Lobby + LobbySummary (wire ownerless-ness, not inferred from ownershipChanged events); DELETE /v1/lobbies/{lobbyId}/ownership (relinquish): 200 ownerless-lobby / 401 / 403 not-owner / 404
 ADR-0098  game/api/openapi.yaml  DELETE /v1/lobbies/{lobbyId}/membership (leaveLobby): drop caller's seat, relinquish-if-owner, destroy-if-ownerless-and-empty ⇒ delete-if-alone / leave-if-others from a list; 204 / 401 / 403 not-a-member / 404 (amendment 2026-07-08)
 ADR-0098  frontend/src/ui/home/HomeScreen.tsx  handleCreateCoop → useCreateOrResume: IN_PROGRESS create-response ⇒ owned-game modal (rejoin / sole-occupant new / subtle subscribe hint), else navigate
+ADR-0098  frontend/src/ui/routes/lobby.$lobbyId.tsx  handleClaim: guest (anon) tapping Reprendre → host sign-in flow first (ownership needs an account, ADR-0083); playing host-less game stays guest-open; sole-occupant start-new gate retained (2026-07-08 amendment)
 # ADR-0098: Multiplayer lobby ownership as a claimable lease — 1 active game by owner_user_id (sticky across disconnect); explicit relinquish→ownerless→claim; RGPD rule 2 vacates not transfers; 7d ownerless GC; amends ADR-0055 & ADR-0083
 ```
 

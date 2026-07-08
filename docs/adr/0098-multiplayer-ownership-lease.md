@@ -233,3 +233,21 @@ leave-if-others** for owner and non-owner callers alike, with no dedicated
 delete verb. Cookie-authed; guests may leave (401 is only for a missing/invalid
 session). Responses: `204` (left), `401` auth-required, `403`
 lobby-membership-forbidden (no seat), `404` lobby-not-found.
+
+### 2026-07-08 — guest claim prompts sign-in; sole-occupant start-new gate retained
+
+Refines §6's frontend UX after the guest-claim guard work (PR #1478).
+
+- **Guest "Reprendre" (claim) prompts sign-in.** §6's ownerless-game affordance
+  ("offer *Reprendre la partie*", quota-gated) is refined: a signed-out player
+  who taps the claim affordance is routed through the host sign-in flow first
+  (then re-taps to claim), because taking ownership requires an account
+  (ADR-0083). *Playing* a host-less game stays open to guests — only the claim
+  needs an account.
+- **Sole-occupant start-new gate retained.** §6's "*Démarrer une nouvelle
+  partie* … offered only when the caller is the sole occupant" stands unchanged.
+  The 2026-07-08 destroy rule (ADR-0055 amendment) reaps only lobbies that are
+  **ownerless *and* empty**; a relinquished but still-populated co-op room is not
+  destroyed, so making one-tap abandonment its default would still strand the
+  remaining peers in an ownerless room. The restriction therefore remains
+  intentional, not vestigial.
