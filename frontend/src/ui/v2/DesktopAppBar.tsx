@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { List } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { Lockup } from '@/design-system';
 import { MenuSheet } from './MenuSheet';
 
@@ -44,28 +45,28 @@ export function DesktopAppBar({ active, trailing, streak }: DesktopAppBarProps) 
   return (
     <header className={bar}>
       <div className={barInner}>
-      <Link to="/" className={brand} aria-label="Accueil">
+      <Link to="/" className={brand} aria-label={t('v2.nav.brandAria')}>
         <Lockup orientation="horizontal" tone="jade" iconSize={28} textSize={20} gap={9} />
       </Link>
-      <nav className={nav} aria-label="Navigation principale">
+      <nav className={nav} aria-label={t('v2.nav.aria')}>
         <Link
           to="/"
           className={active === 'accueil' ? cx(link, linkActive) : link}
           aria-current={active === 'accueil' ? 'page' : undefined}
         >
-          Accueil
+          {t('v2.nav.accueil')}
         </Link>
         <Link
           to="/grilles"
           className={active === 'grilles' ? cx(link, linkActive) : link}
           aria-current={active === 'grilles' ? 'page' : undefined}
         >
-          Grilles
+          {t('v2.nav.grilles')}
         </Link>
       </nav>
       <div className={right}>
         {trailing}
-        <button type="button" className={menuBtn} aria-label="Ouvrir le menu" aria-haspopup="dialog" onClick={() => setMenuOpen(true)}>
+        <button type="button" className={menuBtn} aria-label={t('v2.nav.menuOpen')} aria-haspopup="dialog" onClick={() => setMenuOpen(true)}>
           <List size={22} weight="bold" aria-hidden="true" />
         </button>
       </div>

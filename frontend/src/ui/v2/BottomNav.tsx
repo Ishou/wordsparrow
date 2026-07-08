@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 
 // position:fixed so the frosted bar is full-bleed on all widths; lg:hidden.
 const nav = css({
@@ -31,14 +32,14 @@ export function BottomNav({ active }: BottomNavProps) {
   const accueil = active === 'accueil';
   const grilles = active === 'grilles';
   return (
-    <nav className={nav} aria-label="Navigation principale">
+    <nav className={nav} aria-label={t('v2.nav.aria')}>
       <Link
         to="/"
         className={navItem}
         aria-current={accueil ? 'page' : undefined}
       >
         <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 11.2 12 5l8 6.2V19a1 1 0 0 1-1 1h-4.2v-5.2H9.2V20H5a1 1 0 0 1-1-1z" stroke={accueil ? ACTIVE : IDLE} strokeOpacity={accueil ? 1 : 0.5} strokeWidth="1.9" strokeLinejoin="round" /></svg>
-        <span className={navLabel} style={accueil ? { color: ACTIVE } : { color: IDLE, opacity: 0.55 }}>Accueil</span>
+        <span className={navLabel} style={accueil ? { color: ACTIVE } : { color: IDLE, opacity: 0.55 }}>{t('v2.nav.accueil')}</span>
       </Link>
       <Link
         to="/grilles"
@@ -46,7 +47,7 @@ export function BottomNav({ active }: BottomNavProps) {
         aria-current={grilles ? 'page' : undefined}
       >
         <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke={grilles ? ACTIVE : IDLE} strokeOpacity={grilles ? 1 : 0.5} strokeWidth="1.8" /><rect x="13.2" y="4.2" width="6.6" height="6.6" rx="1.6" stroke={grilles ? ACTIVE : IDLE} strokeOpacity={grilles ? 1 : 0.5} strokeWidth="1.8" /><rect x="4.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke={grilles ? ACTIVE : IDLE} strokeOpacity={grilles ? 1 : 0.5} strokeWidth="1.8" /><rect x="13.2" y="13.2" width="6.6" height="6.6" rx="1.6" stroke={grilles ? ACTIVE : IDLE} strokeOpacity={grilles ? 1 : 0.5} strokeWidth="1.8" /></svg>
-        <span className={navLabel} style={grilles ? { color: ACTIVE } : { color: IDLE, opacity: 0.55 }}>Grilles</span>
+        <span className={navLabel} style={grilles ? { color: ACTIVE } : { color: IDLE, opacity: 0.55 }}>{t('v2.nav.grilles')}</span>
       </Link>
     </nav>
   );

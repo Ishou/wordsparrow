@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { CaretRight } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { fetchAllDailySummaries, type DailySummary, type PuzzleRepository } from '@/application';
 import type { AuthClient } from '@/application/auth';
 import { LobbyClientError, type GameClient, type LobbyClient, type LobbySummary } from '@/application/game';
@@ -31,9 +32,9 @@ export type GrillesOnglet = 'quotidiennes' | 'a-finir' | 'plusieurs';
 type GrillesSession = { readonly sessionId: SessionId; readonly pseudonym: Pseudonym };
 
 const ONGLETS: ReadonlyArray<{ readonly id: GrillesOnglet; readonly label: string }> = [
-  { id: 'quotidiennes', label: 'Quotidiennes' },
-  { id: 'a-finir', label: 'À finir' },
-  { id: 'plusieurs', label: 'À plusieurs' },
+  { id: 'quotidiennes', label: t('v2.grilles.onglet.quotidiennes') },
+  { id: 'a-finir', label: t('v2.grilles.onglet.aFinir') },
+  { id: 'plusieurs', label: t('v2.grilles.onglet.plusieurs') },
 ];
 
 const title = css({
@@ -197,7 +198,7 @@ export function GrillesArchiveScreen({
 
   const calendarSkeleton = (
     <div className={calWrap}>
-      <div className={calendarSkeletonCard} aria-busy="true" aria-label="Chargement des grilles">
+      <div className={calendarSkeletonCard} aria-busy="true" aria-label={t('v2.grilles.loading')}>
         {Array.from({ length: 5 }, (_, w) => (
           <div key={w} className={calendarSkeletonRow}>
             {Array.from({ length: 7 }, (_, d) => (
@@ -248,14 +249,14 @@ export function GrillesArchiveScreen({
               to="/play"
               search={info.today ? undefined : { date: info.summary.date }}
               className={card}
-              aria-label={`Reprendre — ${longDateFr(info.summary.date)}`}
+              aria-label={t('v2.grilles.aFinir.reprendreAria', { date: longDateFr(info.summary.date) })}
             >
               <div className={mid}>
                 <div className={rowTitle}>
-                  {longDateFr(info.summary.date)} · n°{info.summary.gridNumber}
+                  {t('v2.grilles.aFinir.rowTitle', { date: longDateFr(info.summary.date), num: info.summary.gridNumber })}
                 </div>
                 <div className={rowMeta}>
-                  En cours · {info.filled} / {total} cases
+                  {t('v2.grilles.aFinir.rowMeta', { filled: info.filled, total })}
                 </div>
                 <div className={bar}>
                   <span className={barFill} style={{ width: `${pct}%` }} />
@@ -276,7 +277,7 @@ export function GrillesArchiveScreen({
       <>
         <LobbiesEmptyState onCreate={createParty} />
         <Link to="/" className={joinLink}>
-          Rejoindre avec un code
+          {t('v2.grilles.plusieurs.join')}
         </Link>
       </>
     );
@@ -291,11 +292,11 @@ export function GrillesArchiveScreen({
         fillBody
       >
         <div className={head}>
-          <h1 className={title}>Grilles</h1>
+          <h1 className={title}>{t('v2.grilles.title')}</h1>
 
           <SegmentedControl
             className={tabBar}
-            ariaLabel="Choisir la vue des grilles"
+            ariaLabel={t('v2.grilles.tabsAria')}
             options={onglets}
             value={effectiveOnglet}
             onChange={onOngletChange}

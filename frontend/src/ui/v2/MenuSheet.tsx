@@ -4,6 +4,7 @@ import { Portal } from '@ark-ui/react/portal';
 import { Link, useNavigate, useRouteContext } from '@tanstack/react-router';
 import { User, Gear, CaretRight, SignOut, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { useAuth } from '@/ui/components/auth';
 import { useBackDismiss } from '@/ui/lib/useBackDismiss';
 
@@ -146,9 +147,14 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
   const { state, refresh } = useAuth();
   const { authClient } = useRouteContext({ from: '__root__' });
   const authed = state.status === 'authed';
-  const displayName = authed ? state.whoami.displayName : 'Invité';
+  const displayName = authed ? state.whoami.displayName : t('v2.menu.guest');
   const initial = authed ? displayName.trim()[0]?.toUpperCase() ?? '?' : null;
-  const subline = streak != null && streak >= 1 ? `🔥 série ${streak}` : authed ? 'Connecté' : 'Sans compte';
+  const subline =
+    streak != null && streak >= 1
+      ? t('v2.menu.subline.streak', { streak })
+      : authed
+        ? t('v2.menu.subline.connected')
+        : t('v2.menu.subline.noAccount');
   const handleLogout = async () => {
     if (!authClient) return;
     onClose();
@@ -167,7 +173,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
         <Dialog.Backdrop className={scrim} data-testid="menu-sheet-backdrop" />
         <Dialog.Positioner className={positioner}>
           <Dialog.Content className={sheet} style={sheetStyle} onTransitionEnd={onSheetTransitionEnd}>
-            <Dialog.Title className={srTitle}>Menu</Dialog.Title>
+            <Dialog.Title className={srTitle}>{t('v2.menu.dialogTitle')}</Dialog.Title>
             <div
               className={dragZone}
               onPointerDown={onDragDown}
@@ -193,13 +199,13 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
 
             <span className={headDivider} aria-hidden="true" />
 
-            <nav aria-label="Menu">
+            <nav aria-label={t('v2.menu.navAria')}>
               <ul className={list}>
                 <li>
                   <button type="button" className={rowActive} onClick={goReglages}>
                     <Tile icon={Gear} soft />
                     <span className={labelWrap}>
-                      <span className={label}>Réglages</span>
+                      <span className={label}>{t('v2.menu.reglages')}</span>
                     </span>
                     <span className={chevron}>
                       <CaretRight size={18} weight="bold" aria-hidden="true" />
@@ -211,7 +217,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
                     <button type="button" className={rowActive} onClick={() => { void handleLogout(); }}>
                       <Tile icon={SignOut} soft />
                       <span className={labelWrap}>
-                        <span className={label}>Se déconnecter</span>
+                        <span className={label}>{t('v2.menu.logout')}</span>
                       </span>
                       <span className={chevron}>
                         <CaretRight size={18} weight="bold" aria-hidden="true" />

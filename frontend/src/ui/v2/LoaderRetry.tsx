@@ -1,6 +1,7 @@
 import { useRouter } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import type { LoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { PhoneShell } from './PhoneShell';
@@ -49,11 +50,11 @@ export function LoaderRetry({ policy, silentText }: LoaderRetryProps) {
     if (decision == null) {
       setPhase('exhausted');
       timers.push(
-        setTimeout(() => announce('Connexion au serveur impossible. Utilise le bouton Réessayer.'), 0),
+        setTimeout(() => announce(t('v2.loader.announce.exhausted')), 0),
       );
     } else {
       setPhase(decision.silent ? 'silent' : 'retrying');
-      if (decision.attempt === 2) timers.push(setTimeout(() => announce('Reconnexion en cours'), 0));
+      if (decision.attempt === 2) timers.push(setTimeout(() => announce(t('v2.loader.announce.retrying')), 0));
       timers.push(
         setTimeout(() => {
           void router.invalidate();
@@ -75,9 +76,9 @@ export function LoaderRetry({ policy, silentText }: LoaderRetryProps) {
       <PhoneShell header={<BackHeader to="/" />}>
         <SparrowState
           scene={sparrowFlightScene()}
-          title="Connexion impossible"
-          body="Le serveur ne répond pas. Vérifie ta connexion, puis réessaie."
-          cta={{ label: 'Réessayer', onClick: retryNow }}
+          title={t('v2.loader.error.title')}
+          body={t('v2.loader.error.body')}
+          cta={{ label: t('v2.loader.retry'), onClick: retryNow }}
         />
       </PhoneShell>
     );
@@ -86,10 +87,10 @@ export function LoaderRetry({ policy, silentText }: LoaderRetryProps) {
   return (
     <PhoneShell header={<BackHeader to="/" />}>
       <div className={retryWrap}>
-        <p className={placeholder}>{phase === 'silent' ? silentText : 'Reconnexion…'}</p>
+        <p className={placeholder}>{phase === 'silent' ? silentText : t('v2.loader.reconnecting')}</p>
         {phase === 'retrying' ? (
           <PrimaryButton className={retryCta} fullWidth={false} onClick={retryNow}>
-            Réessayer
+            {t('v2.loader.retry')}
           </PrimaryButton>
         ) : null}
       </div>

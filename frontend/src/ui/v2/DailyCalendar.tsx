@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { longDateFr, monthGrid, monthLabelFr, type DayInfo, type DayStatus } from './dailyCalendarModel';
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -141,9 +142,9 @@ const byStatus: Record<Exclude<DayStatus, 'paywalled'>, string> = {
 };
 
 function actionLabel(status: DayStatus): string {
-  if (status === 'done') return 'Revoir';
-  if (status === 'progress') return 'Reprendre';
-  return 'Commencer';
+  if (status === 'done') return t('v2.calendar.action.revoir');
+  if (status === 'progress') return t('v2.calendar.action.reprendre');
+  return t('v2.calendar.action.commencer');
 }
 
 function pctOf(info: DayInfo): number {
@@ -167,11 +168,11 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
   return (
     <div className={cardWrap}>
       <div className={header}>
-        <button type="button" aria-label="Mois précédent" disabled={!canPrev} onClick={onPrev} className={navBtn}>
+        <button type="button" aria-label={t('v2.calendar.prevMonth')} disabled={!canPrev} onClick={onPrev} className={navBtn}>
           <CaretLeft size={18} weight="bold" aria-hidden="true" />
         </button>
         <h2 className={monthTitle}>{monthLabelFr(month)}</h2>
-        <button type="button" aria-label="Mois suivant" disabled={!canNext} onClick={onNext} className={navBtn}>
+        <button type="button" aria-label={t('v2.calendar.nextMonth')} disabled={!canNext} onClick={onNext} className={navBtn}>
           <CaretRight size={18} weight="bold" aria-hidden="true" />
         </button>
       </div>
@@ -200,7 +201,7 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
                   type="button"
                   className={cx(cellPaywalled, !paywalled(week[ci - 1]) && capLeft, !paywalled(week[ci + 1]) && capRight)}
                   onClick={onPaywalledSelect}
-                  aria-label={`Grille réservée à l'abonnement — ${longDateFr(cell.iso)}`}
+                  aria-label={t('v2.calendar.day.ariaPaywalled', { date: longDateFr(cell.iso) })}
                 >
                   {cell.dayOfMonth}
                 </button>
@@ -215,7 +216,11 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
                 // the today ring only marks an untouched day — a progress arc would be unreadable under it
                 className={cx(cellBase, byStatus[info.status], info.today && info.status === 'new' && cellToday)}
                 style={progress ? { background: progressRingBackground(pctOf(info)) } : undefined}
-                aria-label={`${actionLabel(info.status)} — ${longDateFr(cell.iso)}${progress ? ` — ${pctOf(info)} %` : ''}`}
+                aria-label={
+                  progress
+                    ? t('v2.calendar.day.ariaProgress', { action: actionLabel(info.status), date: longDateFr(cell.iso), pct: pctOf(info) })
+                    : t('v2.calendar.day.aria', { action: actionLabel(info.status), date: longDateFr(cell.iso) })
+                }
               >
                 {cell.dayOfMonth}
               </Link>
@@ -224,13 +229,13 @@ export function DailyCalendar({ month, infos, canPrev, canNext, onPrev, onNext, 
         </div>
       ))}
       <p className={legend}>
-        <span className={cx(swatch, cellDone)} aria-hidden="true" /> terminée ·{' '}
-        <span className={swatch} style={{ background: progressRingBackground(66) }} aria-hidden="true" /> en cours ·{' '}
-        <span className={cx(swatch, cellNew)} aria-hidden="true" /> à jouer
+        <span className={cx(swatch, cellDone)} aria-hidden="true" />{t('v2.calendar.legend.done')}{' '}
+        <span className={swatch} style={{ background: progressRingBackground(66) }} aria-hidden="true" />{t('v2.calendar.legend.progress')}{' '}
+        <span className={cx(swatch, cellNew)} aria-hidden="true" />{t('v2.calendar.legend.new')}
         {showPaywallLegend ? (
           <>
             {' · '}
-            <span className={cx(swatch, swatchBand)} aria-hidden="true" /> réservées à l&apos;abonnement
+            <span className={cx(swatch, swatchBand)} aria-hidden="true" />{t('v2.calendar.legend.paywalled')}
           </>
         ) : null}
       </p>

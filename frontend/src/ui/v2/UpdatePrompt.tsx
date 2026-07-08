@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 
 // Decouples infrastructure/ from ui/: composition root pushes updates in; component subscribes. See ADR-0026.
 type ApplyUpdate = () => void;
@@ -97,15 +98,15 @@ export function UpdatePrompt() {
 
   return (
     <div className={banner} role="status" aria-live="polite" data-testid="pwa-update-prompt">
-      <p className={message}>Nouvelle version disponible</p>
+      <p className={message}>{t('v2.update.message')}</p>
       <button type="button" className={updateButton} onClick={apply}>
-        Mettre à jour
+        {t('v2.update.cta')}
       </button>
       <button
         type="button"
         className={dismissButton}
         onClick={() => setDismissed(true)}
-        aria-label="Ignorer la mise à jour"
+        aria-label={t('v2.update.dismiss')}
       >
         ✕
       </button>
