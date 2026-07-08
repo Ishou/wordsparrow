@@ -370,7 +370,7 @@ describe('Grid render', () => {
 
     it('renders the zoom controls cluster centered in the bottom controls bar (no grid-track cap)', () => {
       render(<Grid puzzle={SAMPLE_PUZZLE} />);
-      const cluster = screen.getByRole('group', { name: /zoom controls/i });
+      const cluster = screen.getByRole('group', { name: /contrôles du zoom/i });
       // Grid-track cap no longer applies; the cluster is centered inside the bottom bar now.
       expect(cluster.style.maxWidth).toBe('');
       // Panda atomic class for justifyContent:center on the parent bottom bar.
@@ -399,9 +399,9 @@ describe('Grid render', () => {
     it('keeps the zoom controls keyboard-reachable with WCAG-AA-compliant 44 px touch targets', () => {
       render(<Grid puzzle={SAMPLE_PUZZLE} />);
       // jsdom skips layout; accessible name + enabled state are the behavioral contract.
-      expect(screen.getByRole('button', { name: /zoom in/i })).toBeEnabled();
-      expect(screen.getByRole('button', { name: /zoom out/i })).toBeDisabled();
-      expect(screen.getByRole('button', { name: /reset zoom/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /^zoomer$/i })).toBeEnabled();
+      expect(screen.getByRole('button', { name: /^dézoomer$/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /réinitialiser le zoom/i })).toBeDisabled();
     });
   });
 

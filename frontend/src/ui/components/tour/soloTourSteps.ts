@@ -18,7 +18,7 @@ import { t } from '@/ui/i18n';
 const TOOLBAR_SELECTOR = '[role="toolbar"][aria-label="Outils de la grille"]';
 const DEFINITION_CELL_SELECTOR = '[data-cell-kind="definition"]';
 const HINT_BUTTON_SELECTOR = '[aria-label^="Indice ("]';
-const ZOOM_CONTROLS_SELECTOR = '[role="group"][aria-label="Zoom controls"]';
+const ZOOM_CONTROLS_SELECTOR = '[role="group"][aria-label="Contrôles du zoom"]';
 const MINIMAP_SELECTOR = '[role="img"][aria-label^="Aperçu de la grille"]';
 
 const queryFirst = (selector: string): HTMLElement | null =>
