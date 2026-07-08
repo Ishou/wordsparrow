@@ -1,4 +1,5 @@
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { contentCard, lede, sectionBody, sectionHeading } from './contentPage';
@@ -36,78 +37,48 @@ export function AProposScreen() {
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
-          <h1 className={title}>À propos</h1>
-          <p className={lede}>Un petit jeu de mots fléchés à la française, fait avec soin.</p>
+          <h1 className={title}>{t('v2.apropos.title')}</h1>
+          <p className={lede}>{t('v2.apropos.lede')}</p>
         </header>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>Le projet</h2>
+          <h2 className={sectionHeading}>{t('v2.apropos.projet.heading')}</h2>
           <p className={sectionBody}>
-            Je m&apos;appelle <strong>Colin Auberger</strong> et je développe WordSparrow seul, en
-            France.
+            {t('v2.apropos.projet.p1.pre')}<strong>Colin Auberger</strong>{t('v2.apropos.projet.p1.post')}
           </p>
-          <p className={sectionBody}>
-            C&apos;est autant un jeu qu&apos;un terrain d&apos;apprentissage : je le fais pour
-            progresser, pour le plaisir du travail soigné, et avec l&apos;envie qu&apos;on ait plaisir
-            à l&apos;ouvrir chaque matin. Pas de grande équipe derrière — deux mains, beaucoup de
-            patience.
-          </p>
+          <p className={sectionBody}>{t('v2.apropos.projet.p2')}</p>
         </section>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>L&apos;intelligence artificielle</h2>
-          <p className={sectionBody}>
-            Autant être clair sur la fabrication des définitions : elles sont rédigées par un modèle
-            de langage, que j&apos;entraîne et affine au fil du temps. Le résultat n&apos;est pas
-            encore parfait — il reste des définitions maladroites — et je continue de le peaufiner.
-          </p>
-          <p className={sectionBody}>
-            L&apos;IA me permet de faire vivre le projet à moindre coût, le temps qu&apos;il trouve son
-            public. Le jour où WordSparrow gagnera de l&apos;argent, je veux le consacrer à de vraies
-            plumes : des auteurs payés pour écrire les définitions.
-          </p>
-          <p className={sectionBody}>
-            Tout ça a un coût pour l&apos;environnement — de l&apos;énergie, de l&apos;eau. Je
-            n&apos;ai pas de chiffres à te vendre, mais les définitions sont générées une fois, par
-            lots, puis figées.
-          </p>
+          <h2 className={sectionHeading}>{t('v2.apropos.ia.heading')}</h2>
+          <p className={sectionBody}>{t('v2.apropos.ia.p1')}</p>
+          <p className={sectionBody}>{t('v2.apropos.ia.p2')}</p>
+          <p className={sectionBody}>{t('v2.apropos.ia.p3')}</p>
         </section>
 
         <section className={thanksCard}>
-          <h2 className={sectionHeading}>Remerciements</h2>
-          <p className={thanksText}>
-            WordSparrow ne tient pas debout tout seul. Il repose sur des logiciels libres et sur des
-            polices d&apos;écriture offertes à tous.
-          </p>
-          <p className={thanksText}>
-            Rien de tout cela ne nous appartient vraiment : on en hérite, et on essaie d&apos;en
-            prendre soin. Voici celles et ceux à qui l&apos;on doit un grand merci.
-          </p>
+          <h2 className={sectionHeading}>{t('v2.apropos.thanks.heading')}</h2>
+          <p className={thanksText}>{t('v2.apropos.thanks.p1')}</p>
+          <p className={thanksText}>{t('v2.apropos.thanks.p2')}</p>
         </section>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>Le code et les outils</h2>
+          <h2 className={sectionHeading}>{t('v2.apropos.code.heading')}</h2>
+          <p className={sectionBody}>{t('v2.apropos.code.p1')}</p>
           <p className={sectionBody}>
-            Le jeu tourne grâce à des logiciels libres, écrits et entretenus par une foule de gens
-            qu&apos;on ne croisera jamais.
-          </p>
-          <p className={sectionBody}>
-            Ils sont bien trop nombreux pour tenir ici :{' '}
+            {t('v2.apropos.code.p2.pre')}
             <a className={link} href="/third-party-licenses.txt">
-              la liste complète des licences
-            </a>{' '}
-            les cite un à un.
+              {t('v2.apropos.code.p2.link')}
+            </a>
+            {t('v2.apropos.code.p2.post')}
           </p>
         </section>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>Les lettres</h2>
+          <h2 className={sectionHeading}>{t('v2.apropos.letters.heading')}</h2>
+          <p className={sectionBody}>{t('v2.apropos.letters.p1')}</p>
           <p className={sectionBody}>
-            Les mots méritent de belles lettres. Nos polices d&apos;écriture ont été dessinées puis
-            partagées librement, sous licence SIL Open Font, par des créateurs typographiques.
-          </p>
-          <p className={sectionBody}>
-            Merci aux polices{' '}
+            {t('v2.apropos.letters.p2.pre')}
             <a
               className={link}
               href="https://fonts.google.com/specimen/Fredoka"
@@ -116,7 +87,7 @@ export function AProposScreen() {
             >
               Fredoka
             </a>
-            ,{' '}
+            {', '}
             <a
               className={link}
               href="https://fonts.google.com/specimen/Nunito"
@@ -125,7 +96,7 @@ export function AProposScreen() {
             >
               Nunito
             </a>
-            ,{' '}
+            {', '}
             <a
               className={link}
               href="https://fonts.google.com/specimen/Hanken+Grotesk"
@@ -133,8 +104,8 @@ export function AProposScreen() {
               rel="noopener noreferrer"
             >
               Hanken Grotesk
-            </a>{' '}
-            et{' '}
+            </a>
+            {t('v2.apropos.letters.p2.et')}
             <a
               className={link}
               href="https://fonts.google.com/specimen/Spline+Sans+Mono"
@@ -143,18 +114,15 @@ export function AProposScreen() {
             >
               Spline Sans Mono
             </a>
-            , et aux mains patientes qui les ont tracées.
+            {t('v2.apropos.letters.p2.post')}
           </p>
         </section>
 
         <section className={contentCard}>
-          <h2 className={sectionHeading}>La langue et les mots</h2>
+          <h2 className={sectionHeading}>{t('v2.apropos.langue.heading')}</h2>
+          <p className={sectionBody}>{t('v2.apropos.langue.p1')}</p>
           <p className={sectionBody}>
-            Sans dictionnaire, pas de grille. Notre vocabulaire vient d&apos;un long travail de
-            recensement du français, mot après mot, année après année.
-          </p>
-          <p className={sectionBody}>
-            Merci à{' '}
+            {t('v2.apropos.langue.p2.pre')}
             <a
               className={link}
               href="https://grammalecte.net"
@@ -162,8 +130,8 @@ export function AProposScreen() {
               rel="noopener noreferrer"
             >
               Grammalecte
-            </a>{' '}
-            et à son dictionnaire français, au <strong>Hunspell français</strong>, et à{' '}
+            </a>
+            {t('v2.apropos.langue.p2.mid1')}<strong>Hunspell français</strong>{t('v2.apropos.langue.p2.mid2')}
             <a
               className={link}
               href="https://kaiko.getalp.org/about-dbnary/"
@@ -172,7 +140,7 @@ export function AProposScreen() {
             >
               DBnary
             </a>
-            , le Wiktionnaire mis en données ouvertes.
+            {t('v2.apropos.langue.p2.post')}
           </p>
         </section>
       </article>

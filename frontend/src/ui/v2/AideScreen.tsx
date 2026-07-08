@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { css } from 'styled-system/css';
+import { t } from '@/ui/i18n';
 import { PhoneShell } from './PhoneShell';
 import { BackHeader } from './BackHeader';
 import { contentCard, eyebrow, lede, sectionBody, sectionHeading } from './contentPage';
@@ -41,41 +42,24 @@ export function AideScreen() {
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
-          <div className={eyebrow}>Besoin d&apos;un coup de main&nbsp;?</div>
-          <h1 className={title}>Aide</h1>
-          <p className={lede}>L&apos;essentiel pour jouer, en quelques mots.</p>
+          <div className={eyebrow}>{t('v2.aide.eyebrow')}</div>
+          <h1 className={title}>{t('v2.aide.title')}</h1>
+          <p className={lede}>{t('v2.aide.lede')}</p>
         </header>
 
-        <Section heading="Comment jouer">
-          Touche une case puis tape une lettre. Les flèches du clavier te déplacent dans la grille en
-          évitant les cases d&apos;indices. Au carrefour de deux mots, appuie sur <kbd className={kbd}>Espace</kbd> pour
-          basculer entre les deux directions.
+        <Section heading={t('v2.aide.play.heading')}>
+          {t('v2.aide.play.pre')}<kbd className={kbd}>{t('v2.aide.kbd.espace')}</kbd>{t('v2.aide.play.post')}
         </Section>
 
-        <Section heading="Raccourcis clavier">
-          <kbd className={kbd}>← ↑ ↓ →</kbd> pour te déplacer, <kbd className={kbd}>Espace</kbd> pour changer de
-          direction à un carrefour, <kbd className={kbd}>Retour</kbd> pour effacer une lettre, et{' '}
-          <kbd className={kbd}>Tab</kbd> pour passer au mot suivant.
+        <Section heading={t('v2.aide.shortcuts.heading')}>
+          <kbd className={kbd}>← ↑ ↓ →</kbd>{t('v2.aide.shortcuts.move')}<kbd className={kbd}>{t('v2.aide.kbd.espace')}</kbd>{t('v2.aide.shortcuts.direction')}<kbd className={kbd}>{t('v2.aide.kbd.retour')}</kbd>{t('v2.aide.shortcuts.erase')}<kbd className={kbd}>Tab</kbd>{t('v2.aide.shortcuts.next')}
         </Section>
 
-        <Section heading="Validation et indices">
-          En solo, rien ne se valide au fil de la saisie&nbsp;: une fois toutes les cases remplies, ta grille
-          est vérifiée d&apos;un coup et tu sais si elle est juste ou non. Si tu bloques, demande un indice via
-          le bouton dédié dans le bandeau&nbsp;: il révèle le mot entier sur lequel tu es (nombre limité par
-          grille).
-        </Section>
+        <Section heading={t('v2.aide.validation.heading')}>{t('v2.aide.validation.body')}</Section>
 
-        <Section heading="Jouer à plusieurs">
-          Crée une partie à plusieurs depuis l&apos;accueil et partage le lien&nbsp;: tout le monde joue la même
-          grille, en même temps.
-        </Section>
+        <Section heading={t('v2.aide.multi.heading')}>{t('v2.aide.multi.body')}</Section>
 
-        <Section heading="Installer l&apos;application">
-          WordSparrow s&apos;installe comme une app&nbsp;: grille en plein écran, lancement depuis ton écran
-          d&apos;accueil. Sur Android et sur ordinateur, passe par «&nbsp;Installer l&apos;application&nbsp;» dans les
-          Réglages. Sur iPhone et iPad&nbsp;: bouton Partager de Safari, puis
-          «&nbsp;Sur l&apos;écran d&apos;accueil&nbsp;».
-        </Section>
+        <Section heading={t('v2.aide.install.heading')}>{t('v2.aide.install.body')}</Section>
       </article>
     </PhoneShell>
   );
