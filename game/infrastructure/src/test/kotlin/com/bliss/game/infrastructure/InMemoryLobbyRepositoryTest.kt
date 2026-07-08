@@ -692,6 +692,50 @@ class InMemoryLobbyRepositoryTest {
             assertThat(repo.findById(base.id)!!.ownerUserId).isEqualTo(userA)
         }
 
+    // ADR-0055/0098: relinquishing a solo game empties an ownerless lobby -> it is destroyed, not just ownerless.
+    @Test
+    fun `relinquishOwnership destroys the lobby when the owner is the sole player`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val solo = inProgressLobbyAt(LobbyId.generate(), ownerUserId = userA)
+            repo.save(solo)
+
+            val outcome = repo.relinquishOwnership(solo.id, sessionA, baseInstant.plusSeconds(120))
+
+            assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
+            assertThat(repo.findById(solo.id)).isNull()
+        }
+
+    @Test
+    fun `relinquishOwnershipByUser destroys the lobby when the owner is the sole player`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val solo = inProgressLobbyAt(LobbyId.generate(), ownerUserId = userA)
+            repo.save(solo)
+
+            val outcome = repo.relinquishOwnershipByUser(solo.id, userA, baseInstant.plusSeconds(120))
+
+            assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
+            assertThat(repo.findById(solo.id)).isNull()
+        }
+
+    // ADR-0055/0098: erasing the last remaining player of an already-ownerless lobby leaves a ghost -> delete it.
+    @Test
+    fun `eraseSession destroys an ownerless lobby when its last player is erased`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val sessionB = SessionId("0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5")
+            val ownerless =
+                inProgressLobbyAt(LobbyId.generate(), ownerSessionId = SessionId.ANON, ownerUserId = null)
+                    .copy(players = mapOf(sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))))
+            repo.save(ownerless)
+
+            val result = repo.eraseSession(sessionB)
+
+            assertThat(result.deletedLobbies).isEqualTo(1)
+            assertThat(repo.findById(ownerless.id)).isNull()
+        }
+
     @Test
     fun `claimOwnership binds ownership to a present claimer on an ownerless lobby`() =
         runTest {

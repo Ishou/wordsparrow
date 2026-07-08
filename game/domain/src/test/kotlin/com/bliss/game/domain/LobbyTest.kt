@@ -161,6 +161,15 @@ class LobbyTest {
     }
 
     @Test
+    fun `isDefunct is true only when ownerless and empty`() {
+        assertThat(lobby().copy(ownerUserId = null, players = emptyMap()).isDefunct()).isTrue()
+        // Ownerless but still populated -> claimable, not a ghost.
+        assertThat(lobby().copy(ownerUserId = null).isDefunct()).isFalse()
+        // Owned but empty -> owner returns via My-games, keep it.
+        assertThat(lobby().copy(ownerUserId = userA, players = emptyMap()).isDefunct()).isFalse()
+    }
+
+    @Test
     fun `relinquishOwner clears ownerUserId and marks the lobby ownerless`() {
         val owned = lobby(lastActivityAt = Fixtures.now).copy(ownerUserId = userA)
         val after = owned.relinquishOwner(Fixtures.later)

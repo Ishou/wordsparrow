@@ -131,6 +131,9 @@ data class Lobby(
     // Ownership is a claimable lease (ADR-0098 §2): a null ownerUserId means relinquished/vacated.
     fun isOwnerless(): Boolean = ownerUserId == null
 
+    // ADR-0055/0098: an ownerless AND empty lobby is a ghost nobody owns or plays -- destroy it now, not at the 7-day ownerless GC.
+    fun isDefunct(): Boolean = isOwnerless() && players.isEmpty()
+
     // ADR-0098 §2: owner-gated actions go inert only once BOTH ownerless and unseated -- isOwnerless()
     // alone over-fires for an anonymous owner, whose ownerUserId is null from creation, not relinquish.
     fun isCurrentOwner(sessionId: SessionId): Boolean = isOwner(sessionId) && (hasJoined(sessionId) || !isOwnerless())

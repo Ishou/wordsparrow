@@ -295,8 +295,10 @@ class StartGameUseCase(
 /**
  * Removes a player from a lobby. Does NOT transfer ownership when the
  * owner leaves — the owner is expected to return via My-games
- * (ADR-0039). The lobby persists even when the last player leaves;
- * cleanup is handled by [LobbyGarbageCollector]'s state-specific TTL.
+ * (ADR-0039). An owned lobby persists when emptied, cleaned up by
+ * [LobbyGarbageCollector]'s state-specific TTL; an already-ownerless
+ * lobby emptied by the last player leaving is destroyed immediately
+ * instead (ADR-0055/0098).
  *
  * Manual ownership transfer is intentionally out of scope. The only
  * code path that transfers ownership is RGPD erasure (see ADR-0039 §f
@@ -319,21 +321,26 @@ class LeaveLobbyUseCase(
     ): UseCaseOutcome<Lobby?> {
         val events = mutableListOf<LobbyEvent>(LobbyEvent.PlayerLeft(sessionId))
         var playerWasPresent = false
+        var destroyed = false
         val updated =
             repo.mutate(lobbyId) { lobby ->
                 if (!lobby.hasJoined(sessionId)) return@mutate lobby
                 playerWasPresent = true
-                // Remove the player but keep ownerSessionId unchanged on every branch.
-                // The lobby persists even when emptied; GC TTLs (see [LobbyGarbageCollector]) handle cleanup.
-                lobby.copy(
-                    players = lobby.players - sessionId,
-                    lastActivityAt = clock.now(),
-                )
+                // Keep ownerSessionId unchanged; an owned lobby persists when emptied (owner returns via My-games).
+                val next = lobby.copy(players = lobby.players - sessionId, lastActivityAt = clock.now())
+                // ADR-0055/0098: the last player leaving an ownerless lobby leaves a ghost -- delete it now.
+                if (next.isDefunct()) {
+                    destroyed = true
+                    null
+                } else {
+                    next
+                }
             }
-        // mutate's mutator never returns null, so updated == null
-        // is unambiguously "lobby with this id does not exist" (the repo's only other
-        // null path). PlayerNotInLobby is signalled by playerWasPresent=false on a
-        // non-null mutate return — the mutator short-circuited without mutating.
+        // destroyed => Success(null); else updated == null unambiguously means "lobby does not exist".
+        if (destroyed) {
+            analyticsEventSink.record(AnalyticsEvent.LobbyLeft, sessionId)
+            return success(null, events)
+        }
         if (updated == null) return failure(UseCaseError.LobbyNotFound)
         if (!playerWasPresent) return failure(UseCaseError.PlayerNotInLobby)
         analyticsEventSink.record(AnalyticsEvent.LobbyLeft, sessionId)

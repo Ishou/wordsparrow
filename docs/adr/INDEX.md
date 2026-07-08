@@ -76,6 +76,7 @@ ADR-0053  frontend/vite.config.ts                  SW navigateFallbackDenylist f
 ADR-0054  frontend/src/ui/**                       Page-shell primitive
 ADR-0055  game/**/persistence/**                   Multiplayer game persistence
 ADR-0055  game/application/src/main/kotlin/com/bliss/game/application/usecases/LobbyGarbageCollector.kt   GC matrix: WAITING 24h, COMPLETED 7d anon-only (2026-07-03 amendment: authed seat exempts), IN_PROGRESS never
+ADR-0055  game/application/src/main/kotlin/com/bliss/game/application/usecases/LobbyUseCases.kt   2026-07-08 amendment: destroy ownerless+empty lobbies immediately (Lobby.isDefunct) on relinquish/leave/erase, not at the 7d GC
 ADR-0056  survey/**                                Survey bounded context (RLHF clue rating; pairwise comparison task pulled from v2 deferral)
 ADR-0057  modal_jobs/**                            Cloud-GPU finetune lane (Modal); "second lane / training-only" framing amended by ADR-0087 (sole lane, generation included)
 ADR-0058  data/external/**                         Licensed-data posture (commercial intent); per-source verdict matrix

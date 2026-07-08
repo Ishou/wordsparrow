@@ -382,6 +382,41 @@ living user reclaims by explicit claim.
 The port gains `findIdleOwnerless(cutoff)` alongside `findIdleWaiting` /
 `findIdleCompleted`; both adapters implement it.
 
+## Amendment 2026-07-08 — destroy ownerless-and-empty lobbies immediately (ADR-0098)
+
+The 2026-07-07 amendment added a 7-day ownerless GC sweep as the backstop for
+relinquished / RGPD-vacated games. That sweep is keyed on idleness, so a lobby
+that becomes both **ownerless** (`owner_user_id IS NULL`) **and empty**
+(`players` map empty) would otherwise linger for up to 7 days as a ghost that
+nobody owns or is playing. This amendment tightens the invariant:
+
+> `ownerUserId == null && players.isEmpty()` ⇒ the lobby does not exist.
+
+The destroy fires at **every transition** that can produce that state,
+regardless of how it is reached, via the shared domain predicate
+`Lobby.isDefunct()`:
+
+- **Explicit relinquish** by the sole player (WS Quitter frame and REST
+  `DELETE .../ownership`): nulls `owner_user_id` and drops the caller's seat →
+  ownerless + empty → deleted. The 200 body / WS outcome carries the terminal
+  ownerless snapshot; a follow-up `findById` returns null.
+- **Last player leaving** an already-ownerless (host-less) lobby
+  (`LeaveLobbyUseCase`): deleted.
+- **RGPD `eraseSession`** whose vacate/removal empties an already-ownerless
+  lobby: deleted (rule 1 already covered owner + sole-player; this extends the
+  cascade-delete to a non-owner erasing the last seat of an ownerless lobby).
+
+Explicitly **not** destroyed: an **owned** lobby that is merely empty because
+the owner disconnected (`owner_user_id` stays set — sticky, ADR-0066; they
+return via "Mes parties"), and an **ownerless** lobby that still has players
+(host-less but claimable). The 7-day ownerless sweep remains as the backstop
+for ownerless lobbies that stay *populated* then go idle.
+
+Mechanics: use cases and repository methods that already go through
+`repo.mutate` return `null` from the mutator on `isDefunct()` (the mutate
+contract's atomic-delete hook); the Postgres direct-UPDATE relinquish paths and
+both `eraseSession` adapters issue an explicit cascade `DELETE`.
+
 ## References
 
 - [ADR-0001 — Parallel-agent development workflow](./0001-parallel-agent-development-workflow.md)
