@@ -16,6 +16,7 @@ import com.bliss.game.application.usecases.CreateLobbyUseCase
 import com.bliss.game.application.usecases.EraseSessionUseCase
 import com.bliss.game.application.usecases.JoinLobbyUseCase
 import com.bliss.game.application.usecases.LeaveLobbyUseCase
+import com.bliss.game.application.usecases.LeaveMembershipUseCase
 import com.bliss.game.application.usecases.ListLobbiesForSession
 import com.bliss.game.application.usecases.ListLobbiesForUser
 import com.bliss.game.application.usecases.LobbyGarbageCollector
@@ -309,6 +310,8 @@ fun Application.module() {
     val claimOwnership = ClaimLobbyOwnershipUseCase(lobbyRepository, SystemClock)
     // REST DELETE .../ownership: userId-authorized relinquish (ADR-0098 §2 + 2026-07-08 amendment); distinct from the WS session-keyed path.
     val relinquishByUser = RelinquishOwnershipByUserUseCase(lobbyRepository, SystemClock)
+    // REST DELETE .../membership: leave + relinquish-if-owner + destroy-if-defunct for the game lists (ADR-0098 amendment 2026-07-08).
+    val leaveMembership = LeaveMembershipUseCase(lobbyRepository, useCases.leaveLobby, relinquishByUser)
 
     // Lobby garbage collector — ADR-0039 GC matrix:
     //   - WAITING     → evicted after 24h. Replaces the v1 30-minute knob: with multi-day
@@ -344,6 +347,7 @@ fun Application.module() {
             createLobby = useCases.createLobby,
             claimOwnership = claimOwnership,
             relinquishOwnership = relinquishByUser,
+            leaveMembership = leaveMembership,
             repo = lobbyRepository,
             sessionManager = sessionManager,
             cookieVerifier = cookieVerifier,

@@ -20,6 +20,8 @@ import com.bliss.game.application.ports.Clock
 import com.bliss.game.application.usecases.ClaimLobbyOwnershipUseCase
 import com.bliss.game.application.usecases.CreateLobbyUseCase
 import com.bliss.game.application.usecases.JoinLobbyUseCase
+import com.bliss.game.application.usecases.LeaveLobbyUseCase
+import com.bliss.game.application.usecases.LeaveMembershipUseCase
 import com.bliss.game.application.usecases.RelinquishOwnershipByUserUseCase
 import com.bliss.game.application.usecases.RelinquishOwnershipUseCase
 import com.bliss.game.domain.LobbyId
@@ -366,6 +368,9 @@ class LobbiesRouteTest {
     private val userC = UserId("33333333-3333-3333-3333-333333333333")
     private val sessionB = "0190e3b2-1c45-7d2e-9a3f-b0c1d2e3f4a5"
     private val sessionC = "0190e3c9-9f88-7a11-8b22-c3d4e5f60718"
+
+    // A guest's seat carries no userId; its session-derived id is a v7 UUID used both as the seat sessionId and the whoami userId (ADR-0078).
+    private val guestSession = "0190e3d0-1a2b-7c3d-8e4f-a5b6c7d8e9f0"
     private val seedClock =
         object : Clock {
             override fun now(): Instant = Instant.parse("2026-05-18T12:00:00Z")
@@ -596,6 +601,113 @@ class LobbiesRouteTest {
             assertProblem(response, HttpStatusCode.Forbidden, "https://bliss.example/errors/lobby-relinquish-forbidden")
         }
 
+    // ---- leave-membership endpoint (ADR-0098 amendment 2026-07-08) ----
+
+    @Test
+    fun `DELETE membership without a session returns 401`() =
+        testApplicationWithVerifier(verifier = stubVerifier(null)) { client, repo ->
+            val lobbyId = seedOwnedLobbyWithMember(repo)
+            val response = client.delete("/v1/lobbies/${lobbyId.value}/membership")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
+            assertThat(response.headers["Content-Type"]!!).startsWith("application/problem+json")
+            assertThat(response.bodyAsText()).contains("auth-required")
+        }
+
+    @Test
+    fun `DELETE membership against a non-existent lobbyId returns 404`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userA, Pseudonym("Alice")))) { client, _ ->
+            val response =
+                client.delete("/v1/lobbies/abcdefgh/membership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertProblem(response, HttpStatusCode.NotFound, "https://bliss.example/errors/lobby-not-found")
+        }
+
+    @Test
+    fun `DELETE membership by a caller with no seat returns 403`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userC, Pseudonym("Charlie")))) { client, repo ->
+            val lobbyId = seedOwnedLobbyWithMember(repo)
+            val response =
+                client.delete("/v1/lobbies/${lobbyId.value}/membership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertProblem(response, HttpStatusCode.Forbidden, "https://bliss.example/errors/lobby-membership-forbidden")
+        }
+
+    // Owner alone -> relinquish + drop the only seat -> ownerless-and-empty -> destroyed (ADR-0055/0098).
+    @Test
+    fun `DELETE membership by the sole owner deletes the lobby and returns 204`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userA, Pseudonym("Alice")))) { client, repo ->
+            val lobbyId =
+                CreateLobbyUseCase(repo, seedClock)(SessionId(ownerSessionId), Pseudonym("Alice"), ownerUserId = userA).value.id
+
+            val response =
+                client.delete("/v1/lobbies/${lobbyId.value}/membership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NoContent)
+            assertThat(repo.findById(lobbyId)).isNull()
+        }
+
+    // Owner with a co-player -> ownership relinquished, lobby survives host-less, co-player kept (ADR-0098 §2).
+    @Test
+    fun `DELETE membership by an owner with a co-player leaves the lobby ownerless with the co-player kept`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userA, Pseudonym("Alice")))) { client, repo ->
+            val lobbyId = seedOwnedLobbyWithMember(repo)
+
+            val response =
+                client.delete("/v1/lobbies/${lobbyId.value}/membership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NoContent)
+            val saved = repo.findById(lobbyId)!!
+            assertThat(saved.ownerUserId).isNull()
+            assertThat(saved.isOwnerless()).isTrue()
+            assertThat(saved.players.containsKey(SessionId(ownerSessionId))).isFalse()
+            assertThat(saved.players.containsKey(SessionId(sessionB))).isTrue()
+        }
+
+    // Non-owner among others -> only their seat is dropped; the lobby stays owned (ADR-0098 §2).
+    @Test
+    fun `DELETE membership by a non-owner co-player drops only their seat and keeps the lobby owned`() =
+        testApplicationWithVerifier(verifier = stubVerifier(WhoAmI(userB, Pseudonym("Bob")))) { client, repo ->
+            val lobbyId = seedOwnedLobbyWithMember(repo)
+
+            val response =
+                client.delete("/v1/lobbies/${lobbyId.value}/membership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NoContent)
+            val saved = repo.findById(lobbyId)!!
+            assertThat(saved.ownerUserId).isEqualTo(userA)
+            assertThat(saved.players.containsKey(SessionId(sessionB))).isFalse()
+            assertThat(saved.players.containsKey(SessionId(ownerSessionId))).isTrue()
+        }
+
+    // A guest seat carries no userId; the caller is resolved by the session-derived id (ADR-0078). Alone + host-less -> destroyed.
+    @Test
+    fun `DELETE membership by a guest alone in a host-less lobby deletes it and returns 204`() =
+        testApplicationWithVerifier(
+            verifier = stubVerifier(WhoAmI(UserId(guestSession), Pseudonym("Gaston"))),
+        ) { client, repo ->
+            val lobbyId =
+                CreateLobbyUseCase(repo, seedClock)(SessionId(guestSession), Pseudonym("Gaston"), ownerUserId = null).value.id
+
+            val response =
+                client.delete("/v1/lobbies/${lobbyId.value}/membership") {
+                    cookie(name = "__Secure-ws_session", value = "stub-cookie")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NoContent)
+            assertThat(repo.findById(lobbyId)).isNull()
+        }
+
     /** Ownerless lobby: owner userA relinquishes after userB (sessionB) joins, leaving userB present and claimable. */
     private suspend fun seedOwnerlessLobby(repo: InMemoryLobbyRepository): LobbyId {
         val lobbyId = seedOwnedLobbyWithMember(repo)
@@ -652,6 +764,7 @@ class LobbiesRouteTest {
         val createLobby = CreateLobbyUseCase(repo, clock)
         val claimOwnership = ClaimLobbyOwnershipUseCase(repo, clock)
         val relinquishOwnership = RelinquishOwnershipByUserUseCase(repo, clock)
+        val leaveMembership = LeaveMembershipUseCase(repo, LeaveLobbyUseCase(repo, clock), relinquishOwnership)
         val sessionManager = SessionManager()
         application {
             // Uses production REST_JSON so encodeDefaults/explicitNulls wire-contract assertions hold (ADR-0003 §6).
@@ -661,6 +774,7 @@ class LobbiesRouteTest {
                     createLobby = createLobby,
                     claimOwnership = claimOwnership,
                     relinquishOwnership = relinquishOwnership,
+                    leaveMembership = leaveMembership,
                     repo = repo,
                     sessionManager = sessionManager,
                     cookieVerifier = verifier,

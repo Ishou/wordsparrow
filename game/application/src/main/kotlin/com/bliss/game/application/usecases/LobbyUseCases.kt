@@ -399,6 +399,50 @@ class RelinquishOwnershipByUserUseCase(
 }
 
 /**
+ * REST leave/delete-a-game-from-a-list (ADR-0098 amendment 2026-07-08): the caller drops their seat,
+ * and if they are the current owner ownership is relinquished too. Composed from the shipped
+ * [RelinquishOwnershipByUserUseCase] (owner path) and [LeaveLobbyUseCase] (non-owner path); with the
+ * ADR-0055 destroy-ownerless-and-empty rule this yields delete-if-alone / leave-if-others for owner
+ * and non-owner callers alike. The caller's seat is resolved by verified userId, falling back to a
+ * guest seat keyed by the session-derived id (ADR-0078) when the seat carries no userId.
+ */
+class LeaveMembershipUseCase(
+    private val repo: LobbyRepository,
+    private val leaveLobby: LeaveLobbyUseCase,
+    private val relinquishByUser: RelinquishOwnershipByUserUseCase,
+) {
+    suspend operator fun invoke(
+        lobbyId: LobbyId,
+        userId: UserId,
+    ): UseCaseOutcome<MembershipLeaveResult> {
+        val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
+        val seat =
+            current.players.values.firstOrNull { it.userId == userId }
+                ?: runCatching { SessionId(userId.value) }.getOrNull()?.let { current.players[it] }
+                ?: return failure(UseCaseError.NotPresentInLobby)
+        return if (current.ownerUserId == userId) {
+            when (val outcome = relinquishByUser(lobbyId, userId)) {
+                is UseCaseOutcome.Success ->
+                    success(MembershipLeaveResult(outcome.result.value, relinquishedOwnership = true), outcome.result.events)
+                is UseCaseOutcome.Failure -> outcome
+            }
+        } else {
+            when (val outcome = leaveLobby(lobbyId, seat.sessionId)) {
+                is UseCaseOutcome.Success ->
+                    success(MembershipLeaveResult(outcome.result.value, relinquishedOwnership = false), outcome.result.events)
+                is UseCaseOutcome.Failure -> outcome
+            }
+        }
+    }
+}
+
+/** Surviving lobby (null if destroyed) plus whether the caller's departure relinquished ownership -- drives the peer ownershipChanged broadcast. */
+data class MembershipLeaveResult(
+    val lobby: Lobby?,
+    val relinquishedOwnership: Boolean,
+)
+
+/**
  * Claim an ownerless game (ADR-0098 §2): a player present in a non-terminal, ownerless lobby takes
  * ownership, quota-gated (ADR-0098 §1/§5) unless [hostUnlimited]. Presence and ownerless-ness are
  * re-verified inside [LobbyRepository.claimOwnership]'s lock; the quota re-check runs under the api

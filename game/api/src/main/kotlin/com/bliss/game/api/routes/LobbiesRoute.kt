@@ -19,6 +19,7 @@ import com.bliss.game.application.lobby.LobbyWriteCoordinator
 import com.bliss.game.application.ports.LobbyRepository
 import com.bliss.game.application.usecases.ClaimLobbyOwnershipUseCase
 import com.bliss.game.application.usecases.CreateLobbyUseCase
+import com.bliss.game.application.usecases.LeaveMembershipUseCase
 import com.bliss.game.application.usecases.RelinquishOwnershipByUserUseCase
 import com.bliss.game.application.usecases.UseCaseError
 import com.bliss.game.application.usecases.UseCaseOutcome
@@ -48,6 +49,7 @@ private const val LOBBY_NOT_FOUND_TYPE = "https://bliss.example/errors/lobby-not
 private const val AUTH_REQUIRED_TYPE = "https://bliss.example/errors/auth-required"
 private const val CLAIM_FORBIDDEN_TYPE = "https://bliss.example/errors/lobby-claim-forbidden"
 private const val RELINQUISH_FORBIDDEN_TYPE = "https://bliss.example/errors/lobby-relinquish-forbidden"
+private const val MEMBERSHIP_FORBIDDEN_TYPE = "https://bliss.example/errors/lobby-membership-forbidden"
 private const val QUOTA_EXCEEDED_TYPE = "https://bliss.example/errors/active-game-quota-exceeded"
 
 // Subscriber capability that lifts the one-open-lobby quota (ADR-0083); read only from the server-side whoami, never request input.
@@ -64,6 +66,7 @@ fun Route.lobbies(
     createLobby: CreateLobbyUseCase,
     claimOwnership: ClaimLobbyOwnershipUseCase,
     relinquishOwnership: RelinquishOwnershipByUserUseCase,
+    leaveMembership: LeaveMembershipUseCase,
     repo: LobbyRepository,
     sessionManager: SessionManager,
     cookieVerifier: CookieVerifier,
@@ -272,6 +275,75 @@ fun Route.lobbies(
                     // Tell peers the game is now ownerless so their claim affordance appears (ADR-0098 §2/§6); mirrors the WS Quitter path.
                     sessionManager.broadcast(lobbyId, ServerToClientFrame.OwnershipChanged(lobbyId.value, null, null))
                     call.respond(HttpStatusCode.OK, lobby.toResponseDto(sessionManager.getPresence(lobbyId)))
+                }
+            }
+        }
+
+        // Leave a game from a list -> drop the caller's seat, relinquish-if-owner, destroy-if-defunct (ADR-0098 amendment 2026-07-08 + ADR-0055).
+        delete("{lobbyId}/membership") {
+            val raw = call.parameters["lobbyId"].orEmpty()
+            val lobbyId =
+                runCatching { LobbyId(raw) }
+                    .getOrElse {
+                        return@delete call.respondProblem(
+                            HttpStatusCode.BadRequest,
+                            "Identifiant de salon invalide",
+                            INVALID_LOBBY_ID_TYPE,
+                            "Le paramètre lobbyId doit être un identifiant base58 de 8 caractères, reçu : '$raw'.",
+                        )
+                    }
+            val rawCookie = call.request.cookies[CookieNames.SESSION]
+            val whoAmI =
+                cookieVerifier.verify(rawCookie)
+                    ?: return@delete call.respondProblem(
+                        HttpStatusCode.Unauthorized,
+                        "Authentification requise",
+                        AUTH_REQUIRED_TYPE,
+                        "Quitter une partie nécessite une session.",
+                    )
+
+            // Mirror the relinquish route's TOCTOU posture: re-verify under withUserLock and resolve the caller's seat by verified userId.
+            val outcome: UseCaseOutcome<com.bliss.game.application.usecases.MembershipLeaveResult>? =
+                coordinator.withUserLock(whoAmI.userId) { _ ->
+                    val fresh = cookieVerifier.verifyFresh(rawCookie)
+                    if (fresh == null || fresh.userId != whoAmI.userId) {
+                        null
+                    } else {
+                        leaveMembership(lobbyId, fresh.userId)
+                    }
+                }
+
+            when (outcome) {
+                null ->
+                    call.respondProblem(
+                        HttpStatusCode.Unauthorized,
+                        "Authentification requise",
+                        AUTH_REQUIRED_TYPE,
+                        "Votre session a été invalidée.",
+                    )
+                is UseCaseOutcome.Failure ->
+                    when (outcome.error) {
+                        UseCaseError.LobbyNotFound ->
+                            call.respondProblem(
+                                HttpStatusCode.NotFound,
+                                "Salon introuvable",
+                                LOBBY_NOT_FOUND_TYPE,
+                                "Aucun salon pour l'identifiant '${lobbyId.value}'.",
+                            )
+                        else ->
+                            call.respondProblem(
+                                HttpStatusCode.Forbidden,
+                                "Sortie impossible",
+                                MEMBERSHIP_FORBIDDEN_TYPE,
+                                "Vous n'êtes pas membre de ce salon.",
+                            )
+                    }
+                is UseCaseOutcome.Success -> {
+                    // A departing owner leaves the game ownerless; tell peers so their claim affordance appears (ADR-0098 §2/§6), mirroring the relinquish path.
+                    if (outcome.result.value.relinquishedOwnership) {
+                        sessionManager.broadcast(lobbyId, ServerToClientFrame.OwnershipChanged(lobbyId.value, null, null))
+                    }
+                    call.respond(HttpStatusCode.NoContent)
                 }
             }
         }
