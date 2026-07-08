@@ -54,6 +54,11 @@ const inProgressLobby: Lobby & { readonly id: LobbyId } = {
   } as unknown as Lobby['game'],
 };
 
+const ownerlessInProgressLobby: Lobby & { readonly id: LobbyId } = {
+  ...inProgressLobby,
+  ownerless: true,
+};
+
 const stubPuzzleSolver: PuzzleSolver = {
   validate: () => Promise.resolve({ solved: false }),
   requestHint: () => Promise.reject(new Error('not used')),
@@ -104,7 +109,7 @@ function makeStubGameClient(): GameClient {
 
 // A `/` home route sits alongside the lobby so the test can navigate away and back —
 // reproducing the resume flow (Accueil → « Rejoindre ma partie » → /lobby/$id).
-function makeRouter(getLobby: LobbyClient['getLobby']) {
+function makeRouter(getLobby: LobbyClient['getLobby'], authClient: AuthClient = stubAuthClient) {
   const lobbyClient: LobbyClient = {
     createLobby: vi.fn().mockResolvedValue(waitingLobby),
     getLobby,
@@ -133,6 +138,7 @@ function makeRouter(getLobby: LobbyClient['getLobby']) {
     routeTree,
     history: createMemoryHistory({ initialEntries: ['/'] }),
     context: {
+      authClient,
       puzzleRepository,
       puzzleSolver: stubPuzzleSolver,
       sessionClient: {
@@ -152,9 +158,12 @@ function makeRouter(getLobby: LobbyClient['getLobby']) {
   return { router, lobbyClient };
 }
 
-function renderRouter(router: ReturnType<typeof makeRouter>['router']) {
+function renderRouter(
+  router: ReturnType<typeof makeRouter>['router'],
+  authClient: AuthClient = stubAuthClient,
+) {
   return render(
-    <AuthProvider authClient={stubAuthClient} getPseudonym={() => pseudonym}>
+    <AuthProvider authClient={authClient} getPseudonym={() => pseudonym}>
       <RouterProvider router={router} />
     </AuthProvider>,
   );
@@ -220,5 +229,45 @@ describe('v2 /lobby/$lobbyId — resuming an in-progress game shows no waiting-r
     await act(async () => { await goLobby(router); });
     await waitFor(() => expect(screen.getByText(SALON_MARKER)).toBeTruthy());
     expect(screen.queryByRole('button', { name: 'Quitter la partie' })).toBeNull();
+  });
+});
+
+describe('v2 /lobby/$lobbyId — claiming an ownerless game (ADR-0098 §6 / ADR-0083)', () => {
+  // A controllable whoami: the test resolves it only after the claim button is up, so the
+  // auth state settles deterministically to anon/authed before the tap (no loading-window race).
+  const goOwnerless = async (whoamiResult: Awaited<ReturnType<AuthClient['whoami']>>) => {
+    let resolveWhoami!: (v: Awaited<ReturnType<AuthClient['whoami']>>) => void;
+    const authClient: AuthClient = {
+      ...stubAuthClient,
+      whoami: () => new Promise((resolve) => { resolveWhoami = resolve; }),
+    };
+    const getLobby = vi.fn<LobbyClient['getLobby']>().mockResolvedValue(ownerlessInProgressLobby);
+    const { router, lobbyClient } = makeRouter(getLobby, authClient);
+    renderRouter(router, authClient);
+    await act(async () => { await goLobby(router); });
+    await screen.findByRole('button', { name: 'Reprendre la partie' });
+    await act(async () => { resolveWhoami(whoamiResult); await Promise.resolve(); });
+    return { lobbyClient };
+  };
+
+  it('prompts a guest (anon) to sign in and never calls claimOwnership; the game stays playable', async () => {
+    const { lobbyClient } = await goOwnerless(null);
+    // Playing is never gated for a guest — the on-screen keyboard is present before any claim tap
+    // (asserted here, not after: the sign-in modal makes the background inert once open).
+    expect(screen.getByRole('button', { name: 'Effacer' })).toBeTruthy();
+    act(() => {
+      screen.getByRole('button', { name: 'Reprendre la partie' }).click();
+    });
+    expect(await screen.findByText('Connecte-toi pour créer une partie')).toBeTruthy();
+    expect(lobbyClient.claimOwnership).not.toHaveBeenCalled();
+  });
+
+  it('claims ownership directly for a signed-in player', async () => {
+    const { lobbyClient } = await goOwnerless({ userId: 'u-1', displayName: 'Lapin 472', capabilities: [] });
+    act(() => {
+      screen.getByRole('button', { name: 'Reprendre la partie' }).click();
+    });
+    await waitFor(() => expect(lobbyClient.claimOwnership).toHaveBeenCalledWith(lobbyId));
+    expect(screen.queryByText('Connecte-toi pour créer une partie')).toBeNull();
   });
 });

@@ -114,16 +114,20 @@ export function GrillesArchiveScreen({
     },
   });
 
-  // ADR-0098 §6: an ownerless "Reprendre" row claims ownership, then navigates into the now-owned lobby; a 403/409 surfaces a toast.
+  // ADR-0098 §6 / ADR-0083: claiming needs an account, so a guest is prompted to sign in first (mirrors the create-coop gate); then the ownerless "Reprendre" row claims and navigates into the now-owned lobby. A 403/409 surfaces a toast.
   const handleClaimLobby = useCallback(
     (lobbyId: LobbyId) => {
       if (lobbyClient == null) return;
+      if (authStatus === 'anon') {
+        setHostSignInOpen(true);
+        return;
+      }
       void lobbyClient
         .claimOwnership(lobbyId)
         .then(() => navigate({ to: '/lobby/$lobbyId', params: { lobbyId } }))
         .catch(() => showToast({ text: 'Impossible de reprendre la partie.', tone: 'error' }));
     },
-    [lobbyClient, navigate, showToast],
+    [lobbyClient, authStatus, navigate, showToast],
   );
   const coopPending = coop.pending || coop.startingNew;
 
@@ -327,7 +331,6 @@ export function GrillesArchiveScreen({
       <HostSignInSheet open={hostSignInOpen} authClient={authClient} onClose={() => setHostSignInOpen(false)} />
       <OwnedGameModal
         lobby={coop.ownedGame}
-        canStartNew={coop.canStartNew}
         onRejoindre={coop.rejoindre}
         onStartNew={coop.startNewGame}
         onClose={coop.dismiss}

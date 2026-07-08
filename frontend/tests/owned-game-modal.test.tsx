@@ -58,7 +58,6 @@ function Harness({ lobbyClient }: { lobbyClient: LobbyClient }) {
       <button type="button" onClick={coop.createOrResume}>créer</button>
       <OwnedGameModal
         lobby={coop.ownedGame}
-        canStartNew={coop.canStartNew}
         onRejoindre={coop.rejoindre}
         onStartNew={coop.startNewGame}
         onClose={coop.dismiss}
@@ -127,7 +126,7 @@ describe('OwnedGameModal / useCreateOrResume (ADR-0098 §6)', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(`/lobby/${ownedId}`));
   });
 
-  it('offers the sole-occupant fresh-start only when alone', async () => {
+  it('always offers the fresh-start, alone or with peers (ADR-0098 §6 amendment)', async () => {
     const alone = renderHarness({ createLobby: vi.fn().mockResolvedValue(ownedGame([self])) });
     await create();
     expect(await screen.findByRole('button', { name: /Démarrer une nouvelle partie/ })).toBeTruthy();
@@ -136,7 +135,7 @@ describe('OwnedGameModal / useCreateOrResume (ADR-0098 §6)', () => {
     renderHarness({ createLobby: vi.fn().mockResolvedValue(ownedGame([self, peer])) });
     await create();
     await screen.findByRole('button', { name: 'Rejoindre ma partie' });
-    expect(screen.queryByRole('button', { name: /Démarrer une nouvelle partie/ })).toBeNull();
+    expect(await screen.findByRole('button', { name: /Démarrer une nouvelle partie/ })).toBeTruthy();
   });
 
   it('relinquishes via the REST endpoint, then creates and navigates to the new game', async () => {
