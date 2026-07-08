@@ -132,9 +132,7 @@ export function GrillesArchiveScreen({
     [lobbyClient, authStatus, navigate, showToast],
   );
 
-  // ADR-0098 §6 (2026-07-08): leave/delete a game from the list. The server
-  // decides delete-if-alone / leave-if-others; on success we refetch so the
-  // row disappears. A failure surfaces a toast, mirroring the claim path.
+  // ADR-0098 §6 (2026-07-08): leave/delete from the list; server decides delete-if-alone/leave-if-others, refetch drops the row, failure toasts (mirrors the claim path).
   const handleLeaveLobby = useCallback(
     (lobbyId: LobbyId) => {
       if (lobbyClient == null) return;
