@@ -234,7 +234,7 @@ delete verb. Cookie-authed; guests may leave (401 is only for a missing/invalid
 session). Responses: `204` (left), `401` auth-required, `403`
 lobby-membership-forbidden (no seat), `404` lobby-not-found.
 
-### 2026-07-08 — guest claim prompts sign-in; sole-occupant start-new gate retained
+### 2026-07-08 — guest claim prompts sign-in; sole-occupant start-new gate removed
 
 Refines §6's frontend UX after the guest-claim guard work (PR #1478).
 
@@ -244,10 +244,13 @@ Refines §6's frontend UX after the guest-claim guard work (PR #1478).
   (then re-taps to claim), because taking ownership requires an account
   (ADR-0083). *Playing* a host-less game stays open to guests — only the claim
   needs an account.
-- **Sole-occupant start-new gate retained.** §6's "*Démarrer une nouvelle
-  partie* … offered only when the caller is the sole occupant" stands unchanged.
-  The 2026-07-08 destroy rule (ADR-0055 amendment) reaps only lobbies that are
-  **ownerless *and* empty**; a relinquished but still-populated co-op room is not
-  destroyed, so making one-tap abandonment its default would still strand the
-  remaining peers in an ownerless room. The restriction therefore remains
-  intentional, not vestigial.
+- **Sole-occupant start-new gate removed.** This supersedes §6's "*Démarrer une
+  nouvelle partie* … offered **only when the caller is the sole occupant**"
+  sentence: the button is now **always offered** while the owned-game modal is
+  open, regardless of occupancy. Relinquishing a populated co-op game does **not**
+  strand its peers — the game becomes host-less/claimable and the remaining
+  players keep playing; a co-player can *Reprendre* (claim) it. The 2026-07-08
+  destroy rule (ADR-0055 amendment) reaps a lobby only when it is **ownerless
+  *and* empty**, so a solo owner who relinquishes leaves an empty ownerless
+  lobby that the destroy rule reaps — nobody is stranded either way. The original
+  gate was therefore an unnecessary restriction.
