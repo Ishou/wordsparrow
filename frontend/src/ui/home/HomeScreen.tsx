@@ -379,10 +379,10 @@ export function HomeScreen({
                 {daily.status === 'ok'
                   ? t('home.play.cta.play')
                   : daily.status === 'loading'
-                    ? t('home.play.cta.loading')
+                    ? t('common.loading')
                     : daily.status === 'unavailable'
                       ? t('home.play.cta.unavailable')
-                      : t('home.play.cta.retry')}
+                      : t('common.retry')}
               </PrimaryButton>
               {multiplayerOn ? (
                 <>

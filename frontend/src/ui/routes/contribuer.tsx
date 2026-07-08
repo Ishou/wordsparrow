@@ -24,7 +24,7 @@ function ContribuerSkeleton() {
       <article className={skeletonArticleStyles}>
         <h1 className={skeletonHeadingStyles}>{t('route.contribuer.heading')}</h1>
         <p className={skeletonIntroStyles}>{t('route.contribuer.skeleton.intro')}</p>
-        <p className={skeletonStatusStyles} role="status">{t('route.contribuer.loading')}</p>
+        <p className={skeletonStatusStyles} role="status">{t('common.loading')}</p>
       </article>
     </ContentPage>
   );

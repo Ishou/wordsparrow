@@ -217,7 +217,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
                     <button type="button" className={rowActive} onClick={() => { void handleLogout(); }}>
                       <Tile icon={SignOut} soft />
                       <span className={labelWrap}>
-                        <span className={label}>{t('v2.menu.logout')}</span>
+                        <span className={label}>{t('common.logout')}</span>
                       </span>
                       <span className={chevron}>
                         <CaretRight size={18} weight="bold" aria-hidden="true" />

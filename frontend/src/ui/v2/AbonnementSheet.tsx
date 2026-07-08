@@ -81,7 +81,7 @@ export function AbonnementSheet({
               {t('v2.abonnement.sheet.cta')}
             </Link>
             <button type="button" className={secondary} onClick={onClose}>
-              {t('v2.abonnement.sheet.later')}
+              {t('common.later')}
             </button>
           </Dialog.Content>
         </Dialog.Positioner>

@@ -23,7 +23,7 @@ function ContribuerPairsSkeleton() {
       <article className={skeletonArticleStyles}>
         <h1 className={skeletonHeadingStyles}>{t('route.contribuerPairs.skeletonHeading')}</h1>
         <p className={skeletonIntroStyles}>{t('route.contribuerPairs.skeleton.intro')}</p>
-        <p className={skeletonStatusStyles} role="status">{t('route.contribuer.loading')}</p>
+        <p className={skeletonStatusStyles} role="status">{t('common.loading')}</p>
       </article>
     </ContentPage>
   );

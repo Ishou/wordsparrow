@@ -117,7 +117,7 @@ export function EraseData() {
               {failed ? <p role="alert" className={errText}>{t('v2.erase.failed')}</p> : null}
               <div className={dlgActions}>
                 <button type="button" className={ghostBtn} onClick={close} disabled={deleting}>
-                  {t('v2.erase.cancel')}
+                  {t('common.cancel')}
                 </button>
                 <button type="button" className={cx(dangerBtn, confirmBtn)} onClick={() => void confirm()} disabled={!canConfirm}>
                   {deleting ? t('v2.erase.deleting') : t('v2.erase.confirm')}

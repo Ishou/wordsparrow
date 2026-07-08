@@ -134,7 +134,7 @@ function ReceiptsPanel({ client }: { readonly client: BillingClient }) {
               <>
                 <div className={divider} />
                 <button type="button" className={moreBtn} onClick={() => void loadMore()} disabled={loadingMore}>
-                  {loadingMore ? t('v2.abonnement.receipt.loadingMore') : t('v2.abonnement.receipt.more')}
+                  {loadingMore ? t('common.loading') : t('v2.abonnement.receipt.more')}
                 </button>
               </>
             ) : null}

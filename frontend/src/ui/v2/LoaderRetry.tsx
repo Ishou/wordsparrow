@@ -78,7 +78,7 @@ export function LoaderRetry({ policy, silentText }: LoaderRetryProps) {
           scene={sparrowFlightScene()}
           title={t('v2.loader.error.title')}
           body={t('v2.loader.error.body')}
-          cta={{ label: t('v2.loader.retry'), onClick: retryNow }}
+          cta={{ label: t('common.retry'), onClick: retryNow }}
         />
       </PhoneShell>
     );
@@ -90,7 +90,7 @@ export function LoaderRetry({ policy, silentText }: LoaderRetryProps) {
         <p className={placeholder}>{phase === 'silent' ? silentText : t('v2.loader.reconnecting')}</p>
         {phase === 'retrying' ? (
           <PrimaryButton className={retryCta} fullWidth={false} onClick={retryNow}>
-            {t('v2.loader.retry')}
+            {t('common.retry')}
           </PrimaryButton>
         ) : null}
       </div>

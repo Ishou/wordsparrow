@@ -186,9 +186,9 @@ export function Toast() {
         type="button"
         className={dismissButtonStyles}
         onClick={ctx.dismiss}
-        aria-label={t('toast.close')}
+        aria-label={t('common.close')}
       >
-        {t('toast.close')}
+        {t('common.close')}
       </button>
     </div>
   );

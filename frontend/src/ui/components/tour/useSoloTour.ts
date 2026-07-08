@@ -94,7 +94,7 @@ export function useSoloTour({
       skip: t('tour.skip'),
       nextStep: t('tour.action.next'),
       prevStep: t('tour.action.prev'),
-      close: t('tour.action.close'),
+      close: t('common.close'),
       // zag passes `current` as a 0-indexed step number; the user-facing
       // copy reads naturally as 1-indexed.
       progressText: ({ current, total }) =>

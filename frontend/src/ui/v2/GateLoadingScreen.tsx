@@ -10,7 +10,7 @@ export function GateLoadingScreen() {
   return (
     <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
       <p className={statusCard} role="status">
-        {t('v2.gate.loading')}
+        {t('common.loading')}
       </p>
     </PhoneShell>
   );

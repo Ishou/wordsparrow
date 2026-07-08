@@ -53,7 +53,7 @@ export function UndoBar({ onUndo, busy = false }: UndoBarProps) {
         disabled={busy}
         data-testid="undo-button"
       >
-        {t('sondage.action.cancel')}
+        {t('common.cancel')}
       </button>
     </div>
   );
