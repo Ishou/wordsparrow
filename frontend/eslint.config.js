@@ -172,8 +172,7 @@ export default tseslint.config(
     ],
     rules: { 'no-restricted-syntax': 'off' },
   },
-  // Deferred bilingual legal prose (PrivacyNotice, CGV): exempt from the French-copy
-  // guard only, not the whole rule — the Error.message UI guard above still applies.
+  // Deferred bilingual legal prose: exempt from the French-copy guard only — Error.message guard still applies.
   {
     files: ['src/ui/components/PrivacyNotice.tsx', 'src/ui/v2/ConditionsAbonnementScreen.tsx'],
     rules: {
