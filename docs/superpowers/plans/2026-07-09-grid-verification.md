@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - **Spec:** `docs/superpowers/specs/2026-07-09-grid-verification-design.md` — read in full before any phase.
-- **ADR pre-read:** run `scripts/adr-context.sh <paths>` before editing; ADR-0076 (validation posture), ADR-0031 (per-session cooldown), ADR-0050 (a11y), ADR-0003 (schema-first), ADR-0001 (workflow/PR cap) are load-bearing here.
+- **ADR pre-read:** run `scripts/adr-context.sh <paths>` before editing; ADR-0076 (validation posture), ADR-0084 (per-cell/per-word feedback stays off client surfaces — §2 is what Phase 1's ADR must explicitly amend/supersede, see Phase 1), ADR-0031 (per-session cooldown), ADR-0050 (a11y), ADR-0003 (schema-first), ADR-0001 (workflow/PR cap) are load-bearing here.
 - **PR cap:** 400 lines of diff excluding generated code + blanks (ADR-0001 §4). Split if exceeded.
 - **Schema-first:** no hand-editing generated `types.ts`; `pnpm api:check` regenerates; `openapi-typescript-drift` gate must pass.
 - **Commits:** conventional, bounded-context scope, `git commit -s` (DCO). WIP uses `chore(<scope>): wip …` (never `wip(...)`).
@@ -22,7 +22,7 @@
 
 ---
 
-## Phase 1 — ADR (amends ADR-0076)
+## Phase 1 — ADR (amends ADR-0076, supersedes ADR-0084 §2)
 
 **Branch:** `docs/grid-verification-adr` · **Base:** `main` · **PR prefix:** `docs(adr):`
 
@@ -31,13 +31,13 @@
 - Modify: `docs/adr/INDEX.md` (registry-coherence gate).
 
 **Interfaces:**
-- Produces: the accepted decision that `/verify` may return per-cell `correct` booleans (never canonical letters), gated by a 30-min per-puzzle cooldown as the answer-key rate-limit mitigation; `/validate` stays binary/uncapped; `/hints` stays dormant.
+- Produces: the accepted decision that `/verify` may return per-cell `correct` booleans (never canonical letters), gated by a 30-min per-puzzle cooldown as the answer-key rate-limit mitigation; `/validate` stays binary/uncapped; `/hints` stays dormant. Explicitly supersedes ADR-0084 §2's "solo grids never regain per-word or per-cell feedback" for the `/verify` surface only — `/validate-word` (ADR-0084 §1) and the binary `/validate` (ADR-0084 §2, ADR-0076 §9) are otherwise unaffected.
 
-- [ ] **Step 1:** Run `scripts/adr-context.sh docs/adr/0076-*.md` and read ADR-0076 in full.
+- [ ] **Step 1:** Run `scripts/adr-context.sh grid/api/openapi.yaml grid/api/src/main/kotlin/com/bliss/grid/api/routes/PuzzleRoute.kt` (the actual Phase 2/3 edit surface) and read the matching ADRs in full — this surfaces ADR-0076 **and** ADR-0084, both governing these paths per `docs/adr/INDEX.md` lines 170-174 and 214-218.
 - [ ] **Step 2:** Pick the next ADR number from `docs/adr/INDEX.md`.
-- [ ] **Step 3:** Write the ADR using the CLAUDE.md template. Status `Accepted`. Context: hints reveal whole words; we want a checked-work assist without shipping the answer key. Decision: `/verify` returns per-cell `correct` for filled cells only; 30-min per-puzzle server cooldown; relates to / amends ADR-0076 §§7–9. Consequences: slightly more leak than binary, bounded by the cooldown (~13 h per uniform-letter alphabet sweep), strictly less generous than the 3-free-whole-words hint.
-- [ ] **Step 4:** Add the ADR row to `docs/adr/INDEX.md` (both the table and any path-mapping section that lists validation/puzzle paths).
-- [ ] **Step 5:** Commit `docs(adr): per-cell grid verification, amends ADR-0076` (`-s`), open PR to `main`.
+- [ ] **Step 3:** Write the ADR using the CLAUDE.md template. Status `Accepted`. Context: hints reveal whole words; we want a checked-work assist without shipping the answer key; ADR-0084 §2 currently forbids any client-facing per-cell/per-word feedback for solo grids, so this decision must reopen that clause explicitly rather than talk around it. Decision: `/verify` returns per-cell `correct` for filled cells only; 30-min per-puzzle server cooldown; relates to / amends ADR-0076 §§7–9 **and explicitly supersedes ADR-0084 §2** for the `/verify` surface, naming the reversal plainly. Threat model (ADR-0084's shape — asset/attacker/surfaces/controls/residual risk): compare `/verify`'s residual risk (full solo solve in ~13h, reachable by any authenticated browser) against ADR-0084's `/validate-word` residual risk (one bit per word, requires a leaked service secret / cluster compromise) and state why the larger, directly-client-reachable surface is still acceptable. Consequences: slightly more leak than binary, bounded by the cooldown (~13 h per uniform-letter alphabet sweep), strictly less generous than the 3-free-whole-words hint.
+- [ ] **Step 4:** Add the ADR row to `docs/adr/INDEX.md` (both the table and any path-mapping section that lists validation/puzzle paths), and update the existing ADR-0084 entries/summary line to note the `/verify`-scoped supersession of §2.
+- [ ] **Step 5:** Commit `docs(adr): per-cell grid verification, amends ADR-0076, supersedes ADR-0084 §2` (`-s`), open PR to `main`.
 
 ---
 

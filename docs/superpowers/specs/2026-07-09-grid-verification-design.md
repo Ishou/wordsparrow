@@ -60,17 +60,43 @@ assist-mode setting.
 ### ADR (merges first)
 
 Returning per-cell correctness softens ADR-0076's "answer key off the
-wire" posture. This needs a short ADR that **relates to / amends
-ADR-0076**, documenting:
+wire" posture. It also directly contradicts
+[ADR-0084](../../adr/0084-internal-word-validation-for-multiplayer.md)
+§2: *"Solo grids never regain per-word or per-cell feedback. This ADR
+does not reopen ADR-0076's posture for any client-facing surface."*
+ADR-0084 is current (extended since by ADR-0085 and ADR-0086) and its
+path registry entries (`docs/adr/INDEX.md` lines 214-218) cover exactly
+`grid/api/openapi.yaml` and `grid/api/**/routes/PuzzleRoute.kt` — the
+files Phases 2/3 of the implementation plan touch. This ADR is therefore
+load-bearing here, not optional background reading.
 
+This needs a short ADR that **explicitly amends/supersedes ADR-0084
+§2** (not just ADR-0076 §§7-9), documenting:
+
+- The reversal, named plainly: solo grids regain per-cell feedback via
+  `/verify`, superseding ADR-0084 §2's "never" for this one endpoint.
+  `/validate-word` (ADR-0084 §1, internal/service-authenticated) and the
+  client-facing binary `/validate` (ADR-0084 §2, ADR-0076 §9) are
+  otherwise unaffected.
 - The new `/verify` capability returns per-cell `correct` booleans for
   filled cells only (never the canonical letter).
 - The 30-minute per-puzzle cooldown is the named rate-limit mitigation
   against answer-key brute force (a uniform-letter sweep of the alphabet
   would take ~13 hours).
 - `/validate` remains binary and uncapped; `/hints` remains as-is.
+- A threat model in ADR-0084's shape (asset / attacker / surfaces /
+  controls / residual risk), explicitly comparing the two leak surfaces:
+  ADR-0084's `/validate-word` residual risk is "one bit per word,
+  reachable only with a leaked service secret, which already presupposes
+  cluster compromise"; `/verify`'s residual risk is a full solo solve in
+  ~13h reachable by any authenticated browser client, no compromise
+  required. The ADR must state plainly why that materially larger,
+  directly-client-reachable surface is still acceptable (mirrors the
+  spec's own "Risks / open questions" answer-key-leak note below, but the
+  ADR is the binding artifact — this section is not a substitute for it).
 
-Update `docs/adr/INDEX.md` in the same PR (registry-coherence gate).
+Update `docs/adr/INDEX.md` in the same PR (registry-coherence gate),
+including a row for the amended ADR-0084 §2 status.
 
 ### Backend (grid context) — schema-first
 
@@ -190,7 +216,8 @@ documented extension point for lobby settings.
 
 ## PR sequencing (400-line cap, ADR-0001 §4)
 
-1. **ADR** amending/relating to ADR-0076 (+ `docs/adr/INDEX.md`).
+1. **ADR** amending/relating to ADR-0076 and explicitly superseding
+   ADR-0084 §2 (+ `docs/adr/INDEX.md`).
 2. **Schema-only** PR: `/verify` in `grid/api/openapi.yaml`.
 3. **Backend** PR: use-case + cooldown calculator + migration + route +
    retention cronjob + tests.
