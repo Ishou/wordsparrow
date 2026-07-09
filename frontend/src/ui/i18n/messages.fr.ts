@@ -154,7 +154,7 @@ export const fr = {
   'lobby.leave.processing': 'Traitement…',
   'lobby.leave.error': 'Impossible de quitter la partie. Réessaie.',
   'lobby.delete.error': 'Impossible de supprimer la partie. Réessaie.',
-  'lobby.list.retentionNote': 'Une partie sans activité peut être supprimée automatiquement ; le délai dépend de son état.',
+  'lobby.list.retentionNote': 'Les parties inactives sont supprimées automatiquement après plusieurs jours.',
   'lobby.sr.playerJoined': '{{name}} a rejoint la partie',
   'lobby.sr.playerLeft': '{{name}} a quitté la partie',
   'lobby.sr.unknownPlayer': 'Un joueur',

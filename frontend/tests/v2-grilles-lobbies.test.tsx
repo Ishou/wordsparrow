@@ -261,7 +261,7 @@ describe('GrillesLobbiesSection — retention note', () => {
   it('renders the inactivity retention note under the list', async () => {
     renderInRouter(<GrillesLobbiesSection lobbies={[IN_PROGRESS]} />);
     expect(
-      await screen.findByText('Une partie sans activité peut être supprimée automatiquement ; le délai dépend de son état.'),
+      await screen.findByText('Les parties inactives sont supprimées automatiquement après plusieurs jours.'),
     ).toBeInTheDocument();
   });
 });
