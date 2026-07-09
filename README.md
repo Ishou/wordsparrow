@@ -137,12 +137,14 @@ flowchart LR
     pages["Cloudflare Pages (legacy 301)"]
     dns["Cloudflare DNS"]
     cacherules["Cloudflare cache rules"]
+    httpsredirect["Cloudflare Always Use HTTPS"]
     k3s["Hetzner k3s"]
   end
   deploy_frontend -->|wrangler deploy| workers
   deploy_api_k8s -->|helm upgrade| k3s
   pages -. 301 redirect .-> workers
   dns -->|service subdomains via external-dns| k3s
+  dns -->|301 upgrade| httpsredirect
   dns -->|edge cache| cacherules
   cacherules -->|cache miss / bypass| k3s
   style CI fill:#5a655a1f,stroke:#8b9488;
