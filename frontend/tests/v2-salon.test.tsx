@@ -48,8 +48,7 @@ function stubNativeShareApi() {
   });
 }
 
-// PhoneShell mounts DesktopAppBar unconditionally (CSS-hidden on phone, not
-// unmounted), and DesktopAppBar renders MenuSheet, which reads useAuth().
+// PhoneShell always mounts DesktopAppBar (CSS-hidden on phone), which renders MenuSheet and reads useAuth().
 function fakeAuthClient(): AuthClient {
   return {
     whoami: vi.fn().mockResolvedValue(null),
