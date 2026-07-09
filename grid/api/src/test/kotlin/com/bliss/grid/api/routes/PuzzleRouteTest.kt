@@ -21,6 +21,7 @@ import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
 import com.bliss.grid.application.puzzle.ValidateWordUseCase
+import com.bliss.grid.application.puzzle.VerifyGridUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.WordRepository
 import com.bliss.grid.domain.model.Column
@@ -33,6 +34,7 @@ import com.bliss.grid.domain.model.WordPlacement
 import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
+import com.bliss.grid.infrastructure.persistence.InMemoryVerifyUsageRepository
 import io.ktor.client.request.cookie
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -359,6 +361,7 @@ class PuzzleRouteTest {
                 revealCellHint = RevealCellHintUseCase(repo, hintRepo),
                 validatePuzzle = ValidatePuzzleUseCase(repo),
                 validateWord = ValidateWordUseCase(repo),
+                verifyGrid = VerifyGridUseCase(repo, InMemoryVerifyUsageRepository()),
                 puzzleRepository = repo,
                 hintUsageRepository = hintRepo,
                 hintWriteCoordinator = InMemoryHintWriteCoordinator(),
@@ -538,6 +541,7 @@ class PuzzleRouteTest {
                         revealCellHint = RevealCellHintUseCase(puzzleRepo, hintUsageRepo),
                         validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
                         validateWord = ValidateWordUseCase(puzzleRepo),
+                        verifyGrid = VerifyGridUseCase(puzzleRepo, InMemoryVerifyUsageRepository()),
                         puzzleRepository = puzzleRepo,
                         hintUsageRepository = hintUsageRepo,
                         hintWriteCoordinator = InMemoryHintWriteCoordinator(),
@@ -666,6 +670,7 @@ class PuzzleRouteTest {
                         revealCellHint = RevealCellHintUseCase(puzzleRepo, hintUsageRepo),
                         validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
                         validateWord = ValidateWordUseCase(puzzleRepo),
+                        verifyGrid = VerifyGridUseCase(puzzleRepo, InMemoryVerifyUsageRepository()),
                         puzzleRepository = puzzleRepo,
                         hintUsageRepository = hintUsageRepo,
                         hintWriteCoordinator = InMemoryHintWriteCoordinator(),

@@ -10,4 +10,6 @@ data class ProblemDetails(
     val status: Int,
     val detail: String? = null,
     val instance: String? = null,
+    // RFC 7807 §3.2 extension member; only verify-cooldown-active (ADR-0099) sets it, default Json's encodeDefaults=false keeps it off every other Problem.
+    val secondsUntilNextVerify: Int? = null,
 )

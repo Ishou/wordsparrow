@@ -1,0 +1,88 @@
+{{- if .Values.retention.verifyUsage.enabled -}}
+{{/*
+Nightly retention sweep for `puzzle_verify_usage` (ADR-0099).
+
+Mirrors cronjob-hint-usage-retention.yaml: implements ADR-0025 §5 /
+docs/privacy/retention-schedule.md — rows are kept for `days` from
+`last_verified_at`, then deleted. Connects to the CNPG-managed Postgres
+cluster via the operator-issued "<cluster>-app" Secret; the application
+image is not used, just `psql`.
+*/}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "wordsparrow-api.fullname" . }}-verify-retention
+  labels: {{- include "wordsparrow-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: retention
+spec:
+  schedule: {{ .Values.retention.verifyUsage.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels: {{- include "wordsparrow-api.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: retention
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+          containers:
+            - name: psql
+              image: {{ include "wordsparrow-api.verifyRetentionImage" . | quote }}
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: {drop: [ALL]}
+              env:
+                - name: PGHOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "wordsparrow-api.pgClusterName" . }}-app
+                      key: host
+                - name: PGPORT
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "wordsparrow-api.pgClusterName" . }}-app
+                      key: port
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "wordsparrow-api.pgClusterName" . }}-app
+                      key: username
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "wordsparrow-api.pgClusterName" . }}-app
+                      key: password
+                - name: PGDATABASE
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "wordsparrow-api.pgClusterName" . }}-app
+                      key: dbname
+                - name: RETENTION_DAYS
+                  value: {{ .Values.retention.verifyUsage.days | quote }}
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  echo "[verify-retention] deleting puzzle_verify_usage rows older than ${RETENTION_DAYS} days"
+                  psql -v ON_ERROR_STOP=1 -X -A -t <<SQL
+                    DELETE FROM puzzle_verify_usage
+                     WHERE last_verified_at < now() - (INTERVAL '1 day' * ${RETENTION_DAYS});
+                  SQL
+                  echo "[verify-retention] done"
+              resources:
+                requests: {cpu: 50m, memory: 64Mi}
+                limits: {cpu: 200m, memory: 128Mi}
+              volumeMounts:
+                - {name: tmp, mountPath: /tmp}
+          volumes:
+            - {name: tmp, emptyDir: {}}
+{{- end }}

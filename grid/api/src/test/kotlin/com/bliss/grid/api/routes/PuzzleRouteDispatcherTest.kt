@@ -11,12 +11,14 @@ import com.bliss.grid.application.puzzle.StoredDailyPuzzle
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
 import com.bliss.grid.application.puzzle.ValidateWordUseCase
+import com.bliss.grid.application.puzzle.VerifyGridUseCase
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.domain.generation.WordRepository
 import com.bliss.grid.domain.model.Word
 import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
+import com.bliss.grid.infrastructure.persistence.InMemoryVerifyUsageRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.get
@@ -69,6 +71,7 @@ class PuzzleRouteDispatcherTest {
                         revealCellHint = RevealCellHintUseCase(recordingRepo, hintUsageRepo),
                         validatePuzzle = ValidatePuzzleUseCase(recordingRepo),
                         validateWord = ValidateWordUseCase(recordingRepo),
+                        verifyGrid = VerifyGridUseCase(recordingRepo, InMemoryVerifyUsageRepository()),
                         puzzleRepository = recordingRepo,
                         hintUsageRepository = hintUsageRepo,
                         hintWriteCoordinator = InMemoryHintWriteCoordinator(),
