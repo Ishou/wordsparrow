@@ -68,37 +68,43 @@ now updates the already-mounted screen, as does any other background merge.
 
 ### Piece 2 — Pull-on-entry, non-blocking (stale-while-revalidate)
 
-- Gate `pullAndMergeAll` with `if (!enabled) return;` at the top —
-  consistent with `pullAndMergeOne` and `schedulePush`, which already
-  self-gate. This makes it a no-op for anon / prerender / crawler traffic
-  (Home and `/grilles` are public, indexable routes). **Safe for existing
-  callers:** `useProgressSync` runs `setEnabled(true)` in an effect that
-  precedes the `reconcileOnAuth` effect (verified in
-  `useProgressSync.ts`), and `/compte` is authed, so `enabled` is already
-  true at both existing call sites.
-- On mount of `HomeScreen` and `GrillesArchiveScreen`, fire a
-  fire-and-forget `void progressSyncService?.pullAndMergeAll().catch(() => {})`.
-  No spinner, no blocked navigation: the cached strip/calendar renders
-  immediately, and when the pull's merge lands, Piece 1's signal updates
-  the view.
+- **Gate at the call site, not inside the service.** On mount of
+  `HomeScreen` and `GrillesArchiveScreen`, fire a fire-and-forget pull
+  **only when authed**, using the auth status the screens already read
+  (`useOptionalAuth` in Home, `useAuth` in grilles):
+  `if (authStatus === 'authed') void progressSyncService?.pullAndMergeAll().catch(() => {})`.
+  Anon / prerender / crawler traffic never issues the pull, so the public
+  indexable routes keep their zero-network first paint. No spinner, no
+  blocked navigation: the cached strip/calendar renders immediately, and
+  when the pull's merge lands, Piece 1's signal updates the view.
+- **`ProgressSyncService.pullAndMergeAll` is left unchanged (ungated).**
+  An earlier draft proposed adding `if (!enabled) return;` inside it, but
+  that would (a) break existing tests that call `pullAndMergeAll` /
+  `reconcileOnAuth` directly without `setEnabled(true)`, and (b) let
+  `reconcileOnAuth` save its per-device marker without actually syncing if
+  `enabled` ever lagged. Call-site gating avoids both and touches no
+  existing behavior.
 
 This makes **every entry** re-pull. The sign-in reconcile only runs once
 per device, so without this, re-entering a screen never refreshes.
 
 ### Why both
 
-- Piece 2 alone: in-app navigation is fresh, but cold-start-on-Home stays
-  stale — the mount pull no-ops before auth resolves, and the later
-  reconcile merge cannot re-render a mounted screen without Piece 1.
-- Piece 1 alone: cold-start works, but re-entering never re-pulls
-  (reconcile is once-per-device), so progress made elsewhere while this
-  device idled won't appear without Piece 2.
+- Piece 2 alone (no reactivity): the mount pull writes `localStorage`, but
+  a mounted screen never re-reads it — so on the same visit the strip stays
+  stale until an unrelated remount. Piece 1 is what turns any completed
+  pull (mount pull, cold-start re-fire when `authStatus` flips to
+  `authed`, or the sign-in reconcile) into a visible update.
+- Piece 1 alone: cold-start works (the sign-in reconcile merge now
+  re-renders), but re-entering never re-pulls — the reconcile is
+  once-per-device — so progress made elsewhere while this device idled
+  won't appear without Piece 2.
 
 ## Components & data flow
 
 ```
-mount HomeScreen / GrillesArchiveScreen
-  └─ effect: progressSyncService.pullAndMergeAll()   (Piece 2, non-blocking, no-op if !enabled)
+mount HomeScreen / GrillesArchiveScreen (authed only)
+  └─ effect: progressSyncService.pullAndMergeAll()   (Piece 2, non-blocking, fire-and-forget)
         └─ client.pullAll() → mergeProgress → blobStore.replacePayload (localStorage)
               └─ notify() bumps revision                 (Piece 1)
                     └─ useProgressRevision → useSyncExternalStore re-renders
@@ -112,14 +118,13 @@ updates from those too.
 
 ## Testing
 
-- **Service:** `subscribe`/`notify` fires exactly once after
-  `pullAndMergeAll` and after `pullAndMergeOne`; unsubscribe stops
-  delivery. `pullAndMergeAll` is a no-op (no `client.pullAll`) when
-  disabled — new gate. Existing merge/conflict/pacing tests unchanged.
+- **Service:** `subscribe`/`notify` fires after `pullAndMergeAll` and
+  after `pullAndMergeOne`; `getRevision()` advances; unsubscribe stops
+  delivery. Existing merge/conflict/pacing/reconcile tests unchanged.
 - **Screens:** an external merge (write `localStorage` + `notify`)
-  recomputes `weekCells` / `infos` and updates the rendered cells; a mount
-  fires `pullAndMergeAll`.
-- **Loader/mount gating:** anon → no network call; authed → pull fires.
+  recomputes `weekCells` / `infos` and updates the rendered cells.
+- **Mount gating:** anon → no `pullAndMergeAll` call; authed → the pull
+  fires once on mount.
 
 ## Scope
 
@@ -127,8 +132,9 @@ Files: `application/progress/ProgressSyncService.ts` (+ its interface),
 a `useProgressRevision` hook, `ui/home/HomeScreen.tsx`,
 `ui/v2/GrillesArchiveScreen.tsx`, `ui/routes/index.tsx`,
 `ui/routes/grilles.tsx`, and tests. Single frontend workstream, additive
-to ADR-0075 (new method + a gate), no schema/contract change, no new
-dependency. Well under the 400-line diff cap.
+to ADR-0075 (new `subscribe`/`getRevision` methods only — no change to
+existing sync behavior), no schema/contract change, no new dependency.
+Well under the 400-line diff cap.
 
 ## Consequences
 
