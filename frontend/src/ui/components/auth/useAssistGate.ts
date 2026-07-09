@@ -8,13 +8,15 @@ type GateProps = {
   readonly title: string;
 };
 
-export function useHintGate(): GateProps | null {
+// Gates the active solo assist affordance (ADR-0099's Vérifier today, hint before it); reuses the 'hint'
+// capability until a lobby setting maps assist mode -> capability.
+export function useAssistGate(): GateProps | null {
   const auth = useOptionalAuth();
-  const hasHint = useCapability('hint');
+  const hasAssist = useCapability('hint');
   if (!auth) return null;
   if (auth.state.status === 'loading') {
     return { disabled: true, 'aria-disabled': true, title: t('common.loading') };
   }
-  if (hasHint) return null;
-  return { disabled: true, 'aria-disabled': true, title: t('auth.hintGate.anon') };
+  if (hasAssist) return null;
+  return { disabled: true, 'aria-disabled': true, title: t('auth.assistGate.anon') };
 }

@@ -1,5 +1,5 @@
 export { Grid } from './Grid';
-export { HintCooldown, type HintCooldownProps } from './HintCooldown';
+export { AssistCooldown, formatMmSs, type AssistCooldownProps } from './AssistCooldown';
 export { useCountdownTicker } from './useCountdownTicker';
 export {
   usePuzzleValidation,
