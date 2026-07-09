@@ -4,10 +4,7 @@ import { css } from 'styled-system/css';
 import { canNativeShare, shareOrCopyInviteUrl } from '@/ui/lib/shareInvite';
 import { t } from '@/ui/i18n';
 
-// Per-row "re-share the invitation" affordance for the multiplayer game
-// lists. Native share sheet when the platform has one, clipboard copy
-// otherwise (shareInvite). Rendered as a standalone control outside the
-// row's navigate `Link` so tapping it copies and never navigates.
+// Per-row re-share affordance, mirrors LeaveGameButton's placement outside the row Link.
 
 const triggerStyles = css({
   flex: 'none',
