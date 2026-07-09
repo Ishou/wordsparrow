@@ -1,0 +1,98 @@
+import type { ReactNode } from 'react';
+import { Link, type LinkProps } from '@tanstack/react-router';
+import { CaretLeft } from '@phosphor-icons/react';
+import { css, cx } from 'styled-system/css';
+import { DesktopAppBar } from './DesktopAppBar';
+import { SkipLink } from './SkipLink';
+
+export type AppShellVariant = 'flow' | 'overlay';
+
+export interface AppShellProps {
+  readonly children: ReactNode;
+  readonly variant?: AppShellVariant;
+  readonly topBar?: ReactNode;
+  readonly bottomBar?: ReactNode;
+  readonly navActive?: 'accueil' | 'grilles';
+  readonly backTo?: LinkProps['to'];
+  readonly headerFlush?: boolean;
+}
+
+// Fills #root (height:100%), never depends on 100dvh on mobile so the visual-viewport
+// mismatch that produced the PWA phantom scroll can't recur; md/lg keep the tablet-card/desktop look.
+const shell = css({
+  height: '100%',
+  minHeight: 0,
+  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  fontFamily: 'wsUi',
+  md: { bgImage: 'none', bg: 'var(--colors-ws-hero-flat)', justifyContent: 'center', padding: '40px 24px' },
+  // Desktop: drop the surround — full-bleed gradient with a pinned top bar + scrollable content, matching home/play.
+  lg: { bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0, alignItems: 'stretch' },
+});
+
+// The full-height column that lays out top/middle/bottom as a 3-row grid on mobile.
+const frame = css({
+  width: '100%',
+  maxWidth: '440px',
+  flex: 1,
+  minHeight: 0,
+  display: 'grid',
+  gridTemplateRows: 'auto minmax(0, 1fr) auto',
+  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
+  md: { flex: 'none', maxWidth: '460px', height: 'min(900px, calc(100dvh - 80px))', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 24px 60px rgba(33,75,64,0.18)' },
+  // Desktop: a full-width fixed-height flex column so the bar's full-bleed frost isn't clipped and the body scrollbar lands at the screen edge; content is centred by inner, not the frame.
+  lg: { flex: 1, maxWidth: 'none', minHeight: 0, marginInline: 0, borderRadius: 0, overflow: 'visible', boxShadow: 'none', bgImage: 'none' },
+});
+
+const headerSlot = css({ gridRow: '1', minHeight: 0, lg: { display: 'none' } });
+// Non-flush headers keep the legacy top padding; flush headers (MobileTopBar) own their spacing.
+const headerSlotPadded = css({ padding: 'calc(env(safe-area-inset-top) + 18px) 22px 0' });
+
+// The single scroll container. Bottom safe-area inset lives here only when there is no bottomBar.
+const body = css({
+  gridRow: '2',
+  minHeight: 0,
+  overflowY: 'auto',
+  padding: '18px 22px 28px',
+  // Desktop: full-width scroller; scrollbarGutter reserves the scrollbar's track so it never overlaps the centred content.
+  lg: { paddingInline: 0, paddingTop: '26px', paddingBottom: '56px', scrollbarGutter: 'stable' },
+});
+const bodyBottomInset = css({ paddingBottom: 'calc(env(safe-area-inset-bottom) + 28px)', lg: { paddingBottom: '56px' } });
+const bodyFlushTop = css({ paddingTop: 0, lg: { paddingTop: '26px' } });
+
+const bottomSlot = css({ gridRow: '3', minHeight: 0 });
+
+// Desktop centres the 680px reading column inside the full-width scroller; passthrough on phone/tablet.
+const inner = css({ display: 'contents', lg: { display: 'block', width: '100%', maxWidth: '680px', marginInline: 'auto', paddingInline: '36px' } });
+
+// Desktop-only page Retour (the mobile BackHeader is hidden at lg); pill matches BackHeader's.
+const deskBack = css({
+  display: 'none',
+  lg: { display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '18px', fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'bold', color: 'ws.jadeInk', textDecoration: 'none', borderRadius: '999px', padding: '8px 14px 8px 10px', bg: 'ws.glass', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'ws.glassHover' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } },
+});
+
+export function AppShell({ children, topBar, bottomBar, navActive, backTo, headerFlush }: AppShellProps) {
+  return (
+    <div className={shell} lang="fr">
+      <SkipLink />
+      <div className={frame}>
+        <DesktopAppBar active={navActive} />
+        {topBar != null ? <div className={cx(headerSlot, !headerFlush && headerSlotPadded)}>{topBar}</div> : null}
+        <main id="main-content" tabIndex={-1} className={cx(body, bottomBar == null && bodyBottomInset, headerFlush && bodyFlushTop)}>
+          <div className={inner}>
+            {backTo != null ? (
+              <Link to={backTo} className={deskBack}>
+                <CaretLeft size={16} weight="bold" aria-hidden="true" />
+                Retour
+              </Link>
+            ) : null}
+            {children}
+          </div>
+        </main>
+        {bottomBar != null ? <div className={bottomSlot}>{bottomBar}</div> : null}
+      </div>
+    </div>
+  );
+}
