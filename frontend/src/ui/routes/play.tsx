@@ -3,7 +3,7 @@ import { css } from 'styled-system/css';
 import type { Puzzle } from '@/domain';
 // Sanctioned app→module bridge (ADR-0072).
 import { PlayScreen } from '@/ui/play/PlayScreen';
-import { PhoneShell } from '@/ui/v2/PhoneShell';
+import { AppShell } from '@/ui/v2/AppShell';
 import { SparrowState } from '@/ui/v2/SparrowState';
 import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { INDEXABLE_ROUTES, SITE_BASE_URL, breadcrumbJsonLd, gameJsonLd, indexableHead } from '@/ui/seo';
@@ -35,14 +35,14 @@ const sunriseScene = (
 function PlayUnavailable() {
   const navigate = useNavigate();
   return (
-    <PhoneShell>
+    <AppShell variant="flow">
       <SparrowState
         scene={sunriseScene}
         title={t('route.play.unavailable.title')}
         body={t('route.play.unavailable.body')}
         cta={{ label: t('route.play.unavailable.cta'), onClick: () => void navigate({ to: '/grilles' }) }}
       />
-    </PhoneShell>
+    </AppShell>
   );
 }
 
@@ -50,14 +50,14 @@ function PlayUnavailable() {
 function PlayLoadError() {
   const router = useRouter();
   return (
-    <PhoneShell>
+    <AppShell variant="flow">
       <SparrowState
         scene={sparrowFlightScene()}
         title={t('route.play.loadError.title')}
         body={t('route.play.loadError.body')}
         cta={{ label: t('common.retry'), onClick: () => void router.invalidate() }}
       />
-    </PhoneShell>
+    </AppShell>
   );
 }
 
@@ -86,12 +86,12 @@ const PLAY_TITLE = INDEXABLE_ROUTES.find((x) => x.path === '/play')!.title;
 function PlayPending() {
   // head() runs only after the loader resolves; React 19 hoists this <title> so the prerender hang pass + crawlers see one.
   return (
-    <PhoneShell>
+    <AppShell variant="flow">
       <title>{PLAY_TITLE}</title>
       <div className={pendingCss} role="status" aria-busy="true" aria-label={t('route.play.pending.aria')}>
         {t('route.play.pending.text')}
       </div>
-    </PhoneShell>
+    </AppShell>
   );
 }
 

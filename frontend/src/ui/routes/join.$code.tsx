@@ -7,7 +7,7 @@ import type { Lobby, LobbyId } from '@/domain/game';
 import { LOBBY_CODE_PATTERN } from '@/domain/game/lobbyCode';
 import { createLoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
 import { LoaderRetry } from '@/ui/v2/LoaderRetry';
-import { PhoneShell } from '@/ui/v2/PhoneShell';
+import { AppShell } from '@/ui/v2/AppShell';
 import { BackHeader } from '@/ui/v2/BackHeader';
 import { SparrowState } from '@/ui/v2/SparrowState';
 import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
@@ -43,9 +43,9 @@ function V2JoinRedirect() {
   }, [code, lobby.id, lobbyJoinCodeStash, navigate]);
 
   return (
-    <PhoneShell header={<BackHeader to="/" />}>
+    <AppShell variant="flow" topBar={<BackHeader to="/" />}>
       <p className={message} role="status">{t('route.join.connecting')}</p>
-    </PhoneShell>
+    </AppShell>
   );
 }
 
@@ -65,14 +65,14 @@ function V2JoinError({ error }: { readonly error: Error }) {
     return <LoaderRetry policy={joinLoaderRetryPolicy} silentText={t('route.join.searching')} />;
   }
   return (
-    <PhoneShell>
+    <AppShell variant="flow">
       <SparrowState
         scene={sparrowFlightScene()}
         title={t('route.join.notFound.title')}
         body={t('route.join.notFound.body')}
         cta={{ label: t('route.join.notFound.cta'), onClick: () => void navigate({ to: '/' }) }}
       />
-    </PhoneShell>
+    </AppShell>
   );
 }
 
@@ -92,9 +92,9 @@ export const Route = createRoute({
   component: V2JoinRedirect,
   errorComponent: V2JoinError,
   pendingComponent: () => (
-    <PhoneShell header={<BackHeader to="/" />}>
+    <AppShell variant="flow" topBar={<BackHeader to="/" />}>
       <p className={message} role="status">{t('route.join.searching')}</p>
-    </PhoneShell>
+    </AppShell>
   ),
   head: () => noindexHead(t('seo.shell.join.title'), t('seo.shell.join.description')),
 });

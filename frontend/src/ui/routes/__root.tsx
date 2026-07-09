@@ -111,7 +111,7 @@ function RootErrorBoundary() {
   );
 }
 
-// Mirrors NotFoundScreen's copy/title, but hard-navigates and skips PhoneShell since the route tree itself may be broken.
+// Mirrors NotFoundScreen's copy/title, but hard-navigates and skips the AppShell chrome since the route tree itself may be broken.
 function RootNotFound() {
   useNotFoundDocumentTitle();
   return (
