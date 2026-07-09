@@ -19,6 +19,7 @@ cloud:
   - { id: pages,       label: Cloudflare Pages (legacy 301), tf_resource: cloudflare_pages_project }
   - { id: dns,         label: Cloudflare DNS,      tf_resource: cloudflare_dns_record }
   - { id: cacherules,  label: Cloudflare cache rules, tf_resource: cloudflare_ruleset }
+  - { id: httpsredirect, label: Cloudflare Always Use HTTPS, tf_resource: cloudflare_zone_setting }
   - { id: k3s,         label: Hetzner k3s,         tf_resource: null }
 
 # Cluster-topology edges (request-protocol detail lives in flow_edges); cluster_external lists non-cluster nodes.
@@ -54,6 +55,7 @@ deploy_edges:
   - { from: deploy-api-k8s,  to: k3s,   label: helm upgrade }
   - { from: pages,           to: workers, label: 301 redirect, style: dashed }
   - { from: dns,             to: k3s,   label: service subdomains via external-dns }
+  - { from: dns,             to: httpsredirect, label: 301 upgrade }
   - { from: dns,             to: cacherules, label: edge cache }
   - { from: cacherules,      to: k3s,   label: cache miss / bypass }
 
