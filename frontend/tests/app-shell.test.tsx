@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthClient } from '@/application/auth';
 import { AuthProvider } from '@/ui/components/auth';
+import { t } from '@/ui/i18n';
 import { AppShell } from '@/ui/v2/AppShell';
 
 function stubAuthClient(): AuthClient {
@@ -118,5 +119,38 @@ describe('AppShell (overlay)', () => {
     expect(main).not.toContainElement(screen.getByTestId('tb'));
     expect(main).not.toContainElement(screen.getByTestId('bb'));
     expect(main).toContainElement(screen.getByTestId('viewport'));
+  });
+});
+
+describe.each(['flow', 'overlay'] as const)('AppShell (%s) desktopBar slot', (variant) => {
+  it('falls back to the default DesktopAppBar when desktopBar is omitted', async () => {
+    renderShell(
+      <AppShell variant={variant}>
+        <p>content</p>
+      </AppShell>,
+    );
+    await screen.findByRole('main');
+    expect(screen.getByLabelText(t('v2.nav.brandAria'))).toBeInTheDocument();
+  });
+
+  it('renders a supplied desktopBar instead of the default DesktopAppBar', async () => {
+    renderShell(
+      <AppShell variant={variant} desktopBar={<div data-testid="custom-desktop-bar" />}>
+        <p>content</p>
+      </AppShell>,
+    );
+    await screen.findByRole('main');
+    expect(screen.getByTestId('custom-desktop-bar')).toBeInTheDocument();
+    expect(screen.queryByLabelText(t('v2.nav.brandAria'))).not.toBeInTheDocument();
+  });
+
+  it('renders no desktop bar when desktopBar is explicitly null', async () => {
+    renderShell(
+      <AppShell variant={variant} desktopBar={null}>
+        <p>content</p>
+      </AppShell>,
+    );
+    await screen.findByRole('main');
+    expect(screen.queryByLabelText(t('v2.nav.brandAria'))).not.toBeInTheDocument();
   });
 });

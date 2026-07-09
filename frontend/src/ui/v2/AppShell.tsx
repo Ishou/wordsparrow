@@ -13,6 +13,8 @@ export interface AppShellProps {
   readonly topBar?: ReactNode;
   readonly bottomBar?: ReactNode;
   readonly navActive?: 'accueil' | 'grilles';
+  // Page-supplied desktop bar (e.g. a screen needing a timer/streak/trailing prop the generic navActive bar can't carry). `null` renders no desktop bar; `undefined` falls back to the default DesktopAppBar.
+  readonly desktopBar?: ReactNode;
   readonly backTo?: LinkProps['to'];
   readonly headerFlush?: boolean;
   // Body stops scrolling and delegates to an inner flex:1 child, so a pinned head (e.g. tabs) can stay above a scrolling list.
@@ -96,13 +98,13 @@ const overlayMain = css({ position: 'relative', flex: 1, minHeight: 0, display: 
 const overlayTop = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, paddingTop: 'env(safe-area-inset-top)', lg: { position: 'static', paddingTop: 0 } });
 const overlayBottom = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, paddingBottom: 'env(safe-area-inset-bottom)', lg: { position: 'static', paddingBottom: 0 } });
 
-export function AppShell({ children, variant = 'flow', topBar, bottomBar, navActive, backTo, headerFlush, fillBody }: AppShellProps) {
+export function AppShell({ children, variant = 'flow', topBar, bottomBar, navActive, desktopBar, backTo, headerFlush, fillBody }: AppShellProps) {
   if (variant === 'overlay') {
     return (
       <div className={shell} lang="fr">
         <SkipLink />
         <div className={overlayFrame}>
-          <DesktopAppBar active={navActive} />
+          {desktopBar !== undefined ? desktopBar : <DesktopAppBar active={navActive} />}
           <main id="main-content" tabIndex={-1} className={overlayMain}>
             {topBar != null ? <div className={overlayTop}>{topBar}</div> : null}
             {children}
@@ -116,7 +118,7 @@ export function AppShell({ children, variant = 'flow', topBar, bottomBar, navAct
     <div className={shell} lang="fr">
       <SkipLink />
       <div className={frame}>
-        <DesktopAppBar active={navActive} />
+        {desktopBar !== undefined ? desktopBar : <DesktopAppBar active={navActive} />}
         {topBar != null ? <div className={cx(headerSlot, !headerFlush && headerSlotPadded)}>{topBar}</div> : null}
         <main id="main-content" tabIndex={-1} className={cx(body, bottomBar == null && bodyBottomInset, headerFlush && bodyFlushTop, fillBody && bodyFill)}>
           <div className={fillBody ? innerFill : inner}>

@@ -9,9 +9,9 @@ import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
 import { Button, ClueRail, Lockup } from '@/design-system';
 import { t } from '@/ui/i18n';
+import { AppShell } from '@/ui/v2/AppShell';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
-import { SkipLink } from '@/ui/v2/SkipLink';
 import { useGridNavigation, type Direction } from '@/ui/components/grid/useGridNavigation';
 import { orderClues } from '@/ui/components/grid/orderClues';
 import { CELL, STRIDE, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
@@ -28,36 +28,6 @@ import { GridSoundToggle } from './GridSoundToggle';
 import { formatClock } from '@/ui/lib/formatClock';
 import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
-const stage = css({
-  minHeight: '100dvh',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top), var(--colors-ws-hero-bottom))',
-  md: { bgImage: 'none', bg: 'var(--colors-ws-hero-flat)', padding: '32px 24px' },
-  // Desktop: drop the surround — the board goes immersive on the full-bleed gradient.
-  lg: { bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top), var(--colors-ws-hero-bottom))', bg: 'transparent', padding: 0, alignItems: 'stretch' },
-});
-// Immersive phone-shaped shell: the jade field fills it; the grid bleeds within.
-const shell = css({
-  position: 'relative',
-  width: '100%',
-  maxWidth: '440px',
-  height: '100dvh',
-  overflow: 'hidden',
-  display: 'flex',
-  flexDirection: 'column',
-  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top), var(--colors-ws-hero-bottom))',
-  fontFamily: 'wsUi',
-  md: {
-    maxWidth: '720px',
-    height: 'min(920px, calc(100dvh - 64px))',
-    borderRadius: '28px',
-    boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
-  },
-  // Desktop: full-bleed play field so the board can zoom to the full window width (the app bar is full-bleed too).
-  lg: { maxWidth: 'none', height: '100dvh', borderRadius: 0, boxShadow: 'none' },
-});
 const GUTTER = '14px';
 // Overlay region: the grid bleeds behind it; pan-inset keeps the top reachable.
 const header = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, padding: `12px ${GUTTER} 0`, lg: { position: 'static', width: '100%', paddingTop: '24px', paddingInline: '36px' } });
@@ -457,43 +427,109 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
   }, [soloEntriesStore, puzzle.id, won]);
 
   return (
-    <div className={stage}>
-    <SkipLink />
-    <main id="main-content" tabIndex={-1} className={shell} lang="fr">
-      {isDesktop ? (
-        <DesktopAppBar
-          trailing={
-            <>
+    <AppShell
+      variant="overlay"
+      desktopBar={
+        isDesktop ? (
+          <DesktopAppBar
+            trailing={
+              <>
+                <span className={headerTimer} aria-label={t('play.aria.timer', { time: timeLabel })}>
+                  <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
+                  {timeLabel}
+                </span>
+                {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
+              </>
+            }
+          />
+        ) : null
+      }
+      topBar={
+        isDesktop ? undefined : (
+          <header className={header}>
+            <div className={headerBar}>
+              <button type="button" className={iconBtn} onClick={() => navigate({ to: '/' })} aria-label={t('play.aria.exit')}>
+                <CaretLeft aria-hidden="true" weight="bold" />
+              </button>
+              <Link to="/" className={brandLink} aria-label={t('play.aria.home')}>
+                <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
+              </Link>
+              <span className={headerSpacer} />
               <span className={headerTimer} aria-label={t('play.aria.timer', { time: timeLabel })}>
                 <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
                 {timeLabel}
               </span>
               {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
+              <button type="button" className={iconBtn} onClick={() => setMenuOpen(true)} aria-label={t('play.aria.settings')}>
+                <DotsThreeVertical aria-hidden="true" weight="bold" />
+              </button>
+            </div>
+          </header>
+        )
+      }
+      bottomBar={
+        <div className={bottomBar} ref={bottomRef}>
+          {won ? (
+            <Button variant="secondary" className={resultsBtn} onClick={() => { setWonLive(true); setWinDismissed(false); }}>
+              <Trophy aria-hidden="true" weight="fill" />
+              {t('play.results.cta')}
+            </Button>
+          ) : (
+            <>
+              {hint.errorMessage ? (
+                <p className={hintError} role="alert">
+                  {hint.errorMessage}
+                </p>
+              ) : null}
+              {validation.failMessage ? (
+                <p className={failPill} role="status" aria-live="polite">
+                  {validation.failMessage}
+                </p>
+              ) : null}
+              {displayClue ? (
+                <ClueRail
+                  direction={displayClue.across ? 'horizontal' : 'vertical'}
+                  directionLabel={t(displayClue.across ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
+                  clue={displayClue.text}
+                  index={displayOrdinal + 1}
+                  total={orderedClues.length}
+                  groupLabel={t('clueRail.aria.group')}
+                  counterLabel={t('clueRail.aria.counter', { index: displayOrdinal + 1, total: orderedClues.length })}
+                  prevLabel={t('clueRail.aria.prev')}
+                  nextLabel={t('clueRail.aria.next')}
+                  zoomInLabel={t('clueRail.aria.zoomIn')}
+                  zoomOutLabel={t('clueRail.aria.zoomOut')}
+                  onPrev={() => stepClue(-1)}
+                  onNext={() => stepClue(1)}
+                  onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
+                  onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
+                  trailing={
+                    <span className={hintTrailing}>
+                      <button
+                        type="button"
+                        className={hintBtn}
+                        onClick={requestHint}
+                        disabled={hint.pending || (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)}
+                        aria-label={t('play.hint.aria.remaining', { remaining: hint.hintsRemaining })}
+                      >
+                        <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
+                        {t('play.hint.label', { remaining: hint.hintsRemaining })}
+                      </button>
+                      <HintCooldown
+                        hintsRemaining={hint.hintsRemaining}
+                        hintsAllowed={puzzle.hintsAllowed}
+                        secondsUntilNextHint={hint.secondsUntilNextHint}
+                      />
+                    </span>
+                  }
+                />
+              ) : null}
+              <Keyboard onLetter={(l) => nav.enterLetter(l)} onBackspace={playBackspace} />
             </>
-          }
-        />
-      ) : (
-        <header className={header}>
-          <div className={headerBar}>
-            <button type="button" className={iconBtn} onClick={() => navigate({ to: '/' })} aria-label={t('play.aria.exit')}>
-              <CaretLeft aria-hidden="true" weight="bold" />
-            </button>
-            <Link to="/" className={brandLink} aria-label={t('play.aria.home')}>
-              <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
-            </Link>
-            <span className={headerSpacer} />
-            <span className={headerTimer} aria-label={t('play.aria.timer', { time: timeLabel })}>
-              <Timer aria-hidden="true" weight="bold" className={headerTimerIcon} />
-              {timeLabel}
-            </span>
-            {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
-            <button type="button" className={iconBtn} onClick={() => setMenuOpen(true)} aria-label={t('play.aria.settings')}>
-              <DotsThreeVertical aria-hidden="true" weight="bold" />
-            </button>
-          </div>
-        </header>
-      )}
-
+          )}
+        </div>
+      }
+    >
       <PuzzleBoard
         ref={boardRef}
         puzzle={puzzle}
@@ -516,68 +552,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
       ) : null}
 
       <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
-
-      <div className={bottomBar} ref={bottomRef}>
-        {won ? (
-          <Button variant="secondary" className={resultsBtn} onClick={() => { setWonLive(true); setWinDismissed(false); }}>
-            <Trophy aria-hidden="true" weight="fill" />
-            {t('play.results.cta')}
-          </Button>
-        ) : (
-          <>
-            {hint.errorMessage ? (
-              <p className={hintError} role="alert">
-                {hint.errorMessage}
-              </p>
-            ) : null}
-            {validation.failMessage ? (
-              <p className={failPill} role="status" aria-live="polite">
-                {validation.failMessage}
-              </p>
-            ) : null}
-            {displayClue ? (
-              <ClueRail
-                direction={displayClue.across ? 'horizontal' : 'vertical'}
-                directionLabel={t(displayClue.across ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
-                clue={displayClue.text}
-                index={displayOrdinal + 1}
-                total={orderedClues.length}
-                groupLabel={t('clueRail.aria.group')}
-                counterLabel={t('clueRail.aria.counter', { index: displayOrdinal + 1, total: orderedClues.length })}
-                prevLabel={t('clueRail.aria.prev')}
-                nextLabel={t('clueRail.aria.next')}
-                zoomInLabel={t('clueRail.aria.zoomIn')}
-                zoomOutLabel={t('clueRail.aria.zoomOut')}
-                onPrev={() => stepClue(-1)}
-                onNext={() => stepClue(1)}
-                onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
-                onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
-                trailing={
-                  <span className={hintTrailing}>
-                    <button
-                      type="button"
-                      className={hintBtn}
-                      onClick={requestHint}
-                      disabled={hint.pending || (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)}
-                      aria-label={t('play.hint.aria.remaining', { remaining: hint.hintsRemaining })}
-                    >
-                      <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
-                      {t('play.hint.label', { remaining: hint.hintsRemaining })}
-                    </button>
-                    <HintCooldown
-                      hintsRemaining={hint.hintsRemaining}
-                      hintsAllowed={puzzle.hintsAllowed}
-                      secondsUntilNextHint={hint.secondsUntilNextHint}
-                    />
-                  </span>
-                }
-              />
-            ) : null}
-            <Keyboard onLetter={(l) => nav.enterLetter(l)} onBackspace={playBackspace} />
-          </>
-        )}
-      </div>
-    </main>
-    </div>
+    </AppShell>
   );
 }

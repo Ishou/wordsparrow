@@ -8,8 +8,8 @@ import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
 import { ClueRail, Lockup } from '@/design-system';
 import { t } from '@/ui/i18n';
+import { AppShell } from '@/ui/v2/AppShell';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
-import { SkipLink } from '@/ui/v2/SkipLink';
 import { useGridNavigation } from '@/ui/components/grid/useGridNavigation';
 import { orderClues } from '@/ui/components/grid/orderClues';
 import { CELL, GAP, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
@@ -28,35 +28,6 @@ import { useIsDesktop } from '@/ui/lib/useIsDesktop';
 
 // ADR-0072 v2 co-op IN_PROGRESS screen: shared grid + presence + timer + roster, wired like prod InGameView.
 
-const stage = css({
-  minHeight: '100dvh',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
-  md: { bgImage: 'none', bg: 'var(--colors-ws-hero-flat)', padding: '32px 24px' },
-  // Desktop: drop the surround — the board goes immersive on the full-bleed gradient.
-  lg: { bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)', bg: 'transparent', padding: 0, alignItems: 'stretch' },
-});
-const shell = css({
-  position: 'relative',
-  width: '100%',
-  maxWidth: '440px',
-  height: '100dvh',
-  overflow: 'hidden',
-  display: 'flex',
-  flexDirection: 'column',
-  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
-  fontFamily: 'wsUi',
-  md: {
-    maxWidth: '720px',
-    height: 'min(920px, calc(100dvh - 64px))',
-    borderRadius: '28px',
-    boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
-  },
-  // Desktop: full-bleed like solo PlayScreen — uncap the shell so the DesktopAppBar's 100vw frosting isn't clipped by overflow:hidden.
-  lg: { maxWidth: 'none', height: '100dvh', borderRadius: 0, boxShadow: 'none' },
-});
 const GUTTER = '14px';
 const header = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 4, padding: `12px ${GUTTER} 0`, display: 'flex', flexDirection: 'column', gap: '8px', lg: { position: 'static', width: '100%', paddingTop: '24px', paddingInline: '36px' } });
 // Desktop presence row: aligned with the contained board under the shared nav bar.
@@ -311,20 +282,46 @@ export function LiveCoopScreen({
   );
 
   return (
-    <div className={stage}>
-    <SkipLink />
-    <main id="main-content" tabIndex={-1} className={shell} lang="fr">
-      {isDesktop ? (
-        <>
-          <DesktopAppBar
-            trailing={
-              <>
-                <LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />
-                {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
-              </>
-            }
-          />
-          <div className={coopPresence}>
+    <AppShell
+      variant="overlay"
+      desktopBar={
+        isDesktop ? (
+          <>
+            <DesktopAppBar
+              trailing={
+                <>
+                  <LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />
+                  {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
+                </>
+              }
+            />
+            <div className={coopPresence}>
+              <PlayerStrip
+                players={players}
+                currentSessionId={sessionId}
+                typingSessionIds={typingSessionIds}
+                idleSessionIds={idleSessionIds}
+                disconnectingSessionIds={disconnectingSessionIds}
+              />
+            </div>
+          </>
+        ) : null
+      }
+      topBar={
+        isDesktop ? undefined : (
+          <header className={header}>
+            <div className={headerBar}>
+              <button type="button" className={iconBtn} onClick={onLeave} aria-label={t('v2.multiplayer.coop.aria.leaveGame')}>
+                <CaretLeft aria-hidden="true" weight="bold" />
+              </button>
+              <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
+              <span className={headerSpacer} />
+              <LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />
+              {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
+              <button type="button" className={iconBtn} onClick={onLeave} aria-label={t('v2.multiplayer.leave')}>
+                <SignOut aria-hidden="true" weight="bold" />
+              </button>
+            </div>
             <PlayerStrip
               players={players}
               currentSessionId={sessionId}
@@ -332,32 +329,36 @@ export function LiveCoopScreen({
               idleSessionIds={idleSessionIds}
               disconnectingSessionIds={disconnectingSessionIds}
             />
-          </div>
-        </>
-      ) : (
-        <header className={header}>
-          <div className={headerBar}>
-            <button type="button" className={iconBtn} onClick={onLeave} aria-label={t('v2.multiplayer.coop.aria.leaveGame')}>
-              <CaretLeft aria-hidden="true" weight="bold" />
-            </button>
-            <Lockup orientation="horizontal" tone="jade" iconSize={26} textSize={17} gap={8} />
-            <span className={headerSpacer} />
-            <LiveTimer startedAt={startedAt} frozenAtMs={frozenAtMs} />
-            {soundStore ? <GridSoundToggle soundStore={soundStore} className={iconBtn} /> : null}
-            <button type="button" className={iconBtn} onClick={onLeave} aria-label={t('v2.multiplayer.leave')}>
-              <SignOut aria-hidden="true" weight="bold" />
-            </button>
-          </div>
-          <PlayerStrip
-            players={players}
-            currentSessionId={sessionId}
-            typingSessionIds={typingSessionIds}
-            idleSessionIds={idleSessionIds}
-            disconnectingSessionIds={disconnectingSessionIds}
-          />
-        </header>
-      )}
-
+          </header>
+        )
+      }
+      bottomBar={
+        <div className={bottomBar} ref={bottomRef}>
+          {clue && clueOrdinal >= 0 ? (
+            <ClueRail
+              direction={clue.direction === 'across' ? 'horizontal' : 'vertical'}
+              directionLabel={t(clue.direction === 'across' ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
+              clue={clue.clue.text}
+              index={clueOrdinal + 1}
+              total={orderedClues.length}
+              groupLabel={t('clueRail.aria.group')}
+              counterLabel={t('clueRail.aria.counter', { index: clueOrdinal + 1, total: orderedClues.length })}
+              prevLabel={t('clueRail.aria.prev')}
+              nextLabel={t('clueRail.aria.next')}
+              zoomInLabel={t('clueRail.aria.zoomIn')}
+              zoomOutLabel={t('clueRail.aria.zoomOut')}
+              onPrev={() => nav.cycleClue(-1)}
+              onNext={() => nav.cycleClue(1)}
+              onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
+              onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
+            />
+          ) : null}
+          {!isCompleted ? (
+            <Keyboard onLetter={(l) => nav.enterLetter(l)} onBackspace={() => nav.eraseLetter()} />
+          ) : null}
+        </div>
+      }
+    >
       {onClaim && isOwnerless ? (
         <div className={claimBanner}>
           <span className={claimPill}>
@@ -398,32 +399,6 @@ export function LiveCoopScreen({
           />
         }
       />
-
-      <div className={bottomBar} ref={bottomRef}>
-        {clue && clueOrdinal >= 0 ? (
-          <ClueRail
-            direction={clue.direction === 'across' ? 'horizontal' : 'vertical'}
-            directionLabel={t(clue.direction === 'across' ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
-            clue={clue.clue.text}
-            index={clueOrdinal + 1}
-            total={orderedClues.length}
-            groupLabel={t('clueRail.aria.group')}
-            counterLabel={t('clueRail.aria.counter', { index: clueOrdinal + 1, total: orderedClues.length })}
-            prevLabel={t('clueRail.aria.prev')}
-            nextLabel={t('clueRail.aria.next')}
-            zoomInLabel={t('clueRail.aria.zoomIn')}
-            zoomOutLabel={t('clueRail.aria.zoomOut')}
-            onPrev={() => nav.cycleClue(-1)}
-            onNext={() => nav.cycleClue(1)}
-            onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
-            onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
-          />
-        ) : null}
-        {!isCompleted ? (
-          <Keyboard onLetter={(l) => nav.enterLetter(l)} onBackspace={() => nav.eraseLetter()} />
-        ) : null}
-      </div>
-    </main>
-    </div>
+    </AppShell>
   );
 }
