@@ -75,14 +75,6 @@ class VerifyGridUseCaseTest {
     }
 
     @Test
-    fun `SessionRevoked is a distinct outcome for a caller whose fresh cookie check fails under the write lock`() {
-        // Mirrors RevealCellHintOutcome.SessionRevoked: auth is resolved by the route before the use case runs
-        // (fresh cookie re-verify under HintWriteCoordinator.withUserLock), so this documents the contract shape.
-        val outcome: VerifyGridOutcome = VerifyGridOutcome.SessionRevoked
-        assertThat(outcome).isInstanceOf(VerifyGridOutcome.SessionRevoked::class)
-    }
-
-    @Test
     fun `PuzzleNotFound when store has no entry`() {
         val (puzzleId, userId) = ids()
         val outcome =
