@@ -1,10 +1,28 @@
 import type { GameEvent } from '@/application/game';
 import type {
   GameSession,
+  Instant,
   Lobby,
   LobbyLifecycleState,
   LockedCell,
+  Player,
+  Pseudonym,
+  SessionId,
 } from '@/domain/game';
+
+// Rejoin resilience: on WS connect the server replays a `lobbyState` snapshot
+// taken BEFORE the join re-seats the caller (ADR-0018 §5 grace freed the seat,
+// or an authed seat-move not yet applied), so it can momentarily lack the local
+// seat until the `playerJoined` frame lands — synthesize the local player from
+// the session identity so their own pseudonym never blanks out on rejoin.
+export function withLocalPlayer(
+  players: readonly Player[],
+  sessionId: SessionId,
+  pseudonym: Pseudonym,
+): readonly Player[] {
+  if (players.some((p) => p.sessionId === sessionId)) return players;
+  return [...players, { sessionId, pseudonym, joinedAt: '' as Instant }];
+}
 
 // Internal lobby state — the route-local snapshot the reducer folds
 // events into. Wraps the domain `Lobby` and adds two integration-only
