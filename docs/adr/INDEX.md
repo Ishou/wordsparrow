@@ -74,6 +74,7 @@ ADR-0050  frontend/**                              A11y baseline: WCAG AA, axe-c
 ADR-0053  frontend/src/**/prerender/**             Build-time SEO prerender
 ADR-0053  frontend/vite.config.ts                  SW navigateFallbackDenylist for post-Workbox flat prerendered routes
 ADR-0054  frontend/src/ui/**                       Page-shell primitive
+ADR-0054  frontend/src/ui/v2/AppShell.tsx          Amendment 2026-07-09: one AppShell primitive (flow/overlay); document-scroll-lock invariant (html/body/#root height:100% overflow:hidden, one scroll container/screen, safe-area insets at shell edges)
 ADR-0055  game/**/persistence/**                   Multiplayer game persistence
 ADR-0055  game/application/src/main/kotlin/com/bliss/game/application/usecases/LobbyGarbageCollector.kt   GC matrix: WAITING 24h, COMPLETED 7d anon-only (2026-07-03 amendment: authed seat exempts), IN_PROGRESS 30d inactivity (2026-07-09 amendment: findIdleInProgress closes owned immortal-ghost gap under sticky ownership)
 ADR-0055  game/application/src/main/kotlin/com/bliss/game/application/usecases/LobbyUseCases.kt   2026-07-08 amendment: destroy ownerless+empty lobbies immediately (Lobby.isDefunct) on relinquish/leave/erase, not at the 7d GC
@@ -152,7 +153,6 @@ ADR-0072  frontend/src/design-system/**              WordSparrow design system v
 ADR-0072  frontend/panda.config.ts                   v2 token set (`ws.*`) added namespaced, coexisting with ADR-0043's current tokens (no edits to existing tokens)
 ADR-0072  frontend/src/ui/routes/design-system.tsx   Dev-only gallery route rendering every v2 component + variant (no Storybook); also the design-sync synth-entry surface
 ADR-0072  frontend/src/main.tsx                       §3 render-gate: defers ReactDOM.render until Nunito loads (or 800 ms cap); UI fonts use font-display: block, Fredoka wordmark uses swap
-ADR-0072  frontend/src/ui/v2/AppShell.tsx             Amendment 2026-07-09: one AppShell primitive (flow/overlay); document-scroll-lock resilience invariant (html/body/#root height:100% overflow:hidden, one scroll container per screen, safe-area insets at shell edges)
 # ADR-0072: amendment 2026-06-27 (§3 font-loading strategy): font-display: block + render-gate in main.tsx amends ADR-0008 rejected verdict for block; binding paths above cover implementation
 # ADR-0072: supersedes ADR-0043 for palette + typography (visual identity); ADR-0043's light-only theme + semantic-token-layering decisions still apply. Migration of the live app to v2 is a tracked follow-up (now ADR-0074).
 ADR-0073  grid/api/openapi.yaml                      GET /v1/words/sample (minLen/maxLen/count) → SampleWord{clue,answer}; count + length-range capped server-side; random teaser pool, NOT the daily answer key
