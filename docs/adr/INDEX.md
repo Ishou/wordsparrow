@@ -293,8 +293,7 @@ ADR-0098  frontend/src/ui/routes/lobby.$lobbyId.tsx  handleClaim: guest (anon) t
 # ADR-0098: Multiplayer lobby ownership as a claimable lease — 1 active game by owner_user_id (sticky across disconnect); explicit relinquish→ownerless→claim; RGPD rule 2 vacates not transfers; 7d ownerless GC; amends ADR-0055 & ADR-0083
 ADR-0099  grid/api/openapi.yaml  New POST /v1/puzzles/{puzzleId}/verify: per-cell `correct` booleans for filled cells only (never the canonical letter), 429 on cooldown with no `cells` array
 ADR-0099  grid/api/src/main/kotlin/com/bliss/grid/api/routes/PuzzleRoute.kt  /verify route, auth-gated like /hints; 429 within the 30-min cooldown, no positional data leaked on cooldown response
-ADR-0099  grid/domain/src/main/kotlin/com/bliss/grid/domain/puzzle/**  VerifyCooldownCalculator: 30-min (1800s) per-(user_id, puzzle_id) server-authoritative cooldown, the named rate-limit mitigation against answer-key brute force
-ADR-0099  grid/application/src/main/kotlin/com/bliss/grid/application/puzzle/**  VerifyGridUseCase resolves canonical letters server-side, never returns them — only per-cell correctness
+ADR-0099  grid/application/src/main/kotlin/com/bliss/grid/application/puzzle/**  VerifyCooldownCalculator: 30-min (1800s) per-(user_id, puzzle_id) server-authoritative cooldown, the named rate-limit mitigation against answer-key brute force; VerifyGridUseCase resolves canonical letters server-side, never returns them — only per-cell correctness
 # ADR-0099: relates to / amends ADR-0076 — /verify is a second, narrower carve-out from the answers-off-the-wire posture alongside the §7 hint exception; §9's binary /validate and §§7-8's hint mechanic are unchanged. Bounded by a 30-min cooldown (~13h per uniform-letter alphabet sweep), strictly less generous than the whole-word hint it replaces on solo.
 ```
 
