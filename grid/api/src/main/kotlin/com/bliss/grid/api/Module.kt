@@ -19,6 +19,8 @@ import com.bliss.grid.application.puzzle.PuzzleRepository
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
 import com.bliss.grid.application.puzzle.ValidateWordUseCase
+import com.bliss.grid.application.puzzle.VerifyGridUseCase
+import com.bliss.grid.application.puzzle.VerifyUsageRepository
 import com.bliss.grid.application.puzzle.defaultPuzzleConstraints
 import com.bliss.grid.application.words.SampleWordsUseCase
 import com.bliss.grid.application.words.VerifySampleWordUseCase
@@ -34,10 +36,12 @@ import com.bliss.grid.infrastructure.persistence.InMemoryClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
+import com.bliss.grid.infrastructure.persistence.InMemoryVerifyUsageRepository
 import com.bliss.grid.infrastructure.persistence.PostgresClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.PostgresHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.PostgresHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.PostgresPuzzleRepository
+import com.bliss.grid.infrastructure.persistence.PostgresVerifyUsageRepository
 import com.bliss.grid.infrastructure.words.HmacAnswerTokenMinter
 import io.ktor.client.HttpClient
 import io.ktor.http.ContentType
@@ -177,8 +181,9 @@ fun Application.module() {
     // (Helm chart guarantees it) and gets the durable Postgres path. Local
     // dev / route tests run without a DB and use the in-memory pair so the
     // wire path stays exercisable without spinning up Testcontainers.
+    val puzzleDataSource = Database.dataSource()
     val (puzzleRepository, hintUsageRepository, hintWriteCoordinator) =
-        when (val ds = Database.dataSource()) {
+        when (puzzleDataSource) {
             null ->
                 Triple(
                     InMemoryPuzzleRepository() as PuzzleRepository,
@@ -187,10 +192,15 @@ fun Application.module() {
                 )
             else ->
                 Triple(
-                    PostgresPuzzleRepository(ds) as PuzzleRepository,
-                    PostgresHintUsageRepository(ds) as HintUsageRepository,
-                    PostgresHintWriteCoordinator(ds) as HintWriteCoordinator,
+                    PostgresPuzzleRepository(puzzleDataSource) as PuzzleRepository,
+                    PostgresHintUsageRepository(puzzleDataSource) as HintUsageRepository,
+                    PostgresHintWriteCoordinator(puzzleDataSource) as HintWriteCoordinator,
                 )
+        }
+    val verifyUsageRepository: VerifyUsageRepository =
+        when (puzzleDataSource) {
+            null -> InMemoryVerifyUsageRepository()
+            else -> PostgresVerifyUsageRepository(puzzleDataSource)
         }
     // Fire-and-forget analytics scope (ADR-0025). Cancelled on app stop so in-flight
     // posts don't outlive the JVM. The adapter falls back to a no-op when MATOMO_URL /
@@ -271,6 +281,7 @@ fun Application.module() {
         RevealCellHintUseCase(puzzleRepository, hintUsageRepository, analyticsEventSink = analyticsEventSink, clock = clock)
     val validatePuzzle = ValidatePuzzleUseCase(puzzleRepository)
     val validateWord = ValidateWordUseCase(puzzleRepository)
+    val verifyGrid = VerifyGridUseCase(puzzleRepository, verifyUsageRepository, clock = clock)
     val deleteSession = DeleteSessionUseCase(cooldownRepository)
     val dailyPuzzleSelector = DailyPuzzleSelector()
     val listDailyPuzzles =
@@ -286,6 +297,7 @@ fun Application.module() {
             revealCellHint,
             validatePuzzle,
             validateWord,
+            verifyGrid,
             puzzleRepository = puzzleRepository,
             hintUsageRepository = hintUsageRepository,
             hintWriteCoordinator = hintWriteCoordinator,

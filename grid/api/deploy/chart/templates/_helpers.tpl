@@ -52,6 +52,18 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- printf "%s:%s" $img.repository $img.tag -}}
 {{- end -}}
 {{- end -}}
+{{/* Image ref for the verify-usage retention CronJob (ADR-0099); same digest-or-tag pattern as retentionImage. */}}
+{{- define "wordsparrow-api.verifyRetentionImage" -}}
+{{- $img := .Values.retention.verifyUsage.image -}}
+{{- if and (not $img.digest) $img.requireDigest -}}
+{{- fail "retention.verifyUsage.image.digest must be set for production — MANIFESTO reproducible builds" -}}
+{{- end -}}
+{{- if $img.digest -}}
+{{- printf "%s@%s" $img.repository $img.digest -}}
+{{- else -}}
+{{- printf "%s:%s" $img.repository $img.tag -}}
+{{- end -}}
+{{- end -}}
 {{- define "wordsparrow-api.image" -}}
 {{- if and (not .Values.image.digest) .Values.image.requireDigest -}}
 {{- fail "image.digest must be set for production — MANIFESTO reproducible builds" -}}

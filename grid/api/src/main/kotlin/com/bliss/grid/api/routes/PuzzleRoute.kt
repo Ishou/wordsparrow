@@ -11,6 +11,9 @@ import com.bliss.grid.api.dto.ValidatePuzzleRequest
 import com.bliss.grid.api.dto.ValidatePuzzleResult
 import com.bliss.grid.api.dto.ValidateWordRequest
 import com.bliss.grid.api.dto.ValidateWordResult
+import com.bliss.grid.api.dto.VerifyCellVerdictDto
+import com.bliss.grid.api.dto.VerifyGridRequest
+import com.bliss.grid.api.dto.VerifyGridResponse
 import com.bliss.grid.api.dto.toSecondsUntilNextHintWire
 import com.bliss.grid.api.mapper.GridToPuzzleMapper
 import com.bliss.grid.application.auth.CookieVerifier
@@ -28,6 +31,8 @@ import com.bliss.grid.application.puzzle.ValidatePuzzleOutcome
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
 import com.bliss.grid.application.puzzle.ValidateWordOutcome
 import com.bliss.grid.application.puzzle.ValidateWordUseCase
+import com.bliss.grid.application.puzzle.VerifyGridOutcome
+import com.bliss.grid.application.puzzle.VerifyGridUseCase
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.domain.model.WordAxis
 import io.ktor.http.ContentType
@@ -80,6 +85,8 @@ private const val INVALID_VALIDATE_REQUEST_TYPE: String =
     "https://bliss.example/errors/invalid-validate-request"
 private const val HINT_BUDGET_EXHAUSTED_TYPE: String =
     "https://bliss.example/errors/hint-budget-exhausted"
+private const val VERIFY_COOLDOWN_ACTIVE_TYPE: String =
+    "https://bliss.example/errors/verify-cooldown-active"
 private const val AUTH_REQUIRED_TYPE: String =
     "https://bliss.example/errors/auth-required"
 private const val FORBIDDEN_TYPE: String =
@@ -96,6 +103,7 @@ fun Route.puzzles(
     revealCellHint: RevealCellHintUseCase,
     validatePuzzle: ValidatePuzzleUseCase,
     validateWord: ValidateWordUseCase,
+    verifyGrid: VerifyGridUseCase,
     puzzleRepository: PuzzleRepository,
     hintUsageRepository: HintUsageRepository,
     hintWriteCoordinator: HintWriteCoordinator,
@@ -456,6 +464,100 @@ fun Route.puzzles(
         }
     }
 
+    // ADR-0099: per-cell verification, gated by a 30-min per-(puzzle, user) cooldown; auth mirrors /hints.
+    post("/v1/puzzles/{puzzleId}/verify") {
+        val rawId = call.parameters["puzzleId"].orEmpty()
+        val puzzleId =
+            parseUuid(rawId) ?: run {
+                call.respondProblem(
+                    status = HttpStatusCode.BadRequest,
+                    title = "Identifiant de grille invalide",
+                    type = INVALID_PUZZLE_ID_TYPE,
+                    detail = "Le paramètre puzzleId doit être un UUID, reçu : '$rawId'.",
+                )
+                return@post
+            }
+
+        val rawCookie = call.request.cookies[SESSION_COOKIE_NAME]
+        val cached =
+            cookieVerifier.verify(rawCookie) ?: run {
+                call.respondProblem(
+                    status = HttpStatusCode.Unauthorized,
+                    title = "Authentification requise",
+                    type = AUTH_REQUIRED_TYPE,
+                    detail = "Cette action nécessite une session valide.",
+                )
+                return@post
+            }
+
+        val body =
+            try {
+                call.receive<VerifyGridRequest>()
+            } catch (e: SerializationException) {
+                call.respondProblem(
+                    status = HttpStatusCode.BadRequest,
+                    title = "Corps de requête invalide",
+                    type = INVALID_REQUEST_BODY_TYPE,
+                    detail = e.message ?: "request body could not be deserialized as VerifyGridRequest",
+                )
+                return@post
+            }
+
+        val inputs = body.cells.map { FilledCellInput(it.row, it.column, it.letter) }
+
+        // Reuses the hint coordinator: its per-user advisory lock is not hint-specific, only user-keyed.
+        val outcome =
+            hintWriteCoordinator.withUserLock(cached.userId) { conn ->
+                val fresh = cookieVerifier.verifyFresh(rawCookie)
+                if (fresh == null || fresh.userId != cached.userId) {
+                    VerifyGridOutcome.SessionRevoked
+                } else {
+                    withContext(Dispatchers.IO) {
+                        verifyGrid.execute(conn, puzzleId, fresh.userId, inputs)
+                    }
+                }
+            }
+
+        when (outcome) {
+            is VerifyGridOutcome.Verified ->
+                call.respond(
+                    VerifyGridResponse(
+                        cells = outcome.cells.map { VerifyCellVerdictDto(it.row, it.column, it.correct) },
+                        secondsUntilNextVerify = outcome.secondsUntilNextVerify.toInt(),
+                    ),
+                )
+            is VerifyGridOutcome.CooldownActive ->
+                call.respondProblem(
+                    status = HttpStatusCode.TooManyRequests,
+                    title = "Vérification en cooldown",
+                    type = VERIFY_COOLDOWN_ACTIVE_TYPE,
+                    detail = "Vous devez attendre avant de vérifier à nouveau cette grille.",
+                    secondsUntilNextVerify = outcome.secondsUntilNextVerify.toInt(),
+                )
+            is VerifyGridOutcome.PuzzleNotFound ->
+                call.respondProblem(
+                    status = HttpStatusCode.NotFound,
+                    title = "Grille introuvable",
+                    type = PUZZLE_NOT_FOUND_TYPE,
+                    detail = "Aucune grille pour l'identifiant '$puzzleId'.",
+                )
+            is VerifyGridOutcome.InvalidCoord ->
+                call.respondProblem(
+                    status = HttpStatusCode.BadRequest,
+                    title = "Coordonnées invalides",
+                    type = INVALID_COORD_TYPE,
+                    detail = outcome.reason,
+                )
+            is VerifyGridOutcome.SessionRevoked ->
+                call.respondProblem(
+                    status = HttpStatusCode.Unauthorized,
+                    title = "Session expirée",
+                    type = AUTH_REQUIRED_TYPE,
+                    detail = "Votre session a été invalidée.",
+                )
+        }
+    }
+
     post("/v1/puzzles/{puzzleId}/validate") {
         val rawId = call.parameters["puzzleId"].orEmpty()
         val puzzleId =
@@ -697,6 +799,7 @@ private suspend fun io.ktor.server.application.ApplicationCall.respondProblem(
     title: String,
     type: String,
     detail: String?,
+    secondsUntilNextVerify: Int? = null,
 ) {
     val problem =
         ProblemDetails(
@@ -705,6 +808,7 @@ private suspend fun io.ktor.server.application.ApplicationCall.respondProblem(
             status = status.value,
             detail = detail,
             instance = request.local.uri,
+            secondsUntilNextVerify = secondsUntilNextVerify,
         )
     respondText(
         text = Json.encodeToString(ProblemDetails.serializer(), problem),
