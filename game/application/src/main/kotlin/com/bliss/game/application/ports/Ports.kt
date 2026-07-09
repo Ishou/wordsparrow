@@ -233,6 +233,15 @@ interface LobbyRepository {
      */
     suspend fun findIdleCompleted(cutoff: Instant): List<Lobby>
 
+    /**
+     * Returns IN_PROGRESS lobbies whose [Lobby.lastActivityAt] is at or before [cutoff] —
+     * INACTIVITY, not age. Consumed by the lobby garbage collector to evict abandoned owned
+     * in-progress games so a disconnected host does not leave an immortal ghost under sticky
+     * ownership (ADR-0055 amendment 2026-07-09, ADR-0066). Snapshot — callers must re-validate
+     * inside [mutate] (or [delete]) to avoid TOCTOU between the scan and the eviction.
+     */
+    suspend fun findIdleInProgress(cutoff: Instant): List<Lobby>
+
     /** Anon→authed: sets userId + pseudonym on seats where sessionId == anonSessionId AND userId == null. Must be called on a [LobbyWriteCoordinator]-locked [conn]. Idempotent. Returns touched lobby ids. */
     suspend fun rebindAnonSeats(
         conn: Connection,

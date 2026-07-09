@@ -103,6 +103,10 @@ class InMemoryLobbyRepository : LobbyRepository {
     override suspend fun findIdleWaiting(cutoff: Instant): List<Lobby> =
         store.values.filter { it.state == LobbyLifecycleState.WAITING && !it.lastActivityAt.isAfter(cutoff) }
 
+    // ADR-0055 amendment 2026-07-09: IN_PROGRESS ghosts idle past 30d -- INACTIVITY, not age.
+    override suspend fun findIdleInProgress(cutoff: Instant): List<Lobby> =
+        store.values.filter { it.state == LobbyLifecycleState.IN_PROGRESS && !it.lastActivityAt.isAfter(cutoff) }
+
     // owner arm mirrors findByUserId so an authed-owned COMPLETED lobby is not GC'd after the leave-grace drops the owner seat (ADR-0055/0066).
     override suspend fun findIdleCompleted(cutoff: Instant): List<Lobby> =
         store.values.filter { lobby ->

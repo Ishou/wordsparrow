@@ -417,6 +417,32 @@ Mechanics: use cases and repository methods that already go through
 contract's atomic-delete hook); the Postgres direct-UPDATE relinquish paths and
 both `eraseSession` adapters issue an explicit cascade `DELETE`.
 
+## Amendment 2026-07-09 — IN_PROGRESS gains a 30-day inactivity TTL (immortal-ghost gap)
+
+The original §c matrix set IN_PROGRESS to **never evicted** ("players can
+return any time"). Under sticky ownership (ADR-0066) that combines with a
+failure mode: a host who disconnects mid-game and never returns leaves a
+permanent, unclaimable ghost. The 2026-07-07 ownerless sweep only reaps
+`owner_user_id IS NULL` lobbies (7d); an **owned** abandoned IN_PROGRESS lobby
+matches none of the WAITING / COMPLETED / OWNERLESS queries, so no sweep ever
+reaps it. It sits in Postgres forever, counting against the owner's active-game
+quota (ADR-0098) with no path to release it.
+
+The matrix row changes:
+
+| State        | TTL                        | Notes                                                                 |
+|--------------|----------------------------|-----------------------------------------------------------------------|
+| IN_PROGRESS  | 30 days of **inactivity**  | Keyed on `last_activity_at`, not creation age. An actively-played game keeps touching `last_activity_at` (every state-changing use case stamps it) and never expires; only a game with zero activity for 30 days is evicted. Closes the abandoned-owned-in-progress immortal-ghost gap under sticky ownership. |
+
+Because the 7-day ownerless sweep (2026-07-07) already reaps ownerless
+IN_PROGRESS lobbies well before 30d, only **owned** ghosts remain by 30d; the
+query does not special-case ownership — `WHERE state = 'IN_PROGRESS' AND
+last_activity_at <= cutoff`. The port gains `findIdleInProgress(cutoff)`
+alongside `findIdleWaiting` / `findIdleCompleted` / `findIdleOwnerless`; both
+adapters implement it, and `LobbyGarbageCollector` re-validates state inside
+`mutate` so a game resumed between the scan and the eviction is not deleted.
+The TTL is constructor-injected (`inProgressTtl`, default 30d).
+
 ## References
 
 - [ADR-0001 — Parallel-agent development workflow](./0001-parallel-agent-development-workflow.md)

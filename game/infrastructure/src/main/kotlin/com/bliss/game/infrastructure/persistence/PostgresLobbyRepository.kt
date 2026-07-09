@@ -595,6 +595,25 @@ class PostgresLobbyRepository(
             }
         }
 
+    // ADR-0055 amendment 2026-07-09: owned IN_PROGRESS ghosts idle past 30d -- INACTIVITY, not age. Ownerless ones are already reaped by the 7d sweep.
+    override suspend fun findIdleInProgress(cutoff: Instant): List<Lobby> =
+        withContext(Dispatchers.IO) {
+            ds.connection.use { conn ->
+                val ids = mutableListOf<LobbyId>()
+                conn
+                    .prepareStatement(
+                        "SELECT id FROM lobbies " +
+                            "WHERE state = 'IN_PROGRESS' AND last_activity_at <= ?",
+                    ).use { ps ->
+                        ps.setTimestamp(1, Timestamp.from(cutoff))
+                        ps.executeQuery().use { rs ->
+                            while (rs.next()) ids += LobbyId(rs.getString("id"))
+                        }
+                    }
+                ids.mapNotNull { loadLobby(conn, it) }
+            }
+        }
+
     override suspend fun findIdleCompleted(cutoff: Instant): List<Lobby> =
         withContext(Dispatchers.IO) {
             ds.connection.use { conn ->

@@ -123,6 +123,14 @@ class InMemoryLobbyRepository : LobbyRepository {
                 .toList()
         }
 
+    // ADR-0055 amendment 2026-07-09: IN_PROGRESS ghosts idle past 30d -- INACTIVITY, not age.
+    override suspend fun findIdleInProgress(cutoff: Instant): List<Lobby> =
+        storeLock.withLock {
+            store.values
+                .filter { it.state == LobbyLifecycleState.IN_PROGRESS && !it.lastActivityAt.isAfter(cutoff) }
+                .toList()
+        }
+
     // ADR-0098 §4: ownerless non-terminal lobbies idle past the cutoff -- the relinquished/RGPD-vacated sweep.
     override suspend fun findIdleOwnerless(cutoff: Instant): List<Lobby> =
         storeLock.withLock {
