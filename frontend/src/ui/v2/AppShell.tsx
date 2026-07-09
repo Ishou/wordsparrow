@@ -13,7 +13,7 @@ export interface AppShellProps {
   readonly topBar?: ReactNode;
   readonly bottomBar?: ReactNode;
   readonly navActive?: 'accueil' | 'grilles';
-  // Overlay only: page-supplied desktop bar (e.g. grid pages needing a timer/sound trailing the generic navActive bar can't carry). `null` renders no desktop bar; `undefined` falls back to the default DesktopAppBar.
+  // Page-supplied desktop bar (e.g. a screen needing a timer/streak/trailing prop the generic navActive bar can't carry). `null` renders no desktop bar; `undefined` falls back to the default DesktopAppBar.
   readonly desktopBar?: ReactNode;
   readonly backTo?: LinkProps['to'];
   readonly headerFlush?: boolean;
@@ -118,7 +118,7 @@ export function AppShell({ children, variant = 'flow', topBar, bottomBar, navAct
     <div className={shell} lang="fr">
       <SkipLink />
       <div className={frame}>
-        <DesktopAppBar active={navActive} />
+        {desktopBar !== undefined ? desktopBar : <DesktopAppBar active={navActive} />}
         {topBar != null ? <div className={cx(headerSlot, !headerFlush && headerSlotPadded)}>{topBar}</div> : null}
         <main id="main-content" tabIndex={-1} className={cx(body, bottomBar == null && bodyBottomInset, headerFlush && bodyFlushTop, fillBody && bodyFill)}>
           <div className={fillBody ? innerFill : inner}>
