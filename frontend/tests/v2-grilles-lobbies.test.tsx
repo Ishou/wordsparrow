@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/ui/lib/shareInvite', () => ({
   canNativeShare: vi.fn(() => false),
+  useCanNativeShare: vi.fn(() => false),
   shareOrCopyInviteUrl: vi.fn(async () => 'copied' as const),
 }));
 

@@ -1,5 +1,6 @@
-import { canNativeShare, type ShareInviteResult } from '@/ui/lib/shareInvite';
+import { type ShareInviteResult, useCanNativeShare } from '@/ui/lib/shareInvite';
 import { useEffect, useRef, useState } from 'react';
+import { Copy, ShareNetwork } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { MAX_PSEUDONYM_LENGTH, type Lobby, type Pseudonym, type SessionId } from '@/domain/game';
 import { EyeIcon, EyeOffIcon } from '@/ui/components/icons';
@@ -81,6 +82,7 @@ const styles = {
     fontSize: 'md', fontWeight: 'bold', color: 'accent', margin: 0,
   }),
   row: css({ display: 'flex', alignItems: 'center', gap: 'sm' }),
+  shareButton: css({ gap: 'xs' }),
   inlineField: css({ flex: 1 }),
   // Inline confirmation surfaced next to the share button after a
   // successful clipboard write. `role="status"` + `aria-live="polite"`
@@ -145,6 +147,8 @@ export function WaitingRoom({
   // least one player, which is always true since the owner is a member.
   const canStart = isOwner && lobby.players.length >= 1 && !isStarting;
   const me = lobby.players.find((p) => p.sessionId === currentSessionId);
+  // Same gate as shareOrCopyInviteUrl's actual behavior — icon + label always match what clicking does.
+  const canShare = useCanNativeShare();
 
   // Inline feedback for the "Copier le lien" button. State is held here
   // (rather than promoted to a global toast store) because this is the
@@ -225,8 +229,13 @@ export function WaitingRoom({
       ) : null}
 
       <div className={styles.row}>
-        <Button variant="ghost" onClick={handleCopyClick}>
-          {canNativeShare() ? t('lobby.waitingRoom.share') : t('lobby.waitingRoom.copy')}
+        <Button variant="ghost" onClick={handleCopyClick} className={styles.shareButton}>
+          {canShare ? (
+            <ShareNetwork size={18} weight="bold" aria-hidden="true" />
+          ) : (
+            <Copy size={18} weight="bold" aria-hidden="true" />
+          )}
+          {canShare ? t('lobby.waitingRoom.share') : t('lobby.waitingRoom.copy')}
         </Button>
         {justCopied ? (
           <span role="status" aria-live="polite" className={styles.copyFeedback}>

@@ -1,6 +1,6 @@
-import { canNativeShare, type ShareInviteResult } from '@/ui/lib/shareInvite';
+import { useCanNativeShare, type ShareInviteResult } from '@/ui/lib/shareInvite';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowsClockwise, Copy, Eye, EyeSlash, SignOut } from '@phosphor-icons/react';
+import { ArrowsClockwise, Copy, Eye, EyeSlash, ShareNetwork, SignOut } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import type { ConnectionState } from '@/application/game';
 import {
@@ -268,6 +268,8 @@ export function SalonScreen({
 }: SalonScreenProps) {
   const isOwner = lobby.ownerSessionId === sessionId;
   const me = lobby.players.find((p) => p.sessionId === sessionId);
+  // Same gate as shareOrCopyInviteUrl's actual behavior — icon + label always match what clicking does.
+  const canShare = useCanNativeShare();
 
   const [justCopied, setJustCopied] = useState(false);
   const [codeRevealed, setCodeRevealed] = useState(false);
@@ -325,8 +327,12 @@ export function SalonScreen({
           </div>
           <div className={cx(codeRow, css({ marginTop: '14px', flexWrap: 'wrap' }))}>
             <button type="button" className={pillButton} onClick={handleCopy}>
-              <Copy size={16} weight="bold" aria-hidden="true" />
-              {canNativeShare() ? t('lobby.waitingRoom.share') : t('lobby.waitingRoom.copy')}
+              {canShare ? (
+                <ShareNetwork size={16} weight="bold" aria-hidden="true" />
+              ) : (
+                <Copy size={16} weight="bold" aria-hidden="true" />
+              )}
+              {canShare ? t('lobby.waitingRoom.share') : t('lobby.waitingRoom.copy')}
             </button>
             {isOwner ? (
               <button

@@ -7,15 +7,74 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AuthClient } from '@/application/auth';
 import type { Instant, Lobby, Pseudonym, SessionId } from '@/domain/game';
+import { AuthProvider } from '@/ui/components/auth';
 import { SalonScreen, type SalonScreenProps } from '@/ui/v2/multiplayer/SalonScreen';
 import { expectAxeClean } from '@/test/a11y';
+
+vi.mock('@phosphor-icons/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@phosphor-icons/react')>();
+  return {
+    ...actual,
+    Copy: (props: Record<string, unknown>) => <svg data-testid="icon-copy" {...props} />,
+    ShareNetwork: (props: Record<string, unknown>) => <svg data-testid="icon-share" {...props} />,
+  };
+});
+
+const TOUCH_PRIMARY_QUERY = '(any-pointer: coarse) and (any-hover: none)';
+const originalMatchMedia = window.matchMedia;
+
+// `useTouchPrimary` reads this query; `true` = touch-primary device.
+function stubMatchMedia(matches: boolean) {
+  window.matchMedia = vi.fn().mockReturnValue({
+    matches,
+    media: TOUCH_PRIMARY_QUERY,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }) as unknown as typeof window.matchMedia;
+}
+
+// `useCanNativeShare` also gates on `navigator.share`, absent by default in jsdom.
+function stubNativeShareApi() {
+  Object.defineProperty(navigator, 'share', {
+    configurable: true,
+    value: vi.fn().mockResolvedValue(undefined),
+  });
+}
+
+// PhoneShell always mounts DesktopAppBar (CSS-hidden on phone), which renders MenuSheet and reads useAuth().
+function fakeAuthClient(): AuthClient {
+  return {
+    whoami: vi.fn().mockResolvedValue(null),
+    getMe: vi.fn(),
+    updateMe: vi.fn(),
+    deleteMe: vi.fn(),
+    logout: vi.fn(),
+    logoutAll: vi.fn(),
+    startEmailOtp: vi.fn(),
+    verifyEmailOtp: vi.fn(),
+    signInUrl: (provider, returnTo) => `https://auth.test/${provider}?return_to=${returnTo}`,
+  };
+}
 
 // SalonScreen renders the v2 BackHeader, whose TanStack <Link> needs a router context.
 function renderInRouter(element: ReactElement) {
   const rootRoute = createRootRoute();
-  const route = createRoute({ getParentRoute: () => rootRoute, path: '/', component: () => element });
+  const route = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: () => (
+      <AuthProvider authClient={fakeAuthClient()} getPseudonym={() => 'Renard 423'}>
+        {element}
+      </AuthProvider>
+    ),
+  });
   const router = createRouter({
     routeTree: rootRoute.addChildren([route]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
@@ -66,6 +125,37 @@ async function renderSalonReady(overrides: Partial<SalonScreenProps> = {}) {
 }
 
 describe('v2 SalonScreen', () => {
+  beforeEach(() => stubMatchMedia(false));
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+    // @ts-expect-error -- test-only teardown of a jsdom stub.
+    delete navigator.share;
+  });
+
+  it('shows the copy icon and label on a non-touch device', async () => {
+    await renderSalonReady();
+    expect(screen.getByRole('button', { name: /Copier le lien/ })).toBeTruthy();
+    expect(screen.getByTestId('icon-copy')).toBeTruthy();
+    expect(screen.queryByTestId('icon-share')).toBeNull();
+  });
+
+  it('shows the share icon and label on a touch device with navigator.share', async () => {
+    stubMatchMedia(true);
+    stubNativeShareApi();
+    await renderSalonReady();
+    expect(screen.getByRole('button', { name: /Partager le lien/ })).toBeTruthy();
+    expect(screen.getByTestId('icon-share')).toBeTruthy();
+    expect(screen.queryByTestId('icon-copy')).toBeNull();
+  });
+
+  it('falls back to the copy icon and label on a touch device without navigator.share', async () => {
+    stubMatchMedia(true);
+    await renderSalonReady();
+    expect(screen.getByRole('button', { name: /Copier le lien/ })).toBeTruthy();
+    expect(screen.getByTestId('icon-copy')).toBeTruthy();
+    expect(screen.queryByTestId('icon-share')).toBeNull();
+  });
+
   it('renders the title, the code and the copy + quitter affordances', async () => {
     await renderSalonReady();
     // Code is masked by default; reveal it before asserting the value.
