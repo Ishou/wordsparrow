@@ -1,4 +1,4 @@
-# ADR-0099: Grid verification returns per-cell correctness
+# ADR-0099: Grid verification returns per-cell correctness (amends ADR-0076 and ADR-0084 §2)
 
 ## Status
 
@@ -23,6 +23,16 @@ deliberately binary oracle (`{ solved }`, no positional data) — allows.
 Per-cell correctness is positional feedback, so this ADR relates to and
 amends ADR-0076's answer-off-the-wire posture rather than fitting inside
 it unchanged.
+
+It also collides with ADR-0084 §2 (Proposed), which declared that
+client-facing `/validate` stays a binary whole-grid oracle, that **solo
+grids never regain per-word or per-cell feedback**, and that ADR-0084 does
+not reopen ADR-0076's posture for any client-facing surface — its threat
+model names the attacker as "a solo player probing their own grid
+word-by-word from the browser to defeat the binary-oracle posture," which
+is exactly what a client-facing `/verify` enables. ADR-0099 deliberately
+and narrowly reopens that surface for solo, so it relates to / amends both
+ADR-0076 and ADR-0084 §2.
 
 ## Decision
 
@@ -60,6 +70,19 @@ shape and budget (ADR-0076 §§7–8); it becomes **dormant on solo** — the
 frontend's assist-mode seam selects `'verify'` — but the endpoint,
 use-case, and tables are not removed, so a future lobby setting can
 re-enable it.
+
+### 4. This amends ADR-0084 §2
+
+ADR-0084 §2 forbade **any** client-facing per-cell surface for solo. That
+was correct for its design: ADR-0084's `validate-word` is **uncapped**,
+safe only because it is service-token-gated and not publicly routed — an
+instant per-word oracle the moment it reached a browser, so §2 could not
+allow a client-facing version at all. ADR-0099 ships the per-cell bit to
+the browser deliberately, but bounds it with the 30-min per-puzzle server
+cooldown (~13 h per uniform-letter alphabet sweep) — a rate limit §2 never
+had on the table. That bound is what makes the client-facing surface
+acceptable here where §2 kept it closed. `/validate` and ADR-0084's
+internal `validate-word` are both unchanged.
 
 ## Consequences
 
