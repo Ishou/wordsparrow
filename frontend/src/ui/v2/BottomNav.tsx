@@ -2,13 +2,8 @@ import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
 
-// position:fixed so the frosted bar is full-bleed on all widths; lg:hidden.
+// Lives in the shell's bottom grid row (full-bleed via the frame width); lg:hidden.
 const nav = css({
-  position: 'fixed',
-  left: 0,
-  right: 0,
-  bottom: 0,
-  zIndex: 40,
   bg: 'ws.frost',
   backdropFilter: 'blur(14px)',
   borderTop: '0.5px solid rgba(33,75,64,0.10)',
