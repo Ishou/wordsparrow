@@ -5,7 +5,7 @@ import type { AuthClient, WhoAmIResult } from '@/application/auth';
 import type { BillingClient } from '@/application/billing';
 import { AuthProvider } from '@/ui/components/auth';
 
-// PhoneShell pulls router primitives; stub them so the offer renders without a full router.
+// AppShell pulls router primitives; stub them so the offer renders without a full router.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>();
   return {

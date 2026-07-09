@@ -5,7 +5,7 @@ import type { AuthClient, GetMeResult, WhoAmIResult } from '@/application/auth';
 import type { BillingClient } from '@/application/billing';
 import { AuthProvider } from '@/ui/components/auth';
 
-// PhoneShell pulls router + root-context primitives (DesktopAppBar → MenuSheet); stub them so screens render without a full router.
+// AppShell pulls router + root-context primitives (DesktopAppBar → MenuSheet); stub them so screens render without a full router.
 let routeContext: Record<string, unknown> = {};
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>();

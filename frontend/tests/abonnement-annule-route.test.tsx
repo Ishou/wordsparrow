@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthClient, WhoAmIResult } from '@/application/auth';
 import { AuthProvider } from '@/ui/components/auth';
 
-// PhoneShell pulls router + root-context primitives (DesktopAppBar → MenuSheet); stub them so screens render without a full router.
+// AppShell pulls router + root-context primitives (DesktopAppBar → MenuSheet); stub them so screens render without a full router.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>();
   return {
