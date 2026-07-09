@@ -280,11 +280,7 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       },
     );
 
-    // Prerender stubs the daily archive as empty, so without the
-    // hung-loader-skeleton treatment /grilles bakes the Quotidiennes
-    // "Tu as tout joué" empty state — which the query string can't vary, so
-    // it flashes before hydration on every /grilles?onglet=… deep link.
-    // The baked body must be the loading skeleton, not a tab's terminal state.
+    // The empty-archive prerender stub must bake the loading skeleton, not the Quotidiennes empty state that would flash on every /grilles?onglet=… deep link.
     it('bakes the loading skeleton into dist/grilles.html, not a terminal empty state', () => {
       const html = readFileSync(resolve(DIST, 'grilles.html'), 'utf8');
       expect(html).toContain('aria-label="Chargement des grilles"');
