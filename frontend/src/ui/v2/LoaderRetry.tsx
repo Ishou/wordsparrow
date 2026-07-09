@@ -4,7 +4,7 @@ import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
 import type { LoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
 import { SparrowState } from './SparrowState';
 import { sparrowFlightScene } from './SparrowScenes';
@@ -73,19 +73,19 @@ export function LoaderRetry({ policy, silentText }: LoaderRetryProps) {
 
   if (phase === 'exhausted') {
     return (
-      <PhoneShell header={<BackHeader to="/" />}>
+      <AppShell variant="flow" topBar={<BackHeader to="/" />}>
         <SparrowState
           scene={sparrowFlightScene()}
           title={t('v2.loader.error.title')}
           body={t('v2.loader.error.body')}
           cta={{ label: t('common.retry'), onClick: retryNow }}
         />
-      </PhoneShell>
+      </AppShell>
     );
   }
 
   return (
-    <PhoneShell header={<BackHeader to="/" />}>
+    <AppShell variant="flow" topBar={<BackHeader to="/" />}>
       <div className={retryWrap}>
         <p className={placeholder}>{phase === 'silent' ? silentText : t('v2.loader.reconnecting')}</p>
         {phase === 'retrying' ? (
@@ -94,6 +94,6 @@ export function LoaderRetry({ policy, silentText }: LoaderRetryProps) {
           </PrimaryButton>
         ) : null}
       </div>
-    </PhoneShell>
+    </AppShell>
   );
 }

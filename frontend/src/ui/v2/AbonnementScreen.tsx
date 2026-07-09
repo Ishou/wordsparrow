@@ -7,7 +7,7 @@ import type { BillingCadence, BillingClient } from '@/application/billing';
 import { BillingError } from '@/application/billing';
 import { useSubscriber } from '@/ui/components/billing';
 import { useOptionalAuth } from '@/ui/components/auth';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
 import { GateLoadingScreen } from './GateLoadingScreen';
 import { CGV_VERSION } from './cgv';
@@ -399,7 +399,7 @@ export function AbonnementScreen() {
   // Visible to everyone; checkout stays auth- + capability-gated server-side (ADR-0078).
   if (auth?.state.status === 'loading') return <GateLoadingScreen />;
   return (
-    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
+    <AppShell variant="flow" topBar={<BackHeader to="/reglages" />} backTo="/reglages">
       {subscribed ? (
         <SubscribedState />
       ) : !billingClient ? (
@@ -411,6 +411,6 @@ export function AbonnementScreen() {
       ) : (
         <AbonnementOffer client={billingClient} />
       )}
-    </PhoneShell>
+    </AppShell>
   );
 }

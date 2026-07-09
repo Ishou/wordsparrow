@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
 import { contentCard, lede, sectionBody, sectionHeading } from './contentPage';
 import { CGV_VERSION } from './cgv';
@@ -71,7 +71,7 @@ function P({ children }: { children: ReactNode }) {
 
 export function ConditionsAbonnementScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
+    <AppShell variant="flow" topBar={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
           <h1 className={title}>Conditions générales de vente</h1>
@@ -417,6 +417,6 @@ export function ConditionsAbonnementScreen() {
           </P>
         </Article>
       </article>
-    </PhoneShell>
+    </AppShell>
   );
 }

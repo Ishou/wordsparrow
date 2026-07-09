@@ -9,7 +9,7 @@ import type { SoundStore } from '@/application/session/SoundStore';
 import { useAuth } from '@/ui/components/auth';
 import { useInstallPrompt } from '@/ui/lib/useInstallPrompt';
 import { Skeleton } from '@/design-system';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
 import { SegmentedControl } from './SegmentedControl';
 import { SettingsRow } from './SettingsRow';
@@ -223,7 +223,7 @@ export function ReglagesScreen() {
   const { canInstall, promptInstall } = useInstallPrompt();
   const { themeStore, soundStore } = useRouteContext({ from: '__root__' });
   return (
-    <PhoneShell header={<BackHeader to="/" />} backTo="/">
+    <AppShell variant="flow" topBar={<BackHeader to="/" />} backTo="/">
       <div className={stack}>
         <h1 className={title}>{t('v2.reglages.title')}</h1>
 
@@ -273,6 +273,6 @@ export function ReglagesScreen() {
 
         <p className={foot}>{t('v2.reglages.foot')}</p>
       </div>
-    </PhoneShell>
+    </AppShell>
   );
 }

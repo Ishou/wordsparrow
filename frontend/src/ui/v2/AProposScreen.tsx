@@ -1,6 +1,6 @@
 import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
 import { contentCard, lede, sectionBody, sectionHeading } from './contentPage';
 
@@ -34,7 +34,7 @@ const thanksText = css({
 
 export function AProposScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
+    <AppShell variant="flow" topBar={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
           <h1 className={title}>{t('v2.apropos.title')}</h1>
@@ -145,6 +145,6 @@ export function AProposScreen() {
           </p>
         </section>
       </article>
-    </PhoneShell>
+    </AppShell>
   );
 }

@@ -9,7 +9,7 @@ import { useToast } from '@/ui/components/primitives';
 import { useSubscriber } from '@/ui/components/billing';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { Skeleton } from '@/design-system';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
 import { EraseData } from './EraseData';
 import { SettingsRow } from './SettingsRow';
@@ -293,7 +293,7 @@ function SignInPrompt() {
 export function CompteScreen() {
   const { state } = useAuth();
   return (
-    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
+    <AppShell variant="flow" topBar={<BackHeader to="/reglages" />} backTo="/reglages">
       <h1 className={title}>{t('v2.compte.title')}</h1>
       {state.status === 'loading' ? (
         <div className={stack}>
@@ -305,6 +305,6 @@ export function CompteScreen() {
       ) : (
         <SignInPrompt />
       )}
-    </PhoneShell>
+    </AppShell>
   );
 }
