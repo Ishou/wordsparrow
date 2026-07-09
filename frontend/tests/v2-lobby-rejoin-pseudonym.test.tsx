@@ -11,12 +11,6 @@ import { Route as RootRoute } from '@/ui/routes/__root';
 import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
 import { Route as LobbyRoute, lobbyLoaderRetryPolicy } from '@/ui/routes/lobby.$lobbyId';
 
-// Regression for the "rejoin doesn't show my pseudo" bug: on WS connect the
-// server replays a `lobbyState` snapshot taken BEFORE the join re-seats the
-// caller (ADR-0018 §5 grace freed the seat / authed seat-move). That snapshot
-// momentarily lacks the local seat, so `me` used to resolve to undefined and
-// the local pseudonym blanked out until the `playerJoined` re-seat landed.
-
 const sessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const pseudonym = 'Renard 777' as Pseudonym;
 const lobbyId = '7gQ2xK9p' as LobbyId;

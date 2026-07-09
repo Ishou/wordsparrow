@@ -10,11 +10,7 @@ import type {
   SessionId,
 } from '@/domain/game';
 
-// Rejoin resilience: on WS connect the server replays a `lobbyState` snapshot
-// taken BEFORE the join re-seats the caller (ADR-0018 §5 grace freed the seat,
-// or an authed seat-move not yet applied), so it can momentarily lack the local
-// seat until the `playerJoined` frame lands — synthesize the local player from
-// the session identity so their own pseudonym never blanks out on rejoin.
+// Rejoin snapshot may momentarily omit the local seat (ADR-0018 §5); synthesize it so the pseudonym never blanks.
 export function withLocalPlayer(
   players: readonly Player[],
   sessionId: SessionId,
