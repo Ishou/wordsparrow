@@ -46,7 +46,7 @@ const cardButton = css({ appearance: 'none', textAlign: 'left', font: 'inherit',
 const rowWrap = css({ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' });
 const cardGrow = css({ flex: 1, minWidth: 0 });
 
-// Subtle hint that the backend GC removes long-idle games (ADR-0098 §6 retention).
+// Subtle hint that the backend GC removes long-idle games; TTL varies by state (ADR-0055 §c, amended by ADR-0098 §4).
 const retentionNote = css({
   fontFamily: 'wsUi',
   fontSize: '11.5px',

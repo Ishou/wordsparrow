@@ -258,10 +258,10 @@ describe('GrillesLobbiesSection — differentiated error copy (ADR-0098 §6)', (
 });
 
 describe('GrillesLobbiesSection — retention note', () => {
-  it('renders the 30-day inactivity retention note under the list', async () => {
+  it('renders the inactivity retention note under the list', async () => {
     renderInRouter(<GrillesLobbiesSection lobbies={[IN_PROGRESS]} />);
     expect(
-      await screen.findByText('Une partie sans activité pendant 30 jours est automatiquement supprimée.'),
+      await screen.findByText('Une partie sans activité peut être supprimée automatiquement ; le délai dépend de son état.'),
     ).toBeInTheDocument();
   });
 });
