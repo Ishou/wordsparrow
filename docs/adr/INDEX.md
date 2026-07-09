@@ -291,6 +291,8 @@ ADR-0098  game/api/openapi.yaml  DELETE /v1/lobbies/{lobbyId}/membership (leaveL
 ADR-0098  frontend/src/ui/home/HomeScreen.tsx  handleCreateCoop → useCreateOrResume: IN_PROGRESS create-response ⇒ owned-game modal (rejoin / always-offered new / subtle subscribe hint), else navigate
 ADR-0098  frontend/src/ui/routes/lobby.$lobbyId.tsx  handleClaim: guest (anon) tapping Reprendre → host sign-in flow first (ownership needs an account, ADR-0083); playing host-less game stays guest-open; start-new no longer occupant-gated — always offered (relinquish→host-less/claimable, not stranded) (2026-07-08 amendment)
 # ADR-0098: Multiplayer lobby ownership as a claimable lease — 1 active game by owner_user_id (sticky across disconnect); explicit relinquish→ownerless→claim; RGPD rule 2 vacates not transfers; 7d ownerless GC; amends ADR-0055 & ADR-0083
+ADR-0099  grid/api/openapi.yaml  New POST /v1/puzzles/{puzzleId}/verify: per-cell `correct` booleans for filled cells only (never the canonical letter), 429 on cooldown with no `cells` array
+# ADR-0099: relates to / amends ADR-0076 — /verify is a second, narrower carve-out from the answers-off-the-wire posture alongside the §7 hint exception; §9's binary /validate and §§7-8's hint mechanic are unchanged. Bounded by a 30-min cooldown (~13h per uniform-letter alphabet sweep), strictly less generous than the whole-word hint it replaces on solo.
 ```
 
 ## Adding entries
