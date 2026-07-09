@@ -19,7 +19,7 @@ import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { MobileTopBar } from '@/ui/v2/MobileTopBar';
 import { BottomNav } from '@/ui/v2/BottomNav';
 import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
-import { SkipLink } from '@/ui/v2/SkipLink';
+import { AppShell } from '@/ui/v2/AppShell';
 import { PrimaryButton, SecondaryButton } from '@/ui/v2/Buttons';
 import { progressRingBackground } from '@/ui/v2/DailyCalendar';
 import { HomeGreetingArt, bucketForHour, greetingForBucket } from './HomeGreetingArt';
@@ -38,59 +38,8 @@ type DailyState =
 
 // v2 home (ADR-0072): dev-only sandbox; /accueil untouched; previous grids strip uses real summaries.
 
-const shell = css({
-  // Cap to the viewport so the top bar + bottom nav pin and only `content` scrolls (app-shell), at every width.
-  height: '100dvh',
-  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  // Tablet: a contained app card on a calm jade surround. Desktop: full-bleed for the 2-col layout.
-  md: { bgImage: 'none', bg: 'var(--colors-ws-hero-flat)', justifyContent: 'center', padding: '40px 24px' },
-  lg: { height: '100dvh', bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)', bg: 'transparent', justifyContent: 'flex-start', padding: 0 },
-});
-// Phone: mobile column. Tablet: centred framed card. Desktop: a wide 2-column container.
-const frame = css({
-  width: '100%',
-  // Match PhoneShell's phone column so home and grilles share the exact same page width.
-  maxWidth: '440px',
-  flex: 1,
-  minHeight: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top) 0%, var(--colors-ws-hero-bottom) 100%)',
-  md: {
-    flex: 'none',
-    maxWidth: '460px',
-    height: 'min(900px, calc(100dvh - 80px))',
-    borderRadius: '28px',
-    overflow: 'hidden',
-    boxShadow: '0 24px 60px rgba(33,75,64,0.18)',
-  },
-  // Desktop: full-width single-column bleed; flex/height reset md's fixed 900px cap so the frame fills the viewport instead of stopping 80px short.
-  lg: {
-    flex: 1,
-    height: 'auto',
-    maxWidth: 'none',
-    minHeight: 0,
-    borderRadius: 0,
-    boxShadow: 'none',
-    bgImage: 'none',
-    overflow: 'visible',
-  },
-});
-const content = css({
-  flex: 1,
-  minHeight: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  // Bottom inset clears the fixed BottomNav so the last grids row isn't hidden behind it; top spacing lives in MobileTopBar.
-  padding: '0 22px calc(64px + env(safe-area-inset-bottom))',
-  overflowY: 'auto',
-  // Desktop: full-width scroller under the pinned bar; scrollbarGutter reserves the scrollbar's track so it never overlaps the centred hub.
-  lg: { overflowY: 'auto', padding: '0 0 40px', scrollbarGutter: 'stable' },
-});
-
+// Desktop: break the wide 2-col hub out of AppShell's 680px reading column so it keeps its 1140 bar-aligned cap. Passthrough on phone/tablet.
+const hubBleed = css({ display: 'contents', lg: { display: 'block', width: '100vw', marginLeft: '50%', transform: 'translateX(-50%)' } });
 // Desktop hub: hero (left) + grilles (right) side by side, capped + centred in the viewport (matches the 1140 top-bar cap). Passthrough on phone/tablet.
 const hub = css({ display: 'contents', lg: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 0.92fr)', columnGap: '36px', alignItems: 'start', alignContent: 'center', flex: '1 0 auto', width: '100%', maxWidth: '1140px', marginInline: 'auto', paddingInline: '36px' } });
 
@@ -318,12 +267,16 @@ export function HomeScreen({
   const showDailySkeleton = useDelayedFlag(daily.status === 'loading');
 
   return (
-    <main className={shell} lang="fr">
-      <SkipLink />
-      <div className={frame}>
-        <DesktopAppBar active="accueil" streak={streak.cur} />
-        <MobileTopBar onMenuClick={() => setMenuOpen(true)} />
-        <div id="main-content" tabIndex={-1} className={content}>
+    <>
+      <AppShell
+        variant="flow"
+        navActive="accueil"
+        topBar={<MobileTopBar onMenuClick={() => setMenuOpen(true)} />}
+        headerFlush
+        bottomBar={miniGameTyping ? undefined : <BottomNav active="accueil" />}
+        desktopBar={<DesktopAppBar active="accueil" streak={streak.cur} />}
+      >
+        <div className={hubBleed}>
           <div className={hub}>
           <section className={hero}>
             <HomeGreetingArt bucket={bucket} now={nowDate} className={heroArt} drape={34} neutral={!timeReady} />
@@ -483,21 +436,19 @@ export function HomeScreen({
             ) : null}
           </section>
           </div>
-          <footer>
-            <nav className={legalNav} aria-label={t('home.legalNav.aria.label')}>
-              <Link className={legalLink} to="/confidentialite">
-                {t('home.legalNav.privacy')}
-              </Link>
-              <span aria-hidden="true">·</span>
-              <Link className={legalLink} to="/mentions-legales">
-                {t('home.legalNav.terms')}
-              </Link>
-            </nav>
-          </footer>
         </div>
-
-        {!miniGameTyping ? <BottomNav active="accueil" /> : null}
-      </div>
+        <footer>
+          <nav className={legalNav} aria-label={t('home.legalNav.aria.label')}>
+            <Link className={legalLink} to="/confidentialite">
+              {t('home.legalNav.privacy')}
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link className={legalLink} to="/mentions-legales">
+              {t('home.legalNav.terms')}
+            </Link>
+          </nav>
+        </footer>
+      </AppShell>
 
       <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} streak={streak.cur} />
       <HostSignInSheet open={hostSignInOpen} authClient={authClient} onClose={() => setHostSignInOpen(false)} />
@@ -508,6 +459,6 @@ export function HomeScreen({
         onClose={coop.dismiss}
         startingNew={coop.startingNew}
       />
-    </main>
+    </>
   );
 }
