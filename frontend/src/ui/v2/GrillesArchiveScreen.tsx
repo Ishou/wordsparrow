@@ -51,8 +51,8 @@ const tabBar = css({ marginBottom: '18px' });
 
 // The title + tabs pin at every width while the tab body scrolls; desktop paddingRight matches the body's so tabs stay aligned above the scrollbar.
 const head = css({ flex: 'none', lg: { paddingRight: '16px' } });
-// The tab body is the one scroll container; mobile carries the fixed-BottomNav inset the shell dropped (fillBody).
-const scrollArea = css({ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)', lg: { paddingBottom: '40px', paddingRight: '16px', scrollbarGutter: 'stable' } });
+// The tab body is the one scroll container; BottomNav reserves its own grid row + safe-area inset, so no compensation is needed here.
+const scrollArea = css({ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '20px', lg: { paddingBottom: '40px', paddingRight: '16px', scrollbarGutter: 'stable' } });
 
 const bannerWrap = css({ margin: '14px 0' });
 
