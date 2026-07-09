@@ -105,4 +105,25 @@ describe('Dual-def cell single-tap toggle', () => {
     fireEvent.click(defAt(container, 2, 0));
     expect(document.activeElement).toBe(inputAt(container, 2, 1));
   });
+
+  it('a fully-locked word lands on its first (read-only) cell', () => {
+    const { container } = render(
+      <Grid puzzle={basePuzzle()} validatedPositions={new Set(['0,1', '0,2', '0,3', '0,4'])} />,
+    );
+    fireEvent.click(defAt(container, 0, 0));
+    expect(document.activeElement).toBe(inputAt(container, 0, 1));
+    expect(inputAt(container, 0, 1)!.readOnly).toBe(true);
+  });
+
+  it('a pan gesture leaves the already-focused word unchanged', () => {
+    let panning = false;
+    const { result } = renderHook(() =>
+      useGridNavigation(basePuzzle(), { isPanning: () => panning }),
+    );
+    act(() => result.current.handleDefinitionClick({ row: 0, col: 0 } as Position));
+    expect(result.current.currentClue?.clue.text).toBe('across');
+    panning = true;
+    act(() => result.current.handleDefinitionClick({ row: 2, col: 0 } as Position));
+    expect(result.current.currentClue?.clue.text).toBe('across');
+  });
 });
