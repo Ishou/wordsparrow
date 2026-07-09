@@ -1192,7 +1192,7 @@ internal class Harness(
         u: UserId,
     ) = leaveMembership.invoke(l, u)
 
-    // ADR-0066 anon->authed: a fresh authed join seats userId=null; the seat carries the userId only after this rebind.
+    // ADR-0066 anon->authed: an anon join seats userId=null; the seat carries the userId only after this rebind (or immediately on a fresh authed join, ADR-0066 (c)).
     suspend fun rebind(
         s: SessionId,
         u: UserId,
