@@ -1,13 +1,14 @@
 // Multiplayer-gated `/lobby/$lobbyId` (ADR-0018 §10); smart container over `useLobbyConnection`.
 
 import { createRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LobbyClientError } from '@/application/game';
 import type { Lobby, LobbyId } from '@/domain/game';
 import { createLoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
 import { LoaderRetry } from '@/ui/v2/LoaderRetry';
 import { useOptionalAuth } from '@/ui/components/auth';
 import { useLobbyConnection } from '@/ui/components/lobby/useLobbyConnection';
+import { withLocalPlayer } from '@/ui/components/lobby/lobbyView';
 import { useCreateOrResume } from '@/ui/components/lobby/useCreateOrResume';
 import { OwnedGameModal } from '@/ui/v2/multiplayer/OwnedGameModal';
 import { HostSignInSheet } from '@/ui/home/HostSignInSheet';
@@ -143,6 +144,12 @@ function V2LobbyPage() {
 
   const lobby = view.lobby;
 
+  // Guarantee the local player's seat in the roster so their own pseudonym never blanks on rejoin (see withLocalPlayer / ADR-0018 §5).
+  const rosterPlayers = useMemo(
+    () => withLocalPlayer(lobby.players, sessionId, getSession().pseudonym),
+    [lobby.players, sessionId, getSession],
+  );
+
   // Coop win cue on the live IN_PROGRESS→COMPLETED transition (the screen unmounts into Résultats).
   useCoopWinCue(lobby.state, ctx.soundPlayer);
 
@@ -198,7 +205,7 @@ function V2LobbyPage() {
   if (lobby.state === 'WAITING') {
     return (
       <SalonScreen
-        lobby={lobby}
+        lobby={{ ...lobby, players: rosterPlayers }}
         sessionId={sessionId}
         connectionState={connectionState}
         pseudonymError={pseudonymError}
@@ -223,7 +230,7 @@ function V2LobbyPage() {
           startedAt={lobby.game.startedAt}
           isCompleted={false}
           sessionId={sessionId}
-          players={lobby.players}
+          players={rosterPlayers}
           playersBySessionId={playersBySessionId}
           initialEntries={initialEntries}
           lockedPositions={lobby.game.lockedPositions ?? []}
@@ -248,7 +255,7 @@ function V2LobbyPage() {
       <PhoneShell header={<BackHeader to="/" />}>
         <ResultatsScreen
           durationMs={view.durationMs ?? 0}
-          players={lobby.players}
+          players={rosterPlayers}
           ownerSessionId={lobby.ownerSessionId}
           isReplaying={coop.pending}
           onReplay={handleReplay}

@@ -1,10 +1,24 @@
 import type { GameEvent } from '@/application/game';
 import type {
   GameSession,
+  Instant,
   Lobby,
   LobbyLifecycleState,
   LockedCell,
+  Player,
+  Pseudonym,
+  SessionId,
 } from '@/domain/game';
+
+// Rejoin snapshot may momentarily omit the local seat (ADR-0018 §5); synthesize it so the pseudonym never blanks.
+export function withLocalPlayer(
+  players: readonly Player[],
+  sessionId: SessionId,
+  pseudonym: Pseudonym,
+): readonly Player[] {
+  if (players.some((p) => p.sessionId === sessionId)) return players;
+  return [...players, { sessionId, pseudonym, joinedAt: '' as Instant }];
+}
 
 // Internal lobby state — the route-local snapshot the reducer folds
 // events into. Wraps the domain `Lobby` and adds two integration-only
