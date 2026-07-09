@@ -87,6 +87,8 @@ export const NOINDEX_PRERENDER_ROUTES: ReadonlyArray<PrerenderRoute> = [
   { path: '/contribuer', title: fr['seo.noindex.contribuer.title'] },
   { path: '/contribuer/pairs', title: fr['seo.noindex.contribuerPairs.title'] },
   { path: '/reglages', title: fr['seo.noindex.reglages.title'] },
+  { path: '/grilles/a-finir', title: fr['seo.noindex.grillesAFinir.title'] },
+  { path: '/grilles/multijoueur', title: fr['seo.noindex.grillesMultijoueur.title'] },
   { path: '/finish', title: fr['seo.noindex.finish.title'] },
   { path: '/abonnement', title: fr['seo.noindex.abonnement.title'] },
   { path: '/abonnement/succes', title: fr['seo.noindex.abonnementSucces.title'] },

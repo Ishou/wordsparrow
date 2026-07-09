@@ -35,7 +35,7 @@ async function holdLobbiesPending(page: Page): Promise<void> {
 
 test('À plusieurs shows a loading state, not the empty state, while lobbies load', async ({ page }) => {
   await holdLobbiesPending(page);
-  await page.goto('/grilles?onglet=plusieurs');
+  await page.goto('/grilles/multijoueur');
 
   // Skeleton appears after the sub-200ms anti-flash gate; auto-retry waits through it.
   await expect(page.getByLabel('Chargement des parties')).toBeVisible();

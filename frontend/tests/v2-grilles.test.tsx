@@ -9,7 +9,7 @@ import type { LobbyId, SessionId, Pseudonym } from '@/domain/game';
 import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
-import { Route as GrillesRoute } from '@/ui/routes/grilles';
+import { Route as GrillesRoute, AFinirRoute as GrillesAFinirRoute, MultijoueurRoute as GrillesMultijoueurRoute } from '@/ui/routes/grilles';
 import { longDateFr, monthLabelFr, monthOf } from '@/ui/v2/dailyCalendarModel';
 import { expectAxeClean } from '@/test/a11y';
 
@@ -110,7 +110,9 @@ function renderGrilles(opts: HarnessOptions = {}) {
     path: 'lobby/$lobbyId',
     component: () => <div>lobby</div>,
   });
-  const routeTree = RootRoute.addChildren([AppLayoutRoute.addChildren([GrillesRoute, play, lobby])]);
+  const routeTree = RootRoute.addChildren([
+    AppLayoutRoute.addChildren([GrillesRoute, GrillesAFinirRoute, GrillesMultijoueurRoute, play, lobby]),
+  ]);
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [opts.initialEntry ?? '/grilles'] }),
@@ -224,27 +226,34 @@ describe('v2 grilles — quotidiennes calendar', () => {
 });
 
 describe('v2 grilles — onglets', () => {
-  it('deep-links ?onglet=a-finir to the in-progress list and tabs back to the calendar', async () => {
-    const { router } = renderGrilles({ initialEntry: '/grilles?onglet=a-finir' });
+  it('deep-links /grilles/a-finir to the in-progress list and tabs back to the calendar', async () => {
+    const { router } = renderGrilles({ initialEntry: '/grilles/a-finir' });
     expect(await screen.findByText('En cours · 8 / 14 cases')).toBeTruthy();
     expect(screen.getByRole('link', { name: `Reprendre — ${longDateFr(TODAY)}` })).toBeTruthy();
     expect(screen.queryByText(`Revoir — ${longDateFr(daysAgo(1))}`)).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Quotidiennes' }));
     await findTodayCell();
-    expect(router.state.location.search).toEqual({});
+    expect(router.state.location.pathname).toBe('/grilles');
   });
 
   it('updates the URL when switching to À finir', async () => {
     const { router } = renderGrilles();
     await findTodayCell();
     fireEvent.click(screen.getByRole('tab', { name: 'À finir' }));
-    await waitFor(() => expect(router.state.location.search).toEqual({ onglet: 'a-finir' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/grilles/a-finir'));
+  });
+
+  it('legacy ?onglet=a-finir deep links redirect to the path route', async () => {
+    const { router } = renderGrilles({ initialEntry: '/grilles?onglet=a-finir' });
+    expect(await screen.findByText('En cours · 8 / 14 cases')).toBeTruthy();
+    expect(router.state.location.pathname).toBe('/grilles/a-finir');
+    expect(router.state.location.search).toEqual({});
   });
 
   it('shows the progress empty state when nothing is in progress', async () => {
     const repo = repoOf({ items: [summary(daysAgo(2), 'fresh')], hasMore: false });
-    renderGrilles({ repo, initialEntry: '/grilles?onglet=a-finir' });
+    renderGrilles({ repo, initialEntry: '/grilles/a-finir' });
     expect(await screen.findByText('Aucune grille en cours')).toBeTruthy();
   });
 
@@ -259,7 +268,7 @@ describe('v2 grilles — onglets', () => {
 describe('v2 grilles — à plusieurs', () => {
   it('lists lobbies under the tab', async () => {
     const lobbyClient = { listMyLobbies: () => Promise.resolve([LOBBY]) } as unknown as LobbyClient;
-    renderGrilles({ lobbyClient, initialEntry: '/grilles?onglet=plusieurs' });
+    renderGrilles({ lobbyClient, initialEntry: '/grilles/multijoueur' });
     expect(await screen.findByRole('link', { name: 'Reprendre — Partie du 28 juin' })).toBeTruthy();
   });
 
@@ -267,7 +276,7 @@ describe('v2 grilles — à plusieurs', () => {
     const listMyLobbies = vi.fn().mockResolvedValue([]);
     const listMyLobbiesForUser = vi.fn().mockResolvedValue([LOBBY]);
     const lobbyClient = { listMyLobbies, listMyLobbiesForUser } as unknown as LobbyClient;
-    renderGrilles({ lobbyClient, capabilities: [], initialEntry: '/grilles?onglet=plusieurs' });
+    renderGrilles({ lobbyClient, capabilities: [], initialEntry: '/grilles/multijoueur' });
     expect(await screen.findByRole('link', { name: 'Reprendre — Partie du 28 juin' })).toBeTruthy();
     expect(listMyLobbiesForUser).toHaveBeenCalled();
     expect(listMyLobbies).not.toHaveBeenCalled();
@@ -279,14 +288,14 @@ describe('v2 grilles — à plusieurs', () => {
       listMyLobbies: () => Promise.resolve([]),
       createLobby,
     } as unknown as LobbyClient;
-    const { router } = renderGrilles({ lobbyClient, initialEntry: '/grilles?onglet=plusieurs' });
+    const { router } = renderGrilles({ lobbyClient, initialEntry: '/grilles/multijoueur' });
     fireEvent.click(await screen.findByRole('button', { name: 'Créer une partie' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/lobby/AAAA1111BBBB2222CCCC3333'));
     expect(createLobby).toHaveBeenCalledWith({ ownerSessionId: 'session-1', ownerPseudonym: 'Renard 423' });
   });
 
   it('offers the join-by-code path from the empty state', async () => {
-    renderGrilles({ initialEntry: '/grilles?onglet=plusieurs' });
+    renderGrilles({ initialEntry: '/grilles/multijoueur' });
     expect(await screen.findByRole('link', { name: 'Rejoindre avec un code' })).toBeTruthy();
   });
 
@@ -297,7 +306,7 @@ describe('v2 grilles — à plusieurs', () => {
       listMyLobbiesForUser: () => Promise.resolve([{ ...LOBBY, ownerless: true }]),
       claimOwnership,
     } as unknown as LobbyClient;
-    const { router } = renderGrilles({ lobbyClient, capabilities: [], initialEntry: '/grilles?onglet=plusieurs' });
+    const { router } = renderGrilles({ lobbyClient, capabilities: [], initialEntry: '/grilles/multijoueur' });
     fireEvent.click(await screen.findByRole('button', { name: 'Reprendre — Partie du 28 juin' }));
     await waitFor(() => expect(router.state.location.pathname).toBe(`/lobby/${LOBBY.id}`));
     expect(claimOwnership).toHaveBeenCalledWith(LOBBY.id);
@@ -310,7 +319,7 @@ describe('v2 grilles — à plusieurs', () => {
       listMyLobbiesForUser: () => Promise.resolve([{ ...LOBBY, ownerless: true }]),
       claimOwnership,
     } as unknown as LobbyClient;
-    renderGrilles({ lobbyClient, capabilities: [], initialEntry: '/grilles?onglet=plusieurs' });
+    renderGrilles({ lobbyClient, capabilities: [], initialEntry: '/grilles/multijoueur' });
     fireEvent.click(await screen.findByRole('button', { name: 'Reprendre — Partie du 28 juin' }));
     expect(await screen.findByText('Impossible de reprendre la partie.')).toBeTruthy();
   });
@@ -322,7 +331,7 @@ describe('v2 grilles — à plusieurs', () => {
       .mockResolvedValueOnce([LOBBY]) // initial load
       .mockResolvedValue([]); // after leaving, the row is gone
     const lobbyClient = { listMyLobbies, leaveLobby } as unknown as LobbyClient;
-    renderGrilles({ lobbyClient, initialEntry: '/grilles?onglet=plusieurs' });
+    renderGrilles({ lobbyClient, initialEntry: '/grilles/multijoueur' });
     fireEvent.click(await screen.findByRole('button', { name: 'Quitter cette partie' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Quitter' }));
     await waitFor(() => expect(leaveLobby).toHaveBeenCalledWith(LOBBY.id));
@@ -338,7 +347,7 @@ describe('v2 grilles — à plusieurs', () => {
       listMyLobbies: () => Promise.resolve([LOBBY]),
       leaveLobby,
     } as unknown as LobbyClient;
-    renderGrilles({ lobbyClient, initialEntry: '/grilles?onglet=plusieurs' });
+    renderGrilles({ lobbyClient, initialEntry: '/grilles/multijoueur' });
     fireEvent.click(await screen.findByRole('button', { name: 'Quitter cette partie' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Quitter' }));
     expect(await screen.findByText('Impossible de quitter la partie. Réessaie.')).toBeTruthy();
@@ -351,7 +360,7 @@ describe('v2 grilles — à plusieurs', () => {
       claimOwnership,
     } as unknown as LobbyClient;
     // capabilities:null ⇒ whoami resolves null ⇒ AuthProvider settles 'anon'.
-    renderGrilles({ lobbyClient, capabilities: null, initialEntry: '/grilles?onglet=plusieurs' });
+    renderGrilles({ lobbyClient, capabilities: null, initialEntry: '/grilles/multijoueur' });
     fireEvent.click(await screen.findByRole('button', { name: 'Reprendre — Partie du 28 juin' }));
     expect(await screen.findByText('Connecte-toi pour créer une partie')).toBeTruthy();
     expect(claimOwnership).not.toHaveBeenCalled();

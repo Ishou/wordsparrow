@@ -82,7 +82,7 @@ test('a one-shot getLobby network failure recovers silently — zero visible cha
       characterData: true,
     });
   });
-  await page.goto('/grilles?onglet=plusieurs');
+  await page.goto('/grilles/multijoueur');
 
   // Arm the seam BEFORE the create-flow navigation runs the loader (the global appears once MSW finishes loading).
   await page.waitForFunction(() => window.__gameWsTest__ !== undefined);

@@ -5,7 +5,7 @@ import { Route as AppLayoutRoute } from './routes/app-layout';
 import { Route as IndexRoute } from './routes/index';
 import { Route as PlayRoute } from './routes/play';
 import { Route as FinishRoute } from './routes/finish';
-import { Route as GrillesRoute } from './routes/grilles';
+import { Route as GrillesRoute, AFinirRoute as GrillesAFinirRoute, MultijoueurRoute as GrillesMultijoueurRoute } from './routes/grilles';
 import { Route as ReglagesRoute } from './routes/reglages';
 import { Route as AideRoute } from './routes/aide';
 import { Route as CompteRoute } from './routes/compte';
@@ -49,6 +49,8 @@ export function createAppRouter({ context, multiplayer, emailAuth }: CreateAppRo
     PlayRoute,
     FinishRoute,
     GrillesRoute,
+    GrillesAFinirRoute,
+    GrillesMultijoueurRoute,
     ReglagesRoute,
     AideRoute,
     CompteRoute,

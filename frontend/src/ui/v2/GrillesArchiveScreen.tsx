@@ -255,6 +255,20 @@ export function GrillesArchiveScreen({
     </div>
   );
 
+  // Card-row skeleton for the two list tabs (À finir, À plusieurs); role="status" is the prerender ready-signal.
+  const cardListSkeleton = (label: string) => (
+    <ul className={list} role="status" aria-busy="true" aria-label={label}>
+      {Array.from({ length: 3 }, (_, i) => (
+        <li key={i} className={lobbySkeletonCard}>
+          <div className={mid}>
+            <Skeleton tone="onCard" width="55%" height={14} />
+            <Skeleton tone="onCard" width="40%" height={11} style={{ marginTop: 6 }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+
   const quotidiennes = showSkeleton ? (
     calendarSkeleton
   ) : loading ? null : summaries.length === 0 ? (
@@ -280,7 +294,7 @@ export function GrillesArchiveScreen({
   );
 
   const aFinir = showSkeleton ? (
-    calendarSkeleton
+    cardListSkeleton(t('v2.grilles.loading'))
   ) : loading ? null : enCours.length === 0 ? (
     <GrillesEmptyState filter="progress" onPlay={() => navigate({ to: '/play' })} />
   ) : (
@@ -315,21 +329,8 @@ export function GrillesArchiveScreen({
     </ul>
   );
 
-  const lobbiesSkeleton = (
-    <ul className={list} role="status" aria-busy="true" aria-label={t('v2.grilles.plusieurs.loading')}>
-      {Array.from({ length: 3 }, (_, i) => (
-        <li key={i} className={lobbySkeletonCard}>
-          <div className={mid}>
-            <Skeleton tone="onCard" width="55%" height={14} />
-            <Skeleton tone="onCard" width="40%" height={11} style={{ marginTop: 6 }} />
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-
   const plusieurs = showLobbiesSkeleton ? (
-    lobbiesSkeleton
+    cardListSkeleton(t('v2.grilles.plusieurs.loading'))
   ) : lobbiesLoading ? null : lobbies.length > 0 ? (
     <GrillesLobbiesSection lobbies={lobbies} onClaim={handleClaimLobby} onLeave={handleLeaveLobby} />
   ) : (

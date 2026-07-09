@@ -14,7 +14,7 @@ export async function startMultiplayerGame(
   await page.addInitScript(() => {
     window.localStorage.setItem('wordsparrow.tour.seen', 'true');
   });
-  await page.goto('/grilles?onglet=plusieurs');
+  await page.goto('/grilles/multijoueur');
   await page.getByRole('button', { name: /Créer une partie/i }).click();
   await page.waitForURL(/\/lobby\/[^/]+$/);
 
