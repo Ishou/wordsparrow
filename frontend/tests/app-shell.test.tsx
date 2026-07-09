@@ -61,6 +61,36 @@ describe('AppShell (flow)', () => {
     const shell = container.querySelector('[lang="fr"]') as HTMLElement;
     expect(shell.firstChild).toHaveAttribute('href', '#main-content');
   });
+
+  it('fillBody stops <main> from scrolling and delegates to the inner flex column', async () => {
+    renderShell(
+      <AppShell topBar={<div data-testid="tb" />} bottomBar={<div data-testid="bb" />} fillBody>
+        <div data-testid="pinned-head" />
+      </AppShell>,
+    );
+    const main = await screen.findByRole('main');
+    // Panda's cx keeps both utilities in the class list; ov-y_hidden wins the cascade via source order.
+    expect(main.className).toMatch(/(^|\s)ov-y_hidden(\s|$)/);
+    expect(main.className).toMatch(/(^|\s)d_flex(\s|$)/);
+    expect(main.className).toMatch(/(^|\s)flex-d_column(\s|$)/);
+    // The wrapper is innerFill (flex:1, minHeight:0), not the passthrough `inner` (display:contents).
+    const wrapper = screen.getByTestId('pinned-head').parentElement;
+    expect(wrapper?.className).toMatch(/(^|\s)flex_1(\s|$)/);
+    expect(wrapper?.className).not.toMatch(/(^|\s)d_contents(\s|$)/);
+  });
+
+  it('without fillBody, <main> stays the sole scroll container', async () => {
+    renderShell(
+      <AppShell topBar={<div data-testid="tb" />} bottomBar={<div data-testid="bb" />}>
+        <div data-testid="content" />
+      </AppShell>,
+    );
+    const main = await screen.findByRole('main');
+    expect(main.className).toMatch(/(^|\s)ov-y_auto(\s|$)/);
+    expect(main.className).not.toMatch(/(^|\s)ov-y_hidden(\s|$)/);
+    const wrapper = screen.getByTestId('content').parentElement;
+    expect(wrapper?.className).toMatch(/(^|\s)d_contents(\s|$)/);
+  });
 });
 
 describe('AppShell (overlay)', () => {
