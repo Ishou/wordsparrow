@@ -402,6 +402,36 @@ class PostgresLobbyRepositoryTest {
         }
 
     @Test
+    fun `findIdleInProgress returns in-progress lobbies at or before the cutoff and excludes WAITING and COMPLETED`() =
+        runTest {
+            val idleInProgress =
+                inProgressLobby(
+                    id = LobbyId.generate(),
+                    owner = sessionA,
+                    ownerUserId = UserId("11111111-1111-1111-1111-111111111111"),
+                ).copy(lastActivityAt = baseInstant.minusSeconds(3600))
+            val freshInProgress =
+                inProgressLobby(
+                    id = LobbyId.generate(),
+                    owner = sessionB,
+                    ownerUserId = UserId("22222222-2222-2222-2222-222222222222"),
+                ).copy(lastActivityAt = baseInstant.plusSeconds(3600))
+            val idleWaiting =
+                waitingLobby(id = LobbyId.generate(), owner = sessionC, lastActivityAt = baseInstant.minusSeconds(3600))
+            val idleCompleted =
+                completedLobby(id = LobbyId.generate(), owner = sessionA)
+                    .copy(lastActivityAt = baseInstant.minusSeconds(3600))
+            repo.save(idleInProgress)
+            repo.save(freshInProgress)
+            repo.save(idleWaiting)
+            repo.save(idleCompleted)
+
+            val result = repo.findIdleInProgress(baseInstant)
+
+            assertThat(result.map { it.id }).containsExactly(idleInProgress.id)
+        }
+
+    @Test
     fun `findIdleCompleted returns completed lobbies at or before the cutoff and excludes WAITING and IN_PROGRESS`() =
         runTest {
             val idleCompleted =

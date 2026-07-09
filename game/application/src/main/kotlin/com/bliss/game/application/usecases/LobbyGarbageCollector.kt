@@ -33,9 +33,10 @@ import java.time.Duration
  *  - COMPLETED   → evict after [completedTtl] (default 7d). Finished-game retention.
  *  - OWNERLESS   → evict non-terminal `owner_user_id IS NULL` lobbies after [ownerlessTtl]
  *                  (default 7d). Reaps relinquished / RGPD-vacated games so they don't accrue.
- *  - IN_PROGRESS → never evicted by idle while still owned. An owned in-progress lobby matches
- *                  none of the three queries; it is removed only when the last player leaves
- *                  (see `LeaveLobbyUseCase`).
+ *  - IN_PROGRESS → evict after [inProgressTtl] (default 30d) of INACTIVITY (lastActivityAt).
+ *                  An actively-played game keeps touching `lastActivityAt` and never expires;
+ *                  this closes the abandoned-owned-in-progress immortal-ghost gap under sticky
+ *                  ownership (ADR-0055 amendment 2026-07-09, ADR-0066).
  */
 class LobbyGarbageCollector(
     private val repo: LobbyRepository,
@@ -43,6 +44,7 @@ class LobbyGarbageCollector(
     val waitingTtl: Duration = Duration.ofHours(24),
     val completedTtl: Duration = Duration.ofDays(7),
     val ownerlessTtl: Duration = Duration.ofDays(7),
+    val inProgressTtl: Duration = Duration.ofDays(30),
     val sweepInterval: Duration = Duration.ofMinutes(5),
     private val log: Logger = LoggerFactory.getLogger(LobbyGarbageCollector::class.java),
 ) {
@@ -57,6 +59,7 @@ class LobbyGarbageCollector(
         val waitingCutoff = now.minus(waitingTtl)
         val completedCutoff = now.minus(completedTtl)
         val ownerlessCutoff = now.minus(ownerlessTtl)
+        val inProgressCutoff = now.minus(inProgressTtl)
         var evicted = 0
         evicted +=
             evictAll(
@@ -80,13 +83,22 @@ class LobbyGarbageCollector(
                 requiredState = null,
                 stillEligible = { lobby -> lobby.isOwnerless() && lobby.state != LobbyLifecycleState.COMPLETED },
             )
+        evicted +=
+            evictAll(
+                candidates = repo.findIdleInProgress(inProgressCutoff),
+                cutoff = inProgressCutoff,
+                // INACTIVITY, not age: an actively-played game touches lastActivityAt (ADR-0055 amendment 2026-07-09). Re-checked so a resumed game racing the scan cannot lose the lobby.
+                requiredState = LobbyLifecycleState.IN_PROGRESS,
+                stillEligible = { lobby -> lobby.state == LobbyLifecycleState.IN_PROGRESS },
+            )
         if (evicted > 0) {
             log.info(
-                "lobby.gc.evicted count={} waitingTtlHours={} completedTtlDays={} ownerlessTtlDays={}",
+                "lobby.gc.evicted count={} waitingTtlHours={} completedTtlDays={} ownerlessTtlDays={} inProgressTtlDays={}",
                 evicted,
                 waitingTtl.toHours(),
                 completedTtl.toDays(),
                 ownerlessTtl.toDays(),
+                inProgressTtl.toDays(),
             )
         }
         return evicted
@@ -130,10 +142,11 @@ class LobbyGarbageCollector(
     fun run(scope: CoroutineScope): Job =
         scope.launch(Dispatchers.Default) {
             log.info(
-                "lobby.gc.started waitingTtlHours={} completedTtlDays={} ownerlessTtlDays={} sweepIntervalMinutes={}",
+                "lobby.gc.started waitingTtlHours={} completedTtlDays={} ownerlessTtlDays={} inProgressTtlDays={} sweepIntervalMinutes={}",
                 waitingTtl.toHours(),
                 completedTtl.toDays(),
                 ownerlessTtl.toDays(),
+                inProgressTtl.toDays(),
                 sweepInterval.toMinutes(),
             )
             while (isActive) {

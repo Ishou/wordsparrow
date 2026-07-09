@@ -324,6 +324,25 @@ class InMemoryLobbyRepositoryTest {
             assertThat(repo.findIdleCompleted(baseInstant)).isEmpty()
         }
 
+    @Test
+    fun `findIdleInProgress returns in-progress lobbies at or before cutoff and excludes WAITING and COMPLETED`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val staleInProgress = inProgressLobbyAt(LobbyId.generate(), lastActivityAt = baseInstant)
+            val freshInProgress =
+                inProgressLobbyAt(LobbyId.generate(), lastActivityAt = baseInstant.plusSeconds(3600))
+            val staleWaiting = lobbyAt(LobbyId.generate(), lastActivityAt = baseInstant)
+            val staleCompleted = completedLobbyAt(LobbyId.generate(), lastActivityAt = baseInstant)
+            repo.save(staleInProgress)
+            repo.save(freshInProgress)
+            repo.save(staleWaiting)
+            repo.save(staleCompleted)
+
+            val idle = repo.findIdleInProgress(baseInstant.plusSeconds(60))
+
+            assertThat(idle.map { it.id }).containsExactlyInAnyOrder(staleInProgress.id)
+        }
+
     private fun completedLobbyAt(
         id: LobbyId,
         ownerSessionId: SessionId = sessionA,

@@ -44,9 +44,10 @@ class LobbyGarbageCollectorTest {
     private val waitingTtl: Duration = Duration.ofHours(24)
     private val completedTtl: Duration = Duration.ofDays(7)
     private val ownerlessTtl: Duration = Duration.ofDays(7)
+    private val inProgressTtl: Duration = Duration.ofDays(30)
     private val sweepInterval: Duration = Duration.ofMinutes(5)
 
-    private fun harness(): GcHarness = GcHarness(waitingTtl, completedTtl, ownerlessTtl, sweepInterval)
+    private fun harness(): GcHarness = GcHarness(waitingTtl, completedTtl, ownerlessTtl, inProgressTtl, sweepInterval)
 
     @Test
     fun `sweepOnce evicts a WAITING lobby older than the waiting TTL`() =
@@ -92,7 +93,7 @@ class LobbyGarbageCollectorTest {
         }
 
     @Test
-    fun `sweepOnce never evicts an owned IN_PROGRESS lobby even past every TTL`() =
+    fun `sweepOnce evicts an owned IN_PROGRESS lobby idle beyond the in-progress TTL`() =
         runTest {
             val h = harness()
             val now = h.clock.now()
@@ -100,8 +101,41 @@ class LobbyGarbageCollectorTest {
             val owned = inProgressLobby(id, ownerUserId = userA, lastActivityAt = now)
             h.repo.save(owned)
 
-            // Beyond every idle window: waitingTtl (24h), completedTtl (7d) AND ownerlessTtl (7d).
-            h.clock.advance(completedTtl.plus(Duration.ofDays(30)))
+            // A disconnected owner leaves an immortal ghost under sticky ownership -- the 30d inactivity sweep reaps it.
+            h.clock.advance(inProgressTtl.plusMinutes(1))
+            val evicted = h.gc.sweepOnce()
+
+            assertThat(evicted).isEqualTo(1)
+            assertThat(h.repo.findById(id)).isNull()
+        }
+
+    @Test
+    fun `sweepOnce keeps an owned IN_PROGRESS lobby within the in-progress TTL`() =
+        runTest {
+            val h = harness()
+            val now = h.clock.now()
+            val id = LobbyId.generate()
+            val owned = inProgressLobby(id, ownerUserId = userA, lastActivityAt = now)
+            h.repo.save(owned)
+
+            h.clock.advance(inProgressTtl.minusMinutes(1))
+            val evicted = h.gc.sweepOnce()
+
+            assertThat(evicted).isEqualTo(0)
+            assertThat(h.repo.findById(id)).isNotNull()
+        }
+
+    @Test
+    fun `sweepOnce keeps an owned IN_PROGRESS lobby whose activity was touched recently`() =
+        runTest {
+            val h = harness()
+            val id = LobbyId.generate()
+            // Sit idle almost the whole window, then touch activity -- INACTIVITY resets, so a long-lived
+            // but actively-played game is NOT evicted on age.
+            h.clock.advance(inProgressTtl.plusDays(365))
+            val touched = inProgressLobby(id, ownerUserId = userA, lastActivityAt = h.clock.now())
+            h.repo.save(touched)
+
             val evicted = h.gc.sweepOnce()
 
             assertThat(evicted).isEqualTo(0)
@@ -382,6 +416,7 @@ internal class GcHarness(
     waitingTtl: Duration,
     completedTtl: Duration,
     ownerlessTtl: Duration,
+    inProgressTtl: Duration,
     sweepInterval: Duration,
 ) {
     val clock = FakeClock()
@@ -397,6 +432,7 @@ internal class GcHarness(
             waitingTtl = waitingTtl,
             completedTtl = completedTtl,
             ownerlessTtl = ownerlessTtl,
+            inProgressTtl = inProgressTtl,
             sweepInterval = sweepInterval,
         )
 
