@@ -505,8 +505,18 @@ describe('WaitingRoom — touch-aware share control', () => {
     }) as unknown as typeof window.matchMedia;
   }
 
+  // `useCanNativeShare` also gates on `navigator.share`, absent by default in jsdom.
+  function stubNativeShareApi() {
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: vi.fn().mockResolvedValue(undefined),
+    });
+  }
+
   afterEach(() => {
     window.matchMedia = originalMatchMedia;
+    // @ts-expect-error -- test-only teardown of a jsdom stub.
+    delete navigator.share;
   });
 
   it('shows the copy icon and "Copier le lien" label on a non-touch device', () => {
@@ -521,12 +531,23 @@ describe('WaitingRoom — touch-aware share control', () => {
 
   it('shows the share icon and "Partager le lien" label on a touch device', () => {
     stubMatchMedia(true);
+    stubNativeShareApi();
     render(
       <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
     );
     expect(screen.getByRole('button', { name: /partager le lien/i })).toBeInTheDocument();
     expect(screen.getByTestId('icon-share')).toBeInTheDocument();
     expect(screen.queryByTestId('icon-copy')).toBeNull();
+  });
+
+  it('shows the copy icon on a touch device that lacks navigator.share (finding: icon must match behavior)', () => {
+    stubMatchMedia(true);
+    render(
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+    );
+    expect(screen.getByRole('button', { name: /copier le lien/i })).toBeInTheDocument();
+    expect(screen.getByTestId('icon-copy')).toBeInTheDocument();
+    expect(screen.queryByTestId('icon-share')).toBeNull();
   });
 });
 

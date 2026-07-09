@@ -1,12 +1,23 @@
+import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
+
 // Same signal as useTouchPrimary — a touch-first device with no hover.
 const TOUCH_PRIMARY_QUERY = '(any-pointer: coarse) and (any-hover: none)';
 
-// Native share sheet only on touch-primary platforms; desktops that expose
-// navigator.share still fall through to a direct clipboard copy.
+function hasNativeShareApi(): boolean {
+  return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+}
+
+// Share sheet only on touch-primary devices with navigator.share; desktop always copies.
 export function canNativeShare(): boolean {
-  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return false;
+  if (!hasNativeShareApi()) return false;
   if (typeof window === 'undefined') return false;
   return window.matchMedia?.(TOUCH_PRIMARY_QUERY)?.matches === true;
+}
+
+// Reactive twin of canNativeShare(), for icon/label decisions — same gate, re-renders on media query change.
+export function useCanNativeShare(): boolean {
+  const touchPrimary = useTouchPrimary();
+  return touchPrimary && hasNativeShareApi();
 }
 
 // Branch actually taken; callers gate "copied" feedback on 'copied', not on platform capability.

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { canNativeShare, shareOrCopyInviteUrl } from '@/ui/lib/shareInvite';
+import { renderHook } from '@testing-library/react';
+import { canNativeShare, shareOrCopyInviteUrl, useCanNativeShare } from '@/ui/lib/shareInvite';
 
 const URL = 'https://wordsparrow.io/join/A2B3C4';
 const QUERY = '(any-pointer: coarse) and (any-hover: none)';
@@ -59,6 +60,32 @@ describe('shareInvite', () => {
       });
       stubMatchMedia(false);
       expect(canNativeShare()).toBe(false);
+    });
+  });
+
+  describe('useCanNativeShare', () => {
+    it('mirrors canNativeShare — false on a touch device without navigator.share', () => {
+      const { result } = renderHook(() => useCanNativeShare());
+      expect(result.current).toBe(false);
+    });
+
+    it('mirrors canNativeShare — true on a touch device once navigator.share is stubbed', () => {
+      Object.defineProperty(navigator, 'share', {
+        configurable: true,
+        value: vi.fn().mockResolvedValue(undefined),
+      });
+      const { result } = renderHook(() => useCanNativeShare());
+      expect(result.current).toBe(true);
+    });
+
+    it('mirrors canNativeShare — false on a non-touch device even when navigator.share exists', () => {
+      Object.defineProperty(navigator, 'share', {
+        configurable: true,
+        value: vi.fn().mockResolvedValue(undefined),
+      });
+      stubMatchMedia(false);
+      const { result } = renderHook(() => useCanNativeShare());
+      expect(result.current).toBe(false);
     });
   });
 
