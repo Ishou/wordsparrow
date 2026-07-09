@@ -1,13 +1,5 @@
 {{- if .Values.retention.verifyUsage.enabled -}}
-{{/*
-Nightly retention sweep for `puzzle_verify_usage` (ADR-0099).
-
-Mirrors cronjob-hint-usage-retention.yaml: implements ADR-0025 §5 /
-docs/privacy/retention-schedule.md — rows are kept for `days` from
-`last_verified_at`, then deleted. Connects to the CNPG-managed Postgres
-cluster via the operator-issued "<cluster>-app" Secret; the application
-image is not used, just `psql`.
-*/}}
+{{/* Nightly retention sweep for puzzle_verify_usage (ADR-0099); mirrors cronjob-hint-usage-retention.yaml. */}}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
