@@ -1185,6 +1185,7 @@ export function Grid({
                             key={key}
                             cell={cell}
                             currentArrow={highlight.currentArrow}
+                            onDefinitionClick={nav.handleDefinitionClick}
                           />
                         );
                       }
