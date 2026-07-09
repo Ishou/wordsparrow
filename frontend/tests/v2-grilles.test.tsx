@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { RouterProvider, createMemoryHistory, createRoute, createRouter } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
 import type { DailySummariesPage, DailySummary, PuzzleRepository } from '@/application';
@@ -51,6 +51,29 @@ const soloStore = {
   clearForPuzzle: () => {},
 } as unknown as SoloEntriesStore;
 
+function observableService(): import('@/application/progress').ProgressSyncService & { fireMerge: () => void } {
+  const listeners = new Set<() => void>();
+  let revision = 0;
+  return {
+    setEnabled: () => {},
+    pullAndMergeAll: vi.fn(async () => {}),
+    pullAndMergeOne: async () => {},
+    reconcileOnAuth: async () => {},
+    resetReconciled: () => {},
+    schedulePush: () => {},
+    dispose: () => {},
+    subscribe: (l: () => void) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    getRevision: () => revision,
+    fireMerge: () => {
+      revision += 1;
+      for (const l of listeners) l();
+    },
+  };
+}
+
 function repoOf(...pages: Array<DailySummariesPage | Promise<DailySummariesPage>>): PuzzleRepository {
   let call = 0;
   return {
@@ -94,6 +117,7 @@ interface HarnessOptions {
   readonly lobbyClient?: LobbyClient;
   readonly withMultiplayer?: boolean;
   readonly initialEntry?: string;
+  readonly service?: import('@/application/progress').ProgressSyncService;
 }
 
 function renderGrilles(opts: HarnessOptions = {}) {
@@ -128,6 +152,7 @@ function renderGrilles(opts: HarnessOptions = {}) {
       },
       soloEntriesStore: soloStore,
       tourSeenStore: { get: () => true, set: () => {}, clear: () => {} },
+      progressSyncService: opts.service,
       ...(withMultiplayer ? { lobbyClient, getSession } : {}),
     },
   });
@@ -372,5 +397,43 @@ describe('v2 grilles — a11y', () => {
     const { container } = renderGrilles();
     await findTodayCell();
     await expectAxeClean(container);
+  });
+});
+
+describe('v2 grilles — cross-device progress sync', () => {
+  it('fires pullAndMergeAll on mount when authed', async () => {
+    const service = observableService();
+    renderGrilles({ capabilities: [], service }); // capabilities array → whoami resolves a user → authed
+    await waitFor(() =>
+      expect((service.pullAndMergeAll as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1),
+    );
+  });
+
+  it('does not pull when anon', async () => {
+    const service = observableService();
+    renderGrilles({ capabilities: null, service }); // whoami → null → anon
+    // Wait for the calendar (summaries loaded) so auth has resolved to anon and a stray pull would have fired.
+    await screen.findByRole('heading', { name: monthLabelFr(monthOf(TODAY)) });
+    expect(service.pullAndMergeAll as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+  });
+
+  it('re-derives the "à finir" list when a merge notifies', async () => {
+    const service = observableService();
+    // The a-finir row's aria-label ('Reprendre — {{date}}', no percentage) differs from findTodayCell's calendar-cell format, so query it directly.
+    renderGrilles({ capabilities: [], service, initialEntry: '/grilles/a-finir' });
+    await screen.findByRole('link', { name: `Reprendre — ${longDateFr(TODAY)}` });
+
+    try {
+      act(() => {
+        LOCKED.today = 14; // full → status flips from 'progress' to 'done'
+        service.fireMerge();
+      });
+
+      await waitFor(() =>
+        expect(screen.queryByRole('link', { name: `Reprendre — ${longDateFr(TODAY)}` })).toBeNull(),
+      );
+    } finally {
+      LOCKED.today = 8; // restore shared fixture for other tests
+    }
   });
 });

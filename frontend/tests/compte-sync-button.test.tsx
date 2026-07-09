@@ -44,6 +44,8 @@ function fakeSyncService(pullAndMergeAll: () => Promise<void>): ProgressSyncServ
     resetReconciled: () => {},
     schedulePush: () => {},
     dispose: () => {},
+    subscribe: () => () => {},
+    getRevision: () => 0,
   };
 }
 

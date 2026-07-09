@@ -25,6 +25,7 @@ function GrillesScreen({ onglet }: { readonly onglet: GrillesOnglet }) {
       lobbyClient={context.lobbyClient}
       getSession={context.getSession}
       authClient={context.authClient}
+      progressSyncService={context.progressSyncService}
     />
   );
 }

@@ -6,10 +6,12 @@ import { t } from '@/ui/i18n';
 import { fetchAllDailySummaries, type DailySummary, type PuzzleRepository } from '@/application';
 import type { AuthClient } from '@/application/auth';
 import { LobbyClientError, type LobbyClient, type LobbySummary } from '@/application/game';
+import type { ProgressSyncService } from '@/application/progress';
 import { countFilledCells, type SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { LobbyId, Pseudonym, SessionId } from '@/domain/game';
 import { Skeleton } from '@/design-system';
 import { useAuth } from '@/ui/components/auth';
+import { useProgressRevision } from '@/ui/lib/useProgressRevision';
 import { useCanSubscribe } from '@/ui/components/billing';
 import { HostSignInSheet } from '@/ui/home/HostSignInSheet';
 import { useCreateOrResume } from '@/ui/components/lobby/useCreateOrResume';
@@ -84,6 +86,7 @@ export function GrillesArchiveScreen({
   lobbyClient,
   getSession,
   authClient,
+  progressSyncService,
 }: {
   readonly puzzleRepository: PuzzleRepository;
   readonly soloEntriesStore: SoloEntriesStore;
@@ -93,10 +96,12 @@ export function GrillesArchiveScreen({
   readonly lobbyClient?: LobbyClient;
   readonly getSession?: () => GrillesSession;
   readonly authClient?: AuthClient;
+  readonly progressSyncService?: ProgressSyncService;
 }) {
   const navigate = useNavigate();
   const canSubscribe = useCanSubscribe();
   const { status: authStatus } = useAuth();
+  const progressRevision = useProgressRevision(progressSyncService);
   const { show: showToast } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
   // Kept mounted (Ark animates its own close) and the context persists through the close transition.
@@ -192,6 +197,12 @@ export function GrillesArchiveScreen({
     };
   }, [puzzleRepository, todayIso]);
 
+  // Pull cross-device progress on entry so the calendar is fresh; authed-only keeps anon/prerender network-free (ADR-0075).
+  useEffect(() => {
+    if (authStatus !== 'authed') return;
+    void progressSyncService?.pullAndMergeAll().catch(() => {});
+  }, [authStatus, progressSyncService]);
+
   useEffect(() => {
     if (lobbyClient == null || getSession == null) return;
     if (authStatus === 'loading') return;
@@ -226,7 +237,7 @@ export function GrillesArchiveScreen({
         todayIso,
         canSubscribe,
       ),
-    [summaries, soloEntriesStore, todayIso, canSubscribe],
+    [summaries, soloEntriesStore, todayIso, canSubscribe, progressRevision],
   );
 
   const earliestMonth = summaries.length > 0 ? monthOf(summaries[summaries.length - 1].date) : currentMonth;
