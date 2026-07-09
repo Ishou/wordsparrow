@@ -983,6 +983,22 @@ class LobbyUseCasesTest {
             assertThat(claimed.value.ownerSessionId).isEqualTo(sessionB)
         }
 
+    // ADR-0066/0098: a seated authed co-player must SEE an explicitly-relinquished game on /grilles so the claim affordance appears.
+    @Test
+    fun `findByUserId surfaces an ownerless started lobby to a seated authed co-player after the owner relinquishes`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.joinWithUserId(lobby.id, sessionB, bob, lobby.code.value, userB).requireSuccess()
+            h.start(lobby.id, sessionA).requireSuccess()
+            h.relinquishByUser(lobby.id, userA).requireSuccess()
+
+            val summaries = ListLobbiesForUser(h.repo).invoke(userB)
+            val summary = summaries.singleOrNull { it.id == lobby.id }
+            assertThat(summary).isNotNull()
+            assertThat(summary!!.ownerless).isEqualTo(true)
+        }
+
     @Test
     fun `Claim returns NotPresentInLobby when the caller is not in the lobby`() =
         runTest {

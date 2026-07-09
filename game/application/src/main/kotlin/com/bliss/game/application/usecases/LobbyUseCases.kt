@@ -186,7 +186,8 @@ class JoinLobbyUseCase(
                         wrongCode = true
                         lobby
                     }
-                    else -> seat(lobby, seatUserId = null, rebindOwner = false)
+                    // Stamp the server-verified userId onto a fresh authed join so findByUserId surfaces the game cross-device and after relinquish (ADR-0066 (c)); anon joins pass null.
+                    else -> seat(lobby, seatUserId = userId, rebindOwner = false)
                 }
             } ?: return failure(UseCaseError.LobbyNotFound)
         if (wrongCode) return failure(UseCaseError.WrongCode)

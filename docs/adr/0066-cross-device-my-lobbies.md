@@ -294,3 +294,51 @@ same trust root the (a) amendment's read path already relies on.
   exception.
 - **ADR-0083** — hosting entitlement; every new lobby is authed, so
   `ownerUserId` is populated in practice.
+
+## Amendment 2026-07-09 (c) — fresh authed join stamps the seat userId
+
+### Problem the original decision missed
+
+Amendment (a) noted in passing that "other joiners have `user_id = NULL`
+(the join path never stamps a `userId` onto their seats)" and treated
+that as immutable, adding an `owner_user_id` arm to `findByUserId` to
+work around it for the owner. But it breaks the co-player case that
+amendment (b) enabled: once an owner **explicitly relinquishes**
+(ADR-0098 §2, `owner_user_id → NULL`), a seated authed co-player's
+`/grilles` (`À plusieurs`) list — served by the user-scoped
+`findByUserId` — no longer matches the lobby on **either** arm: the
+`owner_user_id` is null and the co-player's own seat still carries
+`user_id = NULL` because their fresh authed join never stamped it. The
+now-ownerless game vanishes from the co-player's list, so the ADR-0098
+§6 claim affordance can never appear. Confirmed 2026-07-09.
+
+The rebind path (`rebindAnonSeats`) only stamps `userId` on the
+**anon→authed sign-in** transition; a player who is already signed in
+when they join a lobby never triggers it, so their seat stays
+`user_id = NULL` forever.
+
+### Decision
+
+`JoinLobbyUseCase`'s fresh-join arm stamps the socket's server-verified
+`userId` (the same value amendment (b) already threads in, never read
+from the client frame) onto the new seat. Anon/guest joins pass `null`
+and are byte-for-byte unchanged.
+
+### Threat model (auth-boundary-adjacent, CLAUDE.md)
+
+No new capability: the `userId` is already cookie-verified at connect
+time and threaded into `JoinLobbyUseCase` by amendment (b); this only
+persists it on the seat the joiner already holds. A code-holder gains
+exactly the seat they already had, now discoverable cross-device.
+Spoofing is bounded by the identity cookie's integrity — the same trust
+root amendments (a)/(b) rely on. Owner-keyed quota lookups
+(`findActiveByOwnerUser`, `findWaitingByOwnerUser`) read the **owner**
+seat's `userId`, so stamping a co-player seat does not perturb them.
+
+### Consequences
+
+- A seated authed co-player sees, and can claim, an explicitly
+  relinquished game from `/grilles`.
+- The `owner_user_id` arm added by amendment (a) is retained: it still
+  covers the window between the owner's leave-grace dropping their seat
+  and any co-player action.
