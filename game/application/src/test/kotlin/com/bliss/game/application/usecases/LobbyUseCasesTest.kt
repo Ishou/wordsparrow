@@ -932,6 +932,31 @@ class LobbyUseCasesTest {
             assertThat(state.players.keys.contains(sessionB)).isEqualTo(true)
         }
 
+    // Regression: an owner whose seat was dropped (ownership sticky, ADR-0066) can still delete/leave from a list -> relinquish, not 403.
+    @Test
+    fun `LeaveMembership by an owner with no current seat relinquishes instead of failing`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.join(lobby.id, sessionB, bob).requireSuccess()
+            // Owner's seat drops (disconnect/leave) but ownership stays sticky -> owner-without-seat.
+            h.leave(lobby.id, sessionA).requireSuccess()
+            assertThat(
+                h.repo
+                    .findById(lobby.id)!!
+                    .players.keys
+                    .contains(sessionA),
+            ).isEqualTo(false)
+            assertThat(h.repo.findById(lobby.id)!!.ownerUserId).isEqualTo(userA)
+
+            val out = h.leaveMembership(lobby.id, userA).requireSuccess()
+
+            assertThat(out.value.relinquishedOwnership).isEqualTo(true)
+            val state = h.repo.findById(lobby.id)!!
+            assertThat(state.ownerUserId).isNull()
+            assertThat(state.players.keys.contains(sessionB)).isEqualTo(true)
+        }
+
     // Non-owner among others -> only their seat is dropped; the lobby stays owned.
     @Test
     fun `LeaveMembership by a non-owner co-player drops only their seat and keeps the lobby owned`() =
