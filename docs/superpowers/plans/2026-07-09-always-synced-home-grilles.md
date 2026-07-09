@@ -236,7 +236,6 @@ Expected: no errors.
 - [ ] **Step 10: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/sync-home-grilles
 git add frontend/src/application/progress/ProgressSyncService.ts frontend/tests/progress-sync-service.test.ts frontend/tests/compte-sync-button.test.tsx
 git commit -s -m "feat(frontend-application): progress-sync merge-completion observable
 
@@ -348,7 +347,6 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/sync-home-grilles
 git add frontend/src/ui/lib/useProgressRevision.ts frontend/tests/use-progress-revision.test.tsx
 git commit -s -m "feat(frontend-ui): useProgressRevision hook
 
@@ -622,7 +620,6 @@ Expected: PASS (existing home tests render `HomeScreen` without `progressSyncSer
 - [ ] **Step 9: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/sync-home-grilles
 git add frontend/src/ui/home/HomeScreen.tsx frontend/src/ui/routes/index.tsx frontend/tests/home-progress-sync.test.tsx
 git commit -s -m "feat(frontend-ui): Home 7-day strip syncs cross-device progress
 
@@ -827,7 +824,6 @@ Expected: PASS. (Watch the a11y assertions in `v2-grilles` — the new tests mus
 - [ ] **Step 9: Commit**
 
 ```bash
-cd /Users/isho/IdeaProjects/bliss/.claude/worktrees/sync-home-grilles
 git add frontend/src/ui/v2/GrillesArchiveScreen.tsx frontend/src/ui/routes/grilles.tsx frontend/tests/v2-grilles.test.tsx
 git commit -s -m "feat(frontend-ui): /grilles calendar syncs cross-device progress
 
