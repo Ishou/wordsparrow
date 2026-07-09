@@ -132,16 +132,14 @@ export function GrillesArchiveScreen({
     [lobbyClient, authStatus, navigate, showToast],
   );
 
-  // ADR-0098 §6 (2026-07-08): leave/delete from the list; server decides delete-if-alone/leave-if-others, refetch drops the row, failure toasts (mirrors the claim path).
+  // ADR-0098 §6 (2026-07-08): leave/delete from the list; server decides delete-if-alone/leave-if-others, refetch drops the row.
   const handleLeaveLobby = useCallback(
-    (lobbyId: LobbyId) => {
-      if (lobbyClient == null) return;
-      void lobbyClient
-        .leaveLobby(lobbyId)
-        .then(() => setLobbiesRefreshTick((tick) => tick + 1))
-        .catch(() => showToast({ text: t('lobby.leave.error'), tone: 'error' }));
+    (lobbyId: LobbyId): Promise<void> => {
+      if (lobbyClient == null) return Promise.resolve();
+      // Reject on failure so the row's confirm dialog owns the delete-vs-leave error copy + retry.
+      return lobbyClient.leaveLobby(lobbyId).then(() => setLobbiesRefreshTick((tick) => tick + 1));
     },
-    [lobbyClient, showToast],
+    [lobbyClient],
   );
   const coopPending = coop.pending || coop.startingNew;
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
   Outlet,
   RouterProvider,
@@ -19,6 +19,7 @@ import type { LobbySummary } from '@/application/game';
 import type { LobbyId } from '@/domain/game';
 import { GrillesLobbiesSection } from '@/ui/v2/GrillesLobbiesSection';
 import { LobbiesEmptyState } from '@/ui/v2/GrillesEmptyState';
+import { Toast, ToastProvider } from '@/ui/components/primitives/Toast';
 import { expectAxeClean } from '@/test/a11y';
 
 const IN_PROGRESS: LobbySummary = {
@@ -53,6 +54,15 @@ function renderInRouter(node: React.ReactNode) {
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
   return render(<RouterProvider router={router as never} />);
+}
+
+function renderInRouterWithToast(node: React.ReactNode) {
+  return renderInRouter(
+    <ToastProvider>
+      {node}
+      <Toast />
+    </ToastProvider>,
+  );
 }
 
 describe('GrillesLobbiesSection', () => {
@@ -149,6 +159,110 @@ describe('GrillesLobbiesSection — leave/delete affordance (ADR-0098 §6)', () 
     fireEvent.click(await screen.findByRole('button', { name: 'Supprimer cette partie' }));
     const dialog = await screen.findByRole('dialog');
     await expectAxeClean(dialog);
+  });
+});
+
+describe('GrillesLobbiesSection — confirm pending state (ADR-0050)', () => {
+  const ALONE: LobbySummary = { ...COMPLETED, playerCount: 1 };
+
+  function deferred() {
+    let resolve!: () => void;
+    let reject!: () => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  it('disables the confirm + sets aria-busy while onConfirm is in flight, and does not fire twice', async () => {
+    const d = deferred();
+    const onLeave = vi.fn(() => d.promise);
+    renderInRouterWithToast(<GrillesLobbiesSection lobbies={[ALONE]} onLeave={onLeave} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Supprimer cette partie' }));
+    await screen.findByRole('dialog');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
+    const processing = await screen.findByRole('button', { name: 'Traitement…' });
+    expect(processing).toBeDisabled();
+    expect(processing).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: 'Annuler' })).toBeDisabled();
+
+    // A second tap on the disabled confirm must not re-enter.
+    fireEvent.click(processing);
+    expect(onLeave).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      d.resolve();
+      await d.promise;
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('keeps the dialog open on failure so the user can retry', async () => {
+    const d = deferred();
+    const onLeave = vi.fn(() => d.promise);
+    renderInRouterWithToast(<GrillesLobbiesSection lobbies={[ALONE]} onLeave={onLeave} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Supprimer cette partie' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
+
+    await act(async () => {
+      d.reject();
+      await d.promise.catch(() => undefined);
+    });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    // Confirm is re-enabled for the retry.
+    expect(await screen.findByRole('button', { name: 'Supprimer' })).toBeEnabled();
+  });
+
+  it('the busy dialog is axe-clean (ADR-0050)', async () => {
+    const d = deferred();
+    renderInRouterWithToast(<GrillesLobbiesSection lobbies={[ALONE]} onLeave={() => d.promise} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Supprimer cette partie' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
+    const dialog = await screen.findByRole('dialog');
+    await screen.findByRole('button', { name: 'Traitement…' });
+    await expectAxeClean(dialog);
+    await act(async () => {
+      d.resolve();
+      await d.promise;
+    });
+  });
+});
+
+describe('GrillesLobbiesSection — differentiated error copy (ADR-0098 §6)', () => {
+  const ALONE: LobbySummary = { ...COMPLETED, playerCount: 1 };
+  const WITH_OTHERS: LobbySummary = { ...IN_PROGRESS, playerCount: 3 };
+
+  it('a failed delete surfaces the "supprimer" error copy', async () => {
+    renderInRouterWithToast(
+      <GrillesLobbiesSection lobbies={[ALONE]} onLeave={() => Promise.reject(new Error('boom'))} />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Supprimer cette partie' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
+    expect(await screen.findByText('Impossible de supprimer la partie. Réessaie.')).toBeInTheDocument();
+  });
+
+  it('a failed leave surfaces the "quitter" error copy', async () => {
+    renderInRouterWithToast(
+      <GrillesLobbiesSection lobbies={[WITH_OTHERS]} onLeave={() => Promise.reject(new Error('boom'))} />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Quitter cette partie' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Quitter' }));
+    expect(await screen.findByText('Impossible de quitter la partie. Réessaie.')).toBeInTheDocument();
+  });
+});
+
+describe('GrillesLobbiesSection — retention note', () => {
+  it('renders the inactivity retention note under the list', async () => {
+    renderInRouter(<GrillesLobbiesSection lobbies={[IN_PROGRESS]} />);
+    expect(
+      await screen.findByText('Les parties inactives sont supprimées automatiquement après plusieurs jours.'),
+    ).toBeInTheDocument();
   });
 });
 

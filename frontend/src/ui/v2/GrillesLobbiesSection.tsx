@@ -6,6 +6,7 @@ import type { LobbySummary } from '@/application/game';
 import type { LobbyId } from '@/domain/game';
 import { LeaveGameButton } from '@/ui/components/lobby/LeaveGameButton';
 import { ShareInviteButton } from '@/ui/components/lobby/ShareInviteButton';
+import { t } from '@/ui/i18n';
 
 // Session-scoped read only (ADR-0066 §4); stays single-shape when the user-scoped endpoint lands.
 
@@ -45,6 +46,17 @@ const cardButton = css({ appearance: 'none', textAlign: 'left', font: 'inherit',
 const rowWrap = css({ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' });
 const cardGrow = css({ flex: 1, minWidth: 0 });
 
+// Subtle hint that the backend GC removes long-idle games; TTL varies by state (ADR-0055 §c, amended by ADR-0098 §4).
+const retentionNote = css({
+  fontFamily: 'wsUi',
+  fontSize: '11.5px',
+  fontWeight: 'semibold',
+  color: 'ws.khaki',
+  opacity: 0.75,
+  lineHeight: '1.4',
+  margin: '4px 2px 0',
+});
+
 // Headless card list — the caller supplies the heading (the /grilles tab) and decides emptiness.
 // ADR-0098 §6: `onClaim` (when supplied) turns an ownerless "Reprendre" row into a real claim instead of a plain navigate;
 // `onLeave` (when supplied) adds a per-row quitter/supprimer affordance (2026-07-08 amendment).
@@ -55,9 +67,10 @@ export function GrillesLobbiesSection({
 }: {
   readonly lobbies: readonly LobbySummary[];
   readonly onClaim?: (lobbyId: LobbyId) => void;
-  readonly onLeave?: (lobbyId: LobbyId) => void;
+  readonly onLeave?: (lobbyId: LobbyId) => void | Promise<void>;
 }) {
   return (
+    <>
     <ul className={list}>
         {lobbies.map((lobby) => {
           const total = lobby.progress.totalCells;
@@ -103,5 +116,7 @@ export function GrillesLobbiesSection({
           );
         })}
     </ul>
+    <p className={retentionNote}>{t('lobby.list.retentionNote')}</p>
+    </>
   );
 }
