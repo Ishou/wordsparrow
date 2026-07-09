@@ -697,6 +697,7 @@ export const fr = {
   'v2.grilles.aFinir.rowTitle': '{{date}} · n°{{num}}',
   'v2.grilles.aFinir.rowMeta': 'En cours · {{filled}} / {{total}} cases',
   'v2.grilles.plusieurs.join': 'Rejoindre avec un code',
+  'v2.grilles.plusieurs.loading': 'Chargement des parties',
   'v2.grilles.emptyScene.aria': "Un moineau au-dessus d’un nid",
   'v2.grilles.empty.new.title': 'Tu as tout joué !',
   'v2.grilles.empty.new.body': 'Aucune grille à commencer pour l’instant — reviens demain pour la prochaine.',

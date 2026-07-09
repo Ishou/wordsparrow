@@ -279,6 +279,14 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
         expect(html).not.toMatch(/data-scope="menu"[^>]*data-part="content"/);
       },
     );
+
+    // The empty-archive prerender stub must bake the loading skeleton, not the Quotidiennes empty state that would flash on every /grilles?onglet=… deep link.
+    it('bakes the loading skeleton into dist/grilles.html, not a terminal empty state', () => {
+      const html = readFileSync(resolve(DIST, 'grilles.html'), 'utf8');
+      expect(html).toContain('aria-label="Chargement des grilles"');
+      expect(html).not.toContain('Tu as tout joué');
+      expect(html).not.toContain('Aucune partie à plusieurs');
+    });
   },
 );
 
