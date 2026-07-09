@@ -5,6 +5,7 @@ import { bar, barFill, card, chevron, list, mid, rowMeta, rowTitle } from './lis
 import type { LobbySummary } from '@/application/game';
 import type { LobbyId } from '@/domain/game';
 import { LeaveGameButton } from '@/ui/components/lobby/LeaveGameButton';
+import { ShareInviteButton } from '@/ui/components/lobby/ShareInviteButton';
 
 // Session-scoped read only (ADR-0066 §4); stays single-shape when the user-scoped endpoint lands.
 
@@ -92,6 +93,7 @@ export function GrillesLobbiesSection({
               {onLeave != null ? (
                 <div className={rowWrap}>
                   {rowInner}
+                  <ShareInviteButton code={lobby.code} />
                   <LeaveGameButton playerCount={lobby.playerCount} onConfirm={() => onLeave(lobby.id)} />
                 </div>
               ) : (

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
   Outlet,
   RouterProvider,
@@ -8,6 +8,13 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@/ui/lib/shareInvite', () => ({
+  canNativeShare: vi.fn(() => false),
+  shareOrCopyInviteUrl: vi.fn(async () => 'copied' as const),
+}));
+
+import { shareOrCopyInviteUrl } from '@/ui/lib/shareInvite';
 import type { LobbySummary } from '@/application/game';
 import type { LobbyId } from '@/domain/game';
 import { GrillesLobbiesSection } from '@/ui/v2/GrillesLobbiesSection';
@@ -142,6 +149,35 @@ describe('GrillesLobbiesSection — leave/delete affordance (ADR-0098 §6)', () 
     fireEvent.click(await screen.findByRole('button', { name: 'Supprimer cette partie' }));
     const dialog = await screen.findByRole('dialog');
     await expectAxeClean(dialog);
+  });
+});
+
+describe('GrillesLobbiesSection — share-invite affordance', () => {
+  const WITH_OTHERS: LobbySummary = { ...IN_PROGRESS, playerCount: 3 };
+
+  it('copies the /join/<code> link and shows the confirmation, next to the leave button', async () => {
+    vi.mocked(shareOrCopyInviteUrl).mockClear();
+    renderInRouter(<GrillesLobbiesSection lobbies={[WITH_OTHERS]} onLeave={vi.fn()} />);
+    const share = await screen.findByRole('button', { name: 'Copier le lien' });
+    expect(screen.getByRole('button', { name: 'Quitter cette partie' })).toBeInTheDocument();
+    fireEvent.click(share);
+    await waitFor(() =>
+      expect(shareOrCopyInviteUrl).toHaveBeenCalledWith(`${window.location.origin}/join/${WITH_OTHERS.code}`),
+    );
+    expect(await screen.findByText('Copié')).toBeInTheDocument();
+  });
+
+  it('tapping the share button does not navigate the row', async () => {
+    renderInRouter(<GrillesLobbiesSection lobbies={[WITH_OTHERS]} onLeave={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Copier le lien' }));
+    expect(screen.queryByText('lobby')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Reprendre — Partie du 28 juin' })).toBeInTheDocument();
+  });
+
+  it('the row with share + leave is axe-clean (ADR-0050)', async () => {
+    const { container } = renderInRouter(<GrillesLobbiesSection lobbies={[WITH_OTHERS]} onLeave={vi.fn()} />);
+    await screen.findByRole('button', { name: 'Copier le lien' });
+    await expectAxeClean(container);
   });
 });
 
