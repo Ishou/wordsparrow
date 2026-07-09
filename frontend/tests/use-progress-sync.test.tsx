@@ -49,6 +49,8 @@ function fakeService(): ProgressSyncService & {
     },
     schedulePush() {},
     dispose() {},
+    subscribe: () => () => {},
+    getRevision: () => 0,
   };
 }
 

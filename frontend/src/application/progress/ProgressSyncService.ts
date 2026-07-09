@@ -47,6 +47,10 @@ export interface ProgressSyncService {
   schedulePush(puzzleId: string): void;
   // Cancels pending debounce timers (e.g. on sign-out / unmount).
   dispose(): void;
+  // Fires after each merge into local (pullAndMergeAll/One) so mount-gated views can re-read; returns an unsubscribe.
+  subscribe(listener: () => void): () => void;
+  // Monotonic merge counter — the useSyncExternalStore snapshot.
+  getRevision(): number;
 }
 
 const DEFAULT_DEBOUNCE_MS = 1500;
@@ -69,6 +73,12 @@ export function createProgressSyncService(
   const baseUpdatedAt = new Map<string, string>();
   const timers = new Map<string, ReturnType<typeof setTimeout>>();
   let enabled = false;
+  const listeners = new Set<() => void>();
+  let revision = 0;
+  function notify(): void {
+    revision += 1;
+    for (const listener of listeners) listener();
+  }
 
   async function pushPuzzle(sessionId: string, puzzleId: string): Promise<void> {
     let local = blobStore.loadPayload(sessionId, puzzleId);
@@ -125,6 +135,7 @@ export function createProgressSyncService(
       // Skip the push when local added nothing the server lacks — the no-op storm.
       if (!payloadsEqual(merged, remotePayload)) toPush.push(remote.puzzleId);
     }
+    notify();
     // Local-only puzzles the account never saw: push them up so the union holds.
     for (const puzzleId of blobStore.listPuzzleIds(sessionId)) {
       if (!seen.has(puzzleId)) toPush.push(puzzleId);
@@ -150,6 +161,7 @@ export function createProgressSyncService(
         { payload: remotePayload, updatedAt: remote?.updatedAt },
       );
       blobStore.replacePayload(sessionId, puzzleId, merged);
+      notify();
       if (!payloadsEqual(merged, remotePayload)) {
         await pushPuzzle(sessionId, puzzleId);
       }
@@ -179,6 +191,15 @@ export function createProgressSyncService(
     dispose(): void {
       for (const handle of timers.values()) cancel(handle);
       timers.clear();
+    },
+
+    subscribe(listener: () => void): () => void {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+
+    getRevision(): number {
+      return revision;
     },
   };
 }

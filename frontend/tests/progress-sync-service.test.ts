@@ -424,3 +424,85 @@ describe('ProgressSyncService — pullAndMergeOne (per-grid open)', () => {
     expect(client.pushes[0].baseUpdatedAt).toBeUndefined();
   });
 });
+
+describe('ProgressSyncService — merge-completion observable', () => {
+  it('starts at revision 0 and notifies subscribers after pullAndMergeAll', async () => {
+    const remoteEntry: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: payload({ entries: [{ r: 1, c: 1, l: 'B' }] }) as unknown as Record<string, unknown>,
+      updatedAt: T1,
+    };
+    const service = createProgressSyncService({
+      client: fakeClient({ pullAll: [remoteEntry] }),
+      blobStore: memBlobStore(),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    const seen: number[] = [];
+    service.subscribe(() => seen.push(service.getRevision()));
+    expect(service.getRevision()).toBe(0);
+
+    await service.pullAndMergeAll();
+
+    expect(seen).toEqual([1]);
+    expect(service.getRevision()).toBe(1);
+  });
+
+  it('notifies after pullAndMergeOne', async () => {
+    const remote: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: payload({ entries: [{ r: 1, c: 1, l: 'B' }] }) as unknown as Record<string, unknown>,
+      updatedAt: T1,
+    };
+    const service = createProgressSyncService({
+      client: fakeClient({ pull: () => remote }),
+      blobStore: memBlobStore(),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+    const fired = vi.fn();
+    service.subscribe(fired);
+
+    await service.pullAndMergeOne(PUZZLE);
+
+    expect(fired).toHaveBeenCalledTimes(1);
+    expect(service.getRevision()).toBe(1);
+  });
+
+  it('stops notifying after unsubscribe', async () => {
+    const service = createProgressSyncService({
+      client: fakeClient({ pullAll: [] }),
+      blobStore: memBlobStore(),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    const fired = vi.fn();
+    const unsubscribe = service.subscribe(fired);
+    unsubscribe();
+
+    await service.pullAndMergeAll();
+
+    expect(fired).not.toHaveBeenCalled();
+  });
+
+  it('does not notify when pullAndMergeOne is a disabled no-op', async () => {
+    const service = createProgressSyncService({
+      client: fakeClient({ pull: () => null }),
+      blobStore: memBlobStore(),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    const fired = vi.fn();
+    service.subscribe(fired);
+
+    await service.pullAndMergeOne(PUZZLE); // disabled → early return
+
+    expect(fired).not.toHaveBeenCalled();
+    expect(service.getRevision()).toBe(0);
+  });
+});
