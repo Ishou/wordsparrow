@@ -8,8 +8,7 @@ type GateProps = {
   readonly title: string;
 };
 
-// Gates the active solo assist affordance (ADR-0099's Vérifier today, hint before it); reuses the 'hint'
-// capability until a lobby setting maps assist mode -> capability.
+// Gates the active assist affordance; reuses 'hint' capability until ADR-0099's mode→capability mapping lands.
 export function useAssistGate(): GateProps | null {
   const auth = useOptionalAuth();
   const hasAssist = useCapability('hint');
