@@ -123,6 +123,7 @@ function renderContribuerPairs(opts: {
       puzzleSolver: {
         validate: vi.fn(),
         requestHint: vi.fn(),
+        verify: vi.fn(),
       },
       sessionClient: {
         eraseSession: () => Promise.resolve({ deleted: 0 }),

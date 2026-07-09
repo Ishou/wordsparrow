@@ -11,4 +11,9 @@ export {
   type HintLastResult,
   type HintRequestState,
 } from './useHintRequest';
+export {
+  useGridVerification,
+  type GridVerificationState,
+} from './useGridVerification';
+export { type AssistMode, ACTIVE_ASSIST_MODE } from './assistMode';
 export type { FocusedCell } from './focusedCell';

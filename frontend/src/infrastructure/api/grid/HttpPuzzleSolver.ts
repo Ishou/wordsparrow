@@ -1,10 +1,12 @@
 import {
   HintRequestError,
+  VerifyRequestError,
   type FilledCellInput,
   type HintDirection,
   type HintResult,
   type PuzzleSolver,
   type ValidationResult,
+  type VerifyResult,
 } from '@/application';
 import { createGridApiClient, type GridApiClient } from './client';
 
@@ -92,6 +94,45 @@ export function createHttpPuzzleSolver(
         })),
         hintsRemaining: data.hintsRemaining,
         secondsUntilNextHint: data.secondsUntilNextHint,
+      };
+    },
+
+    async verify(
+      puzzleId: string,
+      cells: ReadonlyArray<FilledCellInput>,
+    ): Promise<VerifyResult> {
+      const { data, error, response } = await client.POST(
+        '/v1/puzzles/{puzzleId}/verify',
+        {
+          params: { path: { puzzleId } },
+          // credentials: /verify needs the identity session cookie, same as /hints (ADR-0099).
+          credentials: 'include',
+          body: { cells: [...cells] },
+        },
+      );
+      if (error || !data) {
+        const detail =
+          error?.detail ?? error?.title ?? `HTTP ${response.status}`;
+        if (response.status === 429) {
+          // The 429 body is a VerifyCooldownProblem; narrow off the error union to read the countdown extension member.
+          const seconds =
+            error && 'secondsUntilNextVerify' in error
+              ? error.secondsUntilNextVerify
+              : null;
+          throw new VerifyRequestError('cooldown-active', seconds, detail);
+        }
+        if (response.status === 401) {
+          throw new VerifyRequestError('auth-required', null, detail);
+        }
+        throw new VerifyRequestError('transient', null, detail);
+      }
+      return {
+        cells: data.cells.map((c) => ({
+          row: c.row,
+          column: c.column,
+          correct: c.correct,
+        })),
+        secondsUntilNextVerify: data.secondsUntilNextVerify,
       };
     },
   };
