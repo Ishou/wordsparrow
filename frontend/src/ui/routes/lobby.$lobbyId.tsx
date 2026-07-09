@@ -14,7 +14,7 @@ import { OwnedGameModal } from '@/ui/v2/multiplayer/OwnedGameModal';
 import { HostSignInSheet } from '@/ui/home/HostSignInSheet';
 import { useToast } from '@/ui/components/primitives';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
-import { PhoneShell } from '@/ui/v2/PhoneShell';
+import { AppShell } from '@/ui/v2/AppShell';
 import { BackHeader } from '@/ui/v2/BackHeader';
 import { SparrowState } from '@/ui/v2/SparrowState';
 import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
@@ -38,9 +38,9 @@ const placeholder = css({
 
 function V2LobbyPlaceholder({ text }: { readonly text: string }) {
   return (
-    <PhoneShell header={<BackHeader to="/" />}>
+    <AppShell variant="flow" topBar={<BackHeader to="/" />}>
       <p className={placeholder} role="status">{text}</p>
-    </PhoneShell>
+    </AppShell>
   );
 }
 
@@ -48,14 +48,14 @@ function V2LobbyPlaceholder({ text }: { readonly text: string }) {
 function V2LobbyIntrouvable() {
   const navigate = useNavigate();
   return (
-    <PhoneShell>
+    <AppShell variant="flow">
       <SparrowState
         scene={sparrowFlightScene()}
         title={t('route.lobby.introuvable.title')}
         body={t('route.lobby.introuvable.body')}
         cta={{ label: t('route.lobby.introuvable.cta'), onClick: () => void navigate({ to: '/' }) }}
       />
-    </PhoneShell>
+    </AppShell>
   );
 }
 
@@ -63,14 +63,14 @@ function V2LobbyIntrouvable() {
 function V2LobbyEvicted() {
   const navigate = useNavigate();
   return (
-    <PhoneShell>
+    <AppShell variant="flow">
       <SparrowState
         scene={sparrowFlightScene()}
         title={t('route.lobby.evicted.title')}
         body={t('route.lobby.evicted.body')}
         cta={{ label: t('route.lobby.evicted.cta'), onClick: () => void navigate({ to: '/' }) }}
       />
-    </PhoneShell>
+    </AppShell>
   );
 }
 
@@ -252,7 +252,7 @@ function V2LobbyPage() {
   // COMPLETED co-op finish — the frozen grid is left behind; Résultats is the destination.
   if (lobby.state === 'COMPLETED') {
     return (
-      <PhoneShell header={<BackHeader to="/" />}>
+      <AppShell variant="flow" topBar={<BackHeader to="/" />}>
         <ResultatsScreen
           durationMs={view.durationMs ?? 0}
           players={rosterPlayers}
@@ -268,7 +268,7 @@ function V2LobbyPage() {
           onClose={coop.dismiss}
           startingNew={coop.startingNew}
         />
-      </PhoneShell>
+      </AppShell>
     );
   }
   return <V2LobbyPlaceholder text={t('route.lobby.placeholder.inProgress')} />;

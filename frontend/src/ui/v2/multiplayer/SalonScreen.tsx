@@ -11,7 +11,7 @@ import {
 } from '@/domain/game';
 import { t } from '@/ui/i18n';
 import { PlayerAvatar } from './PlayerAvatar';
-import { PhoneShell } from '@/ui/v2/PhoneShell';
+import { AppShell } from '@/ui/v2/AppShell';
 import { BackHeader } from '@/ui/v2/BackHeader';
 
 // Six presets mirror the prod WaitingRoom picker: four squares + two landscape options.
@@ -300,7 +300,7 @@ export function SalonScreen({
   );
 
   return (
-    <PhoneShell header={<BackHeader to="/" />}>
+    <AppShell variant="flow" topBar={<BackHeader to="/" />}>
       <h1 className={title}>{t('v2.multiplayer.salon.title')}</h1>
       <p className={lead}>{t('v2.multiplayer.salon.lead')}</p>
 
@@ -444,6 +444,6 @@ export function SalonScreen({
         <SignOut size={17} weight="bold" aria-hidden="true" />
         {t('v2.multiplayer.leave')}
       </button>
-    </PhoneShell>
+    </AppShell>
   );
 }
