@@ -1,6 +1,12 @@
-// Native share sheet when the platform has one (mobile), clipboard otherwise.
+// Same signal as useTouchPrimary — a touch-first device with no hover.
+const TOUCH_PRIMARY_QUERY = '(any-pointer: coarse) and (any-hover: none)';
+
+// Native share sheet only on touch-primary platforms; desktops that expose
+// navigator.share still fall through to a direct clipboard copy.
 export function canNativeShare(): boolean {
-  return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return false;
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia?.(TOUCH_PRIMARY_QUERY)?.matches === true;
 }
 
 // Branch actually taken; callers gate "copied" feedback on 'copied', not on platform capability.

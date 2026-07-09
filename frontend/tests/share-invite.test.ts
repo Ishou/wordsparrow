@@ -2,6 +2,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { canNativeShare, shareOrCopyInviteUrl } from '@/ui/lib/shareInvite';
 
 const URL = 'https://wordsparrow.io/join/A2B3C4';
+const QUERY = '(any-pointer: coarse) and (any-hover: none)';
+
+const originalMatchMedia = window.matchMedia;
+
+// Touch-primary devices report `matches: true` for the coarse/no-hover query.
+function stubMatchMedia(matches: boolean) {
+  window.matchMedia = vi.fn().mockReturnValue({
+    matches,
+    media: QUERY,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }) as unknown as typeof window.matchMedia;
+}
 
 describe('shareInvite', () => {
   const writeText = vi.fn().mockResolvedValue(undefined);
@@ -12,11 +29,14 @@ describe('shareInvite', () => {
       configurable: true,
       value: { writeText },
     });
+    // Default: touch device (share sheet available and preferred).
+    stubMatchMedia(true);
   });
 
   afterEach(() => {
     // @ts-expect-error -- test-only teardown of a jsdom stub.
     delete navigator.share;
+    window.matchMedia = originalMatchMedia;
   });
 
   describe('canNativeShare', () => {
@@ -24,17 +44,26 @@ describe('shareInvite', () => {
       expect(canNativeShare()).toBe(false);
     });
 
-    it('is true once navigator.share is stubbed', () => {
+    it('is true on a touch device once navigator.share is stubbed', () => {
       Object.defineProperty(navigator, 'share', {
         configurable: true,
         value: vi.fn().mockResolvedValue(undefined),
       });
       expect(canNativeShare()).toBe(true);
     });
+
+    it('is false on a non-touch device even when navigator.share exists', () => {
+      Object.defineProperty(navigator, 'share', {
+        configurable: true,
+        value: vi.fn().mockResolvedValue(undefined),
+      });
+      stubMatchMedia(false);
+      expect(canNativeShare()).toBe(false);
+    });
   });
 
   describe('shareOrCopyInviteUrl', () => {
-    it('resolves "shared" and never touches the clipboard when navigator.share resolves', async () => {
+    it('resolves "shared" and never touches the clipboard when navigator.share resolves (touch)', async () => {
       const share = vi.fn().mockResolvedValue(undefined);
       Object.defineProperty(navigator, 'share', { configurable: true, value: share });
 
@@ -62,6 +91,18 @@ describe('shareInvite', () => {
       const result = await shareOrCopyInviteUrl(URL);
 
       expect(result).toBe('copied');
+      expect(writeText).toHaveBeenCalledWith(URL);
+    });
+
+    it('copies directly on a non-touch device even when navigator.share exists (never opens the sheet)', async () => {
+      const share = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'share', { configurable: true, value: share });
+      stubMatchMedia(false);
+
+      const result = await shareOrCopyInviteUrl(URL);
+
+      expect(result).toBe('copied');
+      expect(share).not.toHaveBeenCalled();
       expect(writeText).toHaveBeenCalledWith(URL);
     });
 

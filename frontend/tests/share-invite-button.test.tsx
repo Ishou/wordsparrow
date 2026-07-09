@@ -3,22 +3,47 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectAxeClean } from '@/test/a11y';
 
 vi.mock('@/ui/lib/shareInvite', () => ({
-  canNativeShare: vi.fn(() => false),
   shareOrCopyInviteUrl: vi.fn(async () => 'copied' as const),
 }));
 
-import { canNativeShare, shareOrCopyInviteUrl } from '@/ui/lib/shareInvite';
+vi.mock('@phosphor-icons/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@phosphor-icons/react')>();
+  return {
+    ...actual,
+    Copy: (props: Record<string, unknown>) => <svg data-testid="icon-copy" {...props} />,
+    ShareNetwork: (props: Record<string, unknown>) => <svg data-testid="icon-share" {...props} />,
+  };
+});
+
+import { shareOrCopyInviteUrl } from '@/ui/lib/shareInvite';
 import { ShareInviteButton } from '@/ui/components/lobby/ShareInviteButton';
 
 const CODE = 'A2B3C4';
+const QUERY = '(any-pointer: coarse) and (any-hover: none)';
+const originalMatchMedia = window.matchMedia;
+
+// `useTouchPrimary` reads this query; `true` = touch-primary device.
+function stubMatchMedia(matches: boolean) {
+  window.matchMedia = vi.fn().mockReturnValue({
+    matches,
+    media: QUERY,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }) as unknown as typeof window.matchMedia;
+}
 
 describe('ShareInviteButton', () => {
   beforeEach(() => {
     vi.mocked(shareOrCopyInviteUrl).mockClear().mockResolvedValue('copied');
-    vi.mocked(canNativeShare).mockReturnValue(false);
+    stubMatchMedia(false);
   });
   afterEach(() => {
     vi.useRealTimers();
+    window.matchMedia = originalMatchMedia;
   });
 
   it('copies the canonical /join/<code> URL and shows the confirmation', async () => {
@@ -30,10 +55,19 @@ describe('ShareInviteButton', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Copié');
   });
 
-  it('labels the button "Partager le lien" when a native share sheet is available', () => {
-    vi.mocked(canNativeShare).mockReturnValue(true);
+  it('renders the copy icon and "Copier le lien" label on a non-touch device', () => {
+    render(<ShareInviteButton code={CODE} />);
+    expect(screen.getByRole('button', { name: 'Copier le lien' })).toBeInTheDocument();
+    expect(screen.getByTestId('icon-copy')).toBeInTheDocument();
+    expect(screen.queryByTestId('icon-share')).toBeNull();
+  });
+
+  it('renders the share icon and "Partager le lien" label on a touch device', () => {
+    stubMatchMedia(true);
     render(<ShareInviteButton code={CODE} />);
     expect(screen.getByRole('button', { name: 'Partager le lien' })).toBeInTheDocument();
+    expect(screen.getByTestId('icon-share')).toBeInTheDocument();
+    expect(screen.queryByTestId('icon-copy')).toBeNull();
   });
 
   it('does not show the confirmation when the share was dismissed (not copied)', async () => {

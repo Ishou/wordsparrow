@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { ShareNetwork } from '@phosphor-icons/react';
+import { Copy, ShareNetwork } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
-import { canNativeShare, shareOrCopyInviteUrl } from '@/ui/lib/shareInvite';
+import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
+import { shareOrCopyInviteUrl } from '@/ui/lib/shareInvite';
 import { t } from '@/ui/i18n';
 
 // Per-row re-share affordance, mirrors LeaveGameButton's placement outside the row Link.
@@ -31,6 +32,8 @@ const feedbackStyles = css({ fontSize: 'xs', color: 'ws.jadeInk' });
 const COPY_FEEDBACK_MS = 2000;
 
 export function ShareInviteButton({ code }: { readonly code: string }) {
+  // Touch shows the share sheet; desktop copies directly — icon must match.
+  const touchPrimary = useTouchPrimary();
   const [justCopied, setJustCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
@@ -60,14 +63,18 @@ export function ShareInviteButton({ code }: { readonly code: string }) {
       <button
         type="button"
         className={triggerStyles}
-        aria-label={canNativeShare() ? t('lobby.myLobbies.aria.share') : t('lobby.myLobbies.aria.copy')}
+        aria-label={touchPrimary ? t('lobby.myLobbies.aria.share') : t('lobby.myLobbies.aria.copy')}
         onClick={(event) => {
           // The button lives inside a tappable row card; never let it navigate.
           event.stopPropagation();
           handleShare();
         }}
       >
-        <ShareNetwork size={18} weight="bold" aria-hidden="true" />
+        {touchPrimary ? (
+          <ShareNetwork size={18} weight="bold" aria-hidden="true" />
+        ) : (
+          <Copy size={18} weight="bold" aria-hidden="true" />
+        )}
       </button>
       <span role="status" aria-live="polite" className={feedbackStyles}>
         {justCopied ? t('lobby.myLobbies.copied') : ''}

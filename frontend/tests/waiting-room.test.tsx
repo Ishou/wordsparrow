@@ -1,6 +1,16 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Lobby, Pseudonym, SessionId } from '@/domain/game';
+
+vi.mock('@phosphor-icons/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@phosphor-icons/react')>();
+  return {
+    ...actual,
+    Copy: (props: Record<string, unknown>) => <svg data-testid="icon-copy" {...props} />,
+    ShareNetwork: (props: Record<string, unknown>) => <svg data-testid="icon-share" {...props} />,
+  };
+});
+
 import { WaitingRoom } from '@/ui/components/lobby/WaitingRoom';
 
 // `WaitingRoom` is a pure prop-driven component (Wave H PR #16). The
@@ -474,6 +484,49 @@ describe('WaitingRoom — code rotation (ADR-0029)', () => {
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByRole('button', { name: /régénérer le code/i })).toBeNull();
+  });
+});
+
+describe('WaitingRoom — touch-aware share control', () => {
+  const QUERY = '(any-pointer: coarse) and (any-hover: none)';
+  const originalMatchMedia = window.matchMedia;
+
+  // `useTouchPrimary` reads this query; `true` = touch-primary device.
+  function stubMatchMedia(matches: boolean) {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches,
+      media: QUERY,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as unknown as typeof window.matchMedia;
+  }
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('shows the copy icon and "Copier le lien" label on a non-touch device', () => {
+    stubMatchMedia(false);
+    render(
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+    );
+    expect(screen.getByRole('button', { name: /copier le lien/i })).toBeInTheDocument();
+    expect(screen.getByTestId('icon-copy')).toBeInTheDocument();
+    expect(screen.queryByTestId('icon-share')).toBeNull();
+  });
+
+  it('shows the share icon and "Partager le lien" label on a touch device', () => {
+    stubMatchMedia(true);
+    render(
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+    );
+    expect(screen.getByRole('button', { name: /partager le lien/i })).toBeInTheDocument();
+    expect(screen.getByTestId('icon-share')).toBeInTheDocument();
+    expect(screen.queryByTestId('icon-copy')).toBeNull();
   });
 });
 
