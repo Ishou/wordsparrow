@@ -60,6 +60,8 @@ const bannerWrap = css({ margin: '14px 0' });
 const calWrap = css({ lg: { maxWidth: '420px', marginInline: 'auto' } });
 const calendarSkeletonCard = css({ bg: 'ws.sable', borderRadius: '18px', padding: '15px 12px' });
 const calendarSkeletonRow = css({ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '7px', justifyItems: 'center' });
+// Mirrors the list-row card box (listRowStyles) minus the interactive affordances — this row isn't tappable.
+const lobbySkeletonCard = css({ bg: 'ws.card', borderRadius: '16px', padding: '13px 14px', marginBottom: '10px', boxShadow: '0 1px 2px rgba(33,75,64,0.08)' });
 
 const joinLink = css({
   display: 'block',
@@ -104,6 +106,9 @@ export function GrillesArchiveScreen({
   // Gate the skeleton behind a short delay so sub-200ms loads never flash it.
   const [showSkeleton, setShowSkeleton] = useState(false);
   const [lobbies, setLobbies] = useState<readonly LobbySummary[]>([]);
+  const [lobbiesLoading, setLobbiesLoading] = useState(true);
+  // Same anti-flash gate as the calendar skeleton: hold it back so sub-200ms loads never flash.
+  const [showLobbiesSkeleton, setShowLobbiesSkeleton] = useState(false);
   // Bumped after a leave/delete so the lobbies effect refetches and the row drops.
   const [lobbiesRefreshTick, setLobbiesRefreshTick] = useState(0);
   const [hostSignInOpen, setHostSignInOpen] = useState(false);
@@ -161,6 +166,15 @@ export function GrillesArchiveScreen({
   }, [loading]);
 
   useEffect(() => {
+    if (!lobbiesLoading) {
+      setShowLobbiesSkeleton(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowLobbiesSkeleton(true), 200);
+    return () => clearTimeout(timer);
+  }, [lobbiesLoading]);
+
+  useEffect(() => {
     let cancelled = false;
     setLoading(true);
     fetchAllDailySummaries(puzzleRepository, todayIso)
@@ -182,6 +196,7 @@ export function GrillesArchiveScreen({
     if (lobbyClient == null || getSession == null) return;
     if (authStatus === 'loading') return;
     let cancelled = false;
+    setLobbiesLoading(true);
     // ADR-0066: authed players get the cross-device user-scoped union; anon stays session-scoped.
     const fetching =
       authStatus === 'authed' ? lobbyClient.listMyLobbiesForUser() : lobbyClient.listMyLobbies(getSession().sessionId);
@@ -191,6 +206,9 @@ export function GrillesArchiveScreen({
       })
       .catch(() => {
         if (!cancelled) setLobbies([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLobbiesLoading(false);
       });
     return () => {
       cancelled = true;
@@ -225,7 +243,7 @@ export function GrillesArchiveScreen({
 
   const calendarSkeleton = (
     <div className={calWrap}>
-      <div className={calendarSkeletonCard} aria-busy="true" aria-label={t('v2.grilles.loading')}>
+      <div className={calendarSkeletonCard} role="status" aria-busy="true" aria-label={t('v2.grilles.loading')}>
         {Array.from({ length: 5 }, (_, w) => (
           <div key={w} className={calendarSkeletonRow}>
             {Array.from({ length: 7 }, (_, d) => (
@@ -297,17 +315,31 @@ export function GrillesArchiveScreen({
     </ul>
   );
 
-  const plusieurs =
-    lobbies.length > 0 ? (
-      <GrillesLobbiesSection lobbies={lobbies} onClaim={handleClaimLobby} onLeave={handleLeaveLobby} />
-    ) : (
-      <>
-        <LobbiesEmptyState onCreate={createParty} />
-        <Link to="/" className={joinLink}>
-          {t('v2.grilles.plusieurs.join')}
-        </Link>
-      </>
-    );
+  const lobbiesSkeleton = (
+    <ul className={list} role="status" aria-busy="true" aria-label={t('v2.grilles.plusieurs.loading')}>
+      {Array.from({ length: 3 }, (_, i) => (
+        <li key={i} className={lobbySkeletonCard}>
+          <div className={mid}>
+            <Skeleton tone="onCard" width="55%" height={14} />
+            <Skeleton tone="onCard" width="40%" height={11} style={{ marginTop: 6 }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const plusieurs = showLobbiesSkeleton ? (
+    lobbiesSkeleton
+  ) : lobbiesLoading ? null : lobbies.length > 0 ? (
+    <GrillesLobbiesSection lobbies={lobbies} onClaim={handleClaimLobby} onLeave={handleLeaveLobby} />
+  ) : (
+    <>
+      <LobbiesEmptyState onCreate={createParty} />
+      <Link to="/" className={joinLink}>
+        {t('v2.grilles.plusieurs.join')}
+      </Link>
+    </>
+  );
 
   return (
     <>

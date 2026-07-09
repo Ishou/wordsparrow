@@ -42,8 +42,8 @@ const DIST = resolve(import.meta.dirname, '../dist');
 // route's pendingComponent (skeleton) renders; we graft pass A's
 // <head> onto pass B's body.
 
-// Home + /play fetch the daily in a way that would bake the grid into static HTML (flicker); graft the head onto a hung-loader skeleton. /grilles has its own in-component aria-busy.
-const PUZZLE_LOADING_ROUTES: ReadonlySet<string> = new Set(['/', '/play']);
+// Home + /play would bake the fixture grid (fixture→real swap on F5); /grilles' empty-archive stub would bake the Quotidiennes "Tu as tout joué" empty state, which flashes before hydration on any ?onglet=… deep link. All three graft the head onto a hung-loader skeleton body instead.
+const PUZZLE_LOADING_ROUTES: ReadonlySet<string> = new Set(['/', '/play', '/grilles']);
 
 // Hang auth/survey so AuthProvider stays in `loading` and the anon-redirect effect never fires.
 const AUTH_GATED_ROUTES: ReadonlySet<string> = new Set([

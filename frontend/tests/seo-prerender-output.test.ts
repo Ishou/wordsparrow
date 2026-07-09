@@ -279,6 +279,18 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
         expect(html).not.toMatch(/data-scope="menu"[^>]*data-part="content"/);
       },
     );
+
+    // Prerender stubs the daily archive as empty, so without the
+    // hung-loader-skeleton treatment /grilles bakes the Quotidiennes
+    // "Tu as tout joué" empty state — which the query string can't vary, so
+    // it flashes before hydration on every /grilles?onglet=… deep link.
+    // The baked body must be the loading skeleton, not a tab's terminal state.
+    it('bakes the loading skeleton into dist/grilles.html, not a terminal empty state', () => {
+      const html = readFileSync(resolve(DIST, 'grilles.html'), 'utf8');
+      expect(html).toContain('aria-label="Chargement des grilles"');
+      expect(html).not.toContain('Tu as tout joué');
+      expect(html).not.toContain('Aucune partie à plusieurs');
+    });
   },
 );
 
