@@ -20,7 +20,8 @@ const triggerStyles = css({
   cursor: 'pointer',
   transition: 'background-color 120ms, color 120ms',
   _hover: { bg: 'ws.sable', color: 'ws.jadeInk' },
-  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+  // Inset offset (mirrors listRowStyles `card`) so the ring is not clipped by the row's overflow.
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' },
 });
 
 const wrapStyles = css({ display: 'inline-flex', alignItems: 'center', gap: '4px' });

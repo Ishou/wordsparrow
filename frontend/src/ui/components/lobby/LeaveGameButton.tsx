@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SignOut, Trash } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
-import { Button, Dialog, DialogDescription } from '@/ui/components/primitives';
+import { Button, Dialog, DialogDescription, useToast } from '@/ui/components/primitives';
 import { t } from '@/ui/i18n';
 
 // Per-row "quitter / supprimer" affordance for the multiplayer game lists
@@ -27,7 +27,8 @@ const triggerStyles = css({
   cursor: 'pointer',
   transition: 'background-color 120ms, color 120ms',
   _hover: { bg: 'ws.sable', color: 'ws.jadeInk' },
-  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+  // Inset offset (mirrors listRowStyles `card`) so the ring is not clipped by the row's overflow.
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '-3px' },
 });
 
 const actionsStyles = css({
@@ -42,14 +43,26 @@ export function LeaveGameButton({
   onConfirm,
 }: {
   readonly playerCount: number;
-  readonly onConfirm: () => void;
+  readonly onConfirm: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const { show: showToast } = useToast();
   const willDelete = playerCount <= 1;
 
   const handleConfirm = () => {
-    setOpen(false);
-    onConfirm();
+    if (pending) return;
+    setPending(true);
+    Promise.resolve(onConfirm())
+      .then(() => {
+        setPending(false);
+        setOpen(false);
+      })
+      .catch(() => {
+        // Keep the dialog open for a retry; the copy tracks delete-vs-leave.
+        showToast({ text: willDelete ? t('lobby.delete.error') : t('lobby.leave.error'), tone: 'error' });
+        setPending(false);
+      });
   };
 
   return (
@@ -57,6 +70,7 @@ export function LeaveGameButton({
       <button
         type="button"
         className={triggerStyles}
+        disabled={pending}
         aria-label={willDelete ? t('lobby.leave.aria.delete') : t('lobby.leave.aria.leave')}
         onClick={(event) => {
           // The button lives inside a tappable row card; never let it navigate.
@@ -72,17 +86,23 @@ export function LeaveGameButton({
       </button>
       <Dialog
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          if (!pending) setOpen(false);
+        }}
         title={willDelete ? t('lobby.leave.confirm.deleteTitle') : t('lobby.leave.confirm.leaveTitle')}
       >
         <DialogDescription>
           {willDelete ? t('lobby.leave.confirm.deleteBody') : t('lobby.leave.confirm.leaveBody')}
         </DialogDescription>
         <div className={actionsStyles}>
-          <Button variant="primary" onClick={handleConfirm}>
-            {willDelete ? t('lobby.leave.confirm.delete') : t('lobby.leave.confirm.leave')}
+          <Button variant="primary" onClick={handleConfirm} disabled={pending} aria-busy={pending || undefined}>
+            {pending
+              ? t('lobby.leave.processing')
+              : willDelete
+                ? t('lobby.leave.confirm.delete')
+                : t('lobby.leave.confirm.leave')}
           </Button>
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
             {t('lobby.leave.confirm.cancel')}
           </Button>
         </div>
