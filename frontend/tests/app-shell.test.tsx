@@ -120,3 +120,38 @@ describe('AppShell (overlay)', () => {
     expect(main).toContainElement(screen.getByTestId('viewport'));
   });
 });
+
+// The default DesktopAppBar is a <header> banner landmark; the slot's contract is asserted against its presence.
+describe.each(['overlay', 'flow'] as const)('AppShell (%s) desktopBar slot', (variant) => {
+  it('renders a passed desktopBar instead of the default DesktopAppBar', async () => {
+    renderShell(
+      <AppShell variant={variant} desktopBar={<div data-testid="custom-bar" />}>
+        <p>c</p>
+      </AppShell>,
+    );
+    await screen.findByRole('main');
+    expect(screen.getByTestId('custom-bar')).toBeInTheDocument();
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+  });
+
+  it('renders no desktop bar when desktopBar is null', async () => {
+    renderShell(
+      <AppShell variant={variant} desktopBar={null}>
+        <p>c</p>
+      </AppShell>,
+    );
+    await screen.findByRole('main');
+    expect(screen.queryByTestId('custom-bar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the default DesktopAppBar when desktopBar is omitted', async () => {
+    renderShell(
+      <AppShell variant={variant}>
+        <p>c</p>
+      </AppShell>,
+    );
+    await screen.findByRole('main');
+    expect(screen.getByRole('banner')).toBeInTheDocument();
+  });
+});
