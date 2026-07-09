@@ -6,7 +6,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthClient } from '@/application/auth/AuthClient';
 import type { DailySummary, PuzzleRepository } from '@/application';
 import type { ProgressSyncService } from '@/application/progress';
@@ -14,7 +14,9 @@ import type { SoloEntriesStore, SoloLockedCell } from '@/application/solo/SoloEn
 import { HomeScreen } from '@/ui/home/HomeScreen';
 import { AuthProvider } from '@/ui/components/auth';
 
-const TODAY = new Date().toISOString().slice(0, 10);
+// Fixed "now" — HomeScreen derives its own todayIso from Date.now(),
+// so the clock is pinned in beforeEach to agree with this fixture's date.
+const TODAY = '2026-06-24';
 const summaryToday: DailySummary = {
   id: 'today-1',
   date: TODAY,
@@ -113,6 +115,14 @@ function renderHome(opts: {
 // The day-dot button renders the day-of-month as its only text; that's unambiguous among page buttons.
 const DAY_NUM = String(new Date(`${TODAY}T00:00:00Z`).getUTCDate());
 const todayCell = () => screen.getAllByRole('button').find((b) => b.textContent === DAY_NUM)!;
+
+beforeEach(() => {
+  vi.setSystemTime(new Date(`${TODAY}T00:00:00.000Z`));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('Home — cross-device progress sync', () => {
   it('fires pullAndMergeAll on mount when authed', async () => {
