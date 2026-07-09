@@ -15,10 +15,11 @@ export interface AppShellProps {
   readonly navActive?: 'accueil' | 'grilles';
   readonly backTo?: LinkProps['to'];
   readonly headerFlush?: boolean;
+  // Body stops scrolling and delegates to an inner flex:1 child, so a pinned head (e.g. tabs) can stay above a scrolling list.
+  readonly fillBody?: boolean;
 }
 
-// Fills #root (height:100%), never depends on 100dvh on mobile so the visual-viewport
-// mismatch that produced the PWA phantom scroll can't recur; md/lg keep the tablet-card/desktop look.
+// Fills #root; never depends on 100dvh so mobile visual-viewport mismatch can't recur.
 const shell = css({
   height: '100%',
   minHeight: 0,
@@ -61,11 +62,15 @@ const body = css({
 });
 const bodyBottomInset = css({ paddingBottom: 'calc(env(safe-area-inset-bottom) + 28px)', lg: { paddingBottom: '56px' } });
 const bodyFlushTop = css({ paddingTop: 0, lg: { paddingTop: '26px' } });
+// Body stops scrolling and becomes a flex column so an inner flex:1 child owns the scroll instead.
+const bodyFill = css({ overflowY: 'hidden', display: 'flex', flexDirection: 'column', paddingBottom: 0, lg: { paddingBottom: 0 } });
 
 const bottomSlot = css({ gridRow: '3', minHeight: 0 });
 
 // Desktop centres the 680px reading column inside the full-width scroller; passthrough on phone/tablet.
 const inner = css({ display: 'contents', lg: { display: 'block', width: '100%', maxWidth: '680px', marginInline: 'auto', paddingInline: '36px' } });
+// Standalone (never stacked with `inner`): the flex column that lets a fillBody child pin a head above a scrolling body.
+const innerFill = css({ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, lg: { width: '100%', maxWidth: '680px', marginInline: 'auto', paddingInline: '36px' } });
 
 // Desktop-only page Retour (the mobile BackHeader is hidden at lg); pill matches BackHeader's.
 const deskBack = css({
@@ -91,7 +96,7 @@ const overlayMain = css({ position: 'relative', flex: 1, minHeight: 0, display: 
 const overlayTop = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, paddingTop: 'env(safe-area-inset-top)', lg: { position: 'static', paddingTop: 0 } });
 const overlayBottom = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, paddingBottom: 'env(safe-area-inset-bottom)', lg: { position: 'static', paddingBottom: 0 } });
 
-export function AppShell({ children, variant = 'flow', topBar, bottomBar, navActive, backTo, headerFlush }: AppShellProps) {
+export function AppShell({ children, variant = 'flow', topBar, bottomBar, navActive, backTo, headerFlush, fillBody }: AppShellProps) {
   if (variant === 'overlay') {
     return (
       <div className={shell} lang="fr">
@@ -113,8 +118,8 @@ export function AppShell({ children, variant = 'flow', topBar, bottomBar, navAct
       <div className={frame}>
         <DesktopAppBar active={navActive} />
         {topBar != null ? <div className={cx(headerSlot, !headerFlush && headerSlotPadded)}>{topBar}</div> : null}
-        <main id="main-content" tabIndex={-1} className={cx(body, bottomBar == null && bodyBottomInset, headerFlush && bodyFlushTop)}>
-          <div className={inner}>
+        <main id="main-content" tabIndex={-1} className={cx(body, bottomBar == null && bodyBottomInset, headerFlush && bodyFlushTop, fillBody && bodyFill)}>
+          <div className={fillBody ? innerFill : inner}>
             {backTo != null ? (
               <Link to={backTo} className={deskBack}>
                 <CaretLeft size={16} weight="bold" aria-hidden="true" />

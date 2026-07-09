@@ -13,14 +13,22 @@ export interface PhoneShellProps {
   readonly headerFlush?: boolean;
   // Mobile bottom nav (home/grilles only); now a shell bottom row that reserves its own space.
   readonly bottomNav?: ReactNode;
-  // Deprecated no-op: the flow body is already the single scroll container.
+  // Body stops scrolling and delegates to an inner flex:1 child, so a pinned head (e.g. tabs) can stay above a scrolling list.
   readonly fillBody?: boolean;
 }
 
 // Transitional shim (retired in a later phase) so v2 screens keep working while call sites migrate to AppShell.
-export function PhoneShell({ children, header, navActive, backTo, headerFlush, bottomNav }: PhoneShellProps) {
+export function PhoneShell({ children, header, navActive, backTo, headerFlush, bottomNav, fillBody }: PhoneShellProps) {
   return (
-    <AppShell variant="flow" topBar={header} bottomBar={bottomNav} navActive={navActive} backTo={backTo} headerFlush={headerFlush}>
+    <AppShell
+      variant="flow"
+      topBar={header}
+      bottomBar={bottomNav}
+      navActive={navActive}
+      backTo={backTo}
+      headerFlush={headerFlush}
+      fillBody={fillBody}
+    >
       {children}
     </AppShell>
   );
