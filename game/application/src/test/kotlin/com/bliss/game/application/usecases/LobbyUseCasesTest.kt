@@ -901,6 +901,73 @@ class LobbyUseCasesTest {
             assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.LobbyNotFound)
         }
 
+    // ---- LeaveMembership (ADR-0098 amendment 2026-07-08): leave + relinquish-if-owner + destroy-if-defunct) ----
+
+    // Owner alone -> relinquish nulls owner + drops the only seat -> ownerless-and-empty -> destroyed.
+    @Test
+    fun `LeaveMembership by the sole owner destroys the lobby`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            val out = h.leaveMembership(lobby.id, userA).requireSuccess()
+
+            assertThat(out.value.relinquishedOwnership).isEqualTo(true)
+            assertThat(h.repo.findById(lobby.id)).isNull()
+        }
+
+    // Owner with a co-player -> ownership relinquished, lobby survives host-less, co-player kept.
+    @Test
+    fun `LeaveMembership by an owner with a co-player leaves it ownerless keeping the co-player`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.join(lobby.id, sessionB, bob).requireSuccess()
+
+            val out = h.leaveMembership(lobby.id, userA).requireSuccess()
+
+            assertThat(out.value.relinquishedOwnership).isEqualTo(true)
+            val state = h.repo.findById(lobby.id)!!
+            assertThat(state.ownerUserId).isNull()
+            assertThat(state.players.keys.contains(sessionA)).isEqualTo(false)
+            assertThat(state.players.keys.contains(sessionB)).isEqualTo(true)
+        }
+
+    // Non-owner among others -> only their seat is dropped; the lobby stays owned.
+    @Test
+    fun `LeaveMembership by a non-owner co-player drops only their seat and keeps the lobby owned`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            h.joinWithUserId(lobby.id, sessionB, bob, lobby.code.value, userB).requireSuccess()
+            // A signed-in co-player's seat carries their userId only after the ADR-0066 rebind.
+            h.rebind(sessionB, userB, bob)
+
+            val out = h.leaveMembership(lobby.id, userB).requireSuccess()
+
+            assertThat(out.value.relinquishedOwnership).isEqualTo(false)
+            val state = h.repo.findById(lobby.id)!!
+            assertThat(state.ownerUserId).isEqualTo(userA)
+            assertThat(state.players.keys.contains(sessionB)).isEqualTo(false)
+            assertThat(state.players.keys.contains(sessionA)).isEqualTo(true)
+        }
+
+    @Test
+    fun `LeaveMembership returns NotPresentInLobby when the caller has no seat`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userA).value
+            val out = h.leaveMembership(lobby.id, userB)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.NotPresentInLobby)
+        }
+
+    @Test
+    fun `LeaveMembership returns LobbyNotFound for an unknown lobby`() =
+        runTest {
+            val h = harness()
+            val out = h.leaveMembership(LobbyId.generate(), userA)
+            assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.LobbyNotFound)
+        }
+
     // ADR-0098 §2: a present player claims an ownerless game, rebinding owner_user_id and ownerSessionId.
     @Test
     fun `Claim rebinds ownership to a present player on an ownerless lobby`() =
@@ -1012,6 +1079,7 @@ internal class Harness(
     val claim = ClaimLobbyOwnershipUseCase(repo, clock)
     val relinquish = RelinquishOwnershipUseCase(repo, clock)
     val relinquishByUser = RelinquishOwnershipByUserUseCase(repo, clock)
+    val leaveMembership = LeaveMembershipUseCase(repo, leave, relinquishByUser)
 
     suspend fun create(
         s: SessionId,
@@ -1102,7 +1170,27 @@ internal class Harness(
         l: LobbyId,
         u: UserId,
     ) = relinquishByUser.invoke(l, u)
+
+    suspend fun leaveMembership(
+        l: LobbyId,
+        u: UserId,
+    ) = leaveMembership.invoke(l, u)
+
+    // ADR-0066 anon->authed: a fresh authed join seats userId=null; the seat carries the userId only after this rebind.
+    suspend fun rebind(
+        s: SessionId,
+        u: UserId,
+        p: Pseudonym,
+    ) = repo.rebindAnonSeats(STUB_JDBC_CONNECTION, s, u, p)
 }
+
+// InMemory rebindAnonSeats ignores the JDBC connection; a no-op proxy satisfies the signature.
+private val STUB_JDBC_CONNECTION: java.sql.Connection =
+    java.lang.reflect.Proxy
+        .newProxyInstance(
+            java.sql.Connection::class.java.classLoader,
+            arrayOf(java.sql.Connection::class.java),
+        ) { _, _, _ -> null } as java.sql.Connection
 
 internal fun <T> UseCaseOutcome<T>.requireSuccess(): UseCaseResult<T> =
     when (this) {
