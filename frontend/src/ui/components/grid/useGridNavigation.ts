@@ -33,7 +33,7 @@ export interface GridNavigation {
   readonly highlightFor: (position: Position) => CellHighlight;
   // click (not pointerdown) — pan gestures never produce a click, so focus is suppressed naturally.
   readonly handleClick: (event: React.MouseEvent<HTMLDivElement>) => void;
-  // Tap a definition cell → focus its answer word's first editable-and-empty cell. Pan-gated like handleClick.
+  // Tap a definition cell → focus its word's first editable-and-empty cell; a repeat tap on a dual-def cell toggles to its other clue. Pan-gated.
   readonly handleDefinitionClick: (position: Position) => void;
   readonly handleFocus: (event: React.FocusEvent<HTMLInputElement>) => void;
   // Snap DOM focus back to the cell input when blur would otherwise leave
@@ -531,7 +531,11 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
       if (isPanningRef.current?.() === true) return;
       const clues = lookup.cluesByDefCell(defPosition.row, defPosition.col);
       if (clues.length === 0) return;
-      const target = clues[0];
+      // Toggle: if the focused word is already one of this cell's clues, advance to the next; else start at the first.
+      const { focused: f, direction: dir } = stateRef.current;
+      const activeClue = f ? lookup.clueAt(f.row, f.col, dir) : undefined;
+      const activeIdx = activeClue ? clues.findIndex((c) => c === activeClue) : -1;
+      const target = clues[activeIdx >= 0 ? (activeIdx + 1) % clues.length : 0];
       // First editable-and-empty cell (skip locked + typed), else first editable, else the word's first cell.
       const editable = target.cells.filter(
         (c) => !(isCellValidatedRef.current?.(c.position.row, c.position.col) ?? false),
@@ -540,7 +544,7 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
         (c) => (refs.current.get(key(c.position))?.value ?? '') === '',
       );
       const landing = (firstEmpty ?? editable[0] ?? target.cells[0]).position;
-      if (target.direction !== stateRef.current.direction) setDirection(target.direction);
+      if (target.direction !== dir) setDirection(target.direction);
       focusCell(landing);
     },
     [focusCell, lookup],

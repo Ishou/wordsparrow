@@ -77,3 +77,32 @@ describe('Def-cell tap focuses its word', () => {
     expect(result.current.currentClue?.clue.text).toBe('across');
   });
 });
+
+describe('Dual-def cell single-tap toggle', () => {
+  it('first tap focuses clue #1 (across); repeat tap toggles to clue #2 (down); third tap toggles back', () => {
+    const { container } = render(<Grid puzzle={basePuzzle()} />);
+    const dual = () => defAt(container, 2, 0);
+
+    // clue #1 = across (right) → owns (2,1); land there.
+    fireEvent.click(dual());
+    expect(document.activeElement).toBe(inputAt(container, 2, 1));
+
+    // repeat tap → clue #2 = down → owns (3,0); land there.
+    fireEvent.click(dual());
+    expect(document.activeElement).toBe(inputAt(container, 3, 0));
+
+    // third tap → back to clue #1 (2,1).
+    fireEvent.click(dual());
+    expect(document.activeElement).toBe(inputAt(container, 2, 1));
+  });
+
+  it('tapping a dual-def cell after focusing an unrelated word starts at clue #1', () => {
+    const { container } = render(<Grid puzzle={basePuzzle()} />);
+    // Focus the top across word first (unrelated to the dual cell at (2,0)).
+    fireEvent.click(defAt(container, 0, 0));
+    expect(document.activeElement).toBe(inputAt(container, 0, 1));
+    // First tap on the dual cell → clue #1 (across), not the down clue.
+    fireEvent.click(defAt(container, 2, 0));
+    expect(document.activeElement).toBe(inputAt(container, 2, 1));
+  });
+});
