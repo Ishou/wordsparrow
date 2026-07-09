@@ -255,7 +255,7 @@ function V2LobbyPage() {
       <PhoneShell header={<BackHeader to="/" />}>
         <ResultatsScreen
           durationMs={view.durationMs ?? 0}
-          players={lobby.players}
+          players={rosterPlayers}
           ownerSessionId={lobby.ownerSessionId}
           isReplaying={coop.pending}
           onReplay={handleReplay}

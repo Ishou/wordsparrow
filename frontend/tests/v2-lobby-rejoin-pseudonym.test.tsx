@@ -49,6 +49,18 @@ const inProgressLobby: Lobby & { readonly id: LobbyId } = {
   } as unknown as Lobby['game'],
 };
 
+const completedLobby: Lobby & { readonly id: LobbyId } = {
+  ...waitingLobby,
+  state: 'COMPLETED',
+  game: {
+    puzzle: gamePuzzle,
+    entries: [],
+    lockedPositions: [],
+    startedAt: '2026-06-27T15:31:00Z',
+    completedAt: '2026-06-27T15:41:00Z',
+  } as unknown as Lobby['game'],
+};
+
 const stubPuzzleSolver: PuzzleSolver = {
   validate: () => Promise.resolve({ solved: false }),
   requestHint: () => Promise.reject(new Error('not used')),
@@ -222,5 +234,36 @@ describe('v2 /lobby/$lobbyId — local pseudonym survives a seatless rejoin snap
     });
 
     expect(screen.getByText('Renard 777 (toi)')).toBeTruthy();
+  });
+
+  it('keeps the local pseudonym on the Résultats roster when the connect snapshot drops the local seat', async () => {
+    const gameClient = makeGameClient();
+    const getLobby = vi.fn<LobbyClient['getLobby']>().mockResolvedValue(completedLobby);
+    const router = makeRouter(getLobby, gameClient);
+    renderRouter(router);
+
+    await act(async () => { await goLobby(router); });
+    expect(await screen.findByText('Renard 777')).toBeTruthy();
+
+    act(() => {
+      gameClient.dispatch({
+        type: 'lobbyState',
+        players: [],
+        ownerSessionId: sessionId,
+        state: 'COMPLETED',
+        gridConfig: { width: 1, height: 1 },
+        code: 'A2B3C4',
+        game: {
+          puzzle: gamePuzzle,
+          startedAt: '2026-06-27T15:31:00Z' as Instant,
+          completedAt: '2026-06-27T15:41:00Z' as Instant,
+          entries: [],
+          presence: [],
+          lockedPositions: [],
+        },
+      } as unknown as GameEvent);
+    });
+
+    expect(screen.getByText('Renard 777')).toBeTruthy();
   });
 });
