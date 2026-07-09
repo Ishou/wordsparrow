@@ -6,7 +6,7 @@ import { t } from '@/ui/i18n';
 import { useAuth } from '@/ui/components/auth';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
 import { OtpCodeInput } from '@/ui/components/primitives/OtpCodeInput';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
 
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '26px', lineHeight: '1.1', color: 'ws.jadeInk', margin: '0 0 8px' });
@@ -108,7 +108,7 @@ export function ConnexionScreen({ returnTo }: ConnexionScreenProps) {
   };
 
   return (
-    <PhoneShell header={<BackHeader to="/" />} backTo="/">
+    <AppShell variant="flow" topBar={<BackHeader to="/" />} backTo="/">
       {step === 'email' ? (
         <>
           <h1 className={title}>{t('v2.connexion.title')}</h1>
@@ -171,6 +171,6 @@ export function ConnexionScreen({ returnTo }: ConnexionScreenProps) {
           </div>
         </>
       )}
-    </PhoneShell>
+    </AppShell>
   );
 }

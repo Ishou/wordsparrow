@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
 import { contentCard, eyebrow, lede, sectionBody, sectionHeading } from './contentPage';
 
@@ -39,7 +39,7 @@ function Section({ heading, children }: { readonly heading: string; readonly chi
 
 export function AideScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
+    <AppShell variant="flow" topBar={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
           <div className={eyebrow}>{t('v2.aide.eyebrow')}</div>
@@ -61,6 +61,6 @@ export function AideScreen() {
 
         <Section heading={t('v2.aide.install.heading')}>{t('v2.aide.install.body')}</Section>
       </article>
-    </PhoneShell>
+    </AppShell>
   );
 }

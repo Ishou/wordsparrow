@@ -1,6 +1,6 @@
 import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
 import { EraseData } from './EraseData';
 import { contentCard, lede, sectionBody, sectionHeading } from './contentPage';
@@ -30,7 +30,7 @@ const pill = css({
 
 export function ConfidentialiteScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
+    <AppShell variant="flow" topBar={<BackHeader to="/reglages" />} backTo="/reglages">
       <article className={stack}>
         <header>
           <h1 className={title}>{t('v2.confidentialite.title')}</h1>
@@ -80,6 +80,6 @@ export function ConfidentialiteScreen() {
 
         <EraseData />
       </article>
-    </PhoneShell>
+    </AppShell>
   );
 }

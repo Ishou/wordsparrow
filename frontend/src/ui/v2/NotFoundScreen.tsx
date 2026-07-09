@@ -1,6 +1,6 @@
 import { useLayoutEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { SparrowState } from './SparrowState';
 import { sparrowFlightScene } from './SparrowScenes';
 
@@ -26,13 +26,13 @@ export function NotFoundScreen() {
   const navigate = useNavigate();
   useNotFoundDocumentTitle();
   return (
-    <PhoneShell>
+    <AppShell variant="flow">
       <SparrowState
         scene={sparrowFlightScene('404')}
         title={NOT_FOUND_COPY.title}
         body={NOT_FOUND_COPY.body}
         cta={{ label: NOT_FOUND_COPY.cta, onClick: () => void navigate({ to: '/' }) }}
       />
-    </PhoneShell>
+    </AppShell>
   );
 }

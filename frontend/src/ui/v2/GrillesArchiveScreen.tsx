@@ -19,7 +19,7 @@ import { DailyCalendar } from './DailyCalendar';
 import { bar, barFill, card, chevron, list, mid, rowMeta, rowTitle } from './listRowStyles';
 import { deriveDayInfos, isoUtcDate, longDateFr, monthOf, nextMonth, prevMonth, type DayInfo } from './dailyCalendarModel';
 import { GrillesLobbiesSection } from './GrillesLobbiesSection';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { MobileTopBar } from './MobileTopBar';
 import { SegmentedControl } from './SegmentedControl';
 import { GrillesEmptyState, LobbiesEmptyState } from './GrillesEmptyState';
@@ -343,11 +343,12 @@ export function GrillesArchiveScreen({
 
   return (
     <>
-      <PhoneShell
-        header={<MobileTopBar onMenuClick={() => setMenuOpen(true)} />}
+      <AppShell
+        variant="flow"
+        topBar={<MobileTopBar onMenuClick={() => setMenuOpen(true)} />}
         headerFlush
         navActive="grilles"
-        bottomNav={<BottomNav active="grilles" />}
+        bottomBar={<BottomNav active="grilles" />}
         fillBody
       >
         <div className={head}>
@@ -365,7 +366,7 @@ export function GrillesArchiveScreen({
         <div className={scrollArea}>
           {effectiveOnglet === 'quotidiennes' ? quotidiennes : effectiveOnglet === 'a-finir' ? aFinir : plusieurs}
         </div>
-      </PhoneShell>
+      </AppShell>
       <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
       <AbonnementSheet
         open={sheet.open}

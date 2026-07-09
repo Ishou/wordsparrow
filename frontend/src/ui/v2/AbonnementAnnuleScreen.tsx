@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
-import { PhoneShell } from './PhoneShell';
+import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
 import { NotFoundScreen } from './NotFoundScreen';
 import { GateLoadingScreen } from './GateLoadingScreen';
@@ -15,7 +15,7 @@ const linkStyle = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold'
 
 export function CheckoutCancelScreen() {
   return (
-    <PhoneShell header={<BackHeader to="/reglages" />} backTo="/reglages">
+    <AppShell variant="flow" topBar={<BackHeader to="/reglages" />} backTo="/reglages">
       <h1 className={title}>{t('v2.abonnement.annule.title')}</h1>
       <p className={statusCard} role="status">
         {t('v2.abonnement.annule.status')}
@@ -24,7 +24,7 @@ export function CheckoutCancelScreen() {
       <Link to="/abonnement" className={linkStyle}>
         {t('v2.abonnement.annule.back')}
       </Link>
-    </PhoneShell>
+    </AppShell>
   );
 }
 
