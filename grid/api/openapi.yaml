@@ -614,7 +614,7 @@ paths:
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: '#/components/schemas/VerifyCooldownProblem'
 
   /v1/puzzles/{puzzleId}/validate:
     post:
@@ -1407,6 +1407,25 @@ components:
             True iff the submitted letter matches the canonical solution at
             this cell.
           example: true
+
+    VerifyCooldownProblem:
+      description: |
+        RFC 7807 problem body for the `/verify` 429 (ADR-0099 §2), extended
+        with the cooldown countdown as a real typed member — not text
+        embedded in `detail`, unlike `/hints`' 429.
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [secondsUntilNextVerify]
+          properties:
+            secondsUntilNextVerify:
+              type: integer
+              minimum: 0
+              maximum: 1800
+              description: |
+                Seconds until the next `/verify` call is allowed for this
+                `(puzzle, player)`.
+              example: 1147
 
     ValidatePuzzleRequest:
       type: object

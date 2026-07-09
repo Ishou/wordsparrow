@@ -829,6 +829,19 @@ export interface components {
             correct: boolean;
         };
         /**
+         * @description RFC 7807 problem body for the `/verify` 429 (ADR-0099 §2), extended
+         *     with the cooldown countdown as a real typed member — not text
+         *     embedded in `detail`, unlike `/hints`' 429.
+         */
+        VerifyCooldownProblem: components["schemas"]["Problem"] & {
+            /**
+             * @description Seconds until the next `/verify` call is allowed for this
+             *     `(puzzle, player)`.
+             * @example 1147
+             */
+            secondsUntilNextVerify: number;
+        };
+        /**
          * @description Request body for `POST /v1/puzzles/{puzzleId}/validate`. Carries the
          *     cells the client wants to verify. Cleared / unfilled letter cells are
          *     absent — do NOT send `letter: null`. Order is irrelevant; the server
@@ -1566,7 +1579,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["VerifyCooldownProblem"];
                 };
             };
         };
