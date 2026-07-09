@@ -169,3 +169,22 @@ Three sequential PRs (each independently revertable and green):
   (`WaitingRoom` content overlapping the footer on mobile). PR 3 also
   adds a seeded `/lobby/$lobbyId` Playwright probe at WAITING phase to
   gate the regression.
+
+## Amendment (2026-07-09): one AppShell primitive + document lock
+
+The v2 shell is unified into a single `AppShell` component with two modes:
+
+- **flow** — `grid-template-rows: auto 1fr auto`: opaque top bar, a single
+  scroll container (the `1fr` middle owns `<main id="main-content">`),
+  optional opaque bottom nav.
+- **overlay** — full-bleed middle (the grid viewport, `overflow: hidden`,
+  no scroll) with `position: absolute` translucent top bar and bottom bar
+  floating over it. Grid pages only.
+
+Resilience invariant: the **document never scrolls**. `html, body` are
+`overflow: hidden; height: 100%; overscroll-behavior: none` and `#root`
+is `height: 100%`; the shell fills `#root` via a `height: 100%` chain and
+does not depend on `100dvh` on mobile. Exactly one scroll container exists
+per screen (the flow middle); overlay screens have none. Safe-area insets
+are applied once, at the shell's top and bottom edges. `md`/`lg`
+treatments are unchanged by this amendment.
