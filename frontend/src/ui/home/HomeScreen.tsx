@@ -25,6 +25,8 @@ import { progressRingBackground } from '@/ui/v2/DailyCalendar';
 import { HomeGreetingArt, bucketForHour, greetingForBucket } from './HomeGreetingArt';
 import { MiniGame } from './MiniGame';
 import { useDelayedFlag } from '@/ui/lib/useDelayedFlag';
+import { useProgressRevision } from '@/ui/lib/useProgressRevision';
+import type { ProgressSyncService } from '@/application/progress';
 import { t } from '@/ui/i18n';
 
 type HomeSession = { readonly sessionId: SessionId; readonly pseudonym: Pseudonym };
@@ -143,6 +145,7 @@ export function HomeScreen({
   wordsRepository,
   lobbyClient,
   getSession,
+  progressSyncService,
 }: {
   readonly puzzleRepository: PuzzleRepository;
   readonly soloEntriesStore: SoloEntriesStore;
@@ -150,6 +153,7 @@ export function HomeScreen({
   // Present only when the multiplayer flag is on (ADR-0018 §10); gates the co-op entry.
   readonly lobbyClient?: LobbyClient;
   readonly getSession?: () => HomeSession;
+  readonly progressSyncService?: ProgressSyncService;
 }) {
   const navigate = useNavigate();
   const canSubscribe = useCanSubscribe();
@@ -159,6 +163,7 @@ export function HomeScreen({
   const [miniGameTyping, setMiniGameTyping] = useState(false);
   const [hostSignInOpen, setHostSignInOpen] = useState(false);
   const auth = useOptionalAuth();
+  const progressRevision = useProgressRevision(progressSyncService);
   const { authClient, soundPlayer, soundStore } = useRouteContext({ from: '__root__' });
 
   const multiplayerOn = lobbyClient != null && getSession != null;
@@ -247,6 +252,12 @@ export function HomeScreen({
     return () => { cancelled = true; };
   }, [puzzleRepository, range.from, range.to]);
 
+  // Pull cross-device progress on entry so the strip is fresh; authed-only keeps anon/prerender network-free (ADR-0075).
+  useEffect(() => {
+    if (auth?.state.status !== 'authed') return;
+    void progressSyncService?.pullAndMergeAll().catch(() => {});
+  }, [auth?.state.status, progressSyncService]);
+
   const weekCells = useMemo(() => {
     const byDate = new Map(history.map((s) => [s.date, s]));
     return week.map((d) => {
@@ -261,7 +272,7 @@ export function HomeScreen({
       const pct = total > 0 ? Math.round((filledCount / total) * 100) : 0;
       return { ...d, available: summary != null, label: longDateFr(d.iso), status, pct };
     });
-  }, [week, history, soloEntriesStore]);
+  }, [week, history, soloEntriesStore, progressRevision]);
 
   // Skeleton only if the daily is still loading after a beat — a fast fetch resolves first, no flash.
   const showDailySkeleton = useDelayedFlag(daily.status === 'loading');
