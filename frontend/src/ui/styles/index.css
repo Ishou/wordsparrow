@@ -19,8 +19,15 @@
   color-scheme: light;
   background-color: var(--colors-bg);
 }
+/* Lock the document so it can never scroll — the root cause of the mobile-PWA phantom/second scrollbar (a 100dvh shell outgrows the visual viewport and the document gains its own scroll). */
 html, body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
   background-color: var(--colors-bg);
+}
+#root {
+  height: 100%;
 }
 
 /* Paper-grain texture — ADR-0043 §5. An SVG `feTurbulence` noise filter
