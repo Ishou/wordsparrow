@@ -62,3 +62,31 @@ describe('AppShell (flow)', () => {
     expect(shell.firstChild).toHaveAttribute('href', '#main-content');
   });
 });
+
+describe('AppShell (overlay)', () => {
+  it('keeps the middle full-bleed with the floating bars inside <main>', async () => {
+    renderShell(
+      <AppShell variant="overlay" topBar={<div data-testid="tb" />} bottomBar={<div data-testid="bb" />}>
+        <div data-testid="viewport" />
+      </AppShell>,
+    );
+    const main = await screen.findByRole('main');
+    expect(main).toHaveAttribute('id', 'main-content');
+    // Overlay bars float over the full-bleed middle: they live inside <main>, unlike the flow rows.
+    expect(main).toContainElement(screen.getByTestId('tb'));
+    expect(main).toContainElement(screen.getByTestId('bb'));
+    expect(main).toContainElement(screen.getByTestId('viewport'));
+  });
+
+  it('renders the flow bars outside <main> so the middle is the sole scroll row', async () => {
+    renderShell(
+      <AppShell variant="flow" topBar={<div data-testid="tb" />} bottomBar={<div data-testid="bb" />}>
+        <div data-testid="viewport" />
+      </AppShell>,
+    );
+    const main = await screen.findByRole('main');
+    expect(main).not.toContainElement(screen.getByTestId('tb'));
+    expect(main).not.toContainElement(screen.getByTestId('bb'));
+    expect(main).toContainElement(screen.getByTestId('viewport'));
+  });
+});

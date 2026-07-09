@@ -73,7 +73,40 @@ const deskBack = css({
   lg: { display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '18px', fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'bold', color: 'ws.jadeInk', textDecoration: 'none', borderRadius: '999px', padding: '8px 14px 8px 10px', bg: 'ws.glass', boxShadow: '0 1px 2px rgba(33,75,64,0.08)', _hover: { bg: 'ws.glassHover' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } },
 });
 
-export function AppShell({ children, topBar, bottomBar, navActive, backTo, headerFlush }: AppShellProps) {
+// Overlay (grid pages): full-bleed middle, no scroll; bars float translucently over the bleeding grid.
+const overlayFrame = css({
+  width: '100%',
+  maxWidth: '440px',
+  flex: 1,
+  minHeight: 0,
+  position: 'relative',
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  bgImage: 'linear-gradient(180deg, var(--colors-ws-hero-top), var(--colors-ws-hero-bottom))',
+  md: { flex: 'none', maxWidth: '720px', height: 'min(920px, calc(100dvh - 64px))', borderRadius: '28px', boxShadow: '0 24px 60px rgba(33,75,64,0.18)' },
+  lg: { flex: 1, maxWidth: 'none', borderRadius: 0, boxShadow: 'none' },
+});
+const overlayMain = css({ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' });
+const overlayTop = css({ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3, paddingTop: 'env(safe-area-inset-top)', lg: { position: 'static', paddingTop: 0 } });
+const overlayBottom = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, paddingBottom: 'env(safe-area-inset-bottom)', lg: { position: 'static', paddingBottom: 0 } });
+
+export function AppShell({ children, variant = 'flow', topBar, bottomBar, navActive, backTo, headerFlush }: AppShellProps) {
+  if (variant === 'overlay') {
+    return (
+      <div className={shell} lang="fr">
+        <SkipLink />
+        <div className={overlayFrame}>
+          <DesktopAppBar active={navActive} />
+          <main id="main-content" tabIndex={-1} className={overlayMain}>
+            {topBar != null ? <div className={overlayTop}>{topBar}</div> : null}
+            {children}
+            {bottomBar != null ? <div className={overlayBottom}>{bottomBar}</div> : null}
+          </main>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={shell} lang="fr">
       <SkipLink />
