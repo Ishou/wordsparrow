@@ -61,6 +61,12 @@ retention:
       # this file rather than injected by CD: the CD workflow only resolves
       # the grid-api digest. Bump alongside the `tag` in values.yaml.
       digest: "sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50"
+  verifyUsage:
+    enabled: true
+    image:
+      requireDigest: true
+      # Same postgres:16-alpine digest as hintUsage above — identical image, bump together.
+      digest: "sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50"
 # ADR-0089 §5: purge the Cloudflare edge after every daily generation run.
 edgePurge:
   enabled: true
