@@ -287,6 +287,21 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       expect(html).not.toContain('Tu as tout joué');
       expect(html).not.toContain('Aucune partie à plusieurs');
     });
+
+    // Each per-tab route bakes its own tab's skeleton so a hard load lands on the right loader, never a sibling tab's empty state.
+    it('bakes the À plusieurs skeleton into dist/grilles/multijoueur.html', () => {
+      const html = readFileSync(resolve(DIST, 'grilles/multijoueur.html'), 'utf8');
+      expect(html).toContain('aria-label="Chargement des parties"');
+      expect(html).not.toContain('Tu as tout joué');
+      expect(html).not.toContain('Aucune partie à plusieurs');
+    });
+
+    it('bakes the À finir skeleton into dist/grilles/a-finir.html', () => {
+      const html = readFileSync(resolve(DIST, 'grilles/a-finir.html'), 'utf8');
+      expect(html).toContain('aria-label="Chargement des grilles"');
+      expect(html).not.toContain('Tu as tout joué');
+      expect(html).not.toContain('Aucune partie à plusieurs');
+    });
   },
 );
 

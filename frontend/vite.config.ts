@@ -69,6 +69,8 @@ function embeddedFontLicenses(): Plugin {
 const PRERENDERED_ROUTE_PATHS = [
   '/play',
   '/grilles',
+  '/grilles/a-finir',
+  '/grilles/multijoueur',
   '/aide',
   '/mentions-legales',
   '/confidentialite',
