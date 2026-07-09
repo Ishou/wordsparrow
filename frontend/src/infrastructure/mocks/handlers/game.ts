@@ -296,6 +296,33 @@ export const gameHandlers = [
     return HttpResponse.json(relinquished ?? lobby);
   }),
 
+  // DELETE /v1/lobbies/:lobbyId/membership — leave a game from the lists
+  // (ADR-0098 §6, 2026-07-08 amendment). Drops the caller's seat; the server
+  // destroys the lobby when it ends up ownerless-and-empty. Preview mirrors
+  // that by removing the lobby from the store so the refetched list drops the
+  // row. Must precede the `:lobbyId` GET so `/membership` never falls through.
+  http.delete('*/v1/lobbies/:lobbyId/membership', ({ params }) => {
+    const lobbyId = String(params.lobbyId);
+    if (!LOBBY_ID_PATTERN.test(lobbyId)) {
+      return problem(
+        400,
+        'https://bliss.example/errors/invalid-lobby-id',
+        'Invalid lobbyId',
+        `\`${lobbyId}\` does not match the base58 nanoid pattern.`,
+      );
+    }
+    if (!getLobby(lobbyId)) {
+      return problem(
+        404,
+        'https://bliss.example/errors/lobby-not-found',
+        'Lobby not found',
+        `No lobby with id ${lobbyId}.`,
+      );
+    }
+    deleteLobby(lobbyId);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // GET /v1/lobbies/:lobbyId — replay the persisted lobby.
   http.get('*/v1/lobbies/:lobbyId', ({ params }) => {
     // e2e seam: a dropped request (network error), NOT a 404 — the loader retry must recover from it silently.

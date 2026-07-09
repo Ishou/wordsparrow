@@ -115,6 +115,35 @@ describe('<MyLobbiesSection> — progress bar', () => {
   });
 });
 
+describe('<MyLobbiesSection> — leave/delete affordance (ADR-0098 §6)', () => {
+  it('is absent when no onLeave handler is supplied', async () => {
+    renderAt(<MyLobbiesSection lobbies={[lobby]} />);
+    await screen.findByTestId('lobby-code');
+    expect(screen.queryByRole('button', { name: /quitter cette partie|supprimer cette partie/i })).toBeNull();
+  });
+
+  it('leaves a multi-player game after confirming, calling onLeave with the id', async () => {
+    const onLeave = vi.fn();
+    renderAt(<MyLobbiesSection lobbies={[lobby]} onLeave={onLeave} />);
+    const trigger = await screen.findByRole('button', { name: 'Quitter cette partie' });
+    act(() => { fireEvent.click(trigger); });
+    await screen.findByRole('dialog');
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Quitter' })); });
+    expect(onLeave).toHaveBeenCalledWith(lobby.id);
+  });
+
+  it('shows the destructive "Supprimer" confirm when the caller is alone', async () => {
+    const onLeave = vi.fn();
+    renderAt(<MyLobbiesSection lobbies={[{ ...lobby, playerCount: 1 }]} onLeave={onLeave} />);
+    const trigger = await screen.findByRole('button', { name: 'Supprimer cette partie' });
+    act(() => { fireEvent.click(trigger); });
+    await screen.findByRole('dialog');
+    expect(screen.getByText('Supprimer cette partie ?')).toBeInTheDocument();
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Annuler' })); });
+    expect(onLeave).not.toHaveBeenCalled();
+  });
+});
+
 describe('<MyLobbiesSection> — empty state', () => {
   it('renders the empty-state blurb when no lobbies are present', async () => {
     renderAt(<MyLobbiesSection lobbies={[]} />);

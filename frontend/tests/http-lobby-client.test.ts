@@ -208,6 +208,47 @@ describe('HttpLobbyClient.relinquishOwnership', () => {
   });
 });
 
+describe('HttpLobbyClient.leaveLobby', () => {
+  it('DELETEs the membership subresource and resolves on 204 (no body)', async () => {
+    let method: string | null = null;
+    let calledUrl: string | null = null;
+    server.use(
+      http.delete(`${BASE_URL}/v1/lobbies/:lobbyId/membership`, ({ request }) => {
+        method = request.method;
+        calledUrl = request.url;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await expect(makeClient().leaveLobby(lobbyId)).resolves.toBeUndefined();
+
+    expect(method).toBe('DELETE');
+    expect(calledUrl).toBe(`${BASE_URL}/v1/lobbies/${lobbyId}/membership`);
+  });
+
+  it('lifts a 403 (no seat to leave) into LobbyClientError(kind: validation)', async () => {
+    const problem = problemBody(403, 'No seat in this lobby',
+      'https://bliss.example/errors/lobby-membership-forbidden');
+    server.use(
+      http.delete(`${BASE_URL}/v1/lobbies/:lobbyId/membership`, () => respondProblem(403, problem)),
+    );
+
+    await expectError(makeClient().leaveLobby(lobbyId),
+      { kind: 'validation', status: 403, type: problem.type });
+  });
+
+  it('lifts a 401 (missing/invalid session) into LobbyClientError(kind: unauthorized)', async () => {
+    const problem = problemBody(401, 'Session required',
+      'https://bliss.example/errors/auth-required');
+    server.use(
+      http.delete(`${BASE_URL}/v1/lobbies/:lobbyId/membership`, () => respondProblem(401, problem)),
+    );
+
+    await expectError(makeClient().leaveLobby(lobbyId),
+      { kind: 'unauthorized', status: 401, type: problem.type });
+  });
+});
+
 describe('HttpLobbyClient.listMyLobbies', () => {
   const summaryFixture: components['schemas']['LobbySummary'] = {
     id: '7Hk2pQrS',

@@ -47,6 +47,19 @@ export interface LobbyClient {
   relinquishOwnership(lobbyId: LobbyId): Promise<Lobby>;
 
   /**
+   * `DELETE /v1/lobbies/{lobbyId}/membership`. Drops the caller's seat from
+   * a lobby they are not currently on the WebSocket for — the "quitter /
+   * supprimer" affordance on the multiplayer game lists (ADR-0098 §6,
+   * 2026-07-08 amendment). When the caller is the owner, ownership is also
+   * relinquished; composed with the ADR-0055 destroy-ownerless-and-empty
+   * rule this yields delete-if-alone / leave-if-others. Cookie-authed — no
+   * request body. Resolves on `204`. Throws {@link LobbyClientError} with
+   * `kind: 'unauthorized'` (401 — missing/invalid session), `kind:
+   * 'validation'` (403 — no seat to leave), or `kind: 'not-found'` (404).
+   */
+  leaveLobby(lobbyId: LobbyId): Promise<void>;
+
+  /**
    * `GET /v1/lobbies/{lobbyId}`. Bootstraps the lobby route loader before
    * the WebSocket opens. Throws {@link LobbyClientError} with
    * `kind: 'not-found'` when the lobby has never existed or has been GC'd

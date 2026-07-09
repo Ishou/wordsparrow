@@ -80,6 +80,7 @@ function renderHome(
     getLobby: vi.fn().mockResolvedValue(lobby),
     claimOwnership: vi.fn().mockResolvedValue(lobby),
     relinquishOwnership: vi.fn().mockResolvedValue(lobby),
+    leaveLobby: vi.fn().mockResolvedValue(undefined),
     findByCode: vi.fn().mockResolvedValue(lobby),
     listMyLobbies: vi.fn().mockResolvedValue([]),
     listMyLobbiesForUser: vi.fn().mockResolvedValue([]),

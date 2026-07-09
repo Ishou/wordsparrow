@@ -104,6 +104,8 @@ export function GrillesArchiveScreen({
   // Gate the skeleton behind a short delay so sub-200ms loads never flash it.
   const [showSkeleton, setShowSkeleton] = useState(false);
   const [lobbies, setLobbies] = useState<readonly LobbySummary[]>([]);
+  // Bumped after a leave/delete so the lobbies effect refetches and the row drops.
+  const [lobbiesRefreshTick, setLobbiesRefreshTick] = useState(0);
   const [hostSignInOpen, setHostSignInOpen] = useState(false);
   const coop = useCreateOrResume({
     lobbyClient: lobbyClient!,
@@ -128,6 +130,18 @@ export function GrillesArchiveScreen({
         .catch(() => showToast({ text: 'Impossible de reprendre la partie.', tone: 'error' }));
     },
     [lobbyClient, authStatus, navigate, showToast],
+  );
+
+  // ADR-0098 §6 (2026-07-08): leave/delete from the list; server decides delete-if-alone/leave-if-others, refetch drops the row, failure toasts (mirrors the claim path).
+  const handleLeaveLobby = useCallback(
+    (lobbyId: LobbyId) => {
+      if (lobbyClient == null) return;
+      void lobbyClient
+        .leaveLobby(lobbyId)
+        .then(() => setLobbiesRefreshTick((tick) => tick + 1))
+        .catch(() => showToast({ text: t('lobby.leave.error'), tone: 'error' }));
+    },
+    [lobbyClient, showToast],
   );
   const coopPending = coop.pending || coop.startingNew;
 
@@ -183,7 +197,7 @@ export function GrillesArchiveScreen({
     return () => {
       cancelled = true;
     };
-  }, [lobbyClient, getSession, authStatus]);
+  }, [lobbyClient, getSession, authStatus, lobbiesRefreshTick]);
 
   const infos = useMemo(
     () =>
@@ -287,7 +301,7 @@ export function GrillesArchiveScreen({
 
   const plusieurs =
     lobbies.length > 0 ? (
-      <GrillesLobbiesSection lobbies={lobbies} onClaim={handleClaimLobby} />
+      <GrillesLobbiesSection lobbies={lobbies} onClaim={handleClaimLobby} onLeave={handleLeaveLobby} />
     ) : (
       <>
         <LobbiesEmptyState onCreate={createParty} />

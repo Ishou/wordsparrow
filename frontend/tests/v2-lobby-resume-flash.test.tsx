@@ -115,6 +115,7 @@ function makeRouter(getLobby: LobbyClient['getLobby'], authClient: AuthClient = 
     getLobby,
     claimOwnership: vi.fn().mockResolvedValue(waitingLobby),
     relinquishOwnership: vi.fn().mockResolvedValue(waitingLobby),
+    leaveLobby: vi.fn().mockResolvedValue(undefined),
     findByCode: vi.fn().mockResolvedValue(waitingLobby),
     listMyLobbies: vi.fn().mockResolvedValue([]),
     listMyLobbiesForUser: vi.fn().mockResolvedValue([]),
