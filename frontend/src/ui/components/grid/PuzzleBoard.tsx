@@ -329,6 +329,7 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
                   compoundClues={sorted.map((c) => (c.separators?.length ?? 0) > 0)}
                   active={active}
                   validated={solvedDefCells?.has(posKey(row, col))}
+                  onClick={() => nav.handleDefinitionClick({ row, col })}
                 />
               );
             }
