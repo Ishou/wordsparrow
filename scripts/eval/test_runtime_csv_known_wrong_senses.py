@@ -27,5 +27,5 @@ def test_runtime_csv_honours_curated_overrides() -> None:
     assert not violations, (
         f"{len(violations)} curated overrides not honoured in words-fr.csv "
         f"(word, shipped, expected): {violations[:5]}. "
-        f"Run scripts/clue_generation/apply_clue_overrides.py."
+        f"Run scripts/clue_generation/assemble_corpus.py."
     )

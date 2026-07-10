@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Append grammalecte surfaces to words-fr.csv.
+"""Grammalecte surface-admission policies: pure surface -> (lemma, freq)
+scans of the lexique, wrapped onto the unified schema by
+`corpus_normalizers.normalize_grammalecte` and merged by `assemble_corpus.py`
+(ADR-0099) rather than appended to words-fr.csv in place here.
 
-Two admission policies. Pick one per run; they're orthogonal.
+Two admission policies, each its own function below; pick one per call.
 
-(1) Length-band admission (`--mode length-band`, default).
+(1) Length-band admission (`parse_grammalecte_length_band`).
 
 The runtime corpus has historically capped at length 11; PRs #356/#357
 push the daily-grid default to 15x12 and need supply at lengths 12-15.
@@ -11,7 +14,7 @@ This mode ports every grammalecte surface in the requested length range
 whose `Total occurrences` clears `--min-freq`. Inputs are independent of
 the current corpus — this is the "fresh import" mode.
 
-(2) Lemma-anchored admission (`--mode lemma-anchored`).
+(2) Lemma-anchored admission (`parse_grammalecte_lemma_anchored`).
 
 Admits a surface form if BOTH:
 - its lemma is already in the current words-fr.csv (i.e. the lemma has
@@ -34,22 +37,11 @@ runtime CSV loader (CsvWordRepository) no longer applies a frequency
 floor either; the blank-clue gate is the only remaining filter and
 fires only when the inflater fails to produce a non-placeholder clue.
 
-Both modes share the rest of the contract:
-
-- The output keeps the input column order and appends new rows at the
-  tail; reorder/sort is the caller's choice.
-- Idempotent: re-running with the same flags is a no-op (existing words
-  are not re-appended).
-- Placeholder clues (`clue == word`) are written; the downstream
-  generate-clues-lora-batched -> build-surface-clues -> merge-clues-into-wordlist
-  flow upgrades placeholders to authored / inflected clues.
-- The `difficulty` column is left empty for new rows (matching
-  `add_short_word_clues.py`'s convention) -- the runtime generator does
-  not read it.
-- The `source` column is `grammalecte` and `source_license` is `MPL-2.0`.
+Both modes return `surface -> (lemma, freq)`; `clue == word` is the
+placeholder convention `normalize_grammalecte` carries through, upgraded
+later by the LoRA-clue tier during assembly.
 """
 from __future__ import annotations
-import argparse
 import csv
 import os
 from pathlib import Path
@@ -270,120 +262,4 @@ def _load_in_corpus_lemmas(wordlist: Path) -> set[str]:
     return out
 
 
-def main() -> None:
-    p = argparse.ArgumentParser()
-    p.add_argument("--lexique", type=Path, default=DEFAULT_LEXIQUE)
-    p.add_argument("--wordlist", type=Path, default=DEFAULT_WORDLIST)
-    p.add_argument("--mode", choices=("length-band", "lemma-anchored"),
-                   default="length-band",
-                   help="Admission policy: length-band (default, legacy) or "
-                        "lemma-anchored (new; admit surfaces of in-corpus "
-                        "lemmas, blocklist passé simple / subj imparfait / "
-                        "cond 1pl-2pl).")
-    p.add_argument("--length-min", type=int, default=None,
-                   help="Default 12 in length-band mode; 4 in lemma-anchored mode.")
-    p.add_argument("--length-max", type=int, default=15)
-    p.add_argument("--min-freq", type=int, default=None,
-                   help="Default 1000 in length-band mode; 0 in lemma-anchored mode "
-                        "(rare conjugations of common lemmas are fair game).")
-    p.add_argument("--language", default="fr")
-    p.add_argument("--source", default="grammalecte")
-    p.add_argument("--source-license", default="MPL-2.0")
-    p.add_argument("--dry-run", action="store_true")
-    args = p.parse_args()
-
-    # Mode-specific defaults.
-    if args.length_min is None:
-        args.length_min = 4 if args.mode == "lemma-anchored" else 12
-    if args.min_freq is None:
-        args.min_freq = 0 if args.mode == "lemma-anchored" else 1000
-
-    if not args.lexique.exists():
-        raise SystemExit(f"grammalecte lexique not found: {args.lexique}")
-    if not args.wordlist.exists():
-        raise SystemExit(f"wordlist not found: {args.wordlist}")
-
-    # Load existing wordlist; preserve column order.
-    with args.wordlist.open(encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
-        fieldnames = list(reader.fieldnames or [])
-        rows = list(reader)
-    required = {"word", "language", "length", "frequency", "difficulty",
-                "clue", "source", "source_license", "lemma"}
-    missing = required - set(fieldnames)
-    if missing:
-        raise SystemExit(f"wordlist missing columns: {missing}")
-
-    existing_words = {r["word"].strip().lower() for r in rows}
-    print(f"existing wordlist rows: {len(rows)}")
-    print(f"existing distinct words: {len(existing_words)}")
-
-    if args.mode == "lemma-anchored":
-        in_corpus_lemmas = _load_in_corpus_lemmas(args.wordlist)
-        print(f"in-corpus distinct lemmas: {len(in_corpus_lemmas)}")
-        surfaces, counters = parse_grammalecte_lemma_anchored(
-            args.lexique, in_corpus_lemmas,
-            args.length_min, args.length_max, args.min_freq,
-        )
-        print(f"grammalecte lemma-anchored candidates "
-              f"L{args.length_min}-L{args.length_max} freq>={args.min_freq}: "
-              f"{len(surfaces)}")
-        print("  counters:")
-        for k, v in counters.items():
-            print(f"    {k:>26s}: {v}")
-    else:
-        surfaces = parse_grammalecte_length_band(
-            args.lexique, args.length_min, args.length_max, args.min_freq,
-        )
-        print(f"grammalecte length-band surfaces "
-              f"L{args.length_min}-L{args.length_max} freq>={args.min_freq}: "
-              f"{len(surfaces)}")
-
-    # New rows = surfaces not already in the wordlist.
-    new_rows: list[dict] = []
-    for surface in sorted(surfaces):
-        if surface.lower() in existing_words:
-            continue
-        lemma, freq = surfaces[surface]
-        row = {col: "" for col in fieldnames}
-        row["word"] = surface
-        row["language"] = args.language
-        row["length"] = str(len(surface))
-        # Emit the actual surface frequency from grammalecte's "Total
-        # occurrences" column. Do not boost or fabricate; the runtime
-        # loader no longer applies a frequency floor (gatekeeping moved
-        # here), so the field is informational rather than load-bearing.
-        row["frequency"] = str(freq)
-        # difficulty intentionally empty (see header docstring).
-        # clue == word is the placeholder convention; the runtime loader
-        # keeps any non-blank clue, and the build_surface_clues.py +
-        # merge_clues_into_wordlist.py downstream steps can replace this
-        # with an authored / inflected clue later.
-        row["clue"] = surface
-        row["source"] = args.source
-        row["source_license"] = args.source_license
-        row["lemma"] = lemma
-        new_rows.append(row)
-
-    print(f"new rows to append: {len(new_rows)}")
-    if not new_rows:
-        print("nothing to do")
-        return
-    if args.dry_run:
-        print("--dry-run: not writing")
-        return
-
-    # Append in place. Keep column order; existing rows untouched.
-    with args.wordlist.open("w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
-        w.writeheader()
-        for r in rows:
-            w.writerow({k: r.get(k, "") for k in fieldnames})
-        for r in new_rows:
-            w.writerow({k: r.get(k, "") for k in fieldnames})
-
-    print(f"wrote {args.wordlist} (+{len(new_rows)} rows)")
-
-
-if __name__ == "__main__":
-    main()
+# The wordlist-mutation CLI once here is retired in favor of assemble_corpus.py (ADR-0099); the parse functions above remain the pure surface->(lemma,freq) source other modules import.

@@ -17,7 +17,7 @@ inflater change reintroduces the lemma fallback for finite tenses.
 
 If this test fires, re-run:
     python scripts/clue_generation/build_surface_clues.py
-    python scripts/clue_generation/merge_clues_into_wordlist.py
+    python scripts/clue_generation/assemble_corpus.py
 """
 
 from __future__ import annotations
