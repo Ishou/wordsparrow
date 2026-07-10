@@ -84,7 +84,7 @@ function renderGate(authClient: AuthClient): ReactNode {
         fetchDaily: vi.fn(),
         listDailySummaries: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
       },
-      puzzleSolver: { validate: vi.fn(), requestHint: vi.fn() },
+      puzzleSolver: { validate: vi.fn(), requestHint: vi.fn(), verify: vi.fn() },
       sessionClient: {
         eraseSession: () => Promise.resolve({ deleted: 0 }),
         getSessionId: () => 'test-session-id',
@@ -166,7 +166,7 @@ describe('Contribuer pairs capability gate', () => {
           fetchDaily: vi.fn(),
           listDailySummaries: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
         },
-        puzzleSolver: { validate: vi.fn(), requestHint: vi.fn() },
+        puzzleSolver: { validate: vi.fn(), requestHint: vi.fn(), verify: vi.fn() },
         sessionClient: {
           eraseSession: () => Promise.resolve({ deleted: 0 }),
           getSessionId: () => 'test-session-id',

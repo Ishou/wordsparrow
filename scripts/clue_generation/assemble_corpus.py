@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Normalize-then-merge corpus assembler (ADR-0099).
+"""Normalize-then-merge corpus assembler (ADR-0100).
 
 Replaces the six in-place `words-fr.csv` mutators (`add_short_word_clues.py`,
 `add_greek_and_extras.py`, `merge_editorial_into_wordlist.py`,

@@ -7,6 +7,7 @@ class FakeParam {
 }
 class FakeOsc {
   frequency = new FakeParam();
+  detune = new FakeParam();
   type = '';
   connect = vi.fn();
   start = vi.fn();
@@ -53,16 +54,44 @@ describe('webAudioSoundPlayer', () => {
     expect(created).toHaveLength(0);
   });
 
-  it('emits one tick per validated cell, matching the ripple', () => {
+  it('a short word: one build tick per cell plus a soft single-note climax', () => {
     const player = createWebAudioSoundPlayer(() => true);
     player.playWordValidated(5);
-    expect(created[0]?.createOscillator).toHaveBeenCalledTimes(5);
+    // 5 build notes + 1 climax voice (a short word does not bloom the triad)
+    expect(created[0]?.createOscillator).toHaveBeenCalledTimes(6);
+  });
+
+  it('a wide sweep caps the build and blooms into a triad climax', () => {
+    const player = createWebAudioSoundPlayer(() => true);
+    player.playWordValidated(40);
+    // capped at 18 accelerating build notes + a 3-note triad climax — stays snappy, never 40 ticks
+    expect(created[0]?.createOscillator).toHaveBeenCalledTimes(21);
   });
 
   it('always emits at least one tick even for a zero count', () => {
     const player = createWebAudioSoundPlayer(() => true);
     player.playWordValidated(0);
-    expect(created[0]?.createOscillator).toHaveBeenCalledTimes(1);
+    expect(created[0]?.createOscillator.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it('a clean verify sweep: one build tick per correct cell plus a triumphant landing', () => {
+    const player = createWebAudioSoundPlayer(() => true);
+    player.playVerifySweep([true, true, true]);
+    // 3 build ticks + 1 triumphant climax voice (short run stays a single top note)
+    expect(created[0]?.createOscillator).toHaveBeenCalledTimes(4);
+  });
+
+  it('a verify sweep with errors: build ticks, a two-osc thud per wrong cell, and a 3-note warning', () => {
+    const player = createWebAudioSoundPlayer(() => true);
+    player.playVerifySweep([true, false, true]);
+    // 2 build ticks + (2 oscillators for the wrong-cell thud) + 3 warning-climax notes
+    expect(created[0]?.createOscillator).toHaveBeenCalledTimes(7);
+  });
+
+  it('plays nothing for an empty verify sweep', () => {
+    const player = createWebAudioSoundPlayer(() => true);
+    player.playVerifySweep([]);
+    expect(created).toHaveLength(0);
   });
 
   it('emits a three-note arpeggio for a solved puzzle', () => {

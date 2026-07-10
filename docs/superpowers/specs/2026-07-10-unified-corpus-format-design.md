@@ -1,7 +1,7 @@
 # Unified corpus source format — design + decision
 
 - **Date:** 2026-07-10
-- **Status:** Proposed (design approved; formal ADR-0099 to be minted during build)
+- **Status:** Proposed (design approved; formal ADR-0100 to be minted during build)
 - **Scope:** public `bliss` repo (clue-pipeline scripts, `CsvWordRepository`,
   guard tests) + private `wordsparrow-clue-data` repo (all source CSVs +
   runtime `words-fr.csv`).
@@ -186,7 +186,7 @@ is guarded by the runtime lemma test.
 
 ## Rollout order
 
-1. Mint ADR-0099 (unified corpus format) + update `docs/adr/INDEX.md`.
+1. Mint ADR-0100 (unified corpus format) + update `docs/adr/INDEX.md`.
 2. `reconcile_lemmas` gains `pos` input (derive + validate).
 3. `CsvWordRepository` accepts `pos` (loader + test).
 4. Per-source normalizers + the merge assembler; retire the six mutators.

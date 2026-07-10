@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { useGridSounds } from '@/ui/play/useGridSounds';
 
 function makePlayer() {
-  return { playWordValidated: vi.fn(), playPuzzleSolved: vi.fn() };
+  return { playWordValidated: vi.fn(), playVerifySweep: vi.fn(), playPuzzleSolved: vi.fn() };
 }
 
 describe('useGridSounds', () => {

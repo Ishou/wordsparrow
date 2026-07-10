@@ -65,6 +65,8 @@ export interface DefCellProps {
   readonly active?: boolean;
   // All of this cell's clue word(s) are solved → subtly lighter "done" surface.
   readonly validated?: boolean;
+  // Tap to focus this cell's word; a repeat tap on a dual-def cell toggles to its other clue (caller decides).
+  readonly onClick?: () => void;
 }
 
 // An answer exits right (right / right-down) or down; the tab sits on that edge, pointing where it begins.
@@ -148,7 +150,7 @@ function pad(right: boolean, bottom: boolean): string {
   return `${bottom ? 3 : 5}px ${right ? 14 : 8}px ${bottom ? 11 : 5}px 7px`;
 }
 
-export function DefCell({ clues, arrow = 'right', arrows, compoundClues, active = false, validated = false }: DefCellProps) {
+export function DefCell({ clues, arrow = 'right', arrows, compoundClues, active = false, validated = false, onClick }: DefCellProps) {
   // Explicit group accessible name so "mot composé" reads once, right after the clue text.
   const groupProps = (i: number) =>
     compoundClues?.[i]
@@ -164,6 +166,8 @@ export function DefCell({ clues, arrow = 'right', arrows, compoundClues, active 
         {...groupProps(0)}
         className={cx(cell, validated && cellValidated, active && cellActive, flushTop)}
         style={{ padding: pad(r, !r), color: validated ? DONE_TEXT : undefined }}
+        onClick={onClick}
+        onMouseDown={onClick && ((e) => e.preventDefault())}
       >
         <Clue text={clues[0]} hideFromA11y={compoundClues?.[0]} />
         <Tab arrow={a} place={r ? atRightMid : atBottom} />
@@ -174,7 +178,13 @@ export function DefCell({ clues, arrow = 'right', arrows, compoundClues, active 
   const a1 = arrows?.[1] ?? 'down';
   // The bottom tab lives at the cell's bottom edge, so the lower half always clears it.
   return (
-    <div data-defcell="split" className={cx(cell, validated && cellValidated, active && cellActive, split)} style={validated ? { color: DONE_TEXT } : undefined}>
+    <div
+      data-defcell="split"
+      className={cx(cell, validated && cellValidated, active && cellActive, split)}
+      style={validated ? { color: DONE_TEXT } : undefined}
+      onClick={onClick}
+      onMouseDown={onClick && ((e) => e.preventDefault())}
+    >
       <div className={halfBox} {...groupProps(0)} style={{ padding: pad(exitsRight(a0), false) }}>
         <Clue text={clues[0]} hideFromA11y={compoundClues?.[0]} />
       </div>

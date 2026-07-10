@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Per-tier normalizers: map each corpus source's native shape onto the
-UNIFIED 10-column schema (ADR-0099).
+UNIFIED 10-column schema (ADR-0100).
 
 Each source tier has a different native shape (hand-authored unified CSVs,
 gold citation-form clues, semicolon-delimited editorial raw + a `_lemmas`
@@ -14,7 +14,7 @@ priority into a single corpus is a separate concern (the assembler).
 can't be determined uniquely (`derive_lemma` returns `("ambiguous", None)`)
 — it raises, forcing an explicit authored lemma instead of silently
 defaulting to the surface (the bug this whole refactor exists to fix; see
-ADR-0099).
+ADR-0100).
 """
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def normalize_unified(
     `fr.csv`, `themed/*.csv`). Authored `pos`/`lemma` pass through
     unchanged; where `pos` is present and `lemma` is blank, derive it.
     An ambiguous verb surface with no authored lemma is a hard error —
-    never surface-default (that silent default is the bug ADR-0099 fixes).
+    never surface-default (that silent default is the bug ADR-0100 fixes).
 
     When `on_unresolved` is supplied, an ambiguous surface is appended to
     it as `(word, pos, source)` and the row is SKIPPED instead of raising,
@@ -183,7 +183,7 @@ def normalize_editorial(
 
     When no `_lemmas` entry matches, the surface is NOT defaulted as its
     own lemma (that silent default is the exact editorial-merge bug
-    ADR-0099 exists to kill — a genuine inflection like `lia` would ship
+    ADR-0100 exists to kill — a genuine inflection like `lia` would ship
     `lemma=lia` instead of `lier` and dodge grid dedup). Instead it goes
     through the same pos-less `reconcile` used to fix the wordlist:
     a unique-headword inflection is resolved to that headword ("fixed"),

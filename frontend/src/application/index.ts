@@ -13,8 +13,11 @@ export type {
   PuzzleRepository,
   PuzzleSolver,
   ValidationResult,
+  VerifyCellVerdict,
+  VerifyErrorKind,
+  VerifyResult,
 } from './puzzle';
-export { HintRequestError } from './puzzle';
+export { HintRequestError, VerifyRequestError } from './puzzle';
 export { fetchAllDailySummaries } from './puzzle';
 export type {
   SampleWord,

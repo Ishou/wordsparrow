@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createHttpPuzzleSolver } from '@/infrastructure';
-import { HintRequestError } from '@/application';
+import { HintRequestError, VerifyRequestError } from '@/application';
 
 const json = (body: unknown, status = 200, type = 'application/json') =>
   new Response(JSON.stringify(body), {
@@ -196,6 +196,114 @@ describe('HttpPuzzleSolver — requestHint', () => {
     } catch (err) {
       expect(err).toBeInstanceOf(HintRequestError);
       expect((err as HintRequestError).kind).toBe('transient');
+    }
+  });
+});
+
+describe('HttpPuzzleSolver — verify', () => {
+  it('POSTs the filled cells to /v1/puzzles/{id}/verify with credentials and unwraps the verdicts', async () => {
+    const cells = [
+      { row: 0, column: 1, correct: true },
+      { row: 0, column: 3, correct: false },
+    ];
+    const fetchSpy = vi.fn().mockResolvedValue(
+      json({ cells, secondsUntilNextVerify: 1800 }),
+    );
+    const solver = createHttpPuzzleSolver({
+      baseUrl: 'https://api.example.test',
+      fetch: fetchSpy,
+    });
+
+    const result = await solver.verify(PUZZLE_ID, [
+      { row: 0, column: 1, letter: 'P' },
+      { row: 0, column: 3, letter: 'G' },
+    ]);
+
+    const call = fetchSpy.mock.calls[0][0];
+    const url = call instanceof Request ? call.url : String(call);
+    const init = call instanceof Request ? call : fetchSpy.mock.calls[0][1];
+    expect(url).toBe(`https://api.example.test/v1/puzzles/${PUZZLE_ID}/verify`);
+    expect((init as Request).method ?? init.method).toBe('POST');
+    expect((init as Request).credentials).toBe('include');
+    const body = await (init as Request).clone().text();
+    expect(JSON.parse(body)).toEqual({
+      cells: [
+        { row: 0, column: 1, letter: 'P' },
+        { row: 0, column: 3, letter: 'G' },
+      ],
+    });
+    expect(result).toEqual({ cells, secondsUntilNextVerify: 1800 });
+  });
+
+  it('throws VerifyRequestError(cooldown-active) on 429, reading secondsUntilNextVerify from the problem body', async () => {
+    const solver = createHttpPuzzleSolver({
+      baseUrl: 'https://api.example.test',
+      fetch: vi.fn().mockResolvedValue(
+        json(
+          {
+            type: 'https://bliss.example/errors/verify-cooldown-active',
+            title: 'Verification cooldown active',
+            status: 429,
+            secondsUntilNextVerify: 942,
+          },
+          429,
+          'application/problem+json',
+        ),
+      ),
+    });
+    try {
+      await solver.verify(PUZZLE_ID, [{ row: 0, column: 1, letter: 'P' }]);
+      expect.fail('expected VerifyRequestError to throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(VerifyRequestError);
+      const e = err as VerifyRequestError;
+      expect(e.kind).toBe('cooldown-active');
+      expect(e.secondsUntilNextVerify).toBe(942);
+    }
+  });
+
+  it('throws VerifyRequestError(auth-required) on 401', async () => {
+    const solver = createHttpPuzzleSolver({
+      baseUrl: 'https://api.example.test',
+      fetch: vi.fn().mockResolvedValue(
+        json(
+          {
+            type: 'https://bliss.example/errors/auth-required',
+            title: 'Authentification requise',
+            status: 401,
+            detail: 'Cette action nécessite une session valide.',
+          },
+          401,
+          'application/problem+json',
+        ),
+      ),
+    });
+    try {
+      await solver.verify(PUZZLE_ID, [{ row: 0, column: 1, letter: 'P' }]);
+      expect.fail('expected VerifyRequestError to throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(VerifyRequestError);
+      expect((err as VerifyRequestError).kind).toBe('auth-required');
+    }
+  });
+
+  it('throws VerifyRequestError(transient) on 5xx', async () => {
+    const solver = createHttpPuzzleSolver({
+      baseUrl: 'https://api.example.test',
+      fetch: vi.fn().mockResolvedValue(
+        json(
+          { type: 'https://x/err', title: 'Upstream', status: 503 },
+          503,
+          'application/problem+json',
+        ),
+      ),
+    });
+    try {
+      await solver.verify(PUZZLE_ID, [{ row: 0, column: 1, letter: 'P' }]);
+      expect.fail('expected VerifyRequestError to throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(VerifyRequestError);
+      expect((err as VerifyRequestError).kind).toBe('transient');
     }
   });
 });

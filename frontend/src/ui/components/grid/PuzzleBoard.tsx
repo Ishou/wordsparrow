@@ -17,7 +17,8 @@ import { playerColorVars } from '@/ui/lib/playerColor';
 import { type CellHighlight, type GridNavigation } from './useGridNavigation';
 import { GRID_INPUT_GUARDS } from './gridInputGuards';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
-import { CELL, GAP, STRIDE, SOLVE_STAGGER_MS, posKey, exitsRight } from './playLayout';
+import { solvePulseCellDelaysMs } from '@/application/grid/solvePulse';
+import { CELL, GAP, STRIDE, posKey, exitsRight } from './playLayout';
 import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
 import { SeparatorOverlay } from './SeparatorOverlay';
 
@@ -31,8 +32,16 @@ const cellWrap = css({ position: 'relative', cursor: 'pointer' });
 const cellGlow = css({ borderRadius: '13px', zIndex: 1, animation: 'wsSolveGlow 0.45s ease-out both' });
 // Discreet "checking with the server" ring on a completed word awaiting its verdict; outline (not box-shadow) so it never clobbers the cell's state ring.
 const cellValidating = css({ borderRadius: '9px', outline: '2px solid', outlineOffset: '-2px', animation: 'wsValidating 1.1s ease-in-out infinite' });
-// Quick rotational wobble on a completed-but-wrong word's cells ("not quite").
-const cellShake = css({ zIndex: 1, animation: 'wsShake 0.4s ease-in-out both' });
+// Quick rotational wobble on a completed-but-wrong word's cells ("not quite"); reduced motion swaps to a static outline (ADR-0050).
+const cellShake = css({
+  zIndex: 1,
+  animation: 'wsShake 0.4s ease-in-out both',
+  '@media (prefers-reduced-motion: reduce)': {
+    animation: 'none',
+    outline: '2px solid token(colors.ws.sakuraDark)',
+    outlineOffset: '-2px',
+  },
+});
 const letterInput = css({
   position: 'absolute',
   inset: 0,
@@ -271,12 +280,15 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
       return { row: r, col: c };
     });
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
-    // Flatten ripple: stagger the keycap drop across the newly-solved cells, then clear.
+    // Flatten ripple: drop the keycaps on the shared accelerando cadence (solvePulse.ts),
+    // locked to the audio pulse, then clear.
+    const delays = solvePulseCellDelaysMs(added.length);
+    const maxDelay = delays.length ? delays[delays.length - 1] : 0;
     const ripple = new Map<string, number>();
-    added.forEach((k, i) => ripple.set(k, i * SOLVE_STAGGER_MS));
+    added.forEach((k, i) => ripple.set(k, delays[i]));
     setSolveDelays(ripple);
     if (rippleTimerRef.current) window.clearTimeout(rippleTimerRef.current);
-    rippleTimerRef.current = window.setTimeout(() => setSolveDelays(new Map()), (added.length - 1) * SOLVE_STAGGER_MS + 340);
+    rippleTimerRef.current = window.setTimeout(() => setSolveDelays(new Map()), maxDelay + 340);
     if (reduceMotionRef.current) {
       // Microtask defer so the parent's solve-firewall effect (which queues the advance) runs first.
       queueMicrotask(() => onBeatCompleteRef.current?.(addedPositions));
@@ -329,6 +341,7 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
                   compoundClues={sorted.map((c) => (c.separators?.length ?? 0) > 0)}
                   active={active}
                   validated={solvedDefCells?.has(posKey(row, col))}
+                  onClick={() => nav.handleDefinitionClick({ row, col })}
                 />
               );
             }

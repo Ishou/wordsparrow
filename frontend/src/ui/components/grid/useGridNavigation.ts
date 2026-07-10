@@ -33,6 +33,8 @@ export interface GridNavigation {
   readonly highlightFor: (position: Position) => CellHighlight;
   // click (not pointerdown) — pan gestures never produce a click, so focus is suppressed naturally.
   readonly handleClick: (event: React.MouseEvent<HTMLDivElement>) => void;
+  // Tap a definition cell → focus its word's first editable-and-empty cell; a repeat tap on a dual-def cell toggles to its other clue. Pan-gated.
+  readonly handleDefinitionClick: (position: Position) => void;
   readonly handleFocus: (event: React.FocusEvent<HTMLInputElement>) => void;
   // Snap DOM focus back to the cell input when blur would otherwise leave
   // the grid for a button / non-focusable element / page background. Keeps
@@ -154,6 +156,8 @@ interface ClueLookup {
   cellAt: (r: number, c: number) => Cell | null;
   cluesAt: (r: number, c: number) => readonly Clue[];
   clueAt: (r: number, c: number, d: Direction) => Clue | undefined;
+  // Clues whose DEFINITION cell sits at (r,c), in tuple order (byCell is keyed on letter cells only).
+  cluesByDefCell: (r: number, c: number) => readonly Clue[];
   // All clues in deterministic puzzle order: across-then-down, each
   // group sub-sorted by (row, col) of the starting cell. This is the
   // order Tab / Enter walks through. Built once per puzzle.
@@ -166,6 +170,7 @@ function buildLookup(puzzle: Puzzle): ClueLookup {
   const byPos = new Map<string, Cell>();
   for (const c of puzzle.cells) byPos.set(key(c.position), c);
   const byCell = new Map<string, Clue[]>();
+  const byDef = new Map<string, Clue[]>();
   const allClues: Clue[] = [];
   const defs = puzzle.cells
     .filter((c): c is DefinitionCell => c.kind === 'definition')
@@ -203,6 +208,10 @@ function buildLookup(puzzle: Puzzle): ClueLookup {
         byCell.set(k, list);
       }
       allClues.push(clue);
+      const dk = key(def.position);
+      const dlist = byDef.get(dk) ?? [];
+      dlist.push(clue);
+      byDef.set(dk, dlist);
     }
   }
   // Deterministic ordering for Tab / Enter cycling: by starting cell in
@@ -220,6 +229,7 @@ function buildLookup(puzzle: Puzzle): ClueLookup {
     cellAt: (r, c) => byPos.get(key({ row: r, col: c })) ?? null,
     cluesAt: (r, c) => byCell.get(key({ row: r, col: c })) ?? [],
     clueAt: (r, c, d) => (byCell.get(key({ row: r, col: c })) ?? []).find((q) => q.direction === d),
+    cluesByDefCell: (r, c) => byDef.get(key({ row: r, col: c })) ?? [],
     orderedClues,
   };
 }
@@ -513,6 +523,31 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
       refs.current.get(key(p))?.focus();
     },
     [lookup],
+  );
+
+  const handleDefinitionClick = useCallback(
+    (defPosition: Position) => {
+      // Tail-of-pan synthesised clicks aren't slot selections — same gate as handleClick.
+      if (isPanningRef.current?.() === true) return;
+      const clues = lookup.cluesByDefCell(defPosition.row, defPosition.col);
+      if (clues.length === 0) return;
+      // Toggle: if the focused word is already one of this cell's clues, advance to the next; else start at the first.
+      const { focused: f, direction: dir } = stateRef.current;
+      const activeClue = f ? lookup.clueAt(f.row, f.col, dir) : undefined;
+      const activeIdx = activeClue ? clues.findIndex((c) => c === activeClue) : -1;
+      const target = clues[activeIdx >= 0 ? (activeIdx + 1) % clues.length : 0];
+      // First editable-and-empty cell (skip locked + typed), else first editable, else the word's first cell.
+      const editable = target.cells.filter(
+        (c) => !(isCellValidatedRef.current?.(c.position.row, c.position.col) ?? false),
+      );
+      const firstEmpty = editable.find(
+        (c) => (refs.current.get(key(c.position))?.value ?? '') === '',
+      );
+      const landing = (firstEmpty ?? editable[0] ?? target.cells[0]).position;
+      if (target.direction !== dir) setDirection(target.direction);
+      focusCell(landing);
+    },
+    [focusCell, lookup],
   );
 
   const handleFocus = useCallback((event: React.FocusEvent<HTMLInputElement>) => {
@@ -970,6 +1005,7 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
     registerCellRef,
     highlightFor,
     handleClick,
+    handleDefinitionClick,
     handleFocus,
     handleBlur,
     handleKeyDown,

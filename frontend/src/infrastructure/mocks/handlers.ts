@@ -47,6 +47,7 @@ type Puzzle = components['schemas']['Puzzle'];
 type Position = components['schemas']['Position'];
 type ValidatePuzzleRequest = components['schemas']['ValidatePuzzleRequest'];
 type RevealCellHintRequest = components['schemas']['RevealCellHintRequest'];
+type VerifyGridRequest = components['schemas']['VerifyGridRequest'];
 type PuzzleSummary = components['schemas']['PuzzleSummary'];
 type SampleWord = components['schemas']['SampleWord'];
 type SampleVerifyResult = components['schemas']['SampleVerifyResult'];
@@ -142,6 +143,10 @@ const HINT_PROBLEM_INVALID_COORD = {
   status: 400,
   detail: 'coordinate is out of bounds or does not point at a letter cell',
 };
+
+// Per-puzzle verify cooldown (ADR-0099): epoch ms of the last successful call. Resets on module reload (preview only).
+const lastVerifiedAtByPuzzle = new Map<string, number>();
+const VERIFY_COOLDOWN_SECONDS = 1800;
 
 /**
  * Handlers for every Grid API operation declared in
@@ -277,6 +282,33 @@ const gridHandlers = [
     return HttpResponse.json({
       solved: allCorrect && submitted.size === fixtureLetterCellCount,
     });
+  }),
+
+  // POST /v1/puzzles/{id}/verify — preview parity: per-cell correctness (ADR-0099) gated by a 30-min per-puzzle cooldown; 429 carries no `cells`.
+  http.post('*/v1/puzzles/:puzzleId/verify', async ({ params, request }) => {
+    const puzzleId = String(params.puzzleId);
+    const now = Date.now();
+    const lastVerifiedAt = lastVerifiedAtByPuzzle.get(puzzleId);
+    const elapsedSeconds = lastVerifiedAt ? (now - lastVerifiedAt) / 1000 : Infinity;
+    if (elapsedSeconds < VERIFY_COOLDOWN_SECONDS) {
+      return HttpResponse.json(
+        {
+          type: 'https://bliss.example/errors/verify-cooldown-active',
+          title: 'Verification cooldown active',
+          status: 429,
+          secondsUntilNextVerify: Math.ceil(VERIFY_COOLDOWN_SECONDS - elapsedSeconds),
+        },
+        { status: 429, headers: { 'content-type': 'application/problem+json' } },
+      );
+    }
+    const body = (await request.json()) as VerifyGridRequest;
+    const cells = (body.cells ?? []).map((cell) => ({
+      row: cell.row,
+      column: cell.column,
+      correct: fixtureLetterByPosition.get(`${cell.row},${cell.column}`) === cell.letter.toUpperCase(),
+    }));
+    lastVerifiedAtByPuzzle.set(puzzleId, now);
+    return HttpResponse.json({ cells, secondsUntilNextVerify: VERIFY_COOLDOWN_SECONDS });
   }),
 ];
 

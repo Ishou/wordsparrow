@@ -1,5 +1,5 @@
 """Unit tests for assemble_corpus.merge / apply_overrides — the
-normalize-then-merge assembler (ADR-0099). Pure-dict fixtures; no
+normalize-then-merge assembler (ADR-0100). Pure-dict fixtures; no
 grammalecte lexique needed (that's corpus_normalizers' concern, already
 covered by test_corpus_normalizers.py)."""
 from __future__ import annotations

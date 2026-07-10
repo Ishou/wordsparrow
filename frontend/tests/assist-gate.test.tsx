@@ -2,7 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
 import type { AuthClient, WhoAmIResult } from '@/application/auth';
-import { AuthProvider, useHintGate } from '@/ui/components/auth';
+import { AuthProvider, useAssistGate } from '@/ui/components/auth';
 
 const USER: WhoAmIResult = {
   userId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
@@ -48,17 +48,17 @@ function withAuth(client: AuthClient) {
   };
 }
 
-describe('useHintGate', () => {
+describe('useAssistGate', () => {
   it('returns disabled gate props with sign-in tooltip when status=anon', async () => {
     const { result } = renderHook(
-      () => useHintGate(),
+      () => useAssistGate(),
       { wrapper: withAuth(makeClient({ whoami: null })) },
     );
     await waitFor(() =>
       expect(result.current).toMatchObject({
         disabled: true,
         'aria-disabled': true,
-        title: 'Connecte-toi pour utiliser les indices.',
+        title: 'Connecte-toi pour vérifier ta grille.',
       }),
     );
   });
@@ -66,7 +66,7 @@ describe('useHintGate', () => {
   it('returns disabled gate props with loading tooltip while status=loading', () => {
     const latch = new Promise<void>(() => {});
     const { result } = renderHook(
-      () => useHintGate(),
+      () => useAssistGate(),
       { wrapper: withAuth(makeClient({ whoami: null, latch })) },
     );
     expect(result.current).toMatchObject({
@@ -78,7 +78,7 @@ describe('useHintGate', () => {
 
   it('returns null when authed and holding the hint capability', async () => {
     const { result } = renderHook(
-      () => useHintGate(),
+      () => useAssistGate(),
       { wrapper: withAuth(makeClient({ whoami: USER })) },
     );
     await waitFor(() => expect(result.current).toBeNull());
@@ -86,20 +86,20 @@ describe('useHintGate', () => {
 
   it('returns disabled gate props when authed without the hint capability', async () => {
     const { result } = renderHook(
-      () => useHintGate(),
+      () => useAssistGate(),
       { wrapper: withAuth(makeClient({ whoami: USER_NO_HINT })) },
     );
     await waitFor(() =>
       expect(result.current).toMatchObject({
         disabled: true,
         'aria-disabled': true,
-        title: 'Connecte-toi pour utiliser les indices.',
+        title: 'Connecte-toi pour vérifier ta grille.',
       }),
     );
   });
 
   it('returns null when rendered outside an AuthProvider', () => {
-    const { result } = renderHook(() => useHintGate());
+    const { result } = renderHook(() => useAssistGate());
     expect(result.current).toBeNull();
   });
 });

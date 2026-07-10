@@ -2,7 +2,7 @@
 """Grammalecte surface-admission policies: pure surface -> (lemma, freq)
 scans of the lexique, wrapped onto the unified schema by
 `corpus_normalizers.normalize_grammalecte` and merged by `assemble_corpus.py`
-(ADR-0099) rather than appended to words-fr.csv in place here.
+(ADR-0100) rather than appended to words-fr.csv in place here.
 
 Two admission policies, each its own function below; pick one per call.
 
@@ -263,4 +263,4 @@ def _load_in_corpus_lemmas(wordlist: Path) -> set[str]:
     return out
 
 
-# The wordlist-mutation CLI once here is retired in favor of assemble_corpus.py (ADR-0099); the parse functions above remain the pure surface->(lemma,freq) source other modules import.
+# The wordlist-mutation CLI once here is retired in favor of assemble_corpus.py (ADR-0100); the parse functions above remain the pure surface->(lemma,freq) source other modules import.

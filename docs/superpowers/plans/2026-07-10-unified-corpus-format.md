@@ -23,8 +23,8 @@
 ## File Structure
 
 **Public `bliss` repo:**
-- `docs/adr/0099-unified-corpus-source-format.md` — new ADR (Task 1).
-- `docs/adr/INDEX.md` — register ADR-0099 + path globs (Task 1).
+- `docs/adr/0100-unified-corpus-source-format.md` — new ADR (Task 1).
+- `docs/adr/INDEX.md` — register ADR-0100 + path globs (Task 1).
 - `scripts/clue_generation/reconcile_lemmas.py` — add `derive_lemma` + pos-aware `reconcile` (Task 2). Already exists (POS-less version + `_is_inflection`).
 - `scripts/clue_generation/test_reconcile_lemmas.py` — extend (Task 2).
 - `scripts/eval/test_runtime_csv_lemmas.py` — make guard POS-aware (Task 4).
@@ -43,10 +43,10 @@
 
 ---
 
-## Task 1: ADR-0099 + INDEX registration
+## Task 1: ADR-0100 + INDEX registration
 
 **Files:**
-- Create: `docs/adr/0099-unified-corpus-source-format.md`
+- Create: `docs/adr/0100-unified-corpus-source-format.md`
 - Modify: `docs/adr/INDEX.md`
 
 **Interfaces:**
@@ -54,18 +54,18 @@
 
 - [ ] **Step 1: Write the ADR** using the template in `CLAUDE.md` (Status: Accepted). Body = the "Decision (ADR-class)" section of `docs/superpowers/specs/2026-07-10-unified-corpus-format-design.md`: unified row schema, `(surface,pos)` lemma rule, normalize-then-merge assembler, POS carried into runtime, POS-aware reconcile/guard. Consequences from the spec.
 
-- [ ] **Step 2: Register in INDEX.md** — add the `0099` row and a path-glob mapping for `scripts/clue_generation/**`, `scripts/eval/**`, `grid/infrastructure/**/CsvWordRepository.kt`, and `**/words/words-fr.csv` → ADR-0099.
+- [ ] **Step 2: Register in INDEX.md** — add the `0099` row and a path-glob mapping for `scripts/clue_generation/**`, `scripts/eval/**`, `grid/infrastructure/**/CsvWordRepository.kt`, and `**/words/words-fr.csv` → ADR-0100.
 
 - [ ] **Step 3: Verify registry coherence**
 
 Run: `python3 scripts/adr-context.sh scripts/clue_generation/assemble_corpus.py`
-Expected: ADR-0099 body prints.
+Expected: ADR-0100 body prints.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/adr/0099-unified-corpus-source-format.md docs/adr/INDEX.md
-git commit -s -m "docs(adr): ADR-0099 unified corpus source format"
+git add docs/adr/0100-unified-corpus-source-format.md docs/adr/INDEX.md
+git commit -s -m "docs(adr): ADR-0100 unified corpus source format"
 ```
 
 ---
