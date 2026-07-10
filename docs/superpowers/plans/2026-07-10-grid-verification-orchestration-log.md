@@ -33,3 +33,4 @@ Append-only log of the cron's merge-chain decisions. For maintainer review.
 - 2026-07-10T05:48Z — MERGED #1505 — ADR-0099 (green + final review LGTM after last commit); main → b891df47. Merge authorized in cron context (no classifier block). W2 (#1506, #1508) now unblocked.
 - 2026-07-10T05:5xZ — MERGED #1504 — spec+plan docs (green + LGTM); main → 228fc51f. #1506/#1508 mergeability recomputing (UNKNOWN) post-#1505 merge — next tick.
 - 2026-07-10T05:5xZ — MERGED #1506 — /verify schema + types (green + LGTM); main → 7217de16. NEXT: #1510 (base feat/grid-verify-schema) needs retarget→main + rebase. #1508 next for W2.
+- 2026-07-10T06:0xZ — MERGED #1508 — backend logic (green + LGTM; stale "ADR-0099 not merged" finding resolved by #1505); main → 4f24cd43. PENDING REBASES: #1509 (base feat/grid-verify-logic, now merged) + #1510 (auto-retargeted to main, CONFLICTING). Next tick: rebase one.
