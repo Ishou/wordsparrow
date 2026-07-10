@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import com.bliss.grid.api.TestCorpus
+import com.bliss.grid.application.auth.WhoAmI
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
@@ -23,6 +24,7 @@ import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryVerifyUsageRepository
+import io.ktor.client.request.cookie
 import io.ktor.client.request.headers
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -37,16 +39,18 @@ import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.UUID
 
-/** Wire-path tests for `POST /v1/puzzles/{puzzleId}/validate-word`; the internal service-token gate (ADR-0084). */
-class ValidateWordRouteTest {
+/** Wire-path tests for `POST /v1/puzzles/{puzzleId}/verify` (ADR-0099). */
+class PuzzleRouteVerifyTest {
     private val puzzleId = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b")
-    private val serviceToken = "s3cr3t-service-token-value"
+    private val userId = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c")
+    private val cookieValue = "session-cookie-value"
 
     // PAIN at (0,0) Direction.RIGHT: letters P,A,I,N at (0,1)..(0,4).
     private val grid =
@@ -63,7 +67,7 @@ class ValidateWordRouteTest {
                 ),
         )
 
-    private fun ApplicationTestBuilder.mount(token: String?) {
+    private fun ApplicationTestBuilder.mount(verifier: FakeCookieVerifier) {
         application {
             install(ContentNegotiation) {
                 json(
@@ -95,107 +99,111 @@ class ValidateWordRouteTest {
                     puzzleRepository = puzzleRepo,
                     hintUsageRepository = hintUsageRepo,
                     hintWriteCoordinator = InMemoryHintWriteCoordinator(),
-                    cookieVerifier = FakeCookieVerifier(),
-                    wordValidateServiceToken = token,
+                    cookieVerifier = verifier,
                 )
             }
         }
     }
 
-    private val correctWordBody =
+    private val correctBody =
         """{"cells":[{"row":0,"column":1,"letter":"P"},{"row":0,"column":2,"letter":"A"},""" +
-            """{"row":0,"column":3,"letter":"I"},{"row":0,"column":4,"letter":"N"}]}"""
+            """{"row":0,"column":3,"letter":"X"},{"row":0,"column":4,"letter":"N"}]}"""
+
+    private suspend fun verify(
+        client: io.ktor.client.HttpClient,
+        body: String,
+        withCookie: Boolean = true,
+        targetPuzzleId: UUID = puzzleId,
+    ) = client.post("/v1/puzzles/$targetPuzzleId/verify") {
+        if (withCookie) cookie(SESSION_COOKIE_NAME, cookieValue)
+        headers { append(HttpHeaders.ContentType, ContentType.Application.Json.toString()) }
+        setBody(body)
+    }
 
     @Test
-    fun `responds 401 service-auth-required when X-Service-Token header is missing`() =
+    fun `responds 200 with per-cell verdicts and a fresh cooldown`() =
         testApplication {
-            mount(token = serviceToken)
+            mount(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", emptySet())))
 
-            val response =
-                client.post("/v1/puzzles/$puzzleId/validate-word") {
-                    headers { append(HttpHeaders.ContentType, ContentType.Application.Json.toString()) }
-                    setBody(correctWordBody)
-                }
-
-            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
-            assertThat(response.bodyAsText()).contains("service-auth-required")
-        }
-
-    @Test
-    fun `responds 401 service-auth-required when X-Service-Token does not match`() =
-        testApplication {
-            mount(token = serviceToken)
-
-            val response =
-                client.post("/v1/puzzles/$puzzleId/validate-word") {
-                    headers {
-                        append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                        append("X-Service-Token", "wrong-token")
-                    }
-                    setBody(correctWordBody)
-                }
-
-            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
-            assertThat(response.bodyAsText()).contains("service-auth-required")
-        }
-
-    @Test
-    fun `responds 401 service-auth-required when the server token env is unset`() =
-        testApplication {
-            mount(token = null)
-
-            val response =
-                client.post("/v1/puzzles/$puzzleId/validate-word") {
-                    headers {
-                        append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                        append("X-Service-Token", serviceToken)
-                    }
-                    setBody(correctWordBody)
-                }
-
-            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
-            assertThat(response.bodyAsText()).contains("service-auth-required")
-        }
-
-    @Test
-    fun `responds 200 correct=true with a valid token and a correct word`() =
-        testApplication {
-            mount(token = serviceToken)
-
-            val response =
-                client.post("/v1/puzzles/$puzzleId/validate-word") {
-                    headers {
-                        append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                        append("X-Service-Token", serviceToken)
-                    }
-                    setBody(correctWordBody)
-                }
+            val response = verify(client, correctBody)
 
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
             val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-            assertThat(body["correct"]!!.jsonPrimitive.content).isEqualTo("true")
+            val cells = body["cells"]!!.jsonArray
+            assertThat(cells.map { it.jsonObject["correct"]!!.jsonPrimitive.content })
+                .isEqualTo(listOf("true", "true", "false", "true"))
+            assertThat(body["secondsUntilNextVerify"]!!.jsonPrimitive.content).isEqualTo("1800")
         }
 
     @Test
-    fun `responds 200 correct=false with a valid token and a wrong word - no positional data`() =
+    fun `responds 429 verify-cooldown-active on the second call within the cooldown window`() =
         testApplication {
-            mount(token = serviceToken)
+            mount(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", emptySet())))
+            verify(client, correctBody)
 
-            val wrongBody =
-                """{"cells":[{"row":0,"column":1,"letter":"P"},{"row":0,"column":2,"letter":"A"},""" +
-                    """{"row":0,"column":3,"letter":"X"},{"row":0,"column":4,"letter":"N"}]}"""
+            val response = verify(client, correctBody)
 
-            val response =
-                client.post("/v1/puzzles/$puzzleId/validate-word") {
-                    headers {
-                        append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                        append("X-Service-Token", serviceToken)
-                    }
-                    setBody(wrongBody)
-                }
-
-            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.status).isEqualTo(HttpStatusCode.TooManyRequests)
             val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-            assertThat(body["correct"]!!.jsonPrimitive.content).isEqualTo("false")
+            assertThat(body["type"]!!.jsonPrimitive.content).contains("verify-cooldown-active")
+            assertThat(body["secondsUntilNextVerify"]!!.jsonPrimitive.content.toInt() > 0).isEqualTo(true)
+        }
+
+    @Test
+    fun `responds 401 auth-required when the cookie is missing`() =
+        testApplication {
+            mount(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", emptySet())))
+
+            val response = verify(client, correctBody, withCookie = false)
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
+            assertThat(response.bodyAsText()).contains("auth-required")
+        }
+
+    @Test
+    fun `responds 401 auth-required when verifyFresh returns null even though verify cached a positive`() =
+        testApplication {
+            mount(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", emptySet()), fresh = null))
+
+            val response = verify(client, correctBody)
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.Unauthorized)
+            assertThat(response.bodyAsText()).contains("auth-required")
+        }
+
+    @Test
+    fun `responds 400 invalid-coord when a cell is out of grid bounds`() =
+        testApplication {
+            mount(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", emptySet())))
+
+            val response = verify(client, """{"cells":[{"row":999,"column":0,"letter":"P"}]}""")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.BadRequest)
+            assertThat(response.bodyAsText()).contains("invalid-coord")
+        }
+
+    @Test
+    fun `responds 400 on malformed JSON without reaching the use case`() =
+        testApplication {
+            mount(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", emptySet())))
+
+            // ContentNegotiation's own decode-failure handling responds 400 before the route's SerializationException catch runs; same pre-existing shape as /hints.
+            val response = verify(client, """{"cells": not-json}""")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.BadRequest)
+        }
+
+    @Test
+    fun `responds 404 puzzle-not-found when puzzleId is unknown`() =
+        testApplication {
+            mount(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", emptySet())))
+            val unknownId = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a99")
+
+            val response = verify(client, correctBody, targetPuzzleId = unknownId)
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.NotFound)
+            assertThat(response.bodyAsText()).contains("puzzle-not-found")
         }
 }
+
+private const val SESSION_COOKIE_NAME: String = "__Secure-ws_session"

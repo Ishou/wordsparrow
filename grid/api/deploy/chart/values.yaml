@@ -142,6 +142,18 @@ retention:
       digest: ""
       # When true, helm install/upgrade fails fast if digest is empty (mirrors main image guard).
       requireDigest: false
+  verifyUsage:
+    # Off by default — local-dev keeps everything. Prod enables (ADR-0099).
+    enabled: false
+    # Cron expression. Daily 03:45 UTC, staggered after the hint-retention sweep.
+    schedule: "45 3 * * *"
+    # Days from `last_verified_at` to keep rows.
+    days: 90
+    image:
+      repository: postgres
+      tag: "16-alpine"
+      digest: ""
+      requireDigest: false
 # Daily puzzle pre-generation CronJob (ADR-0042). Runs the :grid:worker
 # `--ensure-dailies` CLI; `templates/cronjob-ensure-dailies.yaml` owns
 # the rendering. Off by default so local-dev installs don't try to pull
