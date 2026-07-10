@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { CaretLeft, DotsThreeVertical, Lightbulb, Timer, Trophy } from '@phosphor-icons/react';
+import { CaretLeft, DotsThreeVertical, Lightbulb, MagnifyingGlass, Timer, Trophy } from '@phosphor-icons/react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import type { Position, Puzzle } from '@/domain';
@@ -21,7 +21,10 @@ import { Keyboard } from './Keyboard';
 import { useTouchPrimary, useResumeBlurOnPwa } from '@/ui/components/keyboard';
 import { usePuzzleValidation } from '@/ui/components/grid/usePuzzleValidation';
 import { useHintRequest } from '@/ui/components/grid/useHintRequest';
-import { HintCooldown } from '@/ui/components/grid/HintCooldown';
+import { useGridVerification } from '@/ui/components/grid/useGridVerification';
+import { ACTIVE_ASSIST_MODE } from '@/ui/components/grid/assistMode';
+import { AssistCooldown, formatMmSs } from '@/ui/components/grid/AssistCooldown';
+import { useAssistGate } from '@/ui/components/auth';
 import { WinScreen } from './WinScreen';
 import { useGridSounds } from './useGridSounds';
 import { GridSoundToggle } from './GridSoundToggle';
@@ -164,15 +167,15 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
     return m;
   }, [initialEntries]);
 
-  // Locked cells (hint-revealed + auto-validated words) seed synchronously from the store so validated cells never paint unvalidated first.
+  // Locked cells (assist-revealed/verified + auto-validated words) seed synchronously from the store so validated cells never paint unvalidated first.
   const loadLocked = useCallback(
     (id: string) => new Set(soloEntriesStore.loadLockedCells(id).map((c) => posKey(c.row, c.column))),
     [soloEntriesStore],
   );
-  const [lockedHintCells, setLockedHintCells] = useState<ReadonlySet<string>>(() => loadLocked(puzzle.id));
+  const [lockedAssistCells, setLockedAssistCells] = useState<ReadonlySet<string>>(() => loadLocked(puzzle.id));
   const [lockedLoaded, setLockedLoaded] = useState(true);
   useEffect(() => {
-    setLockedHintCells(loadLocked(puzzle.id));
+    setLockedAssistCells(loadLocked(puzzle.id));
     setLockedLoaded(true);
   }, [puzzle.id, loadLocked]);
 
@@ -209,7 +212,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
         soloEntriesStore.save(puzzle.id, cell.row, cell.column, cell.letter);
         soloEntriesStore.lockCell(puzzle.id, cell.row, cell.column);
       }
-      setLockedHintCells((prev) => {
+      setLockedAssistCells((prev) => {
         const next = new Set(prev);
         for (const cell of cells) next.add(posKey(cell.row, cell.column));
         return next;
@@ -233,12 +236,30 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
   );
 
   const validatedPositions = useMemo<ReadonlySet<string>>(() => {
-    if (lockedHintCells.size === 0) return validation.validated;
-    if (validation.validated.size === 0) return lockedHintCells;
+    if (lockedAssistCells.size === 0) return validation.validated;
+    if (validation.validated.size === 0) return lockedAssistCells;
     const merged = new Set<string>(validation.validated);
-    for (const k of lockedHintCells) merged.add(k);
+    for (const k of lockedAssistCells) merged.add(k);
     return merged;
-  }, [validation.validated, lockedHintCells]);
+  }, [validation.validated, lockedAssistCells]);
+
+  // Verify's correct cells lock via the same persist path hint reveal uses; letters are already saved (typed by the player).
+  const handleVerifyCorrect = useCallback(
+    (positions: ReadonlyArray<{ row: number; column: number }>) => {
+      for (const p of positions) soloEntriesStore.lockCell(puzzle.id, p.row, p.column);
+      setLockedAssistCells((prev) => {
+        const next = new Set(prev);
+        for (const p of positions) next.add(posKey(p.row, p.column));
+        return next;
+      });
+      userActedRef.current = true;
+      checkGrid();
+    },
+    [soloEntriesStore, puzzle.id, checkGrid],
+  );
+
+  const verification = useGridVerification(puzzle, puzzleSolver, validatedPositions, handleVerifyCorrect);
+  const assistGate = useAssistGate();
 
   // Stable ref so callbacks always read the latest validated set.
   const validatedRef = useRef(validatedPositions);
@@ -268,6 +289,11 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
     userActedRef.current = true;
     hint.request(f.row, f.col, activeDirectionRef.current);
   }, [hint]);
+
+  const requestVerify = useCallback(() => {
+    userActedRef.current = true;
+    verification.verify();
+  }, [verification]);
 
   const letterCount = useMemo(() => puzzle.cells.filter((c) => c.kind === 'letter').length, [puzzle]);
   const won = letterCount > 0 && validatedPositions.size >= letterCount;
@@ -476,9 +502,14 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
             </Button>
           ) : (
             <>
-              {hint.errorMessage ? (
+              {ACTIVE_ASSIST_MODE === 'hint' && hint.errorMessage ? (
                 <p className={hintError} role="alert">
                   {hint.errorMessage}
+                </p>
+              ) : null}
+              {ACTIVE_ASSIST_MODE === 'verify' && verification.errorMessage ? (
+                <p className={hintError} role="alert">
+                  {verification.errorMessage}
                 </p>
               ) : null}
               {validation.failMessage ? (
@@ -504,23 +535,50 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
                   onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
                   onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
                   trailing={
-                    <span className={hintTrailing}>
-                      <button
-                        type="button"
-                        className={hintBtn}
-                        onClick={requestHint}
-                        disabled={hint.pending || (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)}
-                        aria-label={t('play.hint.aria.remaining', { remaining: hint.hintsRemaining })}
-                      >
-                        <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
-                        {t('play.hint.label', { remaining: hint.hintsRemaining })}
-                      </button>
-                      <HintCooldown
-                        hintsRemaining={hint.hintsRemaining}
-                        hintsAllowed={puzzle.hintsAllowed}
-                        secondsUntilNextHint={hint.secondsUntilNextHint}
-                      />
-                    </span>
+                    ACTIVE_ASSIST_MODE === 'verify' ? (
+                      <span className={hintTrailing}>
+                        <button
+                          type="button"
+                          className={hintBtn}
+                          onClick={requestVerify}
+                          disabled={verification.pending || (verification.secondsUntilNextVerify ?? 0) > 0}
+                          {...(assistGate ?? {})}
+                        >
+                          <MagnifyingGlass aria-hidden="true" weight="bold" className={hintBulb} />
+                          {t('play.verify.label')}
+                        </button>
+                        <AssistCooldown
+                          visible={verification.secondsUntilNextVerify !== null}
+                          secondsRemaining={verification.secondsUntilNextVerify}
+                          intervalSeconds={1800}
+                          label={t('grid.verify.cooldown.label', {
+                            time: formatMmSs(verification.secondsUntilNextVerify ?? 0),
+                          })}
+                          availableAnnouncement={t('grid.verify.cooldown.available')}
+                        />
+                      </span>
+                    ) : ACTIVE_ASSIST_MODE === 'hint' ? (
+                      <span className={hintTrailing}>
+                        <button
+                          type="button"
+                          className={hintBtn}
+                          onClick={requestHint}
+                          disabled={hint.pending || (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)}
+                          aria-label={t('play.hint.aria.remaining', { remaining: hint.hintsRemaining })}
+                        >
+                          <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
+                          {t('play.hint.label', { remaining: hint.hintsRemaining })}
+                        </button>
+                        <AssistCooldown
+                          visible={hint.hintsRemaining < puzzle.hintsAllowed && hint.secondsUntilNextHint !== null}
+                          secondsRemaining={hint.secondsUntilNextHint}
+                          intervalSeconds={600}
+                          label={`+1 dans ${formatMmSs(hint.secondsUntilNextHint ?? 0)}`}
+                          availableAnnouncement="Un indice est de nouveau disponible."
+                          progressAnnouncement={`Régénération d’un indice en cours, ${hint.hintsRemaining} sur ${puzzle.hintsAllowed}.`}
+                        />
+                      </span>
+                    ) : null
                   }
                 />
               ) : null}
@@ -535,6 +593,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
         puzzle={puzzle}
         nav={nav}
         validatedPositions={validatedPositions}
+        rejectingPositions={ACTIVE_ASSIST_MODE === 'verify' ? verification.shakingPositions : undefined}
         entryAt={entryAt}
         solvedDefCells={solvedDefCells}
         className={viewportFill}

@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { expect, test, type Page } from '@playwright/test';
 
-// Solo whole-word hint (ADR-0076 §§7–9): a hint reveals + locks the entire focused word, spending one budget unit.
+// Solo grid verification (ADR-0099): Vérifier checks filled, not-yet-locked cells — correct ones lock, wrong ones stay editable.
 
 const WIN_HEADING = 'Grille terminée !';
 
@@ -44,12 +44,8 @@ async function gotoPlay(page: Page): Promise<void> {
   await page.waitForTimeout(120);
 }
 
-function clickCell(page: Page, row: number, col: number): Promise<void> {
-  return page.locator(`div[data-row="${row}"][data-col="${col}"]`).click();
-}
-
-function hintButton(page: Page, remaining: number) {
-  return page.getByRole('button', { name: new RegExp(`Indice — ${remaining} restants`) });
+function verifyButton(page: Page) {
+  return page.getByRole('button', { name: 'Vérifier' });
 }
 
 async function lockedCells(page: Page): Promise<Array<{ row: number; col: number; value: string }>> {
@@ -75,36 +71,38 @@ async function fillCells(page: Page, cells: readonly Answer[]): Promise<void> {
   }, cells as Answer[]);
 }
 
-test('a hint reveals the whole focused word, locks it, and spends one budget unit', async ({ page }) => {
+test('Vérifier locks the correct cells, leaves the wrong one editable, and starts the cooldown ring', async ({ page }) => {
   await gotoPlay(page);
-  await clickCell(page, WORD[0].row, WORD[0].col);
+  // Fill the isolated across word: every cell correct except the last one.
+  const submitted = WORD.map((c, i) =>
+    i === WORD.length - 1 ? { ...c, letter: c.letter === 'Z' ? 'Q' : 'Z' } : c,
+  );
+  await fillCells(page, submitted);
 
-  await expect(hintButton(page, 3)).toBeVisible();
-  await hintButton(page, 3).click();
+  await expect(verifyButton(page)).toBeVisible();
+  await verifyButton(page).click();
 
-  // The whole word — not a single cell — is revealed and locked.
-  await expect(hintButton(page, 2)).toBeVisible();
   const locked = await lockedCells(page);
-  expect(locked).toEqual(WORD.map((c) => ({ row: c.row, col: c.col, value: c.letter })));
+  expect(locked).toEqual(WORD.slice(0, -1).map((c) => ({ row: c.row, col: c.col, value: c.letter })));
 
-  // Spending below cap surfaces the discreet regen cooldown; the transition is announced via a separate live region.
-  await expect(page.getByTestId('hint-cooldown')).toBeVisible();
-  const cooldownStatus = page.getByTestId('hint-cooldown-status');
+  // The wrong cell stays editable — no whole-word lock on a partial match.
+  const last = WORD[WORD.length - 1];
+  await expect(
+    page.locator(`input[data-row="${last.row}"][data-col="${last.col}"]`),
+  ).not.toHaveAttribute('aria-readonly', 'true');
+
+  // A successful call — right or wrong per cell — starts the 30-min cooldown ring, announced via a separate live region.
+  await expect(page.getByTestId('assist-cooldown')).toBeVisible();
+  const cooldownStatus = page.getByTestId('assist-cooldown-status');
   await expect(cooldownStatus).toHaveAttribute('role', 'status');
   await expect(cooldownStatus).toHaveAttribute('aria-live', 'polite');
-
-  // A cell outside the word stays editable (no whole-grid lock).
-  await expect(page.locator('input[data-row="0"][data-col="1"]')).not.toHaveAttribute('aria-readonly', 'true');
 });
 
-test('a hint that fills the final cells triggers the whole-grid binary check', async ({ page }) => {
+test('a fully-correct verify locks every cell and triggers the whole-grid binary check', async ({ page }) => {
   await gotoPlay(page);
-  // Fill everything except the focused word; the hint supplies the last cells.
-  const rest = ANSWERS.filter((a) => !(a.row === 11 && a.col >= 8));
-  await fillCells(page, rest);
+  await fillCells(page, ANSWERS);
 
-  await clickCell(page, WORD[0].row, WORD[0].col);
-  await hintButton(page, 3).click();
+  await verifyButton(page).click();
 
   await expect(page.getByRole('heading', { name: WIN_HEADING })).toBeVisible();
 });

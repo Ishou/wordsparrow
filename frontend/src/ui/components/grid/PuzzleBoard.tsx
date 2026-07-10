@@ -31,8 +31,16 @@ const cellWrap = css({ position: 'relative', cursor: 'pointer' });
 const cellGlow = css({ borderRadius: '13px', zIndex: 1, animation: 'wsSolveGlow 0.45s ease-out both' });
 // Discreet "checking with the server" ring on a completed word awaiting its verdict; outline (not box-shadow) so it never clobbers the cell's state ring.
 const cellValidating = css({ borderRadius: '9px', outline: '2px solid', outlineOffset: '-2px', animation: 'wsValidating 1.1s ease-in-out infinite' });
-// Quick rotational wobble on a completed-but-wrong word's cells ("not quite").
-const cellShake = css({ zIndex: 1, animation: 'wsShake 0.4s ease-in-out both' });
+// Quick rotational wobble on a completed-but-wrong word's cells ("not quite"); reduced motion swaps to a static outline (ADR-0050).
+const cellShake = css({
+  zIndex: 1,
+  animation: 'wsShake 0.4s ease-in-out both',
+  '@media (prefers-reduced-motion: reduce)': {
+    animation: 'none',
+    outline: '2px solid token(colors.ws.sakuraDark)',
+    outlineOffset: '-2px',
+  },
+});
 const letterInput = css({
   position: 'absolute',
   inset: 0,

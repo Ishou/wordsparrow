@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
 
-// Discreet regen cooldown for the solo hint affordance (regen spec §D).
+// Discreet regen cooldown ring for the active solo assist affordance (hint's token-bucket regen or verify's 30-min cooldown).
 
 const containerStyles = css({
   display: 'inline-flex',
@@ -37,30 +37,37 @@ const srOnlyStyles = css({
   border: 0,
 });
 
-export interface HintCooldownProps {
-  readonly hintsRemaining: number;
-  readonly hintsAllowed: number;
-  /** Live seconds until the next regenerated credit; `null` when the budget is full. */
-  readonly secondsUntilNextHint: number | null;
-  /** Refill interval in seconds; drives the ring fill fraction. */
-  readonly intervalSeconds?: number;
+export interface AssistCooldownProps {
+  // Caller decides whether the ring should be shown at all — hint keys this on remaining budget, verify on "a cooldown has been seeded".
+  readonly visible: boolean;
+  /** Live seconds until the next allowed action. */
+  readonly secondsRemaining: number | null;
+  /** Cooldown duration in seconds; drives the ring fill fraction. */
+  readonly intervalSeconds: number;
+  /** Fully-formatted visible text, e.g. "+1 dans 4:32" or "+ vérification dans 12:04". */
+  readonly label: string;
+  /** SR announcement once `secondsRemaining` reaches 0. */
+  readonly availableAnnouncement: string;
+  /** SR announcement while still cooling; omit to stay silent until the transition to available (ADR-0050: no per-tick spam). */
+  readonly progressAnnouncement?: string;
 }
 
-function formatMmSs(totalSeconds: number): string {
+export function formatMmSs(totalSeconds: number): string {
   const safe = Math.max(0, Math.floor(totalSeconds));
   const minutes = Math.floor(safe / 60);
   const seconds = safe % 60;
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export function HintCooldown({
-  hintsRemaining,
-  hintsAllowed,
-  secondsUntilNextHint,
-  intervalSeconds = 600,
-}: HintCooldownProps) {
-  const visible = hintsRemaining < hintsAllowed && secondsUntilNextHint !== null;
-  const available = (secondsUntilNextHint ?? 0) <= 0;
+export function AssistCooldown({
+  visible,
+  secondsRemaining,
+  intervalSeconds,
+  label,
+  availableAnnouncement,
+  progressAnnouncement,
+}: AssistCooldownProps) {
+  const available = (secondsRemaining ?? 0) <= 0;
 
   // Announce only at meaningful transitions (appears / becomes available), never on each ticker second (ADR-0050).
   const [announcement, setAnnouncement] = useState('');
@@ -69,29 +76,25 @@ export function HintCooldown({
       setAnnouncement('');
       return;
     }
-    setAnnouncement(
-      available
-        ? 'Un indice est de nouveau disponible.'
-        : `Régénération d’un indice en cours, ${hintsRemaining} sur ${hintsAllowed}.`,
-    );
-  }, [visible, available, hintsRemaining, hintsAllowed]);
+    setAnnouncement(available ? availableAnnouncement : (progressAnnouncement ?? ''));
+  }, [visible, available, availableAnnouncement, progressAnnouncement]);
 
   if (!visible) return null;
 
-  const remaining = Math.max(0, secondsUntilNextHint ?? 0);
+  const remaining = Math.max(0, secondsRemaining ?? 0);
   const progress = Math.min(1, Math.max(0, (intervalSeconds - remaining) / intervalSeconds));
 
   return (
-    <span className={containerStyles} data-testid="hint-cooldown">
+    <span className={containerStyles} data-testid="assist-cooldown">
       <span
         className={ringStyles}
         style={{ '--cooldown-progress': progress } as React.CSSProperties}
         aria-hidden="true"
       />
-      <span aria-hidden="true">+1 dans {formatMmSs(remaining)}</span>
+      <span aria-hidden="true">{label}</span>
       <span
         className={srOnlyStyles}
-        data-testid="hint-cooldown-status"
+        data-testid="assist-cooldown-status"
         role="status"
         aria-live="polite"
       >
