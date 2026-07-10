@@ -263,16 +263,21 @@ def build_surface_rows(
 
 def main() -> None:
     p = argparse.ArgumentParser()
+    # Clue source of record is the gold corpus (Claude-authored, qualified),
+    # built by build_gold_corpus.py — not the retired LoRA `raw_pos` output.
     p.add_argument("--corpus", type=Path,
-                   default=REPO / "data" / "eval" / "production" / "lemma_clues_raw_pos_fixed.csv")
+                   default=REPO / "data" / "eval" / "production" / "lemma_clues_gold.csv")
     p.add_argument("--wordlist", type=Path,
-                   default=REPO / "grid/api/src/main/resources/words/words-fr.csv")
+                   default=REPO / "grid/infrastructure/src/main/resources/words/words-fr.csv")
     p.add_argument("--lexique", type=Path,
                    default=Path(os.path.expanduser(
                        "~/Downloads/grammalecte/lexique-grammalecte-fr-v7.7.txt")))
     p.add_argument("--dst", type=Path,
                    default=REPO / "data" / "eval" / "production" / "surface_clues.csv")
-    p.add_argument("--threshold", type=float, default=0.65,
+    # Gold is all high-confidence, so ship every inflation by default (the
+    # score filter was for noisy LoRA output). Quality routing (passe-simple
+    # 1pl/2pl, agreement, etc.) still drops bad inflections regardless.
+    p.add_argument("--threshold", type=float, default=0.0,
                    help="output filter (rows below go to surface_clues_dropped.csv)")
     args = p.parse_args()
 
