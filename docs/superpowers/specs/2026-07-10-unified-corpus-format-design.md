@@ -89,9 +89,38 @@ left alone. Extend it to take `pos` as input:
   `vue/nom,lemma=vue` ✓ (a `nom` whose lemma grammalecte can't confirm is
   accepted as self); `lia/verbe,lemma=lia` ✗ (must be `lier`).
 
+### Refined root cause — the inflator collapses per-clue senses (added 2026-07-10)
+
+The lemma bug is not only surface-defaulting emitters; it is baked into the
+**inflator**. `build_surface_clues.py` iterates *surfaces* and, for each, sorts
+its candidate `(lemma, pos)` by `POS_PRECEDENCE {nom:0, adj:1, adv:2, verbe:3}`
+(`:253-255`) and keeps **one winner**. So surface `lie` with both a noun clue
+(`lie/nom`) and a verb clue (`lier/verbe`) collapses to the noun — the verb sense
+is discarded, and any verb-clued `lie` elsewhere keeps `lemma=lie`, defeating
+dedup against `lia`(lier). This is *the* reported bug (`lie | "Unit solidement"`
+shipping `lemma=lie`) and generalizes to a ~3200-row class of inflected surfaces
+clued in a sense ≠ their assigned lemma (`abats | "Fais tomber"`, `ris |
+"Manifestes sa gaieté"`). No after-the-fact grammalecte pass can fix it — the
+clue's sense is the only disambiguator, and it lives at generation time.
+
+**Fix: invert the inflator to forward inflation.** Iterate `(lemma, pos)` clues
+and inflate each *forward* to its surfaces, emitting one row per sense carrying
+that clue's own `(lemma, pos)`: `lier/verbe` → `(lie, lemma=lier, pos=verbe)`,
+`lie/nom` → `(lie, lemma=lie, pos=nom)`. A surface legitimately gets multiple
+rows (one per sense/clue); each carries the correct lemma, so grid dedup uses
+the row's lemma correctly. This replaces the single-winner `POS_PRECEDENCE`
+pick. The morphology mechanics (`inflect_clue`, the `inflection_status` codes,
+the pleonasm/agreement guards) are preserved — only the loop direction and the
+"one owner per surface" assumption change.
+
 ### Assembler refactor
 
-Replace the six mutators with two stages:
+Replace the six mutators with two stages that consume **every** tier — not only
+hand-authored sources, but the two that are the *bulk* of the corpus: the
+grammalecte-import tier (`import_grammalecte_long_words`, ~29k long-word
+surfaces) and the forward-inflated LLM/clue tier (the rewritten
+`build_surface_clues`). Each becomes a normalizer feeding the merge; retiring a
+mutator without its replacement normalizer would drop its rows.
 
 1. **Per-source normalizer** — one small function per source shape that emits
    unified rows (fills `pos`+`lemma`, deriving via `reconcile_lemmas` where the
