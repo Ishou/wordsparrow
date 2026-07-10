@@ -21,15 +21,24 @@ export function mergeProgress(
 ): SoloStorePayload {
   const localWinsCollision = isAtLeastAsRecent(local.updatedAt, remote.updatedAt);
 
-  const byCell = new Map<string, { r: number; c: number; l: string }>();
-  // Seed with the loser first so the winner's colliding letter overwrites it.
-  const ordered = localWinsCollision
-    ? [remote.payload.entries, local.payload.entries]
-    : [local.payload.entries, remote.payload.entries];
-  for (const entries of ordered) {
-    for (const e of entries) {
-      byCell.set(cellKey(e.r, e.c), { r: e.r, c: e.c, l: e.l });
+  const localLocks = new Set(local.payload.lockedCells.map((l) => cellKey(l.r, l.c)));
+  const remoteLocks = new Set(remote.payload.lockedCells.map((l) => cellKey(l.r, l.c)));
+
+  // A locked letter is validated ground truth, so it outranks any unlocked colliding guess regardless of blob age; timestamp only breaks equal-lock-status collisions.
+  const byCell = new Map<string, { r: number; c: number; l: string; priority: number }>();
+  const consider = (e: { r: number; c: number; l: string }, locked: boolean, wins: boolean) => {
+    const priority = (locked ? 2 : 0) + (wins ? 1 : 0);
+    const key = cellKey(e.r, e.c);
+    const existing = byCell.get(key);
+    if (existing === undefined || priority > existing.priority) {
+      byCell.set(key, { r: e.r, c: e.c, l: e.l, priority });
     }
+  };
+  for (const e of local.payload.entries) {
+    consider(e, localLocks.has(cellKey(e.r, e.c)), localWinsCollision);
+  }
+  for (const e of remote.payload.entries) {
+    consider(e, remoteLocks.has(cellKey(e.r, e.c)), !localWinsCollision);
   }
 
   const lockKeys = new Set<string>();
@@ -42,7 +51,7 @@ export function mergeProgress(
   }
 
   return {
-    entries: [...byCell.values()],
+    entries: [...byCell.values()].map(({ r, c, l }) => ({ r, c, l })),
     lockedCells,
     hintsUsed: Math.max(local.payload.hintsUsed, remote.payload.hintsUsed),
     // Total time is monotonic; two devices both counting ⇒ keep the larger.

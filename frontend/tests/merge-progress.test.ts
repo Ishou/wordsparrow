@@ -106,6 +106,45 @@ describe('mergeProgress — locked cells (monotonic union)', () => {
   });
 });
 
+describe('mergeProgress — locked letters are authoritative over unlocked collisions', () => {
+  // Solo cells lock only on full validation or a hint, so a locked letter is correct and must never lose to an unlocked guess on the newer blob.
+  it('keeps the validated letter when the other side has a newer unlocked guess', () => {
+    const merged = mergeProgress(
+      { payload: payload({ entries: [{ r: 0, c: 0, l: 'R' }] }), updatedAt: T2 },
+      {
+        payload: payload({
+          entries: [{ r: 0, c: 0, l: 'S' }],
+          lockedCells: [{ r: 0, c: 0 }],
+        }),
+        updatedAt: T1,
+      },
+    );
+    expect(merged.entries).toEqual([{ r: 0, c: 0, l: 'S' }]);
+  });
+
+  it('symmetric — local validated letter beats remote newer unlocked guess', () => {
+    const merged = mergeProgress(
+      {
+        payload: payload({
+          entries: [{ r: 0, c: 0, l: 'S' }],
+          lockedCells: [{ r: 0, c: 0 }],
+        }),
+        updatedAt: T1,
+      },
+      { payload: payload({ entries: [{ r: 0, c: 0, l: 'R' }] }), updatedAt: T2 },
+    );
+    expect(merged.entries).toEqual([{ r: 0, c: 0, l: 'S' }]);
+  });
+
+  it('falls back to the timestamp tiebreak when neither side has the cell locked', () => {
+    const merged = mergeProgress(
+      { payload: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }), updatedAt: T2 },
+      { payload: payload({ entries: [{ r: 0, c: 0, l: 'Z' }] }), updatedAt: T1 },
+    );
+    expect(merged.entries).toEqual([{ r: 0, c: 0, l: 'A' }]);
+  });
+});
+
 describe('mergeProgress — hints used (max)', () => {
   it('takes the max of both sides', () => {
     const merged = mergeProgress(
