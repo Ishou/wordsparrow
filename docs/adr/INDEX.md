@@ -291,6 +291,11 @@ ADR-0098  game/api/openapi.yaml  DELETE /v1/lobbies/{lobbyId}/membership (leaveL
 ADR-0098  frontend/src/ui/home/HomeScreen.tsx  handleCreateCoop → useCreateOrResume: IN_PROGRESS create-response ⇒ owned-game modal (rejoin / always-offered new / subtle subscribe hint), else navigate
 ADR-0098  frontend/src/ui/routes/lobby.$lobbyId.tsx  handleClaim: guest (anon) tapping Reprendre → host sign-in flow first (ownership needs an account, ADR-0083); playing host-less game stays guest-open; start-new no longer occupant-gated — always offered (relinquish→host-less/claimable, not stranded) (2026-07-08 amendment)
 # ADR-0098: Multiplayer lobby ownership as a claimable lease — 1 active game by owner_user_id (sticky across disconnect); explicit relinquish→ownerless→claim; RGPD rule 2 vacates not transfers; 7d ownerless GC; amends ADR-0055 & ADR-0083
+ADR-0099  scripts/clue_generation/**               Unified corpus row schema (adds pos); normalize-then-merge assembler replaces the six in-place mutators; reconcile_lemmas is POS-aware derive/validate
+ADR-0099  scripts/eval/**                          POS-aware runtime lemma guard: (surface,pos)->lemma must be deterministic, zero violations
+ADR-0099  grid/infrastructure/**/CsvWordRepository.kt  Loader accepts the new optional pos column (same tolerance pattern as lemma); runtime doesn't use pos yet
+ADR-0099  **/words/words-fr.csv                    Runtime corpus gains a pos column; lemma is never defaulted to the surface again
+# ADR-0099: unified (surface,pos)->lemma authoring contract fixes the lia/lie/es/vue lemma-collision bugs that let WordAcceptor's same-lemma dedup miss inflections; extends ADR-0097 (private corpus) and ADR-0058 (per-source licensing unchanged)
 ```
 
 ## Adding entries
