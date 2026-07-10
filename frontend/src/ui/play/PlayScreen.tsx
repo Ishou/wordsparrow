@@ -258,7 +258,16 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
     [soloEntriesStore, puzzle.id, checkGrid],
   );
 
-  const verification = useGridVerification(puzzle, puzzleSolver, validatedPositions, handleVerifyCorrect);
+  // Verify plays its own woven sweep; this one-shot ref keeps the generic word cue from doubling up on the lock it triggers.
+  const suppressWordCueRef = useRef(false);
+  const verification = useGridVerification(
+    puzzle,
+    puzzleSolver,
+    validatedPositions,
+    handleVerifyCorrect,
+    soundPlayer,
+    suppressWordCueRef,
+  );
   const assistGate = useAssistGate();
 
   // Stable ref so callbacks always read the latest validated set.
@@ -301,7 +310,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
   // Shared focus-advance firewall: after a word validates, move the cursor to the next word.
   const advance = useAdvanceOnValidation({ puzzle, nav, validatedPositions, currentClue: nav.currentClue, completed: won });
 
-  useGridSounds({ validatedCount: validatedPositions.size, won, userActedRef, soundPlayer });
+  useGridSounds({ validatedCount: validatedPositions.size, won, userActedRef, soundPlayer, suppressWordCueRef });
 
   // Clues ordered across-then-down; drives the ClueRail counter and the focus firewall.
   const orderedClues = useMemo(() => orderClues(puzzle), [puzzle]);

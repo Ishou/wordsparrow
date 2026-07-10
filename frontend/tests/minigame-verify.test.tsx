@@ -56,7 +56,7 @@ describe('MiniGame server verification (ADR-0076)', () => {
   });
 
   it('plays the word-validated cue (sized to the answer) only on a correct guess', async () => {
-    const soundPlayer = { playWordValidated: vi.fn(), playPuzzleSolved: vi.fn() };
+    const soundPlayer = { playWordValidated: vi.fn(), playVerifySweep: vi.fn(), playPuzzleSolved: vi.fn() };
     render(<MiniGame wordsRepository={repo(vi.fn().mockResolvedValue(true))} soundPlayer={soundPlayer} />);
     await waitFor(() => expect(screen.queryByLabelText('Chargement du mot du jour')).toBeNull());
 
@@ -77,7 +77,7 @@ describe('MiniGame server verification (ADR-0076)', () => {
   });
 
   it('stays silent on a wrong guess', async () => {
-    const soundPlayer = { playWordValidated: vi.fn(), playPuzzleSolved: vi.fn() };
+    const soundPlayer = { playWordValidated: vi.fn(), playVerifySweep: vi.fn(), playPuzzleSolved: vi.fn() };
     const verifySample = vi.fn().mockResolvedValue(false);
     render(<MiniGame wordsRepository={repo(verifySample)} soundPlayer={soundPlayer} />);
     await waitFor(() => expect(screen.queryByLabelText('Chargement du mot du jour')).toBeNull());

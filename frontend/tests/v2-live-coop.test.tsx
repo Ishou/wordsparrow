@@ -108,7 +108,7 @@ describe('v2 LiveCoopScreen', () => {
   });
 
   it('pulses the word-validated cue when cells lock, sized to the newly-locked count', () => {
-    const soundPlayer = { playWordValidated: vi.fn(), playPuzzleSolved: vi.fn() };
+    const soundPlayer = { playWordValidated: vi.fn(), playVerifySweep: vi.fn(), playPuzzleSolved: vi.fn() };
     const { rerenderScreen } = renderScreen({ soundPlayer });
     expect(soundPlayer.playWordValidated).not.toHaveBeenCalled();
     act(() => {

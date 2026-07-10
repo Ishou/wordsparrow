@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { useCoopWinCue } from '@/ui/v2/multiplayer/useCoopWinCue';
 
 function makePlayer() {
-  return { playWordValidated: vi.fn(), playPuzzleSolved: vi.fn() };
+  return { playWordValidated: vi.fn(), playVerifySweep: vi.fn(), playPuzzleSolved: vi.fn() };
 }
 
 describe('useCoopWinCue', () => {

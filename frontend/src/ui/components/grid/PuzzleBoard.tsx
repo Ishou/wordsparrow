@@ -17,7 +17,8 @@ import { playerColorVars } from '@/ui/lib/playerColor';
 import { type CellHighlight, type GridNavigation } from './useGridNavigation';
 import { GRID_INPUT_GUARDS } from './gridInputGuards';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
-import { CELL, GAP, STRIDE, SOLVE_STAGGER_MS, posKey, exitsRight } from './playLayout';
+import { solvePulseCellDelaysMs } from '@/application/grid/solvePulse';
+import { CELL, GAP, STRIDE, posKey, exitsRight } from './playLayout';
 import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
 import { SeparatorOverlay } from './SeparatorOverlay';
 
@@ -279,12 +280,15 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
       return { row: r, col: c };
     });
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(14);
-    // Flatten ripple: stagger the keycap drop across the newly-solved cells, then clear.
+    // Flatten ripple: drop the keycaps on the shared accelerando cadence (solvePulse.ts),
+    // locked to the audio pulse, then clear.
+    const delays = solvePulseCellDelaysMs(added.length);
+    const maxDelay = delays.length ? delays[delays.length - 1] : 0;
     const ripple = new Map<string, number>();
-    added.forEach((k, i) => ripple.set(k, i * SOLVE_STAGGER_MS));
+    added.forEach((k, i) => ripple.set(k, delays[i]));
     setSolveDelays(ripple);
     if (rippleTimerRef.current) window.clearTimeout(rippleTimerRef.current);
-    rippleTimerRef.current = window.setTimeout(() => setSolveDelays(new Map()), (added.length - 1) * SOLVE_STAGGER_MS + 340);
+    rippleTimerRef.current = window.setTimeout(() => setSolveDelays(new Map()), maxDelay + 340);
     if (reduceMotionRef.current) {
       // Microtask defer so the parent's solve-firewall effect (which queues the advance) runs first.
       queueMicrotask(() => onBeatCompleteRef.current?.(addedPositions));
