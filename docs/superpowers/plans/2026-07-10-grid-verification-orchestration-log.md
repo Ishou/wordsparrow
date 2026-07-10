@@ -29,4 +29,4 @@ Append-only log of the cron's merge-chain decisions. For maintainer review.
 
 ## Event log
 
-- 2026-07-10 — SETUP — orchestration procedure + log committed; cron created; #1509 flaky build re-run requested.
+- 2026-07-10 — SETUP — procedure + log committed; **cron de7b492e** created (`*/2 * * * *`, session-only, 7-day expiry); #1509 flaky build re-run requested.
