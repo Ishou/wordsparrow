@@ -31,3 +31,4 @@ Append-only log of the cron's merge-chain decisions. For maintainer review.
 
 - 2026-07-10 — SETUP — procedure + log committed; **cron de7b492e** created (`*/2 * * * *`, session-only, 7-day expiry); #1509 flaky build re-run requested.
 - 2026-07-10T05:48Z — MERGED #1505 — ADR-0099 (green + final review LGTM after last commit); main → b891df47. Merge authorized in cron context (no classifier block). W2 (#1506, #1508) now unblocked.
+- 2026-07-10T05:5xZ — MERGED #1504 — spec+plan docs (green + LGTM); main → 228fc51f. #1506/#1508 mergeability recomputing (UNKNOWN) post-#1505 merge — next tick.
