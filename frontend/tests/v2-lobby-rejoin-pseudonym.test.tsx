@@ -64,6 +64,7 @@ const completedLobby: Lobby & { readonly id: LobbyId } = {
 const stubPuzzleSolver: PuzzleSolver = {
   validate: () => Promise.resolve({ solved: false }),
   requestHint: () => Promise.reject(new Error('not used')),
+  verify: () => Promise.reject(new Error('not used')),
 };
 const emptyStore: SoloEntriesStore = {
   load: () => [],

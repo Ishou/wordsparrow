@@ -12,6 +12,9 @@ export type {
   RevealedWordCell,
   PuzzleSolver,
   ValidationResult,
+  VerifyCellVerdict,
+  VerifyErrorKind,
+  VerifyResult,
 } from './PuzzleSolver';
-export { HintRequestError } from './PuzzleSolver';
+export { HintRequestError, VerifyRequestError } from './PuzzleSolver';
 export { fetchAllDailySummaries } from './fetchAllDailySummaries';

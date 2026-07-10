@@ -52,6 +52,35 @@ export class HintRequestError extends Error {
   }
 }
 
+// A single verdict for one submitted cell (ADR-0099 §1): never carries the canonical letter.
+export interface VerifyCellVerdict {
+  readonly row: number;
+  readonly column: number;
+  readonly correct: boolean;
+}
+
+export interface VerifyResult {
+  /** One verdict per submitted cell, same set as the request. */
+  readonly cells: ReadonlyArray<VerifyCellVerdict>;
+  /** Countdown to the next allowed call, seconds; always 1800 immediately after success. */
+  readonly secondsUntilNextVerify: number;
+}
+
+export type VerifyErrorKind = 'cooldown-active' | 'auth-required' | 'transient';
+
+// Typed error so the UI can branch on `err.kind` instead of regexing `Error.message`.
+export class VerifyRequestError extends Error {
+  readonly kind: VerifyErrorKind;
+  /** Set when the server reported it (always present for `cooldown-active`). */
+  readonly secondsUntilNextVerify: number | null;
+  constructor(kind: VerifyErrorKind, secondsUntilNextVerify: number | null, message: string) {
+    super(message);
+    this.kind = kind;
+    this.secondsUntilNextVerify = secondsUntilNextVerify;
+    this.name = 'VerifyRequestError';
+  }
+}
+
 export interface PuzzleSolver {
   /**
    * Submit the player's filled cells for server-side validation. Cleared
@@ -69,4 +98,10 @@ export interface PuzzleSolver {
     column: number,
     direction: HintDirection,
   ): Promise<HintResult>;
+
+  /** Check filled, not-yet-locked cells against the canonical solution (ADR-0099); throws `VerifyRequestError` on every documented 4xx and on transient failures. */
+  verify(
+    puzzleId: string,
+    cells: ReadonlyArray<FilledCellInput>,
+  ): Promise<VerifyResult>;
 }

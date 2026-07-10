@@ -144,7 +144,7 @@ function renderGrilles(opts: HarnessOptions = {}) {
       authClient,
       getPseudonym: () => 'Renard 423',
       puzzleRepository: repo,
-      puzzleSolver: { validate: vi.fn(), requestHint: vi.fn() },
+      puzzleSolver: { validate: vi.fn(), requestHint: vi.fn(), verify: vi.fn() },
       sessionClient: {
         eraseSession: () => Promise.resolve({ deleted: 0 }),
         getSessionId: () => 'session-1',

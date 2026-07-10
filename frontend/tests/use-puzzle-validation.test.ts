@@ -38,6 +38,7 @@ function makeSolver(result: ValidationResult): PuzzleSolver {
   return {
     validate: vi.fn().mockResolvedValue(result),
     requestHint: vi.fn().mockRejectedValue(new Error('not used here')),
+    verify: vi.fn().mockRejectedValue(new Error('not used here')),
   };
 }
 

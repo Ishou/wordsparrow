@@ -15,6 +15,7 @@ function makeSolver(): PuzzleSolver {
   return {
     validate: vi.fn().mockRejectedValue(new Error('not used here')),
     requestHint: vi.fn(),
+    verify: vi.fn().mockRejectedValue(new Error('not used here')),
   };
 }
 
