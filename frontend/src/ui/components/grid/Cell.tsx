@@ -6,7 +6,6 @@ import type {
   DefinitionCell,
   DefinitionClue,
   LetterCell,
-  Position,
 } from '@/domain';
 import { t } from '@/ui/i18n';
 import { ARROW_COLOR, arrowLabel } from './ClueArrowIcon';
@@ -892,8 +891,8 @@ function StackedClue({ clue, isCurrent }: { clue: DefinitionClue; isCurrent: boo
 }
 
 export const DefinitionCellView = memo(function DefinitionCellView({
-  cell, currentArrow, onDefinitionClick,
-}: { cell: DefinitionCell; currentArrow: ArrowDirection | null; onDefinitionClick: (position: Position) => void }) {
+  cell, currentArrow,
+}: { cell: DefinitionCell; currentArrow: ArrowDirection | null }) {
   if (cell.clues.length === 1) {
     const clue = cell.clues[0];
     const isCurrent = currentArrow === clue.arrow;
@@ -910,8 +909,6 @@ export const DefinitionCellView = memo(function DefinitionCellView({
         data-cell-kind="definition"
         data-clue-count="1"
         data-current-clue={isCurrent ? 'true' : 'false'}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => onDefinitionClick(cell.position)}
       >
         <div className={defSingle}>
           <FitText
@@ -948,8 +945,6 @@ export const DefinitionCellView = memo(function DefinitionCellView({
       data-cell-kind="definition"
       data-clue-count="2"
       data-current-clue={currentArrow !== null ? 'true' : 'false'}
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={() => onDefinitionClick(cell.position)}
     >
       <div className={defStack} role="group" aria-label={t('grid.clue.aria.twoDefinitions')}>
         <StackedClue clue={topClue} isCurrent={currentArrow === topClue.arrow} />
