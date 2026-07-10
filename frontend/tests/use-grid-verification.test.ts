@@ -71,6 +71,7 @@ describe('useGridVerification', () => {
   });
 
   it('locks correct:true cells via onCorrect and flags correct:false cells shaking', async () => {
+    vi.useFakeTimers();
     mountInput(0, 1, 'A');
     mountInput(0, 2, 'X');
     const solver = makeSolver();
@@ -93,8 +94,47 @@ describe('useGridVerification', () => {
     });
 
     expect(onCorrect).toHaveBeenCalledWith([{ row: 0, column: 1 }]);
+    // The wrong cell shakes at its position in the sweep — advance past its stagger delay.
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
     expect(result.current.shakingPositions.has('0,2')).toBe(true);
     expect(result.current.shakingPositions.has('0,1')).toBe(false);
+  });
+
+  it('plays the verify sweep in reading order and flags the generic word cue to skip', async () => {
+    vi.useFakeTimers();
+    mountInput(0, 1, 'A');
+    mountInput(0, 2, 'X');
+    const solver = makeSolver();
+    (solver.verify as ReturnType<typeof vi.fn>).mockResolvedValue({
+      cells: [
+        { row: 0, column: 2, correct: false },
+        { row: 0, column: 1, correct: true },
+      ],
+      secondsUntilNextVerify: 1800,
+    } satisfies VerifyResult);
+    const soundPlayer = {
+      playWordValidated: vi.fn(),
+      playVerifySweep: vi.fn(),
+      playPuzzleSolved: vi.fn(),
+    };
+    const suppressWordCueRef = { current: false };
+    const { result } = renderHook(() =>
+      useGridVerification(puzzle, solver, new Set(), vi.fn(), soundPlayer, suppressWordCueRef),
+    );
+
+    await act(async () => {
+      result.current.verify();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Sweep is reading-order (0,1 then 0,2), so verdicts are [correct, wrong].
+    expect(soundPlayer.playVerifySweep).toHaveBeenCalledWith([true, false]);
+    expect(soundPlayer.playWordValidated).not.toHaveBeenCalled();
+    // A lock will fire, so the generic word cue is suppressed once.
+    expect(suppressWordCueRef.current).toBe(true);
   });
 
   it('clears the shake after the shake window elapses', async () => {
@@ -113,6 +153,10 @@ describe('useGridVerification', () => {
       result.current.verify();
       await Promise.resolve();
       await Promise.resolve();
+    });
+    // Staggered shake-add fires on its (zero) delay timer.
+    await act(async () => {
+      vi.advanceTimersByTime(20);
     });
     expect(result.current.shakingPositions.has('0,1')).toBe(true);
 
@@ -230,6 +274,7 @@ describe('useGridVerification', () => {
   });
 
   it('resets pending/cooldown/shake/error on puzzle change', async () => {
+    vi.useFakeTimers();
     mountInput(0, 1, 'X');
     const solver = makeSolver();
     (solver.verify as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -245,6 +290,9 @@ describe('useGridVerification', () => {
       result.current.verify();
       await Promise.resolve();
       await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(20);
     });
     expect(result.current.secondsUntilNextVerify).toBe(1800);
     expect(result.current.shakingPositions.size).toBe(1);

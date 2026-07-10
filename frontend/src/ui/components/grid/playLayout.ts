@@ -7,7 +7,8 @@ export const STRIDE = CELL + GAP;
 // Breathing gap at the pan extreme, mirroring padTop's gap above the first row.
 export const BOARD_BOTTOM_GAP = 14;
 
-// Per-letter stagger for the solve celebration (ripple + mini-game glow + sound pulse), one shared cadence.
+// Linear per-letter stagger for the home mini-game glow; the play-grid ripple + sound pulse
+// now share the accelerando cadence in application/grid/solvePulse.ts.
 export const SOLVE_STAGGER_MS = 45;
 
 export function posKey(row: number, col: number): string {

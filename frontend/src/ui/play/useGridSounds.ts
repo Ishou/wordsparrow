@@ -7,9 +7,17 @@ export interface UseGridSoundsArgs {
   // Solo passes its mount-gate; coop omits it (the ref-seed below already absorbs the join hydration set).
   readonly userActedRef?: { readonly current: boolean };
   readonly soundPlayer?: SoundPlayer;
+  // One-shot: verify plays its own woven sweep, so it flags the lock it triggers to skip the generic word cue.
+  readonly suppressWordCueRef?: { current: boolean };
 }
 
-export function useGridSounds({ validatedCount, won, userActedRef, soundPlayer }: UseGridSoundsArgs): void {
+export function useGridSounds({
+  validatedCount,
+  won,
+  userActedRef,
+  soundPlayer,
+  suppressWordCueRef,
+}: UseGridSoundsArgs): void {
   const prevCount = useRef(validatedCount);
   const prevWon = useRef(won);
   useEffect(() => {
@@ -17,9 +25,11 @@ export function useGridSounds({ validatedCount, won, userActedRef, soundPlayer }
     const justWon = won && !prevWon.current;
     prevCount.current = validatedCount;
     prevWon.current = won;
+    const suppressWord = suppressWordCueRef?.current ?? false;
+    if (suppressWordCueRef) suppressWordCueRef.current = false;
     const acted = userActedRef ? userActedRef.current : true;
     if (!soundPlayer || !acted) return;
     if (justWon) soundPlayer.playPuzzleSolved();
-    else if (added > 0 && !won) soundPlayer.playWordValidated(added);
-  }, [validatedCount, won, soundPlayer, userActedRef]);
+    else if (added > 0 && !won && !suppressWord) soundPlayer.playWordValidated(added);
+  }, [validatedCount, won, soundPlayer, userActedRef, suppressWordCueRef]);
 }
