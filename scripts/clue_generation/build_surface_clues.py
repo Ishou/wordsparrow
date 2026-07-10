@@ -211,7 +211,10 @@ def build_surface_rows(
         if derived:
             status_counter["derived-adverb"] += 1
             rows.append({
-                "surface": surface, "lemma": base, "pos": "adv",
+                # An adverb is invariable — its own lemma, not the base adjective
+                # (`base` supplies the clue only). Keeps the corpus lemma self-
+                # consistent for the POS-aware guard.
+                "surface": surface, "lemma": surface, "pos": "adv",
                 "clue": derived, "source_clue": adj_row["lemma_clue"],
                 "inflection_status": "derived-adverb",
                 "filter_score": adj_row.get("filter_score", ""),

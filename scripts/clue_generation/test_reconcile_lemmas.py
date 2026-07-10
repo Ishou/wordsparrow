@@ -122,3 +122,33 @@ def test_reconcile_pos_scoped_note_vs_verb(index):
     # es/abr keeps es; es/verbe must be être.
     assert reconcile("es", "es", index, pos="abr") == ("ok", "es")
     assert reconcile("es", "es", index, pos="verbe") == ("fixed", "être")
+
+
+def test_wrong_invariable_pos_fixes_pure_verb_forms(index):
+    # gold mislabels short verb forms as `abr`; grammalecte knows them only as
+    # verb inflections, so the invariable claim is provably wrong.
+    assert reconcile_lemmas.wrong_invariable_pos("lia", "abr", index) == "lier"
+    assert reconcile_lemmas.wrong_invariable_pos("nia", "abr", index) == "nier"
+
+
+def test_wrong_invariable_pos_spares_real_homographs_and_sigles(index):
+    # `es` has a real invariable-noun reading (the note); `cc` has no verb
+    # reading — neither is a provably-wrong invariable.
+    assert reconcile_lemmas.wrong_invariable_pos("es", "abr", index) is None
+    assert reconcile_lemmas.wrong_invariable_pos("cc", "abr", index) is None
+
+
+def test_guard_catches_verb_form_mislabelled_invariable(index):
+    assert reconcile("lia", "lia", index, pos="abr") == ("fixed", "lier")
+
+
+def test_guard_is_lenient_on_nominal_plurals(index):
+    # `abats` reads as both noun `abat` and verb `abattre`; a nom row is fine
+    # whether it carries the singular head or the surface itself.
+    assert reconcile("abats", "abat", index, pos="nom") == ("ok", "abat")
+    assert reconcile("abats", "abats", index, pos="nom") == ("ok", "abats")
+
+
+def test_guard_accepts_grammalecte_gap_noun(index):
+    # the noun `vue` is absent from grammalecte; nom/self must not be flagged.
+    assert reconcile("vue", "vue", index, pos="nom") == ("ok", "vue")

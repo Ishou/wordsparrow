@@ -41,15 +41,18 @@ SOURCE_PRIORITY = [
 
 DEFAULT_LEXIQUE = Path(os.path.expanduser(
     "~/Downloads/grammalecte/lexique-grammalecte-fr-v7.7.txt"))
-DEFAULT_WORDLIST = REPO / "grid/infrastructure/src/main/resources/words/words-fr.csv"
-DEFAULT_SHORT_FR = REPO / "data/curated/short-fr.csv"
-DEFAULT_FR = REPO / "data/curated/fr.csv"
-DEFAULT_THEMED_DIR = REPO / "data/curated/themed"
-DEFAULT_GOLD_GLOB = "data/curated/generation-gold-*/clues.csv"
-DEFAULT_RAW_DIR = REPO / "data/curated/raw"
-DEFAULT_LEMMAS_CSV = DEFAULT_RAW_DIR / "_lemmas.csv"
-DEFAULT_SURFACE_CLUES = REPO / "data/eval/production/surface_clues.csv"
-DEFAULT_OVERRIDES = REPO / "data/curated/clue_overrides_fr.csv"
+# Source layout as paths relative to a data root. The root defaults to this
+# repo; pass --data-root <private corpus repo> to assemble against the private
+# `wordsparrow-clue-data` sources (ADR-0097). Themed overlays live under the
+# runtime `words/themed/` dir, not `data/curated/`.
+REL_WORDLIST = "grid/infrastructure/src/main/resources/words/words-fr.csv"
+REL_SHORT_FR = "data/curated/short-fr.csv"
+REL_FR = "data/curated/fr.csv"
+REL_THEMED_DIR = "grid/infrastructure/src/main/resources/words/themed"
+GOLD_GLOB = "data/curated/generation-gold-*/clues.csv"
+REL_RAW_DIR = "data/curated/raw"
+REL_SURFACE_CLUES = "data/eval/production/surface_clues.csv"
+REL_OVERRIDES = "data/curated/clue_overrides_fr.csv"
 
 
 def _sort_key(row: dict) -> tuple:
@@ -141,37 +144,52 @@ def _read_unified_csv(path: Path) -> list[dict]:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--out", type=Path, default=DEFAULT_WORDLIST)
+    p.add_argument("--data-root", type=Path, default=REPO,
+                   help="root the source CSVs resolve against "
+                        "(default: this repo; pass the private corpus repo to assemble it)")
+    p.add_argument("--out", type=Path, default=None,
+                   help="output words-fr.csv (default: <data-root>/" + REL_WORDLIST + ")")
     p.add_argument("--lexique", type=Path, default=DEFAULT_LEXIQUE)
-    p.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES)
+    p.add_argument("--overrides", type=Path, default=None,
+                   help="clue overrides CSV (default: <data-root>/" + REL_OVERRIDES + ")")
     args = p.parse_args()
 
     if not args.lexique.exists():
         raise SystemExit(f"grammalecte lexique not found: {args.lexique}")
     index = MorphologyIndex.load(args.lexique)
 
+    root = args.data_root
+    out_path = args.out or root / REL_WORDLIST
+    overrides_path = args.overrides or root / REL_OVERRIDES
+    short_fr = root / REL_SHORT_FR
+    fr_csv = root / REL_FR
+    themed_dir = root / REL_THEMED_DIR
+    raw_dir = root / REL_RAW_DIR
+    lemmas_csv = raw_dir / "_lemmas.csv"
+    surface_clues_csv = root / REL_SURFACE_CLUES
+
     # One shared collector: every unresolved row across every tier is
     # gathered here so we can print them ALL for one human-authoring pass,
     # then fail -- rather than crashing on the first (`vue`). See Task-8.
     unresolved: list[tuple[str, str | None, str]] = []
 
-    curated_rows = _read_unified_csv(DEFAULT_SHORT_FR) + _read_unified_csv(DEFAULT_FR)
+    curated_rows = _read_unified_csv(short_fr) + _read_unified_csv(fr_csv)
     curated = normalize_unified(curated_rows, index, on_unresolved=unresolved)
 
     themed_rows: list[dict] = []
-    if DEFAULT_THEMED_DIR.is_dir():
-        for csv_path in sorted(DEFAULT_THEMED_DIR.glob("*.csv")):
+    if themed_dir.is_dir():
+        for csv_path in sorted(themed_dir.glob("*.csv")):
             themed_rows.extend(_read_unified_csv(csv_path))
     themed = normalize_unified(themed_rows, index, on_unresolved=unresolved)
 
     gold: list[dict] = []
-    for gold_csv in sorted(REPO.glob(DEFAULT_GOLD_GLOB)):
+    for gold_csv in sorted(root.glob(GOLD_GLOB)):
         gold.extend(normalize_gold(gold_csv, index))
 
     editorial = (
-        normalize_editorial(DEFAULT_RAW_DIR, DEFAULT_LEMMAS_CSV, index,
+        normalize_editorial(raw_dir, lemmas_csv, index,
                             on_unresolved=unresolved)
-        if DEFAULT_RAW_DIR.is_dir() else []
+        if raw_dir.is_dir() else []
     )
 
     # Grammalecte is gated against the higher-priority tiers, not admitted
@@ -199,8 +217,8 @@ def main() -> None:
     grammalecte = normalize_grammalecte(grammalecte_surfaces, index, placeholder_clue="")
 
     llm = (
-        normalize_surface_clues(DEFAULT_SURFACE_CLUES)
-        if DEFAULT_SURFACE_CLUES.exists() else []
+        normalize_surface_clues(surface_clues_csv)
+        if surface_clues_csv.exists() else []
     )
 
     if unresolved:
@@ -216,16 +234,16 @@ def main() -> None:
 
     # Order matches SOURCE_PRIORITY[1:] ("overrides" applied separately below).
     merged = merge([curated, themed, gold, editorial, grammalecte, llm])
-    merged = apply_overrides(merged, load_overrides(args.overrides))
+    merged = apply_overrides(merged, load_overrides(overrides_path))
 
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    with args.out.open("w", encoding="utf-8", newline="") as f:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=UNIFIED_FIELDS, lineterminator="\n")
         w.writeheader()
         for row in merged:
             w.writerow({k: row.get(k, "") for k in UNIFIED_FIELDS})
 
-    print(f"wrote {len(merged)} rows -> {args.out}")
+    print(f"wrote {len(merged)} rows -> {out_path}")
 
 
 if __name__ == "__main__":

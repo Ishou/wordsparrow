@@ -113,6 +113,25 @@ def test_normalize_gold(tmp_path, index):
     }]
 
 
+def test_normalize_gold_corrects_mislabelled_short_forms(tmp_path, index):
+    # gold has absorbed inflected short surfaces with a wrong pos: an invariable
+    # verb form (`lia/abr`) and a verb inflection carrying its own surface as
+    # lemma (`achète/verbe/achète`). Both must ship the true infinitive so grid
+    # dedup works; the genuine note `es/abr` is untouched.
+    gold_csv = tmp_path / "clues.csv"
+    gold_csv.write_text(
+        "lemma,clue,pos,source\n"
+        "lia,Noua ensemble,abr,bliss-authored\n"
+        "achète,Acquiert,verbe,bliss-authored\n"
+        "es,Mi bémol,abr,bliss-authored\n",
+        encoding="utf-8",
+    )
+    out = {r["word"]: (r["pos"], r["lemma"]) for r in cn.normalize_gold(gold_csv, index)}
+    assert out["lia"] == ("verbe", "lier")
+    assert out["achète"] == ("verbe", "acheter")
+    assert out["es"] == ("abr", "es")
+
+
 # --- normalize_surface_clues ----------------------------------------------
 
 def test_normalize_surface_clues_passthrough_and_filters_non_ok():

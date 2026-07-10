@@ -56,6 +56,25 @@ INVARIABLE_POS = frozenset({"abr", "sigle", "interj", "note", "prep", "num", "pr
 _VARIABLE_NOMINAL = frozenset({"nom", "adj", "adv"})
 
 
+def wrong_invariable_pos(surface: str, pos: str, index: MorphologyIndex) -> str | None:
+    """Detect a provably-wrong invariable POS. An `abr`/`sigle`/`note`/… claim
+    means "this surface is its own lemma". That's false when grammalecte knows
+    the surface ONLY as a genuine verb inflection (no nom/adj reading) with a
+    single headword ≠ the surface — e.g. gold mislabelling `lia` as `abr`
+    (it is only a form of `lier`). Returns that infinitive, else None.
+
+    Homographs with a real nominal reading are spared: `es` keeps `abr` (the
+    music note) because grammalecte also gives it an invariable-noun reading;
+    real sigles (`cc`, `kg`) are spared because they have no verb reading."""
+    if (pos or "").strip().lower() not in INVARIABLE_POS:
+        return None
+    forms = index.lookup_form(surface)
+    if any(_classify(t) in ("nom", "adj") for _, t in forms):
+        return None
+    heads = {l for l, t in forms if _classify(t) == "verbe" and _norm(l) != _norm(surface)}
+    return next(iter(heads)) if len(heads) == 1 else None
+
+
 def derive_lemma(surface: str, pos: str, index: MorphologyIndex) -> tuple[str, str | None]:
     """Lemma for an authored (surface, pos). Invariables and unconfirmable
     nouns resolve to the surface itself; a verb resolves to its infinitive,
@@ -72,15 +91,11 @@ def derive_lemma(surface: str, pos: str, index: MorphologyIndex) -> tuple[str, s
             return ("ambiguous", None)
         return ("no-verb-reading", surface)
     if pos in _VARIABLE_NOMINAL:
-        for l, t in forms:
-            if _classify(t) in ("nom", "adj") and _norm(l) == _norm(surface):
-                return ("ok", l)          # surface is its own citation form
-        if any(_classify(t) == "verbe" for _, t in forms):
-            # a competing verb reading (e.g. `vue` as fem ppas of `voir`) means
-            # the lone nom/adj candidate isn't a confirmed dictionary headword.
-            return ("ok", surface)
-        heads = {l for l, t in forms if _classify(t) in ("nom", "adj")}
-        return ("ok", next(iter(heads))) if len(heads) == 1 else ("ok", surface)
+        # A nominal's citation form defaults to the surface. Nominal lemmas are
+        # grammalecte-ambiguous (the noun `vue` is absent; `abats` reads as both
+        # `abat` and the verb `abattre`) and low-risk for dedup, so `reconcile`
+        # validates them LENIENTLY rather than forcing one head here.
+        return ("ok", surface)
     return ("ok", surface)
 
 
@@ -106,6 +121,18 @@ def reconcile(
     """
     overrides = overrides or {}
     if pos is not None:
+        # A provably-wrong invariable POS (gold's `lia`/`abr`) defeats dedup
+        # while looking internally consistent (an invariable's lemma is itself)
+        # — catch it before trusting the authored pos.
+        forced = wrong_invariable_pos(surface, pos, index)
+        if forced is not None:
+            return ("ok", lemma) if _norm(lemma) == _norm(forced) else ("fixed", forced)
+        if pos.strip().lower() in _VARIABLE_NOMINAL:
+            # Lenient: a nominal lemma is fine if it is the surface itself or any
+            # lemma grammalecte assigns to the surface (`abats`->`abat`, `vue`->
+            # `vue`/`vu`). Only a lemma unrelated to the surface is a defect.
+            valid = {_norm(surface)} | {_norm(l) for l, _ in index.lookup_form(surface)}
+            return ("ok", lemma) if _norm(lemma) in valid else ("fixed", surface)
         status, want = derive_lemma(surface, pos, index)
         if want is None:  # ambiguous verb
             ov = overrides.get(surface.lower())

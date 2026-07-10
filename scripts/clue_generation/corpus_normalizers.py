@@ -26,12 +26,28 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "eval"))
 sys.path.insert(0, str(REPO / "scripts" / "clue_generation"))
 from morphology_index import MorphologyIndex, _classify  # noqa: E402
-from reconcile_lemmas import _norm, derive_lemma, reconcile  # noqa: E402
+from reconcile_lemmas import _norm, derive_lemma, reconcile, wrong_invariable_pos  # noqa: E402
 
 UNIFIED_FIELDS = [
     "word", "language", "length", "frequency", "difficulty",
     "clue", "source", "source_license", "pos", "lemma",
 ]
+
+
+def _correct_pos_lemma(word: str, pos: str, lemma: str, index: MorphologyIndex) -> tuple[str, str]:
+    """Correct an authored (pos, lemma) that provably defeats dedup:
+    an invariable pos on a pure verb form (`lia/abr` -> `verbe/lier`), or a
+    `verbe` pos whose lemma is an inflected form rather than the infinitive
+    (`achète/verbe/achète` -> `.../acheter`). Everything else is returned as
+    authored — nominal lemmas and genuine homographs are left alone."""
+    forced = wrong_invariable_pos(word, pos, index)
+    if forced is not None:
+        return ("verbe", forced)
+    if pos.strip().lower() == "verbe":
+        status, want = derive_lemma(word, "verbe", index)
+        if want is not None and _norm(want) != _norm(lemma):
+            return ("verbe", want)
+    return (pos, lemma)
 
 
 def normalize_unified(
@@ -64,6 +80,7 @@ def normalize_unified(
                     continue
                 raise ValueError(f"{word}/{pos} needs an authored lemma")
             lemma = derived
+        pos, lemma = _correct_pos_lemma(word, pos, lemma, index)
         out.append({
             "word": word,
             "language": r.get("language", ""),
@@ -82,16 +99,19 @@ def normalize_unified(
 def normalize_gold(path: Path, index: MorphologyIndex) -> list[dict]:
     """`data/curated/generation-gold-*/clues.csv` (`lemma,clue,pos,source`).
 
-    Gold rows are citation-form: the lemma column IS the word (no
-    inflection to reconcile), so `word` and `lemma` both come from it
-    verbatim. `index` is accepted for interface symmetry with the other
-    normalizers but unused here — there is no surface/lemma gap to derive.
+    Gold rows are meant to be citation-form (lemma column == word). But gold
+    has absorbed some inflected short surfaces mislabelled with an invariable
+    pos (`lia,…,abr` — really a form of `lier`); left verbatim they ship
+    `lemma == lia` and defeat grid dedup. `wrong_invariable_pos` corrects
+    exactly those provable cases to `verbe` + the true infinitive; genuine
+    citation forms and real homographs (`es` note) pass through untouched.
     """
-    del index
     out: list[dict] = []
     with Path(path).open(encoding="utf-8", newline="") as f:
         for r in csv.DictReader(f):
             word = (r.get("lemma") or "").strip()
+            pos = (r.get("pos") or "").strip()
+            out_pos, out_lemma = _correct_pos_lemma(word, pos, word, index)
             out.append({
                 "word": word,
                 "language": "fr",
@@ -101,8 +121,8 @@ def normalize_gold(path: Path, index: MorphologyIndex) -> list[dict]:
                 "clue": r.get("clue", ""),
                 "source": "gold",
                 "source_license": "CC0-1.0",
-                "pos": (r.get("pos") or "").strip(),
-                "lemma": word,
+                "pos": out_pos,
+                "lemma": out_lemma,
             })
     return out
 
