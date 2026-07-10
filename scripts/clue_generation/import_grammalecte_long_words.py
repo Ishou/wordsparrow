@@ -191,6 +191,7 @@ def parse_grammalecte_lemma_anchored(
         "obscure-passe-simple": 0,
         "obscure-subj-imparfait": 0,
         "obscure-cond-1pl-2pl": 0,
+        "obscure-inversion": 0,
         "not-placeable": 0,
         "length-out-of-range": 0,
         "below-min-freq": 0,

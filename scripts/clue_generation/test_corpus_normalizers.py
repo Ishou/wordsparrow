@@ -82,6 +82,20 @@ def test_normalize_unified_ambiguous_verb_raises(index):
         cn.normalize_unified(rows, index)
 
 
+def test_normalize_unified_ambiguous_collects_instead_of_raising_when_asked(index):
+    # With an `on_unresolved` sink the row is SKIPPED and recorded, not
+    # raised — so the assembler can gather every unresolved row in one pass.
+    rows = [{
+        "word": "tue", "language": "fr", "length": "3", "frequency": "100000",
+        "difficulty": "", "clue": "Occit", "source": "bliss",
+        "source_license": "CC0-1.0", "pos": "verbe", "lemma": "",
+    }]
+    sink: list = []
+    out = cn.normalize_unified(rows, index, on_unresolved=sink)
+    assert out == []
+    assert sink == [("tue", "verbe", "bliss")]
+
+
 # --- normalize_gold ------------------------------------------------------
 
 def test_normalize_gold(tmp_path, index):
@@ -200,6 +214,22 @@ def test_normalize_editorial_unmapped_ambiguous_raises(tmp_path, index):
         cn.normalize_editorial(raw_dir, lemmas_csv, index)
 
 
+def test_normalize_editorial_ambiguous_collects_instead_of_raising_when_asked(tmp_path, index):
+    raw_dir = tmp_path / "raw"
+    raw_dir.mkdir()
+    (raw_dir / "fr_test.csv").write_text(
+        "Mot;Définition 1;Définition 2\n"
+        "TUE;Occit;\n",
+        encoding="utf-8",
+    )
+    lemmas_csv = raw_dir / "_lemmas.csv"
+    lemmas_csv.write_text("Mot;Sens;Lemme;Morphologie\n", encoding="utf-8")
+    sink: list = []
+    out = cn.normalize_editorial(raw_dir, lemmas_csv, index, on_unresolved=sink)
+    assert out == []
+    assert sink == [("tue", None, "editorial")]
+
+
 # --- normalize_grammalecte -------------------------------------------------
 
 def test_normalize_grammalecte_derives_pos_from_matching_lemma(index):
@@ -210,3 +240,12 @@ def test_normalize_grammalecte_derives_pos_from_matching_lemma(index):
         "difficulty": "", "clue": "abats", "source": "grammalecte",
         "source_license": "MPL-2.0", "pos": "nom", "lemma": "abat",
     }]
+
+
+def test_normalize_grammalecte_placeholder_clue_blank_ships_no_self_clue(index):
+    # Finding 2: the assembler passes placeholder_clue="" so no grammalecte
+    # row ships a `clue == word` self-clue (`abats` -> "abats").
+    surfaces = {"abats": ("abat", 202)}
+    out = cn.normalize_grammalecte(surfaces, index, placeholder_clue="")
+    assert out[0]["clue"] == ""
+    assert out[0]["word"] == "abats"

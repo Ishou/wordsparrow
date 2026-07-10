@@ -109,3 +109,48 @@ def test_apply_overrides_leaves_non_matching_rows_untouched():
     out = ac.apply_overrides(rows, overrides)
 
     assert out[0]["clue"] == "Aliment de base"
+
+
+def test_apply_overrides_dedups_homograph_collapsed_by_override():
+    # Finding 4: `lie` ships two lemma-distinct rows (lier + lie). A
+    # word-scoped override rewrites BOTH to the same clue, collapsing two
+    # distinct (word, clue) keys into one duplicate that merge() never saw.
+    # apply_overrides must re-dedup rather than emit the duplicate.
+    rows = [
+        _row("lie", "Attache par un lien", source="bliss", pos="verbe", lemma="lier"),
+        _row("lie", "Dépôt au fond du fût", source="bliss", pos="nom", lemma="lie"),
+    ]
+    overrides = {"lie": "Résidu de vin"}
+
+    out = ac.apply_overrides(rows, overrides)
+
+    assert len(out) == 1
+    assert out[0]["clue"] == "Résidu de vin"
+
+
+# --- gate_grammalecte (Findings 2 + 3) -----------------------------------
+
+def test_gate_grammalecte_drops_surface_already_covered_by_higher_tier():
+    # Finding 2: `bras` is already emitted by a curated tier, so the
+    # grammalecte candidate must NOT produce a second (placeholder) row.
+    surfaces = {"bras": ("bras", 5000)}
+    out = ac.gate_grammalecte(surfaces, anchored_lemmas={"bras"}, covered_words={"bras"})
+    assert out == {}
+
+
+def test_gate_grammalecte_drops_surface_whose_lemma_is_not_anchored():
+    # Finding 3: lemma-anchored admission. `xylophones` has no in-corpus
+    # lemma, so it is not admitted even though it clears any length band.
+    surfaces = {"xylophones": ("xylophone", 3)}
+    out = ac.gate_grammalecte(surfaces, anchored_lemmas={"bras"}, covered_words=set())
+    assert out == {}
+
+
+def test_gate_grammalecte_admits_anchored_uncovered_surface():
+    surfaces = {"bras": ("bras", 5000), "clignotais": ("clignoter", 1)}
+    out = ac.gate_grammalecte(
+        surfaces,
+        anchored_lemmas={"clignoter"},
+        covered_words=set(),
+    )
+    assert out == {"clignotais": ("clignoter", 1)}

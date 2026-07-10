@@ -30,7 +30,7 @@ from corpus_normalizers import (  # noqa: E402
     normalize_surface_clues,
     normalize_unified,
 )
-from import_grammalecte_long_words import parse_grammalecte_length_band  # noqa: E402
+from import_grammalecte_long_words import parse_grammalecte_lemma_anchored  # noqa: E402
 
 # Highest priority first. "overrides" is not a merged row source -- it's a
 # post-merge clue patch (see `apply_overrides`) -- but it's listed here so
@@ -97,7 +97,39 @@ def apply_overrides(rows: list[dict], overrides: dict[str, str]) -> list[dict]:
         if new_clue is not None:
             row["clue"] = new_clue
     rows.sort(key=_sort_key)
-    return rows
+    # Overrides run post-merge with no re-dedup: a `word`-scoped override
+    # rewrites every lemma-distinct row of a homograph (`lie` = lier + lie)
+    # to the SAME clue, collapsing two distinct `(word, clue)` keys into
+    # one duplicate that bypassed merge()'s uniqueness. Re-dedup here.
+    seen: set[tuple[str, str]] = set()
+    deduped: list[dict] = []
+    for row in rows:
+        key = (row["word"].lower(), row["clue"])
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped
+
+
+def gate_grammalecte(
+    surfaces: dict[str, tuple[str, int]],
+    anchored_lemmas: set[str],
+    covered_words: set[str],
+) -> dict[str, tuple[str, int]]:
+    """Filter grammalecte candidate surfaces against the higher-priority
+    tiers (Findings 2+3): keep a surface only if its lemma is already
+    anchored by a curated/themed/gold/editorial row AND the surface itself
+    isn't already emitted by one of those tiers. Dropping covered surfaces
+    stops a placeholder self-clue shadowing a real curated clue; the lemma
+    anchor is the shipped `CsvWordRepository` invariant (a grammalecte
+    surface ships only if its lemma already has >=1 corpus row), not a
+    length band."""
+    return {
+        surface: (lemma, freq)
+        for surface, (lemma, freq) in surfaces.items()
+        if lemma.lower() in anchored_lemmas and surface.lower() not in covered_words
+    }
 
 
 def _read_unified_csv(path: Path) -> list[dict]:
@@ -118,33 +150,69 @@ def main() -> None:
         raise SystemExit(f"grammalecte lexique not found: {args.lexique}")
     index = MorphologyIndex.load(args.lexique)
 
+    # One shared collector: every unresolved row across every tier is
+    # gathered here so we can print them ALL for one human-authoring pass,
+    # then fail -- rather than crashing on the first (`vue`). See Task-8.
+    unresolved: list[tuple[str, str | None, str]] = []
+
     curated_rows = _read_unified_csv(DEFAULT_SHORT_FR) + _read_unified_csv(DEFAULT_FR)
-    curated = normalize_unified(curated_rows, index)
+    curated = normalize_unified(curated_rows, index, on_unresolved=unresolved)
 
     themed_rows: list[dict] = []
     if DEFAULT_THEMED_DIR.is_dir():
         for csv_path in sorted(DEFAULT_THEMED_DIR.glob("*.csv")):
             themed_rows.extend(_read_unified_csv(csv_path))
-    themed = normalize_unified(themed_rows, index)
+    themed = normalize_unified(themed_rows, index, on_unresolved=unresolved)
 
     gold: list[dict] = []
     for gold_csv in sorted(REPO.glob(DEFAULT_GOLD_GLOB)):
         gold.extend(normalize_gold(gold_csv, index))
 
     editorial = (
-        normalize_editorial(DEFAULT_RAW_DIR, DEFAULT_LEMMAS_CSV, index)
+        normalize_editorial(DEFAULT_RAW_DIR, DEFAULT_LEMMAS_CSV, index,
+                            on_unresolved=unresolved)
         if DEFAULT_RAW_DIR.is_dir() else []
     )
 
-    grammalecte_surfaces = parse_grammalecte_length_band(
-        args.lexique, length_min=4, length_max=15, min_freq=1000,
+    # Grammalecte is gated against the higher-priority tiers, not admitted
+    # by a length band (Findings 2+3). `anchored_lemmas` is the shipped
+    # lemma-anchored invariant; `covered_words` stops a placeholder
+    # shadowing a real clue. The lemma-anchored parser also applies the
+    # obscure-form blocklist + grid-placeability filter.
+    higher_priority = [curated, themed, gold, editorial]
+    anchored_lemmas = {
+        (r.get("lemma") or "").lower()
+        for tier in higher_priority for r in tier if r.get("lemma")
+    }
+    covered_words = {
+        r["word"].lower() for tier in higher_priority for r in tier
+    }
+    grammalecte_surfaces, _ = parse_grammalecte_lemma_anchored(
+        args.lexique, anchored_lemmas,
+        length_min=4, length_max=15, min_freq=0,
     )
-    grammalecte = normalize_grammalecte(grammalecte_surfaces, index)
+    grammalecte_surfaces = gate_grammalecte(
+        grammalecte_surfaces, anchored_lemmas, covered_words,
+    )
+    # placeholder_clue="" so no grammalecte row ships a `clue == word`
+    # self-clue; the loader drops the resulting blank-clue rows.
+    grammalecte = normalize_grammalecte(grammalecte_surfaces, index, placeholder_clue="")
 
     llm = (
         normalize_surface_clues(DEFAULT_SURFACE_CLUES)
         if DEFAULT_SURFACE_CLUES.exists() else []
     )
+
+    if unresolved:
+        print(
+            f"{len(unresolved)} unresolved row(s) need an authored lemma "
+            f"-- nothing written. Author a lemma for each, then re-run:",
+            file=sys.stderr,
+        )
+        for word, pos, source in sorted(unresolved):
+            print(f"  {source}: {word!r}"
+                  + (f" (pos={pos})" if pos else ""), file=sys.stderr)
+        raise SystemExit(1)
 
     # Order matches SOURCE_PRIORITY[1:] ("overrides" applied separately below).
     merged = merge([curated, themed, gold, editorial, grammalecte, llm])

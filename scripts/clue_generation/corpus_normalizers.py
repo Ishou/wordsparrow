@@ -34,12 +34,22 @@ UNIFIED_FIELDS = [
 ]
 
 
-def normalize_unified(rows: list[dict], index: MorphologyIndex) -> list[dict]:
+def normalize_unified(
+    rows: list[dict],
+    index: MorphologyIndex,
+    on_unresolved: list | None = None,
+) -> list[dict]:
     """Hand-authored sources already in unified shape (`short-fr.csv`,
     `fr.csv`, `themed/*.csv`). Authored `pos`/`lemma` pass through
     unchanged; where `pos` is present and `lemma` is blank, derive it.
     An ambiguous verb surface with no authored lemma is a hard error —
     never surface-default (that silent default is the bug ADR-0099 fixes).
+
+    When `on_unresolved` is supplied, an ambiguous surface is appended to
+    it as `(word, pos, source)` and the row is SKIPPED instead of raising,
+    so the assembler can collect EVERY unresolved row for one human-
+    authoring pass rather than dying on the first (Task-8). The default
+    (`None`) keeps the strict raise the unit tests pin.
     """
     out: list[dict] = []
     for r in rows:
@@ -49,6 +59,9 @@ def normalize_unified(rows: list[dict], index: MorphologyIndex) -> list[dict]:
         if pos and not lemma:
             status, derived = derive_lemma(word, pos, index)
             if status == "ambiguous":
+                if on_unresolved is not None:
+                    on_unresolved.append((word, pos, r.get("source") or "unified"))
+                    continue
                 raise ValueError(f"{word}/{pos} needs an authored lemma")
             lemma = derived
         out.append({
@@ -130,7 +143,12 @@ def _pos_from_lemma(surface: str, lemma: str, index: MorphologyIndex) -> str:
     return ""
 
 
-def normalize_editorial(raw_dir: Path, lemmas_csv: Path, index: MorphologyIndex) -> list[dict]:
+def normalize_editorial(
+    raw_dir: Path,
+    lemmas_csv: Path,
+    index: MorphologyIndex,
+    on_unresolved: list | None = None,
+) -> list[dict]:
     """The editorial raw files (`data/curated/raw/fr_*.csv`, `Mot;Définition
     1;Définition 2`) joined against `_lemmas.csv` (`Mot;Sens;Lemme;
     Morphologie`).
@@ -152,6 +170,11 @@ def normalize_editorial(raw_dir: Path, lemmas_csv: Path, index: MorphologyIndex)
     than guessing. `pos` is derived from `(surface, lemma)` via
     grammalecte; unresolvable pairs get `pos=""` (grammalecte doesn't
     always know editorial-only words).
+
+    `on_unresolved` mirrors `normalize_unified`: when supplied, an
+    ambiguous surface is appended as `(word, None, "editorial")` and the
+    row is skipped rather than raising, so the assembler collects every
+    unresolved editorial row instead of dying on the first (`vue` etc.).
     """
     lemma_map: dict[tuple[str, str], str] = {}
     lemmas_path = Path(lemmas_csv)
@@ -175,6 +198,9 @@ def normalize_editorial(raw_dir: Path, lemmas_csv: Path, index: MorphologyIndex)
                 else:
                     status, resolved = reconcile(word, word, index)
                     if status == "ambiguous":
+                        if on_unresolved is not None:
+                            on_unresolved.append((word, None, "editorial"))
+                            continue
                         raise ValueError(f"editorial {word!r} needs an authored lemma")
                     lemma = resolved if status == "fixed" else word
                 out.append({
@@ -197,6 +223,7 @@ def normalize_grammalecte(
     index: MorphologyIndex,
     source: str = "grammalecte",
     source_license: str = "MPL-2.0",
+    placeholder_clue: str | None = None,
 ) -> list[dict]:
     """The grammalecte-import candidate dict `surface -> (lemma, frequency)`
     produced by `import_grammalecte_long_words.parse_grammalecte_length_band`
@@ -214,8 +241,13 @@ def normalize_grammalecte(
     it's the actual, already-pure interface boundary in the source script).
 
     `pos` is `_classify` of the reading whose lemma matches the row's
-    lemma (`clue == word` is the placeholder convention the import script
-    itself documents — downstream inflation replaces it).
+    lemma. `clue` defaults to the surface (`clue == word`, the placeholder
+    convention the import script documents). The assembler passes
+    `placeholder_clue=""` so these rows carry NO clue instead — a real
+    `clue == word` row ships as a self-clue at grid-fill (`BRAS`->"bras"),
+    whereas a blank-clue row is dropped by the loader
+    (`CsvWordRepository.toWordWithFreq`), matching the old
+    `merge_clues_into_wordlist.py` scrub.
     """
     out: list[dict] = []
     for word, (lemma, freq) in surfaces.items():
@@ -225,7 +257,7 @@ def normalize_grammalecte(
             "length": str(len(word)),
             "frequency": str(freq),
             "difficulty": "",
-            "clue": word,
+            "clue": word if placeholder_clue is None else placeholder_clue,
             "source": source,
             "source_license": source_license,
             "pos": _pos_from_lemma(word, lemma, index),
