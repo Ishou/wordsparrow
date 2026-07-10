@@ -147,7 +147,7 @@ backward-compatible (header-shape detection, as today).
 | `data/curated/short-fr.csv` | unified minus `pos` | add authored `pos`; lemma fixes already staged this session |
 | `grid/.../words/themed/*.csv` | unified minus `pos`, blank lemma | author `pos`; lemma = self (invariables) |
 | `data/curated/fr.csv` | unified minus `pos`, some blank lemma | author `pos` + lemma |
-| `data/curated/generation-gold-*/clues.csv` | `word,clue,pos,source` | expand to unified; derive lemma from `(word,pos)` |
+| `data/curated/generation-gold-*/clues.csv` | `lemma,clue,pos,source` (col1 is the citation lemma == word) | expand to unified; derive lemma from `(word,pos)` |
 | `data/curated/raw/fr_len0{2,3}.csv` | `Mot;Déf1;Déf2` | convert to unified (author `pos`+`lemma`) |
 | inflation `surface_clues.csv` | `surface,lemma,pos,clue,…` | map 1:1 to unified |
 | grammalecte import | `(word,…,lemma)` | add `pos` from grammalecte |

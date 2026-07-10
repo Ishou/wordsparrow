@@ -277,7 +277,7 @@ git commit -s -m "feat(clue-gen): POS-aware runtime lemma guard"
 - Consumes: `derive_lemma` (Task 2), `MorphologyIndex`, the forward-inflated `surface_clues.csv` (Task 5 output).
 - Produces: `UNIFIED_FIELDS` (the 10 columns) and one normalizer per tier, each returning `list[dict]` keyed by `UNIFIED_FIELDS`:
   - `normalize_unified(rows, index)` — hand-authored sources already in unified shape (`short-fr`, `themed/*`, `fr.csv`): pass authored `pos`/`lemma` through; where `pos` present & `lemma` blank, derive; on `("ambiguous", None)` raise `ValueError` (never surface-default).
-  - `normalize_gold(path, index)` — `word,clue,pos,source` → unified, deriving lemma from `(word,pos)`.
+  - `normalize_gold(path, index)` — `lemma,clue,pos,source` (col1 is the citation lemma == word) → unified, deriving lemma from `(word,pos)`.
   - `normalize_editorial(raw_dir, lemmas_csv, index)` — the `Mot;Déf1;Déf2` raw files + `_lemmas.csv` `(Mot,Sens)→Lemme` map → unified (lemma from the map, pos derived from `(surface,lemma)`).
   - `normalize_grammalecte(path, index)` — the grammalecte-import output (`import_grammalecte_long_words`): `(word,…,lemma)` → unified, pos = `_classify` of the reading matching the row's lemma.
   - `normalize_surface_clues(path)` — the forward-inflated `surface_clues.csv` (`surface,lemma,pos,clue,…`) → unified 1:1.
