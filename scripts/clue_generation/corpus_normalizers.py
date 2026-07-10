@@ -26,7 +26,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "eval"))
 sys.path.insert(0, str(REPO / "scripts" / "clue_generation"))
 from morphology_index import MorphologyIndex, _classify  # noqa: E402
-from reconcile_lemmas import _norm, derive_lemma  # noqa: E402
+from reconcile_lemmas import _norm, derive_lemma, reconcile  # noqa: E402
 
 UNIFIED_FIELDS = [
     "word", "language", "length", "frequency", "difficulty",
@@ -141,9 +141,15 @@ def normalize_editorial(raw_dir: Path, lemmas_csv: Path, index: MorphologyIndex)
     text — both scripts key their `_lemmas` map by `(Mot, Sens)` and look it
     up with `(mot, def1)` / `(mot, sens)` interchangeably. Not ambiguous.
 
-    Falls back to `mot.lower()` as the lemma when no `_lemmas` entry
-    matches (mirrors `load_editorial`'s `lemmas.get((mot, def1),
-    mot.lower())` fallback). `pos` is derived from `(surface, lemma)` via
+    When no `_lemmas` entry matches, the surface is NOT defaulted as its
+    own lemma (that silent default is the exact editorial-merge bug
+    ADR-0099 exists to kill — a genuine inflection like `lia` would ship
+    `lemma=lia` instead of `lier` and dodge grid dedup). Instead it goes
+    through the same pos-less `reconcile` used to fix the wordlist:
+    a unique-headword inflection is resolved to that headword ("fixed"),
+    a legitimately self-lemma surface (abbreviation/invariable/unknown)
+    keeps the surface, and a genuinely ambiguous surface raises rather
+    than guessing. `pos` is derived from `(surface, lemma)` via
     grammalecte; unresolvable pairs get `pos=""` (grammalecte doesn't
     always know editorial-only words).
     """
@@ -163,7 +169,14 @@ def normalize_editorial(raw_dir: Path, lemmas_csv: Path, index: MorphologyIndex)
                 if not def1:
                     continue  # skip empty Def 1 rows, mirrors load_editorial
                 word = mot.lower()
-                lemma = lemma_map.get((mot, def1), mot.lower()).lower()
+                mapped = lemma_map.get((mot, def1))
+                if mapped is not None:
+                    lemma = mapped.lower()
+                else:
+                    status, resolved = reconcile(word, word, index)
+                    if status == "ambiguous":
+                        raise ValueError(f"editorial {word!r} needs an authored lemma")
+                    lemma = resolved if status == "fixed" else word
                 out.append({
                     "word": word,
                     "language": "fr",

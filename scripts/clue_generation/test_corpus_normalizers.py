@@ -153,7 +153,24 @@ def test_normalize_editorial_joins_on_mot_and_definition1(tmp_path, index):
     }]
 
 
-def test_normalize_editorial_falls_back_to_surface_when_no_lemmas_match(tmp_path, index):
+def test_normalize_editorial_unmapped_inflection_resolves_via_reconcile(tmp_path, index):
+    # No `_lemmas` entry for LIA — must resolve via reconcile's "fixed" path (lemma="lier"), not surface-default.
+    raw_dir = tmp_path / "raw"
+    raw_dir.mkdir()
+    (raw_dir / "fr_test.csv").write_text(
+        "Mot;Définition 1;Définition 2\n"
+        "LIA;Attacha jadis;\n",
+        encoding="utf-8",
+    )
+    lemmas_csv = raw_dir / "_lemmas.csv"
+    lemmas_csv.write_text("Mot;Sens;Lemme;Morphologie\n", encoding="utf-8")
+    out = cn.normalize_editorial(raw_dir, lemmas_csv, index)
+    assert len(out) == 1
+    assert out[0]["lemma"] == "lier"
+
+
+def test_normalize_editorial_unmapped_self_lemma_keeps_surface(tmp_path, index):
+    # DIX has no `_lemmas` entry, but reconcile returns "ok" — it's legitimately its own lemma, not a silent default.
     raw_dir = tmp_path / "raw"
     raw_dir.mkdir()
     (raw_dir / "fr_test.csv").write_text(
@@ -166,6 +183,21 @@ def test_normalize_editorial_falls_back_to_surface_when_no_lemmas_match(tmp_path
     out = cn.normalize_editorial(raw_dir, lemmas_csv, index)
     assert len(out) == 1
     assert out[0]["lemma"] == "dix"
+
+
+def test_normalize_editorial_unmapped_ambiguous_raises(tmp_path, index):
+    # TUE is a genuine inflection of both `tuer` and `taire`, with no `_lemmas` entry to disambiguate.
+    raw_dir = tmp_path / "raw"
+    raw_dir.mkdir()
+    (raw_dir / "fr_test.csv").write_text(
+        "Mot;Définition 1;Définition 2\n"
+        "TUE;Occit;\n",
+        encoding="utf-8",
+    )
+    lemmas_csv = raw_dir / "_lemmas.csv"
+    lemmas_csv.write_text("Mot;Sens;Lemme;Morphologie\n", encoding="utf-8")
+    with pytest.raises(ValueError, match=r"editorial 'tue' needs an authored lemma"):
+        cn.normalize_editorial(raw_dir, lemmas_csv, index)
 
 
 # --- normalize_grammalecte -------------------------------------------------
