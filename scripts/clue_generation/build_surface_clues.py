@@ -164,6 +164,98 @@ def lemma_pos_freq(lexique: Path) -> dict[tuple[str, str], int]:
     return out
 
 
+def build_surface_rows(
+    surface: str,
+    corpus: dict[tuple[str, str], dict],
+    index: MorphologyIndex,
+    freq: dict[tuple[str, str], int],
+    status_counter: dict[str, int] | None = None,
+) -> list[dict]:
+    """Forward-inflate a surface: emit ONE row per clued (lemma, pos) candidate,
+    not a single freq/POS winner. A homograph surface (`lie` = noun *dregs* +
+    verb *lier*) yields a row per sense, each keeping its own lemma so the
+    grid's same-lemma dedup stays correct. POS_PRECEDENCE is only an
+    eligibility filter here, never a selector."""
+    if status_counter is None:
+        status_counter = defaultdict(int)
+    rows: list[dict] = []
+    analyses = index.lookup_form(surface)
+    if not analyses:
+        return rows
+
+    # Build candidate (lemma, pos_class) tuples that have a clue
+    candidates: list[tuple[str, str, frozenset[str], int]] = []
+    seen: set[tuple[str, str]] = set()
+    for lemma, tags in analyses:
+        pos_class = _classify(tags)
+        if pos_class not in POS_PRECEDENCE:
+            continue
+        key = (lemma, pos_class)
+        if key in seen:
+            continue
+        if key not in corpus:
+            continue
+        seen.add(key)
+        f_ = freq.get(key, 0)
+        candidates.append((lemma, pos_class, tags, f_))
+
+    if not candidates:
+        # Manner-adverb fallback: a `-ment` adverb has no clue of its
+        # own, but its base adjective might — `terrible → "Effrayant"`
+        # gives `terriblement → "De façon effrayante"` (ADR: adverb
+        # derivation). Only when the base adjective is clued and its
+        # clue adverbialises cleanly.
+        base = base_adjective(surface, index)
+        adj_row = corpus.get((base, "adj")) if base else None
+        derived = adverbialise(adj_row["lemma_clue"], index) if adj_row else None
+        if derived:
+            status_counter["derived-adverb"] += 1
+            rows.append({
+                "surface": surface, "lemma": base, "pos": "adv",
+                "clue": derived, "source_clue": adj_row["lemma_clue"],
+                "inflection_status": "derived-adverb",
+                "filter_score": adj_row.get("filter_score", ""),
+                "validation_flag": "ok",
+            })
+        else:
+            status_counter["no-owner"] += 1
+        return rows
+
+    # Forward inflation: one output row per clued candidate (no winner pick).
+    for cand_lemma, cand_pos, cand_tags, _ in candidates:
+        row = corpus[(cand_lemma, cand_pos)]
+        source_clue = row["lemma_clue"]
+
+        if surface == cand_lemma:
+            clue = source_clue
+            status = "verbatim"
+        else:
+            norm_tags = {normalize_tag(t) for t in cand_tags}
+            clue, status = classify_surface_inflection(source_clue, norm_tags, index)
+
+        # Char-cap + wrap gate. Inflation can lengthen ("Récit imaginaire"
+        # → "Récits imaginaires" gains 2 chars), so we re-check
+        # post-inflate rather than trusting the lemma-level validator
+        # alone. fits_single_cell enforces both MAX_CLUE_CHARS and the
+        # Lekton wrap predicate.
+        if not fits_single_cell(clue):
+            status_counter["too-long"] += 1
+            continue
+
+        status_counter[status] += 1
+        rows.append({
+            "surface": surface,
+            "lemma": cand_lemma,
+            "pos": cand_pos,
+            "clue": clue,
+            "source_clue": source_clue,
+            "inflection_status": status,
+            "filter_score": row.get("filter_score", ""),
+            "validation_flag": row.get("validation_flag", ""),
+        })
+    return rows
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--corpus", type=Path,
@@ -207,81 +299,8 @@ def main() -> None:
             L = len(surface)
             if not _surface_length_ok(L):
                 continue
-            analyses = index.lookup_form(surface)
-            if not analyses:
-                continue
-
-            # Build candidate (lemma, pos_class) tuples that have a clue
-            candidates: list[tuple[str, str, frozenset[str], int]] = []
-            seen: set[tuple[str, str]] = set()
-            for lemma, tags in analyses:
-                pos_class = _classify(tags)
-                if pos_class not in POS_PRECEDENCE:
-                    continue
-                key = (lemma, pos_class)
-                if key in seen:
-                    continue
-                if key not in corpus:
-                    continue
-                seen.add(key)
-                f_ = freq.get(key, 0)
-                candidates.append((lemma, pos_class, tags, f_))
-
-            if not candidates:
-                # Manner-adverb fallback: a `-ment` adverb has no clue of its
-                # own, but its base adjective might — `terrible → "Effrayant"`
-                # gives `terriblement → "De façon effrayante"` (ADR: adverb
-                # derivation). Only when the base adjective is clued and its
-                # clue adverbialises cleanly.
-                base = base_adjective(surface, index)
-                adj_row = corpus.get((base, "adj")) if base else None
-                derived = adverbialise(adj_row["lemma_clue"], index) if adj_row else None
-                if derived:
-                    status_counter["derived-adverb"] += 1
-                    out_rows.append({
-                        "surface": surface, "lemma": base, "pos": "adv",
-                        "clue": derived, "source_clue": adj_row["lemma_clue"],
-                        "inflection_status": "derived-adverb",
-                        "filter_score": adj_row.get("filter_score", ""),
-                        "validation_flag": "ok",
-                    })
-                else:
-                    status_counter["no-owner"] += 1
-                continue
-
-            # Pick winner by freq (desc) then POS precedence (asc).
-            candidates.sort(key=lambda c: (-c[3], POS_PRECEDENCE[c[1]]))
-            winner_lemma, winner_pos, winner_tags, _ = candidates[0]
-            row = corpus[(winner_lemma, winner_pos)]
-            source_clue = row["lemma_clue"]
-
-            if surface == winner_lemma:
-                clue = source_clue
-                status = "verbatim"
-            else:
-                norm_tags = {normalize_tag(t) for t in winner_tags}
-                clue, status = classify_surface_inflection(source_clue, norm_tags, index)
-
-            # Char-cap + wrap gate. Inflation can lengthen ("Récit imaginaire"
-            # → "Récits imaginaires" gains 2 chars), so we re-check
-            # post-inflate rather than trusting the lemma-level validator
-            # alone. fits_single_cell enforces both MAX_CLUE_CHARS and the
-            # Lekton wrap predicate.
-            if not fits_single_cell(clue):
-                status_counter["too-long"] += 1
-                continue
-
-            status_counter[status] += 1
-            out_rows.append({
-                "surface": surface,
-                "lemma": winner_lemma,
-                "pos": winner_pos,
-                "clue": clue,
-                "source_clue": source_clue,
-                "inflection_status": status,
-                "filter_score": row.get("filter_score", ""),
-                "validation_flag": row.get("validation_flag", ""),
-            })
+            out_rows.extend(
+                build_surface_rows(surface, corpus, index, freq, status_counter))
 
     fieldnames = ["surface", "lemma", "pos", "clue", "source_clue",
                   "inflection_status", "filter_score", "validation_flag"]
