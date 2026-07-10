@@ -410,6 +410,19 @@ git commit -s -m "feat(frontend-grid): dual-def cell single-tap toggles between 
 - [ ] Manually drive the feature per the `verify` skill: launch the app, open a puzzle, tap a single-def cell (word focuses, keyboard opens on mobile), tap a dual-def cell twice (word switches). Confirm a pan that starts on a def cell does not steal focus.
 - [ ] Confirm diff size: `git diff main --stat` stays well under 400 lines.
 
+## Post-review correction (2026-07-10)
+
+This plan targeted `Grid.tsx` / `Cell.tsx` (`DefinitionCellView`) as the render
+layer. That was wrong: the live `/play` and coop surfaces render
+`PuzzleBoard` + the design-system `DefCell` — `Grid`/`Cell` appear only in the
+design-system gallery. The shared hook change (`handleDefinitionClick`,
+`cluesByDefCell`) was correct and unchanged; the wiring was moved to
+`DefCell` (`onClick`) + `PuzzleBoard`'s definition branch, and the tests were
+re-homed onto a `PuzzleBoard`/`DefCell` render harness
+(`tests/puzzleboard-def-cell-focus.test.tsx`). The §6a review caught the
+mis-wiring via importer analysis; a `/verify`-style drive of the real flow
+would have caught it earlier.
+
 ## Notes / rationale carried from the spec
 
 - "First empty cell" is read from the live `<input>` value (via the hook's `refs`), so it is robust to server-rehydrated entries on resume — unlike `cellValuesRef` (session-typed only), which the existing smart-start uses. Validated/locked cells are excluded first, matching `useAdvanceOnValidation.findNextEditable` semantics.
