@@ -245,112 +245,83 @@ git commit -s -m "feat(clue-gen): POS-aware runtime lemma guard"
 
 ---
 
-## Task 5: Per-source normalizers
+## Task 5: Forward-inflation rewrite of the inflator (the core fix)
+
+**Files:**
+- Modify: `scripts/clue_generation/build_surface_clues.py` (the per-surface winner loop, ~lines 199-284)
+- Test: `scripts/clue_generation/test_build_surface_clues_forward.py` (new)
+
+**Interfaces:**
+- Consumes: the `(lemma, pos)`-keyed `corpus` (unchanged loading, `:189-197`), `MorphologyIndex`, `inflect_clue`, the existing `classify_surface_inflection` / status routing, `base_adjective`/`adverbialise` (adverb fallback).
+- Produces: for each surface, **one output row per candidate `(lemma, pos)` that has a clue** — NOT a single winner. Each row keeps `{surface, lemma, pos, clue, source_clue, inflection_status, filter_score, validation_flag}` with `lemma`/`pos` = that candidate's. The adverb-fallback and `no-owner` paths are unchanged. Output may contain several rows for one surface with distinct `lemma`.
+
+- [ ] **Step 1: Write failing tests** — build a tiny in-memory `corpus` with `(lier,verbe)` and `(lie,nom)` both clued, plus `(are,nom)`. Assert `build_surface_rows("lie", corpus, index)` returns TWO rows: one `lemma=lier,pos=verbe` (verb clue, inflected) and one `lemma=lie,pos=nom` (noun clue, verbatim). Assert a pure-verb surface `lia` returns exactly one row `lemma=lier`. Assert the winner-collapse is gone (both senses present). Extract the per-surface logic into a testable `build_surface_rows(surface, corpus, index, freq) -> list[dict]` so the test doesn't need the full CSV stream.
+
+- [ ] **Step 2: Run to verify fail.** `python3 -m pytest scripts/clue_generation/test_build_surface_clues_forward.py -q` — Expected: FAIL (`build_surface_rows` undefined / current code returns 1 winner row).
+
+- [ ] **Step 3: Implement** — refactor `main()`'s per-surface block into `build_surface_rows(surface, corpus, index, freq)`. Replace `candidates.sort(...); winner = candidates[0]` (`:252-255`) with `for cand in candidates:` emitting a row per candidate via the SAME inflection body (`surface == lemma` → verbatim; else `classify_surface_inflection`; the char-cap `fits_single_cell` gate; status routing to shipped/dropped). Keep `POS_PRECEDENCE` only as the membership filter for which pos classes are eligible (`pos_class not in POS_PRECEDENCE` → skip), NOT for winner selection. `main()` calls `build_surface_rows` per streamed surface and extends `out_rows`.
+
+- [ ] **Step 4: Run to verify pass.** Same pytest — Expected: PASS. Also run `python3 -m pytest scripts/eval -q` to confirm the pleonasm/agreement runtime guards and existing inflation tests still pass.
+
+- [ ] **Step 5: Commit.** `git add scripts/clue_generation/build_surface_clues.py scripts/clue_generation/test_build_surface_clues_forward.py && git commit -s -m "feat(clue-gen): forward-inflate per (lemma,pos) instead of one owner per surface"`
+
+---
+
+## Task 6: Per-tier normalizers
 
 **Files:**
 - Create: `scripts/clue_generation/corpus_normalizers.py`
 - Test: `scripts/clue_generation/test_corpus_normalizers.py`
 
 **Interfaces:**
-- Consumes: `derive_lemma` (Task 2), `MorphologyIndex`.
-- Produces: `UNIFIED_FIELDS: list[str]` (the 10 columns); `normalize_unified(rows: list[dict], index) -> list[dict]` (fills `pos`/`lemma` where derivable, passes authored values through); `normalize_raw_defs(path, index) -> list[dict]` (the `Mot;Déf1;Déf2` shape → unified); `normalize_gold(path, index) -> list[dict]` (`word,clue,pos,source` → unified with derived lemma). Each returns rows keyed by `UNIFIED_FIELDS`.
+- Consumes: `derive_lemma` (Task 2), `MorphologyIndex`, the forward-inflated `surface_clues.csv` (Task 5 output).
+- Produces: `UNIFIED_FIELDS` (the 10 columns) and one normalizer per tier, each returning `list[dict]` keyed by `UNIFIED_FIELDS`:
+  - `normalize_unified(rows, index)` — hand-authored sources already in unified shape (`short-fr`, `themed/*`, `fr.csv`): pass authored `pos`/`lemma` through; where `pos` present & `lemma` blank, derive; on `("ambiguous", None)` raise `ValueError` (never surface-default).
+  - `normalize_gold(path, index)` — `word,clue,pos,source` → unified, deriving lemma from `(word,pos)`.
+  - `normalize_editorial(raw_dir, lemmas_csv, index)` — the `Mot;Déf1;Déf2` raw files + `_lemmas.csv` `(Mot,Sens)→Lemme` map → unified (lemma from the map, pos derived from `(surface,lemma)`).
+  - `normalize_grammalecte(path, index)` — the grammalecte-import output (`import_grammalecte_long_words`): `(word,…,lemma)` → unified, pos = `_classify` of the reading matching the row's lemma.
+  - `normalize_surface_clues(path)` — the forward-inflated `surface_clues.csv` (`surface,lemma,pos,clue,…`) → unified 1:1.
 
-- [ ] **Step 1: Write failing tests** — one per normalizer with a 2-3 row golden fixture. Assert: a `themed` row with blank `pos`/`lemma` for `dr` (abbrev) yields `pos` from a passed default and `lemma=dr`; a `gold` row `es,"Mi bémol",abr,…` yields `lemma=es`; a raw `LIA;Attacha;…` row yields a unified row with `word=lia`. Cover the ambiguous case: a `verbe`-tagged `tue` with no authored lemma raises a clear "needs authored lemma" error (do not silently emit surface).
+- [ ] **Step 1: Write failing tests** — one golden fixture per normalizer (2-3 rows): themed `dr`→`pos=abr,lemma=dr`; gold `es,"Mi bémol",abr`→`lemma=es`; editorial `LIA;Attacha;…`+`_lemmas` `(LIA,…)→lier`→`lemma=lier`; grammalecte `abats,…,abat`→`pos=nom`; a `surface_clues` row `lie,lier,verbe,…`→passes through with `lemma=lier`. Cover the loud-fail: an authored `verbe` row with no lemma and an ambiguous surface raises `ValueError`.
 
-- [ ] **Step 2: Run to verify fail.** Run: `python3 -m pytest scripts/clue_generation/test_corpus_normalizers.py -q` — Expected: FAIL (module missing).
+- [ ] **Step 2-4:** run red, implement each normalizer mapping its shape to `UNIFIED_FIELDS`, run green. `python3 -m pytest scripts/clue_generation/test_corpus_normalizers.py -q`.
 
-- [ ] **Step 3: Implement** the normalizers. Each maps its source shape to `UNIFIED_FIELDS`; where `lemma` is blank/absent but `pos` is known, call `derive_lemma`; on `("ambiguous", None)` raise `ValueError(f"{word}/{pos} needs an authored lemma")` so authoring gaps surface loudly (per spec: never default to surface).
-
-- [ ] **Step 4: Run to verify pass.** Run: `python3 -m pytest scripts/clue_generation/test_corpus_normalizers.py -q` — Expected: PASS.
-
-- [ ] **Step 5: Commit.**
-
-```bash
-git add scripts/clue_generation/corpus_normalizers.py scripts/clue_generation/test_corpus_normalizers.py
-git commit -s -m "feat(clue-gen): per-source corpus normalizers to the unified schema"
-```
+- [ ] **Step 5: Commit.** scope `feat(clue-gen)`.
 
 ---
 
-## Task 6: The merge assembler
+## Task 7: Merge assembler + retire the six mutators
 
 **Files:**
 - Create: `scripts/clue_generation/assemble_corpus.py`
 - Test: `scripts/clue_generation/test_assemble_corpus.py`
+- Delete (after confirming each has a Task-6 normalizer): `add_short_word_clues.py`, `add_greek_and_extras.py`, `merge_editorial_into_wordlist.py`, `merge_clues_into_wordlist.py`, `apply_clue_overrides.py`, `import_grammalecte_long_words.py` and their tests.
 
 **Interfaces:**
-- Consumes: `corpus_normalizers` (Task 5).
-- Produces: `SOURCE_PRIORITY: list[str]` (highest first: `overrides, curated, themed, gold, editorial, inflated, llm, grammalecte`); `merge(normalized_sources: list[list[dict]]) -> list[dict]` — concat, dedup by `(word.lower(), clue)` keeping the highest-priority source, sorted `(language, word, clue)` for stable diffs; `main()` CLI writing `words-fr.csv`.
+- Consumes: `corpus_normalizers` (Task 6).
+- Produces: `SOURCE_PRIORITY` (overrides > curated/themed/gold > editorial > grammalecte > inflated-clue); `merge(normalized: list[list[dict]]) -> list[dict]` (concat → dedup by `(word.lower(), clue)` keeping highest-priority source → sort `(language, word, pos, clue)` for stable diffs, idempotent); `main()` writing `words-fr.csv` with `pos` via `csv.DictWriter(fieldnames=UNIFIED_FIELDS)`.
 
-- [ ] **Step 1: Write failing tests** — dedup keeps the higher-priority source for an identical `(word, clue)`; two *distinct* clues for one word both survive; output is sorted deterministically (idempotent on re-run).
+- [ ] **Step 1: Write failing tests** — identical `(word,clue)` keeps the higher-priority source; a surface with two lemma-distinct rows (`lie/lier` + `lie/lie`) — different clues — BOTH survive (the forward-inflation payoff); re-run is byte-identical (idempotent).
 
-- [ ] **Step 2: Run to verify fail.** Run: `python3 -m pytest scripts/clue_generation/test_assemble_corpus.py -q` — Expected: FAIL.
+- [ ] **Step 2-4:** run red, implement `merge`+`main`, run green.
 
-- [ ] **Step 3: Implement** `merge` + `main`. `main` normalizes each configured source, merges, writes with `csv.DictWriter(fieldnames=UNIFIED_FIELDS, lineterminator="\n")`.
+- [ ] **Step 5: Retire mutators** — grep `grep -rIn "add_short_word_clues\|add_greek_and_extras\|merge_editorial_into_wordlist\|merge_clues_into_wordlist\|apply_clue_overrides\|import_grammalecte_long_words" scripts docs`; repoint any runbook/skill reference to `assemble_corpus.py`; delete the modules + tests; confirm `python3 -m pytest scripts/clue_generation scripts/eval -q` passes (pre-existing sklearn-less judge collection errors excepted).
 
-- [ ] **Step 4: Run to verify pass.** Run: `python3 -m pytest scripts/clue_generation/test_assemble_corpus.py -q` — Expected: PASS.
-
-- [ ] **Step 5: Commit.**
-
-```bash
-git add scripts/clue_generation/assemble_corpus.py scripts/clue_generation/test_assemble_corpus.py
-git commit -s -m "feat(clue-gen): normalize-then-merge corpus assembler"
-```
+- [ ] **Step 6: Commit.** scope `refactor(clue-gen)`.
 
 ---
 
-## Task 7: Retire the six in-place mutators
+## Task 8: Regenerate the corpus (private repo) + guard green
 
-**Files:**
-- Delete: `add_short_word_clues.py`, `add_greek_and_extras.py`, `merge_editorial_into_wordlist.py`, `merge_clues_into_wordlist.py`, `apply_clue_overrides.py`, `import_grammalecte_long_words.py` (and their tests), after confirming each one's logic is represented by a normalizer in Task 5.
+**Files (private `wordsparrow-clue-data`):** author residual `pos`+`lemma` in any source still missing them; regenerate `grid/infrastructure/src/main/resources/words/words-fr.csv`.
 
-**Interfaces:**
-- Consumes: nothing new. This is removal + reference cleanup.
+- [ ] **Step 1: Author residue** — the `pos`+`lemma` on `themed/*`, `short-fr.csv`, `fr.csv` are already staged this session. For sources still lacking `pos`, seed via `derive_lemma`/`_classify`; **print every ambiguous/`no-verb-reading` row for human authoring** (e.g. `tue/verbe→tuer`, `né→naître`) — do not guess.
 
-- [ ] **Step 1: Grep for references** — `grep -rIn "add_short_word_clues\|add_greek_and_extras\|merge_editorial_into_wordlist\|merge_clues_into_wordlist\|apply_clue_overrides\|import_grammalecte_long_words" scripts docs`. Any runbook/skill mention must be repointed to `assemble_corpus.py`.
+- [ ] **Step 2: Regenerate.** `python3 scripts/clue_generation/assemble_corpus.py --out <private>/grid/.../words-fr.csv`. Confirm `lie` now yields a `lemma=lier` row for its verb clue and a `lemma=lie` row for its noun clue.
 
-- [ ] **Step 2: Delete the scripts + their tests.** For each deleted module, confirm a Task-5 normalizer covers its source (checklist in the PR body).
+- [ ] **Step 3: Guard green.** Point `WORDLIST` at the private corpus: `GRAMMALECTE_LEX=~/Downloads/grammalecte/... python3 -m pytest scripts/eval/test_runtime_csv_lemmas.py -q` — zero `fixed` violations. Spot-check `lia→lier`, `lie`(verb)→`lier`, `lie`(noun)→`lie`, `es`(note)→`es`.
 
-- [ ] **Step 3: Run the pipeline test suite.** Run: `python3 -m pytest scripts/clue_generation scripts/eval -q` — Expected: PASS (collection errors only for the pre-existing `sklearn`-less judge tests).
-
-- [ ] **Step 4: Commit.**
-
-```bash
-git add -A scripts/clue_generation
-git commit -s -m "refactor(clue-gen): retire six in-place mutators for the merge assembler"
-```
-
----
-
-## Task 8: Author `pos` + `lemma` across sources; regenerate corpus (private repo)
-
-**Files (private `wordsparrow-clue-data`):**
-- All `data/curated/*` + `grid/.../words/themed/*.csv` gain `pos` (+ lemma where blank/surface).
-- Regenerate `grid/infrastructure/src/main/resources/words/words-fr.csv`.
-
-**Interfaces:**
-- Consumes: `assemble_corpus.py` (Task 6), `reconcile_lemmas.derive_lemma` (Task 2).
-
-- [ ] **Step 1: Bootstrap `pos` where derivable.** For sources that already carry `pos` (gold), it flows through. For themed/curated without `pos`, seed each file's `pos` by class (themed `chem/roman/sigle/unit/abbrev`→ invariable classes; verb-form rows in `short-fr.csv`→`verbe`) using a one-off `reconcile_lemmas`-backed script; **print every `("ambiguous", None)` and `("no-verb-reading", …)` row for human authoring** — do not guess.
-
-- [ ] **Step 2: Human authors the residue** (the printed ambiguous/no-reading list, e.g. `tue/verbe→tuer`). Commit the authored source CSVs.
-
-- [ ] **Step 3: Regenerate.** Run `python3 scripts/clue_generation/assemble_corpus.py --out <private>/grid/.../words-fr.csv`. Confirm the diff touches only `pos`/`lemma` cells and genuinely new/removed rows (not a full re-quote).
-
-- [ ] **Step 4: Guard green.**
-
-Run: `GRAMMALECTE_LEX=~/Downloads/grammalecte/lexique-grammalecte-fr-v7.7.txt python3 -m pytest scripts/eval/test_runtime_csv_lemmas.py -q` (point `WORDLIST` at the private corpus)
-Expected: PASS (zero `fixed` violations). Spot-check `lia→lier`, `es`(note)`→es`, `es`(verb)`→être`.
-
-- [ ] **Step 5: Commit + push** the private corpus, then open the public `bliss` PR(s) for Tasks 1-7.
-
-```bash
-# private repo
-git -C ~/IdeaProjects/wordsparrow-clue-data add -A
-git -C ~/IdeaProjects/wordsparrow-clue-data commit -s -m "corpus: unified pos+lemma across sources; regenerate words-fr.csv"
-```
-
----
+- [ ] **Step 4: Commit + push** private corpus; open the public `bliss` PR(s) for Tasks 1-7.
 
 ## Self-Review
 
@@ -358,3 +329,4 @@ git -C ~/IdeaProjects/wordsparrow-clue-data commit -s -m "corpus: unified pos+le
 - **Placeholder scan:** core logic (`derive_lemma`, guard threading) shown as real code; data-authoring residue (Task 8) is inherently human but bounded by a printed ambiguous list, not left vague.
 - **Type consistency:** `derive_lemma` returns `(status, lemma|None)` used identically in Tasks 2/4/5; `reconcile(..., pos=None)` signature consistent across Tasks 2/4; `UNIFIED_FIELDS` shared by Tasks 5/6.
 - **Scope:** one coherent workstream; Tasks 1-7 are public-repo PRs (each ≤400 lines), Task 8 is the private-repo data cutover gated by the Task-4 guard.
+
