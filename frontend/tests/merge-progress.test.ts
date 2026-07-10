@@ -143,6 +143,26 @@ describe('mergeProgress — locked letters are authoritative over unlocked colli
     );
     expect(merged.entries).toEqual([{ r: 0, c: 0, l: 'A' }]);
   });
+
+  it('falls back to the timestamp tiebreak when both sides have the cell locked', () => {
+    const merged = mergeProgress(
+      {
+        payload: payload({
+          entries: [{ r: 0, c: 0, l: 'A' }],
+          lockedCells: [{ r: 0, c: 0 }],
+        }),
+        updatedAt: T2,
+      },
+      {
+        payload: payload({
+          entries: [{ r: 0, c: 0, l: 'Z' }],
+          lockedCells: [{ r: 0, c: 0 }],
+        }),
+        updatedAt: T1,
+      },
+    );
+    expect(merged.entries).toEqual([{ r: 0, c: 0, l: 'A' }]);
+  });
 });
 
 describe('mergeProgress — hints used (max)', () => {
