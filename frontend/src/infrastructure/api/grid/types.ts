@@ -222,6 +222,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/puzzles/{puzzleId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check filled, not-yet-locked cells against the canonical solution.
+         * @description Per-puzzle grid-verification mechanism (ADR-0099), the solo assist
+         *     that replaces the whole-word hint reveal. The client submits the
+         *     letters it has filled in but not yet locked; the server compares
+         *     each submitted cell against its canonical solution letter and
+         *     returns one `correct: boolean` per submitted cell — never the
+         *     canonical letter itself, and never for a cell the caller did not
+         *     submit. Correct cells the client SHOULD lock (reusing the existing
+         *     hint/co-op lock mechanic); wrong cells stay editable.
+         *
+         *     Every successful call starts a 30-minute (`1800`s) cooldown keyed by
+         *     `(puzzle, player)`, server-authoritative and enforced regardless of
+         *     client-side state (survives reloads, not bypassable by clearing
+         *     localStorage or switching device). A call within the cooldown window
+         *     does NOT compare cells and responds 429 with `secondsUntilNextVerify`
+         *     only — no `cells` array — so an early call leaks nothing beyond "you
+         *     must wait". The cooldown is the rate-limit mitigation against using
+         *     this endpoint as a positional answer-key oracle (ADR-0099 §2): a
+         *     uniform-letter sweep of the alphabet is bounded to roughly 13 hours
+         *     per puzzle.
+         *
+         *     Unlike `/validate` (binary, uncapped, no positional data), this
+         *     endpoint returns per-cell correctness, which is why it carries its
+         *     own cooldown instead of reusing `/validate`'s posture — see
+         *     ADR-0099, which relates to and amends ADR-0076's answer-off-the-wire
+         *     posture with this narrower carve-out. `/hints` and `/validate` are
+         *     unaffected; this is a new, additional capability.
+         *
+         *     Player identity on the wire is the `__Secure-ws_session` cookie
+         *     issued by identity-api, same as `/hints`. The server verifies the
+         *     cookie against identity-api's whoami endpoint and keys the cooldown
+         *     on the resolved `userId`. Missing or revoked cookies produce a 401
+         *     `auth-required` response. Coordinates that point at a non-letter
+         *     cell (definition or block) or that fall outside the puzzle bounds
+         *     produce a 400 `invalid-coord` and do NOT start the cooldown.
+         */
+        post: operations["verifyGrid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/puzzles/{puzzleId}/validate": {
         parameters: {
             query?: never;
@@ -656,6 +709,137 @@ export interface components {
              * @example 420
              */
             secondsUntilNextHint: number | null;
+        };
+        /**
+         * @description Request body for `POST /v1/puzzles/{puzzleId}/verify`. Carries the
+         *     filled, not-yet-locked cells the player wants checked (a subset of
+         *     the grid — already-locked cells are known-correct and SHOULD NOT be
+         *     resubmitted). Cleared / unfilled cells are absent — do NOT send
+         *     `letter: null`. Order is irrelevant; the server keys by
+         *     `(row, column)`. Duplicate `(row, column)` entries are a 400.
+         * @example {
+         *       "cells": [
+         *         {
+         *           "row": 0,
+         *           "column": 1,
+         *           "letter": "P"
+         *         },
+         *         {
+         *           "row": 0,
+         *           "column": 3,
+         *           "letter": "G"
+         *         },
+         *         {
+         *           "row": 0,
+         *           "column": 5,
+         *           "letter": "T"
+         *         }
+         *       ]
+         *     }
+         */
+        VerifyGridRequest: {
+            /**
+             * @description Submitted letters to check. `maxItems` matches the protocol-level
+             *     upper bound on letter cells in a `Puzzle` (`width × height` with
+             *     `width`, `height` ≤ 50).
+             */
+            cells: components["schemas"]["VerifyCellInput"][];
+        };
+        /**
+         * @description A single client-submitted letter to verify. `(row, column)` must
+         *     point at a `letter`-kind cell in the puzzle; pointing at a
+         *     definition or block cell, or out of bounds, is a 400 `invalid-coord`.
+         */
+        VerifyCellInput: {
+            /**
+             * @description Zero-indexed row of the cell.
+             * @example 0
+             */
+            row: number;
+            /**
+             * @description Zero-indexed column of the cell.
+             * @example 1
+             */
+            column: number;
+            /**
+             * @description Single uppercase A-Z code point. Diacritics are normalized
+             *     client-side before submission.
+             * @example P
+             */
+            letter: string;
+        };
+        /**
+         * @description Response body for `POST /v1/puzzles/{puzzleId}/verify` on a 200
+         *     (cooldown was not active). Returns one verdict per submitted cell —
+         *     never the canonical letter — plus the newly-started cooldown
+         *     countdown.
+         */
+        VerifyGridResponse: {
+            /**
+             * @description One verdict per submitted cell, same `(row, column)` set as the
+             *     request. No entry is added for a cell the caller did not submit.
+             * @example [
+             *       {
+             *         "row": 0,
+             *         "column": 1,
+             *         "correct": true
+             *       },
+             *       {
+             *         "row": 0,
+             *         "column": 3,
+             *         "correct": false
+             *       },
+             *       {
+             *         "row": 0,
+             *         "column": 5,
+             *         "correct": true
+             *       }
+             *     ]
+             */
+            cells: components["schemas"]["VerifyCellVerdict"][];
+            /**
+             * @description Countdown to the next allowed call, seconds. Always `1800`
+             *     (30 minutes) immediately after a successful call — the cooldown
+             *     duration is fixed, not variable.
+             * @example 1800
+             */
+            secondsUntilNextVerify: number;
+        };
+        /**
+         * @description Per-cell correctness for one submitted cell. Never carries the
+         *     canonical letter — only whether the submitted letter matched it
+         *     (ADR-0099 §1).
+         */
+        VerifyCellVerdict: {
+            /**
+             * @description Zero-indexed row of the cell.
+             * @example 0
+             */
+            row: number;
+            /**
+             * @description Zero-indexed column of the cell.
+             * @example 1
+             */
+            column: number;
+            /**
+             * @description True iff the submitted letter matches the canonical solution at
+             *     this cell.
+             * @example true
+             */
+            correct: boolean;
+        };
+        /**
+         * @description RFC 7807 problem body for the `/verify` 429 (ADR-0099 §2), extended
+         *     with the cooldown countdown as a real typed member — not text
+         *     embedded in `detail`, unlike `/hints`' 429.
+         */
+        VerifyCooldownProblem: components["schemas"]["Problem"] & {
+            /**
+             * @description Seconds until the next `/verify` call is allowed for this
+             *     `(puzzle, player)`.
+             * @example 1147
+             */
+            secondsUntilNextVerify: number;
         };
         /**
          * @description Request body for `POST /v1/puzzles/{puzzleId}/validate`. Carries the
@@ -1304,6 +1488,98 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    verifyGrid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID v7 identifier of the puzzle. */
+                puzzleId: components["parameters"]["PuzzleId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyGridRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description Verification completed (cooldown was not active). Body reports
+             *     per-cell correctness for exactly the submitted cells, plus the
+             *     newly-started cooldown countdown.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyGridResponse"];
+                };
+            };
+            /**
+             * @description Request is malformed. RFC 7807. Variants:
+             *     - Path parameter `puzzleId` is not a valid UUID
+             *       (`type` = `https://bliss.example/errors/invalid-puzzle-id`).
+             *     - Request body missing or unparseable
+             *       (`type` = `https://bliss.example/errors/invalid-request-body`).
+             *     - A submitted `(row, column)` is out of bounds, points at a
+             *       non-letter cell, or is duplicated
+             *       (`type` = `https://bliss.example/errors/invalid-coord`). The
+             *       cooldown is NOT started in this case.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description No valid `__Secure-ws_session` cookie. The session is missing,
+             *     unparseable, or has been revoked. RFC 7807;
+             *     `type` is `https://bliss.example/errors/auth-required`.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description No puzzle with this id. RFC 7807;
+             *     `type` is `https://bliss.example/errors/puzzle-not-found`.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description Verification cooldown active for this `(puzzle, player)`. RFC
+             *     7807; `type` is
+             *     `https://bliss.example/errors/verify-cooldown-active`. The body
+             *     carries the extension member `secondsUntilNextVerify` (integer,
+             *     seconds until the next verify is allowed) per RFC 7807 §3.2. It
+             *     deliberately carries NO `cells` — an early call reveals nothing
+             *     about the submitted letters during the cooldown (ADR-0099 §2).
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["VerifyCooldownProblem"];
                 };
             };
         };
