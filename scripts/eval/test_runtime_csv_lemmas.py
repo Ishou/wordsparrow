@@ -62,7 +62,8 @@ def _violations(rows: list[dict], index: MorphologyIndex) -> list[tuple[str, str
             continue
         surface = (r.get("word") or "").strip()
         lemma = (r.get("lemma") or "").strip()
-        status, _ = reconcile(surface, lemma, index)
+        pos = (r.get("pos") or "").strip() or None
+        status, _ = reconcile(surface, lemma, index, pos=pos)
         if status == "fixed":
             cands = sorted({l for l, _ in index.lookup_form(surface)})
             hits.append((surface, lemma, cands))
@@ -88,10 +89,11 @@ def test_guard_fires_on_surface_defaulted_lemma_and_passes_homograph() -> None:
         return
     index = MorphologyIndex.load(lex)
     rows = [
-        {"word": "lia", "lemma": "lia", "clue": "Attacha jadis"},  # bug: dodges dedup
-        {"word": "lie", "lemma": "lie", "clue": "Dépôt au fond du fût"},  # valid noun homograph
-        {"word": "lia", "lemma": "lier", "clue": "Attacha jadis"},  # already correct
-        {"word": "lia", "lemma": "lia", "clue": ""},  # unclued: not placeable, ignored
+        {"word": "lia", "pos": "verbe", "lemma": "lia", "clue": "Attacha jadis"},  # violation
+        {"word": "es", "pos": "abr", "lemma": "es", "clue": "Mi bémol"},  # OK (note)
+        {"word": "es", "pos": "verbe", "lemma": "être", "clue": "Existes"},  # OK
+        {"word": "lia", "pos": "verbe", "lemma": "lier", "clue": "Attacha jadis"},  # already correct
+        {"word": "lia", "pos": "verbe", "lemma": "lia", "clue": ""},  # unclued: not placeable, ignored
     ]
     hits = _violations(rows, index)
     assert [h[0] for h in hits] == ["lia"]  # only the clued surface-defaulted row
