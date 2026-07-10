@@ -110,6 +110,8 @@ def normalize_gold(path: Path, index: MorphologyIndex) -> list[dict]:
     with Path(path).open(encoding="utf-8", newline="") as f:
         for r in csv.DictReader(f):
             word = (r.get("lemma") or "").strip()
+            if not word:
+                continue  # some gold rows carry a clue with a blank lemma cell — skip
             pos = (r.get("pos") or "").strip()
             out_pos, out_lemma = _correct_pos_lemma(word, pos, word, index)
             out.append({

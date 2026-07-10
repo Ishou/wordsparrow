@@ -235,6 +235,8 @@ def main() -> None:
     # Order matches SOURCE_PRIORITY[1:] ("overrides" applied separately below).
     merged = merge([curated, themed, gold, editorial, grammalecte, llm])
     merged = apply_overrides(merged, load_overrides(overrides_path))
+    # Defensive: never write a row with an empty surface — the loader rejects it.
+    merged = [r for r in merged if (r.get("word") or "").strip()]
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8", newline="") as f:
