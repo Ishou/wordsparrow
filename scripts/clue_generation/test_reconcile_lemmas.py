@@ -14,6 +14,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "eval"))
 sys.path.insert(0, str(REPO / "scripts" / "clue_generation"))
 
+import reconcile_lemmas  # noqa: E402
 from morphology_index import MorphologyIndex  # noqa: E402
 from reconcile_lemmas import reconcile  # noqa: E402
 
@@ -93,3 +94,31 @@ def test_verb_form_with_spurious_noun_reading_resolves(index):
 
 def test_plural_noun_is_fixed_to_singular(index):
     assert reconcile("ares", "ares", index) == ("fixed", "are")
+
+
+def test_derive_lemma_verb_unique(index):
+    assert reconcile_lemmas.derive_lemma("lia", "verbe", index) == ("ok", "lier")
+
+
+def test_derive_lemma_verb_ambiguous(index):
+    assert reconcile_lemmas.derive_lemma("tue", "verbe", index) == ("ambiguous", None)
+
+
+def test_derive_lemma_invariable_is_self(index):
+    assert reconcile_lemmas.derive_lemma("es", "abr", index) == ("ok", "es")
+    assert reconcile_lemmas.derive_lemma("mcm", "note", index) == ("ok", "mcm")
+
+
+def test_derive_lemma_noun_unconfirmed_is_self(index):
+    # grammalecte lacks the noun `vue`; pos=nom must fall back to self, not `vu`.
+    assert reconcile_lemmas.derive_lemma("vue", "nom", index) == ("ok", "vue")
+
+
+def test_derive_lemma_noun_confirmed(index):
+    assert reconcile_lemmas.derive_lemma("lie", "nom", index) == ("ok", "lie")
+
+
+def test_reconcile_pos_scoped_note_vs_verb(index):
+    # es/abr keeps es; es/verbe must be être.
+    assert reconcile("es", "es", index, pos="abr") == ("ok", "es")
+    assert reconcile("es", "es", index, pos="verbe") == ("fixed", "être")

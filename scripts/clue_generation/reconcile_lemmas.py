@@ -52,11 +52,44 @@ def _is_inflection(tags) -> bool:
     return "pl" in tags or "fem" in tags
 
 
+INVARIABLE_POS = frozenset({"abr", "sigle", "interj", "note", "prep", "num", "propername"})
+_VARIABLE_NOMINAL = frozenset({"nom", "adj", "adv"})
+
+
+def derive_lemma(surface: str, pos: str, index: MorphologyIndex) -> tuple[str, str | None]:
+    """Lemma for an authored (surface, pos). Invariables and unconfirmable
+    nouns resolve to the surface itself; a verb resolves to its infinitive,
+    or ("ambiguous", None) when the surface is a form of several verbs."""
+    pos = (pos or "").strip().lower()
+    if pos in INVARIABLE_POS:
+        return ("ok", surface)
+    forms = index.lookup_form(surface)
+    if pos == "verbe":
+        heads = {l for l, t in forms if _classify(t) == "verbe"}
+        if len(heads) == 1:
+            return ("ok", next(iter(heads)))
+        if len(heads) > 1:
+            return ("ambiguous", None)
+        return ("no-verb-reading", surface)
+    if pos in _VARIABLE_NOMINAL:
+        for l, t in forms:
+            if _classify(t) in ("nom", "adj") and _norm(l) == _norm(surface):
+                return ("ok", l)          # surface is its own citation form
+        if any(_classify(t) == "verbe" for _, t in forms):
+            # a competing verb reading (e.g. `vue` as fem ppas of `voir`) means
+            # the lone nom/adj candidate isn't a confirmed dictionary headword.
+            return ("ok", surface)
+        heads = {l for l, t in forms if _classify(t) in ("nom", "adj")}
+        return ("ok", next(iter(heads))) if len(heads) == 1 else ("ok", surface)
+    return ("ok", surface)
+
+
 def reconcile(
     surface: str,
     lemma: str,
     index: MorphologyIndex,
     overrides: dict[str, str] | None = None,
+    pos: str | None = None,
 ) -> tuple[str, str]:
     """Return (status, lemma) for one row. Status is one of:
 
@@ -67,8 +100,19 @@ def reconcile(
     - "ambiguous"   inflection, several candidate headwords, no override — unchanged.
     - "kept"        surface is not a genuine inflection (abbreviation / invariable) — lemma left as-is.
     - "unknown"     grammalecte doesn't know the surface — lemma left as-is.
+
+    When `pos` is given, validation is POS-scoped via `derive_lemma` instead
+    of the pos-less morphology-only pass below.
     """
     overrides = overrides or {}
+    if pos is not None:
+        status, want = derive_lemma(surface, pos, index)
+        if want is None:  # ambiguous verb
+            ov = overrides.get(surface.lower())
+            if ov is not None:
+                return ("override", ov)
+            return ("ambiguous", lemma)
+        return ("ok", lemma) if _norm(lemma) == _norm(want) else ("fixed", want)
     forms = index.lookup_form(surface)
     if not forms:
         return ("unknown", lemma)
