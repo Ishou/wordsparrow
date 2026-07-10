@@ -23,10 +23,14 @@ import java.text.Normalizer
  *
  * CSV columns (header row required, in the listed order):
  * `word, language, length, frequency, difficulty, clue, source, source_license`
- * with an optional trailing `lemma` column. When `lemma` is present the
- * generator dedupes inflected forms of the same headword (e.g. "court" +
- * "courait") within a single grid; when absent, lemma defaults to the word
- * itself and dedup degenerates to surface-form-only (legacy behavior).
+ * with optional trailing `pos` and `lemma` columns (in that order — the
+ * unified corpus header inserts `pos` before `lemma`). `pos` is read and
+ * discarded here (it feeds the Python lemma guard, not this loader) so its
+ * presence never shifts `lemma` column resolution — both are read by header
+ * name, not position. When `lemma` is present the generator dedupes inflected
+ * forms of the same headword (e.g. "court" + "courait") within a single
+ * grid; when absent, lemma defaults to the word itself and dedup degenerates
+ * to surface-form-only (legacy behavior).
  *
  * Rows with a blank `clue` are silently dropped from the usable corpus —
  * they represent surfaces the current clue-generation iteration has not
@@ -147,6 +151,12 @@ class CsvWordRepository(
             listOf("word", "language", "length", "frequency", "difficulty", "clue", "source", "source_license")
         private const val OPTIONAL_LEMMA_HEADER = "lemma"
         private const val OPTIONAL_THEME_HEADER = "theme"
+
+        // The unified corpus header (grammalecte lemma-guard pipeline) inserts `pos`
+        // between `source_license` and `lemma`. The Python side reads it for the
+        // lemma guard; this loader parses-and-discards it by name so its presence
+        // never shifts `lemma` column resolution.
+        private const val OPTIONAL_POS_HEADER = "pos"
 
         // Resolves a corpus-relative path (e.g. "/words/words-fr.csv") to a stream, or null if absent.
         private val CLASSPATH_RESOLVER: (String) -> java.io.InputStream? =
@@ -315,16 +325,23 @@ class CsvWordRepository(
             headers: List<String>,
             path: String,
         ) {
-            // Accept any of: legacy 8 cols, 8 + lemma, 8 + lemma + theme.
-            // Anything else is hand-edited corruption - fail fast.
+            // Accept any of: legacy 8 cols, 8 + lemma, 8 + lemma + theme, 8 + pos,
+            // 8 + pos + lemma (the unified corpus header). Anything else is
+            // hand-edited corruption - fail fast.
             val matchesLegacy = headers == REQUIRED_HEADERS
             val matchesWithLemma = headers == REQUIRED_HEADERS + OPTIONAL_LEMMA_HEADER
             val matchesWithTheme =
                 headers == REQUIRED_HEADERS + OPTIONAL_LEMMA_HEADER + OPTIONAL_THEME_HEADER
-            require(matchesLegacy || matchesWithLemma || matchesWithTheme) {
+            val matchesWithPos = headers == REQUIRED_HEADERS + OPTIONAL_POS_HEADER
+            val matchesWithPosLemma =
+                headers == REQUIRED_HEADERS + OPTIONAL_POS_HEADER + OPTIONAL_LEMMA_HEADER
+            require(
+                matchesLegacy || matchesWithLemma || matchesWithTheme ||
+                    matchesWithPos || matchesWithPosLemma,
+            ) {
                 "CSV $path header mismatch - expected $REQUIRED_HEADERS " +
-                    "(optionally followed by '$OPTIONAL_LEMMA_HEADER', then " +
-                    "'$OPTIONAL_THEME_HEADER'), got $headers"
+                    "(optionally followed by '$OPTIONAL_POS_HEADER', then " +
+                    "'$OPTIONAL_LEMMA_HEADER', then '$OPTIONAL_THEME_HEADER'), got $headers"
             }
         }
 

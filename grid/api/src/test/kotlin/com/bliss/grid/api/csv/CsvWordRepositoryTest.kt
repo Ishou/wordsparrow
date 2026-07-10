@@ -81,6 +81,22 @@ class CsvWordRepositoryTest {
     }
 
     @Test
+    fun `unified header with pos before lemma still resolves lemma from the last column`() {
+        // The unified corpus header inserts `pos` between `source_license` and
+        // `lemma`; a present `pos` column must not shift `lemma` parsing.
+        val repo = CsvWordRepository.fromClasspath("/words/pos-lemma-column-test.csv")
+        val match = repo.findByLength(3).single { it.text == "LIA" }
+        assertThat(match.lemma).isEqualTo("LIER")
+    }
+
+    @Test
+    fun `header with pos but no lemma still loads and defaults lemma to the word itself`() {
+        val repo = CsvWordRepository.fromClasspath("/words/pos-only-column-test.csv")
+        val word = repo.findByLength(4).single { it.text == "CHAT" }
+        assertThat(word.lemma).isEqualTo(word.text)
+    }
+
+    @Test
     fun `bundled french CSV carries real lemma data (non-trivial inflections)`() {
         // The production export populates lemma for every row. Most short words
         // are themselves lemmas (lemma == text), but a meaningful fraction of
