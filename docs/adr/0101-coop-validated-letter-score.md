@@ -10,9 +10,10 @@ In co-op (ADR-0018, ADR-0084), ADR-0086 already attributes every locked cell to
 the player who completed its word (`lockedPositions[].lockedBy`, first-writer-
 wins on crossings) and tints the board by that owner. The maintainer wants each
 player's tag to also carry a **score**: how many validated letters they
-contributed. ADR-0072's co-op finish screen carried an explicit "no scores —
-versus mode is a deferred follow-up" note; this adds a *collaborative
-contribution tally*, distinct from the still-deferred competitive/versus mode.
+contributed. The Résultats co-op finish screen carried a code comment noting
+"no scores — versus mode is a deferred follow-up"; this establishes a
+*collaborative contribution tally*, distinct from the still-deferred
+competitive/versus mode.
 
 Because `lockedBy` is already on every lobby snapshot and every `wordLocked`
 frame, the score is a pure client-side derivation — no new wire field.
@@ -32,8 +33,9 @@ frame, the score is a pure client-side derivation — no new wire field.
   that would need new server-side per-cell author tracking and would make the
   score diverge from the board colours. Rejected.
 
-This **amends ADR-0072's "no scores" note**: the collaborative contribution
-tally is now shown; competitive/versus scoring remains deferred.
+This establishes co-op scoring, superseding the prior undocumented "no
+scores" assumption carried only in a code comment: the collaborative
+contribution tally is now shown; competitive/versus scoring remains deferred.
 
 ## Consequences
 
@@ -52,5 +54,4 @@ tally is now shown; competitive/versus scoring remains deferred.
 ## Relationships
 
 - **Builds on ADR-0086** (per-cell `lockedBy` attribution) and **ADR-0018 /
-  ADR-0084** (co-op locking). **Amends ADR-0072** (co-op finish "no scores").
-  Reuses **ADR-0050** a11y posture.
+  ADR-0084** (co-op locking). Reuses **ADR-0050** a11y posture.
