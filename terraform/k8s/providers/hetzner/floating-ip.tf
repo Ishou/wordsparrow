@@ -21,11 +21,7 @@
 #      the status address to the floating IP removes the need for a
 #      per-Ingress `external-dns.alpha.kubernetes.io/target` annotation.
 #
-# Default assignment: the worker node. v1 runs ingress-nginx with
-# hostNetwork=true (infra/platform/values.yaml) and the worker is the
-# node that hosts the controller pods. If the deploy footprint changes
-# (HA control plane, dedicated ingress node), update the assignment
-# here — there is no other source of truth.
+# FIP assigned to worker[0] (the designated holder) — see ADR-0106.
 #
 # Circular-reference note: `hcloud_floating_ip.ingress.ip_address` is
 # allocated at create time independently of any server, so the control-

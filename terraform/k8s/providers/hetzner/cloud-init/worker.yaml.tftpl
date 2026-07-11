@@ -75,6 +75,9 @@ write_files:
       node-label:
         - "bliss.io/role=${node_role}"
         - "bliss.io/cluster=${cluster_name}"
+%{ if fip_holder ~}
+        - "bliss.io/fip-holder=true"
+%{ endif ~}
 %{ if length(node_taints) > 0 ~}
       node-taint:
 %{ for taint in node_taints ~}
