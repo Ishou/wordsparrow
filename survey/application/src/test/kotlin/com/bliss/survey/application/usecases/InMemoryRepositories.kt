@@ -260,14 +260,14 @@ open class InMemorySignalementRepository : SignalementRepository {
         return true
     }
 
-    override suspend fun existsFor(
+    override suspend fun findExisting(
         reporterId: UserId,
         wordText: String,
         clueText: String,
-    ): Boolean =
-        reports.any {
-            it.reporterId == reporterId && it.wordText == wordText && it.clueText == clueText
-        }
+    ): ReportId? =
+        reports
+            .firstOrNull { it.reporterId == reporterId && it.wordText == wordText && it.clueText == clueText }
+            ?.id
 
     override suspend fun listPending(): List<PlayerReport> = reports.filter { it.status == ReportStatus.PENDING }
 

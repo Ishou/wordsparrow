@@ -46,11 +46,13 @@ class SubmitSignalementUseCase(
     private val log = LoggerFactory.getLogger(javaClass)
 
     suspend fun execute(cmd: SubmitSignalementCommand): SubmitSignalementResult {
-        val reportId = ReportId(ids.next())
-        if (cmd.reporterId != null && reports.existsFor(cmd.reporterId, cmd.wordText, cmd.clueText)) {
-            return SubmitSignalementResult.DuplicateIgnored(reportId)
+        if (cmd.reporterId != null) {
+            reports.findExisting(cmd.reporterId, cmd.wordText, cmd.clueText)?.let {
+                return SubmitSignalementResult.DuplicateIgnored(it)
+            }
         }
 
+        val reportId = ReportId(ids.next())
         val report =
             PlayerReport(
                 id = reportId,
@@ -64,9 +66,12 @@ class SubmitSignalementUseCase(
                 status = ReportStatus.PENDING,
                 createdAt = clock.now(),
             )
-        // Race-loser on the (reporter, word, clue) unique index: the report already exists, so treat it as an idempotent duplicate.
+        // Race-loser on the (reporter, word, clue) unique index: return the winner's real id so /decision resolves (fallback to the minted id defensively).
         val inserted = tx.inTransaction { reports.insert(report) }
-        if (!inserted) return SubmitSignalementResult.DuplicateIgnored(reportId)
+        if (!inserted) {
+            val existing = cmd.reporterId?.let { reports.findExisting(it, cmd.wordText, cmd.clueText) }
+            return SubmitSignalementResult.DuplicateIgnored(existing ?: reportId)
+        }
 
         if (cmd.reason.isHarm()) {
             // The report is durably saved; a Brevo outage must not fail the request — the alert is a side effect, not a precondition.

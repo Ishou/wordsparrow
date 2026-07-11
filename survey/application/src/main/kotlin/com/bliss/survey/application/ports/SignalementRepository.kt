@@ -10,11 +10,12 @@ interface SignalementRepository {
     /** Returns false when the partial unique index rejects a duplicate authenticated report; true when the row was stored. */
     suspend fun insert(report: PlayerReport): Boolean
 
-    suspend fun existsFor(
+    /** The id of this reporter's existing report for the same word+clue, or null — drives idempotent dedup (returns the real persisted id). */
+    suspend fun findExisting(
         reporterId: UserId,
         wordText: String,
         clueText: String,
-    ): Boolean
+    ): ReportId?
 
     suspend fun listPending(): List<PlayerReport>
 

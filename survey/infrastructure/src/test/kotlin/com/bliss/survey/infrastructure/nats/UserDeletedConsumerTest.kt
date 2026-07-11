@@ -360,11 +360,11 @@ class UserDeletedConsumerTest {
     private object NoopSignalements : SignalementRepository {
         override suspend fun insert(report: PlayerReport) = true
 
-        override suspend fun existsFor(
+        override suspend fun findExisting(
             reporterId: UserId,
             wordText: String,
             clueText: String,
-        ) = false
+        ): ReportId? = null
 
         override suspend fun listPending(): List<PlayerReport> = emptyList()
 

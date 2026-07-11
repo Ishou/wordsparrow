@@ -99,12 +99,13 @@ class PgSignalementRepositoryTest {
         }
 
     @Test
-    fun `existsFor is true for a matching reporter word and clue`() =
+    fun `findExisting returns the report id for a matching reporter word and clue`() =
         runTest {
             val userId = UserId(UUID.randomUUID())
-            reports.insert(report(reporterId = userId, wordText = "chien", clueText = "Meilleur ami"))
-            assertThat(reports.existsFor(userId, "chien", "Meilleur ami")).isTrue()
-            assertThat(reports.existsFor(userId, "chien", "autre def")).isFalse()
+            val r = report(reporterId = userId, wordText = "chien", clueText = "Meilleur ami")
+            reports.insert(r)
+            assertThat(reports.findExisting(userId, "chien", "Meilleur ami")).isEqualTo(r.id)
+            assertThat(reports.findExisting(userId, "chien", "autre def")).isNull()
         }
 
     @Test

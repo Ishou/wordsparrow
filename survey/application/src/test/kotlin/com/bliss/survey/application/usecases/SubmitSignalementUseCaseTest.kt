@@ -9,6 +9,7 @@ import com.bliss.survey.application.ports.EmailSender
 import com.bliss.survey.application.ports.IdGenerator
 import com.bliss.survey.application.ports.OutboundEmail
 import com.bliss.survey.domain.model.PlayerReport
+import com.bliss.survey.domain.model.ReportId
 import com.bliss.survey.domain.model.ReportReason
 import com.bliss.survey.domain.model.ReportStatus
 import com.bliss.survey.domain.model.ReportSurface
@@ -77,14 +78,13 @@ class SubmitSignalementUseCaseTest {
         }
 
     @Test
-    fun `authenticated duplicate returns DuplicateIgnored and does not double-insert`() =
+    fun `authenticated duplicate returns the existing report id and does not double-insert`() =
         runTest {
+            val existingId = ReportId(UUID.fromString("22222222-2222-7222-8222-222222222222"))
             val reports = InMemorySignalementRepository()
             reports.reports +=
                 PlayerReport(
-                    id =
-                        com.bliss.survey.domain.model
-                            .ReportId(UUID.randomUUID()),
+                    id = existingId,
                     wordText = "CHAT",
                     clueText = "Animal qui miaule",
                     reason = ReportReason.ERREUR_SENS,
@@ -98,28 +98,34 @@ class SubmitSignalementUseCaseTest {
 
             val result = useCase(reports, FakeEmailSender()).execute(command())
 
-            assertThat(result).isInstanceOf(SubmitSignalementResult.DuplicateIgnored::class)
+            assertThat(result).isEqualTo(SubmitSignalementResult.DuplicateIgnored(existingId))
             assertThat(reports.reports).hasSize(1)
         }
 
     @Test
-    fun `insert rejected by unique index returns DuplicateIgnored (race loser)`() =
+    fun `race loser returns the winner's existing report id`() =
         runTest {
-            // existsFor lies (concurrent submission passed the pre-check) but insert loses the unique-index race.
+            // Pre-check misses (winner not yet committed), insert loses the unique-index race, post-insert lookup finds the winner.
+            val winnerId = ReportId(UUID.fromString("44444444-4444-7444-8444-444444444444"))
             val racingReports =
                 object : InMemorySignalementRepository() {
-                    override suspend fun existsFor(
+                    var findCalls = 0
+
+                    override suspend fun findExisting(
                         reporterId: UserId,
                         wordText: String,
                         clueText: String,
-                    ) = false
+                    ): ReportId? {
+                        findCalls++
+                        return if (findCalls == 1) null else winnerId
+                    }
 
                     override suspend fun insert(report: PlayerReport) = false
                 }
 
             val result = useCase(racingReports, FakeEmailSender()).execute(command())
 
-            assertThat(result).isInstanceOf(SubmitSignalementResult.DuplicateIgnored::class)
+            assertThat(result).isEqualTo(SubmitSignalementResult.DuplicateIgnored(winnerId))
         }
 
     @Test

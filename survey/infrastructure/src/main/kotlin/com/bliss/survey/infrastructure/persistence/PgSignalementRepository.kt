@@ -52,18 +52,20 @@ class PgSignalementRepository(
             }
         }
 
-    override suspend fun existsFor(
+    override suspend fun findExisting(
         reporterId: UserId,
         wordText: String,
         clueText: String,
-    ): Boolean =
+    ): ReportId? =
         withContext(Dispatchers.IO) {
             withTxConnection(dataSource) { conn ->
-                conn.prepareStatement(EXISTS_SQL).use { stmt ->
+                conn.prepareStatement(FIND_EXISTING_SQL).use { stmt ->
                     stmt.setObject(1, reporterId.value)
                     stmt.setString(2, wordText)
                     stmt.setString(3, clueText)
-                    stmt.executeQuery().use { rs -> rs.next() }
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) ReportId(rs.getObject("report_id", UUID::class.java)) else null
+                    }
                 }
             }
         }
@@ -146,8 +148,8 @@ class PgSignalementRepository(
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
 
-        const val EXISTS_SQL =
-            "SELECT 1 FROM player_reports WHERE reporter_id = ? AND word_text = ? AND clue_text = ? LIMIT 1"
+        const val FIND_EXISTING_SQL =
+            "SELECT report_id FROM player_reports WHERE reporter_id = ? AND word_text = ? AND clue_text = ? LIMIT 1"
 
         const val LIST_PENDING_SQL =
             "SELECT * FROM player_reports WHERE status = 'pending' ORDER BY created_at"
