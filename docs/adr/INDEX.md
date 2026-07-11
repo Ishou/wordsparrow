@@ -316,6 +316,9 @@ ADR-0103  frontend/src/**/signalement*              Report sheet + /signalements
 ADR-0103  survey/**/db/migration/*player_reports*   player_reports table + dedup index; wordText optional, dedup keyed on (reporter, clue, puzzle) since V13
 ADR-0104  .github/workflows/tofu-k8s.yml            Gated CI apply for terraform/k8s: workflow_dispatch plan/apply, apply behind prod-infra environment approval; secrets env-injected, non-secret vars from repo Variables
 ADR-0104  terraform/k8s/**                          Provisioned either manually (ADR-0011) or via the gated tofu-k8s workflow; state/HCLOUD_TOKEN never leave Actions on the CI path
+ADR-0105  frontend/src/domain/puzzle/gridFingerprint.ts  Pure deterministic hash of grid structure (cell kinds + positions + definition clues + dimensions), excludes typed letters; detects a regenerated grid under the same puzzleId
+ADR-0105  frontend/src/application/progress/**       Solo-progress blobs carry a grid fingerprint (SoloStorePayload); pullAndMergeOne(fingerprint) discards local + remote progress typed on a now-regenerated grid and heals the server row. Amends ADR-0075
+ADR-0105  frontend/src/infrastructure/session/localStorageSolo.ts  reconcileSoloFingerprint discards a stale/legacy (missing-fingerprint) blob on load and stamps the current grid; writes preserve the fingerprint
 ```
 
 ## Adding entries

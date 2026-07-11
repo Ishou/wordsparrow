@@ -14,3 +14,4 @@ export type {
 export type { Difficulty, Puzzle } from './Puzzle';
 export { SAMPLE_PUZZLE } from './samples';
 export { normalizeAnswerLetter } from './letterNormalize';
+export { gridFingerprint } from './gridFingerprint';

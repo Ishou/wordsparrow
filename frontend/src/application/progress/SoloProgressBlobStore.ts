@@ -9,6 +9,8 @@ export interface SoloProgressBlobStore {
   loadLocalUpdatedAt(sessionId: string, puzzleId: string): string | undefined;
   // Replaces the puzzle's blob wholesale (used after a merge).
   replacePayload(sessionId: string, puzzleId: string, payload: SoloStorePayload): void;
+  // Discards this puzzle's local progress if it was typed on a different grid, then stamps the current grid's fingerprint (ADR-0105).
+  reconcileFingerprint(sessionId: string, puzzleId: string, fingerprint: string): void;
   // All puzzle ids the device currently has local progress for.
   listPuzzleIds(sessionId: string): ReadonlyArray<string>;
 }
