@@ -65,35 +65,6 @@ function embeddedFontLicenses(): Plugin {
 // Vite + React 19 config for the Bliss frontend bounded context.
 // See ADR-0002 for the stack rationale. v2 faces (ADR-0072) ship with font-display: block + a render-gate in main.tsx.
 
-// Prerendered routes are post-Workbox; denylist so navigations hit Cloudflare's per-route HTML — ADR-0053.
-const PRERENDERED_ROUTE_PATHS = [
-  '/play',
-  '/grilles',
-  '/grilles/a-finir',
-  '/grilles/multijoueur',
-  '/aide',
-  '/mentions-legales',
-  '/confidentialite',
-  '/conditions-abonnement',
-  '/a-propos',
-  '/compte',
-  '/reglages',
-  '/finish',
-  '/abonnement',
-  '/abonnement/succes',
-  '/abonnement/annule',
-  '/contribuer',
-  '/contribuer/pairs',
-] as const;
-const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-// `(\?.*)?` keeps query-string URLs (e.g. /play?date=…) denylisted; without it the SW serves the home shell and flashes it.
-const PRERENDER_NAV_DENYLIST: RegExp[] = [
-  ...PRERENDERED_ROUTE_PATHS.map((p) => new RegExp(`^${escapeRegExp(p)}/?(\\?.*)?$`)),
-  // Param routes: Pages serves their prerendered loading shells via the _redirects 200-rewrites.
-  /^\/lobby\//,
-  /^\/join\//,
-];
-
 // MSW preview handlers (see ADR-0007 §5) replay the spec's
 // `examples/` payloads so the preview SPA stays contract-conformant
 // without a live API. The fixtures live in `grid/api/examples/` —
@@ -127,16 +98,16 @@ export default defineConfig({
   plugins: [
     react(),
     gridApiExamplesAsVirtualModule(),
-    // PWA + offline cache. Workbox precaches the app shell so a reload
-    // works without network, and applies a NetworkFirst strategy to the
-    // grid API so the last-loaded puzzle stays playable offline. The
-    // existing `manifest.webmanifest` is the source of truth — we set
-    // `manifest: false` so the plugin does not generate a competing one.
-    // prompt mode + skipWaiting false: new SW waits for user accept via UpdatePrompt. See ADR-0026.
+    // PWA + offline cache. injectManifest (not generateSW) so the hand-authored `src/sw.ts` can date-scope the daily
+    // runtime-cache key — generateSW cannot express a `cacheKeyWillBeUsed` plugin, which let a rolled-over day replay the
+    // previous daily until a hard refresh (ADR-0089). The precache manifest, navigation fallback + denylist, and the
+    // prompt-mode update handshake all live in `src/sw.ts` now. `manifest.webmanifest` stays the source of truth.
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'prompt',
       injectRegister: false,
-      filename: 'sw.js',
       manifest: false,
       includeAssets: [
         'favicon.svg',
@@ -145,43 +116,8 @@ export default defineConfig({
         'icon-512.png',
         'manifest.webmanifest',
       ],
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
-        navigateFallback: '/index.html',
-        // Bypass navigateFallback for paths CF Pages serves directly; see ADR-0053, ADR-0026.
-        navigateFallbackDenylist: [
-          /^\/v1\//,
-          /^\/robots\.txt$/,
-          /^\/sitemap\.xml$/,
-          // Static redistribution notice must reach the network, not the SPA shell.
-          /^\/third-party-licenses\.txt$/,
-          ...PRERENDER_NAV_DENYLIST,
-        ],
-        cleanupOutdatedCaches: true,
-        // skipWaiting false → new SW waits for user accept; see ADR-0026 update-prompt UX
-        skipWaiting: false,
-        clientsClaim: true,
-        runtimeCaching: [
-          {
-            // Grid API: serve fresh when online, fall back to cache when
-            // offline. 5s network timeout means a flaky link reverts to
-            // the cached puzzle quickly. 1-week TTL is well under any
-            // realistic puzzle-content rotation.
-            urlPattern: ({ url }) =>
-              url.hostname === 'api.wordsparrow.io' &&
-              url.pathname.startsWith('/v1/puzzles/'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'grid-api-puzzles',
-              networkTimeoutSeconds: 5,
-              expiration: {
-                maxEntries: 32,
-                maxAgeSeconds: 7 * 24 * 60 * 60,
-              },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
       },
       devOptions: {
         enabled: false,

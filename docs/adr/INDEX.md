@@ -47,7 +47,7 @@ ADR-0013  */worker/src/**                          Batch worker pattern (words/c
 ADR-0018  game/**                                  Game bounded context: HTTP + WebSocket
 ADR-0019  */api/asyncapi.yaml                      AsyncAPI 2.6, not 3.x
 ADR-0025  frontend/src/**/analytics/**             Matomo + RGPD posture
-ADR-0026  frontend/**/sw.*                         PWA offline cache via Workbox
+ADR-0026  frontend/**/sw.*                         PWA offline cache via Workbox; injectManifest hand-authored SW owns precache + navigateFallback denylist + NetworkFirst (2026-07-11 amendment)
 ADR-0026  frontend/src/ui/v2/UpdatePrompt.*        PWA update prompt (2026-06-29 amendment)
 ADR-0027  infra/observability/**                   SigNoz on ClickHouse
 ADR-0038  infra/observability/**                   k8s-infra subchart for per-pod/node metrics; OTLP exporter preset pins
@@ -72,7 +72,7 @@ ADR-0049  */api/src/**/nats/**                     JetStream cross-context event
 ADR-0049  */infrastructure/src/**/nats/**          JetStream consumer pattern
 ADR-0050  frontend/**                              A11y baseline: WCAG AA, axe-core via Playwright
 ADR-0053  frontend/src/**/prerender/**             Build-time SEO prerender
-ADR-0053  frontend/vite.config.ts                  SW navigateFallbackDenylist for post-Workbox flat prerendered routes
+ADR-0053  frontend/src/sw.ts                       SW navigateFallbackDenylist for post-Workbox flat prerendered routes (moved from vite.config.ts by ADR-0026 2026-07-11 injectManifest amendment)
 ADR-0054  frontend/src/ui/**                       Page-shell primitive
 ADR-0054  frontend/src/ui/v2/AppShell.tsx          Amendment 2026-07-09: one AppShell primitive (flow/overlay); document-scroll-lock invariant (html/body/#root height:100% overflow:hidden, one scroll container/screen, safe-area insets at shell edges)
 ADR-0055  game/**/persistence/**                   Multiplayer game persistence
@@ -239,6 +239,7 @@ ADR-0089  */api/deploy/chart/values-prod.yaml        Orange-cloud api+auth via e
 ADR-0089  terraform/cloudflare-cache-rules.tf        cloudflare_ruleset (http_request_cache_settings): host api.wordsparrow.io + /v1/puzzles/daily, respect origin TTL, bypass on __Secure-ws_session cookie
 ADR-0089  grid/worker/**                             Purge-on-regen: exact-URL CF purge (no-date /v1/puzzles/daily [+?date=]) after every generation run; each URL purged as default + one Origin variant per prod origin (Vary: Origin from credentialed CORS); 30-file/call chunking; failure logs, never fails the Job; Zone.Cache Purge-scoped token Secret
 ADR-0089  */api/src/main/kotlin/**/Module.kt         Timing-Allow-Origin: https://wordsparrow.io https://www.wordsparrow.io in DefaultHeaders (all five services)
+ADR-0089  frontend/src/sw.ts                         SW is a 4th cache layer: date-scope the date-less daily's cache key to the UTC day + drop no-store bodies, so a rollover isn't replayed until hard refresh (2026-07-11 amendment)
 # ADR-0089: amends ADR-0007 §4 (DNS-only posture narrowed to WS hosts); daily cache policy = anon-only public,max-age=0,must-revalidate + s-maxage-to-UTC-midnight + ETag="<puzzleId>" (304), cookie ⇒ private,no-store; daily/list stays public,no-cache — never edge-cached (unbounded query variants vs exact-URL purge); regen propagates via ADR-0081 fresh-UUID ETag flip + edge purge
 ADR-0090  frontend/wrangler.jsonc                    Assets-only Worker owns name, SPA not_found_handling, preview_urls, custom-domain routes (routes added only at cutover); TF never owns the Worker
 ADR-0090  .github/workflows/deploy-frontend.yml      Publish via cloudflare/wrangler-action: `deploy` on main-push, `versions upload` + PR comment on PRs; build steps byte-for-byte; CI is the only path to production

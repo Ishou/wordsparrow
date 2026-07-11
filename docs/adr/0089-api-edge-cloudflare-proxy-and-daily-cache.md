@@ -97,6 +97,20 @@ credentialed prod browser origin (`https://wordsparrow.io`, `https://www.wordspa
 header-scoped `{"files":[{"url":…,"headers":{"Origin":…}}]}` form. `Vary: Origin` is required by
 credentialed CORS and must not be dropped (ADR-0034/0048); the fix is purge coverage only.
 
+*Amended 2026-07-11.* This freshness contract has a **fourth cache layer** the original decision
+never accounted for: the PWA service worker (ADR-0026). Its `NetworkFirst` runtime cache for
+`/v1/puzzles/*` sits in front of the browser HTTP cache and keys purely on the request URL,
+ignoring `Cache-Control` entirely. Because the "today" request is date-less (`/v1/puzzles/daily`,
+above), the SW entry key is **stable across the UTC-midnight rollover**, so any `NetworkFirst`
+fallback (its 5 s timeout, offline, a flaky link) replayed the previous day's grid until a hard
+refresh bypassed the SW — the browser/edge `max-age=0, must-revalidate` + `s-maxage` guarantees
+above never reach that layer. Two SW-side fixes restore the contract (implemented in `src/sw.ts`,
+which ADR-0026's 2026-07-11 amendment moved to `injectManifest`): (a) a `cacheKeyWillBeUsed`
+plugin appends the UTC day to the date-less daily's **cache key only** — the network request stays
+date-less so the edge cache and purge set (§5) are untouched — making a rollover a guaranteed SW
+miss; and (b) a `cacheWillUpdate` plugin drops `no-store` responses so the cookied daily's
+per-user hint budget is never persisted in the shared SW cache.
+
 ### 4. Edge cache rule (Terraform)
 A net-new `terraform/cloudflare-cache-rules.tf` declares one `cloudflare_ruleset` in phase
 `http_request_cache_settings` (provider `cloudflare ~> 5.20` is already pinned at root,
