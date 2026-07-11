@@ -24,10 +24,13 @@ class SubmitSignalementUseCaseTest {
     private val reporter = UserId(UUID.fromString("33333333-3333-7333-8333-333333333333"))
     private val maintainer = "maintainer@wordsparrow.io"
 
-    private class FakeEmailSender : EmailSender {
+    private class FakeEmailSender(
+        private val failing: Boolean = false,
+    ) : EmailSender {
         val sent = mutableListOf<OutboundEmail>()
 
         override suspend fun send(email: OutboundEmail) {
+            if (failing) throw IllegalStateException("brevo down (simulated)")
             sent += email
         }
     }
@@ -95,7 +98,40 @@ class SubmitSignalementUseCaseTest {
 
             val result = useCase(reports, FakeEmailSender()).execute(command())
 
-            assertThat(result).isEqualTo(SubmitSignalementResult.DuplicateIgnored)
+            assertThat(result).isInstanceOf(SubmitSignalementResult.DuplicateIgnored::class)
+            assertThat(reports.reports).hasSize(1)
+        }
+
+    @Test
+    fun `insert rejected by unique index returns DuplicateIgnored (race loser)`() =
+        runTest {
+            // existsFor lies (concurrent submission passed the pre-check) but insert loses the unique-index race.
+            val racingReports =
+                object : InMemorySignalementRepository() {
+                    override suspend fun existsFor(
+                        reporterId: UserId,
+                        wordText: String,
+                        clueText: String,
+                    ) = false
+
+                    override suspend fun insert(report: PlayerReport) = false
+                }
+
+            val result = useCase(racingReports, FakeEmailSender()).execute(command())
+
+            assertThat(result).isInstanceOf(SubmitSignalementResult.DuplicateIgnored::class)
+        }
+
+    @Test
+    fun `harm email send failure still returns Accepted and keeps the report`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+
+            val result =
+                useCase(reports, FakeEmailSender(failing = true))
+                    .execute(command(reason = ReportReason.MOT_OFFENSANT))
+
+            assertThat(result).isInstanceOf(SubmitSignalementResult.Accepted::class)
             assertThat(reports.reports).hasSize(1)
         }
 

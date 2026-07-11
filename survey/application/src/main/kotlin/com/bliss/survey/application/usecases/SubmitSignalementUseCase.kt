@@ -12,6 +12,7 @@ import com.bliss.survey.domain.model.ReportReason
 import com.bliss.survey.domain.model.ReportStatus
 import com.bliss.survey.domain.model.ReportSurface
 import com.bliss.survey.domain.model.UserId
+import org.slf4j.LoggerFactory
 import java.util.UUID
 
 sealed interface SubmitSignalementResult {
@@ -19,7 +20,9 @@ sealed interface SubmitSignalementResult {
         val reportId: ReportId,
     ) : SubmitSignalementResult
 
-    data object DuplicateIgnored : SubmitSignalementResult
+    data class DuplicateIgnored(
+        val reportId: ReportId,
+    ) : SubmitSignalementResult
 }
 
 data class SubmitSignalementCommand(
@@ -40,14 +43,17 @@ class SubmitSignalementUseCase(
     private val tx: TransactionManager,
     private val maintainerAddress: String,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     suspend fun execute(cmd: SubmitSignalementCommand): SubmitSignalementResult {
+        val reportId = ReportId(ids.next())
         if (cmd.reporterId != null && reports.existsFor(cmd.reporterId, cmd.wordText, cmd.clueText)) {
-            return SubmitSignalementResult.DuplicateIgnored
+            return SubmitSignalementResult.DuplicateIgnored(reportId)
         }
 
         val report =
             PlayerReport(
-                id = ReportId(ids.next()),
+                id = reportId,
                 wordText = cmd.wordText,
                 clueText = cmd.clueText,
                 reason = cmd.reason,
@@ -58,16 +64,21 @@ class SubmitSignalementUseCase(
                 status = ReportStatus.PENDING,
                 createdAt = clock.now(),
             )
-        tx.inTransaction { reports.insert(report) }
+        // Race-loser on the (reporter, word, clue) unique index: the report already exists, so treat it as an idempotent duplicate.
+        val inserted = tx.inTransaction { reports.insert(report) }
+        if (!inserted) return SubmitSignalementResult.DuplicateIgnored(reportId)
 
         if (cmd.reason.isHarm()) {
-            email.send(
-                OutboundEmail(
-                    to = maintainerAddress,
-                    subject = "Signalement — ${cmd.reason.name.lowercase()} : ${cmd.wordText}",
-                    textBody = harmBody(cmd),
-                ),
-            )
+            // The report is durably saved; a Brevo outage must not fail the request — the alert is a side effect, not a precondition.
+            runCatching {
+                email.send(
+                    OutboundEmail(
+                        to = maintainerAddress,
+                        subject = "Signalement — ${cmd.reason.name.lowercase()} : ${cmd.wordText}",
+                        textBody = harmBody(cmd),
+                    ),
+                )
+            }.onFailure { log.warn("signalement_harm_email_failed reason={} error={}", cmd.reason.name.lowercase(), it.toString()) }
         }
         return SubmitSignalementResult.Accepted(report.id)
     }
