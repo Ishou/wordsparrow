@@ -12,6 +12,7 @@ import {
   loadSoloLocalUpdatedAt,
   loadSoloPayload,
   listSoloPuzzleIds,
+  reconcileSoloFingerprint,
   replaceSoloPayload,
   saveSoloLetter,
   saveSoloLockedCell,
@@ -49,11 +50,21 @@ function memBlobStore(
 ): SoloProgressBlobStore {
   const map = new Map<string, SoloStorePayload>(Object.entries(seed));
   const times = new Map<string, string>(Object.entries(localTimes));
+  const hasData = (v: SoloStorePayload): boolean =>
+    v.entries.length > 0 || v.lockedCells.length > 0 || v.hintsUsed > 0 || v.elapsedSeconds > 0;
   return {
     loadPayload: (s, p) => map.get(seedKey(s, p)) ?? payload({}),
     loadLocalUpdatedAt: (s, p) => times.get(seedKey(s, p)),
     replacePayload: (s, p, v) => {
       map.set(seedKey(s, p), v);
+    },
+    reconcileFingerprint: (s, p, fp) => {
+      const cur = map.get(seedKey(s, p));
+      if (cur && hasData(cur) && cur.fingerprint !== fp) {
+        map.set(seedKey(s, p), payload({ fingerprint: fp }));
+      } else {
+        map.set(seedKey(s, p), { ...(cur ?? payload({})), fingerprint: fp });
+      }
     },
     listPuzzleIds: (s) =>
       [...map.keys()]
@@ -429,6 +440,7 @@ describe('ProgressSyncService — pullAndMergeOne (per-grid open)', () => {
       loadPayload: loadSoloPayload,
       loadLocalUpdatedAt: loadSoloLocalUpdatedAt,
       replacePayload: replaceSoloPayload,
+      reconcileFingerprint: reconcileSoloFingerprint,
       listPuzzleIds: listSoloPuzzleIds,
     };
     const T1_5 = '2026-06-28T10:30:00.000Z';
@@ -455,6 +467,89 @@ describe('ProgressSyncService — pullAndMergeOne (per-grid open)', () => {
     // The locked cell is untouched by the remote pull and stays locked regardless of timestamps.
     expect(merged.lockedCells).toContainEqual({ r: 3, c: 3 });
     window.localStorage.clear();
+  });
+
+  it('discards a stale-grid remote blob and heals the server with the clean local grid (ADR-0105)', async () => {
+    // The server holds progress typed on the pre-regeneration grid (its fingerprint differs).
+    const stale: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: payload({
+        entries: [{ r: 0, c: 0, l: 'X' }],
+        fingerprint: 'old-grid',
+      }) as unknown as Record<string, unknown>,
+      updatedAt: T1,
+    };
+    const client = fakeClient({ pull: () => stale });
+    const blobStore = memBlobStore(
+      { [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 5, c: 5, l: 'S' }], fingerprint: 'new-grid' }) },
+      { [seedKey(SESSION, PUZZLE)]: T2 },
+    );
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+    await service.pullAndMergeOne(PUZZLE, 'new-grid');
+
+    const merged = blobStore.loadPayload(SESSION, PUZZLE);
+    // The old grid's letter never merges in; only the current grid's progress survives.
+    expect(merged.entries).toContainEqual({ r: 5, c: 5, l: 'S' });
+    expect(merged.entries).not.toContainEqual({ r: 0, c: 0, l: 'X' });
+    expect(merged.fingerprint).toBe('new-grid');
+    // Clean local differs from the discarded remote → pushed up, overwriting the poisoned server row.
+    expect(client.pushes).toHaveLength(1);
+  });
+
+  it('heals stale local progress even while disabled (anon) — local reconcile still runs', async () => {
+    const client = fakeClient({ pull: () => null });
+    const blobStore = memBlobStore({
+      [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'X' }], fingerprint: 'old-grid' }),
+    });
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    // disabled (anon): no network, but the stale local grid must still be discarded before render.
+    await service.pullAndMergeOne(PUZZLE, 'new-grid');
+
+    expect(client.pulls).toHaveLength(0);
+    const local = blobStore.loadPayload(SESSION, PUZZLE);
+    expect(local.entries).toEqual([]);
+    expect(local.fingerprint).toBe('new-grid');
+  });
+
+  it('keeps a matching-fingerprint remote blob (no false discard)', async () => {
+    const remote: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: payload({ entries: [{ r: 1, c: 1, l: 'B' }], fingerprint: 'g1' }) as unknown as Record<
+        string,
+        unknown
+      >,
+      updatedAt: T2,
+    };
+    const client = fakeClient({ pull: () => remote });
+    const blobStore = memBlobStore({
+      [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }], fingerprint: 'g1' }),
+    });
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+    await service.pullAndMergeOne(PUZZLE, 'g1');
+
+    const merged = blobStore.loadPayload(SESSION, PUZZLE);
+    expect(merged.entries).toContainEqual({ r: 0, c: 0, l: 'A' });
+    expect(merged.entries).toContainEqual({ r: 1, c: 1, l: 'B' });
   });
 
   it('does not push when local adds nothing the server lacks', async () => {

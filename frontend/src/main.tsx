@@ -52,6 +52,7 @@ import {
   loadSoloLocalUpdatedAt,
   loadSoloLockedCells,
   loadSoloPayload,
+  reconcileSoloFingerprint,
   recordSoloHintUsed,
   replaceSoloPayload,
   saveReconciledUserId,
@@ -283,6 +284,7 @@ enableMocks()
       loadPayload: loadSoloPayload,
       loadLocalUpdatedAt: loadSoloLocalUpdatedAt,
       replacePayload: replaceSoloPayload,
+      reconcileFingerprint: reconcileSoloFingerprint,
       listPuzzleIds: listSoloPuzzleIds,
     };
     const progressSyncService = createProgressSyncService({

@@ -24,6 +24,8 @@ interface StoredPuzzle {
   elapsedSeconds?: number;
   // Wall-clock of the last local mutation; the sync merge treats a blob newer than the server's as the collision winner (ADR-0075 §4).
   localUpdatedAt?: string;
+  // Structural signature of the grid this progress belongs to; a mismatch on load means the daily was regenerated under the same id, so the blob is stale (ADR-0105).
+  fingerprint?: string;
 }
 
 const nowIso = (): string => new Date().toISOString();
@@ -87,6 +89,7 @@ function readBucket(store: SoloStore, puzzleId: string): StoredPuzzle {
     hintsUsed: raw.hintsUsed ?? 0,
     elapsedSeconds: raw.elapsedSeconds ?? 0,
     localUpdatedAt: raw.localUpdatedAt,
+    fingerprint: raw.fingerprint,
   };
 }
 
@@ -99,7 +102,9 @@ function persistBucket(
     bucket.entries.length === 0 &&
     (bucket.lockedCells ?? []).length === 0 &&
     (bucket.hintsUsed ?? 0) === 0 &&
-    (bucket.elapsedSeconds ?? 0) === 0
+    (bucket.elapsedSeconds ?? 0) === 0 &&
+    // Keep a data-empty bucket that still carries a fingerprint: it records which grid the next write belongs to (ADR-0105).
+    bucket.fingerprint == null
   ) {
     delete store[puzzleId];
   } else {
@@ -141,6 +146,7 @@ export function saveSoloLetter(
     hintsUsed: bucket.hintsUsed,
     elapsedSeconds: bucket.elapsedSeconds,
     localUpdatedAt: nowIso(),
+    fingerprint: bucket.fingerprint,
   });
   writeStore(sessionId, store);
 }
@@ -176,6 +182,7 @@ export function saveSoloLockedCell(
     elapsedSeconds: bucket.elapsedSeconds,
     // A lock always wins its own collision regardless of timestamp, so bumping the blob clock here only poisons unrelated unlocked cells.
     localUpdatedAt: bucket.localUpdatedAt,
+    fingerprint: bucket.fingerprint,
   });
   writeStore(sessionId, store);
 }
@@ -198,6 +205,7 @@ export function recordSoloHintUsed(sessionId: string, puzzleId: string): void {
     elapsedSeconds: bucket.elapsedSeconds,
     // No localUpdatedAt bump: hintsUsed is monotonic (max-merged), so it must not advance the letter-collision clock.
     localUpdatedAt: bucket.localUpdatedAt,
+    fingerprint: bucket.fingerprint,
   });
   writeStore(sessionId, store);
 }
@@ -225,6 +233,7 @@ export function saveSoloElapsed(
     elapsedSeconds: safe,
     // Elapsed ticks constantly; preserve (never advance) the letter-collision clock.
     localUpdatedAt: bucket.localUpdatedAt,
+    fingerprint: bucket.fingerprint,
   });
   writeStore(sessionId, store);
 }
@@ -263,6 +272,7 @@ export function loadSoloPayload(sessionId: string, puzzleId: string): SoloStoreP
       bucket.elapsedSeconds >= 0
         ? bucket.elapsedSeconds
         : 0,
+    fingerprint: typeof bucket.fingerprint === 'string' ? bucket.fingerprint : undefined,
   };
 }
 
@@ -281,7 +291,35 @@ export function replaceSoloPayload(
     elapsedSeconds: payload.elapsedSeconds,
     // Preserve the local edit clock across a merge so an unpushed edit still outranks a stale remote on the next sync.
     localUpdatedAt: existing.localUpdatedAt,
+    // A merge stamps the grid it validated against; batch merges (no fingerprint) keep the stored one.
+    fingerprint: payload.fingerprint ?? existing.fingerprint,
   });
+  writeStore(sessionId, store);
+}
+
+/**
+ * Discard this puzzle's local progress if it was typed on a different grid (ADR-0105).
+ * A stored fingerprint that differs from `fingerprint` — or a missing one on a blob that
+ * holds progress — means the daily was regenerated under the same id, so the letters are
+ * stale; clear them. Then stamp `fingerprint` so subsequent writes are tagged with this grid.
+ */
+export function reconcileSoloFingerprint(
+  sessionId: string,
+  puzzleId: string,
+  fingerprint: string,
+): void {
+  const store = readStore(sessionId);
+  const bucket = readBucket(store, puzzleId);
+  const hasProgress =
+    bucket.entries.length > 0 ||
+    (bucket.lockedCells ?? []).length > 0 ||
+    (bucket.hintsUsed ?? 0) > 0 ||
+    (bucket.elapsedSeconds ?? 0) > 0;
+  const next: StoredPuzzle =
+    hasProgress && bucket.fingerprint !== fingerprint
+      ? { entries: [], lockedCells: [], hintsUsed: 0, elapsedSeconds: 0, fingerprint }
+      : { ...bucket, fingerprint };
+  persistBucket(store, puzzleId, next);
   writeStore(sessionId, store);
 }
 
