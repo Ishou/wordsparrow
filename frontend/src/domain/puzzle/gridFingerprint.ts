@@ -1,9 +1,7 @@
 import type { Cell } from './Cell';
 import type { Puzzle } from './Puzzle';
 
-// Structural signature of a grid: changes when the layout or clues change (e.g. a daily
-// regeneration) but NOT when the player types. Lets the solo-progress layer detect progress
-// stored for a different grid under the same id and discard it (ADR-0075, amended by ADR-0105).
+// Structural signature of a grid, stable while the player types; changes on regeneration (ADR-0105).
 export function gridFingerprint(
   puzzle: Pick<Puzzle, 'width' | 'height' | 'cells'>,
 ): string {

@@ -297,12 +297,7 @@ export function replaceSoloPayload(
   writeStore(sessionId, store);
 }
 
-/**
- * Discard this puzzle's local progress if it was typed on a different grid (ADR-0105).
- * A stored fingerprint that differs from `fingerprint` — or a missing one on a blob that
- * holds progress — means the daily was regenerated under the same id, so the letters are
- * stale; clear them. Then stamp `fingerprint` so subsequent writes are tagged with this grid.
- */
+/** Discards local progress typed on a different grid, then stamps the current fingerprint (ADR-0105). */
 export function reconcileSoloFingerprint(
   sessionId: string,
   puzzleId: string,
