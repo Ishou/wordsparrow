@@ -20,5 +20,7 @@ backups:
   bucket: ""
   # S3 endpoint URL. Hetzner OS FSN1 in prod (ADR-0010 §2).
   endpoint: ""
+  # Daily 02:00 UTC scheduled backup (matches grid; ADR-0010 §3 retention).
+  schedule: "0 2 * * *"
   # CNPG retention policy notation (e.g. "30d").
   retentionPolicy: "30d"
