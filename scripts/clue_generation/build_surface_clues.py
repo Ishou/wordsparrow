@@ -65,9 +65,7 @@ def _surface_length_ok(length: int) -> bool:
 _NUMBER_TOK_RE = re.compile(r"[\wÀ-ÿŒœŸ]+", re.UNICODE)
 # Finite-verb person tags, incl. the inversion persons PERSON_TOKENS omits.
 _PERSON_TAGS = {"1sg", "2sg", "3sg", "1pl", "2pl", "3pl", "1isg", "2isg", "3isg"}
-# Only 1st/2nd person PLURAL passé simple (`nous abaissâmes` / `vous abaissâtes`)
-# is dropped as too archaic; the singular (`j'abaissai`) and 3rd person stay
-# — they read fine as crossword fill (maintainer call, 2026-07-10).
+# Only 1st/2nd plural passé simple is dropped as archaic; singular and 3rd person read fine as crossword fill (maintainer call, 2026-07-10).
 _PASSE_SIMPLE_PERSON = {"1pl", "2pl"}
 
 

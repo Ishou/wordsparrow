@@ -114,6 +114,13 @@ Replace the six mutators with two stages:
    per word are preserved (the grid picks one); only identical
    `(word, clue)` pairs collapse.
 
+### Data root layout
+
+`assemble_corpus.py --data-root <dir>` runs the assembler against either
+this repo (default) or the private `wordsparrow-clue-data` corpus
+(ADR-0097). In both layouts, themed overlays live under the runtime
+`words/themed/` directory tree, not `data/curated/`.
+
 ### Runtime change
 
 `CsvWordRepository`

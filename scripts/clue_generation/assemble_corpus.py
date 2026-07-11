@@ -32,19 +32,14 @@ from corpus_normalizers import (  # noqa: E402
 )
 from import_grammalecte_long_words import parse_grammalecte_lemma_anchored  # noqa: E402
 
-# Highest priority first. "overrides" is not a merged row source -- it's a
-# post-merge clue patch (see `apply_overrides`) -- but it's listed here so
-# the full priority ordering is documented in one place.
+# Highest priority first; "overrides" is apply_overrides's post-merge patch, not a merged source, listed here only for ordering reference.
 SOURCE_PRIORITY = [
     "overrides", "curated", "themed", "gold", "editorial", "grammalecte", "llm",
 ]
 
 DEFAULT_LEXIQUE = Path(os.path.expanduser(
     "~/Downloads/grammalecte/lexique-grammalecte-fr-v7.7.txt"))
-# Source layout as paths relative to a data root. The root defaults to this
-# repo; pass --data-root <private corpus repo> to assemble against the private
-# `wordsparrow-clue-data` sources (ADR-0097). Themed overlays live under the
-# runtime `words/themed/` dir, not `data/curated/`.
+# Source layout relative to --data-root (repo default, or the private ADR-0097 corpus) -- see ADR-0100 for the themed-dir layout rule.
 REL_WORDLIST = "grid/infrastructure/src/main/resources/words/words-fr.csv"
 REL_SHORT_FR = "data/curated/short-fr.csv"
 REL_FR = "data/curated/fr.csv"
