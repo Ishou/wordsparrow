@@ -49,7 +49,7 @@ schema-first with generated TS types.
 ## File Structure
 
 **Wave 1 — governance + contract**
-- Create `docs/adr/0101-player-clue-report.md` — the feature ADR.
+- Create `docs/adr/0103-player-clue-report.md` — the feature ADR.
 - Modify `docs/adr/INDEX.md` — registry rows for ADR-0103.
 - Modify `survey/api/openapi.yaml` — `POST /v1/signalements` + `SignalementRequest`/`SignalementResponse`/`ReportReason` schemas; `GET /v1/signalements` (maintainer list) + `PostSignalementDecision`.
 
@@ -95,7 +95,7 @@ schema-first with generated TS types.
 ### Task 1.1: ADR-0103 + INDEX registry
 
 **Files:**
-- Create: `docs/adr/0101-player-clue-report.md`
+- Create: `docs/adr/0103-player-clue-report.md`
 - Modify: `docs/adr/INDEX.md`
 
 - [ ] **Step 1: Pre-read governing ADRs.** Run
