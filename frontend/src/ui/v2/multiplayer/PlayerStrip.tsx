@@ -42,6 +42,17 @@ const dotConnected = css({ background: 'ws.statusOnline' });
 const dotTyping = css({ background: 'ws.sakuraDark', animation: 'wsPulse 1s ease-in-out infinite' });
 const dotIdle = css({ background: 'ws.statusIdle' });
 const dotLost = css({ background: 'ws.statusLost' });
+const count = css({
+  flex: 'none',
+  fontFamily: 'wsMono',
+  fontSize: '11.5px',
+  fontWeight: 'black',
+  fontVariantNumeric: 'tabular-nums',
+  color: 'ws.jadeInk',
+  opacity: 0.75,
+  minWidth: '12px',
+  textAlign: 'center',
+});
 
 export interface PlayerStripProps {
   readonly players: ReadonlyArray<Player>;
@@ -49,6 +60,7 @@ export interface PlayerStripProps {
   readonly typingSessionIds: ReadonlySet<SessionId>;
   readonly idleSessionIds: ReadonlySet<SessionId>;
   readonly disconnectingSessionIds: ReadonlySet<SessionId>;
+  readonly scoresBySessionId?: ReadonlyMap<SessionId, number>;
 }
 
 function statusFor(
@@ -69,6 +81,7 @@ export function PlayerStrip({
   typingSessionIds,
   idleSessionIds,
   disconnectingSessionIds,
+  scoresBySessionId,
 }: PlayerStripProps) {
   return (
     <ul className={strip} aria-label={t('v2.multiplayer.presence.aria.players')}>
@@ -78,12 +91,20 @@ export function PlayerStrip({
         const status = isSelf
           ? { cls: dotConnected, label: t('v2.multiplayer.presence.online') }
           : statusFor(p.sessionId, typingSessionIds, idleSessionIds, disconnectingSessionIds);
+        const score = scoresBySessionId?.get(p.sessionId) ?? 0;
         return (
           <li key={p.sessionId} className={chip}>
             <PlayerAvatar sessionId={p.sessionId} pseudonym={p.pseudonym} size={24} />
             <span className={name}>
               {p.pseudonym}
               {isSelf ? t('v2.multiplayer.presence.youSuffix') : ''}
+            </span>
+            <span
+              className={count}
+              role="img"
+              aria-label={t('v2.multiplayer.presence.aria.score', { name: p.pseudonym, count: score })}
+            >
+              <span aria-hidden="true">{score}</span>
             </span>
             <span
               className={cx(dot, status.cls)}

@@ -18,6 +18,7 @@ function renderResultats(overrides: Partial<ResultatsScreenProps> = {}) {
     durationMs: 7 * 60 * 1000 + 24 * 1000,
     players,
     ownerSessionId: ownerId,
+    lockedPositions: [],
     isReplaying: false,
     onReplay: vi.fn(),
     onHome: vi.fn(),
@@ -61,6 +62,30 @@ describe('v2 ResultatsScreen', () => {
     expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('shows each contributor validated-letter count', () => {
+    renderResultats({
+      lockedPositions: [
+        { row: 0, column: 0, lockedBy: ownerId },
+        { row: 0, column: 1, lockedBy: ownerId },
+        { row: 1, column: 0, lockedBy: guestId },
+      ],
+    });
+    expect(screen.getByText('2 lettres')).toBeTruthy();
+    expect(screen.getByText('1 lettre')).toBeTruthy();
+  });
+
+  it('ranks players by validated-letter score descending', () => {
+    renderResultats({
+      lockedPositions: [
+        { row: 0, column: 0, lockedBy: guestId },
+        { row: 0, column: 1, lockedBy: guestId },
+        { row: 1, column: 0, lockedBy: ownerId },
+      ],
+    });
+    const names = screen.getAllByText(/^(Léa|Amie)$/).map((n) => n.textContent);
+    expect(names).toEqual(['Amie', 'Léa']); // guest 2 > owner 1
+  });
+
   it('is axe-clean (ADR-0050)', async () => {
     // Slotted into PhoneShell's <main> in production; mirror that here so axe sees a landmark.
     const { container } = render(
@@ -69,6 +94,7 @@ describe('v2 ResultatsScreen', () => {
           durationMs={444000}
           players={players}
           ownerSessionId={ownerId}
+          lockedPositions={[]}
           onReplay={vi.fn()}
           onHome={vi.fn()}
         />

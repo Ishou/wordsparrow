@@ -3,6 +3,7 @@ import { CaretLeft, SignOut } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import type { Position, Puzzle } from '@/domain';
 import type { GameEvent, Unsubscribe } from '@/application/game';
+import { tallyValidatedLetters } from '@/application/game';
 import type { Player, SessionId } from '@/domain/game';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
@@ -155,6 +156,8 @@ export function LiveCoopScreen({
     return m;
   }, [lockedPositions]);
 
+  const scoresBySessionId = useMemo(() => tallyValidatedLetters(lockedPositions), [lockedPositions]);
+
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
 
@@ -302,6 +305,7 @@ export function LiveCoopScreen({
                 typingSessionIds={typingSessionIds}
                 idleSessionIds={idleSessionIds}
                 disconnectingSessionIds={disconnectingSessionIds}
+                scoresBySessionId={scoresBySessionId}
               />
             </div>
           </>
@@ -328,6 +332,7 @@ export function LiveCoopScreen({
               typingSessionIds={typingSessionIds}
               idleSessionIds={idleSessionIds}
               disconnectingSessionIds={disconnectingSessionIds}
+              scoresBySessionId={scoresBySessionId}
             />
           </header>
         )

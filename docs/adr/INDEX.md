@@ -305,6 +305,10 @@ ADR-0101  */api/deploy/db-chart/**                 CNPG HA/DR hardening tracker:
 ADR-0101  grid/api/deploy/chart/templates/postgres-cluster.yaml  Same R1-R5 remediation applies to grid's Cluster spec — grid uses a standalone chart, not the db-chart subchart layout, so the db-chart glob above doesn't route here
 ADR-0101  terraform/**                             Add worker node capacity (R1) before tainting control-plane (R3); node count is the keystone for real CNPG failure-domain spread
 # ADR-0101: cluster HA/DR audit + remediation tracker — 3-instance clusters that don't span nodes, empty resource specs (BestEffort), schedulable control-plane, single-instance billing; remediation ordered on node capacity (R1). Complements ADR-0009/0010/0011 (deploy/provisioning) and the 2026-07-11 backup fix.
+ADR-0102  frontend/src/application/game/playerScores.ts   Co-op score = count of lockedPositions per lockedBy (ADR-0086 attribution); frontend-only derivation
+ADR-0102  frontend/src/ui/v2/multiplayer/PlayerStrip.tsx   Live roster chip carries the player's validated-letter count (join-order, no re-sort)
+ADR-0102  frontend/src/ui/v2/multiplayer/ResultatsScreen.tsx  Résultats ranks players by validated-letter score descending
+# ADR-0102: co-op validated-letter score — per-player validated-letter count on roster chips (live) and a score-ranked Résultats leaderboard; frontend-only derivation from lockedPositions[].lockedBy (ADR-0086).
 ```
 
 ## Adding entries
