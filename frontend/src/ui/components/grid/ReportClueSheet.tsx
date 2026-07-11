@@ -6,7 +6,7 @@ import { Flag } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
 import { useToast } from '@/ui/components/primitives';
-import { useReportClue } from '@/application/signalement/useReportClue';
+import { useReportClue } from './useReportClue';
 import type { ReportReason, ReportSurface, SurveyClient } from '@/application/survey';
 
 const REASONS: readonly ReportReason[] = [
