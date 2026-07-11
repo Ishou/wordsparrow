@@ -748,8 +748,12 @@ components:
 
     SignalementSummary:
       type: object
-      required: [wordText, clueText, reason, count, latestAt]
+      description: |
+        A pending-report group keyed by word + clue + reason. `reportId` is the
+        latest report in the group — the id `POST /decision` acts on.
+      required: [reportId, wordText, clueText, reason, count, latestAt]
       properties:
+        reportId:   { type: string, format: uuid }
         wordText:   { type: string }
         clueText:   { type: string }
         reason:     { $ref: '#/components/schemas/ReportReason' }

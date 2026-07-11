@@ -9,10 +9,12 @@ import com.bliss.survey.application.ports.IdGenerator
 import com.bliss.survey.application.ports.RandomFactory
 import com.bliss.survey.application.ports.TokenGenerator
 import com.bliss.survey.application.usecases.AnonymizeUserRatingsUseCase
+import com.bliss.survey.application.usecases.DecideSignalementUseCase
 import com.bliss.survey.application.usecases.GetCurrentCampaignUseCase
 import com.bliss.survey.application.usecases.GetLemmaMetaUseCase
 import com.bliss.survey.application.usecases.GetNextItemUseCase
 import com.bliss.survey.application.usecases.GetNextPairUseCase
+import com.bliss.survey.application.usecases.ListSignalementsUseCase
 import com.bliss.survey.application.usecases.RecomputeTrainingWeightUseCase
 import com.bliss.survey.application.usecases.SubmitPairRatingUseCase
 import com.bliss.survey.application.usecases.SubmitRatingUseCase
@@ -143,6 +145,8 @@ fun main() {
             tx = txManager,
             maintainerAddress = config.maintainerEmail,
         )
+    val listSignalements = ListSignalementsUseCase(signalements)
+    val decideSignalement = DecideSignalementUseCase(signalements)
 
     val identityClient = IdentityClient(config.identityBaseUrl)
     val sessionVerifier = CachedSessionVerifier(identityClient)
@@ -166,6 +170,8 @@ fun main() {
             getNextPair = getNextPair,
             submitPairRating = { cmd -> submitPairRating.execute(cmd) },
             submitSignalement = { cmd -> submitSignalement.execute(cmd) },
+            listSignalements = { listSignalements.execute() },
+            decideSignalement = { id, decision, uid -> decideSignalement.decide(id, decision, uid, clock.now()) },
             undoAction = { token, uid -> undoAction.execute(token, uid) },
             getCurrentCampaign = getCurrentCampaign,
             getLemmaMeta = getLemmaMeta,
