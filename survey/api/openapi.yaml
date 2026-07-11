@@ -390,6 +390,7 @@ paths:
             schema: { $ref: '#/components/schemas/SignalementDecisionRequest' }
       responses:
         '204': { description: Decision recorded. }
+        '400': { $ref: '#/components/responses/ProblemDetails' }
         '403': { $ref: '#/components/responses/ProblemDetails' }
         '404': { $ref: '#/components/responses/ProblemDetails' }
 

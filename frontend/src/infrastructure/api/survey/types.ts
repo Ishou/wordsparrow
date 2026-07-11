@@ -952,6 +952,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["ProblemDetails"];
             403: components["responses"]["ProblemDetails"];
             404: components["responses"]["ProblemDetails"];
         };
