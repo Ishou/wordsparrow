@@ -13,6 +13,11 @@ value class RatingId(
 )
 
 @JvmInline
+value class ReportId(
+    val value: UUID,
+)
+
+@JvmInline
 value class UserId(
     val value: UUID,
 )
