@@ -230,6 +230,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/signalements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List pending reports (maintainer only).
+         * @description Contribuer-gated maintainer queue. Pending reports grouped by
+         *     clue + reason with a count and the latest note/time.
+         */
+        get: operations["listSignalements"];
+        put?: never;
+        /**
+         * Report a problem with a clue/word.
+         * @description Player report capture. Optional auth — anonymous and authenticated
+         *     players may report; a session, when present, binds the report to the
+         *     reporter for per-user dedup and RGPD anonymization (ADR-0101). Serves
+         *     solo/daily, multiplayer, and the mini-game via the `surface`
+         *     discriminator.
+         */
+        post: operations["submitSignalement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/signalements/{reportId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss or action a report (maintainer only).
+         * @description Contribuer-gated. `dismiss` closes the report; `action` marks it
+         *     actioned once its correctif is applied via the existing gold loop.
+         */
+        post: operations["decideSignalement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -448,6 +498,45 @@ export interface components {
             priorSenses: string[];
             /** @description Distinct sub-domain tags observed in past ratings of this lemma. Ordered most-recent first. */
             priorSubTags: string[];
+        };
+        /**
+         * @description Why the player is reporting the clue/word. Harm reasons (offensive word/definition) email the maintainer (ADR-0101).
+         * @enum {string}
+         */
+        ReportReason: "mot_offensant" | "definition_offensante" | "erreur_sens" | "erreur_grammaire" | "definition_revele" | "ambigu" | "trop_facile" | "trop_difficile" | "autre";
+        /**
+         * @description The play surface the report was raised from.
+         * @enum {string}
+         */
+        ReportSurface: "solo" | "daily" | "multiplayer" | "mini_game";
+        SignalementRequest: {
+            wordText: string;
+            clueText: string;
+            reason: components["schemas"]["ReportReason"];
+            note?: string;
+            /** Format: uuid */
+            puzzleId?: string;
+            surface: components["schemas"]["ReportSurface"];
+        };
+        SignalementResponse: {
+            /** Format: uuid */
+            reportId: string;
+        };
+        SignalementSummary: {
+            wordText: string;
+            clueText: string;
+            reason: components["schemas"]["ReportReason"];
+            count: number;
+            latestNote?: string;
+            /** Format: date-time */
+            latestAt: string;
+        };
+        SignalementListResponse: {
+            items: components["schemas"]["SignalementSummary"][];
+        };
+        SignalementDecisionRequest: {
+            /** @enum {string} */
+            decision: "dismiss" | "action";
         };
         ProblemDetails: {
             /** Format: uri */
@@ -791,6 +880,80 @@ export interface operations {
             };
             403: components["responses"]["ProblemDetails"];
             503: components["responses"]["ProblemDetails"];
+        };
+    };
+    listSignalements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending reports grouped by clue+reason. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalementListResponse"];
+                };
+            };
+            403: components["responses"]["ProblemDetails"];
+        };
+    };
+    submitSignalement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalementRequest"];
+            };
+        };
+        responses: {
+            /** @description Report accepted. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalementResponse"];
+                };
+            };
+            400: components["responses"]["ProblemDetails"];
+            429: components["responses"]["ProblemDetails"];
+        };
+    };
+    decideSignalement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The report to decide on. */
+                reportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalementDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Decision recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["ProblemDetails"];
+            404: components["responses"]["ProblemDetails"];
         };
     };
     getHealth: {

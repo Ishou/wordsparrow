@@ -4,11 +4,13 @@ info:
   version: 0.2.0
   summary: Contribuer-gated rating + corpus-contribution surface for clue RLHF (ADR-0079).
   description: |
-    Backend for the `/sondage` route. All non-health endpoints require the
-    `contribuer` capability (ADR-0079); anonymous and non-maintainer callers
-    receive 403. The `__Secure-ws_session` cookie is verified via identity-api
-    (30 s cache, ADR-0044 pattern); capabilities are sourced from identity's
-    whoami response (absent ⇒ empty set ⇒ deny).
+    Backend for the `/sondage` route plus player report capture. Rating and
+    maintainer endpoints require the `contribuer` capability (ADR-0079);
+    anonymous and non-maintainer callers receive 403. The player report
+    capture `POST /v1/signalements` is the exception — optional auth, open to
+    anonymous players (ADR-0101). The `__Secure-ws_session` cookie is verified
+    via identity-api (30 s cache, ADR-0044 pattern); capabilities are sourced
+    from identity's whoami response (absent ⇒ empty set ⇒ deny).
 
     See ADR-0056, ADR-0079, and `docs/superpowers/specs/2026-05-25-survey-module-design.md`.
   contact:
@@ -34,6 +36,8 @@ tags:
     description: Per-lemma autocomplete — distinct senses and sub-tags aggregated from past ratings.
   - name: me
     description: Per-user progress, contributions, and preferences.
+  - name: signalements
+    description: Player clue/word reports — optional-auth capture + maintainer triage queue (ADR-0101).
 
 paths:
   /v1/campaign/current:
@@ -321,6 +325,73 @@ paths:
           $ref: '#/components/responses/ProblemDetails'
         '503':
           $ref: '#/components/responses/ProblemDetails'
+
+  /v1/signalements:
+    post:
+      operationId: submitSignalement
+      summary: Report a problem with a clue/word.
+      description: |
+        Player report capture. Optional auth — anonymous and authenticated
+        players may report; a session, when present, binds the report to the
+        reporter for per-user dedup and RGPD anonymization (ADR-0101). Serves
+        solo/daily, multiplayer, and the mini-game via the `surface`
+        discriminator.
+      tags: [signalements]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignalementRequest' }
+      responses:
+        '201':
+          description: Report accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignalementResponse' }
+        '400': { $ref: '#/components/responses/ProblemDetails' }
+        '429': { $ref: '#/components/responses/ProblemDetails' }
+    get:
+      operationId: listSignalements
+      summary: List pending reports (maintainer only).
+      description: |
+        Contribuer-gated maintainer queue. Pending reports grouped by
+        clue + reason with a count and the latest note/time.
+      tags: [signalements]
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Pending reports grouped by clue+reason.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignalementListResponse' }
+        '403': { $ref: '#/components/responses/ProblemDetails' }
+
+  /v1/signalements/{reportId}/decision:
+    post:
+      operationId: decideSignalement
+      summary: Dismiss or action a report (maintainer only).
+      description: |
+        Contribuer-gated. `dismiss` closes the report; `action` marks it
+        actioned once its correctif is applied via the existing gold loop.
+      tags: [signalements]
+      security:
+        - sessionCookie: []
+      parameters:
+        - in: path
+          name: reportId
+          required: true
+          description: The report to decide on.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignalementDecisionRequest' }
+      responses:
+        '204': { description: Decision recorded. }
+        '403': { $ref: '#/components/responses/ProblemDetails' }
+        '404': { $ref: '#/components/responses/ProblemDetails' }
 
   /v1/health:
     get:
@@ -644,6 +715,63 @@ components:
             type: string
             minLength: 1
             maxLength: 40
+
+    ReportReason:
+      type: string
+      description: Why the player is reporting the clue/word. Harm reasons (offensive word/definition) email the maintainer (ADR-0101).
+      enum: [mot_offensant, definition_offensante, erreur_sens, erreur_grammaire, definition_revele, ambigu, trop_facile, trop_difficile, autre]
+      x-enum-varnames: [MOT_OFFENSANT, DEFINITION_OFFENSANTE, ERREUR_SENS, ERREUR_GRAMMAIRE, DEFINITION_REVELE, AMBIGU, TROP_FACILE, TROP_DIFFICILE, AUTRE]
+
+    ReportSurface:
+      type: string
+      description: The play surface the report was raised from.
+      enum: [solo, daily, multiplayer, mini_game]
+      x-enum-varnames: [SOLO, DAILY, MULTIPLAYER, MINI_GAME]
+
+    SignalementRequest:
+      type: object
+      required: [wordText, clueText, reason, surface]
+      properties:
+        wordText: { type: string, minLength: 1, maxLength: 64 }
+        clueText: { type: string, minLength: 1, maxLength: 512 }
+        reason:   { $ref: '#/components/schemas/ReportReason' }
+        note:     { type: string, maxLength: 500 }
+        puzzleId: { type: string, format: uuid }
+        surface:  { $ref: '#/components/schemas/ReportSurface' }
+
+    SignalementResponse:
+      type: object
+      required: [reportId]
+      properties:
+        reportId: { type: string, format: uuid }
+
+    SignalementSummary:
+      type: object
+      required: [wordText, clueText, reason, count, latestAt]
+      properties:
+        wordText:   { type: string }
+        clueText:   { type: string }
+        reason:     { $ref: '#/components/schemas/ReportReason' }
+        count:      { type: integer }
+        latestNote: { type: string }
+        latestAt:   { type: string, format: date-time }
+
+    SignalementListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SignalementSummary' }
+
+    SignalementDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [dismiss, action]
+          x-enum-varnames: [DISMISS, ACTION]
 
     ProblemDetails:
       type: object
