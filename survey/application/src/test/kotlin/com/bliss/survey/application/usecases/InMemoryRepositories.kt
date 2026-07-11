@@ -252,7 +252,8 @@ open class InMemorySignalementRepository : SignalementRepository {
 
     override suspend fun insert(report: PlayerReport): Boolean {
         // Mirrors the partial unique index: only authenticated reports dedupe on (reporter, clue, puzzle).
-        if (report.reporterId != null && report.puzzleId != null &&
+        if (report.reporterId != null &&
+            report.puzzleId != null &&
             reports.any { it.reporterId == report.reporterId && it.clueText == report.clueText && it.puzzleId == report.puzzleId }
         ) {
             return false
