@@ -216,11 +216,11 @@ schema-first with generated TS types.
     ReportReason:
       type: string
       enum: [mot_offensant, definition_offensante, erreur_sens, erreur_grammaire, definition_revele, ambigu, trop_facile, trop_difficile, autre]
-      x-enum-varnames: [MotOffensant, DefinitionOffensante, ErreurSens, ErreurGrammaire, DefinitionRevele, Ambigu, TropFacile, TropDifficile, Autre]
+      x-enum-varnames: [MOT_OFFENSANT, DEFINITION_OFFENSANTE, ERREUR_SENS, ERREUR_GRAMMAIRE, DEFINITION_REVELE, AMBIGU, TROP_FACILE, TROP_DIFFICILE, AUTRE]
     ReportSurface:
       type: string
       enum: [solo, daily, multiplayer, mini_game]
-      x-enum-varnames: [Solo, Daily, Multiplayer, MiniGame]
+      x-enum-varnames: [SOLO, DAILY, MULTIPLAYER, MINI_GAME]
     SignalementRequest:
       type: object
       required: [wordText, clueText, reason, surface]
@@ -258,7 +258,7 @@ schema-first with generated TS types.
         decision:
           type: string
           enum: [dismiss, action]
-          x-enum-varnames: [Dismiss, Action]
+          x-enum-varnames: [DISMISS, ACTION]
   ```
 
 - [ ] **Step 3: Lint.** Run the repo's OpenAPI lint (as CI does; e.g.
