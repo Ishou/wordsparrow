@@ -257,6 +257,7 @@ function V2LobbyPage() {
           durationMs={view.durationMs ?? 0}
           players={rosterPlayers}
           ownerSessionId={lobby.ownerSessionId}
+          lockedPositions={lobby.game?.lockedPositions ?? []}
           isReplaying={coop.pending}
           onReplay={handleReplay}
           onHome={handleHome}

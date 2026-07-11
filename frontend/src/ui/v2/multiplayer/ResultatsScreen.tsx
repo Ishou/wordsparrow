@@ -1,11 +1,12 @@
 import { css } from 'styled-system/css';
-import type { Player, SessionId } from '@/domain/game';
+import type { LockedCell, Player, SessionId } from '@/domain/game';
+import { tallyValidatedLetters } from '@/application/game';
 import { t } from '@/ui/i18n';
 import { sparrowCelebrationScene } from '@/ui/v2/SparrowScenes';
 import { formatClock } from '@/ui/lib/formatClock';
 import { PlayerAvatar } from './PlayerAvatar';
 
-// ADR-0072 co-op finish: no scores — versus mode is a deferred follow-up.
+// Co-op finish: per-player validated-letter tally ranked as a leaderboard (ADR-0101, amends ADR-0072). Competitive/versus mode still deferred.
 
 const formatDuration = (durationMs: number): string => formatClock(durationMs / 1000);
 
@@ -39,7 +40,6 @@ const playerRow = css({ display: 'flex', alignItems: 'center', gap: '11px' });
 const playerName = css({ fontFamily: 'wsUi', fontSize: '16px', fontWeight: 'bold', color: 'ws.jadeInk', minWidth: 0 });
 const badge = css({
   flex: 'none',
-  marginLeft: 'auto',
   fontFamily: 'wsUi',
   fontSize: '11px',
   fontWeight: 'black',
@@ -49,6 +49,20 @@ const badge = css({
   padding: '3px 8px',
   bg: 'ws.sakuraBlush',
   color: 'ws.sakuraDark',
+});
+const rightGroup = css({
+  flex: 'none',
+  marginLeft: 'auto',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+});
+const letterCount = css({
+  fontFamily: 'wsMono',
+  fontSize: '13px',
+  fontWeight: 'black',
+  fontVariantNumeric: 'tabular-nums',
+  color: 'ws.jadeInk',
 });
 
 const replayButton = css({
@@ -90,6 +104,7 @@ export interface ResultatsScreenProps {
   readonly durationMs: number;
   readonly players: ReadonlyArray<Player>;
   readonly ownerSessionId: SessionId;
+  readonly lockedPositions: ReadonlyArray<LockedCell>;
   readonly isReplaying?: boolean;
   readonly onReplay: () => void;
   readonly onHome: () => void;
@@ -99,11 +114,16 @@ export function ResultatsScreen({
   durationMs,
   players,
   ownerSessionId,
+  lockedPositions,
   isReplaying = false,
   onReplay,
   onHome,
 }: ResultatsScreenProps) {
   const time = formatDuration(durationMs);
+  const scores = tallyValidatedLetters(lockedPositions);
+  const ranked = [...players].sort(
+    (x, y) => (scores.get(y.sessionId) ?? 0) - (scores.get(x.sessionId) ?? 0),
+  );
   return (
     <div className={wrap}>
       <div className={art}>{sparrowCelebrationScene()}</div>
@@ -118,11 +138,16 @@ export function ResultatsScreen({
       <section className={contribCard} aria-label={t('v2.multiplayer.resultats.aria.participants')}>
         <h2 className={contribTitle}>{t('v2.multiplayer.resultats.withCount', { total: players.length })}</h2>
         <ul className={list}>
-          {players.map((p) => (
+          {ranked.map((p) => (
             <li key={p.sessionId} className={playerRow}>
               <PlayerAvatar sessionId={p.sessionId} pseudonym={p.pseudonym} size={34} />
               <span className={playerName}>{p.pseudonym}</span>
-              {p.sessionId === ownerSessionId ? <span className={badge}>{t('v2.multiplayer.host.badge')}</span> : null}
+              <span className={rightGroup}>
+                {p.sessionId === ownerSessionId ? <span className={badge}>{t('v2.multiplayer.host.badge')}</span> : null}
+                <span className={letterCount}>
+                  {t('v2.multiplayer.resultats.letterCount', { count: scores.get(p.sessionId) ?? 0 })}
+                </span>
+              </span>
             </li>
           ))}
         </ul>
