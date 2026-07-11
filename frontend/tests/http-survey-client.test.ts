@@ -452,6 +452,20 @@ describe('HttpSurveyClient.submitSignalement', () => {
     expect(sent.puzzleId).toBe('0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b');
   });
 
+  it('omits wordText when the player has not solved the word', async () => {
+    const fetchImpl = spyFetch(201, { reportId: 'rep-3' });
+    await call(fetchImpl).submitSignalement({
+      clueText: 'définition offensante',
+      reason: 'definition_offensante',
+      surface: 'solo',
+      puzzleId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
+    });
+    const [, init] = fetchImpl.mock.calls[0];
+    const sent = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(sent).not.toHaveProperty('wordText');
+    expect(sent.clueText).toBe('définition offensante');
+  });
+
   it('throws ReportRateLimitedError on 429 (checked before the generic non-ok throw)', async () => {
     const fetchImpl = spyFetch(429, { type: 'about:blank', title: 'Too Many Requests', status: 429 });
     await expect(

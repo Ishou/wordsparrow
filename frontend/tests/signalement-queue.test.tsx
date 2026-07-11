@@ -46,6 +46,18 @@ describe('SignalementQueue', () => {
     expect(screen.getByText(/contre-sens/)).toBeInTheDocument();
   });
 
+  it('renders a word-less group without a mot and falls the action label back to the clue', async () => {
+    const client = stubClient({
+      listSignalements: vi.fn().mockResolvedValue([
+        summary({ reportId: 'r-noword', wordText: null, clueText: 'Définition offensante', reason: 'definition_offensante' }),
+      ]),
+    });
+    renderQueue(client);
+
+    expect(await screen.findByText('Définition offensante')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rejeter les signalements sur Définition offensante' })).toBeInTheDocument();
+  });
+
   it('sorts harm reasons before quality reasons', async () => {
     const client = stubClient({
       listSignalements: vi.fn().mockResolvedValue([

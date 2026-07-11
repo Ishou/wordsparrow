@@ -110,15 +110,24 @@ describe('ReportClueSheet', () => {
     expect(screen.getByRole('button', { name: 'Envoyer' })).toBeEnabled();
   });
 
-  it('blocks submission and hints when the word is not yet filled', async () => {
-    const submit = vi.fn();
-    renderSheet(<ReportClueSheet {...baseProps} wordText="" surveyClient={stubClient(submit)} />);
+  it('submits without a word when the clue is unsolved, omitting wordText', async () => {
+    const submit = vi.fn().mockResolvedValue({ reportId: 'r-1' });
+    renderSheet(<ReportClueSheet {...baseProps} wordText="" surveyClient={stubClient(submit)} puzzleId="p-2" />);
     fireEvent.click(await screen.findByTestId('report-clue'));
     await flushDialog();
-    fireEvent.click(screen.getByRole('radio', { name: 'Trop facile' }));
-    expect(screen.getByText(/Écris d’abord le mot/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Envoyer' })).toBeDisabled();
-    expect(submit).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('radio', { name: 'La définition est choquante' }));
+    expect(screen.getByRole('button', { name: 'Envoyer' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
+    expect(submit).toHaveBeenCalledWith({
+      wordText: undefined,
+      clueText: 'félin domestique',
+      reason: 'definition_offensante',
+      surface: 'solo',
+      note: undefined,
+      puzzleId: 'p-2',
+    });
   });
 
   it('links to the privacy page from the point-of-collection notice', async () => {

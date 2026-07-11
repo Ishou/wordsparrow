@@ -221,10 +221,10 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
 
   const submitSignalement: SurveyClient['submitSignalement'] = async (input: SignalementInput) => {
     const body: components['schemas']['SignalementRequest'] = {
-      wordText: input.wordText,
       clueText: input.clueText,
       reason: input.reason,
       surface: input.surface,
+      ...(input.wordText ? { wordText: input.wordText } : {}),
       ...(input.note ? { note: input.note } : {}),
       ...(input.puzzleId ? { puzzleId: input.puzzleId } : {}),
     };

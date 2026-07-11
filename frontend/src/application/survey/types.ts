@@ -65,7 +65,8 @@ export type ReportReason =
 export type ReportSurface = 'solo' | 'daily' | 'multiplayer' | 'mini_game';
 
 export interface SignalementInput {
-  readonly wordText: string;
+  // Optional: sent only when the player has solved the word; an offensive clue is reportable without it (ADR-0103).
+  readonly wordText?: string;
   readonly clueText: string;
   readonly reason: ReportReason;
   readonly note?: string;
@@ -80,7 +81,7 @@ export interface SignalementResult {
 // A pending-report group in the maintainer queue; `reportId` is the latest report the decision acts on (ADR-0103).
 export interface SignalementSummary {
   readonly reportId: string;
-  readonly wordText: string;
+  readonly wordText: string | null;
   readonly clueText: string;
   readonly reason: ReportReason;
   readonly count: number;

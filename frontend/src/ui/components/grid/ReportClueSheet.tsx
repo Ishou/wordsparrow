@@ -123,7 +123,6 @@ const noteField = css({
 });
 const notice = css({ fontSize: '12px', color: 'ws.khaki', margin: '14px 0', lineHeight: '1.5' });
 const noticeLink = css({ color: 'ws.sakuraDark', fontWeight: 'bold', textDecoration: 'underline' });
-const needWord = css({ fontSize: '12px', color: 'ws.sakuraDark', fontWeight: 'bold', margin: '0 0 12px' });
 const actions = css({ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' });
 const btnBase = { minHeight: '44px', paddingInline: '18px', borderRadius: '13px', fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', border: 'none' } as const;
 const cancelBtn = css({ ...btnBase, bg: 'transparent', color: 'ws.khaki', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
@@ -133,8 +132,8 @@ export interface ReportClueSheetProps {
   readonly surveyClient?: SurveyClient | null;
   readonly surface: ReportSurface;
   readonly clueText: string;
-  // Derived by the parent from the active clue's cell entries — the client never holds the solution word (ADR-0076).
-  readonly wordText: string;
+  // Derived by the parent from the active clue's cell entries — empty until solved; the client never holds the solution word (ADR-0076).
+  readonly wordText?: string;
   readonly puzzleId?: string;
 }
 
@@ -146,7 +145,7 @@ export function ReportClueSheet({ surveyClient, surface, clueText, wordText, puz
   const [submitting, setSubmitting] = useState(false);
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
-  const wordMissing = wordText.trim().length === 0;
+  const solvedWord = wordText?.trim() || undefined;
 
   const close = () => setOpen(false);
   const onOpenChange = (nextOpen: boolean) => {
@@ -155,11 +154,11 @@ export function ReportClueSheet({ surveyClient, surface, clueText, wordText, puz
   };
 
   const submit = async () => {
-    if (!reason || wordMissing || submitting) return;
+    if (!reason || submitting) return;
     setSubmitting(true);
     try {
       await report({
-        wordText,
+        wordText: solvedWord,
         clueText,
         reason,
         surface,
@@ -230,15 +229,13 @@ export function ReportClueSheet({ surveyClient, surface, clueText, wordText, puz
                 <Link to="/confidentialite" className={noticeLink}>{t('signalement.notice.link')}</Link>
               </p>
 
-              {wordMissing ? <p className={needWord}>{t('signalement.needWord')}</p> : null}
-
               <div className={actions}>
                 <button type="button" className={cancelBtn} onClick={close}>{t('signalement.cancel')}</button>
                 <button
                   type="button"
                   className={submitBtn}
                   onClick={() => { void submit(); }}
-                  disabled={!reason || wordMissing || submitting}
+                  disabled={!reason || submitting}
                 >
                   {t('signalement.submit')}
                 </button>
