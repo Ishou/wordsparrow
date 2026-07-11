@@ -141,7 +141,7 @@ export function SignalementQueue({ surveyClient }: SignalementQueueProps) {
             return (
               <li key={s.reportId} className={`${rowStyles}${harm ? ` ${harmRowStyles}` : ''}`} data-testid="signalement-row">
                 <div className={rowTopStyles}>
-                  <span className={motStyles}>{s.wordText}</span>
+                  {s.wordText ? <span className={motStyles}>{s.wordText}</span> : null}
                   {harm ? <span className={harmBadgeStyles}>{t('route.signalements.harmBadge')}</span> : null}
                 </div>
                 <p className={clueStyles}>{s.clueText}</p>
@@ -156,7 +156,7 @@ export function SignalementQueue({ surveyClient }: SignalementQueueProps) {
                     variant="primary"
                     onClick={() => { void decide(s, 'action'); }}
                     disabled={busyId === s.reportId}
-                    aria-label={t('route.signalements.markHandled.aria', { mot: s.wordText })}
+                    aria-label={t('route.signalements.markHandled.aria', { mot: s.wordText ?? s.clueText })}
                   >
                     {t('route.signalements.markHandled')}
                   </Button>
@@ -164,7 +164,7 @@ export function SignalementQueue({ surveyClient }: SignalementQueueProps) {
                     variant="secondary"
                     onClick={() => { void decide(s, 'dismiss'); }}
                     disabled={busyId === s.reportId}
-                    aria-label={t('route.signalements.reject.aria', { mot: s.wordText })}
+                    aria-label={t('route.signalements.reject.aria', { mot: s.wordText ?? s.clueText })}
                   >
                     {t('route.signalements.reject')}
                   </Button>

@@ -512,7 +512,7 @@ export interface components {
          */
         ReportSurface: "solo" | "daily" | "multiplayer" | "mini_game";
         SignalementRequest: {
-            wordText: string;
+            wordText?: string;
             clueText: string;
             reason: components["schemas"]["ReportReason"];
             note?: string;
@@ -525,13 +525,14 @@ export interface components {
             reportId: string;
         };
         /**
-         * @description A pending-report group keyed by word + clue + reason. `reportId` is the
+         * @description A pending-report group keyed by clue + puzzle + reason. `reportId` is the
          *     latest report in the group — the id `POST /decision` acts on.
          */
         SignalementSummary: {
             /** Format: uuid */
             reportId: string;
-            wordText: string;
+            /** @description null when the group's reports carry no solved word. */
+            wordText: string | null;
             clueText: string;
             reason: components["schemas"]["ReportReason"];
             count: number;

@@ -733,7 +733,8 @@ components:
 
     SignalementRequest:
       type: object
-      required: [wordText, clueText, reason, surface]
+      # wordText is optional: an offensive clue is reportable without solving the word (ADR-0103); present ⇒ non-blank.
+      required: [clueText, reason, surface]
       properties:
         wordText: { type: string, minLength: 1, maxLength: 64 }
         clueText: { type: string, minLength: 1, maxLength: 512 }
@@ -751,12 +752,12 @@ components:
     SignalementSummary:
       type: object
       description: |
-        A pending-report group keyed by word + clue + reason. `reportId` is the
+        A pending-report group keyed by clue + puzzle + reason. `reportId` is the
         latest report in the group — the id `POST /decision` acts on.
       required: [reportId, wordText, clueText, reason, count, latestNote, latestAt]
       properties:
         reportId:   { type: string, format: uuid }
-        wordText:   { type: string }
+        wordText:   { type: string, nullable: true, description: "null when the group's reports carry no solved word." }
         clueText:   { type: string }
         reason:     { $ref: '#/components/schemas/ReportReason' }
         count:      { type: integer }

@@ -12,7 +12,7 @@ import java.util.UUID
 
 class PlayerReportTest {
     private fun report(
-        wordText: String = "chat",
+        wordText: String? = "chat",
         clueText: String = "Petit felin domestique",
         reason: ReportReason = ReportReason.ERREUR_SENS,
         note: String? = null,
@@ -36,6 +36,11 @@ class PlayerReportTest {
     @Test
     fun `rejects blank wordText`() {
         assertFailure { report(wordText = " ") }.messageContains("wordText")
+    }
+
+    @Test
+    fun `accepts absent wordText`() {
+        assertThat(report(wordText = null).wordText).isEqualTo(null)
     }
 
     @Test

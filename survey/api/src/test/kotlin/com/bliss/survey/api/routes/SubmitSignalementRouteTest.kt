@@ -56,6 +56,29 @@ class SubmitSignalementRouteTest {
         }
 
     @Test
+    fun `report without a word - 201 created and command word is null`() =
+        testApplication {
+            var capturedWord: String? = "unset"
+            application {
+                installCapabilitySession()
+                install(ContentNegotiation) { json(WIRE_JSON) }
+                routing {
+                    submitSignalementRoute { cmd: SubmitSignalementCommand ->
+                        capturedWord = cmd.wordText
+                        SubmitSignalementResult.Accepted(ReportId(reportUuid))
+                    }
+                }
+            }
+            val resp =
+                client.post("/v1/signalements") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"clueText":"Definition offensante","reason":"definition_offensante","surface":"solo"}""")
+                }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Created)
+            assertThat(capturedWord).isEqualTo(null)
+        }
+
+    @Test
     fun `authenticated report binds the reporter id`() =
         testApplication {
             var capturedReporter: Boolean? = null

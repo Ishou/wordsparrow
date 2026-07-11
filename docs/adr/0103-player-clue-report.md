@@ -71,8 +71,11 @@ endpoints are restated.
   reports reuse the `__Secure-ws_session` cookie verified by identity-api with
   the existing 30 s cache.
 - **Tampering / poisoning (report flooding).** A partial unique index on
-  `(reporter_id, word_text, clue_text)` dedups authenticated submissions;
-  anonymous reports are bounded by the existing ingress rate limits
+  `(reporter_id, clue_text, puzzle_id)` dedups authenticated submissions (the
+  original `(reporter_id, word_text, clue_text)` key is superseded — see
+  Amendment below); when `puzzle_id` is null Postgres treats the NULLs as
+  distinct, so an authenticated reporter with a null `puzzle_id` — and every
+  anonymous report — is bounded only by the existing ingress rate limits
   (`limit-rps: 5`, `limit-connections: 30`). Reports are advisory — the
   maintainer triages every one; there is no auto-takedown, so a flood degrades
   queue signal but cannot remove content or alter training data.
@@ -80,6 +83,25 @@ endpoints are restated.
   (403 otherwise); the capture endpoint returns only the new `reportId`.
 - **Elevation of privilege.** No maintainer surface is reachable without the
   `contribuer` capability sourced from identity's whoami (absent ⇒ deny).
+
+## Amendment — wordText optional; dedup re-keyed on clue+puzzle (2026-07-11)
+
+The original decision required `word_text` and keyed dedup on
+`(reporter_id, word_text, clue_text)`. That blocked the most important
+report: an offensive definition a player has **not** solved. A player must be
+able to flag a clue from the clue alone, so `wordText` becomes optional
+end-to-end (present ⇒ non-blank; sent best-effort only when the word is
+solved, to help later `survey_item` matching). No server-side word
+resolution is added — the solution stays in `grid/` and off the wire
+(ADR-0076).
+
+A report is now identified by `clue_text` + `puzzle_id`. The partial unique
+index and the maintainer-queue grouping re-key to
+`(reporter_id, clue_text, puzzle_id)` / `(clue_text, puzzle_id, reason)`.
+Postgres treats NULLs as distinct, so a null `puzzle_id` degrades dedup
+gracefully (duplicates are allowed rather than collapsed) — acceptable, since
+reports remain advisory and rate-limited. `V13__player_reports_optional_word`
+carries this as an expand-and-contract migration.
 
 ## Consequences
 

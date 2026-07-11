@@ -45,8 +45,8 @@ class SignalementQueueRouteTest {
 
         override suspend fun findExisting(
             reporterId: UserId,
-            wordText: String,
             clueText: String,
+            puzzleId: UUID?,
         ): ReportId? = null
 
         override suspend fun listPending(): List<PlayerReport> = reports.filter { it.status == ReportStatus.PENDING }

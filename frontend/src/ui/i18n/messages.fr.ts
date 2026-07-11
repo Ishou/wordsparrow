@@ -666,7 +666,6 @@ export const fr = {
   'signalement.note.placeholder': "Ajoute un détail si tu veux…",
   'signalement.notice.pre': "Ton signalement nous aide à améliorer les grilles — ",
   'signalement.notice.link': "en savoir plus",
-  'signalement.needWord': "Écris d’abord le mot pour pouvoir le signaler.",
   'signalement.submit': "Envoyer",
   'signalement.cancel': "Annuler",
   'signalement.success': "Merci, c’est signalé",

@@ -33,6 +33,7 @@ import com.bliss.survey.domain.model.Tier
 import com.bliss.survey.domain.model.UserId
 import com.bliss.survey.domain.routing.KCoveragePolicy
 import java.time.Instant
+import java.util.UUID
 
 class InMemorySurveyItemRepository : SurveyItemRepository {
     val items: MutableMap<ItemId, SurveyItem> = linkedMapOf()
@@ -250,9 +251,10 @@ open class InMemorySignalementRepository : SignalementRepository {
     val reports: MutableList<PlayerReport> = mutableListOf()
 
     override suspend fun insert(report: PlayerReport): Boolean {
-        // Mirrors the partial unique index: only authenticated reports dedupe on (reporter, word, clue).
+        // Mirrors the partial unique index: only authenticated reports dedupe on (reporter, clue, puzzle).
         if (report.reporterId != null &&
-            reports.any { it.reporterId == report.reporterId && it.wordText == report.wordText && it.clueText == report.clueText }
+            report.puzzleId != null &&
+            reports.any { it.reporterId == report.reporterId && it.clueText == report.clueText && it.puzzleId == report.puzzleId }
         ) {
             return false
         }
@@ -262,12 +264,14 @@ open class InMemorySignalementRepository : SignalementRepository {
 
     override suspend fun findExisting(
         reporterId: UserId,
-        wordText: String,
         clueText: String,
+        puzzleId: UUID?,
     ): ReportId? =
-        reports
-            .firstOrNull { it.reporterId == reporterId && it.wordText == wordText && it.clueText == clueText }
-            ?.id
+        puzzleId?.let { pid ->
+            reports
+                .firstOrNull { it.reporterId == reporterId && it.clueText == clueText && it.puzzleId == pid }
+                ?.id
+        }
 
     override suspend fun listPending(): List<PlayerReport> = reports.filter { it.status == ReportStatus.PENDING }
 
