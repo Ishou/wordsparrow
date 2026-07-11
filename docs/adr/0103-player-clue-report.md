@@ -1,4 +1,4 @@
-# ADR-0101: Player clue/word report ("Signaler")
+# ADR-0103: Player clue/word report ("Signaler")
 
 ## Status
 Accepted

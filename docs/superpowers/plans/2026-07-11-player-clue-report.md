@@ -50,7 +50,7 @@ schema-first with generated TS types.
 
 **Wave 1 — governance + contract**
 - Create `docs/adr/0101-player-clue-report.md` — the feature ADR.
-- Modify `docs/adr/INDEX.md` — registry rows for ADR-0101.
+- Modify `docs/adr/INDEX.md` — registry rows for ADR-0103.
 - Modify `survey/api/openapi.yaml` — `POST /v1/signalements` + `SignalementRequest`/`SignalementResponse`/`ReportReason` schemas; `GET /v1/signalements` (maintainer list) + `PostSignalementDecision`.
 
 **Wave 2 — survey domain + persistence**
@@ -87,12 +87,12 @@ schema-first with generated TS types.
 
 ---
 
-## Wave 1 — ADR-0101 + schema (PR 1)
+## Wave 1 — ADR-0103 + schema (PR 1)
 
 *Scope:* governance + contract only, no implementation. Gates: `openapi-lint`,
 `registry-coherence`, `commitlint`, `dco`. This wave unblocks all others.
 
-### Task 1.1: ADR-0101 + INDEX registry
+### Task 1.1: ADR-0103 + INDEX registry
 
 **Files:**
 - Create: `docs/adr/0101-player-clue-report.md`
@@ -123,9 +123,9 @@ schema-first with generated TS types.
 - [ ] **Step 3: Add INDEX rows.** In `docs/adr/INDEX.md` under `## Registry`,
   add rows mirroring the existing column layout:
   ```
-  ADR-0101  survey/**/*Signalement*                  Player clue-report: optional-auth capture, maintainer queue
-  ADR-0101  survey/api/openapi.yaml                   POST /v1/signalements + ReportReason enum
-  ADR-0101  frontend/src/**/signalement*             Report sheet + /signalements triage (contribuer-gated)
+  ADR-0103  survey/**/*Signalement*                  Player clue-report: optional-auth capture, maintainer queue
+  ADR-0103  survey/api/openapi.yaml                   POST /v1/signalements + ReportReason enum
+  ADR-0103  frontend/src/**/signalement*             Report sheet + /signalements triage (contribuer-gated)
   ```
   (Match the actual whitespace/column style of surrounding rows.)
 
@@ -136,7 +136,7 @@ schema-first with generated TS types.
 
 - [ ] **Step 5: Commit.**
   ```bash
-  git commit -s -m "docs(adr): ADR-0101 player clue-report + INDEX rows"
+  git commit -s -m "docs(adr): ADR-0103 player clue-report + INDEX rows"
   ```
 
 ### Task 1.2: OpenAPI schema for signalements
@@ -727,7 +727,7 @@ model in body. Merge on §6a LGTM + green CI. Feature complete.
 - Harm email (survey Brevo) → 3.1/3.2/3.5. ✔
 - Triage `/signalements` (contribuer-gated, Corriger→correctif) → 5.1–5.3. ✔
 - RGPD (anonymize on UserDeleted; `/confidentialite`; point-of-collection notice) → 3.4 + 4.5 + 4.3. ✔
-- Governance (ADR-0101, schema-first, threat models) → 1.1/1.2, Wave 3 & 5 PR gates. ✔
+- Governance (ADR-0103, schema-first, threat models) → 1.1/1.2, Wave 3 & 5 PR gates. ✔
 - Non-goals (auto-takedown, auto-training, cross-guest dedup, purge job) → intentionally absent. ✔
 
 **Placeholder scan** — no "TBD"/"handle edge cases" steps; every code step

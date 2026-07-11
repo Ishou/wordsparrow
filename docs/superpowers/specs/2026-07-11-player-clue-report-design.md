@@ -214,7 +214,7 @@ New `PlayerReport` aggregate + `player_reports` table.
 
 ## Governance
 
-- A short **ADR-0101** for the player-report feature: new player-facing
+- A short **ADR-0103** for the player-report feature: new player-facing
   capability, its relationship to survey `FlagReason` / correctifs, the
   new survey Brevo `EmailSender` adapter, and the RGPD posture. Update
   `docs/adr/INDEX.md` in the same PR (registry-coherence gate); reference
