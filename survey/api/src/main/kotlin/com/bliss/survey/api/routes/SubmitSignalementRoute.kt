@@ -78,14 +78,13 @@ fun Route.submitSignalementRoute(execute: suspend (SubmitSignalementCommand) -> 
                 reporterId = reporterId,
             )
 
-        when (val result = execute(cmd)) {
-            is SubmitSignalementResult.Accepted ->
-                call.respond(HttpStatusCode.Created, SignalementResponse(reportId = result.reportId.value.toString()))
-
-            // Idempotent no-op: the reporter already filed this exact report; 200 (no fresh id) signals "already recorded".
-            SubmitSignalementResult.DuplicateIgnored ->
-                call.respond(HttpStatusCode.OK)
-        }
+        // Idempotent create (ADR-0103): a duplicate is treated as success and returns 201 with the report id, same as a fresh accept.
+        val reportId =
+            when (val result = execute(cmd)) {
+                is SubmitSignalementResult.Accepted -> result.reportId
+                is SubmitSignalementResult.DuplicateIgnored -> result.reportId
+            }
+        call.respond(HttpStatusCode.Created, SignalementResponse(reportId = reportId.value.toString()))
     }
 }
 

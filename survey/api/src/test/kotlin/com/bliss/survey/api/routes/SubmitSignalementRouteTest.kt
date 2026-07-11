@@ -103,13 +103,13 @@ class SubmitSignalementRouteTest {
         }
 
     @Test
-    fun `duplicate report - 200 ok no body`() =
+    fun `duplicate report - 201 created with reportId (idempotent)`() =
         testApplication {
             application {
                 installCapabilitySession()
                 install(ContentNegotiation) { json(WIRE_JSON) }
                 routing {
-                    submitSignalementRoute { _: SubmitSignalementCommand -> SubmitSignalementResult.DuplicateIgnored }
+                    submitSignalementRoute { _: SubmitSignalementCommand -> SubmitSignalementResult.DuplicateIgnored(ReportId(reportUuid)) }
                 }
             }
             val resp =
@@ -118,7 +118,8 @@ class SubmitSignalementRouteTest {
                     contentType(ContentType.Application.Json)
                     setBody(jsonBody())
                 }
-            assertThat(resp.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(resp.status).isEqualTo(HttpStatusCode.Created)
+            assertThat(resp.bodyAsText()).contains("\"reportId\":\"$reportUuid\"")
         }
 
     @Test
