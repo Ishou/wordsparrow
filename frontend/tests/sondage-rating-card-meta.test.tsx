@@ -28,6 +28,7 @@ function stubClient(meta: LemmaMeta): SurveyClient {
     patchPreferences: vi.fn(),
     getCurrentCampaign: vi.fn(),
     getLemmaMeta: vi.fn().mockResolvedValue(meta),
+    submitSignalement: vi.fn().mockResolvedValue({ reportId: 'report-id' }),
   };
 }
 

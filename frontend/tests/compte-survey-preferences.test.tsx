@@ -15,6 +15,7 @@ function stubSurveyClient(patch: (b: { deleteProposedOnErasure: boolean }) => Pr
     patchPreferences: patch as SurveyClient['patchPreferences'],
     getCurrentCampaign: vi.fn(),
     getLemmaMeta: vi.fn(),
+    submitSignalement: vi.fn().mockResolvedValue({ reportId: 'report-id' }),
   };
 }
 
