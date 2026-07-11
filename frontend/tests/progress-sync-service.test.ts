@@ -183,6 +183,31 @@ describe('ProgressSyncService — flushPending (unload)', () => {
     vi.useRealTimers();
   });
 
+  it('updates baseUpdatedAt on a successful keepalive push, so the next push is not built on a stale base', async () => {
+    vi.useFakeTimers();
+    const client = fakeClient({ push: () => ({ kind: 'ok', updatedAt: T2 }) });
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore({
+        [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }),
+      }),
+      getSessionId: () => SESSION,
+      debounceMs: 1500,
+    });
+    service.setEnabled(true);
+    service.schedulePush(PUZZLE);
+    service.flushPending();
+    // Flush the fire-and-forget push's microtask chain (no real timers involved).
+    await vi.advanceTimersByTimeAsync(0);
+
+    service.schedulePush(PUZZLE);
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(client.pushes).toHaveLength(2);
+    expect(client.pushes[1].baseUpdatedAt).toBe(T2);
+    vi.useRealTimers();
+  });
+
   it('is a no-op when nothing is pending', () => {
     const client = fakeClient({});
     const service = createProgressSyncService({

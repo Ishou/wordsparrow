@@ -228,6 +228,9 @@ export function createProgressSyncService(
           .push(puzzleId, local as unknown as Record<string, unknown>, baseUpdatedAt.get(puzzleId), {
             keepalive: true,
           })
+          .then((result) => {
+            if (result.kind === 'ok') baseUpdatedAt.set(puzzleId, result.updatedAt);
+          })
           .catch(() => {});
       }
       timers.clear();
