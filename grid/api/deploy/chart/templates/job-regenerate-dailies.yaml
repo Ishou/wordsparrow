@@ -19,6 +19,33 @@ spec:
       serviceAccountName: {{ include "wordsparrow-api.serviceAccountName" . }}
       restartPolicy: Never
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.corpus.objectStore.enabled }}
+      # ADR-0097: fetch the corpus from private object storage into a volume.
+      initContainers:
+        - name: fetch-corpus
+          image: {{ include "wordsparrow-api.fetchCorpusImage" . | quote }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            # MC_HOST_store keeps credentials out of this process's argv (unlike `mc alias set <user> <pass>`).
+            - >
+              export MC_HOST_store="https://${S3_ACCESS_KEY}:${S3_SECRET_KEY}@${S3_ENDPOINT#https://}" &&
+              mc cp --recursive "store/{{ .Values.corpus.objectStore.bucket }}/words" /corpus/
+          env:
+            - {name: S3_ENDPOINT, value: {{ .Values.corpus.objectStore.endpoint | quote }}}
+            - name: S3_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: {{ .Values.corpus.objectStore.secretName }}, key: access_key}}
+            - name: S3_SECRET_KEY
+              valueFrom: {secretKeyRef: {name: {{ .Values.corpus.objectStore.secretName }}, key: secret_key}}
+            # /corpus is the only writable mount under readOnlyRootFilesystem — see volumeMounts below.
+            - {name: MC_CONFIG_DIR, value: /corpus/.mc}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+            # mc's image defaults to root; the runAsNonRoot pod policy needs an explicit non-root UID (fsGroup 1000 keeps /corpus writable).
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - {name: corpus, mountPath: /corpus}
+      {{- end }}
       containers:
         - name: worker
           image: {{ include "wordsparrow-api.workerImage" . | quote }}
@@ -39,6 +66,9 @@ spec:
             {{- with .Values.ensureDailies.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+            {{- if .Values.corpus.objectStore.enabled }}
+            - {name: CORPUS_DIR, value: /corpus}
+            {{- end }}
             {{- if .Values.edgePurge.enabled }}
             - name: CLOUDFLARE_ZONE_ID
               valueFrom:
@@ -58,6 +88,12 @@ spec:
           {{- end }}
           volumeMounts:
             - {name: tmp, mountPath: /tmp}
+            {{- if .Values.corpus.objectStore.enabled }}
+            - {name: corpus, mountPath: /corpus, readOnly: true}
+            {{- end }}
       volumes:
         - {name: tmp, emptyDir: {}}
+        {{- if .Values.corpus.objectStore.enabled }}
+        - {name: corpus, emptyDir: {}}
+        {{- end }}
 {{- end }}
