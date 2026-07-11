@@ -323,6 +323,9 @@ ADR-0106  terraform/k8s/providers/hetzner/server.tf              `fip_holder = c
 ADR-0106  terraform/k8s/providers/hetzner/cloud-init/worker.yaml.tftpl  `bliss.io/fip-holder=true` node-label set only when `fip_holder` is true
 ADR-0106  terraform/k8s/providers/hetzner/floating-ip.tf          FIP assignment is worker[0] specifically, not "the worker node" — worker_count can be >1 (ADR-0101 R1)
 ADR-0106  infra/platform/values-prod.yaml                        ingress-nginx.controller.nodeSelector must be `bliss.io/fip-holder: "true"`, not `bliss.io/role: worker` — pins the controller pod to the node that actually has the FIP aliased
+ADR-0107  scripts/clue_generation/realize/**       PyRealB (MIT) agreement realizer + frame-based structure builder (grammalecte POS, no ML parser); build-time only, prod reads committed CSV
+ADR-0107  scripts/clue_generation/build_surface_clues.py  Surface inflation routes through the PyRealB frame realizer; head-only inflater is the FALLBACK for unmatched/lexicon-gap clues
+ADR-0107  scripts/eval/inflect_clue.py             Head-only inflater is now the FALLBACK behind ADR-0107's realizer — stop adding agreement frame-guards here; add a PyRealB frame instead
 ```
 
 ## Adding entries
