@@ -136,11 +136,13 @@ paths:
         the Grille route navigates here when the player picks "Reprendre"
         / "Commencer".
 
-        The server derives a deterministic UUID v7 from the date and
-        performs a pure read against the persisted puzzle row populated
-        ahead of time by the daily-puzzle worker (ADR-0042). Subsequent
-        hint / validate calls keyed by the returned `id` resolve to the
-        same canonical grid. When no row exists for the requested date —
+        The server resolves the date to its most-recently-created puzzle
+        row (ADR-0081: regeneration appends a new row, latest wins) and
+        returns that row's `id` — a fresh UUID v7 minted per generation,
+        not derived from the date. Rows are populated ahead of time by the
+        daily-puzzle worker (ADR-0042). Subsequent hint / validate calls
+        keyed by the returned `id` resolve to the same canonical grid.
+        When no row exists for the requested date —
         worker has not yet run, or persistently failed — the endpoint
         returns 404; clients SHOULD retry shortly or surface the
         "daily not yet available" message.
@@ -1020,8 +1022,9 @@ components:
         Thin daily-puzzle summary returned by `listDailyPuzzles`. Carries
         only the fields the archive UI needs to render a row; the full
         `Puzzle` document is fetched lazily via `getDailyPuzzle` when the
-        player opens a past grid. `id` is the deterministic UUID v7
-        derived from `date`, matching what `getDailyPuzzle?date=` returns.
+        player opens a past grid. `id` is the date's current-row UUID v7
+        (ADR-0081: newest row wins), matching what `getDailyPuzzle?date=`
+        returns.
       required: [id, date, gridNumber, totalLetterCells]
       properties:
         id:
