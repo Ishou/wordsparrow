@@ -295,6 +295,11 @@ ADR-0099  grid/api/openapi.yaml  New POST /v1/puzzles/{puzzleId}/verify: per-cel
 ADR-0099  grid/api/src/main/kotlin/com/bliss/grid/api/routes/PuzzleRoute.kt  /verify route, auth-gated like /hints; 429 within the 30-min cooldown, no positional data leaked on cooldown response
 ADR-0099  grid/application/src/main/kotlin/com/bliss/grid/application/puzzle/**  VerifyCooldownCalculator: 30-min (1800s) per-(user_id, puzzle_id) server-authoritative cooldown, the named rate-limit mitigation against answer-key brute force; VerifyGridUseCase resolves canonical letters server-side, never returns them — only per-cell correctness
 # ADR-0099: relates to / amends ADR-0076 AND ADR-0084 §2 — /verify is a second, narrower carve-out from the answers-off-the-wire posture alongside the §7 hint exception, and it reopens for solo the client-facing per-cell surface ADR-0084 §2 forbade (safe now because bounded by a 30-min per-puzzle cooldown, ~13h per uniform-letter alphabet sweep, a rate limit §2's uncapped internal validate-word never had). ADR-0076 §9's binary /validate, §§7-8's hint mechanic, and ADR-0084's internal validate-word are all unchanged; strictly less generous than the whole-word hint it replaces on solo.
+ADR-0100  scripts/clue_generation/**               Unified corpus row schema (adds pos); normalize-then-merge assembler replaces the six in-place mutators; reconcile_lemmas is POS-aware derive/validate
+ADR-0100  scripts/eval/**                          POS-aware runtime lemma guard: (surface,pos)->lemma must be deterministic, zero violations
+ADR-0100  grid/infrastructure/**/CsvWordRepository.kt  Loader accepts the new optional pos column (same tolerance pattern as lemma); runtime doesn't use pos yet
+ADR-0100  **/words/words-fr.csv                    Runtime corpus gains a pos column; lemma is never defaulted to the surface again
+# ADR-0100: unified (surface,pos)->lemma authoring contract fixes the lia/lie/es/vue lemma-collision bugs that let WordAcceptor's same-lemma dedup miss inflections; extends ADR-0097 (private corpus) and ADR-0058 (per-source licensing unchanged)
 ```
 
 ## Adding entries

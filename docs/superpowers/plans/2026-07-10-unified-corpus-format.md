@@ -1,0 +1,332 @@
+# Unified Corpus Format Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Give every clue source and the runtime `words-fr.csv` one unified row shape carrying authored `pos` + `lemma`, so the grid generator's same-lemma dedup gets correct lemmas and the `lia`/`lie`-style live-grid dup can never recur.
+
+**Architecture:** `pos` is the disambiguator — lemma is derived/validated per `(surface, pos)` against grammalecte, deterministically. Six in-place corpus mutators collapse into per-source *normalizers* (emit unified rows) + one *merge* (concat, dedup by `(word, clue)` with source priority). `reconcile_lemmas.py` becomes the POS-aware derive-and-validate core; a POS-aware runtime test guards the result.
+
+**Tech Stack:** Python 3 (pipeline, `scripts/clue_generation` + `scripts/eval`, grammalecte `MorphologyIndex`), Kotlin/Ktor (`grid/infrastructure` `CsvWordRepository`), pytest, Konsist.
+
+## Global Constraints
+
+- Grammalecte lexique lives at `~/Downloads/grammalecte/lexique-grammalecte-fr-v7.7.txt` (env `GRAMMALECTE_LEX` overrides); tests skip gracefully when absent.
+- Runtime corpus path: `grid/infrastructure/src/main/resources/words/words-fr.csv` (private `wordsparrow-clue-data` repo; public repo has only the mock at `grid/api/src/test/resources/mock-corpus/words/words-fr.csv`).
+- Unified schema (exact column order): `word, language, length, frequency, difficulty, clue, source, source_license, pos, lemma`.
+- POS closed set (normalizer-enforced): `nom, adj, adv, verbe` (variable) + `abr, sigle, interj, note, prep, num, propername` (invariable → lemma = self). Extend only with a code + test change.
+- Lemma rule per `(surface, pos)`: `verbe`→verb infinitive; `nom|adj|adv`→citation form (self when grammalecte can't confirm); invariable classes→self.
+- No `--no-verify`, no force-push. Conventional commits with `-s` (DCO). Scope `clue-gen` for scripts, `grid-infra` for the loader, `docs` for ADR.
+- Do NOT invoke the MLX lane or touch the RAFT/Modal training lane (ADR-0087).
+
+---
+
+## File Structure
+
+**Public `bliss` repo:**
+- `docs/adr/0100-unified-corpus-source-format.md` — new ADR (Task 1).
+- `docs/adr/INDEX.md` — register ADR-0100 + path globs (Task 1).
+- `scripts/clue_generation/reconcile_lemmas.py` — add `derive_lemma` + pos-aware `reconcile` (Task 2). Already exists (POS-less version + `_is_inflection`).
+- `scripts/clue_generation/test_reconcile_lemmas.py` — extend (Task 2).
+- `scripts/eval/test_runtime_csv_lemmas.py` — make guard POS-aware (Task 4).
+- `grid/infrastructure/src/main/kotlin/com/bliss/grid/infrastructure/persistence/CsvWordRepository.kt` — accept `pos` column (Task 3).
+- `grid/infrastructure/src/test/kotlin/.../CsvWordRepositoryTest.kt` — pos-column tests (Task 3).
+- `grid/api/src/test/resources/mock-corpus/words/words-fr.csv` — add `pos` column to the fixture (Task 3).
+- `scripts/clue_generation/corpus_normalizers.py` — per-source → unified rows (Task 5).
+- `scripts/clue_generation/test_corpus_normalizers.py` — new (Task 5).
+- `scripts/clue_generation/assemble_corpus.py` — the merge (Task 6).
+- `scripts/clue_generation/test_assemble_corpus.py` — new (Task 6).
+- Retire (Task 7): `add_short_word_clues.py`, `add_greek_and_extras.py`, `merge_editorial_into_wordlist.py`, `merge_clues_into_wordlist.py`, `apply_clue_overrides.py`, `import_grammalecte_long_words.py` — logic folds into normalizers.
+
+**Private `wordsparrow-clue-data` repo (Task 8, data):**
+- All source CSVs gain `pos` (+ lemma where blank/surface).
+- `grid/infrastructure/src/main/resources/words/words-fr.csv` regenerated with `pos`.
+
+---
+
+## Task 1: ADR-0100 + INDEX registration
+
+**Files:**
+- Create: `docs/adr/0100-unified-corpus-source-format.md`
+- Modify: `docs/adr/INDEX.md`
+
+**Interfaces:**
+- Produces: the canonical decision text every later task cites.
+
+- [ ] **Step 1: Write the ADR** using the template in `CLAUDE.md` (Status: Accepted). Body = the "Decision (ADR-class)" section of `docs/superpowers/specs/2026-07-10-unified-corpus-format-design.md`: unified row schema, `(surface,pos)` lemma rule, normalize-then-merge assembler, POS carried into runtime, POS-aware reconcile/guard. Consequences from the spec.
+
+- [ ] **Step 2: Register in INDEX.md** — add the `0099` row and a path-glob mapping for `scripts/clue_generation/**`, `scripts/eval/**`, `grid/infrastructure/**/CsvWordRepository.kt`, and `**/words/words-fr.csv` → ADR-0100.
+
+- [ ] **Step 3: Verify registry coherence**
+
+Run: `python3 scripts/adr-context.sh scripts/clue_generation/assemble_corpus.py`
+Expected: ADR-0100 body prints.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add docs/adr/0100-unified-corpus-source-format.md docs/adr/INDEX.md
+git commit -s -m "docs(adr): ADR-0100 unified corpus source format"
+```
+
+---
+
+## Task 2: POS-aware `reconcile_lemmas.py`
+
+**Files:**
+- Modify: `scripts/clue_generation/reconcile_lemmas.py`
+- Test: `scripts/clue_generation/test_reconcile_lemmas.py`
+
+**Interfaces:**
+- Consumes: `MorphologyIndex` (`scripts/eval/morphology_index.py`), existing `_norm`, `_is_inflection`, `_classify`.
+- Produces:
+  - `INVARIABLE_POS: frozenset[str]` = `{"abr","sigle","interj","note","prep","num","propername"}`.
+  - `derive_lemma(surface: str, pos: str, index) -> tuple[str, str | None]` → `(status, lemma)` where status ∈ `{"ok","ambiguous","no-verb-reading"}`; `lemma` is `None` only for `ambiguous`.
+  - `reconcile(surface, lemma, index, overrides=None, pos=None)` — unchanged signature plus optional `pos`; when `pos` is given, validation is POS-scoped.
+
+- [ ] **Step 1: Write failing tests** (append to `test_reconcile_lemmas.py`)
+
+```python
+def test_derive_lemma_verb_unique(index):
+    assert reconcile_lemmas.derive_lemma("lia", "verbe", index) == ("ok", "lier")
+
+def test_derive_lemma_verb_ambiguous(index):
+    assert reconcile_lemmas.derive_lemma("tue", "verbe", index) == ("ambiguous", None)
+
+def test_derive_lemma_invariable_is_self(index):
+    assert reconcile_lemmas.derive_lemma("es", "abr", index) == ("ok", "es")
+    assert reconcile_lemmas.derive_lemma("mcm", "note", index) == ("ok", "mcm")
+
+def test_derive_lemma_noun_unconfirmed_is_self(index):
+    # grammalecte lacks the noun `vue`; pos=nom must fall back to self, not `vu`.
+    assert reconcile_lemmas.derive_lemma("vue", "nom", index) == ("ok", "vue")
+
+def test_derive_lemma_noun_confirmed(index):
+    assert reconcile_lemmas.derive_lemma("lie", "nom", index) == ("ok", "lie")
+
+def test_reconcile_pos_scoped_note_vs_verb(index):
+    # es/abr keeps es; es/verbe must be être.
+    assert reconcile("es", "es", index, pos="abr") == ("ok", "es")
+    assert reconcile("es", "es", index, pos="verbe") == ("fixed", "être")
+```
+
+- [ ] **Step 2: Run to verify they fail**
+
+Run: `python3 -m pytest scripts/clue_generation/test_reconcile_lemmas.py -q`
+Expected: FAIL (`derive_lemma` undefined; `reconcile` has no `pos` kwarg).
+
+- [ ] **Step 3: Implement** in `reconcile_lemmas.py`
+
+```python
+INVARIABLE_POS = frozenset({"abr", "sigle", "interj", "note", "prep", "num", "propername"})
+_VARIABLE_NOMINAL = frozenset({"nom", "adj", "adv"})
+
+
+def derive_lemma(surface: str, pos: str, index) -> tuple[str, str | None]:
+    """Lemma for an authored (surface, pos). Invariables and unconfirmable
+    nouns resolve to the surface itself; a verb resolves to its infinitive,
+    or ("ambiguous", None) when the surface is a form of several verbs."""
+    pos = (pos or "").strip().lower()
+    if pos in INVARIABLE_POS:
+        return ("ok", surface)
+    forms = index.lookup_form(surface)
+    if pos == "verbe":
+        heads = {l for l, t in forms if _classify(t) == "verbe"}
+        if len(heads) == 1:
+            return ("ok", next(iter(heads)))
+        if len(heads) > 1:
+            return ("ambiguous", None)
+        return ("no-verb-reading", surface)
+    if pos in _VARIABLE_NOMINAL:
+        for l, t in forms:
+            if _classify(t) in ("nom", "adj") and _norm(l) == _norm(surface):
+                return ("ok", l)          # surface is its own citation form
+        heads = {l for l, t in forms if _classify(t) in ("nom", "adj")}
+        return ("ok", next(iter(heads))) if len(heads) == 1 else ("ok", surface)
+    return ("ok", surface)
+
+
+# in reconcile(...), add `pos: str | None = None` param; at the top, when pos:
+#     status, want = derive_lemma(surface, pos, index)
+#     if want is None:                      # ambiguous verb
+#         ov = (overrides or {}).get(surface.lower())
+#         if ov is not None:
+#             return ("override", ov)
+#         return ("ambiguous", lemma)
+#     return ("ok", lemma) if _norm(lemma) == _norm(want) else ("fixed", want)
+# (the existing pos-less body remains the fallback when pos is None)
+```
+
+- [ ] **Step 4: Run to verify pass**
+
+Run: `python3 -m pytest scripts/clue_generation/test_reconcile_lemmas.py -q`
+Expected: PASS (all, incl. the prior 13).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add scripts/clue_generation/reconcile_lemmas.py scripts/clue_generation/test_reconcile_lemmas.py
+git commit -s -m "feat(clue-gen): POS-aware lemma derivation + validation in reconcile_lemmas"
+```
+
+---
+
+## Task 3: `CsvWordRepository` accepts the `pos` column
+
+**Files:**
+- Modify: `grid/infrastructure/src/main/kotlin/com/bliss/grid/infrastructure/persistence/CsvWordRepository.kt`
+- Test: `grid/infrastructure/src/test/kotlin/.../CsvWordRepositoryTest.kt`
+- Modify fixture: `grid/api/src/test/resources/mock-corpus/words/words-fr.csv` (append a `pos` column)
+
+**Interfaces:**
+- Consumes: the unified header. Loader must accept the header with `pos` present after `source_license` and before `lemma`, AND remain backward-compatible with headers lacking `pos` (same tolerant pattern as the existing optional `lemma`).
+- Produces: `Word` unchanged for now (pos parsed but not surfaced on the domain type — YAGNI; see spec "Out of scope"). Read and discard the `pos` cell so a present column does not shift `lemma` parsing.
+
+- [ ] **Step 1: Write failing test** — a header with `...,source_license,pos,lemma` loads and `lemma` is read from the correct (last) column; a legacy header without `pos` still loads. Mirror the existing `lemma`-column test cases in `CsvWordRepositoryTest.kt`; add a `pos`-present fixture string and assert `lemma` resolves (e.g. `lia`→`lier`).
+
+- [ ] **Step 2: Run to verify fail**
+
+Run: `./gradlew :grid:infrastructure:test --tests '*CsvWordRepository*'`
+Expected: FAIL (header validator rejects the `pos` column / `lemma` read from wrong index).
+
+- [ ] **Step 3: Implement** — extend `validateHeader` to accept a `+pos+lemma` (and `+pos`) header shape alongside the existing legacy / `+lemma` / `+lemma+theme` shapes; in `toWordWithFreq`, key columns by name (via the `DictReader`-equivalent index map) rather than fixed position so a present `pos` cell is read by name and ignored. Keep `lemma` defaulting to folded surface when absent (unchanged).
+
+- [ ] **Step 4: Run to verify pass**
+
+Run: `./gradlew :grid:infrastructure:test --tests '*CsvWordRepository*'`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add grid/infrastructure/.../CsvWordRepository.kt grid/infrastructure/.../CsvWordRepositoryTest.kt grid/api/src/test/resources/mock-corpus/words/words-fr.csv
+git commit -s -m "feat(grid-infra): CsvWordRepository accepts the unified pos column"
+```
+
+---
+
+## Task 4: POS-aware runtime guard
+
+**Files:**
+- Modify: `scripts/eval/test_runtime_csv_lemmas.py`
+
+**Interfaces:**
+- Consumes: `reconcile` with `pos`. Guard reads `pos` from each row and validates `(surface, pos, lemma)`; fails only on status `"fixed"` (a provable, non-ambiguous wrong lemma). `"ambiguous"` remains informational (a `verbe` form of several verbs needing an authored override).
+
+- [ ] **Step 1: Update the fixture test** in `_violations` to pass `pos=r.get("pos")` into `reconcile`, and update `test_guard_fires_...` fixtures to include `pos`:
+
+```python
+rows = [
+    {"word": "lia", "pos": "verbe", "lemma": "lia", "clue": "Attacha jadis"},   # violation
+    {"word": "es",  "pos": "abr",   "lemma": "es",  "clue": "Mi bémol"},         # OK (note)
+    {"word": "es",  "pos": "verbe", "lemma": "être","clue": "Existes"},          # OK
+    {"word": "lia", "pos": "verbe", "lemma": "lier","clue": "Attacha jadis"},    # already correct
+]
+assert [h[0] for h in _violations(rows, index)] == ["lia"]
+```
+
+- [ ] **Step 2: Run to verify fail** (fixture asserts new pos behavior)
+
+Run: `python3 -m pytest scripts/eval/test_runtime_csv_lemmas.py -q`
+Expected: FAIL until `_violations` threads `pos`.
+
+- [ ] **Step 3: Implement** — in `_violations`, call `reconcile(surface, lemma, index, pos=(r.get("pos") or "").strip() or None)`; keep the `status == "fixed"` failure rule.
+
+- [ ] **Step 4: Run to verify pass**
+
+Run: `python3 -m pytest scripts/eval/test_runtime_csv_lemmas.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add scripts/eval/test_runtime_csv_lemmas.py
+git commit -s -m "feat(clue-gen): POS-aware runtime lemma guard"
+```
+
+---
+
+## Task 5: Forward-inflation rewrite of the inflator (the core fix)
+
+**Files:**
+- Modify: `scripts/clue_generation/build_surface_clues.py` (the per-surface winner loop, ~lines 199-284)
+- Test: `scripts/clue_generation/test_build_surface_clues_forward.py` (new)
+
+**Interfaces:**
+- Consumes: the `(lemma, pos)`-keyed `corpus` (unchanged loading, `:189-197`), `MorphologyIndex`, `inflect_clue`, the existing `classify_surface_inflection` / status routing, `base_adjective`/`adverbialise` (adverb fallback).
+- Produces: for each surface, **one output row per candidate `(lemma, pos)` that has a clue** — NOT a single winner. Each row keeps `{surface, lemma, pos, clue, source_clue, inflection_status, filter_score, validation_flag}` with `lemma`/`pos` = that candidate's. The adverb-fallback and `no-owner` paths are unchanged. Output may contain several rows for one surface with distinct `lemma`.
+
+- [ ] **Step 1: Write failing tests** — build a tiny in-memory `corpus` with `(lier,verbe)` and `(lie,nom)` both clued, plus `(are,nom)`. Assert `build_surface_rows("lie", corpus, index)` returns TWO rows: one `lemma=lier,pos=verbe` (verb clue, inflected) and one `lemma=lie,pos=nom` (noun clue, verbatim). Assert a pure-verb surface `lia` returns exactly one row `lemma=lier`. Assert the winner-collapse is gone (both senses present). Extract the per-surface logic into a testable `build_surface_rows(surface, corpus, index, freq) -> list[dict]` so the test doesn't need the full CSV stream.
+
+- [ ] **Step 2: Run to verify fail.** `python3 -m pytest scripts/clue_generation/test_build_surface_clues_forward.py -q` — Expected: FAIL (`build_surface_rows` undefined / current code returns 1 winner row).
+
+- [ ] **Step 3: Implement** — refactor `main()`'s per-surface block into `build_surface_rows(surface, corpus, index, freq)`. Replace `candidates.sort(...); winner = candidates[0]` (`:252-255`) with `for cand in candidates:` emitting a row per candidate via the SAME inflection body (`surface == lemma` → verbatim; else `classify_surface_inflection`; the char-cap `fits_single_cell` gate; status routing to shipped/dropped). Keep `POS_PRECEDENCE` only as the membership filter for which pos classes are eligible (`pos_class not in POS_PRECEDENCE` → skip), NOT for winner selection. `main()` calls `build_surface_rows` per streamed surface and extends `out_rows`.
+
+- [ ] **Step 4: Run to verify pass.** Same pytest — Expected: PASS. Also run `python3 -m pytest scripts/eval -q` to confirm the pleonasm/agreement runtime guards and existing inflation tests still pass.
+
+- [ ] **Step 5: Commit.** `git add scripts/clue_generation/build_surface_clues.py scripts/clue_generation/test_build_surface_clues_forward.py && git commit -s -m "feat(clue-gen): forward-inflate per (lemma,pos) instead of one owner per surface"`
+
+---
+
+## Task 6: Per-tier normalizers
+
+**Files:**
+- Create: `scripts/clue_generation/corpus_normalizers.py`
+- Test: `scripts/clue_generation/test_corpus_normalizers.py`
+
+**Interfaces:**
+- Consumes: `derive_lemma` (Task 2), `MorphologyIndex`, the forward-inflated `surface_clues.csv` (Task 5 output).
+- Produces: `UNIFIED_FIELDS` (the 10 columns) and one normalizer per tier, each returning `list[dict]` keyed by `UNIFIED_FIELDS`:
+  - `normalize_unified(rows, index)` — hand-authored sources already in unified shape (`short-fr`, `themed/*`, `fr.csv`): pass authored `pos`/`lemma` through; where `pos` present & `lemma` blank, derive; on `("ambiguous", None)` raise `ValueError` (never surface-default).
+  - `normalize_gold(path, index)` — `lemma,clue,pos,source` (col1 is the citation lemma == word) → unified, deriving lemma from `(word,pos)`.
+  - `normalize_editorial(raw_dir, lemmas_csv, index)` — the `Mot;Déf1;Déf2` raw files + `_lemmas.csv` `(Mot,Sens)→Lemme` map → unified (lemma from the map, pos derived from `(surface,lemma)`).
+  - `normalize_grammalecte(path, index)` — the grammalecte-import output (`import_grammalecte_long_words`): `(word,…,lemma)` → unified, pos = `_classify` of the reading matching the row's lemma.
+  - `normalize_surface_clues(path)` — the forward-inflated `surface_clues.csv` (`surface,lemma,pos,clue,…`) → unified 1:1.
+
+- [ ] **Step 1: Write failing tests** — one golden fixture per normalizer (2-3 rows): themed `dr`→`pos=abr,lemma=dr`; gold `es,"Mi bémol",abr`→`lemma=es`; editorial `LIA;Attacha;…`+`_lemmas` `(LIA,…)→lier`→`lemma=lier`; grammalecte `abats,…,abat`→`pos=nom`; a `surface_clues` row `lie,lier,verbe,…`→passes through with `lemma=lier`. Cover the loud-fail: an authored `verbe` row with no lemma and an ambiguous surface raises `ValueError`.
+
+- [ ] **Step 2-4:** run red, implement each normalizer mapping its shape to `UNIFIED_FIELDS`, run green. `python3 -m pytest scripts/clue_generation/test_corpus_normalizers.py -q`.
+
+- [ ] **Step 5: Commit.** scope `feat(clue-gen)`.
+
+---
+
+## Task 7: Merge assembler + retire the six mutators
+
+**Files:**
+- Create: `scripts/clue_generation/assemble_corpus.py`
+- Test: `scripts/clue_generation/test_assemble_corpus.py`
+- Delete (after confirming each has a Task-6 normalizer): `add_short_word_clues.py`, `add_greek_and_extras.py`, `merge_editorial_into_wordlist.py`, `merge_clues_into_wordlist.py`, `apply_clue_overrides.py`, `import_grammalecte_long_words.py` and their tests.
+
+**Interfaces:**
+- Consumes: `corpus_normalizers` (Task 6).
+- Produces: `SOURCE_PRIORITY` (overrides > curated/themed/gold > editorial > grammalecte > inflated-clue); `merge(normalized: list[list[dict]]) -> list[dict]` (concat → dedup by `(word.lower(), clue)` keeping highest-priority source → sort `(language, word, pos, clue)` for stable diffs, idempotent); `main()` writing `words-fr.csv` with `pos` via `csv.DictWriter(fieldnames=UNIFIED_FIELDS)`.
+
+- [ ] **Step 1: Write failing tests** — identical `(word,clue)` keeps the higher-priority source; a surface with two lemma-distinct rows (`lie/lier` + `lie/lie`) — different clues — BOTH survive (the forward-inflation payoff); re-run is byte-identical (idempotent).
+
+- [ ] **Step 2-4:** run red, implement `merge`+`main`, run green.
+
+- [ ] **Step 5: Retire mutators** — grep `grep -rIn "add_short_word_clues\|add_greek_and_extras\|merge_editorial_into_wordlist\|merge_clues_into_wordlist\|apply_clue_overrides\|import_grammalecte_long_words" scripts docs`; repoint any runbook/skill reference to `assemble_corpus.py`; delete the modules + tests; confirm `python3 -m pytest scripts/clue_generation scripts/eval -q` passes (pre-existing sklearn-less judge collection errors excepted).
+
+- [ ] **Step 6: Commit.** scope `refactor(clue-gen)`.
+
+---
+
+## Task 8: Regenerate the corpus (private repo) + guard green
+
+**Files (private `wordsparrow-clue-data`):** author residual `pos`+`lemma` in any source still missing them; regenerate `grid/infrastructure/src/main/resources/words/words-fr.csv`.
+
+- [ ] **Step 1: Author residue** — the `pos`+`lemma` on `themed/*`, `short-fr.csv`, `fr.csv` are already staged this session. For sources still lacking `pos`, seed via `derive_lemma`/`_classify`; **print every ambiguous/`no-verb-reading` row for human authoring** (e.g. `tue/verbe→tuer`, `né→naître`) — do not guess.
+
+- [ ] **Step 2: Regenerate.** `python3 scripts/clue_generation/assemble_corpus.py --out <private>/grid/.../words-fr.csv`. Confirm `lie` now yields a `lemma=lier` row for its verb clue and a `lemma=lie` row for its noun clue.
+
+- [ ] **Step 3: Guard green.** Point `WORDLIST` at the private corpus: `GRAMMALECTE_LEX=~/Downloads/grammalecte/... python3 -m pytest scripts/eval/test_runtime_csv_lemmas.py -q` — zero `fixed` violations. Spot-check `lia→lier`, `lie`(verb)→`lier`, `lie`(noun)→`lie`, `es`(note)→`es`.
+
+- [ ] **Step 4: Commit + push** private corpus; open the public `bliss` PR(s) for Tasks 1-7.
+
+## Self-Review
+
+- **Spec coverage:** unified schema (Task 3 runtime + Task 5 sources), `(surface,pos)` lemma rule (Task 2), assembler refactor (Tasks 5-7), reconcile derive+validate (Task 2), runtime `pos` + guard (Tasks 3-4), source migration (Task 8), ADR (Task 1). All spec sections mapped.
+- **Placeholder scan:** core logic (`derive_lemma`, guard threading) shown as real code; data-authoring residue (Task 8) is inherently human but bounded by a printed ambiguous list, not left vague.
+- **Type consistency:** `derive_lemma` returns `(status, lemma|None)` used identically in Tasks 2/4/5; `reconcile(..., pos=None)` signature consistent across Tasks 2/4; `UNIFIED_FIELDS` shared by Tasks 5/6.
+- **Scope:** one coherent workstream; Tasks 1-7 are public-repo PRs (each ≤400 lines), Task 8 is the private-repo data cutover gated by the Task-4 guard.
+

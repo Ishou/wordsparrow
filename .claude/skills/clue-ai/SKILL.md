@@ -50,8 +50,8 @@ scripts/clue_generation/build_surface_clues.py   (lemma→surface inflation:
         │             MorphologyIndex.inflect on the head token,
         │             POS precedence nom>adj>adv>verbe)
         ▼
-scripts/clue_generation/merge_clues_into_wordlist.py   (ADDITIVE merge —
-        │             fill blank placeholders only, never overwrite shipped clues)
+scripts/clue_generation/assemble_corpus.py   (normalize-then-merge, ADR-0099 —
+        │             per-source normalizers + priority merge + clue overrides)
         ▼
 grid/infrastructure/src/main/resources/words/words-fr.csv (committed; prod read path)
         ▲
@@ -95,7 +95,7 @@ correctif-aware retrain, and `raft-round-10` generated rounds 11–12.
 | 3b | `modal run modal_jobs/03b_finetune_command_r.py` (Command-R; `03b_finetune.py` = dormant Mistral fork) | $1.50 | Adapter on volume |
 | 4 | `modal run modal_jobs/04_generate_command_r.py --run-tag raft-round-<N> …`       | ~$1–3  | candidates.jsonl on `mots-fleches-generations` (pipeline_v2-gated) |
 | 5 | LLM-judge pass over candidates (sense-first rubric; see round-11/12 logbook entries) | varies | GOOD/BAD/BORDERLINE labels |
-| 6 | `build_surface_clues.py` → `merge_clues_into_wordlist.py` (**additive**)         | $0     | Updated committed `words-fr.csv` + runtime guards |
+| 6 | `build_surface_clues.py` → `assemble_corpus.py` (normalize-then-merge)           | $0     | Updated committed `words-fr.csv` + runtime guards |
 | 8* | `bliss-worker ingest-clue-candidates --source c4ai-command-r-pilot-vN`          | $0     | Postgres `clue_candidates` (worker path — rounds 11–12 used the direct merge in 6 instead) |
 | 9* | `bliss-worker export-words`                                                     | $0     | Committed `words-fr.csv` via worker path |
 
@@ -331,7 +331,7 @@ The LoRA generates clues at **lemma form** — citation form, i.e. infinitive ve
 | `no-target-pos` | surface POS not in {nom, adj, verbe}. |
 | `no-owner` | no `(lemma, pos)` candidate has a clue in `lemma_clues_shipped.csv`. |
 
-3. **`scripts/clue_generation/merge_clues_into_wordlist.py`** — final assembly. Reads `surface_clues.csv`, keeps `validation_flag == ok` rows above the filter threshold, replaces the placeholder `clue == word` field in the runtime `grid/infrastructure/src/main/resources/words/words-fr.csv`. Rows without a high-confidence surface clue keep the placeholder (the grid generator still works; the renderer treats `clue == word` as "no clue available"). The `source` / `source_license` columns describe the **word** provenance (grammalecte, MPL-2.0) — the clue's CC0 LoRA provenance is not surfaced per-field today.
+3. **`scripts/clue_generation/assemble_corpus.py`** — final assembly (ADR-0099). Normalizes every source tier (`corpus_normalizers.py`), including `surface_clues.csv` (`validation_flag == ok` rows only) via `normalize_surface_clues`, then merges by `SOURCE_PRIORITY` and writes the runtime `grid/infrastructure/src/main/resources/words/words-fr.csv`. Rows without a high-confidence surface clue keep the placeholder (the grid generator still works; the renderer treats `clue == word` as "no clue available"). The `source` / `source_license` columns describe the **word** provenance (grammalecte, MPL-2.0) — the clue's CC0 LoRA provenance is not surfaced per-field today.
 
 ### Hard-won inflation gotchas (fixed in PR #192 + #193 — keep regressions out)
 
