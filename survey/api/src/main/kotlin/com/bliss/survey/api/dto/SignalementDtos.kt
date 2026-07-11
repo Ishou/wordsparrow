@@ -26,7 +26,8 @@ data class SignalementSummary(
     val clueText: String,
     val reason: String,
     val count: Int,
-    val latestNote: String? = null,
+    // Required on the wire but nullable — null when the group's latest report carries no note (ADR-0003 §6).
+    val latestNote: String?,
     val latestAt: String,
 )
 
