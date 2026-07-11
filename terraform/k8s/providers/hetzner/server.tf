@@ -109,13 +109,12 @@ resource "hcloud_server" "worker" {
     private_iface = var.private_iface
     node_role     = "worker"
     node_taints   = []
-    # Floating IP must be configured as an alias on the worker's public
-    # interface and DNAT'd for k3s API traffic — the worker is the FIP's
-    # assigned holder (see `hcloud_floating_ip_assignment.ingress`) so
-    # any FIP traffic arrives here at the kernel level. Without the alias
-    # the kernel drops the packets as not-for-me; without DNAT, port
-    # 6443 traffic has nowhere to go because k3s runs on the CP.
-    floating_ip = hcloud_floating_ip.ingress.ip_address
+    # FIP alias + DNAT go ONLY on worker[0], the FIP's assigned holder
+    # (`hcloud_floating_ip_assignment.ingress`). A non-holder worker must NOT
+    # alias the FIP: pod-egress masquerade would source from it, and the FIP's
+    # replies route to the holder — black-holing the non-holder's pod egress
+    # (corpus-fetch / CSI-metadata time out). Latent until worker_count > 1.
+    floating_ip = count.index == 0 ? hcloud_floating_ip.ingress.ip_address : ""
   })
 
   labels = {
