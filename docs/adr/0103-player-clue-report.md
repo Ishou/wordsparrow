@@ -71,8 +71,11 @@ endpoints are restated.
   reports reuse the `__Secure-ws_session` cookie verified by identity-api with
   the existing 30 s cache.
 - **Tampering / poisoning (report flooding).** A partial unique index on
-  `(reporter_id, word_text, clue_text)` dedups authenticated submissions;
-  anonymous reports are bounded by the existing ingress rate limits
+  `(reporter_id, clue_text, puzzle_id)` dedups authenticated submissions (the
+  original `(reporter_id, word_text, clue_text)` key is superseded — see
+  Amendment below); when `puzzle_id` is null Postgres treats the NULLs as
+  distinct, so an authenticated reporter with a null `puzzle_id` — and every
+  anonymous report — is bounded only by the existing ingress rate limits
   (`limit-rps: 5`, `limit-connections: 30`). Reports are advisory — the
   maintainer triages every one; there is no auto-takedown, so a flood degrades
   queue signal but cannot remove content or alter training data.
