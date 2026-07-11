@@ -5,7 +5,7 @@
 # ../../server.tf via the same templatefile() call.
 
 terraform {
-  required_version = "~> 1.15"
+  required_version = "~> 1.10"
 }
 
 variable "cluster_name" {
