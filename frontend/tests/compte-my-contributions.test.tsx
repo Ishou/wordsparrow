@@ -16,6 +16,8 @@ function stubSurveyClient(getContributions: () => Promise<ReadonlyArray<SurveyCo
     getCurrentCampaign: vi.fn(),
     getLemmaMeta: vi.fn(),
     submitSignalement: vi.fn().mockResolvedValue({ reportId: 'report-id' }),
+    listSignalements: vi.fn().mockResolvedValue([]),
+    decideSignalement: vi.fn().mockResolvedValue(undefined),
   };
 }
 

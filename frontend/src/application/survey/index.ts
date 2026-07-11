@@ -12,8 +12,10 @@ export type {
   RatingSubmission,
   ReportReason,
   ReportSurface,
+  SignalementDecision,
   SignalementInput,
   SignalementResult,
+  SignalementSummary,
   SubmittedAs,
   SurveyAnonStore,
   SurveyCategorie,
@@ -29,7 +31,7 @@ export type {
   SurveyTier,
 } from './types';
 
-export { ReportRateLimitedError } from './errors';
+export { ContribuerForbiddenError, ReportRateLimitedError } from './errors';
 
 export { normalizeForMatch } from './gloss';
 

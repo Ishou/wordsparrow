@@ -5,3 +5,11 @@ export class ReportRateLimitedError extends Error {
     this.name = 'ReportRateLimitedError';
   }
 }
+
+// 403 from the maintainer triage surface — the server gate is the real enforcement (ADR-0079).
+export class ContribuerForbiddenError extends Error {
+  constructor() {
+    super('contribuer forbidden');
+    this.name = 'ContribuerForbiddenError';
+  }
+}

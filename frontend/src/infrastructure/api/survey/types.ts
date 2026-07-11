@@ -522,7 +522,13 @@ export interface components {
             /** Format: uuid */
             reportId: string;
         };
+        /**
+         * @description A pending-report group keyed by word + clue + reason. `reportId` is the
+         *     latest report in the group — the id `POST /decision` acts on.
+         */
         SignalementSummary: {
+            /** Format: uuid */
+            reportId: string;
             wordText: string;
             clueText: string;
             reason: components["schemas"]["ReportReason"];

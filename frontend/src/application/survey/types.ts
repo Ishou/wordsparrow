@@ -77,6 +77,19 @@ export interface SignalementResult {
   readonly reportId: string;
 }
 
+// A pending-report group in the maintainer queue; `reportId` is the latest report the decision acts on (ADR-0103).
+export interface SignalementSummary {
+  readonly reportId: string;
+  readonly wordText: string;
+  readonly clueText: string;
+  readonly reason: ReportReason;
+  readonly count: number;
+  readonly latestNote?: string;
+  readonly latestAt: string;
+}
+
+export type SignalementDecision = 'dismiss' | 'action';
+
 export type SubmittedAs = 'auth' | 'anon';
 
 export type LikertScore = 1 | 2 | 3 | 4 | 5;
@@ -188,6 +201,8 @@ export interface SurveyClient {
   getCurrentCampaign(): Promise<Campaign>;
   getLemmaMeta(mot: string): Promise<LemmaMeta>;
   submitSignalement(input: SignalementInput): Promise<SignalementResult>;
+  listSignalements(): Promise<ReadonlyArray<SignalementSummary>>;
+  decideSignalement(reportId: string, decision: SignalementDecision): Promise<void>;
 }
 
 // Port for anon-rated dedup. Concrete adapter: `localStorageSurveyAnon.ts`.

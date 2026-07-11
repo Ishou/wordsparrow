@@ -8,14 +8,16 @@ import type {
   PairRatingSubmission,
   RatingResult,
   RatingSubmission,
+  SignalementDecision,
   SignalementInput,
+  SignalementSummary,
   SurveyClient,
   SurveyContribution,
   SurveyItem,
   SurveyPreferencesPatch,
   SurveyProgress,
 } from '@/application/survey';
-import { ReportRateLimitedError } from '@/application/survey';
+import { ContribuerForbiddenError, ReportRateLimitedError } from '@/application/survey';
 import type { components, paths } from './types';
 
 type CorrectifRejection = components['schemas']['CorrectifRejection'];
@@ -239,6 +241,29 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
     return { reportId: json.reportId };
   };
 
+  const listSignalements: SurveyClient['listSignalements'] = async () => {
+    const res = await fetchImpl(`${base}/v1/signalements`, { credentials: 'include' });
+    if (res.status === 403) throw new ContribuerForbiddenError();
+    if (!res.ok) throw new Error(`listSignalements failed: ${res.status}`);
+    const json = (await res.json()) as components['schemas']['SignalementListResponse'];
+    return json.items as SignalementSummary[];
+  };
+
+  const decideSignalement: SurveyClient['decideSignalement'] = async (
+    reportId: string,
+    decision: SignalementDecision,
+  ) => {
+    const res = await fetchImpl(`${base}/v1/signalements/${encodeURIComponent(reportId)}/decision`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision } satisfies components['schemas']['SignalementDecisionRequest']),
+    });
+    if (res.status === 403) throw new ContribuerForbiddenError();
+    if (res.status === 204) return;
+    if (!res.ok) throw new Error(`decideSignalement failed: ${res.status}`);
+  };
+
   return {
     getNextItem,
     submitRating,
@@ -251,6 +276,8 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
     getCurrentCampaign,
     getLemmaMeta,
     submitSignalement,
+    listSignalements,
+    decideSignalement,
   };
 }
 
