@@ -44,6 +44,26 @@ class PlayerReportTest {
     }
 
     @Test
+    fun `rejects wordText over 64 chars`() {
+        assertFailure { report(wordText = "x".repeat(65)) }.messageContains("wordText")
+    }
+
+    @Test
+    fun `accepts wordText of exactly 64 chars`() {
+        assertThat(report(wordText = "x".repeat(64)).wordText).isEqualTo("x".repeat(64))
+    }
+
+    @Test
+    fun `rejects clueText over 512 chars`() {
+        assertFailure { report(clueText = "x".repeat(513)) }.messageContains("clueText")
+    }
+
+    @Test
+    fun `accepts clueText of exactly 512 chars`() {
+        assertThat(report(clueText = "x".repeat(512)).clueText).isEqualTo("x".repeat(512))
+    }
+
+    @Test
     fun `rejects note over 500 chars`() {
         assertFailure { report(note = "x".repeat(501)) }.messageContains("note")
     }
