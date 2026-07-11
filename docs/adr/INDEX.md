@@ -302,6 +302,7 @@ ADR-0100  grid/infrastructure/**/CsvWordRepository.kt  Loader accepts the new op
 ADR-0100  **/words/words-fr.csv                    Runtime corpus gains a pos column; lemma is never defaulted to the surface again
 # ADR-0100: unified (surface,pos)->lemma authoring contract fixes the lia/lie/es/vue lemma-collision bugs that let WordAcceptor's same-lemma dedup miss inflections; extends ADR-0097 (private corpus) and ADR-0058 (per-source licensing unchanged)
 ADR-0101  */api/deploy/db-chart/**                 CNPG HA/DR hardening tracker: set resource requests/limits (R2), billing instances:3 (R4); backups recurrence handled by ADR-0010 ScheduledBackups
+ADR-0101  grid/api/deploy/chart/templates/postgres-cluster.yaml  Same R1-R5 remediation applies to grid's Cluster spec — grid uses a standalone chart, not the db-chart subchart layout, so the db-chart glob above doesn't route here
 ADR-0101  terraform/**                             Add worker node capacity (R1) before tainting control-plane (R3); node count is the keystone for real CNPG failure-domain spread
 # ADR-0101: cluster HA/DR audit + remediation tracker — 3-instance clusters that don't span nodes, empty resource specs (BestEffort), schedulable control-plane, single-instance billing; remediation ordered on node capacity (R1). Complements ADR-0009/0010/0011 (deploy/provisioning) and the 2026-07-11 backup fix.
 ```
