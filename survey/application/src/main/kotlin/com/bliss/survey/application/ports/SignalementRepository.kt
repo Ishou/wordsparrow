@@ -5,16 +5,17 @@ import com.bliss.survey.domain.model.ReportId
 import com.bliss.survey.domain.model.ReportStatus
 import com.bliss.survey.domain.model.UserId
 import java.time.Instant
+import java.util.UUID
 
 interface SignalementRepository {
     /** Returns false when the partial unique index rejects a duplicate authenticated report; true when the row was stored. */
     suspend fun insert(report: PlayerReport): Boolean
 
-    /** The id of this reporter's existing report for the same word+clue, or null — drives idempotent dedup (returns the real persisted id). */
+    /** The id of this reporter's existing report for the same clue+puzzle, or null — drives idempotent dedup (returns the real persisted id). */
     suspend fun findExisting(
         reporterId: UserId,
-        wordText: String,
         clueText: String,
+        puzzleId: UUID?,
     ): ReportId?
 
     suspend fun listPending(): List<PlayerReport>

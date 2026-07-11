@@ -26,7 +26,7 @@ sealed interface SubmitSignalementResult {
 }
 
 data class SubmitSignalementCommand(
-    val wordText: String,
+    val wordText: String?,
     val clueText: String,
     val reason: ReportReason,
     val note: String?,
@@ -47,7 +47,7 @@ class SubmitSignalementUseCase(
 
     suspend fun execute(cmd: SubmitSignalementCommand): SubmitSignalementResult {
         if (cmd.reporterId != null) {
-            reports.findExisting(cmd.reporterId, cmd.wordText, cmd.clueText)?.let {
+            reports.findExisting(cmd.reporterId, cmd.clueText, cmd.puzzleId)?.let {
                 return SubmitSignalementResult.DuplicateIgnored(it)
             }
         }
@@ -66,10 +66,10 @@ class SubmitSignalementUseCase(
                 status = ReportStatus.PENDING,
                 createdAt = clock.now(),
             )
-        // Race-loser on the (reporter, word, clue) unique index: return the winner's real id so /decision resolves (fallback to the minted id defensively).
+        // Race-loser on the (reporter, clue, puzzle) unique index: return the winner's real id so /decision resolves (fallback to the minted id defensively).
         val inserted = tx.inTransaction { reports.insert(report) }
         if (!inserted) {
-            val existing = cmd.reporterId?.let { reports.findExisting(it, cmd.wordText, cmd.clueText) }
+            val existing = cmd.reporterId?.let { reports.findExisting(it, cmd.clueText, cmd.puzzleId) }
             return SubmitSignalementResult.DuplicateIgnored(existing ?: reportId)
         }
 
@@ -79,7 +79,7 @@ class SubmitSignalementUseCase(
                 email.send(
                     OutboundEmail(
                         to = maintainerAddress,
-                        subject = "Signalement — ${cmd.reason.name.lowercase()} : ${cmd.wordText}",
+                        subject = "Signalement — ${cmd.reason.name.lowercase()} : ${cmd.wordText ?: cmd.clueText}",
                         textBody = harmBody(cmd),
                     ),
                 )
@@ -92,7 +92,7 @@ class SubmitSignalementUseCase(
         buildString {
             appendLine("Un joueur a signalé un contenu potentiellement offensant.")
             appendLine()
-            appendLine("Mot : ${cmd.wordText}")
+            cmd.wordText?.let { appendLine("Mot : $it") }
             appendLine("Définition : ${cmd.clueText}")
             appendLine("Raison : ${cmd.reason.name.lowercase()}")
             appendLine("Surface : ${cmd.surface.name.lowercase()}")

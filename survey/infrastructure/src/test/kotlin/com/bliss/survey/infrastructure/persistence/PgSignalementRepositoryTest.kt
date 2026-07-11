@@ -65,8 +65,9 @@ class PgSignalementRepositoryTest {
         reason: ReportReason = ReportReason.ERREUR_SENS,
         reporterId: UserId? = UserId(UUID.randomUUID()),
         status: ReportStatus = ReportStatus.PENDING,
-        wordText: String = "chat",
+        wordText: String? = "chat",
         clueText: String = "Petit felin",
+        puzzleId: UUID? = UUID.randomUUID(),
         createdAt: Instant = now,
     ): PlayerReport =
         PlayerReport(
@@ -75,7 +76,7 @@ class PgSignalementRepositoryTest {
             clueText = clueText,
             reason = reason,
             note = "note libre",
-            puzzleId = UUID.randomUUID(),
+            puzzleId = puzzleId,
             surface = ReportSurface.SOLO,
             reporterId = reporterId,
             status = status,
@@ -99,13 +100,30 @@ class PgSignalementRepositoryTest {
         }
 
     @Test
-    fun `findExisting returns the report id for a matching reporter word and clue`() =
+    fun `findExisting returns the report id for a matching reporter clue and puzzle`() =
         runTest {
             val userId = UserId(UUID.randomUUID())
-            val r = report(reporterId = userId, wordText = "chien", clueText = "Meilleur ami")
+            val pid = UUID.randomUUID()
+            val r = report(reporterId = userId, clueText = "Meilleur ami", puzzleId = pid)
             reports.insert(r)
-            assertThat(reports.findExisting(userId, "chien", "Meilleur ami")).isEqualTo(r.id)
-            assertThat(reports.findExisting(userId, "chien", "autre def")).isNull()
+            assertThat(reports.findExisting(userId, "Meilleur ami", pid)).isEqualTo(r.id)
+            assertThat(reports.findExisting(userId, "autre def", pid)).isNull()
+        }
+
+    @Test
+    fun `findExisting returns null when puzzleId is null`() =
+        runTest {
+            val userId = UserId(UUID.randomUUID())
+            reports.insert(report(reporterId = userId, clueText = "Sans puzzle", puzzleId = null))
+            assertThat(reports.findExisting(userId, "Sans puzzle", null)).isNull()
+        }
+
+    @Test
+    fun `insert a report with no solved word round-trips`() =
+        runTest {
+            val r = report(wordText = null)
+            reports.insert(r)
+            assertThat(reports.findById(r.id)?.wordText).isNull()
         }
 
     @Test
@@ -151,18 +169,30 @@ class PgSignalementRepositoryTest {
     fun `duplicate authenticated report hits the unique index and returns false, not a raw error`() =
         runTest {
             val userId = UserId(UUID.randomUUID())
-            val first = reports.insert(report(reporterId = userId, wordText = "loup", clueText = "Predateur"))
-            val second = reports.insert(report(reporterId = userId, wordText = "loup", clueText = "Predateur"))
+            val pid = UUID.randomUUID()
+            val first = reports.insert(report(reporterId = userId, clueText = "Predateur", puzzleId = pid))
+            val second = reports.insert(report(reporterId = userId, clueText = "Predateur", puzzleId = pid))
             assertThat(first).isTrue()
             assertThat(second).isFalse()
             assertThat(reports.listPending()).hasSize(1)
         }
 
     @Test
+    fun `authenticated reports with a null puzzle are not deduplicated`() =
+        runTest {
+            val userId = UserId(UUID.randomUUID())
+            reports.insert(report(reporterId = userId, clueText = "Sans puzzle", puzzleId = null))
+            val second = reports.insert(report(reporterId = userId, clueText = "Sans puzzle", puzzleId = null))
+            assertThat(second).isTrue()
+            assertThat(reports.listPending()).hasSize(2)
+        }
+
+    @Test
     fun `anonymous duplicates are not deduplicated`() =
         runTest {
-            reports.insert(report(reporterId = null, wordText = "ours", clueText = "Plantigrade"))
-            val second = reports.insert(report(reporterId = null, wordText = "ours", clueText = "Plantigrade"))
+            val pid = UUID.randomUUID()
+            reports.insert(report(reporterId = null, clueText = "Plantigrade", puzzleId = pid))
+            val second = reports.insert(report(reporterId = null, clueText = "Plantigrade", puzzleId = pid))
             assertThat(second).isTrue()
             assertThat(reports.listPending()).hasSize(2)
         }

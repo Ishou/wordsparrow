@@ -5,7 +5,8 @@ import java.util.UUID
 
 data class PlayerReport(
     val id: ReportId,
-    val wordText: String,
+    // Null when the player reports a clue without having solved the word (e.g. an offensive definition); present ⇒ non-blank.
+    val wordText: String?,
     val clueText: String,
     val reason: ReportReason,
     val note: String?,
@@ -18,8 +19,10 @@ data class PlayerReport(
     val triagedBy: UserId? = null,
 ) {
     init {
-        require(wordText.isNotBlank()) { "wordText must not be blank" }
-        require(wordText.length <= MAX_WORD_LENGTH) { "wordText bounded to $MAX_WORD_LENGTH chars (was ${wordText.length})" }
+        wordText?.let {
+            require(it.isNotBlank()) { "wordText must not be blank when present" }
+            require(it.length <= MAX_WORD_LENGTH) { "wordText bounded to $MAX_WORD_LENGTH chars (was ${it.length})" }
+        }
         require(clueText.isNotBlank()) { "clueText must not be blank" }
         require(clueText.length <= MAX_CLUE_LENGTH) { "clueText bounded to $MAX_CLUE_LENGTH chars (was ${clueText.length})" }
         note?.let {

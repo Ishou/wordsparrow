@@ -20,10 +20,11 @@ class ListSignalementsUseCaseTest {
 
     private fun report(
         id: String,
-        wordText: String = "CHAT",
+        wordText: String? = "CHAT",
         clueText: String = "Animal qui miaule",
         reason: ReportReason = ReportReason.ERREUR_SENS,
         note: String? = null,
+        puzzleId: UUID? = null,
         createdAt: Instant = base,
         status: ReportStatus = ReportStatus.PENDING,
     ): PlayerReport =
@@ -33,7 +34,7 @@ class ListSignalementsUseCaseTest {
             clueText = clueText,
             reason = reason,
             note = note,
-            puzzleId = null,
+            puzzleId = puzzleId,
             surface = ReportSurface.SOLO,
             reporterId = null,
             status = status,
@@ -41,7 +42,7 @@ class ListSignalementsUseCaseTest {
         )
 
     @Test
-    fun `groups pending reports by word clue and reason with a count`() =
+    fun `groups pending reports by clue and reason with a count`() =
         runTest {
             val reports = InMemorySignalementRepository()
             reports.reports += report("11111111-1111-7111-8111-111111111111", createdAt = base)
@@ -53,6 +54,31 @@ class ListSignalementsUseCaseTest {
             assertThat(groups.single().count).isEqualTo(2)
             assertThat(groups.single().wordText).isEqualTo("CHAT")
             assertThat(groups.single().reason).isEqualTo(ReportReason.ERREUR_SENS)
+        }
+
+    @Test
+    fun `word-less reports group together and surface a null word`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+            reports.reports += report("11111111-1111-7111-8111-111111111111", wordText = null, createdAt = base)
+            reports.reports += report("22222222-2222-7222-8222-222222222222", wordText = null, createdAt = base.plusSeconds(60))
+
+            val group = ListSignalementsUseCase(reports).execute().single()
+
+            assertThat(group.count).isEqualTo(2)
+            assertThat(group.wordText).isNull()
+        }
+
+    @Test
+    fun `same clue and reason on distinct puzzles are separate groups`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+            reports.reports +=
+                report("11111111-1111-7111-8111-111111111111", puzzleId = UUID.fromString("aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa"))
+            reports.reports +=
+                report("22222222-2222-7222-8222-222222222222", puzzleId = UUID.fromString("bbbbbbbb-bbbb-7bbb-8bbb-bbbbbbbbbbbb"))
+
+            assertThat(ListSignalementsUseCase(reports).execute()).hasSize(2)
         }
 
     @Test

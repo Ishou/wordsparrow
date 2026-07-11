@@ -23,6 +23,7 @@ class SubmitSignalementUseCaseTest {
     private val now = Instant.parse("2026-07-11T10:00:00Z")
     private val fixedId = UUID.fromString("11111111-1111-7111-8111-111111111111")
     private val reporter = UserId(UUID.fromString("33333333-3333-7333-8333-333333333333"))
+    private val puzzle = UUID.fromString("55555555-5555-7555-8555-555555555555")
     private val maintainer = "maintainer@wordsparrow.io"
 
     private class FakeEmailSender(
@@ -52,13 +53,15 @@ class SubmitSignalementUseCaseTest {
     private fun command(
         reason: ReportReason = ReportReason.ERREUR_SENS,
         reporterId: UserId? = reporter,
+        wordText: String? = "CHAT",
+        puzzleId: UUID? = puzzle,
     ): SubmitSignalementCommand =
         SubmitSignalementCommand(
-            wordText = "CHAT",
+            wordText = wordText,
             clueText = "Animal qui miaule",
             reason = reason,
             note = null,
-            puzzleId = null,
+            puzzleId = puzzleId,
             surface = ReportSurface.SOLO,
             reporterId = reporterId,
         )
@@ -89,7 +92,7 @@ class SubmitSignalementUseCaseTest {
                     clueText = "Animal qui miaule",
                     reason = ReportReason.ERREUR_SENS,
                     note = null,
-                    puzzleId = null,
+                    puzzleId = puzzle,
                     surface = ReportSurface.SOLO,
                     reporterId = reporter,
                     status = ReportStatus.PENDING,
@@ -103,6 +106,30 @@ class SubmitSignalementUseCaseTest {
         }
 
     @Test
+    fun `authenticated report without puzzleId is not deduplicated`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+
+            useCase(reports, FakeEmailSender()).execute(command(puzzleId = null))
+            useCase(reports, FakeEmailSender()).execute(command(puzzleId = null))
+
+            assertThat(reports.reports).hasSize(2)
+        }
+
+    @Test
+    fun `persists a report with no solved word`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+
+            val result =
+                useCase(reports, FakeEmailSender())
+                    .execute(command(reason = ReportReason.DEFINITION_OFFENSANTE, wordText = null))
+
+            assertThat(result).isInstanceOf(SubmitSignalementResult.Accepted::class)
+            assertThat(reports.reports.single().wordText).isEqualTo(null)
+        }
+
+    @Test
     fun `race loser returns the winner's existing report id`() =
         runTest {
             // Pre-check misses (winner not yet committed), insert loses the unique-index race, post-insert lookup finds the winner.
@@ -113,8 +140,8 @@ class SubmitSignalementUseCaseTest {
 
                     override suspend fun findExisting(
                         reporterId: UserId,
-                        wordText: String,
                         clueText: String,
+                        puzzleId: UUID?,
                     ): ReportId? {
                         findCalls++
                         return if (findCalls == 1) null else winnerId

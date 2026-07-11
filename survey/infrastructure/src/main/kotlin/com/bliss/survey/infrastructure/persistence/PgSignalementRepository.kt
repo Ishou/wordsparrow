@@ -26,7 +26,8 @@ class PgSignalementRepository(
             withTxConnection(dataSource) { conn ->
                 conn.prepareStatement(INSERT_SQL).use { stmt ->
                     stmt.setObject(1, report.id.value)
-                    stmt.setString(2, report.wordText)
+                    val wordText = report.wordText
+                    if (wordText != null) stmt.setString(2, wordText) else stmt.setNull(2, Types.VARCHAR)
                     stmt.setString(3, report.clueText)
                     stmt.setString(4, report.reason.name.lowercase())
                     val note = report.note
@@ -52,23 +53,26 @@ class PgSignalementRepository(
             }
         }
 
+    // Null puzzleId can't dedupe: Postgres treats NULLs as distinct in the partial unique index, so skip the lookup (ADR-0103).
     override suspend fun findExisting(
         reporterId: UserId,
-        wordText: String,
         clueText: String,
-    ): ReportId? =
-        withContext(Dispatchers.IO) {
+        puzzleId: UUID?,
+    ): ReportId? {
+        if (puzzleId == null) return null
+        return withContext(Dispatchers.IO) {
             withTxConnection(dataSource) { conn ->
                 conn.prepareStatement(FIND_EXISTING_SQL).use { stmt ->
                     stmt.setObject(1, reporterId.value)
-                    stmt.setString(2, wordText)
-                    stmt.setString(3, clueText)
+                    stmt.setString(2, clueText)
+                    stmt.setObject(3, puzzleId)
                     stmt.executeQuery().use { rs ->
                         if (rs.next()) ReportId(rs.getObject("report_id", UUID::class.java)) else null
                     }
                 }
             }
         }
+    }
 
     override suspend fun listPending(): List<PlayerReport> =
         withContext(Dispatchers.IO) {
@@ -149,7 +153,7 @@ class PgSignalementRepository(
             """
 
         const val FIND_EXISTING_SQL =
-            "SELECT report_id FROM player_reports WHERE reporter_id = ? AND word_text = ? AND clue_text = ? LIMIT 1"
+            "SELECT report_id FROM player_reports WHERE reporter_id = ? AND clue_text = ? AND puzzle_id = ? LIMIT 1"
 
         const val LIST_PENDING_SQL =
             "SELECT * FROM player_reports WHERE status = 'pending' ORDER BY created_at"

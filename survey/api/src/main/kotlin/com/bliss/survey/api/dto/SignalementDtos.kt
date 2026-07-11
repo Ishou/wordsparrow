@@ -5,7 +5,8 @@ import kotlinx.serialization.Serializable
 // Wire DTOs for the signalement capture endpoint — camelCase per ADR-0003; enums are lowercase strings mapped to domain enums in the route.
 @Serializable
 data class SignalementRequest(
-    val wordText: String,
+    // Optional: an offensive clue is reportable without a solved word (ADR-0103); sent only when the player solved it.
+    val wordText: String? = null,
     val clueText: String,
     val reason: String,
     val note: String? = null,
@@ -22,7 +23,8 @@ data class SignalementResponse(
 @Serializable
 data class SignalementSummary(
     val reportId: String,
-    val wordText: String,
+    // Required on the wire but nullable — null when the group's reports carry no solved word (ADR-0003 §6).
+    val wordText: String?,
     val clueText: String,
     val reason: String,
     val count: Int,
