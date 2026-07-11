@@ -145,4 +145,24 @@ class PgSignalementRepositoryTest {
             reports.anonymiseForUser(userId)
             assertThat(reports.findById(r.id)?.reporterId).isNull()
         }
+
+    @Test
+    fun `duplicate authenticated report hits the unique index and returns false, not a raw error`() =
+        runTest {
+            val userId = UserId(UUID.randomUUID())
+            val first = reports.insert(report(reporterId = userId, wordText = "loup", clueText = "Predateur"))
+            val second = reports.insert(report(reporterId = userId, wordText = "loup", clueText = "Predateur"))
+            assertThat(first).isTrue()
+            assertThat(second).isFalse()
+            assertThat(reports.listPending()).hasSize(1)
+        }
+
+    @Test
+    fun `anonymous duplicates are not deduplicated`() =
+        runTest {
+            reports.insert(report(reporterId = null, wordText = "ours", clueText = "Plantigrade"))
+            val second = reports.insert(report(reporterId = null, wordText = "ours", clueText = "Plantigrade"))
+            assertThat(second).isTrue()
+            assertThat(reports.listPending()).hasSize(2)
+        }
 }

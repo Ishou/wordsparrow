@@ -9,6 +9,7 @@ import com.bliss.survey.domain.model.ReportSurface
 import com.bliss.survey.domain.model.UserId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.postgresql.util.PSQLException
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.sql.Types
@@ -20,7 +21,7 @@ import javax.sql.DataSource
 class PgSignalementRepository(
     private val dataSource: DataSource,
 ) : SignalementRepository {
-    override suspend fun insert(report: PlayerReport): Unit =
+    override suspend fun insert(report: PlayerReport): Boolean =
         withContext(Dispatchers.IO) {
             withTxConnection(dataSource) { conn ->
                 conn.prepareStatement(INSERT_SQL).use { stmt ->
@@ -41,7 +42,12 @@ class PgSignalementRepository(
                     if (triagedAt != null) stmt.setTimestamp(11, Timestamp.from(triagedAt)) else stmt.setNull(11, Types.TIMESTAMP)
                     val triagedBy = report.triagedBy
                     if (triagedBy != null) stmt.setObject(12, triagedBy.value) else stmt.setNull(12, Types.OTHER)
-                    stmt.executeUpdate()
+                    try {
+                        stmt.executeUpdate() == 1
+                    } catch (e: PSQLException) {
+                        // 23505 = unique_violation on player_reports_dedup → benign concurrent-duplicate signal.
+                        if (e.sqlState == "23505") false else throw e
+                    }
                 }
             }
         }

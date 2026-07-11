@@ -246,11 +246,18 @@ class InMemoryRatingRepository : RatingRepository {
     }
 }
 
-class InMemorySignalementRepository : SignalementRepository {
+open class InMemorySignalementRepository : SignalementRepository {
     val reports: MutableList<PlayerReport> = mutableListOf()
 
-    override suspend fun insert(report: PlayerReport) {
+    override suspend fun insert(report: PlayerReport): Boolean {
+        // Mirrors the partial unique index: only authenticated reports dedupe on (reporter, word, clue).
+        if (report.reporterId != null &&
+            reports.any { it.reporterId == report.reporterId && it.wordText == report.wordText && it.clueText == report.clueText }
+        ) {
+            return false
+        }
         reports += report
+        return true
     }
 
     override suspend fun existsFor(

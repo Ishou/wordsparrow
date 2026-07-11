@@ -7,7 +7,8 @@ import com.bliss.survey.domain.model.UserId
 import java.time.Instant
 
 interface SignalementRepository {
-    suspend fun insert(report: PlayerReport)
+    /** Returns false when the partial unique index rejects a duplicate authenticated report; true when the row was stored. */
+    suspend fun insert(report: PlayerReport): Boolean
 
     suspend fun existsFor(
         reporterId: UserId,

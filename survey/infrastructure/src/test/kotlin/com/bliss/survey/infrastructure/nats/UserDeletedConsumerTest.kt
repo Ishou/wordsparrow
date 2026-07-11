@@ -358,7 +358,7 @@ class UserDeletedConsumerTest {
     }
 
     private object NoopSignalements : SignalementRepository {
-        override suspend fun insert(report: PlayerReport) = Unit
+        override suspend fun insert(report: PlayerReport) = true
 
         override suspend fun existsFor(
             reporterId: UserId,
