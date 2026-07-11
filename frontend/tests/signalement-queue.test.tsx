@@ -72,19 +72,12 @@ describe('SignalementQueue', () => {
     await waitFor(() => expect(screen.queryByText('CHAT')).not.toBeInTheDocument());
   });
 
-  it('Corriger opens the correctif dialog prefilled and applies as action', async () => {
+  it('Marquer comme traité decides action and drops the row', async () => {
     const decide = vi.fn().mockResolvedValue(undefined);
     const client = stubClient({ decideSignalement: decide });
     renderQueue(client);
 
-    fireEvent.click(await screen.findByRole('button', { name: /Corriger la définition de CHAT/ }));
-
-    const dialog = await screen.findByTestId('signalement-corriger-dialog');
-    expect(dialog).toHaveTextContent('Corriger « CHAT »');
-    const altInput = screen.getByLabelText('Définition alternative') as HTMLInputElement;
-    expect(altInput.value).toBe('Animal qui miaule');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Appliquer et clôturer' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Marquer comme traité les signalements sur CHAT/ }));
 
     await waitFor(() => expect(decide).toHaveBeenCalledWith('0190e3a4-7a2c-7c9e-8f1a-000000000001', 'action'));
     await waitFor(() => expect(screen.queryByText('CHAT')).not.toBeInTheDocument());

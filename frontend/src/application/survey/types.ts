@@ -84,7 +84,7 @@ export interface SignalementSummary {
   readonly clueText: string;
   readonly reason: ReportReason;
   readonly count: number;
-  readonly latestNote?: string;
+  readonly latestNote: string | null;
   readonly latestAt: string;
 }
 

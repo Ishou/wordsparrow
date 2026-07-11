@@ -2,15 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
-import { CorrectifField } from '@/ui/components/sondage/CorrectifField';
-import { Button, Dialog, useToast } from '@/ui/components/primitives';
+import { Button, useToast } from '@/ui/components/primitives';
 import { t } from '@/ui/i18n';
-import type {
-  ReportReason,
-  SignalementSummary,
-  SurveyClient,
-  SurveyCorrectif,
-} from '@/application/survey';
+import type { ReportReason, SignalementDecision, SignalementSummary, SurveyClient } from '@/application/survey';
 
 const HARM_REASONS: ReadonlySet<ReportReason> = new Set(['mot_offensant', 'definition_offensante']);
 
@@ -76,10 +70,6 @@ const noteStyles = css({ fontSize: 'sm', color: 'fgMuted', margin: 0, fontStyle:
 
 const actionsStyles = css({ display: 'flex', gap: 'sm', marginTop: 'xs' });
 
-const dialogBodyStyles = css({ display: 'flex', flexDirection: 'column', gap: 'sm' });
-const dialogClueStyles = css({ fontSize: 'sm', color: 'fgMuted', margin: 0 });
-const dialogActionsStyles = css({ display: 'flex', gap: 'sm', justifyContent: 'flex-end' });
-
 // Harm reasons first; Array.sort is stable so the server's recency order is preserved within each partition.
 function harmFirst(items: ReadonlyArray<SignalementSummary>): SignalementSummary[] {
   return [...items].sort((a, b) => Number(HARM_REASONS.has(b.reason)) - Number(HARM_REASONS.has(a.reason)));
@@ -94,8 +84,6 @@ export function SignalementQueue({ surveyClient }: SignalementQueueProps) {
   const [items, setItems] = useState<ReadonlyArray<SignalementSummary> | null>(null);
   const [error, setError] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [active, setActive] = useState<SignalementSummary | null>(null);
-  const [correctif, setCorrectif] = useState<SurveyCorrectif | undefined>(undefined);
 
   useEffect(() => {
     let alive = true;
@@ -116,38 +104,14 @@ export function SignalementQueue({ surveyClient }: SignalementQueueProps) {
     setItems((prev) => (prev ? prev.filter((x) => x.reportId !== reportId) : prev));
   }, []);
 
-  async function onReject(summary: SignalementSummary): Promise<void> {
+  async function decide(summary: SignalementSummary, decision: SignalementDecision): Promise<void> {
     setBusyId(summary.reportId);
     try {
-      await surveyClient.decideSignalement(summary.reportId, 'dismiss');
+      await surveyClient.decideSignalement(summary.reportId, decision);
       drop(summary.reportId);
-      showToast({ text: t('route.signalements.toast.dismissed'), tone: 'info' });
-    } catch {
-      showToast({ text: t('route.signalements.toast.error'), tone: 'error' });
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  function openCorriger(summary: SignalementSummary): void {
-    setActive(summary);
-    setCorrectif({ text: summary.clueText, style: 'definition_directe' });
-  }
-
-  function closeCorriger(): void {
-    setActive(null);
-    setCorrectif(undefined);
-  }
-
-  async function applyCorriger(): Promise<void> {
-    if (!active) return;
-    setBusyId(active.reportId);
-    try {
-      // A maintainer actioning a report can then apply the correctif via the gold loop; here we flip the report to ACTIONED.
-      await surveyClient.decideSignalement(active.reportId, 'action');
-      drop(active.reportId);
-      closeCorriger();
-      showToast({ text: t('route.signalements.toast.actioned'), tone: 'info' });
+      const toastKey =
+        decision === 'dismiss' ? 'route.signalements.toast.dismissed' : 'route.signalements.toast.handled';
+      showToast({ text: t(toastKey), tone: 'info' });
     } catch {
       showToast({ text: t('route.signalements.toast.error'), tone: 'error' });
     } finally {
@@ -190,15 +154,15 @@ export function SignalementQueue({ surveyClient }: SignalementQueueProps) {
                 <div className={actionsStyles}>
                   <Button
                     variant="primary"
-                    onClick={() => openCorriger(s)}
+                    onClick={() => { void decide(s, 'action'); }}
                     disabled={busyId === s.reportId}
-                    aria-label={t('route.signalements.correct.aria', { mot: s.wordText })}
+                    aria-label={t('route.signalements.markHandled.aria', { mot: s.wordText })}
                   >
-                    {t('route.signalements.correct')}
+                    {t('route.signalements.markHandled')}
                   </Button>
                   <Button
                     variant="secondary"
-                    onClick={() => { void onReject(s); }}
+                    onClick={() => { void decide(s, 'dismiss'); }}
                     disabled={busyId === s.reportId}
                     aria-label={t('route.signalements.reject.aria', { mot: s.wordText })}
                   >
@@ -210,32 +174,6 @@ export function SignalementQueue({ surveyClient }: SignalementQueueProps) {
           })}
         </ul>
       ) : null}
-
-      <Dialog
-        open={active !== null}
-        onClose={closeCorriger}
-        title={active ? t('route.signalements.dialog.title', { mot: active.wordText }) : ''}
-        contentTestId="signalement-corriger-dialog"
-      >
-        {active ? (
-          <div className={dialogBodyStyles}>
-            <p className={dialogClueStyles}>{t('route.signalements.dialog.clue', { clue: active.clueText })}</p>
-            <CorrectifField value={correctif} onChange={setCorrectif} />
-            <div className={dialogActionsStyles}>
-              <Button variant="ghost" onClick={closeCorriger} disabled={busyId === active.reportId}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => { void applyCorriger(); }}
-                disabled={busyId === active.reportId}
-              >
-                {t('route.signalements.dialog.apply')}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </Dialog>
     </article>
   );
 }
