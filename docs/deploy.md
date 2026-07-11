@@ -271,6 +271,17 @@ Actions. Manual local `tofu apply` (above) stays valid as a fallback.
    `apply` job waits on the `prod-infra` reviewer gate; approve it to apply
    the reviewed plan. A drifted state makes the apply reject the stale plan.
 
+**Node rotation (`replace` input).** Servers carry
+`ignore_changes = [user_data]`, so a cloud-init change (e.g. an ADR-0106 FIP
+fix) does **not** show up as a plan diff — the running node keeps its old
+boot config. To roll a node onto the current cloud-init, set the `replace`
+input to its resource address (space-separated for several), e.g.
+`module.cluster.hcloud_server.worker[2]`. The `-replace` is baked into the
+reviewed plan, so the gated apply destroys and recreates exactly those nodes;
+the recreated server boots the current template and its private IP is
+re-pinned by `hcloud_server_network`. Drain first for a worker that holds
+pods, and re-run `ssh-keygen -R <ip>` for the new public IP.
+
 ## Hetzner cluster bring-up (one-time)
 
 First concrete cluster-provisioning module:
