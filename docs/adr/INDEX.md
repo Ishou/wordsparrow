@@ -303,7 +303,8 @@ ADR-0100  **/words/words-fr.csv                    Runtime corpus gains a pos co
 # ADR-0100: unified (surface,pos)->lemma authoring contract fixes the lia/lie/es/vue lemma-collision bugs that let WordAcceptor's same-lemma dedup miss inflections; extends ADR-0097 (private corpus) and ADR-0058 (per-source licensing unchanged)
 ADR-0101  */api/deploy/db-chart/**                 CNPG HA/DR hardening tracker: set resource requests/limits (R2), billing instances:3 (R4); backups recurrence handled by ADR-0010 ScheduledBackups
 ADR-0101  grid/api/deploy/chart/templates/postgres-cluster.yaml  Same R1-R5 remediation applies to grid's Cluster spec — grid uses a standalone chart, not the db-chart subchart layout, so the db-chart glob above doesn't route here
-ADR-0101  terraform/**                             Add worker node capacity (R1) before tainting control-plane (R3); node count is the keystone for real CNPG failure-domain spread
+ADR-0101  */api/deploy/chart/templates/pdb.yaml   R5 PodDisruptionBudgets (minAvailable 1, gated on replicaCount>1); game exempt — single-replica by design (ADR-0018 §3)
+ADR-0101  terraform/**                             Add worker node capacity (R1, worker_count 1→3) before tainting control-plane (R3); node count is the keystone for real CNPG failure-domain spread
 # ADR-0101: cluster HA/DR audit + remediation tracker — 3-instance clusters that don't span nodes, empty resource specs (BestEffort), schedulable control-plane, single-instance billing; remediation ordered on node capacity (R1). Complements ADR-0009/0010/0011 (deploy/provisioning) and the 2026-07-11 backup fix.
 ADR-0102  frontend/src/application/game/playerScores.ts   Co-op score = count of lockedPositions per lockedBy (ADR-0086 attribution); frontend-only derivation
 ADR-0102  frontend/src/ui/v2/multiplayer/PlayerStrip.tsx   Live roster chip carries the player's validated-letter count (join-order, no re-sort)
