@@ -23,6 +23,7 @@ import { Route as DesignSystemRoute } from './routes/design-system';
 import { Route as LockupRoute } from './routes/lockup';
 import { Route as ContribuerRoute } from './routes/contribuer';
 import { Route as ContribuerPairsRoute } from './routes/contribuer.pairs';
+import { Route as SignalementsRoute } from './routes/signalements';
 import {
   AccueilRedirectRoute,
   GrilleRedirectRoute,
@@ -70,7 +71,12 @@ export function createAppRouter({ context, multiplayer, emailAuth }: CreateAppRo
     ...(import.meta.env.DEV ? [DesignSystemRoute, LockupRoute] : []),
   ];
   // Contribuer parents RootRoute (v1 ContentPage shell owns its own chrome; reparenting would break the lazy-route ids).
-  const routeTree = RootRoute.addChildren([AppLayoutRoute.addChildren(appChildren), ContribuerRoute, ContribuerPairsRoute]);
+  const routeTree = RootRoute.addChildren([
+    AppLayoutRoute.addChildren(appChildren),
+    ContribuerRoute,
+    ContribuerPairsRoute,
+    SignalementsRoute,
+  ]);
   return createRouter({ routeTree, context });
 }
 export type AppRouter = ReturnType<typeof createAppRouter>;
