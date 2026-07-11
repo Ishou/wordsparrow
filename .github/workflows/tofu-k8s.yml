@@ -3,6 +3,7 @@ name: Tofu (k8s infra)
 # Gated CI apply for terraform/k8s — manual workflow_dispatch (show / plan / apply,
 # apply behind the prod-infra required-reviewer gate). Threat model + one-time
 # setup: ADR-0104 and docs/deploy.md "Terraform k8s apply via CI".
+# (New workflow_dispatch — GitHub registers it on the push that merges this line.)
 
 on:
   workflow_dispatch:
