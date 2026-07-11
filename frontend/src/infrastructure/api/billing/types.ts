@@ -678,9 +678,23 @@ export interface operations {
                 };
             };
             /**
-             * @description The payment provider is unavailable or the mandate could not be
-             *     reused, so the reactivation could not be completed; the caller may
-             *     retry later. RFC 7807;
+             * @description The caller has no reusable payment mandate on file, so a no-charge
+             *     resume is not possible; they must subscribe afresh via checkout.
+             *     This is a terminal client-side condition, never retried. RFC 7807;
+             *     `type` is `https://bliss.example/errors/no-payment-method`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The payment provider is unavailable, so the reactivation could not
+             *     be completed; the caller may retry later. A missing mandate is 409,
+             *     not this. RFC 7807;
              *     `type` is `https://bliss.example/errors/provider-unavailable`.
              */
             503: {

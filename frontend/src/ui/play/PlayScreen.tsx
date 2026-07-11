@@ -4,6 +4,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
 import type { Position, Puzzle } from '@/domain';
 import type { PuzzleSolver, RevealedWordCell } from '@/application';
+import type { ReportSurface, SurveyClient } from '@/application/survey';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
@@ -17,6 +18,8 @@ import { orderClues } from '@/ui/components/grid/orderClues';
 import { CELL, STRIDE, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
 import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
 import { useAdvanceOnValidation, inputAt } from '@/ui/components/grid/useAdvanceOnValidation';
+import { ReportClueSheet } from '@/ui/components/grid/ReportClueSheet';
+import { foldReportWord } from '@/ui/components/grid/reportWord';
 import { Keyboard } from './Keyboard';
 import { useTouchPrimary, useResumeBlurOnPwa } from '@/ui/components/keyboard';
 import { usePuzzleValidation } from '@/ui/components/grid/usePuzzleValidation';
@@ -133,9 +136,11 @@ export interface PlayScreenProps {
   readonly soloEntriesStore: SoloEntriesStore;
   readonly soundPlayer?: SoundPlayer;
   readonly soundStore?: SoundStore;
+  readonly surveyClient?: SurveyClient;
+  readonly reportSurface?: ReportSurface;
 }
 
-export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer, soundStore }: PlayScreenProps) {
+export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer, soundStore, surveyClient, reportSurface = 'daily' }: PlayScreenProps) {
   // Resume from the persisted elapsed time (synced across devices via the progress blob) instead of restarting at 0.
   const [seconds, setSeconds] = useState(() => soloEntriesStore.loadElapsed(puzzle.id));
   const [winDismissed, setWinDismissed] = useState(false);
@@ -543,6 +548,17 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
                   onNext={() => stepClue(1)}
                   onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
                   onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
+                  report={
+                    surveyClient ? (
+                      <ReportClueSheet
+                        surveyClient={surveyClient}
+                        surface={reportSurface}
+                        clueText={displayClue.text}
+                        wordText={foldReportWord(displayClue.cells.map((p) => nav.getEntryAt(p.row, p.col)))}
+                        puzzleId={puzzle.id}
+                      />
+                    ) : undefined
+                  }
                   trailing={
                     ACTIVE_ASSIST_MODE === 'verify' ? (
                       <span className={hintTrailing}>

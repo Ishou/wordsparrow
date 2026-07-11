@@ -60,9 +60,11 @@ export interface ClueRailProps {
   readonly onZoomOut?: () => void;
   // Replaces the index/total counter in the label row (e.g. a hint control); index/total still drive prev/next bounds.
   readonly trailing?: ReactNode;
+  // Optional action anchored to the far right of the label row (e.g. a report-clue trigger).
+  readonly report?: ReactNode;
 }
 
-export function ClueRail({ direction, directionLabel, clue, index, total, groupLabel, counterLabel, prevLabel, nextLabel, zoomInLabel, zoomOutLabel, onPrev, onNext, onZoomIn, onZoomOut, trailing }: ClueRailProps) {
+export function ClueRail({ direction, directionLabel, clue, index, total, groupLabel, counterLabel, prevLabel, nextLabel, zoomInLabel, zoomOutLabel, onPrev, onNext, onZoomIn, onZoomOut, trailing, report }: ClueRailProps) {
   return (
     <div className={rail} role="group" aria-label={groupLabel}>
       <div className={topRow}>
@@ -83,6 +85,7 @@ export function ClueRail({ direction, directionLabel, clue, index, total, groupL
         </div>
         <div className={rightGroup}>
           {trailing}
+          {report}
           <div className={zoom}>
             <button type="button" className={zoomBtn} onClick={onZoomOut} aria-label={zoomOutLabel}><Minus aria-hidden="true" weight="bold" /></button>
             <span aria-hidden="true" className={zoomSep} />

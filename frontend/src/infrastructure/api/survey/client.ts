@@ -8,12 +8,14 @@ import type {
   PairRatingSubmission,
   RatingResult,
   RatingSubmission,
+  SignalementInput,
   SurveyClient,
   SurveyContribution,
   SurveyItem,
   SurveyPreferencesPatch,
   SurveyProgress,
 } from '@/application/survey';
+import { ReportRateLimitedError } from '@/application/survey';
 import type { components, paths } from './types';
 
 type CorrectifRejection = components['schemas']['CorrectifRejection'];
@@ -215,6 +217,28 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
     if (!res.ok) throw new Error(`patchPreferences failed: ${res.status}`);
   };
 
+  const submitSignalement: SurveyClient['submitSignalement'] = async (input: SignalementInput) => {
+    const body: components['schemas']['SignalementRequest'] = {
+      wordText: input.wordText,
+      clueText: input.clueText,
+      reason: input.reason,
+      surface: input.surface,
+      ...(input.note ? { note: input.note } : {}),
+      ...(input.puzzleId ? { puzzleId: input.puzzleId } : {}),
+    };
+    const res = await fetchImpl(`${base}/v1/signalements`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 429) throw new ReportRateLimitedError();
+    if (!res.ok) throw new Error(`submitSignalement failed: ${res.status}`);
+    // 201 for both a fresh accept and a server-side duplicate — same envelope either way.
+    const json = (await res.json()) as components['schemas']['SignalementResponse'];
+    return { reportId: json.reportId };
+  };
+
   return {
     getNextItem,
     submitRating,
@@ -226,6 +250,7 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
     patchPreferences,
     getCurrentCampaign,
     getLemmaMeta,
+    submitSignalement,
   };
 }
 

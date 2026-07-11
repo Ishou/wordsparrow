@@ -61,6 +61,12 @@ export function ConfidentialiteScreen() {
         </section>
 
         <section className={contentCard}>
+          <h2 className={sectionHeading}>{t('v2.confidentialite.signalements.heading')}</h2>
+          <p className={sectionBody}>{t('v2.confidentialite.signalements.p1')}</p>
+          <p className={sectionBody}>{t('v2.confidentialite.signalements.p2')}</p>
+        </section>
+
+        <section className={contentCard}>
           <h2 className={sectionHeading}>{t('v2.confidentialite.droits.heading')}</h2>
           <p className={sectionBody}>
             {t('v2.confidentialite.droits.pre')}<strong>ISHO IT</strong>{t('v2.confidentialite.droits.mid')}

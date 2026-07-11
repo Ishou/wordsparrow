@@ -50,6 +50,33 @@ export type SurveyTier = 'high' | 'mid' | 'low' | 'excluded';
 
 export type SurveyFlagReason = 'hors_sujet' | 'auto_reference' | 'erreur_sens' | 'autre';
 
+// Player-facing report taxonomy (ADR-0103), distinct from the annotator `SurveyFlagReason`.
+export type ReportReason =
+  | 'mot_offensant'
+  | 'definition_offensante'
+  | 'erreur_sens'
+  | 'erreur_grammaire'
+  | 'definition_revele'
+  | 'ambigu'
+  | 'trop_facile'
+  | 'trop_difficile'
+  | 'autre';
+
+export type ReportSurface = 'solo' | 'daily' | 'multiplayer' | 'mini_game';
+
+export interface SignalementInput {
+  readonly wordText: string;
+  readonly clueText: string;
+  readonly reason: ReportReason;
+  readonly note?: string;
+  readonly puzzleId?: string;
+  readonly surface: ReportSurface;
+}
+
+export interface SignalementResult {
+  readonly reportId: string;
+}
+
 export type SubmittedAs = 'auth' | 'anon';
 
 export type LikertScore = 1 | 2 | 3 | 4 | 5;
@@ -160,6 +187,7 @@ export interface SurveyClient {
   patchPreferences(body: SurveyPreferencesPatch): Promise<void>;
   getCurrentCampaign(): Promise<Campaign>;
   getLemmaMeta(mot: string): Promise<LemmaMeta>;
+  submitSignalement(input: SignalementInput): Promise<SignalementResult>;
 }
 
 // Port for anon-rated dedup. Concrete adapter: `localStorageSurveyAnon.ts`.
