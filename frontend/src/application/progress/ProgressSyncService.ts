@@ -101,7 +101,7 @@ export function createProgressSyncService(
       else baseUpdatedAt.delete(puzzleId);
       const currentLocal = blobStore.loadPayload(sessionId, puzzleId);
       const merged = mergeProgress(
-        { payload: currentLocal },
+        { payload: currentLocal, updatedAt: blobStore.loadLocalUpdatedAt(sessionId, puzzleId) },
         { payload: remotePayload, updatedAt: remote?.updatedAt },
       );
       blobStore.replacePayload(sessionId, puzzleId, merged);
@@ -128,7 +128,10 @@ export function createProgressSyncService(
       const localPayload = blobStore.loadPayload(sessionId, remote.puzzleId);
       const remotePayload = coerceSoloStorePayload(remote.payload);
       const merged = mergeProgress(
-        { payload: localPayload },
+        {
+          payload: localPayload,
+          updatedAt: blobStore.loadLocalUpdatedAt(sessionId, remote.puzzleId),
+        },
         { payload: remotePayload, updatedAt: remote.updatedAt },
       );
       blobStore.replacePayload(sessionId, remote.puzzleId, merged);
@@ -157,7 +160,10 @@ export function createProgressSyncService(
       const remotePayload = remote ? coerceSoloStorePayload(remote.payload) : EMPTY_PAYLOAD;
       if (remote) baseUpdatedAt.set(puzzleId, remote.updatedAt);
       const merged = mergeProgress(
-        { payload: blobStore.loadPayload(sessionId, puzzleId) },
+        {
+          payload: blobStore.loadPayload(sessionId, puzzleId),
+          updatedAt: blobStore.loadLocalUpdatedAt(sessionId, puzzleId),
+        },
         { payload: remotePayload, updatedAt: remote?.updatedAt },
       );
       blobStore.replacePayload(sessionId, puzzleId, merged);

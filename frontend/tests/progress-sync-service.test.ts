@@ -35,10 +35,15 @@ const SEP = '::';
 const seedKey = (s: string, p: string): string => `${s}${SEP}${p}`;
 
 // In-memory blob store keyed by `sessionId::puzzleId` (real impl, not a mock).
-function memBlobStore(seed: Record<string, SoloStorePayload> = {}): SoloProgressBlobStore {
+function memBlobStore(
+  seed: Record<string, SoloStorePayload> = {},
+  localTimes: Record<string, string> = {},
+): SoloProgressBlobStore {
   const map = new Map<string, SoloStorePayload>(Object.entries(seed));
+  const times = new Map<string, string>(Object.entries(localTimes));
   return {
     loadPayload: (s, p) => map.get(seedKey(s, p)) ?? payload({}),
+    loadLocalUpdatedAt: (s, p) => times.get(seedKey(s, p)),
     replacePayload: (s, p, v) => {
       map.set(seedKey(s, p), v);
     },
@@ -369,6 +374,35 @@ describe('ProgressSyncService — pullAndMergeOne (per-grid open)', () => {
     // Local added 'A', which the server lacked → push the union back.
     expect(client.pushes).toHaveLength(1);
     expect(client.pushes[0].baseUpdatedAt).toBe(T2);
+  });
+
+  it('keeps a fresh local edit over a stale remote value on grid-open (P→O regression)', async () => {
+    // Local typed P (at T2) but the debounced push never reached the server, which still holds an older O (at T1).
+    const remote: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: payload({ entries: [{ r: 0, c: 0, l: 'O' }] }) as unknown as Record<string, unknown>,
+      updatedAt: T1,
+    };
+    const client = fakeClient({ pull: () => remote });
+    const blobStore = memBlobStore(
+      { [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'P' }] }) },
+      { [seedKey(SESSION, PUZZLE)]: T2 },
+    );
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+    await service.pullAndMergeOne(PUZZLE);
+
+    const merged = blobStore.loadPayload(SESSION, PUZZLE);
+    expect(merged.entries).toContainEqual({ r: 0, c: 0, l: 'P' });
+    expect(merged.entries).not.toContainEqual({ r: 0, c: 0, l: 'O' });
+    // The fresh edit differs from the server → it is pushed back up.
+    expect(client.pushes).toHaveLength(1);
   });
 
   it('does not push when local adds nothing the server lacks', async () => {

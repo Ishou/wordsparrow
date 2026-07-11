@@ -49,6 +49,7 @@ import {
   loadSoloElapsed,
   loadSoloEntries,
   loadSoloHintsUsed,
+  loadSoloLocalUpdatedAt,
   loadSoloLockedCells,
   loadSoloPayload,
   recordSoloHintUsed,
@@ -280,6 +281,7 @@ enableMocks()
     // Cross-device solo-progress sync side-channel (ADR-0075).
     const soloProgressBlobStore: SoloProgressBlobStore = {
       loadPayload: loadSoloPayload,
+      loadLocalUpdatedAt: loadSoloLocalUpdatedAt,
       replacePayload: replaceSoloPayload,
       listPuzzleIds: listSoloPuzzleIds,
     };

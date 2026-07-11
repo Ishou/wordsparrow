@@ -96,3 +96,77 @@ describe('localStorageSolo blob accessors (ADR-0075 sync)', () => {
     expect(listSoloPuzzleIds(SESSION)).toEqual([]);
   });
 });
+
+describe('localStorageSolo local-edit clock (ADR-0075 §4 collision resolution)', () => {
+  const T_LETTER = '2026-06-28T10:00:00.000Z';
+  const T_LATER = '2026-06-28T12:00:00.000Z';
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    window.localStorage.clear();
+  });
+
+  it('is undefined when the puzzle has never been mutated locally', async () => {
+    const { loadSoloLocalUpdatedAt } = await loadFresh();
+    expect(loadSoloLocalUpdatedAt(SESSION, PUZZLE_A)).toBeUndefined();
+  });
+
+  it('is undefined for a legacy bucket that predates the field', async () => {
+    const { loadSoloLocalUpdatedAt } = await loadFresh();
+    window.localStorage.setItem(
+      `bliss.solo.entries.${SESSION}`,
+      JSON.stringify({ [PUZZLE_A]: { entries: [{ r: 0, c: 0, l: 'A' }] } }),
+    );
+    expect(loadSoloLocalUpdatedAt(SESSION, PUZZLE_A)).toBeUndefined();
+  });
+
+  it('a letter write stamps the clock', async () => {
+    const { saveSoloLetter, loadSoloLocalUpdatedAt } = await loadFresh();
+    vi.setSystemTime(new Date(T_LETTER));
+    saveSoloLetter(SESSION, PUZZLE_A, 0, 0, 'P');
+    expect(loadSoloLocalUpdatedAt(SESSION, PUZZLE_A)).toBe(T_LETTER);
+  });
+
+  it('an elapsed-time write does not advance the clock (elapsed is monotonic, not collision-resolved)', async () => {
+    const { saveSoloLetter, saveSoloElapsed, loadSoloLocalUpdatedAt } = await loadFresh();
+    vi.setSystemTime(new Date(T_LETTER));
+    saveSoloLetter(SESSION, PUZZLE_A, 0, 0, 'P');
+    vi.setSystemTime(new Date(T_LATER));
+    saveSoloElapsed(SESSION, PUZZLE_A, 42);
+    expect(loadSoloLocalUpdatedAt(SESSION, PUZZLE_A)).toBe(T_LETTER);
+  });
+
+  it('a hint write does not advance the clock (hintsUsed is max-merged)', async () => {
+    const { saveSoloLetter, recordSoloHintUsed, loadSoloLocalUpdatedAt } = await loadFresh();
+    vi.setSystemTime(new Date(T_LETTER));
+    saveSoloLetter(SESSION, PUZZLE_A, 0, 0, 'P');
+    vi.setSystemTime(new Date(T_LATER));
+    recordSoloHintUsed(SESSION, PUZZLE_A);
+    expect(loadSoloLocalUpdatedAt(SESSION, PUZZLE_A)).toBe(T_LETTER);
+  });
+
+  it('replaceSoloPayload preserves the local-edit clock across a merge', async () => {
+    const { saveSoloLetter, replaceSoloPayload, loadSoloLocalUpdatedAt } = await loadFresh();
+    vi.setSystemTime(new Date(T_LETTER));
+    saveSoloLetter(SESSION, PUZZLE_A, 0, 0, 'P');
+    vi.setSystemTime(new Date(T_LATER));
+    replaceSoloPayload(SESSION, PUZZLE_A, {
+      entries: [{ r: 0, c: 0, l: 'P' }],
+      lockedCells: [],
+      hintsUsed: 0,
+      elapsedSeconds: 0,
+    });
+    expect(loadSoloLocalUpdatedAt(SESSION, PUZZLE_A)).toBe(T_LETTER);
+  });
+
+  it('keeps the clock out of the wire payload', async () => {
+    const { saveSoloLetter, loadSoloPayload } = await loadFresh();
+    vi.setSystemTime(new Date(T_LETTER));
+    saveSoloLetter(SESSION, PUZZLE_A, 0, 0, 'P');
+    expect(loadSoloPayload(SESSION, PUZZLE_A)).not.toHaveProperty('localUpdatedAt');
+  });
+});
