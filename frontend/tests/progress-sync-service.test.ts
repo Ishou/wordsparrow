@@ -214,6 +214,29 @@ describe('ProgressSyncService — pullAndMergeAll', () => {
     expect(client.pushes[0].baseUpdatedAt).toBe(T1);
   });
 
+  it('carries the remote fingerprint forward so a never-locally-opened puzzle is not treated as legacy', async () => {
+    const remoteEntry: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: payload({
+        entries: [{ r: 1, c: 1, l: 'B' }],
+        fingerprint: 'fp-remote',
+      }) as unknown as Record<string, unknown>,
+      updatedAt: T1,
+    };
+    const client = fakeClient({ pullAll: [remoteEntry] });
+    const blobStore = memBlobStore();
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+    });
+    await service.pullAndMergeAll();
+
+    const merged = blobStore.loadPayload(SESSION, PUZZLE);
+    expect(merged.fingerprint).toBe('fp-remote');
+  });
+
   it('pushes a local-only puzzle the account never saw', async () => {
     const client = fakeClient({ pullAll: [] });
     const blobStore = memBlobStore({

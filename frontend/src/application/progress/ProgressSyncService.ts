@@ -136,7 +136,13 @@ export function createProgressSyncService(
         },
         { payload: remotePayload, updatedAt: remote.updatedAt },
       );
-      blobStore.replacePayload(sessionId, remote.puzzleId, merged);
+      // Carry the fingerprint forward (ADR-0105) — mergeProgress drops it, and a batch sync has none of its own to stamp.
+      const fingerprint = remotePayload.fingerprint ?? localPayload.fingerprint;
+      blobStore.replacePayload(
+        sessionId,
+        remote.puzzleId,
+        fingerprint != null ? { ...merged, fingerprint } : merged,
+      );
       // Skip the push when local added nothing the server lacks — the no-op storm.
       if (!payloadsEqual(merged, remotePayload)) toPush.push(remote.puzzleId);
     }
