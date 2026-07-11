@@ -21,12 +21,7 @@
 #      the status address to the floating IP removes the need for a
 #      per-Ingress `external-dns.alpha.kubernetes.io/target` annotation.
 #
-# Default assignment: worker[0], the designated FIP holder — not "the
-# worker node" (worker_count can be >1, see ADR-0101 R1). ingress-nginx
-# is pinned to worker[0] via the `bliss.io/fip-holder` node label
-# (ADR-0106) so the controller pod always lands where the alias lives.
-# If the deploy footprint changes (HA control plane, dedicated ingress
-# node), update the assignment here — there is no other source of truth.
+# FIP assigned to worker[0] (the designated holder) — see ADR-0106.
 #
 # Circular-reference note: `hcloud_floating_ip.ingress.ip_address` is
 # allocated at create time independently of any server, so the control-

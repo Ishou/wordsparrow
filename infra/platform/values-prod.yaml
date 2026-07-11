@@ -41,12 +41,7 @@ ingress-nginx:
     # not the controller Service's ClusterIP.
     publishService:
       enabled: false
-    # The Hetzner Floating IP is assigned (Terraform-side) to worker[0]
-    # only — only that node has the IP aliased on its public interface
-    # (terraform/k8s/providers/hetzner/cloud-init/worker.yaml.tftpl).
-    # ingress-nginx therefore MUST run on the FIP holder specifically,
-    # not just any worker (worker_count > 1 since ADR-0101 R1); the
-    # `bliss.io/fip-holder` label pins it there. See ADR-0106.
+    # Must match the FIP holder (worker[0]) — see ADR-0106.
     nodeSelector:
       bliss.io/fip-holder: "true"
     # `publish-status-address` is the IP ingress-nginx writes back into
