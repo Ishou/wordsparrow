@@ -80,24 +80,32 @@ Remediate in dependency order. Node capacity (R1) unblocks R3 and R4.
 | # | Item | Addresses | Type | Status |
 |---|------|-----------|------|--------|
 | R0 | `ScheduledBackup` on all service db-charts + one-off base backups taken | backup gap | chart (#1519) + ops | **Done 2026-07-11** |
-| R1 | Add 1–2 worker nodes | F1 (and unblocks R3/R4) | terraform (ADR-0010/0011) | Todo |
-| R2 | Set resource requests/limits on all CNPG clusters | F2, F6 | chart | Todo |
-| R3 | Taint `cp-0` `node-role.kubernetes.io/control-plane:NoSchedule` | F3 | terraform/bootstrap | Todo — after R1 |
-| R4 | Billing DB → `instances: 3`; billing-api → 2 replicas | F4 | chart | Todo — after R1 |
-| R5 | 2 replicas + PDB for single-replica app tiers | F5 | chart | Todo |
+| R1 | Add 2 worker nodes (`worker_count` 1→3) | F1 (and unblocks R3/R4/R5) | terraform (ADR-0010/0011) | **Decided (add 2); maintainer `tofu apply`** |
+| R2 | Set resource requests/limits on the 5 CNPG clusters | F2, F6 | chart | **PR #1524 — deployable now** |
+| R3 | Taint `cp-0` `node-role.kubernetes.io/control-plane:NoSchedule` | F3 | terraform/kubectl | Todo — after R1 |
+| R4 | Billing DB → `instances: 3` | F4 | chart | **PR #1526 — deploy after R1** |
+| R5 | 2 replicas + PDB for stateless single-replica app tiers | F5 | chart | **PR #1525 — deploy after R1** |
 
 Notes:
 - **R1 is the keystone.** With only two schedulable nodes, soft anti-affinity
   cannot spread three instances and hard anti-affinity would leave a replica
   Pending. Adding worker capacity is what makes the existing `instances: 3`
   actually fault-tolerant; consider also setting an explicit `topologyKey`
-  once ≥3 workers exist.
-- **R2 should be sized from data, not guessed.** Pull per-pod DB memory over
-  the last weeks from SigNoz, plus `cp-0` memory and apiserver request latency
-  to confirm the F3 correlation, before committing request/limit values.
+  once ≥3 workers exist. **Maintainer runs** `tofu -chdir=terraform/k8s apply`
+  with `worker_count = 3` (~+€16/mo; no committed tfvars, so the value lives in
+  the maintainer's local vars).
+- **R2 scope correction:** the app *Deployments* already carry requests/limits;
+  it is the five CNPG *Cluster* specs that were empty (BestEffort). Sized from
+  live usage (DB pods ~80–160 MiB): requests 100m/256Mi, limits 1cpu/1Gi.
+- **R4/R5 are staged behind R1.** Merging them before the nodes join would
+  strand pods (a 3rd billing replica / 2nd app replica with nowhere to spread),
+  so hold them until `kubectl get nodes` shows 3 workers.
+- **R5 excludes game.** `game-api` hard-codes `replicas: 1` for in-memory
+  WebSocket lobby state (ADR-0018 §3) — 2 replicas would split state and a
+  `minAvailable:1` PDB would block its drains. Its single-replica posture is an
+  accepted limitation; real game HA needs a shared-state redesign (separate ADR).
 - R1/R3 are infra/capacity decisions with a monthly cost; they are the
-  maintainer's call. R2/R4/R5 are chart-only and can land independently once
-  R1 exists (R4) or immediately (R2, R5).
+  maintainer's call.
 
 ## Consequences
 
