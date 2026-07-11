@@ -50,8 +50,21 @@ and respect RGPD.
    WebSocket. One endpoint serves all play modes.
 3. **`survey/` already owns clue quality** — `FlagReason`, correctifs,
    senses/POS, `maintainer_roles`, `GoldWindowPolicy`, and it already
-   consumes identity's `UserDeleted` NATS event. It is the natural home
-   for the record.
+   consumes identity's `UserDeleted` NATS event
+   (`UserDeletedConsumer` → `AnonymizeUserRatingsUseCase`). It is the
+   natural home for the record.
+4. **There is no shared mailer, and ADR-0032 is not code.** ADR-0032 is a
+   SigNoz-UI-configured 5xx alert over Gmail SMTP. Application email in
+   this repo is **Brevo transactional, per-context** (identity ADR-0092,
+   billing ADR-0094): a `fun interface EmailSender` port + a
+   `BrevoEmailSender` adapter per context. Survey has none today — the
+   harm email requires a **new survey `EmailSender` port + Brevo
+   adapter**, and therefore a new Brevo API-key secret + config in the
+   survey namespace.
+5. **The answer word is not available on `CurrentCluePanel`.** The panel
+   has the clue text + cells, not the solution word. `word_text` must be
+   threaded from the parent grid (derived from the clue's cell entries),
+   not read off the panel.
 
 ## Architecture overview
 
@@ -59,12 +72,12 @@ and respect RGPD.
  play grid (solo / MP / mini-game)
         │  ⚏ Signaler  →  bottom sheet (reason + optional note)
         ▼
- POST /api/signalements  ──────────────►  survey/ context
+ POST /v1/signalements  ───────────────►  survey/ context
                                               │
                         ┌─────────────────────┼─────────────────────┐
                         ▼                      ▼                     ▼
                   persist PlayerReport   harm? → email you    quality → queue
-                        │                (Gmail SMTP, ADR-0032)
+                        │                (survey Brevo EmailSender)
                         ▼
              maintainer /signalements page
                    Rejeter → DISMISSED
@@ -138,7 +151,7 @@ New `PlayerReport` aggregate + `player_reports` table.
 
 ## Capture path
 
-- **Endpoint:** `POST /api/signalements` on `survey/` (schema-first:
+- **Endpoint:** `POST /v1/signalements` on `survey/` (schema-first:
   `survey/api/openapi.yaml` merges before implementation, per ADR-0001
   §3 / ADR-0003). Auth optional — guests allowed; `reporter_id` filled
   from the auth principal when present.
@@ -148,9 +161,11 @@ New `PlayerReport` aggregate + `player_reports` table.
   `CurrentCluePanel`** (the sticky rail that already shows the focused
   clue). Tapping opens a mobile-first **bottom sheet**: reason list +
   optional note + submit. Attaching to the active clue gives unambiguous
-  `(word, clue)` identity and avoids colliding with grid tap / double-tap
-  gestures. One shared hook/component wires into solo grid, multiplayer
-  lobby, and the homescreen mini-game.
+  clue identity and avoids colliding with grid tap / double-tap gestures.
+  `clue_text` comes from the panel; **`word_text` is threaded in from the
+  parent grid** (derived from the clue's cell entries — the panel does not
+  hold the solution word). One shared hook/component wires into solo grid,
+  multiplayer lobby, and the homescreen mini-game.
 - **Point-of-collection notice** inside the sheet: one line —
   "Ton signalement nous aide à améliorer les grilles — [en savoir plus]"
   linking to `/confidentialite`, mirroring how `SignInButton` /
@@ -160,15 +175,20 @@ New `PlayerReport` aggregate + `player_reports` table.
 
 ## Routing
 
-- **Harm reason** on create → email the maintainer immediately via the
-  existing **Gmail SMTP** alert path (ADR-0032). Subject e.g.
-  "⚠ Signalement — MOT_OFFENSANT : <mot>".
+- **Harm reason** on create → email the maintainer immediately via a
+  **new survey `EmailSender` port + Brevo adapter** (mirroring identity
+  ADR-0092 / billing ADR-0094; there is no shared mailer and ADR-0032 is
+  not code). Requires a Brevo API-key secret + config in the survey
+  namespace. Subject e.g. "⚠ Signalement — MOT_OFFENSANT : <mot>", sent to
+  a configured maintainer address.
 - **Quality reason** → persist only; surfaces in `/signalements`.
 
 ## Triage — `/signalements` page
 
-- Maintainer-only, gated via capability authz (ADR-0079), like
-  `/contribuer`.
+- Maintainer-only, gated on the existing **`contribuer` capability**
+  (ADR-0079) exactly like `/contribuer`: `useCapabilityGate('contribuer')`
+  client-side (denied → 404 `NotFoundScreen`), `requireContribuer()`
+  enforced server-side.
 - Lists **PENDING** reports, grouped and sorted (harm first, then by
   count, then recency).
 - Per group: **Rejeter** (→ `DISMISSED`) or **Corriger** (→ opens the
@@ -178,9 +198,10 @@ New `PlayerReport` aggregate + `player_reports` table.
 
 ## RGPD / privacy
 
-- `reporter_id` nullable; on identity's `UserDeleted` NATS event (survey
-  already consumes it) → null out `reporter_id` on that reporter's reports
-  (anonymize, keep the quality signal).
+- `reporter_id` nullable; anonymization rides the **existing**
+  `UserDeletedConsumer` → `AnonymizeUserRatingsUseCase` (no new consumer):
+  add a `signalements.anonymiseForUser(userId)` call there to null out
+  `reporter_id` on that reporter's reports (keep the quality signal).
 - `note` is maintainer-only. Retention: reports kept until triaged, note
   purged per retention policy (automated purge = V2; documented now).
 - **`/confidentialite` disclosure:** new `v2.confidentialite.signalements.*`
@@ -193,10 +214,12 @@ New `PlayerReport` aggregate + `player_reports` table.
 
 ## Governance
 
-- A short **ADR** for the player-report feature: new player-facing
-  capability, its relationship to survey `FlagReason` / correctifs, and
-  the RGPD posture. Update `docs/adr/INDEX.md` in the same PR
-  (registry-coherence gate).
+- A short **ADR-0101** for the player-report feature: new player-facing
+  capability, its relationship to survey `FlagReason` / correctifs, the
+  new survey Brevo `EmailSender` adapter, and the RGPD posture. Update
+  `docs/adr/INDEX.md` in the same PR (registry-coherence gate); reference
+  ADR-0056 (survey context), ADR-0079 (capability authz), ADR-0092/0094
+  (Brevo email precedent).
 - **Schema-first** PR for `survey/api/openapi.yaml`.
 - **Auth/authz note:** the `/signalements` maintainer gate is an authz
   surface — include the (small) threat model in that PR's body per
@@ -211,8 +234,10 @@ convention). Ordered by dependency.
    `POST /signalements` schema + `INDEX.md` update.
 2. **survey domain + persistence.** `PlayerReport` aggregate,
    `ReportReason`, Flyway migration for `player_reports`, repository.
-3. **Capture endpoint + routing.** `POST /api/signalements` use case,
-   harm-email routing (Gmail SMTP), `UserDeleted` anonymize hook.
+3. **Capture endpoint + routing.** `POST /v1/signalements` use case +
+   Ktor route (optional auth), harm-email routing via a new survey
+   `EmailSender` port + Brevo adapter, and `signalements.anonymiseForUser`
+   added to the existing `AnonymizeUserRatingsUseCase`.
 4. **Frontend capture + privacy.** ⚏ affordance on `CurrentCluePanel` +
    report bottom sheet + shared hook wired into solo/MP/mini-game +
    point-of-collection notice + **`/confidentialite` `signalements`
