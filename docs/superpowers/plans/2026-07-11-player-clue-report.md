@@ -255,7 +255,10 @@ schema-first with generated TS types.
       type: object
       required: [decision]
       properties:
-        decision: { type: string, enum: [dismiss, action] }
+        decision:
+          type: string
+          enum: [dismiss, action]
+          x-enum-varnames: [Dismiss, Action]
   ```
 
 - [ ] **Step 3: Lint.** Run the repo's OpenAPI lint (as CI does; e.g.
