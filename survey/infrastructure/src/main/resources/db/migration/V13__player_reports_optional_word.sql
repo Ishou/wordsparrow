@@ -9,7 +9,7 @@ WHERE a.ctid < b.ctid
   AND a.reporter_id IS NOT NULL
   AND a.reporter_id = b.reporter_id
   AND a.clue_text = b.clue_text
-  AND a.puzzle_id IS NOT DISTINCT FROM b.puzzle_id;
+  AND a.puzzle_id = b.puzzle_id;
 
 DROP INDEX player_reports_dedup;
 CREATE UNIQUE INDEX player_reports_dedup
