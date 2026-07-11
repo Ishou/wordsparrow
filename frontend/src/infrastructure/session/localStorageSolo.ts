@@ -174,7 +174,8 @@ export function saveSoloLockedCell(
     lockedCells: [...existing, { r: row, c: column }],
     hintsUsed: bucket.hintsUsed,
     elapsedSeconds: bucket.elapsedSeconds,
-    localUpdatedAt: nowIso(),
+    // A lock always wins its own collision regardless of timestamp, so bumping the blob clock here only poisons unrelated unlocked cells.
+    localUpdatedAt: bucket.localUpdatedAt,
   });
   writeStore(sessionId, store);
 }

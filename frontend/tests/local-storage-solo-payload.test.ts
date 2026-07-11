@@ -149,6 +149,15 @@ describe('localStorageSolo local-edit clock (ADR-0075 §4 collision resolution)'
     expect(loadSoloLocalUpdatedAt(SESSION, PUZZLE_A)).toBe(T_LETTER);
   });
 
+  it('a lock write does not advance the clock (a lock always wins its own collision)', async () => {
+    const { saveSoloLetter, saveSoloLockedCell, loadSoloLocalUpdatedAt } = await loadFresh();
+    vi.setSystemTime(new Date(T_LETTER));
+    saveSoloLetter(SESSION, PUZZLE_A, 0, 0, 'P');
+    vi.setSystemTime(new Date(T_LATER));
+    saveSoloLockedCell(SESSION, PUZZLE_A, 3, 3);
+    expect(loadSoloLocalUpdatedAt(SESSION, PUZZLE_A)).toBe(T_LETTER);
+  });
+
   it('replaceSoloPayload preserves the local-edit clock across a merge', async () => {
     const { saveSoloLetter, replaceSoloPayload, loadSoloLocalUpdatedAt } = await loadFresh();
     vi.setSystemTime(new Date(T_LETTER));
