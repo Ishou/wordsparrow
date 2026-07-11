@@ -81,6 +81,25 @@ endpoints are restated.
 - **Elevation of privilege.** No maintainer surface is reachable without the
   `contribuer` capability sourced from identity's whoami (absent ⇒ deny).
 
+## Amendment — wordText optional; dedup re-keyed on clue+puzzle (2026-07-11)
+
+The original decision required `word_text` and keyed dedup on
+`(reporter_id, word_text, clue_text)`. That blocked the most important
+report: an offensive definition a player has **not** solved. A player must be
+able to flag a clue from the clue alone, so `wordText` becomes optional
+end-to-end (present ⇒ non-blank; sent best-effort only when the word is
+solved, to help later `survey_item` matching). No server-side word
+resolution is added — the solution stays in `grid/` and off the wire
+(ADR-0076).
+
+A report is now identified by `clue_text` + `puzzle_id`. The partial unique
+index and the maintainer-queue grouping re-key to
+`(reporter_id, clue_text, puzzle_id)` / `(clue_text, puzzle_id, reason)`.
+Postgres treats NULLs as distinct, so a null `puzzle_id` degrades dedup
+gracefully (duplicates are allowed rather than collapsed) — acceptable, since
+reports remain advisory and rate-limited. `V13__player_reports_optional_word`
+carries this as an expand-and-contract migration.
+
 ## Consequences
 
 **Easier:**
