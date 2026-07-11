@@ -64,11 +64,10 @@ const soundBtn = css({
   height: '24px',
   borderRadius: '50%',
   color: 'ws.khaki',
-  opacity: 0.6,
   fontSize: '16px',
-  transition: 'opacity 120ms',
-  _hover: { opacity: 1 },
-  _active: { opacity: 1 },
+  transition: 'color 120ms',
+  _hover: { color: 'ws.jadeInk' },
+  _active: { color: 'ws.jadeInk' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const skipBtn = css({
@@ -80,12 +79,11 @@ const skipBtn = css({
   fontSize: '12px',
   fontWeight: 'semibold',
   color: 'ws.khaki',
-  opacity: 0.6,
   padding: '2px 8px',
   borderRadius: '999px',
-  transition: 'opacity 120ms',
-  _hover: { opacity: 1 },
-  _active: { opacity: 1 },
+  transition: 'color 120ms',
+  _hover: { color: 'ws.jadeInk' },
+  _active: { color: 'ws.jadeInk' },
 });
 // Docks our on-screen keyboard at the bottom (touch only) so the native soft keyboard never has to open.
 const kbDock = css({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1100, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '6px 14px calc(8px + env(safe-area-inset-bottom))' });
