@@ -8,6 +8,14 @@ import {
   type SoloProgressBlobStore,
   type SoloStorePayload,
 } from '@/application/progress';
+import {
+  loadSoloLocalUpdatedAt,
+  loadSoloPayload,
+  listSoloPuzzleIds,
+  replaceSoloPayload,
+  saveSoloLetter,
+  saveSoloLockedCell,
+} from '@/infrastructure/session/localStorageSolo';
 
 function memReconciledStore(initial: string | null = null): ReconciledUserStore {
   let value = initial;
@@ -35,10 +43,15 @@ const SEP = '::';
 const seedKey = (s: string, p: string): string => `${s}${SEP}${p}`;
 
 // In-memory blob store keyed by `sessionId::puzzleId` (real impl, not a mock).
-function memBlobStore(seed: Record<string, SoloStorePayload> = {}): SoloProgressBlobStore {
+function memBlobStore(
+  seed: Record<string, SoloStorePayload> = {},
+  localTimes: Record<string, string> = {},
+): SoloProgressBlobStore {
   const map = new Map<string, SoloStorePayload>(Object.entries(seed));
+  const times = new Map<string, string>(Object.entries(localTimes));
   return {
     loadPayload: (s, p) => map.get(seedKey(s, p)) ?? payload({}),
+    loadLocalUpdatedAt: (s, p) => times.get(seedKey(s, p)),
     replacePayload: (s, p, v) => {
       map.set(seedKey(s, p), v);
     },
@@ -369,6 +382,79 @@ describe('ProgressSyncService — pullAndMergeOne (per-grid open)', () => {
     // Local added 'A', which the server lacked → push the union back.
     expect(client.pushes).toHaveLength(1);
     expect(client.pushes[0].baseUpdatedAt).toBe(T2);
+  });
+
+  it('keeps a fresh local edit over a stale remote value on grid-open (P→O regression)', async () => {
+    // Local typed P (at T2) but the debounced push never reached the server, which still holds an older O (at T1).
+    const remote: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: payload({ entries: [{ r: 0, c: 0, l: 'O' }] }) as unknown as Record<string, unknown>,
+      updatedAt: T1,
+    };
+    const client = fakeClient({ pull: () => remote });
+    const blobStore = memBlobStore(
+      { [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'P' }] }) },
+      { [seedKey(SESSION, PUZZLE)]: T2 },
+    );
+    const service = createProgressSyncService({
+      client,
+      blobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+    await service.pullAndMergeOne(PUZZLE);
+
+    const merged = blobStore.loadPayload(SESSION, PUZZLE);
+    expect(merged.entries).toContainEqual({ r: 0, c: 0, l: 'P' });
+    expect(merged.entries).not.toContainEqual({ r: 0, c: 0, l: 'O' });
+    // The fresh edit differs from the server → it is pushed back up.
+    expect(client.pushes).toHaveLength(1);
+  });
+
+  it('a same-device lock write does not poison an unrelated cell collision (cross-device regression)', async () => {
+    // Device A types a stale letter at T1, then (still offline) locks an unrelated
+    // cell at T2. A lock write must not bump the blob clock, or the T2 stamp would
+    // beat a fresher remote letter that a second device pushed at T1.5.
+    window.localStorage.clear();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(T1));
+    saveSoloLetter(SESSION, PUZZLE, 0, 0, 'X');
+    vi.setSystemTime(new Date(T2));
+    saveSoloLockedCell(SESSION, PUZZLE, 3, 3);
+    vi.useRealTimers();
+
+    const realBlobStore: SoloProgressBlobStore = {
+      loadPayload: loadSoloPayload,
+      loadLocalUpdatedAt: loadSoloLocalUpdatedAt,
+      replacePayload: replaceSoloPayload,
+      listPuzzleIds: listSoloPuzzleIds,
+    };
+    const T1_5 = '2026-06-28T10:30:00.000Z';
+    const remote: RemoteProgressEntry = {
+      puzzleId: PUZZLE,
+      payload: payload({ entries: [{ r: 0, c: 0, l: 'Y' }] }) as unknown as Record<string, unknown>,
+      updatedAt: T1_5,
+    };
+    const client = fakeClient({ pull: () => remote });
+    const service = createProgressSyncService({
+      client,
+      blobStore: realBlobStore,
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+    await service.pullAndMergeOne(PUZZLE);
+
+    const merged = loadSoloPayload(SESSION, PUZZLE);
+    // Remote's T1.5 letter beats local's true T1 edit clock — the T2 lock write must not have masqueraded as the letter's freshness.
+    expect(merged.entries).toContainEqual({ r: 0, c: 0, l: 'Y' });
+    expect(merged.entries).not.toContainEqual({ r: 0, c: 0, l: 'X' });
+    // The locked cell is untouched by the remote pull and stays locked regardless of timestamps.
+    expect(merged.lockedCells).toContainEqual({ r: 3, c: 3 });
+    window.localStorage.clear();
   });
 
   it('does not push when local adds nothing the server lacks', async () => {

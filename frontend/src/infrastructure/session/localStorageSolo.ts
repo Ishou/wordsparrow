@@ -22,7 +22,11 @@ interface StoredPuzzle {
   lockedCells?: StoredLock[];
   hintsUsed?: number;
   elapsedSeconds?: number;
+  // Wall-clock of the last local mutation; the sync merge treats a blob newer than the server's as the collision winner (ADR-0075 §4).
+  localUpdatedAt?: string;
 }
+
+const nowIso = (): string => new Date().toISOString();
 
 // Per-puzzle bucket. Legacy shape (PR #242) was `StoredEntry[]` — kept on
 // read for transparent migration; on write we always emit the object form.
@@ -82,6 +86,7 @@ function readBucket(store: SoloStore, puzzleId: string): StoredPuzzle {
     lockedCells: raw.lockedCells ?? [],
     hintsUsed: raw.hintsUsed ?? 0,
     elapsedSeconds: raw.elapsedSeconds ?? 0,
+    localUpdatedAt: raw.localUpdatedAt,
   };
 }
 
@@ -135,6 +140,7 @@ export function saveSoloLetter(
     lockedCells: bucket.lockedCells,
     hintsUsed: bucket.hintsUsed,
     elapsedSeconds: bucket.elapsedSeconds,
+    localUpdatedAt: nowIso(),
   });
   writeStore(sessionId, store);
 }
@@ -168,6 +174,8 @@ export function saveSoloLockedCell(
     lockedCells: [...existing, { r: row, c: column }],
     hintsUsed: bucket.hintsUsed,
     elapsedSeconds: bucket.elapsedSeconds,
+    // A lock always wins its own collision regardless of timestamp, so bumping the blob clock here only poisons unrelated unlocked cells.
+    localUpdatedAt: bucket.localUpdatedAt,
   });
   writeStore(sessionId, store);
 }
@@ -188,6 +196,8 @@ export function recordSoloHintUsed(sessionId: string, puzzleId: string): void {
     lockedCells: bucket.lockedCells,
     hintsUsed: (bucket.hintsUsed ?? 0) + 1,
     elapsedSeconds: bucket.elapsedSeconds,
+    // No localUpdatedAt bump: hintsUsed is monotonic (max-merged), so it must not advance the letter-collision clock.
+    localUpdatedAt: bucket.localUpdatedAt,
   });
   writeStore(sessionId, store);
 }
@@ -213,6 +223,8 @@ export function saveSoloElapsed(
     lockedCells: bucket.lockedCells,
     hintsUsed: bucket.hintsUsed,
     elapsedSeconds: safe,
+    // Elapsed ticks constantly; preserve (never advance) the letter-collision clock.
+    localUpdatedAt: bucket.localUpdatedAt,
   });
   writeStore(sessionId, store);
 }
@@ -261,13 +273,25 @@ export function replaceSoloPayload(
   payload: SoloStorePayload,
 ): void {
   const store = readStore(sessionId);
+  const existing = readBucket(store, puzzleId);
   persistBucket(store, puzzleId, {
     entries: payload.entries.map((e) => ({ r: e.r, c: e.c, l: e.l })),
     lockedCells: payload.lockedCells.map((e) => ({ r: e.r, c: e.c })),
     hintsUsed: payload.hintsUsed,
     elapsedSeconds: payload.elapsedSeconds,
+    // Preserve the local edit clock across a merge so an unpushed edit still outranks a stale remote on the next sync.
+    localUpdatedAt: existing.localUpdatedAt,
   });
   writeStore(sessionId, store);
+}
+
+/** Wall-clock of the puzzle blob's last local content mutation, or `undefined` if never mutated on this device. */
+export function loadSoloLocalUpdatedAt(
+  sessionId: string,
+  puzzleId: string,
+): string | undefined {
+  const bucket = readBucket(readStore(sessionId), puzzleId);
+  return typeof bucket.localUpdatedAt === 'string' ? bucket.localUpdatedAt : undefined;
 }
 
 /** Puzzle ids the device currently holds local progress for. */
