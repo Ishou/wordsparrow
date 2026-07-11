@@ -1,0 +1,107 @@
+name: Tofu (k8s infra)
+
+# Gated CI apply for terraform/k8s — manual workflow_dispatch (show / plan / apply,
+# apply behind the prod-infra required-reviewer gate). Threat model + one-time
+# setup: ADR-0104 and docs/deploy.md "Terraform k8s apply via CI".
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "show (dump current state, read-only) / plan (preview) / apply (gated)"
+        type: choice
+        options: [show, plan, apply]
+        default: plan
+      worker_count:
+        description: "Override worker_count for this run (blank = repo var TF_WORKER_COUNT)"
+        required: false
+        type: string
+
+# Serialize: two concurrent runs would race the lock-object state (ADR-0010 §2).
+concurrency:
+  group: tofu-k8s
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "1"
+  # hcloud provider reads HCLOUD_TOKEN from the environment.
+  HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+  # S3 backend (bliss-tf-state on Hetzner Object Storage) auth.
+  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+  # Non-secret cluster config — from repo Variables so no prod value is
+  # guessed or committed here. worker_count is overridable per-run.
+  TF_VAR_cluster_name: ${{ vars.TF_CLUSTER_NAME }}
+  TF_VAR_region: ${{ vars.TF_REGION }}
+  TF_VAR_control_plane_count: ${{ vars.TF_CONTROL_PLANE_COUNT }}
+  TF_VAR_worker_count: ${{ inputs.worker_count != '' && inputs.worker_count || vars.TF_WORKER_COUNT }}
+  TF_VAR_node_size: ${{ vars.TF_NODE_SIZE }}
+  TF_VAR_worker_node_size: ${{ vars.TF_WORKER_NODE_SIZE }}
+  TF_VAR_observability_worker_count: ${{ vars.TF_OBS_WORKER_COUNT }}
+  TF_VAR_observability_worker_node_size: ${{ vars.TF_OBS_WORKER_NODE_SIZE }}
+  TF_VAR_ssh_public_keys: ${{ vars.TF_SSH_PUBLIC_KEYS }}
+  TF_VAR_k3s_version: ${{ vars.TF_K3S_VERSION }}
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin OpenTofu from terraform/k8s/.opentofu-version
+        id: tofuver
+        run: echo "version=$(cat terraform/k8s/.opentofu-version)" >> "$GITHUB_OUTPUT"
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ steps.tofuver.outputs.version }}
+          tofu_wrapper: false
+      - name: tofu init
+        run: tofu -chdir=terraform/k8s init -input=false
+      # show mode: dump the current state to recover config (server types, ssh
+      # keys, region) when the tfvars are lost. No input vars needed; sensitive
+      # state values (k3s_token) are auto-redacted by `tofu show`.
+      - name: tofu show (current state — read-only)
+        if: ${{ inputs.mode == 'show' }}
+        run: tofu -chdir=terraform/k8s show -no-color
+      - name: tofu plan
+        if: ${{ inputs.mode != 'show' }}
+        run: tofu -chdir=terraform/k8s plan -input=false -lock-timeout=120s -out=tfplan
+      - name: Show plan
+        if: ${{ inputs.mode != 'show' }}
+        run: tofu -chdir=terraform/k8s show -no-color tfplan
+      - name: Upload plan for the apply gate
+        if: ${{ inputs.mode != 'show' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tofu-plan
+          path: terraform/k8s/tfplan
+          retention-days: 5
+
+  apply:
+    name: apply
+    if: ${{ inputs.mode == 'apply' }}
+    needs: plan
+    runs-on: ubuntu-latest
+    # Required-reviewer gate: a human approves the reviewed plan before apply runs.
+    environment: prod-infra
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin OpenTofu from terraform/k8s/.opentofu-version
+        id: tofuver
+        run: echo "version=$(cat terraform/k8s/.opentofu-version)" >> "$GITHUB_OUTPUT"
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ steps.tofuver.outputs.version }}
+          tofu_wrapper: false
+      - name: Fetch the reviewed plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tofu-plan
+          path: terraform/k8s
+      - name: tofu init
+        run: tofu -chdir=terraform/k8s init -input=false
+      - name: tofu apply (the reviewed plan; rejects if state drifted)
+        run: tofu -chdir=terraform/k8s apply -input=false -lock-timeout=120s tfplan

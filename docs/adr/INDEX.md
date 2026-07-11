@@ -313,6 +313,8 @@ ADR-0102  frontend/src/ui/v2/multiplayer/ResultatsScreen.tsx  Résultats ranks p
 ADR-0103  survey/**/*Signalement*                   Player clue-report: optional-auth capture, maintainer queue
 ADR-0103  survey/api/openapi.yaml                   POST /v1/signalements + ReportReason enum
 ADR-0103  frontend/src/**/signalement*              Report sheet + /signalements triage (contribuer-gated)
+ADR-0104  .github/workflows/tofu-k8s.yml            Gated CI apply for terraform/k8s: workflow_dispatch plan/apply, apply behind prod-infra environment approval; secrets env-injected, non-secret vars from repo Variables
+ADR-0104  terraform/k8s/**                          Provisioned either manually (ADR-0011) or via the gated tofu-k8s workflow; state/HCLOUD_TOKEN never leave Actions on the CI path
 ```
 
 ## Adding entries

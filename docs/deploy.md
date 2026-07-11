@@ -233,6 +233,44 @@ If the run 400s with `XAmzContentSHA256Mismatch`, the
 `skip_s3_checksum = true` flag is missing from the backend block —
 re-check `terraform/k8s/versions.tf` against ADR-0010 §2.
 
+## Terraform k8s apply via CI (ADR-0104)
+
+The `Tofu (k8s infra)` workflow (`.github/workflows/tofu-k8s.yml`) runs
+`tofu plan`/`apply` against `terraform/k8s/` from GitHub Actions, so
+infra/capacity changes (e.g. bumping `worker_count`) are a reviewable,
+approved dispatch instead of a local run — the `HCLOUD_TOKEN` never leaves
+Actions. Manual local `tofu apply` (above) stays valid as a fallback.
+
+### One-time setup
+
+1. **Protected environment.** Create a GitHub Environment named
+   **`prod-infra`** (Settings → Environments) with **required reviewers**
+   (yourself). The `apply` job pauses here until approved.
+2. **Repo Variables** (Settings → Secrets and variables → Actions →
+   *Variables*), mirroring your local tfvars — these are non-secret:
+   `TF_CLUSTER_NAME`, `TF_REGION`, `TF_CONTROL_PLANE_COUNT`,
+   `TF_WORKER_COUNT`, `TF_NODE_SIZE`, `TF_WORKER_NODE_SIZE`,
+   `TF_OBS_WORKER_COUNT`, `TF_OBS_WORKER_NODE_SIZE`,
+   `TF_SSH_PUBLIC_KEYS` (a **JSON array**, e.g. `["ssh-ed25519 AAAA…"]`),
+   `TF_K3S_VERSION`.
+
+   **Lost your tfvars?** Run the workflow with `mode = show` first (it needs
+   no Variables) — it prints the current state, from which you read the exact
+   `server_type` per node, the `hcloud_ssh_key` public keys, and the location,
+   then set the Variables to match. `region` is the node **location** (e.g.
+   `nbg1`), *not* the state-bucket region (`fsn1`).
+3. **Secrets** `HCLOUD_TOKEN`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` already exist.
+
+### Running it
+
+1. Actions → **Tofu (k8s infra)** → **Run workflow**, `mode = plan`. Read
+   the "Show plan" output — confirm it's the diff you expect (e.g. only
+   `+2 hcloud_server.worker`, no destroys).
+2. If good, **Run workflow** again with `mode = apply` (optionally set the
+   `worker_count` input to override the repo var for a one-off change). The
+   `apply` job waits on the `prod-infra` reviewer gate; approve it to apply
+   the reviewed plan. A drifted state makes the apply reject the stale plan.
+
 ## Hetzner cluster bring-up (one-time)
 
 First concrete cluster-provisioning module:
