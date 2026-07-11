@@ -73,11 +73,11 @@ const headerSpacer = css({ flex: 1 });
 const brandLink = css({ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', borderRadius: '12px', _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '4px' } });
 const headerTimer = css({ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'wsMono', fontWeight: 'semibold', fontSize: '13.5px', color: 'ws.jadeInk', flex: 'none', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em', paddingInline: '2px' });
 const headerTimerIcon = css({ fontSize: '14px', opacity: 0.55, flex: 'none' });
-// Mobile bleeds full-field; desktop viewport is the clear band between the 72px app bar and the ~140px clue rail, so the grid fits inside it.
-const viewportFill = css({ flex: '1', minHeight: 0, lg: { position: 'absolute', top: '72px', left: 0, right: 0, bottom: '140px' } });
+// Mobile bleeds full-field behind floating bars; desktop is a flex-flow row under the app bar (the AppShell frame already reserves the bar), with the clue rail as a static sibling below.
+const viewportFill = css({ flex: '1', minHeight: 0, lg: { width: '100%' } });
 
-// Overlay bar (padBottom drives focus-reveal); no top-pad — board reserves BOARD_BOTTOM_GAP below itself.
-const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `0 ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { paddingBottom: '24px' } });
+// Overlay bar (padBottom drives focus-reveal); mobile keeps no top-pad so the board bleeds under it. Desktop flows as the bottom row with an 8px gutter above the clue rail.
+const bottomBar = css({ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, display: 'flex', flexDirection: 'column', gap: '10px', padding: `0 ${GUTTER} 14px`, md: { alignItems: 'center', '& > *': { width: '100%', maxWidth: '520px' } }, lg: { position: 'static', paddingTop: '8px', paddingBottom: '24px' } });
 // Compact hint chip, lives in the ClueRail label row (replacing the counter).
 const hintBtn = css({
   display: 'inline-flex',
@@ -623,7 +623,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
         solvedDefCells={solvedDefCells}
         className={viewportFill}
         padTop={isDesktop ? 18 : 68}
-        padBottom={isDesktop ? 6 : bottomInset + BOARD_BOTTOM_GAP}
+        padBottom={isDesktop ? 12 : bottomInset + BOARD_BOTTOM_GAP}
         padX={isDesktop ? 24 : 14}
         edgeFade
         onKeyDown={handleKeyDown}
