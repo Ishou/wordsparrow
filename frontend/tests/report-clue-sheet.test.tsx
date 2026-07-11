@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReportClueSheet } from '@/ui/components/grid/ReportClueSheet';
 import { Toast, ToastProvider } from '@/ui/components/primitives';
 import type { SurveyClient } from '@/application/survey';
+import { ReportRateLimitedError } from '@/application/survey';
 import { expectAxeClean } from '@/test/a11y';
 
 function stubClient(submit = vi.fn().mockResolvedValue({ reportId: 'r-1' })): SurveyClient {
@@ -86,6 +87,18 @@ describe('ReportClueSheet', () => {
       puzzleId: 'p-1',
     });
     await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('Merci, c’est signalé'));
+  });
+
+  it('surfaces a distinct rate-limit toast when the client throws ReportRateLimitedError', async () => {
+    const submit = vi.fn().mockRejectedValue(new ReportRateLimitedError());
+    renderSheet(<ReportClueSheet {...baseProps} surveyClient={stubClient(submit)} />);
+    fireEvent.click(await screen.findByTestId('report-clue'));
+    await flushDialog();
+    fireEvent.click(screen.getByRole('radio', { name: 'Trop facile' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent(/Tu as signalé trop de fois/));
+    expect(screen.getByTestId('toast')).toHaveAttribute('data-tone', 'error');
   });
 
   it('keeps submit disabled until a reason is chosen', async () => {

@@ -671,6 +671,7 @@ export const fr = {
   'signalement.cancel': "Annuler",
   'signalement.success': "Merci, c’est signalé",
   'signalement.error': "Signalement impossible pour le moment. Réessaie plus tard.",
+  'signalement.error.rateLimited': "Tu as signalé trop de fois récemment. Réessaie dans un moment.",
   'v2.mentions.title': "Mentions légales",
   'v2.mentions.lede': "L’essentiel sur l’éditeur du jeu, l’hébergement et tes droits.",
   'v2.mentions.editeur.heading': "Éditeur",

@@ -29,6 +29,8 @@ export type {
   SurveyTier,
 } from './types';
 
+export { ReportRateLimitedError } from './errors';
+
 export { normalizeForMatch } from './gloss';
 
 export { campaignDisplayName } from './campaignName';

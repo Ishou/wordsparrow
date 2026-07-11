@@ -7,6 +7,7 @@ import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
 import { useToast } from '@/ui/components/primitives';
 import { useReportClue } from './useReportClue';
+import { ReportRateLimitedError } from '@/application/survey';
 import type { ReportReason, ReportSurface, SurveyClient } from '@/application/survey';
 
 const REASONS: readonly ReportReason[] = [
@@ -167,8 +168,9 @@ export function ReportClueSheet({ surveyClient, surface, clueText, wordText, puz
       });
       show({ text: t('signalement.success'), tone: 'info' });
       close();
-    } catch {
-      show({ text: t('signalement.error'), tone: 'error' });
+    } catch (err) {
+      const messageKey = err instanceof ReportRateLimitedError ? 'signalement.error.rateLimited' : 'signalement.error';
+      show({ text: t(messageKey), tone: 'error' });
     } finally {
       setSubmitting(false);
     }

@@ -15,6 +15,7 @@ import type {
   SurveyPreferencesPatch,
   SurveyProgress,
 } from '@/application/survey';
+import { ReportRateLimitedError } from '@/application/survey';
 import type { components, paths } from './types';
 
 type CorrectifRejection = components['schemas']['CorrectifRejection'];
@@ -70,13 +71,6 @@ export class UndoUnavailableError extends Error {
   constructor() {
     super('undo unavailable');
     this.name = 'UndoUnavailableError';
-  }
-}
-
-export class ReportRateLimitedError extends Error {
-  constructor() {
-    super('report rate limited');
-    this.name = 'ReportRateLimitedError';
   }
 }
 
