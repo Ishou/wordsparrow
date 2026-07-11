@@ -4,6 +4,9 @@
 # `kubectl rollout status deployment/wordsparrow-survey-api` line resolves
 # without per-context name arithmetic. Without this, helm's default
 # fullname is `<release>-<chart>` = `wordsparrow-survey-api-bliss-survey-api`.
+# ADR-0101 R5: 2 replicas for HA (stateless REST; session cache is per-replica).
+replicaCount: 2
+
 fullnameOverride: "wordsparrow-survey-api"
 
 image:
