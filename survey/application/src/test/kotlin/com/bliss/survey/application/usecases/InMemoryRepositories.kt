@@ -8,6 +8,7 @@ import com.bliss.survey.application.ports.ProposedByRepository
 import com.bliss.survey.application.ports.ProposedContribution
 import com.bliss.survey.application.ports.RatingAggregate
 import com.bliss.survey.application.ports.RatingRepository
+import com.bliss.survey.application.ports.SignalementRepository
 import com.bliss.survey.application.ports.SurveyItemRepository
 import com.bliss.survey.application.ports.TransactionManager
 import com.bliss.survey.application.ports.UserProgress
@@ -19,9 +20,12 @@ import com.bliss.survey.domain.model.ItemId
 import com.bliss.survey.domain.model.ItemPair
 import com.bliss.survey.domain.model.PairRating
 import com.bliss.survey.domain.model.PairRatingId
+import com.bliss.survey.domain.model.PlayerReport
 import com.bliss.survey.domain.model.Pos
 import com.bliss.survey.domain.model.Rating
 import com.bliss.survey.domain.model.RatingId
+import com.bliss.survey.domain.model.ReportId
+import com.bliss.survey.domain.model.ReportStatus
 import com.bliss.survey.domain.model.SubmittedAs
 import com.bliss.survey.domain.model.SurveyAction
 import com.bliss.survey.domain.model.SurveyItem
@@ -239,6 +243,45 @@ class InMemoryRatingRepository : RatingRepository {
             senses = matched.mapNotNull { it.targetSense },
             subTags = matched.flatMap { it.subTags },
         )
+    }
+}
+
+class InMemorySignalementRepository : SignalementRepository {
+    val reports: MutableList<PlayerReport> = mutableListOf()
+
+    override suspend fun insert(report: PlayerReport) {
+        reports += report
+    }
+
+    override suspend fun existsFor(
+        reporterId: UserId,
+        wordText: String,
+        clueText: String,
+    ): Boolean =
+        reports.any {
+            it.reporterId == reporterId && it.wordText == wordText && it.clueText == clueText
+        }
+
+    override suspend fun listPending(): List<PlayerReport> = reports.filter { it.status == ReportStatus.PENDING }
+
+    override suspend fun findById(id: ReportId): PlayerReport? = reports.firstOrNull { it.id == id }
+
+    override suspend fun updateStatus(
+        id: ReportId,
+        status: ReportStatus,
+        triagedBy: UserId,
+        triagedAt: Instant,
+    ) {
+        reports.withIndex().firstOrNull { it.value.id == id }?.let { (idx, r) ->
+            reports[idx] = r.copy(status = status, triagedBy = triagedBy, triagedAt = triagedAt)
+        }
+    }
+
+    override suspend fun anonymiseForUser(userId: UserId) {
+        val targets = reports.withIndex().filter { it.value.reporterId == userId }
+        for ((idx, r) in targets) {
+            reports[idx] = r.copy(reporterId = null)
+        }
     }
 }
 
