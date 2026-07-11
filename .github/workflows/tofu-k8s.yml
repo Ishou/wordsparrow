@@ -77,8 +77,10 @@ jobs:
         env:
           REPLACE: ${{ inputs.replace }}
         run: |
+          set -f  # addresses like worker[2] contain glob metachars — keep word-splitting, drop globbing
           args=()
           for addr in $REPLACE; do args+=("-replace=$addr"); done
+          set +f
           tofu -chdir=terraform/k8s plan -input=false -lock-timeout=120s "${args[@]}" -out=tfplan
       - name: Show plan
         if: ${{ inputs.mode != 'show' }}
