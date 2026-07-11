@@ -1,0 +1,12 @@
+{{- if gt (int (.Values.replicaCount | default 2)) 1 }}
+{{/* ADR-0101 R5: keep >=1 pod during voluntary disruptions (node drain/upgrade). Gated on >1 replica so single-replica local doesn't block drains. */}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "bliss-identity-api.fullname" . }}
+  labels: {{- include "bliss-identity-api.labels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {{- include "bliss-identity-api.selectorLabels" . | nindent 6 }}
+{{- end }}
