@@ -1,0 +1,13 @@
+{{- if .Values.backups.enabled -}}
+{{/* Recurring base backup so the cluster has a recovery point (ADR-0010 §3); WAL archiving alone can't restore without one. Mirrors grid's postgres-backup.yaml. */}}
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ printf "%s-scheduled" .Release.Name }}
+  labels: {{- include "bliss-survey-api-pg.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backups.schedule | quote }}
+  backupOwnerReference: self
+  cluster:
+    name: {{ .Release.Name }}
+{{- end }}
