@@ -1,6 +1,4 @@
--- player_reports: player-submitted clue/word problem reports (ADR-0103).
--- report<->item is a text join on (word_text, clue_text); no item FK by design.
--- reporter_id nulled on RGPD erasure; auth dedup via a partial unique index.
+-- player_reports: report capture (ADR-0103); text-join match on (word_text, clue_text), no item FK.
 
 CREATE TABLE player_reports (
     report_id   UUID PRIMARY KEY,
