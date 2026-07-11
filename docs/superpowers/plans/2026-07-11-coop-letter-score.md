@@ -18,14 +18,14 @@
 - **Live roster stays join-order** (no re-sort). **Résultats sorts by score descending**, ties broken by join order (stable `Array.prototype.sort`).
 - **DCO:** every commit signed off (`git commit -s`) and ends with the `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>` trailer.
 - **Branch:** `feat/coop-letter-score` (already checked out in this worktree, off fresh `origin/main`).
-- **Single PR** (maintainer decision): ADR-0101 + INDEX (Task 1) and the implementation (Tasks 2–6) all land on `feat/coop-letter-score`; Task 7 opens one PR. Task 1 is still committed first so the ADR precedes the code it governs in history.
+- **Single PR** (maintainer decision): ADR-0102 + INDEX (Task 1) and the implementation (Tasks 2–6) all land on `feat/coop-letter-score`; Task 7 opens one PR. Task 1 is still committed first so the ADR precedes the code it governs in history.
 
 ---
 
-### Task 1: ADR-0101 + INDEX entry (Wave 1 PR)
+### Task 1: ADR-0102 + INDEX entry (Wave 1 PR)
 
 **Files:**
-- Create: `docs/adr/0101-coop-validated-letter-score.md`
+- Create: `docs/adr/0102-coop-validated-letter-score.md`
 - Modify: `docs/adr/INDEX.md` (append to the registry table)
 
 **Interfaces:**
@@ -34,10 +34,10 @@
 
 - [ ] **Step 1: Write the ADR**
 
-Create `docs/adr/0101-coop-validated-letter-score.md`:
+Create `docs/adr/0102-coop-validated-letter-score.md`:
 
 ```markdown
-# ADR-0101: Co-op validated-letter score (per-player contribution tally)
+# ADR-0102: Co-op validated-letter score (per-player contribution tally)
 
 ## Status
 
@@ -101,21 +101,21 @@ contribution tally is now shown; competitive/versus scoring remains deferred.
 In `docs/adr/INDEX.md`, append these rows to the registry table (matching the existing `ADR-NNNN  path  description` column style; use the same whitespace alignment as neighbouring rows):
 
 ```
-ADR-0101  frontend/src/application/game/playerScores.ts   Co-op score = count of lockedPositions per lockedBy (ADR-0086 attribution); frontend-only derivation
-ADR-0101  frontend/src/ui/v2/multiplayer/PlayerStrip.tsx   Live roster chip carries the player's validated-letter count (join-order, no re-sort)
-ADR-0101  frontend/src/ui/v2/multiplayer/ResultatsScreen.tsx  Résultats ranks players by validated-letter score descending
+ADR-0102  frontend/src/application/game/playerScores.ts   Co-op score = count of lockedPositions per lockedBy (ADR-0086 attribution); frontend-only derivation
+ADR-0102  frontend/src/ui/v2/multiplayer/PlayerStrip.tsx   Live roster chip carries the player's validated-letter count (join-order, no re-sort)
+ADR-0102  frontend/src/ui/v2/multiplayer/ResultatsScreen.tsx  Résultats ranks players by validated-letter score descending
 ```
 
 - [ ] **Step 3: Verify the registry-coherence pairing**
 
 Run: `git status --porcelain docs/adr/`
-Expected: both `0101-coop-validated-letter-score.md` (new) and `INDEX.md` (modified) appear — the `registry-coherence` CI gate requires an ADR change to touch `INDEX.md` in the same PR.
+Expected: both `0102-coop-validated-letter-score.md` (new) and `INDEX.md` (modified) appear — the `registry-coherence` CI gate requires an ADR change to touch `INDEX.md` in the same PR.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/adr/0101-coop-validated-letter-score.md docs/adr/INDEX.md
-git commit -s -m "docs(adr): ADR-0101 co-op validated-letter score
+git add docs/adr/0102-coop-validated-letter-score.md docs/adr/INDEX.md
+git commit -s -m "docs(adr): ADR-0102 co-op validated-letter score
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
@@ -546,7 +546,7 @@ and add `lockedPositions` to the destructured params of `ResultatsScreen({ ... }
 Replace the top comment line `// ADR-0072 co-op finish: no scores — versus mode is a deferred follow-up.` with:
 
 ```ts
-// Co-op finish: per-player validated-letter tally ranked as a leaderboard (ADR-0101). Competitive/versus mode still deferred.
+// Co-op finish: per-player validated-letter tally ranked as a leaderboard (ADR-0102). Competitive/versus mode still deferred.
 ```
 
 - [ ] **Step 5: Add the count style and right-group style**
@@ -644,13 +644,13 @@ Expected: only the ADR files (Wave 1, already merged) and the frontend files lis
 
 - [ ] **Step 3: Push and open the PR**
 
-Push `feat/coop-letter-score` and open a PR whose body names the workstream (co-op validated-letter score), the bounded context/layer (frontend — application + ui), links ADR-0101 and the spec, and states no schema shipped. Then schedule the auto-merge cron (merge on green CI + §6a LGTM).
+Push `feat/coop-letter-score` and open a PR whose body names the workstream (co-op validated-letter score), the bounded context/layer (frontend — application + ui), links ADR-0102 and the spec, and states no schema shipped. Then schedule the auto-merge cron (merge on green CI + §6a LGTM).
 
 ---
 
 ## Self-Review
 
-**Spec coverage:** semantics → ADR-0101 (T1) + helper (T2); live roster chip → T4 + T5; Résultats leaderboard → T6; ADR + INDEX → T1; i18n → T3; testing → tests in T2/T4/T6 + T7 gate; scope/two-waves → T1 (Wave 1) vs T2–T6 (Wave 2). No gaps.
+**Spec coverage:** semantics → ADR-0102 (T1) + helper (T2); live roster chip → T4 + T5; Résultats leaderboard → T6; ADR + INDEX → T1; i18n → T3; testing → tests in T2/T4/T6 + T7 gate; scope/two-waves → T1 (Wave 1) vs T2–T6 (Wave 2). No gaps.
 
 **Placeholder scan:** every code step shows complete code; no TBD/TODO/"handle edge cases". Clear.
 

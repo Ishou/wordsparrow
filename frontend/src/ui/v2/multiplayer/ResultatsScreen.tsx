@@ -6,7 +6,7 @@ import { sparrowCelebrationScene } from '@/ui/v2/SparrowScenes';
 import { formatClock } from '@/ui/lib/formatClock';
 import { PlayerAvatar } from './PlayerAvatar';
 
-// Co-op finish: per-player validated-letter tally ranked as a leaderboard (ADR-0101). Competitive/versus mode still deferred.
+// Co-op finish: per-player validated-letter tally ranked as a leaderboard (ADR-0102). Competitive/versus mode still deferred.
 
 const formatDuration = (durationMs: number): string => formatClock(durationMs / 1000);
 

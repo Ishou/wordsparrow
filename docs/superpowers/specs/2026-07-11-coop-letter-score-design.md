@@ -93,15 +93,15 @@ the map to both `PlayerStrip` render sites (mobile + desktop).
 — versus mode is a deferred follow-up"* — an undocumented assumption, not a
 clause in any merged ADR. This feature adds a co-op score, so:
 
-- **ADR-0101** (new) records the decision: co-op score = validated-letter count
+- **ADR-0102** (new) records the decision: co-op score = validated-letter count
   via ADR-0086 `lockedBy` attribution; shown on the live roster and the
   Résultats leaderboard; frontend-only (no new wire). It establishes co-op
   scoring, superseding that code-comment assumption (this is a *collaborative*
   contribution tally, not the deferred *versus/competitive* mode) and
   references ADR-0086 and ADR-0050.
-- `docs/adr/INDEX.md` gains the ADR-0101 entry in the same PR (registry
+- `docs/adr/INDEX.md` gains the ADR-0102 entry in the same PR (registry
   coherence gate).
-- The stale comment in `ResultatsScreen.tsx` is updated to point at ADR-0101.
+- The stale comment in `ResultatsScreen.tsx` is updated to point at ADR-0102.
 
 ## i18n
 
@@ -138,7 +138,7 @@ uses; no new namespace is introduced.
 ## Scope / delivery
 
 - Frontend-only; well under the 400-line diff cap.
-- **Wave 1 — ADR PR:** ADR-0101 + INDEX.md entry (governance-only).
+- **Wave 1 — ADR PR:** ADR-0102 + INDEX.md entry (governance-only).
 - **Wave 2 — implementation PR:** `playerScores.ts` + `PlayerStrip` +
   `ResultatsScreen` + `LiveCoopScreen` + route wiring + i18n + tests. Bundles
   the spec doc. Merges after Wave 1.

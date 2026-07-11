@@ -1,4 +1,4 @@
-# ADR-0101: Co-op validated-letter score (per-player contribution tally)
+# ADR-0102: Co-op validated-letter score (per-player contribution tally)
 
 ## Status
 
