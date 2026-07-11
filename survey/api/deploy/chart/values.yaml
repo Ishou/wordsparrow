@@ -105,11 +105,20 @@ env:
     value: "2026-05-30T00:00:00Z"
   - name: SURVEY_GOLD_MULTIPLIER
     value: "3.0"
+  # Harm-report alert mail (ADR-0103). Addresses are non-secret; the API key rides brevoApiKeySecret below.
+  - name: SURVEY_MAINTAINER_EMAIL
+    value: "contact@wordsparrow.io"
+  - name: SURVEY_EMAIL_SENDER
+    value: "signalement@wordsparrow.io"
 # Name of a Kubernetes Secret to envFrom into the pod. ADR-0009 §10:
 # bootstrapped via `kubectl create secret`, never committed. Carries
 # SURVEY_DB_USER / SURVEY_DB_PASSWORD (CNPG injects SURVEY_JDBC_URL via
 # secretKeyRef below). Bootstrap recipe lands with the prod cutover.
 envFromSecret: ""
+# Dedicated Secret holding the Brevo transactional API key (key SURVEY_BREVO_API_KEY;
+# same value as identity). Own lifecycle, separate from envFromSecret. Empty => harm
+# alerts ship dark (ADR-0103). Bootstrapped via `kubectl create secret`, never committed.
+brevoApiKeySecret: ""
 # Calibration seed — gold pilot rows ingested at install time (Helm
 # post-install Job). Disabled by default; values-prod turns it on.
 # Mirrors the configure-in-cluster pattern (CLAUDE.md "Helm post-install
