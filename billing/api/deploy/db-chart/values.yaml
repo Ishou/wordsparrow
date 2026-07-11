@@ -9,6 +9,9 @@ cluster:
     storageClass: ""
   # The api Deployment's wait-for-postgres init container runs `pg_isready -U billing -d billing`; both names must match here or readiness spins forever.
   bootstrap: {database: billing, owner: billing}
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: "1", memory: 1Gi}
 backups:
   # Off by default. Prod turns this on; local stays off.
   enabled: false

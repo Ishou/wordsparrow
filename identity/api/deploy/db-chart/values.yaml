@@ -13,6 +13,9 @@ cluster:
   # container uses `pg_isready -U identity -d identity` — both names must
   # match here or the readiness check spins forever.
   bootstrap: {database: identity, owner: identity}
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: "1", memory: 1Gi}
 backups:
   # Off by default. Prod turns this on; local stays off.
   enabled: false

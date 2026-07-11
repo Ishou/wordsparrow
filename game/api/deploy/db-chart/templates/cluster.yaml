@@ -21,6 +21,10 @@ spec:
     {{- with .Values.cluster.storage.storageClass }}
     storageClass: {{ . }}
     {{- end }}
+  {{- with .Values.cluster.resources }}
+  # ADR-0101 R2: requests lift DB pods off BestEffort QoS (they were first to be evicted under node memory pressure).
+  resources: {{- toYaml . | nindent 4 }}
+  {{- end }}
   {{- if .Values.backups.enabled }}
   backup:
     barmanObjectStore:
