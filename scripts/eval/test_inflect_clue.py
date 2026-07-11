@@ -229,6 +229,26 @@ def test_non_negation_does_not_capture_head() -> None:
     assert "présente" in res.text.lower(), res.text
 
 
+def test_determiner_governed_object_not_agreed_as_head() -> None:
+    """`abusives,abusif,adj,Qui outrepasse un droit` — `droit` is tagged both
+    adj (droit/droite/droits/droites) AND nom. Pre-fix the adj head-ranker
+    picked `droit` (the only adj-POS token) and agreed it to the fem-pl
+    surface, stranding its determiner: `Qui outrepasse un droites`. An
+    article-governed token is a substantive object, not the clue's agreeing
+    head — excluding it lets the invariant relative-clause clue ship
+    verbatim (head-pos-mismatch, which build_surface_clues ships as-is)."""
+    idx = MorphologyIndex()
+    _add(idx, "abusif", "abusif", "adj mas sg")
+    _add(idx, "abusif", "abusives", "adj fem pl")
+    _add(idx, "outrepasser", "outrepasse", "v1__t___zz ipre 3sg")
+    _add(idx, "droit", "droit", "adj nom mas sg")
+    _add(idx, "droit", "droites", "adj nom fem pl")
+    res = inflect_clue("Qui outrepasse un droit", {"adj", "fem", "pl"}, idx)
+    assert "droites" not in res.text.lower(), res.text
+    assert res.text == "Qui outrepasse un droit", res.text
+    assert res.flag == "head-pos-mismatch", res.flag
+
+
 # --- Negative paths preserved -------------------------------------------
 
 

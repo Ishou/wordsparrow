@@ -237,6 +237,19 @@ def _has_verb_dobj_frame(tokens: list[str], head_idx: int) -> bool:
     return nxt in _DOBJ_DETERMINERS
 
 
+def _is_determiner_governed(tokens: list[str], i: int) -> bool:
+    """True iff the token at `i` is directly preceded by a determiner (`un
+    droit`, `la sole`). Such a token is a substantive object, not the head
+    that agrees with the surface — head-only inflating it strands the
+    determiner (`abusives` cluing `Qui outrepasse un droit` → `un droites`)."""
+    j = i - 1
+    while j >= 0 and not _is_alpha_token(tokens[j]):
+        j -= 1
+    if j < 0:
+        return False
+    return tokens[j].lower().rstrip("'") in _DOBJ_DETERMINERS
+
+
 def _decompose_targets(target: set[str]) -> list[set[str]]:
     """Split a fused-feature target into a priority-ordered list of canonical
     targets, each containing at most one mood and one person. The original
@@ -381,6 +394,9 @@ def inflect_clue(
         if tok.lower() in _FUNCTION_WORDS:
             continue
         if target_pos not in index.pos_classes_of_form(tok.lower()):
+            continue
+        # A determiner-governed object (`un droit`) isn't the agreeing head; inflating it strands the determiner (`un droites`). Verb heads are never determiner-governed.
+        if target_pos != "verbe" and _is_determiner_governed(tokens, i):
             continue
         lemma = index.lemma_of_form(tok.lower(), prefer_pos=target_pos)
         if not lemma:
