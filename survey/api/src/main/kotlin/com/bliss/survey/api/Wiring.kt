@@ -12,6 +12,8 @@ import com.bliss.survey.application.usecases.SubmitPairRatingCommand
 import com.bliss.survey.application.usecases.SubmitPairRatingResult
 import com.bliss.survey.application.usecases.SubmitRatingCommand
 import com.bliss.survey.application.usecases.SubmitRatingResult
+import com.bliss.survey.application.usecases.SubmitSignalementCommand
+import com.bliss.survey.application.usecases.SubmitSignalementResult
 import com.bliss.survey.application.usecases.UndoActionResult
 import com.bliss.survey.domain.model.UserId
 import com.bliss.survey.infrastructure.nats.UserDeletedConsumer
@@ -24,6 +26,7 @@ class Wiring(
     val submitRating: suspend (SubmitRatingCommand) -> SubmitRatingResult,
     val getNextPair: GetNextPairUseCase,
     val submitPairRating: suspend (SubmitPairRatingCommand) -> SubmitPairRatingResult,
+    val submitSignalement: suspend (SubmitSignalementCommand) -> SubmitSignalementResult,
     val undoAction: suspend (String, UserId) -> UndoActionResult,
     val getCurrentCampaign: GetCurrentCampaignUseCase,
     val getLemmaMeta: GetLemmaMetaUseCase,

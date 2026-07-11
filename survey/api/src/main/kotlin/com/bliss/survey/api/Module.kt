@@ -13,6 +13,7 @@ import com.bliss.survey.api.routes.meProgressRoute
 import com.bliss.survey.api.routes.nextItemRoute
 import com.bliss.survey.api.routes.submitPairRatingRoute
 import com.bliss.survey.api.routes.submitRatingRoute
+import com.bliss.survey.api.routes.submitSignalementRoute
 import com.bliss.survey.api.routes.undoActionRoute
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -102,6 +103,7 @@ fun Application.surveyApiModule(
         submitRatingRoute(wiring.submitRating)
         getNextPairRoute(wiring.getNextPair)
         submitPairRatingRoute(wiring.submitPairRating)
+        submitSignalementRoute(wiring.submitSignalement)
         undoActionRoute(wiring.undoAction)
         getCurrentCampaignRoute(wiring.getCurrentCampaign)
         lemmaMetaRoute(wiring.getLemmaMeta)
