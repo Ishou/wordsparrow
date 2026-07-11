@@ -66,6 +66,21 @@ runner for `terraform/k8s/`:
 - **Residual risk:** a repo-write actor can trigger a `plan` (read-only to
   infra, reads state) unreviewed. Acceptable — plan makes no changes; apply
   is the gated action.
+- **Known gap — plan artifact carries the k3s join token in cleartext:**
+  the uploaded `tfplan` artifact embeds `random_password.k3s_token.result`
+  (the live cluster join token, wired into every node's `cloud-init` via
+  `server.tf`). OpenTofu's `sensitive` marking only redacts the
+  CLI-rendered plan (`tofu show`); the saved plan *file* itself contains
+  the real value, recoverable via `tofu show -json` or a raw string scan.
+  Any actor with repo **read** access can download the artifact for its
+  5-day retention window — a materially wider blast radius than the
+  `workflow_dispatch` repo-write / `prod-infra`-reviewer actor gate above,
+  since it bypasses the apply gate entirely. Follow-up needed: stop
+  persisting the plan as a downloadable artifact (re-plan inside `apply`
+  against the same state, accepting a race window instead of an
+  artifact hand-off) or move `k3s_token` out of Terraform-managed state
+  (e.g. generate it via a k8s Secret post-bootstrap) so it never lands in
+  a plan file.
 
 ## Consequences
 
