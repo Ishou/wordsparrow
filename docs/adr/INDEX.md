@@ -301,6 +301,9 @@ ADR-0100  scripts/eval/**                          POS-aware runtime lemma guard
 ADR-0100  grid/infrastructure/**/CsvWordRepository.kt  Loader accepts the new optional pos column (same tolerance pattern as lemma); runtime doesn't use pos yet
 ADR-0100  **/words/words-fr.csv                    Runtime corpus gains a pos column; lemma is never defaulted to the surface again
 # ADR-0100: unified (surface,pos)->lemma authoring contract fixes the lia/lie/es/vue lemma-collision bugs that let WordAcceptor's same-lemma dedup miss inflections; extends ADR-0097 (private corpus) and ADR-0058 (per-source licensing unchanged)
+ADR-0101  frontend/src/application/game/playerScores.ts   Co-op score = count of lockedPositions per lockedBy (ADR-0086 attribution); frontend-only derivation
+ADR-0101  frontend/src/ui/v2/multiplayer/PlayerStrip.tsx   Live roster chip carries the player's validated-letter count (join-order, no re-sort)
+ADR-0101  frontend/src/ui/v2/multiplayer/ResultatsScreen.tsx  Résultats ranks players by validated-letter score descending; amends ADR-0072 no-scores note
 ```
 
 ## Adding entries
