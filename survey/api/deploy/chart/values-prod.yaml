@@ -39,6 +39,9 @@ ingress:
 # verifier reads IDENTITY_BASE_URL from values.yaml's env block.
 envFromSecret: "bliss-survey-api-env"
 
+# harm-report mail (ADR-0103); Secret bootstrapped out-of-band, see docs/secrets.md
+brevoApiKeySecret: survey-brevo-api
+
 calibration:
   # Idempotent: IngestBatchUseCase now inserts ON CONFLICT (mot, definition) DO NOTHING, so re-seeding is a no-op.
   seedEnabled: true
