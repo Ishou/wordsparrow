@@ -18,7 +18,7 @@
 - **Live roster stays join-order** (no re-sort). **Résultats sorts by score descending**, ties broken by join order (stable `Array.prototype.sort`).
 - **DCO:** every commit signed off (`git commit -s`) and ends with the `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>` trailer.
 - **Branch:** `feat/coop-letter-score` (already checked out in this worktree, off fresh `origin/main`).
-- Two PRs: **Wave 1** = ADR-0101 governance (Task 1). **Wave 2** = implementation (Tasks 2–6), merges after Wave 1.
+- **Single PR** (maintainer decision): ADR-0101 + INDEX (Task 1) and the implementation (Tasks 2–6) all land on `feat/coop-letter-score`; Task 7 opens one PR. Task 1 is still committed first so the ADR precedes the code it governs in history.
 
 ---
 
@@ -119,7 +119,7 @@ git commit -s -m "docs(adr): ADR-0101 co-op validated-letter score (amends 0072)
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
-This is the Wave 1 PR. Open it, let it merge on green CI + §6a LGTM, then start Task 2.
+Single-PR mode: do **not** open a PR here — just land this commit on the branch and continue to Task 2. The PR opens once in Task 7.
 
 ---
 
