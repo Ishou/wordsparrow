@@ -8,6 +8,7 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { dailyScopedCacheKey, isStorablePuzzleResponse } from '@/infrastructure/pwa/swCache';
+import { navigateFallbackDenylist } from '@/infrastructure/pwa/navigationDenylist';
 
 declare const self: ServiceWorkerGlobalScope &
   typeof globalThis & {
@@ -17,37 +18,6 @@ declare const self: ServiceWorkerGlobalScope &
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
-// Prerendered routes are served per-route by Cloudflare (ADR-0053); the SPA-shell navigation fallback must skip them,
-// plus the API/asset paths that reach the network directly. `(\?.*)?` keeps query-string URLs (e.g. /play?date=…) denied.
-const PRERENDERED_ROUTE_PATHS = [
-  '/play',
-  '/grilles',
-  '/grilles/a-finir',
-  '/grilles/multijoueur',
-  '/aide',
-  '/mentions-legales',
-  '/confidentialite',
-  '/conditions-abonnement',
-  '/a-propos',
-  '/compte',
-  '/reglages',
-  '/finish',
-  '/abonnement',
-  '/abonnement/succes',
-  '/abonnement/annule',
-  '/contribuer',
-  '/contribuer/pairs',
-];
-const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const navigateFallbackDenylist: RegExp[] = [
-  /^\/v1\//,
-  /^\/robots\.txt$/,
-  /^\/sitemap\.xml$/,
-  /^\/third-party-licenses\.txt$/,
-  ...PRERENDERED_ROUTE_PATHS.map((p) => new RegExp(`^${escapeRegExp(p)}/?(\\?.*)?$`)),
-  /^\/lobby\//,
-  /^\/join\//,
-];
 registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: navigateFallbackDenylist }));
 
 // Grid API: NetworkFirst so the player gets the freshest puzzle online and the last-loaded one offline (ADR-0026).
