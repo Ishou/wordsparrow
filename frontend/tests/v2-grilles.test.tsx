@@ -61,6 +61,7 @@ function observableService(): import('@/application/progress').ProgressSyncServi
     reconcileOnAuth: async () => {},
     resetReconciled: () => {},
     schedulePush: () => {},
+    flushPending: () => {},
     dispose: () => {},
     subscribe: (l: () => void) => {
       listeners.add(l);

@@ -58,6 +58,7 @@ function observableService(): ProgressSyncService & { fireMerge: () => void } {
     reconcileOnAuth: async () => {},
     resetReconciled: () => {},
     schedulePush: () => {},
+    flushPending: () => {},
     dispose: () => {},
     subscribe: (l) => {
       listeners.add(l);

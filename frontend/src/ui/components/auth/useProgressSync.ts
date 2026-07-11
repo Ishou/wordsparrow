@@ -24,5 +24,18 @@ export function useProgressSync(service: ProgressSyncService | undefined): void 
     });
   }, [service, userId]);
 
-  useEffect(() => () => service?.dispose(), [service]);
+  // Flush pending debounced pushes on tab hide/close so an edit within the debounce window survives; visibilitychange covers mobile backgrounding where pagehide is unreliable.
+  useEffect(() => {
+    if (!service) return;
+    const flush = (): void => service.flushPending();
+    const onVisibility = (): void => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [service]);
 }
