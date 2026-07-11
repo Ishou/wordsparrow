@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
@@ -9,6 +9,7 @@ import {
   UndoExpiredError,
   UndoUnavailableError,
 } from '@/infrastructure';
+import { ReportRateLimitedError } from '@/application/survey';
 
 const BASE = 'http://survey.test';
 const client = createHttpSurveyClient({ baseUrl: BASE });
@@ -390,5 +391,83 @@ describe('HttpSurveyClient.getLemmaMeta', () => {
     );
     const meta = await client.getLemmaMeta('CHAT');
     expect(meta).toEqual({ priorSenses: ['félin'], priorSubTags: ['domestique'] });
+  });
+});
+
+describe('HttpSurveyClient.submitSignalement', () => {
+  // Injectable fetch (createHttpSurveyClient's `fetch` option) so the request init
+  // — credentials, headers, body omission — can be asserted directly.
+  function spyFetch(status: number, body?: unknown) {
+    return vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async () =>
+      new Response(body === undefined ? null : JSON.stringify(body), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+  }
+
+  const call = (fetchImpl: ReturnType<typeof spyFetch>) =>
+    createHttpSurveyClient({ baseUrl: BASE, fetch: fetchImpl as unknown as typeof fetch });
+
+  it('POSTs to /v1/signalements with credentials + JSON, omits note/puzzleId, returns reportId on 201', async () => {
+    const fetchImpl = spyFetch(201, { reportId: 'rep-1' });
+    const result = await call(fetchImpl).submitSignalement({
+      wordText: 'CHAT',
+      clueText: 'félin domestique',
+      reason: 'erreur_sens',
+      surface: 'solo',
+    });
+
+    expect(result).toEqual({ reportId: 'rep-1' });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe(`${BASE}/v1/signalements`);
+    expect(init.method).toBe('POST');
+    expect(init.credentials).toBe('include');
+    expect(init.headers).toMatchObject({ 'content-type': 'application/json' });
+    const sent = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(sent).toEqual({
+      wordText: 'CHAT',
+      clueText: 'félin domestique',
+      reason: 'erreur_sens',
+      surface: 'solo',
+    });
+    expect(sent).not.toHaveProperty('note');
+    expect(sent).not.toHaveProperty('puzzleId');
+  });
+
+  it('includes note + puzzleId when provided', async () => {
+    const fetchImpl = spyFetch(201, { reportId: 'rep-2' });
+    await call(fetchImpl).submitSignalement({
+      wordText: 'CHAT',
+      clueText: 'félin domestique',
+      reason: 'autre',
+      surface: 'daily',
+      note: 'contre-sens',
+      puzzleId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
+    });
+    const [, init] = fetchImpl.mock.calls[0];
+    const sent = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(sent.note).toBe('contre-sens');
+    expect(sent.puzzleId).toBe('0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b');
+  });
+
+  it('throws ReportRateLimitedError on 429 (checked before the generic non-ok throw)', async () => {
+    const fetchImpl = spyFetch(429, { type: 'about:blank', title: 'Too Many Requests', status: 429 });
+    await expect(
+      call(fetchImpl).submitSignalement({ wordText: 'CHAT', clueText: 'félin', reason: 'autre', surface: 'solo' }),
+    ).rejects.toBeInstanceOf(ReportRateLimitedError);
+  });
+
+  it('throws a generic Error on other non-ok statuses (500)', async () => {
+    const fetchImpl = spyFetch(500);
+    const promise = call(fetchImpl).submitSignalement({
+      wordText: 'CHAT',
+      clueText: 'félin',
+      reason: 'autre',
+      surface: 'solo',
+    });
+    await expect(promise).rejects.toThrow(/submitSignalement failed: 500/);
+    await expect(promise).rejects.not.toBeInstanceOf(ReportRateLimitedError);
   });
 });
