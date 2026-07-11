@@ -248,7 +248,7 @@ export interface paths {
          * Report a problem with a clue/word.
          * @description Player report capture. Optional auth — anonymous and authenticated
          *     players may report; a session, when present, binds the report to the
-         *     reporter for per-user dedup and RGPD anonymization (ADR-0101). Serves
+         *     reporter for per-user dedup and RGPD anonymization (ADR-0103). Serves
          *     solo/daily, multiplayer, and the mini-game via the `surface`
          *     discriminator.
          */
@@ -500,7 +500,7 @@ export interface components {
             priorSubTags: string[];
         };
         /**
-         * @description Why the player is reporting the clue/word. Harm reasons (offensive word/definition) email the maintainer (ADR-0101).
+         * @description Why the player is reporting the clue/word. Harm reasons (offensive word/definition) email the maintainer (ADR-0103).
          * @enum {string}
          */
         ReportReason: "mot_offensant" | "definition_offensante" | "erreur_sens" | "erreur_grammaire" | "definition_revele" | "ambigu" | "trop_facile" | "trop_difficile" | "autre";
