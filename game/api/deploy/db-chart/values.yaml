@@ -10,6 +10,9 @@ cluster:
     # Empty = cluster default. Prod "hcloud-volumes"; local "local-path".
     storageClass: ""
   bootstrap: {database: game, owner: game}
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: "1", memory: 1Gi}
 backups:
   # Off by default. Prod turns this on; local stays off.
   enabled: false

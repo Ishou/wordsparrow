@@ -36,6 +36,10 @@ spec:
     {{- with .Values.postgres.cluster.storage.storageClass }}
     storageClass: {{ . }}
     {{- end }}
+  {{- with .Values.postgres.cluster.resources }}
+  # ADR-0101 R2: requests lift DB pods off BestEffort QoS (they were first to be evicted under node memory pressure).
+  resources: {{- toYaml . | nindent 4 }}
+  {{- end }}
   {{- if .Values.postgres.backups.enabled }}
   backup:
     barmanObjectStore:
