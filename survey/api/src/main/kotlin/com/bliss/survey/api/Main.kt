@@ -4,6 +4,7 @@ import com.bliss.survey.api.auth.SessionPrincipal
 import com.bliss.survey.api.config.SurveyApiConfig
 import com.bliss.survey.application.filters.FilterPipeline
 import com.bliss.survey.application.ports.Clock
+import com.bliss.survey.application.ports.EmailSender
 import com.bliss.survey.application.ports.IdGenerator
 import com.bliss.survey.application.ports.RandomFactory
 import com.bliss.survey.application.ports.TokenGenerator
@@ -15,10 +16,13 @@ import com.bliss.survey.application.usecases.GetNextPairUseCase
 import com.bliss.survey.application.usecases.RecomputeTrainingWeightUseCase
 import com.bliss.survey.application.usecases.SubmitPairRatingUseCase
 import com.bliss.survey.application.usecases.SubmitRatingUseCase
+import com.bliss.survey.application.usecases.SubmitSignalementUseCase
 import com.bliss.survey.application.usecases.UndoActionUseCase
 import com.bliss.survey.domain.routing.StratifiedSampler
 import com.bliss.survey.domain.routing.TierWeights
 import com.bliss.survey.domain.weight.GoldWindowPolicy
+import com.bliss.survey.infrastructure.email.SurveyBrevoConfig
+import com.bliss.survey.infrastructure.email.SurveyBrevoEmailSender
 import com.bliss.survey.infrastructure.identity.CachedSessionVerifier
 import com.bliss.survey.infrastructure.identity.IdentityClient
 import com.bliss.survey.infrastructure.language.LinguaLanguageDetector
@@ -30,6 +34,7 @@ import com.bliss.survey.infrastructure.persistence.PgMaintainerRoleRepository
 import com.bliss.survey.infrastructure.persistence.PgPairRatingRepository
 import com.bliss.survey.infrastructure.persistence.PgProposedByRepository
 import com.bliss.survey.infrastructure.persistence.PgRatingRepository
+import com.bliss.survey.infrastructure.persistence.PgSignalementRepository
 import com.bliss.survey.infrastructure.persistence.PgSurveyItemRepository
 import com.bliss.survey.infrastructure.persistence.PgTransactionManager
 import com.bliss.survey.infrastructure.persistence.PgUserProgressRepository
@@ -44,6 +49,7 @@ import java.security.SecureRandom
 import java.time.Instant
 import java.util.Base64
 import kotlin.random.Random
+import io.ktor.client.engine.cio.CIO as ClientCIO
 
 // Production entry-point; tests use Application.surveyApiModule(wiring, config) directly.
 fun main() {
@@ -58,6 +64,7 @@ fun main() {
     val campaignRepository = PgCampaignRepository(dataSource)
     val maintainerRoles = PgMaintainerRoleRepository(dataSource)
     val actionLog = PgActionLogRepository(dataSource)
+    val signalements = PgSignalementRepository(dataSource)
     val txManager = PgTransactionManager(dataSource)
     val goldPolicy = GoldWindowPolicy(config.goldCutoff, config.goldMultiplier)
     val recompute = RecomputeTrainingWeightUseCase(maintainerRoles, items, goldPolicy)
@@ -119,11 +126,29 @@ fun main() {
         )
     val getCurrentCampaign = GetCurrentCampaignUseCase(campaignRepository)
 
+    // No-op when the Brevo key is absent (dark launch); harm alerts are simply skipped until the secret lands.
+    val emailSender: EmailSender =
+        config.brevoApiKey?.let { key ->
+            SurveyBrevoEmailSender(
+                ClientCIO.create(),
+                SurveyBrevoConfig(apiKey = key, senderEmail = config.emailSender, senderName = "WordSparrow"),
+            )
+        } ?: EmailSender { }
+    val submitSignalement =
+        SubmitSignalementUseCase(
+            reports = signalements,
+            ids = ids,
+            clock = clock,
+            email = emailSender,
+            tx = txManager,
+            maintainerAddress = config.maintainerEmail,
+        )
+
     val identityClient = IdentityClient(config.identityBaseUrl)
     val sessionVerifier = CachedSessionVerifier(identityClient)
 
     // ADR-0049 — must start before Ktor serves so redelivery-on-boot events are captured.
-    val anonymise = AnonymizeUserRatingsUseCase(ratings, proposedBy, items, progress, maintainerRoles, actionLog)
+    val anonymise = AnonymizeUserRatingsUseCase(ratings, proposedBy, items, progress, maintainerRoles, actionLog, signalements)
     val natsConn = Nats.connect(config.natsUrl)
     val consumerScope = CoroutineScope(SupervisorJob())
     val userDeletedConsumer = UserDeletedConsumer(natsConn, anonymise, consumerScope)
@@ -140,6 +165,7 @@ fun main() {
             submitRating = { cmd -> submitRating.execute(cmd) },
             getNextPair = getNextPair,
             submitPairRating = { cmd -> submitPairRating.execute(cmd) },
+            submitSignalement = { cmd -> submitSignalement.execute(cmd) },
             undoAction = { token, uid -> undoAction.execute(token, uid) },
             getCurrentCampaign = getCurrentCampaign,
             getLemmaMeta = getLemmaMeta,

@@ -66,6 +66,15 @@ spec:
                   name: {{ .Values.database.clusterName }}-app
                   key: uri
             {{- end }}
+            {{- with .Values.brevoApiKeySecret }}
+            # Harm-report alert mail (ADR-0103). SURVEY_BREVO_API_KEY from a dedicated Secret (same value as identity); absent ⇒ sender ships dark.
+            - name: SURVEY_BREVO_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: SURVEY_BREVO_API_KEY
+                  optional: true
+            {{- end }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

@@ -4,6 +4,7 @@ import com.bliss.survey.application.ports.ActionLogRepository
 import com.bliss.survey.application.ports.MaintainerRoleRepository
 import com.bliss.survey.application.ports.ProposedByRepository
 import com.bliss.survey.application.ports.RatingRepository
+import com.bliss.survey.application.ports.SignalementRepository
 import com.bliss.survey.application.ports.SurveyItemRepository
 import com.bliss.survey.application.ports.UserProgressRepository
 import com.bliss.survey.domain.model.UserId
@@ -15,6 +16,7 @@ class AnonymizeUserRatingsUseCase(
     private val progress: UserProgressRepository,
     private val maintainerRoles: MaintainerRoleRepository,
     private val actions: ActionLogRepository,
+    private val signalements: SignalementRepository,
 ) {
     suspend fun execute(userId: UserId) {
         val optedOut = proposedBy.listOptedOutByUser(userId)
@@ -24,5 +26,6 @@ class AnonymizeUserRatingsUseCase(
         progress.deleteByUser(userId)
         maintainerRoles.delete(userId)
         actions.scrubUser(userId)
+        signalements.anonymiseForUser(userId)
     }
 }

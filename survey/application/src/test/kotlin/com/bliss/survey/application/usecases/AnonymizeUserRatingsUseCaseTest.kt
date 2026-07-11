@@ -10,9 +10,14 @@ import com.bliss.survey.domain.model.ActionKind
 import com.bliss.survey.domain.model.CampaignId
 import com.bliss.survey.domain.model.Categorie
 import com.bliss.survey.domain.model.ItemId
+import com.bliss.survey.domain.model.PlayerReport
 import com.bliss.survey.domain.model.Pos
 import com.bliss.survey.domain.model.Rating
 import com.bliss.survey.domain.model.RatingId
+import com.bliss.survey.domain.model.ReportId
+import com.bliss.survey.domain.model.ReportReason
+import com.bliss.survey.domain.model.ReportStatus
+import com.bliss.survey.domain.model.ReportSurface
 import com.bliss.survey.domain.model.Source
 import com.bliss.survey.domain.model.Style
 import com.bliss.survey.domain.model.SubmittedAs
@@ -78,6 +83,22 @@ class AnonymizeUserRatingsUseCaseTest {
             ratings.insert(rating)
             progress.incrementItemsRated(user, now)
 
+            val signalements = InMemorySignalementRepository()
+            signalements.insert(
+                PlayerReport(
+                    id = ReportId(UUID.randomUUID()),
+                    wordText = "MOT",
+                    clueText = "def",
+                    reason = ReportReason.ERREUR_SENS,
+                    note = null,
+                    puzzleId = null,
+                    surface = ReportSurface.SOLO,
+                    reporterId = user,
+                    status = ReportStatus.PENDING,
+                    createdAt = now,
+                ),
+            )
+
             val actions = InMemoryActionLogRepository()
             actions.insert(
                 SurveyAction(
@@ -99,7 +120,15 @@ class AnonymizeUserRatingsUseCaseTest {
             )
 
             val uc =
-                AnonymizeUserRatingsUseCase(ratings, proposedBy, items, progress, InMemoryMaintainerRoleRepository(), actions)
+                AnonymizeUserRatingsUseCase(
+                    ratings,
+                    proposedBy,
+                    items,
+                    progress,
+                    InMemoryMaintainerRoleRepository(),
+                    actions,
+                    signalements,
+                )
             uc.execute(user)
 
             assertThat(items.items.containsKey(contribItem.id)).isEqualTo(false)
@@ -109,6 +138,8 @@ class AnonymizeUserRatingsUseCaseTest {
             assertThat(ratings.ratings.none { it.userId == user }).isTrue()
             // RGPD: the logged action's user_id is scrubbed too
             assertThat(actions.actions.none { it.userId == user }).isTrue()
+            // RGPD: the player's reports are anonymised too (ADR-0103)
+            assertThat(signalements.reports.none { it.reporterId == user }).isTrue()
         }
 
     @Test
@@ -125,6 +156,7 @@ class AnonymizeUserRatingsUseCaseTest {
                     progress = InMemoryUserProgressRepository(),
                     maintainerRoles = roles,
                     actions = InMemoryActionLogRepository(),
+                    signalements = InMemorySignalementRepository(),
                 )
             useCase.execute(userId)
             assertThat(roles.find(userId)).isNull()

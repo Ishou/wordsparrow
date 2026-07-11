@@ -11,6 +11,10 @@ data class SurveyApiConfig(
     val natsUrl: String,
     val goldCutoff: java.time.Instant,
     val goldMultiplier: Double,
+    // Harm-report alert mail (ADR-0103) ships dark: a null Brevo key means no sender is wired and harm emails are skipped.
+    val brevoApiKey: String? = null,
+    val maintainerEmail: String = "maintainer@wordsparrow.io",
+    val emailSender: String = "signalement@wordsparrow.io",
 ) {
     companion object {
         fun load(env: (String) -> String? = System::getenv): SurveyApiConfig =
@@ -30,6 +34,10 @@ data class SurveyApiConfig(
                 natsUrl = env("NATS_URL") ?: "nats://nats.wordsparrow.svc.cluster.local:4222",
                 goldCutoff = env("SURVEY_GOLD_CUTOFF")?.let(java.time.Instant::parse) ?: java.time.Instant.parse("2026-05-30T00:00:00Z"),
                 goldMultiplier = env("SURVEY_GOLD_MULTIPLIER")?.toDouble() ?: 3.0,
+                // Shares identity's Brevo account (same key); sender/maintainer addresses default and are env-overridable.
+                brevoApiKey = env("SURVEY_BREVO_API_KEY"),
+                maintainerEmail = env("SURVEY_MAINTAINER_EMAIL") ?: "maintainer@wordsparrow.io",
+                emailSender = env("SURVEY_EMAIL_SENDER") ?: "signalement@wordsparrow.io",
             )
 
         private fun required(

@@ -9,6 +9,7 @@ import com.bliss.survey.domain.model.ReportSurface
 import com.bliss.survey.domain.model.UserId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.postgresql.util.PSQLException
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.sql.Types
@@ -20,7 +21,7 @@ import javax.sql.DataSource
 class PgSignalementRepository(
     private val dataSource: DataSource,
 ) : SignalementRepository {
-    override suspend fun insert(report: PlayerReport): Unit =
+    override suspend fun insert(report: PlayerReport): Boolean =
         withContext(Dispatchers.IO) {
             withTxConnection(dataSource) { conn ->
                 conn.prepareStatement(INSERT_SQL).use { stmt ->
@@ -41,23 +42,30 @@ class PgSignalementRepository(
                     if (triagedAt != null) stmt.setTimestamp(11, Timestamp.from(triagedAt)) else stmt.setNull(11, Types.TIMESTAMP)
                     val triagedBy = report.triagedBy
                     if (triagedBy != null) stmt.setObject(12, triagedBy.value) else stmt.setNull(12, Types.OTHER)
-                    stmt.executeUpdate()
+                    try {
+                        stmt.executeUpdate() == 1
+                    } catch (e: PSQLException) {
+                        // 23505 = unique_violation on player_reports_dedup → benign concurrent-duplicate signal.
+                        if (e.sqlState == "23505") false else throw e
+                    }
                 }
             }
         }
 
-    override suspend fun existsFor(
+    override suspend fun findExisting(
         reporterId: UserId,
         wordText: String,
         clueText: String,
-    ): Boolean =
+    ): ReportId? =
         withContext(Dispatchers.IO) {
             withTxConnection(dataSource) { conn ->
-                conn.prepareStatement(EXISTS_SQL).use { stmt ->
+                conn.prepareStatement(FIND_EXISTING_SQL).use { stmt ->
                     stmt.setObject(1, reporterId.value)
                     stmt.setString(2, wordText)
                     stmt.setString(3, clueText)
-                    stmt.executeQuery().use { rs -> rs.next() }
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) ReportId(rs.getObject("report_id", UUID::class.java)) else null
+                    }
                 }
             }
         }
@@ -140,8 +148,8 @@ class PgSignalementRepository(
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
 
-        const val EXISTS_SQL =
-            "SELECT 1 FROM player_reports WHERE reporter_id = ? AND word_text = ? AND clue_text = ? LIMIT 1"
+        const val FIND_EXISTING_SQL =
+            "SELECT report_id FROM player_reports WHERE reporter_id = ? AND word_text = ? AND clue_text = ? LIMIT 1"
 
         const val LIST_PENDING_SQL =
             "SELECT * FROM player_reports WHERE status = 'pending' ORDER BY created_at"

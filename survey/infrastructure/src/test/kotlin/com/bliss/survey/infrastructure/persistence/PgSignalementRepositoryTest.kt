@@ -99,12 +99,13 @@ class PgSignalementRepositoryTest {
         }
 
     @Test
-    fun `existsFor is true for a matching reporter word and clue`() =
+    fun `findExisting returns the report id for a matching reporter word and clue`() =
         runTest {
             val userId = UserId(UUID.randomUUID())
-            reports.insert(report(reporterId = userId, wordText = "chien", clueText = "Meilleur ami"))
-            assertThat(reports.existsFor(userId, "chien", "Meilleur ami")).isTrue()
-            assertThat(reports.existsFor(userId, "chien", "autre def")).isFalse()
+            val r = report(reporterId = userId, wordText = "chien", clueText = "Meilleur ami")
+            reports.insert(r)
+            assertThat(reports.findExisting(userId, "chien", "Meilleur ami")).isEqualTo(r.id)
+            assertThat(reports.findExisting(userId, "chien", "autre def")).isNull()
         }
 
     @Test
@@ -144,5 +145,25 @@ class PgSignalementRepositoryTest {
             reports.insert(r)
             reports.anonymiseForUser(userId)
             assertThat(reports.findById(r.id)?.reporterId).isNull()
+        }
+
+    @Test
+    fun `duplicate authenticated report hits the unique index and returns false, not a raw error`() =
+        runTest {
+            val userId = UserId(UUID.randomUUID())
+            val first = reports.insert(report(reporterId = userId, wordText = "loup", clueText = "Predateur"))
+            val second = reports.insert(report(reporterId = userId, wordText = "loup", clueText = "Predateur"))
+            assertThat(first).isTrue()
+            assertThat(second).isFalse()
+            assertThat(reports.listPending()).hasSize(1)
+        }
+
+    @Test
+    fun `anonymous duplicates are not deduplicated`() =
+        runTest {
+            reports.insert(report(reporterId = null, wordText = "ours", clueText = "Plantigrade"))
+            val second = reports.insert(report(reporterId = null, wordText = "ours", clueText = "Plantigrade"))
+            assertThat(second).isTrue()
+            assertThat(reports.listPending()).hasSize(2)
         }
 }
