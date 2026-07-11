@@ -309,6 +309,9 @@ ADR-0102  frontend/src/application/game/playerScores.ts   Co-op score = count of
 ADR-0102  frontend/src/ui/v2/multiplayer/PlayerStrip.tsx   Live roster chip carries the player's validated-letter count (join-order, no re-sort)
 ADR-0102  frontend/src/ui/v2/multiplayer/ResultatsScreen.tsx  Résultats ranks players by validated-letter score descending
 # ADR-0102: co-op validated-letter score — per-player validated-letter count on roster chips (live) and a score-ranked Résultats leaderboard; frontend-only derivation from lockedPositions[].lockedBy (ADR-0086).
+ADR-0103  survey/**/*Signalement*                   Player clue-report: optional-auth capture, maintainer queue
+ADR-0103  survey/api/openapi.yaml                   POST /v1/signalements + ReportReason enum
+ADR-0103  frontend/src/**/signalement*              Report sheet + /signalements triage (contribuer-gated)
 ```
 
 ## Adding entries
