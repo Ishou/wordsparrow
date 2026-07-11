@@ -30,3 +30,4 @@ export {
   type LobbySummary,
   type ProblemDetails,
 } from './LobbyClient';
+export { tallyValidatedLetters } from './playerScores';
