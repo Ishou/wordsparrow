@@ -133,6 +133,28 @@ The `vite:preloadError` vanished-chunk recovery reload and the
 recovery path is separate from the update path and still reloads
 automatically on a chunk mismatch.
 
+## Amendment (2026-07-11): injectManifest — hand-authored service worker
+
+The runtime cache is switched from `generateSW` to `injectManifest`
+(`strategies: 'injectManifest'`, `srcDir: 'src'`, `filename: 'sw.ts'` →
+`dist/sw.js`). The trigger was a stale-daily bug: on the date-less "today"
+request (`/v1/puzzles/daily`, ADR-0089 §3), the `NetworkFirst` cache key is
+day-stable, so any cache fallback (5 s timeout, offline, flaky link) replayed
+the *previous* day's grid until a hard refresh bypassed the SW. `generateSW`
+serialises its config to a string and cannot express a `cacheKeyWillBeUsed`
+plugin, so the key could not be date-scoped there.
+
+`src/sw.ts` now owns what the `workbox: {}` block used to generate — precache
+(`precacheAndRoute(self.__WB_MANIFEST)` + `cleanupOutdatedCaches()`), the
+navigation fallback and its denylist, the prompt-mode `SKIP_WAITING` handshake
+(`skipWaiting: false` + `clientsClaim()`), and the grid-API `NetworkFirst`.
+Two plugins close the freshness gap (see ADR-0089's 2026-07-11 amendment): a
+`cacheKeyWillBeUsed` that appends the UTC day to the date-less daily key, and a
+`cacheWillUpdate` that drops `no-store` bodies. `pwa.ts` is unchanged — it still
+registers `/sw.js`. The `workbox-*` runtime packages become explicit
+devDependencies (same v7 family already pulled in by `workbox-build`); `sw.ts`
+type-checks under a dedicated `tsconfig.sw.json` (`lib: WebWorker`).
+
 ## Consequences
 
 ### Easier
