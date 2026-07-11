@@ -336,8 +336,11 @@ class CsvWordRepository(
             val matchesWithPosLemma =
                 headers == REQUIRED_HEADERS + OPTIONAL_POS_HEADER + OPTIONAL_LEMMA_HEADER
             require(
-                matchesLegacy || matchesWithLemma || matchesWithTheme ||
-                    matchesWithPos || matchesWithPosLemma,
+                matchesLegacy ||
+                    matchesWithLemma ||
+                    matchesWithTheme ||
+                    matchesWithPos ||
+                    matchesWithPosLemma,
             ) {
                 "CSV $path header mismatch - expected $REQUIRED_HEADERS " +
                     "(optionally followed by '$OPTIONAL_POS_HEADER', then " +
