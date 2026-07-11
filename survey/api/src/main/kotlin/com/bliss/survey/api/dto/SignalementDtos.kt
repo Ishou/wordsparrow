@@ -17,3 +17,26 @@ data class SignalementRequest(
 data class SignalementResponse(
     val reportId: String,
 )
+
+// Maintainer triage DTOs: `reportId` is the group's latest report — the id `POST /decision` acts on.
+@Serializable
+data class SignalementSummary(
+    val reportId: String,
+    val wordText: String,
+    val clueText: String,
+    val reason: String,
+    val count: Int,
+    // Required on the wire but nullable — null when the group's latest report carries no note (ADR-0003 §6).
+    val latestNote: String?,
+    val latestAt: String,
+)
+
+@Serializable
+data class SignalementListResponse(
+    val items: List<SignalementSummary>,
+)
+
+@Serializable
+data class SignalementDecisionRequest(
+    val decision: String,
+)

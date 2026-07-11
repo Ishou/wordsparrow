@@ -93,6 +93,8 @@ function stubSurveyClient(overrides: Partial<SurveyClient> = {}): SurveyClient {
     getCurrentCampaign: vi.fn().mockResolvedValue(openCampaign),
     getLemmaMeta: vi.fn().mockResolvedValue({ priorSenses: [], priorSubTags: [] }),
     submitSignalement: vi.fn().mockResolvedValue({ reportId: 'report-id' }),
+    listSignalements: vi.fn().mockResolvedValue([]),
+    decideSignalement: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

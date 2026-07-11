@@ -9,7 +9,7 @@ import {
   UndoExpiredError,
   UndoUnavailableError,
 } from '@/infrastructure';
-import { ReportRateLimitedError } from '@/application/survey';
+import { ContribuerForbiddenError, ReportRateLimitedError } from '@/application/survey';
 
 const BASE = 'http://survey.test';
 const client = createHttpSurveyClient({ baseUrl: BASE });
@@ -469,5 +469,73 @@ describe('HttpSurveyClient.submitSignalement', () => {
     });
     await expect(promise).rejects.toThrow(/submitSignalement failed: 500/);
     await expect(promise).rejects.not.toBeInstanceOf(ReportRateLimitedError);
+  });
+});
+
+describe('HttpSurveyClient.listSignalements', () => {
+  const summary = {
+    reportId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
+    wordText: 'CHAT',
+    clueText: 'Animal qui miaule',
+    reason: 'erreur_sens' as const,
+    count: 3,
+    latestNote: 'contre-sens',
+    latestAt: '2026-07-11T10:00:00Z',
+  };
+
+  it('GETs /v1/signalements with credentials and returns the items array on 200', async () => {
+    let credentials: RequestCredentials | undefined;
+    server.use(
+      http.get(`${BASE}/v1/signalements`, ({ request }) => {
+        credentials = request.credentials;
+        return HttpResponse.json({ items: [summary] });
+      }),
+    );
+    const result = await client.listSignalements();
+    expect(result).toEqual([summary]);
+    expect(credentials).toBe('include');
+  });
+
+  it('throws ContribuerForbiddenError on 403', async () => {
+    server.use(http.get(`${BASE}/v1/signalements`, () => new HttpResponse(null, { status: 403 })));
+    await expect(client.listSignalements()).rejects.toBeInstanceOf(ContribuerForbiddenError);
+  });
+
+  it('throws a generic Error on other non-ok statuses', async () => {
+    server.use(http.get(`${BASE}/v1/signalements`, () => new HttpResponse(null, { status: 500 })));
+    await expect(client.listSignalements()).rejects.toThrow(/listSignalements failed: 500/);
+  });
+});
+
+describe('HttpSurveyClient.decideSignalement', () => {
+  const reportId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
+
+  it('POSTs the decision to /v1/signalements/{id}/decision and resolves on 204', async () => {
+    let captured: Record<string, unknown> = {};
+    let method = '';
+    server.use(
+      http.post(`${BASE}/v1/signalements/${reportId}/decision`, async ({ request }) => {
+        method = request.method;
+        captured = (await request.json()) as Record<string, unknown>;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    await expect(client.decideSignalement(reportId, 'action')).resolves.toBeUndefined();
+    expect(method).toBe('POST');
+    expect(captured).toEqual({ decision: 'action' });
+  });
+
+  it('throws ContribuerForbiddenError on 403', async () => {
+    server.use(
+      http.post(`${BASE}/v1/signalements/${reportId}/decision`, () => new HttpResponse(null, { status: 403 })),
+    );
+    await expect(client.decideSignalement(reportId, 'dismiss')).rejects.toBeInstanceOf(ContribuerForbiddenError);
+  });
+
+  it('throws a generic Error on 404', async () => {
+    server.use(
+      http.post(`${BASE}/v1/signalements/${reportId}/decision`, () => new HttpResponse(null, { status: 404 })),
+    );
+    await expect(client.decideSignalement(reportId, 'dismiss')).rejects.toThrow(/decideSignalement failed: 404/);
   });
 });

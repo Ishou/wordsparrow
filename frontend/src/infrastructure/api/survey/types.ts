@@ -269,9 +269,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Dismiss or action a report (maintainer only).
-         * @description Contribuer-gated. `dismiss` closes the report; `action` marks it
-         *     actioned once its correctif is applied via the existing gold loop.
+         * Dismiss or mark-handled a report (maintainer only).
+         * @description Contribuer-gated. `dismiss` closes the report as not-actionable;
+         *     `action` marks it handled by the maintainer. Free-text correctif
+         *     composition from a report is a follow-up (needs report→survey_item
+         *     resolution), so `action` records handling, not a composed correctif.
          */
         post: operations["decideSignalement"];
         delete?: never;
@@ -522,12 +524,19 @@ export interface components {
             /** Format: uuid */
             reportId: string;
         };
+        /**
+         * @description A pending-report group keyed by word + clue + reason. `reportId` is the
+         *     latest report in the group — the id `POST /decision` acts on.
+         */
         SignalementSummary: {
+            /** Format: uuid */
+            reportId: string;
             wordText: string;
             clueText: string;
             reason: components["schemas"]["ReportReason"];
             count: number;
-            latestNote?: string;
+            /** @description null when the latest report in the group carries no note. */
+            latestNote: string | null;
             /** Format: date-time */
             latestAt: string;
         };
