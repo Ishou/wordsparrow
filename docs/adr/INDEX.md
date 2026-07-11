@@ -319,6 +319,10 @@ ADR-0104  terraform/k8s/**                          Provisioned either manually 
 ADR-0105  frontend/src/domain/puzzle/gridFingerprint.ts  Pure deterministic hash of grid structure (cell kinds + positions + definition clues + dimensions), excludes typed letters; detects a regenerated grid under the same puzzleId
 ADR-0105  frontend/src/application/progress/**       Solo-progress blobs carry a grid fingerprint (SoloStorePayload); pullAndMergeOne(fingerprint) discards local + remote progress typed on a now-regenerated grid and heals the server row. Amends ADR-0075
 ADR-0105  frontend/src/infrastructure/session/localStorageSolo.ts  reconcileSoloFingerprint discards a stale/legacy (missing-fingerprint) blob on load and stamps the current grid; writes preserve the fingerprint
+ADR-0106  terraform/k8s/providers/hetzner/server.tf              `fip_holder = count.index == 0` gates the FIP alias/DNAT/label to worker[0] only; other workers must NOT alias the FIP (pod-egress masquerade black-holes non-holders)
+ADR-0106  terraform/k8s/providers/hetzner/cloud-init/worker.yaml.tftpl  `bliss.io/fip-holder=true` node-label set only when `fip_holder` is true
+ADR-0106  terraform/k8s/providers/hetzner/floating-ip.tf          FIP assignment is worker[0] specifically, not "the worker node" — worker_count can be >1 (ADR-0101 R1)
+ADR-0106  infra/platform/values-prod.yaml                        ingress-nginx.controller.nodeSelector must be `bliss.io/fip-holder: "true"`, not `bliss.io/role: worker` — pins the controller pod to the node that actually has the FIP aliased
 ```
 
 ## Adding entries

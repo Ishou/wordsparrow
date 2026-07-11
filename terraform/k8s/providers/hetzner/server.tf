@@ -109,11 +109,8 @@ resource "hcloud_server" "worker" {
     private_iface = var.private_iface
     node_role     = "worker"
     node_taints   = []
-    # FIP alias + DNAT go ONLY on worker[0], the FIP's assigned holder
-    # (`hcloud_floating_ip_assignment.ingress`). A non-holder worker must NOT
-    # alias the FIP: pod-egress masquerade would source from it, and the FIP's
-    # replies route to the holder — black-holing the non-holder's pod egress
-    # (corpus-fetch / CSI-metadata time out). Latent until worker_count > 1.
+    # FIP alias + DNAT + the `bliss.io/fip-holder` label go ONLY on worker[0] — see ADR-0106.
+    fip_holder  = count.index == 0
     floating_ip = count.index == 0 ? hcloud_floating_ip.ingress.ip_address : ""
   })
 
@@ -165,6 +162,7 @@ resource "hcloud_server" "observability_worker" {
     private_ip    = local.observability_private_ips[count.index]
     private_iface = var.private_iface
     floating_ip   = ""
+    fip_holder    = false
     node_role     = "observability"
     node_taints   = ["dedicated=observability:NoSchedule"]
   })
