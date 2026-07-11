@@ -34,7 +34,7 @@ already P1's) → P2 = 3.
 One pure, unit-tested helper is the single source of truth for the tally:
 
 ```ts
-// frontend/src/domain/game/playerScores.ts
+// frontend/src/application/game/playerScores.ts (runtime helper → application layer, not the pure-types domain layer)
 import type { SessionId } from '@/domain/game';
 
 export function tallyValidatedLetters(
