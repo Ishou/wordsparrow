@@ -114,24 +114,11 @@ describe.skipIf(!existsSync(resolve(DIST, 'index.html')))(
       },
     );
 
-    // SW navigation fallback must exclude every prerendered route or returning users get the home shell.
-    const PRERENDERED = [
-      ...INDEXABLE_ROUTES.map((r) => r.path).filter((p) => p !== '/'),
-      ...NOINDEX_PRERENDER_ROUTES.map((r) => r.path),
-      // Concrete param URLs must reach the network so Pages serves the shells.
-      '/lobby/7Hk2pQrS',
-      '/join/A2B3C4',
-    ];
-    // A query string (e.g. /play?date=…) must stay denylisted too — else the SW serves the home shell and flashes it.
-    const PRERENDERED_WITH_QUERY = PRERENDERED.flatMap((p) => [p, `${p}?date=2026-06-29`]);
-    it.each(PRERENDERED_WITH_QUERY)('SW navigation denylist excludes %s', (path) => {
+    // Denylist matching is unit-tested against source in swCache.test.ts — injectManifest's minified bundle renames
+    // identifiers, so scraping dist/sw.js for a literal `denylist:[...]` (the old generateSW shape) can't work here.
+    it('bundles the navigation fallback bound to /index.html', () => {
       const sw = readFileSync(resolve(DIST, 'sw.js'), 'utf8');
-      const denylist = /createHandlerBoundToURL\("\/index\.html"\),\{denylist:\[([^\]]*)\]/.exec(sw);
-      expect(denylist, 'NavigationRoute denylist not found in sw.js').not.toBeNull();
-      const matched = denylist![1]
-        .split(/,(?=\/)/)
-        .some((src) => new RegExp(src.replace(/^\/|\/$/g, '')).test(path));
-      expect(matched, `${path} is not in the SW navigation denylist`).toBe(true);
+      expect(sw).toContain('/index.html');
     });
 
     it('embeds JSON-LD WebApplication on the homepage', () => {

@@ -22,3 +22,19 @@ export function isStorablePuzzleResponse(status: number, cacheControl: string | 
   if (status !== 0 && status !== 200) return false;
   return !(cacheControl != null && /\bno-store\b/i.test(cacheControl));
 }
+
+const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Prerendered routes (ADR-0053) plus API/asset paths must skip the SPA-shell navigation fallback; `(\?.*)?` keeps
+// query-string URLs (e.g. /play?date=…) denied. Kept here, not inlined in sw.ts, so it's unit-testable against source.
+export function buildNavigateFallbackDenylist(prerenderedRoutePaths: string[]): RegExp[] {
+  return [
+    /^\/v1\//,
+    /^\/robots\.txt$/,
+    /^\/sitemap\.xml$/,
+    /^\/third-party-licenses\.txt$/,
+    ...prerenderedRoutePaths.map((p) => new RegExp(`^${escapeRegExp(p)}/?(\\?.*)?$`)),
+    /^\/lobby\//,
+    /^\/join\//,
+  ];
+}

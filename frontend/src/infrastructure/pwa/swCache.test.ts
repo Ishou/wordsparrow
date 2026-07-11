@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dailyScopedCacheKey, isStorablePuzzleResponse, utcDayStamp } from './swCache';
+import { buildNavigateFallbackDenylist, dailyScopedCacheKey, isStorablePuzzleResponse, utcDayStamp } from './swCache';
 
 const API = 'https://api.wordsparrow.io';
 
@@ -62,5 +62,40 @@ describe('isStorablePuzzleResponse', () => {
 
   it('refuses non-cacheable statuses (e.g. 404 worker-not-ready)', () => {
     expect(isStorablePuzzleResponse(404, 'public, no-cache')).toBe(false);
+  });
+});
+
+describe('buildNavigateFallbackDenylist', () => {
+  const denylist = buildNavigateFallbackDenylist(['/play', '/grilles']);
+  const excludes = (path: string) => denylist.some((re) => re.test(path));
+
+  it('excludes a prerendered route', () => {
+    expect(excludes('/play')).toBe(true);
+  });
+
+  it('excludes a prerendered route carrying a query string (e.g. /play?date=…)', () => {
+    expect(excludes('/play?date=2026-06-29')).toBe(true);
+  });
+
+  it('excludes the grid API', () => {
+    expect(excludes('/v1/puzzles/daily')).toBe(true);
+  });
+
+  it('excludes robots.txt and sitemap.xml', () => {
+    expect(excludes('/robots.txt')).toBe(true);
+    expect(excludes('/sitemap.xml')).toBe(true);
+  });
+
+  it('excludes concrete lobby/join URLs so Pages serves their shells', () => {
+    expect(excludes('/lobby/7Hk2pQrS')).toBe(true);
+    expect(excludes('/join/A2B3C4')).toBe(true);
+  });
+
+  it('does not exclude a route absent from the prerendered path list', () => {
+    expect(excludes('/aide')).toBe(false);
+  });
+
+  it('does not exclude an unrelated path', () => {
+    expect(excludes('/foo')).toBe(false);
   });
 });
