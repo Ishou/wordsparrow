@@ -74,7 +74,12 @@ function memBlobStore(
 }
 
 interface FakeClient extends ProgressSyncClient {
-  readonly pushes: Array<{ puzzleId: string; payload: unknown; baseUpdatedAt?: string }>;
+  readonly pushes: Array<{
+    puzzleId: string;
+    payload: unknown;
+    baseUpdatedAt?: string;
+    keepalive?: boolean;
+  }>;
   readonly pulls: string[];
   pullAllCount: number;
 }
@@ -99,8 +104,8 @@ function fakeClient(opts: {
       pulls.push(puzzleId);
       return opts.pull ? opts.pull(puzzleId) : null;
     },
-    async push(puzzleId, payloadArg, baseUpdatedAt) {
-      pushes.push({ puzzleId, payload: payloadArg, baseUpdatedAt });
+    async push(puzzleId, payloadArg, baseUpdatedAt, pushOpts) {
+      pushes.push({ puzzleId, payload: payloadArg, baseUpdatedAt, keepalive: pushOpts?.keepalive });
       pushN += 1;
       return opts.push ? opts.push(pushN) : { kind: 'ok', updatedAt: T2 };
     },
@@ -144,6 +149,67 @@ describe('ProgressSyncService — debounced push on mutation', () => {
     await vi.advanceTimersByTimeAsync(1500);
     expect(client.pushes).toHaveLength(1);
     expect(client.pushes[0].puzzleId).toBe(PUZZLE);
+    vi.useRealTimers();
+  });
+});
+
+describe('ProgressSyncService — flushPending (unload)', () => {
+  it('fires every pending debounced push immediately with keepalive, cancelling the timers', async () => {
+    vi.useFakeTimers();
+    const client = fakeClient({});
+    const p2 = '0190e3a4-7a2c-7c9e-8f1a-000000000002';
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore({
+        [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }),
+        [seedKey(SESSION, p2)]: payload({ entries: [{ r: 1, c: 1, l: 'B' }] }),
+      }),
+      getSessionId: () => SESSION,
+      debounceMs: 1500,
+    });
+    service.setEnabled(true);
+    service.schedulePush(PUZZLE);
+    service.schedulePush(p2);
+    expect(client.pushes).toHaveLength(0);
+
+    service.flushPending();
+
+    expect(client.pushes).toHaveLength(2);
+    expect(client.pushes.every((p) => p.keepalive === true)).toBe(true);
+    expect(client.pushes.map((p) => p.puzzleId).sort()).toEqual([p2, PUZZLE].sort());
+    // Timers were cancelled, so letting the debounce window elapse fires nothing more.
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(client.pushes).toHaveLength(2);
+    vi.useRealTimers();
+  });
+
+  it('is a no-op when nothing is pending', () => {
+    const client = fakeClient({});
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore(),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+    });
+    service.setEnabled(true);
+    service.flushPending();
+    expect(client.pushes).toHaveLength(0);
+  });
+
+  it('is a no-op while disabled (anon)', () => {
+    vi.useFakeTimers();
+    const client = fakeClient({});
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore({
+        [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }),
+      }),
+      getSessionId: () => SESSION,
+      debounceMs: 1500,
+    });
+    service.schedulePush(PUZZLE); // disabled → no timer scheduled anyway
+    service.flushPending();
+    expect(client.pushes).toHaveLength(0);
     vi.useRealTimers();
   });
 });

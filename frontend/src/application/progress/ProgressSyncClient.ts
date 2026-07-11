@@ -19,5 +19,7 @@ export interface ProgressSyncClient {
     puzzleId: string,
     payload: { readonly [key: string]: unknown },
     baseUpdatedAt?: string,
+    // `keepalive` lets the request outlive an unload so a pagehide flush actually reaches the server (ADR-0075).
+    opts?: { readonly keepalive?: boolean },
   ): Promise<PushResult>;
 }

@@ -31,11 +31,13 @@ function fakeService(): ProgressSyncService & {
   readonly enabledCalls: boolean[];
   readonly reconciledUsers: string[];
   resetCount: number;
+  flushCount: number;
 } {
   return {
     enabledCalls: [],
     reconciledUsers: [],
     resetCount: 0,
+    flushCount: 0,
     setEnabled(next: boolean) {
       this.enabledCalls.push(next);
     },
@@ -48,6 +50,9 @@ function fakeService(): ProgressSyncService & {
       this.resetCount += 1;
     },
     schedulePush() {},
+    flushPending() {
+      this.flushCount += 1;
+    },
     dispose() {},
     subscribe: () => () => {},
     getRevision: () => 0,
@@ -90,5 +95,50 @@ describe('useProgressSync', () => {
     );
     await waitFor(() => expect(service.reconciledUsers).toEqual([USER_ID]));
     expect(service.enabledCalls).toContain(true);
+  });
+
+  it('flushes pending pushes when the page is hidden (pagehide)', async () => {
+    const service = fakeService();
+    render(
+      <AuthProvider authClient={fakeAuthClient({ userId: USER_ID, displayName: 'Lapin 472' })} getPseudonym={() => 'Renard 423'}>
+        <Harness service={service} />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('ready')).toBeTruthy());
+
+    window.dispatchEvent(new Event('pagehide'));
+    expect(service.flushCount).toBe(1);
+  });
+
+  it('flushes when the tab is backgrounded (visibilitychange → hidden) but not when it becomes visible', async () => {
+    const service = fakeService();
+    render(
+      <AuthProvider authClient={fakeAuthClient(null)} getPseudonym={() => 'Renard 423'}>
+        <Harness service={service} />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('ready')).toBeTruthy());
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(service.flushCount).toBe(1);
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(service.flushCount).toBe(1);
+  });
+
+  it('removes the hide listeners on unmount', async () => {
+    const service = fakeService();
+    const { unmount } = render(
+      <AuthProvider authClient={fakeAuthClient(null)} getPseudonym={() => 'Renard 423'}>
+        <Harness service={service} />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('ready')).toBeTruthy());
+    unmount();
+
+    window.dispatchEvent(new Event('pagehide'));
+    expect(service.flushCount).toBe(0);
   });
 });

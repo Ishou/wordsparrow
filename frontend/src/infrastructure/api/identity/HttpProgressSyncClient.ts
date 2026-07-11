@@ -50,12 +50,14 @@ export function createHttpProgressSyncClient(
       puzzleId: string,
       payload: { readonly [key: string]: unknown },
       baseUpdatedAt?: string,
+      opts?: { readonly keepalive?: boolean },
     ): Promise<PushResult> {
       const { data, error, response } = await client.PUT(
         '/v1/users/me/progress/{puzzleId}',
         {
           params: { path: { puzzleId } },
           credentials: 'include',
+          keepalive: opts?.keepalive,
           body: { payload: payload as Record<string, unknown>, baseUpdatedAt },
         },
       );

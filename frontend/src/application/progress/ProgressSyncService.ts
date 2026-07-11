@@ -47,6 +47,8 @@ export interface ProgressSyncService {
   resetReconciled(): void;
   // Debounced single-puzzle push after a local mutation; no-op when disabled.
   schedulePush(puzzleId: string): void;
+  // Fires every pending debounced push immediately with keepalive so an edit survives a tab close/hide (ADR-0075). No-op when disabled or nothing pending.
+  flushPending(): void;
   // Cancels pending debounce timers (e.g. on sign-out / unmount).
   dispose(): void;
   // Fires after each merge into local (pullAndMergeAll/One) so mount-gated views can re-read; returns an unsubscribe.
@@ -213,6 +215,22 @@ export function createProgressSyncService(
         void pushPuzzle(getSessionId(), puzzleId);
       }, debounceMs);
       timers.set(puzzleId, handle);
+    },
+
+    flushPending(): void {
+      if (!enabled) return;
+      const sessionId = getSessionId();
+      for (const [puzzleId, handle] of timers) {
+        cancel(handle);
+        const local = blobStore.loadPayload(sessionId, puzzleId);
+        // Single-shot, keepalive, fire-and-forget: an unload can't await a retry loop; the next load re-pulls and reconciles.
+        void client
+          .push(puzzleId, local as unknown as Record<string, unknown>, baseUpdatedAt.get(puzzleId), {
+            keepalive: true,
+          })
+          .catch(() => {});
+      }
+      timers.clear();
     },
 
     dispose(): void {
