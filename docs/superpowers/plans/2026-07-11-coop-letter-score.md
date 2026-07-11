@@ -115,7 +115,7 @@ Expected: both `0101-coop-validated-letter-score.md` (new) and `INDEX.md` (modif
 
 ```bash
 git add docs/adr/0101-coop-validated-letter-score.md docs/adr/INDEX.md
-git commit -s -m "docs(adr): ADR-0101 co-op validated-letter score (amends 0072)
+git commit -s -m "docs(adr): ADR-0101 co-op validated-letter score
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
