@@ -7,6 +7,7 @@ import { tallyValidatedLetters } from '@/application/game';
 import type { Player, SessionId } from '@/domain/game';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
+import type { SurveyClient } from '@/application/survey';
 import { ClueRail, Lockup } from '@/design-system';
 import { t } from '@/ui/i18n';
 import { AppShell } from '@/ui/v2/AppShell';
@@ -16,6 +17,8 @@ import { orderClues } from '@/ui/components/grid/orderClues';
 import { CELL, GAP, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
 import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
 import { useAdvanceOnValidation } from '@/ui/components/grid/useAdvanceOnValidation';
+import { ReportClueSheet } from '@/ui/components/grid/ReportClueSheet';
+import { foldReportWord } from '@/ui/components/grid/reportWord';
 import { Keyboard } from '@/ui/play/Keyboard';
 import { useGridSounds } from '@/ui/play/useGridSounds';
 import { GridSoundToggle } from '@/ui/play/GridSoundToggle';
@@ -95,6 +98,7 @@ export interface LiveCoopScreenProps {
   readonly onClaim?: () => Promise<void>;
   readonly soundPlayer?: SoundPlayer;
   readonly soundStore?: SoundStore;
+  readonly surveyClient?: SurveyClient;
 }
 
 export function LiveCoopScreen({
@@ -116,6 +120,7 @@ export function LiveCoopScreen({
   onClaim,
   soundPlayer,
   soundStore,
+  surveyClient,
 }: LiveCoopScreenProps) {
   const boardRef = useRef<PuzzleBoardHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -356,6 +361,17 @@ export function LiveCoopScreen({
               onNext={() => nav.cycleClue(1)}
               onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
               onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
+              report={
+                surveyClient ? (
+                  <ReportClueSheet
+                    surveyClient={surveyClient}
+                    surface="multiplayer"
+                    clueText={clue.clue.text}
+                    wordText={foldReportWord(clue.cells.map((c) => nav.getEntryAt(c.position.row, c.position.col)))}
+                    puzzleId={puzzle.id}
+                  />
+                ) : undefined
+              }
             />
           ) : null}
           {!isCompleted ? (
