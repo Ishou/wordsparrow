@@ -30,7 +30,7 @@
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: the governance record Wave 2 links to; updates the stale ADR-0072 "no scores" note.
+- Produces: the governance record Wave 2 links to; establishes co-op scoring, superseding the prior undocumented "no scores" assumption carried only in a `ResultatsScreen.tsx` code comment.
 
 - [ ] **Step 1: Write the ADR**
 
@@ -49,9 +49,10 @@ In co-op (ADR-0018, ADR-0084), ADR-0086 already attributes every locked cell to
 the player who completed its word (`lockedPositions[].lockedBy`, first-writer-
 wins on crossings) and tints the board by that owner. The maintainer wants each
 player's tag to also carry a **score**: how many validated letters they
-contributed. ADR-0072's co-op finish screen carried an explicit "no scores —
-versus mode is a deferred follow-up" note; this adds a *collaborative
-contribution tally*, distinct from the still-deferred competitive/versus mode.
+contributed. The Résultats co-op finish screen carried a code comment noting
+"no scores — versus mode is a deferred follow-up"; this establishes a
+*collaborative contribution tally*, distinct from the still-deferred
+competitive/versus mode.
 
 Because `lockedBy` is already on every lobby snapshot and every `wordLocked`
 frame, the score is a pure client-side derivation — no new wire field.
@@ -71,8 +72,9 @@ frame, the score is a pure client-side derivation — no new wire field.
   that would need new server-side per-cell author tracking and would make the
   score diverge from the board colours. Rejected.
 
-This **amends ADR-0072's "no scores" note**: the collaborative contribution
-tally is now shown; competitive/versus scoring remains deferred.
+This establishes co-op scoring, superseding the prior undocumented "no
+scores" assumption carried only in a code comment: the collaborative
+contribution tally is now shown; competitive/versus scoring remains deferred.
 
 ## Consequences
 
@@ -91,8 +93,7 @@ tally is now shown; competitive/versus scoring remains deferred.
 ## Relationships
 
 - **Builds on ADR-0086** (per-cell `lockedBy` attribution) and **ADR-0018 /
-  ADR-0084** (co-op locking). **Amends ADR-0072** (co-op finish "no scores").
-  Reuses **ADR-0050** a11y posture.
+  ADR-0084** (co-op locking). Reuses **ADR-0050** a11y posture.
 ```
 
 - [ ] **Step 2: Add the INDEX entry**
@@ -102,7 +103,7 @@ In `docs/adr/INDEX.md`, append these rows to the registry table (matching the ex
 ```
 ADR-0101  frontend/src/application/game/playerScores.ts   Co-op score = count of lockedPositions per lockedBy (ADR-0086 attribution); frontend-only derivation
 ADR-0101  frontend/src/ui/v2/multiplayer/PlayerStrip.tsx   Live roster chip carries the player's validated-letter count (join-order, no re-sort)
-ADR-0101  frontend/src/ui/v2/multiplayer/ResultatsScreen.tsx  Résultats ranks players by validated-letter score descending; amends ADR-0072 no-scores note
+ADR-0101  frontend/src/ui/v2/multiplayer/ResultatsScreen.tsx  Résultats ranks players by validated-letter score descending
 ```
 
 - [ ] **Step 3: Verify the registry-coherence pairing**
@@ -545,7 +546,7 @@ and add `lockedPositions` to the destructured params of `ResultatsScreen({ ... }
 Replace the top comment line `// ADR-0072 co-op finish: no scores — versus mode is a deferred follow-up.` with:
 
 ```ts
-// Co-op finish: per-player validated-letter tally ranked as a leaderboard (ADR-0101, amends ADR-0072). Competitive/versus mode still deferred.
+// Co-op finish: per-player validated-letter tally ranked as a leaderboard (ADR-0101). Competitive/versus mode still deferred.
 ```
 
 - [ ] **Step 5: Add the count style and right-group style**
