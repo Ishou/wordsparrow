@@ -173,8 +173,8 @@ with the `correction_id`. The overlay is already active and the report can be
 marked handled right away — correctness converges even if the backfill lags.
 
 A **backfill worker** (a loop in `grid/worker`, mirroring `--ensure-dailies`)
-drains pending/running corrections; a NATS event kicks it promptly, with a
-periodic poll as the resilience backstop. Per correction it:
+drains pending/running corrections; a periodic poll (the CronJob) is the sole
+trigger for this wave. Per correction it:
 
 1. On first claim, counts matching stored grids → `grids_matched`, sets
    `backfill_status = 'running'`.
@@ -252,7 +252,7 @@ correction is already durable and idempotent.
    respect the 400-line cap.)*
 5. **grid worker** — durable backfill loop: claim pending corrections, count +
    batch-patch matching grids, heartbeat, per-grid failure isolation, resume on
-   restart. NATS kick + poll backstop. Crash/resume + idempotency tests.
+   restart. CronJob poll (durable, resumable). Crash/resume + idempotency tests.
 6. **frontend** — `admin:signalements` gate swap + "Corriger → Remplacer" form +
    survey `action` composition + progress polling UI; MSW tests.
 
