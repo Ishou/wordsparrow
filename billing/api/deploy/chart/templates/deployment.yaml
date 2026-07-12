@@ -19,6 +19,9 @@ spec:
     spec:
       serviceAccountName: {{ include "bliss-billing-api.serviceAccountName" . }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
       terminationGracePeriodSeconds: 30
       {{- if .Values.database.enabled }}
       # Flyway hangs without this; explicit -U/-d needed when UID 1000 has no /etc/passwd entry (CNPG image).
