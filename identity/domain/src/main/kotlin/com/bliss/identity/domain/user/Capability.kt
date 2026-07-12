@@ -10,6 +10,7 @@ enum class Capability(
     GRILLES_ALL("grilles:all"),
     GRILLES_GENERATE("grilles:generate"),
     MULTIPLAYER_HOST_UNLIMITED("multiplayer:host-unlimited"),
+    ADMIN_SIGNALEMENTS("admin:signalements"),
 }
 
 // Entitlement = role-derived caps (ADR-0079) plus tier-derived caps (ADR-0080); null role == guest, null/free tier adds nothing.
@@ -23,7 +24,9 @@ private fun roleCapabilities(role: Role?): Set<Capability> =
         null -> emptySet()
         // GA promotion per ADR-0079's promotion note: players now hold billing:subscribe.
         Role.PLAYER -> setOf(Capability.HINT, Capability.BILLING_SUBSCRIBE)
-        Role.MAINTAINER -> setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE)
+        // ADMIN_SIGNALEMENTS gates the clue-correction routes; maintainer-only deny-by-default (ADR-0108 §5).
+        Role.MAINTAINER ->
+            setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE, Capability.ADMIN_SIGNALEMENTS)
     }
 
 private fun tierCapabilities(tier: SubscriptionTier?): Set<Capability> =

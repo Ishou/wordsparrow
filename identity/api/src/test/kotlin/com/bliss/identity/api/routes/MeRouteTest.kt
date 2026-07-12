@@ -117,7 +117,7 @@ class MeRouteTest {
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
             val body = response.bodyAsText()
             assertThat(body).contains("\"role\":\"maintainer\"")
-            assertThat(body).contains("\"capabilities\":[\"billing:subscribe\",\"contribuer\",\"hint\"]")
+            assertThat(body).contains("\"capabilities\":[\"admin:signalements\",\"billing:subscribe\",\"contribuer\",\"hint\"]")
         }
 
     @Test
