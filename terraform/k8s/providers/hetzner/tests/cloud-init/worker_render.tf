@@ -47,6 +47,21 @@ variable "floating_ip" {
   default = "203.0.113.42"
 }
 
+variable "node_role" {
+  type    = string
+  default = "worker"
+}
+
+variable "node_taints" {
+  type    = list(string)
+  default = []
+}
+
+variable "fip_holder" {
+  type    = bool
+  default = false
+}
+
 output "worker_rendered" {
   value = templatefile("${path.module}/../../cloud-init/worker.yaml.tftpl", {
     cluster_name  = var.cluster_name
@@ -56,5 +71,8 @@ output "worker_rendered" {
     private_ip    = var.private_ip
     private_iface = var.private_iface
     floating_ip   = var.floating_ip
+    node_role     = var.node_role
+    node_taints   = var.node_taints
+    fip_holder    = var.fip_holder
   })
 }
