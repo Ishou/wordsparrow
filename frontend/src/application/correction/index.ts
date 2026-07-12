@@ -2,6 +2,8 @@
 
 export type {
   BackfillStatus,
+  BlocklistPreview,
+  BlocklistWordInput,
   CorrectionAccepted,
   CorrectionClient,
   CorrectionInput,
@@ -15,3 +17,6 @@ export { LastClueForbidden, SurveyDecisionFailed } from './errors';
 
 export type { ApplyCorrectionDeps, ApplyCorrectionInput } from './applyCorrection';
 export { applyCorrection, markSignalementHandled } from './applyCorrection';
+
+export type { ApplyBlocklistDeps, ApplyBlocklistInput } from './applyBlocklist';
+export { applyBlocklist, previewBlocklist } from './applyBlocklist';

@@ -19,6 +19,19 @@ export interface ForbidClueCorrectionInput {
 
 export type CorrectionInput = ReplaceCorrectionInput | ForbidClueCorrectionInput;
 
+// Destructive blocklist path (ADR-0110): drops the word from generation and scrubs it from every stored grid.
+export interface BlocklistWordInput {
+  readonly kind: 'blocklist_word';
+  readonly wordText: string;
+  readonly reason?: string;
+}
+
+// Dry-run blast radius shown before the typed-word confirm (ADR-0110 §4).
+export interface BlocklistPreview {
+  readonly affectedDailies: number;
+  readonly affectedSolo: number;
+}
+
 export interface CorrectionAccepted {
   readonly correctionId: string;
   readonly backfillStatus: BackfillStatus;
@@ -35,4 +48,6 @@ export interface CorrectionProgress {
 export interface CorrectionClient {
   submitCorrection(input: CorrectionInput): Promise<CorrectionAccepted>;
   getCorrectionProgress(correctionId: string): Promise<CorrectionProgress>;
+  blocklistWord(input: BlocklistWordInput): Promise<CorrectionAccepted>;
+  previewBlocklist(word: string): Promise<BlocklistPreview>;
 }
