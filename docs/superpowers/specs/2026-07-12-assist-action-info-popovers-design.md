@@ -18,16 +18,32 @@ adding permanent visual clutter and without a separate help screen.
 
 ## Scope (first cut)
 
-Only the **assist actions**:
+The **assist actions**, plus honesty fixes to the static help surfaces that
+describe them:
 
-- **Vérifier** + its 30-minute cooldown mechanic.
-- **Hint** + its 10-minute cooldown mechanic.
+- **Vérifier** + its 30-minute cooldown mechanic (in-context popover).
+- **Hint** + its 10-minute cooldown mechanic (in-context popover).
+- **`/aide` page** — the "Validation et indices" section is stale (it claims
+  solo auto-validates on completion and that a hint reveals the whole word).
+  Rewrite it as **generic, feature-agnostic** help copy that names no specific
+  mechanic, so it can't drift.
+- **Onboarding Tour** — the same two false claims live in `tour.validation.body`
+  and `tour.hints.body`. Genericise both. The tour's assist step also targets a
+  **broken selector** (`[aria-label^="Indice ("]`), which matches nothing now
+  that the active assist is Vérifier — re-anchor it to a stable
+  `data-tour="assist"` hook.
 
 `src/ui/components/grid/assistMode.ts` currently hardcodes
 `ACTIVE_ASSIST_MODE = 'verify'`, so only the Vérifier button renders today. We
-build the pattern for both so the Hint popup is ready the moment that flag
-flips. No other controls (sound, settings, report, zoom, co-op direction
+build the popover pattern for both so the Hint popup is ready the moment that
+flag flips. No other controls (sound, settings, report, zoom, co-op direction
 switch) are in this cut.
+
+**Copy principle (maintainer directive):** the in-context popover — which lives
+*on* the button and therefore can't drift — is specific about what the action
+does. The static `/aide` + Tour surfaces are kept **generic** ("un bouton
+d'aide dans le bandeau te donne un coup de main") so they survive
+verify↔hint↔settings churn.
 
 ## Design
 
@@ -123,6 +139,11 @@ workstream, `feat(frontend-grid):` scope.
 - No `(i)` info icon affordance in this cut (longpress-first, per the design
   decision). Revisit if longpress proves undiscoverable.
 - No live cooldown time inside the popup (the conic ring already shows it).
+- **Disabled-button popover:** a native `disabled` button suppresses
+  hover/pointer events, so the popover won't open while the action is on
+  cooldown — the `AssistCooldown` ring communicates state there. An
+  `aria-disabled` pattern to keep the popover reachable during cooldown is a
+  deliberate follow-up.
 - Other non-self-evident controls (sound, settings, report/flag, co-op "Espace"
   direction switch, zoom, nav arrows) are candidates for a later wave reusing
   `InfoPopover`.
