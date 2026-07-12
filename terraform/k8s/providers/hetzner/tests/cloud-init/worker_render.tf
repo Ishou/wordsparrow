@@ -1,6 +1,4 @@
-# Renders ../../cloud-init/worker.yaml.tftpl with the shared stub variables
-# (variables.tf) so worker.tftest.hcl can grep the output for invariants.
-# Production rendering happens in ../../server.tf via the same templatefile().
+# Renders ../../cloud-init/worker.yaml.tftpl with the shared stub variables (variables.tf) so worker.tftest.hcl can grep the output for invariants; production rendering is ../../server.tf via the same templatefile().
 
 output "worker_rendered" {
   value = templatefile("${path.module}/../../cloud-init/worker.yaml.tftpl", {

@@ -1,5 +1,4 @@
-# Renders control-plane.yaml.tftpl with the shared stub variables (variables.tf)
-# for control-plane.tftest.hcl; mirrors worker_render.tf. No resources.
+# Renders control-plane.yaml.tftpl with the shared stub variables (variables.tf) for control-plane.tftest.hcl; mirrors worker_render.tf. No resources.
 
 output "control_plane_rendered" {
   value = templatefile("${path.module}/../../cloud-init/control-plane.yaml.tftpl", {

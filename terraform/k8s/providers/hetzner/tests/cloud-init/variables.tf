@@ -1,7 +1,4 @@
-# Shared stub variables for the cloud-init render fixtures (worker_render.tf,
-# control_plane_render.tf). These live in one module, so the terraform block and
-# variable declarations are declared once here; each fixture contributes only its
-# `output`. No resources, never `tofu apply` — targets for `tofu test`.
+# Shared stub variables for the cloud-init render fixtures (worker_render.tf, control_plane_render.tf) — declared once here since both fixtures live in one module; each keeps only its own `output`. No resources, never `tofu apply`.
 
 terraform {
   required_version = "~> 1.10"
@@ -18,8 +15,7 @@ variable "k3s_version" {
 }
 
 variable "k3s_token" {
-  # Not marked sensitive: test-only, and assertions read the rendered body.
-  # Production rendering (server.tf) passes a sensitive value instead.
+  # Not marked sensitive: test-only, and assertions read the rendered body (server.tf passes a sensitive value in production).
   type    = string
   default = "stub-token"
 }
