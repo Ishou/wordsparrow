@@ -28,6 +28,44 @@ def _row(word, clue, source="bliss", pos="", lemma="", language="fr"):
     }
 
 
+_LONG = "Physicien français de l'électricité"  # 35 chars, doesn't fit a cell
+
+
+def test_gate_cell_fit_drops_overflow_when_fitting_alternative_exists():
+    rows = [
+        _row("ampere", _LONG, pos="nom"),
+        _row("ampere", "Savant", pos="nom"),
+    ]
+    kept, dropped = ac.gate_cell_fit(rows)
+    assert dropped == 1
+    assert [r["clue"] for r in kept] == ["Savant"]
+
+
+def test_gate_cell_fit_keeps_a_words_only_clue_even_if_overflow():
+    rows = [_row("ampere", _LONG, pos="nom")]
+    kept, dropped = ac.gate_cell_fit(rows)
+    assert dropped == 0
+    assert [r["clue"] for r in kept] == [_LONG]
+
+
+def test_gate_cell_fit_empty_placeholder_is_not_a_fitting_alternative():
+    # A blank grammalecte anchor + an overflow clue: the overflow is the word's
+    # only real clue, so it stays (not dropped to just the placeholder).
+    rows = [_row("ampere", "", source="grammalecte"), _row("ampere", _LONG)]
+    kept, dropped = ac.gate_cell_fit(rows)
+    assert dropped == 0
+    assert _LONG in [r["clue"] for r in kept]
+
+
+def test_gate_cell_fit_is_case_sensitive():
+    # `IX` (roman, fitting) and `ix` (only an overflow clue) are distinct grid
+    # surfaces — IX's fitting clue must not credit `ix` and drop its sole clue.
+    rows = [_row("IX", "Neuf en chiffres romains"), _row("ix", _LONG)]
+    kept, dropped = ac.gate_cell_fit(rows)
+    assert dropped == 0
+    assert _LONG in [r["clue"] for r in kept]
+
+
 def test_source_priority_order():
     assert ac.SOURCE_PRIORITY == [
         "overrides", "curated", "themed", "gold", "editorial", "grammalecte", "llm",
