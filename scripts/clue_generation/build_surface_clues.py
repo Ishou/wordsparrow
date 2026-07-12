@@ -229,12 +229,7 @@ def build_surface_rows(
     for cand_lemma, cand_pos, cand_tags, _ in candidates:
         norm_tags = ({normalize_tag(t) for t in cand_tags}
                      if surface != cand_lemma else None)
-        # Try the lemma's clues last-first (preserving the prior last-write-wins
-        # primary) and emit the first that fits the cell. A too-long primary no
-        # longer sinks a surface another clue could inflate cleanly
-        # (`esse`'s too-long "Suffixe…" no longer hides "Crochet en forme de S",
-        # so `esses` gets a clue). fits_single_cell enforces MAX_CLUE_CHARS + the
-        # Lekton wrap predicate; inflation can lengthen, so re-check post-inflate.
+        # Last-first preserves the prior primary; fall back to an earlier clue when it doesn't fit the cell.
         emitted = False
         for row in reversed(corpus[(cand_lemma, cand_pos)]):
             source_clue = row["lemma_clue"]
@@ -289,7 +284,7 @@ def main() -> None:
 
     # Load corpus, key by (lemma, pos). Ownership uses ALL entries with a
     # valid clue — the score threshold only filters the *output* later.
-    corpus: dict[tuple[str, str], dict] = {}
+    corpus: dict[tuple[str, str], list[dict]] = {}
     with args.corpus.open(encoding="utf-8", newline="") as f:
         for r in csv.DictReader(f):
             if r.get("validation_flag") != "ok" or not r.get("lemma_clue"):

@@ -1,12 +1,4 @@
-"""Tests for `build_surface_clues.build_surface_rows`.
-
-Locks in the multi-clue fallback: a `(lemma, pos)` can carry several gold clues.
-Pre-fix the corpus was last-write-wins (one clue per key), so if that single
-clue was too long to fit a cell the surface got NO clue at all — even when the
-lemma had a shorter clue that inflects cleanly (`esse`'s 28-char "Suffixe formant
-des féminins" hid "Crochet en forme de S", so `esses` was silently unclued).
-Post-fix every clue is kept and the first that fits the cell is emitted.
-"""
+"""Locks in the multi-clue fallback: the first fitting gold clue wins, tried last-first."""
 from __future__ import annotations
 
 import sys
