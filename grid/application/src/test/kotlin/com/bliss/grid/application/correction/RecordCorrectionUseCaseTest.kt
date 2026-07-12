@@ -93,35 +93,4 @@ class RecordCorrectionUseCaseTest {
         assertThat(result).isEqualTo(RecordCorrectionUseCase.Result.LastClueForbidden)
         assertThat(repo.recorded.isEmpty()).isEqualTo(true)
     }
-
-    @Test
-    fun `rejects a forbid without wordText that would empty the only word carrying that clue`() {
-        val repo = RecordingCorrectionRepository()
-        val words = FakeWordRepository(listOf(Word("PARIS", "Capitale"), Word("EST", "Verbe etre")))
-        val useCase = RecordCorrectionUseCase(repo, words)
-
-        val result =
-            useCase.execute(
-                ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = "Capitale"),
-                maintainer,
-            )
-
-        assertThat(result).isEqualTo(RecordCorrectionUseCase.Result.LastClueForbidden)
-        assertThat(repo.recorded.isEmpty()).isEqualTo(true)
-    }
-
-    @Test
-    fun `records a forbid without wordText when the matching word keeps another clue`() {
-        val subject = Word("EST", listOf(WordClue("Verbe etre"), WordClue("Point cardinal", theme = "compass")))
-        val repo = RecordingCorrectionRepository()
-        val useCase = RecordCorrectionUseCase(repo, FakeWordRepository(listOf(subject)))
-
-        val result =
-            useCase.execute(
-                ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = "Verbe etre"),
-                maintainer,
-            )
-
-        assertThat(result).isInstanceOf(RecordCorrectionUseCase.Result.Recorded::class)
-    }
 }

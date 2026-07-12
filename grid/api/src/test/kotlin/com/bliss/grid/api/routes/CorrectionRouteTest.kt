@@ -114,6 +114,15 @@ class CorrectionRouteTest {
         }
 
     @Test
+    fun `returns 400 for a forbid without wordText`() =
+        testApplication {
+            mount(capabilities = setOf("admin:signalements"))
+            val response = submit(client, """{"kind":"forbid_clue","oldClueText":"felin domestique"}""")
+            assertThat(response.status).isEqualTo(HttpStatusCode.BadRequest)
+            assertThat(response.bodyAsText()).contains("invalid-correction")
+        }
+
+    @Test
     fun `returns 400 for an unknown kind`() =
         testApplication {
             mount(capabilities = setOf("admin:signalements"))

@@ -129,7 +129,11 @@ private fun CorrectionRequestDto.toClueCorrection(): ClueCorrection? {
                 if (newClueText.isNullOrBlank() || newClueText.length > MAX_CLUE_TEXT) return null
                 newClueText
             }
-            ClueCorrection.Kind.FORBID_CLUE -> null
+            // A forbid is word-scoped (ADR-0108): wordText names the word so the last-clue guard runs.
+            ClueCorrection.Kind.FORBID_CLUE -> {
+                if (wordText.isNullOrBlank()) return null
+                null
+            }
         }
     return ClueCorrection(kind = kind, oldClueText = oldClueText, wordText = wordText, newClueText = newText)
 }

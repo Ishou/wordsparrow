@@ -5,9 +5,9 @@ import com.bliss.grid.domain.generation.WordRepository
 import java.util.UUID
 
 /**
- * Records a maintainer clue correction (ADR-0108). A `forbid_clue` that would
- * empty a located corpus word's clue list is rejected — that is the
- * blocklist-word path (regeneration), not a cheap forbid.
+ * Records a maintainer clue correction (ADR-0108). A word-scoped `forbid_clue`
+ * that would empty its word's clue list is rejected — that is the blocklist-word
+ * path (regeneration), not a cheap forbid.
  */
 class RecordCorrectionUseCase(
     private val corrections: CorrectionRepository,
@@ -31,18 +31,12 @@ class RecordCorrectionUseCase(
         return Result.Recorded(corrections.record(correction, createdBy))
     }
 
-    // No wordText: the clue could belong to any word, so every length bucket is scanned.
+    // A forbid is word-scoped (route rejects a null wordText); this guard locates that word and rejects a last-clue drop.
     private fun emptiesAWord(correction: ClueCorrection): Boolean {
-        val lengths = correction.wordText?.let { listOf(it.uppercase().length) } ?: (1..MAX_SCAN_LENGTH)
-        return lengths
-            .asSequence()
-            .flatMap { words.findByLength(it).asSequence() }
-            .filter { it.clues.any { clue -> clue.text == correction.oldClueText } }
+        val folded = correction.wordText?.uppercase() ?: return false
+        return words
+            .findByLength(folded.length)
+            .filter { it.text == folded && it.clues.any { clue -> clue.text == correction.oldClueText } }
             .any { correction.applyTo(it) == null }
-    }
-
-    private companion object {
-        // No French corpus entry approaches this length; a safe bound for a full-corpus scan.
-        const val MAX_SCAN_LENGTH = 30
     }
 }

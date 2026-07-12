@@ -6,9 +6,11 @@ import com.bliss.grid.domain.model.Word
 
 /**
  * Overlays active corrections (ADR-0108) onto a delegate corpus at generation
- * time: each returned [Word] is passed through every active correction, and a
- * word a forbid empties is dropped from the generation set. [corrections] is
- * read per call so a freshly recorded correction takes effect without reload.
+ * time: each returned [Word] is passed through every active correction. A forbid
+ * is word-scoped and its last-clue drop is rejected at record time, so an emptied
+ * word is a defensive fallback that should not occur; such a word is still dropped
+ * from the generation set. [corrections] is read per call so a freshly recorded
+ * correction takes effect without reload.
  */
 class CorrectionAwareWordRepository(
     private val delegate: WordRepository,
@@ -36,7 +38,7 @@ class CorrectionAwareWordRepository(
         return out
     }
 
-    // Corrections only rewrite or drop a clue; lemma membership (the corpus surface form) is unchanged.
+    // Corrections only rewrite or drop a clue; lemma membership is unchanged (a word-scoped last-clue forbid is rejected at record time).
     override fun containsLemma(text: String): Boolean = delegate.containsLemma(text)
 
     private fun applyAll(words: List<Word>): List<Word> {
