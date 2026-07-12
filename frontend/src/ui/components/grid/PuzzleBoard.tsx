@@ -18,7 +18,7 @@ import { type CellHighlight, type GridNavigation } from './useGridNavigation';
 import { GRID_INPUT_GUARDS } from './gridInputGuards';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import { solvePulseCellDelaysMs } from '@/application/grid/solvePulse';
-import { CELL, GAP, STRIDE, posKey, exitsRight } from './playLayout';
+import { CELL, GAP, posKey, exitsRight } from './playLayout';
 import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
 import { SeparatorOverlay } from './SeparatorOverlay';
 
@@ -148,10 +148,8 @@ function LetterSlot({
 }
 
 export interface PuzzleBoardHandle {
-  // PanZoom imperative handle — auto-frame / per-cell reveal / zoom controls. A getter so it reads the live ref (null only before mount).
+  // PanZoom imperative handle — manual zoom controls. A getter so it reads the live ref (null only before mount).
   readonly panZoom: PanZoomHandle | null;
-  // Pans so a single cell becomes visible (used by the screen on focus change).
-  readonly revealCell: (p: Position) => void;
   // Aborts an in-flight solve beat — a user tap / rail step during the beat skips it.
   readonly cancelBeat: () => void;
 }
@@ -224,10 +222,6 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
     for (const c of puzzle.cells) m.set(posKey(c.position.row, c.position.col), c);
     return m;
   }, [puzzle]);
-
-  const revealCell = useCallback((p: Position) => {
-    pzRef.current?.reveal(p.col * STRIDE, p.row * STRIDE, CELL, CELL);
-  }, []);
 
   // Solve beat: sakura halo + flatten ripple + haptic when cells newly validate; interruptible; reduced-motion skips the visuals.
   const [celebrating, setCelebrating] = useState<ReadonlyMap<string, number>>(() => new Map());
@@ -307,8 +301,8 @@ export const PuzzleBoard = forwardRef<PuzzleBoardHandle, PuzzleBoardProps>(funct
 
   useImperativeHandle(
     ref,
-    () => ({ get panZoom() { return pzRef.current; }, revealCell, cancelBeat }),
-    [revealCell, cancelBeat],
+    () => ({ get panZoom() { return pzRef.current; }, cancelBeat }),
+    [cancelBeat],
   );
 
   return (

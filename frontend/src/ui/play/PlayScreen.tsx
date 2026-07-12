@@ -15,7 +15,7 @@ import { DesktopAppBar } from '@/ui/v2/DesktopAppBar';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { useGridNavigation, type Direction } from '@/ui/components/grid/useGridNavigation';
 import { orderClues } from '@/ui/components/grid/orderClues';
-import { CELL, STRIDE, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
+import { BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
 import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
 import { useAdvanceOnValidation, inputAt } from '@/ui/components/grid/useAdvanceOnValidation';
 import { ReportClueSheet } from '@/ui/components/grid/ReportClueSheet';
@@ -290,9 +290,8 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
       boardRef.current?.cancelBeat(); // a user tap during the beat skips it (no-op otherwise)
       activeFocusRef.current = position;
       if (direction) activeDirectionRef.current = direction;
-      boardRef.current?.revealCell(position);
     },
-    // Force the zoom guard on so PanZoom.reveal() handles scroll avoidance instead of the browser.
+    // Suppress the hook's keyboard-avoidance auto-scroll — the grid never moves the view on its own.
     getZoomScale: () => 2,
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
   });
@@ -372,29 +371,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
     },
     [nav, orderedClues, displayOrdinal, advance],
   );
-
-  // Auto-frame the active clue when it changes; within-clue moves use per-cell reveal.
-  const framedClueRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!clue) {
-      framedClueRef.current = null;
-      return;
-    }
-    const k = `${clue.definition.position.row}:${clue.definition.position.col}:${clue.clue.arrow}`;
-    if (k === framedClueRef.current) return;
-    framedClueRef.current = k;
-    let minRow = clue.definition.position.row;
-    let maxRow = minRow;
-    let minCol = clue.definition.position.col;
-    let maxCol = minCol;
-    for (const c of clue.cells) {
-      minRow = Math.min(minRow, c.position.row);
-      maxRow = Math.max(maxRow, c.position.row);
-      minCol = Math.min(minCol, c.position.col);
-      maxCol = Math.max(maxCol, c.position.col);
-    }
-    boardRef.current?.panZoom?.frame(minCol * STRIDE, minRow * STRIDE, (maxCol - minCol) * STRIDE + CELL, (maxRow - minRow) * STRIDE + CELL);
-  }, [clue]);
 
   // step-back is baked into eraseLetter; no focus nudge needed here.
   const playBackspace = useCallback(() => {

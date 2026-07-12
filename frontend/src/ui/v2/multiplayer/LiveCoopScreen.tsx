@@ -189,8 +189,8 @@ export function LiveCoopScreen({
       : (position, direction) => {
           boardRef.current?.cancelBeat();
           onLocalFocusChange(position, direction);
-          if (position) boardRef.current?.revealCell(position);
         },
+    // Suppress the hook's keyboard-avoidance auto-scroll — the grid never moves the view on its own.
     getZoomScale: () => 2,
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
   });
