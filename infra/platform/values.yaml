@@ -14,6 +14,16 @@ clusterIssuer:
   selfsigned:
     enabled: false
 
+# Egress SNAT on the FIP holder so outbound mail (Brevo, ADR-0092) leaves from the whitelisted floating IP deterministically. Disabled by default; prod sets floatingIp (ADR-0109).
+fipEgressSnat:
+  enabled: false
+  floatingIp: ""
+  image:
+    repository: nicolaka/netshoot
+    # renovate: datasource=docker depName=nicolaka/netshoot
+    tag: "v0.13"
+    digest: ""
+
 # Orphaned-volume garbage collector — reclaims long-Released hcloud volumes left by CNPG churn (ADR-0070).
 volumeGc:
   enabled: false

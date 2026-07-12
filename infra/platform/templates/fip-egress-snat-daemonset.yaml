@@ -1,0 +1,59 @@
+{{- if .Values.fipEgressSnat.enabled }}
+# Self-asserts an egress SNAT on the FIP holder so outbound mail (Brevo) always leaves from the one whitelisted IP; flannel's MASQUERADE address-primary pick can silently flip. Configure-in-cluster (CLAUDE.md) — heals across reboots + follows the FIP to a recreated holder. ADR-0109.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: platform-fip-egress-snat
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "platform.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: fip-egress-snat
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: fip-egress-snat
+        {{- include "platform.labels" . | nindent 8 }}
+    spec:
+      # Only the FIP holder aliases the floating IP, so SNAT belongs only there.
+      nodeSelector:
+        bliss.io/fip-holder: "true"
+      hostNetwork: true
+      # Run on the holder regardless of taints; a mail-critical rule must not be kept off by a node taint.
+      tolerations:
+        - operator: Exists
+      priorityClassName: system-node-critical
+      terminationGracePeriodSeconds: 5
+      containers:
+        - name: snat
+          image: "{{ .Values.fipEgressSnat.image.repository }}{{ if .Values.fipEgressSnat.image.digest }}@{{ .Values.fipEgressSnat.image.digest }}{{ else }}:{{ .Values.fipEgressSnat.image.tag }}{{ end }}"
+          securityContext:
+            capabilities:
+              drop: ["ALL"]
+              add: ["NET_ADMIN"]
+            # NET_ADMIN alone is sufficient for iptables-nft via hostNetwork; no privilege escalation needed.
+            allowPrivilegeEscalation: false
+            runAsNonRoot: false
+            runAsUser: 0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              FIP="{{ required "fipEgressSnat.floatingIp is required when enabled" .Values.fipEgressSnat.floatingIp }}"
+              # Excludes kube-marked (0x4000) + internal 10/8 (pod-to-pod, cluster svc, private net), mirroring flannel's own RETURN rules; -I 1 stays ahead of the flannel jump.
+              RULE="-s 10.42.0.0/16 -m mark ! --mark 0x4000/0x4000 ! -d 10.0.0.0/8 -j SNAT --to-source ${FIP}"
+              while true; do
+                iptables -t nat -C POSTROUTING ${RULE} 2>/dev/null \
+                  || iptables -t nat -I POSTROUTING 1 ${RULE}
+                sleep 30
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+{{- end }}
