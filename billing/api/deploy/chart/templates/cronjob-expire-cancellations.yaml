@@ -35,9 +35,6 @@ spec:
           serviceAccountName: {{ include "bliss-billing-api.serviceAccountName" . }}
           restartPolicy: Never
           securityContext: {{- toYaml .Values.podSecurityContext | nindent 12 }}
-          {{- with .Values.nodeSelector }}
-          nodeSelector: {{- toYaml . | nindent 12 }}
-          {{- end }}
           containers:
             - name: worker
               image: {{ include "bliss-billing-api.workerImage" . | quote }}
