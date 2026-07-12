@@ -44,7 +44,7 @@ describe('InfoPopover', () => {
     await waitFor(() => expect(trigger).toHaveAttribute('aria-describedby'));
   });
 
-  it('when disabled: blocks onActivate, marks aria-disabled, still reveals info', async () => {
+  it('when disabled: blocks onActivate, marks aria-disabled, and persistently exposes the reason', () => {
     const onActivate = vi.fn();
     render(
       <InfoPopover info="Connecte-toi pour vérifier" onActivate={onActivate} disabled>
@@ -55,12 +55,23 @@ describe('InfoPopover', () => {
     expect(trigger).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(trigger);
     expect(onActivate).not.toHaveBeenCalled();
-    act(() => {
-      trigger.focus();
-      fireEvent.pointerMove(trigger);
-    });
-    await waitFor(() =>
-      expect(screen.getByText('Connecte-toi pour vérifier')).toBeInTheDocument(),
+    // Reason is associated without opening the popover — required for touch/AT (no long-press).
+    const descId = trigger.getAttribute('aria-describedby');
+    expect(descId).toBeTruthy();
+    expect(document.getElementById(descId as string)).toHaveTextContent(
+      'Connecte-toi pour vérifier',
+    );
+  });
+
+  it('does not add a persistent description when enabled', () => {
+    render(
+      <InfoPopover info="Vérifie tes lettres" onActivate={() => {}}>
+        <button type="button">Vérifier</button>
+      </InfoPopover>,
+    );
+    // Enabled: no persistent describedby — Ark still wires it on open/focus.
+    expect(screen.getByRole('button', { name: 'Vérifier' })).not.toHaveAttribute(
+      'aria-describedby',
     );
   });
 
