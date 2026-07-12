@@ -80,6 +80,22 @@ _FUNCTION_WORDS = {
     "ne", "pas", "plus", "très", "trop", "peu", "bien", "mal", "non",
 }
 
+# Degree adverbs, negation, and the comparative `comme` sit between a head and
+# a predicate adjective without breaking the agreement chain (`Bois très dur`
+# → `Bois très durs`). Several are also in `_FUNCTION_WORDS`; the walk checks
+# this set first so it crosses them instead of stopping.
+_DEGREE_TRANSPARENT = {
+    "très", "trop", "plus", "moins", "peu", "assez", "bien", "mal",
+    "non", "comme",
+}
+
+# grammalecte tags for readings that must not govern common-noun agreement:
+# pronouns (`personne`/`rien` also read as the negative pronoun) and proper
+# nouns (`pierre` also reads as the first name `Pierre`, `inv mas`). Demoted
+# so the head's gender/number comes from its common-noun reading.
+_DEMOTED_HEAD_TAGS = {"proneg", "proind", "prorel", "prodem", "propos",
+                      "propers", "proint", "proadv", "prn"}
+
 _TOKEN_RE = re.compile(r"[\wÀ-ÿŒœŸ]+|[^\s\wÀ-ÿ]+", re.UNICODE)
 
 # Mood preference for resolving syncretic surface forms. When grammalecte
@@ -567,6 +583,7 @@ def inflect_clue(
     initial_gn = gn
     in_pp = False
     saw_coord = False
+    after_comma = False
     i = head_idx + 1
     while i < len(new_tokens):
         tok = new_tokens[i]
@@ -574,6 +591,7 @@ def inflect_clue(
             # Comma is a co-head boundary — keep walking so the next synonym also inflects.
             if tok == ",":
                 saw_coord = True
+                after_comma = True
                 i += 1
                 continue
             break
@@ -582,11 +600,13 @@ def inflect_clue(
         # Coordinating conjunction: walk through to the next content token.
         if lo in _COORD_WALKTHROUGH:
             saw_coord = True
+            after_comma = False
             i += 1
             continue
         if lo in _AGREEMENT_PASSTHROUGH:
             in_pp = True
             saw_coord = False
+            after_comma = False
             i += 1
             continue
         # In PP state, an encountered noun re-anchors the agreement target
@@ -598,6 +618,11 @@ def inflect_clue(
                 if new_target:
                     gn = new_target
             in_pp = False
+            i += 1
+            continue
+        # Degree adverb / negation / `comme`: cross it so a following predicate
+        # adjective still agrees with the head, keeping the current gn target.
+        if lo in _DEGREE_TRANSPARENT:
             i += 1
             continue
         if lo in _FUNCTION_WORDS:
@@ -620,17 +645,34 @@ def inflect_clue(
                             break
                 if co_form and co_form.lower() != lo:
                     new_tokens[i] = co_form
+                # A noun co-head introduced by a comma is an apposition; a
+                # trailing adjective agrees with it, the nearest noun
+                # (`Oubli, chose non dite` — `dite` agrees with `chose`). Only
+                # commas re-anchor; `et`/`ou` coordinations keep the head's
+                # target so `Ligne A ou B francilienne` stays feminine.
+                if target_pos == "nom" and after_comma:
+                    reanchor = _noun_agreement_from_form(
+                        (co_form or lo).lower(), co_lemma, index)
+                    if reanchor:
+                        gn = reanchor
             saw_coord = False
+            after_comma = False
             i += 1
             continue
         saw_coord = False
         # Post-head adjective agreement (when we know a gn target).
         if gn is not None and "adj" in classes:
-            adj_lemma = index.lemma_of_form(lo, prefer_pos="adj")
-            if adj_lemma:
-                new_form = index.inflect(adj_lemma, gn, prefer_pos="adj")
-                if new_form and new_form.lower() != lo:
-                    new_tokens[i] = new_form
+            # A présent participle governing a complement is verbal and stays
+            # invariable (`Personne fuyant son pays`, not `*fuyante son pays`);
+            # only its bare adjectival use (nothing, or a coordinator, after)
+            # agrees. Past participles still agree (`aimée de tous`).
+            if _reads_as_ppre(lo, index):
+                nxt = _next_alpha_token(new_tokens, i)
+                if nxt is not None and nxt not in _COORD_WALKTHROUGH:
+                    break
+            new_form = _agree_adjective(lo, gn, index)
+            if new_form and new_form.lower() != lo:
+                new_tokens[i] = new_form
             i += 1
             continue
         # Appositive noun in NP state (`Légume racine blanc`): take the head's
@@ -668,6 +710,9 @@ def inflect_clue(
             saw_coord = True
             i -= 1
             continue
+        if lo in _DEGREE_TRANSPARENT:
+            i -= 1
+            continue
         if lo in _FUNCTION_WORDS:
             break
         classes = index.pos_classes_of_form(lo)
@@ -686,11 +731,9 @@ def inflect_clue(
             i -= 1
             continue
         if initial_gn is not None and "adj" in classes:
-            adj_lemma = index.lemma_of_form(lo, prefer_pos="adj")
-            if adj_lemma:
-                new_form = index.inflect(adj_lemma, initial_gn, prefer_pos="adj")
-                if new_form and new_form.lower() != lo:
-                    new_tokens[i] = new_form
+            new_form = _agree_adjective(lo, initial_gn, index)
+            if new_form and new_form.lower() != lo:
+                new_tokens[i] = new_form
             i -= 1
             continue
         break
@@ -736,6 +779,74 @@ _AGREEMENT_PASSTHROUGH = {
 }
 
 
+def _reads_as_ppre(form: str, index: MorphologyIndex) -> bool:
+    """True iff the form has a présent-participle reading (`fuyant`, `parlant`)."""
+    return any("ppre" in tags for _l, tags in index.lookup_form(form))
+
+
+def _form_gender(form: str, index: MorphologyIndex) -> set[str]:
+    """The gender(s) the form carries in its adj/ppas readings (`{mas}`/`{fem}`)."""
+    g: set[str] = set()
+    for _l, tags in index.lookup_form(form):
+        if "adj" in tags or "ppas" in tags:
+            g |= tags & {"mas", "fem"}
+    return g
+
+
+def _form_agrees(form: str, gn: set[str], index: MorphologyIndex) -> bool:
+    """True iff an adj/ppas reading of `form` already matches `gn` (epicene/
+    invariable count as wildcards). Used to skip re-inflecting an already-correct
+    form, which would otherwise risk a paradigm jump (`tendre` adj → `tendu`)."""
+    want_num = gn & NUMBER_TOKENS
+    want_gen = gn & {"mas", "fem"}
+    for _l, tags in index.lookup_form(form):
+        if not ({"adj", "ppas"} & tags):
+            continue
+        num_ok = not want_num or bool(tags & want_num) or "inv" in tags
+        gen_ok = not want_gen or bool(tags & want_gen) or "epi" in tags
+        if num_ok and gen_ok:
+            return True
+    return False
+
+
+# Invariable adverbs that also carry a (usually archaic) adjective reading, so
+# they must not be agreed after a comparative (`Va plus vite`, not `*plus vites`).
+_INVARIABLE_ADVERBS = {
+    "vite", "loin", "tôt", "tard", "mieux", "pis", "exprès", "debout",
+    "ensemble", "gratis", "d'accord",
+}
+
+
+def _agree_adjective(
+    form: str, gn: set[str], index: MorphologyIndex,
+) -> str | None:
+    """Inflect an adjective/participle to `gn`. When `gn` carries no gender
+    (ambiguous-gender head), agree number only and keep the form's own gender."""
+    if form in _INVARIABLE_ADVERBS:
+        return None
+    adj_lemma = index.lemma_of_form(form, prefer_pos="adj")
+    if not adj_lemma:
+        return None
+    agree_gn = gn
+    if not (gn & GENDER_TOKENS):
+        own = _form_gender(form, index)
+        if len(own) > 1:  # form is itself both genders → can't choose, leave as-is
+            return None
+        # Epicene adjective (own == set()) still agrees number, no gender.
+        agree_gn = gn | own
+    if _form_agrees(form, agree_gn, index):
+        return None
+    return index.inflect(adj_lemma, frozenset(agree_gn), prefer_pos="adj")
+
+
+def _next_alpha_token(tokens: list[str], i: int) -> str | None:
+    """Lowercased next alphabetic token after index `i`, or None at clause end."""
+    for j in range(i + 1, len(tokens)):
+        if _is_alpha_token(tokens[j]):
+            return tokens[j].lower()
+    return None
+
+
 def _noun_agreement_from_form(
     surface: str, lemma: str, index: MorphologyIndex,
 ) -> set[str] | None:
@@ -765,16 +876,24 @@ def _agreement_target(
         # Only past participles agree like adjectives.
         if "ppas" not in target:
             return None
-    # Find the inflected head's analysis matching the head_lemma. Pull its
-    # gender + number tags.
-    for lemma, tags in index.lookup_form(inflected_head):
-        if lemma.lower() != head_lemma.lower():
-            continue
+    # Find the inflected head's analysis matching the head_lemma. A form can
+    # carry a pronoun reading alongside its noun reading under one lemma (the
+    # masc negative pronoun `personne` vs the fem noun `personne`); demote
+    # pronoun readings so agreement takes the noun's gender, not the pronoun's.
+    matches = [tags for lemma, tags in index.lookup_form(inflected_head)
+               if lemma.lower() == head_lemma.lower()]
+    matches.sort(key=lambda tags: bool(tags & _DEMOTED_HEAD_TAGS))
+    # Ambiguous-gender head — epicene (`œuvre`), or both masc and fem noun
+    # readings — makes gender unreliable: agree number only and let adjectives
+    # keep their source gender (`_agree_adjective`) rather than forcing masc.
+    kept = [t for t in matches if not (t & _DEMOTED_HEAD_TAGS)] or matches
+    genders = {g for t in kept for g in (t & GENDER_TOKENS)}
+    ambiguous = "epi" in genders or ("mas" in genders and "fem" in genders)
+    for tags in matches:
         gn = (tags & GENDER_TOKENS) | (tags & NUMBER_TOKENS)
         if gn:
-            # Epicene head → adj should pick mas (default in French).
-            if "epi" in gn:
-                gn = (gn - {"epi"}) | {"mas"}
+            if ambiguous:
+                return (gn & NUMBER_TOKENS) or None
             return gn
     return None
 
