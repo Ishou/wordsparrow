@@ -1,5 +1,5 @@
 {{- if .Values.fipEgressSnat.enabled }}
-# Self-asserts an egress SNAT on the FIP holder so outbound mail (Brevo) always leaves from the one whitelisted IP; flannel's MASQUERADE address-primary pick can silently flip. Configure-in-cluster (CLAUDE.md) — heals across reboots + follows the FIP to a recreated holder.
+# Self-asserts an egress SNAT on the FIP holder so outbound mail (Brevo) always leaves from the one whitelisted IP; flannel's MASQUERADE address-primary pick can silently flip. Configure-in-cluster (CLAUDE.md) — heals across reboots + follows the FIP to a recreated holder. ADR-0109.
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -31,9 +31,10 @@ spec:
           image: "{{ .Values.fipEgressSnat.image.repository }}{{ if .Values.fipEgressSnat.image.digest }}@{{ .Values.fipEgressSnat.image.digest }}{{ else }}:{{ .Values.fipEgressSnat.image.tag }}{{ end }}"
           securityContext:
             capabilities:
+              drop: ["ALL"]
               add: ["NET_ADMIN"]
-            # iptables needs to write the host's nat table via hostNetwork; no other privilege.
-            allowPrivilegeEscalation: true
+            # NET_ADMIN alone is sufficient for iptables-nft via hostNetwork; no privilege escalation needed.
+            allowPrivilegeEscalation: false
             runAsNonRoot: false
             runAsUser: 0
           command:
