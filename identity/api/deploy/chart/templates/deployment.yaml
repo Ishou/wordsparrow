@@ -21,6 +21,9 @@ spec:
     spec:
       serviceAccountName: {{ include "bliss-identity-api.serviceAccountName" . }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
       # Mirrors grid/api / game/api grace window. Identity is REST-only so
       # a shorter grace would do; 30 s keeps operational parity.
       terminationGracePeriodSeconds: 30

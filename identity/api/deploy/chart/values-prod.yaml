@@ -9,6 +9,10 @@
 # (since the release name doesn't contain the chart name `bliss-identity-api`).
 fullnameOverride: "wordsparrow-identity-api"
 
+# Pin to the FIP holder: all outbound Brevo mail must egress from the stable floating IP (the only source IP that survives node recreates); non-holder per-node IPs break Brevo's allowlist on every rebuild (ADR-0106, ADR-0092).
+nodeSelector:
+  bliss.io/fip-holder: "true"
+
 image:
   # Fail-fast guard: helm aborts if digest is empty (see _helpers.tpl).
   requireDigest: true

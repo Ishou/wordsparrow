@@ -12,6 +12,7 @@ image:
 # Identity has no in-memory session state — sessions are in Postgres (ADR-0044).
 # Scales horizontally. Default 2; values-local drops to 1.
 replicaCount: 2
+nodeSelector: {}
 resources:
   requests: {cpu: 100m, memory: 256Mi}
   limits: {cpu: 1000m, memory: 512Mi}

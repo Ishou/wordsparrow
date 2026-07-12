@@ -5,6 +5,11 @@ fullnameOverride: "wordsparrow-billing-api"
 
 # ADR-0101 R5: 2 replicas for HA — billing has no in-memory state (ADR-0078), safe to scale regardless of GA status.
 replicaCount: 2
+
+# Pin to the FIP holder: all outbound Brevo mail (api + the outbox-drain cronjob) must egress from the stable floating IP (the only source IP that survives node recreates); non-holder per-node IPs break Brevo's allowlist on every rebuild (ADR-0106, ADR-0092).
+nodeSelector:
+  bliss.io/fip-holder: "true"
+
 image:
   # Fail-fast guard: helm aborts if digest is empty (see _helpers.tpl).
   requireDigest: true

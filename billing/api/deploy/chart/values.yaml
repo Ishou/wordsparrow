@@ -10,6 +10,7 @@ image:
   requireDigest: false
 # No in-memory state (ADR-0078); durable JetStream consumer, scales horizontally.
 replicaCount: 2
+nodeSelector: {}
 resources:
   requests: {cpu: 100m, memory: 256Mi}
   limits: {cpu: 1000m, memory: 512Mi}
