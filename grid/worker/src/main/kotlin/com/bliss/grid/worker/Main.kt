@@ -1,7 +1,9 @@
 package com.bliss.grid.worker
 
 import com.bliss.grid.application.correction.ExportCorrectionsUseCase
+import com.bliss.grid.application.correction.ProcessBlocklistUseCase
 import com.bliss.grid.application.correction.ProcessCorrectionsUseCase
+import com.bliss.grid.application.correction.asDailyRegenerationPort
 import com.bliss.grid.application.puzzle.DailyPuzzleSelector
 import com.bliss.grid.application.puzzle.EnsureUpcomingDailiesUseCase
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
@@ -14,6 +16,7 @@ import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.BlissDatabase
 import com.bliss.grid.infrastructure.persistence.CsvClueOverrideAppender
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
+import com.bliss.grid.infrastructure.persistence.PostgresBlocklistBackfill
 import com.bliss.grid.infrastructure.persistence.PostgresClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.PostgresCorrectionRepository
 import com.bliss.grid.infrastructure.persistence.PostgresGridBackfill
@@ -70,7 +73,7 @@ private fun printUsage() {
     )
 }
 
-// Backfills every stored grid still carrying a corrected clue (ADR-0108 §4). Terminal per-correction state lives in the DB, so a recorded failure exits 0.
+// Backfills every stored grid: patches corrected clues, scrubs blocklisted words (ADR-0108 §4, ADR-0110 §2). Terminal per-correction state lives in the DB, so a recorded failure exits 0.
 private fun runProcessCorrections(): Int {
     val database = BlissDatabase(poolName = "grid-worker-hikari", maxPoolSize = 2, requireUrl = true)
     database.start()
@@ -78,11 +81,47 @@ private fun runProcessCorrections(): Int {
         val dataSource = database.dataSource() ?: error("DATABASE_URL produced a null DataSource")
         val store = PostgresCorrectionRepository(dataSource)
         val backfill = PostgresGridBackfill(dataSource)
-        ProcessCorrectionsUseCase(store, backfill).run()
+        val puzzleRepository = PostgresPuzzleRepository(dataSource)
+        val cooldownRepository = PostgresClueCooldownRepository(dataSource)
+        val blocklist =
+            ProcessBlocklistUseCase(
+                store = store,
+                backfill = PostgresBlocklistBackfill(dataSource),
+                regeneration = singleDateRegenerator(puzzleRepository, cooldownRepository).asDailyRegenerationPort(),
+            )
+        ProcessCorrectionsUseCase(store, backfill, blocklist).run()
+        purgeRegeneratedDailies(blocklist.regeneratedDates)
         0
     } finally {
         database.stop()
     }
+}
+
+// ADR-0089 §5: every regen path purges the edge; best-effort and non-fatal — until-midnight TTL bounds the worst case.
+internal fun purgeRegeneratedDailies(
+    regeneratedDates: List<LocalDate>,
+    edgePurgeHook: EdgePurgeHook = EdgePurgeHook(),
+) {
+    edgePurgeHook.afterGenerationRun(regeneratedDates)
+}
+
+// windowDays=1 so execute(date, force=true) regenerates exactly that date against the corrected corpus (ADR-0110 §2).
+private fun singleDateRegenerator(
+    puzzleRepository: PuzzleRepository,
+    cooldownRepository: ClueCooldownRepository,
+): EnsureUpcomingDailiesUseCase {
+    val cooldownMax =
+        System.getenv("GRID_CLUE_COOLDOWN_MAX")?.toIntOrNull()
+            ?: LoadOrGeneratePuzzleUseCase.DEFAULT_COOLDOWN_MAX
+    return EnsureUpcomingDailiesUseCase(
+        puzzleRepository = puzzleRepository,
+        gridGenerationPort = productionGridGenerationPort(),
+        dailyPuzzleSelector = DailyPuzzleSelector(),
+        cooldownRepository = cooldownRepository,
+        cooldownMax = cooldownMax,
+        windowDays = 1,
+        bestOfN = DAILY_BEST_OF_N,
+    )
 }
 
 // Flushes un-exported corrections into the offline override CSV so the durable corpus catches up (ADR-0108 §3).

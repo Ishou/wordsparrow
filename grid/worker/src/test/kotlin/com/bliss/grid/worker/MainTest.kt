@@ -146,6 +146,36 @@ class MainTest {
     }
 
     @Test
+    fun `purgeRegeneratedDailies purges every regenerated date through the edge hook`() {
+        val sender = CloudflarePurgeTest.RecordingSender()
+        val hook =
+            EdgePurgeHook(
+                env = mapOf("CLOUDFLARE_ZONE_ID" to "zone", "CLOUDFLARE_PURGE_TOKEN" to "tok")::get,
+                sender = sender,
+            )
+
+        purgeRegeneratedDailies(listOf(today, today.plusDays(1)), edgePurgeHook = hook)
+
+        val body = sender.calls.single().jsonBody
+        assertThat(body).contains("?date=$today")
+        assertThat(body).contains("?date=${today.plusDays(1)}")
+    }
+
+    @Test
+    fun `purgeRegeneratedDailies does not purge when nothing was regenerated`() {
+        val sender = CloudflarePurgeTest.RecordingSender()
+        val hook =
+            EdgePurgeHook(
+                env = mapOf("CLOUDFLARE_ZONE_ID" to "zone", "CLOUDFLARE_PURGE_TOKEN" to "tok")::get,
+                sender = sender,
+            )
+
+        purgeRegeneratedDailies(emptyList(), edgePurgeHook = hook)
+
+        assertThat(sender.calls).isEmpty()
+    }
+
+    @Test
     fun `intArg parses equals and space forms and falls back to default`() {
         assertThat(intArg(arrayOf("--start-offset", "-7"), "--start-offset", 0)).isEqualTo(-7)
         assertThat(intArg(arrayOf("--window-days=15"), "--window-days", 7)).isEqualTo(15)
