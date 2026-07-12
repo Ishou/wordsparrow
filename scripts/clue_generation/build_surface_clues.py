@@ -166,7 +166,7 @@ def lemma_pos_freq(lexique: Path) -> dict[tuple[str, str], int]:
 
 def build_surface_rows(
     surface: str,
-    corpus: dict[tuple[str, str], dict],
+    corpus: dict[tuple[str, str], list[dict]],
     index: MorphologyIndex,
     freq: dict[tuple[str, str], int],
     status_counter: dict[str, int] | None = None,
@@ -206,7 +206,8 @@ def build_surface_rows(
         # derivation). Only when the base adjective is clued and its
         # clue adverbialises cleanly.
         base = base_adjective(surface, index)
-        adj_row = corpus.get((base, "adj")) if base else None
+        adj_rows = corpus.get((base, "adj")) if base else None
+        adj_row = adj_rows[-1] if adj_rows else None
         derived = adverbialise(adj_row["lemma_clue"], index) if adj_row else None
         if derived:
             status_counter["derived-adverb"] += 1
@@ -226,36 +227,38 @@ def build_surface_rows(
 
     # Forward inflation: one output row per clued candidate (no winner pick).
     for cand_lemma, cand_pos, cand_tags, _ in candidates:
-        row = corpus[(cand_lemma, cand_pos)]
-        source_clue = row["lemma_clue"]
-
-        if surface == cand_lemma:
-            clue = source_clue
-            status = "verbatim"
-        else:
-            norm_tags = {normalize_tag(t) for t in cand_tags}
-            clue, status = classify_surface_inflection(source_clue, norm_tags, index)
-
-        # Char-cap + wrap gate. Inflation can lengthen ("Récit imaginaire"
-        # → "Récits imaginaires" gains 2 chars), so we re-check
-        # post-inflate rather than trusting the lemma-level validator
-        # alone. fits_single_cell enforces both MAX_CLUE_CHARS and the
-        # Lekton wrap predicate.
-        if not fits_single_cell(clue):
+        norm_tags = ({normalize_tag(t) for t in cand_tags}
+                     if surface != cand_lemma else None)
+        # Try the lemma's clues last-first (preserving the prior last-write-wins
+        # primary) and emit the first that fits the cell. A too-long primary no
+        # longer sinks a surface another clue could inflate cleanly
+        # (`esse`'s too-long "Suffixe…" no longer hides "Crochet en forme de S",
+        # so `esses` gets a clue). fits_single_cell enforces MAX_CLUE_CHARS + the
+        # Lekton wrap predicate; inflation can lengthen, so re-check post-inflate.
+        emitted = False
+        for row in reversed(corpus[(cand_lemma, cand_pos)]):
+            source_clue = row["lemma_clue"]
+            if surface == cand_lemma:
+                clue, status = source_clue, "verbatim"
+            else:
+                clue, status = classify_surface_inflection(source_clue, norm_tags, index)
+            if not fits_single_cell(clue):
+                continue
+            status_counter[status] += 1
+            rows.append({
+                "surface": surface,
+                "lemma": cand_lemma,
+                "pos": cand_pos,
+                "clue": clue,
+                "source_clue": source_clue,
+                "inflection_status": status,
+                "filter_score": row.get("filter_score", ""),
+                "validation_flag": row.get("validation_flag", ""),
+            })
+            emitted = True
+            break
+        if not emitted:
             status_counter["too-long"] += 1
-            continue
-
-        status_counter[status] += 1
-        rows.append({
-            "surface": surface,
-            "lemma": cand_lemma,
-            "pos": cand_pos,
-            "clue": clue,
-            "source_clue": source_clue,
-            "inflection_status": status,
-            "filter_score": row.get("filter_score", ""),
-            "validation_flag": row.get("validation_flag", ""),
-        })
     return rows
 
 
@@ -293,7 +296,7 @@ def main() -> None:
                 continue
             if not r.get("pos"):
                 continue
-            corpus[(r["lemma"], r["pos"])] = r
+            corpus.setdefault((r["lemma"], r["pos"]), []).append(r)
     print(f"corpus entries (validator-ok): {len(corpus)}", file=sys.stderr)
 
     # Stream through words-fr.csv
