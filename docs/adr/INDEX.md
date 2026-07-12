@@ -326,6 +326,13 @@ ADR-0106  terraform/k8s/providers/hetzner/floating-ip.tf          FIP assignment
 ADR-0106  infra/platform/values-prod.yaml                        ingress-nginx.controller.nodeSelector must be `bliss.io/fip-holder: "true"`, not `bliss.io/role: worker` — pins the controller pod to the node that actually has the FIP aliased
 ADR-0107  scripts/eval/inflect_clue.py             Inflater is the agreement engine (PyRealB rejected on the differential — see ADR revision). Relative-`qui` frame: `Qui + verbe` agrees the relative verb with the answer (number, 3rd person). Numerals are in the direct-object set so the pp-only-skip guard catches `Relier deux conduits`
 ADR-0107  scripts/eval/test_inflect_clue.py         Head-selection regression tests: relative-`qui` agreement + ppas numeral-object skip. Verify any inflater change against a full-corpus differential (changes must stay in the intended class)
+ADR-0108  grid/**/correction/**                     Clue-corrections: identity is old_clue_text (text-join, no FK); kinds replace/forbid_clue (blocklist_word deferred); forbidding a word's only clue is rejected
+ADR-0108  grid/api/src/main/resources/db/migration/*clue_corrections*  clue_corrections table: audited rows (created_by) + backfill-progress columns; expand-and-contract, no puzzles FK
+ADR-0108  grid/**/CorrectionAwareWordRepository*     Generation overlay: applies active corrections to each Word at gen time so future grids are clean without a corpus rebuild; export reconciles into data/curated/clue_overrides_fr.csv
+ADR-0108  grid/worker/src/main/kotlin/com/bliss/grid/worker/Main.kt  --process-corrections backfill (durable/resumable, CronJob-driven) + --export-corrections; queue is "rows still matching old_clue_text"
+ADR-0108  grid/api/**/routes/CorrectionRoute*        POST /v1/corrections (202) + GET /v1/corrections/{id}; gated by requireCapability("admin:signalements"); patches preserve puzzleId (progress kept)
+ADR-0108  identity/domain/src/main/kotlin/com/bliss/identity/domain/user/Capability.kt  admin:signalements is maintainer-only; do not grant to PLAYER/tier (distinct from contribuer, ADR-0079)
+ADR-0108  frontend/src/**/signalements/**           Maintainer "Corriger" action composes grid correction + survey action + progress poll; route gated on admin:signalements (was contribuer); tutoiement copy
 ```
 
 ## Adding entries
