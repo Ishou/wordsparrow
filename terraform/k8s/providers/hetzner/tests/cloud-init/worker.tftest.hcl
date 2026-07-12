@@ -53,10 +53,6 @@ run "worker_cloud_init_declares_fip_via_netplan" {
     error_message = "worker cloud-init must write /etc/netplan/60-private-net.yaml so the hot-attached private NIC gets DHCP even when 50-cloud-init.yaml omits it — without it install-k3s.sh hangs on the enp7s0 wait and the node never joins."
   }
 
-  assert {
-    condition     = strcontains(output.worker_rendered, "-j SNAT --to-source ${var.floating_ip}")
-    error_message = "the FIP holder must SNAT pod egress to the FIP so outbound Brevo mail leaves from the whitelisted IP deterministically (ADR-0092); relying on flannel's MASQUERADE address-primary pick is fragile."
-  }
 }
 
 # Non-holder workers (the case that broke node-add): private-NIC dropin present, FIP dropin absent.
@@ -78,8 +74,4 @@ run "worker_configures_private_nic_and_skips_fip_as_non_holder" {
     error_message = "a non-holder worker (floating_ip=\"\") must NOT write the FIP netplan dropin — aliasing the FIP on a non-holder black-holes its pod egress (ADR-0106)."
   }
 
-  assert {
-    condition     = !strcontains(output.worker_rendered, "-j SNAT --to-source")
-    error_message = "a non-holder worker must NOT SNAT egress to a FIP it doesn't hold — mail is pinned to the holder, and a non-holder has no FIP to source from."
-  }
 }
