@@ -1,6 +1,7 @@
 package com.bliss.identity.domain.user
 
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.doesNotContain
 import assertk.assertions.isEmpty
@@ -16,6 +17,7 @@ class CapabilityTest {
         assertThat(Capability.GRILLES_ALL.wire).isEqualTo("grilles:all")
         assertThat(Capability.GRILLES_GENERATE.wire).isEqualTo("grilles:generate")
         assertThat(Capability.MULTIPLAYER_HOST_UNLIMITED.wire).isEqualTo("multiplayer:host-unlimited")
+        assertThat(Capability.ADMIN_SIGNALEMENTS.wire).isEqualTo("admin:signalements")
     }
 
     @Test
@@ -32,11 +34,24 @@ class CapabilityTest {
     }
 
     @Test
-    fun `maintainer holds hint contribuer and billing subscribe`() {
+    fun `maintainer holds hint contribuer billing subscribe and admin signalements`() {
         assertThat(capabilitiesFor(Role.MAINTAINER))
-            .containsExactlyInAnyOrder(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE)
+            .containsExactlyInAnyOrder(
+                Capability.HINT,
+                Capability.CONTRIBUER,
+                Capability.BILLING_SUBSCRIBE,
+                Capability.ADMIN_SIGNALEMENTS,
+            )
         assertThat(capabilitiesFor(Role.MAINTAINER).map { it.wire })
-            .containsExactlyInAnyOrder("hint", "contribuer", "billing:subscribe")
+            .containsExactlyInAnyOrder("hint", "contribuer", "billing:subscribe", "admin:signalements")
+    }
+
+    @Test
+    fun `admin signalements is maintainer-only, not player guest or tier-derived`() {
+        assertThat(capabilitiesFor(Role.MAINTAINER)).contains(Capability.ADMIN_SIGNALEMENTS)
+        assertThat(capabilitiesFor(Role.PLAYER)).doesNotContain(Capability.ADMIN_SIGNALEMENTS)
+        assertThat(capabilitiesFor(null)).doesNotContain(Capability.ADMIN_SIGNALEMENTS)
+        assertThat(capabilitiesFor(Role.PLAYER, SubscriptionTier.SUBSCRIBER)).doesNotContain(Capability.ADMIN_SIGNALEMENTS)
     }
 
     @Test
@@ -72,6 +87,7 @@ class CapabilityTest {
                 Capability.HINT,
                 Capability.CONTRIBUER,
                 Capability.BILLING_SUBSCRIBE,
+                Capability.ADMIN_SIGNALEMENTS,
                 Capability.GRILLES_ALL,
                 Capability.GRILLES_GENERATE,
                 Capability.MULTIPLAYER_HOST_UNLIMITED,

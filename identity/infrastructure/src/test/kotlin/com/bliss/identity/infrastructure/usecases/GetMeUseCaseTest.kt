@@ -127,7 +127,14 @@ class GetMeUseCaseTest {
             users.create(User(userId, DisplayName.of("Alice"), now, now, Role.MAINTAINER))
             val result = sut.execute(GetMeQuery(userId))
             assertThat(result.capabilities)
-                .isEqualTo(setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE))
+                .isEqualTo(
+                    setOf(
+                        Capability.HINT,
+                        Capability.CONTRIBUER,
+                        Capability.BILLING_SUBSCRIBE,
+                        Capability.ADMIN_SIGNALEMENTS,
+                    ),
+                )
         }
 
     @Test

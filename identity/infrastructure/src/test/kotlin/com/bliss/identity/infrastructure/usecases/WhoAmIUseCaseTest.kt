@@ -118,7 +118,14 @@ class WhoAmIUseCaseTest {
             sessions.create(Session(sessionId, userId, now.minusSeconds(60), now.minusSeconds(60), null))
             val result = sut.execute(WhoAmIQuery(sessionId))
             assertThat(result.capabilities)
-                .isEqualTo(setOf(Capability.HINT, Capability.CONTRIBUER, Capability.BILLING_SUBSCRIBE))
+                .isEqualTo(
+                    setOf(
+                        Capability.HINT,
+                        Capability.CONTRIBUER,
+                        Capability.BILLING_SUBSCRIBE,
+                        Capability.ADMIN_SIGNALEMENTS,
+                    ),
+                )
         }
 
     @Test
