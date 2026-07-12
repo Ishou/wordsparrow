@@ -14,8 +14,9 @@ locals {
   # Private-network IPs inside the 10.0.1.0/24 subnet. We reserve
   # .10..(10+N) for control planes and .20..(20+N) for workers so the
   # ranges never collide as either count grows.
-  cp_private_ips     = [for i in range(var.control_plane_count) : "10.0.1.${10 + i}"]
-  worker_private_ips = [for i in range(var.worker_count) : "10.0.1.${20 + i}"]
+  cp_private_ips = [for i in range(var.control_plane_count) : "10.0.1.${10 + i}"]
+  # index 2+ skips .22: a stale Hetzner private-net DHCP binding on it blocked worker[2]'s address, so enp7s0 never came up and it never joined.
+  worker_private_ips = [for i in range(var.worker_count) : "10.0.1.${20 + (i < 2 ? i : i + 1)}"]
 
   # Worker server type — falls back to the contract's `node_size` when
   # the optional override is unset. Splitting the size between control
