@@ -75,6 +75,37 @@ describe('InfoPopover', () => {
     );
   });
 
+  it('touch: suppresses native text selection / callout on the trigger', () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((q: string) => ({
+      matches: true, media: q, onchange: null,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+      addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    try {
+      render(
+        <InfoPopover info="Explication" onActivate={() => {}}>
+          <button type="button">Vérifier</button>
+        </InfoPopover>,
+      );
+      const trigger = screen.getByRole('button', { name: 'Vérifier' });
+      expect(trigger).toHaveStyle({ userSelect: 'none' });
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  it('does not suppress text selection on a fine pointer', () => {
+    render(
+      <InfoPopover info="Explication" onActivate={() => {}}>
+        <button type="button">Vérifier</button>
+      </InfoPopover>,
+    );
+    expect(screen.getByRole('button', { name: 'Vérifier' })).not.toHaveStyle({
+      userSelect: 'none',
+    });
+  });
+
   it('touch: a long-press suppresses the tap, a short tap activates', () => {
     vi.useFakeTimers();
     const original = window.matchMedia;
