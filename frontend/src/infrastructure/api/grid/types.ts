@@ -422,10 +422,14 @@ export interface paths {
          * @description Maintainer-only. Requires the `admin:signalements` capability
          *     (deny-by-default 403), same gate as `POST /v1/corrections`. Reports the
          *     async existing-grid backfill for a correction: its `backfillStatus`,
-         *     how many stored grids matched the clue text (`gridsMatched`, `null`
-         *     until the worker has counted), and how many have been patched so far
-         *     (`gridsPatched`). Patches rewrite the payload in place, preserving each
-         *     grid's `puzzleId` and therefore player progress (ADR-0108 §4).
+         *     how many stored grids matched (`gridsMatched`, `null` until the
+         *     worker has counted — the clue text for `replace`/`forbid_clue`, the
+         *     word for `blocklist_word`), and how many have been patched so far
+         *     (`gridsPatched`). For `replace`/`forbid_clue` (ADR-0108 §4) and
+         *     `blocklist_word` solo grids (ADR-0110 discard+heal), patches rewrite
+         *     the payload in place, preserving `puzzleId` and player progress;
+         *     `blocklist_word` daily grids are regenerated with a fresh `puzzleId`
+         *     instead (latest-wins per ADR-0081).
          */
         get: operations["getCorrectionProgress"];
         put?: never;
@@ -1282,18 +1286,23 @@ export interface components {
             affectedSolo: number;
         };
         /**
-         * @description Progress of a correction's async existing-grid backfill (ADR-0108 §4),
-         *     polled via `GET /v1/corrections/{correctionId}`. Patching preserves
-         *     each grid's `puzzleId`, so player progress survives.
+         * @description Progress of a correction's async existing-grid backfill, polled via
+         *     `GET /v1/corrections/{correctionId}`. For `replace`/`forbid_clue`
+         *     (ADR-0108 §4) and for `blocklist_word` solo grids (ADR-0110
+         *     discard+heal), patching preserves each grid's `puzzleId`, so player
+         *     progress survives. `blocklist_word` daily grids are the exception:
+         *     they are regenerated with a fresh `puzzleId` (latest-wins per
+         *     ADR-0081), not preserved in place.
          */
         CorrectionProgress: {
             correctionId: components["schemas"]["CorrectionId"];
             kind: components["schemas"]["CorrectionKind"];
             backfillStatus: components["schemas"]["BackfillStatus"];
             /**
-             * @description Total stored grids whose payload contains the clue. `null` while
-             *     `backfillStatus` is `pending` (not yet counted); always present on
-             *     the wire (ADR-0003 §6: absence ≠ null).
+             * @description Total stored grids whose payload contains the clue (or, for
+             *     `blocklist_word`, the word). `null` while `backfillStatus` is
+             *     `pending` (not yet counted); always present on the wire
+             *     (ADR-0003 §6: absence ≠ null).
              * @example 42
              */
             gridsMatched: number | null;
