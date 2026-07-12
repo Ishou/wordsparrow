@@ -12,10 +12,11 @@
 
 locals {
   # Private-network IPs inside the 10.0.1.0/24 subnet. We reserve
-  # .10..(10+N) for control planes and .20..(20+N) for workers so the
-  # ranges never collide as either count grows.
-  cp_private_ips     = [for i in range(var.control_plane_count) : "10.0.1.${10 + i}"]
-  worker_private_ips = [for i in range(var.worker_count) : "10.0.1.${20 + i}"]
+  # .10..(10+N) for control planes and .20..(20+N, skipping .22) for
+  # workers; see the check block below for the collision bound with .30..
+  cp_private_ips = [for i in range(var.control_plane_count) : "10.0.1.${10 + i}"]
+  # index 2+ skips .22: a stale Hetzner private-net DHCP binding on it blocked worker[2]'s address, so enp7s0 never came up and it never joined.
+  worker_private_ips = [for i in range(var.worker_count) : "10.0.1.${20 + (i < 2 ? i : i + 1)}"]
 
   # Worker server type — falls back to the contract's `node_size` when
   # the optional override is unset. Splitting the size between control
@@ -28,7 +29,17 @@ locals {
   # Observability workers use the .30..(30+N) sub-range to keep them distinct from
   # app workers' .20.. range. Hits the 10.0.1.0/24 limit at 50+50+...; v1 stays well below.
   observability_private_ips = [for i in range(var.observability_worker_count) : "10.0.1.${30 + i}"]
+}
 
+# Cross-field bound the parent variables.tf doesn't check: the .22 skip above made this collision reachable one worker_count sooner.
+check "worker_observability_private_ip_ranges" {
+  assert {
+    condition     = var.observability_worker_count == 0 || 20 + var.worker_count < 30
+    error_message = "worker_private_ips (10.0.1.20..20+worker_count) would collide with observability_private_ips (10.0.1.30..) once worker_count > 9. Reduce worker_count, or set observability_worker_count = 0."
+  }
+}
+
+locals {
   cp_user_data = [
     for i in range(var.control_plane_count) :
     templatefile("${path.module}/cloud-init/control-plane.yaml.tftpl", {
