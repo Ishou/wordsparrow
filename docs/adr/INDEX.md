@@ -336,6 +336,11 @@ ADR-0108  frontend/src/**/signalements/**           Maintainer "Corriger" action
 ADR-0109  infra/platform/templates/fip-egress-snat-daemonset.yaml  Self-healing DaemonSet asserting a POSTROUTING SNAT to the FIP for pod egress (extends ADR-0035's declarative-config preference where no declarative surface exists); holder-pinned via bliss.io/fip-holder (ADR-0106)
 ADR-0109  infra/platform/values.yaml                                fipEgressSnat.* defaults (disabled, image tag/digest)
 ADR-0109  infra/platform/values-prod.yaml                           fipEgressSnat.enabled + floatingIp set for prod
+ADR-0110  grid/**/correction/**                     blocklist_word: applyTo drops the word unconditionally (overlay already omits null-yielding words); record path skips the last-clue guard; identity is word_text (old_clue_text null)
+ADR-0110  grid/api/src/main/resources/db/migration/*blocklist_word*  Expand-contract: kind CHECK += 'blocklist_word'; old_clue_text relaxed to nullable
+ADR-0110  grid/**/persistence/*GridBackfill*        Blocklist backfill is a NEW strategy (patch-only can't remove a word): match stored grids on payload wordText; dailies → EnsureUpcomingDailiesUseCase.execute(date,force=true); solo → DELETE row (regen on next GET). Progress via ADR-0105
+ADR-0110  grid/api/**/routes/CorrectionRoute*       POST /v1/corrections/blocklist-word (202, audited) + GET /v1/corrections/blocklist-preview (dry-run counts); admin:signalements. Destructive → impact preview + typed-word confirm client-side
+ADR-0110  frontend/src/**/signalements/**           "Blacklister le mot": preview counts → typed-word confirm → blocklist + survey action + progress; hidden/disabled without wordText; tutoiement
 ```
 
 ## Adding entries
