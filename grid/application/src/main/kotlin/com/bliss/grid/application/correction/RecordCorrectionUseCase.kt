@@ -31,12 +31,18 @@ class RecordCorrectionUseCase(
         return Result.Recorded(corrections.record(correction, createdBy))
     }
 
-    // Without wordText the owning word cannot be located cheaply; the overlay drops an emptied word defensively.
+    // No wordText: the clue could belong to any word, so every length bucket is scanned.
     private fun emptiesAWord(correction: ClueCorrection): Boolean {
-        val folded = correction.wordText?.uppercase() ?: return false
-        return words
-            .findByLength(folded.length)
-            .filter { it.text == folded && it.clues.any { clue -> clue.text == correction.oldClueText } }
+        val lengths = correction.wordText?.let { listOf(it.uppercase().length) } ?: (1..MAX_SCAN_LENGTH)
+        return lengths
+            .asSequence()
+            .flatMap { words.findByLength(it).asSequence() }
+            .filter { it.clues.any { clue -> clue.text == correction.oldClueText } }
             .any { correction.applyTo(it) == null }
+    }
+
+    private companion object {
+        // No French corpus entry approaches this length; a safe bound for a full-corpus scan.
+        const val MAX_SCAN_LENGTH = 30
     }
 }

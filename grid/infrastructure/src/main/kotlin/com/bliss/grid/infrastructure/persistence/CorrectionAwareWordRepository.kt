@@ -36,7 +36,7 @@ class CorrectionAwareWordRepository(
         return out
     }
 
-    // Corrections only rewrite or drop a clue; lemma membership is unchanged (a last-clue forbid is rejected at record time).
+    // Corrections only rewrite or drop a clue; lemma membership (the corpus surface form) is unchanged.
     override fun containsLemma(text: String): Boolean = delegate.containsLemma(text)
 
     private fun applyAll(words: List<Word>): List<Word> {
