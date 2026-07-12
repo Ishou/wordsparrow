@@ -836,6 +836,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CorrectionAccepted'
+        '400':
+          description: |
+            The request body is malformed — for example an empty or over-length
+            `oldClueText`/`newClueText`, a missing `newClueText` on a `replace`,
+            or an unknown `kind`. RFC 7807; `type` is
+            `https://bliss.example/errors/invalid-correction`,
+            `title` is `Invalid correction`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '403':
           description: |
             The caller lacks the `admin:signalements` capability (deny-by-
@@ -853,17 +864,6 @@ paths:
             is told to Replace the text or Blocklist the word instead. RFC 7807;
             `type` is `https://bliss.example/errors/last-clue-forbidden`,
             `title` is `Last clue forbidden`.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-        '422':
-          description: |
-            The request body is well-formed JSON but fails validation — for
-            example an empty or over-length `oldClueText`/`newClueText`, a
-            missing `newClueText` on a `replace`, or an unknown `kind`. RFC
-            7807; `type` is
-            `https://bliss.example/errors/invalid-correction`.
           content:
             application/problem+json:
               schema:

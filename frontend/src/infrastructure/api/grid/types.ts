@@ -1956,6 +1956,21 @@ export interface operations {
                 };
             };
             /**
+             * @description The request body is malformed — for example an empty or over-length
+             *     `oldClueText`/`newClueText`, a missing `newClueText` on a `replace`,
+             *     or an unknown `kind`. RFC 7807; `type` is
+             *     `https://bliss.example/errors/invalid-correction`,
+             *     `title` is `Invalid correction`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
              * @description The caller lacks the `admin:signalements` capability (deny-by-
              *     default covers anonymous, player, and missing/revoked sessions).
              *     RFC 7807; `type` is
@@ -1977,21 +1992,6 @@ export interface operations {
              *     `title` is `Last clue forbidden`.
              */
             409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /**
-             * @description The request body is well-formed JSON but fails validation — for
-             *     example an empty or over-length `oldClueText`/`newClueText`, a
-             *     missing `newClueText` on a `replace`, or an unknown `kind`. RFC
-             *     7807; `type` is
-             *     `https://bliss.example/errors/invalid-correction`.
-             */
-            422: {
                 headers: {
                     [name: string]: unknown;
                 };
