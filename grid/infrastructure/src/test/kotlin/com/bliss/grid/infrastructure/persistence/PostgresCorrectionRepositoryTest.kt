@@ -4,8 +4,10 @@ import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
 import com.bliss.grid.application.correction.BackfillStatus
+import com.bliss.grid.application.correction.GuardedRecord
 import com.bliss.grid.domain.correction.ClueCorrection
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -20,6 +22,8 @@ import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.util.UUID
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CyclicBarrier
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PostgresCorrectionRepositoryTest {
@@ -113,9 +117,51 @@ class PostgresCorrectionRepositoryTest {
     }
 
     @Test
+    fun `guarded forbid records when the word keeps a clue and rejects the next one that empties it`() {
+        val first = repository.recordForbidGuarded(forbid("Verbe etre"), maintainer, emptiesEst("Verbe etre"))
+        val second = repository.recordForbidGuarded(forbid("Point cardinal"), maintainer, emptiesEst("Point cardinal"))
+
+        assertThat(first).isInstanceOf(GuardedRecord.Recorded::class)
+        assertThat(second).isEqualTo(GuardedRecord.LastClueForbidden)
+        assertThat(repository.active().map { it.oldClueText }).containsExactly("Verbe etre")
+    }
+
+    @Test
+    fun `two concurrent forbids on the same word's two clues let exactly one win`() {
+        val barrier = CyclicBarrier(2)
+        val results = ConcurrentLinkedQueue<GuardedRecord>()
+        val clues = listOf("Verbe etre", "Point cardinal")
+        val threads =
+            clues.map { clue ->
+                Thread {
+                    barrier.await()
+                    results += repository.recordForbidGuarded(forbid(clue), maintainer, emptiesEst(clue))
+                }
+            }
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+
+        assertThat(results.count { it is GuardedRecord.Recorded }).isEqualTo(1)
+        assertThat(results.count { it == GuardedRecord.LastClueForbidden }).isEqualTo(1)
+        assertThat(repository.active().size).isEqualTo(1)
+    }
+
+    @Test
     fun `progress is null for an unknown id`() {
         assertThat(repository.progress(UUID.randomUUID())).isNull()
     }
+
+    private fun forbid(oldClueText: String): ClueCorrection =
+        ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = oldClueText, wordText = "EST")
+
+    // Models the corpus word EST={Verbe etre, Point cardinal}: forbidding [newForbid] empties it only once
+    // every base clue is dropped by the active forbids read in-txn — the same predicate the use case folds.
+    private fun emptiesEst(newForbid: String): (List<ClueCorrection>) -> Boolean =
+        { active ->
+            val base = setOf("Verbe etre", "Point cardinal")
+            val forbidden = active.filter { it.kind == ClueCorrection.Kind.FORBID_CLUE }.map { it.oldClueText } + newForbid
+            (base - forbidden.toSet()).isEmpty()
+        }
 
     private fun markExported(id: UUID) {
         dataSource.connection.use { conn ->

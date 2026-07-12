@@ -184,7 +184,8 @@ fun Application.module() {
     val corpusRepository = CsvWordRepository.frenchCorpus()
     val wordRepository = CorrectionAwareWordRepository(corpusRepository) { correctionRepository.active() }
     val generatePuzzle = GeneratePuzzleUseCase(wordRepository, defaultPuzzleConstraints())
-    val recordCorrection = RecordCorrectionUseCase(correctionRepository, wordRepository)
+    // Base corpus (not the overlay): the last-clue guard folds the in-txn active corrections itself (ADR-0108 §2).
+    val recordCorrection = RecordCorrectionUseCase(correctionRepository, corpusRepository)
     // ADR-0076: prod injects GRID_TEASER_TOKEN_KEY via a k8s Secret; dev falls back to a fixed key.
     val teaserTokenKey =
         System.getenv("GRID_TEASER_TOKEN_KEY")?.takeIf { it.isNotBlank() } ?: DEV_TEASER_TOKEN_KEY

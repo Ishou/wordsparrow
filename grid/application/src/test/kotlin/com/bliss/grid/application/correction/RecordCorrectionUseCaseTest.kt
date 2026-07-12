@@ -28,6 +28,7 @@ class RecordCorrectionUseCaseTest {
 
     private class RecordingCorrectionRepository : CorrectionRepository {
         val recorded = mutableListOf<Pair<ClueCorrection, UUID>>()
+        var guardSawActive: List<ClueCorrection>? = null
 
         override fun record(
             correction: ClueCorrection,
@@ -35,6 +36,22 @@ class RecordCorrectionUseCaseTest {
         ): UUID {
             recorded += correction to createdBy
             return UUID.randomUUID()
+        }
+
+        // Mirrors the adapters' atomic guard: evaluate the predicate against the already-recorded
+        // corrections, then insert only when it does not empty the word.
+        override fun recordForbidGuarded(
+            correction: ClueCorrection,
+            createdBy: UUID,
+            wouldEmptyWord: (active: List<ClueCorrection>) -> Boolean,
+        ): GuardedRecord {
+            val active = recorded.map { it.first }
+            guardSawActive = active
+            return if (wouldEmptyWord(active)) {
+                GuardedRecord.LastClueForbidden
+            } else {
+                GuardedRecord.Recorded(record(correction, createdBy))
+            }
         }
 
         override fun active(): List<ClueCorrection> = recorded.map { it.first }
@@ -92,5 +109,29 @@ class RecordCorrectionUseCaseTest {
 
         assertThat(result).isEqualTo(RecordCorrectionUseCase.Result.LastClueForbidden)
         assertThat(repo.recorded.isEmpty()).isEqualTo(true)
+    }
+
+    @Test
+    fun `re-reads active corrections in the guard so a second forbid draining the last clue is rejected`() {
+        val subject = Word("EST", listOf(WordClue("Verbe etre"), WordClue("Point cardinal", theme = "compass")))
+        val repo = RecordingCorrectionRepository()
+        val useCase = RecordCorrectionUseCase(repo, FakeWordRepository(listOf(subject)))
+
+        val first =
+            useCase.execute(
+                ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = "Verbe etre", wordText = "EST"),
+                maintainer,
+            )
+        val second =
+            useCase.execute(
+                ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = "Point cardinal", wordText = "EST"),
+                maintainer,
+            )
+
+        assertThat(first).isInstanceOf(RecordCorrectionUseCase.Result.Recorded::class)
+        assertThat(second).isEqualTo(RecordCorrectionUseCase.Result.LastClueForbidden)
+        // The second forbid is rejected only because the guard folded the first (active) forbid in.
+        assertThat(repo.guardSawActive!!.map { it.oldClueText }).isEqualTo(listOf("Verbe etre"))
+        assertThat(repo.recorded.size).isEqualTo(1)
     }
 }
