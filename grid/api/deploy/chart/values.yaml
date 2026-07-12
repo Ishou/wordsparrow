@@ -212,10 +212,7 @@ regenerateDailies:
   enabled: false
   # Appended after --regenerate-dailies, e.g. ["--start-offset", "-7", "--window-days", "14"].
   extraArgs: []
-# Durable clue-correction backfill CronJob (ADR-0108 §4). Runs the :grid:worker
-# `--process-corrections` CLI; `templates/cronjob-process-corrections.yaml` owns
-# the rendering. Reuses the shared worker image + OTEL env from ensureDailies.
-# Off by default so local-dev installs don't pull a worker image; prod enables.
+# Durable clue-correction backfill CronJob (ADR-0108 §4); rendered by templates/cronjob-process-corrections.yaml.
 processCorrections:
   enabled: false
   # Every 5 minutes — recorded corrections converge on stored grids within minutes (ADR-0108 §4).
