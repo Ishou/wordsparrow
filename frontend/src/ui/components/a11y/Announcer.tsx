@@ -38,20 +38,27 @@ export function AnnouncerProvider({ children }: { readonly children: ReactNode }
   // setText call below.
   const lastPolite = useRef<{ text: string; at: number }>({ text: '', at: 0 });
   const lastAssertive = useRef<{ text: string; at: number }>({ text: '', at: 0 });
+  // Re-entrancy guard: say() is sometimes triggered from a commit-phase effect (e.g. grid word-entry), and its flushSync re-renders synchronously — a nested say() during that flush recurses into "Maximum update depth" (React #185). Skip re-entrant calls; the outer announcement still lands, and the call stays synchronous.
+  const flushing = useRef(false);
 
   const say = useCallback((text: string, opts: SayOptions = {}) => {
     const now = Date.now();
     const ref = opts.assertive ? lastAssertive : lastPolite;
     const setter = opts.assertive ? setAssertiveText : setPoliteText;
     if (ref.current.text === text && now - ref.current.at < DEDUP_WINDOW_MS) return;
+    if (flushing.current) return;
     ref.current = { text, at: now };
-    // Deferred to a task: say() is called from effects (e.g. grid word-entry announcements), where flushSync is forbidden and recurses into "Maximum update depth" (React #185). A task runs it outside commit; the two-step empty→text (flushSync so the empty commits first, defeating React's bail-out) still fires so SR clients see a DOM mutation on re-emitted identical text.
-    setTimeout(() => {
+    flushing.current = true;
+    try {
+      // Two-step empty→text so SR clients see a DOM mutation even on re-emitted
+      // identical text; flushSync commits the empty first, defeating React's bail-out.
       flushSync(() => {
         setter('');
       });
       setter(text);
-    }, 0);
+    } finally {
+      flushing.current = false;
+    }
   }, []);
 
   const api = useMemo<AnnouncerApi>(() => ({ say }), [say]);
