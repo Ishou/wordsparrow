@@ -67,6 +67,10 @@ export const fr = {
   'play.hint.aria.remaining': 'Indice — {{remaining}} restants',
   'play.hint.label': 'Indice · {{remaining}}',
   'play.verify.label': 'Vérifier',
+  'play.verify.info':
+    'Vérifie les lettres que tu as saisies : les bonnes se verrouillent, les autres sont signalées. Disponible toutes les 30 minutes.',
+  'play.hint.info':
+    'Révèle une lettre de la case active. Un nouvel indice toutes les 10 minutes.',
   'play.results.cta': 'Voir les résultats',
   'play.sound.aria.mute': 'Couper les sons',
   'play.sound.aria.unmute': 'Activer les sons',
