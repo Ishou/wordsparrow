@@ -4,14 +4,7 @@ import com.bliss.grid.domain.correction.ClueCorrection
 import com.bliss.grid.domain.generation.WordRepository
 import com.bliss.grid.domain.model.Word
 
-/**
- * Overlays active corrections (ADR-0108) onto a delegate corpus at generation
- * time: each returned [Word] is passed through every active correction. A forbid
- * is word-scoped and its last-clue drop is rejected at record time, so an emptied
- * word is a defensive fallback that should not occur; such a word is still dropped
- * from the generation set. [corrections] is read per call so a freshly recorded
- * correction takes effect without reload.
- */
+/** Overlays active corrections onto a delegate corpus at generation time, read per call (ADR-0108). */
 class CorrectionAwareWordRepository(
     private val delegate: WordRepository,
     private val corrections: () -> List<ClueCorrection>,
@@ -44,8 +37,9 @@ class CorrectionAwareWordRepository(
     private fun applyAll(words: List<Word>): List<Word> {
         val active = corrections()
         if (active.isEmpty()) return words
+        // foldRight applies the newest correction (last, by created_at) first so it supersedes older ones (ADR-0108).
         return words.mapNotNull { word ->
-            active.fold(word as Word?) { current, correction -> current?.let { correction.applyTo(it) } }
+            active.foldRight(word as Word?) { correction, current -> current?.let { correction.applyTo(it) } }
         }
     }
 }

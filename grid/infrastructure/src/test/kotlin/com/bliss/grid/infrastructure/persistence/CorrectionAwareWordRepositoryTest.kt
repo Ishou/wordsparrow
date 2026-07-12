@@ -34,6 +34,22 @@ class CorrectionAwareWordRepositoryTest {
     }
 
     @Test
+    fun `the newest of two replaces on the same clue supersedes the older one`() {
+        // Corrections arrive oldest-to-newest (repo ORDER BY created_at); the later one must win (ADR-0108).
+        val overlay =
+            CorrectionAwareWordRepository(delegate) {
+                listOf(
+                    ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "Capitale de la Fance", newClueText = "Ancienne"),
+                    ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "Capitale de la Fance", newClueText = "Recente"),
+                )
+            }
+
+        val result = overlay.findByLength(5).single { it.text == "PARIS" }
+
+        assertThat(result.clues[0].text).isEqualTo("Recente")
+    }
+
+    @Test
     fun `replace also reaches findByLengthAndPattern results`() {
         val overlay =
             CorrectionAwareWordRepository(delegate) {

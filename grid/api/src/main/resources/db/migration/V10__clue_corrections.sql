@@ -3,7 +3,7 @@ CREATE TABLE clue_corrections (
     correction_id       UUID PRIMARY KEY,
     kind                TEXT NOT NULL CHECK (kind IN ('replace', 'forbid_clue')),
     word_text           TEXT,
-    old_clue_text       TEXT,
+    old_clue_text       TEXT NOT NULL,
     new_clue_text       TEXT,
     reason              TEXT,
     created_by          UUID NOT NULL,

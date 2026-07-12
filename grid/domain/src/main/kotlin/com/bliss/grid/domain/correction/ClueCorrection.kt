@@ -2,10 +2,7 @@ package com.bliss.grid.domain.correction
 
 import com.bliss.grid.domain.model.Word
 
-/**
- * A maintainer correction to a corpus clue (ADR-0108). Identity is the clue
- * text ([oldClueText]), optionally narrowed by [wordText]; there is no clue id.
- */
+/** A maintainer correction to a corpus clue, keyed on [oldClueText] and optionally narrowed by [wordText] (ADR-0108). */
 data class ClueCorrection(
     val kind: Kind,
     val oldClueText: String,
@@ -27,11 +24,7 @@ data class ClueCorrection(
         }
     }
 
-    /**
-     * Applies this correction to [word]. Returns the corrected word, the same
-     * instance when the correction does not target it, or null when a forbid
-     * empties the clue list (the word becomes unplaceable and is dropped).
-     */
+    /** Corrects [word], returns it unchanged when untargeted, or null when a forbid empties its clue list (ADR-0108). */
     fun applyTo(word: Word): Word? {
         if (foldedWordText != null && foldedWordText != word.text) return word
         if (word.clues.none { it.text == oldClueText }) return word

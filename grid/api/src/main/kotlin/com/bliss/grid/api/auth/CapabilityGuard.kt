@@ -13,10 +13,7 @@ const val ADMIN_SIGNALEMENTS_CAPABILITY: String = "admin:signalements"
 // Stable RFC 7807 `type` for a missing-capability denial (ADR-0003 §6, ADR-0108 threat model).
 const val CAPABILITY_REQUIRED_TYPE: String = "https://bliss.example/errors/capability-required"
 
-/**
- * Deny-by-default capability gate (ADR-0108): responds 403 and returns false when the verified
- * session lacks [capability]. Anonymous, player, and revoked callers all fall through to 403.
- */
+/** Deny-by-default capability gate: responds 403 and returns false when the session lacks [capability] (ADR-0108). */
 suspend fun ApplicationCall.requireCapability(capability: String): Boolean {
     val capabilities = attributes.getOrNull(CapabilitiesKey) ?: emptySet()
     if (capability in capabilities) return true

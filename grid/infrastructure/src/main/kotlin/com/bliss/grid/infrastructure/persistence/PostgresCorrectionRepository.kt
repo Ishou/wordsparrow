@@ -81,8 +81,10 @@ class PostgresCorrectionRepository(
             VALUES (?, ?, ?, ?, ?, ?)
             """
 
+        // ORDER BY created_at asc so the overlay applies newest last and it supersedes older ones (ADR-0108).
         private const val ACTIVE_SQL =
-            "SELECT kind, word_text, old_clue_text, new_clue_text FROM clue_corrections WHERE exported_at IS NULL"
+            "SELECT kind, word_text, old_clue_text, new_clue_text FROM clue_corrections " +
+                "WHERE exported_at IS NULL ORDER BY created_at, correction_id"
 
         private const val PROGRESS_SQL =
             """

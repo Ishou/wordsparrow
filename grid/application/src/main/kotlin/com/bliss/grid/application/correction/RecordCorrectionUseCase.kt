@@ -4,11 +4,7 @@ import com.bliss.grid.domain.correction.ClueCorrection
 import com.bliss.grid.domain.generation.WordRepository
 import java.util.UUID
 
-/**
- * Records a maintainer clue correction (ADR-0108). A word-scoped `forbid_clue`
- * that would empty its word's clue list is rejected — that is the blocklist-word
- * path (regeneration), not a cheap forbid.
- */
+/** Records a maintainer clue correction; a `forbid_clue` that would empty its word's clue list is rejected (ADR-0108). */
 class RecordCorrectionUseCase(
     private val corrections: CorrectionRepository,
     private val words: WordRepository,

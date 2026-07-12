@@ -1,6 +1,7 @@
 package com.bliss.grid.infrastructure.persistence
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
@@ -101,6 +102,14 @@ class PostgresCorrectionRepositoryTest {
         val active = repository.active()
         assertThat(active.map { it.oldClueText }).containsExactlyInAnyOrder("A")
         assertThat(repository.progress(kept)!!.kind).isEqualTo(ClueCorrection.Kind.REPLACE)
+    }
+
+    @Test
+    fun `active returns corrections oldest-to-newest so the overlay supersedes with the newest`() {
+        repository.record(ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "K", newClueText = "V1"), maintainer)
+        repository.record(ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "K", newClueText = "V2"), maintainer)
+
+        assertThat(repository.active().map { it.newClueText }).containsExactly("V1", "V2")
     }
 
     @Test

@@ -2,11 +2,7 @@ package com.bliss.grid.api.dto
 
 import kotlinx.serialization.Serializable
 
-/**
- * Wire request for `POST /v1/corrections` (ADR-0108). The OpenAPI oneOf is a
- * flat object here: `kind` discriminates and the route validates the
- * per-kind requirements (`newClueText` on `replace`).
- */
+/** Wire request for `POST /v1/corrections`; `kind` discriminates and the route validates per-kind fields (ADR-0108). */
 @Serializable
 data class CorrectionRequestDto(
     val kind: String,
