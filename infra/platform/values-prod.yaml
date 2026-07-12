@@ -12,6 +12,11 @@ clusterIssuer:
   selfsigned:
     enabled: false
 
+# The ingress floating IP (hcloud_floating_ip.ingress; ADR-0035) — the single IP whitelisted on Brevo. Mail workloads are pinned here (identity/billing charts), and this SNATs their egress to it deterministically.
+fipEgressSnat:
+  enabled: true
+  floatingIp: "116.202.180.82"
+
 volumeGc:
   enabled: true
   image:

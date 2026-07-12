@@ -15,6 +15,16 @@ clusterIssuer:
     enabled: false
 
 # Orphaned-volume garbage collector — reclaims long-Released hcloud volumes left by CNPG churn (ADR-0070).
+# Egress SNAT on the FIP holder so outbound mail (Brevo, ADR-0092) leaves from the whitelisted floating IP deterministically. Disabled by default; prod sets floatingIp.
+fipEgressSnat:
+  enabled: false
+  floatingIp: ""
+  image:
+    repository: nicolaka/netshoot
+    # renovate: datasource=docker depName=nicolaka/netshoot
+    tag: "v0.13"
+    digest: ""
+
 volumeGc:
   enabled: false
   schedule: "17 4 * * 0"
