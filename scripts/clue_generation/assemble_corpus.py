@@ -21,6 +21,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "eval"))
 sys.path.insert(0, str(REPO / "scripts" / "clue_generation"))
 
+from clue_metrics import fits_single_cell  # noqa: E402
 from morphology_index import MorphologyIndex  # noqa: E402
 from corpus_normalizers import (  # noqa: E402
     UNIFIED_FIELDS,
@@ -137,6 +138,28 @@ def _read_unified_csv(path: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+def gate_cell_fit(rows: list[dict]) -> tuple[list[dict], int]:
+    """Drop a clue too long for a grid cell WHEN the word still has a fitting
+    clue; keep a word's sole clue (a long clue beats none). The surface-inflation
+    tier already gates on `fits_single_cell`, but the gold/curated tiers don't —
+    so hand-authored overflow clues shipped even when a shorter sibling existed.
+    Empty placeholder rows never count as a fitting alternative."""
+    has_fit: dict[str, bool] = {}
+    for r in rows:
+        clue = r["clue"]
+        if clue and fits_single_cell(clue):
+            has_fit[r["word"]] = True
+    kept: list[dict] = []
+    dropped = 0
+    for r in rows:
+        clue = r["clue"]
+        if not clue or fits_single_cell(clue) or not has_fit.get(r["word"]):
+            kept.append(r)
+        else:
+            dropped += 1
+    return kept, dropped
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--data-root", type=Path, default=REPO,
@@ -230,6 +253,9 @@ def main() -> None:
     # Order matches SOURCE_PRIORITY[1:] ("overrides" applied separately below).
     merged = merge([curated, themed, gold, editorial, grammalecte, llm])
     merged = apply_overrides(merged, load_overrides(overrides_path))
+    merged, n_overflow = gate_cell_fit(merged)
+    print(f"cell-fit gate: dropped {n_overflow} overflow clues (word kept a fitting "
+          f"alternative)", file=sys.stderr)
     # Defensive: never write a row with an empty surface — the loader rejects it.
     merged = [r for r in merged if (r.get("word") or "").strip()]
 
