@@ -1,5 +1,7 @@
 package com.bliss.grid.worker
 
+import com.bliss.grid.application.correction.ExportCorrectionsUseCase
+import com.bliss.grid.application.correction.ProcessCorrectionsUseCase
 import com.bliss.grid.application.puzzle.DailyPuzzleSelector
 import com.bliss.grid.application.puzzle.EnsureUpcomingDailiesUseCase
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
@@ -10,11 +12,15 @@ import com.bliss.grid.application.puzzle.asGridGenerationPort
 import com.bliss.grid.application.puzzle.dailyPuzzleConstraints
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.BlissDatabase
+import com.bliss.grid.infrastructure.persistence.CsvClueOverrideAppender
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import com.bliss.grid.infrastructure.persistence.PostgresClueCooldownRepository
+import com.bliss.grid.infrastructure.persistence.PostgresCorrectionRepository
+import com.bliss.grid.infrastructure.persistence.PostgresGridBackfill
 import com.bliss.grid.infrastructure.persistence.PostgresPuzzleRepository
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.nio.file.Path
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.UUID
@@ -42,6 +48,8 @@ fun main(args: Array<String>) {
                     windowDays = intArg(args, "--window-days", EnsureUpcomingDailiesUseCase.DEFAULT_WINDOW_DAYS),
                 )
             args.contains("--ensure-dailies") -> runDailies(force = false)
+            args.contains("--process-corrections") -> runProcessCorrections()
+            args.contains("--export-corrections") -> runExportCorrections()
             else -> {
                 log.error("event=worker_unknown_arguments args=\"{}\"", args.joinToString(separator = " "))
                 printUsage()
@@ -53,10 +61,43 @@ fun main(args: Array<String>) {
 
 private const val DAILY_BEST_OF_N: Int = 8
 
+private const val DEFAULT_OVERRIDES_CSV: String = "data/curated/clue_overrides_fr.csv"
+
 private fun printUsage() {
     log.info(
-        "usage: grid-worker --ensure-dailies | --regenerate-dailies [--start-offset N] [--window-days N] | --help",
+        "usage: grid-worker --ensure-dailies | --regenerate-dailies [--start-offset N] [--window-days N] " +
+            "| --process-corrections | --export-corrections | --help",
     )
+}
+
+// Backfills every stored grid still carrying a corrected clue (ADR-0108 §4). Terminal per-correction state lives in the DB, so a recorded failure exits 0.
+private fun runProcessCorrections(): Int {
+    val database = BlissDatabase(poolName = "grid-worker-hikari", maxPoolSize = 2, requireUrl = true)
+    database.start()
+    return try {
+        val dataSource = database.dataSource() ?: error("DATABASE_URL produced a null DataSource")
+        val store = PostgresCorrectionRepository(dataSource)
+        val backfill = PostgresGridBackfill(dataSource)
+        ProcessCorrectionsUseCase(store, backfill).run()
+        0
+    } finally {
+        database.stop()
+    }
+}
+
+// Flushes un-exported corrections into the offline override CSV so the durable corpus catches up (ADR-0108 §3).
+private fun runExportCorrections(): Int {
+    val database = BlissDatabase(poolName = "grid-worker-hikari", maxPoolSize = 2, requireUrl = true)
+    database.start()
+    return try {
+        val dataSource = database.dataSource() ?: error("DATABASE_URL produced a null DataSource")
+        val store = PostgresCorrectionRepository(dataSource)
+        val csvPath = Path.of(System.getenv("CLUE_OVERRIDES_CSV") ?: DEFAULT_OVERRIDES_CSV)
+        ExportCorrectionsUseCase(store, CsvClueOverrideAppender(csvPath)).run()
+        0
+    } finally {
+        database.stop()
+    }
 }
 
 // Parse `--name=value` or `--name value`; fall back to `default` when absent or unparseable.
