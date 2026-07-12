@@ -52,6 +52,7 @@ export function InfoPopover({
   const touch = useTouchPrimary();
   const [open, setOpen] = useState(false);
   const descId = useId();
+  const contentId = useId();
   const longPress = useLongPress({
     onLongPress: () => setOpen(true),
     enabled: touch,
@@ -66,12 +67,16 @@ export function InfoPopover({
 
   const childStyle = (children.props as { style?: CSSProperties }).style;
 
+  // Popover.Content stays mounted (hidden, not unmounted) per contentStyles' &[hidden] rule, so this
+  // id resolves even before the first long-press opens it.
+  const touchDescribedBy = touch && !disabled ? contentId : undefined;
+
   // aria-disabled (not native disabled) keeps the button focusable so the reason stays reachable.
   // eslint-disable-next-line @eslint-react/no-clone-element -- inject handlers/aria/style onto the caller's trigger
   const trigger = cloneElement(children as ReactElement<Record<string, unknown>>, {
     onClick: handleClick,
     'aria-disabled': disabled || undefined,
-    'aria-describedby': disabled ? descId : undefined,
+    'aria-describedby': disabled ? descId : touchDescribedBy,
     ...(touch
       ? { ...longPress.handlers, style: { ...childStyle, ...noSelectStyle } }
       : {}),
@@ -98,7 +103,7 @@ export function InfoPopover({
         {reason}
         <Portal>
           <Popover.Positioner>
-            <Popover.Content className={contentStyles}>
+            <Popover.Content id={contentId} className={contentStyles}>
               <Popover.Arrow className={arrowStyles}>
                 <Popover.ArrowTip />
               </Popover.Arrow>
