@@ -51,6 +51,13 @@ jobs:
             echo "::error::LETSENCRYPT_EMAIL variable is not set; see docs/deploy.md"
             exit 1
           fi
+          # `helm dependency build` resolves subchart repos by URL, so they must be added first.
+          helm repo add jetstack https://charts.jetstack.io
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
+          helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts
+          helm repo add hcloud https://charts.hetzner.cloud
+          helm repo update
           helm dependency build infra/platform/
           # --wait=legacy: helm v4.2.1 'watcher' wait burns the full --timeout on each before-hook-creation hook deletion (cert-manager hooks here) — helm/helm#32214.
           helm upgrade --install platform infra/platform/ \
