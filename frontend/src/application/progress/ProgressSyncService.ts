@@ -212,7 +212,8 @@ export function createProgressSyncService(
       if (existing !== undefined) cancel(existing);
       const handle = schedule(() => {
         timers.delete(puzzleId);
-        void pushPuzzle(getSessionId(), puzzleId);
+        // Offline-first: a transient network failure keeps the local edit and reconciles on the next load (as flushPending does). Swallow so it never becomes an unhandled rejection.
+        void pushPuzzle(getSessionId(), puzzleId).catch(() => {});
       }, debounceMs);
       timers.set(puzzleId, handle);
     },

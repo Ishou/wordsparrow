@@ -45,13 +45,13 @@ export function AnnouncerProvider({ children }: { readonly children: ReactNode }
     const setter = opts.assertive ? setAssertiveText : setPoliteText;
     if (ref.current.text === text && now - ref.current.at < DEDUP_WINDOW_MS) return;
     ref.current = { text, at: now };
-    // Two-step empty→text ensures SR clients see a DOM mutation even
-    // when the same text is re-emitted after the de-dup window expires.
-    // flushSync forces the empty render to commit before the real value,
-    // preventing React's bail-out optimization (which would skip the
-    // re-render when the final batched value equals current state).
-    flushSync(() => { setter(''); });
-    setter(text);
+    // Deferred to a task: say() is called from effects (e.g. grid word-entry announcements), where flushSync is forbidden and recurses into "Maximum update depth" (React #185). A task runs it outside commit; the two-step empty→text (flushSync so the empty commits first, defeating React's bail-out) still fires so SR clients see a DOM mutation on re-emitted identical text.
+    setTimeout(() => {
+      flushSync(() => {
+        setter('');
+      });
+      setter(text);
+    }, 0);
   }, []);
 
   const api = useMemo<AnnouncerApi>(() => ({ say }), [say]);
