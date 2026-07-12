@@ -811,8 +811,9 @@ paths:
         may narrow to one word with an optional `wordText`; `forbid_clue` is
         word-scoped and requires `wordText`, dropping that clue for the named
         word, valid only while the word keeps ≥1 usable clue. The
-        `blocklist_word` operation is deferred to a later ADR and is
-        intentionally absent from this contract.
+        `blocklist_word` operation is served by the dedicated
+        `POST /v1/corrections/blocklist-word` endpoint (ADR-0110) and is
+        intentionally not part of this request contract.
 
         Recording is durable and returns `202`: the corpus overlay takes effect
         for future generation immediately, while patching every already-stored
@@ -916,6 +917,119 @@ paths:
           description: |
             No correction with this id. RFC 7807; `type` is
             `https://bliss.example/errors/correction-not-found`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /v1/corrections/blocklist-word:
+    post:
+      operationId: blocklistWord
+      summary: Blocklist an offensive word and scrub it from every grid (ADR-0110).
+      description: |
+        Maintainer-only and **destructive**. Requires the `admin:signalements`
+        capability, granted only to `MAINTAINER` (ADR-0079/0080); the server
+        resolves the caller's capabilities from the `__Secure-ws_session` cookie
+        via identity-api and denies by default — an absent capability (including
+        anonymous and player callers) produces 403 (ADR-0110 threat model). The
+        frontend gate is cosmetic; the server is authoritative.
+
+        Records a `blocklist_word` correction keyed on `wordText` (folded): the
+        word is dropped from the corpus overlay for future generation
+        immediately, and every already-generated grid containing it is scrubbed
+        asynchronously — dailies are regenerated (fresh `puzzleId`, latest-wins
+        per ADR-0081) and solo grids are deleted (next GET re-computes against
+        the corrected corpus, ADR-0105 discard+heal). This cannot be undone by a
+        clue edit; the operation is audited (`created_by`). Callers should first
+        confirm the blast radius with `GET /v1/corrections/blocklist-preview`.
+
+        Recording is durable and returns `202`; poll
+        `GET /v1/corrections/{correctionId}` for backfill progress.
+      tags: [corrections]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlocklistWordRequest'
+      responses:
+        '202':
+          description: |
+            Blocklist recorded. The body carries the new `correctionId` and the
+            initial `backfillStatus` (`pending`). Grid scrubbing runs
+            asynchronously; poll `GET /v1/corrections/{correctionId}`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionAccepted'
+        '403':
+          description: |
+            The caller lacks the `admin:signalements` capability (deny-by-
+            default covers anonymous, player, and missing/revoked sessions).
+            RFC 7807; `type` is
+            `https://bliss.example/errors/capability-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: |
+            The request body is well-formed JSON but fails validation — for
+            example an empty or over-length `wordText`. RFC 7807; `type` is
+            `https://bliss.example/errors/invalid-blocklist`,
+            `title` is `Invalid blocklist`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /v1/corrections/blocklist-preview:
+    get:
+      operationId: blocklistPreview
+      summary: Preview the blast radius of blocklisting a word (ADR-0110).
+      description: |
+        Maintainer-only. Requires the `admin:signalements` capability
+        (deny-by-default 403), the same gate as
+        `POST /v1/corrections/blocklist-word`. A read-only dry run: counts the
+        already-generated grids that contain `word` (folded), split into
+        `affectedDailies` (regenerated) and `affectedSolo` (deleted). Shown as an
+        impact preview before the typed-word confirmation guarding the
+        destructive action (ADR-0110 §4). No state changes.
+      tags: [corrections]
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: word
+          in: query
+          required: true
+          description: The word to preview blocklisting, folded server-side.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+            example: GROSMOT
+      responses:
+        '200':
+          description: Counts of the grids that blocklisting `word` would affect.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlocklistPreview'
+        '400':
+          description: |
+            The `word` query parameter is missing, empty, or over-length. RFC
+            7807; `type` is `https://bliss.example/errors/invalid-blocklist`,
+            `title` is `Invalid blocklist`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: |
+            The caller lacks the `admin:signalements` capability. RFC 7807;
+            `type` is `https://bliss.example/errors/capability-required`.
           content:
             application/problem+json:
               schema:
@@ -1789,11 +1903,12 @@ components:
     CorrectionKind:
       type: string
       description: |
-        The operation a correction performs (ADR-0108). `replace` overrides a
-        word's clue text; `forbid_clue` drops that clue. The deferred
-        `blocklist_word` operation is intentionally absent from this contract.
-      enum: [replace, forbid_clue]
-      x-enum-varnames: [REPLACE, FORBID_CLUE]
+        The operation a correction performs (ADR-0108, ADR-0110). `replace`
+        overrides a word's clue text; `forbid_clue` drops that clue;
+        `blocklist_word` drops the whole word (recorded via the dedicated
+        `POST /v1/corrections/blocklist-word` endpoint).
+      enum: [replace, forbid_clue, blocklist_word]
+      x-enum-varnames: [REPLACE, FORBID_CLUE, BLOCKLIST_WORD]
 
     BackfillStatus:
       type: string
@@ -1812,8 +1927,9 @@ components:
         optionally narrow to one word with `wordText`; `forbid_clue` drops the
         matched clue and requires `wordText` (it is word-scoped). Both identify
         the clue to fix by `oldClueText` (text-join identity).
-        The `blocklist_word` operation is deferred to a later ADR and is
-        intentionally absent.
+        The `blocklist_word` operation is implemented via the dedicated
+        `POST /v1/corrections/blocklist-word` endpoint (ADR-0110) and is
+        intentionally not part of this `oneOf`.
       discriminator:
         propertyName: kind
         mapping:
@@ -1869,6 +1985,49 @@ components:
           $ref: '#/components/schemas/CorrectionId'
         backfillStatus:
           $ref: '#/components/schemas/BackfillStatus'
+
+    BlocklistWordRequest:
+      type: object
+      description: |
+        Blocklist an offensive word (ADR-0110). Records a `blocklist_word`
+        correction keyed on `wordText`; the word is dropped from generation and
+        scrubbed from every stored grid. Destructive and audited.
+      required: [wordText]
+      properties:
+        wordText:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: |
+            The word to blocklist, folded server-side. Length-bounded to 64,
+            mirroring ADR-0103's `wordText`.
+          example: GROSMOT
+        reason:
+          type: string
+          maxLength: 512
+          description: |
+            Optional free-text justification recorded on the audit row. Absent
+            when the maintainer gives none (ADR-0003 §6: absence ≠ null).
+          example: Injure signalée par un joueur
+
+    BlocklistPreview:
+      type: object
+      description: |
+        Read-only dry-run counts for blocklisting a word (ADR-0110 §4): the
+        already-generated grids that contain it, split by kind. Dailies are
+        regenerated and solo grids deleted when the blocklist is applied.
+      required: [affectedDailies, affectedSolo]
+      properties:
+        affectedDailies:
+          type: integer
+          minimum: 0
+          description: Stored daily grids containing the word (regenerated).
+          example: 3
+        affectedSolo:
+          type: integer
+          minimum: 0
+          description: Stored solo grids containing the word (deleted).
+          example: 128
 
     CorrectionProgress:
       type: object

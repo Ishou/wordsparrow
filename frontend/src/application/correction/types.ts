@@ -1,6 +1,6 @@
 // Ports + types for the maintainer clue-correction surface (ADR-0108); mirrors the grid contract without importing generated types (ADR-0002 §7).
 
-export type CorrectionKind = 'replace' | 'forbid_clue';
+export type CorrectionKind = 'replace' | 'forbid_clue' | 'blocklist_word';
 
 export type BackfillStatus = 'pending' | 'running' | 'done' | 'failed';
 
