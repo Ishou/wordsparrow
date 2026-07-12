@@ -346,13 +346,8 @@ def _relative_verb(
     tokens: list[str], target_pos: str, surface_tags: set[str],
     index: MorphologyIndex,
 ) -> tuple[int, str, set[str], str] | None:
-    """A `Qui + verbe` clue defines a nominal/adjectival answer; the relative
-    verb agrees with the antecedent (the answer) in number, 3rd person, keeping
-    its own tense. Returns `(head_idx, lemma, target, "verbe")`, else None: the
-    ranker misses it (verb POS != the answer's POS). Only function words may sit
-    between `Qui` and the verb; `Que`/`Qu'` object-relatives agree with their
-    own subject, not the antecedent, so they're excluded (first word must be
-    `qui`, which never elides)."""
+    """`Qui + verbe` agrees the relative verb with the antecedent's number, 3rd
+    person, own tense; see ADR-0107 for why `qui` (not `que`) is required."""
     if target_pos not in ("nom", "adj"):
         return None
     seen_qui = False
@@ -375,8 +370,8 @@ def _relative_verb(
         forms = index.lookup_form(lo)
         mood = next((m for _l, tags in forms for m in ("ipre",) if m in tags), None)
         if mood is None:
-            mood = next((next(iter(f)) for _l, tags in forms
-                         if (f := tags & _FINITE_MOODS)), None)
+            finite_moods = {m for _l, tags in forms for m in tags & _FINITE_MOODS}
+            mood = next((m for m in _MOOD_PREFERENCE if m in finite_moods), None)
         if mood is None:
             return None
         number = "3pl" if "pl" in surface_tags else "3sg"

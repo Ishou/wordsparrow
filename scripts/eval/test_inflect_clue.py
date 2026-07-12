@@ -21,7 +21,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from inflect_clue import _decompose_targets, _pp_action_definition, inflect_clue  # noqa: E402
+from inflect_clue import (  # noqa: E402
+    _decompose_targets,
+    _pp_action_definition,
+    _relative_verb,
+    inflect_clue,
+)
 from morphology_index import MorphologyIndex  # noqa: E402
 
 
@@ -262,6 +267,21 @@ def test_relative_qui_singular_answer_keeps_singular_verb() -> None:
     _add(idx, "abusif", "abusive", "adj fem sg")
     r = inflect_clue("Qui outrepasse un droit", {"adj", "fem", "sg"}, idx)
     assert r.text == "Qui outrepasse un droit", r.text
+
+
+def test_relative_qui_mood_fallback_is_deterministic() -> None:
+    """When the relative verb's only row fuses multiple finite moods without an
+    `ipre` tag, the mood must be chosen via `_MOOD_PREFERENCE` rather than
+    arbitrary set iteration order — the latter varies with `PYTHONHASHSEED`."""
+    idx = MorphologyIndex()
+    _add(idx, "fusionner", "fusionner", "v1__t___zz infi")
+    _add(idx, "fusionner", "fusionnent", "v1__t___zz cond ifut 3pl")
+    rel = _relative_verb(["Qui", "fusionnent"], "nom", {"nom", "mas", "pl"}, idx)
+    assert rel is not None
+    _head_idx, lemma, target, pos = rel
+    assert lemma == "fusionner", lemma
+    assert pos == "verbe", pos
+    assert target == {"ifut", "3pl"}, target
 
 
 def test_ppas_dobj_skip_includes_numeral_objects() -> None:
