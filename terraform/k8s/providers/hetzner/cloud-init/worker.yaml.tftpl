@@ -161,6 +161,12 @@ write_files:
         || iptables -t nat -A POSTROUTING -p tcp -d ${cp_ip} --dport 6443 \
              -j MASQUERADE
 
+      # 4. Deterministically SNAT pod egress to the FIP so outbound mail (Brevo, ADR-0092) always leaves from the whitelisted IP — flannel's MASQUERADE picks whichever eth0 address is primary and can silently flip. Excludes kube-marked (0x4000) + internal 10/8, mirroring flannel's own RETURNs; -I 1 keeps it ahead of the flannel jump.
+      iptables -t nat -C POSTROUTING -s 10.42.0.0/16 -m mark ! --mark 0x4000/0x4000 \
+          ! -d 10.0.0.0/8 ! -d 224.0.0.0/4 -j SNAT --to-source ${floating_ip} 2>/dev/null \
+        || iptables -t nat -I POSTROUTING 1 -s 10.42.0.0/16 -m mark ! --mark 0x4000/0x4000 \
+             ! -d 10.0.0.0/8 ! -d 224.0.0.0/4 -j SNAT --to-source ${floating_ip}
+
   - path: /etc/systemd/system/floating-ip-config.service
     permissions: "0644"
     owner: root:root
