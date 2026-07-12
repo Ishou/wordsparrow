@@ -13,6 +13,7 @@ import { App } from '@/ui/App';
 import { createAppRouter } from '@/ui/router';
 import {
   createDedupedPuzzleRepository,
+  createGridCorrectionClient,
   createHttpAuthClient,
   createHttpBillingClient,
   createHttpLobbyClient,
@@ -306,6 +307,8 @@ enableMocks()
     const surveyApiBaseUrl =
       import.meta.env.VITE_SURVEY_API_BASE_URL ?? 'https://survey.wordsparrow.io';
     const surveyClient = createHttpSurveyClient({ baseUrl: surveyApiBaseUrl });
+    // Grid corrections adapter (ADR-0108); same grid host as the puzzle endpoints.
+    const correctionClient = createGridCorrectionClient({ baseUrl: gridApiBaseUrl });
     // Billing-api adapter (ADR-0078). Same default-to-prod-host idiom as identity/survey.
     const billingApiBaseUrl =
       import.meta.env.VITE_BILLING_API_BASE_URL ?? 'https://billing.wordsparrow.io';
@@ -316,7 +319,7 @@ enableMocks()
         tracker.trackEvent(category, action, name, value);
       },
     };
-    const baseContext = { authClient, getPseudonym, surveyClient, surveyAnonStore: surveyAnonRatedStore, analytics, progressSyncService, billingClient, themeStore, soundStore, soundPlayer };
+    const baseContext = { authClient, getPseudonym, surveyClient, correctionClient, surveyAnonStore: surveyAnonRatedStore, analytics, progressSyncService, billingClient, themeStore, soundStore, soundPlayer };
     const context = multiplayer
       ? (() => {
           const gameApiBaseUrl = import.meta.env.VITE_GAME_API_BASE_URL;
