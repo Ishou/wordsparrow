@@ -394,8 +394,9 @@ export interface paths {
          *     may narrow to one word with an optional `wordText`; `forbid_clue` is
          *     word-scoped and requires `wordText`, dropping that clue for the named
          *     word, valid only while the word keeps ≥1 usable clue. The
-         *     `blocklist_word` operation is deferred to a later ADR and is
-         *     intentionally absent from this contract.
+         *     `blocklist_word` operation is served by the dedicated
+         *     `POST /v1/corrections/blocklist-word` endpoint (ADR-0110) and is
+         *     intentionally not part of this request contract.
          *
          *     Recording is durable and returns `202`: the corpus overlay takes effect
          *     for future generation immediately, while patching every already-stored
@@ -1180,12 +1181,13 @@ export interface components {
          */
         WordText: string;
         /**
-         * @description The operation a correction performs (ADR-0108). `replace` overrides a
-         *     word's clue text; `forbid_clue` drops that clue. The deferred
-         *     `blocklist_word` operation is intentionally absent from this contract.
+         * @description The operation a correction performs (ADR-0108, ADR-0110). `replace`
+         *     overrides a word's clue text; `forbid_clue` drops that clue;
+         *     `blocklist_word` drops the whole word (recorded via the dedicated
+         *     `POST /v1/corrections/blocklist-word` endpoint).
          * @enum {string}
          */
-        CorrectionKind: "replace" | "forbid_clue";
+        CorrectionKind: "replace" | "forbid_clue" | "blocklist_word";
         /**
          * @description Lifecycle of a correction's async existing-grid patching (ADR-0108 §4):
          *     `pending` until the worker claims it, `running` while patching, `done`
@@ -1200,8 +1202,9 @@ export interface components {
          *     optionally narrow to one word with `wordText`; `forbid_clue` drops the
          *     matched clue and requires `wordText` (it is word-scoped). Both identify
          *     the clue to fix by `oldClueText` (text-join identity).
-         *     The `blocklist_word` operation is deferred to a later ADR and is
-         *     intentionally absent.
+         *     The `blocklist_word` operation is implemented via the dedicated
+         *     `POST /v1/corrections/blocklist-word` endpoint (ADR-0110) and is
+         *     intentionally not part of this `oneOf`.
          */
         CorrectionRequest: components["schemas"]["ReplaceCorrection"] | components["schemas"]["ForbidClueCorrection"];
         /**
@@ -2191,12 +2194,12 @@ export interface operations {
                 };
             };
             /**
-             * @description The caller lacks the `admin:signalements` capability (deny-by-
-             *     default covers anonymous, player, and missing/revoked sessions).
-             *     RFC 7807; `type` is
-             *     `https://bliss.example/errors/capability-required`.
+             * @description The request body is well-formed JSON but fails validation — for
+             *     example an empty or over-length `wordText`. RFC 7807; `type` is
+             *     `https://bliss.example/errors/invalid-blocklist`,
+             *     `title` is `Invalid blocklist`.
              */
-            403: {
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2205,12 +2208,12 @@ export interface operations {
                 };
             };
             /**
-             * @description The request body is well-formed JSON but fails validation — for
-             *     example an empty or over-length `wordText`. RFC 7807; `type` is
-             *     `https://bliss.example/errors/invalid-blocklist`,
-             *     `title` is `Invalid blocklist`.
+             * @description The caller lacks the `admin:signalements` capability (deny-by-
+             *     default covers anonymous, player, and missing/revoked sessions).
+             *     RFC 7807; `type` is
+             *     `https://bliss.example/errors/capability-required`.
              */
-            422: {
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

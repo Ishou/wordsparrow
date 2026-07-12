@@ -811,8 +811,9 @@ paths:
         may narrow to one word with an optional `wordText`; `forbid_clue` is
         word-scoped and requires `wordText`, dropping that clue for the named
         word, valid only while the word keeps ≥1 usable clue. The
-        `blocklist_word` operation is deferred to a later ADR and is
-        intentionally absent from this contract.
+        `blocklist_word` operation is served by the dedicated
+        `POST /v1/corrections/blocklist-word` endpoint (ADR-0110) and is
+        intentionally not part of this request contract.
 
         Recording is durable and returns `202`: the corpus overlay takes effect
         for future generation immediately, while patching every already-stored
@@ -973,7 +974,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        '422':
+        '400':
           description: |
             The request body is well-formed JSON but fails validation — for
             example an empty or over-length `wordText`. RFC 7807; `type` is
@@ -1902,11 +1903,12 @@ components:
     CorrectionKind:
       type: string
       description: |
-        The operation a correction performs (ADR-0108). `replace` overrides a
-        word's clue text; `forbid_clue` drops that clue. The deferred
-        `blocklist_word` operation is intentionally absent from this contract.
-      enum: [replace, forbid_clue]
-      x-enum-varnames: [REPLACE, FORBID_CLUE]
+        The operation a correction performs (ADR-0108, ADR-0110). `replace`
+        overrides a word's clue text; `forbid_clue` drops that clue;
+        `blocklist_word` drops the whole word (recorded via the dedicated
+        `POST /v1/corrections/blocklist-word` endpoint).
+      enum: [replace, forbid_clue, blocklist_word]
+      x-enum-varnames: [REPLACE, FORBID_CLUE, BLOCKLIST_WORD]
 
     BackfillStatus:
       type: string
@@ -1925,8 +1927,9 @@ components:
         optionally narrow to one word with `wordText`; `forbid_clue` drops the
         matched clue and requires `wordText` (it is word-scoped). Both identify
         the clue to fix by `oldClueText` (text-join identity).
-        The `blocklist_word` operation is deferred to a later ADR and is
-        intentionally absent.
+        The `blocklist_word` operation is implemented via the dedicated
+        `POST /v1/corrections/blocklist-word` endpoint (ADR-0110) and is
+        intentionally not part of this `oneOf`.
       discriminator:
         propertyName: kind
         mapping:
