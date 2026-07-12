@@ -1,31 +1,47 @@
 package com.bliss.grid.application.correction
 
+import com.bliss.grid.domain.correction.ClueCorrection
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 
 private val log = LoggerFactory.getLogger("com.bliss.grid.application.correction.ProcessCorrectionsUseCase")
 
-/** Drains pending/running clue-correction backfills, patching stored grids idempotently and resumably (ADR-0108 §4). */
+/** Drains pending/running correction backfills, dispatching by kind: patch replace/forbid, scrub blocklist_word (ADR-0108 §4, ADR-0110 §2). */
 class ProcessCorrectionsUseCase(
     private val store: CorrectionWorkStore,
     private val backfill: GridBackfillPort,
+    private val blocklist: BlocklistJobProcessor? = null,
     private val batchSize: Int = DEFAULT_BATCH_SIZE,
 ) {
-    /** Processes every backfillable correction; returns the number of jobs drained. */
+    /** Processes every backfillable correction; returns the number of jobs acted on. */
     fun run(): Int {
         val jobs = store.backfillJobs()
         var processed = 0
         for (job in jobs) {
             MDC.put("correction_id", job.correctionId.toString())
             try {
-                drain(job)
-                processed++
+                if (dispatch(job)) processed++
             } finally {
                 MDC.remove("correction_id")
             }
         }
         log.info("event=process_corrections_summary jobs_processed={}", processed)
         return processed
+    }
+
+    // A blocklist_word cannot be patched out of a grid; it needs the regenerate/delete scrub, not the clue-patch path (ADR-0110 §2).
+    private fun dispatch(job: CorrectionBackfillJob): Boolean {
+        if (job.correction.kind == ClueCorrection.Kind.BLOCKLIST_WORD) {
+            val processor = blocklist
+            if (processor == null) {
+                log.warn("event=blocklist_processor_absent correction_id={}", job.correctionId)
+                return false
+            }
+            processor.scrub(job)
+            return true
+        }
+        drain(job)
+        return true
     }
 
     private fun drain(job: CorrectionBackfillJob) {

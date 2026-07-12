@@ -1,17 +1,22 @@
 package com.bliss.grid.application.correction
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThanOrEqualTo
+import assertk.assertions.isNull
 import com.bliss.grid.domain.correction.ClueCorrection
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 class ProcessCorrectionsUseCaseTest {
     private val correctionId = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6d")
+    private val blocklistId = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6e")
 
     private fun replace(): ClueCorrection =
         ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", wordText = "MOT", newClueText = "new")
+
+    private fun blocklist(): ClueCorrection = ClueCorrection(ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "GROSMOT")
 
     @Test
     fun `pending correction drains to done with grids patched equal to grids matched`() {
@@ -73,6 +78,38 @@ class ProcessCorrectionsUseCaseTest {
         assertThat(state.status).isEqualTo(BackfillStatus.FAILED)
         assertThat(state.gridsPatched).isEqualTo(2)
         assertThat(state.error).isEqualTo("boom 2")
+    }
+
+    @Test
+    fun `dispatches a blocklist_word job to the scrub processor and still patches a replace`() {
+        val store =
+            FakeWorkStore().apply {
+                seed(correctionId, replace())
+                seed(blocklistId, blocklist())
+            }
+        val backfill = FakeBackfill(mutableListOf(grid(1)))
+        val scrubbed = mutableListOf<UUID>()
+        val useCase = ProcessCorrectionsUseCase(store, backfill, { job -> scrubbed.add(job.correctionId) })
+
+        val processed = useCase.run()
+
+        assertThat(processed).isEqualTo(2)
+        assertThat(scrubbed).containsExactly(blocklistId)
+        assertThat(store.states.getValue(correctionId).status).isEqualTo(BackfillStatus.DONE)
+        // The blocklist job never went through the patch path, so it is untouched by the FakeBackfill.
+        assertThat(store.states.getValue(blocklistId).status).isEqualTo(BackfillStatus.PENDING)
+    }
+
+    @Test
+    fun `leaves a blocklist_word job pending when no scrub processor is wired`() {
+        val store = FakeWorkStore().apply { seed(blocklistId, blocklist()) }
+        val backfill = FakeBackfill(mutableListOf())
+
+        val processed = ProcessCorrectionsUseCase(store, backfill).run()
+
+        assertThat(processed).isEqualTo(0)
+        assertThat(store.states.getValue(blocklistId).status).isEqualTo(BackfillStatus.PENDING)
+        assertThat(store.states.getValue(blocklistId).error).isNull()
     }
 
     private fun grid(
