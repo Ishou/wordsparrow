@@ -333,6 +333,8 @@ ADR-0108  grid/worker/src/main/kotlin/com/bliss/grid/worker/Main.kt  --process-c
 ADR-0108  grid/api/**/routes/CorrectionRoute*        POST /v1/corrections (202) + GET /v1/corrections/{id}; gated by requireCapability("admin:signalements"); patches preserve puzzleId (progress kept)
 ADR-0108  identity/domain/src/main/kotlin/com/bliss/identity/domain/user/Capability.kt  admin:signalements is maintainer-only; do not grant to PLAYER/tier (distinct from contribuer, ADR-0079)
 ADR-0108  frontend/src/**/signalements/**           Maintainer "Corriger" action composes grid correction + survey action + progress poll; route gated on admin:signalements (was contribuer); tutoiement copy
+ADR-0109  infra/platform/templates/fip-egress-snat-daemonset.yaml  Self-healing DaemonSet SNATs FIP-holder pod egress to the FIP so mail (Brevo) leaves from the one whitelisted IP; -I POSTROUTING 1, excludes kube-marked + internal 10/8, re-asserts every 30s. Runtime NAT rule per ADR-0035 scope, cured of wipe-fragility
+ADR-0109  infra/platform/values-prod.yaml           fipEgressSnat.enabled + floatingIp (the ingress FIP) + digest-pinned image; disabled by default in values.yaml
 ```
 
 ## Adding entries
