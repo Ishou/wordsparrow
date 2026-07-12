@@ -55,8 +55,7 @@ describe('InfoPopover', () => {
     expect(trigger).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(trigger);
     expect(onActivate).not.toHaveBeenCalled();
-    // The reason is associated with the button without opening the popover —
-    // essential on touch/AT, where the long-press to open isn't performable.
+    // Reason is associated without opening the popover — required for touch/AT (no long-press).
     const descId = trigger.getAttribute('aria-describedby');
     expect(descId).toBeTruthy();
     expect(document.getElementById(descId as string)).toHaveTextContent(
