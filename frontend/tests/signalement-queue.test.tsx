@@ -3,7 +3,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { SignalementQueue } from '@/ui/components/signalements/SignalementQueue';
 import { Toast, ToastProvider } from '@/ui/components/primitives';
 import type { SignalementSummary, SurveyClient } from '@/application/survey';
+import type { CorrectionClient } from '@/application/correction';
 import { expectAxeClean } from '@/test/a11y';
+
+function stubCorrectionClient(): CorrectionClient {
+  return {
+    submitCorrection: vi.fn(),
+    getCorrectionProgress: vi.fn(),
+    blocklistWord: vi.fn(),
+    previewBlocklist: vi.fn(),
+  } as unknown as CorrectionClient;
+}
 
 function summary(over: Partial<SignalementSummary> = {}): SignalementSummary {
   return {
@@ -109,5 +119,27 @@ describe('SignalementQueue', () => {
     const { container } = renderQueue(stubClient());
     await screen.findByText('CHAT');
     await expectAxeClean(container);
+  });
+
+  it('offers an enabled Blacklister le mot action for word rows and disables it for word-less rows', async () => {
+    const client = stubClient({
+      listSignalements: vi.fn().mockResolvedValue([
+        summary({ reportId: 'r-word', wordText: 'INJURE', reason: 'mot_offensant' }),
+        summary({ reportId: 'r-noword', wordText: null, clueText: 'Définition offensante', reason: 'definition_offensante' }),
+      ]),
+    });
+    render(
+      <ToastProvider>
+        <SignalementQueue surveyClient={client} correctionClient={stubCorrectionClient()} />
+        <Toast />
+      </ToastProvider>,
+    );
+
+    await screen.findAllByTestId('signalement-row');
+    const triggers = screen.getAllByTestId('blocklist-trigger');
+    expect(triggers).toHaveLength(2);
+    expect(triggers[0]).toBeEnabled();
+    expect(triggers[1]).toBeDisabled();
+    expect(screen.getByText('mot requis')).toBeInTheDocument();
   });
 });

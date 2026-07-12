@@ -1,7 +1,13 @@
 // HTTP adapter for the grid corrections surface (ADR-0108); credentials per call since these routes read the maintainer session cookie.
 
 import type { ClientOptions } from 'openapi-fetch';
-import type { CorrectionAccepted, CorrectionClient, CorrectionInput, CorrectionProgress } from '@/application/correction';
+import type {
+  BlocklistPreview,
+  CorrectionAccepted,
+  CorrectionClient,
+  CorrectionInput,
+  CorrectionProgress,
+} from '@/application/correction';
 import { LastClueForbidden } from '@/application/correction';
 import { createGridApiClient } from './client';
 import type { components } from './types';
@@ -53,5 +59,23 @@ export function createGridCorrectionClient(options: GridCorrectionClientOptions)
     } satisfies CorrectionProgress;
   };
 
-  return { submitCorrection, getCorrectionProgress };
+  const blocklistWord: CorrectionClient['blocklistWord'] = async (input) => {
+    const { data, response } = await client.POST('/v1/corrections/blocklist-word', {
+      body: { wordText: input.wordText, ...(input.reason ? { reason: input.reason } : {}) },
+      credentials: 'include',
+    });
+    if (!data) throw new Error(`blocklistWord failed: ${response.status}`);
+    return { correctionId: data.correctionId, backfillStatus: data.backfillStatus } satisfies CorrectionAccepted;
+  };
+
+  const previewBlocklist: CorrectionClient['previewBlocklist'] = async (word) => {
+    const { data, response } = await client.GET('/v1/corrections/blocklist-preview', {
+      params: { query: { word } },
+      credentials: 'include',
+    });
+    if (!data) throw new Error(`previewBlocklist failed: ${response.status}`);
+    return { affectedDailies: data.affectedDailies, affectedSolo: data.affectedSolo } satisfies BlocklistPreview;
+  };
+
+  return { submitCorrection, getCorrectionProgress, blocklistWord, previewBlocklist };
 }

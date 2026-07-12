@@ -7,6 +7,7 @@ import { t } from '@/ui/i18n';
 import type { ReportReason, SignalementDecision, SignalementSummary, SurveyClient } from '@/application/survey';
 import type { CorrectionClient } from '@/application/correction';
 import { CorrectionForm } from './CorrectionForm';
+import { BlocklistWordDialog } from './BlocklistWordDialog';
 
 const HARM_REASONS: ReadonlySet<ReportReason> = new Set(['mot_offensant', 'definition_offensante']);
 
@@ -157,14 +158,23 @@ export function SignalementQueue({ surveyClient, correctionClient }: Signalement
                 ) : null}
                 <div className={actionsStyles}>
                   {correctionClient ? (
-                    <CorrectionForm
-                      correctionClient={correctionClient}
-                      surveyClient={surveyClient}
-                      reportId={s.reportId}
-                      oldClueText={s.clueText}
-                      wordText={s.wordText}
-                      onCorrected={() => drop(s.reportId)}
-                    />
+                    <>
+                      <CorrectionForm
+                        correctionClient={correctionClient}
+                        surveyClient={surveyClient}
+                        reportId={s.reportId}
+                        oldClueText={s.clueText}
+                        wordText={s.wordText}
+                        onCorrected={() => drop(s.reportId)}
+                      />
+                      <BlocklistWordDialog
+                        correctionClient={correctionClient}
+                        surveyClient={surveyClient}
+                        reportId={s.reportId}
+                        word={s.wordText}
+                        onBlocklisted={() => drop(s.reportId)}
+                      />
+                    </>
                   ) : null}
                   <Button
                     variant="primary"
