@@ -10,6 +10,7 @@ import type { SessionClient } from '@/application/session/SessionClient';
 import type { ProgressSyncService } from '@/application/progress';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { SurveyAnonStore, SurveyClient } from '@/application/survey';
+import type { CorrectionClient } from '@/application/correction';
 import type { TourSeenStore } from '@/application/tour/TourSeenStore';
 import type { ThemeStore } from '@/application/session/ThemeStore';
 import type { SoundStore } from '@/application/session/SoundStore';
@@ -75,6 +76,8 @@ export interface AppRouterContext {
   readonly setPseudonym?: (pseudonym: Pseudonym) => void;
   // Survey-api adapter (ADR-0056). Optional; ContribuerPage degrades gracefully when undefined.
   readonly surveyClient?: SurveyClient;
+  // Grid corrections adapter (ADR-0108). Optional; the /signalements queue hides "Corriger" when undefined.
+  readonly correctionClient?: CorrectionClient;
   // Anon-rated dedup store (ADR-0056). Optional for Vitest fixtures.
   readonly surveyAnonStore?: SurveyAnonStore;
   // Analytics port (ADR-0025). Optional; defaults to a no-op in tests.

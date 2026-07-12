@@ -1,4 +1,4 @@
-// `/signalements` lazy half — maintainer triage queue, contribuer-gated (ADR-0079 + ADR-0103).
+// `/signalements` lazy half — maintainer triage queue, admin:signalements-gated (ADR-0079 + ADR-0103 + ADR-0108).
 
 import { createLazyRoute } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
@@ -23,14 +23,14 @@ function SignalementsPage() {
   }
   return (
     <ContentPage>
-      <SignalementQueue surveyClient={surveyClient} />
+      <SignalementQueue surveyClient={surveyClient} correctionClient={ctx.correctionClient} />
     </ContentPage>
   );
 }
 
-// Render-only gate; the survey server enforces contribuer. `denied` renders the standard 404 so the route's existence never leaks.
+// Render-only gate; the grid/survey servers enforce admin:signalements. `denied` renders the standard 404 so the route's existence never leaks.
 export function SignalementsScreen() {
-  const gate = useCapabilityGate('contribuer');
+  const gate = useCapabilityGate('admin:signalements');
   if (gate === 'loading') {
     return (
       <ContentPage>

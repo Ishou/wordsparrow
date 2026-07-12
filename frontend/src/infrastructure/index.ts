@@ -11,6 +11,10 @@ export {
   type GridApiClient,
   type GridApiClientOptions,
 } from './api/grid/client';
+export {
+  createGridCorrectionClient,
+  type GridCorrectionClientOptions,
+} from './api/grid/correctionClient';
 export { createDedupedPuzzleRepository } from './api/grid/DedupedPuzzleRepository';
 export {
   createHttpPuzzleRepository,

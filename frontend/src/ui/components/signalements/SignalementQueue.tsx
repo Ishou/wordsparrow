@@ -5,6 +5,8 @@ import { css } from 'styled-system/css';
 import { Button, useToast } from '@/ui/components/primitives';
 import { t } from '@/ui/i18n';
 import type { ReportReason, SignalementDecision, SignalementSummary, SurveyClient } from '@/application/survey';
+import type { CorrectionClient } from '@/application/correction';
+import { CorrectionForm } from './CorrectionForm';
 
 const HARM_REASONS: ReadonlySet<ReportReason> = new Set(['mot_offensant', 'definition_offensante']);
 
@@ -77,9 +79,11 @@ function harmFirst(items: ReadonlyArray<SignalementSummary>): SignalementSummary
 
 export interface SignalementQueueProps {
   readonly surveyClient: SurveyClient;
+  // ADR-0108: composes the grid correction; absent in fixtures that don't exercise the correction path.
+  readonly correctionClient?: CorrectionClient;
 }
 
-export function SignalementQueue({ surveyClient }: SignalementQueueProps) {
+export function SignalementQueue({ surveyClient, correctionClient }: SignalementQueueProps) {
   const { show: showToast } = useToast();
   const [items, setItems] = useState<ReadonlyArray<SignalementSummary> | null>(null);
   const [error, setError] = useState(false);
@@ -152,6 +156,16 @@ export function SignalementQueue({ surveyClient }: SignalementQueueProps) {
                   <p className={noteStyles}>{t('route.signalements.latestNote', { note: s.latestNote })}</p>
                 ) : null}
                 <div className={actionsStyles}>
+                  {correctionClient ? (
+                    <CorrectionForm
+                      correctionClient={correctionClient}
+                      surveyClient={surveyClient}
+                      reportId={s.reportId}
+                      oldClueText={s.clueText}
+                      wordText={s.wordText}
+                      onCorrected={() => drop(s.reportId)}
+                    />
+                  ) : null}
                   <Button
                     variant="primary"
                     onClick={() => { void decide(s, 'action'); }}
