@@ -1,6 +1,8 @@
 package com.bliss.grid.application.correction
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import com.bliss.grid.domain.correction.ClueCorrection
 import org.junit.jupiter.api.Test
@@ -38,6 +40,34 @@ class ProcessBlocklistUseCaseTest {
         assertThat(state.gridsMatched).isEqualTo(4)
         assertThat(state.gridsPatched).isEqualTo(4)
         assertThat(backfill.remainingWork("GROSMOT").total).isEqualTo(0)
+    }
+
+    @Test
+    fun `exposes only the dailies it regenerated so the edge purge covers exactly those dates`() {
+        val backfill =
+            FakeBlocklistBackfill(
+                dailyDates = mutableListOf(dateA, dateB),
+                soloIds = mutableListOf(UUID.randomUUID()),
+                failingDates = setOf(dateB),
+            )
+        val store = FakeWorkStore().apply { seed(correctionId, blocklist()) }
+        val useCase = ProcessBlocklistUseCase(store, backfill, backfill.regeneration())
+
+        useCase.scrub(store.backfillJobs().single())
+
+        // A failed daily and a deleted solo never reach the purge set; only the successfully regenerated date does.
+        assertThat(useCase.regeneratedDates).containsExactly(dateA)
+    }
+
+    @Test
+    fun `regenerated dates are empty when nothing was regenerated`() {
+        val backfill = FakeBlocklistBackfill(mutableListOf(), mutableListOf(UUID.randomUUID()))
+        val store = FakeWorkStore().apply { seed(correctionId, blocklist()) }
+        val useCase = ProcessBlocklistUseCase(store, backfill, backfill.regeneration())
+
+        useCase.scrub(store.backfillJobs().single())
+
+        assertThat(useCase.regeneratedDates).isEmpty()
     }
 
     @Test

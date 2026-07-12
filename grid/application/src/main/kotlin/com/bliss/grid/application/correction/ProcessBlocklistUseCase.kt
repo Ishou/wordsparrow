@@ -1,6 +1,7 @@
 package com.bliss.grid.application.correction
 
 import org.slf4j.LoggerFactory
+import java.time.LocalDate
 
 private val log = LoggerFactory.getLogger("com.bliss.grid.application.correction.ProcessBlocklistUseCase")
 
@@ -10,6 +11,11 @@ class ProcessBlocklistUseCase(
     private val backfill: BlocklistBackfillPort,
     private val regeneration: DailyRegenerationPort,
 ) : BlocklistJobProcessor {
+    private val regenerated = linkedSetOf<LocalDate>()
+
+    /** Dailies regenerated across every scrub on this instance; the edge cache must be purged for these (ADR-0089 §5). */
+    val regeneratedDates: List<LocalDate> get() = regenerated.toList()
+
     override fun scrub(job: CorrectionBackfillJob) {
         val word =
             job.correction.wordText ?: run {
@@ -31,6 +37,7 @@ class ProcessBlocklistUseCase(
                 try {
                     if (regeneration.regenerate(date)) {
                         scrubbed++
+                        regenerated.add(date)
                     } else {
                         lastError = "daily regeneration failed for $date"
                         log.warn("event=blocklist_daily_failed date={}", date)

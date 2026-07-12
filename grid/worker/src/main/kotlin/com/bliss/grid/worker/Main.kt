@@ -90,10 +90,19 @@ private fun runProcessCorrections(): Int {
                 regeneration = singleDateRegenerator(puzzleRepository, cooldownRepository).asDailyRegenerationPort(),
             )
         ProcessCorrectionsUseCase(store, backfill, blocklist).run()
+        purgeRegeneratedDailies(blocklist.regeneratedDates)
         0
     } finally {
         database.stop()
     }
+}
+
+// ADR-0089 §5: every regen path purges the edge; best-effort and non-fatal — until-midnight TTL bounds the worst case.
+internal fun purgeRegeneratedDailies(
+    regeneratedDates: List<LocalDate>,
+    edgePurgeHook: EdgePurgeHook = EdgePurgeHook(),
+) {
+    edgePurgeHook.afterGenerationRun(regeneratedDates)
 }
 
 // windowDays=1 so execute(date, force=true) regenerates exactly that date against the corrected corpus (ADR-0110 §2).
