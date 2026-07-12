@@ -28,6 +28,7 @@ import { useGridVerification } from '@/ui/components/grid/useGridVerification';
 import { ACTIVE_ASSIST_MODE } from '@/ui/components/grid/assistMode';
 import { AssistCooldown, formatMmSs } from '@/ui/components/grid/AssistCooldown';
 import { useAssistGate } from '@/ui/components/auth';
+import { InfoPopover } from '@/ui/components/primitives/InfoPopover';
 import { WinScreen } from './WinScreen';
 import { useGridSounds } from './useGridSounds';
 import { GridSoundToggle } from './GridSoundToggle';
@@ -93,7 +94,7 @@ const hintBtn = css({
   bg: '#F2EDDC',
   _dark: { bg: '#2A362E' },
   cursor: 'pointer',
-  _disabled: { opacity: 0.45, cursor: 'not-allowed' },
+  '&[aria-disabled=true]': { opacity: 0.45, cursor: 'not-allowed' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const hintBulb = css({ color: 'ws.or' });
@@ -538,16 +539,20 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
                   trailing={
                     ACTIVE_ASSIST_MODE === 'verify' ? (
                       <span className={hintTrailing}>
-                        <button
-                          type="button"
-                          className={hintBtn}
-                          onClick={requestVerify}
-                          disabled={verification.pending || (verification.secondsUntilNextVerify ?? 0) > 0}
-                          {...(assistGate ?? {})}
+                        <InfoPopover
+                          info={assistGate ? assistGate.title : t('play.verify.info')}
+                          onActivate={requestVerify}
+                          disabled={
+                            assistGate != null ||
+                            verification.pending ||
+                            (verification.secondsUntilNextVerify ?? 0) > 0
+                          }
                         >
-                          <MagnifyingGlass aria-hidden="true" weight="bold" className={hintBulb} />
-                          {t('play.verify.label')}
-                        </button>
+                          <button type="button" className={hintBtn} data-tour="assist">
+                            <MagnifyingGlass aria-hidden="true" weight="bold" className={hintBulb} />
+                            {t('play.verify.label')}
+                          </button>
+                        </InfoPopover>
                         <AssistCooldown
                           visible={verification.secondsUntilNextVerify !== null}
                           secondsRemaining={verification.secondsUntilNextVerify}
@@ -560,16 +565,25 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
                       </span>
                     ) : ACTIVE_ASSIST_MODE === 'hint' ? (
                       <span className={hintTrailing}>
-                        <button
-                          type="button"
-                          className={hintBtn}
-                          onClick={requestHint}
-                          disabled={hint.pending || (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)}
-                          aria-label={t('play.hint.aria.remaining', { remaining: hint.hintsRemaining })}
+                        <InfoPopover
+                          info={assistGate ? assistGate.title : t('play.hint.info')}
+                          onActivate={requestHint}
+                          disabled={
+                            assistGate != null ||
+                            hint.pending ||
+                            (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)
+                          }
                         >
-                          <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
-                          {t('play.hint.label', { remaining: hint.hintsRemaining })}
-                        </button>
+                          <button
+                            type="button"
+                            className={hintBtn}
+                            data-tour="assist"
+                            aria-label={t('play.hint.aria.remaining', { remaining: hint.hintsRemaining })}
+                          >
+                            <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
+                            {t('play.hint.label', { remaining: hint.hintsRemaining })}
+                          </button>
+                        </InfoPopover>
                         <AssistCooldown
                           visible={hint.hintsRemaining < puzzle.hintsAllowed && hint.secondsUntilNextHint !== null}
                           secondsRemaining={hint.secondsUntilNextHint}

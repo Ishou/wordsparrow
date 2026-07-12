@@ -17,7 +17,7 @@ import { t } from '@/ui/i18n';
 
 const TOOLBAR_SELECTOR = '[role="toolbar"][aria-label="Outils de la grille"]';
 const DEFINITION_CELL_SELECTOR = '[data-cell-kind="definition"]';
-const HINT_BUTTON_SELECTOR = '[aria-label^="Indice ("]';
+const ASSIST_BUTTON_SELECTOR = '[data-tour="assist"]';
 const ZOOM_CONTROLS_SELECTOR = '[role="group"][aria-label="Contrôles du zoom"]';
 const MINIMAP_SELECTOR = '[role="img"][aria-label^="Aperçu de la grille"]';
 
@@ -75,7 +75,7 @@ export function buildSoloTourSteps({
       type: 'tooltip',
       title: t('tour.hints.title'),
       description: t('tour.hints.body'),
-      target: () => queryFirst(HINT_BUTTON_SELECTOR),
+      target: () => queryFirst(ASSIST_BUTTON_SELECTOR),
       placement: 'bottom',
       arrow: true,
       backdrop: true,
@@ -120,7 +120,7 @@ export function buildSoloTourSteps({
 export const TOUR_TARGET_SELECTORS = {
   toolbar: TOOLBAR_SELECTOR,
   definitionCell: DEFINITION_CELL_SELECTOR,
-  hintButton: HINT_BUTTON_SELECTOR,
+  assistButton: ASSIST_BUTTON_SELECTOR,
   zoomControls: ZOOM_CONTROLS_SELECTOR,
   minimap: MINIMAP_SELECTOR,
 } as const;
