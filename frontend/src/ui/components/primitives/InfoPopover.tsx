@@ -67,8 +67,7 @@ export function InfoPopover({
 
   const childStyle = (children.props as { style?: CSSProperties }).style;
 
-  // Popover.Content stays mounted (hidden, not unmounted) per contentStyles' &[hidden] rule, so this
-  // id resolves even before the first long-press opens it.
+  // Popover.Content stays mounted (hidden) via contentStyles' &[hidden] rule, so this id resolves before long-press opens it.
   const touchDescribedBy = touch && !disabled ? contentId : undefined;
 
   // aria-disabled (not native disabled) keeps the button focusable so the reason stays reachable.
