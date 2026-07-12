@@ -12,6 +12,7 @@
 variables {
   floating_ip = "203.0.113.42"
   cp_ip       = "10.0.1.10"
+  fip_holder  = true
 }
 
 run "worker_cloud_init_declares_fip_via_netplan" {
@@ -45,5 +46,30 @@ run "worker_cloud_init_declares_fip_via_netplan" {
   assert {
     condition     = strcontains(output.worker_rendered, "iptables -t nat") && strcontains(output.worker_rendered, "PREROUTING")
     error_message = "the iptables PREROUTING DNAT rule (FIP:6443 -> CP:6443) must remain — kubectl access on the FIP depends on it."
+  }
+
+  assert {
+    condition     = strcontains(output.worker_rendered, "/etc/netplan/60-private-net.yaml")
+    error_message = "worker cloud-init must write /etc/netplan/60-private-net.yaml so the hot-attached private NIC gets DHCP even when 50-cloud-init.yaml omits it — without it install-k3s.sh hangs on the enp7s0 wait and the node never joins."
+  }
+}
+
+# Non-holder workers (the case that broke node-add): private-NIC dropin present, FIP dropin absent.
+run "worker_configures_private_nic_and_skips_fip_as_non_holder" {
+  command = plan
+
+  variables {
+    floating_ip = ""
+    fip_holder  = false
+  }
+
+  assert {
+    condition     = strcontains(output.worker_rendered, "/etc/netplan/60-private-net.yaml") && strcontains(output.worker_rendered, "dhcp4: true")
+    error_message = "a non-holder worker must still write the private-net dropin with dhcp4: true, or its enp7s0 never comes up and the node never joins."
+  }
+
+  assert {
+    condition     = !strcontains(output.worker_rendered, "- path: /etc/netplan/60-floating-ip.yaml")
+    error_message = "a non-holder worker (floating_ip=\"\") must NOT write the FIP netplan dropin — aliasing the FIP on a non-holder black-holes its pod egress (ADR-0106)."
   }
 }

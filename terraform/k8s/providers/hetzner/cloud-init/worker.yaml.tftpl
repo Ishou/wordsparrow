@@ -85,6 +85,17 @@ write_files:
 %{ endfor ~}
 %{ endif ~}
 
+  - path: /etc/netplan/60-private-net.yaml
+    permissions: "0600"
+    owner: root:root
+    content: |
+      # Hetzner hot-attaches the private NIC ~17s after boot, after cloud-init renders 50-cloud-init.yaml — so ${private_iface} is omitted and never gets DHCP (install-k3s.sh then hangs forever). This name-matched dropin makes networkd configure it whenever it appears.
+      network:
+        version: 2
+        ethernets:
+          ${private_iface}:
+            dhcp4: true
+
   - path: /etc/sysctl.d/60-ip-forward.conf
     permissions: "0644"
     owner: root:root
@@ -176,12 +187,13 @@ write_files:
       #!/bin/bash
       set -euo pipefail
 
-      # Wait for Hetzner to attach the private network interface — hcloud_server_network
-      # is applied after hcloud_server, so cloud-init can start before the NIC has its IP.
-      # k3s reads node-ip from /etc/rancher/k3s/config.yaml at install time and refuses
-      # to bind to an unassigned address; this loop closes the race.
+      # Hetzner attaches the private NIC ~17s after boot — after cloud-init renders
+      # 50-cloud-init.yaml — so the name-matched 60-private-net.yaml dropin is what lets
+      # networkd configure it; re-apply each poll until it has its IP, since k3s reads
+      # node-ip from config.yaml at install and refuses to bind an unassigned address.
       until ip -4 addr show "${private_iface}" 2>/dev/null | grep -q "inet "; do
         echo "Waiting for ${private_iface} to come up with an IPv4 address..."
+        netplan apply || true
         sleep 5
       done
 
