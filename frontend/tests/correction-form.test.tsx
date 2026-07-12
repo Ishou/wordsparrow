@@ -100,6 +100,40 @@ describe('CorrectionForm', () => {
     expect(await screen.findByText(/Terminé/)).toBeInTheDocument();
   });
 
+  it('surfaces the retry notice when the survey decision fails, then settles on Réessayer', async () => {
+    let decisionCalls = 0;
+    let decisionShouldFail = true;
+    server.use(
+      http.post(`${GRID}/v1/corrections`, () =>
+        HttpResponse.json({ correctionId: CORRECTION_ID, backfillStatus: 'pending' }, { status: 202 }),
+      ),
+      http.get(`${GRID}/v1/corrections/${CORRECTION_ID}`, () =>
+        HttpResponse.json({ correctionId: CORRECTION_ID, kind: 'replace', backfillStatus: 'done', gridsMatched: 3, gridsPatched: 3 }),
+      ),
+      http.post(`${SURVEY}/v1/signalements/${REPORT_ID}/decision`, () => {
+        decisionCalls += 1;
+        return decisionShouldFail ? new HttpResponse(null, { status: 500 }) : new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderForm();
+    await openDialog();
+    fireEvent.input(screen.getByLabelText(/Nouvelle définition/), { target: { value: 'Félin domestique' } });
+    click(screen.getByRole('button', { name: /Enregistrer la correction/ }));
+
+    expect(await screen.findByText(/marqué comme traité/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Réessayer/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Enregistrer la correction/ })).toBeNull();
+    await waitFor(() => expect(decisionCalls).toBe(1));
+
+    decisionShouldFail = false;
+    click(screen.getByRole('button', { name: /Réessayer/ }));
+
+    expect(await screen.findByText(/Terminé/)).toBeInTheDocument();
+    expect(screen.queryByText(/marqué comme traité/)).toBeNull();
+    await waitFor(() => expect(decisionCalls).toBe(2));
+  });
+
   it('renders the rejection copy on a 409 last-clue-forbidden', async () => {
     let decisionCalled = false;
     server.use(
