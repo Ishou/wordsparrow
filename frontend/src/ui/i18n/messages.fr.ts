@@ -533,7 +533,6 @@ export const fr = {
   'v2.reglages.title': 'Réglages',
   'v2.reglages.theme.clair': 'Clair',
   'v2.reglages.theme.sombre': 'Sombre',
-  'v2.reglages.theme.auto': 'Auto',
   'v2.reglages.appearance': 'Apparence',
   'v2.reglages.aria.theme': 'Thème',
   'v2.reglages.sound': 'Son',

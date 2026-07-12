@@ -232,9 +232,10 @@ ADR-0087  scripts/clue_generation/**               MLX lane (run_production.sh, 
 ADR-0087  scripts/eval/**                          validate_clue/inflation/runtime guards stay live (lane-independent); CamemBERT filter retired as a shipping gate
 ADR-0088  frontend/panda.config.ts                       Dark mode « jardin de nuit »: ws.* promoted to semanticTokens with {base,_dark}; dark condition = [data-theme=dark]
 ADR-0088  frontend/src/ui/v2/**                          Night-ramp values for the v2 chrome; SVG art + hero gradients consume CSS vars so they theme
-ADR-0088  frontend/index.html                            Pre-paint data-theme applied from localStorage bliss.theme ('clair'|'sombre'|'auto'); auto follows prefers-color-scheme
-ADR-0088  frontend/src/ui/v2/ReglagesScreen.tsx          Theme control lives in Réglages; default flips to 'auto' only in rollout Wave C
-# ADR-0088: Dark mode « jardin de nuit » — ws.* and semantic tokens promoted to {base,_dark} pairs, condition = [data-theme=dark]; theme setting 'clair'|'sombre'|'auto' persisted in localStorage, applied pre-paint; rollout ships dark first (default clair), flips to auto once QA completes.
+ADR-0088  frontend/index.html                            Pre-paint data-theme applied from localStorage bliss.theme ('clair'|'sombre'); default light, no prefers-color-scheme (2026-07-12 addendum drops 'auto')
+ADR-0088  frontend/src/infrastructure/session/localStorageTheme.ts  Theme port adapter: load/save/apply bliss.theme; legacy 'auto' resolves to light
+ADR-0088  frontend/src/ui/v2/ReglagesScreen.tsx          Theme control lives in Réglages; two-option toggle (Clair|Sombre), default clair
+# ADR-0088: Dark mode « jardin de nuit » — ws.* and semantic tokens promoted to {base,_dark} pairs, condition = [data-theme=dark]; theme setting 'clair'|'sombre' persisted in localStorage, applied pre-paint; default clair (2026-07-12 addendum removed the 'auto'/system-default lane).
 ADR-0089  */api/deploy/chart/values-prod.yaml        Orange-cloud api+auth via external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"; game stays gray (WS); rollback = remove the annotation
 ADR-0089  terraform/cloudflare-cache-rules.tf        cloudflare_ruleset (http_request_cache_settings): host api.wordsparrow.io + /v1/puzzles/daily, respect origin TTL, bypass on __Secure-ws_session cookie
 ADR-0089  grid/worker/**                             Purge-on-regen: exact-URL CF purge (no-date /v1/puzzles/daily [+?date=]) after every generation run; each URL purged as default + one Origin variant per prod origin (Vary: Origin from credentialed CORS); 30-file/call chunking; failure logs, never fails the Job; Zone.Cache Purge-scoped token Secret

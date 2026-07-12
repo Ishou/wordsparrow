@@ -69,3 +69,22 @@ SVG art fills, and shadow/scrim rgba tints.
 - `prefers-color-scheme: dark` users see light until Wave C — deliberate
   (deploy dark, release bright).
 - No server, schema, or authz change; no threat-model impact.
+
+## Addendum (2026-07-12): drop the system-default lane
+
+The `'auto'` mode (follow `prefers-color-scheme` live) is removed. The theme
+setting is now `'clair' | 'sombre'` with **`'clair'` as the default**; the OS
+scheme is no longer consulted anywhere (pre-paint script, resolver, or a live
+watcher). Rationale: the maintainer wants a single, predictable default rather
+than an appearance that varies by device setting.
+
+- `loadThemePreference` returns `'clair'` unless the stored value is exactly
+  `'sombre'`. Existing users on the legacy `'auto'` value therefore resolve to
+  light on next load (no migration code; a dark-OS user who never picked a
+  theme flips to light once — accepted).
+- The `watchSystemTheme` OS watcher and the resolver's `matchMedia` branch are
+  deleted as dead code.
+- Réglages shows a two-option toggle (Clair / Sombre); the `Auto` control and
+  its `v2.reglages.theme.auto` copy are removed.
+- Wave C's "flip the default to `auto`" is superseded: the default stays
+  `clair` and Auto no longer exists.

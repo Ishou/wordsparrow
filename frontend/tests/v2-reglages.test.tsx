@@ -82,13 +82,14 @@ describe('v2 réglages screen', () => {
   });
 
   it('renders the theme control when a themeStore is wired and persists a change', async () => {
-    const themeStore: ThemeStore = { load: vi.fn().mockReturnValue('auto'), set: vi.fn() };
+    const themeStore: ThemeStore = { load: vi.fn().mockReturnValue('clair'), set: vi.fn() };
     renderReglages(stubAuth(), themeStore);
     await screen.findByRole('heading', { level: 1, name: 'Réglages' });
     const group = screen.getByRole('group', { name: 'Thème' });
     expect(group).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Auto' })).toBeNull();
     const sombre = screen.getByRole('button', { name: 'Sombre' });
-    expect(screen.getByRole('button', { name: 'Auto' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Clair' }).getAttribute('aria-pressed')).toBe('true');
     sombre.click();
     await waitFor(() => expect(themeStore.set).toHaveBeenCalledWith('sombre'));
     expect(sombre.getAttribute('aria-pressed')).toBe('true');
