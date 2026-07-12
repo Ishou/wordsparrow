@@ -79,7 +79,6 @@ const themeCard = css({ bg: 'ws.card', borderRadius: '18px', padding: '8px', box
 const THEME_OPTIONS: ReadonlyArray<{ id: ThemePreference; label: string }> = [
   { id: 'clair', label: t('v2.reglages.theme.clair') },
   { id: 'sombre', label: t('v2.reglages.theme.sombre') },
-  { id: 'auto', label: t('v2.reglages.theme.auto') },
 ];
 
 function ThemeGroup({ themeStore }: { readonly themeStore: ThemeStore }) {

@@ -1,4 +1,4 @@
-import { applyThemePreference, loadThemePreference, saveThemePreference, watchSystemTheme } from '@/infrastructure/session/localStorageTheme';
+import { applyThemePreference, loadThemePreference, saveThemePreference } from '@/infrastructure/session/localStorageTheme';
 import type { ThemeStore } from '@/application/session/ThemeStore';
 import { loadSoundEnabled, saveSoundEnabled } from '@/infrastructure/session/localStorageSound';
 import { createWebAudioSoundPlayer } from '@/infrastructure/session/webAudioSoundPlayer';
@@ -256,7 +256,6 @@ enableMocks()
       set: (pref) => {
         saveThemePreference(pref);
         applyThemePreference(pref);
-        watchSystemTheme(pref);
       },
     };
 
@@ -384,10 +383,8 @@ enableMocks()
         }
       : undefined;
 
-    // ADR-0088: re-assert the pre-paint theme (covers SPA-restored sessions) and track OS changes under 'auto'.
-    const themePref = loadThemePreference();
-    applyThemePreference(themePref);
-    watchSystemTheme(themePref);
+    // ADR-0088: re-assert the pre-paint theme (covers SPA-restored sessions).
+    applyThemePreference(loadThemePreference());
 
     // onCaughtError only: onUncaughtError would double-emit via the window.error handler.
     const mount = () =>
