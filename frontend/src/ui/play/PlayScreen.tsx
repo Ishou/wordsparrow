@@ -94,7 +94,6 @@ const hintBtn = css({
   bg: '#F2EDDC',
   _dark: { bg: '#2A362E' },
   cursor: 'pointer',
-  _disabled: { opacity: 0.45, cursor: 'not-allowed' },
   '&[aria-disabled=true]': { opacity: 0.45, cursor: 'not-allowed' },
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });

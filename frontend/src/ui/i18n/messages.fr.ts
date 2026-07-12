@@ -220,13 +220,13 @@ export const fr = {
     'Une petite flèche indique la direction et la première case de la réponse — → pour les mots horizontaux, ↓ pour les verticaux.',
   'tour.hints.title': 'Coup de pouce',
   'tour.hints.body':
-    "Bloqué·e sur un mot ? Le bouton d'aide dans le bandeau te donne un coup de main. Il se recharge après chaque utilisation.",
+    "Bloqué·e sur un mot ? Le bouton d’aide dans le bandeau te donne un coup de main. Il se recharge après chaque utilisation.",
   'tour.zoom.title': 'Ajuster le zoom',
   'tour.zoom.body':
     'Trois boutons sous la grille pour zoomer ou revenir à la vue de départ. La molette de la souris ajuste aussi le zoom — pratique pour confirmer une lettre serrée.',
   'tour.validation.title': 'Aperçu de la grille',
   'tour.validation.body':
-    "L'aperçu de la grille suit ton avancée et met en évidence les cases déjà remplies.",
+    "L’aperçu de la grille suit ton avancée et met en évidence les cases déjà remplies.",
   'grid.clue.empty': 'Sélectionne une case pour afficher la définition',
   'grid.clue.aria.switch': 'Basculer sur la définition {{direction}} (raccourci : Espace)',
   'grid.clue.aria.twoDefinitions': 'deux définitions',
@@ -626,7 +626,7 @@ export const fr = {
   'v2.aide.shortcuts.erase': " pour effacer une lettre, et ",
   'v2.aide.shortcuts.next': " pour passer au mot suivant.",
   'v2.aide.validation.heading': "Coup de pouce",
-  'v2.aide.validation.body': "Si tu bloques sur un mot, un bouton d'aide dans le bandeau te donne un coup de main. Il se recharge après chaque utilisation, alors garde-le pour les moments où tu en as vraiment besoin.",
+  'v2.aide.validation.body': "Si tu bloques sur un mot, un bouton d’aide dans le bandeau te donne un coup de main. Il se recharge après chaque utilisation, alors garde-le pour les moments où tu en as vraiment besoin.",
   'v2.aide.multi.heading': "Jouer à plusieurs",
   'v2.aide.multi.body': "Crée une partie à plusieurs depuis l’accueil et partage le lien : tout le monde joue la même grille, en même temps.",
   'v2.aide.install.heading': "Installer l’application",
