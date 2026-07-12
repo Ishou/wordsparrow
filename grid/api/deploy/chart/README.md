@@ -19,6 +19,11 @@ fronts it.
   backfill manually: `kubectl create job
   --from=cronjob/wordsparrow-api-ensure-dailies
   ensure-dailies-backfill-$(date +%Y%m%d) -n grid`.
+- `CronJob` for the `:grid:worker` `--process-corrections` durable
+  clue-correction backfill (prod only — `processCorrections.enabled=true`,
+  ADR-0108 §4). Runs every 5 minutes, patching stored grids whose payload
+  still contains a corrected clue; `Forbid` concurrency policy plus a
+  work-queue-drains-to-empty design makes each run idempotent and resumable.
 
 Out of scope: the cluster (step 3 — `terraform/k8s/` + operators), the
 image build (sibling PR), and the CD workflow (step 5).
