@@ -1,14 +1,9 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { css, cx } from 'styled-system/css';
-import { computeFrame } from './computeFrame';
 
 export interface PanZoomHandle {
   zoomIn: () => void;
   zoomOut: () => void;
-  // Pan so a content-space rect becomes visible (used to follow the cursor).
-  reveal: (x: number, y: number, w: number, h: number) => void;
-  // Zoom-out + pan so a rect is centred in the clear band, animated (auto-frame).
-  frame: (x: number, y: number, w: number, h: number) => void;
 }
 
 export interface PanZoomProps {
@@ -65,9 +60,6 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   const pinchDist = useRef(0);
   const moved = useRef(0);
   const idle = useRef(0);
-  const rafId = useRef(0);
-  const reduceMotion = useRef(false);
-  const frameAnimActive = useRef(false);
 
   const apply = useCallback(() => {
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
@@ -111,37 +103,6 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   }, []);
   useEffect(() => () => window.clearTimeout(idle.current), []);
 
-  // JS tween (not CSS transition) so the transform and edge-fade always update in lockstep each frame.
-  const ANIM_MS = 220;
-  const tweenFrame = useCallback((toScale: number, toTx: number, toTy: number) => {
-    cancelAnimationFrame(rafId.current);
-    const fromScale = scale.current;
-    const fromTx = tx.current;
-    const fromTy = ty.current;
-    if (reduceMotion.current) {
-      scale.current = toScale;
-      tx.current = toTx;
-      ty.current = toTy;
-      frameAnimActive.current = false;
-      apply();
-      return;
-    }
-    frameAnimActive.current = true;
-    let start = 0;
-    const tick = (now: number) => {
-      if (!start) start = now;
-      const t = Math.min(1, (now - start) / ANIM_MS);
-      const k = 1 - Math.pow(1 - t, 3); // ease-out
-      scale.current = fromScale + (toScale - fromScale) * k;
-      tx.current = fromTx + (toTx - fromTx) * k;
-      ty.current = fromTy + (toTy - fromTy) * k;
-      apply();
-      if (t < 1) rafId.current = requestAnimationFrame(tick);
-      else frameAnimActive.current = false;
-    };
-    rafId.current = requestAnimationFrame(tick);
-  }, [apply]);
-  useEffect(() => () => cancelAnimationFrame(rafId.current), []);
   // Snap viewport scroll to 0: focus triggers a browser scroll that shifts the transform-positioned stage.
   useEffect(() => {
     const vp = vpRef.current;
@@ -155,16 +116,8 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     vp.addEventListener('scroll', onScroll, { passive: true });
     return () => vp.removeEventListener('scroll', onScroll);
   }, []);
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    reduceMotion.current = mq.matches;
-    const onChange = () => { reduceMotion.current = mq.matches; };
-    mq.addEventListener?.('change', onChange);
-    return () => mq.removeEventListener?.('change', onChange);
-  }, []);
 
-  // fit fills the viewport; padBottom governs only pan + reveal, not the initial fit.
+  // fit fills the viewport; padBottom governs pan clamping, not the initial fit.
   const fitScale = useCallback(() => {
     const vp = vpRef.current;
     if (!vp) return 1;
@@ -204,8 +157,6 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
 
   const zoomTo = useCallback(
     (next: number, cx0: number, cy0: number) => {
-      // Ignore zoom while a frame animation owns the view — a mid-animation zoom leaves a stuck tiled layer.
-      if (frameAnimActive.current) return;
       const s = Math.min(maxScale, Math.max(lowerBound(), next));
       const k = s / scale.current;
       tx.current = cx0 - (cx0 - tx.current) * k;
@@ -271,54 +222,8 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
         const vp = vpRef.current;
         if (vp) zoomTo(scale.current / STEP, vp.clientWidth / 2, vp.clientHeight / 2);
       },
-      reveal: (x, y, w, h) => {
-        if (frameAnimActive.current) return; // a frame animation owns the view
-        const vp = vpRef.current;
-        if (!vp) return;
-        const m = 14;
-        const vw = vp.clientWidth;
-        const vh = vp.clientHeight;
-        const left = tx.current + x * scale.current;
-        const right = tx.current + (x + w) * scale.current;
-        const top = ty.current + y * scale.current;
-        const bottom = ty.current + (y + h) * scale.current;
-        if (left < m) tx.current += m - left;
-        else if (right > vw - m) tx.current -= right - (vw - m);
-        if (top < m) ty.current += m - top;
-        else if (bottom > vh - padBottom - m) ty.current -= bottom - (vh - padBottom - m);
-        clamp();
-        apply();
-      },
-      frame: (x, y, w, h) => {
-        const vp = vpRef.current;
-        if (!vp) return;
-        const next = computeFrame(
-          { x, y, w, h },
-          { w: vp.clientWidth, h: vp.clientHeight },
-          { top: padTop, bottom: padBottom, x: padX },
-          scale.current,
-          minScale,
-          tx.current,
-          ty.current,
-        );
-        // Clamp the target to valid pan bounds without disturbing the live position, then tween to it.
-        const fromScale = scale.current;
-        const fromTx = tx.current;
-        const fromTy = ty.current;
-        scale.current = next.scale;
-        tx.current = next.tx;
-        ty.current = next.ty;
-        clamp();
-        const toScale = scale.current;
-        const toTx = tx.current;
-        const toTy = ty.current;
-        scale.current = fromScale;
-        tx.current = fromTx;
-        ty.current = fromTy;
-        tweenFrame(toScale, toTx, toTy);
-      },
     }),
-    [apply, clamp, zoomTo, tweenFrame, padTop, padBottom, padX, minScale],
+    [zoomTo],
   );
 
   // Capture only after a drag starts, so a tap's click still reaches the cell.
@@ -331,8 +236,6 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    // Ignore pan/pinch while a frame animation owns the view — taps still fire onClick.
-    if (frameAnimActive.current) return;
     // Capture only once a drag exceeds the tap threshold, not on down, so taps still reach the cell.
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 1) moved.current = 0;
