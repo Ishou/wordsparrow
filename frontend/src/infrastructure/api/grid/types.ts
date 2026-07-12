@@ -370,6 +370,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a maintainer clue correction (ADR-0108).
+         * @description Maintainer-only. Requires the `admin:signalements` capability, granted
+         *     only to `MAINTAINER` (ADR-0079/0080); the server resolves the caller's
+         *     capabilities from the `__Secure-ws_session` cookie via identity-api and
+         *     denies by default — an absent capability (including anonymous and
+         *     player callers) produces 403 (ADR-0108 threat model). The frontend gate
+         *     is cosmetic; the server is authoritative.
+         *
+         *     The correction is keyed on the clue text, not an id — a clue-report
+         *     carries only the raw `oldClueText` (plus optional `wordText`), matched
+         *     to the corpus and to stored grids by text-join (ADR-0108, ADR-0103).
+         *     `replace` overrides the clue text for the word; `forbid_clue` drops
+         *     that clue, valid only while the word keeps ≥1 usable clue. The
+         *     `blocklist_word` operation is deferred to a later ADR and is
+         *     intentionally absent from this contract.
+         *
+         *     Recording is durable and returns `202`: the corpus overlay takes effect
+         *     for future generation immediately, while patching every already-stored
+         *     grid runs asynchronously. Poll `GET /v1/corrections/{correctionId}` for
+         *     backfill progress.
+         */
+        post: operations["submitCorrection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/corrections/{correctionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Poll the backfill progress of a recorded correction (ADR-0108).
+         * @description Maintainer-only. Requires the `admin:signalements` capability
+         *     (deny-by-default 403), same gate as `POST /v1/corrections`. Reports the
+         *     async existing-grid backfill for a correction: its `backfillStatus`,
+         *     how many stored grids matched the clue text (`gridsMatched`, `null`
+         *     until the worker has counted), and how many have been patched so far
+         *     (`gridsPatched`). Patches rewrite the payload in place, preserving each
+         *     grid's `puzzleId` and therefore player progress (ADR-0108 §4).
+         */
+        get: operations["getCorrectionProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1031,6 +1095,110 @@ export interface components {
              */
             correct: boolean;
         };
+        /**
+         * Format: uuid
+         * @description UUID v7 identifier of a recorded correction.
+         * @example 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6d
+         */
+        CorrectionId: string;
+        /**
+         * @description Clue (definition) text. Length-bounded to 512, mirroring ADR-0103's
+         *     `clueText`. Matched against the corpus and stored grids by exact
+         *     text-join — there is no clue id (ADR-0108).
+         * @example Capitale de la France
+         */
+        ClueText: string;
+        /**
+         * @description The solved answer word the clue belongs to, when the report resolved
+         *     it. Optional — narrows the text-join match. Length-bounded to 64,
+         *     mirroring ADR-0103's `wordText`.
+         * @example PARIS
+         */
+        WordText: string;
+        /**
+         * @description The operation a correction performs (ADR-0108). `replace` overrides a
+         *     word's clue text; `forbid_clue` drops that clue. The deferred
+         *     `blocklist_word` operation is intentionally absent from this contract.
+         * @enum {string}
+         */
+        CorrectionKind: "replace" | "forbid_clue";
+        /**
+         * @description Lifecycle of a correction's async existing-grid patching (ADR-0108 §4):
+         *     `pending` until the worker claims it, `running` while patching, `done`
+         *     once every matching grid is patched, `failed` on an unrecoverable
+         *     worker error.
+         * @enum {string}
+         */
+        BackfillStatus: "pending" | "running" | "done" | "failed";
+        /**
+         * @description A maintainer clue correction (ADR-0108), discriminated by `kind`.
+         *     `replace` carries the `newClueText` to override the word's clue;
+         *     `forbid_clue` drops the matched clue. Both identify the clue to fix by
+         *     `oldClueText` (text-join identity), optionally narrowed by `wordText`.
+         *     The `blocklist_word` operation is deferred to a later ADR and is
+         *     intentionally absent.
+         */
+        CorrectionRequest: components["schemas"]["ReplaceCorrection"] | components["schemas"]["ForbidClueCorrection"];
+        /**
+         * @description Override a word's clue text. The matched clue's text is replaced by
+         *     `newClueText` for future generation and in every stored grid.
+         */
+        ReplaceCorrection: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "replace";
+            oldClueText: components["schemas"]["ClueText"];
+            wordText?: components["schemas"]["WordText"];
+            newClueText: components["schemas"]["ClueText"];
+        };
+        /**
+         * @description Drop a clue for the word. Valid only while the word keeps ≥1 usable
+         *     clue; forbidding a word's only clue is rejected with 409
+         *     (`last-clue-forbidden`, ADR-0108).
+         */
+        ForbidClueCorrection: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "forbid_clue";
+            oldClueText: components["schemas"]["ClueText"];
+            wordText?: components["schemas"]["WordText"];
+        };
+        /**
+         * @description `202` acceptance for a recorded correction (ADR-0108). The corpus
+         *     overlay applies immediately; existing-grid backfill runs async — poll
+         *     `GET /v1/corrections/{correctionId}`.
+         */
+        CorrectionAccepted: {
+            correctionId: components["schemas"]["CorrectionId"];
+            backfillStatus: components["schemas"]["BackfillStatus"];
+        };
+        /**
+         * @description Progress of a correction's async existing-grid backfill (ADR-0108 §4),
+         *     polled via `GET /v1/corrections/{correctionId}`. Patching preserves
+         *     each grid's `puzzleId`, so player progress survives.
+         */
+        CorrectionProgress: {
+            correctionId: components["schemas"]["CorrectionId"];
+            kind: components["schemas"]["CorrectionKind"];
+            backfillStatus: components["schemas"]["BackfillStatus"];
+            /**
+             * @description Total stored grids whose payload contains the clue. `null` while
+             *     `backfillStatus` is `pending` (not yet counted); always present on
+             *     the wire (ADR-0003 §6: absence ≠ null).
+             * @example 42
+             */
+            gridsMatched: number | null;
+            /**
+             * @description Grids patched so far; reaches `gridsMatched` when `backfillStatus`
+             *     is `done`.
+             * @example 17
+             */
+            gridsPatched: number;
+        };
     };
     responses: never;
     parameters: {
@@ -1041,6 +1209,8 @@ export interface components {
         ServiceToken: string;
         /** @description UUID v7 identifier of the puzzle. */
         PuzzleId: components["schemas"]["PuzzleId"];
+        /** @description UUID v7 identifier of a recorded correction. */
+        CorrectionId: components["schemas"]["CorrectionId"];
         /**
          * @description UUID v7 identifying the calling player's session. When present,
          *     the server biases clue selection on cache miss away from clues
@@ -1750,6 +1920,125 @@ export interface operations {
              *     `type` is `https://bliss.example/errors/invalid-session-id`.
              */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    submitCorrection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectionRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description Correction recorded. The body carries the new `correctionId` and
+             *     the initial `backfillStatus` (`pending`). Existing-grid patching
+             *     runs asynchronously; poll `GET /v1/corrections/{correctionId}`.
+             */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionAccepted"];
+                };
+            };
+            /**
+             * @description The caller lacks the `admin:signalements` capability (deny-by-
+             *     default covers anonymous, player, and missing/revoked sessions).
+             *     RFC 7807; `type` is
+             *     `https://bliss.example/errors/capability-required`.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The requested `forbid_clue` would remove the word's only remaining
+             *     clue, leaving it unplaceable — rejected (ADR-0108). The maintainer
+             *     is told to Replace the text or Blocklist the word instead. RFC 7807;
+             *     `type` is `https://bliss.example/errors/last-clue-forbidden`,
+             *     `title` is `Last clue forbidden`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The request body is well-formed JSON but fails validation — for
+             *     example an empty or over-length `oldClueText`/`newClueText`, a
+             *     missing `newClueText` on a `replace`, or an unknown `kind`. RFC
+             *     7807; `type` is
+             *     `https://bliss.example/errors/invalid-correction`.
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getCorrectionProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID v7 identifier of a recorded correction. */
+                correctionId: components["parameters"]["CorrectionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current backfill progress for the correction. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionProgress"];
+                };
+            };
+            /**
+             * @description The caller lacks the `admin:signalements` capability. RFC 7807;
+             *     `type` is `https://bliss.example/errors/capability-required`.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description No correction with this id. RFC 7807; `type` is
+             *     `https://bliss.example/errors/correction-not-found`.
+             */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
