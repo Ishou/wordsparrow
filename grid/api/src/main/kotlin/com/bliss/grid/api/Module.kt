@@ -3,6 +3,7 @@ package com.bliss.grid.api
 import com.bliss.grid.api.auth.SessionMiddleware
 import com.bliss.grid.api.dto.ProblemDetails
 import com.bliss.grid.api.infrastructure.Database
+import com.bliss.grid.api.routes.blocklistCorrections
 import com.bliss.grid.api.routes.corrections
 import com.bliss.grid.api.routes.deleteSession
 import com.bliss.grid.api.routes.health
@@ -10,6 +11,7 @@ import com.bliss.grid.api.routes.puzzles
 import com.bliss.grid.api.routes.words
 import com.bliss.grid.application.analytics.AnalyticsEventSink
 import com.bliss.grid.application.auth.CookieVerifier
+import com.bliss.grid.application.correction.BlocklistPreviewQuery
 import com.bliss.grid.application.correction.CorrectionRepository
 import com.bliss.grid.application.correction.RecordCorrectionUseCase
 import com.bliss.grid.application.puzzle.DailyPuzzleSelector
@@ -37,12 +39,14 @@ import com.bliss.grid.infrastructure.events.NatsConnectionFactory
 import com.bliss.grid.infrastructure.events.UserEventSubscribers
 import com.bliss.grid.infrastructure.persistence.CorrectionAwareWordRepository
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
+import com.bliss.grid.infrastructure.persistence.InMemoryBlocklistPreviewQuery
 import com.bliss.grid.infrastructure.persistence.InMemoryClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryCorrectionRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryVerifyUsageRepository
+import com.bliss.grid.infrastructure.persistence.PostgresBlocklistPreviewQuery
 import com.bliss.grid.infrastructure.persistence.PostgresClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.PostgresCorrectionRepository
 import com.bliss.grid.infrastructure.persistence.PostgresHintUsageRepository
@@ -186,6 +190,12 @@ fun Application.module() {
     val generatePuzzle = GeneratePuzzleUseCase(wordRepository, defaultPuzzleConstraints())
     // Base corpus (not the overlay): the last-clue guard folds the in-txn active corrections itself (ADR-0108 §2).
     val recordCorrection = RecordCorrectionUseCase(correctionRepository, corpusRepository)
+    // Blocklist impact preview (ADR-0110 §4): counts affected stored grids; in-memory returns zeros without a DB.
+    val blocklistPreviewQuery: BlocklistPreviewQuery =
+        when (val ds = Database.dataSource()) {
+            null -> InMemoryBlocklistPreviewQuery()
+            else -> PostgresBlocklistPreviewQuery(ds)
+        }
     // ADR-0076: prod injects GRID_TEASER_TOKEN_KEY via a k8s Secret; dev falls back to a fixed key.
     val teaserTokenKey =
         System.getenv("GRID_TEASER_TOKEN_KEY")?.takeIf { it.isNotBlank() } ?: DEV_TEASER_TOKEN_KEY
@@ -328,6 +338,7 @@ fun Application.module() {
         deleteSession(deleteSession)
         words(sampleWords, verifySampleWord)
         corrections(recordCorrection, correctionRepository)
+        blocklistCorrections(recordCorrection, blocklistPreviewQuery)
     }
 }
 
