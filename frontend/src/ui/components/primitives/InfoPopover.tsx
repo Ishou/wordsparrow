@@ -1,10 +1,12 @@
 import type { ReactElement } from 'react';
-import { cloneElement, useState } from 'react';
+import { cloneElement, useId, useState } from 'react';
 import { Tooltip } from '@ark-ui/react/tooltip';
 import { Portal } from '@ark-ui/react/portal';
 import { css } from 'styled-system/css';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
 import { useLongPress } from './useLongPress';
+
+const srOnly = css({ srOnly: true });
 
 const contentStyles = css({
   maxWidth: '260px',
@@ -41,6 +43,7 @@ export function InfoPopover({
 }: InfoPopoverProps) {
   const touch = useTouchPrimary();
   const [open, setOpen] = useState(false);
+  const descId = useId();
   const longPress = useLongPress({
     onLongPress: () => setOpen(true),
     enabled: touch,
@@ -58,6 +61,7 @@ export function InfoPopover({
   const trigger = cloneElement(children as ReactElement<Record<string, unknown>>, {
     onClick: handleClick,
     'aria-disabled': disabled || undefined,
+    'aria-describedby': disabled ? descId : undefined,
     ...(touch ? longPress.handlers : {}),
   });
 
@@ -74,6 +78,12 @@ export function InfoPopover({
   return (
     <Tooltip.Root {...rootProps}>
       <Tooltip.Trigger asChild>{trigger}</Tooltip.Trigger>
+      {/* Ark associates the tooltip only while open; expose the disabled reason persistently for touch/AT. */}
+      {disabled ? (
+        <span id={descId} className={srOnly}>
+          {info}
+        </span>
+      ) : null}
       <Portal>
         <Tooltip.Positioner>
           <Tooltip.Content className={contentStyles}>
