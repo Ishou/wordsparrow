@@ -50,8 +50,7 @@ export function AnnouncerProvider({ children }: { readonly children: ReactNode }
     ref.current = { text, at: now };
     flushing.current = true;
     try {
-      // Two-step empty→text so SR clients see a DOM mutation even on re-emitted
-      // identical text; flushSync commits the empty first, defeating React's bail-out.
+      // Two-step empty→text defeats React's bail-out so SR clients see the mutation even on re-emitted text.
       flushSync(() => {
         setter('');
       });
