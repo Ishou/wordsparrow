@@ -18,6 +18,20 @@ data class CorrectionAcceptedDto(
     val backfillStatus: String,
 )
 
+/** Wire request for `POST /v1/corrections/blocklist-word`; `wordText` is required, `reason` optional (ADR-0110). */
+@Serializable
+data class BlocklistWordRequestDto(
+    val wordText: String,
+    val reason: String? = null,
+)
+
+/** `200` body for `GET /v1/corrections/blocklist-preview`: affected-grid counts split by kind (ADR-0110 §4). */
+@Serializable
+data class BlocklistPreviewDto(
+    val affectedDailies: Int,
+    val affectedSolo: Int,
+)
+
 /** `200` body for `GET /v1/corrections/{correctionId}` (ADR-0108 §4). */
 @Serializable
 data class CorrectionProgressDto(

@@ -3,10 +3,13 @@ package com.bliss.grid.api.routes
 import com.bliss.grid.api.auth.ADMIN_SIGNALEMENTS_CAPABILITY
 import com.bliss.grid.api.auth.UserIdKey
 import com.bliss.grid.api.auth.requireCapability
+import com.bliss.grid.api.dto.BlocklistPreviewDto
+import com.bliss.grid.api.dto.BlocklistWordRequestDto
 import com.bliss.grid.api.dto.CorrectionAcceptedDto
 import com.bliss.grid.api.dto.CorrectionProgressDto
 import com.bliss.grid.api.dto.CorrectionRequestDto
 import com.bliss.grid.api.dto.ProblemDetails
+import com.bliss.grid.application.correction.BlocklistPreviewQuery
 import com.bliss.grid.application.correction.CorrectionProgress
 import com.bliss.grid.application.correction.CorrectionRepository
 import com.bliss.grid.application.correction.RecordCorrectionUseCase
@@ -30,6 +33,7 @@ private const val INVALID_CORRECTION_TYPE = "https://bliss.example/errors/invali
 private const val INVALID_CORRECTION_ID_TYPE = "https://bliss.example/errors/invalid-correction-id"
 private const val LAST_CLUE_FORBIDDEN_TYPE = "https://bliss.example/errors/last-clue-forbidden"
 private const val CORRECTION_NOT_FOUND_TYPE = "https://bliss.example/errors/correction-not-found"
+private const val INVALID_BLOCKLIST_TYPE = "https://bliss.example/errors/invalid-blocklist"
 
 // explicitNulls keeps required-nullable gridsMatched present on the wire (ADR-0003 §6).
 private val correctionJson =
@@ -119,6 +123,87 @@ fun Route.corrections(
     }
 }
 
+/** Destructive blocklist-word routes (ADR-0110), gated by `admin:signalements`; ride grid's existing credentialed CORS (ADR-0077). */
+fun Route.blocklistCorrections(
+    recordCorrection: RecordCorrectionUseCase,
+    blocklistPreview: BlocklistPreviewQuery,
+) {
+    post("/v1/corrections/blocklist-word") {
+        if (!call.requireCapability(ADMIN_SIGNALEMENTS_CAPABILITY)) return@post
+        val createdBy = call.attributes.getOrNull(UserIdKey) ?: return@post
+
+        val request =
+            try {
+                call.receive<BlocklistWordRequestDto>()
+            } catch (_: SerializationException) {
+                return@post call.respondCorrectionProblem(
+                    HttpStatusCode.BadRequest,
+                    INVALID_BLOCKLIST_TYPE,
+                    "Invalid blocklist",
+                    "Le corps de la requete est mal forme.",
+                )
+            }
+
+        val wordText = request.wordText
+        if (wordText.isBlank() || wordText.length > MAX_WORD_TEXT) {
+            return@post call.respondCorrectionProblem(
+                HttpStatusCode.BadRequest,
+                INVALID_BLOCKLIST_TYPE,
+                "Invalid blocklist",
+                "Le mot a blacklister est invalide.",
+            )
+        }
+        val reason = request.reason?.takeIf { it.isNotBlank() }
+        if (reason != null && reason.length > MAX_CLUE_TEXT) {
+            return@post call.respondCorrectionProblem(
+                HttpStatusCode.BadRequest,
+                INVALID_BLOCKLIST_TYPE,
+                "Invalid blocklist",
+                "La justification est trop longue.",
+            )
+        }
+
+        val correction =
+            ClueCorrection(kind = ClueCorrection.Kind.BLOCKLIST_WORD, wordText = wordText, reason = reason)
+        // Blocklist skips the last-clue guard (ADR-0110); the use case records it directly.
+        val recorded = recordCorrection.execute(correction, createdBy) as RecordCorrectionUseCase.Result.Recorded
+        call.respondText(
+            text =
+                correctionJson.encodeToString(
+                    CorrectionAcceptedDto.serializer(),
+                    CorrectionAcceptedDto(recorded.correctionId.toString(), "pending"),
+                ),
+            contentType = ContentType.Application.Json,
+            status = HttpStatusCode.Accepted,
+        )
+    }
+
+    get("/v1/corrections/blocklist-preview") {
+        if (!call.requireCapability(ADMIN_SIGNALEMENTS_CAPABILITY)) return@get
+
+        val word = call.request.queryParameters["word"]
+        if (word.isNullOrBlank() || word.length > MAX_WORD_TEXT) {
+            return@get call.respondCorrectionProblem(
+                HttpStatusCode.BadRequest,
+                INVALID_BLOCKLIST_TYPE,
+                "Invalid blocklist",
+                "Le parametre word est invalide.",
+            )
+        }
+
+        val preview = blocklistPreview.preview(word)
+        call.respondText(
+            text =
+                correctionJson.encodeToString(
+                    BlocklistPreviewDto.serializer(),
+                    BlocklistPreviewDto(preview.affectedDailies, preview.affectedSolo),
+                ),
+            contentType = ContentType.Application.Json,
+            status = HttpStatusCode.OK,
+        )
+    }
+}
+
 private fun CorrectionRequestDto.toClueCorrection(): ClueCorrection? {
     val kind = ClueCorrection.Kind.fromWire(kind) ?: return null
     if (oldClueText.isBlank() || oldClueText.length > MAX_CLUE_TEXT) return null
@@ -134,6 +219,8 @@ private fun CorrectionRequestDto.toClueCorrection(): ClueCorrection? {
                 if (wordText.isNullOrBlank()) return null
                 null
             }
+            // A blocklist has its own dedicated destructive endpoint (ADR-0110); reject it on the generic route.
+            ClueCorrection.Kind.BLOCKLIST_WORD -> return null
         }
     return ClueCorrection(kind = kind, oldClueText = oldClueText, wordText = wordText, newClueText = newText)
 }

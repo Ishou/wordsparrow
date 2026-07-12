@@ -81,6 +81,28 @@ class RecordCorrectionUseCaseTest {
     }
 
     @Test
+    fun `records a blocklist directly without the last-clue guard`() {
+        val repo = RecordingCorrectionRepository()
+        val useCase = RecordCorrectionUseCase(repo, FakeWordRepository(listOf(Word("GROSMOT", "Une definition"))))
+
+        val result =
+            useCase.execute(
+                ClueCorrection(ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "GROSMOT", reason = "Injure"),
+                maintainer,
+            )
+
+        assertThat(result).isInstanceOf(RecordCorrectionUseCase.Result.Recorded::class)
+        assertThat(repo.recorded.size).isEqualTo(1)
+        // The guard never ran: a blocklist skips it entirely (ADR-0110).
+        assertThat(repo.guardSawActive == null).isEqualTo(true)
+        assertThat(
+            repo.recorded
+                .single()
+                .first.reason,
+        ).isEqualTo("Injure")
+    }
+
+    @Test
     fun `records a forbid when the word keeps another clue`() {
         val subject = Word("EST", listOf(WordClue("Verbe etre"), WordClue("Point cardinal", theme = "compass")))
         val repo = RecordingCorrectionRepository()

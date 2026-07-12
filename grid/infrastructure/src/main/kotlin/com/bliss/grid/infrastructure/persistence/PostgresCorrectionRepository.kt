@@ -33,7 +33,8 @@ class PostgresCorrectionRepository(
                 stmt.setString(3, correction.wordText)
                 stmt.setString(4, correction.oldClueText)
                 stmt.setString(5, correction.newClueText)
-                stmt.setObject(6, createdBy)
+                stmt.setString(6, correction.reason)
+                stmt.setObject(7, createdBy)
                 stmt.executeUpdate()
             }
         }
@@ -65,7 +66,8 @@ class PostgresCorrectionRepository(
                     stmt.setString(3, correction.wordText)
                     stmt.setString(4, correction.oldClueText)
                     stmt.setString(5, correction.newClueText)
-                    stmt.setObject(6, createdBy)
+                    stmt.setString(6, correction.reason)
+                    stmt.setObject(7, createdBy)
                     stmt.executeUpdate()
                 }
                 conn.commit()
@@ -202,8 +204,8 @@ class PostgresCorrectionRepository(
     companion object {
         private const val INSERT_SQL =
             """
-            INSERT INTO clue_corrections (correction_id, kind, word_text, old_clue_text, new_clue_text, created_by)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO clue_corrections (correction_id, kind, word_text, old_clue_text, new_clue_text, reason, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """
 
         // Transaction-scoped advisory lock keyed on the folded word so concurrent forbids on it serialize.

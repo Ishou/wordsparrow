@@ -85,6 +85,18 @@ class CorrectionAwareWordRepositoryTest {
     }
 
     @Test
+    fun `blocklist omits the named word from findByLength and pattern results`() {
+        val overlay =
+            CorrectionAwareWordRepository(delegate) {
+                listOf(ClueCorrection(ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "PARIS"))
+            }
+
+        assertThat(overlay.findByLength(5).map { it.text }).containsExactlyInAnyOrder()
+        assertThat(overlay.findByLengthAndPattern(5, mapOf(0 to 'P')).map { it.text }).containsExactlyInAnyOrder()
+        assertThat(overlay.findByLength(3).single().text).isEqualTo("EST")
+    }
+
+    @Test
     fun `no active corrections passes the delegate results through unchanged`() {
         val overlay = CorrectionAwareWordRepository(delegate) { emptyList() }
 

@@ -96,6 +96,30 @@ class ClueCorrectionTest {
     }
 
     @Test
+    fun `blocklist drops the named word regardless of its clues`() {
+        val subject = word("GROSMOT", WordClue("Une definition"), WordClue("Une autre", theme = "x"))
+        val correction = ClueCorrection(kind = ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "GROSMOT")
+
+        assertThat(correction.applyTo(subject)).isNull()
+    }
+
+    @Test
+    fun `blocklist leaves a different word untouched`() {
+        val subject = word("PARIS", WordClue("Capitale"))
+        val correction = ClueCorrection(kind = ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "GROSMOT")
+
+        assertThat(correction.applyTo(subject)).isSameInstanceAs(subject)
+    }
+
+    @Test
+    fun `blocklist folds the word before matching`() {
+        val subject = word("GROSMOT", WordClue("Une definition"))
+        val correction = ClueCorrection(kind = ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "grosmot")
+
+        assertThat(correction.applyTo(subject)).isNull()
+    }
+
+    @Test
     fun `wordText matches case-insensitively against the folded word`() {
         val subject = word("OR", WordClue("Metal precieux"))
         val correction =

@@ -38,5 +38,7 @@ internal object ClueCorrectionPayloadPatch {
                 val pick = remaining.indexOfFirst { it.theme == null }.coerceAtLeast(0)
                 copy(clues = remaining, chosenClueIndex = pick)
             }
+            // A blocklist removes the whole word, not one clue; the ADR-0110 backfill regenerates/deletes instead of patching.
+            ClueCorrection.Kind.BLOCKLIST_WORD -> this
         }
 }
