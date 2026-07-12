@@ -187,10 +187,7 @@ write_files:
       #!/bin/bash
       set -euo pipefail
 
-      # Hetzner attaches the private NIC ~17s after boot — after cloud-init renders
-      # 50-cloud-init.yaml — so the name-matched 60-private-net.yaml dropin is what lets
-      # networkd configure it; re-apply each poll until it has its IP, since k3s reads
-      # node-ip from config.yaml at install and refuses to bind an unassigned address.
+      # Private NIC attaches late (see 60-private-net.yaml above); reapply netplan each poll in case it attaches mid-wait.
       until ip -4 addr show "${private_iface}" 2>/dev/null | grep -q "inet "; do
         echo "Waiting for ${private_iface} to come up with an IPv4 address..."
         netplan apply || true
