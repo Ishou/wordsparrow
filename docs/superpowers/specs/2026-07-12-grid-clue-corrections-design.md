@@ -39,9 +39,11 @@ places at once:
   composes two calls (grid correction + survey `action`) at the frontend, which
   already talks to multiple contexts.
 - **Capabilities are a generic `Set<String>` end-to-end** (identity
-  `capabilitiesFor(role,tier)` → whoami → session attributes). `contribuer` may
-  broaden to players (ADR-0079/0080), so admin moderation needs its **own
-  maintainer-only capability**.
+  `capabilitiesFor(role,tier)` → whoami → session attributes). The `contribuer`
+  capability's scope is still under maintainer review (ADR-0079), and a precedent
+  exists for capability-scope broadening at GA (`billing:subscribe`, ADR-0080).
+  Admin moderation must stay maintainer-only regardless, so it gets its **own**
+  capability distinct from `contribuer`.
 
 ## Decisions (locked during brainstorming)
 
@@ -50,8 +52,10 @@ places at once:
   the clue, patched **in place** (preserves `puzzle_id`, so player progress is
   kept). Not just the reported puzzle.
 - **Corpus mechanism:** a **runtime corrections store** in `grid/`, overlaid on
-  the corpus by the generator (mirrors the existing themed-overlay pattern), so
-  new grids are clean immediately — **plus** an offline export into
+  the corpus by the generator (mirrors the *conceptual shape* of the existing
+  themed-clue overlay, though that overlay is inline in `CsvWordRepository.load()`
+  today — this introduces the first `WordRepository`-wrapping decorator in
+  `grid/`), so new grids are clean immediately — **plus** an offline export into
   `clue_overrides_fr.csv` so the durable corpus catches up.
 - **Existing-grid backfill is async, durable, and resumable** with progress
   polling. Recording a correction returns immediately; patching every stored grid
@@ -143,8 +147,10 @@ the generation overlay.
 
 ### Generation overlay — `CorrectionAwareWordRepository`
 
-A decorator wrapping `CsvWordRepository` (the exact shape of the existing themed
-overlays). At load it applies active corrections to each `Word`:
+A decorator wrapping `CsvWordRepository` — the first `WordRepository`-wrapping
+decorator in `grid/`; today's themed-clue overlay is inline in
+`CsvWordRepository.load()` rather than a separate decorator, so this mirrors its
+*conceptual shape* only. At load it applies active corrections to each `Word`:
 
 - `replace`: rewrite the matching `WordClue.text`.
 - `forbid_clue`: drop the matching `WordClue`; if that empties the word, drop the
