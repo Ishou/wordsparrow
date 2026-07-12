@@ -1,9 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-// Mocked so the reentrant-say test below can synchronously re-enter `say()`
-// from inside the real `flushSync` call — the only way to deterministically
-// land a second call inside the `flushing` guard's protected window.
+// Mocks flushSync so the nested say() call fires synchronously inside the guard's protected window.
 const { reentrantHolder } = vi.hoisted(() => ({ reentrantHolder: { fn: null as (() => void) | null } }));
 
 vi.mock('react-dom', async (importOriginal) => {
@@ -96,17 +94,14 @@ describe('Announcer', () => {
       </AnnouncerProvider>,
     );
 
-    // Fires synchronously from inside the outer call's own flushSync (see the
-    // react-dom mock above) — same shape as the grid word-entry effect
-    // re-entering say() during another say()'s commit (React #185).
+    // Same shape as grid word-entry re-entering say() during another say()'s commit (React #185).
     reentrantHolder.fn = () => say('nested-during-flush', { assertive: true });
 
     expect(() => {
       act(() => { say('outer'); });
     }).not.toThrow();
 
-    // Outer announcement survives; the reentrant one is silently dropped
-    // rather than queued — the assertive channel never sees it.
+    // Outer announcement survives; the reentrant one is silently dropped, not queued.
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe('outer');
     expect(container.querySelector('[aria-live="assertive"]')?.textContent).toBe('');
   });
