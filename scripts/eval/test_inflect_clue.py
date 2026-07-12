@@ -1071,3 +1071,35 @@ def test_degree_transparency_does_not_over_agree_infinitive_gloss() -> None:
     idx = _degree_index()
     res = inflect_clue("Rendre plus dur", {"nom", "mas", "pl"}, idx)
     assert "durs" not in res.text.lower(), res.text
+
+
+def _ppre_index() -> MorphologyIndex:
+    """`fuyant` carries both a ppre reading (verbal, governs `son pays`) and a
+    genuine adj reading (`fuyantes`, `fuyants`) — the ambiguity the guard at
+    inflect_clue.py's post-head adjective branch must resolve by context."""
+    idx = MorphologyIndex()
+    _add(idx, "personne", "personne", "nom fem sg")
+    _add(idx, "personne", "personnes", "nom fem pl")
+    _add(idx, "fuir", "fuyant", "v3__t___zz ppre adj mas sg")
+    _add(idx, "fuir", "fuyants", "adj mas pl")
+    _add(idx, "fuir", "fuyante", "adj fem sg")
+    _add(idx, "fuir", "fuyantes", "adj fem pl")
+    return idx
+
+
+def test_ppre_governing_complement_stays_invariable() -> None:
+    """A présent participle followed by its own complement is verbal, not
+    adjectival — `Personne fuyant son pays` must not become `*fuyante son
+    pays` even though the surface target is feminine plural."""
+    idx = _ppre_index()
+    res = inflect_clue("Personne fuyant son pays", {"nom", "fem", "pl"}, idx)
+    assert res.text == "Personnes fuyant son pays", res.text
+
+
+def test_ppre_without_complement_still_agrees() -> None:
+    """The same ppre-tagged form with nothing following it reads as a bare
+    adjective and must agree normally — `Personne fuyant` → `Personnes
+    fuyantes`, not left invariable."""
+    idx = _ppre_index()
+    res = inflect_clue("Personne fuyant", {"nom", "fem", "pl"}, idx)
+    assert res.text == "Personnes fuyantes", res.text

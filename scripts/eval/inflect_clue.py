@@ -80,19 +80,13 @@ _FUNCTION_WORDS = {
     "ne", "pas", "plus", "très", "trop", "peu", "bien", "mal", "non",
 }
 
-# Degree adverbs, negation, and the comparative `comme` sit between a head and
-# a predicate adjective without breaking the agreement chain (`Bois très dur`
-# → `Bois très durs`). Several are also in `_FUNCTION_WORDS`; the walk checks
-# this set first so it crosses them instead of stopping.
+# Degree adverbs / negation / `comme` bridge a head to a trailing predicate adjective without breaking the agreement chain (`Bois très dur` → `Bois très durs`); checked before `_FUNCTION_WORDS` since several overlap it.
 _DEGREE_TRANSPARENT = {
     "très", "trop", "plus", "moins", "peu", "assez", "bien", "mal",
     "non", "comme",
 }
 
-# grammalecte tags for readings that must not govern common-noun agreement:
-# pronouns (`personne`/`rien` also read as the negative pronoun) and proper
-# nouns (`pierre` also reads as the first name `Pierre`, `inv mas`). Demoted
-# so the head's gender/number comes from its common-noun reading.
+# Readings that must not govern common-noun agreement (pronoun `personne`/`rien`, proper noun `pierre`/`Pierre`) — demoted so gender/number comes from the common-noun reading.
 _DEMOTED_HEAD_TAGS = {"proneg", "proind", "prorel", "prodem", "propos",
                       "propers", "proint", "proadv", "prn"}
 
@@ -645,11 +639,7 @@ def inflect_clue(
                             break
                 if co_form and co_form.lower() != lo:
                     new_tokens[i] = co_form
-                # A noun co-head introduced by a comma is an apposition; a
-                # trailing adjective agrees with it, the nearest noun
-                # (`Oubli, chose non dite` — `dite` agrees with `chose`). Only
-                # commas re-anchor; `et`/`ou` coordinations keep the head's
-                # target so `Ligne A ou B francilienne` stays feminine.
+                # Comma-introduced noun co-head re-anchors gn to itself (apposition); et/ou keep the head's target.
                 if target_pos == "nom" and after_comma:
                     reanchor = _noun_agreement_from_form(
                         (co_form or lo).lower(), co_lemma, index)
@@ -662,10 +652,7 @@ def inflect_clue(
         saw_coord = False
         # Post-head adjective agreement (when we know a gn target).
         if gn is not None and "adj" in classes:
-            # A présent participle governing a complement is verbal and stays
-            # invariable (`Personne fuyant son pays`, not `*fuyante son pays`);
-            # only its bare adjectival use (nothing, or a coordinator, after)
-            # agrees. Past participles still agree (`aimée de tous`).
+            # A ppre form followed by a non-coordinator token governs a complement (verbal, invariable); bare/coordinated use agrees.
             if _reads_as_ppre(lo, index):
                 nxt = _next_alpha_token(new_tokens, i)
                 if nxt is not None and nxt not in _COORD_WALKTHROUGH:
@@ -794,9 +781,7 @@ def _form_gender(form: str, index: MorphologyIndex) -> set[str]:
 
 
 def _form_agrees(form: str, gn: set[str], index: MorphologyIndex) -> bool:
-    """True iff an adj/ppas reading of `form` already matches `gn` (epicene/
-    invariable count as wildcards). Used to skip re-inflecting an already-correct
-    form, which would otherwise risk a paradigm jump (`tendre` adj → `tendu`)."""
+    """True iff `form` already matches `gn`; skips a re-inflect that could paradigm-jump (`tendre` adj → `tendu`)."""
     want_num = gn & NUMBER_TOKENS
     want_gen = gn & {"mas", "fem"}
     for _l, tags in index.lookup_form(form):
@@ -809,11 +794,10 @@ def _form_agrees(form: str, gn: set[str], index: MorphologyIndex) -> bool:
     return False
 
 
-# Invariable adverbs that also carry a (usually archaic) adjective reading, so
-# they must not be agreed after a comparative (`Va plus vite`, not `*plus vites`).
+# Invariable adverbs with a (usually archaic) adjective reading that must not agree after a comparative (`Va plus vite`, not `*plus vites`).
 _INVARIABLE_ADVERBS = {
     "vite", "loin", "tôt", "tard", "mieux", "pis", "exprès", "debout",
-    "ensemble", "gratis", "d'accord",
+    "ensemble", "gratis",
 }
 
 
@@ -876,16 +860,11 @@ def _agreement_target(
         # Only past participles agree like adjectives.
         if "ppas" not in target:
             return None
-    # Find the inflected head's analysis matching the head_lemma. A form can
-    # carry a pronoun reading alongside its noun reading under one lemma (the
-    # masc negative pronoun `personne` vs the fem noun `personne`); demote
-    # pronoun readings so agreement takes the noun's gender, not the pronoun's.
+    # Demote pronoun readings sharing the head_lemma (masc `personne` pronoun vs fem `personne` noun) so the noun's gender wins.
     matches = [tags for lemma, tags in index.lookup_form(inflected_head)
                if lemma.lower() == head_lemma.lower()]
     matches.sort(key=lambda tags: bool(tags & _DEMOTED_HEAD_TAGS))
-    # Ambiguous-gender head — epicene (`œuvre`), or both masc and fem noun
-    # readings — makes gender unreliable: agree number only and let adjectives
-    # keep their source gender (`_agree_adjective`) rather than forcing masc.
+    # Epicene or both-genders head makes gender unreliable: agree number only, adjectives keep their own gender.
     kept = [t for t in matches if not (t & _DEMOTED_HEAD_TAGS)] or matches
     genders = {g for t in kept for g in (t & GENDER_TOKENS)}
     ambiguous = "epi" in genders or ("mas" in genders and "fem" in genders)
