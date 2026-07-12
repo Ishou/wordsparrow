@@ -55,13 +55,26 @@ once (`src/ui/components/sondage/StyleTooltip.tsx`) — **no new dependency, so 
 ADR is required**. `InfoPopover` generalizes that bespoke implementation into a
 shared component.
 
-- Wraps an existing trigger element via `asChild`, so the real Vérifier / Hint
-  button remains the trigger and keeps its own `onClick` handler.
-- Prop: `content` — a plain string sourced from the i18n catalog.
+- Wraps an existing trigger element (the real Vérifier / Hint button) and, via
+  `cloneElement`, injects the click handler, the long-press handlers, and
+  `aria-disabled` onto it, then renders it through Ark's `asChild`.
+- Props: `info` (string from i18n), `onActivate` (the action), `disabled`
+  (guards the action), `children` (the button, which must **not** set its own
+  `onClick`).
 - Ark wires `aria-describedby` from trigger → content automatically; no extra
   ARIA plumbing needed. The button keeps its existing `aria-label`.
 - Styled with Panda `css()`, mirroring `StyleTooltip` (Portal → Positioner →
   Content → Arrow/ArrowTip).
+
+**Disabled must stay explainable.** The assist button is disabled both on
+cooldown *and* when the user is signed out (the `useAssistGate` capability
+gate). A native `disabled` button swallows hover/pointer events, so the
+explanation would be unreachable exactly when it matters most (a signed-out
+player staring at a greyed-out button). Therefore the button uses
+**`aria-disabled` + a guarded click**, never native `disabled`: it stays
+focusable and hoverable, the popover opens in every state, and `InfoPopover`'s
+`disabled` prop blocks `onActivate`. This is a UX-affordance change, not an
+authz change — `solver.verify` is auth-enforced server-side regardless.
 
 ### Interaction model
 
@@ -95,14 +108,23 @@ existing `play.verify.*` / `play.hint.*` namespaces. No `{{placeholder}}`
 interpolation, so no dev-mode `t()` throw risk.
 
 - `play.verify.info`:
-  "Vérifie les lettres que vous avez saisies : les bonnes se verrouillent, les
+  "Vérifie les lettres que tu as saisies : les bonnes se verrouillent, les
   autres sont signalées. Disponible toutes les 30 minutes."
 - `play.hint.info`:
   "Révèle une lettre de la case active. Un nouvel indice toutes les 10 minutes."
 
+**State-aware content (two messages).** The popover shows the *reason* when the
+action is blocked by the auth gate, otherwise the what-it-does description:
+
+- Signed out → `assistGate.title` (existing `auth.assistGate.anon` =
+  "Connecte-toi pour vérifier ta grille.").
+- Enabled **or** on cooldown → `play.verify.info` — which already states
+  "Disponible toutes les 30 minutes", so it doubles as the cooldown
+  explanation. No dedicated cooldown string.
+
 The live countdown remains where it already is — the `AssistCooldown` conic
-ring (`src/ui/components/grid/AssistCooldown.tsx`). The popup only explains the
-mechanism; it does not duplicate live state.
+ring (`src/ui/components/grid/AssistCooldown.tsx`); the popover explains the
+mechanism, the ring shows the live seconds.
 
 ### Accessibility (ADR-0050, WCAG AA)
 
@@ -112,6 +134,10 @@ mechanism; it does not duplicate live state.
   **persistent** (stays until dismissed), does not obscure the trigger.
 - Keyboard: focus opens on desktop, Esc closes. No focus trap — content is
   non-essential.
+- **`aria-disabled` over native `disabled`** so the disabled button stays
+  focusable and its explanation reachable (the recommended pattern for a
+  disabled control that still needs a tooltip); the click guard prevents the
+  action, matching the visual disabled state.
 
 ### Testing
 
@@ -139,11 +165,6 @@ workstream, `feat(frontend-grid):` scope.
 - No `(i)` info icon affordance in this cut (longpress-first, per the design
   decision). Revisit if longpress proves undiscoverable.
 - No live cooldown time inside the popup (the conic ring already shows it).
-- **Disabled-button popover:** a native `disabled` button suppresses
-  hover/pointer events, so the popover won't open while the action is on
-  cooldown — the `AssistCooldown` ring communicates state there. An
-  `aria-disabled` pattern to keep the popover reachable during cooldown is a
-  deliberate follow-up.
 - Other non-self-evident controls (sound, settings, report/flag, co-op "Espace"
   direction switch, zoom, nav arrows) are candidates for a later wave reusing
   `InfoPopover`.

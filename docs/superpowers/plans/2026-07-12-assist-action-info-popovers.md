@@ -4,7 +4,7 @@
 
 **Goal:** Give players an on-demand, discoverable explanation of the assist action (Vérifier / Hint) via a hover-and-longpress info popup, and stop the `/aide` page + onboarding Tour from carrying stale, drifting feature descriptions.
 
-**Architecture:** A reusable `InfoPopover` primitive wraps the existing assist button and shows a short description on hover/focus (fine pointer) or long-press (touch, via a new `useLongPress` hook that also suppresses the tap so the action doesn't fire). Static, feature-agnostic help copy on `/aide` and in the Tour is genericised so it can't drift, and the Tour's assist step is re-anchored to a stable `data-tour="assist"` hook instead of the now-wrong "Indice (" aria-label selector.
+**Architecture:** A reusable `InfoPopover` primitive wraps the existing assist button and shows a short description on hover/focus (fine pointer) or long-press (touch, via a new `useLongPress` hook that also suppresses the tap so the action doesn't fire). The button uses `aria-disabled` + a guarded click instead of native `disabled`, so the explanation — including the signed-out "connecte-toi" reason — stays reachable in every state. Feature-agnostic help copy on `/aide` and in the Tour is genericised so it can't drift, and the Tour's assist step is re-anchored to a stable `data-tour="assist"` hook instead of the now-wrong "Indice (" aria-label selector.
 
 **Tech Stack:** React 19 + TypeScript, Ark UI (`@ark-ui/react` ^5.37) Tooltip, Panda CSS (`styled-system/css`), Vitest + Testing Library, i18n via the repo's `t()` catalog.
 
@@ -228,11 +228,11 @@ git commit -s -m "feat(frontend-grid): add useLongPress hook with tap-suppressio
 - Test: `tests/primitives/info-popover.test.tsx`
 
 **Interfaces:**
-- Consumes: `useLongPress` (Task 1); `useTouchPrimary` from `@/ui/components/keyboard/useTouchPrimary`; Ark `Tooltip`, `Portal`.
+- Consumes: `useLongPress` (Task 1); `useTouchPrimary` from `@/ui/components/keyboard/useTouchPrimary`; Ark `Tooltip`, `Portal`; `cloneElement`.
 - Produces:
   - `InfoPopover(props: InfoPopoverProps): JSX.Element`
-  - `InfoPopoverProps = { info: string; onActivate: () => void; children: ReactElement; longPressMs?: number }`
-  - Contract: `children` is a single element that owns the visual/disabled/aria state but **must not** set its own `onClick` — `InfoPopover` supplies the click handler and calls `onActivate()` unless a long-press just fired.
+  - `InfoPopoverProps = { info: string; onActivate: () => void; children: ReactElement; disabled?: boolean; longPressMs?: number }`
+  - Contract: `children` is a single element that owns the visual state but **must not** set its own `onClick` or `aria-disabled`. `InfoPopover` `cloneElement`s the child to inject `onClick`, the long-press handlers, and `aria-disabled`. `onActivate()` fires on click unless `disabled` is set or a long-press just fired. The popover opens in every state (the child is never natively `disabled`).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -284,6 +284,26 @@ describe('InfoPopover', () => {
     });
     await waitFor(() => expect(trigger).toHaveAttribute('aria-describedby'));
   });
+
+  it('when disabled: blocks onActivate, marks aria-disabled, still reveals info', async () => {
+    const onActivate = vi.fn();
+    render(
+      <InfoPopover info="Connecte-toi pour vérifier" onActivate={onActivate} disabled>
+        <button type="button">Vérifier</button>
+      </InfoPopover>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Vérifier' });
+    expect(trigger).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(trigger);
+    expect(onActivate).not.toHaveBeenCalled();
+    act(() => {
+      trigger.focus();
+      fireEvent.pointerMove(trigger);
+    });
+    await waitFor(() =>
+      expect(screen.getByText('Connecte-toi pour vérifier')).toBeInTheDocument(),
+    );
+  });
 });
 ```
 
@@ -298,7 +318,7 @@ Create `src/ui/components/primitives/InfoPopover.tsx`:
 
 ```tsx
 import type { ReactElement } from 'react';
-import { useState } from 'react';
+import { cloneElement, useState } from 'react';
 import { Tooltip } from '@ark-ui/react/tooltip';
 import { Portal } from '@ark-ui/react/portal';
 import { css } from 'styled-system/css';
@@ -327,10 +347,17 @@ export interface InfoPopoverProps {
   readonly info: string;
   readonly onActivate: () => void;
   readonly children: ReactElement;
+  readonly disabled?: boolean;
   readonly longPressMs?: number;
 }
 
-export function InfoPopover({ info, onActivate, children, longPressMs = 500 }: InfoPopoverProps) {
+export function InfoPopover({
+  info,
+  onActivate,
+  children,
+  disabled = false,
+  longPressMs = 500,
+}: InfoPopoverProps) {
   const touch = useTouchPrimary();
   const [open, setOpen] = useState(false);
   const longPress = useLongPress({
@@ -340,12 +367,19 @@ export function InfoPopover({ info, onActivate, children, longPressMs = 500 }: I
   });
 
   const handleClick = () => {
+    if (disabled) return;
     if (longPress.consumeSuppression()) return;
     onActivate();
   };
 
-  // Touch: drive open only from long-press; honor Ark's close requests but
-  // ignore its interaction-driven opens so a plain tap runs the action.
+  // aria-disabled (not native disabled) keeps the button hoverable so the popover stays reachable.
+  const trigger = cloneElement(children, {
+    onClick: handleClick,
+    'aria-disabled': disabled || undefined,
+    ...(touch ? longPress.handlers : {}),
+  });
+
+  // Touch: open only from long-press; honor Ark's close but ignore its opens so a tap runs the action.
   const rootProps = touch
     ? {
         open,
@@ -357,9 +391,7 @@ export function InfoPopover({ info, onActivate, children, longPressMs = 500 }: I
 
   return (
     <Tooltip.Root {...rootProps}>
-      <Tooltip.Trigger asChild onClick={handleClick} {...(touch ? longPress.handlers : {})}>
-        {children}
-      </Tooltip.Trigger>
+      <Tooltip.Trigger asChild>{trigger}</Tooltip.Trigger>
       <Portal>
         <Tooltip.Positioner>
           <Tooltip.Content className={contentStyles}>
@@ -378,9 +410,9 @@ export function InfoPopover({ info, onActivate, children, longPressMs = 500 }: I
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `pnpm test -- info-popover`
-Expected: PASS (3 tests).
+Expected: PASS (4 tests).
 
-**Fallback if the click test fails** (Ark did not forward `onClick` through `asChild`): inject the handler onto the child instead of onto `Tooltip.Trigger`. Add `import { cloneElement } from 'react';`, build `const trigger = cloneElement(children, { onClick: handleClick, ...(touch ? longPress.handlers : {}) });`, and render `<Tooltip.Trigger asChild>{trigger}</Tooltip.Trigger>`. Re-run.
+**If `cloneElement` typing complains** (the child's prop type is too narrow for `aria-disabled`/pointer handlers): type the prop as `ReactElement<Record<string, unknown>>` or cast the second arg — the runtime shape is correct; only the structural type needs widening.
 
 - [ ] **Step 5: Commit**
 
@@ -425,33 +457,42 @@ import { InfoPopover } from '@/ui/components/primitives/InfoPopover';
 Replace the Vérifier `<button>…</button>` block (currently `PlayScreen.tsx:565-574`) with:
 
 ```tsx
-<InfoPopover info={t('play.verify.info')} onActivate={requestVerify}>
-  <button
-    type="button"
-    className={hintBtn}
-    data-tour="assist"
-    disabled={verification.pending || (verification.secondsUntilNextVerify ?? 0) > 0}
-    {...(assistGate ?? {})}
-  >
+<InfoPopover
+  info={assistGate ? assistGate.title : t('play.verify.info')}
+  onActivate={requestVerify}
+  disabled={
+    assistGate != null ||
+    verification.pending ||
+    (verification.secondsUntilNextVerify ?? 0) > 0
+  }
+>
+  <button type="button" className={hintBtn} data-tour="assist">
     <MagnifyingGlass aria-hidden="true" weight="bold" className={hintBulb} />
     {t('play.verify.label')}
   </button>
 </InfoPopover>
 ```
 
-(Note: the `onClick={requestVerify}` prop is removed from the button — `InfoPopover`'s `onActivate` now owns it.)
+(Notes: `onClick={requestVerify}` moves to `InfoPopover`'s `onActivate`; the native `disabled={…}` attribute and the `{...(assistGate ?? {})}` spread are removed — `InfoPopover` now supplies `aria-disabled`, and the auth reason surfaces as popover `info` instead of a native `title`.)
 
 - [ ] **Step 4: Wrap the Hint button**
 
 Replace the Hint `<button>…</button>` block (currently `PlayScreen.tsx:587-596`) with:
 
 ```tsx
-<InfoPopover info={t('play.hint.info')} onActivate={requestHint}>
+<InfoPopover
+  info={assistGate ? assistGate.title : t('play.hint.info')}
+  onActivate={requestHint}
+  disabled={
+    assistGate != null ||
+    hint.pending ||
+    (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)
+  }
+>
   <button
     type="button"
     className={hintBtn}
     data-tour="assist"
-    disabled={hint.pending || (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)}
     aria-label={t('play.hint.aria.remaining', { remaining: hint.hintsRemaining })}
   >
     <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
@@ -460,9 +501,18 @@ Replace the Hint `<button>…</button>` block (currently `PlayScreen.tsx:587-596
 </InfoPopover>
 ```
 
-(Note: `onClick={requestHint}` removed from the button.)
+(Notes: `onClick={requestHint}` and native `disabled` removed, same as the Vérifier button; the `aria-label` stays.)
 
-- [ ] **Step 5: Verify typecheck + existing tests**
+- [ ] **Step 5: Style the `aria-disabled` state**
+
+Native `disabled` is gone, so the `_disabled` opacity no longer fires. In `src/ui/play/PlayScreen.tsx`, in the `hintBtn = css({ … })` block, add an `aria-disabled` selector next to the existing `_disabled` line:
+
+```ts
+  _disabled: { opacity: 0.45, cursor: 'not-allowed' },
+  '&[aria-disabled=true]': { opacity: 0.45, cursor: 'not-allowed' },
+```
+
+- [ ] **Step 6: Verify typecheck + existing tests**
 
 Run: `pnpm typecheck`
 Expected: PASS (new `play.verify.info` / `play.hint.info` keys resolve; `InfoPopover` types line up).
@@ -470,7 +520,7 @@ Expected: PASS (new `play.verify.info` / `play.hint.info` keys resolve; `InfoPop
 Run: `pnpm test`
 Expected: PASS — no existing test asserts an `onClick` on these buttons; behavior is preserved through `onActivate`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/ui/play/PlayScreen.tsx src/ui/i18n/messages.fr.ts
@@ -573,8 +623,9 @@ Expected: PASS (no new axe violations on the play route).
 Confirm on the solo play screen:
 1. Desktop: hovering **Vérifier** shows the description after ~400 ms; Esc / mouse-leave dismisses; clicking still runs verification.
 2. Touch emulation (DevTools coarse pointer): long-pressing **Vérifier** shows the description and does **not** run verification; a normal tap runs verification with no popup; tap-outside dismisses.
-3. `/aide` "Coup de pouce" section reads generically (no "vérifiée d'un coup", no "révèle le mot entier").
-4. Onboarding tour (`?tour=1`) assist step spotlights the real Vérifier button, not empty space.
+3. **Signed out:** the button is greyed (`aria-disabled`), hover/long-press shows "Connecte-toi pour vérifier ta grille.", and clicking does nothing.
+4. `/aide` "Coup de pouce" section reads generically (no "vérifiée d'un coup", no "révèle le mot entier").
+5. Onboarding tour (`?tour=1`) assist step spotlights the real Vérifier button, not empty space.
 
 - [ ] **Step 4: Push and open the PR**
 
@@ -592,16 +643,17 @@ Open the PR with body naming the workstream (assist-action info popups + honest 
 - InfoPopover primitive over Ark Tooltip → Task 2. ✓
 - Hover (desktop) + longpress (touch) with click-suppression → Task 1 (`useLongPress`) + Task 2 (branch on `useTouchPrimary`). ✓
 - Vérifier + Hint both wrapped → Task 3. ✓
-- Static description copy in i18n → Task 3. ✓
+- State-aware content (what-it-does vs. signed-out reason, two messages) in i18n → Task 3. ✓
 - `aria-describedby` / WCAG 1.4.13 dismissible-persistent → Task 2 (Ark wiring + `onOpenChange`), asserted in Task 2 Step 1. ✓
+- Disabled stays explainable via `aria-disabled` + guarded click; auth reason surfaces as popover `info` → Task 2 (`disabled` prop, asserted in Task 2 Step 1's disabled test) + Task 3 (derive `disabled`/`info`, style `aria-disabled`). ✓
 - Generic, non-drifting `/aide` + Tour copy (user override of the earlier "verify-specific" wording) → Task 4. ✓
 - Tour assist step re-anchored (the broken `Indice (` selector) → Task 4 + `data-tour` hook in Task 3. ✓
 
 **Placeholder scan:** No TBD/TODO; every code step shows full code. ✓
 
-**Type consistency:** `consumeSuppression` / `handlers` / `onActivate` / `info` names are identical across Tasks 1–3. `ASSIST_BUTTON_SELECTOR` / `assistButton` consistent within Task 4. `data-tour="assist"` string identical in Task 3 (both buttons) and Task 4's selector. ✓
+**Type consistency:** `consumeSuppression` / `handlers` / `onActivate` / `info` / `disabled` names are identical across Tasks 1–3. `assistGate.title` matches the `GateProps` shape in `useAssistGate.ts`. `ASSIST_BUTTON_SELECTOR` / `assistButton` consistent within Task 4. `data-tour="assist"` string identical in Task 3 (both buttons) and Task 4's selector. ✓
 
-## Notes / known limitations (out of scope, do not implement)
+## Notes
 
-- **Disabled-button popover:** while the assist button is disabled (during cooldown), a native `disabled` button suppresses hover/pointer events, so the popover won't open in that window — the `AssistCooldown` ring already communicates the live state there. Converting to an `aria-disabled` pattern to keep the popover reachable during cooldown is a deliberate follow-up, not part of this cut.
 - The in-context popover copy (`play.verify.info`) is intentionally specific (it lives on the button and can't drift); only the static `/aide` + Tour surfaces are genericised.
+- Switching the assist button from native `disabled` to `aria-disabled` + guarded click is a UX-affordance change, **not** an authz change: `solver.verify` remains auth-enforced server-side, so a client can't gain assist by defeating the guard.
