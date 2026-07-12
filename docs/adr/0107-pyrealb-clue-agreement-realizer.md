@@ -1,7 +1,44 @@
 # ADR-0107: PyRealB realizer for clue lemma→surface agreement
 
 ## Status
-Proposed
+**Rejected (2026-07-12).** PyRealB was built and measured against the real
+corpus; the differential rejected it. The reported bugs were fixed instead by a
+targeted **head-selection** change in the existing inflater — see Revision below.
+
+## Revision (2026-07-12) — PyRealB rejected on the differential
+
+The realizer spike (below) was correct on hand-built structures, but a
+**full-corpus differential** (PyRealB realizer vs `inflect_clue` over the 118k
+surface clues) showed PyRealB **regresses**, not improves:
+
+- Of realized clues, ~19% diverged from the head-only inflater and **~97% of
+  those divergences were regressions**: coordinated verbs (`Diminuerai,
+  réduire` vs correct `…réduirai`), post-head adjective agreement (`Lieux
+  protégé` vs `Lieux protégés`), and archaic subjunctive/passé-simple that the
+  inflater handles with a tuned `Qu'`-prefix. Only relative-`qui` was a win.
+- The inflater is **not** "head-only" as its docstring claims: it has a
+  forward-walk doing co-head coordination, post-head adjective agreement,
+  PP-state re-anchoring, appositive nouns, subjunctive prefixing and
+  passé-simple person drops. That machinery is correct; PyRealB via
+  head-substitution discards it, and PyRealB has its own gaps (`être` has no
+  ppas, it refuses ppas on intransitive verbs, lexicon misses `recoder`/…).
+
+**Every reported bug was a head-*selection* bug, not an agreement-capability
+gap.** Fix adopted instead (`scripts/eval/inflect_clue.py`):
+
+1. **relative-`qui` frame** — when the clue is `Qui + verbe`, the head is the
+   relative verb, agreed to 3rd person + the answer's number (keeping its
+   tense); the forward-walk then handles coordinated verbs. Fixes `abusives →
+   "Qui outrepassent un droit"`, `menteurs → "Qui mentent"`.
+2. **numerals in the direct-object set** — the `pp-only-skipped` guard now fires
+   on `Relier deux conduits` (numeral-headed object), not just `un/le/des`.
+
+**Differential of the fix vs origin/main over the full corpus: 98%
+byte-identical; the 1,271 changes are ALL in the two bug classes (1,239
+relative-`qui`, 32 ppas drops), zero unintended divergences.** The deterministic
+corpus gate (ADR-0097 sync, `lint_corpus.py`) stays. PyRealB (`pyrealb`) is not
+adopted; mlconjug3 was already rejected. The material below is the original
+proposal, kept for the record.
 
 ## Context
 Clues are generated at **lemma form** (masc-sing noun/adj, infinitive verb)

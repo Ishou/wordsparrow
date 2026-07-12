@@ -229,6 +229,51 @@ def test_non_negation_does_not_capture_head() -> None:
     assert "présente" in res.text.lower(), res.text
 
 
+def _rel_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "outrepasser", "outrepasser", "v1__t___zz infi")
+    _add(idx, "outrepasser", "outrepasse", "v1__t___zz ipre 3sg")
+    _add(idx, "outrepasser", "outrepassent", "v1__t___zz ipre 3pl")
+    _add(idx, "mentir", "mentir", "v3__t___zz infi")
+    _add(idx, "mentir", "ment", "v3__t___zz ipre 3sg")
+    _add(idx, "mentir", "mentent", "v3__t___zz ipre 3pl")
+    _add(idx, "abusif", "abusives", "adj fem pl")
+    _add(idx, "menteur", "menteurs", "nom mas pl")
+    _add(idx, "droit", "droit", "adj nom mas sg")
+    _add(idx, "droit", "droits", "adj nom mas pl")
+    return idx
+
+
+def test_relative_qui_agrees_verb_with_antecedent_number() -> None:
+    """`Qui + verbe` defines the answer; the relative verb agrees with the
+    antecedent (answer) in number, 3rd person. The POS-matched ranker can't see
+    it (verb POS != adj/nom answer) so pre-fix it shipped the singular verb
+    verbatim (`menteurs -> "Qui ment"`) or, worse, agreed the object noun
+    (`abusives -> "Qui outrepasse un droites"`). The object stays untouched."""
+    idx = _rel_index()
+    r = inflect_clue("Qui outrepasse un droit", {"adj", "fem", "pl"}, idx)
+    assert r.text == "Qui outrepassent un droit", r.text
+    r2 = inflect_clue("Qui ment", {"nom", "mas", "pl"}, idx)
+    assert r2.text == "Qui mentent", r2.text
+
+
+def test_relative_qui_singular_answer_keeps_singular_verb() -> None:
+    idx = _rel_index()
+    _add(idx, "abusif", "abusive", "adj fem sg")
+    r = inflect_clue("Qui outrepasse un droit", {"adj", "fem", "sg"}, idx)
+    assert r.text == "Qui outrepasse un droit", r.text
+
+
+def test_ppas_dobj_skip_includes_numeral_objects() -> None:
+    """`Relier deux conduits` on a past-participle surface must skip like
+    `Relier un tuyau` does — a numeral heads the direct object too."""
+    idx = MorphologyIndex()
+    _add(idx, "relier", "relier", "v1__t___zz infi")
+    _add(idx, "relier", "relié", "v1__t___zz ppas mas sg")
+    r = inflect_clue("Relier deux conduits", {"v1__t___zz", "ppas", "mas", "sg"}, idx)
+    assert r.flag == "pp-only-skipped", r.flag
+
+
 # --- Negative paths preserved -------------------------------------------
 
 

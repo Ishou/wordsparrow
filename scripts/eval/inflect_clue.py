@@ -118,6 +118,11 @@ _DOBJ_DETERMINERS = {
     "son", "sa", "ses",
     "mon", "ma", "mes", "ton", "ta", "tes",
     "leur", "leurs", "notre", "nos", "votre", "vos",
+    # numerals / quantifiers head a bare direct object too (`Relier deux
+    # conduits`); without them the pp-only-skip guard misses `Relié deux …`.
+    "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix",
+    "plusieurs", "quelques", "certains", "certaines", "divers", "diverses",
+    "maints", "maintes",
 }
 
 # Prepositions that, when they sit between the head verb and a following
@@ -337,6 +342,48 @@ def _pp_action_definition(
     return False
 
 
+def _relative_verb(
+    tokens: list[str], target_pos: str, surface_tags: set[str],
+    index: MorphologyIndex,
+) -> tuple[int, str, set[str], str] | None:
+    """A `Qui + verbe` clue defines a nominal/adjectival answer; the relative
+    verb agrees with the antecedent (the answer) in number, 3rd person, keeping
+    its own tense. Returns `(head_idx, lemma, target, "verbe")`, else None: the
+    ranker misses it (verb POS != the answer's POS). Only function words may sit
+    between `Qui` and the verb; `Que`/`Qu'` object-relatives agree with their
+    own subject, not the antecedent, so they're excluded (first word must be
+    `qui`, which never elides)."""
+    if target_pos not in ("nom", "adj"):
+        return None
+    seen_qui = False
+    for i, tok in enumerate(tokens):
+        if not _is_alpha_token(tok):
+            continue
+        lo = tok.lower()
+        if not seen_qui:
+            if lo != "qui":
+                return None
+            seen_qui = True
+            continue
+        if lo in _FUNCTION_WORDS:
+            continue
+        if "verbe" not in index.pos_classes_of_form(lo):
+            return None
+        lemma = index.lemma_of_form(lo, prefer_pos="verbe")
+        if not lemma:
+            return None
+        forms = index.lookup_form(lo)
+        mood = next((m for _l, tags in forms for m in ("ipre",) if m in tags), None)
+        if mood is None:
+            mood = next((next(iter(f)) for _l, tags in forms
+                         if (f := tags & _FINITE_MOODS)), None)
+        if mood is None:
+            return None
+        number = "3pl" if "pl" in surface_tags else "3sg"
+        return (i, lemma, {mood, number}, "verbe")
+    return None
+
+
 def inflect_clue(
     clue: str,
     surface_tags: set[str],
@@ -371,34 +418,41 @@ def inflect_clue(
     if not tokens:
         return InflectionResult(clue, "empty")
 
-    # Rank candidate heads. Demote tokens whose lemma is a known pre-head
-    # adjective (petit, grand, beau, vieux …) so they don't capture the head
-    # role from the actual noun. Ties break by leftmost.
-    candidates: list[tuple[int, int, str]] = []  # (rank, position, lemma)
-    for i, tok in enumerate(tokens):
-        if not _is_alpha_token(tok):
-            continue
-        if tok.lower() in _FUNCTION_WORDS:
-            continue
-        if target_pos not in index.pos_classes_of_form(tok.lower()):
-            continue
-        lemma = index.lemma_of_form(tok.lower(), prefer_pos=target_pos)
-        if not lemma:
-            continue
-        # Rank: pre-head adj demoted to back, rest in clue order.
-        rank = 1 if lemma.lower() in _PRE_HEAD_ADJ_LEMMAS else 0
-        candidates.append((rank, i, lemma))
-    candidates.sort()
-    head_idx = -1
-    head_lemma = ""
-    if candidates:
-        _, head_idx, head_lemma = candidates[0]
+    # Relative-clause frame takes precedence over the POS-matched ranker: a
+    # `Qui + verbe` clue agrees the relative verb with the answer, not a token
+    # matching the answer's own POS.
+    rel = _relative_verb(tokens, target_pos, surface_tags, index)
+    if rel is not None:
+        head_idx, head_lemma, target, target_pos = rel
+    else:
+        # Rank candidate heads. Demote tokens whose lemma is a known pre-head
+        # adjective (petit, grand, beau, vieux …) so they don't capture the head
+        # role from the actual noun. Ties break by leftmost.
+        candidates: list[tuple[int, int, str]] = []  # (rank, position, lemma)
+        for i, tok in enumerate(tokens):
+            if not _is_alpha_token(tok):
+                continue
+            if tok.lower() in _FUNCTION_WORDS:
+                continue
+            if target_pos not in index.pos_classes_of_form(tok.lower()):
+                continue
+            lemma = index.lemma_of_form(tok.lower(), prefer_pos=target_pos)
+            if not lemma:
+                continue
+            # Rank: pre-head adj demoted to back, rest in clue order.
+            rank = 1 if lemma.lower() in _PRE_HEAD_ADJ_LEMMAS else 0
+            candidates.append((rank, i, lemma))
+        candidates.sort()
+        head_idx = -1
+        head_lemma = ""
+        if candidates:
+            _, head_idx, head_lemma = candidates[0]
 
-    if head_idx < 0:
-        # No head with matching POS — clue is structurally incompatible with
-        # the surface morphology (e.g. surface is a verb but the clue head is
-        # a noun, like "Astre du jour" cluing a verb form). Leave verbatim.
-        return InflectionResult(_capitalize_first(clue), "head-pos-mismatch")
+        if head_idx < 0:
+            # No head with matching POS — clue is structurally incompatible with
+            # the surface morphology (e.g. surface is a verb but the clue head is
+            # a noun, like "Astre du jour" cluing a verb form). Leave verbatim.
+            return InflectionResult(_capitalize_first(clue), "head-pos-mismatch")
 
     # Copula-as-genus guard: a NOMINAL surface headed by être/avoir uses the noun, not the verb — ship verbatim.
     if target_pos != "verbe" and head_lemma.lower() in _COPULA_LEMMAS:
