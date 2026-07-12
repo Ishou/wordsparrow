@@ -48,8 +48,7 @@ def test_falls_back_to_fitting_clue_when_primary_too_long() -> None:
 
 
 def test_primary_clue_still_wins_when_it_fits() -> None:
-    """No regression: when the last (primary) clue fits, it's still the one
-    emitted — the fallback only triggers on a non-fitting primary."""
+    """No regression: the primary clue still wins when it fits the cell."""
     idx = _index()
     corpus = {("esse", "nom"): [
         _clue("esse", "nom", "Crochet en forme de S"),
