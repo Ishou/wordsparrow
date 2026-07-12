@@ -614,8 +614,7 @@ def inflect_clue(
             in_pp = False
             i += 1
             continue
-        # Degree adverb / negation / `comme`: cross it so a following predicate
-        # adjective still agrees with the head, keeping the current gn target.
+        # Degree adverb / negation / comme: cross it, keeping the current gn target.
         if lo in _DEGREE_TRANSPARENT:
             i += 1
             continue
@@ -804,8 +803,7 @@ _INVARIABLE_ADVERBS = {
 def _agree_adjective(
     form: str, gn: set[str], index: MorphologyIndex,
 ) -> str | None:
-    """Inflect an adjective/participle to `gn`. When `gn` carries no gender
-    (ambiguous-gender head), agree number only and keep the form's own gender."""
+    """Inflect to gn; with no gender in gn (ambiguous head), agree number only and keep the form's own gender."""
     if form in _INVARIABLE_ADVERBS:
         return None
     adj_lemma = index.lemma_of_form(form, prefer_pos="adj")
