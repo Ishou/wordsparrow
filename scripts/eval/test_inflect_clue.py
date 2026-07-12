@@ -953,3 +953,133 @@ def test_copula_genus_on_noun_ships_verbatim() -> None:
     res = inflect_clue("Être vivant", {"nom", "fem", "pl"}, idx)
     assert res.flag == "verbatim", res
     assert res.text == "Être vivant"
+
+
+# --- Degree-adverb / negation / `comme` transparency + participial adj ---
+
+
+def _degree_index() -> MorphologyIndex:
+    """Degree/negation/`comme` must not stall the agreement walk to a trailing predicate adjective or adjectival past participle."""
+    idx = MorphologyIndex()
+    _add(idx, "chêne", "chêne", "nom mas sg")
+    _add(idx, "chêne", "chênes", "nom mas pl")
+    _add(idx, "personne", "personne", "nom fem sg")
+    _add(idx, "personne", "personnes", "nom fem pl")
+    _add(idx, "dur", "dur", "adj mas sg")
+    _add(idx, "dur", "durs", "adj mas pl")
+    _add(idx, "dur", "dure", "adj fem sg")
+    _add(idx, "dur", "dures", "adj fem pl")
+    _add(idx, "vrai", "vrai", "adj mas sg")
+    _add(idx, "vrai", "vraie", "adj fem sg")
+    _add(idx, "vrai", "vrais", "adj mas pl")
+    _add(idx, "vrai", "vraies", "adj fem pl")
+    _add(idx, "rendre", "rendre", "v3__t___zz infi")
+    _add(idx, "reconnaître", "reconnaître", "v3__t___zz infi")
+    _add(idx, "reconnaître", "reconnu", "v3__t___zz ppas mas sg")
+    _add(idx, "reconnaître", "reconnue", "v3__t___zz ppas fem sg")
+    _add(idx, "reconnaître", "reconnus", "v3__t___zz ppas mas pl")
+    _add(idx, "reconnaître", "reconnues", "v3__t___zz ppas fem pl")
+    # `poursuivre`'s ppas rows are tagged BOTH `adj` and `ppas`, so a naïve adj-only lookup (no `ppas` in target) finds nothing.
+    _add(idx, "poursuivre", "poursuivre", "v3__t___zz infi")
+    _add(idx, "poursuivre", "poursuivi", "v3__t___zz adj ppas mas sg")
+    _add(idx, "poursuivre", "poursuivie", "v3__t___zz adj ppas fem sg")
+    _add(idx, "poursuivre", "poursuivis", "v3__t___zz adj ppas mas pl")
+    _add(idx, "poursuivre", "poursuivies", "v3__t___zz adj ppas fem pl")
+    return idx
+
+
+@pytest.mark.parametrize("clue,tags,expected", [
+    # Degree/negation/`comme` are agreement-transparent bridges.
+    ("Chêne très dur", {"nom", "mas", "pl"}, "Chênes très durs"),
+    ("Personne peu dur", {"nom", "fem", "pl"}, "Personnes peu dures"),
+    ("Personne plus dur", {"nom", "fem", "pl"}, "Personnes plus dures"),
+    ("Chêne comme vrai", {"nom", "mas", "pl"}, "Chênes comme vrais"),
+    # A participle after a transparent bridge agrees too, once the bridge no longer stalls the walk.
+    ("Chêne non poursuivi", {"nom", "mas", "pl"}, "Chênes non poursuivis"),
+])
+def test_degree_bridge_agreement(clue, tags, expected) -> None:
+    idx = _degree_index()
+    res = inflect_clue(clue, set(tags), idx)
+    assert res.text == expected, f"{clue!r} {sorted(tags)} -> {res.text!r}"
+
+
+def test_comma_noun_cohead_reanchors_trailing_adjective() -> None:
+    """A noun after a comma re-anchors agreement onto itself, not the masculine head: `Oubli, chose non dite` must stay `dite`."""
+    idx = MorphologyIndex()
+    _add(idx, "oubli", "oubli", "nom mas sg")
+    _add(idx, "oubli", "oublis", "nom mas pl")
+    _add(idx, "chose", "chose", "nom fem sg")
+    _add(idx, "chose", "choses", "nom fem pl")
+    _add(idx, "dire", "dire", "v3__t___zz infi")
+    _add(idx, "dire", "dit", "v3__t___zz adj ppas mas sg")
+    _add(idx, "dire", "dite", "v3__t___zz adj ppas fem sg")
+    res = inflect_clue("Oubli, chose non dit", {"nom", "mas", "sg"}, idx)
+    assert res.text == "Oubli, chose non dite", res.text
+
+
+def test_pronoun_reading_does_not_govern_head_agreement() -> None:
+    """`personne` also reads as the masc negative pronoun; the noun reading must win so a fem answer isn't masculinised."""
+    idx = MorphologyIndex()
+    _add(idx, "personne", "personne", "mas mg proneg sg")  # pronoun, listed first
+    _add(idx, "personne", "personne", "fem nom sg")
+    _add(idx, "patient", "patient", "adj mas sg")
+    _add(idx, "patient", "patiente", "adj fem sg")
+    res = inflect_clue("Personne très patient", {"nom", "fem", "sg"}, idx)
+    assert res.text == "Personne très patiente", res.text
+
+
+def test_epicene_head_still_agrees_epicene_adjective_number() -> None:
+    """Epicene head + epicene adjective: no gender to force, but number must still agree."""
+    idx = MorphologyIndex()
+    _add(idx, "espace", "espace", "epi nom sg")
+    _add(idx, "espace", "espaces", "epi nom pl")
+    _add(idx, "vide", "vide", "adj epi sg")
+    _add(idx, "vide", "vides", "adj epi pl")
+    res = inflect_clue("Espace vide", {"nom", "mas", "pl"}, idx)
+    assert res.text == "Espaces vides", res.text
+
+
+def test_epicene_head_preserves_gendered_adjective_gender() -> None:
+    """Epicene head + gendered adjective: keep the adjective's source gender, agree number only."""
+    idx = MorphologyIndex()
+    _add(idx, "œuvre", "œuvre", "epi nom sg")
+    _add(idx, "œuvre", "œuvres", "epi nom pl")
+    _add(idx, "musical", "musical", "adj mas sg")
+    _add(idx, "musical", "musicaux", "adj mas pl")
+    _add(idx, "musical", "musicale", "adj fem sg")
+    _add(idx, "musical", "musicales", "adj fem pl")
+    assert inflect_clue("Œuvre musical", {"nom", "mas", "sg"}, idx).text == "Œuvre musical"
+    assert inflect_clue("Œuvre musical", {"nom", "mas", "pl"}, idx).text == "Œuvres musicaux"
+
+
+def test_degree_transparency_does_not_over_agree_infinitive_gloss() -> None:
+    """Self-scoping: an infinitive-gloss clue (no gender/number target) leaves the object-complement adjective untouched."""
+    idx = _degree_index()
+    res = inflect_clue("Rendre plus dur", {"nom", "mas", "pl"}, idx)
+    assert "durs" not in res.text.lower(), res.text
+
+
+def _ppre_index() -> MorphologyIndex:
+    """`fuyant` carries both a ppre reading (verbal) and a genuine adj reading — the ppre-guard must resolve the ambiguity by context."""
+    idx = MorphologyIndex()
+    _add(idx, "personne", "personne", "nom fem sg")
+    _add(idx, "personne", "personnes", "nom fem pl")
+    _add(idx, "fuir", "fuyant", "v3__t___zz ppre adj mas sg")
+    _add(idx, "fuir", "fuyants", "adj mas pl")
+    _add(idx, "fuir", "fuyante", "adj fem sg")
+    _add(idx, "fuir", "fuyantes", "adj fem pl")
+    return idx
+
+
+def test_ppre_governing_complement_stays_invariable() -> None:
+    """A présent participle followed by its own complement is verbal, not adjectival, even though the surface target is feminine plural."""
+    idx = _ppre_index()
+    res = inflect_clue("Personne fuyant son pays", {"nom", "fem", "pl"}, idx)
+    assert res.text == "Personnes fuyant son pays", res.text
+
+
+def test_ppre_without_complement_still_agrees() -> None:
+    """The same ppre-tagged form with nothing following it reads as a bare adjective and must agree normally, not stay invariable."""
+    idx = _ppre_index()
+    res = inflect_clue("Personne fuyant", {"nom", "fem", "pl"}, idx)
+    assert res.text == "Personnes fuyantes", res.text
