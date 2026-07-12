@@ -30,8 +30,7 @@ class InMemoryCorrectionRepository : CorrectionRepository {
         return id
     }
 
-    // Check+record run inside the one lock so the predicate sees every prior forbid — the in-memory
-    // analogue of the Postgres advisory lock (ADR-0108 §2).
+    // Check+record run inside the one lock, the in-memory analogue of the Postgres advisory lock (ADR-0108 §2).
     override fun recordForbidGuarded(
         correction: ClueCorrection,
         createdBy: UUID,

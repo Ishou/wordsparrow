@@ -36,8 +36,7 @@ class PostgresCorrectionRepository(
         return id
     }
 
-    // Serializes concurrent forbids on the same word: the xact advisory lock is held to commit, so a
-    // second forbid blocks until the first commits and then re-reads it via active() (ADR-0108 §2).
+    // Xact advisory lock serializes concurrent forbids on the same word until commit (ADR-0108 §2).
     override fun recordForbidGuarded(
         correction: ClueCorrection,
         createdBy: UUID,

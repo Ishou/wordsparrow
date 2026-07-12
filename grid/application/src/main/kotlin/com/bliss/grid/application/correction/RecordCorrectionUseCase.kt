@@ -22,8 +22,7 @@ class RecordCorrectionUseCase(
         correction: ClueCorrection,
         createdBy: UUID,
     ): Result {
-        // Forbid check+record is serialized in the repository (ADR-0108 §2): the last-clue predicate is
-        // re-evaluated against the corrections read inside the write, closing the concurrent-forbid TOCTOU.
+        // Check+record is serialized in the repository, closing the concurrent-forbid TOCTOU (ADR-0108 §2).
         if (correction.kind == ClueCorrection.Kind.FORBID_CLUE) {
             return when (
                 val outcome =
@@ -38,8 +37,7 @@ class RecordCorrectionUseCase(
         return Result.Recorded(corrections.record(correction, createdBy))
     }
 
-    // Folds [active] (read atomically in the guard) plus this forbid onto each corpus word of the target
-    // text, mirroring CorrectionAwareWordRepository.applyAll; a null result means the forbid drops its last clue.
+    // Folds active corrections plus this forbid onto each matching corpus word; null means it drops the last clue.
     private fun emptiesAWord(
         correction: ClueCorrection,
         active: List<ClueCorrection>,

@@ -154,8 +154,7 @@ class PostgresCorrectionRepositoryTest {
     private fun forbid(oldClueText: String): ClueCorrection =
         ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = oldClueText, wordText = "EST")
 
-    // Models the corpus word EST={Verbe etre, Point cardinal}: forbidding [newForbid] empties it only once
-    // every base clue is dropped by the active forbids read in-txn — the same predicate the use case folds.
+    // Models corpus word EST={Verbe etre, Point cardinal}; empties only once every base clue is forbidden.
     private fun emptiesEst(newForbid: String): (List<ClueCorrection>) -> Boolean =
         { active ->
             val base = setOf("Verbe etre", "Point cardinal")

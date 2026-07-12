@@ -38,8 +38,7 @@ class RecordCorrectionUseCaseTest {
             return UUID.randomUUID()
         }
 
-        // Mirrors the adapters' atomic guard: evaluate the predicate against the already-recorded
-        // corrections, then insert only when it does not empty the word.
+        // Mirrors the adapters' atomic guard: evaluate the predicate before inserting.
         override fun recordForbidGuarded(
             correction: ClueCorrection,
             createdBy: UUID,

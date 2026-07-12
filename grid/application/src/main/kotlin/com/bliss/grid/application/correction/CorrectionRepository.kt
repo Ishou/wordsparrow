@@ -11,14 +11,7 @@ interface CorrectionRepository {
         createdBy: UUID,
     ): UUID
 
-    /**
-     * Atomic last-clue guard for a `forbid_clue` (ADR-0108 §2). Serializes on the target word and
-     * re-reads the committed active corrections inside the same write, so two concurrent forbids on
-     * the same word cannot each pass the check against a stale snapshot and jointly empty it. Mirrors
-     * `LobbyRepository.mutate`'s read-decide-write under a per-key lock: [wouldEmptyWord] is the
-     * decision callback, invoked with the corrections active at check time; returning true leaves the
-     * row unwritten and yields [GuardedRecord.LastClueForbidden], otherwise [correction] is inserted.
-     */
+    /** Atomic last-clue guard for forbid_clue; re-reads active corrections inside the write to close the concurrent-forbid TOCTOU (ADR-0108 §2). */
     fun recordForbidGuarded(
         correction: ClueCorrection,
         createdBy: UUID,
