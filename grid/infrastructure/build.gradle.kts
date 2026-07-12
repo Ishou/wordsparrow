@@ -21,6 +21,9 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:12.8.1")
     implementation("org.slf4j:slf4j-api:2.0.18")
 
+    // UUID v7 ids for clue-correction rows (ADR-0108, ADR-0003 §6); same generator grid/api already uses.
+    implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
+
     // Ktor client + CIO engine — used by MatomoAnalyticsAdapter to POST events
     // to the self-hosted Matomo server (ADR-0025). Mirrors :game:infrastructure's
     // Ktor stack for consistency.

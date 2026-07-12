@@ -389,10 +389,11 @@ export interface paths {
          *     is cosmetic; the server is authoritative.
          *
          *     The correction is keyed on the clue text, not an id — a clue-report
-         *     carries only the raw `oldClueText` (plus optional `wordText`), matched
-         *     to the corpus and to stored grids by text-join (ADR-0108, ADR-0103).
-         *     `replace` overrides the clue text for the word; `forbid_clue` drops
-         *     that clue, valid only while the word keeps ≥1 usable clue. The
+         *     carries the raw `oldClueText`, matched to the corpus and to stored grids
+         *     by text-join (ADR-0108, ADR-0103). `replace` overrides the clue text and
+         *     may narrow to one word with an optional `wordText`; `forbid_clue` is
+         *     word-scoped and requires `wordText`, dropping that clue for the named
+         *     word, valid only while the word keeps ≥1 usable clue. The
          *     `blocklist_word` operation is deferred to a later ADR and is
          *     intentionally absent from this contract.
          *
@@ -1132,9 +1133,10 @@ export interface components {
         BackfillStatus: "pending" | "running" | "done" | "failed";
         /**
          * @description A maintainer clue correction (ADR-0108), discriminated by `kind`.
-         *     `replace` carries the `newClueText` to override the word's clue;
-         *     `forbid_clue` drops the matched clue. Both identify the clue to fix by
-         *     `oldClueText` (text-join identity), optionally narrowed by `wordText`.
+         *     `replace` carries the `newClueText` to override the word's clue and may
+         *     optionally narrow to one word with `wordText`; `forbid_clue` drops the
+         *     matched clue and requires `wordText` (it is word-scoped). Both identify
+         *     the clue to fix by `oldClueText` (text-join identity).
          *     The `blocklist_word` operation is deferred to a later ADR and is
          *     intentionally absent.
          */
@@ -1154,9 +1156,10 @@ export interface components {
             newClueText: components["schemas"]["ClueText"];
         };
         /**
-         * @description Drop a clue for the word. Valid only while the word keeps ≥1 usable
-         *     clue; forbidding a word's only clue is rejected with 409
-         *     (`last-clue-forbidden`, ADR-0108).
+         * @description Drop a clue for a word (ADR-0108). A forbid is word-scoped — `wordText`
+         *     is required so the drop is bounded to that word and the last-clue guard
+         *     can run. Valid only while the word keeps ≥1 usable clue; forbidding a
+         *     word's only clue is rejected with 409 (`last-clue-forbidden`).
          */
         ForbidClueCorrection: {
             /**
@@ -1165,7 +1168,7 @@ export interface components {
              */
             kind: "forbid_clue";
             oldClueText: components["schemas"]["ClueText"];
-            wordText?: components["schemas"]["WordText"];
+            wordText: components["schemas"]["WordText"];
         };
         /**
          * @description `202` acceptance for a recorded correction (ADR-0108). The corpus
@@ -1958,7 +1961,8 @@ export interface operations {
             /**
              * @description The request body is malformed — for example an empty or over-length
              *     `oldClueText`/`newClueText`, a missing `newClueText` on a `replace`,
-             *     or an unknown `kind`. RFC 7807; `type` is
+             *     a missing `wordText` on a `forbid_clue`, or an unknown `kind`. RFC
+             *     7807; `type` is
              *     `https://bliss.example/errors/invalid-correction`,
              *     `title` is `Invalid correction`.
              */
