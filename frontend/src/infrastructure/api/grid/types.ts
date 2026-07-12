@@ -2023,6 +2023,19 @@ export interface operations {
                 };
             };
             /**
+             * @description Request is malformed. RFC 7807. Variants:
+             *     - Path parameter `correctionId` is not a valid UUID
+             *       (`type` = `https://bliss.example/errors/invalid-correction-id`).
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
              * @description The caller lacks the `admin:signalements` capability. RFC 7807;
              *     `type` is `https://bliss.example/errors/capability-required`.
              */
