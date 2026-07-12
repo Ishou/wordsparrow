@@ -78,6 +78,9 @@ ensureDailies:
     # matrix row's `image-digest-grid-worker` artifact.
     requireDigest: true
     digest: ""
+# ADR-0108 §4: converges existing grids within minutes of a recorded correction.
+processCorrections:
+  enabled: true
 # ADR-0097: corpus fetched from object storage in prod; classpath fallback removed in the follow-up PR.
 corpus:
   objectStore:

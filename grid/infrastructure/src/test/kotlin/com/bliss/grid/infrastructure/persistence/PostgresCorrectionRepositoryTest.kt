@@ -3,6 +3,7 @@ package com.bliss.grid.infrastructure.persistence
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.containsExactlyInAnyOrder
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
@@ -149,6 +150,71 @@ class PostgresCorrectionRepositoryTest {
     @Test
     fun `progress is null for an unknown id`() {
         assertThat(repository.progress(UUID.randomUUID())).isNull()
+    }
+
+    @Test
+    fun `begin heartbeat and complete drive the backfill lifecycle`() {
+        val id =
+            repository.record(
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", wordText = "MOT", newClueText = "new"),
+                maintainer,
+            )
+
+        repository.beginBackfill(id, gridsMatched = 4)
+        repository.heartbeatBackfill(id, patchedDelta = 3)
+        repository.heartbeatBackfill(id, patchedDelta = 1)
+
+        val running = repository.progress(id)!!
+        assertThat(running.backfillStatus).isEqualTo(BackfillStatus.RUNNING)
+        assertThat(running.gridsMatched).isEqualTo(4)
+        assertThat(running.gridsPatched).isEqualTo(4)
+
+        repository.completeBackfill(id)
+        assertThat(repository.progress(id)!!.backfillStatus).isEqualTo(BackfillStatus.DONE)
+    }
+
+    @Test
+    fun `backfillJobs returns pending and running corrections and omits done ones`() {
+        val pending =
+            repository.record(ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "P", newClueText = "PP"), maintainer)
+        val running =
+            repository.record(ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "R", newClueText = "RR"), maintainer)
+        val done =
+            repository.record(ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "D", newClueText = "DD"), maintainer)
+        repository.beginBackfill(running, 1)
+        repository.beginBackfill(done, 0)
+        repository.completeBackfill(done)
+
+        assertThat(repository.backfillJobs().map { it.correctionId }).containsExactlyInAnyOrder(pending, running)
+    }
+
+    @Test
+    fun `failBackfill records the error and marks the correction failed`() {
+        val id =
+            repository.record(ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new"), maintainer)
+        repository.beginBackfill(id, 2)
+
+        repository.failBackfill(id, "boom on puzzle X")
+
+        assertThat(repository.progress(id)!!.backfillStatus).isEqualTo(BackfillStatus.FAILED)
+    }
+
+    @Test
+    fun `exportableCorrections returns un-exported replace-with-word and markExported stamps it`() {
+        val replace =
+            repository.record(
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "Souffrance", wordText = "PAIN", newClueText = "Aliment"),
+                maintainer,
+            )
+        repository.record(ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = "x", wordText = "MOT"), maintainer)
+        repository.record(ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "y", newClueText = "z"), maintainer)
+
+        val exportable = repository.exportableCorrections()
+        assertThat(exportable.map { it.correctionId }).containsExactly(replace)
+        assertThat(exportable.single().wordText).isEqualTo("PAIN")
+
+        repository.markExported(replace)
+        assertThat(repository.exportableCorrections()).isEmpty()
     }
 
     private fun forbid(oldClueText: String): ClueCorrection =

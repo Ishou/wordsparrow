@@ -1,0 +1,53 @@
+{{- if .Values.processCorrections.enabled -}}
+{{/* Durable clue-correction backfill (ADR-0108 §4): runs `:grid:worker --process-corrections`, resuming on rows still matching. Same CNPG Secret + worker image as ensure-dailies; no corpus/edge-purge (it patches puzzles.payload JSONB in place). */}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "wordsparrow-api.fullname" . }}-process-corrections
+  labels: {{- include "wordsparrow-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: process-corrections
+spec:
+  schedule: {{ .Values.processCorrections.schedule | quote }}
+  # Forbid: a second concurrent run would re-select and double-patch rows the first run is mid-flight on (ADR-0108 §4).
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: {{ .Values.processCorrections.activeDeadlineSeconds }}
+      # No retries: the next scheduled run resumes on whatever rows still match.
+      backoffLimit: 0
+      template:
+        metadata:
+          labels: {{- include "wordsparrow-api.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: process-corrections
+        spec:
+          serviceAccountName: {{ include "wordsparrow-api.serviceAccountName" . }}
+          restartPolicy: Never
+          securityContext: {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: worker
+              image: {{ include "wordsparrow-api.workerImage" . | quote }}
+              imagePullPolicy: {{ .Values.ensureDailies.image.pullPolicy }}
+              securityContext: {{- toYaml .Values.containerSecurityContext | nindent 16 }}
+              command: ["/app/bin/grid-worker"]
+              args: ["--process-corrections"]
+              env:
+                # CNPG-managed connection string (same key the api Deployment uses).
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "wordsparrow-api.pgClusterName" . }}-app
+                      key: uri
+                {{- with .Values.ensureDailies.env }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              {{- with .Values.processCorrections.resources }}
+              resources: {{- toYaml . | nindent 16 }}
+              {{- end }}
+              # readOnlyRootFilesystem requires a writable /tmp (JVM PerfData etc).
+              volumeMounts:
+                - {name: tmp, mountPath: /tmp}
+          volumes:
+            - {name: tmp, emptyDir: {}}
+{{- end }}
