@@ -248,7 +248,7 @@ export const fr = {
   'grid.verify.error.cooldown': 'Vérification bientôt disponible',
   'grid.verify.error.authRequired': 'Connecte-toi pour vérifier ta grille',
   'grid.verify.error.generic': 'Erreur, réessayez',
-  'grid.verify.cooldown.label': '+ vérification dans {{time}}',
+  'grid.verify.cooldown.label': '{{time}}',
   'grid.verify.cooldown.available': 'Nouvelle vérification disponible.',
   'sondage.field.nature': 'Nature',
   'sondage.field.style': 'Style',

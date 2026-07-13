@@ -46,7 +46,7 @@ export interface AssistCooldownProps {
   readonly secondsRemaining: number | null;
   /** Cooldown duration in seconds; drives the ring fill fraction. */
   readonly intervalSeconds: number;
-  /** Fully-formatted visible text, e.g. "+1 dans 4:32" or "+ vérification dans 12:04". */
+  /** Fully-formatted visible text, e.g. "+1 dans 4:32" (hint) or a bare "12:04" (verify). */
   readonly label: string;
   /** SR announcement once `secondsRemaining` reaches 0. */
   readonly availableAnnouncement: string;
