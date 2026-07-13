@@ -84,6 +84,7 @@ export function apiPuzzleToDomain(api: ApiPuzzle): Puzzle {
     hintsAllowed: api.hintsAllowed,
     hintsRemaining: api.hintsRemaining,
     secondsUntilNextHint: api.secondsUntilNextHint,
+    secondsUntilNextVerify: api.secondsUntilNextVerify,
     cells,
     difficulty: api.difficulty ?? null,
     gridNumber: api.gridNumber ?? null,
