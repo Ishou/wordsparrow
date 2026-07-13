@@ -46,3 +46,23 @@ resource "hcloud_floating_ip_assignment" "ingress" {
   floating_ip_id = hcloud_floating_ip.ingress.id
   server_id      = hcloud_server.worker[0].id
 }
+
+# Per-worker EGRESS floating IPs (ADR-0112): each non-holder worker aliases its own dedicated FIP and the fip-egress-snat DaemonSet SNATs its pod egress to it, so outbound mail (Brevo) leaves from a stable, whitelisted IP from ANY worker — mail workloads stay HA-spread instead of pinned to the holder. worker[0] reuses the ingress FIP for egress; worker[1..N-1] get these.
+resource "hcloud_floating_ip" "worker_egress" {
+  count         = var.worker_count > 1 ? var.worker_count - 1 : 0
+  type          = "ipv4"
+  home_location = var.region
+  name          = "${var.cluster_name}-worker-egress-${count.index + 1}"
+  description   = "Stable egress IP for ${var.cluster_name} worker[${count.index + 1}] outbound mail (Brevo allowlist). Survives node replacement."
+
+  labels = {
+    cluster = var.cluster_name
+    role    = "worker-egress"
+  }
+}
+
+resource "hcloud_floating_ip_assignment" "worker_egress" {
+  count          = var.worker_count > 1 ? var.worker_count - 1 : 0
+  floating_ip_id = hcloud_floating_ip.worker_egress[count.index].id
+  server_id      = hcloud_server.worker[count.index + 1].id
+}

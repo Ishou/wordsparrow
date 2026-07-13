@@ -1,5 +1,5 @@
 {{- if .Values.fipEgressSnat.enabled }}
-# Self-asserts an egress SNAT on the FIP holder so outbound mail (Brevo) always leaves from the one whitelisted IP; flannel's MASQUERADE address-primary pick can silently flip. Configure-in-cluster (CLAUDE.md) — heals across reboots + follows the FIP to a recreated holder. ADR-0109.
+# Self-asserts an egress SNAT to whichever FIP each node aliases, so outbound mail (Brevo) always leaves from a stable, whitelisted IP from ANY worker — mail workloads stay HA-spread instead of pinned to the holder (ADR-0112, amends ADR-0109). Each worker aliases exactly one FIP (holder: ingress; others: their egress FIP); nodes that alias none (control-plane, observability) no-op. flannel's MASQUERADE address-primary pick can silently flip; this re-asserts every 30s. Configure-in-cluster (CLAUDE.md), self-heals across reboots + follows the FIP to a recreated node.
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -17,11 +17,9 @@ spec:
         app.kubernetes.io/component: fip-egress-snat
         {{- include "platform.labels" . | nindent 8 }}
     spec:
-      # Only the FIP holder aliases the floating IP, so SNAT belongs only there.
-      nodeSelector:
-        bliss.io/fip-holder: "true"
+      # Runs on every node: each discovers its own aliased FIP and SNATs to it; a node with no FIP alias idles. Not holder-pinned — that's the whole point of ADR-0112.
       hostNetwork: true
-      # Run on the holder regardless of taints; a mail-critical rule must not be kept off by a node taint.
+      # Tolerate every taint — a mail-critical rule must not be kept off a worker by a taint (e.g. a future drain-guard).
       tolerations:
         - operator: Exists
       priorityClassName: system-node-critical
@@ -42,12 +40,17 @@ spec:
             - -c
             - |
               set -eu
-              FIP="{{ required "fipEgressSnat.floatingIp is required when enabled" .Values.fipEgressSnat.floatingIp }}"
-              # Excludes kube-marked (0x4000) + internal 10/8 (pod-to-pod, cluster svc, private net), mirroring flannel's own RETURN rules; -I 1 stays ahead of the flannel jump.
-              RULE="-s 10.42.0.0/16 -m mark ! --mark 0x4000/0x4000 ! -d 10.0.0.0/8 -j SNAT --to-source ${FIP}"
+              # Discover in-loop, not once: the netplan FIP alias can land after the pod starts (boot race), and re-discovery follows a FIP that moves under a node.
+              # The node's FIP is the global address on eth0 that is NOT the default-route source (the DHCP primary). None → this node holds no FIP (control-plane, observability); idle.
               while true; do
-                iptables -t nat -C POSTROUTING ${RULE} 2>/dev/null \
-                  || iptables -t nat -I POSTROUTING 1 ${RULE}
+                PRIMARY="$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p')"
+                FIP="$(ip -4 -o addr show dev eth0 scope global 2>/dev/null | sed -n 's#.* inet \([0-9.]*\)/.*#\1#p' | grep -vx "${PRIMARY:-}" | head -n1)"
+                if [ -n "${FIP}" ]; then
+                  # Excludes kube-marked (0x4000) + internal 10/8 (pod-to-pod, cluster svc, private net), mirroring flannel's own RETURN rules; -I 1 stays ahead of the flannel jump.
+                  RULE="-s 10.42.0.0/16 -m mark ! --mark 0x4000/0x4000 ! -d 10.0.0.0/8 -j SNAT --to-source ${FIP}"
+                  iptables -t nat -C POSTROUTING ${RULE} 2>/dev/null \
+                    || iptables -t nat -I POSTROUTING 1 ${RULE}
+                fi
                 sleep 30
               done
           resources:

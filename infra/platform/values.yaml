@@ -14,10 +14,9 @@ clusterIssuer:
   selfsigned:
     enabled: false
 
-# Egress SNAT on the FIP holder so outbound mail (Brevo, ADR-0092) leaves from the whitelisted floating IP deterministically. Disabled by default; prod sets floatingIp (ADR-0109).
+# Per-node egress SNAT so outbound mail (Brevo, ADR-0092) leaves from each worker's own whitelisted floating IP deterministically, from ANY worker (ADR-0112, amends ADR-0109). Each node discovers its own aliased FIP at runtime — no per-node config. Disabled by default.
 fipEgressSnat:
   enabled: false
-  floatingIp: ""
   image:
     repository: nicolaka/netshoot
     # renovate: datasource=docker depName=nicolaka/netshoot
