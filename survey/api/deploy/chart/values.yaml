@@ -47,6 +47,8 @@ ingress:
 serviceAccount:
   create: true
   name: ""
+# Empty by default; prod pins to bliss.io/role=worker so harm-report mail egresses from a whitelisted worker FIP (ADR-0112).
+nodeSelector: {}
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 1000
