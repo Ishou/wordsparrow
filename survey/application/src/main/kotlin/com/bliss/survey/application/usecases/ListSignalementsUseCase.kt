@@ -3,6 +3,7 @@ package com.bliss.survey.application.usecases
 import com.bliss.survey.application.ports.SignalementRepository
 import com.bliss.survey.domain.model.ReportId
 import com.bliss.survey.domain.model.ReportReason
+import com.bliss.survey.domain.model.ReportSurface
 import java.time.Instant
 import java.util.UUID
 
@@ -11,6 +12,8 @@ data class SignalementGroup(
     val wordText: String?,
     val clueText: String,
     val reason: ReportReason,
+    val surface: ReportSurface,
+    val puzzleId: UUID?,
     val count: Int,
     val latestNote: String?,
     val latestAt: Instant,
@@ -36,6 +39,8 @@ class ListSignalementsUseCase(
                     wordText = latest.wordText,
                     clueText = key.clueText,
                     reason = key.reason,
+                    surface = latest.surface,
+                    puzzleId = key.puzzleId,
                     count = group.size,
                     latestNote = latest.note,
                     latestAt = latest.createdAt,

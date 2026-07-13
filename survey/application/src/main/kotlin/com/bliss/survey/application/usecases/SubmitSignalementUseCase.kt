@@ -2,6 +2,7 @@ package com.bliss.survey.application.usecases
 
 import com.bliss.survey.application.ports.Clock
 import com.bliss.survey.application.ports.EmailSender
+import com.bliss.survey.application.ports.GridWordResolver
 import com.bliss.survey.application.ports.IdGenerator
 import com.bliss.survey.application.ports.OutboundEmail
 import com.bliss.survey.application.ports.SignalementRepository
@@ -26,6 +27,7 @@ sealed interface SubmitSignalementResult {
 }
 
 data class SubmitSignalementCommand(
+    // Deprecated (ADR-0111): the client's own letters are ignored on write; the server resolves the real word from the grid.
     val wordText: String?,
     val clueText: String,
     val reason: ReportReason,
@@ -40,6 +42,7 @@ class SubmitSignalementUseCase(
     private val ids: IdGenerator,
     private val clock: Clock,
     private val email: EmailSender,
+    private val gridWordResolver: GridWordResolver,
     private val tx: TransactionManager,
     private val maintainerAddress: String,
 ) {
@@ -52,11 +55,14 @@ class SubmitSignalementUseCase(
             }
         }
 
+        // Server owns the word (ADR-0111): resolve it from the grid outside the tx and ignore any client-sent wordText (ADR-0076).
+        val resolvedWord = resolveWord(cmd)
+
         val reportId = ReportId(ids.next())
         val report =
             PlayerReport(
                 id = reportId,
-                wordText = cmd.wordText,
+                wordText = resolvedWord,
                 clueText = cmd.clueText,
                 reason = cmd.reason,
                 note = cmd.note,
@@ -79,8 +85,8 @@ class SubmitSignalementUseCase(
                 email.send(
                     OutboundEmail(
                         to = maintainerAddress,
-                        subject = "Signalement — ${cmd.reason.name.lowercase()} : ${cmd.wordText ?: cmd.clueText}",
-                        textBody = harmBody(cmd),
+                        subject = "Signalement — ${cmd.reason.name.lowercase()} : ${resolvedWord ?: cmd.clueText}",
+                        textBody = harmBody(cmd, resolvedWord),
                     ),
                 )
             }.onSuccess { log.info("signalement_harm_email_sent reason={} to={}", cmd.reason.name.lowercase(), maintainerAddress) }
@@ -89,11 +95,31 @@ class SubmitSignalementUseCase(
         return SubmitSignalementResult.Accepted(report.id)
     }
 
-    private fun harmBody(cmd: SubmitSignalementCommand): String =
+    // Surface-dispatched (ADR-0111): puzzle surfaces resolve from the grid; mini_game has no report button yet, so its branch is stubbed.
+    private suspend fun resolveWord(cmd: SubmitSignalementCommand): String? =
+        when (cmd.surface) {
+            ReportSurface.SOLO, ReportSurface.DAILY, ReportSurface.MULTIPLAYER ->
+                cmd.puzzleId?.let { puzzleId ->
+                    gridWordResolver.resolve(puzzleId, cmd.clueText).also { word ->
+                        if (word == null) {
+                            log.warn("signalement_word_unresolved puzzleId={} surface={}", puzzleId, cmd.surface.name.lowercase())
+                        }
+                    }
+                } ?: run {
+                    log.warn("signalement_puzzle_id_missing surface={}", cmd.surface.name.lowercase())
+                    null
+                }
+            ReportSurface.MINI_GAME -> null
+        }
+
+    private fun harmBody(
+        cmd: SubmitSignalementCommand,
+        resolvedWord: String?,
+    ): String =
         buildString {
             appendLine("Un joueur a signalé un contenu potentiellement offensant.")
             appendLine()
-            cmd.wordText?.let { appendLine("Mot : $it") }
+            resolvedWord?.let { appendLine("Mot : $it") }
             appendLine("Définition : ${cmd.clueText}")
             appendLine("Raison : ${cmd.reason.name.lowercase()}")
             appendLine("Surface : ${cmd.surface.name.lowercase()}")

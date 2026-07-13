@@ -2,10 +2,13 @@ package com.bliss.survey.application.usecases
 
 import assertk.assertThat
 import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import com.bliss.survey.application.ports.EmailSender
+import com.bliss.survey.application.ports.GridWordResolver
 import com.bliss.survey.application.ports.IdGenerator
 import com.bliss.survey.application.ports.OutboundEmail
 import com.bliss.survey.domain.model.PlayerReport
@@ -37,15 +40,31 @@ class SubmitSignalementUseCaseTest {
         }
     }
 
+    private class FakeGridWordResolver(
+        private val word: String? = "ESSE",
+    ) : GridWordResolver {
+        val calls = mutableListOf<Pair<UUID, String>>()
+
+        override suspend fun resolve(
+            puzzleId: UUID,
+            clueText: String,
+        ): String? {
+            calls += puzzleId to clueText
+            return word
+        }
+    }
+
     private fun useCase(
         reports: InMemorySignalementRepository,
         email: EmailSender,
+        resolver: GridWordResolver = FakeGridWordResolver(),
     ): SubmitSignalementUseCase =
         SubmitSignalementUseCase(
             reports = reports,
             ids = IdGenerator { fixedId },
             clock = { now },
             email = email,
+            gridWordResolver = resolver,
             tx = passThroughTransactionManager,
             maintainerAddress = maintainer,
         )
@@ -55,6 +74,7 @@ class SubmitSignalementUseCaseTest {
         reporterId: UserId? = reporter,
         wordText: String? = "CHAT",
         puzzleId: UUID? = puzzle,
+        surface: ReportSurface = ReportSurface.SOLO,
     ): SubmitSignalementCommand =
         SubmitSignalementCommand(
             wordText = wordText,
@@ -62,7 +82,7 @@ class SubmitSignalementUseCaseTest {
             reason = reason,
             note = null,
             puzzleId = puzzleId,
-            surface = ReportSurface.SOLO,
+            surface = surface,
             reporterId = reporterId,
         )
 
@@ -117,16 +137,56 @@ class SubmitSignalementUseCaseTest {
         }
 
     @Test
-    fun `persists a report with no solved word`() =
+    fun `resolves the answer word from the grid and persists it, ignoring the client wordText`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+            val resolver = FakeGridWordResolver(word = "ESSE")
+
+            useCase(reports, FakeEmailSender(), resolver).execute(command(wordText = "CHAT"))
+
+            assertThat(reports.reports.single().wordText).isEqualTo("ESSE")
+            assertThat(resolver.calls).isEqualTo(listOf(puzzle to "Animal qui miaule"))
+        }
+
+    @Test
+    fun `grid unreachable resolves null, and the report is still accepted with no word`() =
         runTest {
             val reports = InMemorySignalementRepository()
 
             val result =
-                useCase(reports, FakeEmailSender())
-                    .execute(command(reason = ReportReason.DEFINITION_OFFENSANTE, wordText = null))
+                useCase(reports, FakeEmailSender(), FakeGridWordResolver(word = null))
+                    .execute(command(wordText = "CHAT"))
 
             assertThat(result).isInstanceOf(SubmitSignalementResult.Accepted::class)
-            assertThat(reports.reports.single().wordText).isEqualTo(null)
+            assertThat(reports.reports.single().wordText).isNull()
+        }
+
+    @Test
+    fun `puzzle surface without puzzleId skips resolution and the report is still accepted with no word`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+            val resolver = FakeGridWordResolver()
+
+            val result =
+                useCase(reports, FakeEmailSender(), resolver)
+                    .execute(command(puzzleId = null, reporterId = null))
+
+            assertThat(result).isInstanceOf(SubmitSignalementResult.Accepted::class)
+            assertThat(resolver.calls).isEmpty()
+            assertThat(reports.reports.single().wordText).isNull()
+        }
+
+    @Test
+    fun `mini_game surface skips resolution entirely`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+            val resolver = FakeGridWordResolver()
+
+            useCase(reports, FakeEmailSender(), resolver)
+                .execute(command(surface = ReportSurface.MINI_GAME, puzzleId = null, reporterId = null))
+
+            assertThat(resolver.calls).isEmpty()
+            assertThat(reports.reports.single().wordText).isNull()
         }
 
     @Test
@@ -195,6 +255,20 @@ class SubmitSignalementUseCaseTest {
                     .subject
                     .contains("mot_offensant"),
             ).isTrue()
+        }
+
+    @Test
+    fun `harm email carries the grid-resolved word, not the client wordText`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+            val email = FakeEmailSender()
+
+            useCase(reports, email, FakeGridWordResolver(word = "ESSE"))
+                .execute(command(reason = ReportReason.MOT_OFFENSANT, wordText = "CHAT"))
+
+            val body = email.sent.single()
+            assertThat(body.subject.contains("ESSE")).isTrue()
+            assertThat(body.textBody.contains("Mot : ESSE")).isTrue()
         }
 
     @Test

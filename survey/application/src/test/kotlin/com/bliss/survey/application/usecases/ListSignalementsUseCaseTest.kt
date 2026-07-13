@@ -25,6 +25,7 @@ class ListSignalementsUseCaseTest {
         reason: ReportReason = ReportReason.ERREUR_SENS,
         note: String? = null,
         puzzleId: UUID? = null,
+        surface: ReportSurface = ReportSurface.SOLO,
         createdAt: Instant = base,
         status: ReportStatus = ReportStatus.PENDING,
     ): PlayerReport =
@@ -35,7 +36,7 @@ class ListSignalementsUseCaseTest {
             reason = reason,
             note = note,
             puzzleId = puzzleId,
-            surface = ReportSurface.SOLO,
+            surface = surface,
             reporterId = null,
             status = status,
             createdAt = createdAt,
@@ -54,6 +55,24 @@ class ListSignalementsUseCaseTest {
             assertThat(groups.single().count).isEqualTo(2)
             assertThat(groups.single().wordText).isEqualTo("CHAT")
             assertThat(groups.single().reason).isEqualTo(ReportReason.ERREUR_SENS)
+        }
+
+    @Test
+    fun `emits the surface and puzzleId of the reported group`() =
+        runTest {
+            val puzzle = UUID.fromString("aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa")
+            val reports = InMemorySignalementRepository()
+            reports.reports +=
+                report(
+                    "11111111-1111-7111-8111-111111111111",
+                    puzzleId = puzzle,
+                    surface = ReportSurface.DAILY,
+                )
+
+            val group = ListSignalementsUseCase(reports).execute().single()
+
+            assertThat(group.surface).isEqualTo(ReportSurface.DAILY)
+            assertThat(group.puzzleId).isEqualTo(puzzle)
         }
 
     @Test

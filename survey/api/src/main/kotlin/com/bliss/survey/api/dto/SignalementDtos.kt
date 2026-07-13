@@ -23,10 +23,13 @@ data class SignalementResponse(
 @Serializable
 data class SignalementSummary(
     val reportId: String,
-    // Required on the wire but nullable — null when the group's reports carry no solved word (ADR-0003 §6).
+    // Required on the wire but nullable — null while the grid-resolved word is still pending/unresolved (ADR-0111, ADR-0003 §6).
     val wordText: String?,
     val clueText: String,
     val reason: String,
+    val surface: String,
+    // Required on the wire but nullable — null for mini-game reports, which carry no puzzle (ADR-0073, ADR-0003 §6).
+    val puzzleId: String?,
     val count: Int,
     // Required on the wire but nullable — null when the group's latest report carries no note (ADR-0003 §6).
     val latestNote: String?,
