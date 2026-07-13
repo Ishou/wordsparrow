@@ -2,6 +2,19 @@ package com.bliss.grid.api.dto
 
 import kotlinx.serialization.Serializable
 
+/** `200` body for `GET /v1/words/{word}/clues`: every clue the corpus carries, for the correction picker (ADR-0108). */
+@Serializable
+data class WordCluesResultDto(
+    val clues: List<WordClueItemDto>,
+)
+
+/** One candidate clue in the picker; `theme` is required-and-nullable on the wire (ADR-0003 §6). */
+@Serializable
+data class WordClueItemDto(
+    val text: String,
+    val theme: String?,
+)
+
 /** Wire request for `POST /v1/corrections`; `kind` discriminates and the route validates per-kind fields (ADR-0108). */
 @Serializable
 data class CorrectionRequestDto(

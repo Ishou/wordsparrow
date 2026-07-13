@@ -8,11 +8,13 @@ import com.bliss.grid.api.routes.corrections
 import com.bliss.grid.api.routes.deleteSession
 import com.bliss.grid.api.routes.health
 import com.bliss.grid.api.routes.puzzles
+import com.bliss.grid.api.routes.wordClues
 import com.bliss.grid.api.routes.words
 import com.bliss.grid.application.analytics.AnalyticsEventSink
 import com.bliss.grid.application.auth.CookieVerifier
 import com.bliss.grid.application.correction.BlocklistPreviewQuery
 import com.bliss.grid.application.correction.CorrectionRepository
+import com.bliss.grid.application.correction.ListWordCluesUseCase
 import com.bliss.grid.application.correction.RecordCorrectionUseCase
 import com.bliss.grid.application.puzzle.DailyPuzzleSelector
 import com.bliss.grid.application.puzzle.DeleteSessionUseCase
@@ -191,6 +193,8 @@ fun Application.module() {
     val generatePuzzle = GeneratePuzzleUseCase(wordRepository, defaultPuzzleConstraints())
     // Base corpus (not the overlay): the last-clue guard folds the in-txn active corrections itself (ADR-0108 §2).
     val recordCorrection = RecordCorrectionUseCase(correctionRepository, corpusRepository)
+    // Base corpus: the picker shows every clue the word carries, including the reported one (ADR-0108 amendment).
+    val listWordClues = ListWordCluesUseCase(corpusRepository)
     // Blocklist impact preview (ADR-0110 §4): counts affected stored grids; in-memory returns zeros without a DB.
     val blocklistPreviewQuery: BlocklistPreviewQuery =
         when (val ds = Database.dataSource()) {
@@ -342,6 +346,7 @@ fun Application.module() {
         deleteSession(deleteSession)
         words(sampleWords, verifySampleWord)
         corrections(recordCorrection, correctionRepository)
+        wordClues(listWordClues)
         blocklistCorrections(recordCorrection, blocklistPreviewQuery)
     }
 }
