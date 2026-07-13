@@ -1,6 +1,8 @@
 package com.bliss.grid.infrastructure.persistence
 
 import assertk.assertThat
+import assertk.assertions.containsExactlyInAnyOrder
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import com.bliss.grid.application.puzzle.StoredPuzzle
@@ -26,6 +28,7 @@ import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -117,6 +120,35 @@ class PostgresGridBackfillTest {
     }
 
     @Test
+    fun `patchBatch reports the puzzle_date of patched dailies and omits dateless solos`() {
+        val dailyId = UUID.randomUUID()
+        val soloId = UUID.randomUUID()
+        val date = LocalDate.of(2026, 7, 12)
+        seedDaily(dailyId, date, Word("PAIN", "Souffrance"))
+        seed(soloId, Word("PAIN", "Souffrance"))
+        val correction =
+            ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "Souffrance", wordText = "PAIN", newClueText = "Aliment de base")
+
+        val result = backfill.patchBatch(correction, 10)
+
+        assertThat(result.patched).isEqualTo(2)
+        // Only the daily contributes a date; the dateless solo does not (edge cache is keyed by daily date, ADR-0089 §5).
+        assertThat(result.patchedDates).containsExactlyInAnyOrder(date)
+    }
+
+    @Test
+    fun `patchBatch reports no dates when a no-op correction patches nothing`() {
+        seedDaily(UUID.randomUUID(), LocalDate.of(2026, 7, 12), Word("PAIN", "Souffrance"))
+        val correction =
+            ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "Souffrance", wordText = "PAIN", newClueText = "Souffrance")
+
+        val result = backfill.patchBatch(correction, 10)
+
+        assertThat(result.patched).isEqualTo(0)
+        assertThat(result.patchedDates).isEmpty()
+    }
+
+    @Test
     fun `a correction narrowed to a different word matches nothing`() {
         seed(UUID.randomUUID(), Word("PARIS", "Capitale"))
         val correction =
@@ -129,6 +161,18 @@ class PostgresGridBackfillTest {
         puzzleId: UUID,
         word: Word,
     ) {
+        puzzles.getOrCompute(puzzleId) { storedOf(word) }
+    }
+
+    private fun seedDaily(
+        puzzleId: UUID,
+        date: LocalDate,
+        word: Word,
+    ) {
+        puzzles.insertDaily(puzzleId, date, storedOf(word))
+    }
+
+    private fun storedOf(word: Word): StoredPuzzle {
         val placement =
             WordPlacement(
                 word = word,
@@ -136,14 +180,12 @@ class PostgresGridBackfillTest {
                 direction = Direction.DOWN_RIGHT,
                 chosenClue = word.clues.first(),
             )
-        val stored =
-            StoredPuzzle(
-                grid = Grid.fromPlacements(width = 12, height = 12, placements = listOf(placement)),
-                title = "t",
-                language = "fr",
-                hintsAllowed = 3,
-                createdAt = Instant.parse("2026-05-13T00:00:00Z"),
-            )
-        puzzles.getOrCompute(puzzleId) { stored }
+        return StoredPuzzle(
+            grid = Grid.fromPlacements(width = 12, height = 12, placements = listOf(placement)),
+            title = "t",
+            language = "fr",
+            hintsAllowed = 3,
+            createdAt = Instant.parse("2026-05-13T00:00:00Z"),
+        )
     }
 }

@@ -2,11 +2,13 @@ package com.bliss.grid.application.correction
 
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThanOrEqualTo
 import assertk.assertions.isNull
 import com.bliss.grid.domain.correction.ClueCorrection
 import org.junit.jupiter.api.Test
+import java.time.LocalDate
 import java.util.UUID
 
 class ProcessCorrectionsUseCaseTest {
@@ -112,15 +114,50 @@ class ProcessCorrectionsUseCaseTest {
         assertThat(store.states.getValue(blocklistId).error).isNull()
     }
 
+    @Test
+    fun `accumulates patched daily dates across batches for edge purge and excludes failures`() {
+        val day1 = LocalDate.of(2026, 7, 12)
+        val day2 = LocalDate.of(2026, 7, 13)
+        val store = FakeWorkStore().apply { seed(correctionId, replace()) }
+        val backfill =
+            FakeBackfill(
+                mutableListOf(
+                    grid(1, date = day1),
+                    grid(2, failing = true, date = LocalDate.of(2026, 7, 20)),
+                    grid(3, date = day2),
+                    grid(4, date = day1),
+                ),
+            )
+        val useCase = ProcessCorrectionsUseCase(store, backfill, batchSize = 2)
+
+        useCase.run()
+
+        // Deduped, in first-seen order; the failing grid's date is never purged.
+        assertThat(useCase.patchedDailyDates).containsExactly(day1, day2)
+    }
+
+    @Test
+    fun `patched daily dates is empty when a solo grid without a date is patched`() {
+        val store = FakeWorkStore().apply { seed(correctionId, replace()) }
+        val backfill = FakeBackfill(mutableListOf(grid(1), grid(2)))
+        val useCase = ProcessCorrectionsUseCase(store, backfill)
+
+        useCase.run()
+
+        assertThat(useCase.patchedDailyDates).isEmpty()
+    }
+
     private fun grid(
         id: Int,
         failing: Boolean = false,
-    ): FakeGrid = FakeGrid(id, clueText = "old", failing = failing)
+        date: LocalDate? = null,
+    ): FakeGrid = FakeGrid(id, clueText = "old", failing = failing, date = date)
 
     private data class FakeGrid(
         val id: Int,
         var clueText: String,
         val failing: Boolean = false,
+        val date: LocalDate? = null,
     )
 
     private class FakeBackfill(
@@ -135,6 +172,7 @@ class ProcessCorrectionsUseCaseTest {
             var patched = 0
             var failed = 0
             var lastError: String? = null
+            val patchedDates = mutableListOf<LocalDate>()
             for (g in grids.filter { it.clueText == correction.oldClueText }.take(limit)) {
                 if (g.failing) {
                     failed++
@@ -143,8 +181,9 @@ class ProcessCorrectionsUseCaseTest {
                 }
                 g.clueText = correction.newClueText ?: g.clueText
                 patched++
+                if (g.date != null) patchedDates.add(g.date)
             }
-            return PatchBatchResult(patched, failed, lastError)
+            return PatchBatchResult(patched, failed, lastError, patchedDates)
         }
     }
 }

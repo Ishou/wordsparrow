@@ -89,8 +89,10 @@ private fun runProcessCorrections(): Int {
                 backfill = PostgresBlocklistBackfill(dataSource),
                 regeneration = singleDateRegenerator(puzzleRepository, cooldownRepository).asDailyRegenerationPort(),
             )
-        ProcessCorrectionsUseCase(store, backfill, blocklist).run()
-        purgeRegeneratedDailies(blocklist.regeneratedDates)
+        val corrections = ProcessCorrectionsUseCase(store, backfill, blocklist)
+        corrections.run()
+        // Both paths mutate stored dailies: blocklist regenerates, replace/forbid patches the clue in place (ADR-0089 §5).
+        purgeRegeneratedDailies((blocklist.regeneratedDates + corrections.patchedDailyDates).distinct())
         0
     } finally {
         database.stop()

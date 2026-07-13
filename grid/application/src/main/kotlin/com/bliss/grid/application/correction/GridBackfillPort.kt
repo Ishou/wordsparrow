@@ -1,6 +1,7 @@
 package com.bliss.grid.application.correction
 
 import com.bliss.grid.domain.correction.ClueCorrection
+import java.time.LocalDate
 
 /** Patches stored-grid payloads for a correction; the work queue is "rows still matching old_clue_text" (ADR-0108 §4). */
 interface GridBackfillPort {
@@ -19,4 +20,6 @@ data class PatchBatchResult(
     val patched: Int,
     val failed: Int,
     val lastError: String?,
+    /** Puzzle dates of patched daily rows, so the worker can purge their edge cache (ADR-0089 §5). */
+    val patchedDates: List<LocalDate> = emptyList(),
 )

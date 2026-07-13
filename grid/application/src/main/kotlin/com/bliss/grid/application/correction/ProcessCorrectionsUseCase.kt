@@ -3,6 +3,7 @@ package com.bliss.grid.application.correction
 import com.bliss.grid.domain.correction.ClueCorrection
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.time.LocalDate
 
 private val log = LoggerFactory.getLogger("com.bliss.grid.application.correction.ProcessCorrectionsUseCase")
 
@@ -13,6 +14,11 @@ class ProcessCorrectionsUseCase(
     private val blocklist: BlocklistJobProcessor? = null,
     private val batchSize: Int = DEFAULT_BATCH_SIZE,
 ) {
+    private val patchedDailies = linkedSetOf<LocalDate>()
+
+    /** Daily dates whose clue was patched across this run; the edge cache must be purged for these (ADR-0089 §5). */
+    val patchedDailyDates: List<LocalDate> get() = patchedDailies.toList()
+
     /** Processes every backfillable correction; returns the number of jobs acted on. */
     fun run(): Int {
         val jobs = store.backfillJobs()
@@ -54,6 +60,7 @@ class ProcessCorrectionsUseCase(
         while (true) {
             val result = backfill.patchBatch(job.correction, batchSize)
             store.heartbeatBackfill(job.correctionId, result.patched)
+            patchedDailies.addAll(result.patchedDates)
             if (result.lastError != null) lastError = result.lastError
             log.info("event=backfill_batch patched={} failed={}", result.patched, result.failed)
             // A patched grid drops out of the queue, so no progress means the remainder is stuck or done (ADR-0108 §4).
