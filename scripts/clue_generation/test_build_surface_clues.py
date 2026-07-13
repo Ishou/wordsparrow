@@ -107,3 +107,16 @@ def test_pp_fem_pl_homograph_head_under_negation_is_kept() -> None:
     assert len(rows) == 1, rows
     assert rows[0]["clue"] == "Ne satisfaites pas", rows
     assert rows[0]["inflection_status"] == "inflected", rows
+
+
+def test_pp_fem_pl_homograph_head_past_leading_non_matching_content_word() -> None:
+    """`comblez → "Capable de satisfaire"`: the real head (`satisfaire`) sits after
+    a leading adjective (`Capable`) that isn't itself a finite verb — the scan must
+    keep going past it instead of stopping at the first content token."""
+    idx = _pp_homograph_index()
+    _add(idx, "capable", "capable", "adj epi sg")
+    corpus = {("combler", "verbe"): [_clue("combler", "verbe", "Capable de satisfaire")]}
+    rows = build_surface_rows("comblez", corpus, idx, {})
+    assert len(rows) == 1, rows
+    assert rows[0]["clue"] == "Capable de satisfaites", rows
+    assert rows[0]["inflection_status"] == "pp-adjective-homograph", rows

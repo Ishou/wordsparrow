@@ -124,7 +124,7 @@ def _head_reads_as_pp_adjective(text: str, index: MorphologyIndex) -> bool:
             return False
         readings = index.lookup_form(low)
         if not any(tags & _PERSON_TAGS for _lemma, tags in readings):
-            return False  # first content token is not a finite verb — not this case
+            continue  # not the head candidate — keep scanning for the real finite-verb head
         is_pp_fem_pl = any(
             "ppas" in tags and "fem" in tags and (tags & {"pl", "plur"})
             for _lemma, tags in readings
