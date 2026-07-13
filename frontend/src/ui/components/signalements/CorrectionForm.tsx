@@ -1,15 +1,17 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from '@ark-ui/react/dialog';
 import { Portal } from '@ark-ui/react/portal';
 import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
 import { useToast } from '@/ui/components/primitives';
 import { applyCorrection, LastClueForbidden, markSignalementHandled, SurveyDecisionFailed } from '@/application/correction';
-import type { CorrectionClient, CorrectionInput } from '@/application/correction';
+import type { CorrectionClient, CorrectionInput, WordClue } from '@/application/correction';
 import type { SurveyClient } from '@/application/survey';
 import { useCorrectionProgress } from './useCorrectionProgress';
 
 type Mode = 'replace' | 'forbid';
+type ReplaceStyle = 'write' | 'pick';
+type CluesStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 const trigger = css({
   minHeight: '44px',
@@ -81,6 +83,26 @@ const textField = css({
   fontSize: '15px',
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '1px' },
 });
+const pickList = css({ listStyle: 'none', margin: '0 0 12px', padding: 0, display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '210px', overflowY: 'auto' });
+const pickRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  minHeight: '44px',
+  paddingInline: '10px',
+  borderRadius: '12px',
+  cursor: 'pointer',
+  color: 'ws.jadeInk',
+  fontSize: '15px',
+  lineHeight: '1.3',
+  transition: 'background-color 120ms',
+  _hover: { bg: 'ws.sable' },
+  '&:has(input:focus-visible)': { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+  '&:has(input:checked)': { bg: 'ws.sakuraBlush', fontWeight: 'bold' },
+});
+const pickText = css({ flex: '1 1 auto', minWidth: 0 });
+const themeTag = css({ flex: 'none', fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.03em', textTransform: 'uppercase', color: 'ws.khaki', bg: 'ws.sable', borderRadius: '999px', paddingInline: '8px', paddingBlock: '2px' });
+const pickNotice = css({ fontSize: '13px', color: 'ws.khaki', margin: '0 0 12px', lineHeight: '1.5' });
 const rejected = css({ fontSize: '13px', color: 'ws.sakuraDark', margin: '12px 0', lineHeight: '1.5', fontWeight: 'bold' });
 const progressText = css({ fontSize: '13px', color: 'ws.khaki', margin: '12px 0', lineHeight: '1.5' });
 const doneText = css({ fontSize: '13px', color: 'ws.jadeInk', margin: '12px 0', lineHeight: '1.5', fontWeight: 'bold' });
@@ -114,23 +136,58 @@ export function CorrectionForm({
   const solvedWord = wordText?.trim() || undefined;
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>('replace');
+  const [replaceStyle, setReplaceStyle] = useState<ReplaceStyle>('write');
   const [hasText, setHasText] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [correctionId, setCorrectionId] = useState<string | null>(null);
   const [lastClue, setLastClue] = useState(false);
   const [decisionFailed, setDecisionFailed] = useState(false);
+  const [clues, setClues] = useState<ReadonlyArray<WordClue>>([]);
+  const [cluesStatus, setCluesStatus] = useState<CluesStatus>('idle');
+  const [pickedClue, setPickedClue] = useState<string | null>(null);
   const newClueRef = useRef<HTMLInputElement>(null);
+  const fetchedWordRef = useRef<string | null>(null);
   const { progress } = useCorrectionProgress(correctionClient, correctionId, pollIntervalMs);
 
   const settled = correctionId !== null && !decisionFailed;
+  const picking = mode === 'replace' && replaceStyle === 'pick';
+
+  // Fetch the word's clue set once when the picker is first opened; the reported clue is excluded from the offered list.
+  useEffect(() => {
+    if (!picking || !solvedWord || fetchedWordRef.current === solvedWord) return;
+    fetchedWordRef.current = solvedWord;
+    let alive = true;
+    setCluesStatus('loading');
+    correctionClient
+      .listWordClues(solvedWord)
+      .then((list) => {
+        if (alive) {
+          setClues(list);
+          setCluesStatus('ready');
+        }
+      })
+      .catch(() => {
+        if (alive) setCluesStatus('error');
+      });
+    return () => {
+      alive = false;
+    };
+  }, [picking, solvedWord, correctionClient]);
+
+  const otherClues = useMemo(() => clues.filter((c) => c.text !== oldClueText), [clues, oldClueText]);
 
   const reset = () => {
     setMode('replace');
+    setReplaceStyle('write');
     setHasText(false);
     setSubmitting(false);
     setCorrectionId(null);
     setLastClue(false);
     setDecisionFailed(false);
+    setClues([]);
+    setCluesStatus('idle');
+    setPickedClue(null);
+    fetchedWordRef.current = null;
   };
 
   const onOpenChange = (nextOpen: boolean) => {
@@ -147,7 +204,7 @@ export function CorrectionForm({
       if (!solvedWord) return null;
       return { kind: 'forbid_clue', oldClueText, wordText: solvedWord };
     }
-    const newClueText = newClueRef.current?.value.trim() ?? '';
+    const newClueText = replaceStyle === 'pick' ? (pickedClue ?? '') : (newClueRef.current?.value.trim() ?? '');
     if (!newClueText) return null;
     return { kind: 'replace', oldClueText, newClueText, ...(solvedWord ? { wordText: solvedWord } : {}) };
   };
@@ -190,7 +247,13 @@ export function CorrectionForm({
     }
   };
 
-  const canSubmit = !submitting && (mode === 'forbid' ? Boolean(solvedWord) : hasText);
+  const canSubmit =
+    !submitting &&
+    (mode === 'forbid'
+      ? Boolean(solvedWord)
+      : replaceStyle === 'pick'
+        ? pickedClue !== null
+        : hasText);
 
   return (
     <>
@@ -240,19 +303,60 @@ export function CorrectionForm({
                   </fieldset>
 
                   {mode === 'replace' ? (
-                    <div>
-                      <label className={fieldLabel} htmlFor="correction-new-clue">{t('correction.newClue.label')}</label>
-                      <input
-                        id="correction-new-clue"
-                        ref={newClueRef}
-                        className={textField}
-                        type="text"
-                        defaultValue=""
-                        maxLength={512}
-                        placeholder={t('correction.newClue.placeholder')}
-                        onInput={(e) => setHasText(e.currentTarget.value.trim().length > 0)}
-                      />
-                    </div>
+                    <>
+                      {solvedWord ? (
+                        <fieldset className={fieldset}>
+                          <legend className={legend}>{t('correction.replace.styleLegend')}</legend>
+                          <label className={modeRow}>
+                            <input type="radio" name="correction-replace-style" className={radioInput} value="write" checked={replaceStyle === 'write'} onChange={() => setReplaceStyle('write')} />
+                            <span>{t('correction.replace.write')}</span>
+                          </label>
+                          <label className={modeRow}>
+                            <input type="radio" name="correction-replace-style" className={radioInput} value="pick" checked={replaceStyle === 'pick'} onChange={() => setReplaceStyle('pick')} />
+                            <span>{t('correction.replace.pick')}</span>
+                          </label>
+                        </fieldset>
+                      ) : null}
+
+                      {picking ? (
+                        cluesStatus === 'ready' && otherClues.length > 0 ? (
+                          <fieldset className={fieldset}>
+                            <legend className={legend}>{t('correction.pick.legend')}</legend>
+                            <ul className={pickList}>
+                              {otherClues.map((c, i) => (
+                                <li key={`${c.text}-${i}`}>
+                                  <label className={pickRow}>
+                                    <input type="radio" name="correction-pick" className={radioInput} value={c.text} checked={pickedClue === c.text} onChange={() => setPickedClue(c.text)} />
+                                    <span className={pickText}>{c.text}</span>
+                                    {c.theme ? <span className={themeTag}>{c.theme}</span> : null}
+                                  </label>
+                                </li>
+                              ))}
+                            </ul>
+                          </fieldset>
+                        ) : cluesStatus === 'error' ? (
+                          <p className={pickNotice} role="status">{t('correction.pick.error')}</p>
+                        ) : cluesStatus === 'ready' ? (
+                          <p className={pickNotice} role="status">{t('correction.pick.empty')}</p>
+                        ) : (
+                          <p className={pickNotice} role="status">{t('common.loading')}</p>
+                        )
+                      ) : (
+                        <div>
+                          <label className={fieldLabel} htmlFor="correction-new-clue">{t('correction.newClue.label')}</label>
+                          <input
+                            id="correction-new-clue"
+                            ref={newClueRef}
+                            className={textField}
+                            type="text"
+                            defaultValue=""
+                            maxLength={512}
+                            placeholder={t('correction.newClue.placeholder')}
+                            onInput={(e) => setHasText(e.currentTarget.value.trim().length > 0)}
+                          />
+                        </div>
+                      )}
+                    </>
                   ) : null}
 
                   {lastClue ? <p className={rejected} role="alert">{t('correction.rejected.lastClue')}</p> : null}

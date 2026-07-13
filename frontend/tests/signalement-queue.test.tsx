@@ -12,6 +12,7 @@ function stubCorrectionClient(): CorrectionClient {
     getCorrectionProgress: vi.fn(),
     blocklistWord: vi.fn(),
     previewBlocklist: vi.fn(),
+    listWordClues: vi.fn(),
   } as unknown as CorrectionClient;
 }
 

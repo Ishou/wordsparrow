@@ -167,6 +167,116 @@ describe('CorrectionForm', () => {
     expect(screen.getByText(/mot requis pour interdire/)).toBeInTheDocument();
   });
 
+  it('picker lists the word’s other clues and submits the chosen one', async () => {
+    let correctionBody: unknown;
+    let decisionBody: unknown;
+    server.use(
+      http.get(`${GRID}/v1/words/CHAT/clues`, () =>
+        HttpResponse.json({
+          clues: [
+            { text: 'Animal qui miaule', theme: null },
+            { text: 'Félin domestique', theme: null },
+            { text: 'Matou', theme: 'animaux' },
+          ],
+        }),
+      ),
+      http.post(`${GRID}/v1/corrections`, async ({ request }) => {
+        correctionBody = await request.json();
+        return HttpResponse.json({ correctionId: CORRECTION_ID, backfillStatus: 'pending' }, { status: 202 });
+      }),
+      http.get(`${GRID}/v1/corrections/${CORRECTION_ID}`, () =>
+        HttpResponse.json({ correctionId: CORRECTION_ID, kind: 'replace', backfillStatus: 'done', gridsMatched: 2, gridsPatched: 2 }),
+      ),
+      http.post(`${SURVEY}/v1/signalements/${REPORT_ID}/decision`, async ({ request }) => {
+        decisionBody = await request.json();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderForm();
+    await openDialog();
+    click(screen.getByRole('radio', { name: /Choisir parmi les autres définitions/ }));
+
+    expect(await screen.findByRole('radio', { name: /Félin domestique/ })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Animal qui miaule/ })).toBeNull();
+    expect(screen.getByText('animaux')).toBeInTheDocument();
+
+    click(screen.getByRole('radio', { name: /Matou/ }));
+    click(screen.getByRole('button', { name: /Enregistrer la correction/ }));
+
+    await waitFor(() =>
+      expect(correctionBody).toEqual({ kind: 'replace', oldClueText: 'Animal qui miaule', newClueText: 'Matou', wordText: 'CHAT' }),
+    );
+    await waitFor(() => expect(decisionBody).toEqual({ decision: 'action' }));
+  });
+
+  it('shows a graceful message on no other clue and keeps the free-text path', async () => {
+    let correctionBody: unknown;
+    server.use(
+      http.get(`${GRID}/v1/words/CHAT/clues`, () =>
+        HttpResponse.json({ clues: [{ text: 'Animal qui miaule', theme: null }] }),
+      ),
+      http.post(`${GRID}/v1/corrections`, async ({ request }) => {
+        correctionBody = await request.json();
+        return HttpResponse.json({ correctionId: CORRECTION_ID, backfillStatus: 'pending' }, { status: 202 });
+      }),
+      http.get(`${GRID}/v1/corrections/${CORRECTION_ID}`, () =>
+        HttpResponse.json({ correctionId: CORRECTION_ID, kind: 'replace', backfillStatus: 'done', gridsMatched: 1, gridsPatched: 1 }),
+      ),
+      http.post(`${SURVEY}/v1/signalements/${REPORT_ID}/decision`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    renderForm();
+    await openDialog();
+    click(screen.getByRole('radio', { name: /Choisir parmi les autres définitions/ }));
+
+    expect(await screen.findByText(/Pas d.autre définition/)).toBeInTheDocument();
+
+    click(screen.getByRole('radio', { name: /Écrire une nouvelle définition/ }));
+    fireEvent.input(screen.getByLabelText(/Nouvelle définition/), { target: { value: 'Félin domestique' } });
+    click(screen.getByRole('button', { name: /Enregistrer la correction/ }));
+
+    await waitFor(() =>
+      expect(correctionBody).toEqual({ kind: 'replace', oldClueText: 'Animal qui miaule', newClueText: 'Félin domestique', wordText: 'CHAT' }),
+    );
+  });
+
+  it('falls back gracefully when the clue fetch fails', async () => {
+    server.use(http.get(`${GRID}/v1/words/CHAT/clues`, () => new HttpResponse(null, { status: 500 })));
+
+    renderForm();
+    await openDialog();
+    click(screen.getByRole('radio', { name: /Choisir parmi les autres définitions/ }));
+
+    expect(await screen.findByText(/Impossible de charger/)).toBeInTheDocument();
+
+    click(screen.getByRole('radio', { name: /Écrire une nouvelle définition/ }));
+    expect(screen.getByLabelText(/Nouvelle définition/)).toBeInTheDocument();
+  });
+
+  it('hides the picker option when the report has no resolved word', async () => {
+    renderForm({ wordText: null });
+    await openDialog();
+    expect(screen.queryByRole('radio', { name: /Choisir parmi les autres définitions/ })).toBeNull();
+    expect(screen.getByLabelText(/Nouvelle définition/)).toBeInTheDocument();
+  });
+
+  it('has no axe violations with the picker open', async () => {
+    const { expectAxeClean } = await import('@/test/a11y');
+    server.use(
+      http.get(`${GRID}/v1/words/CHAT/clues`, () =>
+        HttpResponse.json({ clues: [{ text: 'Animal qui miaule', theme: null }, { text: 'Matou', theme: 'animaux' }] }),
+      ),
+    );
+    renderForm();
+    await openDialog();
+    click(screen.getByRole('radio', { name: /Choisir parmi les autres définitions/ }));
+    await screen.findByRole('radio', { name: /Matou/ });
+    await act(async () => {
+      await expectAxeClean(screen.getByRole('dialog'));
+    });
+  });
+
   it('has no axe violations when open', async () => {
     const { expectAxeClean } = await import('@/test/a11y');
     renderForm();

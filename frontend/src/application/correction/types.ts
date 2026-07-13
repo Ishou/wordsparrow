@@ -32,6 +32,12 @@ export interface BlocklistPreview {
   readonly affectedSolo: number;
 }
 
+// One of a word's corpus clues, offered as an alternate replacement in the Corriger picker (ADR-0108 2026-07-13 amendment).
+export interface WordClue {
+  readonly text: string;
+  readonly theme: string | null;
+}
+
 export interface CorrectionAccepted {
   readonly correctionId: string;
   readonly backfillStatus: BackfillStatus;
@@ -50,4 +56,5 @@ export interface CorrectionClient {
   getCorrectionProgress(correctionId: string): Promise<CorrectionProgress>;
   blocklistWord(input: BlocklistWordInput): Promise<CorrectionAccepted>;
   previewBlocklist(word: string): Promise<BlocklistPreview>;
+  listWordClues(word: string): Promise<ReadonlyArray<WordClue>>;
 }
