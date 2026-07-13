@@ -106,20 +106,13 @@ def _head_verb_numbers(text: str, index: MorphologyIndex) -> set[str]:
 
 
 def _head_reads_as_pp_adjective(text: str, index: MorphologyIndex) -> bool:
-    """True when the inflated head is a finite-verb form that is *also* a
-    feminine-plural past participle and sits in a predicative frame — followed
-    by an adverb, or clause-final. The satisfaire/faire/dire family collides
-    here (`vous satisfaites` == fem-pl ppas `satisfaites`), so `comblez →
-    "Satisfaites pleinement"` reads as the adjective "[elles sont] satisfaites"
-    (maintainer report 2026-07-13). A following infinitive/object (`Faites
-    fonctionner`, `Faites face`) forces the verb reading and is left alone."""
+    """True when the inflated head is a finite-verb form that also reads as a fem-pl past participle in a predicative frame (e.g. `vous satisfaites` / ppas `satisfaites`)."""
     toks = _NUMBER_TOK_RE.findall(text)
     for i, tok in enumerate(toks):
         low = tok.lower()
         if low in _FUNCTION_WORDS:
             continue
-        # `ne … pas` forces the finite-verb reading (`mécontentez → "Ne satisfaites pas"`);
-        # an adjective can't be negated this way, so the homograph is unambiguous there.
+        # `ne … pas` forces the finite-verb reading; an adjective can't be negated this way.
         if any(t.lower() in ("ne", "n") for t in toks[:i]):
             return False
         readings = index.lookup_form(low)
