@@ -365,8 +365,7 @@ class UpdateCellWordLockTest {
     @Test
     fun `GameSolved and COMPLETED fire when the whole no-answer grid is locked (v1 wire reality)`() =
         runTest {
-            // Production repro: grid strips LetterCell.answer, so whole-grid
-            // completion must be derived from locks, never from cell.answer.
+            // Production repro: grid strips LetterCell.answer, so completion must derive from locks.
             val puzzleWithoutAnswers =
                 GamePuzzle(
                     id = UUID.fromString("0190e3c0-0000-7000-8000-000000000003"),

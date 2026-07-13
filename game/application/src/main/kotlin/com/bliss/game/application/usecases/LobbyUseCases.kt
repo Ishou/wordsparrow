@@ -501,9 +501,7 @@ class UpdateCellUseCase(
         position: Position,
         letter: Letter?,
     ): UseCaseOutcome<Lobby> {
-        // Step 1: write the cell entry (or clear) and capture the post-state
-        // that drives lock detection. Locked-cell writes short-circuit here;
-        // whole-grid completion is decided in step 3, once the winning word locks.
+        // Step 1: write the cell entry; locked cells short-circuit. Completion is decided in step 3 once the winning word locks.
         var writtenAt: Instant? = null
         var entriesAfter: Map<Position, CellEntry> = emptyMap()
         var solved: Pair<Long, Map<Position, CellEntry>>? = null
