@@ -70,6 +70,9 @@ export interface LobbyActions {
   readonly setGridConfig: (width: number, height: number) => void;
   readonly start: () => void;
   readonly rotateCode: () => void;
+  // Owner-only (ADR-0113), valid only from COMPLETED — server drives the actual restart / return.
+  readonly rematch: () => void;
+  readonly returnToSalon: () => void;
   // See ShareInviteResult (shareInvite.ts) for the gating rule; `null` when there's no code to share yet.
   readonly copyShareUrl: () => Promise<ShareInviteResult | null>;
   // Voluntary leave: frees the slot server-side. Navigation is the caller's concern — the hook owns no navigate seam.
@@ -400,6 +403,14 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     gameClient.leaveLobby();
   }, [gameClient]);
 
+  const rematch = useCallback(() => {
+    gameClient.rematch();
+  }, [gameClient]);
+
+  const returnToSalon = useCallback(() => {
+    gameClient.returnToSalon();
+  }, [gameClient]);
+
   const cellUpdate = useCallback((row: number, col: number, letter: string | null) => {
     // The Grid hook reports `string | null`; `cellUpdate` expects
     // `Letter | null`. The hook normalizes to a single uppercase letter
@@ -507,6 +518,8 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       setGridConfig,
       start,
       rotateCode,
+      rematch,
+      returnToSalon,
       copyShareUrl,
       leave,
       clearPseudonymError,
@@ -521,6 +534,8 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       setGridConfig,
       start,
       rotateCode,
+      rematch,
+      returnToSalon,
       copyShareUrl,
       leave,
       clearPseudonymError,

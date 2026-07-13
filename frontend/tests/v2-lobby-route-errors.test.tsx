@@ -68,6 +68,8 @@ function makeStubGameClient() {
     cellFocus: () => {},
     leaveLobby: () => { calls.leaveLobby += 1; },
     rotateCode: () => {},
+    rematch: () => {},
+    returnToSalon: () => {},
     disconnect: () => { calls.disconnect += 1; },
     subscribe: (h) => { subscribers.add(h); return () => { subscribers.delete(h); }; },
     subscribeConnectionState: (h) => {

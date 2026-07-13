@@ -116,6 +116,14 @@ describe('WebSocketGameClient client→server frames', () => {
     expect(JSON.parse(ws.sent[1]!)).toEqual({ type: 'rotateCode' });
   });
 
+  it('rematch and returnToSalon send bare type frames (ADR-0113)', async () => {
+    const { client, ws } = await connectAndOpen();
+    client.rematch();
+    client.returnToSalon();
+    expect(JSON.parse(ws.sent[1]!)).toEqual({ type: 'rematch' });
+    expect(JSON.parse(ws.sent[2]!)).toEqual({ type: 'returnToSalon' });
+  });
+
   it('throws when called before the socket is open', () => {
     const client = makeClient();
     expect(() => client.cellUpdate(0, 0, null)).toThrow(/not open/);

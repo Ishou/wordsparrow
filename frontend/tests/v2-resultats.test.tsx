@@ -19,8 +19,10 @@ function renderResultats(overrides: Partial<ResultatsScreenProps> = {}) {
     players,
     ownerSessionId: ownerId,
     lockedPositions: [],
-    isReplaying: false,
-    onReplay: vi.fn(),
+    secondsUntilRematch: 10,
+    isHost: false,
+    onRematchNow: vi.fn(),
+    onCancelRematch: vi.fn(),
     onHome: vi.fn(),
     ...overrides,
   };
@@ -48,18 +50,34 @@ describe('v2 ResultatsScreen', () => {
     expect(screen.getAllByText('Hôte')).toHaveLength(1);
   });
 
-  it('wires Rejouer and retour-accueil', () => {
-    const { props } = renderResultats();
-    fireEvent.click(screen.getByRole('button', { name: 'Rejouer' }));
-    expect(props.onReplay).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole('button', { name: /accueil/i }));
-    expect(props.onHome).toHaveBeenCalledOnce();
+  it('shows the auto-restart countdown for everyone (ADR-0113)', () => {
+    renderResultats({ isHost: false, secondsUntilRematch: 7 });
+    expect(screen.getByText(/Nouvelle partie dans 7/)).toBeTruthy();
   });
 
-  it('disables Rejouer and flips the label while replaying', () => {
-    renderResultats({ isReplaying: true });
-    const btn = screen.getByRole('button', { name: 'Création…' });
-    expect((btn as HTMLButtonElement).disabled).toBe(true);
+  it('hides the countdown when secondsUntilRematch is null', () => {
+    renderResultats({ secondsUntilRematch: null });
+    expect(screen.queryByText(/Nouvelle partie dans/)).toBeNull();
+  });
+
+  it('host sees Rejouer maintenant / Annuler and they fire their handlers', () => {
+    const { props } = renderResultats({ isHost: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Rejouer maintenant' }));
+    expect(props.onRematchNow).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
+    expect(props.onCancelRematch).toHaveBeenCalledOnce();
+  });
+
+  it('hides the host controls for a guest', () => {
+    renderResultats({ isHost: false });
+    expect(screen.queryByRole('button', { name: 'Rejouer maintenant' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Annuler' })).toBeNull();
+  });
+
+  it('everyone keeps the Accueil button, which fires onHome', () => {
+    const { props } = renderResultats({ isHost: false });
+    fireEvent.click(screen.getByRole('button', { name: /accueil/i }));
+    expect(props.onHome).toHaveBeenCalledOnce();
   });
 
   it('shows each contributor validated-letter count', () => {
@@ -95,7 +113,10 @@ describe('v2 ResultatsScreen', () => {
           players={players}
           ownerSessionId={ownerId}
           lockedPositions={[]}
-          onReplay={vi.fn()}
+          secondsUntilRematch={10}
+          isHost
+          onRematchNow={vi.fn()}
+          onCancelRematch={vi.fn()}
           onHome={vi.fn()}
         />
       </main>,

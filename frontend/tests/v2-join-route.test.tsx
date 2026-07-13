@@ -53,6 +53,8 @@ const stubGameClient: GameClient = {
   cellFocus: () => {},
   leaveLobby: () => {},
   rotateCode: () => {},
+  rematch: () => {},
+  returnToSalon: () => {},
   disconnect: () => {},
   subscribe: () => () => {},
   subscribeConnectionState: () => () => {},

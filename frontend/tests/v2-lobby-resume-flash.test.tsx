@@ -99,6 +99,8 @@ function makeStubGameClient(): GameClient {
     cellFocus: () => {},
     leaveLobby: () => {},
     rotateCode: () => {},
+    rematch: () => {},
+    returnToSalon: () => {},
     disconnect: () => {},
     subscribe: (h) => { subscribers.add(h); return () => { subscribers.delete(h); }; },
     subscribeConnectionState: (h: (s: ConnectionState) => void) => {

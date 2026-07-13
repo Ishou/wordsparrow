@@ -53,6 +53,8 @@ function makeFakeInnerClient() {
     },
     leaveLobby: () => {},
     rotateCode: () => {},
+    rematch: () => {},
+    returnToSalon: () => {},
     disconnect: () => {
       disconnectCalls.count += 1;
       setConnectionState('disconnected');

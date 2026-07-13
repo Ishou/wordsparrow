@@ -9,8 +9,7 @@ import { LoaderRetry } from '@/ui/v2/LoaderRetry';
 import { useOptionalAuth } from '@/ui/components/auth';
 import { useLobbyConnection } from '@/ui/components/lobby/useLobbyConnection';
 import { withLocalPlayer } from '@/ui/components/lobby/lobbyView';
-import { useCreateOrResume } from '@/ui/components/lobby/useCreateOrResume';
-import { OwnedGameModal } from '@/ui/v2/multiplayer/OwnedGameModal';
+import { useCountdownTicker } from '@/ui/components/grid';
 import { HostSignInSheet } from '@/ui/home/HostSignInSheet';
 import { useToast } from '@/ui/components/primitives';
 import { useAnnouncer } from '@/ui/components/a11y/Announcer';
@@ -26,6 +25,9 @@ import { css } from 'styled-system/css';
 import { noindexHead } from '@/ui/seo';
 import { t } from '@/ui/i18n';
 import { Route as AppLayoutRoute } from './app-layout';
+
+// ADR-0113: the server auto-restarts a completed co-op game after this delay; the win-screen countdown mirrors it cosmetically.
+const REMATCH_AUTO_START_SECONDS = 10;
 
 const placeholder = css({
   fontFamily: 'wsUi',
@@ -163,13 +165,19 @@ function V2LobbyPage() {
     void navigate({ to: '/' });
   }, [navigate]);
 
-  // ADR-0098 §6: the "Démarrer une nouvelle partie" relinquish now goes through the REST client synchronously (no WS frame).
-  const coop = useCreateOrResume({
-    lobbyClient,
-    getSession,
-    onError: () => showToast({ text: t('route.lobby.error.cannotCreate'), tone: 'error' }),
-  });
-  const handleReplay = coop.createOrResume;
+  // ADR-0113: seed the cosmetic countdown once from the server `completedAt`; the ticker counts down 1 Hz while the server-side timer drives the real restart.
+  const completedAt = lobby.game?.completedAt ?? null;
+  const [rematchSeed, setRematchSeed] = useState<number | null>(null);
+  useEffect(() => {
+    const completedMs = completedAt != null ? Date.parse(completedAt) : NaN;
+    if (!Number.isFinite(completedMs)) {
+      setRematchSeed(null);
+      return;
+    }
+    setRematchSeed(Math.max(0, REMATCH_AUTO_START_SECONDS - Math.floor((Date.now() - completedMs) / 1000)));
+  }, [completedAt]);
+  const secondsUntilRematch = useCountdownTicker(rematchSeed);
+  const isHost = sessionId === lobby.ownerSessionId;
 
   const handleHome = useCallback(() => {
     actions.leave();
@@ -259,16 +267,11 @@ function V2LobbyPage() {
           players={rosterPlayers}
           ownerSessionId={lobby.ownerSessionId}
           lockedPositions={lobby.game?.lockedPositions ?? []}
-          isReplaying={coop.pending}
-          onReplay={handleReplay}
+          secondsUntilRematch={secondsUntilRematch}
+          isHost={isHost}
+          onRematchNow={actions.rematch}
+          onCancelRematch={actions.returnToSalon}
           onHome={handleHome}
-        />
-        <OwnedGameModal
-          lobby={coop.ownedGame}
-          onRejoindre={coop.rejoindre}
-          onStartNew={coop.startNewGame}
-          onClose={coop.dismiss}
-          startingNew={coop.startingNew}
         />
       </AppShell>
     );

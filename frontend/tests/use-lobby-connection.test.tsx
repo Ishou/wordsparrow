@@ -53,6 +53,8 @@ interface FakeGameClient extends GameClient {
   readonly setGridConfigCalls: GridConfig[];
   readonly startGameCalls: { count: number };
   readonly rotateCalls: { count: number };
+  readonly rematchCalls: { count: number };
+  readonly returnToSalonCalls: { count: number };
   readonly leaveCalls: { count: number };
   readonly cellUpdateCalls: Array<{ row: number; column: number; letter: Letter | null }>;
   readonly cellFocusCalls: Array<{
@@ -75,6 +77,8 @@ const makeFakeGameClient = (): FakeGameClient => {
   const setGridConfigCalls: GridConfig[] = [];
   const startGameCalls = { count: 0 };
   const rotateCalls = { count: 0 };
+  const rematchCalls = { count: 0 };
+  const returnToSalonCalls = { count: 0 };
   const leaveCalls = { count: 0 };
   const cellUpdateCalls: Array<{ row: number; column: number; letter: Letter | null }> = [];
   const cellFocusCalls: Array<{
@@ -89,6 +93,8 @@ const makeFakeGameClient = (): FakeGameClient => {
     setGridConfigCalls,
     startGameCalls,
     rotateCalls,
+    rematchCalls,
+    returnToSalonCalls,
     leaveCalls,
     cellUpdateCalls,
     cellFocusCalls,
@@ -107,6 +113,8 @@ const makeFakeGameClient = (): FakeGameClient => {
     cellFocus: (row, column, direction) => { cellFocusCalls.push({ row, column, direction }); },
     leaveLobby: () => { leaveCalls.count += 1; },
     rotateCode: () => { rotateCalls.count += 1; },
+    rematch: () => { rematchCalls.count += 1; },
+    returnToSalon: () => { returnToSalonCalls.count += 1; },
     disconnect: () => { disconnectCalls.count += 1; },
     subscribe: (handler) => { subscribers.add(handler); return () => { subscribers.delete(handler); }; },
     subscribeConnectionState: (handler) => {
@@ -267,6 +275,15 @@ describe('useLobbyConnection actions', () => {
     expect(gameClient.leaveCalls.count).toBe(1);
     // leave() owns no navigation/teardown — the caller navigates, unmount disconnects.
     expect(gameClient.disconnectCalls.count).toBe(0);
+  });
+
+  it('rematch() and returnToSalon() forward to the game client (ADR-0113)', () => {
+    const gameClient = makeFakeGameClient();
+    const { result } = renderHook(() => useLobbyConnection(makeArgs(gameClient)));
+    act(() => result.current.actions.rematch());
+    expect(gameClient.rematchCalls.count).toBe(1);
+    act(() => result.current.actions.returnToSalon());
+    expect(gameClient.returnToSalonCalls.count).toBe(1);
   });
 
   it('cellUpdate() forwards row/column/letter', () => {

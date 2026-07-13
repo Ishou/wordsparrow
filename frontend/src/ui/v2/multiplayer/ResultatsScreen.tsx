@@ -65,6 +65,15 @@ const letterCount = css({
   color: 'ws.jadeInk',
 });
 
+const countdownCss = css({
+  fontFamily: 'wsUi',
+  fontWeight: 'black',
+  fontSize: '15px',
+  color: 'ws.jadeInk',
+  marginTop: '22px',
+  fontVariantNumeric: 'tabular-nums',
+});
+
 const replayButton = css({
   width: '100%',
   marginTop: '24px',
@@ -105,8 +114,11 @@ export interface ResultatsScreenProps {
   readonly players: ReadonlyArray<Player>;
   readonly ownerSessionId: SessionId;
   readonly lockedPositions: ReadonlyArray<LockedCell>;
-  readonly isReplaying?: boolean;
-  readonly onReplay: () => void;
+  // ADR-0113: cosmetic countdown to the server-driven auto-restart; `null` hides it. Server is the timer authority.
+  readonly secondsUntilRematch: number | null;
+  readonly isHost: boolean;
+  readonly onRematchNow: () => void;
+  readonly onCancelRematch: () => void;
   readonly onHome: () => void;
 }
 
@@ -115,8 +127,10 @@ export function ResultatsScreen({
   players,
   ownerSessionId,
   lockedPositions,
-  isReplaying = false,
-  onReplay,
+  secondsUntilRematch,
+  isHost,
+  onRematchNow,
+  onCancelRematch,
   onHome,
 }: ResultatsScreenProps) {
   const time = formatDuration(durationMs);
@@ -153,15 +167,22 @@ export function ResultatsScreen({
         </ul>
       </section>
 
-      <button
-        type="button"
-        className={replayButton}
-        onClick={onReplay}
-        disabled={isReplaying}
-        aria-busy={isReplaying || undefined}
-      >
-        {isReplaying ? t('v2.multiplayer.creating') : t('lobby.endGame.playAgain')}
-      </button>
+      {secondsUntilRematch != null ? (
+        <p className={countdownCss} role="timer">
+          {t('v2.multiplayer.resultats.autoRestart', { seconds: secondsUntilRematch })}
+        </p>
+      ) : null}
+
+      {isHost ? (
+        <>
+          <button type="button" className={replayButton} onClick={onRematchNow}>
+            {t('v2.multiplayer.resultats.rematchNow')}
+          </button>
+          <button type="button" className={homeButton} onClick={onCancelRematch}>
+            {t('v2.multiplayer.resultats.cancelRematch')}
+          </button>
+        </>
+      ) : null}
       <button type="button" className={homeButton} onClick={onHome}>
         {t('v2.multiplayer.resultats.home')}
       </button>
