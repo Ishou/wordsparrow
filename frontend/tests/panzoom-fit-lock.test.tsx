@@ -3,10 +3,7 @@ import { render, act } from '@testing-library/react';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PanZoom, type PanZoomHandle } from '@/ui/play/PanZoom';
 
-// Regression: once the user has taken control of the zoom, a change to the
-// pad props (driven on the play screen by the bottom bar re-measuring its
-// height when the active clue re-wraps) must NOT reset the zoom back to the
-// initial "fit the screen" scale. The initial fit is a one-time thing.
+// Regression: a padBottom change after interaction must not reset the user's zoom to fit.
 
 function stageScale(container: HTMLElement): number {
   const stage = Array.from(container.querySelectorAll('div')).find((el) =>

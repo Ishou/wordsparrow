@@ -60,9 +60,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   const pinchDist = useRef(0);
   const moved = useRef(0);
   const idle = useRef(0);
-  // The initial fit is one-time. Once the user touches the board (tap/pan/zoom),
-  // later pad/viewport changes only re-clamp — they never re-fit and clobber the
-  // user's zoom. A different puzzle (content-size change) re-arms the fit.
+  // One-time fit: locks on first user interaction, re-arms on a new puzzle (content-size change).
   const interacted = useRef(false);
   const lastContent = useRef({ w: contentWidth, h: contentHeight });
 
