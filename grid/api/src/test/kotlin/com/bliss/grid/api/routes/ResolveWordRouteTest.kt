@@ -97,6 +97,7 @@ class ResolveWordRouteTest {
                     verifyGrid = VerifyGridUseCase(puzzleRepo, InMemoryVerifyUsageRepository()),
                     puzzleRepository = puzzleRepo,
                     hintUsageRepository = hintUsageRepo,
+                    verifyUsageRepository = InMemoryVerifyUsageRepository(),
                     hintWriteCoordinator = InMemoryHintWriteCoordinator(),
                     cookieVerifier = FakeCookieVerifier(),
                     wordValidateServiceToken = token,

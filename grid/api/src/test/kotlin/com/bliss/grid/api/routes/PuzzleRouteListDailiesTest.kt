@@ -297,6 +297,7 @@ class PuzzleRouteListDailiesTest {
                     ),
                 puzzleRepository = puzzleRepo,
                 hintUsageRepository = hintRepo,
+                verifyUsageRepository = InMemoryVerifyUsageRepository(),
                 hintWriteCoordinator = InMemoryHintWriteCoordinator(),
                 cookieVerifier = FakeCookieVerifier(),
                 dailyPuzzleSelector = selector,

@@ -26,6 +26,7 @@ import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
 import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryVerifyUsageRepository
 import io.ktor.client.request.cookie
+import io.ktor.client.request.get
 import io.ktor.client.request.headers
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -40,6 +41,7 @@ import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -89,6 +91,8 @@ class PuzzleRouteVerifyTest {
                 )
             }
             val hintUsageRepo = InMemoryHintUsageRepository()
+            // Shared so a verify POST's cooldown is visible to the puzzle GET, mirroring the single per-user row in prod.
+            val verifyUsageRepo = InMemoryVerifyUsageRepository()
             val gen = GeneratePuzzleUseCase(TestCorpus.load(), defaultPuzzleConstraints())
             routing {
                 puzzles(
@@ -97,9 +101,10 @@ class PuzzleRouteVerifyTest {
                     validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
                     validateWord = ValidateWordUseCase(puzzleRepo),
                     resolveWord = ResolveWordUseCase(puzzleRepo),
-                    verifyGrid = VerifyGridUseCase(puzzleRepo, InMemoryVerifyUsageRepository()),
+                    verifyGrid = VerifyGridUseCase(puzzleRepo, verifyUsageRepo),
                     puzzleRepository = puzzleRepo,
                     hintUsageRepository = hintUsageRepo,
+                    verifyUsageRepository = verifyUsageRepo,
                     hintWriteCoordinator = InMemoryHintWriteCoordinator(),
                     cookieVerifier = verifier,
                 )
@@ -205,6 +210,34 @@ class PuzzleRouteVerifyTest {
 
             assertThat(response.status).isEqualTo(HttpStatusCode.NotFound)
             assertThat(response.bodyAsText()).contains("puzzle-not-found")
+        }
+
+    @Test
+    fun `GET puzzle surfaces the active verify cooldown for the authenticated caller`() =
+        testApplication {
+            mount(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", emptySet())))
+            verify(client, correctBody)
+
+            val response =
+                client.get("/v1/puzzles/$puzzleId") {
+                    cookie(SESSION_COOKIE_NAME, cookieValue)
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            assertThat(body["secondsUntilNextVerify"]!!.jsonPrimitive.content.toInt() > 0).isEqualTo(true)
+        }
+
+    @Test
+    fun `GET puzzle reports a null verify cooldown for an anonymous caller`() =
+        testApplication {
+            mount(FakeCookieVerifier(cached = WhoAmI(userId, "Joueuse", emptySet())))
+
+            val response = client.get("/v1/puzzles/$puzzleId")
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            assertThat(body["secondsUntilNextVerify"]).isEqualTo(JsonNull)
         }
 }
 

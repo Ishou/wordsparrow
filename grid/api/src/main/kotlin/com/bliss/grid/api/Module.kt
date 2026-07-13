@@ -332,6 +332,7 @@ fun Application.module() {
             verifyGrid,
             puzzleRepository = puzzleRepository,
             hintUsageRepository = hintUsageRepository,
+            verifyUsageRepository = verifyUsageRepository,
             hintWriteCoordinator = hintWriteCoordinator,
             cookieVerifier = cookieVerifier,
             listDailyPuzzles = listDailyPuzzles,
