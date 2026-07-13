@@ -335,6 +335,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/puzzles/{puzzleId}/resolve-word": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * (Internal) Resolve the answer word placed for a clue on a grid.
+         * @description INTERNAL, service-to-service only. Used by survey-api to attach the real
+         *     answer word to a player report (ADR-0111): survey submits the reported
+         *     `clueText`, and this returns the single word that grid placed for that
+         *     clue in the stored puzzle. A clue is unique within a generated grid, so
+         *     `puzzleId + clueText` identifies exactly one placement.
+         *
+         *     Unlike `/validate-word` (a binary verdict, ADR-0084) this endpoint
+         *     returns the **plaintext word**, so its exposure is strictly first-party:
+         *     it requires the `X-Service-Token` header (constant-time-compared to the
+         *     server's `WORD_VALIDATE_SERVICE_TOKEN`), is NOT on the public ingress,
+         *     and MUST NOT be reachable by a browser — a player calling it would leak
+         *     the daily solution (ADR-0076 §9). The word reaches only the survey
+         *     service and, from there, the contribuer-gated maintainer queue; it is
+         *     never returned to the reporting player. Threat model: ADR-0084.
+         */
+        post: operations["resolveWord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sessions/{sessionId}": {
         parameters: {
             query?: never;
@@ -1087,6 +1120,26 @@ export interface components {
              * @example true
              */
             correct: boolean;
+        };
+        /** @description The reported clue text to look up on the puzzle (ADR-0111). */
+        ResolveWordRequest: {
+            /**
+             * @description The clue as shown to the player. Matched against the placement's
+             *     chosen clue text on the stored puzzle.
+             */
+            clueText: string;
+        };
+        /**
+         * @description The single answer word grid placed for the clue on this puzzle
+         *     (ADR-0111). Plaintext — this endpoint is internal, service-token gated,
+         *     never browser-reachable (ADR-0076 §9, ADR-0084).
+         */
+        ResolveWordResult: {
+            /**
+             * @description The placed answer word (surface form).
+             * @example ESSE
+             */
+            word: string;
         };
         /**
          * @description RFC 7807 error envelope (ADR-0003 §6). Additional members per
@@ -1983,6 +2036,65 @@ export interface operations {
             /**
              * @description No puzzle with this id. RFC 7807;
              *     `type` is `https://bliss.example/errors/puzzle-not-found`.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resolveWord: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Shared service token for internal endpoints (ADR-0084). Must match the
+                 *     server's `WORD_VALIDATE_SERVICE_TOKEN`; otherwise 401.
+                 */
+                "X-Service-Token": components["parameters"]["ServiceToken"];
+            };
+            path: {
+                /** @description UUID v7 identifier of the puzzle. */
+                puzzleId: components["parameters"]["PuzzleId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveWordRequest"];
+            };
+        };
+        responses: {
+            /** @description The clue was found on the grid; the body carries its word. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolveWordResult"];
+                };
+            };
+            /**
+             * @description Missing or invalid `X-Service-Token`. This endpoint is
+             *     service-authenticated; browsers cannot call it. RFC 7807; `type` is
+             *     `https://bliss.example/errors/service-auth-required`.
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description No puzzle with this id, or no placement on that puzzle carries this
+             *     clue text. RFC 7807; `type` is
+             *     `https://bliss.example/errors/clue-not-on-puzzle`.
              */
             404: {
                 headers: {
