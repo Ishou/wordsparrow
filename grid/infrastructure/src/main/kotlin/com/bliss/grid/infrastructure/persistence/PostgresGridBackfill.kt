@@ -61,7 +61,11 @@ class PostgresGridBackfill(
         return PatchBatchResult(patched, failed, lastError, patchedDates)
     }
 
-    private data class BackfillRow(val puzzleId: UUID, val payload: String, val puzzleDate: LocalDate?)
+    private data class BackfillRow(
+        val puzzleId: UUID,
+        val payload: String,
+        val puzzleDate: LocalDate?,
+    )
 
     private fun selectBatch(
         correction: ClueCorrection,
