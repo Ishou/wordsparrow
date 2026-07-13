@@ -23,7 +23,9 @@ import com.bliss.game.application.usecases.LobbyGarbageCollector
 import com.bliss.game.application.usecases.PresenceAggregator
 import com.bliss.game.application.usecases.RelinquishOwnershipByUserUseCase
 import com.bliss.game.application.usecases.RelinquishOwnershipUseCase
+import com.bliss.game.application.usecases.RematchUseCase
 import com.bliss.game.application.usecases.RenameSelfUseCase
+import com.bliss.game.application.usecases.ReturnToSalonUseCase
 import com.bliss.game.application.usecases.RotateLobbyCodeUseCase
 import com.bliss.game.application.usecases.SetGridConfigUseCase
 import com.bliss.game.application.usecases.StartGameUseCase
@@ -306,6 +308,8 @@ fun Application.module() {
             leaveLobby = LeaveLobbyUseCase(lobbyRepository, SystemClock, analyticsEventSink = analyticsEventSink),
             rotateCode = RotateLobbyCodeUseCase(lobbyRepository, SystemClock, analyticsEventSink = analyticsEventSink),
             relinquishOwnership = RelinquishOwnershipUseCase(lobbyRepository, SystemClock),
+            rematch = RematchUseCase(lobbyRepository, puzzleProvider, SystemClock, analyticsEventSink = analyticsEventSink),
+            returnToSalon = ReturnToSalonUseCase(lobbyRepository, SystemClock),
         )
     val claimOwnership = ClaimLobbyOwnershipUseCase(lobbyRepository, SystemClock)
     // REST DELETE .../ownership: userId-authorized relinquish (ADR-0098 §2 + 2026-07-08 amendment); distinct from the WS session-keyed path.

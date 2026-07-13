@@ -94,6 +94,8 @@ internal fun LobbyEvent.toFrameOrNull(): ServerToClientFrame? =
         is LobbyEvent.GridConfigChanged -> null
         // CodeRotated (ADR-0029): same posture — snapshot rebroadcast.
         is LobbyEvent.CodeRotated -> null
+        // ReturnedToSalon (ADR-0113): no dedicated frame; the route rebroadcasts the lobbyState snapshot.
+        is LobbyEvent.ReturnedToSalon -> null
         // LobbyClosed: the server closes the socket; nothing to broadcast.
         is LobbyEvent.LobbyClosed -> null
         is LobbyEvent.Typing ->

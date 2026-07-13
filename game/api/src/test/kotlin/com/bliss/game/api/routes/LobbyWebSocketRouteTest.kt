@@ -24,15 +24,22 @@ import com.bliss.game.application.usecases.JoinLobbyUseCase
 import com.bliss.game.application.usecases.LeaveLobbyUseCase
 import com.bliss.game.application.usecases.PresenceAggregator
 import com.bliss.game.application.usecases.RelinquishOwnershipUseCase
+import com.bliss.game.application.usecases.RematchUseCase
 import com.bliss.game.application.usecases.RenameSelfUseCase
+import com.bliss.game.application.usecases.ReturnToSalonUseCase
 import com.bliss.game.application.usecases.RotateLobbyCodeUseCase
 import com.bliss.game.application.usecases.SetGridConfigUseCase
 import com.bliss.game.application.usecases.StartGameUseCase
 import com.bliss.game.application.usecases.UpdateCellUseCase
 import com.bliss.game.application.usecases.UseCaseOutcome
+import com.bliss.game.domain.BlockCell
+import com.bliss.game.domain.GameClue
+import com.bliss.game.domain.GameClueDirection
 import com.bliss.game.domain.GamePuzzle
 import com.bliss.game.domain.Letter
+import com.bliss.game.domain.LetterCell
 import com.bliss.game.domain.LobbyId
+import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -194,6 +201,8 @@ class LobbyWebSocketRouteTest {
                     leaveLobby = LeaveLobbyUseCase(repo, clock),
                     rotateCode = RotateLobbyCodeUseCase(repo, clock),
                     relinquishOwnership = RelinquishOwnershipUseCase(repo, clock),
+                    rematch = RematchUseCase(repo, NullPuzzleProvider, clock),
+                    returnToSalon = ReturnToSalonUseCase(repo, clock),
                 )
             val sessionManager = SessionManager()
             val backgroundJob = SupervisorJob()
@@ -1099,6 +1108,53 @@ class LobbyWebSocketRouteTest {
                 .contains(LobbyEvent.ConnectionLost(SessionId(sessionA)))
         }
 
+    // ---------- rematch auto-restart (ADR-0113) ----------
+
+    @Test
+    fun `a solved co-op grid auto-restarts a fresh game after the delay`() =
+        runWith(rematchDelay = 200.milliseconds, puzzle = SamplePuzzles.solvable()) { harness ->
+            val lobbyId = harness.seedLobby()
+            harness.startGame(lobbyId)
+            harness.client.webSocket("/v1/lobbies/${lobbyId.value}/ws?sessionId=$sessionA") {
+                receiveText() // initial snapshot
+                sendText("""{"type":"joinLobby","sessionId":"$sessionA","pseudonym":"$pseudoA"}""")
+                sendText("""{"type":"cellUpdate","row":0,"column":3,"letter":"P"}""")
+                sendText("""{"type":"cellUpdate","row":0,"column":4,"letter":"A"}""")
+                drainUntil("gameSolved")
+                // The server-driven timer restarts the same room; a gameStarted frame lands after the delay.
+                drainUntil("gameStarted")
+            }
+            assertThat(harness.repo.findById(lobbyId)!!.state).isEqualTo(LobbyLifecycleState.IN_PROGRESS)
+        }
+
+    @Test
+    fun `returnToSalon before the auto-restart fires suppresses the rematch`() =
+        runWith(rematchDelay = 400.milliseconds, puzzle = SamplePuzzles.solvable()) { harness ->
+            val lobbyId = harness.seedLobby()
+            harness.startGame(lobbyId)
+            harness.client.webSocket("/v1/lobbies/${lobbyId.value}/ws?sessionId=$sessionA") {
+                receiveText() // initial snapshot
+                sendText("""{"type":"joinLobby","sessionId":"$sessionA","pseudonym":"$pseudoA"}""")
+                sendText("""{"type":"cellUpdate","row":0,"column":3,"letter":"P"}""")
+                sendText("""{"type":"cellUpdate","row":0,"column":4,"letter":"A"}""")
+                drainUntil("gameSolved")
+                // Leaving COMPLETED before the timer fires makes the fire-time re-check a no-op.
+                sendText("""{"type":"returnToSalon"}""")
+                delay(900)
+                val stray =
+                    withTimeoutOrNull(200) {
+                        var seen: String? = null
+                        while (seen == null) {
+                            val text = receiveText()
+                            if (text.contains("\"type\":\"gameStarted\"")) seen = text
+                        }
+                        seen
+                    }
+                assertThat(stray).isNull()
+            }
+            assertThat(harness.repo.findById(lobbyId)!!.state).isEqualTo(LobbyLifecycleState.WAITING)
+        }
+
     // ---------- harness ----------
 
     private class Harness(
@@ -1141,11 +1197,12 @@ class LobbyWebSocketRouteTest {
 
     private fun runWith(
         reconnectGrace: Duration = Duration.ZERO,
+        rematchDelay: Duration = REMATCH_AUTO_START_DELAY,
+        puzzle: GamePuzzle = SamplePuzzles.tiny(),
         block: suspend (Harness) -> Unit,
     ) = testApplication {
         val clock: Clock = SystemClock
         val repo = InMemoryLobbyRepository()
-        val puzzle = SamplePuzzles.tiny()
         val provider =
             object : PuzzleProvider {
                 override suspend fun fetch(
@@ -1167,6 +1224,8 @@ class LobbyWebSocketRouteTest {
                 leaveLobby = LeaveLobbyUseCase(repo, clock),
                 rotateCode = RotateLobbyCodeUseCase(repo, clock),
                 relinquishOwnership = RelinquishOwnershipUseCase(repo, clock),
+                rematch = RematchUseCase(repo, provider, clock),
+                returnToSalon = ReturnToSalonUseCase(repo, clock),
             )
         val sessionManager = SessionManager()
         // Background scope for the reconnect-grace timer. SupervisorJob so a
@@ -1184,6 +1243,7 @@ class LobbyWebSocketRouteTest {
                     repo,
                     backgroundScope = backgroundScope,
                     reconnectGrace = reconnectGrace,
+                    rematchDelay = rematchDelay,
                 )
             }
         }
@@ -1221,6 +1281,8 @@ class LobbyWebSocketRouteTest {
                     leaveLobby = LeaveLobbyUseCase(repo, clock),
                     rotateCode = RotateLobbyCodeUseCase(repo, clock),
                     relinquishOwnership = RelinquishOwnershipUseCase(repo, clock),
+                    rematch = RematchUseCase(repo, provider, clock),
+                    returnToSalon = ReturnToSalonUseCase(repo, clock),
                 )
             val sessionManager = SessionManager()
             val presenceClock = AdjustableClock()
@@ -1312,6 +1374,27 @@ class LobbyWebSocketRouteTest {
                 cells = emptyList(),
                 clues = emptyList(),
                 createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+            )
+
+        // Two-cell across word "PA": completing both cells locks the word and solves the grid (ADR-0084).
+        fun solvable(): GamePuzzle =
+            tiny().copy(
+                cells =
+                    listOf(
+                        BlockCell(Position(0, 0)),
+                        LetterCell(Position(0, 3), Letter('P')),
+                        LetterCell(Position(0, 4), Letter('A')),
+                    ),
+                clues =
+                    listOf(
+                        GameClue(
+                            UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5aca"),
+                            GameClueDirection.ACROSS,
+                            Position(0, 3),
+                            2,
+                            "PA",
+                        ),
+                    ),
             )
     }
 }

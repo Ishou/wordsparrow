@@ -293,6 +293,71 @@ class StartGameUseCase(
     }
 }
 
+/** Owner-only: from COMPLETED, start a fresh game reusing the lobby's gridConfig (ADR-0113). */
+class RematchUseCase(
+    private val repo: LobbyRepository,
+    private val puzzleProvider: PuzzleProvider,
+    private val clock: Clock,
+    private val analyticsEventSink: AnalyticsEventSink = AnalyticsEventSink.Noop,
+) {
+    suspend operator fun invoke(
+        lobbyId: LobbyId,
+        sessionId: SessionId,
+        expectedCompletedAt: Instant? = null,
+    ): UseCaseOutcome<Lobby> {
+        val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
+        if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        if (current.state != LobbyLifecycleState.COMPLETED) return failure(UseCaseError.InvalidState)
+        // Fetch outside the lock — IO must not stall other lobbies' mutators.
+        val puzzle = puzzleProvider.fetch(current.gridConfig.width, current.gridConfig.height)
+        var session: GameSession? = null
+        val updated =
+            repo.mutate(lobbyId) { lobby ->
+                if (!lobby.isCurrentOwner(sessionId) || lobby.state != LobbyLifecycleState.COMPLETED) return@mutate lobby
+                // Staleness guard (ADR-0113): a timer from a prior game must not restart a newer one.
+                if (expectedCompletedAt != null && lobby.game?.completedAt != expectedCompletedAt) return@mutate lobby
+                val now = clock.now()
+                val s = GameSession(puzzle, emptyMap(), now, null)
+                session = s
+                lobby.copy(state = LobbyLifecycleState.IN_PROGRESS, game = s, lastActivityAt = now)
+            } ?: return failure(UseCaseError.LobbyNotFound)
+        // session stays null when a guard short-circuited the mutator (not owner / not COMPLETED / stale).
+        val started = session ?: return failure(UseCaseError.InvalidState)
+        analyticsEventSink.record(
+            AnalyticsEvent.GameStarted(updated.gridConfig.toLabel(), updated.players.size),
+            sessionId,
+        )
+        return success(updated, listOf(LobbyEvent.GameStarted(started)))
+    }
+}
+
+/** Owner-only: return a COMPLETED lobby to WAITING to pick a new grid (ADR-0113). */
+class ReturnToSalonUseCase(
+    private val repo: LobbyRepository,
+    private val clock: Clock,
+    private val analyticsEventSink: AnalyticsEventSink = AnalyticsEventSink.Noop,
+) {
+    suspend operator fun invoke(
+        lobbyId: LobbyId,
+        sessionId: SessionId,
+    ): UseCaseOutcome<Lobby> {
+        val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
+        if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
+        if (current.state != LobbyLifecycleState.COMPLETED) return failure(UseCaseError.InvalidState)
+        var returned = false
+        val updated =
+            repo.mutate(lobbyId) { lobby ->
+                if (!lobby.isCurrentOwner(sessionId) || lobby.state != LobbyLifecycleState.COMPLETED) return@mutate lobby
+                returned = true
+                lobby.copy(state = LobbyLifecycleState.WAITING, game = null, lastActivityAt = clock.now())
+            } ?: return failure(UseCaseError.LobbyNotFound)
+        if (!returned) {
+            return if (!updated.isCurrentOwner(sessionId)) failure(UseCaseError.NotOwner) else failure(UseCaseError.InvalidState)
+        }
+        return success(updated, listOf(LobbyEvent.ReturnedToSalon))
+    }
+}
+
 /**
  * Removes a player from a lobby. Does NOT transfer ownership when the
  * owner leaves — the owner is expected to return via My-games

@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
+import java.time.Instant
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -55,6 +56,9 @@ private val SESSION_ID_REGEX =
 
 /** ADR-0018 §5: a closed socket reserves the player's slot for this long before it's freed. */
 internal val DEFAULT_RECONNECT_GRACE: Duration = 30.seconds
+
+/** ADR-0113: pause on the win screen before the co-op room auto-restarts a fresh game. */
+internal val REMATCH_AUTO_START_DELAY: Duration = 10.seconds
 
 /**
  * `/v1/lobbies/{lobbyId}/ws` — the real-time half of the multiplayer feature
@@ -92,6 +96,7 @@ fun Route.lobbyWebSocketRoute(
     presenceAggregator: PresenceAggregator? = null,
     backgroundScope: CoroutineScope = defaultBackgroundScope,
     reconnectGrace: Duration = DEFAULT_RECONNECT_GRACE,
+    rematchDelay: Duration = REMATCH_AUTO_START_DELAY,
     cookieVerifier: CookieVerifier? = null,
 ) {
     webSocket("/v1/lobbies/{lobbyId}/ws") {
@@ -147,6 +152,8 @@ fun Route.lobbyWebSocketRoute(
                         memberSessionId,
                         presenceAggregator,
                         verifiedUserId,
+                        backgroundScope,
+                        rematchDelay,
                     )
             }
         } finally {
@@ -214,6 +221,8 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
     memberSessionId: String?,
     presenceAggregator: PresenceAggregator?,
     verifiedUserId: UserId?,
+    backgroundScope: CoroutineScope,
+    rematchDelay: Duration,
 ): String? {
     val effectiveId =
         if (memberSessionId.isNullOrEmpty()) null else memberSessionId
@@ -283,14 +292,16 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
                     sendError("Lettre invalide", "La lettre doit être un caractère majuscule A-Z ou null.")
                     return memberSessionId
                 }
-            dispatch(lobbyId, sessionManager) {
+            val outcome =
                 useCases.updateCell(
                     lobbyId,
                     SessionId(sid),
                     Position(parsed.row, parsed.column),
                     letter,
                 )
-            }
+            handleOutcome(outcome, lobbyId, sessionManager)
+            // ADR-0113: a completed co-op grid arms the server-driven 10s auto-restart on the same room.
+            scheduleRematchIfSolved(outcome, backgroundScope, sessionManager, useCases, lobbyId, rematchDelay)
             // rising typing edge; trailing edge fires from tickOnce after the configured gap.
             presenceAggregator?.recordKeystroke(lobbyId, SessionId(sid))
             memberSessionId
@@ -330,6 +341,28 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
                 }
             dispatch(lobbyId, sessionManager) {
                 useCases.rotateCode(lobbyId, SessionId(sid))
+            }
+            memberSessionId
+        }
+        ClientToServerFrame.Rematch -> {
+            val sid =
+                effectiveId ?: run {
+                    sendNotJoined()
+                    return memberSessionId
+                }
+            dispatch(lobbyId, sessionManager) {
+                useCases.rematch(lobbyId, SessionId(sid))
+            }
+            memberSessionId
+        }
+        ClientToServerFrame.ReturnToSalon -> {
+            val sid =
+                effectiveId ?: run {
+                    sendNotJoined()
+                    return memberSessionId
+                }
+            dispatch(lobbyId, sessionManager) {
+                useCases.returnToSalon(lobbyId, SessionId(sid))
             }
             memberSessionId
         }
@@ -424,7 +457,9 @@ private suspend fun <T> DefaultWebSocketServerSession.handleOutcome(
             // new lobby fields (per the wire-mapping note in LobbyEvent.kt).
             val needsSnapshot =
                 outcome.result.events.any {
-                    it is LobbyEvent.GridConfigChanged || it is LobbyEvent.CodeRotated
+                    it is LobbyEvent.GridConfigChanged ||
+                        it is LobbyEvent.CodeRotated ||
+                        it is LobbyEvent.ReturnedToSalon
                 }
             if (needsSnapshot) {
                 (outcome.result.value as? Lobby)?.let { lobby ->
@@ -528,6 +563,59 @@ private fun scheduleReconnectGrace(
                 sessionId,
                 cause.message,
             )
+        }
+    }
+}
+
+/**
+ * When [outcome] carries a [LobbyEvent.GameSolved], arm the ADR-0113 auto-restart: schedule a
+ * delayed rematch keyed on the solved game's `completedAt` so a stale timer cannot restart a newer
+ * game. No-op for any other outcome.
+ */
+private fun <T> scheduleRematchIfSolved(
+    outcome: UseCaseOutcome<T>,
+    backgroundScope: CoroutineScope,
+    sessionManager: SessionManager,
+    useCases: LobbyUseCases,
+    lobbyId: LobbyId,
+    rematchDelay: Duration,
+) {
+    if (outcome !is UseCaseOutcome.Success) return
+    if (outcome.result.events.none { it is LobbyEvent.GameSolved }) return
+    val solved = outcome.result.value as? Lobby ?: return
+    val completedAt = solved.game?.completedAt ?: return
+    scheduleRematch(
+        backgroundScope = backgroundScope,
+        sessionManager = sessionManager,
+        useCases = useCases,
+        lobbyId = lobbyId,
+        ownerSessionId = solved.ownerSessionId,
+        completedAt = completedAt,
+        rematchDelay = rematchDelay,
+    )
+}
+
+/**
+ * Schedules the ADR-0113 10s auto-restart. Like [scheduleReconnectGrace] there is no job map: the
+ * rematch fires only if the lobby is still COMPLETED with the same [completedAt], so a manual
+ * rematch / returnToSalon in the window makes the timer a no-op by re-check.
+ */
+private fun scheduleRematch(
+    backgroundScope: CoroutineScope,
+    sessionManager: SessionManager,
+    useCases: LobbyUseCases,
+    lobbyId: LobbyId,
+    ownerSessionId: SessionId,
+    completedAt: Instant,
+    rematchDelay: Duration,
+) {
+    backgroundScope.launch {
+        if (rematchDelay > Duration.ZERO) delay(rematchDelay)
+        val outcome = useCases.rematch(lobbyId, ownerSessionId, completedAt)
+        if (outcome is UseCaseOutcome.Success) {
+            for (event in outcome.result.events) {
+                event.toFrameOrNull()?.let { sessionManager.broadcast(lobbyId, it) }
+            }
         }
     }
 }

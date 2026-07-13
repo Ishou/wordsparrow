@@ -4,7 +4,9 @@ import com.bliss.game.application.usecases.CreateLobbyUseCase
 import com.bliss.game.application.usecases.JoinLobbyUseCase
 import com.bliss.game.application.usecases.LeaveLobbyUseCase
 import com.bliss.game.application.usecases.RelinquishOwnershipUseCase
+import com.bliss.game.application.usecases.RematchUseCase
 import com.bliss.game.application.usecases.RenameSelfUseCase
+import com.bliss.game.application.usecases.ReturnToSalonUseCase
 import com.bliss.game.application.usecases.RotateLobbyCodeUseCase
 import com.bliss.game.application.usecases.SetGridConfigUseCase
 import com.bliss.game.application.usecases.StartGameUseCase
@@ -26,4 +28,7 @@ data class LobbyUseCases(
     val rotateCode: RotateLobbyCodeUseCase,
     // Explicit "Quitter la partie" relinquishes ownership -> ownerless (ADR-0098 §2); distinct from the disconnect-grace leaveLobby.
     val relinquishOwnership: RelinquishOwnershipUseCase,
+    // COMPLETED -> IN_PROGRESS same-room replay and COMPLETED -> WAITING return-to-salon (ADR-0113).
+    val rematch: RematchUseCase,
+    val returnToSalon: ReturnToSalonUseCase,
 )

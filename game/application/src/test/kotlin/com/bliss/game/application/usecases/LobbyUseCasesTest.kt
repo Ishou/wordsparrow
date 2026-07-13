@@ -1114,6 +1114,8 @@ internal class Harness(
     val rename = RenameSelfUseCase(repo, clock)
     val setConfig = SetGridConfigUseCase(repo, clock)
     val start = StartGameUseCase(repo, provider, clock)
+    val rematch = RematchUseCase(repo, provider, clock)
+    val returnToSalon = ReturnToSalonUseCase(repo, clock)
     val update = UpdateCellUseCase(repo, clock, wordValidator)
     val leave = LeaveLobbyUseCase(repo, clock)
     val rotateCode = RotateLobbyCodeUseCase(repo, clock)
@@ -1177,6 +1179,17 @@ internal class Harness(
         l: LobbyId,
         s: SessionId,
     ) = start.invoke(l, s)
+
+    suspend fun rematch(
+        l: LobbyId,
+        s: SessionId,
+        expectedCompletedAt: java.time.Instant? = null,
+    ) = rematch.invoke(l, s, expectedCompletedAt)
+
+    suspend fun returnToSalon(
+        l: LobbyId,
+        s: SessionId,
+    ) = returnToSalon.invoke(l, s)
 
     suspend fun write(
         l: LobbyId,
