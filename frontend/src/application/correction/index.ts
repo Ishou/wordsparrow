@@ -11,6 +11,7 @@ export type {
   CorrectionProgress,
   ForbidClueCorrectionInput,
   ReplaceCorrectionInput,
+  WordClue,
 } from './types';
 
 export { LastClueForbidden, SurveyDecisionFailed } from './errors';

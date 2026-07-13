@@ -7,6 +7,7 @@ import type {
   CorrectionClient,
   CorrectionInput,
   CorrectionProgress,
+  WordClue,
 } from '@/application/correction';
 import { LastClueForbidden } from '@/application/correction';
 import { createGridApiClient } from './client';
@@ -77,5 +78,14 @@ export function createGridCorrectionClient(options: GridCorrectionClientOptions)
     return { affectedDailies: data.affectedDailies, affectedSolo: data.affectedSolo } satisfies BlocklistPreview;
   };
 
-  return { submitCorrection, getCorrectionProgress, blocklistWord, previewBlocklist };
+  const listWordClues: CorrectionClient['listWordClues'] = async (word) => {
+    const { data, response } = await client.GET('/v1/words/{word}/clues', {
+      params: { path: { word } },
+      credentials: 'include',
+    });
+    if (!data) throw new Error(`listWordClues failed: ${response.status}`);
+    return data.clues.map((c) => ({ text: c.text, theme: c.theme })) satisfies WordClue[];
+  };
+
+  return { submitCorrection, getCorrectionProgress, blocklistWord, previewBlocklist, listWordClues };
 }
