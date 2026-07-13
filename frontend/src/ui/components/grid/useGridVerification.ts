@@ -33,7 +33,10 @@ export function useGridVerification(
   suppressWordCueRef?: { current: boolean },
 ): GridVerificationState {
   const [pending, setPending] = useState(false);
-  const [serverSeconds, setServerSeconds] = useState<number | null>(null);
+  // Seed from the server-authoritative cooldown on the puzzle so a reload shows the countdown synced from the first paint (ADR-0099), not "available until the first click".
+  const [serverSeconds, setServerSeconds] = useState<number | null>(
+    () => puzzle.secondsUntilNextVerify ?? null,
+  );
   const [shakingPositions, setShakingPositions] = useState<ReadonlySet<string>>(() => new Set());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -59,15 +62,15 @@ export function useGridVerification(
     shakeTimersRef.current = [];
   }, []);
 
-  // Reset on puzzle change.
+  // Reset on puzzle change; re-seed from the new puzzle's server cooldown.
   useEffect(() => {
     setPending(false);
-    setServerSeconds(null);
+    setServerSeconds(puzzle.secondsUntilNextVerify ?? null);
     setShakingPositions(new Set());
     setErrorMessage(null);
     requestSeqRef.current += 1;
     clearShakeTimers();
-  }, [puzzle.id, clearShakeTimers]);
+  }, [puzzle.id, puzzle.secondsUntilNextVerify, clearShakeTimers]);
 
   useEffect(() => () => clearShakeTimers(), [clearShakeTimers]);
 
