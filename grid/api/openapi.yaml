@@ -1258,7 +1258,7 @@ components:
     Puzzle:
       type: object
       description: A complete mots-fléchés puzzle ready to render and play.
-      required: [id, title, language, width, height, cells, clues, hintsAllowed, hintsRemaining, secondsUntilNextHint, createdAt]
+      required: [id, title, language, width, height, cells, clues, hintsAllowed, hintsRemaining, secondsUntilNextHint, secondsUntilNextVerify, createdAt]
       properties:
         id:
           $ref: '#/components/schemas/PuzzleId'
@@ -1355,6 +1355,19 @@ components:
             quota d'indices est plein (et toujours null pour un appelant
             anonyme).
           example: 420
+        secondsUntilNextVerify:
+          type: integer
+          minimum: 0
+          maximum: 1800
+          nullable: true
+          description: >-
+            Secondes restantes avant la prochaine vérification autorisée
+            (`POST /v1/puzzles/{puzzleId}/verify`, cooldown de 30 min par
+            (grille, joueur) — ADR-0099) ; null si aucun cooldown n'est actif
+            (et toujours null pour un appelant anonyme). Permet au client
+            d'afficher le compte à rebours dès le chargement, sans appel de
+            sonde.
+          example: 1170
         createdAt:
           type: string
           format: date-time
