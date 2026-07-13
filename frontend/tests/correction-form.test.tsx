@@ -261,6 +261,24 @@ describe('CorrectionForm', () => {
     expect(screen.getByLabelText(/Nouvelle définition/)).toBeInTheDocument();
   });
 
+  it('re-disables submit after write→pick→write leaves the field empty', async () => {
+    server.use(
+      http.get(`${GRID}/v1/words/CHAT/clues`, () =>
+        HttpResponse.json({ clues: [{ text: 'Animal qui miaule', theme: null }, { text: 'Matou', theme: 'animaux' }] }),
+      ),
+    );
+    renderForm();
+    await openDialog();
+    const submit = () => screen.getByRole('button', { name: /Enregistrer la correction/ });
+    fireEvent.input(screen.getByLabelText(/Nouvelle définition/), { target: { value: 'Félin domestique' } });
+    expect(submit()).toBeEnabled();
+    click(screen.getByRole('radio', { name: /Choisir parmi les autres définitions/ }));
+    await screen.findByRole('radio', { name: /Matou/ });
+    click(screen.getByRole('radio', { name: /Écrire une nouvelle définition/ }));
+    expect(screen.getByLabelText(/Nouvelle définition/)).toHaveValue('');
+    expect(submit()).toBeDisabled();
+  });
+
   it('has no axe violations with the picker open', async () => {
     const { expectAxeClean } = await import('@/test/a11y');
     server.use(

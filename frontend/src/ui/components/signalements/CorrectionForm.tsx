@@ -308,11 +308,11 @@ export function CorrectionForm({
                         <fieldset className={fieldset}>
                           <legend className={legend}>{t('correction.replace.styleLegend')}</legend>
                           <label className={modeRow}>
-                            <input type="radio" name="correction-replace-style" className={radioInput} value="write" checked={replaceStyle === 'write'} onChange={() => setReplaceStyle('write')} />
+                            <input type="radio" name="correction-replace-style" className={radioInput} value="write" checked={replaceStyle === 'write'} onChange={() => { setReplaceStyle('write'); setHasText(false); }} />
                             <span>{t('correction.replace.write')}</span>
                           </label>
                           <label className={modeRow}>
-                            <input type="radio" name="correction-replace-style" className={radioInput} value="pick" checked={replaceStyle === 'pick'} onChange={() => setReplaceStyle('pick')} />
+                            <input type="radio" name="correction-replace-style" className={radioInput} value="pick" checked={replaceStyle === 'pick'} onChange={() => { setReplaceStyle('pick'); setHasText(false); }} />
                             <span>{t('correction.replace.pick')}</span>
                           </label>
                         </fieldset>
