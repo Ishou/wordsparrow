@@ -9,7 +9,8 @@ const rail = css({
   boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 8px 22px rgba(33,75,64,0.10)',
   _dark: { boxShadow: '0 1px 2px rgba(0,0,0,0.3), 0 8px 22px rgba(0,0,0,0.35)' },
 });
-const topRow = css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '9px' });
+// Wrap-safe so a wide trailing affordance (e.g. the verify cooldown ring + label) never pushes the zoom cluster past the panel edge on narrow phones.
+const topRow = css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', rowGap: '8px', marginBottom: '9px' });
 const labelGroup = css({ display: 'flex', alignItems: 'center', gap: '8px' });
 const dot = css({ width: '7px', height: '7px', borderRadius: '999px', bg: 'ws.sakura', flexShrink: 0 });
 const label = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.14em', color: '#6B520F',
@@ -17,7 +18,7 @@ const label = css({ fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'bold', le
 const sep = css({ width: '1px', height: '11px', bg: 'rgba(76,72,36,0.22)', _dark: { bg: 'rgba(233,242,236,0.2)' } });
 const counter = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'semibold', color: 'ws.khaki', opacity: 0.7, whiteSpace: 'nowrap' });
 
-const rightGroup = css({ display: 'flex', alignItems: 'center', gap: '10px' });
+const rightGroup = css({ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '10px', rowGap: '8px', minWidth: 0 });
 const zoom = css({ display: 'flex', alignItems: 'center', bg: '#F2EDDC', borderRadius: '9px', overflow: 'hidden', _dark: { bg: '#2A362E' } });
 const zoomBtn = css({ width: '32px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', bg: 'transparent', border: 'none', color: 'ws.jadeInk', cursor: 'pointer' });
 const zoomSep = css({ width: '1px', height: '15px', bg: 'rgba(33,75,64,0.16)', _dark: { bg: 'rgba(233,242,236,0.14)' } });

@@ -245,7 +245,7 @@ export const fr = {
   'grid.hint.error.exhausted': 'Indices épuisés',
   'grid.hint.error.authRequired': 'Connecte-toi pour utiliser les indices',
   'grid.hint.error.generic': 'Une erreur est survenue. Réessaie.',
-  'grid.verify.error.cooldown': 'Vérification en cooldown',
+  'grid.verify.error.cooldown': 'Vérification bientôt disponible',
   'grid.verify.error.authRequired': 'Connecte-toi pour vérifier ta grille',
   'grid.verify.error.generic': 'Erreur, réessayez',
   'grid.verify.cooldown.label': '+ vérification dans {{time}}',
