@@ -401,6 +401,24 @@ Hetzner side but the node never aliases it, so the SNAT DaemonSet's
 discovery loop finds nothing and idles — egress from it stays
 silently inert rather than loudly broken.
 
+**After every worker recreate, delete the stale node object.** A
+`tofu` replace destroys the old machine, but k3s does not garbage-
+collect its node object — and because the node name carries a
+machine-id suffix, the recreated worker joins under a *new* name,
+leaving the old one behind as `NotReady`. The old holder-pinned
+workloads ignored other nodes so this was invisible; the per-node
+`fip-egress-snat` DaemonSet (ADR-0112) schedules a pod on *every*
+node, so a stale `NotReady` node leaves a pod stuck `Pending` and the
+next `deploy-platform` `helm upgrade --wait` blocks until it times out
+(`context deadline exceeded`). Delete the stale node(s) before the
+platform deploy:
+
+```sh
+# The live workers are the `Ready` ones; the destroyed machines linger as NotReady.
+kubectl get nodes
+kubectl delete node <stale-NotReady-worker-node-name> ...
+```
+
 # Platform operators bootstrap (Hetzner k8s)
 
 Step 3 of the ADR-0009 §8 migration. Installs the four in-cluster
