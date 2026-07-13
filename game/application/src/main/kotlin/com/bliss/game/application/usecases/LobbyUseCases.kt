@@ -322,7 +322,12 @@ class RematchUseCase(
                 lobby.copy(state = LobbyLifecycleState.IN_PROGRESS, game = s, lastActivityAt = now)
             } ?: return failure(UseCaseError.LobbyNotFound)
         // session stays null when a guard short-circuited the mutator (not owner / not COMPLETED / stale).
-        val started = session ?: return failure(UseCaseError.InvalidState)
+        val started =
+            session ?: return if (!updated.isCurrentOwner(sessionId)) {
+                failure(UseCaseError.NotOwner)
+            } else {
+                failure(UseCaseError.InvalidState)
+            }
         analyticsEventSink.record(
             AnalyticsEvent.GameStarted(updated.gridConfig.toLabel(), updated.players.size),
             sessionId,
