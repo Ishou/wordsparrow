@@ -204,9 +204,7 @@ signoz:
     # PR-D ships the backend; PII config is small enough to land
     # inline once we know what's there to scrub.
     config: {}
-    # Batch/queue memory spikes above steady-state (~220Mi) during flush
-    # bursts and can exceed the limit, causing OOMKills. CPU is far under
-    # its limit (~40m measured) and left alone.
+    # Batch/queue memory spikes above steady-state (~220Mi) during flush bursts, causing OOMKills.
     resources:
       requests:
         cpu: 100m
