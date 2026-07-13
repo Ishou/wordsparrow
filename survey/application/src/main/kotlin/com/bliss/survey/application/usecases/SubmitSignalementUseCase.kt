@@ -104,6 +104,9 @@ class SubmitSignalementUseCase(
                             log.warn("signalement_word_unresolved puzzleId={} surface={}", puzzleId, cmd.surface.name.lowercase())
                         }
                     }
+                } ?: run {
+                    log.warn("signalement_puzzle_id_missing surface={}", cmd.surface.name.lowercase())
+                    null
                 }
             ReportSurface.MINI_GAME -> null
         }

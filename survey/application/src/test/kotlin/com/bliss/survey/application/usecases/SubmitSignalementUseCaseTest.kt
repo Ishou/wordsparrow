@@ -162,6 +162,21 @@ class SubmitSignalementUseCaseTest {
         }
 
     @Test
+    fun `puzzle surface without puzzleId skips resolution and the report is still accepted with no word`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+            val resolver = FakeGridWordResolver()
+
+            val result =
+                useCase(reports, FakeEmailSender(), resolver)
+                    .execute(command(puzzleId = null, reporterId = null))
+
+            assertThat(result).isInstanceOf(SubmitSignalementResult.Accepted::class)
+            assertThat(resolver.calls).isEmpty()
+            assertThat(reports.reports.single().wordText).isNull()
+        }
+
+    @Test
     fun `mini_game surface skips resolution entirely`() =
         runTest {
             val reports = InMemorySignalementRepository()
