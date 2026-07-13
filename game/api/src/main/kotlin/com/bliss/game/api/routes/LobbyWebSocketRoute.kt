@@ -567,11 +567,7 @@ private fun scheduleReconnectGrace(
     }
 }
 
-/**
- * When [outcome] carries a [LobbyEvent.GameSolved], arm the ADR-0113 auto-restart: schedule a
- * delayed rematch keyed on the solved game's `completedAt` so a stale timer cannot restart a newer
- * game. No-op for any other outcome.
- */
+/** Arms the ADR-0113 auto-restart when [outcome] carries [LobbyEvent.GameSolved]; no-op otherwise. */
 private fun <T> scheduleRematchIfSolved(
     outcome: UseCaseOutcome<T>,
     backgroundScope: CoroutineScope,
@@ -595,11 +591,7 @@ private fun <T> scheduleRematchIfSolved(
     )
 }
 
-/**
- * Schedules the ADR-0113 10s auto-restart. Like [scheduleReconnectGrace] there is no job map: the
- * rematch fires only if the lobby is still COMPLETED with the same [completedAt], so a manual
- * rematch / returnToSalon in the window makes the timer a no-op by re-check.
- */
+/** Schedules the ADR-0113 10s auto-restart; re-check-guarded like [scheduleReconnectGrace], no job map. */
 private fun scheduleRematch(
     backgroundScope: CoroutineScope,
     sessionManager: SessionManager,
