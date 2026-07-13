@@ -355,6 +355,11 @@ ADR-0112  terraform/k8s/providers/hetzner/floating-ip.tf          Per-worker egr
 ADR-0112  terraform/k8s/providers/hetzner/server.tf              worker_floating_ips local: every worker aliases exactly one FIP (holder=ingress, others=own egress FIP). Amends ADR-0106 §2 (non-holders no longer floating_ip="")
 ADR-0112  terraform/k8s/providers/hetzner/cloud-init/worker.yaml.tftpl  Split gating: netplan FIP alias on `floating_ip != ""` (all workers); :6443 DNAT + floating-ip-config.service + bliss.io/fip-holder label on `fip_holder` (worker[0] only). Non-holder FIPs are egress-only
 ADR-0112  infra/platform/templates/fip-egress-snat-daemonset.yaml  Amends ADR-0109: runs on every node (no holder nodeSelector), discovers the node's FIP (global eth0 addr that isn't the default-route source), SNATs to it; nodes with no FIP idle. Un-pins mail from the holder
+ADR-0113  game/domain/**/Lobby.kt                         Lobby lifecycle gains COMPLETED->IN_PROGRESS (rematch) and COMPLETED->WAITING (return to salon) edges; COMPLETED no longer terminal
+ADR-0113  game/application/**/usecases/*                  RematchUseCase + ReturnToSalonUseCase (owner-only, COMPLETED-only; share StartGame puzzle-fetch/session-build); state-guarded under mutate
+ADR-0113  game/api/asyncapi.yaml                          Adds owner-only rematch + returnToSalon command frames; reuses gameStarted / lobbyState broadcasts (no new server->client event)
+ADR-0113  game/api/**/routes/LobbyWebSocketRoute*         Wires the two commands; scheduleRematch on the gameSolved path (backgroundScope + delay, re-check state + completedAt, mirrors scheduleReconnectGrace)
+ADR-0113  frontend/src/**/multiplayer/ResultatsScreen*    10s "Nouvelle partie dans N" countdown (completedAt+delay); host Rejouer maintenant / Annuler; all keep Accueil
 ```
 
 ## Adding entries
