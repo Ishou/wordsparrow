@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 import org.postgresql.util.PGobject
 import org.slf4j.LoggerFactory
 import java.sql.PreparedStatement
+import java.time.LocalDate
 import java.util.UUID
 import javax.sql.DataSource
 
@@ -37,38 +38,50 @@ class PostgresGridBackfill(
         var patched = 0
         var failed = 0
         var lastError: String? = null
-        for ((puzzleId, payloadJson) in rows) {
+        val patchedDates = mutableListOf<LocalDate>()
+        for (row in rows) {
             try {
-                val original = json.decodeFromString(PuzzlePayload.serializer(), payloadJson)
+                val original = json.decodeFromString(PuzzlePayload.serializer(), row.payload)
                 val corrected = ClueCorrectionPayloadPatch.apply(original, correction)
                 // A no-op (new clue equals old) would never leave the queue; surface it rather than spin (ADR-0108 §4).
                 if (corrected == original) {
                     failed++
-                    lastError = "correction is a no-op for puzzle $puzzleId"
+                    lastError = "correction is a no-op for puzzle ${row.puzzleId}"
                     continue
                 }
-                updatePayload(puzzleId, corrected)
+                updatePayload(row.puzzleId, corrected)
                 patched++
+                if (row.puzzleDate != null) patchedDates.add(row.puzzleDate)
             } catch (e: Exception) {
                 failed++
                 lastError = e.message ?: e.toString()
-                log.warn("event=backfill_grid_failed puzzle_id={} error=\"{}\"", puzzleId, lastError)
+                log.warn("event=backfill_grid_failed puzzle_id={} error=\"{}\"", row.puzzleId, lastError)
             }
         }
-        return PatchBatchResult(patched, failed, lastError)
+        return PatchBatchResult(patched, failed, lastError, patchedDates)
     }
+
+    private data class BackfillRow(val puzzleId: UUID, val payload: String, val puzzleDate: LocalDate?)
 
     private fun selectBatch(
         correction: ClueCorrection,
         limit: Int,
-    ): List<Pair<UUID, String>> =
+    ): List<BackfillRow> =
         dataSource.connection.use { conn ->
             conn.prepareStatement(SELECT_BATCH_SQL).use { stmt ->
                 bindPredicate(stmt, correction)
                 stmt.setInt(4, limit)
                 stmt.executeQuery().use { rs ->
                     buildList {
-                        while (rs.next()) add(rs.getObject("puzzle_id", UUID::class.java) to rs.getString("payload"))
+                        while (rs.next()) {
+                            add(
+                                BackfillRow(
+                                    puzzleId = rs.getObject("puzzle_id", UUID::class.java),
+                                    payload = rs.getString("payload"),
+                                    puzzleDate = rs.getObject("puzzle_date", LocalDate::class.java),
+                                ),
+                            )
+                        }
                     }
                 }
             }
@@ -113,7 +126,7 @@ class PostgresGridBackfill(
         private const val COUNT_SQL = "SELECT count(*) FROM puzzles p WHERE $MATCH_PREDICATE"
 
         private const val SELECT_BATCH_SQL =
-            "SELECT p.puzzle_id, p.payload FROM puzzles p WHERE $MATCH_PREDICATE " +
+            "SELECT p.puzzle_id, p.payload, p.puzzle_date FROM puzzles p WHERE $MATCH_PREDICATE " +
                 "ORDER BY p.created_at, p.puzzle_id LIMIT ?"
 
         private const val UPDATE_SQL = "UPDATE puzzles SET payload = ? WHERE puzzle_id = ?"
