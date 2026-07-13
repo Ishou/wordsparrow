@@ -71,7 +71,26 @@ run "worker_configures_private_nic_and_skips_fip_as_non_holder" {
 
   assert {
     condition     = !strcontains(output.worker_rendered, "- path: /etc/netplan/60-floating-ip.yaml")
-    error_message = "a non-holder worker (floating_ip=\"\") must NOT write the FIP netplan dropin — aliasing the FIP on a non-holder black-holes its pod egress (ADR-0106)."
+    error_message = "a worker with no egress FIP (floating_ip=\"\") must NOT write the FIP netplan dropin."
+  }
+}
+
+# Phase 2 (ADR-0112): a non-holder WITH its own dedicated egress FIP aliases it (so pod egress can SNAT to it) but must NOT run the ingress :6443 DNAT — that's holder-only.
+run "non_holder_aliases_its_egress_fip_without_dnat" {
+  command = plan
+
+  variables {
+    floating_ip = "203.0.113.99"
+    fip_holder  = false
   }
 
+  assert {
+    condition     = strcontains(output.worker_rendered, "- path: /etc/netplan/60-floating-ip.yaml") && strcontains(output.worker_rendered, "203.0.113.99/32")
+    error_message = "a non-holder with a dedicated egress FIP must alias it via netplan so pod egress can SNAT to it (ADR-0112)."
+  }
+
+  assert {
+    condition     = !strcontains(output.worker_rendered, "iptables -t nat -C PREROUTING")
+    error_message = "a non-holder must NOT render the ingress DNAT (floating-ip-config.sh) — its FIP is egress-only; the :6443 DNAT is holder-only (ADR-0112)."
+  }
 }

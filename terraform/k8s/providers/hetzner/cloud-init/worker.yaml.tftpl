@@ -110,9 +110,7 @@ write_files:
     permissions: "0600"
     owner: root:root
     content: |
-      # Hetzner ingress floating IP, declared as a static address on
-      # eth0 so the kernel accepts FIP-destined packets locally
-      # (otherwise it drops them as not-for-me and 80/443 go dark).
+      # This worker's floating IP (holder: ingress; non-holder: own egress FIP) — see ADR-0112.
       #
       # This is a netplan dropin: it merges with the DHCP-driven
       # 50-cloud-init.yaml that Hetzner's images ship — DHCP keeps
@@ -128,7 +126,8 @@ write_files:
           eth0:
             addresses:
               - ${floating_ip}/32
-
+%{ endif ~}
+%{ if fip_holder ~}
   - path: /usr/local/bin/floating-ip-config.sh
     permissions: "0755"
     owner: root:root
@@ -218,8 +217,9 @@ runcmd:
   # This MUST run before floating-ip-config.service so the kernel owns
   # the FIP locally before any service starts depending on it.
   - netplan apply
-  # Enable + start the FIP DNAT unit so iptables rules for FIP:6443
-  # are in place before k3s-agent comes up.
+%{ endif ~}
+%{ if fip_holder ~}
+  # Holder only — non-holder FIPs are egress-only (no DNAT); see ADR-0112.
   - systemctl daemon-reload
   - systemctl enable --now floating-ip-config.service
 %{ endif ~}

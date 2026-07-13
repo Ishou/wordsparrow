@@ -12,10 +12,9 @@ clusterIssuer:
   selfsigned:
     enabled: false
 
-# The ingress floating IP (hcloud_floating_ip.ingress; ADR-0035) — the single IP whitelisted on Brevo. Mail workloads are pinned here (identity/billing charts), and this SNATs their egress to it deterministically.
+# Per-worker egress SNAT (ADR-0112): each worker aliases its own FIP (holder: ingress 116.202.180.82; others: dedicated egress FIPs) and SNATs pod egress to it, so Brevo mail leaves from a whitelisted IP from any worker. All worker egress FIPs must be on the Brevo allowlist. The DaemonSet discovers each node's FIP at runtime — no IP configured here.
 fipEgressSnat:
   enabled: true
-  floatingIp: "116.202.180.82"
   image:
     # nicolaka/netshoot:v0.13 multi-arch index digest, resolved 2026-07-12.
     digest: "sha256:a20c2531bf35436ed3766cd6cfe89d352b050ccc4d7005ce6400adf97503da1b"

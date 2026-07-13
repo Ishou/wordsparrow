@@ -17,6 +17,11 @@ locals {
   cp_private_ips = [for i in range(var.control_plane_count) : "10.0.1.${10 + i}"]
   # index 2+ skips .22: a stale Hetzner private-net DHCP binding on it blocked worker[2]'s address, so enp7s0 never came up and it never joined.
   worker_private_ips = [for i in range(var.worker_count) : "10.0.1.${20 + (i < 2 ? i : i + 1)}"]
+  # Each worker's egress FIP (ADR-0112): worker[0] reuses the ingress FIP; worker[i>0] gets its dedicated egress FIP. Every worker aliases exactly one FIP, so the SNAT DaemonSet's per-node discovery is unambiguous.
+  worker_floating_ips = [
+    for i in range(var.worker_count) :
+    i == 0 ? hcloud_floating_ip.ingress.ip_address : hcloud_floating_ip.worker_egress[i - 1].ip_address
+  ]
 
   # Worker server type — falls back to the contract's `node_size` when
   # the optional override is unset. Splitting the size between control
@@ -122,7 +127,7 @@ resource "hcloud_server" "worker" {
     node_taints   = []
     # FIP alias + DNAT + the `bliss.io/fip-holder` label go ONLY on worker[0] — see ADR-0106.
     fip_holder  = count.index == 0
-    floating_ip = count.index == 0 ? hcloud_floating_ip.ingress.ip_address : ""
+    floating_ip = local.worker_floating_ips[count.index]
   })
 
   labels = {

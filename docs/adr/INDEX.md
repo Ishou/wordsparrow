@@ -320,7 +320,7 @@ ADR-0104  terraform/k8s/**                          Provisioned either manually 
 ADR-0105  frontend/src/domain/puzzle/gridFingerprint.ts  Pure deterministic hash of grid structure (cell kinds + positions + definition clues + dimensions), excludes typed letters; detects a regenerated grid under the same puzzleId
 ADR-0105  frontend/src/application/progress/**       Solo-progress blobs carry a grid fingerprint (SoloStorePayload); pullAndMergeOne(fingerprint) discards local + remote progress typed on a now-regenerated grid and heals the server row. Amends ADR-0075
 ADR-0105  frontend/src/infrastructure/session/localStorageSolo.ts  reconcileSoloFingerprint discards a stale/legacy (missing-fingerprint) blob on load and stamps the current grid; writes preserve the fingerprint
-ADR-0106  terraform/k8s/providers/hetzner/server.tf              `fip_holder = count.index == 0` gates the FIP alias/DNAT/label to worker[0] only; other workers must NOT alias the FIP (pod-egress masquerade black-holes non-holders)
+ADR-0106  terraform/k8s/providers/hetzner/server.tf              `fip_holder = count.index == 0` gates the DNAT + `bliss.io/fip-holder` label to worker[0]. (The "non-holders must alias NO FIP" rule is amended by ADR-0112: each non-holder now aliases its OWN assigned egress FIP — safe because the black hole only happened when the SHARED ingress FIP was aliased on a non-assigned node. DNAT/label stay holder-only.)
 ADR-0106  terraform/k8s/providers/hetzner/cloud-init/worker.yaml.tftpl  `bliss.io/fip-holder=true` node-label set only when `fip_holder` is true
 ADR-0106  terraform/k8s/providers/hetzner/floating-ip.tf          FIP assignment is worker[0] specifically, not "the worker node" — worker_count can be >1 (ADR-0101 R1)
 ADR-0106  infra/platform/values-prod.yaml                        ingress-nginx.controller.nodeSelector must be `bliss.io/fip-holder: "true"`, not `bliss.io/role: worker` — pins the controller pod to the node that actually has the FIP aliased
@@ -333,9 +333,9 @@ ADR-0108  grid/worker/src/main/kotlin/com/bliss/grid/worker/Main.kt  --process-c
 ADR-0108  grid/api/**/routes/CorrectionRoute*        POST /v1/corrections (202) + GET /v1/corrections/{id}; gated by requireCapability("admin:signalements"); patches preserve puzzleId (progress kept)
 ADR-0108  identity/domain/src/main/kotlin/com/bliss/identity/domain/user/Capability.kt  admin:signalements is maintainer-only; do not grant to PLAYER/tier (distinct from contribuer, ADR-0079)
 ADR-0108  frontend/src/**/signalements/**           Maintainer "Corriger" action composes grid correction + survey action + progress poll; route gated on admin:signalements (was contribuer); tutoiement copy
-ADR-0109  infra/platform/templates/fip-egress-snat-daemonset.yaml  Self-healing DaemonSet asserting a POSTROUTING SNAT to the FIP for pod egress (extends ADR-0035's declarative-config preference where no declarative surface exists); holder-pinned via bliss.io/fip-holder (ADR-0106)
-ADR-0109  infra/platform/values.yaml                                fipEgressSnat.* defaults (disabled, image tag/digest)
-ADR-0109  infra/platform/values-prod.yaml                           fipEgressSnat.enabled + floatingIp set for prod
+ADR-0109  infra/platform/templates/fip-egress-snat-daemonset.yaml  Self-healing DaemonSet asserting a POSTROUTING SNAT to the FIP for pod egress (extends ADR-0035's declarative-config preference where no declarative surface exists). Was holder-pinned + single hardcoded FIP; ADR-0112 made it per-node self-discovering (runs everywhere, SNATs to each node's own aliased FIP)
+ADR-0109  infra/platform/values.yaml                                fipEgressSnat.* defaults (disabled, image tag/digest); floatingIp removed by ADR-0112 (discovered per-node)
+ADR-0109  infra/platform/values-prod.yaml                           fipEgressSnat.enabled for prod; floatingIp removed by ADR-0112
 ADR-0110  grid/**/correction/**                     blocklist_word: applyTo drops the word unconditionally (overlay already omits null-yielding words); record path skips the last-clue guard; identity is word_text (old_clue_text null)
 ADR-0110  grid/api/src/main/resources/db/migration/*blocklist_word*  Expand-contract: kind CHECK += 'blocklist_word'; old_clue_text relaxed to nullable
 ADR-0110  grid/**/persistence/*GridBackfill*        Blocklist backfill is a NEW strategy (patch-only can't remove a word): match stored grids on payload wordText; dailies → EnsureUpcomingDailiesUseCase.execute(date,force=true); solo → DELETE row (regen on next GET). Progress via ADR-0105
@@ -348,6 +348,10 @@ ADR-0111  survey/**/usecases/SubmitSignalementUseCase*  Resolve the word via gri
 ADR-0111  survey/infrastructure/**/grid/GridWordResolver*  survey→grid resolve-word client (X-Service-Token), mirrors IdentityClient; surface-dispatched (puzzle now, mini-game corpus branch stubbed)
 ADR-0111  survey/infrastructure/src/main/resources/db/migration/*  word_text now holds the resolved answer (repurposed from the player letters); puzzleId stays nullable
 ADR-0111  frontend/src/**/signalements/**          Display the server-resolved word (reliable); stop sending player letters
+ADR-0112  terraform/k8s/providers/hetzner/floating-ip.tf          Per-worker egress FIPs: worker[0] reuses the ingress FIP; each worker[i>0] gets hcloud_floating_ip.worker_egress[i-1] assigned to that server (assignment is what stops the ADR-0106 §1 black hole). All must be on the Brevo allowlist
+ADR-0112  terraform/k8s/providers/hetzner/server.tf              worker_floating_ips local: every worker aliases exactly one FIP (holder=ingress, others=own egress FIP). Amends ADR-0106 §2 (non-holders no longer floating_ip="")
+ADR-0112  terraform/k8s/providers/hetzner/cloud-init/worker.yaml.tftpl  Split gating: netplan FIP alias on `floating_ip != ""` (all workers); :6443 DNAT + floating-ip-config.service + bliss.io/fip-holder label on `fip_holder` (worker[0] only). Non-holder FIPs are egress-only
+ADR-0112  infra/platform/templates/fip-egress-snat-daemonset.yaml  Amends ADR-0109: runs on every node (no holder nodeSelector), discovers the node's FIP (global eth0 addr that isn't the default-route source), SNATs to it; nodes with no FIP idle. Un-pins mail from the holder
 ```
 
 ## Adding entries
