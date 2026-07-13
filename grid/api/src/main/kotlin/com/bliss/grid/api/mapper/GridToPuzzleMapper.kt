@@ -7,7 +7,7 @@ import com.bliss.grid.api.dto.DefinitionCellDto
 import com.bliss.grid.api.dto.DifficultyDto
 import com.bliss.grid.api.dto.LetterCellDto
 import com.bliss.grid.api.dto.PuzzleResponse
-import com.bliss.grid.api.dto.toSecondsUntilNextHintWire
+import com.bliss.grid.api.dto.toNullableIntWire
 import com.bliss.grid.domain.model.ClueCell
 import com.bliss.grid.domain.model.Column
 import com.bliss.grid.domain.model.Direction
@@ -43,6 +43,7 @@ class GridToPuzzleMapper {
         hintsAllowed: Int,
         hintsRemaining: Int = hintsAllowed,
         secondsUntilNextHint: Int? = null,
+        secondsUntilNextVerify: Int? = null,
         title: String = "Grille du jour",
         language: String = "fr",
         difficulty: DifficultyDto? = null,
@@ -74,7 +75,8 @@ class GridToPuzzleMapper {
             clues = clues,
             hintsAllowed = hintsAllowed,
             hintsRemaining = hintsRemaining,
-            secondsUntilNextHint = secondsUntilNextHint.toSecondsUntilNextHintWire(),
+            secondsUntilNextHint = secondsUntilNextHint.toNullableIntWire(),
+            secondsUntilNextVerify = secondsUntilNextVerify.toNullableIntWire(),
             createdAt = DateTimeFormatter.ISO_INSTANT.format(createdAt),
             difficulty = difficulty,
             gridNumber = gridNumber,

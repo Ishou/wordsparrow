@@ -76,6 +76,7 @@ class PuzzleRouteDispatcherTest {
                         verifyGrid = VerifyGridUseCase(recordingRepo, InMemoryVerifyUsageRepository()),
                         puzzleRepository = recordingRepo,
                         hintUsageRepository = hintUsageRepo,
+                        verifyUsageRepository = InMemoryVerifyUsageRepository(),
                         hintWriteCoordinator = InMemoryHintWriteCoordinator(),
                         cookieVerifier = FakeCookieVerifier(),
                     )

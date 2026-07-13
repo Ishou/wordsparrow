@@ -16,7 +16,7 @@ import com.bliss.grid.api.dto.ValidateWordResult
 import com.bliss.grid.api.dto.VerifyCellVerdictDto
 import com.bliss.grid.api.dto.VerifyGridRequest
 import com.bliss.grid.api.dto.VerifyGridResponse
-import com.bliss.grid.api.dto.toSecondsUntilNextHintWire
+import com.bliss.grid.api.dto.toNullableIntWire
 import com.bliss.grid.api.mapper.GridToPuzzleMapper
 import com.bliss.grid.application.auth.CookieVerifier
 import com.bliss.grid.application.puzzle.DailyPuzzleSelector
@@ -37,6 +37,7 @@ import com.bliss.grid.application.puzzle.ValidateWordOutcome
 import com.bliss.grid.application.puzzle.ValidateWordUseCase
 import com.bliss.grid.application.puzzle.VerifyGridOutcome
 import com.bliss.grid.application.puzzle.VerifyGridUseCase
+import com.bliss.grid.application.puzzle.VerifyUsageRepository
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.domain.model.WordAxis
 import io.ktor.http.ContentType
@@ -113,6 +114,7 @@ fun Route.puzzles(
     verifyGrid: VerifyGridUseCase,
     puzzleRepository: PuzzleRepository,
     hintUsageRepository: HintUsageRepository,
+    verifyUsageRepository: VerifyUsageRepository,
     hintWriteCoordinator: HintWriteCoordinator,
     cookieVerifier: CookieVerifier,
     listDailyPuzzles: ListDailyPuzzlesUseCase = ListDailyPuzzlesUseCase(puzzleRepository),
@@ -180,6 +182,14 @@ fun Route.puzzles(
                 hintsAllowed = stored.hintsAllowed,
                 now = clock.instant(),
             )
+        val secondsUntilNextVerify =
+            verifyCooldownFor(
+                cookieVerifier = cookieVerifier,
+                verifyUsageRepository = verifyUsageRepository,
+                rawCookie = rawCookie,
+                puzzleId = puzzleId,
+                now = clock.instant(),
+            )
         call.respond(
             mapper.toApi(
                 grid = stored.grid,
@@ -188,6 +198,7 @@ fun Route.puzzles(
                 hintsAllowed = stored.hintsAllowed,
                 hintsRemaining = budget.tokensRemaining,
                 secondsUntilNextHint = budget.secondsUntilNextHint?.toInt(),
+                secondsUntilNextVerify = secondsUntilNextVerify,
                 title = stored.title,
                 language = stored.language,
                 difficulty = difficulty,
@@ -343,6 +354,14 @@ fun Route.puzzles(
                 hintsAllowed = stored.hintsAllowed,
                 now = clock.instant(),
             )
+        val secondsUntilNextVerify =
+            verifyCooldownFor(
+                cookieVerifier = cookieVerifier,
+                verifyUsageRepository = verifyUsageRepository,
+                rawCookie = call.request.cookies[SESSION_COOKIE_NAME],
+                puzzleId = puzzleId,
+                now = clock.instant(),
+            )
         call.respond(
             mapper.toApi(
                 grid = stored.grid,
@@ -351,6 +370,7 @@ fun Route.puzzles(
                 hintsAllowed = stored.hintsAllowed,
                 hintsRemaining = budget.tokensRemaining,
                 secondsUntilNextHint = budget.secondsUntilNextHint?.toInt(),
+                secondsUntilNextVerify = secondsUntilNextVerify,
                 title = stored.title,
                 language = stored.language,
             ),
@@ -437,7 +457,7 @@ fun Route.puzzles(
                                 RevealedCellDto(row = it.row, column = it.column, letter = it.letter.toString())
                             },
                         hintsRemaining = outcome.hintsRemaining,
-                        secondsUntilNextHint = outcome.secondsUntilNextHint?.toInt().toSecondsUntilNextHintWire(),
+                        secondsUntilNextHint = outcome.secondsUntilNextHint?.toInt().toNullableIntWire(),
                     ),
                 )
             is RevealCellHintOutcome.PuzzleNotFound ->
@@ -781,6 +801,19 @@ private suspend fun hintBudgetFor(
             now,
         )
     }
+}
+
+// Server-authoritative verify cooldown for the puzzle GET (ADR-0099): null when anonymous or no cooldown is active, else the remaining seconds so the client renders the countdown on load.
+private suspend fun verifyCooldownFor(
+    cookieVerifier: CookieVerifier,
+    verifyUsageRepository: VerifyUsageRepository,
+    rawCookie: String?,
+    puzzleId: UUID,
+    now: Instant,
+): Int? {
+    val who = cookieVerifier.verify(rawCookie) ?: return null
+    val cooldown = withContext(Dispatchers.IO) { verifyUsageRepository.cooldownFor(puzzleId, who.userId, now) }
+    return cooldown.secondsUntilNextVerify.takeIf { it > 0 }?.toInt()
 }
 
 private sealed interface DimensionParse {

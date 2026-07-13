@@ -366,6 +366,7 @@ class PuzzleRouteTest {
                 verifyGrid = VerifyGridUseCase(repo, InMemoryVerifyUsageRepository()),
                 puzzleRepository = repo,
                 hintUsageRepository = hintRepo,
+                verifyUsageRepository = InMemoryVerifyUsageRepository(),
                 hintWriteCoordinator = InMemoryHintWriteCoordinator(),
                 cookieVerifier = cookieVerifier,
                 clock = clock,
@@ -547,6 +548,7 @@ class PuzzleRouteTest {
                         verifyGrid = VerifyGridUseCase(puzzleRepo, InMemoryVerifyUsageRepository()),
                         puzzleRepository = puzzleRepo,
                         hintUsageRepository = hintUsageRepo,
+                        verifyUsageRepository = InMemoryVerifyUsageRepository(),
                         hintWriteCoordinator = InMemoryHintWriteCoordinator(),
                         cookieVerifier = FakeCookieVerifier(),
                     )
@@ -677,6 +679,7 @@ class PuzzleRouteTest {
                         verifyGrid = VerifyGridUseCase(puzzleRepo, InMemoryVerifyUsageRepository()),
                         puzzleRepository = puzzleRepo,
                         hintUsageRepository = hintUsageRepo,
+                        verifyUsageRepository = InMemoryVerifyUsageRepository(),
                         hintWriteCoordinator = InMemoryHintWriteCoordinator(),
                         cookieVerifier = FakeCookieVerifier(),
                     )
