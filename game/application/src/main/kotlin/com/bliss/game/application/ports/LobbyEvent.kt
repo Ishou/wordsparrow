@@ -45,6 +45,9 @@ sealed interface LobbyEvent {
         val code: LobbyCode,
     ) : LobbyEvent
 
+    /** Owner returned a COMPLETED lobby to WAITING (ADR-0113). No dedicated wire frame: the route re-broadcasts the [LobbyState] snapshot, mirroring [CodeRotated]. */
+    data object ReturnedToSalon : LobbyEvent
+
     data class GameStarted(
         val session: GameSession,
     ) : LobbyEvent

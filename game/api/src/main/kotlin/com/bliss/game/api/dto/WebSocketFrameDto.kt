@@ -87,6 +87,16 @@ sealed class ClientToServerFrame {
     @Serializable
     @SerialName("rotateCode")
     object RotateCode : ClientToServerFrame()
+
+    /** Owner-only rematch (ADR-0113). No body; COMPLETED-only, reuses the lobby's gridConfig. */
+    @Serializable
+    @SerialName("rematch")
+    object Rematch : ClientToServerFrame()
+
+    /** Owner-only return-to-salon (ADR-0113). No body; COMPLETED-only, drops the game back to WAITING. */
+    @Serializable
+    @SerialName("returnToSalon")
+    object ReturnToSalon : ClientToServerFrame()
 }
 
 @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
