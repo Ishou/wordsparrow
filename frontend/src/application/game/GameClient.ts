@@ -90,6 +90,12 @@ export interface GameClient {
   // surfaces a `not-owner` error frame.
   rotateCode(): void;
 
+  // Owner-only (ADR-0113). Valid only from COMPLETED: drives COMPLETED → IN_PROGRESS; server re-broadcasts `gameStarted`.
+  rematch(): void;
+
+  // Owner-only (ADR-0113). Valid only from COMPLETED: drives COMPLETED → WAITING; server re-broadcasts `lobbyState`.
+  returnToSalon(): void;
+
   // Close the underlying socket without sending `leaveLobby`.
   disconnect(): void;
 

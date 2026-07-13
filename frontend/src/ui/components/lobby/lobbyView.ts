@@ -155,16 +155,24 @@ export function reduceLobby(current: LobbyView, event: GameEvent): LobbyView {
         },
       };
     }
-    case 'gameSolved':
+    case 'gameSolved': {
+      const game = current.lobby.game;
+      // ADR-0113: the win-screen rematch countdown seeds off `completedAt`, but the live `gameSolved` frame carries only `durationMs` — derive the instant from `startedAt + durationMs`.
+      const completedAt =
+        game != null && Number.isFinite(Date.parse(game.startedAt))
+          ? (new Date(Date.parse(game.startedAt) + event.durationMs).toISOString() as Instant)
+          : null;
       return {
         ...current,
         lobby: {
           ...current.lobby,
           state: 'COMPLETED',
+          ...(game != null ? { game: { ...game, completedAt } } : {}),
         },
         durationMs: event.durationMs,
         modalDismissed: false,
       };
+    }
     default:
       // `cellUpdated`, `presenceUpdated`, and `error` frames do not
       // change route-level state. Presence is overlay-only — the

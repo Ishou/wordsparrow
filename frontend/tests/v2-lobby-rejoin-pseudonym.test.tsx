@@ -105,6 +105,8 @@ function makeGameClient(): Dispatchable {
     cellFocus: () => {},
     leaveLobby: () => {},
     rotateCode: () => {},
+    rematch: () => {},
+    returnToSalon: () => {},
     disconnect: () => {},
     subscribe: (h) => { subscribers.add(h); return () => { subscribers.delete(h); }; },
     subscribeConnectionState: (h: (s: ConnectionState) => void) => { h('connected'); return () => {}; },

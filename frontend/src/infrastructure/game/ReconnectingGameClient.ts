@@ -283,6 +283,8 @@ export function createReconnectingGameClient(
     },
     leaveLobby() { inner.leaveLobby(); },
     rotateCode() { inner.rotateCode(); },
+    rematch() { inner.rematch(); },
+    returnToSalon() { inner.returnToSalon(); },
 
     subscribe(handler: (event: GameEvent) => void): Unsubscribe {
       return inner.subscribe(handler);
