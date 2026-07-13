@@ -96,8 +96,18 @@ inert for mail routing and harmless: the holder still sends as it does today.
 - The Brevo allowlist now has N entries (one per worker) instead of one.
   Each is dashboard-managed with no API, so worker-count changes carry a
   manual allowlist step — a new failure mode if forgotten (mail from an
-  un-whitelisted new worker is rejected). Tracked as an operational note in
-  the deploy runbook.
+  un-whitelisted new worker is rejected). Runbook step: `docs/deploy.md`
+  § "Whitelist egress FIPs for mail (Brevo)".
+- Existing prod workers (`worker[1]`, `worker[2]`) need a reprovision
+  (`tofu taint` + apply) to pick up the new egress alias — the same
+  mechanical consequence ADR-0106 already documented for this template:
+  `server.tf`'s `lifecycle { ignore_changes = [user_data] }` means edits
+  to `worker.yaml.tftpl` only apply to new/recreated workers. Until
+  reprovisioned, the Hetzner-side FIP assignment exists but the node
+  never aliases it, so the SNAT DaemonSet's discovery loop finds nothing
+  and idles — egress from that worker stays silently inert rather than
+  loudly broken. Runbook step: `docs/deploy.md` § "Whitelist egress FIPs
+  for mail (Brevo)".
 - More privileged surface: the `hostNetwork`/`NET_ADMIN` SNAT pod now runs
   on every node, not just the holder (control-plane and observability
   included, where it idles). The least-privilege container hardening from

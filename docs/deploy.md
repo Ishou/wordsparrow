@@ -364,6 +364,43 @@ populated by the maintainer once after step 2. Re-issue the kubeconfig
 secret only if the floating IP itself changes (rare — it survives
 typical node lifecycle events).
 
+### 3. Whitelist egress FIPs for mail (Brevo)
+
+ADR-0112 gives every worker its own dedicated egress floating IP so
+mail can leave from any worker, not just the ingress holder. Each
+egress FIP must be on Brevo's dashboard allowlist (Settings → SMTP &
+API → Authorized IPs — dashboard-only, no API, per ADR-0092/0094)
+**before** mail sent from a workload scheduled on that worker will
+deliver:
+
+```sh
+tofu -chdir=terraform/k8s/ output -raw ingress_floating_ip  # worker[0]'s egress IP — already whitelisted
+hcloud floating-ip list -l role=worker-egress                # worker[1..N-1]'s dedicated egress IPs
+```
+
+Add every `worker-egress` address to Brevo. A worker-count bump means
+whitelisting the new worker's egress FIP the same way, before relying
+on mail from it.
+
+**Existing clusters upgrading to ADR-0112** (not a fresh bring-up):
+`hcloud_server.worker`'s `lifecycle { ignore_changes = [user_data] }`
+(`server.tf`) means `tofu apply` provisions and assigns the new egress
+FIPs at the Hetzner API level but does **not** push the alias onto
+already-running `worker[1]`/`worker[2]` — the same mechanical
+consequence ADR-0106 already documented for this template. Reprovision
+each non-holder worker to pick it up:
+
+```sh
+tofu -chdir=terraform/k8s/ taint 'module.cluster.hcloud_server.worker[1]'
+tofu -chdir=terraform/k8s/ taint 'module.cluster.hcloud_server.worker[2]'
+tofu -chdir=terraform/k8s/ apply
+```
+
+Until reprovisioned, that worker's FIP assignment exists on the
+Hetzner side but the node never aliases it, so the SNAT DaemonSet's
+discovery loop finds nothing and idles — egress from it stays
+silently inert rather than loudly broken.
+
 # Platform operators bootstrap (Hetzner k8s)
 
 Step 3 of the ADR-0009 §8 migration. Installs the four in-cluster
