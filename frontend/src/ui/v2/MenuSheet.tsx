@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import { Dialog } from '@ark-ui/react/dialog';
 import { Portal } from '@ark-ui/react/portal';
 import { Link, useNavigate, useRouteContext } from '@tanstack/react-router';
-import { User, Gear, CaretRight, SignOut, type Icon } from '@phosphor-icons/react';
+import { User, Gear, Flag, CaretRight, SignOut, type Icon } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
 import { t } from '@/ui/i18n';
 import { useAuth } from '@/ui/components/auth';
+import { useCapabilityGate } from '@/ui/v2/useCapabilityGate';
 import { useBackDismiss } from '@/ui/lib/useBackDismiss';
 
 // Desktop uses a lighter scrim — the menu is a small anchored dropdown, not a full takeover.
@@ -143,6 +144,12 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
   const goReglages = () => {
     navigate({ to: '/reglages' });
   };
+  const goSignalements = () => {
+    navigate({ to: '/signalements' });
+  };
+
+  // Render-only, no-flash gate: the row appears only once the capability is confirmed, never during loading/denied (ADR-0108).
+  const signalementsGate = useCapabilityGate('admin:signalements');
 
   const { state, refresh } = useAuth();
   const { authClient } = useRouteContext({ from: '__root__' });
@@ -212,6 +219,19 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
                     </span>
                   </button>
                 </li>
+                {signalementsGate === 'allowed' ? (
+                  <li>
+                    <button type="button" className={rowActive} onClick={goSignalements}>
+                      <Tile icon={Flag} soft />
+                      <span className={labelWrap}>
+                        <span className={label}>{t('v2.menu.signalements')}</span>
+                      </span>
+                      <span className={chevron}>
+                        <CaretRight size={18} weight="bold" aria-hidden="true" />
+                      </span>
+                    </button>
+                  </li>
+                ) : null}
                 {authed ? (
                   <li>
                     <button type="button" className={rowActive} onClick={() => { void handleLogout(); }}>

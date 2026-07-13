@@ -773,6 +773,7 @@ export const fr = {
   'v2.menu.dialogTitle': 'Menu',
   'v2.menu.navAria': 'Menu',
   'v2.menu.reglages': 'Réglages',
+  'v2.menu.signalements': 'Signalements',
   'v2.calendar.action.revoir': 'Revoir',
   'v2.calendar.action.reprendre': 'Reprendre',
   'v2.calendar.action.commencer': 'Commencer',
