@@ -40,8 +40,7 @@ spec:
             - -c
             - |
               set -eu
-              # Discover in-loop, not once: the netplan FIP alias can land after the pod starts (boot race), and re-discovery follows a FIP that moves under a node.
-              # The node's FIP is the global address on eth0 that is NOT the default-route source (the DHCP primary). None → this node holds no FIP (control-plane, observability); idle.
+              # Per-node FIP discovery, re-run every loop (boot-race + node-move safe); see ADR-0112.
               while true; do
                 PRIMARY="$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p')"
                 FIP="$(ip -4 -o addr show dev eth0 scope global 2>/dev/null | sed -n 's#.* inet \([0-9.]*\)/.*#\1#p' | grep -vx "${PRIMARY:-}" | head -n1)"
