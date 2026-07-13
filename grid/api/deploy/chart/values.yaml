@@ -219,9 +219,10 @@ processCorrections:
   schedule: "*/5 * * * *"
   # 20 minutes: a run only patches rows still matching, so it stays short even on a large backlog.
   activeDeadlineSeconds: 1200
+  # CPU sized for the CSP regen this job runs (same solver grid-api needs 3 cores for): each run drives ~0.5 core and was throttled at the old 500m limit, while the 100m request under-declared it 5×. request 100m→500m (accurate scheduling), limit 500m→1 (batch job — unthrottle without grid-api's full 3).
   resources:
-    requests: {cpu: 100m, memory: 256Mi}
-    limits: {cpu: 500m, memory: 512Mi}
+    requests: {cpu: 500m, memory: 256Mi}
+    limits: {cpu: "1", memory: 512Mi}
 # ADR-0097: corpus.objectStore fetches the clue corpus from private Hetzner Object Storage via an initContainer; off by default until the bucket is populated.
 corpus:
   objectStore:
