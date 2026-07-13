@@ -341,6 +341,13 @@ ADR-0110  grid/api/src/main/resources/db/migration/*blocklist_word*  Expand-cont
 ADR-0110  grid/**/persistence/*GridBackfill*        Blocklist backfill is a NEW strategy (patch-only can't remove a word): match stored grids on payload wordText; dailies → EnsureUpcomingDailiesUseCase.execute(date,force=true); solo → DELETE row (regen on next GET). Progress via ADR-0105
 ADR-0110  grid/api/**/routes/CorrectionRoute*       POST /v1/corrections/blocklist-word (202, audited) + GET /v1/corrections/blocklist-preview (dry-run counts); admin:signalements. Destructive → impact preview + typed-word confirm client-side
 ADR-0110  frontend/src/**/signalements/**           "Blacklister le mot": preview counts → typed-word confirm → blocklist + survey action + progress; hidden/disabled without wordText; tutoiement
+ADR-0111  grid/api/openapi.yaml                     New internal `POST /v1/puzzles/{id}/resolve-word` {clueText} → {word}; serviceToken-gated + off public ingress; returns PLAINTEXT (stricter than ADR-0084's binary), ADR-0076 §9 preserved (word never to the player)
+ADR-0111  grid/api/**/routes/PuzzleRoute.kt         resolve-word route: puzzleId+clueText → the one placement's wordText from the stored puzzle; service-token gate; 404 clue-not-on-puzzle
+ADR-0111  survey/api/openapi.yaml                   SignalementRequest.wordText deprecated (server owns it); SignalementSummary gains surface + puzzleId and wordText becomes the server-resolved answer word
+ADR-0111  survey/**/usecases/SubmitSignalementUseCase*  Resolve the word via grid at submit + persist on the report; accept + backfill when grid is unreachable
+ADR-0111  survey/infrastructure/**/grid/GridWordResolver*  survey→grid resolve-word client (X-Service-Token), mirrors IdentityClient; surface-dispatched (puzzle now, mini-game corpus branch stubbed)
+ADR-0111  survey/infrastructure/src/main/resources/db/migration/*  word_text now holds the resolved answer (repurposed from the player letters); puzzleId stays nullable
+ADR-0111  frontend/src/**/signalements/**          Display the server-resolved word (reliable); stop sending player letters
 ```
 
 ## Adding entries

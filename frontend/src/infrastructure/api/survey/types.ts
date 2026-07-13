@@ -512,11 +512,22 @@ export interface components {
          */
         ReportSurface: "solo" | "daily" | "multiplayer" | "mini_game";
         SignalementRequest: {
+            /**
+             * @deprecated
+             * @description Deprecated (ADR-0111): the player's own letters, unreliable. Ignored
+             *     on write — the server resolves the real word from the grid. Removed
+             *     once the frontend stops sending it.
+             */
             wordText?: string;
             clueText: string;
             reason: components["schemas"]["ReportReason"];
             note?: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The puzzle the clue was reported from. Present for solo/daily/
+             *     multiplayer; drives server-side word resolution (ADR-0111). Absent
+             *     for mini-game (ADR-0073), which has no puzzle.
+             */
             puzzleId?: string;
             surface: components["schemas"]["ReportSurface"];
         };
@@ -531,10 +542,21 @@ export interface components {
         SignalementSummary: {
             /** Format: uuid */
             reportId: string;
-            /** @description null when the group's reports carry no solved word. */
+            /**
+             * @description The answer word, resolved server-side from the grid at submit and
+             *     persisted on the report (ADR-0111). Null only while resolution is
+             *     still pending or could not resolve (e.g. grid unreachable at submit,
+             *     awaiting backfill).
+             */
             wordText: string | null;
             clueText: string;
             reason: components["schemas"]["ReportReason"];
+            surface: components["schemas"]["ReportSurface"];
+            /**
+             * Format: uuid
+             * @description The puzzle of the latest report in the group; null for mini-game (ADR-0073).
+             */
+            puzzleId: string | null;
             count: number;
             /** @description null when the latest report in the group carries no note. */
             latestNote: string | null;
