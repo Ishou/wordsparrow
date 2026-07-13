@@ -9,7 +9,9 @@
 # (since the release name doesn't contain the chart name `bliss-identity-api`).
 fullnameOverride: "wordsparrow-identity-api"
 
-# Unpinned (ADR-0112): every worker aliases its own Brevo-whitelisted egress FIP and the fip-egress-snat DaemonSet SNATs mail egress to it, so identity-api HA-spreads across workers instead of concentrating on the holder. Inherits the chart-default nodeSelector {} (workers only — cp/obs are tainted).
+# Unpinned from the FIP holder (ADR-0112) but kept off cp-0 explicitly: every worker now aliases its own Brevo-whitelisted egress FIP, and cp-0 stays untainted until ADR-0101 R3 lands, so the chart-default {} could land these pods on the memory-pressured control-plane node (ADR-0101 F3).
+nodeSelector:
+  bliss.io/role: worker
 
 image:
   # Fail-fast guard: helm aborts if digest is empty (see _helpers.tpl).
