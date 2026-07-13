@@ -9,6 +9,10 @@ replicaCount: 2
 
 fullnameOverride: "wordsparrow-survey-api"
 
+# Keep off cp-0 explicitly (ADR-0112): survey-api sends legally-sensitive harm-report mail (art. L221-13), and cp-0 stays untainted until ADR-0101 R3 lands + has no egress FIP, so the chart-default {} could land this mail path on the control-plane and leak from a non-whitelisted IP. bliss.io/role=worker → the 3 workers, each with a Brevo-whitelisted egress FIP.
+nodeSelector:
+  bliss.io/role: worker
+
 image:
   # Fail-fast guard: helm aborts if digest is empty (see _helpers.tpl).
   requireDigest: true
