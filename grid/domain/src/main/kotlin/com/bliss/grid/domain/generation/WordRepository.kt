@@ -11,6 +11,13 @@ interface WordRepository {
     ): List<Word>
 
     /**
+     * The corpus word whose folded surface equals [text] exactly (already
+     * folded, e.g. `ESSE`), or null when no such word exists. Production
+     * adapters with a text index should override with an O(1) lookup.
+     */
+    fun findByText(text: String): Word? = findByLength(text.length).firstOrNull { it.text == text }
+
+    /**
      * Count of words at the given [length]. Used by the slot planner's
      * corpus-aware length policy to avoid materialising slots whose corpus is
      * too sparse to fill. Default implementation is O(corpus); production

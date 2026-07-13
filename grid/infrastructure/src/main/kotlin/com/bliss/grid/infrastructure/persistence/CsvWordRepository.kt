@@ -79,7 +79,12 @@ class CsvWordRepository(
     private val knownTokens: Set<String> =
         words.flatMap { setOf(it.text, it.lemma) }.toSet()
 
+    // Folded-surface index backing findByText's O(1) lookup; the loader already merges duplicate surfaces.
+    private val byText: Map<String, Word> = words.associateBy { it.text }
+
     override fun findByLength(length: Int): List<Word> = byLength[length].orEmpty()
+
+    override fun findByText(text: String): Word? = byText[text]
 
     override fun countByLength(length: Int): Int = byLength[length]?.size ?: 0
 

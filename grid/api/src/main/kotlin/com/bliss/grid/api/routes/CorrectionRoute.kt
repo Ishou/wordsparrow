@@ -9,9 +9,12 @@ import com.bliss.grid.api.dto.CorrectionAcceptedDto
 import com.bliss.grid.api.dto.CorrectionProgressDto
 import com.bliss.grid.api.dto.CorrectionRequestDto
 import com.bliss.grid.api.dto.ProblemDetails
+import com.bliss.grid.api.dto.WordClueItemDto
+import com.bliss.grid.api.dto.WordCluesResultDto
 import com.bliss.grid.application.correction.BlocklistPreviewQuery
 import com.bliss.grid.application.correction.CorrectionProgress
 import com.bliss.grid.application.correction.CorrectionRepository
+import com.bliss.grid.application.correction.ListWordCluesUseCase
 import com.bliss.grid.application.correction.RecordCorrectionUseCase
 import com.bliss.grid.domain.correction.ClueCorrection
 import io.ktor.http.ContentType
@@ -34,6 +37,7 @@ private const val INVALID_CORRECTION_ID_TYPE = "https://bliss.example/errors/inv
 private const val LAST_CLUE_FORBIDDEN_TYPE = "https://bliss.example/errors/last-clue-forbidden"
 private const val CORRECTION_NOT_FOUND_TYPE = "https://bliss.example/errors/correction-not-found"
 private const val INVALID_BLOCKLIST_TYPE = "https://bliss.example/errors/invalid-blocklist"
+private const val WORD_NOT_FOUND_TYPE = "https://bliss.example/errors/word-not-found"
 
 // explicitNulls keeps required-nullable gridsMatched present on the wire (ADR-0003 §6).
 private val correctionJson =
@@ -117,6 +121,33 @@ fun Route.corrections(
 
         call.respondText(
             text = correctionJson.encodeToString(CorrectionProgressDto.serializer(), progress.toDto()),
+            contentType = ContentType.Application.Json,
+            status = HttpStatusCode.OK,
+        )
+    }
+}
+
+/**
+ * Maintainer-gated read of a word's full clue set for the alternate-definition picker (ADR-0108 amendment).
+ * An ungated clue->answer read would be a cheat oracle (ADR-0076), hence the same gate as `POST /v1/corrections`.
+ */
+fun Route.wordClues(listWordClues: ListWordCluesUseCase) {
+    get("/v1/words/{word}/clues") {
+        if (!call.requireCapability(ADMIN_SIGNALEMENTS_CAPABILITY)) return@get
+
+        val word = call.parameters["word"].orEmpty()
+        val clues =
+            listWordClues.execute(word)
+                ?: return@get call.respondCorrectionProblem(
+                    HttpStatusCode.NotFound,
+                    WORD_NOT_FOUND_TYPE,
+                    "Word not found",
+                    "Aucun mot avec cette surface dans le corpus.",
+                )
+
+        val result = WordCluesResultDto(clues.map { WordClueItemDto(it.text, it.theme) })
+        call.respondText(
+            text = correctionJson.encodeToString(WordCluesResultDto.serializer(), result),
             contentType = ContentType.Application.Json,
             status = HttpStatusCode.OK,
         )
