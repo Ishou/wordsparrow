@@ -621,6 +621,11 @@ export interface components {
              */
             secondsUntilNextHint: number | null;
             /**
+             * @description Secondes restantes avant la prochaine vérification autorisée (`POST /v1/puzzles/{puzzleId}/verify`, cooldown de 30 min par (grille, joueur) — ADR-0099) ; null si aucun cooldown n'est actif (et toujours null pour un appelant anonyme). Permet au client d'afficher le compte à rebours dès le chargement, sans appel de sonde.
+             * @example 1170
+             */
+            secondsUntilNextVerify: number | null;
+            /**
              * Format: date-time
              * @description ISO-8601 instant with timezone offset.
              * @example 2026-04-24T15:30:00Z
