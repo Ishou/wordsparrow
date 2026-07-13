@@ -624,9 +624,9 @@ class LobbyUseCasesTest {
         }
 
     @Test
-    fun `UpdateCell on the final correct letter emits CellUpdated then GameSolved and moves to COMPLETED`() =
+    fun `UpdateCell on the final correct letter emits CellUpdated WordLocked then GameSolved and moves to COMPLETED`() =
         runTest {
-            val h = harness()
+            val h = Harness(Samples.cluedPuzzle())
             val lobby = h.create(sessionA, alice).value
             h.start(lobby.id, sessionA).requireSuccess()
             h.clock.advance(Duration.ofSeconds(2))
@@ -636,10 +636,10 @@ class LobbyUseCasesTest {
 
             assertThat(solved.value.state).isEqualTo(LobbyLifecycleState.COMPLETED)
             assertThat(solved.value.game?.completedAt).isNotNull()
-            assertThat(solved.events).hasSize(2)
-            assertThat(solved.events[0]).isInstanceOf(LobbyEvent.CellUpdated::class)
-            assertThat(solved.events[1]).isInstanceOf(LobbyEvent.GameSolved::class)
-            val gs = solved.events[1] as LobbyEvent.GameSolved
+            // Completion is lock-based (ADR-0084): the winning word locks, then the grid solves.
+            val types = solved.events.map { it::class.simpleName }
+            assertThat(types).isEqualTo(listOf("CellUpdated", "WordLocked", "GameSolved"))
+            val gs = solved.events.last() as LobbyEvent.GameSolved
             // started at t=0, P written at t=2s, A written at t=5s -> 5000 ms
             assertThat(gs.durationMs).isEqualTo(5000L)
         }

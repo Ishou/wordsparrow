@@ -100,12 +100,13 @@ class UpdateCellConcurrencyTest {
     @Test
     fun `random fill order flips isSolved exactly on the final correct write`() =
         runTest {
-            // Property: for any permutation of the two answer cells, isSolved is false
-            // until the last write and true after. Two cells -> 2 perms; checkAll runs
-            // many iterations of the same shuffle Arb to exercise both orderings.
+            // Property: for any permutation of the two word cells, isSolved is false
+            // until the last write locks the word and true after. Two cells -> 2 perms;
+            // checkAll runs many iterations of the same shuffle Arb to exercise both
+            // orderings. Completion is lock-based (ADR-0084), so the puzzle carries a clue.
             val positions = listOf(pPos to Letter('P'), aPos to Letter('A'))
             checkAll(50, Arb.shuffle(positions)) { order ->
-                val h = Harness()
+                val h = Harness(Samples.cluedPuzzle())
                 val lobby = h.create(sessionA, alice).value
                 h.start(lobby.id, sessionA).requireSuccess()
                 order.forEachIndexed { i, (pos, letter) ->
