@@ -120,6 +120,7 @@ class SignalementQueueRouteTest {
             val body = resp.bodyAsText()
             assertThat(body).contains("\"reportId\":\"11111111-1111-7111-8111-111111111111\"")
             assertThat(body).contains("\"reason\":\"erreur_sens\"")
+            assertThat(body).contains("\"surface\":\"solo\"")
             assertThat(body).contains("\"count\":1")
             assertThat(body).contains("\"latestNote\":\"contre-sens\"")
         }

@@ -15,6 +15,9 @@ data class SurveyApiConfig(
     val brevoApiKey: String? = null,
     val maintainerEmail: String = "maintainer@wordsparrow.io",
     val emailSender: String = "signalement@wordsparrow.io",
+    // Server-side word resolution (ADR-0111) ships dark: a null base URL or token wires a no-op resolver so reports still persist (word backfilled later).
+    val gridBaseUrl: String? = null,
+    val wordValidateServiceToken: String? = null,
 ) {
     companion object {
         fun load(env: (String) -> String? = System::getenv): SurveyApiConfig =
@@ -38,6 +41,8 @@ data class SurveyApiConfig(
                 brevoApiKey = env("SURVEY_BREVO_API_KEY"),
                 maintainerEmail = env("SURVEY_MAINTAINER_EMAIL") ?: "maintainer@wordsparrow.io",
                 emailSender = env("SURVEY_EMAIL_SENDER") ?: "signalement@wordsparrow.io",
+                gridBaseUrl = env("GRID_BASE_URL"),
+                wordValidateServiceToken = env("WORD_VALIDATE_SERVICE_TOKEN"),
             )
 
         private fun required(

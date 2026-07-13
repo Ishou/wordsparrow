@@ -5,6 +5,7 @@ import com.bliss.survey.api.config.SurveyApiConfig
 import com.bliss.survey.application.filters.FilterPipeline
 import com.bliss.survey.application.ports.Clock
 import com.bliss.survey.application.ports.EmailSender
+import com.bliss.survey.application.ports.GridWordResolver
 import com.bliss.survey.application.ports.IdGenerator
 import com.bliss.survey.application.ports.RandomFactory
 import com.bliss.survey.application.ports.TokenGenerator
@@ -25,6 +26,7 @@ import com.bliss.survey.domain.routing.TierWeights
 import com.bliss.survey.domain.weight.GoldWindowPolicy
 import com.bliss.survey.infrastructure.email.SurveyBrevoConfig
 import com.bliss.survey.infrastructure.email.SurveyBrevoEmailSender
+import com.bliss.survey.infrastructure.grid.GridWordResolverClient
 import com.bliss.survey.infrastructure.identity.CachedSessionVerifier
 import com.bliss.survey.infrastructure.identity.IdentityClient
 import com.bliss.survey.infrastructure.language.LinguaLanguageDetector
@@ -136,12 +138,20 @@ fun main() {
                 SurveyBrevoConfig(apiKey = key, senderEmail = config.emailSender, senderName = "WordSparrow"),
             )
         } ?: EmailSender { }
+    // No-op resolver when grid config is absent (dark launch); reports still persist with the word unresolved (ADR-0111).
+    val gridWordResolver: GridWordResolver =
+        if (config.gridBaseUrl != null && config.wordValidateServiceToken != null) {
+            GridWordResolverClient(config.gridBaseUrl, config.wordValidateServiceToken)
+        } else {
+            GridWordResolver { _, _ -> null }
+        }
     val submitSignalement =
         SubmitSignalementUseCase(
             reports = signalements,
             ids = ids,
             clock = clock,
             email = emailSender,
+            gridWordResolver = gridWordResolver,
             tx = txManager,
             maintainerAddress = config.maintainerEmail,
         )
