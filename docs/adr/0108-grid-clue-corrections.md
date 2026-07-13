@@ -126,3 +126,16 @@ Rollout is staged as small PRs per ADR-0001 §3/§4: this ADR, then the schema-o
 OpenAPI PR, then identity, grid producer, grid worker, and frontend. Full design in
 `docs/superpowers/specs/2026-07-12-grid-clue-corrections-design.md`; wave plan in
 `docs/superpowers/plans/2026-07-12-grid-clue-corrections.md`.
+
+## Amendment (2026-07-13): alternate-definition picker
+
+The Corriger sheet gains a second `replace` story — instead of authoring free
+text, the maintainer picks one of the word's OTHER existing clues as the
+replacement. This needs a maintainer-gated read of the word's clue set, added as
+`GET /v1/words/{word}/clues` (same `admin:signalements` deny-by-default gate as
+`POST /v1/corrections`). It returns every clue the corpus carries for the word
+(`Word.clues`), deliberately unfiltered by the per-session clue cooldown
+(ADR-0031) — the chosen clue is applied via the existing `replace` correction,
+whose overlay already bypasses generation clue-selection. No new correction kind:
+the picker just supplies `newClueText`. The gate matters because an ungated
+clue→answer read would be a cheat oracle (ADR-0076).

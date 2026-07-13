@@ -403,6 +403,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/words/{word}/clues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List every clue a word carries, for the maintainer correction picker (ADR-0108).
+         * @description Maintainer-only. Requires the `admin:signalements` capability — the same
+         *     deny-by-default gate as `POST /v1/corrections` (resolved from the
+         *     `__Secure-ws_session` cookie via identity-api; anonymous/player/missing
+         *     sessions get 403). A public version would leak clue→answer (ADR-0076),
+         *     hence the gate.
+         *
+         *     Returns every candidate clue the corpus carries for `word` (`Word.clues`),
+         *     deliberately UNFILTERED by the per-session clue cooldown (ADR-0031) — the
+         *     maintainer picks any alternate definition to `replace` the reported one,
+         *     cooldown notwithstanding. The reported clue itself is included; the client
+         *     excludes it. Powers the "choose from other definitions" story in the
+         *     Corriger sheet.
+         */
+        get: operations["listWordClues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/corrections": {
         parameters: {
             query?: never;
@@ -1298,6 +1329,16 @@ export interface components {
             correctionId: components["schemas"]["CorrectionId"];
             backfillStatus: components["schemas"]["BackfillStatus"];
         };
+        /** @description Every clue the corpus carries for a word (ADR-0108 correction picker); cooldown-unfiltered. */
+        WordCluesResult: {
+            clues: components["schemas"]["WordClueItem"][];
+        };
+        WordClueItem: {
+            /** @description The clue text. */
+            text: string;
+            /** @description The themed-overlay category this clue came from, or null for a base corpus clue. */
+            theme: string | null;
+        };
         /**
          * @description Blocklist an offensive word (ADR-0110). Records a `blocklist_word`
          *     correction keyed on `wordText`; the word is dropped from generation and
@@ -2137,6 +2178,54 @@ export interface operations {
              *     `type` is `https://bliss.example/errors/invalid-session-id`.
              */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listWordClues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The answer surface as stored in the corpus (folded, e.g. `ESSE`). Matched exactly. */
+                word: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The word's clues (≥1; includes the reported clue). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WordCluesResult"];
+                };
+            };
+            /**
+             * @description The caller lacks the `admin:signalements` capability (deny-by-default
+             *     covers anonymous, player, and missing/revoked sessions). RFC 7807;
+             *     `type` is `https://bliss.example/errors/capability-required`.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description No word with this surface in the corpus. RFC 7807; `type` is
+             *     `https://bliss.example/errors/word-not-found`.
+             */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
