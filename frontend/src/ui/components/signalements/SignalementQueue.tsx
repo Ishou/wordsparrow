@@ -1,8 +1,8 @@
 // Maintainer triage queue (ADR-0103). Render-only gate upstream; the survey server enforces contribuer (ADR-0079).
 
 import { useCallback, useEffect, useState } from 'react';
-import { css } from 'styled-system/css';
-import { Button, useToast } from '@/ui/components/primitives';
+import { css, cx } from 'styled-system/css';
+import { useToast } from '@/ui/components/primitives';
 import { t } from '@/ui/i18n';
 import type {
   ReportReason,
@@ -36,55 +36,57 @@ const surfaceLabelKey = {
   mini_game: 'route.signalements.surface.mini_game',
 } as const satisfies Record<ReportSurface, string>;
 
-const articleStyles = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'lg',
-  width: '100%',
-  maxWidth: '720px',
-});
+const stackStyles = css({ display: 'flex', flexDirection: 'column', gap: '16px' });
 
-const headingStyles = css({
-  fontFamily: 'heading',
-  fontSize: { base: 'xl', md: 'display' },
-  fontWeight: 'black',
-  letterSpacing: '-0.02em',
-  margin: 0,
-  color: 'fg',
-});
+const introStyles = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'semibold', color: 'ws.khaki', margin: 0 });
+const statusStyles = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'semibold', color: 'ws.khaki', margin: 0 });
+const alertStyles = css({ fontFamily: 'wsUi', fontSize: '14px', fontWeight: 'bold', color: 'ws.sakuraDark', margin: 0 });
 
-const introStyles = css({ fontSize: 'body', color: 'fgMuted', margin: 0 });
-const statusStyles = css({ fontSize: 'body', color: 'fgMuted', margin: 0 });
-const alertStyles = css({ fontSize: 'body', color: 'errorText', margin: 0 });
-
-const listStyles = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'md' });
+const listStyles = css({ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '12px' });
 
 const rowStyles = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: 'xs',
-  padding: 'md',
-  borderRadius: '12px',
-  border: '1px solid token(colors.border)',
-  bg: 'surface',
+  gap: '8px',
+  padding: '16px',
+  borderRadius: '18px',
+  bg: 'ws.card',
+  boxShadow: '0 1px 2px rgba(33,75,64,0.05), 0 10px 22px rgba(33,75,64,0.08)',
 });
 
-const harmRowStyles = css({ borderColor: 'ws.sakuraDark' });
+const harmRowStyles = css({ boxShadow: '0 0 0 1.5px token(colors.ws.sakuraDark), 0 10px 22px rgba(33,75,64,0.08)' });
 
-const rowTopStyles = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 'sm' });
-const motStyles = css({ fontFamily: 'heading', fontSize: 'lg', fontWeight: 'bold', color: 'fg' });
-const clueStyles = css({ fontSize: 'body', color: 'fg', margin: 0 });
-const metaStyles = css({ fontSize: 'sm', color: 'fgMuted', margin: 0 });
+const rowTopStyles = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '8px' });
+const motStyles = css({ fontFamily: 'wsDisplay', fontSize: '18px', fontWeight: 'semibold', color: 'ws.jadeInk' });
+const clueStyles = css({ fontFamily: 'wsUi', fontSize: '15px', color: 'ws.jadeInk', margin: 0 });
+const metaStyles = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'semibold', color: 'ws.khaki', margin: 0 });
 const harmBadgeStyles = css({
-  fontSize: 'xs',
+  fontFamily: 'wsUi',
+  fontSize: '11px',
   fontWeight: 'black',
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
   color: 'ws.sakuraDark',
 });
-const noteStyles = css({ fontSize: 'sm', color: 'fgMuted', margin: 0, fontStyle: 'italic' });
+const noteStyles = css({ fontFamily: 'wsUi', fontSize: '12.5px', color: 'ws.khaki', margin: 0, fontStyle: 'italic' });
 
-const actionsStyles = css({ display: 'flex', gap: 'sm', marginTop: 'xs' });
+const actionsStyles = css({ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' });
+
+const decisionBtnBase = {
+  minHeight: '44px',
+  paddingInline: '16px',
+  borderRadius: '11px',
+  border: 'none',
+  fontFamily: 'wsUi',
+  fontSize: '15px',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+  transition: 'background-color 120ms, color 120ms, opacity 120ms',
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
+} as const;
+const handleBtnStyles = css({ ...decisionBtnBase, bg: 'ws.jadeInk', color: 'ws.onJadeInk', _hover: { opacity: 0.9 } });
+const rejectBtnStyles = css({ ...decisionBtnBase, bg: 'ws.sable', color: 'ws.jadeInk', _hover: { bg: 'ws.sableHover' } });
 
 // Harm reasons first; Array.sort is stable so the server's recency order is preserved within each partition.
 function harmFirst(items: ReadonlyArray<SignalementSummary>): SignalementSummary[] {
@@ -138,8 +140,7 @@ export function SignalementQueue({ surveyClient, correctionClient }: Signalement
   }
 
   return (
-    <article className={articleStyles}>
-      <h1 className={headingStyles}>{t('route.signalements.heading')}</h1>
+    <div className={stackStyles}>
       <p className={introStyles}>{t('route.signalements.intro')}</p>
 
       {items === null && !error ? (
@@ -157,7 +158,7 @@ export function SignalementQueue({ surveyClient, correctionClient }: Signalement
           {harmFirst(items).map((s) => {
             const harm = HARM_REASONS.has(s.reason);
             return (
-              <li key={s.reportId} className={`${rowStyles}${harm ? ` ${harmRowStyles}` : ''}`} data-testid="signalement-row">
+              <li key={s.reportId} className={harm ? cx(rowStyles, harmRowStyles) : rowStyles} data-testid="signalement-row">
                 <div className={rowTopStyles}>
                   {s.wordText ? <span className={motStyles}>{s.wordText}</span> : null}
                   {harm ? <span className={harmBadgeStyles}>{t('route.signalements.harmBadge')}</span> : null}
@@ -191,28 +192,30 @@ export function SignalementQueue({ surveyClient, correctionClient }: Signalement
                       />
                     </>
                   ) : null}
-                  <Button
-                    variant="primary"
+                  <button
+                    type="button"
+                    className={handleBtnStyles}
                     onClick={() => { void decide(s, 'action'); }}
                     disabled={busyId === s.reportId}
                     aria-label={t('route.signalements.markHandled.aria', { mot: s.wordText ?? s.clueText })}
                   >
                     {t('route.signalements.markHandled')}
-                  </Button>
-                  <Button
-                    variant="secondary"
+                  </button>
+                  <button
+                    type="button"
+                    className={rejectBtnStyles}
                     onClick={() => { void decide(s, 'dismiss'); }}
                     disabled={busyId === s.reportId}
                     aria-label={t('route.signalements.reject.aria', { mot: s.wordText ?? s.clueText })}
                   >
                     {t('route.signalements.reject')}
-                  </Button>
+                  </button>
                 </div>
               </li>
             );
           })}
         </ul>
       ) : null}
-    </article>
+    </div>
   );
 }
