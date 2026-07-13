@@ -41,4 +41,10 @@ spec:
               kubernetes.io/metadata.name: observability
       ports:
         - {protocol: TCP, port: 4317}
+    # External HTTPS for the Brevo transactional-email API — harm-report alerts (ADR-0103); Brevo has no stable IP so egress is any-destination :443.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - {protocol: TCP, port: 443}
 {{- end }}

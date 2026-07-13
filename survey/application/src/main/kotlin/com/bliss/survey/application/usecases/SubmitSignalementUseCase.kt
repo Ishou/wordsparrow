@@ -83,7 +83,8 @@ class SubmitSignalementUseCase(
                         textBody = harmBody(cmd),
                     ),
                 )
-            }.onFailure { log.warn("signalement_harm_email_failed reason={} error={}", cmd.reason.name.lowercase(), it.toString()) }
+            }.onSuccess { log.info("signalement_harm_email_sent reason={} to={}", cmd.reason.name.lowercase(), maintainerAddress) }
+                .onFailure { log.warn("signalement_harm_email_failed reason={} error={}", cmd.reason.name.lowercase(), it.toString()) }
         }
         return SubmitSignalementResult.Accepted(report.id)
     }
