@@ -13,6 +13,8 @@ const containerStyles = css({
   color: 'ws.jadeInk',
   opacity: 0.7,
   userSelect: 'none',
+  // Wrap as one block within the clue rail's trailing slot; never break the label mid-countdown.
+  whiteSpace: 'nowrap',
 });
 
 const ringStyles = css({
