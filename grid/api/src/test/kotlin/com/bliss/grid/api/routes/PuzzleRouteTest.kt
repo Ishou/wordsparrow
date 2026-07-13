@@ -318,6 +318,18 @@ class PuzzleRouteTest {
             assertThat(json.containsKey("gridNumber")).isEqualTo(false)
         }
 
+    private fun gridWithClue(clue: String): Grid {
+        val word = Word(text = "ABCDE", definition = clue)
+        val placement =
+            WordPlacement(
+                word = word,
+                cluePosition = Position(Row(0), Column(0)),
+                direction = Direction.DOWN_RIGHT,
+                chosenClue = word.clues.first(),
+            )
+        return Grid.fromPlacements(width = 15, height = 12, placements = listOf(placement))
+    }
+
     private fun storedDailyPuzzle(
         width: Int = 15,
         height: Int = 12,
@@ -378,7 +390,7 @@ class PuzzleRouteTest {
         Clock.fixed(Instant.parse("2026-05-09T10:00:00Z"), ZoneOffset.UTC)
 
     @Test
-    fun `anonymous daily emits public cache-control with s-maxage until utc midnight and a puzzle-id etag`() =
+    fun `anonymous daily emits public cache-control with s-maxage until utc midnight and a content etag`() =
         testApplication {
             val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6d")
             application { dailyRouteWith(clock = cacheClock) { it.insertDaily(id, dailyDate, storedDailyPuzzle()) } }
@@ -389,8 +401,38 @@ class PuzzleRouteTest {
             // 2026-05-09T10:00:00Z -> next UTC midnight is 14h = 50400s away.
             assertThat(response.headers["Cache-Control"]!!)
                 .isEqualTo("public, max-age=0, must-revalidate, s-maxage=50400")
-            assertThat(response.headers["ETag"]!!).isEqualTo("\"$id\"")
+            // Content-folded etag (ADR-0089 §7): "<id>-<clue-hash>", not the bare id.
+            assertThat(response.headers["ETag"]!!).startsWith("\"$id-")
         }
+
+    @Test
+    fun `anonymous daily answers 200 not a stale 304 when If-None-Match carries the bare pre-correction puzzle-id etag`() =
+        testApplication {
+            val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a81")
+            application { dailyRouteWith(clock = cacheClock) { it.insertDaily(id, dailyDate, storedDailyPuzzle()) } }
+
+            // The bare "<id>" etag a client cached before ADR-0108 in-place corrections existed; it must no longer 304.
+            val response =
+                client.get("/v1/puzzles/daily?date=2026-05-09") {
+                    header(HttpHeaders.IfNoneMatch, "\"$id\"")
+                }
+
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(response.headers["ETag"]!!).startsWith("\"$id-")
+        }
+
+    @Test
+    fun `dailyEtagOf flips when a clue is corrected in place, is stable for identical content, and flips on a new id`() {
+        val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a80")
+        val gridOld = gridWithClue("Vieux indice")
+        val gridNew = gridWithClue("Nouvel indice")
+
+        assertThat(dailyEtagOf(id, gridOld)).isEqualTo(dailyEtagOf(id, gridOld))
+        // The bug this fixes: an in-place clue correction keeps the id but must change the etag.
+        assertThat(dailyEtagOf(id, gridNew)).isNotEqualTo(dailyEtagOf(id, gridOld))
+        // Regeneration (ADR-0081) mints a fresh id and must flip it even if the grid is byte-identical.
+        assertThat(dailyEtagOf(UUID.randomUUID(), gridOld)).isNotEqualTo(dailyEtagOf(id, gridOld))
+    }
 
     @Test
     fun `cookied daily emits private no-store and no etag`() =
@@ -418,16 +460,17 @@ class PuzzleRouteTest {
             val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6e")
             application { dailyRouteWith(clock = cacheClock) { it.insertDaily(id, dailyDate, storedDailyPuzzle()) } }
 
+            val etag = client.get("/v1/puzzles/daily?date=2026-05-09").headers["ETag"]!!
             val response =
                 client.get("/v1/puzzles/daily?date=2026-05-09") {
-                    header(HttpHeaders.IfNoneMatch, "\"$id\"")
+                    header(HttpHeaders.IfNoneMatch, etag)
                 }
 
             assertThat(response.status).isEqualTo(HttpStatusCode.NotModified)
             assertThat(response.bodyAsText()).isEqualTo("")
             assertThat(response.headers["Cache-Control"]!!)
                 .isEqualTo("public, max-age=0, must-revalidate, s-maxage=50400")
-            assertThat(response.headers["ETag"]!!).isEqualTo("\"$id\"")
+            assertThat(response.headers["ETag"]!!).isEqualTo(etag)
         }
 
     @Test
@@ -436,14 +479,15 @@ class PuzzleRouteTest {
             val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a70")
             application { dailyRouteWith(clock = cacheClock) { it.insertDaily(id, dailyDate, storedDailyPuzzle()) } }
 
+            val etag = client.get("/v1/puzzles/daily?date=2026-05-09").headers["ETag"]!!
             val response =
                 client.get("/v1/puzzles/daily?date=2026-05-09") {
-                    header(HttpHeaders.IfNoneMatch, "W/\"$id\"")
+                    header(HttpHeaders.IfNoneMatch, "W/$etag")
                 }
 
             assertThat(response.status).isEqualTo(HttpStatusCode.NotModified)
             assertThat(response.bodyAsText()).isEqualTo("")
-            assertThat(response.headers["ETag"]!!).isEqualTo("\"$id\"")
+            assertThat(response.headers["ETag"]!!).isEqualTo(etag)
         }
 
     @Test
@@ -452,9 +496,10 @@ class PuzzleRouteTest {
             val id = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a71")
             application { dailyRouteWith(clock = cacheClock) { it.insertDaily(id, dailyDate, storedDailyPuzzle()) } }
 
+            val etag = client.get("/v1/puzzles/daily?date=2026-05-09").headers["ETag"]!!
             val response =
                 client.get("/v1/puzzles/daily?date=2026-05-09") {
-                    header(HttpHeaders.IfNoneMatch, "\"stale\", W/\"$id\"")
+                    header(HttpHeaders.IfNoneMatch, "\"stale\", W/$etag")
                 }
 
             assertThat(response.status).isEqualTo(HttpStatusCode.NotModified)
@@ -472,7 +517,7 @@ class PuzzleRouteTest {
                 }
 
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
-            assertThat(response.headers["ETag"]!!).isEqualTo("\"$id\"")
+            assertThat(response.headers["ETag"]!!).startsWith("\"$id-")
         }
 
     @Test

@@ -39,6 +39,7 @@ import com.bliss.grid.application.puzzle.VerifyGridOutcome
 import com.bliss.grid.application.puzzle.VerifyGridUseCase
 import com.bliss.grid.application.puzzle.VerifyUsageRepository
 import com.bliss.grid.domain.generation.ClueCooldownRepository
+import com.bliss.grid.domain.model.Grid
 import com.bliss.grid.domain.model.WordAxis
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -159,8 +160,8 @@ fun Route.puzzles(
         val stored = current.puzzle
         val rawCookie = call.request.cookies[SESSION_COOKIE_NAME]
         if (rawCookie == null) {
-            // ADR-0089 §3: anonymous responses are edge-cacheable until UTC midnight; the id is a strong validator (ADR-0081).
-            val etag = "\"$puzzleId\""
+            // ADR-0089 §3/§7: edge-cacheable until UTC midnight. The etag folds in the clue content, not just the id, so an in-place clue correction (ADR-0108, same id) flips it and revalidation returns 200 instead of a stale 304.
+            val etag = dailyEtagOf(puzzleId, stored.grid)
             call.response.header(HttpHeaders.CacheControl, publicCacheControlUntilUtcMidnight(clock.instant()))
             call.response.header(HttpHeaders.ETag, etag)
             if (ifNoneMatchMatches(call.request.headers[HttpHeaders.IfNoneMatch], etag)) {
@@ -757,6 +758,20 @@ private fun publicCacheControlUntilUtcMidnight(now: Instant): String {
     val seconds = maxOf(1L, Duration.between(now, nextMidnight).seconds)
     // Not no-cache: RFC 9111 binds it on shared caches too — CF answered REVALIDATED, never HIT (ADR-0089 §3 amendment).
     return "public, max-age=0, must-revalidate, s-maxage=$seconds"
+}
+
+// Strong daily validator (ADR-0089 §7): the id covers regeneration (fresh UUID per ADR-0081); the clue-content hash covers in-place corrections (ADR-0108) that keep the id — which a bare "<puzzleId>" etag silently 304'd.
+internal fun dailyEtagOf(
+    puzzleId: UUID,
+    grid: Grid,
+): String {
+    val content =
+        grid.placements.joinToString("") { p ->
+            "${p.cluePosition.row.value},${p.cluePosition.column.value}${p.direction}${p.word.text}${p.chosenClue.text}"
+        }
+    val digest = MessageDigest.getInstance("SHA-256").digest(content.toByteArray(Charsets.UTF_8))
+    val hex = digest.joinToString("") { "%02x".format(it) }
+    return "\"$puzzleId-${hex.take(16)}\""
 }
 
 // Strong list validator (ADR-0089 §3): hasMore is hashed too because a backfilled older date can flip it without changing the visible ids.
