@@ -34,6 +34,15 @@ inflection_status values:
   - "passe-simple-person"   : 1st/2nd-person passé-simple surface (considérai).
                               Routed to dropped — the inflated head reads as
                               archaic (Tins compte de); 3rd person is kept.
+  - "pp-adjective-homograph": the inflated head is a finite verb form that is
+                              *also* a feminine-plural past participle, used in
+                              a predicative frame (followed by an adverb, or
+                              clause-final). The satisfaire/faire/dire family:
+                              `vous satisfaites` == fem-pl ppas `satisfaites`,
+                              so `comblez → "Satisfaites pleinement"` reads as
+                              "[elles sont] satisfaites", a wrong-gender
+                              agreement. Routed to dropped. `Faites fonctionner`
+                              is spared — the infinitive forces the verb reading.
   - "head-pos-mismatch"     : no clue head matches surface POS
   - "no-target-pos"         : surface POS not in {nom, adj, verbe}
   - "no-owner"              : no (lemma, pos) candidate has a clue in corpus
@@ -96,6 +105,36 @@ def _head_verb_numbers(text: str, index: MorphologyIndex) -> set[str]:
     return set()
 
 
+def _head_reads_as_pp_adjective(text: str, index: MorphologyIndex) -> bool:
+    """True when the inflated head is a finite-verb form that also reads as a fem-pl past participle in a predicative frame (e.g. `vous satisfaites` / ppas `satisfaites`)."""
+    toks = _NUMBER_TOK_RE.findall(text)
+    for i, tok in enumerate(toks):
+        low = tok.lower()
+        if low in _FUNCTION_WORDS:
+            continue
+        # `ne … pas` forces the finite-verb reading; an adjective can't be negated this way.
+        if any(t.lower() in ("ne", "n") for t in toks[:i]):
+            return False
+        readings = index.lookup_form(low)
+        if not any(tags & _PERSON_TAGS for _lemma, tags in readings):
+            continue  # not the head candidate — keep scanning for the real finite-verb head
+        is_pp_fem_pl = any(
+            "ppas" in tags and "fem" in tags and (tags & {"pl", "plur"})
+            for _lemma, tags in readings
+        )
+        if not is_pp_fem_pl:
+            return False
+        # Predicative frame: clause-final, or the next content token is an adverb
+        # (not an infinitive/object, which would license the verb reading).
+        for nxt in toks[i + 1:]:
+            nlow = nxt.lower()
+            if nlow in _FUNCTION_WORDS:
+                continue
+            return any("adv" in tags for _lemma, tags in index.lookup_form(nlow))
+        return True  # bare head — reads as a predicative adjective
+    return False
+
+
 def classify_inflection(
     source_clue: str, surface_tags: set[str], index: MorphologyIndex,
 ) -> tuple[str, str]:
@@ -107,6 +146,8 @@ def classify_inflection(
         head_numbers = _head_verb_numbers(res.text, index)
         if surf_n and head_numbers and surf_n not in head_numbers:
             return res.text, "agreement-mismatch"
+        if _head_reads_as_pp_adjective(res.text, index):
+            return res.text, "pp-adjective-homograph"
     return res.text, status
 
 
@@ -328,10 +369,12 @@ def main() -> None:
         # `agreement-mismatch`: inflated head number disagrees with the surface.
         # `subject-person-mismatch`: clue's own subject disagrees with the forced surface person/number.
         # `passe-simple-person`: 1st/2nd-person passé-simple head reads as archaic (`considérai → "Tins compte de"`).
+        # `pp-adjective-homograph`: fem-pl-ppas homograph head in a predicative frame (`comblez → "Satisfaites pleinement"`).
         skipped = r.get("inflection_status") in (
             "pp-only-skipped", "pp-reflexive-skipped", "neg-nonfinite-skipped",
             "no-inflection-finite", "agreement-mismatch",
             "subject-person-mismatch", "passe-simple-person",
+            "pp-adjective-homograph",
         )
         if skipped or s < args.threshold:
             dropped.append(r)
