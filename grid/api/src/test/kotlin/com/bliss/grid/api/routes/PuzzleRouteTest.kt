@@ -17,6 +17,7 @@ import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PUZZLE_HEIGHT
 import com.bliss.grid.application.puzzle.PUZZLE_WIDTH
+import com.bliss.grid.application.puzzle.ResolveWordUseCase
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
@@ -361,6 +362,7 @@ class PuzzleRouteTest {
                 revealCellHint = RevealCellHintUseCase(repo, hintRepo),
                 validatePuzzle = ValidatePuzzleUseCase(repo),
                 validateWord = ValidateWordUseCase(repo),
+                resolveWord = ResolveWordUseCase(repo),
                 verifyGrid = VerifyGridUseCase(repo, InMemoryVerifyUsageRepository()),
                 puzzleRepository = repo,
                 hintUsageRepository = hintRepo,
@@ -541,6 +543,7 @@ class PuzzleRouteTest {
                         revealCellHint = RevealCellHintUseCase(puzzleRepo, hintUsageRepo),
                         validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
                         validateWord = ValidateWordUseCase(puzzleRepo),
+                        resolveWord = ResolveWordUseCase(puzzleRepo),
                         verifyGrid = VerifyGridUseCase(puzzleRepo, InMemoryVerifyUsageRepository()),
                         puzzleRepository = puzzleRepo,
                         hintUsageRepository = hintUsageRepo,
@@ -670,6 +673,7 @@ class PuzzleRouteTest {
                         revealCellHint = RevealCellHintUseCase(puzzleRepo, hintUsageRepo),
                         validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
                         validateWord = ValidateWordUseCase(puzzleRepo),
+                        resolveWord = ResolveWordUseCase(puzzleRepo),
                         verifyGrid = VerifyGridUseCase(puzzleRepo, InMemoryVerifyUsageRepository()),
                         puzzleRepository = puzzleRepo,
                         hintUsageRepository = hintUsageRepo,

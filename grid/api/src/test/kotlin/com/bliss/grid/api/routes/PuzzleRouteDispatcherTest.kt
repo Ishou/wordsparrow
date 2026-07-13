@@ -6,6 +6,7 @@ import assertk.assertions.isNotNull
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PuzzleRepository
+import com.bliss.grid.application.puzzle.ResolveWordUseCase
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.StoredDailyPuzzle
 import com.bliss.grid.application.puzzle.StoredPuzzle
@@ -71,6 +72,7 @@ class PuzzleRouteDispatcherTest {
                         revealCellHint = RevealCellHintUseCase(recordingRepo, hintUsageRepo),
                         validatePuzzle = ValidatePuzzleUseCase(recordingRepo),
                         validateWord = ValidateWordUseCase(recordingRepo),
+                        resolveWord = ResolveWordUseCase(recordingRepo),
                         verifyGrid = VerifyGridUseCase(recordingRepo, InMemoryVerifyUsageRepository()),
                         puzzleRepository = recordingRepo,
                         hintUsageRepository = hintUsageRepo,

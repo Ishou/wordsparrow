@@ -4,6 +4,8 @@ import com.bliss.grid.api.dto.DifficultyDto
 import com.bliss.grid.api.dto.ListDailyPuzzlesResponseDto
 import com.bliss.grid.api.dto.ProblemDetails
 import com.bliss.grid.api.dto.PuzzleSummaryDto
+import com.bliss.grid.api.dto.ResolveWordRequest
+import com.bliss.grid.api.dto.ResolveWordResult
 import com.bliss.grid.api.dto.RevealCellHintRequest
 import com.bliss.grid.api.dto.RevealCellHintResult
 import com.bliss.grid.api.dto.RevealedCellDto
@@ -25,6 +27,8 @@ import com.bliss.grid.application.puzzle.HintWriteCoordinator
 import com.bliss.grid.application.puzzle.ListDailyPuzzlesUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PuzzleRepository
+import com.bliss.grid.application.puzzle.ResolveWordOutcome
+import com.bliss.grid.application.puzzle.ResolveWordUseCase
 import com.bliss.grid.application.puzzle.RevealCellHintOutcome
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.ValidatePuzzleOutcome
@@ -93,6 +97,8 @@ private const val FORBIDDEN_TYPE: String =
     "https://bliss.example/errors/forbidden"
 private const val SERVICE_AUTH_REQUIRED_TYPE: String =
     "https://bliss.example/errors/service-auth-required"
+private const val CLUE_NOT_ON_PUZZLE_TYPE: String =
+    "https://bliss.example/errors/clue-not-on-puzzle"
 
 private const val SESSION_COOKIE_NAME: String = "__Secure-ws_session"
 private const val HINT_CAPABILITY: String = "hint"
@@ -103,6 +109,7 @@ fun Route.puzzles(
     revealCellHint: RevealCellHintUseCase,
     validatePuzzle: ValidatePuzzleUseCase,
     validateWord: ValidateWordUseCase,
+    resolveWord: ResolveWordUseCase,
     verifyGrid: VerifyGridUseCase,
     puzzleRepository: PuzzleRepository,
     hintUsageRepository: HintUsageRepository,
@@ -659,6 +666,56 @@ fun Route.puzzles(
                     title = "Requête de validation invalide",
                     type = INVALID_VALIDATE_REQUEST_TYPE,
                     detail = outcome.reason,
+                )
+        }
+    }
+
+    // Internal plaintext answer-word resolver (ADR-0111). Token-gated first so an unauthenticated caller learns nothing, not even puzzle existence.
+    post("/v1/puzzles/{puzzleId}/resolve-word") {
+        if (!serviceTokenMatches(wordValidateServiceToken, call.request.headers["X-Service-Token"])) {
+            call.respondProblem(
+                status = HttpStatusCode.Unauthorized,
+                title = "Authentification de service requise",
+                type = SERVICE_AUTH_REQUIRED_TYPE,
+                detail = "Cet endpoint interne nécessite un jeton de service valide.",
+            )
+            return@post
+        }
+
+        val rawId = call.parameters["puzzleId"].orEmpty()
+        val puzzleId =
+            parseUuid(rawId) ?: run {
+                call.respondProblem(
+                    status = HttpStatusCode.BadRequest,
+                    title = "Identifiant de grille invalide",
+                    type = INVALID_PUZZLE_ID_TYPE,
+                    detail = "Le paramètre puzzleId doit être un UUID, reçu : '$rawId'.",
+                )
+                return@post
+            }
+
+        val body =
+            try {
+                call.receive<ResolveWordRequest>()
+            } catch (e: SerializationException) {
+                call.respondProblem(
+                    status = HttpStatusCode.BadRequest,
+                    title = "Corps de requête invalide",
+                    type = INVALID_REQUEST_BODY_TYPE,
+                    detail = e.message ?: "request body could not be deserialized as ResolveWordRequest",
+                )
+                return@post
+            }
+
+        when (val outcome = withContext(Dispatchers.IO) { resolveWord.execute(puzzleId, body.clueText) }) {
+            is ResolveWordOutcome.Resolved ->
+                call.respond(ResolveWordResult(word = outcome.word))
+            is ResolveWordOutcome.ClueNotFound ->
+                call.respondProblem(
+                    status = HttpStatusCode.NotFound,
+                    title = "Indice introuvable sur la grille",
+                    type = CLUE_NOT_ON_PUZZLE_TYPE,
+                    detail = "Aucun mot placé pour cet indice sur la grille '$puzzleId'.",
                 )
         }
     }

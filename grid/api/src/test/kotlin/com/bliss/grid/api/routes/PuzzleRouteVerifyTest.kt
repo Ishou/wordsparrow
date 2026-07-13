@@ -7,6 +7,7 @@ import com.bliss.grid.api.TestCorpus
 import com.bliss.grid.application.auth.WhoAmI
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
+import com.bliss.grid.application.puzzle.ResolveWordUseCase
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
@@ -95,6 +96,7 @@ class PuzzleRouteVerifyTest {
                     revealCellHint = RevealCellHintUseCase(puzzleRepo, hintUsageRepo),
                     validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
                     validateWord = ValidateWordUseCase(puzzleRepo),
+                    resolveWord = ResolveWordUseCase(puzzleRepo),
                     verifyGrid = VerifyGridUseCase(puzzleRepo, InMemoryVerifyUsageRepository()),
                     puzzleRepository = puzzleRepo,
                     hintUsageRepository = hintUsageRepo,
