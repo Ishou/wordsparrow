@@ -56,3 +56,54 @@ def test_primary_clue_still_wins_when_it_fits() -> None:
     ]}
     rows = build_surface_rows("esses", corpus, idx, {})
     assert [r["clue"] for r in rows] == ["Crochets de boucher"], rows
+
+
+def _pp_homograph_index() -> MorphologyIndex:
+    """satisfaire/faire: the `vous` form is a homograph of the fem-pl past participle."""
+    idx = MorphologyIndex()
+    _add(idx, "combler", "combler", "v1__t___zz infi")
+    _add(idx, "combler", "comblez", "v1__t___zz ipre 2pl")
+    _add(idx, "satisfaire", "satisfaire", "v3__t___zz infi")
+    _add(idx, "satisfaire", "satisfaites", "v3__t___zz ipre 2pl")
+    _add(idx, "satisfaire", "satisfaites", "v3__t___zz ppas fem pl")
+    _add(idx, "pleinement", "pleinement", "adv")
+    _add(idx, "actionner", "actionner", "v1__t___zz infi")
+    _add(idx, "actionner", "actionnez", "v1__t___zz ipre 2pl")
+    _add(idx, "faire", "faire", "v3__t___zz infi")
+    _add(idx, "faire", "faites", "v3__t___zz ipre 2pl")
+    _add(idx, "faire", "faites", "v3__t___zz ppas fem pl")
+    _add(idx, "fonctionner", "fonctionner", "v1__t___zz infi")
+    _add(idx, "mécontenter", "mécontenter", "v1__t___zz infi")
+    _add(idx, "mécontenter", "mécontentez", "v1__t___zz ipre 2pl")
+    _add(idx, "pas", "pas", "adv")
+    return idx
+
+
+def test_pp_fem_pl_homograph_head_with_adverb_is_dropped() -> None:
+    """`comblez → "Satisfaites pleinement"` reads as the fem-pl adjective — routed to dropped."""
+    idx = _pp_homograph_index()
+    corpus = {("combler", "verbe"): [_clue("combler", "verbe", "Satisfaire pleinement")]}
+    rows = build_surface_rows("comblez", corpus, idx, {})
+    assert len(rows) == 1, rows
+    assert rows[0]["clue"] == "Satisfaites pleinement", rows
+    assert rows[0]["inflection_status"] == "pp-adjective-homograph", rows
+
+
+def test_pp_fem_pl_homograph_head_with_infinitive_is_kept() -> None:
+    """`actionnez → "Faites fonctionner"`: the infinitive forces the causative verb reading — kept."""
+    idx = _pp_homograph_index()
+    corpus = {("actionner", "verbe"): [_clue("actionner", "verbe", "Faire fonctionner")]}
+    rows = build_surface_rows("actionnez", corpus, idx, {})
+    assert len(rows) == 1, rows
+    assert rows[0]["clue"] == "Faites fonctionner", rows
+    assert rows[0]["inflection_status"] == "inflected", rows
+
+
+def test_pp_fem_pl_homograph_head_under_negation_is_kept() -> None:
+    """`mécontentez → "Ne satisfaites pas"`: `ne … pas` forces the verb reading — kept."""
+    idx = _pp_homograph_index()
+    corpus = {("mécontenter", "verbe"): [_clue("mécontenter", "verbe", "Ne satisfaire pas")]}
+    rows = build_surface_rows("mécontentez", corpus, idx, {})
+    assert len(rows) == 1, rows
+    assert rows[0]["clue"] == "Ne satisfaites pas", rows
+    assert rows[0]["inflection_status"] == "inflected", rows
