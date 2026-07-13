@@ -102,6 +102,8 @@ channels:
           - { $ref: '#/components/messages/CellFocus' }
           - { $ref: '#/components/messages/LeaveLobby' }
           - { $ref: '#/components/messages/RotateCode' }
+          - { $ref: '#/components/messages/Rematch' }
+          - { $ref: '#/components/messages/ReturnToSalon' }
     subscribe:
       operationId: serverToClient
       summary: Frames broadcast by the server to subscribed players.
@@ -141,6 +143,8 @@ components:
     CellFocus:      { name: cellFocus,      title: Client cell focus,                  summary: Player moved (or cleared) their cursor.,                                                           payload: { $ref: '#/components/schemas/CellFocusPayload' },     description: Pure presence signal; lets peers render the sender's cursor + active word. Carries zero domain meaning. Clients SHOULD throttle to ~5 Hz (200 ms debounce). }
     LeaveLobby:     { name: leaveLobby,     title: Leave lobby,                        summary: Voluntary disconnect; frees the slot immediately.,                                                 payload: { $ref: '#/components/schemas/LeaveLobbyPayload' } }
     RotateCode:     { name: rotateCode,     title: Rotate join code (owner only),      summary: Owner mints a fresh join code in place; old code stops admitting new joiners.,                     payload: { $ref: '#/components/schemas/RotateCodePayload' },    description: "ADR-0029. Owner-only. Server replies with a refreshed `lobbyState` snapshot whose `code` field carries the new value, and rejects with `not-owner` (403) when sent by anyone else. Already-joined sessions stay joined across rotation; only the join authority changes." }
+    Rematch:        { name: rematch,        title: Rematch (owner only),               summary: Owner starts a fresh game in the same lobby from COMPLETED.,                                        payload: { $ref: '#/components/schemas/RematchPayload' },       description: "ADR-0113. Owner-only, COMPLETED-only. Reuses gridConfig; server broadcasts gameStarted. Rejected with not-owner/invalid-state." }
+    ReturnToSalon:  { name: returnToSalon,  title: Return to salon (owner only),       summary: Owner returns a COMPLETED lobby to WAITING to pick a new grid.,                                     payload: { $ref: '#/components/schemas/ReturnToSalonPayload' }, description: "ADR-0113. Owner-only, COMPLETED-only. Clears the game; server broadcasts a lobbyState snapshot." }
     LobbyState:     { name: lobbyState,     title: Lobby snapshot,                     summary: Full lobby state; fires on join and on reconnect.,                                                 payload: { $ref: '#/components/schemas/LobbyStatePayload' } }
     PlayerJoined:   { name: playerJoined,   title: Player joined,                                                                                                                                  payload: { $ref: '#/components/schemas/PlayerJoinedPayload' } }
     PlayerLeft:     { name: playerLeft,     title: Player left,                                                                                                                                    payload: { $ref: '#/components/schemas/PlayerLeftPayload' } }
@@ -484,6 +488,26 @@ components:
       properties:
         type: { type: string, enum: [rotateCode] }
       example: { type: rotateCode }
+    RematchPayload:
+      type: object
+      required: [type]
+      description: |
+        ADR-0113. Owner-only, COMPLETED-only. Starts a fresh game in the same
+        lobby reusing the current gridConfig; server broadcasts `gameStarted`.
+        Rejected with `not-owner` (403) or `invalid-state`.
+      properties:
+        type: { type: string, enum: [rematch] }
+      example: { type: rematch }
+    ReturnToSalonPayload:
+      type: object
+      required: [type]
+      description: |
+        ADR-0113. Owner-only, COMPLETED-only. Returns the lobby to WAITING
+        (clears the game, keeps players/code/gridConfig); server broadcasts a
+        refreshed `lobbyState`. Rejected with `not-owner` (403) or `invalid-state`.
+      properties:
+        type: { type: string, enum: [returnToSalon] }
+      example: { type: returnToSalon }
 
     # ----- Server → client payloads -----
     LobbyStatePayload:
