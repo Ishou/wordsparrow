@@ -42,7 +42,8 @@ internal object Fixtures {
         entries: Map<Position, CellEntry> = emptyMap(),
         startedAt: Instant = now,
         completedAt: Instant? = null,
-    ): GameSession = GameSession(puzzle(), entries, startedAt, completedAt)
+        lockedPositions: Map<Position, SessionId> = emptyMap(),
+    ): GameSession = GameSession(puzzle(), entries, startedAt, completedAt, lockedPositions)
 
     fun entry(
         letter: Char,

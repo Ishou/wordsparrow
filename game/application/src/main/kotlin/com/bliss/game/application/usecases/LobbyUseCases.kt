@@ -501,11 +501,7 @@ class UpdateCellUseCase(
         position: Position,
         letter: Letter?,
     ): UseCaseOutcome<Lobby> {
-        // Step 1: write the cell entry (or clear) and capture the post-state
-        // we'll need to drive lock detection. Locked-cell writes short-circuit
-        // here. We also evaluate isSolved() inside the mutator so a fully-
-        // correct grid still emits GameSolved + transitions to COMPLETED on
-        // the same write — the lock detection in step 2 is independent.
+        // Step 1: write the cell entry; locked cells short-circuit. Completion is decided in step 3 once the winning word locks.
         var writtenAt: Instant? = null
         var entriesAfter: Map<Position, CellEntry> = emptyMap()
         var solved: Pair<Long, Map<Position, CellEntry>>? = null
@@ -525,26 +521,7 @@ class UpdateCellUseCase(
                         session.entries + (position to CellEntry(sessionId, letter, now))
                     }
                 entriesAfter = entries
-                val nextSession = session.copy(entries = entries)
-                if (nextSession.isSolved() && session.completedAt == null) {
-                    val durationMs = Duration.between(session.startedAt, now).toMillis()
-                    solved = durationMs to entries
-                    analyticsEventSink.record(
-                        AnalyticsEvent.GameSolved(
-                            gridSize = lobby.gridConfig.toLabel(),
-                            playerCount = lobby.players.size,
-                            durationMs = durationMs,
-                        ),
-                        sessionId,
-                    )
-                    lobby.copy(
-                        state = LobbyLifecycleState.COMPLETED,
-                        game = nextSession.copy(completedAt = now),
-                        lastActivityAt = now,
-                    )
-                } else {
-                    lobby.copy(game = nextSession, lastActivityAt = now)
-                }
+                lobby.copy(game = session.copy(entries = entries), lastActivityAt = now)
             } ?: return failure(UseCaseError.LobbyNotFound)
         // writtenAt is null when the mutator short-circuited (player not in lobby, not IN_PROGRESS,
         // or position already locked). The locked-no-op case must surface as success-with-no-events.
@@ -611,14 +588,33 @@ class UpdateCellUseCase(
                     }.toSet()
             if (stillCorrect.isEmpty()) return@mutate lobby
             actualLocks = stillCorrect
-            lobby.copy(
-                game = s.copy(lockedPositions = s.lockedPositions + stillCorrect.associateWith { sessionId }),
-                lastActivityAt = stamp,
-            )
+            val locked = s.copy(lockedPositions = s.lockedPositions + stillCorrect.associateWith { sessionId })
+            // Completion (ADR-0084): checked on locks, not the raw cell write — the winning lock tips the grid to solved.
+            if (locked.isSolved() && s.completedAt == null) {
+                solved = Duration.between(s.startedAt, stamp).toMillis() to s.entries
+                lobby.copy(
+                    state = LobbyLifecycleState.COMPLETED,
+                    game = locked.copy(completedAt = stamp),
+                    lastActivityAt = stamp,
+                )
+            } else {
+                lobby.copy(game = locked, lastActivityAt = stamp)
+            }
         }
         if (actualLocks.isEmpty()) return success(updated, events).withSolved(solved)
         events += LobbyEvent.WordLocked(actualLocks, sessionId, stamp)
         val finalLobby = repo.findById(lobbyId) ?: updated
+        val solvedResult = solved
+        if (solvedResult != null) {
+            analyticsEventSink.record(
+                AnalyticsEvent.GameSolved(
+                    gridSize = finalLobby.gridConfig.toLabel(),
+                    playerCount = finalLobby.players.size,
+                    durationMs = solvedResult.first,
+                ),
+                sessionId,
+            )
+        }
         return success(finalLobby, events).withSolved(solved)
     }
 

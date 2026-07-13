@@ -6,7 +6,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import assertk.assertions.messageContains
-import com.bliss.game.domain.Fixtures.entry
 import com.bliss.game.domain.Fixtures.gameSession
 import com.bliss.game.domain.Fixtures.later
 import com.bliss.game.domain.Fixtures.now
@@ -22,8 +21,8 @@ class GameSessionTest {
     private val finder = SessionId("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b")
 
     @Test
-    fun `isSolved is false when the puzzle has no answerable cells`() {
-        val noAnswerPuzzle =
+    fun `isSolved is false when the puzzle has no letter cells`() {
+        val noLetterCells =
             GamePuzzle(
                 id = UUID.randomUUID(),
                 title = "Empty",
@@ -34,37 +33,25 @@ class GameSessionTest {
                 clues = emptyList(),
                 createdAt = now,
             )
-        val s = GameSession(noAnswerPuzzle, emptyMap(), now, null)
+        val s = GameSession(noLetterCells, emptyMap(), now, null, lockedPositions = emptyMap())
         assertThat(s.isSolved()).isFalse()
     }
 
     @Test
-    fun `isSolved is false when no entries are placed`() {
+    fun `isSolved is false when no cells are locked`() {
         assertThat(gameSession().isSolved()).isFalse()
     }
 
     @Test
-    fun `isSolved is false when only some letter cells are filled`() {
-        val s = gameSession(entries = mapOf(pPos to entry('P')))
+    fun `isSolved is false when only some letter cells are locked`() {
+        val s = gameSession(lockedPositions = mapOf(pPos to finder))
         assertThat(s.isSolved()).isFalse()
     }
 
     @Test
-    fun `isSolved is false when an entry letter does not match the answer`() {
-        val s = gameSession(entries = mapOf(pPos to entry('P'), aPos to entry('Z')))
-        assertThat(s.isSolved()).isFalse()
-    }
-
-    @Test
-    fun `isSolved is true when every letter cell entry matches its answer`() {
-        val s = gameSession(entries = mapOf(pPos to entry('P'), aPos to entry('A')))
+    fun `isSolved is true when every letter cell is locked`() {
+        val s = gameSession(lockedPositions = mapOf(pPos to finder, aPos to finder))
         assertThat(s.isSolved()).isTrue()
-    }
-
-    @Test
-    fun `solvedPositions returns only the matching cells`() {
-        val s = gameSession(entries = mapOf(pPos to entry('P'), aPos to entry('Z')))
-        assertThat(s.solvedPositions()).isEqualTo(setOf(pPos))
     }
 
     @Test

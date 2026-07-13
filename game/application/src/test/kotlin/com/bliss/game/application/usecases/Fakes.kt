@@ -6,6 +6,7 @@ import com.bliss.game.application.ports.LobbyRepository
 import com.bliss.game.application.ports.PuzzleProvider
 import com.bliss.game.domain.BlockCell
 import com.bliss.game.domain.GameClue
+import com.bliss.game.domain.GameClueDirection
 import com.bliss.game.domain.GamePuzzle
 import com.bliss.game.domain.Letter
 import com.bliss.game.domain.LetterCell
@@ -341,6 +342,7 @@ internal object Samples {
 
     val pPos = Position(0, 3)
     val aPos = Position(0, 4)
+    val paClueId = UUID.fromString("0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5aca")
 
     /** Two-letter puzzle (P, A). Solved when both are placed correctly. */
     fun puzzle(): GamePuzzle =
@@ -359,4 +361,7 @@ internal object Samples {
             clues = emptyList<GameClue>(),
             createdAt = Instant.parse("2026-01-01T00:00:00Z"),
         )
+
+    // Same two cells as [puzzle] but with the across clue "PA" so completing the word locks both cells; lock-based completion (ADR-0084) needs a clue to fire.
+    fun cluedPuzzle(): GamePuzzle = puzzle().copy(clues = listOf(GameClue(paClueId, GameClueDirection.ACROSS, pPos, 2, "PA")))
 }

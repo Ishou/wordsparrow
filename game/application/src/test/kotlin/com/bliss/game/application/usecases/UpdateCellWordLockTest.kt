@@ -6,6 +6,7 @@ import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotNull
 import com.bliss.game.application.ports.LobbyEvent
 import com.bliss.game.application.usecases.Samples.alice
 import com.bliss.game.application.usecases.Samples.bob
@@ -17,6 +18,7 @@ import com.bliss.game.domain.GameClueDirection
 import com.bliss.game.domain.GamePuzzle
 import com.bliss.game.domain.Letter
 import com.bliss.game.domain.LetterCell
+import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Position
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
@@ -358,5 +360,55 @@ class UpdateCellWordLockTest {
             assertThat(locks?.get(across01)).isEqualTo(sessionA)
             assertThat(locks?.get(down13)).isEqualTo(sessionB)
             assertThat(locks?.get(down23)).isEqualTo(sessionB)
+        }
+
+    @Test
+    fun `GameSolved and COMPLETED fire when the whole no-answer grid is locked (v1 wire reality)`() =
+        runTest {
+            // Production repro: grid strips LetterCell.answer, so completion must derive from locks.
+            val puzzleWithoutAnswers =
+                GamePuzzle(
+                    id = UUID.fromString("0190e3c0-0000-7000-8000-000000000003"),
+                    title = "Realistic v1 puzzle",
+                    language = "fr",
+                    width = 5,
+                    height = 5,
+                    cells =
+                        listOf(
+                            BlockCell(Position(0, 0)),
+                            LetterCell(across01, answer = null),
+                            LetterCell(across02, answer = null),
+                            LetterCell(cross03, answer = null),
+                            LetterCell(down13, answer = null),
+                            LetterCell(down23, answer = null),
+                        ),
+                    clues =
+                        listOf(
+                            GameClue(acrossClueId, GameClueDirection.ACROSS, across01, 3, "PAS"),
+                            GameClue(downClueId, GameClueDirection.DOWN, cross03, 3, "SEL"),
+                        ),
+                    createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+                )
+            val gridAnswers =
+                mapOf(
+                    across01 to Letter('P'),
+                    across02 to Letter('A'),
+                    cross03 to Letter('S'),
+                    down13 to Letter('E'),
+                    down23 to Letter('L'),
+                )
+            val h = Harness(puzzleWithoutAnswers, answers = gridAnswers)
+            val lobby = h.create(sessionA, alice).value
+            h.start(lobby.id, sessionA).requireSuccess()
+
+            h.write(lobby.id, sessionA, across01, Letter('P')).requireSuccess()
+            h.write(lobby.id, sessionA, across02, Letter('A')).requireSuccess()
+            h.write(lobby.id, sessionA, down13, Letter('E')).requireSuccess()
+            h.write(lobby.id, sessionA, down23, Letter('L')).requireSuccess()
+            val solved = h.write(lobby.id, sessionA, cross03, Letter('S')).requireSuccess()
+
+            assertThat(solved.events.filterIsInstance<LobbyEvent.GameSolved>()).hasSize(1)
+            assertThat(solved.value.state).isEqualTo(LobbyLifecycleState.COMPLETED)
+            assertThat(solved.value.game?.completedAt).isNotNull()
         }
 }

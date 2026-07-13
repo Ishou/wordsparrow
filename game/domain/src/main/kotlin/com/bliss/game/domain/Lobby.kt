@@ -51,26 +51,16 @@ data class GameSession(
         }
     }
 
+    /** Solved when every letter cell is server-locked; the answer key is stripped from the wire (ADR-0084), so completion is derived from locks, never from [LetterCell.answer] (null in prod). */
     fun isSolved(): Boolean {
-        val answerable = letterCellPositionsWithAnswer()
-        // A puzzle with no answerable cells is not solvable, so it is not solved.
-        return answerable.isNotEmpty() && solvedPositions() == answerable
+        val letterPositions = letterCellPositions()
+        return letterPositions.isNotEmpty() && lockedPositions.keys.containsAll(letterPositions)
     }
 
-    /** Positions whose [LetterCell] answer matches the placed [CellEntry]. */
-    fun solvedPositions(): Set<Position> =
+    private fun letterCellPositions(): Set<Position> =
         puzzle.cells
             .asSequence()
             .filterIsInstance<LetterCell>()
-            .filter { it.answer != null && entries[it.position]?.letter == it.answer }
-            .map { it.position }
-            .toSet()
-
-    private fun letterCellPositionsWithAnswer(): Set<Position> =
-        puzzle.cells
-            .asSequence()
-            .filterIsInstance<LetterCell>()
-            .filter { it.answer != null }
             .map { it.position }
             .toSet()
 
