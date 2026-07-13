@@ -1260,7 +1260,8 @@ export interface components {
         /**
          * @description The solved answer word the clue belongs to, when the report resolved
          *     it. Optional — narrows the text-join match. Length-bounded to 64,
-         *     mirroring ADR-0103's `wordText`.
+         *     mirroring ADR-0103's `wordText`. Folded to uppercase ASCII A-Z, no
+         *     accents (`Word.text`'s corpus invariant, `grid/domain/.../Word.kt`).
          * @example PARIS
          */
         WordText: string;
@@ -1334,8 +1335,7 @@ export interface components {
             clues: components["schemas"]["WordClueItem"][];
         };
         WordClueItem: {
-            /** @description The clue text. */
-            text: string;
+            text: components["schemas"]["ClueText"];
             /** @description The themed-overlay category this clue came from, or null for a base corpus clue. */
             theme: string | null;
         };

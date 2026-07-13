@@ -2031,10 +2031,12 @@ components:
       type: string
       minLength: 1
       maxLength: 64
+      pattern: '^[A-Z]+$'
       description: |
         The solved answer word the clue belongs to, when the report resolved
         it. Optional — narrows the text-join match. Length-bounded to 64,
-        mirroring ADR-0103's `wordText`.
+        mirroring ADR-0103's `wordText`. Folded to uppercase ASCII A-Z, no
+        accents (`Word.text`'s corpus invariant, `grid/domain/.../Word.kt`).
       example: PARIS
 
     CorrectionKind:
@@ -2138,10 +2140,7 @@ components:
       required: [text, theme]
       properties:
         text:
-          type: string
-          minLength: 1
-          maxLength: 512
-          description: The clue text.
+          $ref: '#/components/schemas/ClueText'
         theme:
           type: string
           nullable: true
