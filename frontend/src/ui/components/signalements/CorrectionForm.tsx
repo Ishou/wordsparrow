@@ -292,11 +292,11 @@ export function CorrectionForm({
                   <fieldset className={fieldset}>
                     <legend className={legend}>{t('correction.mode.legend')}</legend>
                     <label className={modeRow}>
-                      <input type="radio" name="correction-mode" className={radioInput} value="replace" checked={mode === 'replace'} onChange={() => setMode('replace')} />
+                      <input type="radio" name="correction-mode" className={radioInput} value="replace" checked={mode === 'replace'} onChange={() => { setMode('replace'); setHasText(false); }} />
                       <span>{t('correction.mode.replace')}</span>
                     </label>
                     <label className={modeRow}>
-                      <input type="radio" name="correction-mode" className={radioInput} value="forbid" checked={mode === 'forbid'} disabled={!solvedWord} onChange={() => setMode('forbid')} />
+                      <input type="radio" name="correction-mode" className={radioInput} value="forbid" checked={mode === 'forbid'} disabled={!solvedWord} onChange={() => { setMode('forbid'); setHasText(false); }} />
                       <span>{t('correction.mode.forbid')}</span>
                     </label>
                     {!solvedWord ? <p className={hint}>{t('correction.forbid.needWord')}</p> : null}

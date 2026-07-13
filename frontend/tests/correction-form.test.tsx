@@ -279,6 +279,18 @@ describe('CorrectionForm', () => {
     expect(submit()).toBeDisabled();
   });
 
+  it('re-disables submit after replace→forbid→replace leaves the field empty', async () => {
+    renderForm();
+    await openDialog();
+    const submit = () => screen.getByRole('button', { name: /Enregistrer la correction/ });
+    fireEvent.input(screen.getByLabelText(/Nouvelle définition/), { target: { value: 'Félin domestique' } });
+    expect(submit()).toBeEnabled();
+    click(screen.getByRole('radio', { name: /Interdire cette définition/ }));
+    click(screen.getByRole('radio', { name: /Remplacer la définition/ }));
+    expect(screen.getByLabelText(/Nouvelle définition/)).toHaveValue('');
+    expect(submit()).toBeDisabled();
+  });
+
   it('has no axe violations with the picker open', async () => {
     const { expectAxeClean } = await import('@/test/a11y');
     server.use(
