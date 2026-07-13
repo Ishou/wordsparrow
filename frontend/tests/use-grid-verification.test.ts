@@ -248,7 +248,7 @@ describe('useGridVerification', () => {
       await Promise.resolve();
     });
 
-    expect(result.current.errorMessage).toBe('Vérification en cooldown');
+    expect(result.current.errorMessage).toBe('Vérification bientôt disponible');
     expect(result.current.secondsUntilNextVerify).toBe(900);
     expect(onCorrect).not.toHaveBeenCalled();
     expect(result.current.shakingPositions.size).toBe(0);
