@@ -2193,7 +2193,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description The answer surface as stored in the corpus (folded, e.g. `ESSE`). Matched exactly. */
-                word: string;
+                word: components["schemas"]["WordText"];
             };
             cookie?: never;
         };

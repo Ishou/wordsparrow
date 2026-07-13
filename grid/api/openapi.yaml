@@ -876,10 +876,7 @@ paths:
           required: true
           description: The answer surface as stored in the corpus (folded, e.g. `ESSE`). Matched exactly.
           schema:
-            type: string
-            minLength: 1
-            maxLength: 64
-            pattern: '^[A-Za-zÀ-ÖØ-öø-ÿŒœ]+$'
+            $ref: '#/components/schemas/WordText'
       responses:
         '200':
           description: The word's clues (≥1; includes the reported clue).
