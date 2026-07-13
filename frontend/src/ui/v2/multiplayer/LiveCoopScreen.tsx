@@ -18,7 +18,6 @@ import { CELL, GAP, BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLa
 import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
 import { useAdvanceOnValidation } from '@/ui/components/grid/useAdvanceOnValidation';
 import { ReportClueSheet } from '@/ui/components/grid/ReportClueSheet';
-import { foldReportWord } from '@/ui/components/grid/reportWord';
 import { Keyboard } from '@/ui/play/Keyboard';
 import { useGridSounds } from '@/ui/play/useGridSounds';
 import { GridSoundToggle } from '@/ui/play/GridSoundToggle';
@@ -367,7 +366,6 @@ export function LiveCoopScreen({
                     surveyClient={surveyClient}
                     surface="multiplayer"
                     clueText={clue.clue.text}
-                    wordText={foldReportWord(clue.cells.map((c) => nav.getEntryAt(c.position.row, c.position.col)))}
                     puzzleId={puzzle.id}
                   />
                 ) : undefined

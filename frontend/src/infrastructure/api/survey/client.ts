@@ -224,7 +224,6 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
       clueText: input.clueText,
       reason: input.reason,
       surface: input.surface,
-      ...(input.wordText ? { wordText: input.wordText } : {}),
       ...(input.note ? { note: input.note } : {}),
       ...(input.puzzleId ? { puzzleId: input.puzzleId } : {}),
     };
@@ -246,7 +245,19 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
     if (res.status === 403) throw new ContribuerForbiddenError();
     if (!res.ok) throw new Error(`listSignalements failed: ${res.status}`);
     const json = (await res.json()) as components['schemas']['SignalementListResponse'];
-    return json.items as SignalementSummary[];
+    return json.items.map(
+      (it): SignalementSummary => ({
+        reportId: it.reportId,
+        wordText: it.wordText,
+        clueText: it.clueText,
+        reason: it.reason,
+        surface: it.surface,
+        puzzleId: it.puzzleId,
+        count: it.count,
+        latestNote: it.latestNote,
+        latestAt: it.latestAt,
+      }),
+    );
   };
 
   const decideSignalement: SurveyClient['decideSignalement'] = async (

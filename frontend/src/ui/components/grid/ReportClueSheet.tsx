@@ -132,20 +132,16 @@ export interface ReportClueSheetProps {
   readonly surveyClient?: SurveyClient | null;
   readonly surface: ReportSurface;
   readonly clueText: string;
-  // Derived by the parent from the active clue's cell entries — empty until solved; the client never holds the solution word (ADR-0076).
-  readonly wordText?: string;
   readonly puzzleId?: string;
 }
 
-export function ReportClueSheet({ surveyClient, surface, clueText, wordText, puzzleId }: ReportClueSheetProps) {
+export function ReportClueSheet({ surveyClient, surface, clueText, puzzleId }: ReportClueSheetProps) {
   const { report } = useReportClue(surveyClient ?? null);
   const { show } = useToast();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const noteRef = useRef<HTMLTextAreaElement>(null);
-
-  const solvedWord = wordText?.trim() || undefined;
 
   const close = () => setOpen(false);
   const onOpenChange = (nextOpen: boolean) => {
@@ -158,7 +154,6 @@ export function ReportClueSheet({ surveyClient, surface, clueText, wordText, puz
     setSubmitting(true);
     try {
       await report({
-        wordText: solvedWord,
         clueText,
         reason,
         surface,

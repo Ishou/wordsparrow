@@ -8,11 +8,9 @@ export interface SeenReportsStore {
   add(key: string): void;
 }
 
-// Local guard: anonymous players can't be deduped server-side (ADR-0103). Keyed on the word when solved, else clue+puzzle.
-export const reportGuardKey = (input: Pick<SignalementInput, 'wordText' | 'clueText' | 'puzzleId'>): string =>
-  input.wordText
-    ? `signalement:${input.wordText}:${input.clueText}`
-    : `signalement:${input.puzzleId ?? ''}:${input.clueText}`;
+// Local guard: anonymous players can't be deduped server-side (ADR-0103). Keyed on clue+puzzle (the client never holds the word, ADR-0111).
+export const reportGuardKey = (input: Pick<SignalementInput, 'clueText' | 'puzzleId'>): string =>
+  `signalement:${input.puzzleId ?? ''}:${input.clueText}`;
 
 export async function reportClue(
   client: SurveyClient | null | undefined,
