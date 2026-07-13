@@ -591,8 +591,7 @@ class UpdateCellUseCase(
             if (stillCorrect.isEmpty()) return@mutate lobby
             actualLocks = stillCorrect
             val locked = s.copy(lockedPositions = s.lockedPositions + stillCorrect.associateWith { sessionId })
-            // Completion (ADR-0084): the winning word's lock is what tips the grid into
-            // solved, so isSolved() is checked here — on locks — not on the raw cell write.
+            // Completion (ADR-0084): checked on locks, not the raw cell write — the winning lock tips the grid to solved.
             if (locked.isSolved() && s.completedAt == null) {
                 solved = Duration.between(s.startedAt, stamp).toMillis() to s.entries
                 lobby.copy(
