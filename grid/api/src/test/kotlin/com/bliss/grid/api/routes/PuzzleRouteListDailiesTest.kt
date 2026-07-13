@@ -17,6 +17,7 @@ import com.bliss.grid.application.puzzle.DailyPuzzleSelector
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.ListDailyPuzzlesUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
+import com.bliss.grid.application.puzzle.ResolveWordUseCase
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.application.puzzle.ValidatePuzzleUseCase
@@ -286,6 +287,7 @@ class PuzzleRouteListDailiesTest {
                 revealCellHint = RevealCellHintUseCase(puzzleRepo, hintRepo),
                 validatePuzzle = ValidatePuzzleUseCase(puzzleRepo),
                 validateWord = ValidateWordUseCase(puzzleRepo),
+                resolveWord = ResolveWordUseCase(puzzleRepo),
                 verifyGrid = VerifyGridUseCase(puzzleRepo, InMemoryVerifyUsageRepository()),
                 listDailyPuzzles =
                     ListDailyPuzzlesUseCase(
