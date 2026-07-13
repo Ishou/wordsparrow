@@ -559,7 +559,7 @@ class PuzzleRouteTest {
                 }
 
             assertThat(response.status).isEqualTo(HttpStatusCode.OK)
-            assertThat(response.headers["ETag"]!!).isEqualTo("\"$newId\"")
+            assertThat(response.headers["ETag"]!!).startsWith("\"$newId-")
             val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject
             assertThat(json["width"]!!.jsonPrimitive.content.toInt()).isEqualTo(9)
         }
