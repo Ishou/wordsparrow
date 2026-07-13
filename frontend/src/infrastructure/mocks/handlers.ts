@@ -148,6 +148,14 @@ const HINT_PROBLEM_INVALID_COORD = {
 const lastVerifiedAtByPuzzle = new Map<string, number>();
 const VERIFY_COOLDOWN_SECONDS = 1800;
 
+// Preview parity for ADR-0099's server-authoritative cooldown on the puzzle GET: null when no cooldown is active, so a reload after a verify shows the countdown synced from the first paint.
+function verifyCooldownSecondsFor(puzzleId: string): number | null {
+  const last = lastVerifiedAtByPuzzle.get(puzzleId);
+  if (last == null) return null;
+  const remaining = Math.ceil(VERIFY_COOLDOWN_SECONDS - (Date.now() - last) / 1000);
+  return remaining > 0 ? remaining : null;
+}
+
 /**
  * Handlers for every Grid API operation declared in
  * `grid/api/openapi.yaml`. The path patterns use a `*` host prefix so
@@ -228,6 +236,7 @@ const gridHandlers = [
       ...puzzleFixture,
       difficulty: 'facile',
       gridNumber,
+      secondsUntilNextVerify: verifyCooldownSecondsFor(puzzleFixture.id),
     });
   }),
 
@@ -236,7 +245,11 @@ const gridHandlers = [
     // (the spec example's hard-coded UUID would otherwise mismatch
     // whatever id the application layer asked for).
     const puzzleId = String(params.puzzleId);
-    return HttpResponse.json({ ...puzzleFixture, id: puzzleId });
+    return HttpResponse.json({
+      ...puzzleFixture,
+      id: puzzleId,
+      secondsUntilNextVerify: verifyCooldownSecondsFor(puzzleId),
+    });
   }),
 
   // POST /v1/puzzles/{id}/hints — preview parity: resolve the word at (row, column, direction), decrement the per-puzzle budget, 429 when exhausted, 400 on a non-letter coord.

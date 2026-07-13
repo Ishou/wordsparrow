@@ -70,6 +70,25 @@ describe('useGridVerification', () => {
     expect(solver.verify).toHaveBeenCalledWith('test-puzzle', [{ row: 0, column: 1, letter: 'A' }]);
   });
 
+  it('seeds the cooldown from puzzle.secondsUntilNextVerify and gates verify while cooling', async () => {
+    mountInput(0, 1, 'A');
+    const solver = makeSolver();
+    const cooling: Puzzle = { ...puzzle, secondsUntilNextVerify: 1200 };
+    const { result } = renderHook(() => useGridVerification(cooling, solver, new Set(), vi.fn()));
+
+    // Synced from the first render (ADR-0099), not null/available.
+    expect(result.current.secondsUntilNextVerify).toBe(1200);
+
+    await act(async () => {
+      result.current.verify();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // The active cooldown gates the call: the server is never hit.
+    expect(solver.verify).not.toHaveBeenCalled();
+  });
+
   it('locks correct:true cells via onCorrect and flags correct:false cells shaking', async () => {
     vi.useFakeTimers();
     mountInput(0, 1, 'A');
