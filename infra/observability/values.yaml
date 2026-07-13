@@ -204,13 +204,14 @@ signoz:
     # PR-D ships the backend; PII config is small enough to land
     # inline once we know what's there to scrub.
     config: {}
+    # Batch/queue memory spikes above steady-state (~220Mi) during flush bursts, causing OOMKills.
     resources:
       requests:
         cpu: 100m
-        memory: 256Mi
+        memory: 512Mi
       limits:
         cpu: 500m
-        memory: 512Mi
+        memory: 1Gi
 
 # Image pre-pull DaemonSet — keeps the SigNoz/ClickHouse/Zookeeper image
 # set warm in containerd's cache on every observability-labeled node so a
