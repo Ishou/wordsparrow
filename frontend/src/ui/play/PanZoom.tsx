@@ -60,6 +60,11 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   const pinchDist = useRef(0);
   const moved = useRef(0);
   const idle = useRef(0);
+  // The initial fit is one-time. Once the user touches the board (tap/pan/zoom),
+  // later pad/viewport changes only re-clamp — they never re-fit and clobber the
+  // user's zoom. A different puzzle (content-size change) re-arms the fit.
+  const interacted = useRef(false);
+  const lastContent = useRef({ w: contentWidth, h: contentHeight });
 
   const apply = useCallback(() => {
     if (stRef.current) stRef.current.style.transform = `translate(${tx.current}px, ${ty.current}px) scale(${scale.current})`;
@@ -172,10 +177,20 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   useLayoutEffect(() => {
     const vp = vpRef.current;
     if (vp) {
-      scale.current = fit === 'cover' ? fitScale() * overscan : fitScale();
-      // Centre on both axes so whichever side bleeds does so evenly.
-      tx.current = (vp.clientWidth - contentWidth * scale.current) / 2;
-      ty.current = (vp.clientHeight - contentHeight * scale.current) / 2;
+      // A different puzzle re-arms the one-time fit; a mere pad/viewport change does not.
+      if (lastContent.current.w !== contentWidth || lastContent.current.h !== contentHeight) {
+        lastContent.current = { w: contentWidth, h: contentHeight };
+        interacted.current = false;
+      }
+      if (!interacted.current) {
+        scale.current = fit === 'cover' ? fitScale() * overscan : fitScale();
+        // Centre on both axes so whichever side bleeds does so evenly.
+        tx.current = (vp.clientWidth - contentWidth * scale.current) / 2;
+        ty.current = (vp.clientHeight - contentHeight * scale.current) / 2;
+      } else if (scale.current < lowerBound()) {
+        // Pad reflow can raise the floor; keep the board filling it without re-fitting.
+        scale.current = lowerBound();
+      }
     }
     clamp();
     apply();
@@ -196,6 +211,7 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     if (!vp) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      interacted.current = true;
       promote();
       const rect = vp.getBoundingClientRect();
       // Normalize to pixels: one notch fires one big delta; trackpad fires a stream of tiny ones.
@@ -216,11 +232,15 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
     () => ({
       zoomIn: () => {
         const vp = vpRef.current;
-        if (vp) zoomTo(scale.current * STEP, vp.clientWidth / 2, vp.clientHeight / 2);
+        if (!vp) return;
+        interacted.current = true;
+        zoomTo(scale.current * STEP, vp.clientWidth / 2, vp.clientHeight / 2);
       },
       zoomOut: () => {
         const vp = vpRef.current;
-        if (vp) zoomTo(scale.current / STEP, vp.clientWidth / 2, vp.clientHeight / 2);
+        if (!vp) return;
+        interacted.current = true;
+        zoomTo(scale.current / STEP, vp.clientWidth / 2, vp.clientHeight / 2);
       },
     }),
     [zoomTo],
@@ -236,6 +256,8 @@ export const PanZoom = forwardRef<PanZoomHandle, PanZoomProps>(function PanZoom(
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
+    // First touch on the board locks the one-time fit: from here, pad reflows only re-clamp.
+    interacted.current = true;
     // Capture only once a drag exceeds the tap threshold, not on down, so taps still reach the cell.
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 1) moved.current = 0;
