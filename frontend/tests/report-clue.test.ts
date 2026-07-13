@@ -3,10 +3,10 @@ import { reportClue, reportGuardKey, type SeenReportsStore } from '@/application
 import type { SignalementInput, SurveyClient } from '@/application/survey';
 
 const input: SignalementInput = {
-  wordText: 'CHAT',
   clueText: 'félin domestique',
   reason: 'erreur_sens',
   surface: 'solo',
+  puzzleId: 'p-1',
 };
 
 function memoryStore(): SeenReportsStore {
@@ -27,7 +27,7 @@ describe('reportClue', () => {
 
     expect(outcome).toBe('reported');
     expect(submit).toHaveBeenCalledWith(input);
-    expect(store.has(reportGuardKey({ wordText: 'CHAT', clueText: 'félin domestique' }))).toBe(true);
+    expect(store.has(reportGuardKey({ clueText: 'félin domestique', puzzleId: 'p-1' }))).toBe(true);
   });
 
   it('refuses a second report for the same word+clue without calling the client', async () => {
@@ -46,7 +46,7 @@ describe('reportClue', () => {
     const store = memoryStore();
 
     await expect(reportClue(stubClient(submit), store, input)).rejects.toThrow('boom');
-    expect(store.has(reportGuardKey({ wordText: 'CHAT', clueText: 'félin domestique' }))).toBe(false);
+    expect(store.has(reportGuardKey({ clueText: 'félin domestique', puzzleId: 'p-1' }))).toBe(false);
   });
 
   it('throws when no client is available', async () => {

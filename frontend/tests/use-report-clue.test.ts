@@ -4,10 +4,10 @@ import { useReportClue } from '@/ui/components/grid/useReportClue';
 import type { SignalementInput, SurveyClient } from '@/application/survey';
 
 const input: SignalementInput = {
-  wordText: 'CHAT',
   clueText: 'félin domestique',
   reason: 'erreur_sens',
   surface: 'solo',
+  puzzleId: 'p-1',
 };
 
 function stubClient(submit = vi.fn().mockResolvedValue({ reportId: 'r-1' })): SurveyClient {
@@ -32,7 +32,7 @@ describe('useReportClue (default localStorage store)', () => {
 
     expect(outcome).toBe('reported');
     expect(submit).toHaveBeenCalledWith(input);
-    expect(localStorage.getItem('signalement:CHAT:félin domestique')).not.toBeNull();
+    expect(localStorage.getItem('signalement:p-1:félin domestique')).not.toBeNull();
   });
 
   it('returns already-reported on a repeat without calling the client again', async () => {

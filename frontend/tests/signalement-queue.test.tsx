@@ -21,6 +21,8 @@ function summary(over: Partial<SignalementSummary> = {}): SignalementSummary {
     wordText: 'CHAT',
     clueText: 'Animal qui miaule',
     reason: 'erreur_sens',
+    surface: 'daily',
+    puzzleId: '0190e3a4-7a2c-7c9e-8f1a-0000000000ab',
     count: 2,
     latestNote: 'contre-sens',
     latestAt: '2026-07-11T10:00:00Z',
@@ -56,15 +58,30 @@ describe('SignalementQueue', () => {
     expect(screen.getByText(/contre-sens/)).toBeInTheDocument();
   });
 
-  it('renders a word-less group without a mot and falls the action label back to the clue', async () => {
+  it('renders the resolved word with a surface label and the puzzle context', async () => {
     const client = stubClient({
       listSignalements: vi.fn().mockResolvedValue([
-        summary({ reportId: 'r-noword', wordText: null, clueText: 'Définition offensante', reason: 'definition_offensante' }),
+        summary({ wordText: 'ESSE', surface: 'daily', puzzleId: '0190e3a4-7a2c-7c9e-8f1a-0000000000ab' }),
+      ]),
+    });
+    renderQueue(client);
+
+    expect(await screen.findByText('ESSE')).toBeInTheDocument();
+    expect(screen.getByText(/Grille du jour/)).toBeInTheDocument();
+    expect(screen.getByText(/réf\. 0190e3a4/)).toBeInTheDocument();
+  });
+
+  it('renders a word-less group gracefully — no mot, no puzzle context, label falls back to the clue', async () => {
+    const client = stubClient({
+      listSignalements: vi.fn().mockResolvedValue([
+        summary({ reportId: 'r-noword', wordText: null, surface: 'solo', puzzleId: null, clueText: 'Définition offensante', reason: 'definition_offensante' }),
       ]),
     });
     renderQueue(client);
 
     expect(await screen.findByText('Définition offensante')).toBeInTheDocument();
+    expect(screen.getByText(/Solo/)).toBeInTheDocument();
+    expect(screen.queryByText(/réf\./)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Rejeter les signalements sur Définition offensante' })).toBeInTheDocument();
   });
 

@@ -409,10 +409,9 @@ describe('HttpSurveyClient.submitSignalement', () => {
   const call = (fetchImpl: ReturnType<typeof spyFetch>) =>
     createHttpSurveyClient({ baseUrl: BASE, fetch: fetchImpl as unknown as typeof fetch });
 
-  it('POSTs to /v1/signalements with credentials + JSON, omits note/puzzleId, returns reportId on 201', async () => {
+  it('POSTs to /v1/signalements with credentials + JSON, never sends wordText, returns reportId on 201', async () => {
     const fetchImpl = spyFetch(201, { reportId: 'rep-1' });
     const result = await call(fetchImpl).submitSignalement({
-      wordText: 'CHAT',
       clueText: 'félin domestique',
       reason: 'erreur_sens',
       surface: 'solo',
@@ -427,19 +426,18 @@ describe('HttpSurveyClient.submitSignalement', () => {
     expect(init.headers).toMatchObject({ 'content-type': 'application/json' });
     const sent = JSON.parse(init.body as string) as Record<string, unknown>;
     expect(sent).toEqual({
-      wordText: 'CHAT',
       clueText: 'félin domestique',
       reason: 'erreur_sens',
       surface: 'solo',
     });
+    expect(sent).not.toHaveProperty('wordText');
     expect(sent).not.toHaveProperty('note');
     expect(sent).not.toHaveProperty('puzzleId');
   });
 
-  it('includes note + puzzleId when provided', async () => {
+  it('includes note + puzzleId when provided, still without wordText', async () => {
     const fetchImpl = spyFetch(201, { reportId: 'rep-2' });
     await call(fetchImpl).submitSignalement({
-      wordText: 'CHAT',
       clueText: 'félin domestique',
       reason: 'autre',
       surface: 'daily',
@@ -450,33 +448,19 @@ describe('HttpSurveyClient.submitSignalement', () => {
     const sent = JSON.parse(init.body as string) as Record<string, unknown>;
     expect(sent.note).toBe('contre-sens');
     expect(sent.puzzleId).toBe('0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b');
-  });
-
-  it('omits wordText when the player has not solved the word', async () => {
-    const fetchImpl = spyFetch(201, { reportId: 'rep-3' });
-    await call(fetchImpl).submitSignalement({
-      clueText: 'définition offensante',
-      reason: 'definition_offensante',
-      surface: 'solo',
-      puzzleId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
-    });
-    const [, init] = fetchImpl.mock.calls[0];
-    const sent = JSON.parse(init.body as string) as Record<string, unknown>;
     expect(sent).not.toHaveProperty('wordText');
-    expect(sent.clueText).toBe('définition offensante');
   });
 
   it('throws ReportRateLimitedError on 429 (checked before the generic non-ok throw)', async () => {
     const fetchImpl = spyFetch(429, { type: 'about:blank', title: 'Too Many Requests', status: 429 });
     await expect(
-      call(fetchImpl).submitSignalement({ wordText: 'CHAT', clueText: 'félin', reason: 'autre', surface: 'solo' }),
+      call(fetchImpl).submitSignalement({ clueText: 'félin', reason: 'autre', surface: 'solo' }),
     ).rejects.toBeInstanceOf(ReportRateLimitedError);
   });
 
   it('throws a generic Error on other non-ok statuses (500)', async () => {
     const fetchImpl = spyFetch(500);
     const promise = call(fetchImpl).submitSignalement({
-      wordText: 'CHAT',
       clueText: 'félin',
       reason: 'autre',
       surface: 'solo',
@@ -492,6 +476,8 @@ describe('HttpSurveyClient.listSignalements', () => {
     wordText: 'CHAT',
     clueText: 'Animal qui miaule',
     reason: 'erreur_sens' as const,
+    surface: 'daily' as const,
+    puzzleId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
     count: 3,
     latestNote: 'contre-sens',
     latestAt: '2026-07-11T10:00:00Z',

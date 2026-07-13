@@ -4,7 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
 import { Button, useToast } from '@/ui/components/primitives';
 import { t } from '@/ui/i18n';
-import type { ReportReason, SignalementDecision, SignalementSummary, SurveyClient } from '@/application/survey';
+import type {
+  ReportReason,
+  ReportSurface,
+  SignalementDecision,
+  SignalementSummary,
+  SurveyClient,
+} from '@/application/survey';
 import type { CorrectionClient } from '@/application/correction';
 import { CorrectionForm } from './CorrectionForm';
 import { BlocklistWordDialog } from './BlocklistWordDialog';
@@ -22,6 +28,13 @@ const reasonLabelKey = {
   trop_difficile: 'signalement.reason.trop_difficile',
   autre: 'signalement.reason.autre',
 } as const;
+
+const surfaceLabelKey = {
+  solo: 'route.signalements.surface.solo',
+  daily: 'route.signalements.surface.daily',
+  multiplayer: 'route.signalements.surface.multiplayer',
+  mini_game: 'route.signalements.surface.mini_game',
+} as const satisfies Record<ReportSurface, string>;
 
 const articleStyles = css({
   display: 'flex',
@@ -152,6 +165,8 @@ export function SignalementQueue({ surveyClient, correctionClient }: Signalement
                 <p className={clueStyles}>{s.clueText}</p>
                 <p className={metaStyles}>
                   {t(reasonLabelKey[s.reason])} · {t('route.signalements.count', { count: s.count })}
+                  {s.surface ? ` · ${t(surfaceLabelKey[s.surface])}` : ''}
+                  {s.puzzleId ? ` · ${t('route.signalements.puzzleContext', { id: s.puzzleId.slice(0, 8) })}` : ''}
                 </p>
                 {s.latestNote ? (
                   <p className={noteStyles}>{t('route.signalements.latestNote', { note: s.latestNote })}</p>

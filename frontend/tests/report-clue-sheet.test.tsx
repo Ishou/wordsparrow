@@ -51,7 +51,6 @@ const flushDialog = async () => {
 const baseProps = {
   surface: 'solo' as const,
   clueText: 'félin domestique',
-  wordText: 'CHAT',
 };
 
 describe('ReportClueSheet', () => {
@@ -79,13 +78,13 @@ describe('ReportClueSheet', () => {
 
     await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
     expect(submit).toHaveBeenCalledWith({
-      wordText: 'CHAT',
       clueText: 'félin domestique',
       reason: 'erreur_sens',
       surface: 'solo',
       note: 'contre-sens',
       puzzleId: 'p-1',
     });
+    expect(submit.mock.calls[0][0]).not.toHaveProperty('wordText');
     await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('Merci, c’est signalé'));
   });
 
@@ -110,9 +109,9 @@ describe('ReportClueSheet', () => {
     expect(screen.getByRole('button', { name: 'Envoyer' })).toBeEnabled();
   });
 
-  it('submits without a word when the clue is unsolved, omitting wordText', async () => {
+  it('never sends wordText — the server resolves the answer word (ADR-0111)', async () => {
     const submit = vi.fn().mockResolvedValue({ reportId: 'r-1' });
-    renderSheet(<ReportClueSheet {...baseProps} wordText="" surveyClient={stubClient(submit)} puzzleId="p-2" />);
+    renderSheet(<ReportClueSheet {...baseProps} surveyClient={stubClient(submit)} puzzleId="p-2" />);
     fireEvent.click(await screen.findByTestId('report-clue'));
     await flushDialog();
     fireEvent.click(screen.getByRole('radio', { name: 'La définition est choquante' }));
@@ -121,13 +120,13 @@ describe('ReportClueSheet', () => {
 
     await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
     expect(submit).toHaveBeenCalledWith({
-      wordText: undefined,
       clueText: 'félin domestique',
       reason: 'definition_offensante',
       surface: 'solo',
       note: undefined,
       puzzleId: 'p-2',
     });
+    expect(submit.mock.calls[0][0]).not.toHaveProperty('wordText');
   });
 
   it('links to the privacy page from the point-of-collection notice', async () => {

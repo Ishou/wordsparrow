@@ -19,7 +19,6 @@ import { BOARD_BOTTOM_GAP, posKey } from '@/ui/components/grid/playLayout';
 import { PuzzleBoard, type PuzzleBoardHandle } from '@/ui/components/grid/PuzzleBoard';
 import { useAdvanceOnValidation, inputAt } from '@/ui/components/grid/useAdvanceOnValidation';
 import { ReportClueSheet } from '@/ui/components/grid/ReportClueSheet';
-import { foldReportWord } from '@/ui/components/grid/reportWord';
 import { Keyboard } from './Keyboard';
 import { useTouchPrimary, useResumeBlurOnPwa } from '@/ui/components/keyboard';
 import { usePuzzleValidation } from '@/ui/components/grid/usePuzzleValidation';
@@ -531,7 +530,6 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
                         surveyClient={surveyClient}
                         surface={reportSurface}
                         clueText={displayClue.text}
-                        wordText={foldReportWord(displayClue.cells.map((p) => nav.getEntryAt(p.row, p.col)))}
                         puzzleId={puzzle.id}
                       />
                     ) : undefined
