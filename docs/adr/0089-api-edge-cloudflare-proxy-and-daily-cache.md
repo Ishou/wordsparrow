@@ -143,6 +143,17 @@ staleness — purge fails *and* nothing retries — is the until-midnight edge T
 silently wrong grid replayed onto stale progress (ADR-0081 already guarantees the new id
 starts from fresh state).
 
+*Amended 2026-07-13.* ADR-0108 added **in-place** clue corrections that patch
+`puzzles.payload` under the **same** id, breaking §3's "immutable per id" premise: the bare
+`ETag: "<puzzleId>"` no longer changed when the body did, so a browser holding the pre-correction
+copy sent `If-None-Match: "<puzzleId>"`, the origin recomputed the identical etag and answered
+`304`, and the client replayed its stale body even after the §5 edge purge (private/incognito
+sessions, with no cached copy to revalidate, were the only ones that saw the fix — the observed
+symptom). The daily etag is now `"<puzzleId>-<clue-content-hash>"` (`dailyEtagOf`): the id half
+still flips on regeneration, and the hash half flips on an in-place correction, restoring the
+strong-validator guarantee for both. The §5 purge remains necessary — it forces the edge to
+re-fetch so the browser's revalidation reaches an origin that now returns a changed etag.
+
 ### Alternatives considered
 - **Same-origin `/api/*` through Cloudflare** (kills all preflights and per-origin TLS
   setups): a much bigger migration — OAuth redirect URIs, the `__Secure-ws_session` cookie
