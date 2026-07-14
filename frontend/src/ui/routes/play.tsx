@@ -1,6 +1,6 @@
 import { createRoute, useNavigate, useRouter } from '@tanstack/react-router';
 import { css } from 'styled-system/css';
-import { gridFingerprint, type Puzzle } from '@/domain';
+import { type Puzzle } from '@/domain';
 // Sanctioned app→module bridge (ADR-0072).
 import { PlayScreen } from '@/ui/play/PlayScreen';
 import { AppShell } from '@/ui/v2/AppShell';
@@ -109,11 +109,8 @@ export const Route = createRoute({
   loader: async ({ context, deps }): Promise<Puzzle | null> => {
     const puzzle = await context.puzzleRepository.fetchDaily(deps.date);
     // Pull this grid's cross-device progress before render so the uncontrolled grid reads the merge (ADR-0075).
-    // The fingerprint discards progress typed on a now-regenerated grid sharing this id (ADR-0105).
     if (puzzle) {
-      await context.progressSyncService
-        ?.pullAndMergeOne(puzzle.id, gridFingerprint(puzzle))
-        .catch(() => {});
+      await context.progressSyncService?.pullAndMergeOne(puzzle.id).catch(() => {});
     }
     return puzzle;
   },

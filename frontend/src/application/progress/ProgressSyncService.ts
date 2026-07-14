@@ -39,8 +39,7 @@ export interface ProgressSyncService {
   // Batch-pull, merge each into local, push only the blobs the server is missing or behind on.
   pullAndMergeAll(): Promise<void>;
   // Pull+merge one puzzle on grid-open; push back only if local adds something. No-op when disabled.
-  // `fingerprint` (grid structure, ADR-0105) discards local/remote progress typed on a now-regenerated grid; runs the local discard even while disabled (anon).
-  pullAndMergeOne(puzzleId: string, fingerprint?: string): Promise<void>;
+  pullAndMergeOne(puzzleId: string): Promise<void>;
   // Runs pullAndMergeAll once per account per device; no-op once this userId is reconciled.
   reconcileOnAuth(userId: string): Promise<void>;
   // Forgets the reconcile marker (sign-out) so a re-auth re-syncs.
@@ -138,19 +137,12 @@ export function createProgressSyncService(
         },
         { payload: remotePayload, updatedAt: remote.updatedAt },
       );
-      // Carry the fingerprint forward (ADR-0105) — mergeProgress drops it, and a batch sync has none of its own to stamp.
-      const fingerprint = remotePayload.fingerprint ?? localPayload.fingerprint;
-      blobStore.replacePayload(
-        sessionId,
-        remote.puzzleId,
-        fingerprint != null ? { ...merged, fingerprint } : merged,
-      );
+      blobStore.replacePayload(sessionId, remote.puzzleId, merged);
       // Skip the push when local added nothing the server lacks — the no-op storm.
       if (!payloadsEqual(merged, remotePayload)) toPush.push(remote.puzzleId);
     }
     notify();
-    // Local-only puzzles the account never saw: push them up so the union holds.
-    // Skip bare fingerprint-only buckets (opened but unplayed) — they carry no progress (ADR-0105).
+    // Local-only puzzles the account never saw: push them up so the union holds. Skip empty buckets — they carry no progress.
     for (const puzzleId of blobStore.listPuzzleIds(sessionId)) {
       if (!seen.has(puzzleId) && hasProgress(blobStore.loadPayload(sessionId, puzzleId))) {
         toPush.push(puzzleId);
@@ -166,30 +158,20 @@ export function createProgressSyncService(
 
     pullAndMergeAll,
 
-    async pullAndMergeOne(puzzleId: string, fingerprint?: string): Promise<void> {
+    async pullAndMergeOne(puzzleId: string): Promise<void> {
       const sessionId = getSessionId();
-      // Local heal runs even while disabled (anon): drop progress typed on a now-regenerated grid before render.
-      if (fingerprint != null) blobStore.reconcileFingerprint(sessionId, puzzleId, fingerprint);
       if (!enabled) return;
       const remote = await client.pull(puzzleId);
-      const remoteRaw = remote ? coerceSoloStorePayload(remote.payload) : EMPTY_PAYLOAD;
+      const remotePayload = remote ? coerceSoloStorePayload(remote.payload) : EMPTY_PAYLOAD;
       if (remote) baseUpdatedAt.set(puzzleId, remote.updatedAt);
-      // Discard a remote blob typed on a different grid (regenerated under the same id); pushing the clean local back then heals the server row (ADR-0105).
-      const remoteStale =
-        fingerprint != null && hasProgress(remoteRaw) && remoteRaw.fingerprint !== fingerprint;
-      const remotePayload = remoteStale ? EMPTY_PAYLOAD : remoteRaw;
       const merged = mergeProgress(
         {
           payload: blobStore.loadPayload(sessionId, puzzleId),
           updatedAt: blobStore.loadLocalUpdatedAt(sessionId, puzzleId),
         },
-        { payload: remotePayload, updatedAt: remoteStale ? undefined : remote?.updatedAt },
+        { payload: remotePayload, updatedAt: remote?.updatedAt },
       );
-      blobStore.replacePayload(
-        sessionId,
-        puzzleId,
-        fingerprint != null ? { ...merged, fingerprint } : merged,
-      );
+      blobStore.replacePayload(sessionId, puzzleId, merged);
       notify();
       if (!payloadsEqual(merged, remotePayload)) {
         await pushPuzzle(sessionId, puzzleId);
