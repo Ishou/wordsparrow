@@ -165,3 +165,11 @@ def test_plural_noun_with_impersonal_il_is_kept() -> None:
     corpus = {("œil", "nom"): [_clue("œil", "nom", "Il faut voir")]}
     rows = build_surface_rows("œils", corpus, idx, {})
     assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
+
+
+def test_plural_noun_with_impersonal_il_sagit_is_kept() -> None:
+    """`Il s'agit de ...` is impersonal and doesn't stand for the answer; the apostrophe token split must not defeat detection."""
+    idx = _number_index()
+    corpus = {("œil", "nom"): [_clue("œil", "nom", "Il s'agit de voir")]}
+    rows = build_surface_rows("œils", corpus, idx, {})
+    assert rows[0]["inflection_status"] != "subject-number-mismatch", rows

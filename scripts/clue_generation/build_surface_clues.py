@@ -140,12 +140,17 @@ def _head_reads_as_pp_adjective(text: str, index: MorphologyIndex) -> bool:
 
 
 # Impersonal `il` (il y a / il faut / il pleut) heads a clause that doesn't stand for the answer.
-_IMPERSONAL_IL_VERBS = {"faut", "pleut", "neige", "gèle", "grêle", "vente", "bruine", "importe", "suffit", "agit"}
+_IMPERSONAL_IL_VERBS = {"faut", "pleut", "neige", "gèle", "grêle", "vente", "bruine", "importe", "suffit"}
+# `_NUMBER_TOK_RE` drops apostrophes, so `il s'agit` can't be caught via toks[1] == "agit"
+# (that would also wrongly exempt the non-reflexive, non-impersonal "il agit").
+_IMPERSONAL_IL_SAGIT_RE = re.compile(r"\bil\s+s['’]agit\b", re.IGNORECASE)
 
 
 def _clue_subject_number_disagrees(text: str, surface_tags) -> bool:
     """True when a plural surface is clued with a singular subject pronoun (Il/Elle) that stands for the answer, so it must be plural."""
     if "pl" not in surface_tags:
+        return False
+    if _IMPERSONAL_IL_SAGIT_RE.search(text):
         return False
     toks = _NUMBER_TOK_RE.findall(text)
     if len(toks) < 2:
