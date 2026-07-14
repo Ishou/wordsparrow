@@ -27,6 +27,13 @@ signoz:
       - {key: dedicated, operator: Equal, value: observability, effect: NoSchedule}
     nodeSelector:
       bliss.io/role: observability
+    # Signs SigNoz session JWTs (unset ⇒ forgeable); value in the signoz-jwt-secret Secret, key upper-cased to SIGNOZ_TOKENIZER_JWT_SECRET by the subchart.
+    env:
+      signoz_tokenizer_jwt_secret:
+        valueFrom:
+          secretKeyRef:
+            name: signoz-jwt-secret
+            key: jwt-secret
 
   telemetryStoreMigrator:
     tolerations:
