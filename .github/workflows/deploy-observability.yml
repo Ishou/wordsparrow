@@ -1,0 +1,65 @@
+name: Deploy Observability (SigNoz umbrella chart)
+
+# CD for the SigNoz umbrella chart (infra/observability/; ADR-0027, ADR-0038).
+# workflow_dispatch only — the chart bundles the ClickHouse StatefulSet and the
+# telemetrystore-migrator Job, so an upgrade can restart telemetry storage and run
+# a schema migration. Deploy deliberately in a low-traffic window, not on every push.
+# Alert rules and dashboards keep their own push-triggered workflows.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  # A cancelled mid-flight helm upgrade can strand the release in pending-upgrade.
+  group: deploy-observability-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: helm upgrade --install observability
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: prod-observability
+    steps:
+      - name: Checkout repository
+        # actions/checkout v4.3.1 — same SHA as deploy-platform.yml + deploy-api-k8s.yml.
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+
+      - name: Set up Helm
+        # azure/setup-helm v4.3.1 — same SHA as deploy-platform.yml + deploy-api-k8s.yml.
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v4.2.1
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_PROD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KUBECONFIG_DATA:-}" ]; then
+            echo "::error::KUBECONFIG_PROD secret is not set; see docs/deploy.md"
+            exit 1
+          fi
+          mkdir -p ~/.kube
+          printf '%s' "$KUBECONFIG_DATA" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Helm upgrade --install (observability chart)
+        run: |
+          set -euo pipefail
+          # `helm dependency build` resolves the signoz + k8s-infra subcharts by URL, so the repo must be added first.
+          helm repo add signoz https://charts.signoz.io
+          helm repo update
+          helm dependency build infra/observability/
+          # --wait=legacy: helm v4.2.1 'watcher' wait burns the full --timeout on each before-hook-creation hook deletion (telemetrystore-migrator hooks here) — helm/helm#32214.
+          helm upgrade --install observability infra/observability/ \
+            -n observability \
+            -f infra/observability/values.yaml \
+            -f infra/observability/values-prod.yaml \
+            --wait=legacy --timeout 15m
