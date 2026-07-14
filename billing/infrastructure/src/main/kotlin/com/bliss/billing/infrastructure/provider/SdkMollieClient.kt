@@ -14,7 +14,7 @@ import com.mollie.mollie.models.components.SequenceType
 import com.mollie.mollie.models.components.Sorting
 import com.mollie.mollie.models.components.SubscriptionRequest
 import com.mollie.mollie.models.components.SubscriptionResponse
-import com.mollie.mollie.models.errors.APIException
+import com.mollie.mollie.models.errors.ClientError
 import com.mollie.mollie.models.operations.GetPaymentRequest
 import com.mollie.mollie.models.operations.ListAllSubscriptionsRequest
 import com.mollie.mollie.models.operations.ListCustomerPaymentsRequest
@@ -278,7 +278,8 @@ class SdkMollieClient(
                     .customerId(customerId)
                     .subscriptionId(subscriptionId)
                     .call()
-            } catch (e: APIException) {
+            } catch (e: ClientError) {
+                // Mollie surfaces a gone resource as ErrorResponse or APIException depending on content-type; both extend ClientError.
                 if (e.code() in GONE_CODES) throw MollieResourceGoneException("subscription $subscriptionId is gone (${e.code()})")
                 throw e
             }
@@ -342,7 +343,8 @@ class SdkMollieClient(
     private fun <T> notFoundToNull(block: () -> T?): T? =
         try {
             block()
-        } catch (e: APIException) {
+        } catch (e: ClientError) {
+            // Mollie surfaces a 404 as ErrorResponse or APIException depending on content-type; both extend ClientError.
             if (e.code() == NOT_FOUND) null else throw e
         }
 
