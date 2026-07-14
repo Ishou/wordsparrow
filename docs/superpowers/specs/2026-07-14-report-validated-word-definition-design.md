@@ -1,8 +1,14 @@
 # Design: Tap-to-select & report any word's definition
 
 Date: 2026-07-14
-Bounded context: `frontend/` (ui layer, grid + play)
+Bounded context: `frontend/` (ui + design-system layers, grid + play)
 Status: approved (brainstorming), pending implementation plan
+
+> Revised 2026-07-14 after re-verifying against fresh `main`: the original
+> draft was explored on the stale `cycle3` branch. Two corrections: the report
+> path no longer carries a client `wordText` (ADR-0111 resolves the answer word
+> server-side), so the former "Change 3" is dropped; and the cell visuals live
+> in the design-system `Cell`, not the grid `Cell.tsx`.
 
 ## Goal
 
@@ -20,122 +26,130 @@ puzzle is won.
 Read-only **letter** cells stay non-selectable: the player selects the word via
 its definition cell, not by tapping locked letters.
 
-## What already works (verified in code, no change needed)
+## What already works (verified on fresh `main`, no change needed)
 
-- `handleDefinitionClick` (`frontend/src/ui/components/grid/useGridNavigation.ts`)
-  already makes even a fully-locked word the active clue — it has no early-return
-  for words with no editable cells; `landing` falls back to `target.cells[0]`,
-  and `focusCell` sets `focused` state unconditionally (independent of DOM
-  `.focus()` succeeding).
-- The clue rail + Flag button already derive from the active clue
-  (`nav.currentClue` → `displayClue` in `PlayScreen.tsx`), so a selected
-  validated word is already reportable **while the puzzle is in progress**.
+- `handleDefinitionClick` (`frontend/src/ui/components/grid/useGridNavigation.ts:528`)
+  already makes even a fully-locked word the active clue — no early-return for
+  words with no editable cells; `landing` falls back to `target.cells[0]`, and
+  `focusCell` (`:443`) sets `focused` state unconditionally (independent of DOM
+  `.focus()` succeeding). Existing test
+  `tests/puzzleboard-def-cell-focus.test.tsx` already asserts "a fully-locked
+  word lands on its first (read-only) cell."
+- The active clue derives purely from `focused` + `direction`
+  (`currentClue`, `useGridNavigation.ts:596`), and the clue rail's `displayClue`
+  follows it (`PlayScreen.tsx:339-355`), so a selected validated word is already
+  reportable **while the puzzle is in progress**.
 - The definition cell already shows its active "ring" when validated
-  (`DefCell.tsx` composes `active && cellActive` regardless of `validated`).
+  (`PuzzleBoard.tsx:329` → `DefCell active`).
 - Validated letter cells still render an `<input>` that registers a ref
-  (`LetterSlot` in `PuzzleBoard.tsx` sets `readOnly`/`tabIndex={-1}` but always
-  renders the input), so focusing a locked word's cell works. A `readOnly` input
-  does not raise the mobile virtual keyboard, so no phantom keyboard appears.
+  (`LetterSlot`, `PuzzleBoard.tsx:129-145` — `readOnly`/`tabIndex={-1}`, input
+  always rendered), so focusing a locked word's cell works, and a `readOnly`
+  input does not raise the mobile virtual keyboard (no phantom keyboard).
+- **Answer-word resolution is server-side (ADR-0111).** The report sends only
+  `clueText` + `surface` + optional `puzzleId`; the server resolves the one
+  answer word for that clue on that grid. So reporting a *validated* word already
+  yields the correct answer word in the maintainer queue with **no** client-side
+  word plumbing — and the client must not send the word (ADR-0076, ADR-0111).
 
 ## Changes
 
 ### 1. Selected-word highlight on validated cells
 
-Files: `frontend/src/ui/components/grid/PuzzleBoard.tsx`, grid `Cell` styles
-(`frontend/src/ui/components/grid/Cell.tsx`).
+Files: `frontend/src/design-system/components/Cell/Cell.tsx`,
+`frontend/src/ui/components/grid/PuzzleBoard.tsx`.
 
-Today the `CellState` mapping in `PuzzleBoard.tsx` is
-`validated ? 'solved' : focused ? 'active' : currentWord ? 'activeWord' : 'empty'`
-— the `validated` branch short-circuits, so a locked word's letter cells never
-show the active/word highlight. Only the def cell rings.
+Today the `CellState` mapping in `PuzzleBoard.tsx:106-112` is
+`validated ? 'solved' : highlight.focused ? 'active' : highlight.currentWord ? 'activeWord' : 'empty'`
+— the `validated` branch short-circuits, so a locked word's letter cells stay
+`'solved'` and never show the active/word highlight. Only the def cell rings.
 
-Add a "solved + selected" treatment: when a validated cell is `focused` or in the
-`currentWord`, keep the sage solved fill and layer a **selection outline** on top
-(rather than replacing the fill with the pink active colour, which would read as
-"unsolved"). Introduce the state(s) needed to express this (e.g. a
-`solvedActive` / `solvedWord` variant, or an additive outline modifier) and wire
-the mapping so the `validated` branch can still carry the selection outline.
+Add an additive **selected outline** to the design-system `Cell`:
 
-Result: the whole selected word reads as selected in any state; the sage
-"solved" semantics are preserved.
+- `Cell` gains a `selected?: boolean` prop. When the cell is `state === 'solved'`
+  and `selected`, layer a sakura selection **outline** on top (an `outline`, not
+  a `box-shadow`, so it never clobbers the solved inset shadow — mirrors the
+  existing `state === 'solved' && tinted && solvedTint` additive pattern). The
+  sage solved fill is preserved. Expose it as `data-selected="true"` for tests.
+- Gating on `'solved'` means non-validated cells are unaffected: their `active` /
+  `activeWord` states already carry the pink selection, so passing `selected` for
+  them is a no-op.
+- `PuzzleBoard.tsx` `LetterSlot` passes
+  `selected={highlight.focused || highlight.currentWord}` to `<Cell>`. For a
+  validated word made active via a def-cell tap, the landing cell (`focused`) and
+  the rest of the word (`currentWord`) all render the outline, so the whole word
+  reads as selected.
+
+Result: the selected word reads as selected in any state; the sage "solved"
+semantics are preserved.
 
 ### 2. Keep report reachable in the won state
 
-File: `frontend/src/ui/play/PlayScreen.tsx` (the `won ? … : …` control-area
-ternary, ~line 488).
+File: `frontend/src/ui/play/PlayScreen.tsx` (the `won ? … : …` `bottomBar`
+ternary, `:488`).
 
-Today when the whole puzzle is won, the clue rail + `ReportClueSheet` + keyboard
-are replaced by a single "Voir les résultats" button — removing every report
-affordance in the terminal state, which is exactly the state where every word is
-validated.
+Today when the whole puzzle is won, the `bottomBar` renders only a single "Voir
+les résultats" `Button` — removing every report affordance in the terminal
+state, which is exactly the state where every word is validated. (The board
+`PuzzleBoard` is rendered *outside* this ternary, `:642`, so def-cell taps still
+work when won — only the report affordance is missing.)
 
-Rework the won layout to keep the **clue rail + Flag report** mounted (def-cell
-taps still select a word and its clue shows in the rail), **plus** the results
-button. Drop the letter keyboard in the won state — there is nothing to type. The
-board (`PuzzleBoard`) remains rendered and tappable throughout, so this is a
-change to the bottom control area only.
+Rework so the won branch also renders the **clue rail + Flag report** (def-cell
+taps select a word; its clue shows in the rail), **plus** the results button.
+The letter keyboard stays absent in the won state (nothing to type), as does the
+assist trailing (hint/verify are meaningless once solved).
 
-`LiveCoopScreen.tsx` uses the same `ReportClueSheet`; verify its won/end state
-does not regress (in scope only to the extent of not breaking it — no new coop
-behaviour required).
+To avoid duplicating ~15 `ClueRail` props across both branches, extract the
+shared rail configuration (direction, labels, `onPrev`/`onNext`, zoom, and the
+`report` node) into a single value used by both branches; the non-won branch
+additionally supplies the assist `trailing` slot and is followed by `Keyboard`,
+the won branch is followed by the results `Button`.
 
-### 3. Accurate `wordText` for validated / hydrated words
-
-File: `frontend/src/ui/play/PlayScreen.tsx` (the `foldReportWord(...)` word-fold
-source feeding `ReportClueSheet`).
-
-`foldReportWord` currently folds from `nav.getEntryAt(...)`, which reads
-`cellValuesRef` — populated only by typing/remote-updates **this session**. A word
-validated via a hint reveal, or restored from a prior session's persisted store,
-folds to `''`, so its report carries no word.
-
-Fold the report word from the **live input values** (the cells' registered
-`refs` / DOM `.value`, which are hydrated for every filled cell via
-`defaultValue`) so a validated word's report actually carries the word.
-
-This stays within **ADR-0076**: the value read is the player's own entered/revealed
-letters already present on the client, never a solution shipped from the server.
+`LiveCoopScreen.tsx` uses the same `ReportClueSheet` and a different end state —
+verify it is not regressed; no new coop behaviour is in scope.
 
 ## Explicitly out of scope
 
 - Making read-only **letter** cells selectable — confirmed: they stay
-  non-selectable; selection is via the definition cell.
-- New report reasons — the existing `ReportReason` set (`mot_offensant`,
-  `definition_offensante`, `erreur_sens`, `erreur_grammaire`, `definition_revele`,
-  `ambigu`, `trop_facile`, `trop_difficile`, `autre`) already covers flagging a
+  non-selectable (`handleClick`'s validated early-return, `useGridNavigation.ts:465`,
+  is untouched); selection is via the definition cell.
+- New report reasons — the existing `ReportReason` set already covers flagging a
   validated word's definition.
+- Any **`wordText` / word plumbing** on the client — deprecated by ADR-0111; the
+  server resolves the word. Nothing to add.
 - Any grid or survey **API** change — the report payload (`clueText`, optional
-  `wordText`, `puzzleId`, `surface`, reason, note) is unchanged.
-- The alternate `Grid.tsx` renderer (not used by the play/coop screens) — no
-  changes.
+  `puzzleId`, `surface`, `reason`, `note`) is unchanged.
+- The alternate `Grid.tsx` renderer (not used by the play/coop screens).
 
 ## Testing
 
-- Vitest (`frontend/tests/`):
-  - Tapping the definition cell of a **fully-validated** word makes its clue the
-    active `currentClue`; the highlight state includes its letter cells (selected
-    outline), not just the def-cell ring.
-  - The Flag → `ReportClueSheet` submits with the correct `clueText` and a
-    **non-empty** `wordText` for a validated word whose letters were hydrated
-    (not typed this session).
-  - Read-only letter-cell taps remain no-ops (regression guard on the
-    `handleClick` validated early-return).
-- Won-state test: rail + Flag present, results button present, keyboard absent,
-  def-cell tap still selects a word.
-- a11y (`pnpm a11y`): the selection outline meets WCAG AA contrast against the
-  sage solved fill; the coexisting rail + results button keep a sane focus/tab
-  order (ADR-0050).
+- **Cell selected outline** (`tests/design-system-cell.test.tsx`, extend): a
+  `Cell` with `state="solved" selected` renders `data-selected="true"` and stays
+  axe-clean; `state="active" selected` does **not** (gated on solved).
+- **PuzzleBoard highlight** (`tests/puzzleboard-def-cell-focus.test.tsx`,
+  extend): after tapping the def cell of a **fully-validated** word, every letter
+  cell of that word renders `data-selected="true"` (whole word reads selected),
+  and cells outside the word do not.
+- **Regression**: read-only letter-cell taps remain no-ops (existing
+  `handleClick` validated-guard coverage stays green).
+- **Won-state (app-verified, no unit seam):** no test currently renders
+  `PlayScreen` (provider-heavy). Verify change 2 by driving the app to a won
+  state (via the `run`/`verify` skill): confirm the clue rail + Flag are present,
+  the results button is present, the keyboard is absent, and tapping a def cell
+  selects a word and shows its clue + report. A Playwright e2e is optional
+  follow-up only if a won-state fixture/seam exists.
+- **a11y** (`pnpm a11y` / axe in unit tests): the selection outline meets WCAG AA
+  contrast against the sage solved fill (ADR-0050).
 
 ## Notes for the implementation plan
 
-- Base off fresh `main` (done — this work is on `feat/report-validated-word-definition`
-  off `origin/main`).
-- Run `scripts/adr-context.sh` on the touched paths during planning. This touches
-  the report flow (ADR-0103 dedupe guard), the no-solution-on-wire contract
-  (ADR-0076), and a11y (ADR-0050). Expected outcome: no new ADR — this reuses the
-  existing report contract and adds no dependency, context, or cross-context
-  contract — but confirm before writing code.
-- 400-line diff cap (ADR-0001 §4): the three changes are one workstream (enable
-  reporting a validated word's definition). If the won-state layout rework pushes
-  the diff over the cap, split the pure-visual highlight (change 1) into its own
-  follow-up PR.
+- Base off fresh `main` (done — work is on `feat/report-validated-word-definition`).
+- Run `scripts/adr-context.sh` on the touched paths during planning. Relevant:
+  ADR-0111 (server-resolved answer word — do **not** reintroduce client
+  `wordText`), ADR-0076 (no solution on the wire), ADR-0103 (report dedupe
+  guard), ADR-0050 (a11y). Expected: no new ADR — this reuses the existing
+  report contract and adds no dependency, context, or cross-context contract —
+  but confirm before writing code.
+- 400-line diff cap (ADR-0001 §4): the two changes are one workstream. Change 1
+  (Cell + PuzzleBoard) and change 2 (PlayScreen won-state) are each small; the
+  combined diff should sit well under the cap. If the won-state extraction grows,
+  split change 1 (pure-visual) into its own follow-up PR.
