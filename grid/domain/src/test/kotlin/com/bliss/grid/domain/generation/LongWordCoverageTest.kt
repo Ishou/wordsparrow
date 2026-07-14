@@ -94,7 +94,51 @@ class LongWordCoverageTest {
         assertThat(LongWordCoverage.coverageOf(grid, minLen = 2)).isEqualTo(11L)
     }
 
+    // -- bestByCoverage: best-of-N selection ---------------------------------
+
+    @Test
+    fun `bestByCoverage picks the higher-coverage grid`() {
+        val high = singleWordGrid("ABCDEFGHIJKL") // len 12, counts
+        val low = singleWordGrid("XYZ") // len 3, below threshold
+        assertThat(LongWordCoverage.bestByCoverage(listOf(low, high), minLen = 2)).isEqualTo(high)
+    }
+
+    @Test
+    fun `bestByCoverage breaks ties by fewest clue cells`() {
+        val lean = singleWordGrid("ABCDEFGHIJKL") // 1 clue cell
+        val cluttered = twoWordGrid("ABCDEFGHIJKL", "MN") // same coverage, extra short word -> 2 clue cells
+        assertThat(LongWordCoverage.bestByCoverage(listOf(cluttered, lean), minLen = 2)).isEqualTo(lean)
+    }
+
+    @Test
+    fun `bestByCoverage returns null for no candidates`() {
+        assertThat(LongWordCoverage.bestByCoverage(emptyList(), minLen = 2)).isEqualTo(null)
+    }
+
     // -- fixtures ------------------------------------------------------------
+
+    /** 14x6 grid with one horizontal word at (0,0). */
+    private fun singleWordGrid(word: String): Grid =
+        Grid.fromPlacements(
+            width = 14,
+            height = 6,
+            placements = listOf(WordPlacement(Word(word, "c"), Position(Row(0), Column(0)), Direction.RIGHT)),
+        )
+
+    /** 14x6 grid with a long word at (0,0) and a short word at (2,0). */
+    private fun twoWordGrid(
+        long: String,
+        short: String,
+    ): Grid =
+        Grid.fromPlacements(
+            width = 14,
+            height = 6,
+            placements =
+                listOf(
+                    WordPlacement(Word(long, "c1"), Position(Row(0), Column(0)), Direction.RIGHT),
+                    WordPlacement(Word(short, "c2"), Position(Row(2), Column(0)), Direction.RIGHT),
+                ),
+        )
 
     /** 12x8 grid: horizontal words of length 6 and 3, vertical words of length 5 and 2, non-overlapping. */
     private fun sampleGrid(): Grid {

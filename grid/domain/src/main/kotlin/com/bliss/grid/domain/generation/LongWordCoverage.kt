@@ -1,5 +1,6 @@
 package com.bliss.grid.domain.generation
 
+import com.bliss.grid.domain.model.ClueCell
 import com.bliss.grid.domain.model.Grid
 import com.bliss.grid.domain.model.WordAxis
 import kotlin.math.roundToInt
@@ -51,6 +52,19 @@ object LongWordCoverage {
         lUseful: Int = Int.MAX_VALUE,
         fraction: Double = DEFAULT_LONG_FRACTION,
     ): Long = score(grid, thresholds(grid.width, grid.height, minLen, lUseful, fraction))
+
+    /** Best-of-N selector: highest coverage, ties broken toward fewest definition cells (ADR-0095 density). */
+    fun bestByCoverage(
+        grids: List<Grid>,
+        minLen: Int,
+        fraction: Double = DEFAULT_LONG_FRACTION,
+    ): Grid? =
+        grids.maxWithOrNull(
+            compareBy(
+                { coverageOf(it, minLen, fraction = fraction) },
+                { -it.cells.values.count { cell -> cell is ClueCell } },
+            ),
+        )
 
     private fun axisThreshold(
         dimension: Int,
