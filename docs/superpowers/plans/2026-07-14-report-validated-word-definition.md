@@ -62,11 +62,11 @@ In `frontend/src/design-system/components/Cell/Cell.tsx`:
 Add this style constant immediately after the `solvedTint` definition (currently line 61):
 
 ```tsx
-// Additive selection ring on a solved/locked cell whose word is currently selected — an outline (not box-shadow) so it never clobbers the solved inset shadow. Mirrors the `solvedTint` additive pattern.
+// Additive selection ring on a solved/locked cell whose word is currently selected — an outline (not box-shadow) so it never clobbers the solved inset shadow. Rose in dark mode clears WCAG 1.4.11 on the dark solved fill.
 const selectedRing = css({
   outline: '2.5px solid token(colors.ws.sakuraDark)',
   outlineOffset: '-2.5px',
-  borderRadius: '9px',
+  _dark: { outlineColor: 'token(colors.ws.sakuraRose)' },
 });
 ```
 
@@ -350,11 +350,11 @@ git commit -s -m "feat(frontend-play): keep the clue rail and report reachable a
 ### Task 4: Guard the co-op surface + final gates
 
 **Files:**
-- Read/verify: `frontend/src/ui/multiplayer/LiveCoopScreen.tsx` (uses the same `ReportClueSheet`)
+- Read/verify: `frontend/src/ui/v2/multiplayer/LiveCoopScreen.tsx` (uses the same `ReportClueSheet`)
 
 - [ ] **Step 1: Confirm `LiveCoopScreen` is not regressed**
 
-Run: `cd frontend && grep -n "ReportClueSheet\|won\|bottomBar\|ClueRail" src/ui/multiplayer/LiveCoopScreen.tsx`
+Run: `cd frontend && grep -n "ReportClueSheet\|won\|bottomBar\|ClueRail" src/ui/v2/multiplayer/LiveCoopScreen.tsx`
 Read the matched region. Confirm this plan changed nothing in `LiveCoopScreen` and that its report/end-state path is independent of the `PlayScreen` `bottomBar` edited in Task 3. If it shares a component that Task 3 changed, note it; otherwise no change is needed.
 Expected: `LiveCoopScreen` mounts `ReportClueSheet` directly and is unaffected.
 

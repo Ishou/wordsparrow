@@ -104,8 +104,9 @@ shared rail configuration (direction, labels, `onPrev`/`onNext`, zoom, and the
 additionally supplies the assist `trailing` slot and is followed by `Keyboard`,
 the won branch is followed by the results `Button`.
 
-`LiveCoopScreen.tsx` uses the same `ReportClueSheet` and a different end state —
-verify it is not regressed; no new coop behaviour is in scope.
+`frontend/src/ui/v2/multiplayer/LiveCoopScreen.tsx` uses the same `ReportClueSheet`
+and a different end state — verify it is not regressed; no new coop behaviour is
+in scope.
 
 ## Explicitly out of scope
 
@@ -138,7 +139,9 @@ verify it is not regressed; no new coop behaviour is in scope.
   selects a word and shows its clue + report. A Playwright e2e is optional
   follow-up only if a won-state fixture/seam exists.
 - **a11y** (`pnpm a11y` / axe in unit tests): the selection outline meets WCAG AA
-  contrast against the sage solved fill (ADR-0050).
+  contrast against the sage solved fill (ADR-0050) — light mode uses
+  `sakuraDark`; dark mode switches to `sakuraRose` to clear WCAG 1.4.11 against
+  the dark solved fill.
 
 ## Notes for the implementation plan
 
