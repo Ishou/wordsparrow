@@ -1,6 +1,26 @@
 import { act, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { AnnouncerProvider, useAnnouncer } from '@/ui/components/a11y/Announcer';
+
+// Mocks flushSync so the nested say() call fires synchronously inside the guard's protected window.
+const { reentrantHolder } = vi.hoisted(() => ({ reentrantHolder: { fn: null as (() => void) | null } }));
+
+vi.mock('react-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-dom')>();
+  return {
+    ...actual,
+    flushSync: (cb: () => void) => {
+      const result = actual.flushSync(cb);
+      const fn = reentrantHolder.fn;
+      if (fn) {
+        reentrantHolder.fn = null;
+        fn();
+      }
+      return result;
+    },
+  };
+});
+
+const { AnnouncerProvider, useAnnouncer } = await import('@/ui/components/a11y/Announcer');
 
 function Harness({ onSay }: { onSay: (say: (text: string, opts?: { assertive?: boolean }) => void) => void }) {
   const announcer = useAnnouncer();
@@ -64,5 +84,25 @@ describe('Announcer', () => {
     act(() => { vi.advanceTimersByTime(250); say('même'); });
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe('même');
     vi.useRealTimers();
+  });
+
+  it('drops a say() that re-enters while an outer say() is still inside its flushSync window', () => {
+    let say!: (t: string, o?: { assertive?: boolean }) => void;
+    const { container } = render(
+      <AnnouncerProvider>
+        <Harness onSay={(s) => { say = s; }} />
+      </AnnouncerProvider>,
+    );
+
+    // Same shape as grid word-entry re-entering say() during another say()'s commit (React #185).
+    reentrantHolder.fn = () => say('nested-during-flush', { assertive: true });
+
+    expect(() => {
+      act(() => { say('outer'); });
+    }).not.toThrow();
+
+    // Outer announcement survives; the reentrant one is silently dropped, not queued.
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe('outer');
+    expect(container.querySelector('[aria-live="assertive"]')?.textContent).toBe('');
   });
 });

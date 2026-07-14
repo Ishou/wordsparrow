@@ -151,6 +151,28 @@ describe('ProgressSyncService — debounced push on mutation', () => {
     expect(client.pushes[0].puzzleId).toBe(PUZZLE);
     vi.useRealTimers();
   });
+
+  it('swallows a rejected push so a transient network failure never surfaces as an unhandled rejection', async () => {
+    const client = fakeClient({
+      push: () => {
+        throw new Error('Failed to fetch');
+      },
+    });
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore({
+        [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }),
+      }),
+      getSessionId: () => SESSION,
+      debounceMs: 1500,
+    });
+    service.setEnabled(true);
+    service.schedulePush(PUZZLE);
+    // Reaching this assertion without vitest flagging an unhandled rejection proves the `.catch` in schedulePush.
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(client.pushes).toHaveLength(1);
+    vi.useRealTimers();
+  });
 });
 
 describe('ProgressSyncService — flushPending (unload)', () => {
