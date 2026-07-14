@@ -1185,8 +1185,9 @@ class LobbyWebSocketRouteTest {
                 drainUntil("gameSolved")
                 // The server-driven timer restarts the same room; a gameStarted frame lands after the delay.
                 drainUntil("gameStarted")
+                // Assert while the socket is open — closing it triggers grace=0 disconnect cleanup that deletes the empty lobby, racing the read.
+                assertThat(harness.repo.findById(lobbyId)!!.state).isEqualTo(LobbyLifecycleState.IN_PROGRESS)
             }
-            assertThat(harness.repo.findById(lobbyId)!!.state).isEqualTo(LobbyLifecycleState.IN_PROGRESS)
         }
 
     @Test
@@ -1213,8 +1214,9 @@ class LobbyWebSocketRouteTest {
                         seen
                     }
                 assertThat(stray).isNull()
+                // Assert while the socket is open — closing it triggers grace=0 disconnect cleanup that deletes the empty lobby, racing the read.
+                assertThat(harness.repo.findById(lobbyId)!!.state).isEqualTo(LobbyLifecycleState.WAITING)
             }
-            assertThat(harness.repo.findById(lobbyId)!!.state).isEqualTo(LobbyLifecycleState.WAITING)
         }
 
     // ---------- harness ----------
