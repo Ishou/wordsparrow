@@ -60,10 +60,10 @@ const solveRipple = css({ animation: 'wsFlatten 0.26s ease both' });
 // ADR-0086: co-op solved fill tinted with the finder's `--player-color`.
 const solvedTint = css({ bg: 'color-mix(in srgb, var(--player-color) 32%, token(colors.ws.sable))' });
 
-// Additive selection ring on a solved/locked cell whose word is currently selected — an outline (not box-shadow) so it never clobbers the solved inset shadow. Rose in dark mode clears WCAG 1.4.11 on the dark solved fill.
+// Discreet 1px selection ring on a solved/locked cell whose word is currently selected — an outline (not box-shadow) so it never clobbers the solved inset shadow. Rose in dark mode clears WCAG 1.4.11 on the dark solved fill.
 const selectedRing = css({
-  outline: '2.5px solid token(colors.ws.sakuraDark)',
-  outlineOffset: '-2.5px',
+  outline: '1px solid token(colors.ws.sakuraDark)',
+  outlineOffset: '-1px',
   _dark: { outlineColor: 'token(colors.ws.sakuraRose)' },
 });
 
