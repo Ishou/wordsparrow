@@ -1,6 +1,7 @@
-import type { ReactElement } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
 import { cloneElement, useId, useState } from 'react';
 import { Tooltip } from '@ark-ui/react/tooltip';
+import { Popover } from '@ark-ui/react/popover';
 import { Portal } from '@ark-ui/react/portal';
 import { css } from 'styled-system/css';
 import { useTouchPrimary } from '@/ui/components/keyboard/useTouchPrimary';
@@ -26,6 +27,13 @@ const arrowStyles = css({
   '--arrow-background': 'token(colors.neutral.900)',
 });
 
+// A touch-hold over the label would otherwise start native text selection / the iOS callout.
+const noSelectStyle: CSSProperties = {
+  userSelect: 'none',
+  WebkitUserSelect: 'none',
+  WebkitTouchCallout: 'none',
+};
+
 export interface InfoPopoverProps {
   readonly info: string;
   readonly onActivate: () => void;
@@ -44,6 +52,7 @@ export function InfoPopover({
   const touch = useTouchPrimary();
   const [open, setOpen] = useState(false);
   const descId = useId();
+  const contentId = useId();
   const longPress = useLongPress({
     onLongPress: () => setOpen(true),
     enabled: touch,
@@ -56,34 +65,59 @@ export function InfoPopover({
     onActivate();
   };
 
-  // aria-disabled (not native disabled) keeps the button hoverable so the popover stays reachable.
-  // eslint-disable-next-line @eslint-react/no-clone-element -- inject handlers/aria-disabled onto the caller's trigger
+  const childStyle = (children.props as { style?: CSSProperties }).style;
+
+  // Popover.Content stays mounted (hidden) via contentStyles' &[hidden] rule, so this id resolves before long-press opens it.
+  const touchDescribedBy = touch && !disabled ? contentId : undefined;
+
+  // aria-disabled (not native disabled) keeps the button focusable so the reason stays reachable.
+  // eslint-disable-next-line @eslint-react/no-clone-element -- inject handlers/aria/style onto the caller's trigger
   const trigger = cloneElement(children as ReactElement<Record<string, unknown>>, {
     onClick: handleClick,
     'aria-disabled': disabled || undefined,
-    'aria-describedby': disabled ? descId : undefined,
-    ...(touch ? longPress.handlers : {}),
+    'aria-describedby': disabled ? descId : touchDescribedBy,
+    ...(touch
+      ? { ...longPress.handlers, style: { ...childStyle, ...noSelectStyle } }
+      : {}),
   });
 
-  // Touch: open only from long-press; honor Ark's close but ignore its opens so a tap runs the action.
-  const rootProps = touch
-    ? {
-        open,
-        onOpenChange: (details: { open: boolean }) => {
-          if (!details.open) setOpen(false);
-        },
-      }
-    : { openDelay: 400, closeDelay: 100 };
+  // Ark associates the tooltip only while open; expose the disabled reason persistently for touch/AT.
+  const reason = disabled ? (
+    <span id={descId} className={srOnly}>
+      {info}
+    </span>
+  ) : null;
+
+  // Touch: a persistent Popover (long-press opens, outside-tap/Esc dismiss); Ark Tooltip closes on release.
+  if (touch) {
+    return (
+      <Popover.Root
+        open={open}
+        onOpenChange={(details) => setOpen(details.open)}
+        modal={false}
+        autoFocus={false}
+        positioning={{ placement: 'top' }}
+      >
+        <Popover.Anchor asChild>{trigger}</Popover.Anchor>
+        {reason}
+        <Portal>
+          <Popover.Positioner>
+            <Popover.Content id={contentId} className={contentStyles}>
+              <Popover.Arrow className={arrowStyles}>
+                <Popover.ArrowTip />
+              </Popover.Arrow>
+              {info}
+            </Popover.Content>
+          </Popover.Positioner>
+        </Portal>
+      </Popover.Root>
+    );
+  }
 
   return (
-    <Tooltip.Root {...rootProps}>
+    <Tooltip.Root openDelay={400} closeDelay={100}>
       <Tooltip.Trigger asChild>{trigger}</Tooltip.Trigger>
-      {/* Ark associates the tooltip only while open; expose the disabled reason persistently for touch/AT. */}
-      {disabled ? (
-        <span id={descId} className={srOnly}>
-          {info}
-        </span>
-      ) : null}
+      {reason}
       <Portal>
         <Tooltip.Positioner>
           <Tooltip.Content className={contentStyles}>

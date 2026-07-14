@@ -75,6 +75,69 @@ describe('InfoPopover', () => {
     );
   });
 
+  it('touch: suppresses native text selection / callout on the trigger', () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((q: string) => ({
+      matches: true, media: q, onchange: null,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+      addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    try {
+      render(
+        <InfoPopover info="Explication" onActivate={() => {}}>
+          <button type="button">Vérifier</button>
+        </InfoPopover>,
+      );
+      const trigger = screen.getByRole('button', { name: 'Vérifier' });
+      expect(trigger).toHaveStyle({ userSelect: 'none' });
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  it('does not suppress text selection on a fine pointer', () => {
+    render(
+      <InfoPopover info="Explication" onActivate={() => {}}>
+        <button type="button">Vérifier</button>
+      </InfoPopover>,
+    );
+    expect(screen.getByRole('button', { name: 'Vérifier' })).not.toHaveStyle({
+      userSelect: 'none',
+    });
+  });
+
+  it('touch: describes the trigger via aria-describedby before and after long-press opens it', () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((q: string) => ({
+      matches: true, media: q, onchange: null,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+      addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    vi.useFakeTimers();
+    try {
+      render(
+        <InfoPopover info="Vérifie tes lettres" onActivate={() => {}} longPressMs={500}>
+          <button type="button">Vérifier</button>
+        </InfoPopover>,
+      );
+      const trigger = screen.getByRole('button', { name: 'Vérifier' });
+      const descId = trigger.getAttribute('aria-describedby');
+      expect(descId).toBeTruthy();
+      // Content is mounted (hidden) before the popover opens, so the id resolves immediately.
+      expect(document.getElementById(descId as string)).toBeInTheDocument();
+      act(() => { fireEvent.pointerDown(trigger, { clientX: 0, clientY: 0 }); });
+      act(() => { vi.advanceTimersByTime(500); });
+      act(() => { fireEvent.pointerUp(trigger); });
+      expect(trigger).toHaveAttribute('aria-describedby', descId as string);
+      expect(document.getElementById(descId as string)).toHaveTextContent(
+        'Vérifie tes lettres',
+      );
+    } finally {
+      window.matchMedia = original;
+      vi.useRealTimers();
+    }
+  });
+
   it('touch: a long-press suppresses the tap, a short tap activates', () => {
     vi.useFakeTimers();
     const original = window.matchMedia;
