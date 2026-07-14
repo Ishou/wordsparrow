@@ -31,10 +31,10 @@ jobs:
       from: ${{ steps.parse.outputs.from }}
       to: ${{ steps.parse.outputs.to }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.14.6'
       - run: pip install -r scripts/breaking-bump/requirements.txt
@@ -179,16 +179,16 @@ jobs:
       FROM: ${{ needs.dispatch.outputs.from }}
       TO: ${{ needs.dispatch.outputs.to }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.14.6'
       - run: pip install -r scripts/breaking-bump/requirements.txt
 
       - name: Run the AI gate (changelog-only smell test)
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@f1bd27ca5b54584506e40e17884d90bdaaa1a9b3 # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Renovate opens these PRs; allow it so the action doesn't refuse a bot-authored event.

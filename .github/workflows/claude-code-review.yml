@@ -80,7 +80,7 @@ jobs:
         # secret isn't set so this workflow keeps working on PRs opened
         # before the secret has been provisioned. See the PR that introduced
         # this comment for PAT setup instructions.
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref }}
@@ -174,7 +174,7 @@ jobs:
       - name: Run reviewer agent
         if: steps.cap.outputs.skip != 'true'
         id: reviewer
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@f1bd27ca5b54584506e40e17884d90bdaaa1a9b3 # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Required so cycle-until-LGTM (per ADR-0001 §6a 2026-04-26 amendment) keeps
@@ -395,7 +395,7 @@ jobs:
 
       - name: Run fixer agent
         if: steps.cap.outputs.skip != 'true' && !startsWith(github.head_ref, 'renovate/') && (steps.detect.outputs.has_findings == 'true' || steps.detect-ci.outputs.ci_red == 'true')
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@f1bd27ca5b54584506e40e17884d90bdaaa1a9b3 # v1
         env:
           # Surfaced into the agent's environment so the prompt below can
           # reference $CI_FAILED_CHECKS and the agent can act on it.

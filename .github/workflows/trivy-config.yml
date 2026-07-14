@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       # SARIF dump covers all severities (Security-tab backlog); gate step
       # below fails only on CRITICAL per ADR-0065 §2. See build-and-push-image.yml
@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload SARIF to Security tab
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@02c5e83432fe5497fd85b873b6c9f16a8578e1d9 # v3.37.0
         with:
           sarif_file: trivy-config.sarif
           category: trivy-config
