@@ -60,6 +60,13 @@ const solveRipple = css({ animation: 'wsFlatten 0.26s ease both' });
 // ADR-0086: co-op solved fill tinted with the finder's `--player-color`.
 const solvedTint = css({ bg: 'color-mix(in srgb, var(--player-color) 32%, token(colors.ws.sable))' });
 
+// Additive selection ring on a solved/locked cell whose word is currently selected — an outline (not box-shadow) so it never clobbers the solved inset shadow. Rose in dark mode clears WCAG 1.4.11 on the dark solved fill.
+const selectedRing = css({
+  outline: '2.5px solid token(colors.ws.sakuraDark)',
+  outlineOffset: '-2.5px',
+  _dark: { outlineColor: 'token(colors.ws.sakuraRose)' },
+});
+
 export type CellState = keyof typeof byState;
 
 export interface CellProps {
@@ -69,14 +76,18 @@ export interface CellProps {
   readonly solveDelay?: number;
   // ADR-0086: when solved, tint the fill from the ancestor's `--player-color`.
   readonly tinted?: boolean;
+  // When solved/locked, mark this cell as part of the currently-selected word — layers a selection outline over the solved fill.
+  readonly selected?: boolean;
 }
 
-export function Cell({ state, letter, solveDelay, tinted }: CellProps) {
+export function Cell({ state, letter, solveDelay, tinted, selected }: CellProps) {
   const ripple = state === 'solved' && solveDelay !== undefined;
+  const showSelected = state === 'solved' && selected === true;
   return (
     <div
       data-cell-state={state}
-      className={cx(base, byState[state], ripple && solveRipple, state === 'solved' && tinted && solvedTint)}
+      data-selected={showSelected ? 'true' : undefined}
+      className={cx(base, byState[state], ripple && solveRipple, state === 'solved' && tinted && solvedTint, showSelected && selectedRing)}
       style={ripple ? { animationDelay: `${solveDelay}ms` } : undefined}
     >
       {state === 'empty' ? '' : letter}

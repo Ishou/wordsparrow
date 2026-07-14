@@ -18,4 +18,19 @@ describe('Cell', () => {
     expect(container.querySelector('[data-cell-state="empty"]')?.textContent).toBe('');
     await expectAxeClean(container);
   });
+
+  it('layers a selection outline only on a solved + selected cell', async () => {
+    const { container, rerender } = render(<Cell state="solved" letter="A" selected />);
+    const solved = container.querySelector('[data-cell-state="solved"]');
+    expect(solved?.getAttribute('data-selected')).toBe('true');
+    await expectAxeClean(container);
+
+    // Gated on 'solved': active/word cells already carry the pink selection, so `selected` is inert there.
+    rerender(<Cell state="active" letter="R" selected />);
+    expect(container.querySelector('[data-cell-state="active"]')?.getAttribute('data-selected')).toBeNull();
+
+    // Solved but not selected → no outline attribute.
+    rerender(<Cell state="solved" letter="A" />);
+    expect(container.querySelector('[data-cell-state="solved"]')?.getAttribute('data-selected')).toBeNull();
+  });
 });

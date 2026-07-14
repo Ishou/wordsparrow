@@ -125,7 +125,7 @@ function LetterSlot({
       onClick={nav.handleClick}
       onMouseDown={(e) => e.preventDefault()}
     >
-      <Cell state={state} solveDelay={solveDelay} tinted={owner !== undefined} />
+      <Cell state={state} solveDelay={solveDelay} tinted={owner !== undefined} selected={highlight.focused || highlight.currentWord} />
       <input
         ref={nav.registerCellRef}
         {...GRID_INPUT_GUARDS}

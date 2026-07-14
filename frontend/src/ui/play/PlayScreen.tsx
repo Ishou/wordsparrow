@@ -485,118 +485,116 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
       }
       bottomBar={
         <div className={bottomBar} ref={bottomRef}>
+          {!won && ACTIVE_ASSIST_MODE === 'hint' && hint.errorMessage ? (
+            <p className={hintError} role="alert">
+              {hint.errorMessage}
+            </p>
+          ) : null}
+          {!won && ACTIVE_ASSIST_MODE === 'verify' && verification.errorMessage ? (
+            <p className={hintError} role="alert">
+              {verification.errorMessage}
+            </p>
+          ) : null}
+          {!won && validation.failMessage ? (
+            <p className={failPill} role="status" aria-live="polite">
+              {validation.failMessage}
+            </p>
+          ) : null}
+          {displayClue ? (
+            <ClueRail
+              direction={displayClue.across ? 'horizontal' : 'vertical'}
+              directionLabel={t(displayClue.across ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
+              clue={displayClue.text}
+              index={displayOrdinal + 1}
+              total={orderedClues.length}
+              groupLabel={t('clueRail.aria.group')}
+              counterLabel={t('clueRail.aria.counter', { index: displayOrdinal + 1, total: orderedClues.length })}
+              prevLabel={t('clueRail.aria.prev')}
+              nextLabel={t('clueRail.aria.next')}
+              zoomInLabel={t('clueRail.aria.zoomIn')}
+              zoomOutLabel={t('clueRail.aria.zoomOut')}
+              onPrev={() => stepClue(-1)}
+              onNext={() => stepClue(1)}
+              onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
+              onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
+              report={
+                surveyClient ? (
+                  <ReportClueSheet
+                    surveyClient={surveyClient}
+                    surface={reportSurface}
+                    clueText={displayClue.text}
+                    puzzleId={puzzle.id}
+                  />
+                ) : undefined
+              }
+              trailing={
+                won ? undefined : ACTIVE_ASSIST_MODE === 'verify' ? (
+                  <span className={hintTrailing}>
+                    <InfoPopover
+                      info={assistGate ? assistGate.title : t('play.verify.info')}
+                      onActivate={requestVerify}
+                      disabled={
+                        assistGate != null ||
+                        verification.pending ||
+                        (verification.secondsUntilNextVerify ?? 0) > 0
+                      }
+                    >
+                      <button type="button" className={hintBtn} data-tour="assist">
+                        <MagnifyingGlass aria-hidden="true" weight="bold" className={hintBulb} />
+                        {t('play.verify.label')}
+                      </button>
+                    </InfoPopover>
+                    <AssistCooldown
+                      visible={verification.secondsUntilNextVerify !== null}
+                      secondsRemaining={verification.secondsUntilNextVerify}
+                      intervalSeconds={1800}
+                      label={t('grid.verify.cooldown.label', {
+                        time: formatMmSs(verification.secondsUntilNextVerify ?? 0),
+                      })}
+                      availableAnnouncement={t('grid.verify.cooldown.available')}
+                    />
+                  </span>
+                ) : ACTIVE_ASSIST_MODE === 'hint' ? (
+                  <span className={hintTrailing}>
+                    <InfoPopover
+                      info={assistGate ? assistGate.title : t('play.hint.info')}
+                      onActivate={requestHint}
+                      disabled={
+                        assistGate != null ||
+                        hint.pending ||
+                        (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)
+                      }
+                    >
+                      <button
+                        type="button"
+                        className={hintBtn}
+                        data-tour="assist"
+                        aria-label={t('play.hint.aria.remaining', { remaining: hint.hintsRemaining })}
+                      >
+                        <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
+                        {t('play.hint.label', { remaining: hint.hintsRemaining })}
+                      </button>
+                    </InfoPopover>
+                    <AssistCooldown
+                      visible={hint.hintsRemaining < puzzle.hintsAllowed && hint.secondsUntilNextHint !== null}
+                      secondsRemaining={hint.secondsUntilNextHint}
+                      intervalSeconds={600}
+                      label={`+1 dans ${formatMmSs(hint.secondsUntilNextHint ?? 0)}`}
+                      availableAnnouncement="Un indice est de nouveau disponible."
+                      progressAnnouncement={`Régénération d’un indice en cours, ${hint.hintsRemaining} sur ${puzzle.hintsAllowed}.`}
+                    />
+                  </span>
+                ) : null
+              }
+            />
+          ) : null}
           {won ? (
             <Button variant="secondary" className={resultsBtn} onClick={() => { setWonLive(true); setWinDismissed(false); }}>
               <Trophy aria-hidden="true" weight="fill" />
               {t('play.results.cta')}
             </Button>
           ) : (
-            <>
-              {ACTIVE_ASSIST_MODE === 'hint' && hint.errorMessage ? (
-                <p className={hintError} role="alert">
-                  {hint.errorMessage}
-                </p>
-              ) : null}
-              {ACTIVE_ASSIST_MODE === 'verify' && verification.errorMessage ? (
-                <p className={hintError} role="alert">
-                  {verification.errorMessage}
-                </p>
-              ) : null}
-              {validation.failMessage ? (
-                <p className={failPill} role="status" aria-live="polite">
-                  {validation.failMessage}
-                </p>
-              ) : null}
-              {displayClue ? (
-                <ClueRail
-                  direction={displayClue.across ? 'horizontal' : 'vertical'}
-                  directionLabel={t(displayClue.across ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
-                  clue={displayClue.text}
-                  index={displayOrdinal + 1}
-                  total={orderedClues.length}
-                  groupLabel={t('clueRail.aria.group')}
-                  counterLabel={t('clueRail.aria.counter', { index: displayOrdinal + 1, total: orderedClues.length })}
-                  prevLabel={t('clueRail.aria.prev')}
-                  nextLabel={t('clueRail.aria.next')}
-                  zoomInLabel={t('clueRail.aria.zoomIn')}
-                  zoomOutLabel={t('clueRail.aria.zoomOut')}
-                  onPrev={() => stepClue(-1)}
-                  onNext={() => stepClue(1)}
-                  onZoomIn={() => boardRef.current?.panZoom?.zoomIn()}
-                  onZoomOut={() => boardRef.current?.panZoom?.zoomOut()}
-                  report={
-                    surveyClient ? (
-                      <ReportClueSheet
-                        surveyClient={surveyClient}
-                        surface={reportSurface}
-                        clueText={displayClue.text}
-                        puzzleId={puzzle.id}
-                      />
-                    ) : undefined
-                  }
-                  trailing={
-                    ACTIVE_ASSIST_MODE === 'verify' ? (
-                      <span className={hintTrailing}>
-                        <InfoPopover
-                          info={assistGate ? assistGate.title : t('play.verify.info')}
-                          onActivate={requestVerify}
-                          disabled={
-                            assistGate != null ||
-                            verification.pending ||
-                            (verification.secondsUntilNextVerify ?? 0) > 0
-                          }
-                        >
-                          <button type="button" className={hintBtn} data-tour="assist">
-                            <MagnifyingGlass aria-hidden="true" weight="bold" className={hintBulb} />
-                            {t('play.verify.label')}
-                          </button>
-                        </InfoPopover>
-                        <AssistCooldown
-                          visible={verification.secondsUntilNextVerify !== null}
-                          secondsRemaining={verification.secondsUntilNextVerify}
-                          intervalSeconds={1800}
-                          label={t('grid.verify.cooldown.label', {
-                            time: formatMmSs(verification.secondsUntilNextVerify ?? 0),
-                          })}
-                          availableAnnouncement={t('grid.verify.cooldown.available')}
-                        />
-                      </span>
-                    ) : ACTIVE_ASSIST_MODE === 'hint' ? (
-                      <span className={hintTrailing}>
-                        <InfoPopover
-                          info={assistGate ? assistGate.title : t('play.hint.info')}
-                          onActivate={requestHint}
-                          disabled={
-                            assistGate != null ||
-                            hint.pending ||
-                            (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)
-                          }
-                        >
-                          <button
-                            type="button"
-                            className={hintBtn}
-                            data-tour="assist"
-                            aria-label={t('play.hint.aria.remaining', { remaining: hint.hintsRemaining })}
-                          >
-                            <Lightbulb aria-hidden="true" weight="fill" className={hintBulb} />
-                            {t('play.hint.label', { remaining: hint.hintsRemaining })}
-                          </button>
-                        </InfoPopover>
-                        <AssistCooldown
-                          visible={hint.hintsRemaining < puzzle.hintsAllowed && hint.secondsUntilNextHint !== null}
-                          secondsRemaining={hint.secondsUntilNextHint}
-                          intervalSeconds={600}
-                          label={`+1 dans ${formatMmSs(hint.secondsUntilNextHint ?? 0)}`}
-                          availableAnnouncement="Un indice est de nouveau disponible."
-                          progressAnnouncement={`Régénération d’un indice en cours, ${hint.hintsRemaining} sur ${puzzle.hintsAllowed}.`}
-                        />
-                      </span>
-                    ) : null
-                  }
-                />
-              ) : null}
-              <Keyboard onLetter={(l) => nav.enterLetter(l)} onBackspace={playBackspace} />
-            </>
+            <Keyboard onLetter={(l) => nav.enterLetter(l)} onBackspace={playBackspace} />
           )}
         </div>
       }

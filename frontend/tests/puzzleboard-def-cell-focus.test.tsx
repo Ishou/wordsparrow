@@ -27,6 +27,8 @@ const basePuzzle = (): Puzzle => {
 const inputAt = (row: number, col: number) =>
   document.querySelector<HTMLInputElement>(`input[data-cell-kind="letter"][data-row="${row}"][data-col="${col}"]`)!;
 const defByText = (text: string) => screen.getByText(text).closest('[data-defcell]')!;
+const keycapAt = (row: number, col: number) =>
+  document.querySelector<HTMLElement>(`div[data-row="${row}"][data-col="${col}"] [data-cell-state]`)!;
 
 const EMPTY_SET: ReadonlySet<string> = new Set();
 const EMPTY_MAP: ReadonlyMap<string, string> = new Map();
@@ -92,6 +94,19 @@ describe('PuzzleBoard wires def-cell tap-to-focus through the live DefCell compo
     expect(document.activeElement).toBe(inputAt(0, 1));
     fireEvent.click(defByText('dual-h'));
     expect(document.activeElement).toBe(inputAt(2, 1));
+  });
+
+  it('selecting a fully-locked word outlines only that word, not other validated cells', () => {
+    // Two fully-validated words: the across word (row 0) and the dual-h word (row 2).
+    render(<Harness puzzle={basePuzzle()} validated={new Set(['0,1', '0,2', '0,3', '0,4', '2,1', '2,2', '2,3', '2,4'])} />);
+    fireEvent.click(defByText('across'));
+    for (const col of [1, 2, 3, 4]) {
+      expect(keycapAt(0, col).getAttribute('data-selected')).toBe('true');
+    }
+    // A validated cell in a different (unselected) word stays solved but un-outlined —
+    // discriminates against a regression that outlines every cell.
+    expect(keycapAt(2, 1).getAttribute('data-cell-state')).toBe('solved');
+    expect(keycapAt(2, 1).getAttribute('data-selected')).toBeNull();
   });
 });
 
