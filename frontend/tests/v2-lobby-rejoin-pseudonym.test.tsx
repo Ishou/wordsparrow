@@ -61,6 +61,13 @@ const completedLobby: Lobby & { readonly id: LobbyId } = {
   } as unknown as Lobby['game'],
 };
 
+// An authed host: the server-verified account name differs from the local guest session pseudonym.
+const accountName = 'Colin Compte' as Pseudonym;
+const authedWaitingLobby: Lobby & { readonly id: LobbyId } = {
+  ...waitingLobby,
+  players: [{ sessionId, pseudonym: accountName, joinedAt: '2026-06-27T15:30:00Z' as Instant }],
+};
+
 const stubPuzzleSolver: PuzzleSolver = {
   validate: () => Promise.resolve({ solved: false }),
   requestHint: () => Promise.reject(new Error('not used')),
@@ -87,6 +94,10 @@ const stubAuthClient: AuthClient = {
   startEmailOtp: vi.fn(),
   verifyEmailOtp: vi.fn(),
   signInUrl: (provider, returnTo) => `https://auth.test/${provider}?return=${returnTo}`,
+};
+const authedAuthClient: AuthClient = {
+  ...stubAuthClient,
+  whoami: () => Promise.resolve({ userId: '11111111-1111-1111-1111-111111111111', displayName: accountName }),
 };
 
 interface Dispatchable extends GameClient {
@@ -162,9 +173,9 @@ function makeRouter(getLobby: LobbyClient['getLobby'], gameClient: GameClient) {
   return router;
 }
 
-function renderRouter(router: ReturnType<typeof makeRouter>) {
+function renderRouter(router: ReturnType<typeof makeRouter>, authClient: AuthClient = stubAuthClient) {
   return render(
-    <AuthProvider authClient={stubAuthClient} getPseudonym={() => pseudonym}>
+    <AuthProvider authClient={authClient} getPseudonym={() => pseudonym}>
       <RouterProvider router={router} />
     </AuthProvider>,
   );
@@ -206,6 +217,33 @@ describe('v2 /lobby/$lobbyId — local pseudonym survives a seatless rejoin snap
     fireEvent.click(screen.getByRole('button', { name: 'Changer mon pseudo' }));
     const input = screen.getByLabelText('Ton pseudonyme') as HTMLInputElement;
     expect(input.value).toBe('Renard 777');
+  });
+
+  it('shows the authed account pseudonym (not the local guest name) when the connect snapshot drops the local seat', async () => {
+    const gameClient = makeGameClient();
+    const getLobby = vi.fn<LobbyClient['getLobby']>().mockResolvedValue(authedWaitingLobby);
+    const router = makeRouter(getLobby, gameClient);
+    renderRouter(router, authedAuthClient);
+
+    await act(async () => { await goLobby(router); });
+    expect(await screen.findByText('Colin Compte (toi)')).toBeTruthy();
+
+    // Connect-time replay drops the local seat while the authed account name differs from the local guest pseudonym.
+    act(() => {
+      gameClient.dispatch({
+        type: 'lobbyState',
+        players: [],
+        ownerSessionId: sessionId,
+        state: 'WAITING',
+        gridConfig: { width: 7, height: 7 },
+        code: 'A2B3C4',
+        game: null,
+      });
+    });
+
+    // The synthesized fallback seat must carry the ACCOUNT name, never the local guest « Renard 777 ».
+    expect(await screen.findByText('Colin Compte (toi)')).toBeTruthy();
+    expect(screen.queryByText(/Renard 777/)).toBeNull();
   });
 
   it('keeps « (toi) » in the live co-op roster when the connect snapshot drops the local seat', async () => {
