@@ -53,6 +53,9 @@ dependencies {
     // MockEngine + coroutines-test — fake transport for MatomoAnalyticsAdapterTest.
     testImplementation("io.ktor:ktor-client-mock:$ktorVersion")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+
+    // logback ListAppender — capture Flyway log events in FlywayNoiseFilteringLogCreatorTest.
+    testImplementation("ch.qos.logback:logback-classic:1.5.34")
 }
 
 tasks.test {
