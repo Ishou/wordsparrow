@@ -408,9 +408,7 @@ class LobbyUseCasesTest {
             assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.WrongCode)
         }
 
-    // ADR-0066 (b), 2026-07-14 amendment: an authed seat takes the server-verified account
-    // pseudonym, never the client frame — the client-sent guest name is ignored for authed joins.
-
+    // ADR-0066 (d): authed seat takes the verified account pseudonym, not the client frame.
     @Test
     fun `JoinLobby seats an authed joiner under the verified account pseudonym, not the client-sent one`() =
         runTest {
@@ -432,9 +430,7 @@ class LobbyUseCasesTest {
             assertThat(out.value.players[sessionB]?.pseudonym).isEqualTo(Pseudonym("BobCompte"))
         }
 
-    // The reported prod bug: an authed owner whose seat was freed by the ADR-0018 §5 grace reconnects
-    // via the owner-re-entry arm. The client frame carries a stale guest name; the re-seat must use the
-    // verified account name, not persist the guest name into the authoritative lobby (and PlayerJoined).
+    // Prod bug: owner re-entry after ADR-0018 §5 grace must not overwrite the account name with the stale guest name.
     @Test
     fun `JoinLobby owner re-entry seats the verified account pseudonym, not the stale client frame`() =
         runTest {
