@@ -47,11 +47,11 @@ class InfrastructureArchitectureTest {
             }
     }
 
-    // The Mollie SDK is the ADR-0078 provider adapter, allowed in infrastructure but confined to the SdkMollieClient seam.
+    // The Mollie SDK is the ADR-0078 provider adapter, confined to the SdkMollieClient seam and its own tests.
     @Test
     fun `only the mollie client seam imports the mollie sdk`() {
         infrastructureScope.files
-            .filter { it.name != "SdkMollieClient" }
+            .filter { !it.name.startsWith("SdkMollieClient") }
             .assertFalse {
                 it.hasImport { import -> import.name.startsWith("com.mollie") || import.name.startsWith("be.woutschoovaerts") }
             }

@@ -18,11 +18,7 @@ import java.net.http.HttpResponse
 import java.util.Optional
 import javax.net.ssl.SSLSession
 
-/**
- * Mollie surfaces 404/410-class responses as ErrorResponse (a sibling of APIException; both extend ClientError)
- * whenever the body is application/hal+json — the exact shape seen in prod (issue #1617). These drive the real SDK
- * against a stub transport so the adapter must catch ClientError, not just APIException.
- */
+// Reproduces the ErrorResponse/hal+json shape seen in prod; see SdkMollieClient's ClientError catch.
 class SdkMollieClientNotFoundTest {
     private fun clientReturning(
         status: Int,
