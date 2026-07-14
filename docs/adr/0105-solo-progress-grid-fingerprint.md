@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted (amends ADR-0075)
+Superseded by ADR-0114 — the structural fingerprint discarded progress on an
+in-place clue correction (ADR-0108), which changes definition text but not the
+`puzzleId` or any answer; solo progress is now keyed on `puzzleId` alone.
 
 ## Context
 

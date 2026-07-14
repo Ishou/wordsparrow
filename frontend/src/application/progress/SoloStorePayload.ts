@@ -17,8 +17,6 @@ export interface SoloStorePayload {
   readonly hintsUsed: number;
   // Total seconds spent on the puzzle; monotonic across devices (merge takes max).
   readonly elapsedSeconds: number;
-  // Structural signature of the grid this progress was typed on (ADR-0105); a mismatch means the puzzle was regenerated under the same id, so the blob is stale and gets discarded.
-  readonly fingerprint?: string;
 }
 
 export const EMPTY_PAYLOAD: SoloStorePayload = {
@@ -62,11 +60,10 @@ export function coerceSoloStorePayload(raw: unknown): SoloStorePayload {
     obj.elapsedSeconds >= 0
       ? obj.elapsedSeconds
       : 0;
-  const fingerprint = typeof obj.fingerprint === 'string' ? obj.fingerprint : undefined;
-  return { entries, lockedCells, hintsUsed, elapsedSeconds, fingerprint };
+  return { entries, lockedCells, hintsUsed, elapsedSeconds };
 }
 
-// True when the blob holds actual player progress (not just a bare grid-fingerprint stamp).
+// True when the blob holds actual player progress rather than an empty shell.
 export function hasProgress(payload: SoloStorePayload): boolean {
   return (
     payload.entries.length > 0 ||
