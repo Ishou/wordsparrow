@@ -239,6 +239,68 @@ class LobbyWebSocketRouteTest {
             }
         }
 
+    // ADR-0066 (b) 2026-07-14 amendment: an authed socket seats under the verified account name (FixedCookieVerifier -> "Alice"), never the guest pseudonym in the join frame.
+    @Test
+    fun `authed join seats the verified account pseudonym, not the client join frame`() =
+        testApplication {
+            val clock: Clock = SystemClock
+            val repo = InMemoryLobbyRepository()
+            val ownerUser = UserId("11111111-1111-1111-1111-111111111111")
+            val createLobby = CreateLobbyUseCase(repo, clock)
+            val useCases =
+                LobbyUseCases(
+                    createLobby = createLobby,
+                    joinLobby = JoinLobbyUseCase(repo, clock),
+                    renameSelf = RenameSelfUseCase(repo, clock),
+                    setGridConfig = SetGridConfigUseCase(repo, clock),
+                    startGame = StartGameUseCase(repo, NullPuzzleProvider, clock),
+                    updateCell = UpdateCellUseCase(repo, clock, NullWordValidator),
+                    leaveLobby = LeaveLobbyUseCase(repo, clock),
+                    rotateCode = RotateLobbyCodeUseCase(repo, clock),
+                    relinquishOwnership = RelinquishOwnershipUseCase(repo, clock),
+                    rematch = RematchUseCase(repo, NullPuzzleProvider, clock),
+                    returnToSalon = ReturnToSalonUseCase(repo, clock),
+                )
+            val sessionManager = SessionManager()
+            val backgroundJob = SupervisorJob()
+            application {
+                install(ServerWebSockets)
+                routing {
+                    lobbyWebSocketRoute(
+                        sessionManager,
+                        useCases,
+                        repo,
+                        backgroundScope = CoroutineScope(backgroundJob + Dispatchers.Default),
+                        reconnectGrace = Duration.ZERO,
+                        cookieVerifier = FixedCookieVerifier("owner-cookie", ownerUser),
+                    )
+                }
+            }
+            val client = createClient { install(WebSockets) }
+            try {
+                val lobbyId = createLobby(SessionId(sessionA), Pseudonym(pseudoA), ownerUserId = ownerUser).value.id
+                val newDevice = "0190e3c9-9f88-7a11-8b22-c3d4e5f60719"
+                client.webSocket(
+                    "/v1/lobbies/${lobbyId.value}/ws",
+                    request = { header(HttpHeaders.Cookie, "${CookieNames.SESSION}=owner-cookie") },
+                ) {
+                    receiveText()
+                    // Guest animal-name in the frame; the verified cookie resolves to "Alice".
+                    sendText("""{"type":"joinLobby","sessionId":"$newDevice","pseudonym":"Renard 777"}""")
+                    drainUntil("playerJoined")
+                }
+                assertThat(
+                    repo
+                        .findById(lobbyId)
+                        ?.players
+                        ?.get(SessionId(newDevice))
+                        ?.pseudonym,
+                ).isEqualTo(Pseudonym("Alice"))
+            } finally {
+                backgroundJob.cancel()
+            }
+        }
+
     @Test
     fun `cellUpdate from one client is broadcast to both`() =
         runWith { harness ->

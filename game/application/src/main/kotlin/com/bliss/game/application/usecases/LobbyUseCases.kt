@@ -140,6 +140,7 @@ class JoinLobbyUseCase(
         pseudonym: Pseudonym,
         code: String?,
         userId: UserId? = null,
+        verifiedPseudonym: Pseudonym? = null,
     ): UseCaseOutcome<Lobby> {
         var emitted: LobbyEvent? = null
         var wrongCode = false
@@ -160,7 +161,8 @@ class JoinLobbyUseCase(
             // Gate capacity on the post-removal count so replacing your own stale seat is a net-zero swap, not a rejected join.
             if (withoutStaleSeat.size >= Lobby.MAX_PLAYERS) return lobby
             val now = clock.now()
-            val player = Player(sessionId, pseudonym, now, userId = seatUserId)
+            // An authed socket seats under its server-verified account name, never the client frame (ADR-0066 (b) 2026-07-14 amendment); anon joins keep the client pseudonym.
+            val player = Player(sessionId, verifiedPseudonym ?: pseudonym, now, userId = seatUserId)
             emitted = LobbyEvent.PlayerJoined(player)
             return lobby.copy(
                 ownerSessionId = if (rebindOwner) sessionId else lobby.ownerSessionId,

@@ -113,15 +113,17 @@ fun Route.lobbyWebSocketRoute(
         sessionManager.register(lobbyId, this)
 
         // Server-verified identity for the authed rejoin arms — never from a client frame (ADR-0066 (b)); verify failure means anonymous-for-this-socket.
-        val verifiedUserId: UserId? =
+        val whoAmI =
             if (cookieVerifier != null) {
                 call.request.cookies[CookieNames.SESSION]
                     ?.takeIf { it.isNotBlank() }
                     ?.let { rawCookie -> runCatching { cookieVerifier.verify(rawCookie) }.getOrNull() }
-                    ?.userId
             } else {
                 null
             }
+        val verifiedUserId: UserId? = whoAmI?.userId
+        // Authed sockets seat under the verified account name, not the client join frame (ADR-0066 (b) 2026-07-14 amendment).
+        val verifiedPseudonym: Pseudonym? = whoAmI?.displayName
         verifiedUserId?.let { sessionManager.bindUserId(lobbyId, this, it) }
         // Initial snapshot to this socket only — bootstrap signal for the UI.
         // Carries the current ephemeral presence map so a refreshing client
@@ -152,6 +154,7 @@ fun Route.lobbyWebSocketRoute(
                         memberSessionId,
                         presenceAggregator,
                         verifiedUserId,
+                        verifiedPseudonym,
                         backgroundScope,
                         rematchDelay,
                     )
@@ -221,6 +224,7 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
     memberSessionId: String?,
     presenceAggregator: PresenceAggregator?,
     verifiedUserId: UserId?,
+    verifiedPseudonym: Pseudonym?,
     backgroundScope: CoroutineScope,
     rematchDelay: Duration,
 ): String? {
@@ -228,7 +232,7 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
         if (memberSessionId.isNullOrEmpty()) null else memberSessionId
     return when (parsed) {
         is ClientToServerFrame.JoinLobby ->
-            dispatchJoin(parsed, lobbyId, useCases, sessionManager, session, verifiedUserId) ?: effectiveId
+            dispatchJoin(parsed, lobbyId, useCases, sessionManager, session, verifiedUserId, verifiedPseudonym) ?: effectiveId
         is ClientToServerFrame.RenameSelf -> {
             val sid =
                 effectiveId ?: run {
@@ -403,6 +407,7 @@ private suspend fun DefaultWebSocketServerSession.dispatchJoin(
     sessionManager: SessionManager,
     session: DefaultWebSocketServerSession,
     verifiedUserId: UserId?,
+    verifiedPseudonym: Pseudonym?,
 ): String? {
     val sid =
         try {
@@ -418,8 +423,8 @@ private suspend fun DefaultWebSocketServerSession.dispatchJoin(
             sendInvalidPseudonym(cause.message ?: "pseudonym failed validation")
             return null
         }
-    // Server-verified identity from connect-time cookie verification — the client join frame carries no userId (ADR-0066 (b)).
-    val outcome = useCases.joinLobby(lobbyId, sid, pseudo, parsed.code, verifiedUserId)
+    // Server-verified identity from connect-time cookie verification — the client join frame carries no userId, and an authed seat takes the verified account name over parsed.pseudonym (ADR-0066 (b) + 2026-07-14 amendment).
+    val outcome = useCases.joinLobby(lobbyId, sid, pseudo, parsed.code, verifiedUserId, verifiedPseudonym)
     handleOutcome(outcome, lobbyId, sessionManager)
     return if (outcome is UseCaseOutcome.Success) {
         // Bind the socket to the player's sessionId so a subsequent
