@@ -96,14 +96,17 @@ describe('PuzzleBoard wires def-cell tap-to-focus through the live DefCell compo
     expect(document.activeElement).toBe(inputAt(2, 1));
   });
 
-  it('selecting a fully-locked word outlines every letter cell of that word', () => {
-    render(<Harness puzzle={basePuzzle()} validated={new Set(['0,1', '0,2', '0,3', '0,4'])} />);
+  it('selecting a fully-locked word outlines only that word, not other validated cells', () => {
+    // Two fully-validated words: the across word (row 0) and the dual-h word (row 2).
+    render(<Harness puzzle={basePuzzle()} validated={new Set(['0,1', '0,2', '0,3', '0,4', '2,1', '2,2', '2,3', '2,4'])} />);
     fireEvent.click(defByText('across'));
     for (const col of [1, 2, 3, 4]) {
       expect(keycapAt(0, col).getAttribute('data-selected')).toBe('true');
     }
-    // A cell outside the selected word is not outlined.
-    expect(keycapAt(1, 1).getAttribute('data-selected')).toBeNull();
+    // A validated cell in a different (unselected) word stays solved but un-outlined —
+    // discriminates against a regression that outlines every cell.
+    expect(keycapAt(2, 1).getAttribute('data-cell-state')).toBe('solved');
+    expect(keycapAt(2, 1).getAttribute('data-selected')).toBeNull();
   });
 });
 
