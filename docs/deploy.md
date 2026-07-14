@@ -798,14 +798,24 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
 # Observability chart (`infra/observability/`) — upgrades
 
 The `deploy-observability-alerts.yml` and `deploy-observability-dashboards.yml` workflows
-cover alert rules and dashboards respectively, but the umbrella Helm chart itself
-(`infra/observability/`) has no CI-triggered deploy workflow yet.
+cover alert rules and dashboards respectively. The umbrella Helm chart itself
+(`infra/observability/`) is deployed by `deploy-observability.yml`.
 
-**TODO:** add a `workflow_dispatch` / `push` trigger for `infra/observability/**` changes on
-`main` to automate chart upgrades from CI. This is accepted debt; the manual path below is
-the stopgap.
+That workflow is **`workflow_dispatch` only** — not push-triggered — because the chart
+bundles the ClickHouse StatefulSet and the `telemetrystore-migrator` Job, so an upgrade
+can restart telemetry storage and run a schema migration. It must be deployed deliberately
+in a low-traffic window, not automatically on every merge (same posture as
+`deploy-platform.yml`). Before triggering it, review the pending diff locally
+(`helm diff upgrade`, or `helm template` compared against the live release) so you know
+what the ClickHouse StatefulSet and migrator changes are and have a rollback plan.
 
 ## Upgrading the chart
+
+Preferred: run the **Deploy Observability (SigNoz umbrella chart)** workflow
+(`deploy-observability.yml`) via *workflow_dispatch* — it upgrades the release with the
+`prod-observability` environment gate and `KUBECONFIG_PROD`.
+
+Manual equivalent (local operator, for the reviewed session above):
 
 ```sh
 export KUBECONFIG=~/.kube/wordsparrow-prod
