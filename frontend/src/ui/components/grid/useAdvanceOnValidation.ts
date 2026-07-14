@@ -103,13 +103,16 @@ export function useAdvanceOnValidation({
     prevFocusRef.current = cur;
     if (!cur || !validatedPositions.has(posKey(cur.row, cur.col))) return;
     const adjacent = !wasJump && !!prev && Math.abs(cur.row - prev.row) + Math.abs(cur.col - prev.col) === 1;
+    // Only advance if the WHOLE current word is solved; partial or wrong keeps focus.
+    const wordKeys = (currentClueRef.current?.cells ?? []).map((c) => posKey(c.position.row, c.position.col));
+    const justValidated = wordKeys.some((k) => !prevValidated.has(k) && validatedPositions.has(k));
+    // Deliberately selecting an already-solved word (a tap/click landing focus on it — not an arrow step, a Tab jump, or a fresh this-tick completion) keeps focus so the player can act on its clue (e.g. report it). Without this the firewall bounces to the next unsolved word.
+    if (!adjacent && !wasJump && !justValidated) return;
     const vec =
       adjacent && prev
         ? { dr: cur.row - prev.row, dc: cur.col - prev.col }
         : { dr: fDir === 'down' ? 1 : 0, dc: fDir === 'across' ? 1 : 0 };
     const target = findNextEditable(cur, vec, validatedPositions, adjacent);
-    // Only advance if the WHOLE current word is solved; partial or wrong keeps focus.
-    const wordKeys = (currentClueRef.current?.cells ?? []).map((c) => posKey(c.position.row, c.position.col));
     const fullySolved = wordKeys.length > 0 && wordKeys.every((k) => validatedPositions.has(k));
     if (target && (fullySolved || wordKeys.includes(posKey(target.row, target.col)))) {
       inputAt(target.row, target.col)?.focus();
@@ -121,8 +124,7 @@ export function useAdvanceOnValidation({
         cycleClueRef.current(tabDirRef.current);
       };
       // Celebrate only when THIS word's cells just validated this tick, not when tabbing onto a solved clue.
-      const celebrate = wordKeys.some((k) => !prevValidated.has(k) && validatedPositions.has(k));
-      if (celebrate) {
+      if (justValidated) {
         // The board runs the beat (halo + haptic) off the same diff, then calls onBeatComplete → this advance.
         pendingAdvanceRef.current = advance;
         return;

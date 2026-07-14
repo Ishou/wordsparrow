@@ -115,6 +115,20 @@ describe('useAdvanceOnValidation', () => {
     expect(document.activeElement).toBe(lastA);
   });
 
+  it('does NOT advance when focus lands on an already-validated word (tap-to-report)', () => {
+    const { container, validate } = renderHarness();
+    // Word A is already fully validated from a prior tick; nothing is focused yet.
+    validate(WORD_A);
+
+    // The player taps word A's definition cell → focus lands on its first (locked) cell.
+    const firstA = inputAt(container, 0, 1)!;
+    act(() => firstA.focus());
+
+    // Focus must STAY on the tapped validated word so its clue can be reported —
+    // the firewall must not bounce the cursor to the next unsolved word.
+    expect(document.activeElement).toBe(firstA);
+  });
+
   it('suppresses advancing once the whole grid is completed', () => {
     const { container, validate, runBeat } = renderHarness(true);
     const lastA = inputAt(container, 0, 2)!;
