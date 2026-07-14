@@ -619,7 +619,8 @@ class UpdateCellUseCase(
                 } catch (cause: CancellationException) {
                     throw cause
                 } catch (cause: Exception) {
-                    log.warn(
+                    // ERROR not WARN: a validation dependency that rejects/errors us means co-op word-checking is broken for players — an incident (it must trip the ERROR-log-burst alert), not a recoverable blip.
+                    log.error(
                         "coop.word_validate_failed lobbyId={} puzzleId={} position={} cause={}",
                         lobbyId.value,
                         session.puzzle.id,
