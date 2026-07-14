@@ -1,0 +1,75 @@
+{
+  "alert": "BlissServiceAuthRejected",
+  "alertType": "LOGS_BASED_ALERT",
+  "description": "grid-api rejected a service-to-service call for a bad/missing X-Service-Token on an internal-only endpoint (validate-word / resolve-word). These endpoints sit off public ingress, so a rejection means a legitimate caller's WORD_VALIDATE_SERVICE_TOKEN drifted - not an attacker. This is the direct signal for the token-drift class (the 2026-07-14 co-op outage), unsampled and earlier than the caller-side error.",
+  "ruleType": "threshold_rule",
+  "version": "v5",
+  "schemaVersion": "v2alpha1",
+  "condition": {
+    "compositeQuery": {
+      "queryType": "builder",
+      "panelType": "graph",
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "stepInterval": 0,
+            "signal": "logs",
+            "source": "",
+            "aggregations": [
+              {
+                "expression": "count()"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = 'grid-api' AND body LIKE '%service_auth_rejected%'"
+            },
+            "having": {
+              "expression": ""
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "warning",
+          "op": "above",
+          "matchType": "in_total",
+          "target": 2,
+          "channels": [
+            "alerts@wordsparrow.io"
+          ]
+        }
+      ]
+    }
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "5m",
+      "frequency": "1m"
+    }
+  },
+  "labels": {
+    "severity": "warning",
+    "component": "grid"
+  },
+  "annotations": {
+    "summary": "grid-api is rejecting internal service-token calls",
+    "description": "{{$value}} service-auth rejections in 5m on grid-api's internal endpoints (validate-word / resolve-word). A legitimate caller (game-api, survey-api) is presenting a stale/missing WORD_VALIDATE_SERVICE_TOKEN - the shared token has drifted between services. Co-op word validation and word resolution are broken. Fix: re-sync the token across bliss-game-api-env / wordsparrow-api-env (and the survey caller) and roll the affected pods."
+  },
+  "notificationSettings": {
+    "renotify": {
+      "enabled": true,
+      "interval": "1h",
+      "alertStates": [
+        "firing"
+      ]
+    }
+  }
+}

@@ -636,12 +636,7 @@ fun Route.puzzles(
     // Internal per-word oracle (ADR-0084). Token-gated first so an unauthenticated caller learns nothing, not even puzzle existence.
     post("/v1/puzzles/{puzzleId}/validate-word") {
         if (!serviceTokenMatches(wordValidateServiceToken, call.request.headers["X-Service-Token"])) {
-            call.respondProblem(
-                status = HttpStatusCode.Unauthorized,
-                title = "Authentification de service requise",
-                type = SERVICE_AUTH_REQUIRED_TYPE,
-                detail = "Cet endpoint interne nécessite un jeton de service valide.",
-            )
+            call.respondServiceAuthRequired("validate-word", log)
             return@post
         }
 
@@ -694,12 +689,7 @@ fun Route.puzzles(
     // Internal plaintext answer-word resolver (ADR-0111). Token-gated first so an unauthenticated caller learns nothing, not even puzzle existence.
     post("/v1/puzzles/{puzzleId}/resolve-word") {
         if (!serviceTokenMatches(wordValidateServiceToken, call.request.headers["X-Service-Token"])) {
-            call.respondProblem(
-                status = HttpStatusCode.Unauthorized,
-                title = "Authentification de service requise",
-                type = SERVICE_AUTH_REQUIRED_TYPE,
-                detail = "Cet endpoint interne nécessite un jeton de service valide.",
-            )
+            call.respondServiceAuthRequired("resolve-word", log)
             return@post
         }
 
@@ -898,6 +888,24 @@ private fun parseUuid(raw: String): UUID? =
     } catch (_: IllegalArgumentException) {
         null
     }
+
+// Both internal endpoints (validate-word, resolve-word) sit off public ingress, so a service-token rejection means a caller's token drifted, not an attacker — log it (logs are unsampled, unlike the 10% traced spans) so a service-auth-rejection alert can fire.
+private suspend fun io.ktor.server.application.ApplicationCall.respondServiceAuthRequired(
+    endpoint: String,
+    log: org.slf4j.Logger,
+) {
+    log.warn(
+        "service_auth_rejected endpoint={} tokenPresent={}",
+        endpoint,
+        !request.headers["X-Service-Token"].isNullOrEmpty(),
+    )
+    respondProblem(
+        status = HttpStatusCode.Unauthorized,
+        title = "Authentification de service requise",
+        type = SERVICE_AUTH_REQUIRED_TYPE,
+        detail = "Cet endpoint interne nécessite un jeton de service valide.",
+    )
+}
 
 private suspend fun io.ktor.server.application.ApplicationCall.respondProblem(
     status: HttpStatusCode,
