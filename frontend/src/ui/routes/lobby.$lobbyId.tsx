@@ -3,7 +3,7 @@
 import { createRoute, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LobbyClientError } from '@/application/game';
-import type { Lobby, LobbyId } from '@/domain/game';
+import type { Lobby, LobbyId, Pseudonym } from '@/domain/game';
 import { createLoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
 import { LoaderRetry } from '@/ui/v2/LoaderRetry';
 import { useOptionalAuth } from '@/ui/components/auth';
@@ -146,10 +146,14 @@ function V2LobbyPage() {
 
   const lobby = view.lobby;
 
+  // An authed user's real seat carries their account name (server-verified), so the synthesized fallback must too — otherwise a reconnect snapshot gap flashes the local guest pseudonym (ADR-0066 (d) amendment).
+  const localPseudonym =
+    auth?.state.status === 'authed' ? (auth.state.whoami.displayName as Pseudonym) : getSession().pseudonym;
+
   // Guarantee the local player's seat in the roster so their own pseudonym never blanks on rejoin (see withLocalPlayer / ADR-0018 §5).
   const rosterPlayers = useMemo(
-    () => withLocalPlayer(lobby.players, sessionId, getSession().pseudonym),
-    [lobby.players, sessionId, getSession],
+    () => withLocalPlayer(lobby.players, sessionId, localPseudonym),
+    [lobby.players, sessionId, localPseudonym],
   );
 
   // Coop win cue on the live IN_PROGRESS→COMPLETED transition (the screen unmounts into Résultats).
