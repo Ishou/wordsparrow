@@ -8,8 +8,11 @@ failures shaped as HTTP 5xx, this one sees failures shaped as
 The version-controlled rule lives at
 [`files/backend-error-log-burst.json`](./files/backend-error-log-burst.json)
 and is applied to SigNoz by the chart's post-install Job (`/api/v1/rules`).
-The JSON was validated against the live SigNoz `/api/v1/rules` endpoint
-(HTTP 200) before commit — do not hand-edit its query shape from docs.
+The JSON's query shape was validated against the live SigNoz
+`/api/v1/rules` endpoint when first authored; this change removes only
+the Flyway carve-out clause from the filter (diffed against the live
+rule) and the chart's apply Job PUTs it on deploy. Do not hand-edit the
+query shape from docs.
 
 ## Identity
 
@@ -46,16 +49,15 @@ Fires when, over a rolling **5-minute** window, the count of
 | Window           | 5 minutes (rolling)                |
 | Threshold        | `> 3`                              |
 
-The filter **excludes** the benign Flyway line `... no migration could
-be resolved ...` — Flyway emits it at ERROR on every pod/CronJob start
-(~500/hr cluster-wide, dominated by the 5-minutely process-corrections
-job) but it only means "schema is already up to date." Without the
-exclusion this alert would fire constantly. (Fixing that log's level at
-the source is tracked separately.)
+The filter no longer carves out the benign Flyway `... no migration
+could be resolved ...` line: #1623 demoted it below ERROR at the source
+in all five Flyway-running contexts, so it can no longer count toward
+this alert. (Confirmed in prod after the #1623 rollout: 0 ERROR-level
+occurrences across the API services and the 5-minutely
+process-corrections job.)
 
-Baseline at authoring (ex-Flyway, per hour): billing-api ~6, game-api
-~1.7, others ~0 — so `> 3 in 5m` clears normal noise while catching a
-systemic break.
+Baseline per hour: billing-api ~6, game-api ~1.7, others ~0 — so
+`> 3 in 5m` clears normal noise while catching a systemic break.
 
 ## Query (SigNoz builder, logs signal)
 
@@ -63,7 +65,6 @@ systemic break.
 count() WHERE
   severity_text = 'ERROR'
   AND service.name IN ('grid-api','game-api','identity-api','billing-api','survey-api')
-  AND body NOT LIKE '%no migration could be resolved%'
 ```
 
 ClickHouse equivalent (for reference; field names verified against
@@ -75,7 +76,6 @@ FROM signoz_logs.distributed_logs_v2
 WHERE severity_text = 'ERROR'
   AND resources_string['service.name'] IN
       ('grid-api','game-api','identity-api','billing-api','survey-api')
-  AND body NOT LIKE '%no migration could be resolved%'
   AND timestamp > now() - INTERVAL 5 MINUTE;
 ```
 

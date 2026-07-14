@@ -23,7 +23,7 @@
               }
             ],
             "filter": {
-              "expression": "severity_text = 'ERROR' AND service.name IN ('grid-api', 'game-api', 'identity-api', 'billing-api', 'survey-api') AND body NOT LIKE '%no migration could be resolved%'"
+              "expression": "severity_text = 'ERROR' AND service.name IN ('grid-api', 'game-api', 'identity-api', 'billing-api', 'survey-api')"
             },
             "having": {
               "expression": ""
@@ -61,7 +61,7 @@
   },
   "annotations": {
     "summary": "Backend ERROR-log burst",
-    "description": "{{$value}} ERROR-level logs in 5m from a backend service (grid/game/identity/billing/survey), excluding the benign Flyway 'no migration could be resolved' line. Catches functional incidents that do NOT surface as an HTTP 5xx. Open Logs in SigNoz filtered to severity_text=ERROR to find the failing service + stack trace."
+    "description": "{{$value}} ERROR-level logs in 5m from a backend service (grid/game/identity/billing/survey). Catches functional incidents that do NOT surface as an HTTP 5xx. Open Logs in SigNoz filtered to severity_text=ERROR to find the failing service + stack trace."
   },
   "notificationSettings": {
     "renotify": {
