@@ -342,3 +342,47 @@ seat's `userId`, so stamping a co-player seat does not perturb them.
 - The `owner_user_id` arm added by amendment (a) is retained: it still
   covers the window between the owner's leave-grace dropping their seat
   and any co-player action.
+
+## Amendment 2026-07-14 (d) — authed seats take the verified display name
+
+### Problem the original decision missed
+
+Amendment (b) threads the connect-time verified `userId` into
+`JoinLobbyUseCase` "never from the client frame", but the seat's
+**pseudonym** was still taken verbatim from the client `joinLobby`
+frame (`LobbyWebSocketRoute` → `Player(sessionId, pseudonym, …)`). The
+REST create path (`LobbiesRoute`) already overrides it with the
+verified `WhoAmI.displayName`, so the two paths disagreed: an
+authenticated player whose account display name differs from the local
+per-browser guest pseudonym (`bliss.session.pseudonym`, a random animal
+name) was seated under the **guest** name on the WS path. Two symptoms,
+both confirmed in prod (2026-07-14):
+
+- **Persistent**: when the host's seat is freed by the ADR-0018 §5
+  reconnect grace and they reconnect, the owner-re-entry arm re-seats
+  them from the client frame — overwriting the account name with the
+  guest name in the authoritative lobby and the `playerJoined`
+  broadcast.
+- **Transient**: the frontend `withLocalPlayer` fallback (which
+  synthesizes the local seat during the pre-join snapshot gap) drew the
+  pseudonym from the local guest session, flashing the guest name until
+  the real re-seat frame landed.
+
+### Decision
+
+`JoinLobbyUseCase` seats an authed socket under the connect-time
+server-verified `WhoAmI.displayName` (threaded like the `userId` in
+(b)), falling back to the client-frame pseudonym only for anon joins.
+This aligns the WS path with REST create. The frontend fallback mirrors
+it: `withLocalPlayer` uses `auth.whoami.displayName` for an authed user,
+the local guest pseudonym otherwise.
+
+### Threat model (auth-boundary-adjacent, CLAUDE.md)
+
+Strictly tighter than before: an authed client can no longer present a
+spoofed display name over the wire — the seat name is now bound to the
+identity cookie, the same trust root as (a)/(b). No new capability; anon
+joins are byte-for-byte unchanged. In-lobby rename (`RenameSelf`) is
+unchanged and still permitted; a subsequent authed reconnect re-seats
+under the account name, matching how the REST-created host already
+behaved.

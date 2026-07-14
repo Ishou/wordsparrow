@@ -408,6 +408,71 @@ class LobbyUseCasesTest {
             assertThat((out as UseCaseOutcome.Failure).error).isEqualTo(UseCaseError.WrongCode)
         }
 
+    // ADR-0066 (d): authed seat takes the verified account pseudonym, not the client frame.
+    @Test
+    fun `JoinLobby seats an authed joiner under the verified account pseudonym, not the client-sent one`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userId = userA).value
+
+            // Client frame carries a guest animal-name; the verified identity says "BobCompte".
+            val out =
+                h
+                    .joinWithVerified(
+                        lobby.id,
+                        sessionB,
+                        clientPseudonym = Pseudonym("Renard 777"),
+                        code = lobby.code.value,
+                        userId = userB,
+                        verifiedPseudonym = Pseudonym("BobCompte"),
+                    ).requireSuccess()
+
+            assertThat(out.value.players[sessionB]?.pseudonym).isEqualTo(Pseudonym("BobCompte"))
+        }
+
+    // Prod bug: owner re-entry after ADR-0018 §5 grace must not overwrite the account name with the stale guest name.
+    @Test
+    fun `JoinLobby owner re-entry seats the verified account pseudonym, not the stale client frame`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice, userId = userA).value
+            h.leave(lobby.id, sessionA).requireSuccess()
+
+            val out =
+                h
+                    .joinWithVerified(
+                        lobby.id,
+                        sessionA,
+                        clientPseudonym = Pseudonym("Renard 777"),
+                        code = null,
+                        userId = userA,
+                        verifiedPseudonym = alice,
+                    ).requireSuccess()
+
+            assertThat(out.value.players[sessionA]?.pseudonym).isEqualTo(alice)
+            assertThat(out.events[0]).isInstanceOf(LobbyEvent.PlayerJoined::class)
+        }
+
+    @Test
+    fun `JoinLobby anon joiner keeps the client-sent pseudonym when no verified identity`() =
+        runTest {
+            val h = harness()
+            val lobby = h.create(sessionA, alice).value
+
+            val out =
+                h
+                    .joinWithVerified(
+                        lobby.id,
+                        sessionB,
+                        clientPseudonym = bob,
+                        code = lobby.code.value,
+                        userId = null,
+                        verifiedPseudonym = null,
+                    ).requireSuccess()
+
+            assertThat(out.value.players[sessionB]?.pseudonym).isEqualTo(bob)
+        }
+
     // ADR-0029 — owner-only rotation. Tests verify the owner gate, the
     // in-place code update, and that the OLD code stops working.
 
@@ -1162,6 +1227,15 @@ internal class Harness(
         code: String?,
         userId: UserId?,
     ) = join.invoke(l, s, p, code, userId)
+
+    suspend fun joinWithVerified(
+        l: LobbyId,
+        s: SessionId,
+        clientPseudonym: Pseudonym,
+        code: String?,
+        userId: UserId?,
+        verifiedPseudonym: Pseudonym?,
+    ) = join.invoke(l, s, clientPseudonym, code, userId, verifiedPseudonym)
 
     suspend fun rename(
         l: LobbyId,
