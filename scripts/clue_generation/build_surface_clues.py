@@ -31,6 +31,10 @@ inflection_status values:
                               (La sueur apparaît) but the surface forced a
                               1st/2nd person (transpireras). Routed to dropped
                               — the person disagrees inside the clue.
+  - "subject-number-mismatch": plural noun answer clued with a singular subject
+                              pronoun (`œils → "Il permet de voir"`, `mains →
+                              "Elle a cinq doigts"`). Routed to dropped — the
+                              pronoun stands for the answer and must be plural.
   - "passe-simple-person"   : 1st/2nd-person passé-simple surface (considérai).
                               Routed to dropped — the inflated head reads as
                               archaic (Tins compte de); 3rd person is kept.
@@ -132,6 +136,35 @@ def _head_reads_as_pp_adjective(text: str, index: MorphologyIndex) -> bool:
                 continue
             return any("adv" in tags for _lemma, tags in index.lookup_form(nlow))
         return True  # bare head — reads as a predicative adjective
+    return False
+
+
+# Impersonal `il` (il y a / il faut / il pleut) heads a clause that doesn't stand for the answer.
+_IMPERSONAL_IL_VERBS = {"faut", "pleut", "neige", "gèle", "grêle", "vente", "bruine", "importe", "suffit"}
+# _NUMBER_TOK_RE drops the apostrophe, so match `il s'agit` via regex, not toks[1] == "agit" (which would also wrongly exempt the personal "il agit").
+_IMPERSONAL_IL_SAGIT_RE = re.compile(r"\bil\s+(?:ne\s+)?s['’]agit\b", re.IGNORECASE)
+
+
+def _clue_subject_number_disagrees(text: str, surface_tags) -> bool:
+    """True when a plural surface is clued with a singular subject pronoun (Il/Elle) that stands for the answer, so it must be plural."""
+    if "pl" not in surface_tags:
+        return False
+    if _IMPERSONAL_IL_SAGIT_RE.search(text):
+        return False
+    toks = _NUMBER_TOK_RE.findall(text)
+    if len(toks) < 2:
+        return False
+    p = toks[0].lower()
+    if p == "elle":
+        return True
+    if p == "il":
+        i = 1
+        while i < len(toks) and toks[i].lower() in ("ne", "n"):
+            i += 1
+        if i >= len(toks):
+            return False
+        nxt = toks[i].lower()
+        return nxt != "y" and nxt not in _IMPERSONAL_IL_VERBS
     return False
 
 
@@ -280,6 +313,9 @@ def build_surface_rows(
                 clue, status = classify_surface_inflection(source_clue, norm_tags, index)
             if not fits_single_cell(clue):
                 continue
+            # A plural noun answer led by a singular subject pronoun disagrees regardless of how the clue was produced (verbatim/inflected/head-pos-mismatch).
+            if cand_pos == "nom" and _clue_subject_number_disagrees(clue, cand_tags):
+                status = "subject-number-mismatch"
             status_counter[status] += 1
             rows.append({
                 "surface": surface,
@@ -374,7 +410,7 @@ def main() -> None:
             "pp-only-skipped", "pp-reflexive-skipped", "neg-nonfinite-skipped",
             "no-inflection-finite", "agreement-mismatch",
             "subject-person-mismatch", "passe-simple-person",
-            "pp-adjective-homograph",
+            "pp-adjective-homograph", "subject-number-mismatch",
         )
         if skipped or s < args.threshold:
             dropped.append(r)

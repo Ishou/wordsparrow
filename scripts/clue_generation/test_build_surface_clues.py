@@ -118,3 +118,81 @@ def test_pp_fem_pl_homograph_head_past_leading_non_matching_content_word() -> No
     assert len(rows) == 1, rows
     assert rows[0]["clue"] == "Capable de satisfaites", rows
     assert rows[0]["inflection_status"] == "pp-adjective-homograph", rows
+
+
+def _number_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "œil", "œil", "nom mas sg")
+    _add(idx, "œil", "œils", "nom mas pl")
+    _add(idx, "main", "main", "nom fem sg")
+    _add(idx, "main", "mains", "nom fem pl")
+    _add(idx, "doigt", "doigt", "nom mas sg")
+    _add(idx, "doigt", "doigts", "nom mas pl")
+    _add(idx, "permettre", "permet", "v3__t___zz ipre 3sg")
+    _add(idx, "voir", "voir", "v3__t___zz infi")
+    _add(idx, "avoir", "a", "v3__t___zz ipre 3sg")
+    _add(idx, "falloir", "faut", "v3__i___zz ipre 3sg")
+    return idx
+
+
+def test_plural_noun_with_singular_il_clue_is_dropped() -> None:
+    """`œils → "Il permet de voir"`: singular pronoun on a plural noun answer."""
+    idx = _number_index()
+    corpus = {("œil", "nom"): [_clue("œil", "nom", "Il permet de voir")]}
+    rows = build_surface_rows("œils", corpus, idx, {})
+    assert rows[0]["inflection_status"] == "subject-number-mismatch", rows
+
+
+def test_plural_noun_with_singular_elle_clue_is_dropped() -> None:
+    """`mains → "Elle a cinq doigts"`: singular Elle on a plural noun answer."""
+    idx = _number_index()
+    corpus = {("main", "nom"): [_clue("main", "nom", "Elle a cinq doigts")]}
+    rows = build_surface_rows("mains", corpus, idx, {})
+    assert rows[0]["inflection_status"] == "subject-number-mismatch", rows
+
+
+def test_singular_noun_with_singular_il_clue_is_kept() -> None:
+    """No over-drop: the singular surface (œil) keeps its singular-pronoun clue."""
+    idx = _number_index()
+    corpus = {("œil", "nom"): [_clue("œil", "nom", "Il permet de voir")]}
+    rows = build_surface_rows("œil", corpus, idx, {})
+    assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
+
+
+def test_plural_noun_with_impersonal_il_is_kept() -> None:
+    """Impersonal `il faut` doesn't stand for the answer — not a disagreement."""
+    idx = _number_index()
+    corpus = {("œil", "nom"): [_clue("œil", "nom", "Il faut voir")]}
+    rows = build_surface_rows("œils", corpus, idx, {})
+    assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
+
+
+def test_plural_noun_with_impersonal_il_sagit_is_kept() -> None:
+    """`Il s'agit de ...` is impersonal and doesn't stand for the answer; the apostrophe token split must not defeat detection."""
+    idx = _number_index()
+    corpus = {("œil", "nom"): [_clue("œil", "nom", "Il s'agit de voir")]}
+    rows = build_surface_rows("œils", corpus, idx, {})
+    assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
+
+
+def test_plural_noun_with_negated_impersonal_il_faut_is_kept() -> None:
+    """`Il ne faut pas ...` is impersonal; the negation particle must not defeat detection of `faut`."""
+    idx = _number_index()
+    corpus = {("œil", "nom"): [_clue("œil", "nom", "Il ne faut pas rêver")]}
+    rows = build_surface_rows("œils", corpus, idx, {})
+    assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
+
+
+def test_plural_noun_with_negated_impersonal_il_y_a_is_kept() -> None:
+    """`Il n'y a pas ...` is impersonal; the apostrophe token split must not defeat detection of `y`."""
+    idx = _number_index()
+    corpus = {("œil", "nom"): [_clue("œil", "nom", "Il n'y a pas de doute")]}
+    rows = build_surface_rows("œils", corpus, idx, {})
+    assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
+
+
+def test_plural_noun_with_negated_il_sagit_is_kept() -> None:
+    """`Il ne s'agit pas de ...` is impersonal despite the negation between il and s'agit."""
+    idx = _number_index()
+    rows = build_surface_rows("œils", {("œil", "nom"): [_clue("œil", "nom", "Il ne s'agit pas de voir")]}, idx, {})
+    assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
