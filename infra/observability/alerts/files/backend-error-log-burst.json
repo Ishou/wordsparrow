@@ -1,0 +1,75 @@
+{
+  "alert": "BlissBackendErrorLogBurst",
+  "alertType": "LOGS_BASED_ALERT",
+  "description": "A backend service is emitting ERROR-level logs above baseline - a functional incident that may not surface as an HTTP 5xx (a rejected internal call, a failed background job, an unhandled exception).",
+  "ruleType": "threshold_rule",
+  "version": "v5",
+  "schemaVersion": "v2alpha1",
+  "condition": {
+    "compositeQuery": {
+      "queryType": "builder",
+      "panelType": "graph",
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "stepInterval": 0,
+            "signal": "logs",
+            "source": "",
+            "aggregations": [
+              {
+                "expression": "count()"
+              }
+            ],
+            "filter": {
+              "expression": "severity_text = 'ERROR' AND service.name IN ('grid-api', 'game-api', 'identity-api', 'billing-api', 'survey-api') AND body NOT LIKE '%no migration could be resolved%'"
+            },
+            "having": {
+              "expression": ""
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "warning",
+          "op": "above",
+          "matchType": "in_total",
+          "target": 3,
+          "channels": [
+            "alerts@wordsparrow.io"
+          ]
+        }
+      ]
+    }
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "5m",
+      "frequency": "1m"
+    }
+  },
+  "labels": {
+    "severity": "warning",
+    "component": "backend"
+  },
+  "annotations": {
+    "summary": "Backend ERROR-log burst",
+    "description": "{{$value}} ERROR-level logs in 5m from a backend service (grid/game/identity/billing/survey), excluding the benign Flyway 'no migration could be resolved' line. Catches functional incidents that do NOT surface as an HTTP 5xx. Open Logs in SigNoz filtered to severity_text=ERROR to find the failing service + stack trace."
+  },
+  "notificationSettings": {
+    "renotify": {
+      "enabled": true,
+      "interval": "2h",
+      "alertStates": [
+        "firing"
+      ]
+    }
+  }
+}
