@@ -146,7 +146,7 @@ function V2LobbyPage() {
 
   const lobby = view.lobby;
 
-  // An authed user's real seat carries their account name (server-verified), so the synthesized fallback must too — otherwise a reconnect snapshot gap flashes the local guest pseudonym (ADR-0066 (b) 2026-07-14 amendment).
+  // An authed user's real seat carries their account name (server-verified), so the synthesized fallback must too — otherwise a reconnect snapshot gap flashes the local guest pseudonym (ADR-0066 (d) amendment).
   const localPseudonym =
     auth?.state.status === 'authed' ? (auth.state.whoami.displayName as Pseudonym) : getSession().pseudonym;
 
