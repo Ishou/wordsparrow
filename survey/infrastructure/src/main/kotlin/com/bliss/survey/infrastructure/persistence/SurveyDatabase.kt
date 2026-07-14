@@ -36,6 +36,7 @@ object SurveyDatabase {
             .dataSource(ds)
             .table(FLYWAY_HISTORY_TABLE)
             .locations("classpath:db/migration")
+            .loggers("com.bliss.survey.infrastructure.persistence.FlywayNoiseFilteringLogCreator")
             .load()
             .migrate()
     }

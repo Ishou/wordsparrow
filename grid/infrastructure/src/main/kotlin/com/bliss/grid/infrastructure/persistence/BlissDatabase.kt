@@ -91,6 +91,7 @@ class BlissDatabase(
                 .configure()
                 .dataSource(ds)
                 .locations("classpath:db/migration")
+                .loggers("com.bliss.grid.infrastructure.persistence.FlywayNoiseFilteringLogCreator")
                 .load()
                 .migrate()
         log.info(

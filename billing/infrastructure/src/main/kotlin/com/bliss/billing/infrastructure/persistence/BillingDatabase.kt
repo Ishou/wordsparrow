@@ -79,6 +79,7 @@ class BillingDatabase(
                 .configure()
                 .dataSource(ds)
                 .locations("classpath:db/migration")
+                .loggers("com.bliss.billing.infrastructure.persistence.FlywayNoiseFilteringLogCreator")
                 .table("flyway_schema_history_billing")
                 .load()
                 .migrate()

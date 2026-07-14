@@ -79,6 +79,7 @@ class IdentityDatabase(
                 .configure()
                 .dataSource(ds)
                 .locations("classpath:db/migration")
+                .loggers("com.bliss.identity.infrastructure.persistence.FlywayNoiseFilteringLogCreator")
                 .table("flyway_schema_history_identity")
                 .load()
                 .migrate()
