@@ -280,6 +280,17 @@ export function LiveCoopScreen({
     return orderedClues.findIndex((c) => c.key === k);
   }, [clue, orderedClues]);
 
+  // Rail stays mounted from init (before any focus) so the board fit reserves its height and never shifts when it later appears — same sticky-fallback as solo PlayScreen. Shows the live clue on focus, the last clue on blur, the first unfilled clue on load.
+  const [lastOrdinal, setLastOrdinal] = useState(() => {
+    const i = orderedClues.findIndex((c) => c.cells.some((p) => !entryAt.has(posKey(p.row, p.col))));
+    return i < 0 ? 0 : i;
+  });
+  useEffect(() => {
+    if (clueOrdinal >= 0) setLastOrdinal(clueOrdinal);
+  }, [clueOrdinal]);
+  const displayOrdinal = clueOrdinal >= 0 ? clueOrdinal : lastOrdinal;
+  const displayClue = orderedClues[displayOrdinal];
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Tab') advance.markJump(e.shiftKey ? -1 : 1);
@@ -343,15 +354,15 @@ export function LiveCoopScreen({
       }
       bottomBar={
         <div className={bottomBar} ref={bottomRef}>
-          {clue && clueOrdinal >= 0 ? (
+          {displayClue ? (
             <ClueRail
-              direction={clue.direction === 'across' ? 'horizontal' : 'vertical'}
-              directionLabel={t(clue.direction === 'across' ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
-              clue={clue.clue.text}
-              index={clueOrdinal + 1}
+              direction={displayClue.across ? 'horizontal' : 'vertical'}
+              directionLabel={t(displayClue.across ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
+              clue={displayClue.text}
+              index={displayOrdinal + 1}
               total={orderedClues.length}
               groupLabel={t('clueRail.aria.group')}
-              counterLabel={t('clueRail.aria.counter', { index: clueOrdinal + 1, total: orderedClues.length })}
+              counterLabel={t('clueRail.aria.counter', { index: displayOrdinal + 1, total: orderedClues.length })}
               prevLabel={t('clueRail.aria.prev')}
               nextLabel={t('clueRail.aria.next')}
               zoomInLabel={t('clueRail.aria.zoomIn')}
@@ -365,7 +376,7 @@ export function LiveCoopScreen({
                   <ReportClueSheet
                     surveyClient={surveyClient}
                     surface="multiplayer"
-                    clueText={clue.clue.text}
+                    clueText={displayClue.text}
                     puzzleId={puzzle.id}
                   />
                 ) : undefined
