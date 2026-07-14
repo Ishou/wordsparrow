@@ -141,8 +141,7 @@ def _head_reads_as_pp_adjective(text: str, index: MorphologyIndex) -> bool:
 
 # Impersonal `il` (il y a / il faut / il pleut) heads a clause that doesn't stand for the answer.
 _IMPERSONAL_IL_VERBS = {"faut", "pleut", "neige", "gèle", "grêle", "vente", "bruine", "importe", "suffit"}
-# `_NUMBER_TOK_RE` drops apostrophes, so `il s'agit` can't be caught via toks[1] == "agit"
-# (that would also wrongly exempt the non-reflexive, non-impersonal "il agit").
+# _NUMBER_TOK_RE drops the apostrophe, so match `il s'agit` via regex, not toks[1] == "agit" (which would also wrongly exempt the personal "il agit").
 _IMPERSONAL_IL_SAGIT_RE = re.compile(r"\bil\s+s['’]agit\b", re.IGNORECASE)
 
 
