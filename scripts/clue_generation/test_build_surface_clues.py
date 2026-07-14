@@ -173,3 +173,19 @@ def test_plural_noun_with_impersonal_il_sagit_is_kept() -> None:
     corpus = {("œil", "nom"): [_clue("œil", "nom", "Il s'agit de voir")]}
     rows = build_surface_rows("œils", corpus, idx, {})
     assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
+
+
+def test_plural_noun_with_negated_impersonal_il_faut_is_kept() -> None:
+    """`Il ne faut pas ...` is impersonal; the negation particle must not defeat detection of `faut`."""
+    idx = _number_index()
+    corpus = {("œil", "nom"): [_clue("œil", "nom", "Il ne faut pas rêver")]}
+    rows = build_surface_rows("œils", corpus, idx, {})
+    assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
+
+
+def test_plural_noun_with_negated_impersonal_il_y_a_is_kept() -> None:
+    """`Il n'y a pas ...` is impersonal; the apostrophe token split must not defeat detection of `y`."""
+    idx = _number_index()
+    corpus = {("œil", "nom"): [_clue("œil", "nom", "Il n'y a pas de doute")]}
+    rows = build_surface_rows("œils", corpus, idx, {})
+    assert rows[0]["inflection_status"] != "subject-number-mismatch", rows

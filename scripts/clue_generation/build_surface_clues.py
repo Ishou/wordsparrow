@@ -158,7 +158,12 @@ def _clue_subject_number_disagrees(text: str, surface_tags) -> bool:
     if p == "elle":
         return True
     if p == "il":
-        nxt = toks[1].lower()
+        i = 1
+        while i < len(toks) and toks[i].lower() in ("ne", "n"):
+            i += 1
+        if i >= len(toks):
+            return False
+        nxt = toks[i].lower()
         return nxt != "y" and nxt not in _IMPERSONAL_IL_VERBS
     return False
 
