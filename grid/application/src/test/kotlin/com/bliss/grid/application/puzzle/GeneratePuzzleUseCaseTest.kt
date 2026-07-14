@@ -39,6 +39,29 @@ class GeneratePuzzleUseCaseTest {
     }
 
     @Test
+    fun `parallel best-of-N returns a valid grid`() {
+        val useCase =
+            GeneratePuzzleUseCase(
+                wordRepository = AlwaysMatchingRepository,
+                defaults = GridConstraints(width = 5, height = 5),
+                bestOfN = 4,
+            )
+        assertThat(useCase.execute()).isNotNull()
+    }
+
+    @Test
+    fun `parallel best-of-N returns null when every candidate fails`() {
+        val useCase =
+            GeneratePuzzleUseCase(
+                wordRepository = EmptyWordRepository,
+                defaults = GridConstraints(width = 5, height = 5),
+                maxAttempts = 1,
+                bestOfN = 4,
+            )
+        assertThat(useCase.execute()).isNull()
+    }
+
+    @Test
     fun `returns null after exhausting maxAttempts with empty vocabulary`() {
         val useCase =
             GeneratePuzzleUseCase(
