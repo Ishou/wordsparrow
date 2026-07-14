@@ -189,3 +189,10 @@ def test_plural_noun_with_negated_impersonal_il_y_a_is_kept() -> None:
     corpus = {("œil", "nom"): [_clue("œil", "nom", "Il n'y a pas de doute")]}
     rows = build_surface_rows("œils", corpus, idx, {})
     assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
+
+
+def test_plural_noun_with_negated_il_sagit_is_kept() -> None:
+    """`Il ne s'agit pas de ...` is impersonal despite the negation between il and s'agit."""
+    idx = _number_index()
+    rows = build_surface_rows("œils", {("œil", "nom"): [_clue("œil", "nom", "Il ne s'agit pas de voir")]}, idx, {})
+    assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
