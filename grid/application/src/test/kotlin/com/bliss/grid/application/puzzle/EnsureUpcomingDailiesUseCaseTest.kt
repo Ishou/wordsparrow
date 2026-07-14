@@ -5,8 +5,10 @@ import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import assertk.assertions.isLessThan
 import com.bliss.grid.domain.generation.ClueCooldownPolicy
+import com.bliss.grid.domain.generation.LongWordCoverage
 import com.bliss.grid.domain.model.ClueCell
 import com.bliss.grid.domain.model.Column
 import com.bliss.grid.domain.model.Direction
@@ -209,6 +211,36 @@ class EnsureUpcomingDailiesUseCaseTest {
     }
 
     @Test
+    fun `best-of-N prefers higher long-word coverage over sparsity`() {
+        val repo = TrackingPuzzleRepository()
+        val innerAttempts = 100
+        // Candidate 0: sparse (2 clue cells) but zero long-word coverage.
+        // Candidate 1: more clue cells but a long word -> higher coverage; must win.
+        val port =
+            RecordingPort(
+                grids = { call ->
+                    val candidateIndex = (call.seed - today.toEpochDay() * 1_000_000_000L) / innerAttempts
+                    if (candidateIndex.toInt() == 0) gridWithClueCellCount(2) else gridWithLongWord()
+                },
+            )
+        val useCase =
+            EnsureUpcomingDailiesUseCase(
+                puzzleRepository = repo,
+                gridGenerationPort = port,
+                dailyPuzzleSelector = selector,
+                windowDays = 1,
+                maxAttempts = 1,
+                innerAttempts = innerAttempts,
+                bestOfN = 2,
+            )
+
+        useCase.execute(today)
+
+        val persisted = repo.getCurrentForDate(today)?.puzzle?.grid
+        assertThat(persisted?.let { LongWordCoverage.coverageOf(it, 2) } ?: 0L).isGreaterThan(0L)
+    }
+
+    @Test
     fun `candidate times maxAttempts plus attempt composition avoids seed collisions across candidates`() {
         val useCase = newUseCase(TrackingPuzzleRepository(), RecordingPort(grids = { _ -> null }))
         val maxAttempts = EnsureUpcomingDailiesUseCase.DEFAULT_MAX_ATTEMPTS
@@ -257,6 +289,22 @@ class EnsureUpcomingDailiesUseCaseTest {
                 chosenClue = word.clues.first(),
             )
         return Grid.fromPlacements(width = 5, height = 5, placements = listOf(placement))
+    }
+
+    /** 15x6 grid with a length-12 horizontal word (high coverage) plus short words (extra clue cells). */
+    private fun gridWithLongWord(): Grid {
+        val long =
+            WordPlacement(
+                word = Word(text = "ABCDEFGHIJKL", definition = "long"),
+                cluePosition = Position(Row(0), Column(0)),
+                direction = Direction.RIGHT,
+            )
+        val clutter =
+            (2..4).map { r ->
+                val word = Word(text = "W${'A' + r}", definition = "short")
+                WordPlacement(word, Position(Row(r), Column(0)), Direction.RIGHT)
+            }
+        return Grid.fromPlacements(width = 15, height = 6, placements = listOf(long) + clutter)
     }
 
     private fun gridWithClueCellCount(count: Int): Grid {
