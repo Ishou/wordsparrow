@@ -99,7 +99,9 @@ function letterInput(row: number, col: number): HTMLInputElement {
 describe('v2 LiveCoopScreen', () => {
   it('renders the board, the timer and the roster', () => {
     renderScreen();
-    expect(screen.getByText('Affirmation')).toBeTruthy();
+    // The clue rail is mounted from init (before any cell is focused) so the board fit reserves its height and never shifts when it appears; it shows the first clue.
+    const rail = screen.getByRole('group', { name: 'Indice actif' });
+    expect(within(rail).getByText('Affirmation')).toBeTruthy();
     expect(screen.getByRole('timer')).toBeTruthy();
     expect(letterInput(0, 1)).toBeTruthy();
     const roster = screen.getByRole('list', { name: 'Joueurs' });
