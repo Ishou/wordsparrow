@@ -1,10 +1,6 @@
 name: Deploy Observability (SigNoz umbrella chart)
 
-# CD for the SigNoz umbrella chart (infra/observability/; ADR-0027, ADR-0038).
-# workflow_dispatch only — the chart bundles the ClickHouse StatefulSet and the
-# telemetrystore-migrator Job, so an upgrade can restart telemetry storage and run
-# a schema migration. Deploy deliberately in a low-traffic window, not on every push.
-# Alert rules and dashboards keep their own push-triggered workflows.
+# CD for the SigNoz umbrella chart (infra/observability/; ADR-0027, ADR-0038). workflow_dispatch only — rationale in docs/deploy.md.
 
 on:
   workflow_dispatch:
