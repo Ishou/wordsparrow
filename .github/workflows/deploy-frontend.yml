@@ -51,19 +51,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
 
       - name: Set up pnpm
-        # pnpm/action-setup v4.0.0
-        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
+        # pnpm/action-setup v6.0.9
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
           version: '11.7.0'
           run_install: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: frontend/.nvmrc
           cache: 'pnpm'
@@ -124,7 +124,7 @@ jobs:
       - name: Publish to Cloudflare Workers
         id: publish
         # wrangler-action v4.0.0 pinned by SHA (ADR-0090); the wrangler version comes from the frontend lockfile.
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -134,7 +134,7 @@ jobs:
 
       - name: Comment preview URL on PR
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           PREVIEW_URL: ${{ steps.publish.outputs.deployment-url }}
         with:
@@ -157,7 +157,7 @@ jobs:
       - name: Register preview as a GitHub deployment
         # Surfaces the Workers preview as an Environment in the PR (the "View deployment" link Pages used to create for free; ADR-0090 only comments the URL).
         if: ${{ github.event_name == 'pull_request' && steps.publish.outputs.deployment-url != '' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           PREVIEW_URL: ${{ steps.publish.outputs.deployment-url }}
         with:
@@ -206,7 +206,7 @@ jobs:
           } > lighthouse-handoff/handoff.txt
 
       - name: Upload Lighthouse handoff artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lighthouse-handoff
           path: lighthouse-handoff/handoff.txt
@@ -220,19 +220,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
 
       - name: Set up pnpm
-        # pnpm/action-setup v4.0.0
-        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
+        # pnpm/action-setup v6.0.9
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
           version: '11.7.0'
           run_install: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: frontend/.nvmrc
           cache: 'pnpm'
@@ -244,7 +244,7 @@ jobs:
 
       - name: Publish legacy redirect stub to Pages
         # wrangler warns that wrangler.jsonc is not a Pages config and ignores it; the stub dir is the deploy source.
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -265,7 +265,7 @@ jobs:
           } > lighthouse-handoff/handoff.txt
 
       - name: Upload Lighthouse handoff artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lighthouse-handoff
           path: lighthouse-handoff/handoff.txt

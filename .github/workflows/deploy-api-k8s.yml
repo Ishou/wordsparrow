@@ -256,15 +256,15 @@ jobs:
 
       - name: Checkout repository
         if: env.RUN_ROW == 'true'
-        # actions/checkout v4.3.1 — same SHA as helm-lint.yml.
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        # actions/checkout v7.0.0 — same SHA as helm-lint.yml.
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
 
       - name: Set up Helm
         if: env.RUN_ROW == 'true'
-        # azure/setup-helm v4.3.1 — same SHA as helm-lint.yml.
-        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        # azure/setup-helm v5.0.1 — same SHA as helm-lint.yml.
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: v4.2.1
 
@@ -272,8 +272,8 @@ jobs:
         # Cross-workflow artifact download: the build workflow uploaded
         # `image-digest-<context>` in the run identified by `workflow_run.id`.
         if: env.RUN_ROW == 'true' && github.event_name == 'workflow_run'
-        # actions/download-artifact v4.3.0
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        # actions/download-artifact v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ matrix.digest-artifact }}
           path: artifact
@@ -313,8 +313,8 @@ jobs:
         # main digest above. No-op for rows whose worker-digest-artifact
         # is empty (e.g. game).
         if: env.RUN_ROW == 'true' && github.event_name == 'workflow_run' && matrix.worker-digest-artifact != ''
-        # actions/download-artifact v4.3.0 — same SHA as above.
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        # actions/download-artifact v8.0.1 — same SHA as above.
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ matrix.worker-digest-artifact }}
           path: worker-artifact
