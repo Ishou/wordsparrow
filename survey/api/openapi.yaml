@@ -396,6 +396,25 @@ paths:
         '403': { $ref: '#/components/responses/ProblemDetails' }
         '404': { $ref: '#/components/responses/ProblemDetails' }
 
+  /v1/signalements/historique:
+    get:
+      operationId: listHandledSignalements
+      summary: List already-handled reports (maintainer only).
+      description: |
+        Contribuer-gated. Reports already triaged (dismissed or actioned),
+        most-recently-triaged first, capped at a recent window. Flat list, not
+        grouped — a decision acts on a single report (ADR-0103).
+      tags: [signalements]
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Handled reports, newest triaged first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignalementHistoryResponse' }
+        '403': { $ref: '#/components/responses/ProblemDetails' }
+
   /v1/health:
     get:
       operationId: getHealth
@@ -768,7 +787,7 @@ components:
       description: |
         A pending-report group keyed by clue + puzzle + reason. `reportId` is the
         latest report in the group — the id `POST /decision` acts on.
-      required: [reportId, wordText, clueText, reason, surface, puzzleId, count, latestNote, latestAt]
+      required: [reportId, wordText, clueText, reason, surface, puzzleId, count, latestNote, latestAt, mine]
       properties:
         reportId:   { type: string, format: uuid }
         wordText:
@@ -790,6 +809,12 @@ components:
         count:      { type: integer }
         latestNote: { type: string, nullable: true, description: "null when the latest report in the group carries no note." }
         latestAt:   { type: string, format: date-time }
+        mine:
+          type: boolean
+          description: |
+            True when the authenticated maintainer viewing the queue is among
+            this group's reporters (ADR-0103). Lets them deprioritise their own
+            reports. Anonymous and RGPD-anonymised reports never match.
 
     SignalementListResponse:
       type: object
@@ -798,6 +823,40 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/SignalementSummary' }
+
+    SignalementHistoryItem:
+      type: object
+      description: A single already-triaged report (ADR-0103).
+      required: [reportId, wordText, clueText, reason, surface, puzzleId, note, decision, triagedAt]
+      properties:
+        reportId:  { type: string, format: uuid }
+        wordText:
+          type: string
+          nullable: true
+          description: Server-resolved answer word; null when unresolved (ADR-0111).
+        clueText:  { type: string }
+        reason:    { $ref: '#/components/schemas/ReportReason' }
+        surface:   { $ref: '#/components/schemas/ReportSurface' }
+        puzzleId:
+          type: string
+          format: uuid
+          nullable: true
+          description: null for mini-game reports (ADR-0073).
+        note:      { type: string, nullable: true, description: "null when the report carried no note." }
+        decision:
+          type: string
+          enum: [dismiss, action]
+          x-enum-varnames: [DISMISS, ACTION]
+          description: "How it was triaged: dismiss = rejeté, action = traité."
+        triagedAt: { type: string, format: date-time }
+
+    SignalementHistoryResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SignalementHistoryItem' }
 
     SignalementDecisionRequest:
       type: object
