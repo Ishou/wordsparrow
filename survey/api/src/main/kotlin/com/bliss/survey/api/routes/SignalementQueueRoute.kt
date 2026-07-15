@@ -22,12 +22,13 @@ import java.util.UUID
 
 // Maintainer-only triage queue (ADR-0079 + ADR-0103): both routes gate on requireContribuer(); anon/player callers get 403.
 fun Route.signalementQueueRoute(
-    list: suspend () -> List<SignalementGroup>,
+    list: suspend (UserId) -> List<SignalementGroup>,
     decide: suspend (ReportId, SignalementDecision, UserId) -> DecideSignalementResult,
 ) {
     get("/v1/signalements") {
         if (!call.requireContribuer()) return@get
-        val items = list().map { it.toSummary() }
+        val viewerId = UserId(call.attributes[UserIdKey])
+        val items = list(viewerId).map { it.toSummary() }
         call.respond(HttpStatusCode.OK, SignalementListResponse(items = items))
     }
 
@@ -75,6 +76,7 @@ private fun SignalementGroup.toSummary(): SignalementSummary =
         count = count,
         latestNote = latestNote,
         latestAt = latestAt.toString(),
+        mine = mine,
     )
 
 private fun problem(

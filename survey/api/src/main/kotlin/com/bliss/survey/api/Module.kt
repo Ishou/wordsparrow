@@ -11,6 +11,7 @@ import com.bliss.survey.api.routes.meContributionsRoute
 import com.bliss.survey.api.routes.mePreferencesRoute
 import com.bliss.survey.api.routes.meProgressRoute
 import com.bliss.survey.api.routes.nextItemRoute
+import com.bliss.survey.api.routes.signalementHistoryRoute
 import com.bliss.survey.api.routes.signalementQueueRoute
 import com.bliss.survey.api.routes.submitPairRatingRoute
 import com.bliss.survey.api.routes.submitRatingRoute
@@ -106,6 +107,7 @@ fun Application.surveyApiModule(
         submitPairRatingRoute(wiring.submitPairRating)
         submitSignalementRoute(wiring.submitSignalement)
         signalementQueueRoute(wiring.listSignalements, wiring.decideSignalement)
+        signalementHistoryRoute(wiring.listHandledSignalements)
         undoActionRoute(wiring.undoAction)
         getCurrentCampaignRoute(wiring.getCurrentCampaign)
         lemmaMetaRoute(wiring.getLemmaMeta)

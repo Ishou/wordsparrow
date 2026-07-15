@@ -34,6 +34,8 @@ data class SignalementSummary(
     // Required on the wire but nullable — null when the group's latest report carries no note (ADR-0003 §6).
     val latestNote: String?,
     val latestAt: String,
+    // True when the maintainer viewing the queue is among this group's reporters (ADR-0115).
+    val mine: Boolean,
 )
 
 @Serializable
@@ -44,4 +46,24 @@ data class SignalementListResponse(
 @Serializable
 data class SignalementDecisionRequest(
     val decision: String,
+)
+
+// Maintainer history DTOs (ADR-0115): one already-triaged report; flat, not grouped.
+@Serializable
+data class SignalementHistoryItem(
+    val reportId: String,
+    val wordText: String?,
+    val clueText: String,
+    val reason: String,
+    val surface: String,
+    val puzzleId: String?,
+    val note: String?,
+    // "dismiss" (rejeté) or "action" (traité).
+    val decision: String,
+    val triagedAt: String,
+)
+
+@Serializable
+data class SignalementHistoryResponse(
+    val items: List<SignalementHistoryItem>,
 )

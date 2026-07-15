@@ -20,6 +20,9 @@ interface SignalementRepository {
 
     suspend fun listPending(): List<PlayerReport>
 
+    /** Already-triaged reports (dismissed or actioned), newest triagedAt first, capped at [limit]. */
+    suspend fun listHandled(limit: Int): List<PlayerReport>
+
     suspend fun findById(id: ReportId): PlayerReport?
 
     suspend fun updateStatus(

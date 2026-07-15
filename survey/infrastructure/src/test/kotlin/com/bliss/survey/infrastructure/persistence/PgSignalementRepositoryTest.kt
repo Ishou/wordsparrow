@@ -141,6 +141,23 @@ class PgSignalementRepositoryTest {
         }
 
     @Test
+    fun `listHandled returns only non-pending reports, newest triaged first, capped`() =
+        runTest {
+            val triager = UserId(UUID.randomUUID())
+            val actioned = report()
+            val dismissed = report()
+            val pending = report()
+            reports.insert(actioned)
+            reports.insert(dismissed)
+            reports.insert(pending)
+            reports.updateStatus(actioned.id, ReportStatus.ACTIONED, triager, now.plusSeconds(60))
+            reports.updateStatus(dismissed.id, ReportStatus.DISMISSED, triager, now.plusSeconds(120))
+
+            assertThat(reports.listHandled(10).map { it.id }).containsExactly(dismissed.id, actioned.id)
+            assertThat(reports.listHandled(1)).hasSize(1)
+        }
+
+    @Test
     fun `updateStatus records the triage metadata`() =
         runTest {
             val r = report()
