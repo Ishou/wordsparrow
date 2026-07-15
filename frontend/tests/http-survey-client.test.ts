@@ -481,6 +481,7 @@ describe('HttpSurveyClient.listSignalements', () => {
     count: 3,
     latestNote: 'contre-sens',
     latestAt: '2026-07-11T10:00:00Z',
+    mine: false,
   };
 
   it('GETs /v1/signalements with credentials and returns the items array on 200', async () => {
@@ -504,6 +505,43 @@ describe('HttpSurveyClient.listSignalements', () => {
   it('throws a generic Error on other non-ok statuses', async () => {
     server.use(http.get(`${BASE}/v1/signalements`, () => new HttpResponse(null, { status: 500 })));
     await expect(client.listSignalements()).rejects.toThrow(/listSignalements failed: 500/);
+  });
+});
+
+describe('HttpSurveyClient.listHandledSignalements', () => {
+  const item = {
+    reportId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
+    wordText: 'CHAT',
+    clueText: 'Animal qui miaule',
+    reason: 'erreur_sens' as const,
+    surface: 'daily' as const,
+    puzzleId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b',
+    note: 'contre-sens',
+    decision: 'action' as const,
+    triagedAt: '2026-07-11T12:00:00Z',
+  };
+
+  it('GETs /v1/signalements/historique with credentials and returns the items array on 200', async () => {
+    let credentials: RequestCredentials | undefined;
+    server.use(
+      http.get(`${BASE}/v1/signalements/historique`, ({ request }) => {
+        credentials = request.credentials;
+        return HttpResponse.json({ items: [item] });
+      }),
+    );
+    const result = await client.listHandledSignalements();
+    expect(result).toEqual([item]);
+    expect(credentials).toBe('include');
+  });
+
+  it('throws ContribuerForbiddenError on 403', async () => {
+    server.use(http.get(`${BASE}/v1/signalements/historique`, () => new HttpResponse(null, { status: 403 })));
+    await expect(client.listHandledSignalements()).rejects.toBeInstanceOf(ContribuerForbiddenError);
+  });
+
+  it('throws a generic Error on other non-ok statuses', async () => {
+    server.use(http.get(`${BASE}/v1/signalements/historique`, () => new HttpResponse(null, { status: 500 })));
+    await expect(client.listHandledSignalements()).rejects.toThrow(/listHandledSignalements failed: 500/);
   });
 });
 

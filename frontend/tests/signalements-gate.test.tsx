@@ -58,6 +58,7 @@ function summary(over: Partial<SignalementSummary> = {}): SignalementSummary {
     count: 2,
     latestNote: 'contre-sens',
     latestAt: '2026-07-11T10:00:00Z',
+    mine: false,
     ...over,
   };
 }

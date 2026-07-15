@@ -30,6 +30,7 @@ function stubClient(meta: LemmaMeta): SurveyClient {
     getLemmaMeta: vi.fn().mockResolvedValue(meta),
     submitSignalement: vi.fn().mockResolvedValue({ reportId: 'report-id' }),
     listSignalements: vi.fn().mockResolvedValue([]),
+    listHandledSignalements: vi.fn().mockResolvedValue([]),
     decideSignalement: vi.fn().mockResolvedValue(undefined),
   };
 }
