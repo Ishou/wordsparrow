@@ -85,6 +85,18 @@ class PgSignalementRepository(
             }
         }
 
+    override suspend fun listHandled(limit: Int): List<PlayerReport> =
+        withContext(Dispatchers.IO) {
+            withTxConnection(dataSource) { conn ->
+                conn.prepareStatement(LIST_HANDLED_SQL).use { stmt ->
+                    stmt.setInt(1, limit)
+                    val out = mutableListOf<PlayerReport>()
+                    stmt.executeQuery().use { rs -> while (rs.next()) out += rs.toPlayerReport() }
+                    out
+                }
+            }
+        }
+
     override suspend fun findById(id: ReportId): PlayerReport? =
         withContext(Dispatchers.IO) {
             withTxConnection(dataSource) { conn ->
@@ -157,6 +169,9 @@ class PgSignalementRepository(
 
         const val LIST_PENDING_SQL =
             "SELECT * FROM player_reports WHERE status = 'pending' ORDER BY created_at"
+
+        const val LIST_HANDLED_SQL =
+            "SELECT * FROM player_reports WHERE status <> 'pending' ORDER BY triaged_at DESC LIMIT ?"
 
         const val FIND_BY_ID_SQL = "SELECT * FROM player_reports WHERE report_id = ?"
 

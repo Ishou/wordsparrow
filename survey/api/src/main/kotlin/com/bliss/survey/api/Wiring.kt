@@ -11,6 +11,7 @@ import com.bliss.survey.application.usecases.GetNextItemUseCase
 import com.bliss.survey.application.usecases.GetNextPairUseCase
 import com.bliss.survey.application.usecases.SignalementDecision
 import com.bliss.survey.application.usecases.SignalementGroup
+import com.bliss.survey.application.usecases.SignalementHistoryRow
 import com.bliss.survey.application.usecases.SubmitPairRatingCommand
 import com.bliss.survey.application.usecases.SubmitPairRatingResult
 import com.bliss.survey.application.usecases.SubmitRatingCommand
@@ -32,6 +33,7 @@ class Wiring(
     val submitPairRating: suspend (SubmitPairRatingCommand) -> SubmitPairRatingResult,
     val submitSignalement: suspend (SubmitSignalementCommand) -> SubmitSignalementResult,
     val listSignalements: suspend (UserId) -> List<SignalementGroup>,
+    val listHandledSignalements: suspend () -> List<SignalementHistoryRow>,
     val decideSignalement: suspend (ReportId, SignalementDecision, UserId) -> DecideSignalementResult,
     val undoAction: suspend (String, UserId) -> UndoActionResult,
     val getCurrentCampaign: GetCurrentCampaignUseCase,

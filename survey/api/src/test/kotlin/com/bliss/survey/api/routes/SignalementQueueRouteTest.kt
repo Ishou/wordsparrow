@@ -51,6 +51,9 @@ class SignalementQueueRouteTest {
 
         override suspend fun listPending(): List<PlayerReport> = reports.filter { it.status == ReportStatus.PENDING }
 
+        override suspend fun listHandled(limit: Int): List<PlayerReport> =
+            reports.filter { it.status != ReportStatus.PENDING }.sortedByDescending { it.triagedAt ?: Instant.MIN }.take(limit)
+
         override suspend fun findById(id: ReportId): PlayerReport? = reports.firstOrNull { it.id == id }
 
         override suspend fun updateStatus(

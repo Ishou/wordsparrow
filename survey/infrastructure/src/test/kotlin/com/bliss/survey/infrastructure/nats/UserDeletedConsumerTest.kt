@@ -368,6 +368,8 @@ class UserDeletedConsumerTest {
 
         override suspend fun listPending(): List<PlayerReport> = emptyList()
 
+        override suspend fun listHandled(limit: Int): List<PlayerReport> = emptyList()
+
         override suspend fun findById(id: ReportId): PlayerReport? = null
 
         override suspend fun updateStatus(

@@ -15,6 +15,7 @@ import com.bliss.survey.application.usecases.GetCurrentCampaignUseCase
 import com.bliss.survey.application.usecases.GetLemmaMetaUseCase
 import com.bliss.survey.application.usecases.GetNextItemUseCase
 import com.bliss.survey.application.usecases.GetNextPairUseCase
+import com.bliss.survey.application.usecases.ListHandledSignalementsUseCase
 import com.bliss.survey.application.usecases.ListSignalementsUseCase
 import com.bliss.survey.application.usecases.RecomputeTrainingWeightUseCase
 import com.bliss.survey.application.usecases.SubmitPairRatingUseCase
@@ -156,6 +157,7 @@ fun main() {
             maintainerAddress = config.maintainerEmail,
         )
     val listSignalements = ListSignalementsUseCase(signalements)
+    val listHandledSignalements = ListHandledSignalementsUseCase(signalements)
     val decideSignalement = DecideSignalementUseCase(signalements)
 
     val identityClient = IdentityClient(config.identityBaseUrl)
@@ -181,6 +183,7 @@ fun main() {
             submitPairRating = { cmd -> submitPairRating.execute(cmd) },
             submitSignalement = { cmd -> submitSignalement.execute(cmd) },
             listSignalements = { viewerId -> listSignalements.execute(viewerId) },
+            listHandledSignalements = { listHandledSignalements.execute() },
             decideSignalement = { id, decision, uid -> decideSignalement.decide(id, decision, uid, clock.now()) },
             undoAction = { token, uid -> undoAction.execute(token, uid) },
             getCurrentCampaign = getCurrentCampaign,
