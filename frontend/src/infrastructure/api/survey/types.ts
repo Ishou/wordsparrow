@@ -282,6 +282,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/signalements/historique": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List already-handled reports (maintainer only).
+         * @description Contribuer-gated. Reports already triaged (dismissed or actioned),
+         *     most-recently-triaged first, capped server-side at the 200 most
+         *     recent. Flat list, not grouped — a decision acts on a single report
+         *     (ADR-0115).
+         */
+        get: operations["listHandledSignalements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -562,9 +585,43 @@ export interface components {
             latestNote: string | null;
             /** Format: date-time */
             latestAt: string;
+            /**
+             * @description True when the authenticated maintainer viewing the queue is among
+             *     this group's reporters (ADR-0115). Lets them deprioritise their own
+             *     reports. Anonymous and RGPD-anonymised reports never match.
+             */
+            mine: boolean;
         };
         SignalementListResponse: {
             items: components["schemas"]["SignalementSummary"][];
+        };
+        /** @description A single already-triaged report (ADR-0115). */
+        SignalementHistoryItem: {
+            /** Format: uuid */
+            reportId: string;
+            /** @description Server-resolved answer word; null when unresolved (ADR-0111). */
+            wordText: string | null;
+            clueText: string;
+            reason: components["schemas"]["ReportReason"];
+            surface: components["schemas"]["ReportSurface"];
+            /**
+             * Format: uuid
+             * @description null for mini-game reports (ADR-0073).
+             */
+            puzzleId: string | null;
+            /** @description null when the report carried no note. */
+            note: string | null;
+            /**
+             * @description How it was triaged: dismiss = rejeté, action = traité.
+             * @enum {string}
+             */
+            decision: "dismiss" | "action";
+            /** Format: date-time */
+            triagedAt: string;
+        };
+        SignalementHistoryResponse: {
+            /** @description Newest-triaged first, capped server-side at 200 (ADR-0115). */
+            items: components["schemas"]["SignalementHistoryItem"][];
         };
         SignalementDecisionRequest: {
             /** @enum {string} */
@@ -987,6 +1044,27 @@ export interface operations {
             400: components["responses"]["ProblemDetails"];
             403: components["responses"]["ProblemDetails"];
             404: components["responses"]["ProblemDetails"];
+        };
+    };
+    listHandledSignalements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Handled reports, newest triaged first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalementHistoryResponse"];
+                };
+            };
+            403: components["responses"]["ProblemDetails"];
         };
     };
     getHealth: {
