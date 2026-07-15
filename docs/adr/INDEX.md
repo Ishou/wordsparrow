@@ -364,6 +364,8 @@ ADR-0113  game/application/**/usecases/*                  RematchUseCase + Retur
 ADR-0113  game/api/asyncapi.yaml                          Adds owner-only rematch + returnToSalon command frames; reuses gameStarted / lobbyState broadcasts (no new server->client event)
 ADR-0113  game/api/**/routes/LobbyWebSocketRoute*         Wires the two commands; scheduleRematch on the gameSolved path (backgroundScope + delay, re-check state + completedAt, mirrors scheduleReconnectGrace)
 ADR-0113  frontend/src/**/multiplayer/ResultatsScreen*    10s "Nouvelle partie dans N" countdown (completedAt+delay); host Rejouer maintenant / Annuler; all keep Accueil
+ADR-0115  survey/api/openapi.yaml                        `mine` self-report flag on SignalementSummary; GET /v1/signalements/historique (flat, 200-cap, contribuer-gated)
+ADR-0115  survey/**/*Signalement*                         Amends ADR-0103: self-flag derived from reporter_id at read time (RGPD-safe); historique is a triaged-only, ungrouped, capped maintainer view
 ```
 
 ## Adding entries

@@ -402,8 +402,9 @@ paths:
       summary: List already-handled reports (maintainer only).
       description: |
         Contribuer-gated. Reports already triaged (dismissed or actioned),
-        most-recently-triaged first, capped at a recent window. Flat list, not
-        grouped — a decision acts on a single report (ADR-0103).
+        most-recently-triaged first, capped server-side at the 200 most
+        recent. Flat list, not grouped — a decision acts on a single report
+        (ADR-0115).
       tags: [signalements]
       security:
         - sessionCookie: []
@@ -813,7 +814,7 @@ components:
           type: boolean
           description: |
             True when the authenticated maintainer viewing the queue is among
-            this group's reporters (ADR-0103). Lets them deprioritise their own
+            this group's reporters (ADR-0115). Lets them deprioritise their own
             reports. Anonymous and RGPD-anonymised reports never match.
 
     SignalementListResponse:
@@ -826,7 +827,7 @@ components:
 
     SignalementHistoryItem:
       type: object
-      description: A single already-triaged report (ADR-0103).
+      description: A single already-triaged report (ADR-0115).
       required: [reportId, wordText, clueText, reason, surface, puzzleId, note, decision, triagedAt]
       properties:
         reportId:  { type: string, format: uuid }
@@ -856,6 +857,8 @@ components:
       properties:
         items:
           type: array
+          description: Newest-triaged first, capped server-side at 200 (ADR-0115).
+          maxItems: 200
           items: { $ref: '#/components/schemas/SignalementHistoryItem' }
 
     SignalementDecisionRequest:
