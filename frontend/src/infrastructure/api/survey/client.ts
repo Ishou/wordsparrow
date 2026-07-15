@@ -9,6 +9,7 @@ import type {
   RatingResult,
   RatingSubmission,
   SignalementDecision,
+  SignalementHistoryItem,
   SignalementInput,
   SignalementSummary,
   SurveyClient,
@@ -256,6 +257,27 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
         count: it.count,
         latestNote: it.latestNote,
         latestAt: it.latestAt,
+        mine: it.mine,
+      }),
+    );
+  };
+
+  const listHandledSignalements: SurveyClient['listHandledSignalements'] = async () => {
+    const res = await fetchImpl(`${base}/v1/signalements/historique`, { credentials: 'include' });
+    if (res.status === 403) throw new ContribuerForbiddenError();
+    if (!res.ok) throw new Error(`listHandledSignalements failed: ${res.status}`);
+    const json = (await res.json()) as components['schemas']['SignalementHistoryResponse'];
+    return json.items.map(
+      (it): SignalementHistoryItem => ({
+        reportId: it.reportId,
+        wordText: it.wordText,
+        clueText: it.clueText,
+        reason: it.reason,
+        surface: it.surface,
+        puzzleId: it.puzzleId,
+        note: it.note,
+        decision: it.decision,
+        triagedAt: it.triagedAt,
       }),
     );
   };
@@ -288,6 +310,7 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
     getLemmaMeta,
     submitSignalement,
     listSignalements,
+    listHandledSignalements,
     decideSignalement,
   };
 }

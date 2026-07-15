@@ -89,9 +89,23 @@ export interface SignalementSummary {
   readonly count: number;
   readonly latestNote: string | null;
   readonly latestAt: string;
+  // True when the viewing maintainer is among this group's reporters (ADR-0115).
+  readonly mine: boolean;
 }
 
 export type SignalementDecision = 'dismiss' | 'action';
+
+export interface SignalementHistoryItem {
+  readonly reportId: string;
+  readonly wordText: string | null;
+  readonly clueText: string;
+  readonly reason: ReportReason;
+  readonly surface: ReportSurface;
+  readonly puzzleId: string | null;
+  readonly note: string | null;
+  readonly decision: SignalementDecision;
+  readonly triagedAt: string;
+}
 
 export type SubmittedAs = 'auth' | 'anon';
 
@@ -205,6 +219,7 @@ export interface SurveyClient {
   getLemmaMeta(mot: string): Promise<LemmaMeta>;
   submitSignalement(input: SignalementInput): Promise<SignalementResult>;
   listSignalements(): Promise<ReadonlyArray<SignalementSummary>>;
+  listHandledSignalements(): Promise<ReadonlyArray<SignalementHistoryItem>>;
   decideSignalement(reportId: string, decision: SignalementDecision): Promise<void>;
 }
 

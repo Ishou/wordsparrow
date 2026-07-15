@@ -13,6 +13,7 @@ export type {
   ReportReason,
   ReportSurface,
   SignalementDecision,
+  SignalementHistoryItem,
   SignalementInput,
   SignalementResult,
   SignalementSummary,

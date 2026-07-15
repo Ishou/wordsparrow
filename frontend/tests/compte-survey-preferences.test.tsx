@@ -17,6 +17,7 @@ function stubSurveyClient(patch: (b: { deleteProposedOnErasure: boolean }) => Pr
     getLemmaMeta: vi.fn(),
     submitSignalement: vi.fn().mockResolvedValue({ reportId: 'report-id' }),
     listSignalements: vi.fn().mockResolvedValue([]),
+    listHandledSignalements: vi.fn().mockResolvedValue([]),
     decideSignalement: vi.fn().mockResolvedValue(undefined),
   };
 }

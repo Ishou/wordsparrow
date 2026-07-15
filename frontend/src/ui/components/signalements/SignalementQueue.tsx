@@ -68,6 +68,14 @@ const harmBadgeStyles = css({
   textTransform: 'uppercase',
   color: 'ws.sakuraDark',
 });
+const mineBadgeStyles = css({
+  fontFamily: 'wsUi',
+  fontSize: '11px',
+  fontWeight: 'black',
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  color: 'ws.khaki',
+});
 const noteStyles = css({ fontFamily: 'wsUi', fontSize: '12.5px', color: 'ws.khaki', margin: 0, fontStyle: 'italic' });
 
 const actionsStyles = css({ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' });
@@ -162,6 +170,7 @@ export function SignalementQueue({ surveyClient, correctionClient }: Signalement
                 <div className={rowTopStyles}>
                   {s.wordText ? <span className={motStyles}>{s.wordText}</span> : null}
                   {harm ? <span className={harmBadgeStyles}>{t('route.signalements.harmBadge')}</span> : null}
+                  {s.mine ? <span className={mineBadgeStyles}>{t('route.signalements.mineBadge')}</span> : null}
                 </div>
                 <p className={clueStyles}>{s.clueText}</p>
                 <p className={metaStyles}>

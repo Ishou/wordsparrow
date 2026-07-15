@@ -1,9 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { RouterProvider, createMemoryHistory, createRoute, createRouter } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import type { AuthClient, WhoAmIResult } from '@/application/auth';
-import type { SignalementSummary, SurveyClient } from '@/application/survey';
+import type { SignalementHistoryItem, SignalementSummary, SurveyClient } from '@/application/survey';
 import { AuthProvider } from '@/ui/components/auth';
 import { ToastProvider } from '@/ui/components/primitives';
 import { Route as RootRoute } from '@/ui/routes/__root';
@@ -58,6 +58,22 @@ function summary(over: Partial<SignalementSummary> = {}): SignalementSummary {
     count: 2,
     latestNote: 'contre-sens',
     latestAt: '2026-07-11T10:00:00Z',
+    mine: false,
+    ...over,
+  };
+}
+
+function historyItem(over: Partial<SignalementHistoryItem> = {}): SignalementHistoryItem {
+  return {
+    reportId: '0190e3a4-7a2c-7c9e-8f1a-000000000002',
+    wordText: 'CHIEN',
+    clueText: 'Animal qui aboie',
+    reason: 'erreur_sens',
+    surface: 'daily',
+    puzzleId: null,
+    note: null,
+    decision: 'action',
+    triagedAt: '2026-07-11T12:00:00Z',
     ...over,
   };
 }
@@ -66,6 +82,7 @@ function stubSurveyClient(): SurveyClient {
   return {
     listSignalements: vi.fn().mockResolvedValue([summary()]),
     decideSignalement: vi.fn().mockResolvedValue(undefined),
+    listHandledSignalements: vi.fn().mockResolvedValue([historyItem()]),
   } as unknown as SurveyClient;
 }
 
@@ -139,5 +156,22 @@ describe('/signalements capability gate (no flash of the page identity)', () => 
 
     await waitFor(() => expect(screen.getByText("Cette page s'est envolée")).toBeInTheDocument());
     expect(screen.queryByRole('heading', { name: 'Signalements' })).toBeNull();
+  });
+
+  it('switches to the Historique tab, swapping the queue for the handled-report history, and back', async () => {
+    render(renderGate(authClientFor(MAINTAINER)));
+
+    expect(await screen.findByText('CHAT')).toBeInTheDocument();
+    expect(screen.queryByText('CHIEN')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Historique' }));
+
+    expect(await screen.findByText('CHIEN')).toBeInTheDocument();
+    expect(screen.queryByText('CHAT')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'À traiter' }));
+
+    expect(await screen.findByText('CHAT')).toBeInTheDocument();
+    expect(screen.queryByText('CHIEN')).toBeNull();
   });
 });

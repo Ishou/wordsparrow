@@ -27,6 +27,7 @@ function summary(over: Partial<SignalementSummary> = {}): SignalementSummary {
     count: 2,
     latestNote: 'contre-sens',
     latestAt: '2026-07-11T10:00:00Z',
+    mine: false,
     ...over,
   };
 }
@@ -57,6 +58,20 @@ describe('SignalementQueue', () => {
     expect(screen.getByText(/La définition ne colle pas au mot/)).toBeInTheDocument();
     expect(screen.getByText(/2 signalements/)).toBeInTheDocument();
     expect(screen.getByText(/contre-sens/)).toBeInTheDocument();
+  });
+
+  it('shows the "dont vous" badge only on groups the maintainer reported', async () => {
+    const client = stubClient({
+      listSignalements: vi.fn().mockResolvedValue([
+        summary({ reportId: 'r-mine', wordText: 'MIEN', mine: true }),
+        summary({ reportId: 'r-other', wordText: 'AUTRE', mine: false }),
+      ]),
+    });
+    renderQueue(client);
+
+    expect(await screen.findByText('MIEN')).toBeInTheDocument();
+    const badges = screen.getAllByText('dont vous');
+    expect(badges).toHaveLength(1);
   });
 
   it('renders the resolved word with a surface label and the puzzle context', async () => {
