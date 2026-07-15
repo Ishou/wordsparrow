@@ -31,7 +31,7 @@ class Wiring(
     val getNextPair: GetNextPairUseCase,
     val submitPairRating: suspend (SubmitPairRatingCommand) -> SubmitPairRatingResult,
     val submitSignalement: suspend (SubmitSignalementCommand) -> SubmitSignalementResult,
-    val listSignalements: suspend () -> List<SignalementGroup>,
+    val listSignalements: suspend (UserId) -> List<SignalementGroup>,
     val decideSignalement: suspend (ReportId, SignalementDecision, UserId) -> DecideSignalementResult,
     val undoAction: suspend (String, UserId) -> UndoActionResult,
     val getCurrentCampaign: GetCurrentCampaignUseCase,

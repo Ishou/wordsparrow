@@ -180,7 +180,7 @@ fun main() {
             getNextPair = getNextPair,
             submitPairRating = { cmd -> submitPairRating.execute(cmd) },
             submitSignalement = { cmd -> submitSignalement.execute(cmd) },
-            listSignalements = { listSignalements.execute() },
+            listSignalements = { viewerId -> listSignalements.execute(viewerId) },
             decideSignalement = { id, decision, uid -> decideSignalement.decide(id, decision, uid, clock.now()) },
             undoAction = { token, uid -> undoAction.execute(token, uid) },
             getCurrentCampaign = getCurrentCampaign,

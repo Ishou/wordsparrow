@@ -4,12 +4,15 @@ import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.bliss.survey.domain.model.PlayerReport
 import com.bliss.survey.domain.model.ReportId
 import com.bliss.survey.domain.model.ReportReason
 import com.bliss.survey.domain.model.ReportStatus
 import com.bliss.survey.domain.model.ReportSurface
+import com.bliss.survey.domain.model.UserId
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -17,6 +20,7 @@ import java.util.UUID
 
 class ListSignalementsUseCaseTest {
     private val base = Instant.parse("2026-07-11T10:00:00Z")
+    private val viewer = UserId(UUID.fromString("99999999-9999-7999-8999-999999999999"))
 
     private fun report(
         id: String,
@@ -28,6 +32,7 @@ class ListSignalementsUseCaseTest {
         surface: ReportSurface = ReportSurface.SOLO,
         createdAt: Instant = base,
         status: ReportStatus = ReportStatus.PENDING,
+        reporterId: UserId? = null,
     ): PlayerReport =
         PlayerReport(
             id = ReportId(UUID.fromString(id)),
@@ -37,7 +42,7 @@ class ListSignalementsUseCaseTest {
             note = note,
             puzzleId = puzzleId,
             surface = surface,
-            reporterId = null,
+            reporterId = reporterId,
             status = status,
             createdAt = createdAt,
         )
@@ -49,7 +54,7 @@ class ListSignalementsUseCaseTest {
             reports.reports += report("11111111-1111-7111-8111-111111111111", createdAt = base)
             reports.reports += report("22222222-2222-7222-8222-222222222222", createdAt = base.plusSeconds(60))
 
-            val groups = ListSignalementsUseCase(reports).execute()
+            val groups = ListSignalementsUseCase(reports).execute(viewer)
 
             assertThat(groups).hasSize(1)
             assertThat(groups.single().count).isEqualTo(2)
@@ -69,7 +74,7 @@ class ListSignalementsUseCaseTest {
                     surface = ReportSurface.DAILY,
                 )
 
-            val group = ListSignalementsUseCase(reports).execute().single()
+            val group = ListSignalementsUseCase(reports).execute(viewer).single()
 
             assertThat(group.surface).isEqualTo(ReportSurface.DAILY)
             assertThat(group.puzzleId).isEqualTo(puzzle)
@@ -82,7 +87,7 @@ class ListSignalementsUseCaseTest {
             reports.reports += report("11111111-1111-7111-8111-111111111111", wordText = null, createdAt = base)
             reports.reports += report("22222222-2222-7222-8222-222222222222", wordText = null, createdAt = base.plusSeconds(60))
 
-            val group = ListSignalementsUseCase(reports).execute().single()
+            val group = ListSignalementsUseCase(reports).execute(viewer).single()
 
             assertThat(group.count).isEqualTo(2)
             assertThat(group.wordText).isNull()
@@ -97,7 +102,7 @@ class ListSignalementsUseCaseTest {
             reports.reports +=
                 report("22222222-2222-7222-8222-222222222222", puzzleId = UUID.fromString("bbbbbbbb-bbbb-7bbb-8bbb-bbbbbbbbbbbb"))
 
-            assertThat(ListSignalementsUseCase(reports).execute()).hasSize(2)
+            assertThat(ListSignalementsUseCase(reports).execute(viewer)).hasSize(2)
         }
 
     @Test
@@ -107,7 +112,7 @@ class ListSignalementsUseCaseTest {
             reports.reports += report("11111111-1111-7111-8111-111111111111", reason = ReportReason.ERREUR_SENS)
             reports.reports += report("22222222-2222-7222-8222-222222222222", reason = ReportReason.AMBIGU)
 
-            val groups = ListSignalementsUseCase(reports).execute()
+            val groups = ListSignalementsUseCase(reports).execute(viewer)
 
             assertThat(groups).hasSize(2)
         }
@@ -120,7 +125,7 @@ class ListSignalementsUseCaseTest {
             val latestId = "22222222-2222-7222-8222-222222222222"
             reports.reports += report(latestId, note = "récent", createdAt = base.plusSeconds(120))
 
-            val group = ListSignalementsUseCase(reports).execute().single()
+            val group = ListSignalementsUseCase(reports).execute(viewer).single()
 
             assertThat(group.reportId).isEqualTo(ReportId(UUID.fromString(latestId)))
             assertThat(group.latestNote).isEqualTo("récent")
@@ -133,7 +138,7 @@ class ListSignalementsUseCaseTest {
             val reports = InMemorySignalementRepository()
             reports.reports += report("11111111-1111-7111-8111-111111111111", note = null, createdAt = base)
 
-            assertThat(ListSignalementsUseCase(reports).execute().single().latestNote).isNull()
+            assertThat(ListSignalementsUseCase(reports).execute(viewer).single().latestNote).isNull()
         }
 
     @Test
@@ -143,7 +148,7 @@ class ListSignalementsUseCaseTest {
             reports.reports += report("11111111-1111-7111-8111-111111111111", clueText = "ancien", createdAt = base)
             reports.reports += report("22222222-2222-7222-8222-222222222222", clueText = "nouveau", createdAt = base.plusSeconds(300))
 
-            val clues = ListSignalementsUseCase(reports).execute().map { it.clueText }
+            val clues = ListSignalementsUseCase(reports).execute(viewer).map { it.clueText }
 
             assertThat(clues).containsExactly("nouveau", "ancien")
         }
@@ -154,12 +159,41 @@ class ListSignalementsUseCaseTest {
             val reports = InMemorySignalementRepository()
             reports.reports += report("11111111-1111-7111-8111-111111111111", status = ReportStatus.ACTIONED)
 
-            assertThat(ListSignalementsUseCase(reports).execute()).hasSize(0)
+            assertThat(ListSignalementsUseCase(reports).execute(viewer)).hasSize(0)
         }
 
     @Test
     fun `empty pending set yields no groups`() =
         runTest {
-            assertThat(ListSignalementsUseCase(InMemorySignalementRepository()).execute()).hasSize(0)
+            assertThat(ListSignalementsUseCase(InMemorySignalementRepository()).execute(viewer)).hasSize(0)
+        }
+
+    @Test
+    fun `mine is true when the viewer is among the group reporters`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+            reports.reports += report("11111111-1111-7111-8111-111111111111", reporterId = viewer)
+            reports.reports += report("22222222-2222-7222-8222-222222222222", reporterId = null)
+
+            assertThat(ListSignalementsUseCase(reports).execute(viewer).single().mine).isTrue()
+        }
+
+    @Test
+    fun `mine is false when the group has no report from the viewer`() =
+        runTest {
+            val other = UserId(UUID.fromString("88888888-8888-7888-8888-888888888888"))
+            val reports = InMemorySignalementRepository()
+            reports.reports += report("11111111-1111-7111-8111-111111111111", reporterId = other)
+
+            assertThat(ListSignalementsUseCase(reports).execute(viewer).single().mine).isFalse()
+        }
+
+    @Test
+    fun `mine is false for anonymised reports with a null reporter`() =
+        runTest {
+            val reports = InMemorySignalementRepository()
+            reports.reports += report("11111111-1111-7111-8111-111111111111", reporterId = null)
+
+            assertThat(ListSignalementsUseCase(reports).execute(viewer).single().mine).isFalse()
         }
 }

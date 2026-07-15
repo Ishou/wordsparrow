@@ -70,6 +70,7 @@ class SignalementQueueRouteTest {
     private fun report(
         id: UUID = reportUuid,
         status: ReportStatus = ReportStatus.PENDING,
+        reporterId: UUID? = null,
     ) = PlayerReport(
         id = ReportId(id),
         wordText = "CHAT",
@@ -78,7 +79,7 @@ class SignalementQueueRouteTest {
         note = "contre-sens",
         puzzleId = null,
         surface = ReportSurface.SOLO,
-        reporterId = null,
+        reporterId = reporterId?.let(::UserId),
         status = status,
         createdAt = Instant.parse("2026-07-11T10:00:00Z"),
     )
@@ -90,7 +91,7 @@ class SignalementQueueRouteTest {
         val decide = DecideSignalementUseCase(repo)
         routing {
             signalementQueueRoute(
-                list = { list.execute() },
+                list = { viewerId -> list.execute(viewerId) },
                 decide = { id, decision, uid -> decide.decide(id, decision, uid, Instant.parse("2026-07-11T12:00:00Z")) },
             )
         }
@@ -123,6 +124,23 @@ class SignalementQueueRouteTest {
             assertThat(body).contains("\"surface\":\"solo\"")
             assertThat(body).contains("\"count\":1")
             assertThat(body).contains("\"latestNote\":\"contre-sens\"")
+        }
+
+    @Test
+    fun `GET marks the maintainer's own report with mine true`() =
+        testApplication {
+            application { wire(FakeRepo(listOf(report(reporterId = MAINTAINER_ID)))) }
+            val resp = client.get("/v1/signalements") { cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE) }
+            assertThat(resp.bodyAsText()).contains("\"mine\":true")
+        }
+
+    @Test
+    fun `GET marks a stranger's report with mine false`() =
+        testApplication {
+            val other = UUID.fromString("44444444-4444-7444-8444-444444444444")
+            application { wire(FakeRepo(listOf(report(reporterId = other)))) }
+            val resp = client.get("/v1/signalements") { cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE) }
+            assertThat(resp.bodyAsText()).contains("\"mine\":false")
         }
 
     @Test

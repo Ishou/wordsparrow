@@ -34,6 +34,8 @@ data class SignalementSummary(
     // Required on the wire but nullable — null when the group's latest report carries no note (ADR-0003 §6).
     val latestNote: String?,
     val latestAt: String,
+    // True when the maintainer viewing the queue is among this group's reporters (ADR-0115).
+    val mine: Boolean,
 )
 
 @Serializable

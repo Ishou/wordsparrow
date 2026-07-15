@@ -4,6 +4,7 @@ import com.bliss.survey.application.ports.SignalementRepository
 import com.bliss.survey.domain.model.ReportId
 import com.bliss.survey.domain.model.ReportReason
 import com.bliss.survey.domain.model.ReportSurface
+import com.bliss.survey.domain.model.UserId
 import java.time.Instant
 import java.util.UUID
 
@@ -17,6 +18,7 @@ data class SignalementGroup(
     val count: Int,
     val latestNote: String?,
     val latestAt: Instant,
+    val mine: Boolean,
 )
 
 private data class GroupKey(
@@ -28,7 +30,7 @@ private data class GroupKey(
 class ListSignalementsUseCase(
     private val reports: SignalementRepository,
 ) {
-    suspend fun execute(): List<SignalementGroup> =
+    suspend fun execute(viewerId: UserId): List<SignalementGroup> =
         reports
             .listPending()
             .groupBy { GroupKey(it.clueText, it.puzzleId, it.reason) }
@@ -44,6 +46,7 @@ class ListSignalementsUseCase(
                     count = group.size,
                     latestNote = latest.note,
                     latestAt = latest.createdAt,
+                    mine = group.any { it.reporterId == viewerId },
                 )
             }.sortedByDescending { it.latestAt }
 }
