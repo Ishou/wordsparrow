@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { css, cx } from 'styled-system/css';
 import { useToast } from '@/ui/components/primitives';
+import { relativeTimeFr } from '@/ui/lib/relativeTimeFr';
 import { t } from '@/ui/i18n';
 import type {
   ReportReason,
@@ -56,26 +57,28 @@ const rowStyles = css({
 
 const harmRowStyles = css({ boxShadow: '0 0 0 1.5px token(colors.ws.sakuraDark), 0 10px 22px rgba(33,75,64,0.08)' });
 
-const rowTopStyles = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '8px' });
+const rowTopStyles = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' });
 const motStyles = css({ fontFamily: 'wsDisplay', fontSize: '18px', fontWeight: 'semibold', color: 'ws.jadeInk' });
 const clueStyles = css({ fontFamily: 'wsUi', fontSize: '15px', color: 'ws.jadeInk', margin: 0 });
 const metaStyles = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'semibold', color: 'ws.khaki', margin: 0 });
-const harmBadgeStyles = css({
+const timeStyles = css({ fontFamily: 'wsUi', fontSize: '12px', color: 'ws.khaki', margin: 0 });
+const pillBase = {
+  display: 'inline-flex',
+  alignItems: 'center',
   fontFamily: 'wsUi',
   fontSize: '11px',
   fontWeight: 'black',
-  letterSpacing: '0.04em',
+  letterSpacing: '0.03em',
   textTransform: 'uppercase',
-  color: 'ws.sakuraDark',
-});
-const mineBadgeStyles = css({
-  fontFamily: 'wsUi',
-  fontSize: '11px',
-  fontWeight: 'black',
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-  color: 'ws.khaki',
-});
+  paddingInline: '9px',
+  paddingBlock: '3px',
+  borderRadius: '999px',
+  whiteSpace: 'nowrap',
+} as const;
+// jadeInk (not sakuraDark) on sakuraBlush clears WCAG AA in both themes (~7.7:1 light, ~12.7:1 dark).
+const harmPillStyles = css({ ...pillBase, bg: 'ws.sakuraBlush', color: 'ws.jadeInk' });
+const minePillStyles = css({ ...pillBase, bg: 'ws.sable', color: 'ws.jadeInk' });
+const countPillStyles = css({ ...pillBase, bg: 'transparent', border: '1.5px solid token(colors.ws.sable)', color: 'ws.khaki' });
 const noteStyles = css({ fontFamily: 'wsUi', fontSize: '12.5px', color: 'ws.khaki', margin: 0, fontStyle: 'italic' });
 
 const actionsStyles = css({ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' });
@@ -169,15 +172,21 @@ export function SignalementQueue({ surveyClient, correctionClient }: Signalement
               <li key={s.reportId} className={harm ? cx(rowStyles, harmRowStyles) : rowStyles} data-testid="signalement-row">
                 <div className={rowTopStyles}>
                   {s.wordText ? <span className={motStyles}>{s.wordText}</span> : null}
-                  {harm ? <span className={harmBadgeStyles}>{t('route.signalements.harmBadge')}</span> : null}
-                  {s.mine ? <span className={mineBadgeStyles}>{t('route.signalements.mineBadge')}</span> : null}
+                  {harm ? <span className={harmPillStyles}>{t('route.signalements.harmBadge')}</span> : null}
+                  {s.mine ? (
+                    <span className={minePillStyles}>
+                      {t(s.count === 1 ? 'route.signalements.mineBadge.only' : 'route.signalements.mineBadge')}
+                    </span>
+                  ) : null}
+                  <span className={countPillStyles}>{t('route.signalements.count', { count: s.count })}</span>
                 </div>
                 <p className={clueStyles}>{s.clueText}</p>
                 <p className={metaStyles}>
-                  {t(reasonLabelKey[s.reason])} · {t('route.signalements.count', { count: s.count })}
+                  {t(reasonLabelKey[s.reason])}
                   {s.surface ? ` · ${t(surfaceLabelKey[s.surface])}` : ''}
                   {s.puzzleId ? ` · ${t('route.signalements.puzzleContext', { id: s.puzzleId.slice(0, 8) })}` : ''}
                 </p>
+                <p className={timeStyles}>{relativeTimeFr(s.latestAt)}</p>
                 {s.latestNote ? (
                   <p className={noteStyles}>{t('route.signalements.latestNote', { note: s.latestNote })}</p>
                 ) : null}

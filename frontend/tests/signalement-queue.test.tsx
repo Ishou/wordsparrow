@@ -60,18 +60,28 @@ describe('SignalementQueue', () => {
     expect(screen.getByText(/contre-sens/)).toBeInTheDocument();
   });
 
-  it('shows the "dont vous" badge only on groups the maintainer reported', async () => {
+  it('shows the "dont toi" badge only on groups the maintainer reported', async () => {
     const client = stubClient({
       listSignalements: vi.fn().mockResolvedValue([
-        summary({ reportId: 'r-mine', wordText: 'MIEN', mine: true }),
-        summary({ reportId: 'r-other', wordText: 'AUTRE', mine: false }),
+        summary({ reportId: 'r-mine', wordText: 'MIEN', mine: true, count: 3 }),
+        summary({ reportId: 'r-other', wordText: 'AUTRE', mine: false, count: 2 }),
       ]),
     });
     renderQueue(client);
 
     expect(await screen.findByText('MIEN')).toBeInTheDocument();
-    const badges = screen.getAllByText('dont vous');
-    expect(badges).toHaveLength(1);
+    expect(screen.getAllByText('dont toi')).toHaveLength(1);
+  });
+
+  it('reads the mine badge as "toi" when the group is a single report', async () => {
+    const client = stubClient({
+      listSignalements: vi.fn().mockResolvedValue([summary({ wordText: 'SEUL', mine: true, count: 1 })]),
+    });
+    renderQueue(client);
+
+    expect(await screen.findByText('SEUL')).toBeInTheDocument();
+    expect(screen.getByText('toi')).toBeInTheDocument();
+    expect(screen.queryByText('dont toi')).toBeNull();
   });
 
   it('renders the resolved word with a surface label and the puzzle context', async () => {

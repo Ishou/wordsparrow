@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SignalementHistory } from '@/ui/components/signalements/SignalementHistory';
 import type { SignalementHistoryItem, SurveyClient } from '@/application/survey';
 
@@ -25,6 +25,15 @@ function stubClient(items: ReadonlyArray<SignalementHistoryItem>): SurveyClient 
 }
 
 describe('SignalementHistory', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-11T14:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders a Traité chip for an actioned report and a Rejeté chip for a dismissed one', async () => {
     render(
       <SignalementHistory
@@ -38,6 +47,7 @@ describe('SignalementHistory', () => {
     expect(await screen.findByText('CHAT')).toBeInTheDocument();
     expect(screen.getByText('Traité')).toBeInTheDocument();
     expect(screen.getByText('Rejeté')).toBeInTheDocument();
+    expect(screen.getAllByText('il y a 2 h')).toHaveLength(2);
   });
 
   it('shows the empty state when there is no handled report', async () => {
