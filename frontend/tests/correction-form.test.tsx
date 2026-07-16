@@ -291,6 +291,20 @@ describe('CorrectionForm', () => {
     expect(submit()).toBeDisabled();
   });
 
+  it('moves the selected-row fill class when the mode selection changes', async () => {
+    renderForm();
+    await openDialog();
+    const replaceLabel = screen.getByRole('radio', { name: /Remplacer la définition/ }).closest('label')!;
+    const forbidLabel = screen.getByRole('radio', { name: /Interdire cette définition/ }).closest('label')!;
+    const replaceBefore = replaceLabel.className;
+    const forbidBefore = forbidLabel.className;
+
+    click(screen.getByRole('radio', { name: /Interdire cette définition/ }));
+
+    expect(replaceLabel.className).not.toBe(replaceBefore);
+    expect(forbidLabel.className).not.toBe(forbidBefore);
+  });
+
   it('has no axe violations with the picker open', async () => {
     const { expectAxeClean } = await import('@/test/a11y');
     server.use(
