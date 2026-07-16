@@ -23,7 +23,7 @@ import { Route as DesignSystemRoute } from './routes/design-system';
 import { Route as LockupRoute } from './routes/lockup';
 import { Route as ContribuerRoute } from './routes/contribuer';
 import { Route as ContribuerPairsRoute } from './routes/contribuer.pairs';
-import { Route as SignalementsRoute } from './routes/signalements';
+import { Route as SignalementsRoute, HistoriqueRoute as SignalementsHistoriqueRoute } from './routes/signalements';
 import {
   AccueilRedirectRoute,
   GrilleRedirectRoute,
@@ -76,6 +76,7 @@ export function createAppRouter({ context, multiplayer, emailAuth }: CreateAppRo
     ContribuerRoute,
     ContribuerPairsRoute,
     SignalementsRoute,
+    SignalementsHistoriqueRoute,
   ]);
   return createRouter({ routeTree, context });
 }

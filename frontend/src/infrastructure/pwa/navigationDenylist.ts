@@ -11,6 +11,8 @@ export const PRERENDERED_ROUTE_PATHS = [
   '/a-propos',
   '/compte',
   '/reglages',
+  '/signalements',
+  '/signalements/historique',
   '/finish',
   '/abonnement',
   '/abonnement/succes',

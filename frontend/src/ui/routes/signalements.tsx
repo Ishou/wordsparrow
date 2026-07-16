@@ -24,3 +24,18 @@ export const Route = createRoute({
       noindex: true,
     }),
 }).lazy(() => import('./signalements.lazy').then((m) => m.Route));
+
+// Historique is its own route so F5 / deep-links stay on the handled-report tab (mirrors the /grilles per-tab routes).
+export const HistoriqueRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: '/signalements/historique',
+  pendingMs: 0,
+  pendingComponent: SignalementsPending,
+  head: () =>
+    buildHead({
+      title: t('seo.noindex.signalements.title'),
+      description: t('seo.noindex.signalements.description'),
+      canonical: `${SITE_BASE_URL}/signalements/historique`,
+      noindex: true,
+    }),
+}).lazy(() => import('./signalements.lazy').then((m) => m.HistoriqueRoute));
