@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
-import { longDateFr } from '@/ui/v2/dailyCalendarModel';
+import { relativeTimeFr } from '@/ui/lib/relativeTimeFr';
 import type { ReportReason, ReportSurface, SignalementHistoryItem, SurveyClient } from '@/application/survey';
 
 const reasonLabelKey = {
@@ -42,6 +42,7 @@ const rowTopStyles = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'basel
 const motStyles = css({ fontFamily: 'wsDisplay', fontSize: '18px', fontWeight: 'semibold', color: 'ws.jadeInk' });
 const clueStyles = css({ fontFamily: 'wsUi', fontSize: '15px', color: 'ws.jadeInk', margin: 0 });
 const metaStyles = css({ fontFamily: 'wsUi', fontSize: '12.5px', fontWeight: 'semibold', color: 'ws.khaki', margin: 0 });
+const timeStyles = css({ fontFamily: 'wsUi', fontSize: '12px', color: 'ws.khaki', margin: 0 });
 const chipBase = { fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.04em', textTransform: 'uppercase' } as const;
 const actionChip = css({ ...chipBase, color: 'ws.jadeInk' });
 const dismissChip = css({ ...chipBase, color: 'ws.khaki' });
@@ -90,9 +91,9 @@ export function SignalementHistory({ surveyClient }: SignalementHistoryProps) {
                 </div>
                 <p className={clueStyles}>{h.clueText}</p>
                 <p className={metaStyles}>
-                  {t(reasonLabelKey[h.reason])} · {t(surfaceLabelKey[h.surface])} ·{' '}
-                  {t('route.signalements.history.triagedAt', { date: longDateFr(h.triagedAt.slice(0, 10)) })}
+                  {t(reasonLabelKey[h.reason])} · {t(surfaceLabelKey[h.surface])}
                 </p>
+                <p className={timeStyles}>{relativeTimeFr(h.triagedAt)}</p>
               </li>
             );
           })}
