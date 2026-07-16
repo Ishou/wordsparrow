@@ -9,11 +9,17 @@ import { ToastProvider } from '@/ui/components/primitives';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { SignalementsScreen } from '@/ui/routes/signalements.lazy';
 
-// Same route id as the real ParentRoute ('/signalements') so SignalementsPage's useRouteContext resolves against the stubbed context.
+// Two sibling routes mirror the real per-tab routing: SignalementsPage reads context off RootRoute, so both resolve against the stubbed context.
 const GatedSignalementsRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: '/signalements',
-  component: SignalementsScreen,
+  component: () => <SignalementsScreen onglet="a-traiter" />,
+});
+
+const GatedHistoriqueRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: '/signalements/historique',
+  component: () => <SignalementsScreen onglet="historique" />,
 });
 
 const MAINTAINER: WhoAmIResult = {
@@ -86,10 +92,10 @@ function stubSurveyClient(): SurveyClient {
   } as unknown as SurveyClient;
 }
 
-function renderGate(authClient: AuthClient): ReactNode {
+function renderGate(authClient: AuthClient, initialPath = '/signalements'): ReactNode {
   const router = createRouter({
-    routeTree: RootRoute.addChildren([GatedSignalementsRoute]),
-    history: createMemoryHistory({ initialEntries: ['/signalements'] }),
+    routeTree: RootRoute.addChildren([GatedSignalementsRoute, GatedHistoriqueRoute]),
+    history: createMemoryHistory({ initialEntries: [initialPath] }),
     context: {
       authClient,
       getPseudonym: () => 'Lapin 1',
@@ -173,5 +179,13 @@ describe('/signalements capability gate (no flash of the page identity)', () => 
 
     expect(await screen.findByText('CHAT')).toBeInTheDocument();
     expect(screen.queryByText('CHIEN')).toBeNull();
+  });
+
+  it('deep-links straight to the Historique tab (F5 stays put) via /signalements/historique', async () => {
+    render(renderGate(authClientFor(MAINTAINER), '/signalements/historique'));
+
+    expect(await screen.findByText('CHIEN')).toBeInTheDocument();
+    expect(screen.queryByText('CHAT')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Historique' })).toHaveAttribute('aria-selected', 'true');
   });
 });
