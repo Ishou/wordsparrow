@@ -7,6 +7,7 @@ import { useToast } from '@/ui/components/primitives';
 import { applyCorrection, LastClueForbidden, markSignalementHandled, SurveyDecisionFailed } from '@/application/correction';
 import type { CorrectionClient, CorrectionInput, WordClue } from '@/application/correction';
 import type { SurveyClient } from '@/application/survey';
+import { useBackDismiss } from '@/ui/lib/useBackDismiss';
 import { useCorrectionProgress } from './useCorrectionProgress';
 
 type Mode = 'replace' | 'forbid';
@@ -198,6 +199,9 @@ export function CorrectionForm({
       onCorrected?.();
     }
   };
+
+  // Touch devices: the browser "back" gesture closes the sheet instead of navigating away.
+  useBackDismiss(open, () => onOpenChange(false));
 
   const buildInput = (): CorrectionInput | null => {
     if (mode === 'forbid') {

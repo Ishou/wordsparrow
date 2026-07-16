@@ -315,4 +315,16 @@ describe('CorrectionForm', () => {
       await expectAxeClean(screen.getByRole('dialog'));
     });
   });
+
+  it('closes on the browser back gesture (popstate)', async () => {
+    renderForm();
+    await openDialog();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
 });
