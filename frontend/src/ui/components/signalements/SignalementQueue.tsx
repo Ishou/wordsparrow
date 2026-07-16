@@ -75,7 +75,8 @@ const pillBase = {
   borderRadius: '999px',
   whiteSpace: 'nowrap',
 } as const;
-const harmPillStyles = css({ ...pillBase, bg: 'ws.sakuraBlush', color: 'ws.sakuraDark' });
+// jadeInk (not sakuraDark) on sakuraBlush clears WCAG AA in both themes (~7.7:1 light, ~12.7:1 dark).
+const harmPillStyles = css({ ...pillBase, bg: 'ws.sakuraBlush', color: 'ws.jadeInk' });
 const minePillStyles = css({ ...pillBase, bg: 'ws.sable', color: 'ws.jadeInk' });
 const countPillStyles = css({ ...pillBase, bg: 'transparent', border: '1.5px solid token(colors.ws.sable)', color: 'ws.khaki' });
 const noteStyles = css({ fontFamily: 'wsUi', fontSize: '12.5px', color: 'ws.khaki', margin: 0, fontStyle: 'italic' });
