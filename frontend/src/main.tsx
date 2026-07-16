@@ -80,7 +80,6 @@ import {
 import type { TourSeenStore } from '@/application/tour/TourSeenStore';
 import type { SessionClient } from '@/application/session/SessionClient';
 import { registerServiceWorker } from '@/infrastructure/pwa';
-import { signalUpdateAvailable } from '@/ui/v2/UpdatePrompt';
 import { sessionStorageLobbyJoinCodeStash } from '@/infrastructure/session/sessionStorageLobbyJoinCode';
 import type { Pseudonym, SessionId } from '@/domain/game';
 // v2 (ADR-0072) faces, declared inline with font-display: block — see the file header.
@@ -428,5 +427,5 @@ enableMocks()
       mount();
     }
 
-    registerServiceWorker(signalUpdateAvailable);
+    registerServiceWorker();
   });

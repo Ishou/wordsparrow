@@ -835,9 +835,6 @@ export const fr = {
   'v2.loader.reconnecting': 'Reconnexion…',
   'v2.sparrow.flight.aria': "Un moineau qui s’envole",
   'v2.sparrow.celebration.aria': 'Un moineau qui chante sur une branche fleurie',
-  'v2.update.message': 'Nouvelle version disponible',
-  'v2.update.cta': 'Mettre à jour',
-  'v2.update.dismiss': 'Ignorer la mise à jour',
   'seo.route.home.title': 'WordSparrow — mots fléchés français en ligne',
   'seo.route.home.description':
     'Joue aux mots fléchés en français, en solo ou en multijoueur. Gratuit, sans inscription.',
