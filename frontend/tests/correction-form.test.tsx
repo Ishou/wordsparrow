@@ -15,7 +15,10 @@ const CORRECTION_ID = '0190e3a4-7a2c-7c9e-8f1a-0000000000aa';
 const correctionClient = createGridCorrectionClient({ baseUrl: GRID });
 const surveyClient = createHttpSurveyClient({ baseUrl: SURVEY });
 
-const server = setupServer();
+// Default impact-preview handler — the sheet fetches it on open; tests override with server.use when they assert counts.
+const server = setupServer(
+  http.get(`${GRID}/v1/corrections/preview`, () => HttpResponse.json({ affectedDailies: 0, affectedSolo: 0 })),
+);
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
@@ -340,5 +343,15 @@ describe('CorrectionForm', () => {
     });
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('shows the grid-impact preview when the sheet opens', async () => {
+    server.use(
+      http.get(`${GRID}/v1/corrections/preview`, () => HttpResponse.json({ affectedDailies: 2, affectedSolo: 40 })),
+    );
+    renderForm();
+    await openDialog();
+
+    expect(await screen.findByText(/2 grille\(s\) du jour et 40 grille\(s\) libre\(s\) concernée/)).toBeInTheDocument();
   });
 });

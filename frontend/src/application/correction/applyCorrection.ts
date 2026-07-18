@@ -1,6 +1,6 @@
 import type { SurveyClient } from '@/application/survey';
 import { SurveyDecisionFailed } from './errors';
-import type { CorrectionClient, CorrectionInput, CorrectionAccepted } from './types';
+import type { CorrectionClient, CorrectionInput, CorrectionAccepted, CorrectionPreview } from './types';
 
 export interface ApplyCorrectionDeps {
   readonly correctionClient: CorrectionClient;
@@ -29,4 +29,13 @@ export async function applyCorrection(
 // Retry path for a correction whose grid write landed but whose survey decision failed.
 export function markSignalementHandled(surveyClient: SurveyClient, reportId: string): Promise<void> {
   return surveyClient.decideSignalement(reportId, 'action');
+}
+
+// Dry-run impact shown in the Corriger sheet before applying (ADR-0108).
+export function previewCorrection(
+  correctionClient: CorrectionClient,
+  oldClueText: string,
+  wordText?: string,
+): Promise<CorrectionPreview> {
+  return correctionClient.previewCorrection(oldClueText, wordText);
 }

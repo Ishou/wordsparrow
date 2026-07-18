@@ -4,8 +4,8 @@ import { Portal } from '@ark-ui/react/portal';
 import { css, cx } from 'styled-system/css';
 import { t } from '@/ui/i18n';
 import { useToast } from '@/ui/components/primitives';
-import { applyCorrection, LastClueForbidden, markSignalementHandled, SurveyDecisionFailed } from '@/application/correction';
-import type { CorrectionClient, CorrectionInput, WordClue } from '@/application/correction';
+import { applyCorrection, LastClueForbidden, markSignalementHandled, previewCorrection, SurveyDecisionFailed } from '@/application/correction';
+import type { CorrectionClient, CorrectionInput, CorrectionPreview, WordClue } from '@/application/correction';
 import type { SurveyClient } from '@/application/survey';
 import { useBackDismiss } from '@/ui/lib/useBackDismiss';
 import { useCorrectionProgress } from './useCorrectionProgress';
@@ -50,6 +50,7 @@ const sheet = css({
 const grab = css({ display: 'block', width: '42px', height: '5px', borderRadius: '999px', bg: 'ws.hairline', margin: '0 auto 14px', lg: { display: 'none' } });
 const title = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '19px', color: 'ws.jadeInk', margin: '0 0 4px' });
 const clueEcho = css({ fontSize: '13px', color: 'ws.khaki', margin: '0 0 14px', lineHeight: '1.4' });
+const previewMuted = css({ fontSize: '13px', color: 'ws.khaki', margin: '0 0 4px', lineHeight: '1.5', fontStyle: 'italic' });
 const fieldset = css({ border: 'none', padding: 0, margin: '0 0 12px', display: 'flex', flexDirection: 'column', gap: '4px' });
 const legend = css({ fontFamily: 'wsUi', fontSize: '12px', fontWeight: 'black', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'ws.eyebrow', padding: 0, marginBottom: '4px' });
 const modeRow = css({
@@ -145,6 +146,8 @@ export function CorrectionForm({
   const [clues, setClues] = useState<ReadonlyArray<WordClue>>([]);
   const [cluesStatus, setCluesStatus] = useState<CluesStatus>('idle');
   const [pickedClue, setPickedClue] = useState<string | null>(null);
+  const [preview, setPreview] = useState<CorrectionPreview | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const newClueRef = useRef<HTMLInputElement>(null);
   const fetchedWordRef = useRef<string | null>(null);
   const { progress } = useCorrectionProgress(correctionClient, correctionId, pollIntervalMs);
@@ -201,6 +204,18 @@ export function CorrectionForm({
 
   // Touch devices: the browser "back" gesture closes the sheet instead of navigating away.
   useBackDismiss(open, () => onOpenChange(false));
+
+  // Fetch the correction's grid-impact once the sheet opens (ADR-0108); shown before the maintainer applies.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    setPreview(null);
+    setPreviewFailed(false);
+    previewCorrection(correctionClient, oldClueText, solvedWord)
+      .then((p) => { if (alive) setPreview(p); })
+      .catch(() => { if (alive) setPreviewFailed(true); });
+    return () => { alive = false; };
+  }, [open, oldClueText, solvedWord, correctionClient]);
 
   const buildInput = (): CorrectionInput | null => {
     if (mode === 'forbid') {
@@ -361,6 +376,16 @@ export function CorrectionForm({
                       )}
                     </>
                   ) : null}
+
+                  <p className={previewMuted} role="status">
+                    {previewFailed
+                      ? t('correction.preview.error')
+                      : preview === null
+                        ? t('correction.preview.loading')
+                        : preview.affectedDailies + preview.affectedSolo === 0
+                          ? t('correction.preview.none')
+                          : t('correction.preview.counts', { dailies: preview.affectedDailies, solo: preview.affectedSolo })}
+                  </p>
 
                   {lastClue ? <p className={rejected} role="alert">{t('correction.rejected.lastClue')}</p> : null}
                   {decisionFailed ? <p className={rejected} role="alert">{t('correction.retryNotice')}</p> : null}
