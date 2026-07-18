@@ -396,6 +396,31 @@ paths:
         '403': { $ref: '#/components/responses/ProblemDetails' }
         '404': { $ref: '#/components/responses/ProblemDetails' }
 
+  /v1/signalements/{reportId}/undo:
+    post:
+      operationId: undoSignalement
+      summary: Reopen a triaged report (maintainer only).
+      description: |
+        Contribuer-gated. Reverts a dismissed or actioned report back to
+        `pending` and clears its triage (triagedAt/triagedBy), so it reappears
+        in the À traiter queue (ADR-0116). Idempotent — reopening an
+        already-pending report is a no-op. Reversing the correction the report
+        may have triggered is a separate grid call (`POST /v1/corrections/reverse`).
+      tags: [signalements]
+      security:
+        - sessionCookie: []
+      parameters:
+        - in: path
+          name: reportId
+          required: true
+          description: The report to reopen.
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Report reopened (or already pending). }
+        '400': { $ref: '#/components/responses/ProblemDetails' }
+        '403': { $ref: '#/components/responses/ProblemDetails' }
+        '404': { $ref: '#/components/responses/ProblemDetails' }
+
   /v1/signalements/historique:
     get:
       operationId: listHandledSignalements

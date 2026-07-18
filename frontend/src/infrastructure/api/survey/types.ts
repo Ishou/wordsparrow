@@ -282,6 +282,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/signalements/{reportId}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen a triaged report (maintainer only).
+         * @description Contribuer-gated. Reverts a dismissed or actioned report back to
+         *     `pending` and clears its triage (triagedAt/triagedBy), so it reappears
+         *     in the À traiter queue (ADR-0116). Idempotent — reopening an
+         *     already-pending report is a no-op. Reversing the correction the report
+         *     may have triggered is a separate grid call (`POST /v1/corrections/reverse`).
+         */
+        post: operations["undoSignalement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/signalements/historique": {
         parameters: {
             query?: never;
@@ -1035,6 +1059,30 @@ export interface operations {
         };
         responses: {
             /** @description Decision recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ProblemDetails"];
+            403: components["responses"]["ProblemDetails"];
+            404: components["responses"]["ProblemDetails"];
+        };
+    };
+    undoSignalement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The report to reopen. */
+                reportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report reopened (or already pending). */
             204: {
                 headers: {
                     [name: string]: unknown;
