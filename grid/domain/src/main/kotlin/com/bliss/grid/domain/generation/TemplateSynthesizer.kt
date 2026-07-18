@@ -6,12 +6,7 @@ import kotlin.random.Random
 
 private const val STRUCT_WORDS_PER_LEN = 25 // >= L_USEFUL_FLOOR so every padded length counts as usable
 
-/**
- * A corpus-free lexicon with dummy words at EVERY length 2..[maxLen]. Used as the build-check reference
- * during template construction: with all lengths populated, `SlotRegistry.build` null-ness reflects pure
- * structural validity (dead-ends / isolated cells / connectivity), never "a run longer than any real word".
- * This is what lets construction build-check a board whose transient runs exceed the real corpus max (ADR-0117).
- */
+/** A corpus-free lexicon with dummy words at every length, so build-checks reflect pure structural validity (ADR-0117). */
 internal fun structuralLexicon(maxLen: Int): Lexicon {
     val byLen =
         (2..maxLen).associateWith { len ->
@@ -41,13 +36,7 @@ internal fun structuralLexicon(maxLen: Int): Lexicon {
     return Lexicon(repo, maxLen = maxLen)
 }
 
-/**
- * Builds valid, airy, anti-clustered black-cell templates (ADR-0117). Unlike the ADR-0039 seed→fill→perturb
- * loop it never perturbs: it caps every white run at [maxRun] and thins to a target density while build-checked
- * against a structural lexicon at every step, so the result is structurally valid at any size with a
- * magazine-like profile (~18% black, few 2-letter runs). Fillability against the REAL corpus is a separate
- * step (fill it, or distil it — see backoff distillation).
- */
+/** Builds valid, airy, anti-clustered black-cell templates without perturbation, up to a target density (ADR-0117). */
 internal object TemplateSynthesizer {
     fun synthesize(
         width: Int,
@@ -80,8 +69,7 @@ internal object TemplateSynthesizer {
             tries++
             place(cells, width, height, 1 + random.nextInt(height - 1), 1 + random.nextInt(width - 1), minLen, structLex, maxNeighbours = 0)
         }
-        // Reject a board that still has an over-long run (a run the breaker couldn't split legally) so the
-        // caller retries with a fresh seed -- guarantees produced templates honour the cap.
+        // Reject a board with a run the breaker couldn't split legally, so the caller retries with a fresh seed.
         if ((longestWhiteRun(cells, width, height)?.first ?: 0) > maxRun) return null
         return if (SlotRegistry.build(cells, structLex, minLen) != null) cells else null
     }
