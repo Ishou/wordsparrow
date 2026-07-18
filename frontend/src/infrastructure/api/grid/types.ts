@@ -563,6 +563,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/corrections/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview how many grids a clue correction would touch (ADR-0108).
+         * @description Maintainer-only. Requires the `admin:signalements` capability
+         *     (deny-by-default 403), the same gate as `POST /v1/corrections`. A
+         *     read-only dry run: counts the already-generated grids whose chosen clue
+         *     for a placement equals `oldClueText` (optionally narrowed to `wordText`,
+         *     folded), split into `affectedDailies` and `affectedSolo`. Shown as an
+         *     impact preview in the Corriger sheet before a correction is applied. No
+         *     state changes.
+         */
+        get: operations["correctionPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1377,6 +1403,22 @@ export interface components {
             /**
              * @description Stored solo grids containing the word (deleted).
              * @example 128
+             */
+            affectedSolo: number;
+        };
+        /**
+         * @description Read-only dry-run counts for a clue correction (ADR-0108): the already-
+         *     generated grids whose chosen clue equals the target text, split by kind.
+         */
+        CorrectionPreview: {
+            /**
+             * @description Stored daily grids whose chosen clue matches (patched in place).
+             * @example 2
+             */
+            affectedDailies: number;
+            /**
+             * @description Stored solo grids whose chosen clue matches (patched in place).
+             * @example 40
              */
             affectedSolo: number;
         };
@@ -2454,6 +2496,56 @@ export interface operations {
              * @description The `word` query parameter is missing, empty, or over-length. RFC
              *     7807; `type` is `https://bliss.example/errors/invalid-blocklist`,
              *     `title` is `Invalid blocklist`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The caller lacks the `admin:signalements` capability. RFC 7807;
+             *     `type` is `https://bliss.example/errors/capability-required`.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    correctionPreview: {
+        parameters: {
+            query: {
+                /** @description The current clue text the correction targets, matched exactly. */
+                oldClueText: string;
+                /** @description Optional answer word to narrow the match, folded server-side. */
+                wordText?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Counts of the grids the correction would touch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionPreview"];
+                };
+            };
+            /**
+             * @description The `oldClueText` query parameter is missing, empty, or over-length.
+             *     RFC 7807; `type` is `https://bliss.example/errors/invalid-correction`,
+             *     `title` is `Invalid correction`.
              */
             400: {
                 headers: {

@@ -1144,6 +1144,65 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /v1/corrections/preview:
+    get:
+      operationId: correctionPreview
+      summary: Preview how many grids a clue correction would touch (ADR-0108).
+      description: |
+        Maintainer-only. Requires the `admin:signalements` capability
+        (deny-by-default 403), the same gate as `POST /v1/corrections`. A
+        read-only dry run: counts the already-generated grids whose chosen clue
+        for a placement equals `oldClueText` (optionally narrowed to `wordText`,
+        folded), split into `affectedDailies` and `affectedSolo`. Shown as an
+        impact preview in the Corriger sheet before a correction is applied. No
+        state changes.
+      tags: [corrections]
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: oldClueText
+          in: query
+          required: true
+          description: The current clue text the correction targets, matched exactly.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+            example: Animal qui miaule
+        - name: wordText
+          in: query
+          required: false
+          description: Optional answer word to narrow the match, folded server-side.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+            example: CHAT
+      responses:
+        '200':
+          description: Counts of the grids the correction would touch.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionPreview'
+        '400':
+          description: |
+            The `oldClueText` query parameter is missing, empty, or over-length.
+            RFC 7807; `type` is `https://bliss.example/errors/invalid-correction`,
+            `title` is `Invalid correction`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: |
+            The caller lacks the `admin:signalements` capability. RFC 7807;
+            `type` is `https://bliss.example/errors/capability-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
 components:
   securitySchemes:
     sessionCookie:
@@ -2201,6 +2260,24 @@ components:
           minimum: 0
           description: Stored solo grids containing the word (deleted).
           example: 128
+
+    CorrectionPreview:
+      type: object
+      description: |
+        Read-only dry-run counts for a clue correction (ADR-0108): the already-
+        generated grids whose chosen clue equals the target text, split by kind.
+      required: [affectedDailies, affectedSolo]
+      properties:
+        affectedDailies:
+          type: integer
+          minimum: 0
+          description: Stored daily grids whose chosen clue matches (patched in place).
+          example: 2
+        affectedSolo:
+          type: integer
+          minimum: 0
+          description: Stored solo grids whose chosen clue matches (patched in place).
+          example: 40
 
     CorrectionProgress:
       type: object
