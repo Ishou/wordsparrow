@@ -67,7 +67,7 @@ correction route). The lookup predicate is kind-specific, because a
 and reverses per kind:
 
 - **replace** → deactivate the original correction (same `exported_at`
-  mechanism the corpus-export batch worker uses, ADR-0013) **and** record a
+  mechanism the corpus-export batch worker uses, ADR-0108 §3) **and** record a
   compensating `replace(new → old)` correction. Deactivating the original is
   required, not optional: `CorrectionAwareWordRepository.applyAll` folds
   active corrections newest-first against the *pristine* corpus word, so a
