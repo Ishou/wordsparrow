@@ -32,6 +32,12 @@ export interface BlocklistPreview {
   readonly affectedSolo: number;
 }
 
+// Dry-run impact of a clue correction, shown in the Corriger sheet before applying (ADR-0108).
+export interface CorrectionPreview {
+  readonly affectedDailies: number;
+  readonly affectedSolo: number;
+}
+
 // One of a word's corpus clues, offered as an alternate replacement in the Corriger picker (ADR-0108 2026-07-13 amendment).
 export interface WordClue {
   readonly text: string;
@@ -56,5 +62,6 @@ export interface CorrectionClient {
   getCorrectionProgress(correctionId: string): Promise<CorrectionProgress>;
   blocklistWord(input: BlocklistWordInput): Promise<CorrectionAccepted>;
   previewBlocklist(word: string): Promise<BlocklistPreview>;
+  previewCorrection(oldClueText: string, wordText?: string): Promise<CorrectionPreview>;
   listWordClues(word: string): Promise<ReadonlyArray<WordClue>>;
 }

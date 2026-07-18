@@ -3,6 +3,7 @@
 import type { ClientOptions } from 'openapi-fetch';
 import type {
   BlocklistPreview,
+  CorrectionPreview,
   CorrectionAccepted,
   CorrectionClient,
   CorrectionInput,
@@ -78,6 +79,15 @@ export function createGridCorrectionClient(options: GridCorrectionClientOptions)
     return { affectedDailies: data.affectedDailies, affectedSolo: data.affectedSolo } satisfies BlocklistPreview;
   };
 
+  const previewCorrection: CorrectionClient['previewCorrection'] = async (oldClueText, wordText) => {
+    const { data, response } = await client.GET('/v1/corrections/preview', {
+      params: { query: { oldClueText, ...(wordText ? { wordText } : {}) } },
+      credentials: 'include',
+    });
+    if (!data) throw new Error(`previewCorrection failed: ${response.status}`);
+    return { affectedDailies: data.affectedDailies, affectedSolo: data.affectedSolo } satisfies CorrectionPreview;
+  };
+
   const listWordClues: CorrectionClient['listWordClues'] = async (word) => {
     const { data, response } = await client.GET('/v1/words/{word}/clues', {
       params: { path: { word } },
@@ -87,5 +97,5 @@ export function createGridCorrectionClient(options: GridCorrectionClientOptions)
     return data.clues.map((c) => ({ text: c.text, theme: c.theme })) satisfies WordClue[];
   };
 
-  return { submitCorrection, getCorrectionProgress, blocklistWord, previewBlocklist, listWordClues };
+  return { submitCorrection, getCorrectionProgress, blocklistWord, previewBlocklist, previewCorrection, listWordClues };
 }
