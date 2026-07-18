@@ -1,8 +1,15 @@
 package com.bliss.grid.domain.generation
 
+import com.bliss.grid.domain.model.Column
 import com.bliss.grid.domain.model.Grid
+import com.bliss.grid.domain.model.LetterCell
+import com.bliss.grid.domain.model.Position
+import com.bliss.grid.domain.model.Row
 import kotlin.math.min
 import kotlin.random.Random
+
+private const val FILL_LAYOUT_MAX_ATTEMPTS = 80
+private const val DISTILL_FILL_CHECK_MS = 2_000L
 
 /**
  * Default per-attempt deadline. The outer retry loop in
@@ -209,6 +216,101 @@ class GridGenerator(
         metrics?.slotPlanBacktracks = perturbations
         metrics?.attempts = attempts
         return null
+    }
+
+    /**
+     * Daily template path (ADR-0115): produce a dense fillable grid, back off (whiten) black cells while the
+     * layout still fills, then fill the airier distilled layout best-of-N by long-word coverage. Airier and
+     * longer-worded than [generate]; expensive (many fill checks) so it is for the latency-tolerant pre-gen.
+     */
+    fun generateDistilled(
+        constraints: GridConstraints,
+        random: Random = Random.Default,
+        timeoutMs: Long = DEFAULT_GENERATION_TIMEOUT_MS,
+        bestOfN: Int = 1,
+        distillFillCheckMs: Long = DISTILL_FILL_CHECK_MS,
+        cooldownPolicy: ClueCooldownPolicy = ClueCooldownPolicy.Inert,
+    ): Grid? {
+        val dense = generate(constraints, random, timeoutMs = timeoutMs, cooldownPolicy = cooldownPolicy) ?: return null
+        val minLen = constraints.minWordLength
+        val start = reconstructLayout(dense, constraints.width, constraints.height)
+        val distilled =
+            BackoffDistiller.distill(start, minLen, lexicon()) { candidate ->
+                fillLayout(
+                    candidate,
+                    minLen,
+                    random,
+                    timeoutMs = distillFillCheckMs,
+                    themeLimits = constraints.themeLimits,
+                    cooldownPolicy = cooldownPolicy,
+                ) !=
+                    null
+            }
+        return fillLayout(
+            distilled,
+            minLen,
+            random,
+            timeoutMs = timeoutMs,
+            bestOfN = bestOfN,
+            themeLimits = constraints.themeLimits,
+            cooldownPolicy = cooldownPolicy,
+        )
+    }
+
+    /**
+     * Fill a FIXED black-cell layout (no perturbation), keeping the highest-coverage of up to [bestOfN]
+     * successful fills; null if none fills within budget or the layout is structurally unfillable.
+     */
+    internal fun fillLayout(
+        cells: CellArray,
+        minLen: Int,
+        random: Random = Random.Default,
+        timeoutMs: Long = DEFAULT_GENERATION_TIMEOUT_MS,
+        bestOfN: Int = 1,
+        themeLimits: Map<String, Int> = DEFAULT_THEME_LIMITS,
+        cooldownPolicy: ClueCooldownPolicy = ClueCooldownPolicy.Inert,
+    ): Grid? {
+        val lex = lexicon()
+        val w = cells.width
+        val h = cells.height
+        val deadlineNs = clock.nanoTime() + timeoutMs * NS_PER_MS
+        var best: Grid? = null
+        var bestCov = -1L
+        var successes = 0
+        var attempt = 0
+        while (successes < bestOfN && attempt < FILL_LAYOUT_MAX_ATTEMPTS && clock.nanoTime() < deadlineNs) {
+            attempt++
+            val build = SlotRegistry.build(cells, lex, minLen) ?: return null
+            val csp = BitmaskCsp(build.slots, lex, WordAcceptor(themeLimits, cooldownPolicy), clock, Random(random.nextLong()))
+            if (!csp.initialArcConsistency()) continue
+            val budget = GenerationKnobs.BASE_BUDGET_BACKTRACKS * luby(attempt)
+            val attemptDeadline = min(deadlineNs, clock.nanoTime() + (perAttemptSeconds(w * h) * 1e9).toLong())
+            if (csp.search(attemptDeadline, budget) { clock.nanoTime() > deadlineNs } != BitmaskCsp.Result.OK) continue
+            val placements = SlotRegistry.toPlacements(build.slots)
+            if (placements.any { it.word.text.length < minLen }) continue
+            val grid = runCatching { Grid.fromPlacements(w, h, placements) }.getOrNull() ?: continue
+            successes++
+            val cov = LongWordCoverage.coverageOf(grid, minLen)
+            if (cov > bestCov) {
+                bestCov = cov
+                best = grid
+            }
+        }
+        return best
+    }
+
+    internal fun reconstructLayout(
+        grid: Grid,
+        w: Int,
+        h: Int,
+    ): CellArray {
+        val cells = CellArray(w, h)
+        for (r in 0 until h) {
+            for (c in 0 until w) {
+                if (grid.cells[Position(Row(r), Column(c))] !is LetterCell) cells.set(r, c, CellArray.BLACK)
+            }
+        }
+        return cells
     }
 
     /** Internal rather than private so tests can drive the full-re-seed branch directly. */
