@@ -19,6 +19,7 @@ import com.bliss.survey.application.usecases.SubmitRatingResult
 import com.bliss.survey.application.usecases.SubmitSignalementCommand
 import com.bliss.survey.application.usecases.SubmitSignalementResult
 import com.bliss.survey.application.usecases.UndoActionResult
+import com.bliss.survey.application.usecases.UndoSignalementResult
 import com.bliss.survey.domain.model.ReportId
 import com.bliss.survey.domain.model.UserId
 import com.bliss.survey.infrastructure.nats.UserDeletedConsumer
@@ -34,6 +35,7 @@ class Wiring(
     val submitSignalement: suspend (SubmitSignalementCommand) -> SubmitSignalementResult,
     val listSignalements: suspend (UserId) -> List<SignalementGroup>,
     val listHandledSignalements: suspend () -> List<SignalementHistoryRow>,
+    val undoSignalement: suspend (ReportId) -> UndoSignalementResult,
     val decideSignalement: suspend (ReportId, SignalementDecision, UserId) -> DecideSignalementResult,
     val undoAction: suspend (String, UserId) -> UndoActionResult,
     val getCurrentCampaign: GetCurrentCampaignUseCase,

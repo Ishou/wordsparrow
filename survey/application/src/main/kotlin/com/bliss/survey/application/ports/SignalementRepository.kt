@@ -32,5 +32,8 @@ interface SignalementRepository {
         triagedAt: Instant,
     )
 
+    /** Reopen a triaged report: back to PENDING with triagedAt/triagedBy cleared (ADR-0116). */
+    suspend fun revertToPending(id: ReportId)
+
     suspend fun anonymiseForUser(userId: UserId)
 }

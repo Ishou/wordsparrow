@@ -53,6 +53,8 @@ class SignalementHistoryRouteTest {
             triagedAt: Instant,
         ) {}
 
+        override suspend fun revertToPending(id: ReportId) {}
+
         override suspend fun anonymiseForUser(userId: UserId) {}
     }
 

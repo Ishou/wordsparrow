@@ -294,6 +294,12 @@ open class InMemorySignalementRepository : SignalementRepository {
         }
     }
 
+    override suspend fun revertToPending(id: ReportId) {
+        reports.withIndex().firstOrNull { it.value.id == id }?.let { (idx, r) ->
+            reports[idx] = r.copy(status = ReportStatus.PENDING, triagedBy = null, triagedAt = null)
+        }
+    }
+
     override suspend fun anonymiseForUser(userId: UserId) {
         val targets = reports.withIndex().filter { it.value.reporterId == userId }
         for ((idx, r) in targets) {

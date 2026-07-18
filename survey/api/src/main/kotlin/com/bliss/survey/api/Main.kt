@@ -22,6 +22,7 @@ import com.bliss.survey.application.usecases.SubmitPairRatingUseCase
 import com.bliss.survey.application.usecases.SubmitRatingUseCase
 import com.bliss.survey.application.usecases.SubmitSignalementUseCase
 import com.bliss.survey.application.usecases.UndoActionUseCase
+import com.bliss.survey.application.usecases.UndoSignalementUseCase
 import com.bliss.survey.domain.routing.StratifiedSampler
 import com.bliss.survey.domain.routing.TierWeights
 import com.bliss.survey.domain.weight.GoldWindowPolicy
@@ -158,6 +159,7 @@ fun main() {
         )
     val listSignalements = ListSignalementsUseCase(signalements)
     val listHandledSignalements = ListHandledSignalementsUseCase(signalements)
+    val undoSignalement = UndoSignalementUseCase(signalements)
     val decideSignalement = DecideSignalementUseCase(signalements)
 
     val identityClient = IdentityClient(config.identityBaseUrl)
@@ -184,6 +186,7 @@ fun main() {
             submitSignalement = { cmd -> submitSignalement.execute(cmd) },
             listSignalements = { viewerId -> listSignalements.execute(viewerId) },
             listHandledSignalements = { listHandledSignalements.execute() },
+            undoSignalement = { id -> undoSignalement.execute(id) },
             decideSignalement = { id, decision, uid -> decideSignalement.decide(id, decision, uid, clock.now()) },
             undoAction = { token, uid -> undoAction.execute(token, uid) },
             getCurrentCampaign = getCurrentCampaign,

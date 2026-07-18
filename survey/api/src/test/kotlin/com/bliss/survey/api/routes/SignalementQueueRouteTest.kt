@@ -7,6 +7,7 @@ import com.bliss.survey.api.auth.SESSION_COOKIE_NAME
 import com.bliss.survey.application.ports.SignalementRepository
 import com.bliss.survey.application.usecases.DecideSignalementUseCase
 import com.bliss.survey.application.usecases.ListSignalementsUseCase
+import com.bliss.survey.application.usecases.UndoSignalementUseCase
 import com.bliss.survey.domain.model.PlayerReport
 import com.bliss.survey.domain.model.ReportId
 import com.bliss.survey.domain.model.ReportReason
@@ -67,6 +68,12 @@ class SignalementQueueRouteTest {
             }
         }
 
+        override suspend fun revertToPending(id: ReportId) {
+            reports.withIndex().firstOrNull { it.value.id == id }?.let { (idx, r) ->
+                reports[idx] = r.copy(status = ReportStatus.PENDING, triagedBy = null, triagedAt = null)
+            }
+        }
+
         override suspend fun anonymiseForUser(userId: UserId) {}
     }
 
@@ -92,11 +99,13 @@ class SignalementQueueRouteTest {
         install(ContentNegotiation) { json() }
         val list = ListSignalementsUseCase(repo)
         val decide = DecideSignalementUseCase(repo)
+        val undo = UndoSignalementUseCase(repo)
         routing {
             signalementQueueRoute(
                 list = { viewerId -> list.execute(viewerId) },
                 decide = { id, decision, uid -> decide.decide(id, decision, uid, Instant.parse("2026-07-11T12:00:00Z")) },
             )
+            signalementUndoRoute(undo = { id -> undo.execute(id) })
         }
     }
 
@@ -226,5 +235,30 @@ class SignalementQueueRouteTest {
                     setBody("""{"decision":"dismiss"}""")
                 }
             assertThat(resp.status).isEqualTo(HttpStatusCode.BadRequest)
+        }
+
+    @Test
+    fun `POST undo without a cookie is 403`() =
+        testApplication {
+            application { wire(FakeRepo(listOf(report(status = ReportStatus.ACTIONED)))) }
+            assertThat(client.post("/v1/signalements/$reportUuid/undo").status).isEqualTo(HttpStatusCode.Forbidden)
+        }
+
+    @Test
+    fun `POST undo as a maintainer reopens the report to pending`() =
+        testApplication {
+            val repo = FakeRepo(listOf(report(status = ReportStatus.ACTIONED)))
+            application { wire(repo) }
+            val resp = client.post("/v1/signalements/$reportUuid/undo") { cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE) }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.NoContent)
+            assertThat(repo.reports.single().status).isEqualTo(ReportStatus.PENDING)
+        }
+
+    @Test
+    fun `POST undo on an unknown reportId is 404`() =
+        testApplication {
+            application { wire(FakeRepo()) }
+            val resp = client.post("/v1/signalements/$reportUuid/undo") { cookie(SESSION_COOKIE_NAME, MAINTAINER_COOKIE) }
+            assertThat(resp.status).isEqualTo(HttpStatusCode.NotFound)
         }
 }

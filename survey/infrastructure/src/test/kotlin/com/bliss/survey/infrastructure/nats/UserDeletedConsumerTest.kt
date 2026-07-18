@@ -379,6 +379,8 @@ class UserDeletedConsumerTest {
             triagedAt: Instant,
         ) = Unit
 
+        override suspend fun revertToPending(id: ReportId) = Unit
+
         override suspend fun anonymiseForUser(userId: UserId) = Unit
     }
 }
