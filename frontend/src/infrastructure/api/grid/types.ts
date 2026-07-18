@@ -589,6 +589,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/corrections/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reverse the correction applied for a report (ADR-0116).
+         * @description Maintainer-only (`admin:signalements`, deny-by-default 403). Finds the
+         *     active correction for a reopened report and reverses it, per kind:
+         *     `replace` records a compensating `replace(new → old)` whose backfill
+         *     patches the affected grids back (poll `GET /v1/corrections/{id}`);
+         *     `forbid` / `blocklist` deactivate the overlay entry so the clue / word
+         *     is available again (no grid regeneration). The lookup is kind-split
+         *     because a `blocklist_word` correction carries no `oldClueText`: replace
+         *     / forbid match `oldClueText`, blocklist matches `wordText`. When no
+         *     active correction matches, nothing is reversed (`reversedKind: null`).
+         */
+        post: operations["reverseCorrection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1421,6 +1449,31 @@ export interface components {
              * @example 40
              */
             affectedSolo: number;
+        };
+        /**
+         * @description Identifies the correction to reverse for a reopened report (ADR-0116).
+         *     `oldClueText` is the report's clue (a correction's `old_clue_text`), used
+         *     to match a replace/forbid; `wordText` matches a blocklist (whose
+         *     `old_clue_text` is null) and narrows replace/forbid.
+         */
+        CorrectionReverseRequest: {
+            /** @example Animal qui miaule */
+            oldClueText: string;
+            /** @example CHAT */
+            wordText?: string;
+        };
+        /**
+         * @description Outcome of reversing a report's correction (ADR-0116). `replace` records
+         *     a compensating replace(new→old) whose backfill patches grids back;
+         *     `forbid`/`blocklist` deactivate the overlay entry; no active match
+         *     reverses nothing.
+         */
+        CorrectionReverseResult: {
+            /**
+             * @description The kind reversed; null when no active correction matched.
+             * @enum {string|null}
+             */
+            reversedKind: "replace" | "forbid" | "blocklist" | null;
         };
         /**
          * @description Progress of a correction's async existing-grid backfill (ADR-0108 §4),
@@ -2546,6 +2599,54 @@ export interface operations {
              * @description The `oldClueText` query parameter is missing, empty, or over-length.
              *     RFC 7807; `type` is `https://bliss.example/errors/invalid-correction`,
              *     `title` is `Invalid correction`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description The caller lacks the `admin:signalements` capability. RFC 7807;
+             *     `type` is `https://bliss.example/errors/capability-required`.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reverseCorrection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectionReverseRequest"];
+            };
+        };
+        responses: {
+            /** @description Reversal outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionReverseResult"];
+                };
+            };
+            /**
+             * @description `oldClueText` is missing, empty, or over-length. RFC 7807; `type` is
+             *     `https://bliss.example/errors/invalid-correction`.
              */
             400: {
                 headers: {
