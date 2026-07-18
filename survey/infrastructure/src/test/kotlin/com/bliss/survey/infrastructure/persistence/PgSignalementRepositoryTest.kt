@@ -173,6 +173,21 @@ class PgSignalementRepositoryTest {
         }
 
     @Test
+    fun `revertToPending resets status to pending and clears triage`() =
+        runTest {
+            val r = report()
+            reports.insert(r)
+            reports.updateStatus(r.id, ReportStatus.ACTIONED, UserId(UUID.randomUUID()), now.plusSeconds(60))
+
+            reports.revertToPending(r.id)
+
+            val back = reports.findById(r.id)
+            assertThat(back?.status).isEqualTo(ReportStatus.PENDING)
+            assertThat(back?.triagedAt).isNull()
+            assertThat(back?.triagedBy).isNull()
+        }
+
+    @Test
     fun `anonymiseForUser nulls the reporter id`() =
         runTest {
             val userId = UserId(UUID.randomUUID())

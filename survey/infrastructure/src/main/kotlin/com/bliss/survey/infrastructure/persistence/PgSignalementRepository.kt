@@ -125,6 +125,16 @@ class PgSignalementRepository(
             }
         }
 
+    override suspend fun revertToPending(id: ReportId): Unit =
+        withContext(Dispatchers.IO) {
+            withTxConnection(dataSource) { conn ->
+                conn.prepareStatement(REVERT_TO_PENDING_SQL).use { stmt ->
+                    stmt.setObject(1, id.value)
+                    stmt.executeUpdate()
+                }
+            }
+        }
+
     override suspend fun anonymiseForUser(userId: UserId): Unit =
         withContext(Dispatchers.IO) {
             withTxConnection(dataSource) { conn ->
@@ -177,6 +187,9 @@ class PgSignalementRepository(
 
         const val UPDATE_STATUS_SQL =
             "UPDATE player_reports SET status = ?, triaged_by = ?, triaged_at = ? WHERE report_id = ?"
+
+        const val REVERT_TO_PENDING_SQL =
+            "UPDATE player_reports SET status = 'pending', triaged_by = NULL, triaged_at = NULL WHERE report_id = ?"
 
         const val ANONYMISE_SQL = "UPDATE player_reports SET reporter_id = NULL WHERE reporter_id = ?"
     }

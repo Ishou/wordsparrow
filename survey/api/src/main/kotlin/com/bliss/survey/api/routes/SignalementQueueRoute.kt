@@ -10,6 +10,7 @@ import com.bliss.survey.api.respondProblem
 import com.bliss.survey.application.usecases.DecideSignalementResult
 import com.bliss.survey.application.usecases.SignalementDecision
 import com.bliss.survey.application.usecases.SignalementGroup
+import com.bliss.survey.application.usecases.UndoSignalementResult
 import com.bliss.survey.domain.model.ReportId
 import com.bliss.survey.domain.model.UserId
 import io.ktor.http.HttpStatusCode
@@ -57,6 +58,29 @@ fun Route.signalementQueueRoute(
         when (decide(ReportId(reportId), decision, maintainerId)) {
             DecideSignalementResult.Decided -> call.respond(HttpStatusCode.NoContent)
             DecideSignalementResult.NotFound ->
+                call.respondProblem(
+                    HttpStatusCode.NotFound,
+                    problem("report not found", "no report with that id", HttpStatusCode.NotFound),
+                )
+        }
+    }
+}
+
+// Maintainer-only reopen (ADR-0116): reverts a triaged report to pending; contribuer-gated.
+fun Route.signalementUndoRoute(undo: suspend (ReportId) -> UndoSignalementResult) {
+    post("/v1/signalements/{reportId}/undo") {
+        if (!call.requireContribuer()) return@post
+
+        val reportId =
+            runCatching { UUID.fromString(call.parameters["reportId"]) }.getOrNull()
+                ?: return@post call.respondProblem(
+                    HttpStatusCode.BadRequest,
+                    problem("invalid report id", "reportId must be a UUID", HttpStatusCode.BadRequest),
+                )
+
+        when (undo(ReportId(reportId))) {
+            UndoSignalementResult.Reopened -> call.respond(HttpStatusCode.NoContent)
+            UndoSignalementResult.NotFound ->
                 call.respondProblem(
                     HttpStatusCode.NotFound,
                     problem("report not found", "no report with that id", HttpStatusCode.NotFound),
