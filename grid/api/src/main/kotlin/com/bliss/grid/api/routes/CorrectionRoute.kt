@@ -6,12 +6,14 @@ import com.bliss.grid.api.auth.requireCapability
 import com.bliss.grid.api.dto.BlocklistPreviewDto
 import com.bliss.grid.api.dto.BlocklistWordRequestDto
 import com.bliss.grid.api.dto.CorrectionAcceptedDto
+import com.bliss.grid.api.dto.CorrectionPreviewDto
 import com.bliss.grid.api.dto.CorrectionProgressDto
 import com.bliss.grid.api.dto.CorrectionRequestDto
 import com.bliss.grid.api.dto.ProblemDetails
 import com.bliss.grid.api.dto.WordClueItemDto
 import com.bliss.grid.api.dto.WordCluesResultDto
 import com.bliss.grid.application.correction.BlocklistPreviewQuery
+import com.bliss.grid.application.correction.CorrectionPreviewQuery
 import com.bliss.grid.application.correction.CorrectionProgress
 import com.bliss.grid.application.correction.CorrectionRepository
 import com.bliss.grid.application.correction.ListWordCluesUseCase
@@ -264,6 +266,43 @@ private fun CorrectionProgress.toDto(): CorrectionProgressDto =
         gridsMatched = gridsMatched,
         gridsPatched = gridsPatched,
     )
+
+/** `GET /v1/corrections/preview` — read-only impact of a clue correction (ADR-0108), gated by `admin:signalements`. */
+fun Route.correctionPreview(preview: CorrectionPreviewQuery) {
+    get("/v1/corrections/preview") {
+        if (!call.requireCapability(ADMIN_SIGNALEMENTS_CAPABILITY)) return@get
+
+        val oldClueText = call.request.queryParameters["oldClueText"]
+        if (oldClueText.isNullOrBlank() || oldClueText.length > MAX_CLUE_TEXT) {
+            return@get call.respondCorrectionProblem(
+                HttpStatusCode.BadRequest,
+                INVALID_CORRECTION_TYPE,
+                "Invalid correction",
+                "Le parametre oldClueText est invalide.",
+            )
+        }
+        val wordText = call.request.queryParameters["wordText"]?.takeIf { it.isNotBlank() }
+        if (wordText != null && wordText.length > MAX_WORD_TEXT) {
+            return@get call.respondCorrectionProblem(
+                HttpStatusCode.BadRequest,
+                INVALID_CORRECTION_TYPE,
+                "Invalid correction",
+                "Le parametre wordText est invalide.",
+            )
+        }
+
+        val result = preview.preview(oldClueText, wordText)
+        call.respondText(
+            text =
+                correctionJson.encodeToString(
+                    CorrectionPreviewDto.serializer(),
+                    CorrectionPreviewDto(result.affectedDailies, result.affectedSolo),
+                ),
+            contentType = ContentType.Application.Json,
+            status = HttpStatusCode.OK,
+        )
+    }
+}
 
 private suspend fun ApplicationCall.respondCorrectionProblem(
     status: HttpStatusCode,
