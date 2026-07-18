@@ -4,6 +4,7 @@ import com.bliss.grid.api.auth.SessionMiddleware
 import com.bliss.grid.api.dto.ProblemDetails
 import com.bliss.grid.api.infrastructure.Database
 import com.bliss.grid.api.routes.blocklistCorrections
+import com.bliss.grid.api.routes.correctionPreview
 import com.bliss.grid.api.routes.corrections
 import com.bliss.grid.api.routes.deleteSession
 import com.bliss.grid.api.routes.health
@@ -13,6 +14,7 @@ import com.bliss.grid.api.routes.words
 import com.bliss.grid.application.analytics.AnalyticsEventSink
 import com.bliss.grid.application.auth.CookieVerifier
 import com.bliss.grid.application.correction.BlocklistPreviewQuery
+import com.bliss.grid.application.correction.CorrectionPreviewQuery
 import com.bliss.grid.application.correction.CorrectionRepository
 import com.bliss.grid.application.correction.ListWordCluesUseCase
 import com.bliss.grid.application.correction.RecordCorrectionUseCase
@@ -44,6 +46,7 @@ import com.bliss.grid.infrastructure.persistence.CorrectionAwareWordRepository
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryBlocklistPreviewQuery
 import com.bliss.grid.infrastructure.persistence.InMemoryClueCooldownRepository
+import com.bliss.grid.infrastructure.persistence.InMemoryCorrectionPreviewQuery
 import com.bliss.grid.infrastructure.persistence.InMemoryCorrectionRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryHintWriteCoordinator
@@ -51,6 +54,7 @@ import com.bliss.grid.infrastructure.persistence.InMemoryPuzzleRepository
 import com.bliss.grid.infrastructure.persistence.InMemoryVerifyUsageRepository
 import com.bliss.grid.infrastructure.persistence.PostgresBlocklistPreviewQuery
 import com.bliss.grid.infrastructure.persistence.PostgresClueCooldownRepository
+import com.bliss.grid.infrastructure.persistence.PostgresCorrectionPreviewQuery
 import com.bliss.grid.infrastructure.persistence.PostgresCorrectionRepository
 import com.bliss.grid.infrastructure.persistence.PostgresHintUsageRepository
 import com.bliss.grid.infrastructure.persistence.PostgresHintWriteCoordinator
@@ -201,6 +205,12 @@ fun Application.module() {
             null -> InMemoryBlocklistPreviewQuery()
             else -> PostgresBlocklistPreviewQuery(ds)
         }
+    // Corriger impact preview (ADR-0108): counts affected stored grids by clue; in-memory returns zeros without a DB.
+    val correctionPreviewQuery: CorrectionPreviewQuery =
+        when (val ds = Database.dataSource()) {
+            null -> InMemoryCorrectionPreviewQuery()
+            else -> PostgresCorrectionPreviewQuery(ds)
+        }
     // ADR-0076: prod injects GRID_TEASER_TOKEN_KEY via a k8s Secret; dev falls back to a fixed key.
     val teaserTokenKey =
         System.getenv("GRID_TEASER_TOKEN_KEY")?.takeIf { it.isNotBlank() } ?: DEV_TEASER_TOKEN_KEY
@@ -348,6 +358,7 @@ fun Application.module() {
         corrections(recordCorrection, correctionRepository)
         wordClues(listWordClues)
         blocklistCorrections(recordCorrection, blocklistPreviewQuery)
+        correctionPreview(correctionPreviewQuery)
     }
 }
 

@@ -45,6 +45,13 @@ data class BlocklistPreviewDto(
     val affectedSolo: Int,
 )
 
+/** `200` body for `GET /v1/corrections/preview` — impact of a clue correction (ADR-0108). */
+@Serializable
+data class CorrectionPreviewDto(
+    val affectedDailies: Int,
+    val affectedSolo: Int,
+)
+
 /** `200` body for `GET /v1/corrections/{correctionId}` (ADR-0108 §4). */
 @Serializable
 data class CorrectionProgressDto(
