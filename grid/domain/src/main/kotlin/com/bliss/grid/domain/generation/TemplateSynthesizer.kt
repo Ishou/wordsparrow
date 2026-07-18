@@ -129,7 +129,10 @@ internal object TemplateSynthesizer {
         structLex: Lexicon,
         maxNeighbours: Int,
     ): Boolean {
-        if (r < 1 || c < 1 || cells.isBlack(r, c) || blackNeighbours(cells, w, h, r, c) > maxNeighbours ||
+        if (r < 1 ||
+            c < 1 ||
+            cells.isBlack(r, c) ||
+            blackNeighbours(cells, w, h, r, c) > maxNeighbours ||
             isolatesNeighbour(cells, w, h, r, c)
         ) {
             return false
