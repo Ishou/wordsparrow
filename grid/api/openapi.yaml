@@ -2334,15 +2334,9 @@ components:
       required: [oldClueText]
       properties:
         oldClueText:
-          type: string
-          minLength: 1
-          maxLength: 512
-          example: Animal qui miaule
+          $ref: '#/components/schemas/ClueText'
         wordText:
-          type: string
-          minLength: 1
-          maxLength: 64
-          example: CHAT
+          $ref: '#/components/schemas/WordText'
 
     CorrectionReverseResult:
       type: object
@@ -2354,11 +2348,10 @@ components:
       required: [reversedKind]
       properties:
         reversedKind:
-          type: string
-          enum: [replace, forbid, blocklist]
-          x-enum-varnames: [REPLACE, FORBID, BLOCKLIST]
-          nullable: true
-          description: The kind reversed; null when no active correction matched.
+          oneOf:
+            - $ref: '#/components/schemas/CorrectionKind'
+            - type: 'null'
+          description: The CorrectionKind reversed; null when no active correction matched.
 
     CorrectionProgress:
       type: object

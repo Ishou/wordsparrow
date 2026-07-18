@@ -1457,10 +1457,8 @@ export interface components {
          *     `old_clue_text` is null) and narrows replace/forbid.
          */
         CorrectionReverseRequest: {
-            /** @example Animal qui miaule */
-            oldClueText: string;
-            /** @example CHAT */
-            wordText?: string;
+            oldClueText: components["schemas"]["ClueText"];
+            wordText?: components["schemas"]["WordText"];
         };
         /**
          * @description Outcome of reversing a report's correction (ADR-0116). `replace` records
@@ -1469,11 +1467,8 @@ export interface components {
          *     reverses nothing.
          */
         CorrectionReverseResult: {
-            /**
-             * @description The kind reversed; null when no active correction matched.
-             * @enum {string|null}
-             */
-            reversedKind: "replace" | "forbid" | "blocklist" | null;
+            /** @description The CorrectionKind reversed; null when no active correction matched. */
+            reversedKind: components["schemas"]["CorrectionKind"] | null;
         };
         /**
          * @description Progress of a correction's async existing-grid backfill (ADR-0108 §4),
