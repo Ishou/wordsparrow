@@ -66,10 +66,19 @@ correction route). The lookup predicate is kind-specific, because a
 
 and reverses per kind:
 
-- **replace** → record a compensating `replace(new → old)` correction. Its
-  backfill re-matches the grids currently showing the new clue and **patches
-  them back** to the old clue. This is the true reverse of a replace and is
-  symmetric with how the correction was applied.
+- **replace** → deactivate the original correction (same `exported_at`
+  mechanism the corpus-export batch worker uses, ADR-0013) **and** record a
+  compensating `replace(new → old)` correction. Deactivating the original is
+  required, not optional: `CorrectionAwareWordRepository.applyAll` folds
+  active corrections newest-first against the *pristine* corpus word, so a
+  compensating correction left beside a still-active original can never
+  fire — the original's `old_clue_text` match against the pristine word
+  wins every time, and it would keep rewriting every future puzzle
+  indefinitely. The compensating correction's own job is narrower: its
+  backfill re-matches the grids currently showing the new clue and
+  **patches them back** to the old clue. Together, the two effects reverse
+  both halves of the original apply — deactivation stops future generation,
+  the compensating backfill fixes already-generated grids.
 - **forbid** → deactivate the forbid correction in the overlay so the clue is
   **allowed again** for future generation. Existing grids keep the clue they
   re-picked when the forbid landed — they are **not** re-patched (no stored
