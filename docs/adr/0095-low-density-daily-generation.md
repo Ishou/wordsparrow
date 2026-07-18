@@ -83,9 +83,14 @@ the black-minimizing one from the original decision.
   (`EnsureUpcomingDailiesUseCase`) and the on-demand path
   (`GeneratePuzzleUseCase`) keep the highest-coverage of N candidates, ties
   broken toward fewest definition cells (preserving the original density
-  preference). On-demand runs the N candidates in parallel (bounded daemon
-  pool) so wall time stays ~one generation; `PUZZLE_BEST_OF_N = 16`,
-  env-overridable. Daily reuses its existing best-of-8.
+  preference). On-demand runs the N candidates on a bounded daemon pool sized
+  to `Runtime.availableProcessors()` — JDK 21 reads this from the container's
+  cgroup CPU quota, so wall time is `ceil(N / pool-size)` x one generation,
+  not a flat ~1x. `PUZZLE_BEST_OF_N = 16` is env-overridable; the value an
+  operator picks trades coverage for latency against the pod's actual CPU
+  limit (prod: `cpu: 3000m` -> pool size 3 -> ~6x, see
+  `grid/api/deploy/chart/values-prod.yaml`). Daily reuses its existing
+  best-of-8.
 
 Measured on the full production surface corpus (clued + dropped, clue-agnostic
 sweep fixture): today's grids already carry ~8.8 (28×20) / ~15.8 (22×15) words

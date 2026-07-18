@@ -76,9 +76,7 @@ class GeneratePuzzleUseCase(
     ): Grid? {
         val n = bestOfN.coerceAtLeast(1)
         if (n == 1) return executeWithOutcome(width, height, cooldownPolicy).grid
-        // Generate N candidates in parallel (each its own retry loop) and serve the
-        // highest-coverage one; wall time stays ~one generation. Distinct per-candidate
-        // seeds avoid collisions across the concurrent runs.
+        // N candidates run on a pool sized to available cores; wall time is ceil(N/pool-size) x one generation, not N=1 (ADR-0095 amendment).
         val futures =
             (0 until n).map { candidate ->
                 generationPool.submit(

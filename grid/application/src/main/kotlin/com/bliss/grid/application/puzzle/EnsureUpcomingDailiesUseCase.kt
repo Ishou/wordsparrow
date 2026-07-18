@@ -89,9 +89,7 @@ class EnsureUpcomingDailiesUseCase(
 
     private fun generateForDate(date: LocalDate): Pair<Grid?, Int> {
         val cooldownPolicy = cooldownPolicyFor()
-        // Best-of-N (offline pre-gen only): generate up to N candidates and keep the one with the
-        // most long-word coverage, ties broken toward fewest definition cells (ADR-0095 density).
-        // bestOfN = 1 preserves the old single-shot.
+        // Best-of-N (offline pre-gen only): keep highest coverage, ties -> fewest definition cells (ADR-0095 amendment).
         var best: Grid? = null
         var bestCoverage = -1L
         var bestBlack = Int.MAX_VALUE
