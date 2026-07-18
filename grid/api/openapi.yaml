@@ -1203,6 +1203,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /v1/corrections/reverse:
+    post:
+      operationId: reverseCorrection
+      summary: Reverse the correction applied for a report (ADR-0116).
+      description: |
+        Maintainer-only (`admin:signalements`, deny-by-default 403). Finds the
+        active correction for a reopened report and reverses it, per kind:
+        `replace` records a compensating `replace(new → old)` whose backfill
+        patches the affected grids back (poll `GET /v1/corrections/{id}`);
+        `forbid` / `blocklist` deactivate the overlay entry so the clue / word
+        is available again (no grid regeneration). The lookup is kind-split
+        because a `blocklist_word` correction carries no `oldClueText`: replace
+        / forbid match `oldClueText`, blocklist matches `wordText`. When no
+        active correction matches, nothing is reversed (`reversedKind: null`).
+      tags: [corrections]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CorrectionReverseRequest' }
+      responses:
+        '200':
+          description: Reversal outcome.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CorrectionReverseResult' }
+        '400':
+          description: |
+            `oldClueText` is missing, empty, or over-length. RFC 7807; `type` is
+            `https://bliss.example/errors/invalid-correction`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: |
+            The caller lacks the `admin:signalements` capability. RFC 7807;
+            `type` is `https://bliss.example/errors/capability-required`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
 components:
   securitySchemes:
     sessionCookie:
@@ -2278,6 +2323,35 @@ components:
           minimum: 0
           description: Stored solo grids whose chosen clue matches (patched in place).
           example: 40
+
+    CorrectionReverseRequest:
+      type: object
+      description: |
+        Identifies the correction to reverse for a reopened report (ADR-0116).
+        `oldClueText` is the report's clue (a correction's `old_clue_text`), used
+        to match a replace/forbid; `wordText` matches a blocklist (whose
+        `old_clue_text` is null) and narrows replace/forbid.
+      required: [oldClueText]
+      properties:
+        oldClueText:
+          $ref: '#/components/schemas/ClueText'
+        wordText:
+          $ref: '#/components/schemas/WordText'
+
+    CorrectionReverseResult:
+      type: object
+      description: |
+        Outcome of reversing a report's correction (ADR-0116). `replace` records
+        a compensating replace(new→old) whose backfill patches grids back;
+        `forbid`/`blocklist` deactivate the overlay entry; no active match
+        reverses nothing.
+      required: [reversedKind]
+      properties:
+        reversedKind:
+          oneOf:
+            - $ref: '#/components/schemas/CorrectionKind'
+            - type: 'null'
+          description: The CorrectionKind reversed; null when no active correction matched.
 
     CorrectionProgress:
       type: object
