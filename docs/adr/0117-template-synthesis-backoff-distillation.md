@@ -1,4 +1,4 @@
-# ADR-0115: Template Synthesis + Backoff Distillation for Long-Word-Rich Grids
+# ADR-0117: Template Synthesis + Backoff Distillation for Long-Word-Rich Grids
 
 ## Status
 Proposed
@@ -40,7 +40,7 @@ A long investigation (in-session, on the real production corpus) established:
   reaches a **fillable 22×15 frontier of ~18.5% black / mean 5.16 / 12%
   two-letter** — essentially magazine quality. The residual gap to the ideal is
   specific missing short forms (bare 3-letter inflections like MET/LUE/SEL/…),
-  addressed by ADR-0115's companion corpus enrichment.
+  addressed by ADR-0117's companion corpus enrichment.
 
 ## Decision
 Adopt a **template-first** generation path alongside the ADR-0039 generator:

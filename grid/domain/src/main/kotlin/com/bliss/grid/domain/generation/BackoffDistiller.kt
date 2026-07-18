@@ -1,7 +1,7 @@
 package com.bliss.grid.domain.generation
 
 /**
- * Backoff distillation (ADR-0115): starting from a dense, fillable layout, greedily whiten interior black
+ * Backoff distillation (ADR-0117): starting from a dense, fillable layout, greedily whiten interior black
  * cells — keeping a removal only if the board stays structurally valid AND still fills. Each removal merges
  * two runs into one longer word, so the result is the airiest, longest-worded layout the corpus can still
  * fill at that size. The fill check is injected so the distiller stays corpus-agnostic and testable; the
