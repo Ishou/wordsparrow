@@ -371,7 +371,6 @@ ADR-0116  survey/api/openapi.yaml                        POST /v1/signalements/{
 ADR-0116  grid/api/openapi.yaml                          POST /v1/corrections/reverse — compensating reverse by clue-text join (replace→replace(new→old) patches back; forbid/blocklist→deactivate overlay, no regen)
 ADR-0116  frontend/src/**/signalement*                   Réouvrir on Historique cards orchestrates grid reverse + survey undo (mirrors applyCorrection); undo is compensating, not a rollback
 ADR-0117  grid/domain/src/main/kotlin/com/bliss/grid/domain/generation/**  Template-first generation: TemplateSynthesizer builds valid airy run-capped templates at any size (build-checked vs a structural all-length-padded Lexicon, no perturbation/geometric fallback), backoff distillation (whiten blacks keeping only fill-checked removals) finds the airiest fillable frontier, template library reused via unlimited distinct fills. Rejected fill-order-first / more+vertical anchoring / greedy word-first construction / structural-only distillation (all measured). Corpus is the binding limit — companion short-form enrichment
-# ADR-0117: template synthesis + backoff distillation — synthesize magazine-profile templates (spread anti-cluster + run cap via structural padded Lexicon), distill to the airiest fillable frontier by fill-checking each black removal, mine a small library reused via unlimited distinct fills; the corpus (bare short inflected forms) is the binding limit
 ```
 
 ## Adding entries
