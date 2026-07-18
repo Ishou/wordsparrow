@@ -366,6 +366,9 @@ ADR-0113  game/api/**/routes/LobbyWebSocketRoute*         Wires the two commands
 ADR-0113  frontend/src/**/multiplayer/ResultatsScreen*    10s "Nouvelle partie dans N" countdown (completedAt+delay); host Rejouer maintenant / Annuler; all keep Accueil
 ADR-0115  survey/api/openapi.yaml                        `mine` self-report flag on SignalementSummary; GET /v1/signalements/historique (flat, 200-cap, contribuer-gated)
 ADR-0115  survey/**/*Signalement*                         Amends ADR-0103: self-flag derived from reporter_id at read time (RGPD-safe); historique is a triaged-only, ungrouped, capped maintainer view
+ADR-0116  survey/api/openapi.yaml                        POST /v1/signalements/{reportId}/undo — reopen a triaged report (revertToPending, clears triaged_at/by)
+ADR-0116  grid/api/openapi.yaml                          POST /v1/corrections/reverse — compensating reverse by clue-text join (replace→replace(new→old) patches back; forbid/blocklist→deactivate overlay, no regen)
+ADR-0116  frontend/src/**/signalement*                   Réouvrir on Historique cards orchestrates grid reverse + survey undo (mirrors applyCorrection); undo is compensating, not a rollback
 ```
 
 ## Adding entries
