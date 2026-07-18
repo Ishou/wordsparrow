@@ -155,6 +155,36 @@ registers `/sw.js`. The `workbox-*` runtime packages become explicit
 devDependencies (same v7 family already pulled in by `workbox-build`); `sw.ts`
 type-checks under a dedicated `tsconfig.sw.json` (`lib: WebWorker`).
 
+## Amendment (2026-07-16): transparent update while hidden — supersedes the prompt
+
+The 2026-06-29 prompt (a dismissible "Nouvelle version disponible" banner)
+is removed. A running SPA's already-executing bundle can't be hot-swapped in
+production — HMR is dev-only, and dynamic-importing the new chunks would load a
+second copy of React/singletons — so applying a new version always needs one
+reload. The prompt made that reload explicit; the goal now is to make it
+**unnoticeable** rather than avoidable.
+
+The new SW still **waits** (`skipWaiting: false`, `clientsClaim: true`,
+`registerType: 'prompt'` and `src/sw.ts` unchanged). `pwa.ts` no longer surfaces
+a callback/banner; instead it swaps the update in **only while the tab is
+hidden**:
+
+- On workbox's `waiting` event (or an already-waiting SW at register time), if
+  `document.visibilityState === 'hidden'` it posts `SKIP_WAITING` immediately;
+  otherwise it arms a one-shot `visibilitychange`/`pagehide` handler and posts
+  `SKIP_WAITING` the moment the tab goes hidden. The `controlling` listener then
+  reloads **once**, guarded by a `skipWaitingSent` flag so the initial-install
+  `controlling` and a background tab's activation never reload this tab.
+- Net effect: the reload happens after the player switches away, closes, or
+  reopens the app — they return to the new version having never seen a refresh.
+  "On open" (desktop tab or installed PWA launch) is satisfied because the prior
+  session's hide already applied the swap. localStorage keeps puzzle state
+  across the reload, unchanged.
+
+`UpdatePrompt.tsx` and the `v2.update.*` copy are deleted. The
+`vite:preloadError` vanished-chunk recovery and `updateViaCache: 'none'` are
+unchanged — that crash-recovery reload is separate and still immediate.
+
 ## Consequences
 
 ### Easier

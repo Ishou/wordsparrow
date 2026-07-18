@@ -1,11 +1,11 @@
 // Service-worker registration for the PWA + offline cache.
 //
-// `vite-plugin-pwa` generates the actual `/sw.js` from the workbox
-// config in `vite.config.ts` (precaches the app shell, NetworkFirst for
-// puzzle GETs). This module wires browser registration via the
-// workbox-window helper, which fits the plugin's `registerType:
-// 'prompt'` mode: a freshly precached SW waits, and `onUpdateAvailable`
-// surfaces a dismissible prompt whose accept-action reloads the tab.
+// `vite-plugin-pwa` generates `/sw.js` from `src/sw.ts` (injectManifest:
+// precaches the app shell, NetworkFirst for puzzle GETs). This module
+// wires browser registration via workbox-window. A freshly precached SW
+// waits (`skipWaiting: false`); we swap it in **transparently** — only
+// while the tab is hidden — so the reload never flashes in front of the
+// player (ADR-0026 2026-07-16 amendment).
 //
 // Skipped in dev (`import.meta.env.DEV`) so HMR isn't shadowed by a
 // cached shell.
@@ -19,9 +19,6 @@ const CHUNK_RELOAD_AT = 'bliss.chunk-mismatch-reload-at';
 // suppression window; second error within span = infinite-reload guard (ADR-0026)
 const CHUNK_RELOAD_WINDOW_MS = 10_000;
 
-// Called with an `apply` that activates the waiting SW and reloads on accept.
-export type OnUpdateAvailable = (apply: () => void) => void;
-
 // vite:preloadError recovery — see ADR-0026 for the vanished-chunk flow
 function installChunkMismatchGuard(wb: Workbox, reload: () => void): void {
   window.addEventListener('vite:preloadError', (event: Event) => {
@@ -33,7 +30,7 @@ function installChunkMismatchGuard(wb: Workbox, reload: () => void): void {
   });
 }
 
-export function registerServiceWorker(onUpdateAvailable?: OnUpdateAvailable): void {
+export function registerServiceWorker(): void {
   if (typeof window === 'undefined') return;
   if (!('serviceWorker' in navigator)) return;
   if (import.meta.env.DEV) return;
@@ -57,8 +54,6 @@ export function registerServiceWorker(onUpdateAvailable?: OnUpdateAvailable): vo
     // — the symptom that motivated this module's last revision.
     const wb = new Workbox('/sw.js', { updateViaCache: 'none' });
     let refreshing = false;
-    // background controlling (another tab) must not reload this tab unprompted.
-    let userAccepted = false;
 
     const reloadOnce = () => {
       if (refreshing) return;
@@ -68,30 +63,48 @@ export function registerServiceWorker(onUpdateAvailable?: OnUpdateAvailable): vo
 
     installChunkMismatchGuard(wb, reloadOnce);
 
-    // messageSkipWaiting → controlling fires → reloadOnce. localStorage keeps puzzle state (ADR-0026).
-    const apply = () => {
-      userAccepted = true;
-      void wb.messageSkipWaiting();
+    // Transparent update (ADR-0026 2026-07-16 amendment): swap to the new SW
+    // only while the tab is hidden, so the player never witnesses the reload.
+    // A visible tab keeps running the loaded version until they switch away or
+    // reopen — then they silently come back to the new one. localStorage keeps
+    // puzzle state across the reload (ADR-0026).
+    let skipWaitingSent = false;
+    const sendSkipWaiting = () => {
+      if (skipWaitingSent) return;
+      skipWaitingSent = true;
+      void wb.messageSkipWaiting(); // waiting SW activates → `controlling` → reloadOnce
     };
 
-    let promptShown = false;
-    const promptUpdate = () => {
-      if (promptShown || !onUpdateAvailable) return;
-      promptShown = true;
-      onUpdateAvailable(apply);
+    const applyWhenHidden = () => {
+      if (skipWaitingSent) return;
+      if (document.visibilityState === 'hidden') {
+        sendSkipWaiting();
+        return;
+      }
+      const onHidden = () => {
+        if (document.visibilityState !== 'hidden') return;
+        document.removeEventListener('visibilitychange', onHidden);
+        window.removeEventListener('pagehide', onHidden);
+        sendSkipWaiting();
+      };
+      document.addEventListener('visibilitychange', onHidden);
+      window.addEventListener('pagehide', onHidden);
     };
 
+    // Reload only for an update we initiated, and only once. The initial-install
+    // `controlling` (first visit) and a background tab's activation both leave
+    // `skipWaitingSent` false, so neither reloads this tab unprompted.
     wb.addEventListener('controlling', () => {
-      if (userAccepted) reloadOnce();
+      if (skipWaitingSent) reloadOnce();
     });
 
     // A new SW finished installing and is waiting to activate.
-    wb.addEventListener('waiting', promptUpdate);
+    wb.addEventListener('waiting', applyWhenHidden);
 
     wb.register()
       .then((registration) => {
-        // prompt for a SW that was already waiting before this listener attached.
-        if (registration?.waiting) promptUpdate();
+        // Catch a SW that was already waiting before this listener attached.
+        if (registration?.waiting) applyWhenHidden();
       })
       .catch((err: unknown) => {
         // Non-fatal; surfaces in SigNoz so we notice sudden upticks without DevTools.

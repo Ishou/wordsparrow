@@ -36,12 +36,25 @@ const fireWaiting = () => {
   for (const fn of waitingHandlers) fn();
 };
 
-describe('registerServiceWorker — update strategy', () => {
+function setVisibility(state: 'visible' | 'hidden') {
+  Object.defineProperty(document, 'visibilityState', { configurable: true, value: state });
+}
+const goHidden = () => {
+  setVisibility('hidden');
+  document.dispatchEvent(new Event('visibilitychange'));
+};
+const goVisible = () => {
+  setVisibility('visible');
+  document.dispatchEvent(new Event('visibilitychange'));
+};
+
+describe('registerServiceWorker — transparent (hidden-reload) update strategy', () => {
   let reloadMock: ReturnType<typeof vi.fn>;
   let originalLocation: Location;
-  // track vite:preloadError listeners to detach between tests, preventing stale-closure accumulation
-  const addedListeners: Array<[string, EventListener]> = [];
-  const realAdd = window.addEventListener.bind(window);
+  // Track SUT-added listeners so a test that arms them but never fires them can't leak into the next.
+  const tracked: Array<{ target: EventTarget; type: string; listener: EventListener }> = [];
+  const realWindowAdd = window.addEventListener.bind(window);
+  const realDocAdd = document.addEventListener.bind(document);
 
   beforeEach(() => {
     controllingHandlers.length = 0;
@@ -52,11 +65,16 @@ describe('registerServiceWorker — update strategy', () => {
     wbUpdate.mockClear();
     wbMessageSkipWaiting.mockClear();
     sessionStorage.clear();
+    setVisibility('visible');
 
-    addedListeners.length = 0;
+    tracked.length = 0;
     vi.spyOn(window, 'addEventListener').mockImplementation((type, listener, opts) => {
-      if (type === 'vite:preloadError') addedListeners.push([type, listener as EventListener]);
-      return realAdd(type, listener as EventListener, opts);
+      if (type === 'vite:preloadError' || type === 'pagehide') tracked.push({ target: window, type, listener: listener as EventListener });
+      return realWindowAdd(type, listener as EventListener, opts);
+    });
+    vi.spyOn(document, 'addEventListener').mockImplementation((type, listener, opts) => {
+      if (type === 'visibilitychange') tracked.push({ target: document, type, listener: listener as EventListener });
+      return realDocAdd(type, listener as EventListener, opts);
     });
 
     reloadMock = vi.fn();
@@ -66,18 +84,10 @@ describe('registerServiceWorker — update strategy', () => {
       value: { ...originalLocation, reload: reloadMock },
     });
 
-    // jsdom doesn't expose `navigator.serviceWorker`; the SUT's
-    // `'serviceWorker' in navigator` guard would otherwise short-
-    // circuit registration. Any object satisfies the check — the SUT
-    // doesn't read into `navigator.serviceWorker`, only the workbox-
-    // window mock does (and we stub that wholesale).
-    Object.defineProperty(navigator, 'serviceWorker', {
-      configurable: true,
-      value: {},
-    });
+    // jsdom doesn't expose `navigator.serviceWorker`; the SUT's guard would
+    // otherwise short-circuit. Any object satisfies the `in` check.
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: {} });
 
-    // Production-like env so the early-returns don't short-circuit
-    // registration.
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_MOCK_GRID_API', 'false');
     vi.stubEnv('VITE_MOCK_GAME_API', 'false');
@@ -88,14 +98,9 @@ describe('registerServiceWorker — update strategy', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllEnvs();
+    for (const { target, type, listener } of tracked) target.removeEventListener(type, listener);
     vi.restoreAllMocks();
-    for (const [type, listener] of addedListeners) {
-      window.removeEventListener(type, listener);
-    }
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: originalLocation,
-    });
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
   });
 
   it("passes updateViaCache: 'none' to the Workbox registration", () => {
@@ -106,71 +111,92 @@ describe('registerServiceWorker — update strategy', () => {
     expect(constructorCalls[0]!.options).toMatchObject({ updateViaCache: 'none' });
   });
 
-  it('fires the update-available callback when a new SW starts waiting', () => {
-    const onUpdate = vi.fn();
-    registerServiceWorker(onUpdate);
+  it('does NOT skip-waiting while the tab is visible when a new SW is waiting', () => {
+    registerServiceWorker();
 
     fireWaiting();
 
-    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(wbMessageSkipWaiting).not.toHaveBeenCalled();
   });
 
-  it('prompts only once even if waiting fires repeatedly', () => {
-    const onUpdate = vi.fn();
-    registerServiceWorker(onUpdate);
+  it('skips-waiting once the tab becomes hidden after an update is waiting', () => {
+    registerServiceWorker();
 
     fireWaiting();
-    fireWaiting();
+    goHidden();
 
-    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(wbMessageSkipWaiting).toHaveBeenCalledTimes(1);
   });
 
-  it('prompts for a SW that was already waiting at register time', async () => {
-    registerResult = { waiting: {} };
-    const onUpdate = vi.fn();
-    registerServiceWorker(onUpdate);
-
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(onUpdate).toHaveBeenCalledTimes(1);
-  });
-
-  it('does NOT reload when controlling fires before the user accepts', () => {
-    registerServiceWorker(vi.fn());
+  it('skips-waiting immediately if the tab is already hidden when the update arrives', () => {
+    setVisibility('hidden');
+    registerServiceWorker();
 
     fireWaiting();
+
+    expect(wbMessageSkipWaiting).toHaveBeenCalledTimes(1);
+  });
+
+  it('reloads once after the new SW takes control, but only post skip-waiting', () => {
+    registerServiceWorker();
+
+    fireWaiting();
+    goHidden();
+    expect(reloadMock).not.toHaveBeenCalled();
+
+    fireControlling();
+    expect(reloadMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reload on the initial-install controlling (no update pending)', () => {
+    registerServiceWorker();
+
     fireControlling();
 
     expect(wbMessageSkipWaiting).not.toHaveBeenCalled();
     expect(reloadMock).not.toHaveBeenCalled();
   });
 
-  it('activates the waiting SW and reloads once after the user accepts', () => {
-    let apply: (() => void) | undefined;
-    registerServiceWorker((a) => { apply = a; });
+  it('does not reload while the tab is visible even after controlling — a background tab must not refresh this one', () => {
+    registerServiceWorker();
 
-    fireWaiting();
-    expect(apply).toBeTypeOf('function');
-    apply!();
-
-    expect(wbMessageSkipWaiting).toHaveBeenCalledTimes(1);
-    expect(reloadMock).not.toHaveBeenCalled();
-
+    // Another tab activated the new SW: controlling fires here without our skip-waiting.
     fireControlling();
-    expect(reloadMock).toHaveBeenCalledTimes(1);
+
+    expect(reloadMock).not.toHaveBeenCalled();
   });
 
-  it('does not reload twice when controlling fires repeatedly after accept', () => {
-    let apply: (() => void) | undefined;
-    registerServiceWorker((a) => { apply = a; });
+  it('handles a SW already waiting at register time — skips-waiting when hidden', async () => {
+    registerResult = { waiting: {} };
+    registerServiceWorker();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(wbMessageSkipWaiting).not.toHaveBeenCalled();
+
+    goHidden();
+    expect(wbMessageSkipWaiting).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends skip-waiting only once even as visibility toggles repeatedly', () => {
+    registerServiceWorker();
 
     fireWaiting();
-    apply!();
-    fireControlling();
-    fireControlling();
+    goHidden();
+    goVisible();
+    goHidden();
 
-    expect(reloadMock).toHaveBeenCalledTimes(1);
+    expect(wbMessageSkipWaiting).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies a mid-session update on pagehide (tab close / bfcache)', () => {
+    registerServiceWorker();
+
+    fireWaiting();
+    setVisibility('hidden');
+    window.dispatchEvent(new Event('pagehide'));
+
+    expect(wbMessageSkipWaiting).toHaveBeenCalledTimes(1);
   });
 
   // two microtask ticks needed: finally() on wb.update() settles asynchronously
@@ -194,7 +220,6 @@ describe('registerServiceWorker — update strategy', () => {
     window.dispatchEvent(new Event('vite:preloadError'));
     await Promise.resolve();
     await Promise.resolve();
-    // Still within the 10s window — no second reload (and no second update).
     expect(reloadMock).toHaveBeenCalledTimes(1);
     expect(wbUpdate).toHaveBeenCalledTimes(1);
   });
@@ -213,12 +238,6 @@ describe('registerServiceWorker — update strategy', () => {
     expect(wbUpdate).toHaveBeenCalledTimes(2);
   });
 
-  // Preview deploys set VITE_MOCK_GRID_API/VITE_MOCK_GAME_API='true' so
-  // MSW's own service worker takes scope `/`. Registering Workbox here
-  // would race MSW for that scope; the resulting `controlling` event
-  // would fire reloadOnce() inside the fresh-load window, triggering an
-  // infinite reload loop on every preview URL (regression caught on
-  // https://11593b5f.preview.pages.dev/ — page refreshed every ~1.5 s).
   it('skips registration when VITE_MOCK_GRID_API is true', () => {
     vi.stubEnv('VITE_MOCK_GRID_API', 'true');
     registerServiceWorker();

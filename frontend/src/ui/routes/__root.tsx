@@ -21,7 +21,6 @@ import { NOT_FOUND_COPY, useNotFoundDocumentTitle } from '@/ui/v2/NotFoundScreen
 import { sparrowFlightScene } from '@/ui/v2/SparrowScenes';
 import { AnnouncerProvider } from '@/ui/components/a11y/Announcer';
 import { Toast, ToastProvider } from '@/ui/components/primitives';
-import { UpdatePrompt } from '@/ui/v2/UpdatePrompt';
 import { t } from '@/ui/i18n';
 
 // Router context surface — every route loader receives this object as
@@ -137,7 +136,6 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
         <ToastProvider>
           <Outlet />
           <Toast />
-          <UpdatePrompt />
         </ToastProvider>
       </AnnouncerProvider>
     </>
