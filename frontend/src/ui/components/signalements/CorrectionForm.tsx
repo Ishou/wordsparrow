@@ -71,7 +71,6 @@ const modeRow = css({
 // Selected/hover fills are applied by React state, not `:has(input:checked)` — WebKit doesn't re-evaluate `:has()` when a radio is unchecked, leaving stale highlights on mobile Safari. Hover lives only on unselected rows so it can't repaint a selected one.
 const rowSelected = css({ bg: 'ws.sakuraBlush', fontWeight: 'bold' });
 const rowHoverable = css({ _hover: { bg: 'ws.sable' } });
-// Custom-drawn, not a resized `accent-color` native radio: WebKit scales native controls sized past their default and intermittently drops the checked dot inside the animated sheet. `appearance:none` + `:checked` styling on the input repaints reliably (element-local, not ancestor `:has`).
 const radioInput = css({
   appearance: 'none',
   flex: 'none',
@@ -82,9 +81,10 @@ const radioInput = css({
   border: '2px solid token(colors.ws.khaki)',
   bg: 'ws.card',
   cursor: 'pointer',
-  _checked: { borderColor: 'ws.sakuraDark', bg: 'ws.sakuraDark', boxShadow: 'inset 0 0 0 3px token(colors.ws.card)' },
   _disabled: { opacity: 0.5, cursor: 'not-allowed' },
 });
+// Checked fill is driven by React state, not `:checked`: the controlled radios' DOM checkedness is unreliable in mobile Safari here (the row accent, on the same state, stays correct), so the dot follows that state instead of the input's checkedness.
+const radioChecked = css({ borderColor: 'ws.sakuraDark', bg: 'ws.sakuraDark', boxShadow: 'inset 0 0 0 3px token(colors.ws.card)' });
 const hint = css({ fontSize: '12px', color: 'ws.khaki', margin: '0 0 10px 42px', fontStyle: 'italic' });
 const fieldLabel = css({ display: 'block', fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.jadeInk', marginBottom: '6px' });
 const textField = css({
@@ -323,11 +323,11 @@ export function CorrectionForm({
                   <fieldset className={fieldset}>
                     <legend className={legend}>{t('correction.mode.legend')}</legend>
                     <label className={mode === 'replace' ? cx(modeRow, rowSelected) : cx(modeRow, rowHoverable)}>
-                      <input type="radio" name="correction-mode" className={radioInput} value="replace" checked={mode === 'replace'} onChange={() => { setMode('replace'); setHasText(false); }} />
+                      <input type="radio" name="correction-mode" className={cx(radioInput, mode === 'replace' && radioChecked)} value="replace" checked={mode === 'replace'} onChange={() => { setMode('replace'); setHasText(false); }} />
                       <span>{t('correction.mode.replace')}</span>
                     </label>
                     <label className={mode === 'forbid' ? cx(modeRow, rowSelected) : cx(modeRow, rowHoverable)}>
-                      <input type="radio" name="correction-mode" className={radioInput} value="forbid" checked={mode === 'forbid'} disabled={!solvedWord} onChange={() => { setMode('forbid'); setHasText(false); }} />
+                      <input type="radio" name="correction-mode" className={cx(radioInput, mode === 'forbid' && radioChecked)} value="forbid" checked={mode === 'forbid'} disabled={!solvedWord} onChange={() => { setMode('forbid'); setHasText(false); }} />
                       <span>{t('correction.mode.forbid')}</span>
                     </label>
                     {!solvedWord ? <p className={hint}>{t('correction.forbid.needWord')}</p> : null}
@@ -339,11 +339,11 @@ export function CorrectionForm({
                         <fieldset className={fieldset}>
                           <legend className={legend}>{t('correction.replace.styleLegend')}</legend>
                           <label className={replaceStyle === 'write' ? cx(modeRow, rowSelected) : cx(modeRow, rowHoverable)}>
-                            <input type="radio" name="correction-replace-style" className={radioInput} value="write" checked={replaceStyle === 'write'} onChange={() => { setReplaceStyle('write'); setHasText(false); }} />
+                            <input type="radio" name="correction-replace-style" className={cx(radioInput, replaceStyle === 'write' && radioChecked)} value="write" checked={replaceStyle === 'write'} onChange={() => { setReplaceStyle('write'); setHasText(false); }} />
                             <span>{t('correction.replace.write')}</span>
                           </label>
                           <label className={replaceStyle === 'pick' ? cx(modeRow, rowSelected) : cx(modeRow, rowHoverable)}>
-                            <input type="radio" name="correction-replace-style" className={radioInput} value="pick" checked={replaceStyle === 'pick'} onChange={() => { setReplaceStyle('pick'); setHasText(false); }} />
+                            <input type="radio" name="correction-replace-style" className={cx(radioInput, replaceStyle === 'pick' && radioChecked)} value="pick" checked={replaceStyle === 'pick'} onChange={() => { setReplaceStyle('pick'); setHasText(false); }} />
                             <span>{t('correction.replace.pick')}</span>
                           </label>
                         </fieldset>
@@ -357,7 +357,7 @@ export function CorrectionForm({
                               {otherClues.map((c, i) => (
                                 <li key={`${c.text}-${i}`}>
                                   <label className={pickedClue === c.text ? cx(pickRow, rowSelected) : cx(pickRow, rowHoverable)}>
-                                    <input type="radio" name="correction-pick" className={radioInput} value={c.text} checked={pickedClue === c.text} onChange={() => setPickedClue(c.text)} />
+                                    <input type="radio" name="correction-pick" className={cx(radioInput, pickedClue === c.text && radioChecked)} value={c.text} checked={pickedClue === c.text} onChange={() => setPickedClue(c.text)} />
                                     <span className={pickText}>{c.text}</span>
                                     {c.theme ? <span className={themeTag}>{c.theme}</span> : null}
                                   </label>
