@@ -10,6 +10,7 @@ import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.GridGenerationPort
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PuzzleRepository
+import com.bliss.grid.application.puzzle.asDistilledGridGenerationPort
 import com.bliss.grid.application.puzzle.asGridGenerationPort
 import com.bliss.grid.application.puzzle.dailyPuzzleConstraints
 import com.bliss.grid.domain.generation.ClueCooldownRepository
@@ -190,7 +191,12 @@ private fun productionGridGenerationPort(): GridGenerationPort {
             wordRepository = wordRepository,
             defaults = dailyPuzzleConstraints(),
         )
-    return generatePuzzle.asGridGenerationPort()
+    // Rollout toggle (deploy dark, release bright): serve distilled airier grids when GRID_DAILY_DISTILL=true (ADR-0117).
+    return if (System.getenv("GRID_DAILY_DISTILL")?.toBooleanStrictOrNull() == true) {
+        generatePuzzle.asDistilledGridGenerationPort()
+    } else {
+        generatePuzzle.asGridGenerationPort()
+    }
 }
 
 internal fun executeAndExit(
