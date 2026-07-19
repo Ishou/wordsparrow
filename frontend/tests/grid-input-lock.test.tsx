@@ -45,8 +45,7 @@ function renderCells(nav: ReturnType<typeof useGridNavigation>, validated: Reado
   });
 }
 
-// Mirrors PlayScreen's wiring: usePuzzleValidation drives isInputLocked via
-// its `pending` flag, and onCellChange re-runs the whole-grid check.
+// Mirrors PlayScreen's wiring: isInputLocked reads usePuzzleValidation's `pending` flag.
 function ValidationHarness({
   solver,
   onCellChange,
@@ -77,8 +76,7 @@ function ValidationHarness({
   );
 }
 
-// Standalone harness with an externally-controlled lock, to pin the
-// useGridNavigation guard contract independently of validation.
+// Standalone harness pinning the useGridNavigation guard contract independently of validation.
 let externalLocked = false;
 function LockHarness({ onCellChange }: { onCellChange?: (r: number, c: number, l: string | null) => void }) {
   const nav = useGridNavigation(PUZZLE, {
@@ -166,8 +164,7 @@ describe('grid input lock — race on the last letter', () => {
   });
 });
 
-// Mirrors PlayScreen's requestHint/requestVerify: both skip while validation.pending,
-// since a hint reveal or a verify correct-cell lock re-checks the grid and would drop an in-flight verdict.
+// Mirrors PlayScreen's requestHint/requestVerify, both gated on validation.pending.
 function AssistHarness({
   solver,
   onHintRequest,
