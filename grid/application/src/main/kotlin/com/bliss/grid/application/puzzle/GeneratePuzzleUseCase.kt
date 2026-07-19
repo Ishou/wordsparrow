@@ -94,11 +94,7 @@ class GeneratePuzzleUseCase(
         return LongWordCoverage.bestByCoverage(grids, defaults.minWordLength)
     }
 
-    /**
-     * Template-distillation path (ADR-0117): a dense fillable grid, backed off (whitened) while still fillable,
-     * then filled best-of-N by coverage. Airier and longer-worded than [execute]; expensive (many fill checks),
-     * so it is for the latency-tolerant daily pre-gen only.
-     */
+    /** Template-distillation path (ADR-0117): latency-tolerant daily pre-gen only. See ADR for rationale. */
     fun executeDistilled(
         width: Int? = null,
         height: Int? = null,

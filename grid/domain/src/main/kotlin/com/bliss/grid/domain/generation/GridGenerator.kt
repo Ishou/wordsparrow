@@ -218,11 +218,7 @@ class GridGenerator(
         return null
     }
 
-    /**
-     * Daily template path (ADR-0115): produce a dense fillable grid, back off (whiten) black cells while the
-     * layout still fills, then fill the airier distilled layout best-of-N by long-word coverage. Airier and
-     * longer-worded than [generate]; expensive (many fill checks) so it is for the latency-tolerant pre-gen.
-     */
+    /** Daily template path (ADR-0117): dense grid, backoff-distilled, then best-of-N fill. See ADR for rationale. */
     fun generateDistilled(
         constraints: GridConstraints,
         random: Random = Random.Default,
@@ -257,10 +253,7 @@ class GridGenerator(
         )
     }
 
-    /**
-     * Fill a FIXED black-cell layout (no perturbation), keeping the highest-coverage of up to [bestOfN]
-     * successful fills; null if none fills within budget or the layout is structurally unfillable.
-     */
+    /** Fill a fixed black-cell layout (no perturbation), keeping the highest-coverage of up to [bestOfN] fills. */
     internal fun fillLayout(
         cells: CellArray,
         minLen: Int,
