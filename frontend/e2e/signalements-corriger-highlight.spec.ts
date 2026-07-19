@@ -76,12 +76,16 @@ test('Corriger radios show their checked state visually', async ({ page }) => {
   expect(await rowBg(page, /Interdire/)).toBe(TRANSPARENT);
 
   // Switch to Interdire — the checked fill and the row highlight both move
-  // immediately (no native-scale drop, no 120ms cross-fade), so the read
-  // right after the click already shows the final state.
+  // immediately (no 120ms cross-fade), so the read right after the click
+  // already shows the final state.
   await interdire.click();
   await expect(interdire).toBeChecked();
   expect(await radioBg(page, /Interdire/)).toBe(SAKURA_DARK);
   expect(await radioBg(page, /Remplacer/)).toBe(CARD);
   expect(await rowBg(page, /Interdire/)).toBe(SAKURA_BLUSH);
   expect(await rowBg(page, /Remplacer/)).toBe(TRANSPARENT);
+
+  // Simulates the on-device failure: DOM checkedness drops but the fill must survive (state-driven, not `:checked`).
+  await page.getByRole('radio', { name: /Interdire/ }).evaluate((el) => { (el as HTMLInputElement).checked = false; });
+  expect(await radioBg(page, /Interdire/)).toBe(SAKURA_DARK);
 });
