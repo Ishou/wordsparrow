@@ -64,7 +64,7 @@ const modeRow = css({
   color: 'ws.jadeInk',
   fontSize: '15px',
   lineHeight: '1.3',
-  transition: 'background-color 120ms',
+  // No background-color transition: a selection highlight must snap to the chosen row. A cross-fade leaves the just-deselected row painted for 120ms (worse on mobile Safari), reading as a stale/wrong highlight.
   '&:has(input:focus-visible)': { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
   '&:has(input:disabled)': { cursor: 'not-allowed', color: 'ws.khaki' },
 });
@@ -98,7 +98,7 @@ const pickRow = css({
   color: 'ws.jadeInk',
   fontSize: '15px',
   lineHeight: '1.3',
-  transition: 'background-color 120ms',
+  // See modeRow: selection highlight snaps, no cross-fade.
   '&:has(input:focus-visible)': { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const pickText = css({ flex: '1 1 auto', minWidth: 0 });
