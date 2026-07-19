@@ -53,12 +53,17 @@ ADR-0027  infra/observability/**                   SigNoz on ClickHouse
 ADR-0038  infra/observability/**                   k8s-infra subchart for per-pod/node metrics; OTLP exporter preset pins
 ADR-0030  infra/observability/templates/oauth2-proxy.yaml   oauth2-proxy htpasswd-only; session cookie for SigNoz SPA; no OIDC
 ADR-0030  infra/observability/values.yaml                   oauth2Proxy.image.tag pin (v7.15.3); Renovate keeps current
+ADR-0031  grid/domain/src/**/generation/ClueCooldown*       Clue cooldown ports/policy: per-session seq TTL; the daily bucket is retired for a calendar window (2026-07-19 amendment)
+ADR-0031  grid/application/src/**/puzzle/DailyClueRecurrence.kt  Daily clue recurrence: forbid stored-neighbor pairs within a random 5..10-day window (2026-07-19 amendment, replaces the daily seq TTL)
+ADR-0031  grid/application/src/**/puzzle/EnsureUpcomingDailiesUseCase.kt  Daily pre-gen sources the recurrence window from stored neighbor grids, not the DAILY_SCOPE_ID counter (2026-07-19 amendment)
+ADR-0031  grid/application/src/**/puzzle/LoadOrGeneratePuzzleUseCase.kt   Per-session clue cooldown on GET puzzle: seq TTL bucket keyed by X-Session-Id (unchanged by the 2026-07-19 amendment)
 ADR-0033  frontend/src/**/otel/**                  Frontend OTel public ingest; emits traceparent/tracestate
 ADR-0033  frontend/src/infrastructure/api/**       Browser SDK adds traceparent to every cross-origin fetch
 ADR-0034  */api/src/**/Module.kt                   CORS: allowHeaders { true } (wildcard predicate)
 ADR-0039  grid/domain/src/main/kotlin/com/bliss/grid/domain/generation/**  Bitmask-CSP generator: black-cell layout invariants — functional blacks, no 3-run/clamp, and white-cell connectivity (canPlaceBlack Check 6: a placement must not split white into a disconnected pocket / closed block). Interlocking is half-checked: canPlaceBlack Check 1 rejects a neighbour only if it is orphaned on BOTH axes, allowing single-axis (sandwiched) cells; GridValidator.uncrossedCells flags only cells in no word (2026-07-01 amendment, generator-side follow-up)
 ADR-0039  grid/domain/src/main/kotlin/com/bliss/grid/domain/validation/**  Interlocking is half-checked: GridValidator.uncrossedCells / GridViolation.UncrossedCell flag only cells in no word (2026-07-01 amendment); dead-end words must be >= 5 letters: GridValidator.DEAD_END_MIN_LEN / GridViolation.ShortDeadEnd, enforced by canPlaceBlack Check 7 and a SlotRegistry.build rejection (2026-07-03 amendment)
 ADR-0042  */worker/src/**/pre*generation/**        Daily puzzle pre-gen worker (k8s CronJob)
+ADR-0042  grid/application/src/**/puzzle/EnsureUpcomingDailiesUseCase.kt  Daily pre-gen use case: sequential rolling-window walk, seed iteration per date (clue recurrence lives in the ADR-0031 amendment)
 ADR-0044  identity/**                              Identity bounded context for player OIDC
 ADR-0044  */api/src/**/persistence/*Database.kt    CNPG libpq URI → toJdbcUrl(); never pass raw uri to Hikari
 ADR-0044  */api/src/**/SessionMiddleware.kt        Session cookie verification via identity-api
