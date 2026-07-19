@@ -1,6 +1,8 @@
 // Read-only handled-report history (ADR-0115); contribuer-gated upstream.
 
 import { useCallback, useEffect, useState } from 'react';
+import { Dialog } from '@ark-ui/react/dialog';
+import { Portal } from '@ark-ui/react/portal';
 import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
 import { useToast } from '@/ui/components/primitives';
@@ -67,6 +69,28 @@ const reopenBtn = css({
   _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 
+const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out' });
+const positioner = css({ position: 'fixed', inset: 0, zIndex: 1001, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', lg: { alignItems: 'center' } });
+const confirmSheet = css({
+  width: '100%',
+  maxWidth: '420px',
+  bg: 'ws.card',
+  borderTopLeftRadius: '22px',
+  borderTopRightRadius: '22px',
+  padding: '18px 18px calc(20px + env(safe-area-inset-bottom))',
+  boxShadow: '0 -8px 30px rgba(20,40,34,0.22)',
+  fontFamily: 'wsUi',
+  animation: 'wsSheetUp 260ms cubic-bezier(0.32,0.72,0,1)',
+  outline: 'none',
+  lg: { borderRadius: '22px', animation: 'wsFade 150ms ease-out' },
+});
+const confirmTitle = css({ fontFamily: 'wsDisplay', fontWeight: 'semibold', fontSize: '19px', color: 'ws.jadeInk', margin: '0 0 8px' });
+const confirmBody = css({ fontSize: '14px', color: 'ws.jadeInk', margin: '0 0 16px', lineHeight: '1.5' });
+const confirmActions = css({ display: 'flex', gap: '10px', justifyContent: 'flex-end' });
+const confirmBtnBase = { minHeight: '44px', paddingInline: '18px', borderRadius: '13px', fontFamily: 'wsUi', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', border: 'none' } as const;
+const confirmCancelBtn = css({ ...confirmBtnBase, bg: 'transparent', color: 'ws.khaki', _hover: { bg: 'ws.sable' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+const confirmConfirmBtn = css({ ...confirmBtnBase, bg: 'ws.sakuraDark', color: 'white', _hover: { filter: 'brightness(0.96)' }, _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' } });
+
 export interface SignalementHistoryProps {
   readonly surveyClient: SurveyClient;
   // ADR-0116: reversing the correction on reopen composes the grid correction; absent in fixtures that don't exercise it.
@@ -78,6 +102,7 @@ export function SignalementHistory({ surveyClient, correctionClient }: Signaleme
   const [items, setItems] = useState<ReadonlyArray<SignalementHistoryItem> | null>(null);
   const [error, setError] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<SignalementHistoryItem | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -143,7 +168,7 @@ export function SignalementHistory({ surveyClient, correctionClient }: Signaleme
                     <button
                       type="button"
                       className={reopenBtn}
-                      onClick={() => { void handleReopen(h); }}
+                      onClick={() => setConfirming(h)}
                       disabled={busyId === h.reportId}
                       aria-label={t('route.signalements.reopen.aria', { mot: h.wordText ?? h.clueText })}
                     >
@@ -156,6 +181,45 @@ export function SignalementHistory({ surveyClient, correctionClient }: Signaleme
           })}
         </ul>
       ) : null}
+
+      <Dialog.Root
+        open={confirming !== null}
+        onOpenChange={(d) => { if (!d.open) setConfirming(null); }}
+        modal
+        closeOnInteractOutside
+        closeOnEscape
+        preventScroll
+      >
+        <Portal>
+          <Dialog.Backdrop className={scrim} />
+          <Dialog.Positioner className={positioner}>
+            <Dialog.Content className={confirmSheet} data-testid="reopen-confirm-sheet">
+              <Dialog.Title className={confirmTitle}>{t('route.signalements.reopen.confirm.title')}</Dialog.Title>
+              <Dialog.Description className={confirmBody}>
+                {confirming?.decision === 'action'
+                  ? t('route.signalements.reopen.confirm.body')
+                  : t('route.signalements.reopen.confirm.bodyDismiss')}
+              </Dialog.Description>
+              <div className={confirmActions}>
+                <button type="button" className={confirmCancelBtn} onClick={() => setConfirming(null)}>
+                  {t('route.signalements.reopen.confirm.cancel')}
+                </button>
+                <button
+                  type="button"
+                  className={confirmConfirmBtn}
+                  onClick={() => {
+                    const h = confirming;
+                    setConfirming(null);
+                    if (h) void handleReopen(h);
+                  }}
+                >
+                  {t('route.signalements.reopen.confirm.confirm')}
+                </button>
+              </div>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </div>
   );
 }
