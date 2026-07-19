@@ -197,6 +197,7 @@ ensureDailies:
       value: "parentbased_traceidratio"
     - name: OTEL_TRACES_SAMPLER_ARG
       value: "1.0"
+    # - {name: GRID_DAILY_DISTILL, value: "true"}  # ADR-0117 daily-distill toggle, deploy dark
 # Cloudflare edge purge after daily generation (ADR-0089 §5). Reads the
 # `cloudflare-purge-token` Secret (keys `zone-id` + `token`, zone-scoped
 # Zone -> Cache Purge permission; see docs/secrets.md). Off by default so

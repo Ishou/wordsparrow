@@ -10,6 +10,7 @@ import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.GridGenerationPort
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PuzzleRepository
+import com.bliss.grid.application.puzzle.asDistilledGridGenerationPort
 import com.bliss.grid.application.puzzle.asGridGenerationPort
 import com.bliss.grid.application.puzzle.dailyPuzzleConstraints
 import com.bliss.grid.domain.generation.ClueCooldownRepository
@@ -117,7 +118,8 @@ private fun singleDateRegenerator(
             ?: LoadOrGeneratePuzzleUseCase.DEFAULT_COOLDOWN_MAX
     return EnsureUpcomingDailiesUseCase(
         puzzleRepository = puzzleRepository,
-        gridGenerationPort = productionGridGenerationPort(),
+        // Plain port: distillation's cost is justified for the daily window, not the 5-min --process-corrections cadence (ADR-0117).
+        gridGenerationPort = productionGridGenerationPort(distill = false),
         dailyPuzzleSelector = DailyPuzzleSelector(),
         cooldownRepository = cooldownRepository,
         cooldownMax = cooldownMax,
@@ -172,7 +174,7 @@ private fun runDailies(
         executeAndExit(
             puzzleRepository,
             cooldownRepository,
-            productionGridGenerationPort(),
+            productionGridGenerationPort(distill = System.getenv("GRID_DAILY_DISTILL")?.toBooleanStrictOrNull() == true),
             today = LocalDate.now(ZoneOffset.UTC).plusDays(startOffset.toLong()),
             force = force,
             windowDays = windowDays,
@@ -182,7 +184,8 @@ private fun runDailies(
     }
 }
 
-private fun productionGridGenerationPort(): GridGenerationPort {
+// distill is scoped to the daily-window callers; --process-corrections passes false (ADR-0117).
+private fun productionGridGenerationPort(distill: Boolean): GridGenerationPort {
     val wordRepository = CsvWordRepository.frenchCorpus()
     // Per-call overrides from EnsureUpcomingDailiesUseCase replace the constructor maxAttempts at runtime.
     val generatePuzzle =
@@ -190,7 +193,11 @@ private fun productionGridGenerationPort(): GridGenerationPort {
             wordRepository = wordRepository,
             defaults = dailyPuzzleConstraints(),
         )
-    return generatePuzzle.asGridGenerationPort()
+    return if (distill) {
+        generatePuzzle.asDistilledGridGenerationPort()
+    } else {
+        generatePuzzle.asGridGenerationPort()
+    }
 }
 
 internal fun executeAndExit(
