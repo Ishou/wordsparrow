@@ -78,6 +78,10 @@ spec:
                 {{- with .Values.ensureDailies.env }}
                 {{- toYaml . | nindent 16 }}
                 {{- end }}
+                {{- if .Values.ensureDailies.distill }}
+                # ADR-0117: serve distilled (airier, longer-worded) dailies from the pre-gen path.
+                - {name: GRID_DAILY_DISTILL, value: "true"}
+                {{- end }}
                 {{- if .Values.corpus.objectStore.enabled }}
                 - {name: CORPUS_DIR, value: /corpus}
                 {{- end }}
