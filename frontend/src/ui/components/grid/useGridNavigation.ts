@@ -298,6 +298,8 @@ export interface UseGridNavigationOptions {
   readonly isPanning?: () => boolean;
   // Validation-set predicate; absent means no cell is validated.
   readonly isCellValidated?: (row: number, col: number) => boolean;
+  // True while further input must be ignored — a full-grid validation is in flight and its verdict could be the win; blocking mutation keeps the submitted grid intact so a late keystroke can't corrupt the final state or void the winning verdict.
+  readonly isInputLocked?: () => boolean;
 }
 
 // Formats the polite announcement emitted once each time the user enters a
@@ -356,6 +358,9 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
   // Validation-set predicate; ref so an inline arrow at the call site doesn't churn identities.
   const isCellValidatedRef = useRef(options?.isCellValidated);
   isCellValidatedRef.current = options?.isCellValidated;
+  // Input-lock getter; ref for the same reason.
+  const isInputLockedRef = useRef(options?.isInputLocked);
+  isInputLockedRef.current = options?.isInputLocked;
   // Tracks the per-cell normalized (uppercase) value so handleInput can
   // detect same-letter no-ops. The browser overwrites target.value with the
   // raw IME character before handleInput fires, making a simple before/after
@@ -690,6 +695,7 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
 
   const enterLetter = useCallback(
     (char: string) => {
+      if (isInputLockedRef.current?.()) return;
       const { focused: f, direction: dir } = stateRef.current;
       if (!f) return;
       const letter = stripDiacritics(char);
@@ -737,6 +743,7 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
   );
 
   const eraseLetter = useCallback(() => {
+    if (isInputLockedRef.current?.()) return;
     const { focused: f, direction: dir } = stateRef.current;
     if (!f) return;
     const clue = lookup.clueAt(f.row, f.col, dir);
@@ -867,6 +874,13 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
     (event: React.FormEvent<HTMLInputElement>) => {
       const inputEvent = event.nativeEvent as InputEvent;
       const target = event.currentTarget;
+      // Locked (e.g. a full-grid validation in flight): the browser may have already written the raw glyph, so restore the cell to its mirror rather than just returning — a bare return would leave the stray letter in the DOM.
+      if (isInputLockedRef.current?.()) {
+        const p = posOf(target);
+        const stored = p ? cellValuesRef.current.get(key(p)) ?? '' : '';
+        if (target.value !== stored) target.value = stored;
+        return;
+      }
       // Validated cells are read-only. Browsers block native input
       // here, but Android soft keyboards have been observed to bypass
       // readOnly via composition events — mirror the keydown path's

@@ -294,19 +294,24 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
     // Suppress the hook's keyboard-avoidance auto-scroll — the grid never moves the view on its own.
     getZoomScale: () => 2,
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
+    // Freeze input while the whole-grid verdict is in flight so a late keystroke can't overwrite the last letter or void a winning validation (ADR-0076).
+    isInputLocked: () => validation.pending,
   });
 
   const requestHint = useCallback(() => {
     const f = activeFocusRef.current;
-    if (!f || validatedRef.current.has(posKey(f.row, f.col))) return;
+    // Reveal re-checks the grid (ADR-0076 §7); mid-verdict that would bump requestSeqRef and drop it.
+    if (!f || validatedRef.current.has(posKey(f.row, f.col)) || validation.pending) return;
     userActedRef.current = true;
     hint.request(f.row, f.col, activeDirectionRef.current);
-  }, [hint]);
+  }, [hint, validation.pending]);
 
   const requestVerify = useCallback(() => {
+    // Same race as requestHint: a correct-cell lock re-checks the grid mid-verdict.
+    if (validation.pending) return;
     userActedRef.current = true;
     verification.verify();
-  }, [verification]);
+  }, [verification, validation.pending]);
 
   const letterCount = useMemo(() => puzzle.cells.filter((c) => c.kind === 'letter').length, [puzzle]);
   const won = letterCount > 0 && validatedPositions.size >= letterCount;
@@ -536,6 +541,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
                       disabled={
                         assistGate != null ||
                         verification.pending ||
+                        validation.pending ||
                         (verification.secondsUntilNextVerify ?? 0) > 0
                       }
                     >
@@ -562,6 +568,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
                       disabled={
                         assistGate != null ||
                         hint.pending ||
+                        validation.pending ||
                         (hint.exhausted && (hint.secondsUntilNextHint ?? 0) > 0)
                       }
                     >
