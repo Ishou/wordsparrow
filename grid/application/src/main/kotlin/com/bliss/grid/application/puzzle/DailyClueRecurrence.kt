@@ -3,16 +3,7 @@ package com.bliss.grid.application.puzzle
 import com.bliss.grid.domain.generation.ClueId
 import java.time.LocalDate
 
-/**
- * Calendar-window clue recurrence for the shared daily puzzle (ADR-0031 amendment, 2026-07-19).
- *
- * A `(word, clue)` pair used by a stored daily grid on source date S is forbidden on target date
- * D whenever `|D - S| <= h`, where `h` is a per-use horizon in `[minGapDays, maxGapDays]` derived
- * deterministically from the pair and S. The minimum guarantees adjacent days never repeat; the
- * `minGap..maxGap` band randomizes the recurrence distance. Deriving from stored grids by date
- * (not a generation counter) makes the constraint order-independent and regeneration-safe, which
- * the generation-seq TTL it replaces was not.
- */
+/** Forbids a daily clue within a random 5..10-day gap of its use on a stored neighbor grid; see ADR-0031 amendment (2026-07-19). */
 object DailyClueRecurrence {
     fun forbiddenPairs(
         targetDate: LocalDate,

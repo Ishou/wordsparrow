@@ -15,13 +15,7 @@ import java.nio.file.Path
 import java.time.LocalDate
 import kotlin.random.Random
 
-// Starvation guard for the ADR-0031 date-window recurrence: 22x15 daily generation must still fill
-// when clues used within the last maxGap days are forbidden.
-//
-// The committed mock corpus carries ~1 clue per word (ADR-0097), so forbidding a clue there forbids
-// the whole WORD and grossly overstates starvation — clue-diversity starvation only shows on a
-// production-scale, multi-clue corpus. So the strict assertion runs only when WORDSPARROW_REAL_CORPUS_DIR
-// points at a dir containing `words/words-fr.csv`; otherwise the test skips.
+// Starvation guard (ADR-0031 amendment): 22x15 must fill at gap 5..10; asserts only vs WORDSPARROW_REAL_CORPUS_DIR because the mock corpus is ~1 clue/word (ADR-0097) and overstates starvation.
 @Tag("bench")
 class DailyRecurrenceWindowSweepTest {
     @Test
