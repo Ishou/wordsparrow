@@ -85,10 +85,7 @@ test('Corriger radios show their checked state visually', async ({ page }) => {
   expect(await rowBg(page, /Interdire/)).toBe(SAKURA_BLUSH);
   expect(await rowBg(page, /Remplacer/)).toBe(TRANSPARENT);
 
-  // The reported failure: the controlled radio's DOM checkedness drops
-  // (`:checked` absent) even though React state is right. Simulate it by
-  // forcing `.checked = false` on the selected input — the fill must
-  // survive, because it's driven by state (className), not `:checked`.
+  // Simulates the on-device failure: DOM checkedness drops but the fill must survive (state-driven, not `:checked`).
   await page.getByRole('radio', { name: /Interdire/ }).evaluate((el) => { (el as HTMLInputElement).checked = false; });
   expect(await radioBg(page, /Interdire/)).toBe(SAKURA_DARK);
 });
