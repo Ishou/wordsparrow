@@ -94,6 +94,21 @@ class GeneratePuzzleUseCase(
         return LongWordCoverage.bestByCoverage(grids, defaults.minWordLength)
     }
 
+    /** Template-distillation path (ADR-0117): latency-tolerant daily pre-gen only. See ADR for rationale. */
+    fun executeDistilled(
+        width: Int? = null,
+        height: Int? = null,
+        cooldownPolicy: ClueCooldownPolicy = ClueCooldownPolicy.Inert,
+        random: Random = Random(clock.nanoTime()),
+    ): Grid? {
+        val constraints =
+            defaults.copy(
+                width = width ?: defaults.width,
+                height = height ?: defaults.height,
+            )
+        return generator.generateDistilled(constraints, random, bestOfN = bestOfN.coerceAtLeast(1), cooldownPolicy = cooldownPolicy)
+    }
+
     /**
      * Run the retry loop and return the full [AttemptOutcome] — attempts count,
      * per-attempt wall time, per-attempt metrics, total time.

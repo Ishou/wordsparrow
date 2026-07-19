@@ -202,3 +202,9 @@ fun GeneratePuzzleUseCase.asGridGenerationPort(): GridGenerationPort =
             perAttemptTimeoutMsOverride = perAttemptTimeoutMs,
         ).grid
     }
+
+// Distilled variant (ADR-0117): generateDistilled manages its own attempt/timeout budget, unlike the base port.
+fun GeneratePuzzleUseCase.asDistilledGridGenerationPort(): GridGenerationPort =
+    GridGenerationPort { randomSeed, cooldownPolicy, _, _ ->
+        executeDistilled(cooldownPolicy = cooldownPolicy, random = Random(randomSeed))
+    }

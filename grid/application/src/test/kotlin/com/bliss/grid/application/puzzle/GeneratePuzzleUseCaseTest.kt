@@ -8,6 +8,7 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
+import com.bliss.grid.domain.generation.ClueCooldownPolicy
 import com.bliss.grid.domain.generation.GridConstraints
 import com.bliss.grid.domain.generation.WordRepository
 import com.bliss.grid.domain.model.Word
@@ -199,6 +200,36 @@ class GeneratePuzzleUseCaseTest {
         assertThat(viaOutcome!!.width).isEqualTo(viaExecute!!.width)
         assertThat(viaOutcome.height).isEqualTo(viaExecute.height)
         assertThat(viaOutcome.placements.size).isEqualTo(viaExecute.placements.size)
+    }
+
+    @Test
+    fun `executeDistilled returns a valid grid`() {
+        val useCase =
+            GeneratePuzzleUseCase(
+                wordRepository = AlwaysMatchingRepository,
+                defaults = GridConstraints(width = 9, height = 9),
+            )
+        val grid = useCase.executeDistilled(random = Random(1))
+        assertThat(grid).isNotNull()
+        assertThat(grid!!.width).isEqualTo(9)
+    }
+
+    @Test
+    fun `asDistilledGridGenerationPort routes generation through the distilled path`() {
+        val useCase =
+            GeneratePuzzleUseCase(
+                wordRepository = AlwaysMatchingRepository,
+                defaults = GridConstraints(width = 9, height = 9),
+            )
+        val port = useCase.asDistilledGridGenerationPort()
+        val grid =
+            port.generate(
+                randomSeed = 1L,
+                cooldownPolicy = ClueCooldownPolicy.Inert,
+                attempts = 1,
+                perAttemptTimeoutMs = 1_000L,
+            )
+        assertThat(grid).isNotNull()
     }
 }
 
