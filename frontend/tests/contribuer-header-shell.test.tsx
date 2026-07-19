@@ -68,6 +68,7 @@ function stubSurveyClient(): SurveyClient {
     listSignalements: vi.fn().mockResolvedValue([]),
     listHandledSignalements: vi.fn().mockResolvedValue([]),
     decideSignalement: vi.fn().mockResolvedValue(undefined),
+    undoSignalement: vi.fn().mockResolvedValue(undefined),
   };
 }
 

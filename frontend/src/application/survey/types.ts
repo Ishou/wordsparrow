@@ -221,6 +221,7 @@ export interface SurveyClient {
   listSignalements(): Promise<ReadonlyArray<SignalementSummary>>;
   listHandledSignalements(): Promise<ReadonlyArray<SignalementHistoryItem>>;
   decideSignalement(reportId: string, decision: SignalementDecision): Promise<void>;
+  undoSignalement(reportId: string): Promise<void>;
 }
 
 // Port for anon-rated dedup. Concrete adapter: `localStorageSurveyAnon.ts`.

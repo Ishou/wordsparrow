@@ -297,6 +297,16 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
     if (!res.ok) throw new Error(`decideSignalement failed: ${res.status}`);
   };
 
+  const undoSignalement: SurveyClient['undoSignalement'] = async (reportId: string) => {
+    const res = await fetchImpl(`${base}/v1/signalements/${encodeURIComponent(reportId)}/undo`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (res.status === 403) throw new ContribuerForbiddenError();
+    if (res.status === 204) return;
+    if (!res.ok) throw new Error(`undoSignalement failed: ${res.status}`);
+  };
+
   return {
     getNextItem,
     submitRating,
@@ -312,6 +322,7 @@ export function createHttpSurveyClient(options: HttpSurveyClientOptions): Survey
     listSignalements,
     listHandledSignalements,
     decideSignalement,
+    undoSignalement,
   };
 }
 

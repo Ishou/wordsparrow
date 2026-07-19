@@ -49,7 +49,7 @@ function SignalementsPage({ onglet }: { readonly onglet: SignalementsOnglet }) {
           {onglet === 'a-traiter' ? (
             <SignalementQueue surveyClient={surveyClient} correctionClient={ctx.correctionClient} />
           ) : (
-            <SignalementHistory surveyClient={surveyClient} />
+            <SignalementHistory surveyClient={surveyClient} correctionClient={ctx.correctionClient} />
           )}
         </>
       ) : (

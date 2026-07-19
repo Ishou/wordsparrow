@@ -4,6 +4,7 @@ export type {
   BackfillStatus,
   BlocklistPreview,
   CorrectionPreview,
+  ReversedKind,
   BlocklistWordInput,
   CorrectionAccepted,
   CorrectionClient,
@@ -15,10 +16,10 @@ export type {
   WordClue,
 } from './types';
 
-export { LastClueForbidden, SurveyDecisionFailed } from './errors';
+export { LastClueForbidden, SurveyDecisionFailed, SurveyUndoFailed } from './errors';
 
-export type { ApplyCorrectionDeps, ApplyCorrectionInput } from './applyCorrection';
-export { applyCorrection, markSignalementHandled, previewCorrection } from './applyCorrection';
+export type { ApplyCorrectionDeps, ApplyCorrectionInput, ReopenSignalementInput } from './applyCorrection';
+export { applyCorrection, markSignalementHandled, previewCorrection, reopenSignalement } from './applyCorrection';
 
 export type { ApplyBlocklistDeps, ApplyBlocklistInput } from './applyBlocklist';
 export { applyBlocklist, previewBlocklist } from './applyBlocklist';
