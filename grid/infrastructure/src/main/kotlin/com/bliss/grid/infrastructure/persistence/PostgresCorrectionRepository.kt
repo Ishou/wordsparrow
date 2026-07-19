@@ -131,7 +131,9 @@ class PostgresCorrectionRepository(
     ): List<ReversibleCorrection> =
         conn.prepareStatement(FIND_REVERSIBLE_SQL).use { stmt ->
             stmt.setString(1, oldClueText)
-            if (folded != null) stmt.setString(2, folded) else stmt.setNull(2, Types.VARCHAR)
+            for (i in 2..4) {
+                if (folded != null) stmt.setString(i, folded) else stmt.setNull(i, Types.VARCHAR)
+            }
             stmt.executeQuery().use { rs ->
                 buildList {
                     while (rs.next()) {
@@ -325,11 +327,13 @@ class PostgresCorrectionRepository(
 
         private const val MARK_EXPORTED_SQL = "UPDATE clue_corrections SET exported_at = now() WHERE correction_id = ?"
 
-        // Active (not exported, not reverted) corrections to reverse (ADR-0116): replace/forbid by old_clue_text, blocklist by word_text; newest first.
+        // Active (not exported, not reverted) corrections to reverse (ADR-0116): replace/forbid by old_clue_text
+        // optionally narrowed by folded word_text, blocklist by folded word_text alone; newest first.
         private const val FIND_REVERSIBLE_SQL =
             "SELECT correction_id, kind, old_clue_text, new_clue_text, word_text FROM clue_corrections " +
                 "WHERE exported_at IS NULL AND reverted_at IS NULL " +
-                "AND (old_clue_text = ? OR (kind = 'blocklist_word' AND upper(word_text) = ?)) " +
+                "AND ((old_clue_text = ? AND (? IS NULL OR upper(word_text) = ?)) " +
+                "OR (kind = 'blocklist_word' AND upper(word_text) = ?)) " +
                 "ORDER BY created_at DESC, correction_id DESC"
 
         private const val DEACTIVATE_SQL = "UPDATE clue_corrections SET reverted_at = now() WHERE correction_id = ?"

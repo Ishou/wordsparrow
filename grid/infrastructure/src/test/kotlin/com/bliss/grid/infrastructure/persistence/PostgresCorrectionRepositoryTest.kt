@@ -144,6 +144,23 @@ class PostgresCorrectionRepositoryTest {
     }
 
     @Test
+    fun `findReversible narrows a replace match by wordText when two corrections share the same old clue text`() {
+        val chatId =
+            repository.record(
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new chat", wordText = "CHAT"),
+                maintainer,
+            )
+        repository.record(
+            ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new chien", wordText = "CHIEN"),
+            maintainer,
+        )
+
+        val matched = repository.findReversible("old", "chat")
+
+        assertThat(matched.map { it.id }).containsExactly(chatId)
+    }
+
+    @Test
     fun `deactivate drops a correction from active and findReversible`() {
         val id = repository.record(ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = "old", wordText = "CHAT"), maintainer)
 

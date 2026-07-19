@@ -1,6 +1,7 @@
 package com.bliss.grid.application.correction
 
 import assertk.assertThat
+import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
@@ -44,9 +45,10 @@ class ReverseCorrectionUseCaseTest {
             return rows
                 .filterNot { it.reverted }
                 .filter { row ->
-                    row.correction.oldClueText == oldClueText ||
+                    (row.correction.oldClueText == oldClueText && (folded == null || row.correction.wordText?.uppercase() == folded)) ||
                         (
-                            row.correction.kind == ClueCorrection.Kind.BLOCKLIST_WORD && folded != null &&
+                            row.correction.kind == ClueCorrection.Kind.BLOCKLIST_WORD &&
+                                folded != null &&
                                 row.correction.wordText?.uppercase() == folded
                         )
                 }.map {
@@ -100,6 +102,22 @@ class ReverseCorrectionUseCaseTest {
 
         assertThat(kind).isEqualTo(ClueCorrection.Kind.FORBID_CLUE)
         assertThat(repo.active()).isEmpty()
+    }
+
+    @Test
+    fun `wordText narrows which replace is reversed when two share the same old clue text`() {
+        val repo = FakeCorrections()
+        repo.record(ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new chat", wordText = "CHAT"), by)
+        repo.record(ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new chien", wordText = "CHIEN"), by)
+
+        ReverseCorrectionUseCase(repo).execute("old", "chat", by)
+
+        val active = repo.active()
+        assertThat(active).hasSize(2)
+        assertThat(active.map { it.oldClueText to it.newClueText }).containsExactlyInAnyOrder(
+            "old" to "new chien",
+            "new chat" to "old",
+        )
     }
 
     @Test

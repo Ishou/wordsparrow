@@ -60,7 +60,7 @@ class InMemoryCorrectionRepository : CorrectionRepository {
                 .filterNot { it.value.reverted }
                 .filter { (_, row) ->
                     val c = row.correction
-                    c.oldClueText == oldClueText ||
+                    (c.oldClueText == oldClueText && (folded == null || c.wordText?.uppercase() == folded)) ||
                         (c.kind == ClueCorrection.Kind.BLOCKLIST_WORD && folded != null && c.wordText?.uppercase() == folded)
                 }.map { (id, row) ->
                     ReversibleCorrection(
