@@ -1,4 +1,4 @@
-// Needs a real engine to see the cross-fade lag; jsdom can't render transitions.
+// Needs a real engine (jsdom can't render the checked fill / transition): asserts the radio's own checked paint and the row highlight snap.
 import { expect, test, type Page } from '@playwright/test';
 
 const USER = { userId: 'u-1', displayName: 'Maintainer 1', role: 'maintainer', capabilities: ['admin:signalements', 'contribuer'] };
@@ -17,6 +17,8 @@ const REPORT = {
 };
 
 const SAKURA_BLUSH = 'rgb(247, 222, 231)';
+const SAKURA_DARK = 'rgb(190, 73, 112)';
+const CARD = 'rgb(255, 255, 255)';
 const TRANSPARENT = 'rgba(0, 0, 0, 0)';
 
 async function seed(page: Page): Promise<void> {
@@ -51,8 +53,12 @@ async function seed(page: Page): Promise<void> {
 async function rowBg(page: Page, name: RegExp): Promise<string> {
   return page.getByRole('radio', { name }).evaluate((input) => getComputedStyle(input.closest('label') as HTMLElement).backgroundColor);
 }
+// Computed background of the radio control itself — its checked fill.
+async function radioBg(page: Page, name: RegExp): Promise<string> {
+  return page.getByRole('radio', { name }).evaluate((input) => getComputedStyle(input).backgroundColor);
+}
 
-test('Corriger selection highlight snaps to the selected row with no cross-fade', async ({ page }) => {
+test('Corriger radios show their checked state visually', async ({ page }) => {
   await seed(page);
   await page.goto('/signalements');
 
@@ -62,15 +68,20 @@ test('Corriger selection highlight snaps to the selected row with no cross-fade'
   const remplacer = page.getByRole('radio', { name: /Remplacer/ });
   const interdire = page.getByRole('radio', { name: /Interdire/ });
 
-  // Default: Remplacer selected + highlighted.
+  // Default: Remplacer selected — its control shows the checked fill, its row is highlighted.
   await expect(remplacer).toBeChecked();
+  expect(await radioBg(page, /Remplacer/)).toBe(SAKURA_DARK);
+  expect(await radioBg(page, /Interdire/)).toBe(CARD);
   expect(await rowBg(page, /Remplacer/)).toBe(SAKURA_BLUSH);
   expect(await rowBg(page, /Interdire/)).toBe(TRANSPARENT);
 
-  // Switch to Interdire — the highlight must move immediately (no 120ms lag),
-  // so the read right after the click already shows the final colors.
+  // Switch to Interdire — the checked fill and the row highlight both move
+  // immediately (no native-scale drop, no 120ms cross-fade), so the read
+  // right after the click already shows the final state.
   await interdire.click();
   await expect(interdire).toBeChecked();
+  expect(await radioBg(page, /Interdire/)).toBe(SAKURA_DARK);
+  expect(await radioBg(page, /Remplacer/)).toBe(CARD);
   expect(await rowBg(page, /Interdire/)).toBe(SAKURA_BLUSH);
   expect(await rowBg(page, /Remplacer/)).toBe(TRANSPARENT);
 });
