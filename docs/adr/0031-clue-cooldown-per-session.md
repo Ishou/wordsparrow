@@ -252,3 +252,89 @@ Cooldown does not grant any access. Not applicable.
 - Feature-flag retirement PR is owed by `2026-09-01`. Search for
   `GRID_CLUE_COOLDOWN_ENABLED` in `Module.kt` to find the cleanup
   surface area.
+
+## Amendment (2026-07-19): daily bucket uses a calendar-recurrence window
+
+### Context
+
+The daily bucket's generation-seq TTL assumes daily grids are generated
+once per day, in date order, so a clue used "yesterday" is exactly one
+counter bump behind "today" and reliably on cooldown. Two production
+realities break that assumption:
+
+- **Pre-generation runs far ahead.** The window is generated in large
+  batches (dozens of dates at once), so date order and counter order
+  already diverge within a batch's tail.
+- **Regeneration is out-of-band.** Correction and blocklist processing
+  (ADR-0108) regenerate a *single* date (`windowDays=1`, `force=true`,
+  ADR-0081) at whatever counter value is current, and the shared
+  `generation_seq` is bumped by every such regeneration. The `rand(1..8)`
+  TTL then expires far faster than one day.
+
+On 2026-07-19 this shipped a visible defect: a partial-window
+regeneration on 2026-07-11 rebuilt 2026-07-10…18 but not 2026-07-19+.
+The frozen 2026-07-19 grid had been generated five days earlier at a low
+`generation_seq`; by the time 2026-07-18 was regenerated its clues had
+long fallen off cooldown, so the regenerated grid reused seven
+`(word, clue)` pairs — `CLE / "Ouvre la serrure"`, `RAS`, `RTT`, … —
+that 2026-07-19 already showed. Two adjacent days repeated definitions,
+which the whole feature exists to prevent.
+
+The root cause is a units mismatch: "don't repeat within N days" is a
+**calendar** constraint pinned to a **generation counter** polluted by
+regeneration traffic. Widening `GRID_CLUE_COOLDOWN_MAX` cannot fix it
+(it worsens short-word starvation, per `CooldownSweepTest`, and still
+ignores generation order).
+
+### Decision
+
+For the **daily bucket only**, replace the generation-seq TTL with a
+calendar-recurrence window derived from the stored grids themselves.
+When generating or regenerating date `D`, forbid every `(word, clue)`
+pair used by the *current* stored grid of any date `S` with
+`|D - S| <= h`, where `h = rand(minGapDays..maxGapDays)` is derived
+deterministically per `(pair, S)` from a stable hash — so a given stored
+grid always yields the same horizons and a regeneration of `D` sees the
+same constraints. Defaults `minGapDays = 5`, `maxGapDays = 10`
+(`GRID_DAILY_CLUE_MIN_GAP_DAYS` / `GRID_DAILY_CLUE_MAX_GAP_DAYS`). The
+`maxGapDays` is also the radius of stored neighbors consulted.
+
+The minimum gap is a hard floor: any two dates within `minGapDays` are
+always mutually exclusive regardless of generation order, so adjacent
+days can never repeat. The `min..max` band randomizes the recurrence
+distance, mirroring the original `rand(1..X)` intent.
+
+Placement: a pure `DailyClueRecurrence` helper in `:grid:application`
+computes the forbidden set from a `Map<LocalDate, Set<ClueId>>`;
+`EnsureUpcomingDailiesUseCase` sources that map via
+`PuzzleRepository.getCurrentForDate` and passes the resulting
+`ClueCooldownPolicy` into the generator — the same seam the seq snapshot
+used. No new port, no schema change: the stored grid *is* the record, so
+the daily path no longer reads or writes the `DAILY_SCOPE_ID` bucket.
+
+The per-session bucket is unchanged: it keeps the generation-seq TTL,
+the `clue_cooldown*` tables, and `GRID_CLUE_COOLDOWN_MAX`. Session
+generations are inherently in-order within a session, so the original
+model holds there.
+
+### Consequences
+
+- **Order-independent and regeneration-safe.** A single-date regen reads
+  its neighbors' stored grids directly, so the 2026-07-11 blind spot
+  cannot recur. This supersedes ADR-0042's "sequential walk … reads
+  cooldown state" *correctness* rationale — sequential generation is now
+  only a convenience (a just-persisted day is a visible neighbor for the
+  next), not the guarantee.
+- **No schema migration.** The forbidden set is derived from `puzzles`.
+  The `DAILY_SCOPE_ID` row and its `clue_cooldown` rows become inert
+  historical data; a later prune may drop them.
+- **More reads per generation.** Up to `2 * maxGapDays`
+  `getCurrentForDate` lookups per date. Offline pre-gen only; negligible.
+- **Starvation is bounded and validated.** Worst case forbids ~`2*maxGap`
+  neighbor grids' pairs; `DailyRecurrenceWindowSweepTest` confirms 22×15
+  daily generation still fills across a long sequence at gap 5..10 —
+  0/30 failures, first-attempt fills, on the production corpus (words
+  carry many distinct clues, so a forbidden pair rarely removes a word).
+  The committed mock corpus (~1 clue/word, ADR-0097) is not a valid proxy
+  here; the test asserts only against a `WORDSPARROW_REAL_CORPUS_DIR`.
+- `GRID_CLUE_COOLDOWN_MAX` no longer affects the daily grid.

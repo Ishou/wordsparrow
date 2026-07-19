@@ -1,7 +1,6 @@
 package com.bliss.grid.application.puzzle
 
 import com.bliss.grid.domain.generation.ClueCooldownPolicy
-import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.domain.generation.ClueId
 import com.bliss.grid.domain.generation.LongWordCoverage
 import com.bliss.grid.domain.model.ClueCell
@@ -17,8 +16,8 @@ class EnsureUpcomingDailiesUseCase(
     private val puzzleRepository: PuzzleRepository,
     private val gridGenerationPort: GridGenerationPort,
     private val dailyPuzzleSelector: DailyPuzzleSelector,
-    private val cooldownRepository: ClueCooldownRepository? = null,
-    private val cooldownMax: Int = LoadOrGeneratePuzzleUseCase.DEFAULT_COOLDOWN_MAX,
+    private val recurrenceMinGapDays: Int = DEFAULT_RECURRENCE_MIN_GAP_DAYS,
+    private val recurrenceMaxGapDays: Int = DEFAULT_RECURRENCE_MAX_GAP_DAYS,
     private val maxAttempts: Int = DEFAULT_MAX_ATTEMPTS,
     private val clock: Clock = Clock.systemUTC(),
     private val title: String = LoadOrGeneratePuzzleUseCase.DEFAULT_TITLE,
@@ -41,8 +40,8 @@ class EnsureUpcomingDailiesUseCase(
         val failedDates = mutableListOf<LocalDate>()
         val skippedDates = mutableListOf<LocalDate>()
 
-        // Sequential: cooldown snapshot from day N biases day N+1; parallel runs corrupt the ordering.
-        // Stop on first failure so day N+1 never persists with a snapshot that ignores day N's clues.
+        // Sequential so a just-persisted day is a visible stored neighbor for the next; parallel runs would blind adjacent days to each other.
+        // Stop on first failure so a later day never persists having skipped a gap that a retry would have filled.
         var stopped = false
         for (offset in 0 until windowDays) {
             val date = today.plusDays(offset.toLong())
@@ -88,7 +87,7 @@ class EnsureUpcomingDailiesUseCase(
     }
 
     private fun generateForDate(date: LocalDate): Pair<Grid?, Int> {
-        val cooldownPolicy = cooldownPolicyFor()
+        val cooldownPolicy = cooldownPolicyFor(date)
         // Best-of-N (offline pre-gen only): keep highest coverage, ties -> fewest definition cells (ADR-0095 amendment).
         var best: Grid? = null
         var bestCoverage = -1L
@@ -119,10 +118,29 @@ class EnsureUpcomingDailiesUseCase(
         return best to totalAttempts
     }
 
-    private fun cooldownPolicyFor(): ClueCooldownPolicy {
-        val cooldown = cooldownRepository ?: return ClueCooldownPolicy.Inert
-        val onCooldown = cooldown.snapshot(ClueCooldownRepository.DAILY_SCOPE_ID).onCooldown
-        return ClueCooldownPolicy.fromSet(onCooldown)
+    // Forbid clues used by stored neighbor grids within a random 5..10-day window (ADR-0031 amendment): date-derived, so order-independent and regeneration-safe.
+    private fun cooldownPolicyFor(date: LocalDate): ClueCooldownPolicy {
+        val forbidden =
+            DailyClueRecurrence.forbiddenPairs(
+                targetDate = date,
+                neighborPairsByDate = neighborPairsByDate(date),
+                minGapDays = recurrenceMinGapDays,
+                maxGapDays = recurrenceMaxGapDays,
+            )
+        return ClueCooldownPolicy.fromSet(forbidden)
+    }
+
+    private fun neighborPairsByDate(date: LocalDate): Map<LocalDate, Set<ClueId>> {
+        val out = HashMap<LocalDate, Set<ClueId>>()
+        for (offset in -recurrenceMaxGapDays..recurrenceMaxGapDays) {
+            if (offset == 0) continue
+            val neighbor = date.plusDays(offset.toLong())
+            val stored = puzzleRepository.getCurrentForDate(neighbor) ?: continue
+            out[neighbor] =
+                stored.puzzle.grid.placements
+                    .mapTo(HashSet()) { ClueId(it.word.text, it.chosenClue.text) }
+        }
+        return out
     }
 
     private fun persistGenerated(
@@ -131,14 +149,6 @@ class EnsureUpcomingDailiesUseCase(
     ): UUID {
         // Fresh v7 per generation so a regenerated date never collides with progress keyed on the prior id (ADR-0081).
         val puzzleId = dailyPuzzleSelector.freshDailyId(clock.millis())
-        cooldownRepository?.let { cooldown ->
-            val usedClues = grid.placements.map { ClueId(it.word.text, it.chosenClue.text) }
-            cooldown.recordGeneration(
-                bucketId = ClueCooldownRepository.DAILY_SCOPE_ID,
-                usedClues = usedClues,
-                rollMaxInclusive = cooldownMax,
-            )
-        }
         puzzleRepository.insertDaily(
             puzzleId = puzzleId,
             puzzleDate = date,
@@ -171,6 +181,12 @@ class EnsureUpcomingDailiesUseCase(
         const val DEFAULT_WINDOW_DAYS: Int = 7
         const val DEFAULT_MAX_ATTEMPTS: Int = 20
         const val SEED_DAY_MULTIPLIER: Long = 1_000_000_000L
+
+        /** Adjacent days within this many days never share a clue; the hard floor of the recurrence window (ADR-0031 amendment). */
+        const val DEFAULT_RECURRENCE_MIN_GAP_DAYS: Int = 5
+
+        /** Upper bound of the random per-clue recurrence gap; also the radius of stored neighbors consulted (ADR-0031 amendment). */
+        const val DEFAULT_RECURRENCE_MAX_GAP_DAYS: Int = 10
 
         /** 1 preserves single-shot; the daily worker overrides to 8 (ADR-0095). */
         const val DEFAULT_BEST_OF_N: Int = 1
