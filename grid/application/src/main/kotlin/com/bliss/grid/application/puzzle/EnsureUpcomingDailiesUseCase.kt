@@ -27,6 +27,8 @@ class EnsureUpcomingDailiesUseCase(
     private val innerAttempts: Int = DEFAULT_INNER_ATTEMPTS,
     private val perAttemptTimeoutMs: Long = DEFAULT_PER_ATTEMPT_TIMEOUT_MS,
     private val bestOfN: Int = DEFAULT_BEST_OF_N,
+    // Per-date grid size (ADR-0118); null keeps the port's base size (the dense, pre-sizing behaviour).
+    private val gridSizeForDate: ((LocalDate) -> Pair<Int, Int>)? = null,
 ) {
     private val log = LoggerFactory.getLogger(EnsureUpcomingDailiesUseCase::class.java)
 
@@ -88,6 +90,7 @@ class EnsureUpcomingDailiesUseCase(
 
     private fun generateForDate(date: LocalDate): Pair<Grid?, Int> {
         val cooldownPolicy = cooldownPolicyFor(date)
+        val size = gridSizeForDate?.invoke(date)
         // Best-of-N (offline pre-gen only): keep highest coverage, ties -> fewest definition cells (ADR-0095 amendment).
         var best: Grid? = null
         var bestCoverage = -1L
@@ -102,6 +105,8 @@ class EnsureUpcomingDailiesUseCase(
                         cooldownPolicy = cooldownPolicy,
                         attempts = innerAttempts,
                         perAttemptTimeoutMs = perAttemptTimeoutMs,
+                        width = size?.first,
+                        height = size?.second,
                     )
                 if (grid != null) {
                     val coverage = LongWordCoverage.coverageOf(grid, PUZZLE_MIN_WORD_LENGTH)
@@ -201,17 +206,22 @@ class EnsureUpcomingDailiesUseCase(
 
 /** Stubbable seam over [GeneratePuzzleUseCase] so worker tests do not pay CSP solver cost. */
 fun interface GridGenerationPort {
+    // width/height override the use case's base size for this date (ADR-0118 daily sizing); null keeps the base.
     fun generate(
         randomSeed: Long,
         cooldownPolicy: ClueCooldownPolicy,
         attempts: Int,
         perAttemptTimeoutMs: Long,
+        width: Int?,
+        height: Int?,
     ): Grid?
 }
 
 fun GeneratePuzzleUseCase.asGridGenerationPort(): GridGenerationPort =
-    GridGenerationPort { randomSeed, cooldownPolicy, attempts, perAttemptTimeoutMs ->
+    GridGenerationPort { randomSeed, cooldownPolicy, attempts, perAttemptTimeoutMs, width, height ->
         executeWithOutcome(
+            width = width,
+            height = height,
             cooldownPolicy = cooldownPolicy,
             randomFactory = { attempt -> Random(randomSeed + attempt) },
             attemptsOverride = attempts,
@@ -221,6 +231,6 @@ fun GeneratePuzzleUseCase.asGridGenerationPort(): GridGenerationPort =
 
 // Distilled variant (ADR-0117): generateDistilled manages its own attempt/timeout budget, unlike the base port.
 fun GeneratePuzzleUseCase.asDistilledGridGenerationPort(): GridGenerationPort =
-    GridGenerationPort { randomSeed, cooldownPolicy, _, _ ->
-        executeDistilled(cooldownPolicy = cooldownPolicy, random = Random(randomSeed))
+    GridGenerationPort { randomSeed, cooldownPolicy, _, _, width, height ->
+        executeDistilled(width = width, height = height, cooldownPolicy = cooldownPolicy, random = Random(randomSeed))
     }

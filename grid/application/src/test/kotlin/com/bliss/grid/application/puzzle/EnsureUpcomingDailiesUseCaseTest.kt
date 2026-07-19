@@ -8,6 +8,7 @@ import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isLessThan
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import com.bliss.grid.domain.generation.ClueCooldownPolicy
 import com.bliss.grid.domain.generation.ClueId
@@ -134,6 +135,37 @@ class EnsureUpcomingDailiesUseCaseTest {
             assertThat(call.attempts).isEqualTo(42)
             assertThat(call.perAttemptTimeoutMs).isEqualTo(7_777L)
         }
+    }
+
+    @Test
+    fun `passes the per-date grid size to the port when a sizer is configured`() {
+        val repo = TrackingPuzzleRepository()
+        val port = RecordingPort(grids = { _ -> successfulGrid() })
+        val sunday = LocalDate.of(2026, 8, 2) // Sunday; the next day is a weekday
+        val useCase =
+            EnsureUpcomingDailiesUseCase(
+                puzzleRepository = repo,
+                gridGenerationPort = port,
+                dailyPuzzleSelector = selector,
+                windowDays = 2,
+                gridSizeForDate = ::dailyGridSize,
+            )
+
+        useCase.execute(sunday)
+
+        assertThat(port.calls[0].width to port.calls[0].height).isEqualTo(22 to 15)
+        assertThat(port.calls[1].width to port.calls[1].height).isEqualTo(15 to 12)
+    }
+
+    @Test
+    fun `passes null size to the port when no sizer is configured`() {
+        val repo = TrackingPuzzleRepository()
+        val port = RecordingPort(grids = { _ -> successfulGrid() })
+
+        newUseCase(repo, port, windowDays = 1).execute(today)
+
+        assertThat(port.calls[0].width).isNull()
+        assertThat(port.calls[0].height).isNull()
     }
 
     @Test
@@ -445,6 +477,8 @@ class EnsureUpcomingDailiesUseCaseTest {
         val cooldownPolicy: ClueCooldownPolicy,
         val attempts: Int,
         val perAttemptTimeoutMs: Long,
+        val width: Int?,
+        val height: Int?,
     )
 
     private class RecordingPort(
@@ -457,8 +491,10 @@ class EnsureUpcomingDailiesUseCaseTest {
             cooldownPolicy: ClueCooldownPolicy,
             attempts: Int,
             perAttemptTimeoutMs: Long,
+            width: Int?,
+            height: Int?,
         ): Grid? {
-            val call = PortCall(randomSeed, cooldownPolicy, attempts, perAttemptTimeoutMs)
+            val call = PortCall(randomSeed, cooldownPolicy, attempts, perAttemptTimeoutMs, width, height)
             calls += call
             return grids(call)
         }

@@ -190,6 +190,8 @@ class MainTest {
                     cooldownPolicy: ClueCooldownPolicy,
                     attempts: Int,
                     perAttemptTimeoutMs: Long,
+                    width: Int?,
+                    height: Int?,
                 ): Grid? = null
             }
 
@@ -275,6 +277,8 @@ class MainTest {
             cooldownPolicy: ClueCooldownPolicy,
             attempts: Int,
             perAttemptTimeoutMs: Long,
+            width: Int?,
+            height: Int?,
         ): Grid {
             val word = Word(text = "ABCDE", definition = "test")
             val placement =
@@ -294,6 +298,8 @@ class MainTest {
             cooldownPolicy: ClueCooldownPolicy,
             attempts: Int,
             perAttemptTimeoutMs: Long,
+            width: Int?,
+            height: Int?,
         ): Grid = error("GridGenerationPort.generate must not be called when every day is already persisted")
     }
 
@@ -305,6 +311,8 @@ class MainTest {
             cooldownPolicy: ClueCooldownPolicy,
             attempts: Int,
             perAttemptTimeoutMs: Long,
+            width: Int?,
+            height: Int?,
         ): Grid {
             calls++
             val word = Word(text = "ABCDE", definition = "test")

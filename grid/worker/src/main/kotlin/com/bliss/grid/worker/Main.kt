@@ -11,7 +11,9 @@ import com.bliss.grid.application.puzzle.GridGenerationPort
 import com.bliss.grid.application.puzzle.PuzzleRepository
 import com.bliss.grid.application.puzzle.asDistilledGridGenerationPort
 import com.bliss.grid.application.puzzle.asGridGenerationPort
+import com.bliss.grid.application.puzzle.dailyGridSize
 import com.bliss.grid.application.puzzle.dailyPuzzleConstraints
+import com.bliss.grid.application.puzzle.distilledDailyBaseConstraints
 import com.bliss.grid.infrastructure.persistence.BlissDatabase
 import com.bliss.grid.infrastructure.persistence.CsvClueOverrideAppender
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
@@ -193,10 +195,11 @@ private fun runDailies(
 private fun productionGridGenerationPort(distill: Boolean): GridGenerationPort {
     val wordRepository = CsvWordRepository.frenchCorpus()
     // Per-call overrides from EnsureUpcomingDailiesUseCase replace the constructor maxAttempts at runtime.
+    // Distilled dailies are per-date sized off a bare base (ADR-0118); the dense path keeps the 22x15 ADR-0095 constraints.
     val generatePuzzle =
         GeneratePuzzleUseCase(
             wordRepository = wordRepository,
-            defaults = dailyPuzzleConstraints(),
+            defaults = if (distill) distilledDailyBaseConstraints() else dailyPuzzleConstraints(),
         )
     return if (distill) {
         generatePuzzle.asDistilledGridGenerationPort()
@@ -226,6 +229,8 @@ internal fun executeAndExit(
             // Dense attempts are cheap (best-of-N pays off, ADR-0095); distillation is expensive + self-selecting/self-retrying, so it runs once per date -- retrying it would redo the backoff (ADR-0117).
             bestOfN = if (distill) 1 else DAILY_BEST_OF_N,
             maxAttempts = if (distill) DISTILL_DAILY_MAX_ATTEMPTS else EnsureUpcomingDailiesUseCase.DEFAULT_MAX_ATTEMPTS,
+            // Per-date sizing is gated with distillation (ADR-0118): the dense path stays 22x15 so this deploys dark.
+            gridSizeForDate = if (distill) ::dailyGridSize else null,
         )
     val summary = useCase.execute(today, force = force)
     log.info(
