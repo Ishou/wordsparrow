@@ -13,8 +13,6 @@ import com.bliss.grid.application.puzzle.PuzzleRepository
 import com.bliss.grid.application.puzzle.StoredDailyPuzzle
 import com.bliss.grid.application.puzzle.StoredPuzzle
 import com.bliss.grid.domain.generation.ClueCooldownPolicy
-import com.bliss.grid.domain.generation.ClueCooldownRepository
-import com.bliss.grid.domain.generation.ClueId
 import com.bliss.grid.domain.model.Column
 import com.bliss.grid.domain.model.Direction
 import com.bliss.grid.domain.model.Grid
@@ -55,7 +53,7 @@ class MainTest {
             repo.seedDaily(date, newStoredPuzzle())
         }
 
-        val exit = executeAndExit(repo, NoopCooldownRepo(), ExplodingPort, today = today)
+        val exit = executeAndExit(repo, ExplodingPort, today = today)
 
         assertThat(exit).isEqualTo(0)
         val summary = appender.list.single { it.formattedMessage.contains("event=ensure_upcoming_dailies_summary") }
@@ -75,7 +73,7 @@ class MainTest {
             repo.seedDaily(today.plusDays(offset.toLong()), newStoredPuzzle())
         }
 
-        val exit = executeAndExit(repo, NoopCooldownRepo(), SuccessfulPort, today = today, force = true)
+        val exit = executeAndExit(repo, SuccessfulPort, today = today, force = true)
 
         assertThat(exit).isEqualTo(0)
         val summary = appender.list.single { it.formattedMessage.contains("event=ensure_upcoming_dailies_summary") }
@@ -88,7 +86,6 @@ class MainTest {
         val exit =
             executeAndExit(
                 PreseededRepo(),
-                NoopCooldownRepo(),
                 SuccessfulPort,
                 today = today,
                 force = true,
@@ -112,7 +109,6 @@ class MainTest {
         val exit =
             executeAndExit(
                 PreseededRepo(),
-                NoopCooldownRepo(),
                 SuccessfulPort,
                 today = today,
                 force = true,
@@ -139,7 +135,7 @@ class MainTest {
                 sender = sender,
             )
 
-        val exit = executeAndExit(repo, NoopCooldownRepo(), ExplodingPort, today = today, edgePurgeHook = hook)
+        val exit = executeAndExit(repo, ExplodingPort, today = today, edgePurgeHook = hook)
 
         assertThat(exit).isEqualTo(0)
         assertThat(sender.calls).isEmpty()
@@ -196,7 +192,7 @@ class MainTest {
                 ): Grid? = null
             }
 
-        val exit = executeAndExit(repo, NoopCooldownRepo(), failingPort, today = today)
+        val exit = executeAndExit(repo, failingPort, today = today)
 
         assertThat(exit).isEqualTo(1)
         val summary = appender.list.single { it.formattedMessage.contains("event=ensure_upcoming_dailies_summary") }
@@ -252,18 +248,6 @@ class MainTest {
             val id = byDate[date]?.lastOrNull() ?: return null
             return store[id]?.let { StoredDailyPuzzle(id, it) }
         }
-    }
-
-    private class NoopCooldownRepo : ClueCooldownRepository {
-        override fun snapshot(bucketId: UUID): ClueCooldownRepository.Snapshot = ClueCooldownRepository.Snapshot(0L, emptySet())
-
-        override fun recordGeneration(
-            bucketId: UUID,
-            usedClues: Collection<ClueId>,
-            rollMaxInclusive: Int,
-        ): Long = 0L
-
-        override fun deleteBySession(bucketId: UUID): Int = 0
     }
 
     private object SuccessfulPort : GridGenerationPort {

@@ -66,6 +66,14 @@ Sequential walk is non-negotiable: each successful generation
 updates clue cooldown state (ADR-0031) that the next day's
 generator reads. Parallel walk would corrupt the ordering.
 
+> **Amendment (2026-07-19):** the daily clue cooldown is now a
+> calendar-recurrence window derived from stored neighbor grids
+> (ADR-0031 amendment), not a generation-seq TTL. Correctness no
+> longer depends on the sequential walk — each date reads its stored
+> neighbors directly, so out-of-order regeneration is safe. Sequential
+> generation is retained only so a just-persisted day is a visible
+> neighbor for the next within a batch.
+
 Seed iteration preserves the deterministic puzzle id per date
 (UUID v7 of date midnight UTC, ADR-0021); only the generator's
 randomization varies on retries.

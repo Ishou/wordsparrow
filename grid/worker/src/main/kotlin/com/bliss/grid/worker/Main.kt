@@ -8,17 +8,14 @@ import com.bliss.grid.application.puzzle.DailyPuzzleSelector
 import com.bliss.grid.application.puzzle.EnsureUpcomingDailiesUseCase
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.GridGenerationPort
-import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
 import com.bliss.grid.application.puzzle.PuzzleRepository
 import com.bliss.grid.application.puzzle.asDistilledGridGenerationPort
 import com.bliss.grid.application.puzzle.asGridGenerationPort
 import com.bliss.grid.application.puzzle.dailyPuzzleConstraints
-import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.BlissDatabase
 import com.bliss.grid.infrastructure.persistence.CsvClueOverrideAppender
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import com.bliss.grid.infrastructure.persistence.PostgresBlocklistBackfill
-import com.bliss.grid.infrastructure.persistence.PostgresClueCooldownRepository
 import com.bliss.grid.infrastructure.persistence.PostgresCorrectionRepository
 import com.bliss.grid.infrastructure.persistence.PostgresGridBackfill
 import com.bliss.grid.infrastructure.persistence.PostgresPuzzleRepository
@@ -83,12 +80,11 @@ private fun runProcessCorrections(): Int {
         val store = PostgresCorrectionRepository(dataSource)
         val backfill = PostgresGridBackfill(dataSource)
         val puzzleRepository = PostgresPuzzleRepository(dataSource)
-        val cooldownRepository = PostgresClueCooldownRepository(dataSource)
         val blocklist =
             ProcessBlocklistUseCase(
                 store = store,
                 backfill = PostgresBlocklistBackfill(dataSource),
-                regeneration = singleDateRegenerator(puzzleRepository, cooldownRepository).asDailyRegenerationPort(),
+                regeneration = singleDateRegenerator(puzzleRepository).asDailyRegenerationPort(),
             )
         val corrections = ProcessCorrectionsUseCase(store, backfill, blocklist)
         corrections.run()
@@ -109,23 +105,29 @@ internal fun purgeRegeneratedDailies(
 }
 
 // windowDays=1 so execute(date, force=true) regenerates exactly that date against the corrected corpus (ADR-0110 §2).
-private fun singleDateRegenerator(
-    puzzleRepository: PuzzleRepository,
-    cooldownRepository: ClueCooldownRepository,
-): EnsureUpcomingDailiesUseCase {
-    val cooldownMax =
-        System.getenv("GRID_CLUE_COOLDOWN_MAX")?.toIntOrNull()
-            ?: LoadOrGeneratePuzzleUseCase.DEFAULT_COOLDOWN_MAX
+private fun singleDateRegenerator(puzzleRepository: PuzzleRepository): EnsureUpcomingDailiesUseCase {
+    val (minGap, maxGap) = recurrenceGapsFromEnv()
     return EnsureUpcomingDailiesUseCase(
         puzzleRepository = puzzleRepository,
         // Plain port: distillation's cost is justified for the daily window, not the 5-min --process-corrections cadence (ADR-0117).
         gridGenerationPort = productionGridGenerationPort(distill = false),
         dailyPuzzleSelector = DailyPuzzleSelector(),
-        cooldownRepository = cooldownRepository,
-        cooldownMax = cooldownMax,
+        recurrenceMinGapDays = minGap,
+        recurrenceMaxGapDays = maxGap,
         windowDays = 1,
         bestOfN = DAILY_BEST_OF_N,
     )
+}
+
+// Date-window recurrence bounds (ADR-0031 amendment); env overrides let production tune without a redeploy of the constants.
+private fun recurrenceGapsFromEnv(): Pair<Int, Int> {
+    val min =
+        System.getenv("GRID_DAILY_CLUE_MIN_GAP_DAYS")?.toIntOrNull()
+            ?: EnsureUpcomingDailiesUseCase.DEFAULT_RECURRENCE_MIN_GAP_DAYS
+    val max =
+        System.getenv("GRID_DAILY_CLUE_MAX_GAP_DAYS")?.toIntOrNull()
+            ?: EnsureUpcomingDailiesUseCase.DEFAULT_RECURRENCE_MAX_GAP_DAYS
+    return min to max
 }
 
 // Flushes un-exported corrections into the offline override CSV so the durable corpus catches up (ADR-0108 §3).
@@ -170,10 +172,8 @@ private fun runDailies(
     return try {
         val dataSource = database.dataSource() ?: error("DATABASE_URL produced a null DataSource")
         val puzzleRepository: PuzzleRepository = PostgresPuzzleRepository(dataSource)
-        val cooldownRepository: ClueCooldownRepository = PostgresClueCooldownRepository(dataSource)
         executeAndExit(
             puzzleRepository,
-            cooldownRepository,
             productionGridGenerationPort(distill = System.getenv("GRID_DAILY_DISTILL")?.toBooleanStrictOrNull() == true),
             today = LocalDate.now(ZoneOffset.UTC).plusDays(startOffset.toLong()),
             force = force,
@@ -202,23 +202,20 @@ private fun productionGridGenerationPort(distill: Boolean): GridGenerationPort {
 
 internal fun executeAndExit(
     puzzleRepository: PuzzleRepository,
-    cooldownRepository: ClueCooldownRepository,
     gridGenerationPort: GridGenerationPort,
     today: LocalDate = LocalDate.now(ZoneOffset.UTC),
     force: Boolean = false,
     windowDays: Int = EnsureUpcomingDailiesUseCase.DEFAULT_WINDOW_DAYS,
     edgePurgeHook: EdgePurgeHook = EdgePurgeHook(),
 ): Int {
-    val cooldownMax =
-        System.getenv("GRID_CLUE_COOLDOWN_MAX")?.toIntOrNull()
-            ?: LoadOrGeneratePuzzleUseCase.DEFAULT_COOLDOWN_MAX
+    val (minGap, maxGap) = recurrenceGapsFromEnv()
     val useCase =
         EnsureUpcomingDailiesUseCase(
             puzzleRepository = puzzleRepository,
             gridGenerationPort = gridGenerationPort,
             dailyPuzzleSelector = DailyPuzzleSelector(),
-            cooldownRepository = cooldownRepository,
-            cooldownMax = cooldownMax,
+            recurrenceMinGapDays = minGap,
+            recurrenceMaxGapDays = maxGap,
             windowDays = windowDays,
             // Offline pre-gen can afford best-of-N -> keep the sparsest daily grid (ADR-0095).
             bestOfN = DAILY_BEST_OF_N,

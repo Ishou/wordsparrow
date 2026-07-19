@@ -2,12 +2,15 @@ package com.bliss.grid.application.puzzle
 
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.doesNotContain
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isLessThan
+import assertk.assertions.isTrue
 import com.bliss.grid.domain.generation.ClueCooldownPolicy
+import com.bliss.grid.domain.generation.ClueId
 import com.bliss.grid.domain.generation.LongWordCoverage
 import com.bliss.grid.domain.model.ClueCell
 import com.bliss.grid.domain.model.Column
@@ -265,6 +268,65 @@ class EnsureUpcomingDailiesUseCaseTest {
         assertThat(summary.failedDates).containsExactly(today)
         assertThat(summary.skippedDates).containsExactly(today.plusDays(1))
         assertThat(repo.insertedDates).isEmpty()
+    }
+
+    @Test
+    fun `regenerating one date in isolation avoids the clues of already-frozen neighbor grids`() {
+        // The July-11 regression: a partial regeneration reused a frozen future day's clues because the
+        // generation-seq cooldown could not see it. The date-window policy forbids stored neighbors directly.
+        val repo = TrackingPuzzleRepository()
+        val target = today
+        val etePair = ClueId("ETE", "saison la plus chaude")
+        val clePair = ClueId("CLE", "ouvre la serrure")
+        repo.seedDaily(target.minusDays(1), storedFromPairs(etePair))
+        repo.seedDaily(target.plusDays(1), storedFromPairs(clePair))
+
+        // A picker that reuses each frozen clue unless the policy forbids it, mirroring the real fallback picker.
+        val port =
+            RecordingPort(grids = { call ->
+                pickerGrid(call.cooldownPolicy, listOf(etePair, clePair))
+            })
+        val useCase = newUseCase(repo, port, windowDays = 1)
+
+        useCase.execute(target, force = true)
+
+        val policy = port.calls.last().cooldownPolicy
+        assertThat(policy.isOnCooldown(etePair)).isTrue()
+        assertThat(policy.isOnCooldown(clePair)).isTrue()
+        val targetPairs = pairsOf(repo.getCurrentForDate(target)!!.puzzle.grid)
+        assertThat(targetPairs).doesNotContain(etePair)
+        assertThat(targetPairs).doesNotContain(clePair)
+    }
+
+    private fun pairsOf(grid: Grid): List<ClueId> = grid.placements.map { ClueId(it.word.text, it.chosenClue.text) }
+
+    private fun storedFromPairs(vararg pairs: ClueId): StoredPuzzle =
+        StoredPuzzle(
+            grid = pickerGrid(ClueCooldownPolicy.Inert, pairs.toList()),
+            title = "Grille du jour",
+            language = "fr",
+            hintsAllowed = 3,
+            createdAt = Instant.parse("2026-05-13T00:00:00Z"),
+        )
+
+    // One placement per candidate: keep the pair if free, else swap to a non-colliding filler.
+    private fun pickerGrid(
+        policy: ClueCooldownPolicy,
+        candidates: List<ClueId>,
+    ): Grid {
+        val placements =
+            candidates.mapIndexed { i, pair ->
+                val (text, clue) =
+                    if (policy.isOnCooldown(pair)) "Z${pair.wordText}" to "def-${pair.wordText}" else pair.wordText to pair.clueText
+                val word = Word(text = text, definition = clue)
+                WordPlacement(
+                    word = word,
+                    cluePosition = Position(Row(i), Column(0)),
+                    direction = Direction.RIGHT,
+                    chosenClue = word.clues.first(),
+                )
+            }
+        return Grid.fromPlacements(width = 12, height = candidates.size.coerceAtLeast(1), placements = placements)
     }
 
     private fun newUseCase(
