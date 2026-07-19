@@ -11,6 +11,9 @@ import kotlin.random.Random
 private const val FILL_LAYOUT_MAX_ATTEMPTS = 80
 private const val DISTILL_FILL_CHECK_MS = 2_000L
 
+// Backoff is expensive, so retry the fill (cheap) not the template: a few fresh templates cover a cooled-out fill.
+private const val DEFAULT_DISTILL_TEMPLATE_ATTEMPTS = 3
+
 /**
  * Default per-attempt deadline. The outer retry loop in
  * `GeneratePuzzleUseCase` retries on failure with a fresh seed, so a tight
@@ -226,26 +229,54 @@ class GridGenerator(
         bestOfN: Int = 1,
         distillFillCheckMs: Long = DISTILL_FILL_CHECK_MS,
         cooldownPolicy: ClueCooldownPolicy = ClueCooldownPolicy.Inert,
+        templateAttempts: Int = DEFAULT_DISTILL_TEMPLATE_ATTEMPTS,
+    ): Grid? =
+        firstFillableTemplate(random, templateAttempts) { attemptRandom ->
+            distillOnce(constraints, attemptRandom, timeoutMs, bestOfN, distillFillCheckMs, cooldownPolicy)
+        }
+
+    /** Return the first of [attempts] freshly-seeded templates that fills, so a cooled-out fill retries the fill -- never the expensive backoff. */
+    internal fun firstFillableTemplate(
+        random: Random,
+        attempts: Int,
+        produce: (Random) -> Grid?,
     ): Grid? {
-        val dense = generate(constraints, random, timeoutMs = timeoutMs, cooldownPolicy = cooldownPolicy) ?: return null
+        repeat(attempts) {
+            val grid = produce(Random(random.nextLong()))
+            if (grid != null) return grid
+        }
+        return null
+    }
+
+    private fun distillOnce(
+        constraints: GridConstraints,
+        random: Random,
+        timeoutMs: Long,
+        bestOfN: Int,
+        distillFillCheckMs: Long,
+        cooldownPolicy: ClueCooldownPolicy,
+    ): Grid? {
         val minLen = constraints.minWordLength
+        // Dense start + backoff probes run Inert: they ask a structural "can this SHAPE fill?" question, so the daily cooldown is irrelevant and only slows probes / over-rejects fillable shapes.
+        val dense = generate(constraints, random, timeoutMs = timeoutMs, cooldownPolicy = ClueCooldownPolicy.Inert) ?: return null
         val start = reconstructLayout(dense, constraints.width, constraints.height)
         val distilled =
             BackoffDistiller.distill(start, minLen, lexicon()) { candidate ->
                 fillLayout(
                     candidate,
                     minLen,
-                    random,
+                    Random(random.nextLong()),
                     timeoutMs = distillFillCheckMs,
                     themeLimits = constraints.themeLimits,
-                    cooldownPolicy = cooldownPolicy,
+                    cooldownPolicy = ClueCooldownPolicy.Inert,
                 ) !=
                     null
             }
+        // Only the served grid honours the cooldown; fillLayout self-retries within its budget.
         return fillLayout(
             distilled,
             minLen,
-            random,
+            Random(random.nextLong()),
             timeoutMs = timeoutMs,
             bestOfN = bestOfN,
             themeLimits = constraints.themeLimits,

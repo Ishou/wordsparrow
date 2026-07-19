@@ -62,6 +62,9 @@ fun main(args: Array<String>) {
 
 private const val DAILY_BEST_OF_N: Int = 8
 
+// Distilled generation self-retries internally (fresh templates + fill retries), so one outer attempt per date suffices.
+private const val DISTILL_DAILY_MAX_ATTEMPTS: Int = 1
+
 private const val DEFAULT_OVERRIDES_CSV: String = "data/curated/clue_overrides_fr.csv"
 
 private fun printUsage() {
@@ -172,12 +175,14 @@ private fun runDailies(
     return try {
         val dataSource = database.dataSource() ?: error("DATABASE_URL produced a null DataSource")
         val puzzleRepository: PuzzleRepository = PostgresPuzzleRepository(dataSource)
+        val distill = System.getenv("GRID_DAILY_DISTILL")?.toBooleanStrictOrNull() == true
         executeAndExit(
             puzzleRepository,
-            productionGridGenerationPort(distill = System.getenv("GRID_DAILY_DISTILL")?.toBooleanStrictOrNull() == true),
+            productionGridGenerationPort(distill = distill),
             today = LocalDate.now(ZoneOffset.UTC).plusDays(startOffset.toLong()),
             force = force,
             windowDays = windowDays,
+            distill = distill,
         )
     } finally {
         database.stop()
@@ -206,6 +211,7 @@ internal fun executeAndExit(
     today: LocalDate = LocalDate.now(ZoneOffset.UTC),
     force: Boolean = false,
     windowDays: Int = EnsureUpcomingDailiesUseCase.DEFAULT_WINDOW_DAYS,
+    distill: Boolean = false,
     edgePurgeHook: EdgePurgeHook = EdgePurgeHook(),
 ): Int {
     val (minGap, maxGap) = recurrenceGapsFromEnv()
@@ -217,8 +223,9 @@ internal fun executeAndExit(
             recurrenceMinGapDays = minGap,
             recurrenceMaxGapDays = maxGap,
             windowDays = windowDays,
-            // Offline pre-gen can afford best-of-N -> keep the sparsest daily grid (ADR-0095).
-            bestOfN = DAILY_BEST_OF_N,
+            // Dense attempts are cheap (best-of-N pays off, ADR-0095); distillation is expensive + self-selecting/self-retrying, so it runs once per date -- retrying it would redo the backoff (ADR-0117).
+            bestOfN = if (distill) 1 else DAILY_BEST_OF_N,
+            maxAttempts = if (distill) DISTILL_DAILY_MAX_ATTEMPTS else EnsureUpcomingDailiesUseCase.DEFAULT_MAX_ATTEMPTS,
         )
     val summary = useCase.execute(today, force = force)
     log.info(

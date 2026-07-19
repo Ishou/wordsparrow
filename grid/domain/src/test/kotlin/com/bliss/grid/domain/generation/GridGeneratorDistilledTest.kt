@@ -2,7 +2,6 @@ package com.bliss.grid.domain.generation
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import assertk.assertions.isLessThanOrEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import org.junit.jupiter.api.Test
@@ -31,17 +30,45 @@ class GridGeneratorDistilledTest {
     }
 
     @Test
-    fun `generateDistilled produces a valid grid no denser than the dense start`() {
+    fun `generateDistilled returns null (not throw, not hang) when no template is fillable`() {
+        // Empty corpus -> every template attempt's dense generation fails; the loop must exhaust to null, not NPE or spin.
+        val emptyGen = GridGenerator(ListWordRepository(emptyList()))
         val c = GridConstraints(width = 9, height = 9, minWordLength = minLen)
-        val dense = gen.generate(c, Random(3)) ?: error("dense generation failed")
-        val denseBlacks = gen.reconstructLayout(dense, c.width, c.height).countBlack()
+        assertThat(emptyGen.generateDistilled(c, Random(1), timeoutMs = 500L)).isNull()
+    }
 
+    @Test
+    fun `firstFillableTemplate retries past a failed template and returns the first that fills`() {
+        val filledGrid = gen.generate(GridConstraints(width = 9, height = 9, minWordLength = minLen), Random(1))!!
+        var produced = 0
+        val result =
+            gen.firstFillableTemplate(Random(1), attempts = 3) {
+                produced++
+                if (produced < 2) null else filledGrid
+            }
+        assertThat(result).isEqualTo(filledGrid)
+        assertThat(produced).isEqualTo(2) // failed once, recovered on the 2nd -- guards a repeat(1) mutation
+    }
+
+    @Test
+    fun `firstFillableTemplate returns null after exhausting every attempt`() {
+        var produced = 0
+        val result =
+            gen.firstFillableTemplate(Random(1), attempts = 3) {
+                produced++
+                null
+            }
+        assertThat(result).isNull()
+        assertThat(produced).isEqualTo(3)
+    }
+
+    @Test
+    fun `generateDistilled produces a valid grid`() {
+        // The whitens-only density invariant lives in BackoffDistillerTest (generateDistilled now reseeds each template attempt internally).
+        val c = GridConstraints(width = 9, height = 9, minWordLength = minLen)
         val distilled = gen.generateDistilled(c, Random(3), timeoutMs = 6_000L, distillFillCheckMs = 300L)
 
         assertThat(distilled).isNotNull()
         assertThat(distilled!!.width).isEqualTo(9)
-        // Distillation only whitens, so the served grid is never denser than the dense start it came from.
-        val distilledBlacks = gen.reconstructLayout(distilled, c.width, c.height).countBlack()
-        assertThat(distilledBlacks).isLessThanOrEqualTo(denseBlacks)
     }
 }

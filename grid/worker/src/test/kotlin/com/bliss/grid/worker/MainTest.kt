@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -202,6 +203,24 @@ class MainTest {
         assertThat(summary.formattedMessage).contains(today.toString())
     }
 
+    @Test
+    fun `executeAndExit invokes the port once per date when distilling`() {
+        val repo = PreseededRepo()
+        val port = CountingPort()
+        executeAndExit(repo, port, today = today, distill = true, windowDays = 3)
+        // Distillation is expensive + self-retrying, so the daily loop calls it exactly once per date (ADR-0117).
+        assertThat(port.calls).isEqualTo(3)
+    }
+
+    @Test
+    fun `executeAndExit runs best-of-N per date when not distilling`() {
+        val repo = PreseededRepo()
+        val port = CountingPort()
+        executeAndExit(repo, port, today = today, windowDays = 1)
+        // The cheap dense path keeps best-of-N candidates per date (ADR-0095), so it calls the port more than once.
+        assertThat(port.calls).isGreaterThan(1)
+    }
+
     private fun newStoredPuzzle(): StoredPuzzle {
         val word = Word(text = "ABCDE", definition = "test")
         val placement =
@@ -276,5 +295,27 @@ class MainTest {
             attempts: Int,
             perAttemptTimeoutMs: Long,
         ): Grid = error("GridGenerationPort.generate must not be called when every day is already persisted")
+    }
+
+    private class CountingPort : GridGenerationPort {
+        var calls = 0
+
+        override fun generate(
+            randomSeed: Long,
+            cooldownPolicy: ClueCooldownPolicy,
+            attempts: Int,
+            perAttemptTimeoutMs: Long,
+        ): Grid {
+            calls++
+            val word = Word(text = "ABCDE", definition = "test")
+            val placement =
+                WordPlacement(
+                    word = word,
+                    cluePosition = Position(Row(0), Column(0)),
+                    direction = Direction.DOWN_RIGHT,
+                    chosenClue = word.clues.first(),
+                )
+            return Grid.fromPlacements(width = 5, height = 5, placements = listOf(placement))
+        }
     }
 }
