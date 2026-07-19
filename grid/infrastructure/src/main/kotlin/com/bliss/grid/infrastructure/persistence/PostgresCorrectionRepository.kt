@@ -103,7 +103,7 @@ class PostgresCorrectionRepository(
             conn.autoCommit = false
             try {
                 conn.prepareStatement(ADVISORY_LOCK_SQL).use { stmt ->
-                    stmt.setString(1, folded ?: oldClueText)
+                    stmt.setString(1, oldClueText)
                     stmt.executeQuery().use { it.next() }
                 }
                 val match = findReversibleIn(conn, oldClueText, folded).firstOrNull()
@@ -327,8 +327,7 @@ class PostgresCorrectionRepository(
 
         private const val MARK_EXPORTED_SQL = "UPDATE clue_corrections SET exported_at = now() WHERE correction_id = ?"
 
-        // Active (not exported, not reverted) corrections to reverse (ADR-0116): replace/forbid by old_clue_text
-        // optionally narrowed by folded word_text, blocklist by folded word_text alone; newest first.
+        // Reversible corrections (ADR-0116): replace/forbid by old_clue_text, optionally narrowed by folded word_text; blocklist by folded word_text alone; newest first.
         private const val FIND_REVERSIBLE_SQL =
             "SELECT correction_id, kind, old_clue_text, new_clue_text, word_text FROM clue_corrections " +
                 "WHERE exported_at IS NULL AND reverted_at IS NULL " +

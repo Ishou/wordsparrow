@@ -241,6 +241,34 @@ class PostgresCorrectionRepositoryTest {
     }
 
     @Test
+    fun `two concurrent reverses of the same replace correction with and without wordText let exactly one win`() {
+        repository.record(
+            ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new", wordText = "CHAT"),
+            maintainer,
+        )
+        val barrier = CyclicBarrier(2)
+        val results = ConcurrentLinkedQueue<Boolean>()
+        val calls = listOf<String?>(null, "chat")
+        val threads =
+            calls.map { wordText ->
+                Thread {
+                    barrier.await()
+                    val kind =
+                        repository.reverseGuarded("old", wordText, maintainer) { match ->
+                            ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = match.newClueText, newClueText = match.oldClueText)
+                        }
+                    results += (kind == ClueCorrection.Kind.REPLACE)
+                }
+            }
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+
+        assertThat(results.count { it }).isEqualTo(1)
+        assertThat(results.count { !it }).isEqualTo(1)
+        assertThat(repository.active().count { it.oldClueText == "new" }).isEqualTo(1)
+    }
+
+    @Test
     fun `progress is null for an unknown id`() {
         assertThat(repository.progress(UUID.randomUUID())).isNull()
     }
