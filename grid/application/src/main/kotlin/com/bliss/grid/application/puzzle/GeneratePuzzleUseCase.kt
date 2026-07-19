@@ -106,7 +106,15 @@ class GeneratePuzzleUseCase(
                 width = width ?: defaults.width,
                 height = height ?: defaults.height,
             )
-        return generator.generateDistilled(constraints, random, bestOfN = bestOfN.coerceAtLeast(1), cooldownPolicy = cooldownPolicy)
+        val result = generator.generateDistilled(constraints, random, bestOfN = bestOfN.coerceAtLeast(1), cooldownPolicy = cooldownPolicy)
+        if (result?.usedCooldownFallback == true) {
+            log.warn(
+                "distilled_puzzle_cooldown_fallback width={} height={}",
+                constraints.width,
+                constraints.height,
+            )
+        }
+        return result?.grid
     }
 
     /**

@@ -25,6 +25,12 @@ const val DEFAULT_GENERATION_TIMEOUT_MS = 5_000L
 
 private const val NS_PER_MS: Long = 1_000_000L
 
+/** Result of [GridGenerator.generateDistilled]: the served grid and whether ADR-0117's cooldown fallback fired. */
+data class DistilledResult(
+    val grid: Grid,
+    val usedCooldownFallback: Boolean,
+)
+
 /**
  * Bitmask-CSP grid generator (Phase 1: sequential).
  *
@@ -230,7 +236,7 @@ class GridGenerator(
         distillFillCheckMs: Long = DISTILL_FILL_CHECK_MS,
         cooldownPolicy: ClueCooldownPolicy = ClueCooldownPolicy.Inert,
         templateAttempts: Int = DEFAULT_DISTILL_TEMPLATE_ATTEMPTS,
-    ): Grid? {
+    ): DistilledResult? {
         val minLen = constraints.minWordLength
         var fallbackFill: Grid? = null
         val served =
@@ -250,7 +256,8 @@ class GridGenerator(
                 )
             }
         // Cooldown fallback (ADR-0117): if no template fills under the clue cooldown, serve the Inert fill captured during backoff -- a possible repeat beats a missing daily.
-        return served ?: fallbackFill
+        val grid = served ?: fallbackFill
+        return grid?.let { DistilledResult(it, usedCooldownFallback = served == null) }
     }
 
     /** Return the first of [attempts] freshly-seeded templates that fills, so a cooled-out fill retries the fill -- never the expensive backoff. */
