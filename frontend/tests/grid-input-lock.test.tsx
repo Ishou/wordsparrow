@@ -166,6 +166,63 @@ describe('grid input lock — race on the last letter', () => {
   });
 });
 
+// Mirrors PlayScreen's requestHint/requestVerify: both skip while validation.pending,
+// since a hint reveal or a verify correct-cell lock re-checks the grid and would drop an in-flight verdict.
+function AssistHarness({
+  solver,
+  onHintRequest,
+  onVerifyRequest,
+}: {
+  solver: PuzzleSolver;
+  onHintRequest: () => void;
+  onVerifyRequest: () => void;
+}) {
+  const validation = usePuzzleValidation(PUZZLE, solver);
+  const nav = useGridNavigation(PUZZLE, {
+    onCellChange: () => validation.onGridChanged(),
+    isInputLocked: () => validation.pending,
+  });
+  const requestHint = () => { if (!validation.pending) onHintRequest(); };
+  const requestVerify = () => { if (!validation.pending) onVerifyRequest(); };
+  return (
+    <div>
+      {renderCells(nav, validation.validated)}
+      <button data-testid="hint-btn" type="button" onClick={requestHint}>hint</button>
+      <button data-testid="verify-btn" type="button" onClick={requestVerify}>verify</button>
+    </div>
+  );
+}
+
+describe('assist-request gating — hint/verify skip while a whole-grid verdict is pending', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('drops hint and verify requests fired during the in-flight validation window', async () => {
+    const { solver } = makeDeferredSolver();
+    const onHintRequest = vi.fn();
+    const onVerifyRequest = vi.fn();
+    const { container } = render(
+      <AssistHarness solver={solver} onHintRequest={onHintRequest} onVerifyRequest={onVerifyRequest} />,
+    );
+    const c1 = inputAt(container, 0, 1)!;
+    const c2 = inputAt(container, 0, 2)!;
+    const c3 = inputAt(container, 0, 3)!;
+
+    click(c1);
+    typeChar(c1, 'a');
+    typeChar(c2, 'b');
+    await act(async () => {
+      typeChar(c3, 'c'); // last cell filled → whole-grid validate fires, pending=true
+      await Promise.resolve();
+    });
+    expect(solver.validate).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(container.querySelector('[data-testid="hint-btn"]')!);
+    fireEvent.click(container.querySelector('[data-testid="verify-btn"]')!);
+    expect(onHintRequest).not.toHaveBeenCalled();
+    expect(onVerifyRequest).not.toHaveBeenCalled();
+  });
+});
+
 describe('useGridNavigation — isInputLocked guard', () => {
   beforeEach(() => { externalLocked = false; });
   afterEach(() => { vi.restoreAllMocks(); });
