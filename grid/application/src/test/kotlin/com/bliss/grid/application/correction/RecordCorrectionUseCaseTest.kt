@@ -56,6 +56,20 @@ class RecordCorrectionUseCaseTest {
         override fun active(): List<ClueCorrection> = recorded.map { it.first }
 
         override fun progress(correctionId: UUID): CorrectionProgress? = null
+
+        override fun findReversible(
+            oldClueText: String,
+            wordText: String?,
+        ): List<ReversibleCorrection> = emptyList()
+
+        override fun deactivate(correctionId: UUID) = Unit
+
+        override fun reverseGuarded(
+            oldClueText: String,
+            wordText: String?,
+            reversedBy: UUID,
+            compensate: (ReversibleCorrection) -> ClueCorrection?,
+        ): ClueCorrection.Kind? = null
     }
 
     @Test

@@ -118,6 +118,59 @@ class PostgresCorrectionRepositoryTest {
     }
 
     @Test
+    fun `findReversible matches replace by clue text and blocklist by word`() {
+        val replaceId =
+            repository.record(
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new", wordText = "CHAT"),
+                maintainer,
+            )
+        repository.record(ClueCorrection(ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "CHAT"), maintainer)
+
+        val byClue = repository.findReversible("old", null)
+        assertThat(byClue.map { it.kind }).containsExactly(ClueCorrection.Kind.REPLACE)
+        assertThat(byClue.single().id).isEqualTo(replaceId)
+
+        val byWord = repository.findReversible("unrelated clue", "chat")
+        assertThat(byWord.map { it.kind }).containsExactly(ClueCorrection.Kind.BLOCKLIST_WORD)
+    }
+
+    @Test
+    fun `findReversible matches a blocklist correction whose word_text was stored lower or mixed case`() {
+        repository.record(ClueCorrection(ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "chat"), maintainer)
+
+        val byWord = repository.findReversible("unrelated clue", "CHAT")
+
+        assertThat(byWord.map { it.kind }).containsExactly(ClueCorrection.Kind.BLOCKLIST_WORD)
+    }
+
+    @Test
+    fun `findReversible narrows a replace match by wordText when two corrections share the same old clue text`() {
+        val chatId =
+            repository.record(
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new chat", wordText = "CHAT"),
+                maintainer,
+            )
+        repository.record(
+            ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new chien", wordText = "CHIEN"),
+            maintainer,
+        )
+
+        val matched = repository.findReversible("old", "chat")
+
+        assertThat(matched.map { it.id }).containsExactly(chatId)
+    }
+
+    @Test
+    fun `deactivate drops a correction from active and findReversible`() {
+        val id = repository.record(ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = "old", wordText = "CHAT"), maintainer)
+
+        repository.deactivate(id)
+
+        assertThat(repository.active()).isEmpty()
+        assertThat(repository.findReversible("old", "chat")).isEmpty()
+    }
+
+    @Test
     fun `guarded forbid records when the word keeps a clue and rejects the next one that empties it`() {
         val first = repository.recordForbidGuarded(forbid("Verbe etre"), maintainer, emptiesEst("Verbe etre"))
         val second = repository.recordForbidGuarded(forbid("Point cardinal"), maintainer, emptiesEst("Point cardinal"))
@@ -145,6 +198,74 @@ class PostgresCorrectionRepositoryTest {
         assertThat(results.count { it is GuardedRecord.Recorded }).isEqualTo(1)
         assertThat(results.count { it == GuardedRecord.LastClueForbidden }).isEqualTo(1)
         assertThat(repository.active().size).isEqualTo(1)
+    }
+
+    @Test
+    fun `reverseGuarded records the compensate result and deactivates the match`() {
+        val original =
+            repository.record(
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new", wordText = "CHAT"),
+                maintainer,
+            )
+
+        val kind =
+            repository.reverseGuarded("old", "chat", maintainer) { match ->
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = match.newClueText, newClueText = match.oldClueText)
+            }
+
+        assertThat(kind).isEqualTo(ClueCorrection.Kind.REPLACE)
+        assertThat(repository.progress(original)!!.kind).isEqualTo(ClueCorrection.Kind.REPLACE)
+        assertThat(repository.active().map { it.oldClueText }).containsExactly("new")
+    }
+
+    @Test
+    fun `two concurrent reverses of the same blocklist correction let exactly one win`() {
+        repository.record(ClueCorrection(ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "CHAT"), maintainer)
+        val barrier = CyclicBarrier(2)
+        // ConcurrentLinkedQueue rejects null elements, so track wins as Boolean rather than the nullable Kind? result.
+        val results = ConcurrentLinkedQueue<Boolean>()
+        val threads =
+            List(2) {
+                Thread {
+                    barrier.await()
+                    val kind = repository.reverseGuarded("unrelated clue", "chat", maintainer) { null }
+                    results += (kind == ClueCorrection.Kind.BLOCKLIST_WORD)
+                }
+            }
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+
+        assertThat(results.count { it }).isEqualTo(1)
+        assertThat(results.count { !it }).isEqualTo(1)
+        assertThat(repository.active()).isEmpty()
+    }
+
+    @Test
+    fun `two concurrent reverses of the same replace correction with and without wordText let exactly one win`() {
+        repository.record(
+            ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new", wordText = "CHAT"),
+            maintainer,
+        )
+        val barrier = CyclicBarrier(2)
+        val results = ConcurrentLinkedQueue<Boolean>()
+        val calls = listOf<String?>(null, "chat")
+        val threads =
+            calls.map { wordText ->
+                Thread {
+                    barrier.await()
+                    val kind =
+                        repository.reverseGuarded("old", wordText, maintainer) { match ->
+                            ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = match.newClueText, newClueText = match.oldClueText)
+                        }
+                    results += (kind == ClueCorrection.Kind.REPLACE)
+                }
+            }
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+
+        assertThat(results.count { it }).isEqualTo(1)
+        assertThat(results.count { !it }).isEqualTo(1)
+        assertThat(repository.active().count { it.oldClueText == "new" }).isEqualTo(1)
     }
 
     @Test

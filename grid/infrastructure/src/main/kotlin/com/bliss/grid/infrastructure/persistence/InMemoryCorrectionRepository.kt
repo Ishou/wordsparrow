@@ -4,6 +4,7 @@ import com.bliss.grid.application.correction.BackfillStatus
 import com.bliss.grid.application.correction.CorrectionProgress
 import com.bliss.grid.application.correction.CorrectionRepository
 import com.bliss.grid.application.correction.GuardedRecord
+import com.bliss.grid.application.correction.ReversibleCorrection
 import com.bliss.grid.domain.correction.ClueCorrection
 import com.fasterxml.uuid.Generators
 import java.util.UUID
@@ -13,6 +14,7 @@ class InMemoryCorrectionRepository : CorrectionRepository {
     private data class Row(
         val correction: ClueCorrection,
         val createdBy: UUID,
+        val reverted: Boolean = false,
     )
 
     private val lock = Any()
@@ -46,7 +48,48 @@ class InMemoryCorrectionRepository : CorrectionRepository {
             }
         }
 
-    override fun active(): List<ClueCorrection> = synchronized(lock) { rows.values.map { it.correction } }
+    override fun active(): List<ClueCorrection> = synchronized(lock) { rows.values.filterNot { it.reverted }.map { it.correction } }
+
+    override fun findReversible(
+        oldClueText: String,
+        wordText: String?,
+    ): List<ReversibleCorrection> =
+        synchronized(lock) {
+            val folded = wordText?.uppercase()
+            rows.entries
+                .filterNot { it.value.reverted }
+                .filter { (_, row) ->
+                    val c = row.correction
+                    (c.oldClueText == oldClueText && (folded == null || c.wordText?.uppercase() == folded)) ||
+                        (c.kind == ClueCorrection.Kind.BLOCKLIST_WORD && folded != null && c.wordText?.uppercase() == folded)
+                }.map { (id, row) ->
+                    ReversibleCorrection(
+                        id,
+                        row.correction.kind,
+                        row.correction.oldClueText,
+                        row.correction.newClueText,
+                        row.correction.wordText,
+                    )
+                }.reversed()
+        }
+
+    override fun deactivate(correctionId: UUID) {
+        synchronized(lock) { rows[correctionId]?.let { rows[correctionId] = it.copy(reverted = true) } }
+    }
+
+    // Reentrant lock: find + compensate + deactivate run inside the one monitor, the in-memory analogue of the Postgres advisory lock (ADR-0116).
+    override fun reverseGuarded(
+        oldClueText: String,
+        wordText: String?,
+        reversedBy: UUID,
+        compensate: (ReversibleCorrection) -> ClueCorrection?,
+    ): ClueCorrection.Kind? =
+        synchronized(lock) {
+            val match = findReversible(oldClueText, wordText).firstOrNull() ?: return null
+            compensate(match)?.let { record(it, reversedBy) }
+            deactivate(match.id)
+            match.kind
+        }
 
     override fun progress(correctionId: UUID): CorrectionProgress? =
         synchronized(lock) { rows[correctionId] }?.let {
