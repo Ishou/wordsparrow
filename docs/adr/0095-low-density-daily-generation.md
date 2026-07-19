@@ -66,3 +66,42 @@ enriched corpus.
   definition-cell density, <70 ms/gen — comparable to the 28×20 result.
   Regenerating already-persisted dailies at the new size is an operator step
   (`grid-worker --regenerate-dailies`), not part of the config change.
+
+## Amendment (2026-07-14): long-word coverage objective + best-of-N-by-coverage
+
+Maximizing the number of long words in a grid is a **layout/selection**
+concern, not a fill-order one — MRV fill is length-agnostic and cannot change
+which lengths exist. This amendment adds a second selection objective alongside
+the black-minimizing one from the original decision.
+
+- **Coverage objective** (`LongWordCoverage`): per-axis, grid-relative "long"
+  thresholds `Lh = round(F·width)`, `Lv = round(F·height)` (F = 0.4 default,
+  floored to `minLen+2`, capped at the axis dimension / `lUseful`), scored as a
+  letter-sum over words at/above their axis threshold. Pure function of the
+  finished grid.
+- **Best-of-N by coverage**: both the daily pre-gen path
+  (`EnsureUpcomingDailiesUseCase`) and the on-demand path
+  (`GeneratePuzzleUseCase`) keep the highest-coverage of N candidates, ties
+  broken toward fewest definition cells (preserving the original density
+  preference). On-demand runs the N candidates on a bounded daemon pool sized
+  to `Runtime.availableProcessors()` — JDK 21 reads this from the container's
+  cgroup CPU quota, so wall time is `ceil(N / pool-size)` x one generation,
+  not a flat ~1x. `PUZZLE_BEST_OF_N = 16` is env-overridable; the value an
+  operator picks trades coverage for latency against the pod's actual CPU
+  limit (prod: `cpu: 3000m` -> pool size 3 -> ~6x, see
+  `grid/api/deploy/chart/values-prod.yaml`). Daily reuses its existing
+  best-of-8.
+
+Measured on the full production surface corpus (clued + dropped, clue-agnostic
+sweep fixture): today's grids already carry ~8.8 (28×20) / ~15.8 (22×15) words
+at/above the F=0.4 threshold — the "2-3 long words" perception counts only the
+visible horizontal anchors. Best-of-N by coverage lifts these to ~11.8 (N=16,
+28×20) and ~20.8 (N=8, 22×15).
+
+- **Rejected: vertical anchoring.** `LayoutAnchorer.carveVertical` +
+  `GridConstraints.verticalAnchorCount/verticalAnchorLength` were built and
+  measured. Enabling vertical anchors is worse on BOTH boards (28×20: 9.8 vs
+  10.7 long words, ~2× slower; 22×15: 18.5 vs 20.8, ~3× slower) — the same
+  densification trap this ADR already documents, now confirmed on the vertical
+  axis. `carveVertical` stays in the code as a **default-off** lever (like
+  `longWordBias`/`lengthTwoPenalty`), not enabled in any production config.

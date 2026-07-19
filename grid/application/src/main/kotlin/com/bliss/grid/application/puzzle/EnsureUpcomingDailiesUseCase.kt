@@ -3,6 +3,7 @@ package com.bliss.grid.application.puzzle
 import com.bliss.grid.domain.generation.ClueCooldownPolicy
 import com.bliss.grid.domain.generation.ClueCooldownRepository
 import com.bliss.grid.domain.generation.ClueId
+import com.bliss.grid.domain.generation.LongWordCoverage
 import com.bliss.grid.domain.model.ClueCell
 import com.bliss.grid.domain.model.Grid
 import org.slf4j.LoggerFactory
@@ -88,9 +89,9 @@ class EnsureUpcomingDailiesUseCase(
 
     private fun generateForDate(date: LocalDate): Pair<Grid?, Int> {
         val cooldownPolicy = cooldownPolicyFor()
-        // Best-of-N (offline pre-gen only): generate up to N candidates and keep the sparsest
-        // (fewest definition cells) for airier grids. bestOfN = 1 preserves the old single-shot.
+        // Best-of-N (offline pre-gen only): keep highest coverage, ties -> fewest definition cells (ADR-0095 amendment).
         var best: Grid? = null
+        var bestCoverage = -1L
         var bestBlack = Int.MAX_VALUE
         var totalAttempts = 0
         for (candidate in 0 until bestOfN.coerceAtLeast(1)) {
@@ -104,8 +105,10 @@ class EnsureUpcomingDailiesUseCase(
                         perAttemptTimeoutMs = perAttemptTimeoutMs,
                     )
                 if (grid != null) {
+                    val coverage = LongWordCoverage.coverageOf(grid, PUZZLE_MIN_WORD_LENGTH)
                     val definitionCells = grid.cells.values.count { it is ClueCell }
-                    if (definitionCells < bestBlack) {
+                    if (coverage > bestCoverage || (coverage == bestCoverage && definitionCells < bestBlack)) {
+                        bestCoverage = coverage
                         bestBlack = definitionCells
                         best = grid
                     }

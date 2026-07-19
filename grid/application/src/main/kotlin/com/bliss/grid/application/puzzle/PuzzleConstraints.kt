@@ -13,6 +13,9 @@ const val PUZZLE_ANCHOR_COUNT: Int = 3
 const val PUZZLE_LTARGET_HORIZONTAL: Int = 11
 const val PUZZLE_LTARGET_VERTICAL: Int = 8
 
+// On-demand best-of-N by long-word coverage (ADR-0095 amendment): N16 lifts mean long-word count ~8.8 -> ~11.8; env-overridable to fit a pod's real core count.
+const val PUZZLE_BEST_OF_N: Int = 16
+
 // Daily grid: re-scaled ADR-0095 knobs at 22×15 — see ADR-0095 Consequences.
 const val DAILY_PUZZLE_WIDTH: Int = 22
 const val DAILY_PUZZLE_HEIGHT: Int = 15

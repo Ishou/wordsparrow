@@ -5,10 +5,14 @@ import com.bliss.grid.domain.generation.ClueCooldownPolicy
 import com.bliss.grid.domain.generation.GenerationMetrics
 import com.bliss.grid.domain.generation.GridConstraints
 import com.bliss.grid.domain.generation.GridGenerator
+import com.bliss.grid.domain.generation.LongWordCoverage
 import com.bliss.grid.domain.generation.SystemClock
 import com.bliss.grid.domain.generation.WordRepository
 import com.bliss.grid.domain.model.Grid
 import org.slf4j.LoggerFactory
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlin.random.Random
 
 /**
@@ -43,9 +47,19 @@ class GeneratePuzzleUseCase(
     private val warmupCount: Int = 3,
     private val rollingWindow: Int = 20,
     private val clock: Clock = SystemClock,
+    /** Number of candidate grids to generate per request; the highest-coverage one is served (ADR-0095 amendment). */
+    private val bestOfN: Int = DEFAULT_BEST_OF_N,
+    private val generationParallelism: Int = Runtime.getRuntime().availableProcessors(),
 ) {
     private val log = LoggerFactory.getLogger(GeneratePuzzleUseCase::class.java)
     private val generator = GridGenerator(wordRepository, clock)
+
+    // Bounded daemon pool for parallel best-of-N; lazy so single-shot callers never allocate it.
+    private val generationPool: ExecutorService by lazy {
+        Executors.newFixedThreadPool(generationParallelism.coerceAtLeast(1)) { runnable ->
+            Thread(runnable, "puzzle-gen").apply { isDaemon = true }
+        }
+    }
 
     /**
      * Recent successful attempt wall times (ms). Kept synchronized — callers
@@ -59,7 +73,26 @@ class GeneratePuzzleUseCase(
         width: Int? = null,
         height: Int? = null,
         cooldownPolicy: ClueCooldownPolicy = ClueCooldownPolicy.Inert,
-    ): Grid? = executeWithOutcome(width, height, cooldownPolicy).grid
+    ): Grid? {
+        val n = bestOfN.coerceAtLeast(1)
+        if (n == 1) return executeWithOutcome(width, height, cooldownPolicy).grid
+        // N candidates run on a pool sized to available cores; wall time is ceil(N/pool-size) x one generation, not N=1 (ADR-0095 amendment).
+        val futures =
+            (0 until n).map { candidate ->
+                generationPool.submit(
+                    Callable {
+                        executeWithOutcome(
+                            width = width,
+                            height = height,
+                            cooldownPolicy = cooldownPolicy,
+                            randomFactory = { attempt -> Random(clock.nanoTime() + candidate * CANDIDATE_SEED_STRIDE + attempt) },
+                        ).grid
+                    },
+                )
+            }
+        val grids = futures.mapNotNull { runCatching { it.get() }.getOrNull() }
+        return LongWordCoverage.bestByCoverage(grids, defaults.minWordLength)
+    }
 
     /**
      * Run the retry loop and return the full [AttemptOutcome] — attempts count,
@@ -156,6 +189,12 @@ class GeneratePuzzleUseCase(
          * a higher value (`50`) to absorb the longer tail.
          */
         const val DEFAULT_MAX_ATTEMPTS: Int = 10
+
+        /** Single-shot by default; the on-demand wiring opts into best-of-N (see Module.kt). */
+        const val DEFAULT_BEST_OF_N: Int = 1
+
+        /** Per-candidate seed offset so concurrent best-of-N runs never share a seed. */
+        private const val CANDIDATE_SEED_STRIDE: Long = 1_000_003L
 
         /**
          * Default per-attempt deadline. Single-attempt p90 ≈ 4.5s under

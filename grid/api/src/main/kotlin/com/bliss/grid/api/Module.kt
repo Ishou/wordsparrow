@@ -25,6 +25,7 @@ import com.bliss.grid.application.puzzle.HintUsageRepository
 import com.bliss.grid.application.puzzle.HintWriteCoordinator
 import com.bliss.grid.application.puzzle.ListDailyPuzzlesUseCase
 import com.bliss.grid.application.puzzle.LoadOrGeneratePuzzleUseCase
+import com.bliss.grid.application.puzzle.PUZZLE_BEST_OF_N
 import com.bliss.grid.application.puzzle.PuzzleRepository
 import com.bliss.grid.application.puzzle.ResolveWordUseCase
 import com.bliss.grid.application.puzzle.RevealCellHintUseCase
@@ -194,7 +195,9 @@ fun Application.module() {
         }
     val corpusRepository = CsvWordRepository.frenchCorpus()
     val wordRepository = CorrectionAwareWordRepository(corpusRepository) { correctionRepository.active() }
-    val generatePuzzle = GeneratePuzzleUseCase(wordRepository, defaultPuzzleConstraints())
+    // Env override lets the test suite drop to 1 (best-of-16 would run every route test 16x).
+    val bestOfN = System.getenv("PUZZLE_BEST_OF_N")?.toIntOrNull() ?: PUZZLE_BEST_OF_N
+    val generatePuzzle = GeneratePuzzleUseCase(wordRepository, defaultPuzzleConstraints(), bestOfN = bestOfN)
     // Base corpus (not the overlay): the last-clue guard folds the in-txn active corrections itself (ADR-0108 §2).
     val recordCorrection = RecordCorrectionUseCase(correctionRepository, corpusRepository)
     // Base corpus: the picker shows every clue the word carries, including the reported one (ADR-0108 amendment).
