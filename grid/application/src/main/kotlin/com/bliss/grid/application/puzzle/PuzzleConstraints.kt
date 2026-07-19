@@ -1,6 +1,8 @@
 package com.bliss.grid.application.puzzle
 
 import com.bliss.grid.domain.generation.GridConstraints
+import java.time.DayOfWeek
+import java.time.LocalDate
 
 // Mirrors openapi.yaml PuzzleWidth/PuzzleHeight defaults (28/20, max 28); the on-demand GET fallback (daily uses DAILY_* below).
 const val PUZZLE_WIDTH: Int = 28
@@ -43,4 +45,26 @@ fun dailyPuzzleConstraints(): GridConstraints =
         anchorLength = DAILY_PUZZLE_ANCHOR_LENGTH,
         lTargetHorizontal = DAILY_PUZZLE_LTARGET_HORIZONTAL,
         lTargetVertical = DAILY_PUZZLE_LTARGET_VERTICAL,
+    )
+
+// Distilled dailies vary by day of week (ADR-0118): a 15x12 weekday grid, a big 22x15 Europe/Paris-Sunday showpiece.
+const val DAILY_WEEKDAY_WIDTH: Int = 15
+const val DAILY_WEEKDAY_HEIGHT: Int = 12
+const val DAILY_SUNDAY_WIDTH: Int = 22
+const val DAILY_SUNDAY_HEIGHT: Int = 15
+
+/** Per-date size for the distilled daily (ADR-0118): the big grid lands on Sunday; other days are the compact weekday grid. */
+fun dailyGridSize(date: LocalDate): Pair<Int, Int> =
+    if (date.dayOfWeek == DayOfWeek.SUNDAY) {
+        DAILY_SUNDAY_WIDTH to DAILY_SUNDAY_HEIGHT
+    } else {
+        DAILY_WEEKDAY_WIDTH to DAILY_WEEKDAY_HEIGHT
+    }
+
+// Distillation supplies airiness via backoff, so the distilled base carries none of the ADR-0095 dense knobs; the size is overridden per date via dailyGridSize.
+fun distilledDailyBaseConstraints(): GridConstraints =
+    GridConstraints(
+        width = DAILY_WEEKDAY_WIDTH,
+        height = DAILY_WEEKDAY_HEIGHT,
+        minWordLength = PUZZLE_MIN_WORD_LENGTH,
     )

@@ -228,6 +228,8 @@ class GeneratePuzzleUseCaseTest {
                 cooldownPolicy = ClueCooldownPolicy.Inert,
                 attempts = 1,
                 perAttemptTimeoutMs = 1_000L,
+                width = null,
+                height = null,
             )
         assertThat(grid).isNotNull()
     }
