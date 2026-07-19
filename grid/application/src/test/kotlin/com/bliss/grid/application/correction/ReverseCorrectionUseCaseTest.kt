@@ -63,6 +63,18 @@ class ReverseCorrectionUseCaseTest {
         override fun deactivate(correctionId: UUID) {
             rows.firstOrNull { it.id == correctionId }?.reverted = true
         }
+
+        override fun reverseGuarded(
+            oldClueText: String,
+            wordText: String?,
+            reversedBy: UUID,
+            compensate: (ReversibleCorrection) -> ClueCorrection?,
+        ): ClueCorrection.Kind? {
+            val match = findReversible(oldClueText, wordText).firstOrNull() ?: return null
+            compensate(match)?.let { record(it, reversedBy) }
+            deactivate(match.id)
+            return match.kind
+        }
     }
 
     @Test

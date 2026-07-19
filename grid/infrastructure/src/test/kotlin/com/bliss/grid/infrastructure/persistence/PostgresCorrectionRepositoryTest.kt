@@ -135,6 +135,15 @@ class PostgresCorrectionRepositoryTest {
     }
 
     @Test
+    fun `findReversible matches a blocklist correction whose word_text was stored lower or mixed case`() {
+        repository.record(ClueCorrection(ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "chat"), maintainer)
+
+        val byWord = repository.findReversible("unrelated clue", "CHAT")
+
+        assertThat(byWord.map { it.kind }).containsExactly(ClueCorrection.Kind.BLOCKLIST_WORD)
+    }
+
+    @Test
     fun `deactivate drops a correction from active and findReversible`() {
         val id = repository.record(ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = "old", wordText = "CHAT"), maintainer)
 
@@ -172,6 +181,46 @@ class PostgresCorrectionRepositoryTest {
         assertThat(results.count { it is GuardedRecord.Recorded }).isEqualTo(1)
         assertThat(results.count { it == GuardedRecord.LastClueForbidden }).isEqualTo(1)
         assertThat(repository.active().size).isEqualTo(1)
+    }
+
+    @Test
+    fun `reverseGuarded records the compensate result and deactivates the match`() {
+        val original =
+            repository.record(
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new", wordText = "CHAT"),
+                maintainer,
+            )
+
+        val kind =
+            repository.reverseGuarded("old", "chat", maintainer) { match ->
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = match.newClueText, newClueText = match.oldClueText)
+            }
+
+        assertThat(kind).isEqualTo(ClueCorrection.Kind.REPLACE)
+        assertThat(repository.progress(original)!!.kind).isEqualTo(ClueCorrection.Kind.REPLACE)
+        assertThat(repository.active().map { it.oldClueText }).containsExactly("new")
+    }
+
+    @Test
+    fun `two concurrent reverses of the same blocklist correction let exactly one win`() {
+        repository.record(ClueCorrection(ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "CHAT"), maintainer)
+        val barrier = CyclicBarrier(2)
+        // ConcurrentLinkedQueue rejects null elements, so track wins as Boolean rather than the nullable Kind? result.
+        val results = ConcurrentLinkedQueue<Boolean>()
+        val threads =
+            List(2) {
+                Thread {
+                    barrier.await()
+                    val kind = repository.reverseGuarded("unrelated clue", "chat", maintainer) { null }
+                    results += (kind == ClueCorrection.Kind.BLOCKLIST_WORD)
+                }
+            }
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+
+        assertThat(results.count { it }).isEqualTo(1)
+        assertThat(results.count { !it }).isEqualTo(1)
+        assertThat(repository.active()).isEmpty()
     }
 
     @Test

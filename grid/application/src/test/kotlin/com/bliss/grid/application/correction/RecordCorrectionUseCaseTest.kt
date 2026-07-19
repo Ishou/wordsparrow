@@ -63,6 +63,13 @@ class RecordCorrectionUseCaseTest {
         ): List<ReversibleCorrection> = emptyList()
 
         override fun deactivate(correctionId: UUID) = Unit
+
+        override fun reverseGuarded(
+            oldClueText: String,
+            wordText: String?,
+            reversedBy: UUID,
+            compensate: (ReversibleCorrection) -> ClueCorrection?,
+        ): ClueCorrection.Kind? = null
     }
 
     @Test

@@ -77,6 +77,20 @@ class InMemoryCorrectionRepository : CorrectionRepository {
         synchronized(lock) { rows[correctionId]?.let { rows[correctionId] = it.copy(reverted = true) } }
     }
 
+    // Reentrant lock: find + compensate + deactivate run inside the one monitor, the in-memory analogue of the Postgres advisory lock (ADR-0116).
+    override fun reverseGuarded(
+        oldClueText: String,
+        wordText: String?,
+        reversedBy: UUID,
+        compensate: (ReversibleCorrection) -> ClueCorrection?,
+    ): ClueCorrection.Kind? =
+        synchronized(lock) {
+            val match = findReversible(oldClueText, wordText).firstOrNull() ?: return null
+            compensate(match)?.let { record(it, reversedBy) }
+            deactivate(match.id)
+            match.kind
+        }
+
     override fun progress(correctionId: UUID): CorrectionProgress? =
         synchronized(lock) { rows[correctionId] }?.let {
             CorrectionProgress(

@@ -28,18 +28,7 @@ class PostgresCorrectionRepository(
         createdBy: UUID,
     ): UUID {
         val id = idGenerator.generate()
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(INSERT_SQL).use { stmt ->
-                stmt.setObject(1, id)
-                stmt.setString(2, correction.kind.wire)
-                stmt.setString(3, correction.wordText)
-                stmt.setString(4, correction.oldClueText)
-                stmt.setString(5, correction.newClueText)
-                stmt.setString(6, correction.reason)
-                stmt.setObject(7, createdBy)
-                stmt.executeUpdate()
-            }
-        }
+        dataSource.connection.use { conn -> insertIn(conn, id, correction, createdBy) }
         return id
     }
 
@@ -62,16 +51,7 @@ class PostgresCorrectionRepository(
                     return GuardedRecord.LastClueForbidden
                 }
                 val id = idGenerator.generate()
-                conn.prepareStatement(INSERT_SQL).use { stmt ->
-                    stmt.setObject(1, id)
-                    stmt.setString(2, correction.kind.wire)
-                    stmt.setString(3, correction.wordText)
-                    stmt.setString(4, correction.oldClueText)
-                    stmt.setString(5, correction.newClueText)
-                    stmt.setString(6, correction.reason)
-                    stmt.setObject(7, createdBy)
-                    stmt.executeUpdate()
-                }
+                insertIn(conn, id, correction, createdBy)
                 conn.commit()
                 return GuardedRecord.Recorded(id)
             } catch (e: Exception) {
@@ -107,37 +87,95 @@ class PostgresCorrectionRepository(
     override fun findReversible(
         oldClueText: String,
         wordText: String?,
-    ): List<ReversibleCorrection> =
+    ): List<ReversibleCorrection> = dataSource.connection.use { conn -> findReversibleIn(conn, oldClueText, wordText?.uppercase()) }
+
+    override fun deactivate(correctionId: UUID): Unit = dataSource.connection.use { conn -> deactivateIn(conn, correctionId) }
+
+    // Xact advisory lock serializes concurrent reverses of the same target until commit (ADR-0116).
+    override fun reverseGuarded(
+        oldClueText: String,
+        wordText: String?,
+        reversedBy: UUID,
+        compensate: (ReversibleCorrection) -> ClueCorrection?,
+    ): ClueCorrection.Kind? {
+        val folded = wordText?.uppercase()
         dataSource.connection.use { conn ->
-            conn.prepareStatement(FIND_REVERSIBLE_SQL).use { stmt ->
-                stmt.setString(1, oldClueText)
-                val folded = wordText?.uppercase()
-                if (folded != null) stmt.setString(2, folded) else stmt.setNull(2, Types.VARCHAR)
-                stmt.executeQuery().use { rs ->
-                    buildList {
-                        while (rs.next()) {
-                            add(
-                                ReversibleCorrection(
-                                    id = rs.getObject("correction_id", UUID::class.java),
-                                    kind = requireNotNull(ClueCorrection.Kind.fromWire(rs.getString("kind"))),
-                                    oldClueText = rs.getString("old_clue_text"),
-                                    newClueText = rs.getString("new_clue_text"),
-                                    wordText = rs.getString("word_text"),
-                                ),
-                            )
-                        }
+            conn.autoCommit = false
+            try {
+                conn.prepareStatement(ADVISORY_LOCK_SQL).use { stmt ->
+                    stmt.setString(1, folded ?: oldClueText)
+                    stmt.executeQuery().use { it.next() }
+                }
+                val match = findReversibleIn(conn, oldClueText, folded).firstOrNull()
+                if (match == null) {
+                    conn.rollback()
+                    return null
+                }
+                compensate(match)?.let { insertIn(conn, idGenerator.generate(), it, reversedBy) }
+                deactivateIn(conn, match.id)
+                conn.commit()
+                return match.kind
+            } catch (e: Exception) {
+                conn.rollback()
+                throw e
+            } finally {
+                conn.autoCommit = true
+            }
+        }
+    }
+
+    private fun findReversibleIn(
+        conn: Connection,
+        oldClueText: String,
+        folded: String?,
+    ): List<ReversibleCorrection> =
+        conn.prepareStatement(FIND_REVERSIBLE_SQL).use { stmt ->
+            stmt.setString(1, oldClueText)
+            if (folded != null) stmt.setString(2, folded) else stmt.setNull(2, Types.VARCHAR)
+            stmt.executeQuery().use { rs ->
+                buildList {
+                    while (rs.next()) {
+                        add(
+                            ReversibleCorrection(
+                                id = rs.getObject("correction_id", UUID::class.java),
+                                kind = requireNotNull(ClueCorrection.Kind.fromWire(rs.getString("kind"))),
+                                oldClueText = rs.getString("old_clue_text"),
+                                newClueText = rs.getString("new_clue_text"),
+                                wordText = rs.getString("word_text"),
+                            ),
+                        )
                     }
                 }
             }
         }
 
-    override fun deactivate(correctionId: UUID): Unit =
-        dataSource.connection.use { conn ->
-            conn.prepareStatement(DEACTIVATE_SQL).use { stmt ->
-                stmt.setObject(1, correctionId)
-                stmt.executeUpdate()
-            }
+    private fun deactivateIn(
+        conn: Connection,
+        correctionId: UUID,
+    ) {
+        conn.prepareStatement(DEACTIVATE_SQL).use { stmt ->
+            stmt.setObject(1, correctionId)
+            stmt.executeUpdate()
         }
+    }
+
+    private fun insertIn(
+        conn: Connection,
+        id: UUID,
+        correction: ClueCorrection,
+        createdBy: UUID,
+    ) {
+        conn.prepareStatement(INSERT_SQL).use { stmt ->
+            stmt.setObject(1, id)
+            stmt.setString(2, correction.kind.wire)
+            stmt.setString(3, correction.wordText)
+            stmt.setString(4, correction.oldClueText)
+            stmt.setString(5, correction.newClueText)
+            stmt.setString(6, correction.reason)
+            stmt.setObject(7, createdBy)
+            stmt.executeUpdate()
+        }
+    }
 
     override fun backfillJobs(): List<CorrectionBackfillJob> =
         dataSource.connection.use { conn ->
@@ -291,7 +329,7 @@ class PostgresCorrectionRepository(
         private const val FIND_REVERSIBLE_SQL =
             "SELECT correction_id, kind, old_clue_text, new_clue_text, word_text FROM clue_corrections " +
                 "WHERE exported_at IS NULL AND reverted_at IS NULL " +
-                "AND (old_clue_text = ? OR (kind = 'blocklist_word' AND word_text = ?)) " +
+                "AND (old_clue_text = ? OR (kind = 'blocklist_word' AND upper(word_text) = ?)) " +
                 "ORDER BY created_at DESC, correction_id DESC"
 
         private const val DEACTIVATE_SQL = "UPDATE clue_corrections SET reverted_at = now() WHERE correction_id = ?"

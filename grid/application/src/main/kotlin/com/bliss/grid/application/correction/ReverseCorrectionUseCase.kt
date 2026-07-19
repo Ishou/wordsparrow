@@ -11,25 +11,18 @@ class ReverseCorrectionUseCase(
         oldClueText: String,
         wordText: String?,
         reversedBy: UUID,
-    ): ClueCorrection.Kind? {
-        val match = corrections.findReversible(oldClueText, wordText).firstOrNull() ?: return null
-        when (match.kind) {
-            ClueCorrection.Kind.REPLACE -> {
-                // Compensating replace(new → old): its backfill re-matches the grids showing the new clue and patches them back.
-                corrections.record(
-                    ClueCorrection(
-                        kind = ClueCorrection.Kind.REPLACE,
-                        oldClueText = match.newClueText,
-                        newClueText = match.oldClueText,
-                        wordText = match.wordText,
-                    ),
-                    reversedBy,
+    ): ClueCorrection.Kind? =
+        corrections.reverseGuarded(oldClueText, wordText, reversedBy) { match ->
+            // Compensating replace(new -> old) backfills grids back; forbid/blocklist just lift the overlay restriction (ADR-0116).
+            if (match.kind == ClueCorrection.Kind.REPLACE) {
+                ClueCorrection(
+                    kind = ClueCorrection.Kind.REPLACE,
+                    oldClueText = match.newClueText,
+                    newClueText = match.oldClueText,
+                    wordText = match.wordText,
                 )
-                corrections.deactivate(match.id)
+            } else {
+                null
             }
-            // forbid / blocklist: lift the overlay restriction; existing grids are not restored (ADR-0116).
-            ClueCorrection.Kind.FORBID_CLUE, ClueCorrection.Kind.BLOCKLIST_WORD -> corrections.deactivate(match.id)
         }
-        return match.kind
-    }
 }
