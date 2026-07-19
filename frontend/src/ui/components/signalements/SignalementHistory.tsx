@@ -7,7 +7,7 @@ import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
 import { useToast } from '@/ui/components/primitives';
 import { relativeTimeFr } from '@/ui/lib/relativeTimeFr';
-import { reopenSignalement } from '@/application/correction';
+import { reopenSignalement, SurveyUndoFailed } from '@/application/correction';
 import type { CorrectionClient } from '@/application/correction';
 import type { ReportReason, ReportSurface, SignalementHistoryItem, SurveyClient } from '@/application/survey';
 
@@ -130,8 +130,12 @@ export function SignalementHistory({ surveyClient, correctionClient }: Signaleme
         );
         setItems((prev) => (prev ? prev.filter((x) => x.reportId !== h.reportId) : prev));
         showToast({ text: t('route.signalements.reopen.toast'), tone: 'info' });
-      } catch {
-        showToast({ text: t('route.signalements.reopen.error'), tone: 'error' });
+      } catch (err) {
+        // The grid correction is already reversed here (ADR-0116 §3); re-clicking Réouvrir is safe, reverseCorrection is a no-op the second time.
+        showToast({
+          text: t(err instanceof SurveyUndoFailed ? 'route.signalements.reopen.retryError' : 'route.signalements.reopen.error'),
+          tone: 'error',
+        });
       } finally {
         setBusyId(null);
       }
@@ -170,7 +174,10 @@ export function SignalementHistory({ surveyClient, correctionClient }: Signaleme
                       className={reopenBtn}
                       onClick={() => setConfirming(h)}
                       disabled={busyId === h.reportId}
-                      aria-label={t('route.signalements.reopen.aria', { mot: h.wordText ?? h.clueText })}
+                      aria-label={t(
+                        actioned ? 'route.signalements.reopen.aria' : 'route.signalements.reopen.aria.dismiss',
+                        { mot: h.wordText ?? h.clueText },
+                      )}
                     >
                       {t('route.signalements.reopen')}
                     </button>

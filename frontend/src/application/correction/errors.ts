@@ -1,4 +1,4 @@
-import type { BackfillStatus } from './types';
+import type { BackfillStatus, ReversedKind } from './types';
 
 // 409 from the grid correction surface — forbidding a word's only clue (ADR-0108 §2).
 export class LastClueForbidden extends Error {
@@ -17,6 +17,17 @@ export class SurveyDecisionFailed extends Error {
     this.name = 'SurveyDecisionFailed';
     this.correctionId = correctionId;
     this.backfillStatus = backfillStatus;
+    this.cause = cause;
+  }
+}
+
+// The grid correction was already reversed but re-triaging the report failed (ADR-0116 §3) — retry the survey step only; re-reversing is a no-op.
+export class SurveyUndoFailed extends Error {
+  readonly reversedKind: ReversedKind;
+  constructor(reversedKind: ReversedKind, cause?: unknown) {
+    super('survey undo failed');
+    this.name = 'SurveyUndoFailed';
+    this.reversedKind = reversedKind;
     this.cause = cause;
   }
 }

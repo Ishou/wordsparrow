@@ -1,5 +1,5 @@
 import type { SurveyClient } from '@/application/survey';
-import { SurveyDecisionFailed } from './errors';
+import { SurveyDecisionFailed, SurveyUndoFailed } from './errors';
 import type { CorrectionClient, CorrectionInput, CorrectionAccepted, CorrectionPreview, ReversedKind } from './types';
 
 export interface ApplyCorrectionDeps {
@@ -52,6 +52,10 @@ export async function reopenSignalement(
   input: ReopenSignalementInput,
 ): Promise<ReversedKind> {
   const reversedKind = await correctionClient.reverseCorrection(input.oldClueText, input.wordText);
-  await surveyClient.undoSignalement(input.reportId);
+  try {
+    await surveyClient.undoSignalement(input.reportId);
+  } catch (cause) {
+    throw new SurveyUndoFailed(reversedKind, cause);
+  }
   return reversedKind;
 }

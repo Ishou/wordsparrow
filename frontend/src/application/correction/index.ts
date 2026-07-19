@@ -16,7 +16,7 @@ export type {
   WordClue,
 } from './types';
 
-export { LastClueForbidden, SurveyDecisionFailed } from './errors';
+export { LastClueForbidden, SurveyDecisionFailed, SurveyUndoFailed } from './errors';
 
 export type { ApplyCorrectionDeps, ApplyCorrectionInput, ReopenSignalementInput } from './applyCorrection';
 export { applyCorrection, markSignalementHandled, previewCorrection, reopenSignalement } from './applyCorrection';
