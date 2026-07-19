@@ -63,6 +63,15 @@ class GridGeneratorDistilledTest {
     }
 
     @Test
+    fun `generateDistilled falls back to an Inert fill when the cooldown blocks every clue`() {
+        // A total cooldown makes the served (cooldown) fill fail on every template; the fallback must still serve a grid.
+        val allOnCooldown = ClueCooldownPolicy { true }
+        val c = GridConstraints(width = 9, height = 9, minWordLength = minLen)
+        val grid = gen.generateDistilled(c, Random(1), timeoutMs = 6_000L, distillFillCheckMs = 300L, cooldownPolicy = allOnCooldown)
+        assertThat(grid).isNotNull()
+    }
+
+    @Test
     fun `generateDistilled produces a valid grid`() {
         // The whitens-only density invariant lives in BackoffDistillerTest (generateDistilled now reseeds each template attempt internally).
         val c = GridConstraints(width = 9, height = 9, minWordLength = minLen)
