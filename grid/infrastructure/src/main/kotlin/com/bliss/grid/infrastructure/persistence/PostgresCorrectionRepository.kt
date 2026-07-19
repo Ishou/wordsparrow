@@ -7,10 +7,12 @@ import com.bliss.grid.application.correction.CorrectionRepository
 import com.bliss.grid.application.correction.CorrectionWorkStore
 import com.bliss.grid.application.correction.ExportableCorrection
 import com.bliss.grid.application.correction.GuardedRecord
+import com.bliss.grid.application.correction.ReversibleCorrection
 import com.bliss.grid.domain.correction.ClueCorrection
 import com.fasterxml.uuid.Generators
 import java.sql.Connection
 import java.sql.ResultSet
+import java.sql.Types
 import java.util.UUID
 import javax.sql.DataSource
 
@@ -99,6 +101,41 @@ class PostgresCorrectionRepository(
                 stmt.executeQuery().use { rs ->
                     if (rs.next()) rs.toProgress() else null
                 }
+            }
+        }
+
+    override fun findReversible(
+        oldClueText: String,
+        wordText: String?,
+    ): List<ReversibleCorrection> =
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(FIND_REVERSIBLE_SQL).use { stmt ->
+                stmt.setString(1, oldClueText)
+                val folded = wordText?.uppercase()
+                if (folded != null) stmt.setString(2, folded) else stmt.setNull(2, Types.VARCHAR)
+                stmt.executeQuery().use { rs ->
+                    buildList {
+                        while (rs.next()) {
+                            add(
+                                ReversibleCorrection(
+                                    id = rs.getObject("correction_id", UUID::class.java),
+                                    kind = requireNotNull(ClueCorrection.Kind.fromWire(rs.getString("kind"))),
+                                    oldClueText = rs.getString("old_clue_text"),
+                                    newClueText = rs.getString("new_clue_text"),
+                                    wordText = rs.getString("word_text"),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+    override fun deactivate(correctionId: UUID): Unit =
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(DEACTIVATE_SQL).use { stmt ->
+                stmt.setObject(1, correctionId)
+                stmt.executeUpdate()
             }
         }
 
@@ -214,7 +251,7 @@ class PostgresCorrectionRepository(
         // ORDER BY created_at asc so the overlay applies newest last and it supersedes older ones (ADR-0108).
         private const val ACTIVE_SQL =
             "SELECT kind, word_text, old_clue_text, new_clue_text FROM clue_corrections " +
-                "WHERE exported_at IS NULL ORDER BY created_at, correction_id"
+                "WHERE exported_at IS NULL AND reverted_at IS NULL ORDER BY created_at, correction_id"
 
         private const val PROGRESS_SQL =
             """
@@ -225,7 +262,7 @@ class PostgresCorrectionRepository(
         private const val BACKFILL_JOBS_SQL =
             "SELECT correction_id, kind, word_text, old_clue_text, new_clue_text, " +
                 "backfill_status, grids_matched, grids_patched FROM clue_corrections " +
-                "WHERE backfill_status IN ('pending', 'running') ORDER BY created_at, correction_id"
+                "WHERE backfill_status IN ('pending', 'running') AND reverted_at IS NULL ORDER BY created_at, correction_id"
 
         private const val BEGIN_BACKFILL_SQL =
             "UPDATE clue_corrections SET backfill_status = 'running', grids_matched = ?, " +
@@ -245,9 +282,18 @@ class PostgresCorrectionRepository(
         // Only replace-with-word corrections map onto a word->clue override row (ADR-0108 §3).
         private const val EXPORTABLE_SQL =
             "SELECT correction_id, word_text, new_clue_text, reason FROM clue_corrections " +
-                "WHERE exported_at IS NULL AND kind = 'replace' AND word_text IS NOT NULL " +
+                "WHERE exported_at IS NULL AND reverted_at IS NULL AND kind = 'replace' AND word_text IS NOT NULL " +
                 "AND new_clue_text IS NOT NULL ORDER BY created_at, correction_id"
 
         private const val MARK_EXPORTED_SQL = "UPDATE clue_corrections SET exported_at = now() WHERE correction_id = ?"
+
+        // Active (not exported, not reverted) corrections to reverse (ADR-0116): replace/forbid by old_clue_text, blocklist by word_text; newest first.
+        private const val FIND_REVERSIBLE_SQL =
+            "SELECT correction_id, kind, old_clue_text, new_clue_text, word_text FROM clue_corrections " +
+                "WHERE exported_at IS NULL AND reverted_at IS NULL " +
+                "AND (old_clue_text = ? OR (kind = 'blocklist_word' AND word_text = ?)) " +
+                "ORDER BY created_at DESC, correction_id DESC"
+
+        private const val DEACTIVATE_SQL = "UPDATE clue_corrections SET reverted_at = now() WHERE correction_id = ?"
     }
 }

@@ -9,6 +9,8 @@ import com.bliss.grid.api.dto.CorrectionAcceptedDto
 import com.bliss.grid.api.dto.CorrectionPreviewDto
 import com.bliss.grid.api.dto.CorrectionProgressDto
 import com.bliss.grid.api.dto.CorrectionRequestDto
+import com.bliss.grid.api.dto.CorrectionReverseRequestDto
+import com.bliss.grid.api.dto.CorrectionReverseResultDto
 import com.bliss.grid.api.dto.ProblemDetails
 import com.bliss.grid.api.dto.WordClueItemDto
 import com.bliss.grid.api.dto.WordCluesResultDto
@@ -297,6 +299,56 @@ fun Route.correctionPreview(preview: CorrectionPreviewQuery) {
                 correctionJson.encodeToString(
                     CorrectionPreviewDto.serializer(),
                     CorrectionPreviewDto(result.affectedDailies, result.affectedSolo),
+                ),
+            contentType = ContentType.Application.Json,
+            status = HttpStatusCode.OK,
+        )
+    }
+}
+
+/** `POST /v1/corrections/reverse` — reverse a report's correction (ADR-0116), gated by `admin:signalements`. */
+fun Route.correctionReverse(reverse: (oldClueText: String, wordText: String?, reversedBy: UUID) -> ClueCorrection.Kind?) {
+    post("/v1/corrections/reverse") {
+        if (!call.requireCapability(ADMIN_SIGNALEMENTS_CAPABILITY)) return@post
+        val reversedBy = call.attributes.getOrNull(UserIdKey) ?: return@post
+
+        val request =
+            try {
+                call.receive<CorrectionReverseRequestDto>()
+            } catch (_: SerializationException) {
+                return@post call.respondCorrectionProblem(
+                    HttpStatusCode.BadRequest,
+                    INVALID_CORRECTION_TYPE,
+                    "Invalid correction",
+                    "Le corps de la requete est mal forme.",
+                )
+            }
+
+        val oldClueText = request.oldClueText
+        if (oldClueText.isBlank() || oldClueText.length > MAX_CLUE_TEXT) {
+            return@post call.respondCorrectionProblem(
+                HttpStatusCode.BadRequest,
+                INVALID_CORRECTION_TYPE,
+                "Invalid correction",
+                "Le parametre oldClueText est invalide.",
+            )
+        }
+        val wordText = request.wordText?.takeIf { it.isNotBlank() }
+        if (wordText != null && wordText.length > MAX_WORD_TEXT) {
+            return@post call.respondCorrectionProblem(
+                HttpStatusCode.BadRequest,
+                INVALID_CORRECTION_TYPE,
+                "Invalid correction",
+                "Le parametre wordText est invalide.",
+            )
+        }
+
+        val reversedKind = reverse(oldClueText, wordText, reversedBy)
+        call.respondText(
+            text =
+                correctionJson.encodeToString(
+                    CorrectionReverseResultDto.serializer(),
+                    CorrectionReverseResultDto(reversedKind?.wire),
                 ),
             contentType = ContentType.Application.Json,
             status = HttpStatusCode.OK,

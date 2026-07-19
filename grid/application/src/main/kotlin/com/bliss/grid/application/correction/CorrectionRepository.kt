@@ -23,7 +23,29 @@ interface CorrectionRepository {
 
     /** Backfill progress for [correctionId], or null when no such correction exists. */
     fun progress(correctionId: UUID): CorrectionProgress?
+
+    /**
+     * Active (not exported, not reverted) corrections to reverse for a reopened report (ADR-0116),
+     * newest first: replace/forbid matched on [oldClueText], blocklist on folded [wordText]
+     * (its old_clue_text is null).
+     */
+    fun findReversible(
+        oldClueText: String,
+        wordText: String?,
+    ): List<ReversibleCorrection>
+
+    /** Deactivate a correction: sets reverted_at so the overlay and export skip it (ADR-0116). */
+    fun deactivate(correctionId: UUID)
 }
+
+/** A stored correction (with its id) that can be reversed (ADR-0116). */
+data class ReversibleCorrection(
+    val id: UUID,
+    val kind: ClueCorrection.Kind,
+    val oldClueText: String?,
+    val newClueText: String?,
+    val wordText: String?,
+)
 
 /** Outcome of [CorrectionRepository.recordForbidGuarded]. */
 sealed interface GuardedRecord {

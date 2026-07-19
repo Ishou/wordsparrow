@@ -52,6 +52,19 @@ data class CorrectionPreviewDto(
     val affectedSolo: Int,
 )
 
+/** `POST /v1/corrections/reverse` body — identifies the correction to reverse for a reopened report (ADR-0116). */
+@Serializable
+data class CorrectionReverseRequestDto(
+    val oldClueText: String,
+    val wordText: String? = null,
+)
+
+/** `200` body for `POST /v1/corrections/reverse` — the CorrectionKind reversed, or null when none matched (ADR-0116). */
+@Serializable
+data class CorrectionReverseResultDto(
+    val reversedKind: String?,
+)
+
 /** `200` body for `GET /v1/corrections/{correctionId}` (ADR-0108 §4). */
 @Serializable
 data class CorrectionProgressDto(

@@ -5,6 +5,7 @@ import com.bliss.grid.api.dto.ProblemDetails
 import com.bliss.grid.api.infrastructure.Database
 import com.bliss.grid.api.routes.blocklistCorrections
 import com.bliss.grid.api.routes.correctionPreview
+import com.bliss.grid.api.routes.correctionReverse
 import com.bliss.grid.api.routes.corrections
 import com.bliss.grid.api.routes.deleteSession
 import com.bliss.grid.api.routes.health
@@ -18,6 +19,7 @@ import com.bliss.grid.application.correction.CorrectionPreviewQuery
 import com.bliss.grid.application.correction.CorrectionRepository
 import com.bliss.grid.application.correction.ListWordCluesUseCase
 import com.bliss.grid.application.correction.RecordCorrectionUseCase
+import com.bliss.grid.application.correction.ReverseCorrectionUseCase
 import com.bliss.grid.application.puzzle.DailyPuzzleSelector
 import com.bliss.grid.application.puzzle.DeleteSessionUseCase
 import com.bliss.grid.application.puzzle.GeneratePuzzleUseCase
@@ -197,6 +199,7 @@ fun Application.module() {
     val generatePuzzle = GeneratePuzzleUseCase(wordRepository, defaultPuzzleConstraints())
     // Base corpus (not the overlay): the last-clue guard folds the in-txn active corrections itself (ADR-0108 §2).
     val recordCorrection = RecordCorrectionUseCase(correctionRepository, corpusRepository)
+    val reverseCorrection = ReverseCorrectionUseCase(correctionRepository)
     // Base corpus: the picker shows every clue the word carries, including the reported one (ADR-0108 amendment).
     val listWordClues = ListWordCluesUseCase(corpusRepository)
     // Blocklist impact preview (ADR-0110 §4): counts affected stored grids; in-memory returns zeros without a DB.
@@ -359,6 +362,7 @@ fun Application.module() {
         wordClues(listWordClues)
         blocklistCorrections(recordCorrection, blocklistPreviewQuery)
         correctionPreview(correctionPreviewQuery)
+        correctionReverse { old, word, by -> reverseCorrection.execute(old, word, by) }
     }
 }
 

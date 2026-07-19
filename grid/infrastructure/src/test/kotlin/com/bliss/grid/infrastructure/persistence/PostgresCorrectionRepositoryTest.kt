@@ -118,6 +118,33 @@ class PostgresCorrectionRepositoryTest {
     }
 
     @Test
+    fun `findReversible matches replace by clue text and blocklist by word`() {
+        val replaceId =
+            repository.record(
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "old", newClueText = "new", wordText = "CHAT"),
+                maintainer,
+            )
+        repository.record(ClueCorrection(ClueCorrection.Kind.BLOCKLIST_WORD, wordText = "CHAT"), maintainer)
+
+        val byClue = repository.findReversible("old", null)
+        assertThat(byClue.map { it.kind }).containsExactly(ClueCorrection.Kind.REPLACE)
+        assertThat(byClue.single().id).isEqualTo(replaceId)
+
+        val byWord = repository.findReversible("unrelated clue", "chat")
+        assertThat(byWord.map { it.kind }).containsExactly(ClueCorrection.Kind.BLOCKLIST_WORD)
+    }
+
+    @Test
+    fun `deactivate drops a correction from active and findReversible`() {
+        val id = repository.record(ClueCorrection(ClueCorrection.Kind.FORBID_CLUE, oldClueText = "old", wordText = "CHAT"), maintainer)
+
+        repository.deactivate(id)
+
+        assertThat(repository.active()).isEmpty()
+        assertThat(repository.findReversible("old", "chat")).isEmpty()
+    }
+
+    @Test
     fun `guarded forbid records when the word keeps a clue and rejects the next one that empties it`() {
         val first = repository.recordForbidGuarded(forbid("Verbe etre"), maintainer, emptiesEst("Verbe etre"))
         val second = repository.recordForbidGuarded(forbid("Point cardinal"), maintainer, emptiesEst("Point cardinal"))
