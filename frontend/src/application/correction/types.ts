@@ -38,6 +38,9 @@ export interface CorrectionPreview {
   readonly affectedSolo: number;
 }
 
+// The CorrectionKind that a reverse undid, or null when no active correction matched (ADR-0116).
+export type ReversedKind = CorrectionKind | null;
+
 // One of a word's corpus clues, offered as an alternate replacement in the Corriger picker (ADR-0108 2026-07-13 amendment).
 export interface WordClue {
   readonly text: string;
@@ -63,5 +66,6 @@ export interface CorrectionClient {
   blocklistWord(input: BlocklistWordInput): Promise<CorrectionAccepted>;
   previewBlocklist(word: string): Promise<BlocklistPreview>;
   previewCorrection(oldClueText: string, wordText?: string): Promise<CorrectionPreview>;
+  reverseCorrection(oldClueText: string, wordText?: string): Promise<ReversedKind>;
   listWordClues(word: string): Promise<ReadonlyArray<WordClue>>;
 }

@@ -94,6 +94,7 @@ function stubSurveyClient(overrides: Partial<SurveyClient> = {}): SurveyClient {
     listSignalements: vi.fn().mockResolvedValue([]),
     listHandledSignalements: vi.fn().mockResolvedValue([]),
     decideSignalement: vi.fn().mockResolvedValue(undefined),
+    undoSignalement: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

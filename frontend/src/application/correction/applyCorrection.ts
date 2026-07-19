@@ -1,6 +1,6 @@
 import type { SurveyClient } from '@/application/survey';
 import { SurveyDecisionFailed } from './errors';
-import type { CorrectionClient, CorrectionInput, CorrectionAccepted, CorrectionPreview } from './types';
+import type { CorrectionClient, CorrectionInput, CorrectionAccepted, CorrectionPreview, ReversedKind } from './types';
 
 export interface ApplyCorrectionDeps {
   readonly correctionClient: CorrectionClient;
@@ -38,4 +38,20 @@ export function previewCorrection(
   wordText?: string,
 ): Promise<CorrectionPreview> {
   return correctionClient.previewCorrection(oldClueText, wordText);
+}
+
+export interface ReopenSignalementInput {
+  readonly reportId: string;
+  readonly oldClueText: string;
+  readonly wordText?: string;
+}
+
+// Reopen a triaged report (ADR-0116): reverse its correction (grid), then reopen the report (survey). Grid-then-survey, mirroring applyCorrection.
+export async function reopenSignalement(
+  { correctionClient, surveyClient }: ApplyCorrectionDeps,
+  input: ReopenSignalementInput,
+): Promise<ReversedKind> {
+  const reversedKind = await correctionClient.reverseCorrection(input.oldClueText, input.wordText);
+  await surveyClient.undoSignalement(input.reportId);
+  return reversedKind;
 }

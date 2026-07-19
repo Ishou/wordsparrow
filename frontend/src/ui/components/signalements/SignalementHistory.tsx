@@ -1,9 +1,12 @@
 // Read-only handled-report history (ADR-0115); contribuer-gated upstream.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
 import { t } from '@/ui/i18n';
+import { useToast } from '@/ui/components/primitives';
 import { relativeTimeFr } from '@/ui/lib/relativeTimeFr';
+import { reopenSignalement } from '@/application/correction';
+import type { CorrectionClient } from '@/application/correction';
 import type { ReportReason, ReportSurface, SignalementHistoryItem, SurveyClient } from '@/application/survey';
 
 const reasonLabelKey = {
@@ -46,14 +49,35 @@ const timeStyles = css({ fontFamily: 'wsUi', fontSize: '12px', color: 'ws.khaki'
 const chipBase = { fontFamily: 'wsUi', fontSize: '11px', fontWeight: 'black', letterSpacing: '0.04em', textTransform: 'uppercase' } as const;
 const actionChip = css({ ...chipBase, color: 'ws.jadeInk' });
 const dismissChip = css({ ...chipBase, color: 'ws.khaki' });
+const actionsStyles = css({ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' });
+const reopenBtn = css({
+  minHeight: '40px',
+  paddingInline: '14px',
+  borderRadius: '11px',
+  border: '1px solid token(colors.ws.sable)',
+  bg: 'transparent',
+  color: 'ws.jadeInk',
+  fontFamily: 'wsUi',
+  fontSize: '14px',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+  transition: 'background-color 120ms',
+  _hover: { bg: 'ws.sable' },
+  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
+  _focusVisible: { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
+});
 
 export interface SignalementHistoryProps {
   readonly surveyClient: SurveyClient;
+  // ADR-0116: reversing the correction on reopen composes the grid correction; absent in fixtures that don't exercise it.
+  readonly correctionClient?: CorrectionClient;
 }
 
-export function SignalementHistory({ surveyClient }: SignalementHistoryProps) {
+export function SignalementHistory({ surveyClient, correctionClient }: SignalementHistoryProps) {
+  const { show: showToast } = useToast();
   const [items, setItems] = useState<ReadonlyArray<SignalementHistoryItem> | null>(null);
   const [error, setError] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -69,6 +93,26 @@ export function SignalementHistory({ surveyClient }: SignalementHistoryProps) {
       alive = false;
     };
   }, [surveyClient]);
+
+  const handleReopen = useCallback(
+    async (h: SignalementHistoryItem): Promise<void> => {
+      if (!correctionClient) return;
+      setBusyId(h.reportId);
+      try {
+        await reopenSignalement(
+          { correctionClient, surveyClient },
+          { reportId: h.reportId, oldClueText: h.clueText, ...(h.wordText ? { wordText: h.wordText } : {}) },
+        );
+        setItems((prev) => (prev ? prev.filter((x) => x.reportId !== h.reportId) : prev));
+        showToast({ text: t('route.signalements.reopen.toast'), tone: 'info' });
+      } catch {
+        showToast({ text: t('route.signalements.reopen.error'), tone: 'error' });
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [correctionClient, surveyClient, showToast],
+  );
 
   return (
     <div className={stackStyles}>
@@ -94,6 +138,19 @@ export function SignalementHistory({ surveyClient }: SignalementHistoryProps) {
                   {t(reasonLabelKey[h.reason])} · {t(surfaceLabelKey[h.surface])}
                 </p>
                 <p className={timeStyles}>{relativeTimeFr(h.triagedAt)}</p>
+                {correctionClient ? (
+                  <div className={actionsStyles}>
+                    <button
+                      type="button"
+                      className={reopenBtn}
+                      onClick={() => { void handleReopen(h); }}
+                      disabled={busyId === h.reportId}
+                      aria-label={t('route.signalements.reopen.aria', { mot: h.wordText ?? h.clueText })}
+                    >
+                      {t('route.signalements.reopen')}
+                    </button>
+                  </div>
+                ) : null}
               </li>
             );
           })}

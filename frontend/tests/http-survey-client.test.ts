@@ -577,3 +577,33 @@ describe('HttpSurveyClient.decideSignalement', () => {
     await expect(client.decideSignalement(reportId, 'dismiss')).rejects.toThrow(/decideSignalement failed: 404/);
   });
 });
+
+describe('HttpSurveyClient.undoSignalement', () => {
+  const reportId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
+
+  it('POSTs to /v1/signalements/{id}/undo and resolves on 204', async () => {
+    let method = '';
+    server.use(
+      http.post(`${BASE}/v1/signalements/${reportId}/undo`, ({ request }) => {
+        method = request.method;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    await expect(client.undoSignalement(reportId)).resolves.toBeUndefined();
+    expect(method).toBe('POST');
+  });
+
+  it('throws ContribuerForbiddenError on 403', async () => {
+    server.use(
+      http.post(`${BASE}/v1/signalements/${reportId}/undo`, () => new HttpResponse(null, { status: 403 })),
+    );
+    await expect(client.undoSignalement(reportId)).rejects.toBeInstanceOf(ContribuerForbiddenError);
+  });
+
+  it('throws a generic Error on 404', async () => {
+    server.use(
+      http.post(`${BASE}/v1/signalements/${reportId}/undo`, () => new HttpResponse(null, { status: 404 })),
+    );
+    await expect(client.undoSignalement(reportId)).rejects.toThrow(/undoSignalement failed: 404/);
+  });
+});

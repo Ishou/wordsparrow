@@ -1,7 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SignalementHistory } from '@/ui/components/signalements/SignalementHistory';
+import { Toast, ToastProvider } from '@/ui/components/primitives';
 import type { SignalementHistoryItem, SurveyClient } from '@/application/survey';
+import type { CorrectionClient } from '@/application/correction';
 
 function item(over: Partial<SignalementHistoryItem> = {}): SignalementHistoryItem {
   return {
@@ -21,6 +23,7 @@ function item(over: Partial<SignalementHistoryItem> = {}): SignalementHistoryIte
 function stubClient(items: ReadonlyArray<SignalementHistoryItem>): SurveyClient {
   return {
     listHandledSignalements: vi.fn().mockResolvedValue(items),
+    undoSignalement: vi.fn().mockResolvedValue(undefined),
   } as unknown as SurveyClient;
 }
 
@@ -61,5 +64,53 @@ describe('SignalementHistory', () => {
     render(<SignalementHistory surveyClient={client} />);
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+
+  it('reopens a report: reverses the correction, undoes the decision, drops the card and toasts', async () => {
+    const survey = stubClient([item({ reportId: 'r-a', wordText: 'CHAT', clueText: 'Animal qui miaule' })]);
+    const correction = {
+      reverseCorrection: vi.fn().mockResolvedValue('forbid_clue'),
+    } as unknown as CorrectionClient;
+
+    render(
+      <ToastProvider>
+        <SignalementHistory surveyClient={survey} correctionClient={correction} />
+        <Toast />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Réouvrir le signalement sur CHAT et annuler la correction' }));
+
+    await waitFor(() => expect(screen.queryByText('CHAT')).not.toBeInTheDocument());
+    expect(correction.reverseCorrection).toHaveBeenCalledWith('Animal qui miaule', 'CHAT');
+    expect(survey.undoSignalement).toHaveBeenCalledWith('r-a');
+    expect(await screen.findByText('Signalement réouvert ; correction annulée.')).toBeInTheDocument();
+  });
+
+  it('keeps the card and shows an error toast when reopening fails', async () => {
+    const survey = stubClient([item({ reportId: 'r-a', wordText: 'CHAT' })]);
+    const correction = {
+      reverseCorrection: vi.fn().mockRejectedValue(new Error('boom')),
+    } as unknown as CorrectionClient;
+
+    render(
+      <ToastProvider>
+        <SignalementHistory surveyClient={survey} correctionClient={correction} />
+        <Toast />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Réouvrir le signalement sur CHAT et annuler la correction' }));
+
+    expect(await screen.findByText('Réouverture impossible pour le moment. Réessaie.')).toBeInTheDocument();
+    expect(screen.getByText('CHAT')).toBeInTheDocument();
+    expect(survey.undoSignalement).not.toHaveBeenCalled();
+  });
+
+  it('does not render a Réouvrir button without a correction client', async () => {
+    render(<SignalementHistory surveyClient={stubClient([item({ wordText: 'CHAT' })])} />);
+
+    expect(await screen.findByText('CHAT')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Réouvrir/ })).not.toBeInTheDocument();
   });
 });
