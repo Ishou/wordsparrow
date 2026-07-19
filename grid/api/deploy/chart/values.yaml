@@ -163,6 +163,8 @@ retention:
 # an image that may not exist on a contributor laptop; prod enables.
 ensureDailies:
   enabled: false
+  # ADR-0117 rollout toggle: true emits GRID_DAILY_DISTILL=true so the pre-gen serves distilled (airier, longer-worded) grids. Deploy dark; flip per-env or with --set for a one-off regen.
+  distill: false
   # 03:00 UTC — between low-traffic hours and the European morning playtime, after the 02:00 CNPG backup.
   schedule: "0 3 * * *"
   # 90 minutes covers ADR-0042's ~70-minute worst case (7 days × ~10 min each) with headroom.
@@ -197,7 +199,6 @@ ensureDailies:
       value: "parentbased_traceidratio"
     - name: OTEL_TRACES_SAMPLER_ARG
       value: "1.0"
-    # - {name: GRID_DAILY_DISTILL, value: "true"}  # ADR-0117 daily-distill toggle, deploy dark
 # Cloudflare edge purge after daily generation (ADR-0089 §5). Reads the
 # `cloudflare-purge-token` Secret (keys `zone-id` + `token`, zone-scoped
 # Zone -> Cache Purge permission; see docs/secrets.md). Off by default so
