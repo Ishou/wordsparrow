@@ -64,14 +64,27 @@ const modeRow = css({
   color: 'ws.jadeInk',
   fontSize: '15px',
   lineHeight: '1.3',
-  transition: 'background-color 120ms',
+  // No background-color transition: a selection highlight must snap to the chosen row. A cross-fade leaves the just-deselected row painted for 120ms (worse on mobile Safari), reading as a stale/wrong highlight.
   '&:has(input:focus-visible)': { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
   '&:has(input:disabled)': { cursor: 'not-allowed', color: 'ws.khaki' },
 });
 // Selected/hover fills are applied by React state, not `:has(input:checked)` — WebKit doesn't re-evaluate `:has()` when a radio is unchecked, leaving stale highlights on mobile Safari. Hover lives only on unselected rows so it can't repaint a selected one.
 const rowSelected = css({ bg: 'ws.sakuraBlush', fontWeight: 'bold' });
 const rowHoverable = css({ _hover: { bg: 'ws.sable' } });
-const radioInput = css({ flex: 'none', width: '20px', height: '20px', accentColor: 'token(colors.ws.sakuraDark)' });
+// Custom-drawn, not a resized `accent-color` native radio: WebKit scales native controls sized past their default and intermittently drops the checked dot inside the animated sheet. `appearance:none` + `:checked` styling on the input repaints reliably (element-local, not ancestor `:has`).
+const radioInput = css({
+  appearance: 'none',
+  flex: 'none',
+  width: '20px',
+  height: '20px',
+  margin: 0,
+  borderRadius: '999px',
+  border: '2px solid token(colors.ws.khaki)',
+  bg: 'ws.card',
+  cursor: 'pointer',
+  _checked: { borderColor: 'ws.sakuraDark', bg: 'ws.sakuraDark', boxShadow: 'inset 0 0 0 3px token(colors.ws.card)' },
+  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
+});
 const hint = css({ fontSize: '12px', color: 'ws.khaki', margin: '0 0 10px 42px', fontStyle: 'italic' });
 const fieldLabel = css({ display: 'block', fontFamily: 'wsUi', fontSize: '13px', fontWeight: 'bold', color: 'ws.jadeInk', marginBottom: '6px' });
 const textField = css({
@@ -98,7 +111,7 @@ const pickRow = css({
   color: 'ws.jadeInk',
   fontSize: '15px',
   lineHeight: '1.3',
-  transition: 'background-color 120ms',
+  // See modeRow: selection highlight snaps, no cross-fade.
   '&:has(input:focus-visible)': { outline: '3px solid token(colors.ws.sakuraRose)', outlineOffset: '2px' },
 });
 const pickText = css({ flex: '1 1 auto', minWidth: 0 });
