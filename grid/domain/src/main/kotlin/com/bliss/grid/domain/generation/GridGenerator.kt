@@ -25,6 +25,12 @@ const val DEFAULT_GENERATION_TIMEOUT_MS = 5_000L
 
 private const val NS_PER_MS: Long = 1_000_000L
 
+/** Result of [GridGenerator.generateDistilled]: the served grid and whether ADR-0117's cooldown fallback fired. */
+data class DistilledResult(
+    val grid: Grid,
+    val usedCooldownFallback: Boolean,
+)
+
 /**
  * Bitmask-CSP grid generator (Phase 1: sequential).
  *
@@ -230,10 +236,29 @@ class GridGenerator(
         distillFillCheckMs: Long = DISTILL_FILL_CHECK_MS,
         cooldownPolicy: ClueCooldownPolicy = ClueCooldownPolicy.Inert,
         templateAttempts: Int = DEFAULT_DISTILL_TEMPLATE_ATTEMPTS,
-    ): Grid? =
-        firstFillableTemplate(random, templateAttempts) { attemptRandom ->
-            distillOnce(constraints, attemptRandom, timeoutMs, bestOfN, distillFillCheckMs, cooldownPolicy)
-        }
+    ): DistilledResult? {
+        val minLen = constraints.minWordLength
+        var fallbackFill: Grid? = null
+        val served =
+            firstFillableTemplate(random, templateAttempts) { attemptRandom ->
+                val (template, inertFill) =
+                    distillTemplate(constraints, attemptRandom, timeoutMs, distillFillCheckMs)
+                        ?: return@firstFillableTemplate null
+                fallbackFill = inertFill
+                fillLayout(
+                    template,
+                    minLen,
+                    Random(attemptRandom.nextLong()),
+                    timeoutMs = timeoutMs,
+                    bestOfN = bestOfN,
+                    themeLimits = constraints.themeLimits,
+                    cooldownPolicy = cooldownPolicy,
+                )
+            }
+        // Cooldown fallback (ADR-0117): if no template fills under the clue cooldown, serve the Inert fill captured during backoff -- a possible repeat beats a missing daily.
+        val grid = served ?: fallbackFill
+        return grid?.let { DistilledResult(it, usedCooldownFallback = served == null) }
+    }
 
     /** Return the first of [attempts] freshly-seeded templates that fills, so a cooled-out fill retries the fill -- never the expensive backoff. */
     internal fun firstFillableTemplate(
@@ -248,40 +273,43 @@ class GridGenerator(
         return null
     }
 
-    private fun distillOnce(
+    // One distilled template plus a proven Inert fill of it: dense start + backoff probes run Inert (a structural "can this SHAPE fill?" question). The over-thinned template is only marginally fillable, so the fill captured by the last accepted probe -- not a fresh fill -- is the reliable fallback.
+    private fun distillTemplate(
         constraints: GridConstraints,
         random: Random,
         timeoutMs: Long,
-        bestOfN: Int,
         distillFillCheckMs: Long,
-        cooldownPolicy: ClueCooldownPolicy,
-    ): Grid? {
+    ): Pair<CellArray, Grid>? {
         val minLen = constraints.minWordLength
-        // Dense start + backoff probes run Inert: they ask a structural "can this SHAPE fill?" question, so the daily cooldown is irrelevant and only slows probes / over-rejects fillable shapes.
         val dense = generate(constraints, random, timeoutMs = timeoutMs, cooldownPolicy = ClueCooldownPolicy.Inert) ?: return null
         val start = reconstructLayout(dense, constraints.width, constraints.height)
-        val distilled =
+        var lastFill: Grid? = null
+        val template =
             BackoffDistiller.distill(start, minLen, lexicon()) { candidate ->
-                fillLayout(
-                    candidate,
+                val filled =
+                    fillLayout(
+                        candidate,
+                        minLen,
+                        Random(random.nextLong()),
+                        timeoutMs = distillFillCheckMs,
+                        themeLimits = constraints.themeLimits,
+                        cooldownPolicy = ClueCooldownPolicy.Inert,
+                    )
+                if (filled != null) lastFill = filled
+                filled != null
+            }
+        // lastFill is the fill of the final template (the last accepted whitening's own probe); fill the un-thinned start if nothing whitened.
+        val fill =
+            lastFill
+                ?: fillLayout(
+                    template,
                     minLen,
                     Random(random.nextLong()),
-                    timeoutMs = distillFillCheckMs,
+                    timeoutMs = timeoutMs,
                     themeLimits = constraints.themeLimits,
                     cooldownPolicy = ClueCooldownPolicy.Inert,
-                ) !=
-                    null
-            }
-        // Only the served grid honours the cooldown; fillLayout self-retries within its budget.
-        return fillLayout(
-            distilled,
-            minLen,
-            Random(random.nextLong()),
-            timeoutMs = timeoutMs,
-            bestOfN = bestOfN,
-            themeLimits = constraints.themeLimits,
-            cooldownPolicy = cooldownPolicy,
-        )
+                )
+        return fill?.let { template to it }
     }
 
     /** Fill a fixed black-cell layout (no perturbation), keeping the highest-coverage of up to [bestOfN] fills. */
