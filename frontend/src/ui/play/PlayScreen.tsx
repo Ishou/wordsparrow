@@ -294,6 +294,8 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
     // Suppress the hook's keyboard-avoidance auto-scroll — the grid never moves the view on its own.
     getZoomScale: () => 2,
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
+    // Freeze input while the whole-grid verdict is in flight so a late keystroke can't overwrite the last letter or void a winning validation (ADR-0076).
+    isInputLocked: () => validation.pending,
   });
 
   const requestHint = useCallback(() => {
