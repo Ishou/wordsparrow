@@ -1,12 +1,4 @@
-/**
- * Regression: the Corriger option rows must show their selection highlight
- * on the *currently selected* row, immediately, with no cross-fade. A
- * `transition: background-color` used to leave the just-deselected row
- * painted for 120ms (pronounced on mobile Safari), so the highlight read as
- * stuck on the wrong option. jsdom can't see this — it needs a real engine.
- * Seeds admin:signalements + one report via `worker.use(...)`, same MSW
- * handshake as auth-authed.spec.ts.
- */
+// Needs a real engine to see the cross-fade lag; jsdom can't render transitions.
 import { expect, test, type Page } from '@playwright/test';
 
 const USER = { userId: 'u-1', displayName: 'Maintainer 1', role: 'maintainer', capabilities: ['admin:signalements', 'contribuer'] };
