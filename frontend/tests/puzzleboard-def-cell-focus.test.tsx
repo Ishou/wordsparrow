@@ -110,6 +110,35 @@ describe('PuzzleBoard wires def-cell tap-to-focus through the live DefCell compo
   });
 });
 
+describe('PuzzleBoard keycap tier reflects live typing, not just the mount-time entry seed', () => {
+  // (3,0) is the lone cell of the unrelated "dual-v" word — focusing it clears the
+  // across word's highlight so (0,1)'s tier reads its own state, not 'activeWord'.
+  const deselect = () => act(() => inputAt(3, 0).focus());
+
+  it('a cell flips from empty to filled as soon as the player types into it', () => {
+    render(<Harness puzzle={basePuzzle()} />);
+    expect(keycapAt(0, 1).getAttribute('data-cell-state')).toBe('empty');
+    const input = inputAt(0, 1);
+    act(() => input.focus());
+    act(() => fireEvent.keyDown(input, { key: 'X' }));
+    deselect();
+    expect(keycapAt(0, 1).getAttribute('data-cell-state')).toBe('filled');
+  });
+
+  it('a cell flips back to empty when the typed letter is erased', () => {
+    render(<Harness puzzle={basePuzzle()} />);
+    const input = inputAt(0, 1);
+    act(() => input.focus());
+    act(() => fireEvent.keyDown(input, { key: 'X' }));
+    deselect();
+    expect(keycapAt(0, 1).getAttribute('data-cell-state')).toBe('filled');
+    act(() => input.focus());
+    act(() => fireEvent.keyDown(input, { key: 'Backspace' }));
+    deselect();
+    expect(keycapAt(0, 1).getAttribute('data-cell-state')).toBe('empty');
+  });
+});
+
 describe('handleDefinitionClick hook behaviour', () => {
   it('does nothing while a pan gesture is in progress', () => {
     const { result } = renderHook(() => useGridNavigation(basePuzzle(), { isPanning: () => true }));
