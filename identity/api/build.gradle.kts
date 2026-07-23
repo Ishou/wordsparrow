@@ -52,7 +52,7 @@ dependencies {
     constraints {
         implementation("io.netty:netty-codec-http:4.2.15.Final")
         implementation("io.netty:netty-codec-http2:4.2.15.Final")
-        implementation("io.netty:netty-codec-compression:4.2.15.Final")
+        implementation("io.netty:netty-codec-compression:4.2.16.Final")
         implementation("io.netty:netty-transport-native-epoll:4.2.15.Final")
         implementation("io.netty:netty-transport-native-kqueue:4.2.15.Final")
         implementation("com.fasterxml.jackson.core:jackson-core:2.22.0")
