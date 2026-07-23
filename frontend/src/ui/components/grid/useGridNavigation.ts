@@ -328,6 +328,22 @@ function formatWordEntryAnnouncement(
   });
 }
 
+// With skip-filled on, land on the next still-empty cell in the word; fall back to the immediate next when every cell ahead is filled.
+export function nextAdvanceIndex(
+  cells: readonly LetterCell[],
+  fromIdx: number,
+  skipFilled: boolean,
+  isFilled: (position: Position) => boolean,
+): number | null {
+  if (fromIdx < 0) return null;
+  if (skipFilled) {
+    for (let j = fromIdx + 1; j < cells.length; j++) {
+      if (!isFilled(cells[j]!.position)) return j;
+    }
+  }
+  return fromIdx < cells.length - 1 ? fromIdx + 1 : null;
+}
+
 export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOptions): GridNavigation {
   const lookup = useMemo(() => buildLookup(puzzle), [puzzle]);
   const refs = useRef(new Map<string, HTMLInputElement>());
