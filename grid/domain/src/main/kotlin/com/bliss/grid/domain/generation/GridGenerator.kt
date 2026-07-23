@@ -54,6 +54,9 @@ class GridGenerator(
     // it lazily on the first `generate` call and reuse for subsequent calls.
     @Volatile private var cachedLexicon: Lexicon? = null
 
+    // Corpus-backed multi-lemma dedup seam (ADR-0100); Inert for repositories that don't carry it.
+    private val surfaceLemmas: SurfaceLemmas by lazy { repository.surfaceLemmas() }
+
     private fun lexicon(): Lexicon =
         cachedLexicon
             ?: synchronized(this) {
@@ -142,7 +145,7 @@ class GridGenerator(
                 perturbations++
                 continue
             }
-            val acceptor = WordAcceptor(constraints.themeLimits, cooldownPolicy)
+            val acceptor = WordAcceptor(constraints.themeLimits, cooldownPolicy, surfaceLemmas)
             val csp = BitmaskCsp(build.slots, lex, acceptor, clock, random)
             if (!csp.initialArcConsistency()) {
                 consecFails++
@@ -333,7 +336,8 @@ class GridGenerator(
         while (successes < bestOfN && attempt < FILL_LAYOUT_MAX_ATTEMPTS && clock.nanoTime() < deadlineNs) {
             attempt++
             val build = SlotRegistry.build(cells, lex, minLen) ?: return null
-            val csp = BitmaskCsp(build.slots, lex, WordAcceptor(themeLimits, cooldownPolicy), clock, Random(random.nextLong()))
+            val csp =
+                BitmaskCsp(build.slots, lex, WordAcceptor(themeLimits, cooldownPolicy, surfaceLemmas), clock, Random(random.nextLong()))
             if (!csp.initialArcConsistency()) continue
             val budget = GenerationKnobs.BASE_BUDGET_BACKTRACKS * luby(attempt)
             val attemptDeadline = min(deadlineNs, clock.nanoTime() + (perAttemptSeconds(w * h) * 1e9).toLong())

@@ -55,4 +55,12 @@ interface WordRepository {
      * canonical solution.
      */
     fun containsLemma(text: String): Boolean
+
+    /**
+     * Full folded-lemma set per folded surface, for per-grid dedup of inflected
+     * homographs the loader's single-lemma merge collapses (ADR-0100). The
+     * default [SurfaceLemmas.Inert] degrades to surface-own-lemma dedup;
+     * corpus-backed adapters override it.
+     */
+    fun surfaceLemmas(): SurfaceLemmas = SurfaceLemmas.Inert
 }
