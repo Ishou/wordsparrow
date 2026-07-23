@@ -406,11 +406,16 @@ def main() -> None:
         # `subject-person-mismatch`: clue's own subject disagrees with the forced surface person/number.
         # `passe-simple-person`: 1st/2nd-person passé-simple head reads as archaic (`considérai → "Tins compte de"`).
         # `pp-adjective-homograph`: fem-pl-ppas homograph head in a predicative frame (`comblez → "Satisfaites pleinement"`).
+        # `pp-epicene-skipped`: an irregular epicene-ppas head (`nuire → "Nui"`)
+        # can't agree with a fem/pl answer and can't be safely synthesized;
+        # dropping lets a sibling sense supply the clue (regular -er heads are
+        # synthesized upstream and ship as `inflected`).
         skipped = r.get("inflection_status") in (
             "pp-only-skipped", "pp-reflexive-skipped", "neg-nonfinite-skipped",
             "no-inflection-finite", "agreement-mismatch",
             "subject-person-mismatch", "passe-simple-person",
             "pp-adjective-homograph", "subject-number-mismatch",
+            "pp-epicene-skipped",
         )
         if skipped or s < args.threshold:
             dropped.append(r)

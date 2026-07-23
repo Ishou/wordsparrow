@@ -119,3 +119,27 @@ def test_subject_person_mismatch_flows_through_to_surface_status() -> None:
     _clue, status = classify_surface_inflection(
         "La sueur apparaît", {"ifut", "2sg", "v3__i___zz"}, idx)
     assert status == "subject-person-mismatch", status
+
+
+def test_epicene_irregular_ppas_drops_through_surface_status() -> None:
+    """An irregular epicene-ppas head (`nuire`) cluing a fem answer surfaces as
+    the droppable `pp-epicene-skipped` status through the surface-tier wrapper,
+    so `build_surface_clues` routes it to the dropped set."""
+    idx = MorphologyIndex()
+    _add(idx, "nuire", "nuire", "v3__t___zz infi")
+    _add(idx, "nuire", "nui", "v3__t___zz ppas epi inv")
+    _clue, status = classify_surface_inflection(
+        "Nuire à la réputation", {"ppas", "fem", "sg", "v3__t___zz"}, idx)
+    assert status == "pp-epicene-skipped", status
+
+
+def test_epicene_er_ppas_synthesized_and_kept() -> None:
+    """A regular -er epicene-ppas head (`demeurer`) synthesizes the agreeing
+    form and ships as `inflected` — not dropped."""
+    idx = MorphologyIndex()
+    _add(idx, "demeurer", "demeurer", "v1ei_____a infi")
+    _add(idx, "demeurer", "demeuré", "v1ei_____a ppas epi inv")
+    clue, status = classify_surface_inflection(
+        "Demeurer sur place", {"ppas", "fem", "sg", "v1ei_____a"}, idx)
+    assert status == "inflected", (clue, status)
+    assert clue == "Demeurée sur place", clue
