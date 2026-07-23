@@ -49,14 +49,32 @@ purpose-built French derivational databases are:
 | DériF           | tool only, no bulk data | not a dataset |
 
 Démonette-2 is the one purpose-built, commercially-usable option. It is a
-derivational database of French: ~287k lexemes and ~80k derivational relations
-over ~117 affixes, covering suffixation (`-age`, `-eur/-euse`, `-ion`,
-`-ment`, `-able`…), prefixation (`re-`, `dé-`, `en-`, `anti-`…), conversion
-(V↔N *déverbal*, V↔A, N↔A) and parasynthetic derivation. Each relation is
-annotated with POS of both ends, orientation (`des2as`/`as2des`), derivational
-type, complexity (simple/complex, direct/indirect) and a semantic-motivation
-flag. It is distributed as CSV tables (lexemes, relations, families) via
-demonext.xyz and ORTOLANG under CC BY-SA 4.0 — verified at
+derivational database of French distributed as three CSV tables (lexemes,
+relations, families). The figures below are **verified from the real dump**
+(OSF `osf.io/db2w8`, downloaded and inspected 2026-07-23): **222,118 directed
+relation rows** (each undirected pair stored both ways) and **253,131
+families**, over **784 distinct constructions** covering suffixation (`Xage`,
+`Xeur/Xeuse`, `Xion`, `Xment`, `Xable`…), prefixation (`reX`, `dé1X`, `inX`,
+`antiX`…) and conversion (`X`, the V↔N *déverbal* case). Each relation carries
+the columns we depend on:
+
+- `graph_1`/`graph_2` — the two related lexemes (lemma-level; Démonette has
+  **no conjugated forms**, so any consumer must lemmatise a surface first);
+- `cat_1`/`cat_2` — POS **with gender** (`Nf`/`Nm`/`V`/`Adj`);
+- `cstr_1`/`cstr_2` — the construction/affix of each side;
+- `orientation` — `des2as` (derived→base) / `as2des` (base→derived);
+- `complexite` — the effective motivation flag: `simple` (207k), `motiv-sem`
+  (12.9k, semantically-motivated incl. **suppletive** pairs like
+  `école`/`scolaire`), `motiv-form` (1.5k), `complexe` (390), and `accidentel`
+  (78 false-friend pairs, e.g. `baptiser`/`baptême`);
+- `fid` — a native family id (also indexed in `families.csv`).
+
+Two capability facts the ingest and downstream specs must respect: the
+`semty_*`/`sous_semty_*` semantic-role columns and the `def_conc`/`def_abs`
+definition columns are **0 % populated** in this release — so semantic role
+(action/agent/result) and ready-made definitions are **not** available;
+consumers infer role from the affix (`cstr`) and reframe from our own clues.
+Distribution is under CC BY-SA 4.0 — verified on the OSF project and at
 `demonext.xyz/en/view-and-download-the-demonette-database/`. (An earlier
 research note in this project mis-stated it as CC BY-NC-SA; that is the
 retired **v1.2** licence, not the v2/Démonext release.)
@@ -85,38 +103,52 @@ and is governed by the ADR-0058 ShareAlike posture, not re-litigated here:
   a Docker image, chart, or public dataset.
 - Attribution in `NOTICE.md` (Démonette-2 / Démonext, CC BY-SA 4.0, ORTOLANG),
   mirroring the DBnary and Grammalecte entries.
-- The derived artifact we commit is a **filtered derivation graph** (our own
-  normalised representation), which inherits SA — kept internal, consistent
-  with the DBnary discipline.
+- The derived artifact is a **filtered derivation graph** (our own normalised
+  representation), which inherits SA — kept **internal and uncommitted**,
+  hosted alongside the private corpus (ADR-0097 tier), never in a public repo
+  or deployed artifact, consistent with the DBnary discipline.
 
 **Ingest.** A one-shot ingest (`scripts/demonette/`) reads the Démonette-2 CSVs
-and emits a normalised `surface/lemma → {related lexeme, relation type, affix,
-orientation, complexity, semantic-motivation}` graph, filtered to what we use:
+and emits two normalised, self-describing artifacts — a directed relations
+table (`lemma_from, cat_from, cstr_from, lemma_to, cat_to, cstr_to,
+orientation, complexite`) and a families table (`lemma, family_id,
+family_size`) — filtered to what we use:
 
-- Keep only **semantically-motivated, direct** relations whose derived form is
-  **present in our corpus** — precision over recall; an opaque or accidental
-  formal relation is excluded rather than risk a wrong family link.
+- **Exclude `accidentel`** (false friends); keep `simple`/`motiv-sem`/
+  `motiv-form` (and `complexe`, flagged). `motiv-sem` deliberately retains
+  suppletive pairs (`école`/`scolaire`) that theming wants.
+- Keep only relations whose **both endpoints are present in our corpus**
+  (`words-fr.csv` `lemma` column, the same lowercase-accented space) — precision
+  over recall; coverage on our vocabulary is reported by the ingest.
 - The output is a small, corpus-scoped resource loadable by `:grid` and the
   clue pipeline; the multi-hundred-k raw table stays out of the runtime.
 
 **Roadmap (each its own ADR/PR — not built here).** The value ranking that
 justifies adoption:
 
-1. **Grid de-duplication.** A family-aware check in `WordAcceptor` excludes
-   derivational relatives of already-placed answers (fixes the reported
-   `tir`/`tirons`, `laver`/`lavage` bug). Highest priority — a live defect.
+1. **Grid de-duplication.** A family-aware `WordAcceptor` check excludes
+   derivational relatives of already-placed answers (`tir`/`tirer`,
+   `laver`/`lavage`). This is the derivational **layer 2** on top of the
+   FP-free multi-lemma floor already shipped (the `lie`/`lia` inflectional-
+   homograph fix, which uses ADR-0100's corpus data and needs no Démonette).
 2. **Clue-leak detection.** A principled morphological-leak gate: reject a clue
    whose tokens are derivationally related to the answer, replacing the current
    substring-luck check.
 3. **Derivational clue propagation.** A local, Modal-free clue lane that applies
    the answer's derivation to a known clue: `laver "nettoyer"` + `-age` →
-   `lavage "nettoyage"`. Directly attacks finding B by manufacturing fresh
-   clues for the long derived words that starve the cooldown. Output still
-   passes the existing validation/leak/cell-cap gates.
-4. **Family-aware cross-day variety / cooldown.** Cool down a whole family, not
-   just a surface, so consecutive dailies do not circle one root.
-5. **Difficulty signal.** Derivational complexity (simple vs parasynthetic,
-   direct vs indirect) as one input to a per-word difficulty score.
+   `lavage "nettoyage"`. Directly attacks finding B for long derived words that
+   starve the cooldown. Because `semty` is unpopulated, reframing templates key
+   off the **affix** (`Xage`/`Xion`→action, `Xeur`→agent), not a stored role;
+   output passes the existing validation/leak/cell-cap gates.
+4. **Family-aware cross-day variety / cooldown.** Cool down a whole family
+   (native `fid`), not just a surface, so consecutive dailies do not circle one
+   root — size-capped, since families run large (947 have 13+ members).
+5. **Lexical-family theming.** Build themed grids from a family's members —
+   e.g. an "école" grid spanning `école`/`scolaire`/`scolarité`/`préscolaire`.
+   Feasible because Démonette links **suppletive** roots via `motiv-sem`; no
+   curation needed for the motivating case.
+6. **Difficulty signal.** Derivational complexity as one input to a per-word
+   difficulty score.
 
 ## Consequences
 **Easier:**
