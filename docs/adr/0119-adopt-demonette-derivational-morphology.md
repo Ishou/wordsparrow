@@ -181,4 +181,4 @@ justifies adoption:
 - The `WordAcceptor` family-aware dedup fix (roadmap item 1) — the immediate
   follow-up, since it fixes a live defect.
 - The derivational clue-propagation lane (item 3) and its judge/leak gates.
-- Family cooldown and the difficulty signal (items 4–5).
+- Family cooldown, lexical-family theming, and the difficulty signal (items 4–6).
