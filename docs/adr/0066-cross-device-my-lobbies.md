@@ -386,3 +386,99 @@ joins are byte-for-byte unchanged. In-lobby rename (`RenameSelf`) is
 unchanged and still permitted; a subsequent authed reconnect re-seats
 under the account name, matching how the REST-created host already
 behaved.
+
+## Amendment 2026-07-23 (e) — account-scoped live player identity
+
+### Problem the original decision missed
+
+Amendment (b) recognizes an authed rejoin from a second device and **moves**
+the seat rather than duplicating it (`JoinLobbyUseCase.seat`'s
+`withoutStaleSeat` filter). But the move is never expressed on the wire as a
+removal: the join emits only `PlayerJoined(newSessionId)` — there is no
+`PlayerLeft(oldSessionId)` — and `handleOutcome` broadcasts that single event
+to every socket. The frontend roster reducer dedupes by `sessionId` only, so it
+appends the new row without dropping the old one. Both devices render `{S1,
+S2}`. Because identity and score are still keyed on the per-device `sessionId`
+(ADR-0018 §6; score = `count(lockedPositions where lockedBy === sessionId)`,
+ADR-0102 over ADR-0086 attribution), each phantom row carries its own count.
+
+Net user-visible bug, confirmed 2026-07-23: **a single account joining the same
+lobby from mobile + desktop appears twice, with two separate scores**, and a
+device switch orphans the earlier device's contributions. The identity cookie
+is not implicated — `__Secure-ws_session` is `Domain=wordsparrow.io`, reaches
+the `game.wordsparrow.io` WS handshake, and the de-dup fires; the defect is that
+identity and score are device-scoped rather than account-scoped, and the seat
+move is invisible to peers.
+
+### Decision
+
+For **authenticated** players the live game model is **account-scoped**. Anon
+players are unchanged (still per-device).
+
+1. **Stable `PlayerId`**, derived once per socket at the WebSocket edge from
+   server-verified inputs: `playerId = verifiedUserId?.value ?: sessionId.value`
+   (authed → the account `userId`; anon → the device `sessionId`). Derived from
+   the connect-time identity-api cookie verification, **never** from a client
+   frame.
+2. **Roster re-keyed on `PlayerId`.** `Lobby.players` becomes
+   `Map<PlayerId, Player>`; join is an idempotent upsert on `playerId`. A second
+   device of the same account maps to the same key — a structural no-op. This
+   **deletes** the amendment (b) `withoutStaleSeat` seat-move (with it, the
+   missing-`PlayerLeft` duplication and the two-device ping-pong).
+3. **Score re-keyed on `PlayerId`.** `lockedPositions` becomes
+   `Map<Position, PlayerId>` and the wire `lockedBy` becomes a `PlayerId`, so an
+   account's locks aggregate into one score across devices and across a device
+   switch. ADR-0086 board tint-by-finder (same `lockedBy`) becomes account-scoped
+   consistently — the ADR-0102 invariant "score equals the count of your coloured
+   cells" is preserved.
+4. **Reconnect grace removes on last session.** After the grace window a player
+   is removed only when no live socket remains for its `playerId` (extends the
+   existing per-`sessionId` multi-tab check in `SessionManager` to `playerId`).
+   Closing one device while another stays connected does not drop the account.
+
+**Explicitly unchanged (bounded blast radius):** ownership stays keyed on
+`ownerSessionId` + `ownerUserId` (amendment (b) already rebinds owner
+cross-device) — `isOwner`, StartGame, RotateCode, SetGridConfig, kick keep their
+guards verbatim; kick's *target* becomes a `playerId`. Presence/cursors stay
+per-session and ephemeral. The `cellUpdate`/`cellUpdated` sync transport stays
+per-device, with **no self-echo suppression keyed on `playerId`** — that is the
+one change that would break mobile↔desktop input reflection.
+
+### Threat model (auth-boundary change — required, CLAUDE.md)
+
+- **Spoofing:** the authed `playerId` derives from the server-verified `userId`
+  (identity-api whoami at connect time), never from a client frame — a client
+  cannot present another account's `playerId`. Anon `playerId = sessionId` is
+  client-supplied exactly as today (ADR-0018 §7); no regression.
+- **Elevation of privilege:** none. Ownership and every owner-gated use case keep
+  their existing `isOwner(sessionId)` / `ownerUserId` guards. The re-key adds no
+  capability; it only collapses roster rows and score buckets for one verified
+  account.
+- **Information disclosure:** none new. Join still requires the `lobbyId`; no arm
+  leaks lobby existence. An anon player's exposed `playerId` is their own
+  `sessionId` (already on the wire); an authed player's is their `userId`,
+  visible only to co-players already in the lobby.
+- Residual risk is bounded by the identity cookie's integrity — the same trust
+  root amendments (a)/(b)/(c)/(d) rely on.
+
+### Supersession
+
+Supersedes **ADR-0018 §6** for authed *live* identity and score attribution
+only. §6 stands unchanged for anonymous players and for the per-device
+`sessionId` transport (cell sync, presence, cursors). One additive,
+backward-compatible migration (`V4`, expand-and-contract): `lobby_players` is
+DELETE+INSERT full-rewritten per save, so re-keying needs no row-dedup backfill;
+`game_payload` `lockedBy` is read forward-compatibly (a legacy `sessionId` value
+reads as a `PlayerId`; anon values are already correct; authed in-flight locks
+self-heal on the next lock).
+
+### References (this amendment)
+
+- **ADR-0018 §6/§7/§9** — per-device `sessionId` model, two-tier authz, presence;
+  this amendment scopes §6 to anon + transport only.
+- **ADR-0086** — board tint by word-completer (`lockedBy`).
+- **ADR-0102** — co-op validated-letter score (`tallyValidatedLetters` over
+  `lockedBy`).
+- Design + wave plan:
+  `docs/superpowers/specs/2026-07-23-multiplayer-account-player-identity-design.md`,
+  `docs/superpowers/plans/2026-07-23-multiplayer-account-player-identity.md`.
