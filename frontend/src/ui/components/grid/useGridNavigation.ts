@@ -551,6 +551,20 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
     [lookup],
   );
 
+  // First editable-and-empty cell (skip locked + typed), else first editable, else the word's first cell.
+  const firstLandingCell = useCallback(
+    (clue: Clue): Position => {
+      const editable = clue.cells.filter(
+        (c) => !(isCellValidatedRef.current?.(c.position.row, c.position.col) ?? false),
+      );
+      const firstEmpty = editable.find(
+        (c) => (refs.current.get(key(c.position))?.value ?? '') === '',
+      );
+      return (firstEmpty ?? editable[0] ?? clue.cells[0]).position;
+    },
+    [],
+  );
+
   const handleDefinitionClick = useCallback(
     (defPosition: Position) => {
       // Tail-of-pan synthesised clicks aren't slot selections — same gate as handleClick.
@@ -562,18 +576,10 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
       const activeClue = f ? lookup.clueAt(f.row, f.col, dir) : undefined;
       const activeIdx = activeClue ? clues.findIndex((c) => c === activeClue) : -1;
       const target = clues[activeIdx >= 0 ? (activeIdx + 1) % clues.length : 0];
-      // First editable-and-empty cell (skip locked + typed), else first editable, else the word's first cell.
-      const editable = target.cells.filter(
-        (c) => !(isCellValidatedRef.current?.(c.position.row, c.position.col) ?? false),
-      );
-      const firstEmpty = editable.find(
-        (c) => (refs.current.get(key(c.position))?.value ?? '') === '',
-      );
-      const landing = (firstEmpty ?? editable[0] ?? target.cells[0]).position;
       if (target.direction !== dir) setDirection(target.direction);
-      focusCell(landing);
+      focusCell(firstLandingCell(target));
     },
-    [focusCell, lookup],
+    [firstLandingCell, focusCell, lookup],
   );
 
   const handleFocus = useCallback((event: React.FocusEvent<HTMLInputElement>) => {
@@ -764,9 +770,9 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
         nextClue = clues[nextIdx];
       }
       if (nextClue.direction !== stateRef.current.direction) setDirection(nextClue.direction);
-      focusCell(nextClue.cells[0].position);
+      focusCell(firstLandingCell(nextClue));
     },
-    [focusCell, lookup],
+    [firstLandingCell, focusCell, lookup],
   );
 
   const eraseLetter = useCallback(() => {
