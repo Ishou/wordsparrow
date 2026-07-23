@@ -180,5 +180,7 @@ justifies adoption:
 **Deferred (own ADRs):**
 - The `WordAcceptor` family-aware dedup fix (roadmap item 1) — the immediate
   follow-up, since it fixes a live defect.
+- Morphological clue-leak detection (item 2), replacing the current
+  substring-luck check.
 - The derivational clue-propagation lane (item 3) and its judge/leak gates.
 - Family cooldown, lexical-family theming, and the difficulty signal (items 4–6).
