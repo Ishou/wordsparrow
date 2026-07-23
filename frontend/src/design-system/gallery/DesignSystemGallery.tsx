@@ -107,6 +107,7 @@ export function DesignSystemGallery() {
         <Card name="Cell" desc="Lettres en Spline Sans Mono · rayon 9px. Vide/actif en relief, résolu aplati.">
           <div className={jade}>
             <Var label="Empty" w={58}><Cell state="empty" /></Var>
+            <Var label="Filled" w={58}><Cell state="filled" letter="A" /></Var>
             <Var label="Solved" w={58}><Cell state="solved" letter="A" /></Var>
             <Var label="Active" w={58}><Cell state="active" letter="P" /></Var>
             <Var label="Active word" w={58}><Cell state="activeWord" letter="A" /></Var>

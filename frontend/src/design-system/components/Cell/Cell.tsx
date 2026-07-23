@@ -22,18 +22,18 @@ const byState = {
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2.5px 0 0 #17211B, 0 3px 5px -3px rgba(0,0,0,0.4)',
     },
   }),
-  // A typed-but-unlocked cell: still a raised keycap, but now carries its letter.
+  // Typed-but-unlocked: raised keycap like empty, warmer sand face so filled progress reads apart from empty at a glance.
   filled: css({
-    bgImage: 'linear-gradient(180deg, #FBFAF3, #EFEADB)',
+    bgImage: 'linear-gradient(180deg, #EDE6CF, #E0D7BC)',
     color: 'ws.khaki',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.75), 0 2.5px 0 0 #DCD6C5, 0 3px 5px -3px rgba(33,75,64,0.16)',
     _dark: {
-      bgImage: 'linear-gradient(180deg, #2C3830, #232E27)',
+      bgImage: 'linear-gradient(180deg, #35402F, #2A3626)',
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2.5px 0 0 #17211B, 0 3px 5px -3px rgba(0,0,0,0.4)',
     },
   }),
   solved: css({
-    bg: 'ws.sable',
+    bg: 'ws.cellSolved',
     color: 'ws.khaki',
     boxShadow: 'inset 0 1px 3px rgba(33,75,64,0.16), inset 0 0 0 1px rgba(33,75,64,0.07)',
     _dark: { boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(233,242,236,0.06)' },
@@ -58,7 +58,7 @@ const byState = {
 const solveRipple = css({ animation: 'wsFlatten 0.26s ease both' });
 
 // ADR-0086: co-op solved fill tinted with the finder's `--player-color`.
-const solvedTint = css({ bg: 'color-mix(in srgb, var(--player-color) 32%, token(colors.ws.sable))' });
+const solvedTint = css({ bg: 'color-mix(in srgb, var(--player-color) 32%, token(colors.ws.cellSolved))' });
 
 // Discreet 1px selection ring on a solved/locked cell whose word is currently selected — an outline (not box-shadow) so it never clobbers the solved inset shadow. Rose in dark mode clears WCAG 1.4.11 on the dark solved fill.
 const selectedRing = css({

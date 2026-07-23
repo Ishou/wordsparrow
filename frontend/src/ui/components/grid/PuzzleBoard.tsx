@@ -103,13 +103,17 @@ function LetterSlot({
   // true while this cell's word wobbles after a wrong completion.
   readonly rejectShake?: boolean;
 }) {
+  // Live per-cell mirror (not the frozen `entry` seed prop) — updates the tier as the player types. Callers must seed the mirror at mount for resumed cells (see LiveCoopScreen/PlayScreen's rejoin-resync effect).
+  const liveEntry = nav.getEntryAt(row, col);
   const state: CellState = validated
     ? 'solved'
     : highlight.focused
       ? 'active'
       : highlight.currentWord
         ? 'activeWord'
-        : 'empty';
+        : liveEntry !== ''
+          ? 'filled'
+          : 'empty';
   const owner = validated ? lockedBy : undefined;
   const wrapStyle: Record<string, string> = {};
   if (celebrateDelay !== undefined) wrapStyle.animationDelay = `${celebrateDelay}ms`;

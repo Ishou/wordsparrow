@@ -208,6 +208,8 @@ export default defineConfig({
           onJadeInk: { value: { base: '#FFFFFF', _dark: '#16241D' } },
           sable: { value: { base: '#E8E2C6', _dark: '#23301F' } },
           khaki: { value: { base: '#4C4824', _dark: '#A8B49B' } },
+          // Solved letter-cell fill — muted success-green, softer than chrome jade so a solved grid stays discreet; AA with ws.khaki both themes.
+          cellSolved: { value: { base: '#D9E6CC', _dark: '#274A30' } },
           or: { value: { base: '#D8C77A', _dark: '#8A7A3D' } },
           sakura: { value: { base: '#D45D83', _dark: '#D45D83' } },
           sakuraDark: { value: { base: '#BE4970', _dark: '#BE4970' } },
