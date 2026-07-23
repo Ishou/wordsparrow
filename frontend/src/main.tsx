@@ -264,7 +264,7 @@ enableMocks()
     const soundStore: SoundStore = { load: loadSoundEnabled, set: saveSoundEnabled };
     const soundPlayer: SoundPlayer = createWebAudioSoundPlayer(loadSoundEnabled);
 
-    // Skip-filled-cells preference (off by default); same port indirection as the theme preference.
+    // Skip-filled-cells preference (on by default); same port indirection as the theme preference.
     const skipFilledStore: SkipFilledStore = { load: loadSkipFilled, set: saveSkipFilled };
 
     // Cookieless Matomo tracker (ADR-0025). No-op when env vars are unset
