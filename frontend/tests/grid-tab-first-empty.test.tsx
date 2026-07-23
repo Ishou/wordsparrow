@@ -3,12 +3,7 @@ import { describe, it, expect } from 'vitest';
 import type { Cell, Puzzle } from '@/domain';
 import { Grid } from '@/ui/components/grid';
 
-// 5x4 grid. across-1 at (0,1); across-2 at (1,1)..(1,4); down-1 at (1,2),(2,2),(3,2).
-// Tab order (by start row,col; across before down): across-1 -> across-2 -> down-1.
-//   D->  X   D|  X   X
-//   D->  X   X   X   X
-//   X    X   X   X   X
-//   X    B   X   X   X
+// 5x4 grid: across-1 (0,1); across-2 (1,1)-(1,4); down-1 (1,2),(2,2),(3,2). Tab order (across before down, by start row,col): across-1 -> across-2 -> down-1.
 const L = (row: number, col: number): Cell => ({ kind: 'letter', position: { row, col }, entry: '' });
 const PUZZLE: Puzzle = {
   id: 't', title: 't', language: 'fr', width: 5, height: 4, hintsAllowed: 3, hintsRemaining: 3,
