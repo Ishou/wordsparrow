@@ -57,6 +57,30 @@ filter model's training data and the LoRA's prompting pipeline are
 derivative of DBnary as input, even though no source text is
 shipped.
 
+## Derivational morphology — Démonette-2 (Démonext)
+
+- **Source:** `osf.io/db2w8` — the Démonext release of Démonette-2, a
+  derivational database of French (lexemes, relations, families),
+  also distributed via ORTOLANG.
+- **License:** Creative Commons Attribution-ShareAlike 4.0
+  International (CC BY-SA 4.0). This is the v2/Démonext release, not
+  the retired Démonette v1.2 (CC BY-NC-SA 4.0).
+- **Canonical URL:** https://osf.io/db2w8 and
+  https://demonext.xyz/en/view-and-download-the-demonette-database/
+
+Per [ADR-0119](./docs/adr/0119-adopt-demonette-derivational-morphology.md),
+Démonette-2 is used to build a corpus-scoped derivation graph consumed
+by `:grid` and the clue pipeline for derivational de-duplication and
+leak detection. `scripts/demonette/ingest.py` filters the raw tables
+to relations whose both endpoints are present in our corpus.
+
+**No raw or verbatim Démonette-2 data is redistributed by this
+repository.** The raw dump lives under the gitignored
+`data/external/demonette/` and the derived, filtered derivation graph
+is kept internal and uncommitted (ADR-0097 tier), never in a public
+repo or deployed artifact — the same discipline as the DBnary entry
+above.
+
 ## Modal clue-AI lane — language detection and base model
 
 - lingua-language-detector v2.2.0 — Apache 2.0
