@@ -103,10 +103,7 @@ function LetterSlot({
   // true while this cell's word wobbles after a wrong completion.
   readonly rejectShake?: boolean;
 }) {
-  // Reads through the live per-cell mirror (not the `entry` seed prop, which
-  // is frozen at mount) so the keycap tier updates as the player types —
-  // `nav.getEntryAt`'s version counter already re-renders this tree on
-  // every keystroke (see useGridNavigation's `entriesVersion`).
+  // Live per-cell mirror (not the frozen `entry` seed prop) — updates the tier as the player types. Callers must seed the mirror at mount for resumed cells (see LiveCoopScreen/PlayScreen's rejoin-resync effect).
   const liveEntry = nav.getEntryAt(row, col);
   const state: CellState = validated
     ? 'solved'

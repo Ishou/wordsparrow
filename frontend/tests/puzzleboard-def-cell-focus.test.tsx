@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { render, fireEvent, screen, renderHook, act } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import type { Cell, Position, Puzzle } from '@/domain';
@@ -45,6 +46,14 @@ function Harness({
   const nav = useGridNavigation(puzzle, {
     isCellValidated: (r, c) => validated.has(`${r},${c}`),
   });
+  // Mirrors PlayScreen/LiveCoopScreen's resume seeding — real screens must call this for a resumed cell to render `filled` (PuzzleBoard itself only reads the live mirror, never the frozen `entries` seed).
+  const { applyRemoteCellUpdate } = nav;
+  useEffect(() => {
+    for (const [k, letter] of entries) {
+      const [row, col] = k.split(',').map(Number);
+      applyRemoteCellUpdate(row, col, letter);
+    }
+  }, [entries, applyRemoteCellUpdate]);
   return (
     <AnnouncerProvider>
       <PuzzleBoard puzzle={puzzle} nav={nav} validatedPositions={validated} entryAt={entries} />
@@ -132,6 +141,20 @@ describe('PuzzleBoard keycap tier reflects live typing, not just the mount-time 
     act(() => fireEvent.keyDown(input, { key: 'X' }));
     deselect();
     expect(keycapAt(0, 1).getAttribute('data-cell-state')).toBe('filled');
+    act(() => input.focus());
+    act(() => fireEvent.keyDown(input, { key: 'Backspace' }));
+    deselect();
+    expect(keycapAt(0, 1).getAttribute('data-cell-state')).toBe('empty');
+  });
+
+  it('a cell resumed with a persisted letter renders filled at mount, before any typing', () => {
+    render(<Harness puzzle={basePuzzle()} entries={new Map([['0,1', 'X']])} />);
+    expect(keycapAt(0, 1).getAttribute('data-cell-state')).toBe('filled');
+  });
+
+  it('a resumed cell flips back to empty when its persisted letter is erased', () => {
+    render(<Harness puzzle={basePuzzle()} entries={new Map([['0,1', 'X']])} />);
+    const input = inputAt(0, 1);
     act(() => input.focus());
     act(() => fireEvent.keyDown(input, { key: 'Backspace' }));
     deselect();

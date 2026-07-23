@@ -298,6 +298,12 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
     isInputLocked: () => validation.pending,
   });
 
+  const { applyRemoteCellUpdate } = nav;
+  // Solo resume: seed the live per-cell mirror from persisted entries, mirroring LiveCoopScreen's rejoin resync — otherwise a resumed cell's keycap tier reads `empty` until the player retypes it.
+  useEffect(() => {
+    for (const e of initialEntries) applyRemoteCellUpdate(e.row, e.column, e.letter);
+  }, [initialEntries, applyRemoteCellUpdate]);
+
   const requestHint = useCallback(() => {
     const f = activeFocusRef.current;
     // Reveal re-checks the grid (ADR-0076 §7); mid-verdict that would bump requestSeqRef and drop it.
