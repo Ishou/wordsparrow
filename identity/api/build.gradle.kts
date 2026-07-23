@@ -56,7 +56,7 @@ dependencies {
         implementation("io.netty:netty-transport-native-epoll:4.2.15.Final")
         implementation("io.netty:netty-transport-native-kqueue:4.2.15.Final")
         implementation("com.fasterxml.jackson.core:jackson-core:2.22.0")
-        implementation("tools.jackson.core:jackson-core:3.2.0")
+        implementation("tools.jackson.core:jackson-core:3.2.1")
     }
 
     // Identity bounded-context inner layers (ADR-0001 §1).
