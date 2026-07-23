@@ -72,6 +72,8 @@ edgePurge:
   enabled: true
 ensureDailies:
   enabled: true
+  # ADR-0117/0118: distilled daily generation live — airy 15x12 weekdays, 22x15 Sunday showpiece.
+  distill: true
   image:
     # MANIFESTO: prod images pin to digest. Injected by the CD workflow
     # (deploy-api-k8s.yml) per push from the wordsparrow-worker build
