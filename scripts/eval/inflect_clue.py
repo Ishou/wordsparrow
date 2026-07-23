@@ -353,10 +353,7 @@ def _pp_action_definition(
     return False
 
 
-# Grammalecte tags some verbs' past participle as `ppas epi inv` on the verb
-# row (`demeuré` for demeurer), delegating the gendered forms to a separate
-# noun/adj lemma. Inflating such a head to a fem/pl answer matches the epicene
-# row through the inv/epi wildcards and yields the masculine-reading citation.
+# Epicene ppas head (`demeuré`) inflates to the masculine citation on fem/pl answers — see ADR-0107.
 _EPICENE_PPAS_SKIP = object()
 
 
@@ -384,11 +381,7 @@ def _is_regular_er_verb(lemma: str, index: MorphologyIndex) -> bool:
 def _agree_epicene_ppas(
     inflected: str, head_lemma: str, target: set[str], index: MorphologyIndex,
 ) -> str | object | None:
-    """Repair a ppas head that inflated to an epicene form for a fem/pl answer.
-
-    Returns the synthesized agreeing form (regular `-er` head), the sentinel
-    `_EPICENE_PPAS_SKIP` (irregular head — can't fabricate, drop instead), or
-    None (head already agrees, or the answer is masc-sg and needs no repair)."""
+    """Repair an epicene ppas head for a fem/pl answer: synth for regular `-er`, else `_EPICENE_PPAS_SKIP`, else None (ADR-0107)."""
     want_fem = "fem" in target
     want_pl = "pl" in target
     if not (want_fem or want_pl):
@@ -597,10 +590,7 @@ def inflect_clue(
         return InflectionResult(_capitalize_first(clue), "no-inflection")
     target = chosen_target
 
-    # Epicene past-participle repair: a fem/pl answer whose ppas head is
-    # epicene-invariable in grammalecte (`demeuré`) otherwise ships the
-    # masculine citation (`Demeuré sur place` on RESTÉE). Synthesize the
-    # regular -er agreement, or drop an irregular head to a placeholder.
+    # Epicene ppas repair: synth regular `-er` agreement, else drop irregular heads (ADR-0107).
     if target_pos == "verbe" and "ppas" in target:
         repaired = _agree_epicene_ppas(inflected, head_lemma, target, index)
         if repaired is _EPICENE_PPAS_SKIP:
