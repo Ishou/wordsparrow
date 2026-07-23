@@ -14,6 +14,7 @@ import type { CorrectionClient } from '@/application/correction';
 import type { TourSeenStore } from '@/application/tour/TourSeenStore';
 import type { ThemeStore } from '@/application/session/ThemeStore';
 import type { SoundStore } from '@/application/session/SoundStore';
+import type { SkipFilledStore } from '@/application/session/SkipFilledStore';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { Pseudonym, SessionId } from '@/domain/game';
 import { SparrowState } from '@/ui/v2/SparrowState';
@@ -58,6 +59,8 @@ export interface AppRouterContext {
   readonly themeStore?: ThemeStore;
   // Grid sound-effects preference port; optional so route-level Vitest fixtures can omit it.
   readonly soundStore?: SoundStore;
+  // Skip-filled-cells preference port; optional so route-level Vitest fixtures can omit it.
+  readonly skipFilledStore?: SkipFilledStore;
   // Grid sound-effects player port; optional so route-level Vitest fixtures can omit it.
   readonly soundPlayer?: SoundPlayer;
   // Phase 5 — identity-api adapter + a thin getter over the anon
