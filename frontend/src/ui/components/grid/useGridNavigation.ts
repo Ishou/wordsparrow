@@ -300,6 +300,8 @@ export interface UseGridNavigationOptions {
   readonly isCellValidated?: (row: number, col: number) => boolean;
   // True while further input must be ignored — a full-grid validation is in flight and its verdict could be the win; blocking mutation keeps the submitted grid intact so a late keystroke can't corrupt the final state or void the winning verdict.
   readonly isInputLocked?: () => boolean;
+  // Typing-advance skip: when this returns true, the cursor lands on the next still-empty cell in the word after a typed letter instead of the immediate next one. Absent ⇒ immediate next (legacy). Backspace/arrows unaffected.
+  readonly skipFilledOnAdvance?: () => boolean;
 }
 
 // Formats the polite announcement emitted once each time the user enters a
@@ -377,6 +379,9 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
   // Input-lock getter; ref for the same reason.
   const isInputLockedRef = useRef(options?.isInputLocked);
   isInputLockedRef.current = options?.isInputLocked;
+  // Skip-filled-on-advance getter; ref for the same reason.
+  const skipFilledOnAdvanceRef = useRef(options?.skipFilledOnAdvance);
+  skipFilledOnAdvanceRef.current = options?.skipFilledOnAdvance;
   // Tracks the per-cell normalized (uppercase) value so handleInput can
   // detect same-letter no-ops. The browser overwrites target.value with the
   // raw IME character before handleInput fires, making a simple before/after
@@ -731,7 +736,13 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
       const clue = lookup.clueAt(f.row, f.col, dir);
       if (!clue) return;
       const idx = clue.cells.findIndex((c) => same(c.position, f));
-      if (idx >= 0 && idx < clue.cells.length - 1) focusCell(clue.cells[idx + 1].position);
+      const nextIdx = nextAdvanceIndex(
+        clue.cells,
+        idx,
+        skipFilledOnAdvanceRef.current?.() ?? false,
+        (pos) => (cellValuesRef.current.get(key(pos)) ?? '') !== '',
+      );
+      if (nextIdx !== null) focusCell(clue.cells[nextIdx]!.position);
     },
     [bumpEntries, focusCell, lookup],
   );
@@ -982,7 +993,13 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
       const clue = lookup.clueAt(p.row, p.col, dir);
       if (!clue) return;
       const idx = clue.cells.findIndex((c) => same(c.position, p));
-      if (idx >= 0 && idx < clue.cells.length - 1) focusCell(clue.cells[idx + 1].position);
+      const nextIdx = nextAdvanceIndex(
+        clue.cells,
+        idx,
+        skipFilledOnAdvanceRef.current?.() ?? false,
+        (pos) => (cellValuesRef.current.get(key(pos)) ?? '') !== '',
+      );
+      if (nextIdx !== null) focusCell(clue.cells[nextIdx]!.position);
     },
     [bumpEntries, focusCell, lookup],
   );
