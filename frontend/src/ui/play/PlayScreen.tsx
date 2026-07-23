@@ -8,6 +8,7 @@ import type { ReportSurface, SurveyClient } from '@/application/survey';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
+import type { SkipFilledStore } from '@/application/session/SkipFilledStore';
 import { Button, ClueRail, Lockup } from '@/design-system';
 import { t } from '@/ui/i18n';
 import { AppShell } from '@/ui/v2/AppShell';
@@ -136,11 +137,12 @@ export interface PlayScreenProps {
   readonly soloEntriesStore: SoloEntriesStore;
   readonly soundPlayer?: SoundPlayer;
   readonly soundStore?: SoundStore;
+  readonly skipFilledStore?: SkipFilledStore;
   readonly surveyClient?: SurveyClient;
   readonly reportSurface?: ReportSurface;
 }
 
-export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer, soundStore, surveyClient, reportSurface = 'daily' }: PlayScreenProps) {
+export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer, soundStore, skipFilledStore, surveyClient, reportSurface = 'daily' }: PlayScreenProps) {
   // Resume from the persisted elapsed time (synced across devices via the progress blob) instead of restarting at 0.
   const [seconds, setSeconds] = useState(() => soloEntriesStore.loadElapsed(puzzle.id));
   const [winDismissed, setWinDismissed] = useState(false);
@@ -296,6 +298,7 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
     // Freeze input while the whole-grid verdict is in flight so a late keystroke can't overwrite the last letter or void a winning validation (ADR-0076).
     isInputLocked: () => validation.pending,
+    skipFilledOnAdvance: () => skipFilledStore?.load() ?? true,
   });
 
   const { applyRemoteCellUpdate } = nav;

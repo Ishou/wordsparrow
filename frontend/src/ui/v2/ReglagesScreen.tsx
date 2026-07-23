@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, useRouteContext } from '@tanstack/react-router';
-import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User, SpeakerHigh, Info } from '@phosphor-icons/react';
+import { Lock, FileText, Envelope, CaretRight, DownloadSimple, Question, User, SpeakerHigh, GridFour, Info } from '@phosphor-icons/react';
 import { Switch } from '@ark-ui/react/switch';
 import { css, cx } from 'styled-system/css';
 import { t } from '@/ui/i18n';
 import type { ThemePreference, ThemeStore } from '@/application/session/ThemeStore';
 import type { SoundStore } from '@/application/session/SoundStore';
+import type { SkipFilledStore } from '@/application/session/SkipFilledStore';
 import { useAuth } from '@/ui/components/auth';
 import { useInstallPrompt } from '@/ui/lib/useInstallPrompt';
 import { Skeleton } from '@/design-system';
@@ -163,6 +164,38 @@ function SoundGroup({ soundStore }: { readonly soundStore: SoundStore }) {
   );
 }
 
+function SkipFilledGroup({ skipFilledStore }: { readonly skipFilledStore: SkipFilledStore }) {
+  const [on, setOn] = useState<boolean>(() => skipFilledStore.load());
+  return (
+    <section aria-label={t('v2.reglages.grid')}>
+      <div className={groupLabel}>{t('v2.reglages.grid')}</div>
+      <div className={soundCard}>
+        <Switch.Root
+          checked={on}
+          onCheckedChange={(details) => {
+            skipFilledStore.set(details.checked);
+            setOn(details.checked);
+          }}
+          className={soundRow}
+        >
+          <span className={soundTile}>
+            <GridFour size={18} weight="bold" aria-hidden="true" />
+          </span>
+          <span className={soundBody}>
+            <Switch.Label className={soundLabel}>{t('v2.reglages.grid.skipFilled.label')}</Switch.Label>
+            <span className={soundSub}>{t('v2.reglages.grid.skipFilled.sub')}</span>
+          </span>
+          <Switch.Control className={switchControl}>
+            <Switch.Thumb className={switchThumb} />
+          </Switch.Control>
+          {/* role=switch: an on/off toggle, not a tri-state checkbox (Ark's default input role). */}
+          <Switch.HiddenInput role="switch" />
+        </Switch.Root>
+      </div>
+    </section>
+  );
+}
+
 const foot = css({ fontFamily: 'wsMono', fontSize: '11px', color: 'ws.khaki', opacity: 0.85, textAlign: 'center', paddingTop: '10px' });
 
 function initialFor(displayName: string): string {
@@ -220,7 +253,7 @@ function ProfileCard() {
 
 export function ReglagesScreen() {
   const { canInstall, promptInstall } = useInstallPrompt();
-  const { themeStore, soundStore } = useRouteContext({ from: '__root__' });
+  const { themeStore, soundStore, skipFilledStore } = useRouteContext({ from: '__root__' });
   return (
     <AppShell variant="flow" topBar={<BackHeader to="/" />} backTo="/">
       <div className={stack}>
@@ -231,6 +264,8 @@ export function ReglagesScreen() {
         {themeStore ? <ThemeGroup themeStore={themeStore} /> : null}
 
         {soundStore ? <SoundGroup soundStore={soundStore} /> : null}
+
+        {skipFilledStore ? <SkipFilledGroup skipFilledStore={skipFilledStore} /> : null}
 
         {canInstall ? (
           <nav aria-label={t('v2.reglages.app')}>

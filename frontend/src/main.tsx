@@ -1,8 +1,10 @@
 import { applyThemePreference, loadThemePreference, saveThemePreference } from '@/infrastructure/session/localStorageTheme';
 import type { ThemeStore } from '@/application/session/ThemeStore';
 import { loadSoundEnabled, saveSoundEnabled } from '@/infrastructure/session/localStorageSound';
+import { loadSkipFilled, saveSkipFilled } from '@/infrastructure/session/localStorageSkipFilled';
 import { createWebAudioSoundPlayer } from '@/infrastructure/session/webAudioSoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
+import type { SkipFilledStore } from '@/application/session/SkipFilledStore';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 // Composition root for the Bliss frontend bundle. This file is the only
 // place where the ui and infrastructure layers are wired together; it is
@@ -262,6 +264,9 @@ enableMocks()
     const soundStore: SoundStore = { load: loadSoundEnabled, set: saveSoundEnabled };
     const soundPlayer: SoundPlayer = createWebAudioSoundPlayer(loadSoundEnabled);
 
+    // Skip-filled-cells preference (on by default); same port indirection as the theme preference.
+    const skipFilledStore: SkipFilledStore = { load: loadSkipFilled, set: saveSkipFilled };
+
     // Cookieless Matomo tracker (ADR-0025). No-op when env vars are unset
     // (local dev / preview / pre-Matomo prod).
     const tracker = createMatomoTracker(readMatomoConfigFromEnv());
@@ -316,7 +321,7 @@ enableMocks()
         tracker.trackEvent(category, action, name, value);
       },
     };
-    const baseContext = { authClient, getPseudonym, surveyClient, correctionClient, surveyAnonStore: surveyAnonRatedStore, analytics, progressSyncService, billingClient, themeStore, soundStore, soundPlayer };
+    const baseContext = { authClient, getPseudonym, surveyClient, correctionClient, surveyAnonStore: surveyAnonRatedStore, analytics, progressSyncService, billingClient, themeStore, soundStore, skipFilledStore, soundPlayer };
     const context = multiplayer
       ? (() => {
           const gameApiBaseUrl = import.meta.env.VITE_GAME_API_BASE_URL;

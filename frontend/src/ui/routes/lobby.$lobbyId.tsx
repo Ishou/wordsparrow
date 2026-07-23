@@ -255,6 +255,7 @@ function V2LobbyPage() {
           onClaim={handleClaim}
           soundPlayer={ctx.soundPlayer}
           soundStore={ctx.soundStore}
+          skipFilledStore={ctx.skipFilledStore}
           surveyClient={ctx.surveyClient}
         />
         <HostSignInSheet open={hostSignInOpen} authClient={ctx.authClient} onClose={() => setHostSignInOpen(false)} />

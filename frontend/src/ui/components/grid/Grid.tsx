@@ -238,6 +238,7 @@ export function Grid({
   hintPending = false,
   onRequestHint,
   getFocusedCell,
+  skipFilledOnAdvance,
 }: {
   puzzle: Puzzle;
   onCellChange?: (row: number, col: number, letter: string | null) => void;
@@ -277,6 +278,7 @@ export function Grid({
   hintPending?: boolean;
   onRequestHint?: (row: number, column: number) => void;
   getFocusedCell?: () => FocusedCell | null;
+  skipFilledOnAdvance?: () => boolean;
 }) {
   const touchPrimary = useTouchPrimary();
   // Android PWA: pre-emptive blur on hide prevents OS keyboard re-attach on resume.
@@ -407,6 +409,7 @@ export function Grid({
     getZoomScale,
     isPanning: isPanningGetter,
     isCellValidated,
+    skipFilledOnAdvance,
   });
 
   // Multiplayer presence map. The hook subscribes to `presenceUpdated`

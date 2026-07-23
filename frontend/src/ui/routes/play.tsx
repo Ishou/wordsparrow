@@ -63,9 +63,9 @@ function PlayLoadError() {
 
 function PlayRouteComponent() {
   const puzzle = Route.useLoaderData() as Puzzle | null;
-  const { puzzleSolver, soloEntriesStore, soundPlayer, soundStore, surveyClient } = Route.useRouteContext();
+  const { puzzleSolver, soloEntriesStore, soundPlayer, soundStore, skipFilledStore, surveyClient } = Route.useRouteContext();
   if (!puzzle) return <PlayUnavailable />;
-  return <PlayScreen puzzle={puzzle} puzzleSolver={puzzleSolver} soloEntriesStore={soloEntriesStore} soundPlayer={soundPlayer} soundStore={soundStore} surveyClient={surveyClient} reportSurface="daily" />;
+  return <PlayScreen puzzle={puzzle} puzzleSolver={puzzleSolver} soloEntriesStore={soloEntriesStore} soundPlayer={soundPlayer} soundStore={soundStore} skipFilledStore={skipFilledStore} surveyClient={surveyClient} reportSurface="daily" />;
 }
 
 const pendingCss = css({

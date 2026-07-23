@@ -7,6 +7,7 @@ import { tallyValidatedLetters } from '@/application/game';
 import type { Player, SessionId } from '@/domain/game';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
+import type { SkipFilledStore } from '@/application/session/SkipFilledStore';
 import type { SurveyClient } from '@/application/survey';
 import { ClueRail, Lockup } from '@/design-system';
 import { t } from '@/ui/i18n';
@@ -97,6 +98,7 @@ export interface LiveCoopScreenProps {
   readonly onClaim?: () => Promise<void>;
   readonly soundPlayer?: SoundPlayer;
   readonly soundStore?: SoundStore;
+  readonly skipFilledStore?: SkipFilledStore;
   readonly surveyClient?: SurveyClient;
 }
 
@@ -119,6 +121,7 @@ export function LiveCoopScreen({
   onClaim,
   soundPlayer,
   soundStore,
+  skipFilledStore,
   surveyClient,
 }: LiveCoopScreenProps) {
   const boardRef = useRef<PuzzleBoardHandle>(null);
@@ -192,6 +195,7 @@ export function LiveCoopScreen({
     // Suppress the hook's keyboard-avoidance auto-scroll — the grid never moves the view on its own.
     getZoomScale: () => 2,
     isCellValidated: (row, col) => validatedRef.current.has(posKey(row, col)),
+    skipFilledOnAdvance: () => skipFilledStore?.load() ?? true,
   });
 
   // Inbound remote writes land directly on the uncontrolled inputs (ADR-0002 §4), never re-emitting onCellChange.

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AuthClient } from '@/application/auth';
 import type { ThemeStore } from '@/application/session/ThemeStore';
 import type { SoundStore } from '@/application/session/SoundStore';
+import type { SkipFilledStore } from '@/application/session/SkipFilledStore';
 import { AuthProvider } from '@/ui/components/auth';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
@@ -28,7 +29,12 @@ function stubAuth(overrides: Partial<AuthClient> = {}): AuthClient {
   };
 }
 
-function renderReglages(authClient: AuthClient, themeStore?: ThemeStore, soundStore?: SoundStore) {
+function renderReglages(
+  authClient: AuthClient,
+  themeStore?: ThemeStore,
+  soundStore?: SoundStore,
+  skipFilledStore?: SkipFilledStore,
+) {
   const routeTree = RootRoute.addChildren([AppLayoutRoute.addChildren([ReglagesRoute])]);
   const router = createRouter({
     routeTree,
@@ -63,6 +69,7 @@ function renderReglages(authClient: AuthClient, themeStore?: ThemeStore, soundSt
       tourSeenStore: { get: () => true, set: () => {}, clear: () => {} },
       themeStore,
       soundStore,
+      skipFilledStore,
     },
   });
   return render(
@@ -110,6 +117,25 @@ describe('v2 réglages screen', () => {
     renderReglages(stubAuth());
     await screen.findByRole('heading', { level: 1, name: 'Réglages' });
     expect(screen.queryByRole('switch', { name: 'Sons' })).toBeNull();
+  });
+
+  it('renders the skip-filled toggle when a skipFilledStore is wired and persists a change', async () => {
+    const skipFilledStore: SkipFilledStore = { load: vi.fn().mockReturnValue(true), set: vi.fn() };
+    renderReglages(stubAuth(), undefined, undefined, skipFilledStore);
+    await screen.findByRole('heading', { level: 1, name: 'Réglages' });
+    const toggle = screen.getByRole('switch', {
+      name: 'Sauter les cases déjà remplies',
+    }) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    toggle.click();
+    await waitFor(() => expect(skipFilledStore.set).toHaveBeenCalledWith(false));
+    expect(toggle.checked).toBe(false);
+  });
+
+  it('omits the skip-filled toggle when no skipFilledStore is in context', async () => {
+    renderReglages(stubAuth());
+    await screen.findByRole('heading', { level: 1, name: 'Réglages' });
+    expect(screen.queryByRole('switch', { name: 'Sauter les cases déjà remplies' })).toBeNull();
   });
 
   it('is axe-clean with the sound toggle present (ADR-0050)', async () => {
