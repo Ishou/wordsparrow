@@ -19,9 +19,12 @@ import kotlin.random.Random
 internal class WordAcceptor(
     private val themeLimits: Map<String, Int>,
     private val cooldownPolicy: ClueCooldownPolicy,
+    private val surfaceLemmas: SurfaceLemmas = SurfaceLemmas.Inert,
 ) {
     private val usedWords: HashSet<String> = HashSet()
-    private val usedLemmas: HashSet<String> = HashSet()
+
+    // Multiset: a shared lemma from another surface must not unblock on the first removal.
+    private val usedLemmas: HashMap<String, Int> = HashMap()
     private val themeUsed: HashMap<String, Int> = HashMap()
 
     val themeUsedView: Map<String, Int> get() = themeUsed
@@ -35,7 +38,7 @@ internal class WordAcceptor(
      */
     fun accepts(word: Word): Boolean {
         if (word.text in usedWords) return false
-        if (word.lemma in usedLemmas) return false
+        if (lemmasOf(word).any { it in usedLemmas }) return false
         return hasUsableClue(word)
     }
 
@@ -67,7 +70,9 @@ internal class WordAcceptor(
         chosenClue: WordClue,
     ) {
         usedWords += word.text
-        usedLemmas += word.lemma
+        for (lemma in lemmasOf(word)) {
+            usedLemmas[lemma] = (usedLemmas[lemma] ?: 0) + 1
+        }
         val theme = chosenClue.theme
         if (theme != null) {
             themeUsed[theme] = (themeUsed[theme] ?: 0) + 1
@@ -80,13 +85,19 @@ internal class WordAcceptor(
         chosenClue: WordClue,
     ) {
         usedWords -= word.text
-        usedLemmas -= word.lemma
+        for (lemma in lemmasOf(word)) {
+            val prev = usedLemmas.getValue(lemma)
+            if (prev <= 1) usedLemmas.remove(lemma) else usedLemmas[lemma] = prev - 1
+        }
         val theme = chosenClue.theme
         if (theme != null) {
             val prev = themeUsed.getValue(theme)
             if (prev <= 1) themeUsed.remove(theme) else themeUsed[theme] = prev - 1
         }
     }
+
+    // The surface's own lemma plus every other lemma the corpus records for it (dropped by the loader merge).
+    private fun lemmasOf(word: Word): Set<String> = surfaceLemmas.lemmasOf(word.text) + word.lemma
 
     private fun hasUsableClue(word: Word): Boolean =
         word.clues.any {

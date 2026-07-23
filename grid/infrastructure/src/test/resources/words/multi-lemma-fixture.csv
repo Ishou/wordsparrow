@@ -1,0 +1,4 @@
+word,language,length,frequency,difficulty,clue,source,source_license,pos,lemma
+lie,fr,3,5000,easy,Dépôt au fond du vin,test,test,nom,lie
+lie,fr,3,4000,easy,Unit par contrat,test,test,verbe,lier
+lia,fr,3,900,easy,Attacha jadis,test,test,verbe,lier

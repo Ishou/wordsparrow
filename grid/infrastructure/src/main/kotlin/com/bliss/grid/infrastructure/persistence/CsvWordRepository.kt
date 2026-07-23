@@ -1,5 +1,6 @@
 package com.bliss.grid.infrastructure.persistence
 
+import com.bliss.grid.domain.generation.SurfaceLemmas
 import com.bliss.grid.domain.generation.WordRepository
 import com.bliss.grid.domain.model.HyphenSurface
 import com.bliss.grid.domain.model.Word
@@ -49,8 +50,14 @@ import java.text.Normalizer
  */
 class CsvWordRepository(
     words: List<Word>,
+    // Full folded-lemma set per surface, captured pre-merge (ADR-0100); empty when unsupported.
+    lemmasBySurface: Map<String, Set<String>> = emptyMap(),
 ) : WordRepository {
     private val byLength: Map<Int, List<Word>> = words.groupBy { it.text.length }
+
+    private val surfaceLemmasPolicy: SurfaceLemmas = SurfaceLemmas.fromMap(lemmasBySurface)
+
+    override fun surfaceLemmas(): SurfaceLemmas = surfaceLemmasPolicy
 
     /**
      * Position-letter index: `byLengthPosLetter[length][position][char] = words containing
@@ -264,7 +271,12 @@ class CsvWordRepository(
                         for ((text, themedWord) in overlay) {
                             byText.getOrPut(text) { themedWord }
                         }
-                        CsvWordRepository(byText.values.toList())
+                        // Multi-lemma surfaces only, from pre-merge rows (ADR-0100); single-lemma ones already covered by Word.lemma.
+                        val lemmasBySurface = HashMap<String, MutableSet<String>>()
+                        for (w in mainWords) lemmasBySurface.getOrPut(w.text) { HashSet() } += w.lemma
+                        for ((text, tw) in overlay) lemmasBySurface.getOrPut(text) { HashSet() } += tw.lemma
+                        val multiLemma = lemmasBySurface.filterValues { it.size > 1 }
+                        CsvWordRepository(byText.values.toList(), multiLemma)
                     }
                 }
             }

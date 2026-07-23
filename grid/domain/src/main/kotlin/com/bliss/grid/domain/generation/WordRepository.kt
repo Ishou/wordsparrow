@@ -55,4 +55,7 @@ interface WordRepository {
      * canonical solution.
      */
     fun containsLemma(text: String): Boolean
+
+    /** Per-surface folded-lemma set recovered from the loader's merge (ADR-0100); defaults to [SurfaceLemmas.Inert]. */
+    fun surfaceLemmas(): SurfaceLemmas = SurfaceLemmas.Inert
 }
