@@ -47,6 +47,9 @@ inflection_status values:
                               "[elles sont] satisfaites", a wrong-gender
                               agreement. Routed to dropped. `Faites fonctionner`
                               is spared — the infinitive forces the verb reading.
+  - "pp-epicene-skipped"    : irregular epicene-ppas head can't agree with a
+                              fem/pl answer and can't be safely synthesized —
+                              see ADR-0107. Routed to dropped.
   - "head-pos-mismatch"     : no clue head matches surface POS
   - "no-target-pos"         : surface POS not in {nom, adj, verbe}
   - "no-owner"              : no (lemma, pos) candidate has a clue in corpus
