@@ -91,6 +91,7 @@ ADR-0058  scripts/clue_generation/**               Training/filter paths must cl
 ADR-0058  scripts/eval/**                          Same — eval paths that feed training must classify
 ADR-0058  modal_jobs/**                            Training/inference on Modal must classify per ADR-0058 (incl. the Command-R base model)
 # ADR-0058: amendment 2026-07-05 (license-audit correction) — Grammalecte/Dicollecte lexicon data reclassified GPL 3.0 → MPL-2.0, redistribute forbidden → permitted (with NOTICE.md attribution); Lexique3 label corrected CC BY-NC-SA 4.0 → CC BY-SA 4.0 (no NC clause upstream), `forbidden` verdict retained pending maintainer confirmation since the NC-clause rationale no longer holds. No new binding paths — corrections land in the matrix above.
+# ADR-0058: amendment 2026-07-23 (new SA source) — Démonette-2 (Démonext, CC BY-SA 4.0) added to the verdict matrix in the same SA class as DBnary (training permitted via SA-acceptance, redistribute forbidden). Distinct from the retired v1.2 (CC BY-NC-SA, forbidden). Adopted by ADR-0119; binding paths registered under that ADR above.
 ADR-0059  survey/**/persistence/**                 Campaign lifecycle: campaigns table, partial-unique open invariant
 ADR-0059  survey/**/usecases/SubmitRatingUseCase.kt           Locked arm + campaign_id stamping
 ADR-0059  survey/**/usecases/SubmitPairRatingUseCase.kt       Locked arm + campaign_id stamping
@@ -378,6 +379,8 @@ ADR-0116  grid/api/openapi.yaml                          POST /v1/corrections/re
 ADR-0116  frontend/src/**/signalement*                   Réouvrir on Historique cards orchestrates grid reverse + survey undo (mirrors applyCorrection); undo is compensating, not a rollback
 ADR-0117  grid/domain/src/main/kotlin/com/bliss/grid/domain/generation/**  Template-first generation: TemplateSynthesizer builds valid airy run-capped templates at any size (build-checked vs a structural all-length-padded Lexicon, no perturbation/geometric fallback), backoff distillation (whiten blacks keeping only fill-checked removals) finds the airiest fillable frontier, template library reused via unlimited distinct fills. Rejected fill-order-first / more+vertical anchoring / greedy word-first construction / structural-only distillation (all measured). Corpus is the binding limit — companion short-form enrichment
 ADR-0118  grid/application/src/main/kotlin/com/bliss/grid/application/puzzle/PuzzleConstraints.kt  Day-of-week daily grid sizing: Sunday (Europe/Paris) is a big 22x15 showpiece, other days a compact 15x12, both distilled (ADR-0117). dailyGridSize(date) is the policy; size passed per date via GridGenerationPort.generate(width,height) over a bare base (no ADR-0095 dense knobs). Gated with GRID_DAILY_DISTILL so it deploys dark; dense path unchanged.
+ADR-0119  data/external/demonette/**               Démonette-2 (Démonext) raw dump: French derivational-morphology DB, CC BY-SA 4.0 (SA class, permitted per ADR-0058 matrix), gitignored — never shipped verbatim
+ADR-0119  scripts/demonette/**                     Ingest: normalize Démonette-2 CSVs into a filtered internal derivation graph (semantically-motivated direct relations whose derived form is corpus-present); foundation for family-aware grid dedup, morphological clue-leak detection, and derivational clue propagation (each its own ADR)
 ```
 
 ## Adding entries

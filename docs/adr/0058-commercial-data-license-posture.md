@@ -58,6 +58,7 @@ Two recurring confusions need codification:
 |---------------------------------|--------------------|----------|-------------|------------|--------------|
 | Lexique3                        | CC BY-SA 4.0⁴      | **forbidden**⁴ | **forbidden**⁴ | local read only | **forbidden** |
 | DBnary                          | CC BY-SA 4.0       | permitted¹ | permitted | permitted | **forbidden** |
+| Démonette-2 (Démonext)          | CC BY-SA 4.0⁵      | permitted⁵ | permitted | permitted | **forbidden** |
 | Grammalecte lexique data        | MPL-2.0            | permitted² | permitted | permitted | permitted (with notice)² |
 | Hunspell-fr                     | MPL 2.0            | permitted | permitted | permitted | permitted (with notice) |
 | Mistral-Nemo-Base-2407          | Apache 2.0         | permitted | n/a       | permitted | per Apache 2.0 |
@@ -91,6 +92,15 @@ use but prohibits redistribution of model weights. LoRA adapters derived
 from Command-R are stored on the Modal volume and not released externally,
 consistent with the §"ShareAlike posture" mitigations above. The unsloth
 pre-quantized bnb-4bit redistribution is used under the same license terms.
+
+⁵ Démonette-2 (the Démonext release) is CC BY-SA 4.0 — the same SA class
+as DBnary, so it inherits the same verdict and the §"ShareAlike posture"
+mitigations (training permitted with SA-acceptance, redistribute
+forbidden). This is **not** the retired Démonette **v1.2**, which is
+CC BY-NC-SA 4.0 (NC clause → forbidden). Adopted in ADR-0119 as a French
+derivational-morphology resource; the raw dump is gitignored under
+`data/external/demonette/` and only a filtered, internal derivation graph
+is kept. See "License evidence" below.
 
 ### Definitions (binding)
 
@@ -176,6 +186,11 @@ verifiable rather than asserted:
   bundled `LICENSE-CC-BY-SA4.0.txt`.
 - **DBnary → CC BY-SA 4.0**, inherited from Wiktionary
   (`kaiko.getalp.org/about-dbnary/`). See ADR-0023.
+- **Démonette-2 / Démonext → CC BY-SA 4.0.** The download page states the
+  database is distributed under CC BY-SA 4.0
+  (`demonext.xyz/en/view-and-download-the-demonette-database/`; also on
+  ORTOLANG). The CC BY-NC-SA licence belongs to the retired Démonette
+  **v1.2**, not this v2 release. See ADR-0119.
 
 ## Consequences
 
