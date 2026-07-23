@@ -65,6 +65,8 @@ export const fr = {
   'clueRail.aria.zoomOut': 'Dézoomer',
   'clueRail.direction.horizontal': 'HORIZONTAL',
   'clueRail.direction.vertical': 'VERTICAL',
+  'clueRail.letterCount_one': '{{count}} lettre',
+  'clueRail.letterCount_other': '{{count}} lettres',
   'play.aria.timer': 'Temps {{time}}',
   'play.aria.exit': 'Quitter la grille',
   'play.aria.home': 'Accueil',

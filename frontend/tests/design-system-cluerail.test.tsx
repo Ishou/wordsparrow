@@ -49,4 +49,19 @@ describe('ClueRail', () => {
     fireEvent.click(screen.getByLabelText('Indice suivant'));
     expect(onNext).toHaveBeenCalledOnce();
   });
+
+  it('shows the word length as "(N)" with a spoken label when letterCount is set', async () => {
+    const { container } = render(
+      <ClueRail {...LABELS} direction="horizontal" clue="Capitale de la France" index={4} total={18} letterCount={5} letterCountLabel="5 lettres" onPrev={vi.fn()} onNext={vi.fn()} />,
+    );
+    expect(screen.getByText('(5)')).toBeTruthy();
+    // The glyph is decorative; the spoken form carries the meaning.
+    expect(screen.getByText('5 lettres')).toBeTruthy();
+    await expectAxeClean(container);
+  });
+
+  it('omits the count when letterCount is not provided', () => {
+    render(<ClueRail {...LABELS} direction="horizontal" clue="Capitale de la France" index={4} total={18} onPrev={vi.fn()} onNext={vi.fn()} />);
+    expect(screen.queryByText(/^\(\d+\)$/)).toBeNull();
+  });
 });
