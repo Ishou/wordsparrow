@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import type { Cell, Puzzle } from '@/domain';
 import { Grid } from '@/ui/components/grid';
 
-// 4×2 grid: across word "across-2" at (1,1),(1,2),(1,3),(1,4); (1,2) is
+// 5×2 grid: across word "across-2" at (1,1),(1,2),(1,3),(1,4); (1,2) is
 // also the first cell of a down word so pre-filling it is realistic.
 //   D→  X   D↓  X   X
 //   D→  X   X   X   X
