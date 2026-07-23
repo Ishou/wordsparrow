@@ -519,6 +519,8 @@ export function PlayScreen({ puzzle, puzzleSolver, soloEntriesStore, soundPlayer
               direction={displayClue.across ? 'horizontal' : 'vertical'}
               directionLabel={t(displayClue.across ? 'clueRail.direction.horizontal' : 'clueRail.direction.vertical')}
               clue={displayClue.text}
+              letterCount={displayClue.cells.length}
+              letterCountLabel={t('clueRail.letterCount', { count: displayClue.cells.length })}
               index={displayOrdinal + 1}
               total={orderedClues.length}
               groupLabel={t('clueRail.aria.group')}

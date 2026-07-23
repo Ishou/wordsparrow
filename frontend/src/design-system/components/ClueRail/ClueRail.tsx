@@ -40,6 +40,9 @@ const stepper = css({
   _disabled: { opacity: 0.4, cursor: 'not-allowed' },
 });
 const clueText = css({ flex: 1, textAlign: 'center', fontFamily: 'wsUi', fontWeight: 'bold', fontSize: '20px', lineHeight: '1.12', letterSpacing: '-0.01em', color: 'ws.jadeInk' });
+// Subdued word-length helper trailing the clue, e.g. "(5)" — a hint, not part of the clue text.
+const countChip = css({ marginInlineStart: '0.4em', fontWeight: 'semibold', fontSize: '0.75em', color: 'ws.khaki', opacity: 0.55, fontVariantNumeric: 'tabular-nums' });
+const srOnly = css({ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 });
 
 export type ClueDirection = 'horizontal' | 'vertical';
 
@@ -47,6 +50,10 @@ export interface ClueRailProps {
   readonly direction: ClueDirection;
   readonly directionLabel: string;
   readonly clue: string;
+  // Word length shown as a subdued "(N)" after the clue; omit to hide.
+  readonly letterCount?: number;
+  // Spoken form of letterCount for screen readers (e.g. "5 lettres"); the visible "(N)" is aria-hidden.
+  readonly letterCountLabel?: string;
   readonly index: number;
   readonly total: number;
   readonly groupLabel: string;
@@ -65,7 +72,7 @@ export interface ClueRailProps {
   readonly report?: ReactNode;
 }
 
-export function ClueRail({ direction, directionLabel, clue, index, total, groupLabel, counterLabel, prevLabel, nextLabel, zoomInLabel, zoomOutLabel, onPrev, onNext, onZoomIn, onZoomOut, trailing, report }: ClueRailProps) {
+export function ClueRail({ direction, directionLabel, clue, letterCount, letterCountLabel, index, total, groupLabel, counterLabel, prevLabel, nextLabel, zoomInLabel, zoomOutLabel, onPrev, onNext, onZoomIn, onZoomOut, trailing, report }: ClueRailProps) {
   return (
     <div className={rail} role="group" aria-label={groupLabel}>
       <div className={topRow}>
@@ -96,7 +103,15 @@ export function ClueRail({ direction, directionLabel, clue, index, total, groupL
       </div>
       <div className={mainRow}>
         <button type="button" className={stepper} onClick={onPrev} disabled={!onPrev || total <= 1} aria-label={prevLabel}><CaretLeft aria-hidden="true" weight="bold" /></button>
-        <div className={clueText}>{clue}</div>
+        <div className={clueText}>
+          {clue}
+          {letterCount !== undefined ? (
+            <>
+              <span aria-hidden="true" className={countChip}>({letterCount})</span>
+              {letterCountLabel ? <span className={srOnly}>{letterCountLabel}</span> : null}
+            </>
+          ) : null}
+        </div>
         <button type="button" className={stepper} onClick={onNext} disabled={!onNext || total <= 1} aria-label={nextLabel}><CaretRight aria-hidden="true" weight="bold" /></button>
       </div>
     </div>
