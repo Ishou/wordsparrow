@@ -150,6 +150,7 @@ class InflectionResult:
     flag: str  # '' | 'no-target-pos' | 'no-head' | 'no-inflection'
                # | 'no-inflection-finite' | 'identity' | 'head-pos-mismatch'
                # | 'pp-only-skipped' | 'pp-reflexive-skipped'
+               # | 'pp-epicene-skipped'
                # | 'neg-nonfinite-skipped' | 'subject-person-mismatch' | 'empty'
                #
                # `no-inflection-finite` is a stricter sibling of `no-inflection`
@@ -352,6 +353,46 @@ def _pp_action_definition(
     return False
 
 
+# Epicene ppas head (`demeuré`) inflates to the masculine citation on fem/pl answers — see ADR-0107.
+_EPICENE_PPAS_SKIP = object()
+
+
+def _head_ppas_tags(
+    form: str, head_lemma: str, index: MorphologyIndex,
+) -> frozenset[str]:
+    """The ppas tag set the inflected `form` carries under `head_lemma`."""
+    for lemma, tags in index.lookup_form(form):
+        if lemma.lower() == head_lemma.lower() and "ppas" in tags:
+            return tags
+    return frozenset()
+
+
+def _is_regular_er_verb(lemma: str, index: MorphologyIndex) -> bool:
+    """True for 1st-group (`v1…`) `-er` verbs, whose participle agrees
+    regularly (`-é → -ée/-és/-ées`) and is safe to synthesize."""
+    if not lemma.lower().endswith("er"):
+        return False
+    for _surface, tags in index.by_lemma.get(lemma.lower(), []):
+        if any(len(t) >= 3 and t[:2] == "v1" and "_" in t for t in tags):
+            return True
+    return False
+
+
+def _agree_epicene_ppas(
+    inflected: str, head_lemma: str, target: set[str], index: MorphologyIndex,
+) -> str | object | None:
+    """Repair an epicene ppas head for a fem/pl answer: synth for regular `-er`, else `_EPICENE_PPAS_SKIP`, else None (ADR-0107)."""
+    want_fem = "fem" in target
+    want_pl = "pl" in target
+    if not (want_fem or want_pl):
+        return None
+    if "epi" not in _head_ppas_tags(inflected, head_lemma, index):
+        return None
+    if not (_is_regular_er_verb(head_lemma, index) and inflected.endswith("é")):
+        return _EPICENE_PPAS_SKIP
+    return inflected + ("e" if want_fem else "") + ("s" if want_pl else "")
+
+
 def _relative_verb(
     tokens: list[str], target_pos: str, surface_tags: set[str],
     index: MorphologyIndex,
@@ -548,6 +589,14 @@ def inflect_clue(
             return InflectionResult(_capitalize_first(clue), "no-inflection-finite")
         return InflectionResult(_capitalize_first(clue), "no-inflection")
     target = chosen_target
+
+    # Epicene ppas repair: synth regular `-er` agreement, else drop irregular heads (ADR-0107).
+    if target_pos == "verbe" and "ppas" in target:
+        repaired = _agree_epicene_ppas(inflected, head_lemma, target, index)
+        if repaired is _EPICENE_PPAS_SKIP:
+            return InflectionResult(_capitalize_first(clue), "pp-epicene-skipped")
+        if isinstance(repaired, str):
+            inflected = repaired
 
     new_tokens = list(tokens)
     head_changed = inflected.lower() != tokens[head_idx].lower()

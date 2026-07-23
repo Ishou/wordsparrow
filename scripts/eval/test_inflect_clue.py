@@ -955,6 +955,95 @@ def test_copula_genus_on_noun_ships_verbatim() -> None:
     assert res.text == "Être vivant"
 
 
+# --- Epicene past-participle agreement (RESTÉE / demeurer class) -----------
+# Grammalecte tags some verbs' past participle as `ppas epi inv` (epicene,
+# invariable) on the verb row, delegating the gendered forms to a separate
+# noun/adj lemma. `demeuré` (demeurer) is one: inflating it to a fem/pl answer
+# matched the epicene row through the inv/epi wildcards and shipped the
+# masculine-reading citation (`Demeuré sur place` on RESTÉE). For a regular
+# `-er` head the agreement is synthesized (`-é → -ée/-és/-ées`); an irregular
+# head can't be safely fabricated and drops via `pp-epicene-skipped`.
+
+
+def _build_epicene_index() -> MorphologyIndex:
+    """Mirror grammalecte's epicene-invariable ppas emission. `demeurer`
+    (regular -er) tags `demeuré` as `ppas epi inv` with NO distinct fem/pl
+    verb rows; `nuire` (irregular -re) does the same with `nui`. `soulever`
+    (regular -er) keeps proper gendered ppas rows — the control."""
+    idx = MorphologyIndex()
+    _add(idx, "demeurer", "demeurer", "v1ei_____a infi")
+    _add(idx, "demeurer", "demeuré", "v1ei_____a ppas epi inv")
+    _add(idx, "nuire", "nuire", "v3__t___zz infi")
+    _add(idx, "nuire", "nui", "v3__t___zz ppas epi inv")
+    _add(idx, "soulever", "soulever", "v1__t___zz infi")
+    _add(idx, "soulever", "soulevé", "v1__t___zz ppas mas sg")
+    _add(idx, "soulever", "soulevée", "v1__t___zz ppas fem sg")
+    _add(idx, "soulever", "soulevés", "v1__t___zz ppas mas pl")
+    _add(idx, "soulever", "soulevées", "v1__t___zz ppas fem pl")
+    return idx
+
+
+@pytest.mark.parametrize("tags,expected", [
+    ({"v1ei_____a", "ppas", "fem", "sg"}, "Demeurée sur place"),
+    ({"v1ei_____a", "ppas", "fem", "pl"}, "Demeurées sur place"),
+    ({"v1ei_____a", "ppas", "mas", "pl"}, "Demeurés sur place"),
+])
+def test_epicene_er_ppas_synthesizes_agreement(
+    tags: set[str], expected: str,
+) -> None:
+    """`Demeurer sur place` cluing a fem/pl answer (RESTÉE): the epicene
+    `demeuré` reads masculine, so the regular -er agreement is synthesized."""
+    idx = _build_epicene_index()
+    res = inflect_clue("Demeurer sur place", tags, idx)
+    assert res.flag == "", res
+    assert res.text == expected, res
+
+
+def test_epicene_er_ppas_mas_sg_left_unchanged() -> None:
+    """A masculine-singular answer needs no agreement — the epicene form reads
+    correctly, so the synthesis must not fire."""
+    idx = _build_epicene_index()
+    res = inflect_clue("Demeurer sur place",
+                       {"v1ei_____a", "ppas", "mas", "sg"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Demeuré sur place", res
+
+
+@pytest.mark.parametrize("tags", [
+    {"v3__t___zz", "ppas", "fem", "sg"},
+    {"v3__t___zz", "ppas", "fem", "pl"},
+    {"v3__t___zz", "ppas", "mas", "pl"},
+])
+def test_epicene_irregular_ppas_drops(tags: set[str]) -> None:
+    """`Nuire à la réputation` cluing a fem/pl answer: `nuire` is irregular
+    (not -er), so its epicene participle can't be safely fabricated — drop to
+    a placeholder via the new skip flag rather than ship a wrong agreement."""
+    idx = _build_epicene_index()
+    res = inflect_clue("Nuire à la réputation", tags, idx)
+    assert res.flag == "pp-epicene-skipped", res
+    assert res.text == "Nuire à la réputation", res
+
+
+def test_gendered_er_ppas_control_still_agrees() -> None:
+    """A head that HAS distinct fem ppas rows (`soulever`) agrees the ordinary
+    way — the epicene synthesis must not intercept it."""
+    idx = _build_epicene_index()
+    res = inflect_clue("Soulever", {"v1__t___zz", "ppas", "fem", "sg"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Soulevée", res
+
+
+def test_epicene_ppas_guard_ignores_finite_targets() -> None:
+    """The guard is scoped to ppas targets. A finite (ipre-3sg) surface on the
+    same epicene head must not be touched by the synthesis path."""
+    idx = _build_epicene_index()
+    _add(idx, "demeurer", "demeure", "v1ei_____a ipre spre 1sg 3sg")
+    res = inflect_clue("Demeurer sur place",
+                       {"v1ei_____a", "ipre", "3sg"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Demeure sur place", res
+
+
 # --- Degree-adverb / negation / `comme` transparency + participial adj ---
 
 

@@ -47,6 +47,9 @@ inflection_status values:
                               "[elles sont] satisfaites", a wrong-gender
                               agreement. Routed to dropped. `Faites fonctionner`
                               is spared — the infinitive forces the verb reading.
+  - "pp-epicene-skipped"    : irregular epicene-ppas head can't agree with a
+                              fem/pl answer and can't be safely synthesized —
+                              see ADR-0107. Routed to dropped.
   - "head-pos-mismatch"     : no clue head matches surface POS
   - "no-target-pos"         : surface POS not in {nom, adj, verbe}
   - "no-owner"              : no (lemma, pos) candidate has a clue in corpus
@@ -406,11 +409,13 @@ def main() -> None:
         # `subject-person-mismatch`: clue's own subject disagrees with the forced surface person/number.
         # `passe-simple-person`: 1st/2nd-person passé-simple head reads as archaic (`considérai → "Tins compte de"`).
         # `pp-adjective-homograph`: fem-pl-ppas homograph head in a predicative frame (`comblez → "Satisfaites pleinement"`).
+        # `pp-epicene-skipped`: irregular epicene-ppas head can't agree with a fem/pl answer (`nuire → "Nui"`) — dropped (ADR-0107).
         skipped = r.get("inflection_status") in (
             "pp-only-skipped", "pp-reflexive-skipped", "neg-nonfinite-skipped",
             "no-inflection-finite", "agreement-mismatch",
             "subject-person-mismatch", "passe-simple-person",
             "pp-adjective-homograph", "subject-number-mismatch",
+            "pp-epicene-skipped",
         )
         if skipped or s < args.threshold:
             dropped.append(r)
