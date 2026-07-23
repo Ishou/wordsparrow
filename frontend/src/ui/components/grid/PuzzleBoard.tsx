@@ -109,7 +109,9 @@ function LetterSlot({
       ? 'active'
       : highlight.currentWord
         ? 'activeWord'
-        : 'empty';
+        : entry !== ''
+          ? 'filled'
+          : 'empty';
   const owner = validated ? lockedBy : undefined;
   const wrapStyle: Record<string, string> = {};
   if (celebrateDelay !== undefined) wrapStyle.animationDelay = `${celebrateDelay}ms`;
