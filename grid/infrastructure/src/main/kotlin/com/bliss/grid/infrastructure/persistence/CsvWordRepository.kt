@@ -50,8 +50,7 @@ import java.text.Normalizer
  */
 class CsvWordRepository(
     words: List<Word>,
-    // Full folded-lemma set per folded surface, captured before the byText merge
-    // discards secondary lemmas (ADR-0100); empty for callers that don't carry it.
+    // Full folded-lemma set per surface, captured pre-merge (ADR-0100); empty when unsupported.
     lemmasBySurface: Map<String, Set<String>> = emptyMap(),
 ) : WordRepository {
     private val byLength: Map<Int, List<Word>> = words.groupBy { it.text.length }
@@ -272,11 +271,7 @@ class CsvWordRepository(
                         for ((text, themedWord) in overlay) {
                             byText.getOrPut(text) { themedWord }
                         }
-                        // Capture every folded lemma per surface from the pre-merge rows —
-                        // the byText merge above keeps one variant and drops the rest, which
-                        // is exactly the data-loss that let inflected homographs share a grid
-                        // (ADR-0100). Keep only surfaces with >1 distinct lemma; single-lemma
-                        // surfaces are already covered by the Word's own lemma.
+                        // Multi-lemma surfaces only, from pre-merge rows (ADR-0100); single-lemma ones already covered by Word.lemma.
                         val lemmasBySurface = HashMap<String, MutableSet<String>>()
                         for (w in mainWords) lemmasBySurface.getOrPut(w.text) { HashSet() } += w.lemma
                         for ((text, tw) in overlay) lemmasBySurface.getOrPut(text) { HashSet() } += tw.lemma

@@ -23,8 +23,7 @@ internal class WordAcceptor(
 ) {
     private val usedWords: HashSet<String> = HashSet()
 
-    // Multiset: a lemma may be contributed by several surfaces (homograph inflections),
-    // so a single removal must not unblock it while another placement still holds it.
+    // Multiset: a shared lemma from another surface must not unblock on the first removal.
     private val usedLemmas: HashMap<String, Int> = HashMap()
     private val themeUsed: HashMap<String, Int> = HashMap()
 
