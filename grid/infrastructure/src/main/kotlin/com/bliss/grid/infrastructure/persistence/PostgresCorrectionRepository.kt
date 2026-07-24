@@ -4,10 +4,13 @@ import com.bliss.grid.application.correction.BackfillStatus
 import com.bliss.grid.application.correction.CorrectionBackfillJob
 import com.bliss.grid.application.correction.CorrectionProgress
 import com.bliss.grid.application.correction.CorrectionRepository
+import com.bliss.grid.application.correction.CorrectionSeedStore
 import com.bliss.grid.application.correction.CorrectionWorkStore
 import com.bliss.grid.application.correction.ExportableCorrection
 import com.bliss.grid.application.correction.GuardedRecord
 import com.bliss.grid.application.correction.ReversibleCorrection
+import com.bliss.grid.application.correction.SeedReplacement
+import com.bliss.grid.application.correction.SeedResult
 import com.bliss.grid.domain.correction.ClueCorrection
 import com.fasterxml.uuid.Generators
 import java.sql.Connection
@@ -20,8 +23,42 @@ import javax.sql.DataSource
 class PostgresCorrectionRepository(
     private val dataSource: DataSource,
 ) : CorrectionRepository,
-    CorrectionWorkStore {
+    CorrectionWorkStore,
+    CorrectionSeedStore {
     private val idGenerator = Generators.timeBasedEpochGenerator()
+
+    // Pre-stamps exported_at so the override flush (exportableCorrections) skips these -- a seed's new clue is already the corpus gold (ADR-0108 amendment 2026-07-24).
+    override fun seedReplacements(
+        rows: List<SeedReplacement>,
+        createdBy: UUID,
+    ): SeedResult {
+        if (rows.isEmpty()) return SeedResult(inserted = 0, skippedExisting = 0)
+        var inserted = 0
+        dataSource.connection.use { conn ->
+            conn.autoCommit = false
+            try {
+                conn.prepareStatement(SEED_INSERT_SQL).use { stmt ->
+                    for (row in rows) {
+                        stmt.setObject(1, idGenerator.generate())
+                        stmt.setString(2, row.wordText)
+                        stmt.setString(3, row.oldClueText)
+                        stmt.setString(4, row.newClueText)
+                        stmt.setObject(5, createdBy)
+                        stmt.setString(6, row.wordText)
+                        stmt.setString(7, row.oldClueText)
+                        inserted += stmt.executeUpdate()
+                    }
+                }
+                conn.commit()
+            } catch (e: Exception) {
+                conn.rollback()
+                throw e
+            } finally {
+                conn.autoCommit = true
+            }
+        }
+        return SeedResult(inserted = inserted, skippedExisting = rows.size - inserted)
+    }
 
     override fun record(
         correction: ClueCorrection,
@@ -283,6 +320,17 @@ class PostgresCorrectionRepository(
             """
             INSERT INTO clue_corrections (correction_id, kind, word_text, old_clue_text, new_clue_text, reason, created_by)
             VALUES (?, ?, ?, ?, ?, ?, ?)
+            """
+
+        // Seeded rows are exported_at-stamped up front (skip the override flush) but stay backfill_status='pending' so --process-corrections still patches grids; NOT EXISTS makes re-runs idempotent and yields to a live API correction on the same word+clue.
+        private const val SEED_INSERT_SQL =
+            """
+            INSERT INTO clue_corrections (correction_id, kind, word_text, old_clue_text, new_clue_text, created_by, exported_at)
+            SELECT ?, 'replace', ?, ?, ?, ?, now()
+            WHERE NOT EXISTS (
+                SELECT 1 FROM clue_corrections
+                WHERE kind = 'replace' AND reverted_at IS NULL AND upper(word_text) = upper(?) AND old_clue_text = ?
+            )
             """
 
         // Transaction-scoped advisory lock keyed on the folded word so concurrent forbids on it serialize.

@@ -3,6 +3,7 @@ package com.bliss.grid.worker
 import com.bliss.grid.application.correction.ExportCorrectionsUseCase
 import com.bliss.grid.application.correction.ProcessBlocklistUseCase
 import com.bliss.grid.application.correction.ProcessCorrectionsUseCase
+import com.bliss.grid.application.correction.SeedCorrectionsUseCase
 import com.bliss.grid.application.correction.asDailyRegenerationPort
 import com.bliss.grid.application.puzzle.DailyPuzzleSelector
 import com.bliss.grid.application.puzzle.EnsureUpcomingDailiesUseCase
@@ -16,6 +17,7 @@ import com.bliss.grid.application.puzzle.dailyPuzzleConstraints
 import com.bliss.grid.application.puzzle.distilledDailyBaseConstraints
 import com.bliss.grid.infrastructure.persistence.BlissDatabase
 import com.bliss.grid.infrastructure.persistence.CsvClueOverrideAppender
+import com.bliss.grid.infrastructure.persistence.CsvCorrectionSeedSource
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import com.bliss.grid.infrastructure.persistence.PostgresBlocklistBackfill
 import com.bliss.grid.infrastructure.persistence.PostgresCorrectionRepository
@@ -53,6 +55,7 @@ fun main(args: Array<String>) {
             args.contains("--ensure-dailies") -> runDailies(force = false)
             args.contains("--process-corrections") -> runProcessCorrections()
             args.contains("--export-corrections") -> runExportCorrections()
+            args.any { it == SEED_FLAG || it.startsWith("$SEED_FLAG=") } -> runSeedCorrections(stringArg(args, SEED_FLAG))
             else -> {
                 log.error("event=worker_unknown_arguments args=\"{}\"", args.joinToString(separator = " "))
                 printUsage()
@@ -69,11 +72,47 @@ private const val DISTILL_DAILY_MAX_ATTEMPTS: Int = 1
 
 private const val DEFAULT_OVERRIDES_CSV: String = "data/curated/clue_overrides_fr.csv"
 
+private const val SEED_FLAG: String = "--seed-corrections"
+
+// Service identity stamped on created_by for ops-run bulk seeds (ADR-0108 amendment); marks seeded rows apart from maintainer API corrections.
+private val SEED_JOB_ACTOR: UUID = UUID.fromString("5eed5eed-0000-0000-0000-000000000000")
+
 private fun printUsage() {
     log.info(
         "usage: grid-worker --ensure-dailies | --regenerate-dailies [--start-offset N] [--window-days N] " +
-            "| --process-corrections | --export-corrections | --help",
+            "| --process-corrections | --export-corrections | --seed-corrections <source.csv> | --help",
     )
+}
+
+// Bulk-seeds replace corrections from a pre-validated CSV; the existing --process-corrections sweep then patches the grids (ADR-0108 amendment 2026-07-24).
+private fun runSeedCorrections(sourcePath: String?): Int {
+    if (sourcePath.isNullOrBlank()) {
+        log.error("event=seed_corrections_missing_source")
+        printUsage()
+        return 1
+    }
+    val database = BlissDatabase(poolName = "grid-worker-hikari", maxPoolSize = 2, requireUrl = true)
+    database.start()
+    return try {
+        val dataSource = database.dataSource() ?: error("DATABASE_URL produced a null DataSource")
+        val store = PostgresCorrectionRepository(dataSource)
+        val rows = CsvCorrectionSeedSource(Path.of(sourcePath)).read()
+        val summary = SeedCorrectionsUseCase(store).execute(rows, SEED_JOB_ACTOR)
+        log.info(
+            "event=seed_corrections_done submitted={} invalid={} inserted={} skipped_existing={}",
+            summary.submitted,
+            summary.invalid,
+            summary.inserted,
+            summary.skippedExisting,
+        )
+        // Pre-validated source should carry no invalid rows; a nonzero count is surfaced but valid rows still seed (re-run is idempotent).
+        if (summary.invalid > 0) {
+            log.error("event=seed_corrections_invalid_rows count={}", summary.invalid)
+        }
+        0
+    } finally {
+        database.stop()
+    }
 }
 
 // Backfills every stored grid: patches corrected clues, scrubs blocklisted words (ADR-0108 §4, ADR-0110 §2). Terminal per-correction state lives in the DB, so a recorded failure exits 0.
@@ -159,6 +198,16 @@ internal fun intArg(
     args.firstOrNull { it.startsWith("$name=") }?.let { return it.substringAfter('=').toIntOrNull() ?: default }
     val idx = args.indexOf(name)
     return if (idx >= 0 && idx + 1 < args.size) args[idx + 1].toIntOrNull() ?: default else default
+}
+
+// Parse `--name=value` or `--name value`; null when absent or valueless.
+internal fun stringArg(
+    args: Array<String>,
+    name: String,
+): String? {
+    args.firstOrNull { it.startsWith("$name=") }?.let { return it.substringAfter('=') }
+    val idx = args.indexOf(name)
+    return if (idx >= 0 && idx + 1 < args.size) args[idx + 1] else null
 }
 
 // force appends a fresh daily even when a row exists (ADR-0081); startOffset backdates the window, windowDays widens it.
