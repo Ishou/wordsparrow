@@ -75,12 +75,13 @@ jobs:
 
       - name: Install Playwright chromium for prerender
         # The seo:postbuild step (chained into build / build:preview)
-        # uses Playwright's chromium to render each indexable route to
-        # static HTML. Browser binaries aren't part of the npm package,
-        # so install just chromium with its OS deps before the build.
-        # See ADR-0053.
+        # uses Playwright's chromium to serialize each indexable route to
+        # static HTML (see ADR-0053). No `--with-deps`: the ubuntu-latest
+        # runner already ships chromium's shared libs; `--with-deps` only
+        # added CJK/Cyrillic fonts, irrelevant to DOM→HTML serialization,
+        # and stalled the job on the apt mirror past the 10-min cap.
         working-directory: frontend
-        run: pnpm exec playwright install chromium --with-deps
+        run: pnpm exec playwright install chromium
 
       - name: Build frontend
         # PR previews use build:preview (loads .env.preview → VITE_USE_MOCK_API=true)
