@@ -24,7 +24,7 @@ const lobbyId = '7gQ2xK9p' as LobbyId;
 const lobbyFixture: WireLobby = {
   id: '7gQ2xK9p',
   ownerSessionId: sessionId,
-  players: [{ sessionId, pseudonym, joinedAt: '2026-05-02T15:30:00Z' }],
+  players: [{ playerId: sessionId, sessionId, pseudonym, joinedAt: '2026-05-02T15:30:00Z' }],
   state: 'WAITING',
   gridConfig: { width: 7, height: 7 },
   game: null,

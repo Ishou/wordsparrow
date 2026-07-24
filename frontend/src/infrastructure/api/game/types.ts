@@ -382,10 +382,12 @@ export interface components {
             height: number;
         };
         /**
-         * @description A player currently holding a slot in the lobby. Mirrors `Player` in
-         *     `game/api/asyncapi.yaml`; keep in sync.
+         * @description A player currently holding a slot in the lobby. Identity is `playerId`
+         *     (account-scoped); `sessionId` is the transport connection. Mirrors
+         *     `Player` in `game/api/asyncapi.yaml`; keep in sync.
          */
         Player: {
+            playerId: components["schemas"]["PlayerId"];
             sessionId: components["schemas"]["SessionId"];
             pseudonym: components["schemas"]["Pseudonym"];
             joinedAt: components["schemas"]["Instant"];

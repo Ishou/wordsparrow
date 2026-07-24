@@ -738,11 +738,14 @@ components:
 
     Player:
       type: object
-      required: [sessionId, pseudonym, joinedAt]
+      required: [playerId, sessionId, pseudonym, joinedAt]
       description: |
-        A player currently holding a slot in the lobby. Mirrors `Player` in
-        `game/api/asyncapi.yaml`; keep in sync.
+        A player currently holding a slot in the lobby. Identity is `playerId`
+        (account-scoped); `sessionId` is the transport connection. Mirrors
+        `Player` in `game/api/asyncapi.yaml`; keep in sync.
       properties:
+        playerId:
+          $ref: '#/components/schemas/PlayerId'
         sessionId:
           $ref: '#/components/schemas/SessionId'
         pseudonym:

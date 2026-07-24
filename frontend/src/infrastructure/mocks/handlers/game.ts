@@ -134,6 +134,7 @@ export const gameHandlers = [
 
     const id = generateLobbyId();
     const player: Player = {
+      playerId: body.ownerSessionId,
       sessionId: body.ownerSessionId,
       pseudonym: body.ownerPseudonym,
       joinedAt: nowIso(),
@@ -399,7 +400,7 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
             ...current,
             players: [
               ...current.players,
-              { sessionId: BOT_SESSION_ID, pseudonym: BOT_PSEUDONYM, joinedAt },
+              { playerId: BOT_SESSION_ID, sessionId: BOT_SESSION_ID, pseudonym: BOT_PSEUDONYM, joinedAt },
             ],
           },
     );
@@ -407,6 +408,7 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
     client.send(
       JSON.stringify({
         type: 'playerJoined',
+        playerId: BOT_SESSION_ID,
         sessionId: BOT_SESSION_ID,
         pseudonym: BOT_PSEUDONYM,
         joinedAt,
@@ -660,13 +662,14 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
                 ...current,
                 players: [
                   ...current.players,
-                  { sessionId: join.sessionId, pseudonym: join.pseudonym, joinedAt },
+                  { playerId: join.sessionId, sessionId: join.sessionId, pseudonym: join.pseudonym, joinedAt },
                 ],
               },
         );
         client.send(
           JSON.stringify({
             type: 'playerJoined',
+            playerId: join.sessionId,
             sessionId: join.sessionId,
             pseudonym: join.pseudonym,
             joinedAt,
