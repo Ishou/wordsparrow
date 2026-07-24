@@ -4,7 +4,7 @@ import { css } from 'styled-system/css';
 import type { Position, Puzzle } from '@/domain';
 import type { GameEvent, Unsubscribe } from '@/application/game';
 import { tallyValidatedLetters } from '@/application/game';
-import type { Player, SessionId } from '@/domain/game';
+import type { Player, PlayerId, SessionId } from '@/domain/game';
 import type { SoundPlayer } from '@/application/session/SoundPlayer';
 import type { SoundStore } from '@/application/session/SoundStore';
 import type { SkipFilledStore } from '@/application/session/SkipFilledStore';
@@ -83,10 +83,12 @@ export interface LiveCoopScreenProps {
   readonly frozenAtMs?: number;
   readonly isCompleted: boolean;
   readonly sessionId: SessionId;
+  // ADR-0066 (e): account-scoped local identity for roster "you"/score/colour; `sessionId` stays for the cell-sync transport + presence.
+  readonly currentPlayerId: PlayerId;
   readonly players: ReadonlyArray<Player>;
   readonly playersBySessionId: ReadonlyMap<SessionId, Player>;
   readonly initialEntries: ReadonlyArray<{ row: number; column: number; letter: string }>;
-  readonly lockedPositions: ReadonlyArray<{ row: number; column: number; lockedBy: SessionId }>;
+  readonly lockedPositions: ReadonlyArray<{ row: number; column: number; lockedBy: PlayerId }>;
   readonly onCellChange: (row: number, col: number, letter: string | null) => void;
   readonly onLocalFocusChange: (position: Position | null, direction: 'across' | 'down' | null) => void;
   readonly subscribeToRemoteCellUpdates: (handler: (event: GameEvent) => void) => Unsubscribe;
@@ -108,6 +110,7 @@ export function LiveCoopScreen({
   frozenAtMs,
   isCompleted,
   sessionId,
+  currentPlayerId,
   players,
   playersBySessionId,
   initialEntries,
@@ -156,14 +159,14 @@ export function LiveCoopScreen({
     return set;
   }, [isCompleted, lockedPositions, puzzle.cells]);
 
-  // ADR-0086: per-cell finder so PuzzleBoard tints each locked cell with the player's colour.
-  const lockedByAt = useMemo<ReadonlyMap<string, SessionId>>(() => {
-    const m = new Map<string, SessionId>();
+  // ADR-0086 / ADR-0066 (e): per-cell finder (account-scoped `playerId`) so PuzzleBoard tints each locked cell with the player's colour.
+  const lockedByAt = useMemo<ReadonlyMap<string, PlayerId>>(() => {
+    const m = new Map<string, PlayerId>();
     for (const p of lockedPositions) m.set(posKey(p.row, p.column), p.lockedBy);
     return m;
   }, [lockedPositions]);
 
-  const scoresBySessionId = useMemo(() => tallyValidatedLetters(lockedPositions), [lockedPositions]);
+  const scoresByPlayerId = useMemo(() => tallyValidatedLetters(lockedPositions), [lockedPositions]);
 
   const validatedRef = useRef(validatedPositions);
   validatedRef.current = validatedPositions;
@@ -320,11 +323,11 @@ export function LiveCoopScreen({
             <div className={coopPresence}>
               <PlayerStrip
                 players={players}
-                currentSessionId={sessionId}
+                currentPlayerId={currentPlayerId}
                 typingSessionIds={typingSessionIds}
                 idleSessionIds={idleSessionIds}
                 disconnectingSessionIds={disconnectingSessionIds}
-                scoresBySessionId={scoresBySessionId}
+                scoresByPlayerId={scoresByPlayerId}
               />
             </div>
           </>
@@ -347,11 +350,11 @@ export function LiveCoopScreen({
             </div>
             <PlayerStrip
               players={players}
-              currentSessionId={sessionId}
+              currentPlayerId={currentPlayerId}
               typingSessionIds={typingSessionIds}
               idleSessionIds={idleSessionIds}
               disconnectingSessionIds={disconnectingSessionIds}
-              scoresBySessionId={scoresBySessionId}
+              scoresByPlayerId={scoresByPlayerId}
             />
           </header>
         )

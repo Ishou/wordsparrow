@@ -134,9 +134,10 @@ export function ResultatsScreen({
   onHome,
 }: ResultatsScreenProps) {
   const time = formatDuration(durationMs);
+  // ADR-0066 (e): score is account-scoped — tally + lookup key on `playerId`.
   const scores = tallyValidatedLetters(lockedPositions);
   const ranked = [...players].sort(
-    (x, y) => (scores.get(y.sessionId) ?? 0) - (scores.get(x.sessionId) ?? 0),
+    (x, y) => (scores.get(y.playerId) ?? 0) - (scores.get(x.playerId) ?? 0),
   );
   return (
     <div className={wrap}>
@@ -153,13 +154,13 @@ export function ResultatsScreen({
         <h2 className={contribTitle}>{t('v2.multiplayer.resultats.withCount', { total: players.length })}</h2>
         <ul className={list}>
           {ranked.map((p) => (
-            <li key={p.sessionId} className={playerRow}>
-              <PlayerAvatar sessionId={p.sessionId} pseudonym={p.pseudonym} size={34} />
+            <li key={p.playerId} className={playerRow}>
+              <PlayerAvatar colorId={p.playerId} pseudonym={p.pseudonym} size={34} />
               <span className={playerName}>{p.pseudonym}</span>
               <span className={rightGroup}>
                 {p.sessionId === ownerSessionId ? <span className={badge}>{t('v2.multiplayer.host.badge')}</span> : null}
                 <span className={letterCount}>
-                  {t('v2.multiplayer.resultats.letterCount', { count: scores.get(p.sessionId) ?? 0 })}
+                  {t('v2.multiplayer.resultats.letterCount', { count: scores.get(p.playerId) ?? 0 })}
                 </span>
               </span>
             </li>

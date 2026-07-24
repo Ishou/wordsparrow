@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Lobby, Pseudonym, SessionId } from '@/domain/game';
+import type { Lobby, PlayerId, Pseudonym, SessionId } from '@/domain/game';
 
 vi.mock('@phosphor-icons/react', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@phosphor-icons/react')>();
@@ -25,12 +25,14 @@ const ownerSessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const peerSessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
 const ownerPseudonym = 'Joueur 1234' as Pseudonym;
 const peerPseudonym = 'Joueur 5678' as Pseudonym;
+const ownerPlayerId = ownerSessionId as unknown as PlayerId;
+const peerPlayerId = peerSessionId as unknown as PlayerId;
 
 const baseLobby: Lobby = {
   ownerSessionId,
   players: [
-    { sessionId: ownerSessionId, pseudonym: ownerPseudonym, joinedAt: '2026-05-02T15:30:00Z' },
-    { sessionId: peerSessionId, pseudonym: peerPseudonym, joinedAt: '2026-05-02T15:30:01Z' },
+    { playerId: ownerPlayerId, sessionId: ownerSessionId, pseudonym: ownerPseudonym, joinedAt: '2026-05-02T15:30:00Z' },
+    { playerId: peerPlayerId, sessionId: peerSessionId, pseudonym: peerPseudonym, joinedAt: '2026-05-02T15:30:01Z' },
   ],
   state: 'WAITING',
   gridConfig: { width: 7, height: 7 },
@@ -48,7 +50,7 @@ const noopProps = {
 describe('WaitingRoom — player list', () => {
   it('renders one row per player with the pseudonym text', () => {
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     const list = screen.getByRole('list', { name: /liste des joueurs/i });
     // The owner pseudonym also surfaces in the pseudonym-editor button;
@@ -59,7 +61,7 @@ describe('WaitingRoom — player list', () => {
 
   it('marks the local player with a "toi" badge', () => {
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     // Exactly one "toi" badge — the row of the local player.
     expect(screen.getAllByText('toi')).toHaveLength(1);
@@ -67,14 +69,14 @@ describe('WaitingRoom — player list', () => {
 
   it('marks the lobby owner with a "propriétaire" badge', () => {
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={peerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={peerSessionId} currentPlayerId={peerPlayerId} {...noopProps} />,
     );
     expect(screen.getAllByText('propriétaire')).toHaveLength(1);
   });
 
   it('renders empty slots up to the 8-player cap', () => {
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     // 2 players + 6 empty slots = 8 total list items in the player list.
     expect(screen.getAllByLabelText('Place libre')).toHaveLength(6);
@@ -84,7 +86,7 @@ describe('WaitingRoom — player list', () => {
 describe('WaitingRoom — owner-gated controls', () => {
   it('shows the grid-size picker and Start button to the owner', () => {
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     // Picker is now an Ark `ToggleGroup` (single-select). Zag's
     // toggle-group state machine still emits `role="radiogroup"` on
@@ -99,7 +101,7 @@ describe('WaitingRoom — owner-gated controls', () => {
 
   it('hides the grid-size picker and Start button from non-owners', () => {
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={peerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={peerSessionId} currentPlayerId={peerPlayerId} {...noopProps} />,
     );
     expect(screen.queryByRole('radiogroup', { name: /taille de la grille/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /démarrer la partie/i })).toBeNull();
@@ -111,7 +113,7 @@ describe('WaitingRoom — Start button', () => {
     const soloLobby: Lobby = { ...baseLobby, players: [baseLobby.players[0]!] };
     const onStart = vi.fn();
     render(
-      <WaitingRoom lobby={soloLobby} currentSessionId={ownerSessionId} {...noopProps} onStart={onStart} />,
+      <WaitingRoom lobby={soloLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} onStart={onStart} />,
     );
     const startButton = screen.getByRole('button', { name: /démarrer la partie/i });
     expect(startButton).toBeEnabled();
@@ -122,7 +124,7 @@ describe('WaitingRoom — Start button', () => {
   it('is enabled with 2+ players and fires onStart on click', () => {
     const onStart = vi.fn();
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} onStart={onStart} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} onStart={onStart} />,
     );
     const startButton = screen.getByRole('button', { name: /démarrer la partie/i });
     expect(startButton).toBeEnabled();
@@ -135,7 +137,7 @@ describe('WaitingRoom — pseudonym editor', () => {
   it('fires onRename with the trimmed value when Enter is pressed', () => {
     const onRename = vi.fn();
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} onRename={onRename} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} onRename={onRename} />,
     );
     // Enter edit mode by clicking the pseudonym button.
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier ton pseudonyme.*${ownerPseudonym}`, 'i') }));
@@ -150,7 +152,7 @@ describe('WaitingRoom — pseudonym editor', () => {
     // `fireEvent.change`, so the assertion is on the attribute itself
     // (which the browser DOES honour during real keystrokes / paste).
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier ton pseudonyme.*${ownerPseudonym}`, 'i') }));
     const input = screen.getByLabelText(/ton pseudonyme/i) as HTMLInputElement;
@@ -163,7 +165,7 @@ describe('WaitingRoom — pseudonym editor', () => {
     // editor itself must refuse to commit an over-cap value.
     const onRename = vi.fn();
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} onRename={onRename} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} onRename={onRename} />,
     );
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`modifier ton pseudonyme.*${ownerPseudonym}`, 'i') }));
     const input = screen.getByLabelText(/ton pseudonyme/i) as HTMLInputElement;
@@ -178,7 +180,7 @@ describe('WaitingRoom — pseudonym editor', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={ownerSessionId}
+        currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
         {...noopProps}
         pseudonymError="Pseudonym must be at most 32 chars, was 33"
       />,
@@ -192,7 +194,7 @@ describe('WaitingRoom — pseudonym editor', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={ownerSessionId}
+        currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
         {...noopProps}
         pseudonymError="Pseudonym must be at most 32 chars, was 33"
         onClearPseudonymError={onClearPseudonymError}
@@ -217,7 +219,7 @@ describe('WaitingRoom — readonly PinInput + eye toggle (ADR-0027)', () => {
 
   it('renders the code as readOnly PinInput slots, masked by default', () => {
     const { container } = render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     const slots = container.querySelectorAll<HTMLInputElement>('input[data-part="input"]');
     expect(slots).toHaveLength(6);
@@ -230,7 +232,7 @@ describe('WaitingRoom — readonly PinInput + eye toggle (ADR-0027)', () => {
 
   it('reveals the code via the eye toggle and re-masks on second click', () => {
     const { container } = render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     const showToggle = screen.getByRole('button', { name: /afficher le code/i });
     expect(showToggle).toHaveAttribute('aria-pressed', 'false');
@@ -247,7 +249,7 @@ describe('WaitingRoom — readonly PinInput + eye toggle (ADR-0027)', () => {
   it('does not render the code surface when lobby.code is null (legacy lobbies)', () => {
     const noCodeLobby: Lobby = { ...baseLobby, code: null };
     const { container } = render(
-      <WaitingRoom lobby={noCodeLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={noCodeLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     expect(container.querySelector('input[data-part="input"]')).toBeNull();
     expect(screen.queryByRole('button', { name: /afficher le code/i })).toBeNull();
@@ -257,7 +259,7 @@ describe('WaitingRoom — readonly PinInput + eye toggle (ADR-0027)', () => {
 describe('WaitingRoom — grid size picker', () => {
   it('reflects the current grid config as the pressed toggle', () => {
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     // Ark `ToggleGroup.Item` is a real `<button role="radio">` — the
     // pressed state surfaces via `aria-checked`, not the input `.checked`
@@ -273,7 +275,7 @@ describe('WaitingRoom — grid size picker', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={ownerSessionId}
+        currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
         {...noopProps}
         onSetGridConfig={onSetGridConfig}
       />,
@@ -293,7 +295,7 @@ describe('WaitingRoom — grid size picker', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={ownerSessionId}
+        currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
         {...noopProps}
         onSetGridConfig={onSetGridConfig}
       />,
@@ -306,7 +308,7 @@ describe('WaitingRoom — grid size picker', () => {
   it('reflects a 15×12 lobby config as the pressed toggle', () => {
     const landscape: Lobby = { ...baseLobby, gridConfig: { width: 15, height: 12 } };
     render(
-      <WaitingRoom lobby={landscape} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={landscape} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     expect(screen.getByRole('radio', { name: '15×12' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: '7×7' })).toHaveAttribute('aria-checked', 'false');
@@ -317,7 +319,7 @@ describe('WaitingRoom — grid size picker', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={ownerSessionId}
+        currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
         {...noopProps}
         onSetGridConfig={onSetGridConfig}
       />,
@@ -330,7 +332,7 @@ describe('WaitingRoom — grid size picker', () => {
   it('reflects a 28×20 lobby config as the pressed toggle', () => {
     const landscape: Lobby = { ...baseLobby, gridConfig: { width: 28, height: 20 } };
     render(
-      <WaitingRoom lobby={landscape} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={landscape} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     expect(screen.getByRole('radio', { name: '28×20' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: '15×12' })).toHaveAttribute('aria-checked', 'false');
@@ -343,7 +345,7 @@ describe('WaitingRoom — share URL button', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={ownerSessionId}
+        currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
         {...noopProps}
         onCopyShareUrl={onCopyShareUrl}
       />,
@@ -360,7 +362,7 @@ describe('WaitingRoom — share URL button', () => {
       render(
         <WaitingRoom
           lobby={baseLobby}
-          currentSessionId={ownerSessionId}
+          currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
           {...noopProps}
           onCopyShareUrl={() => Promise.resolve('copied')}
         />,
@@ -386,7 +388,7 @@ describe('WaitingRoom — share URL button', () => {
       render(
         <WaitingRoom
           lobby={baseLobby}
-          currentSessionId={ownerSessionId}
+          currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
           {...noopProps}
           onCopyShareUrl={() => Promise.resolve('shared')}
         />,
@@ -406,7 +408,7 @@ describe('WaitingRoom — Start button loading state', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={ownerSessionId}
+        currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
         {...noopProps}
         isStarting
       />,
@@ -421,7 +423,7 @@ describe('WaitingRoom — Start button loading state', () => {
 
   it('renders the default label and is enabled when isStarting is false (default)', () => {
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     const button = screen.getByRole('button', { name: /démarrer la partie/i });
     expect(button).toBeEnabled();
@@ -436,7 +438,7 @@ describe('WaitingRoom — code rotation (ADR-0029)', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={ownerSessionId}
+        currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
         {...noopProps}
         onRotateCode={() => {}}
       />,
@@ -448,7 +450,7 @@ describe('WaitingRoom — code rotation (ADR-0029)', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={peerSessionId}
+        currentSessionId={peerSessionId} currentPlayerId={peerPlayerId}
         {...noopProps}
         onRotateCode={() => {}}
       />,
@@ -461,7 +463,7 @@ describe('WaitingRoom — code rotation (ADR-0029)', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={ownerSessionId}
+        currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
         {...noopProps}
         onRotateCode={onRotateCode}
       />,
@@ -474,7 +476,7 @@ describe('WaitingRoom — code rotation (ADR-0029)', () => {
     render(
       <WaitingRoom
         lobby={baseLobby}
-        currentSessionId={ownerSessionId}
+        currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId}
         {...noopProps}
         onRotateCode={() => {}}
         isRotating
@@ -522,7 +524,7 @@ describe('WaitingRoom — touch-aware share control', () => {
   it('shows the copy icon and "Copier le lien" label on a non-touch device', () => {
     stubMatchMedia(false);
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     expect(screen.getByRole('button', { name: /copier le lien/i })).toBeInTheDocument();
     expect(screen.getByTestId('icon-copy')).toBeInTheDocument();
@@ -533,7 +535,7 @@ describe('WaitingRoom — touch-aware share control', () => {
     stubMatchMedia(true);
     stubNativeShareApi();
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     expect(screen.getByRole('button', { name: /partager le lien/i })).toBeInTheDocument();
     expect(screen.getByTestId('icon-share')).toBeInTheDocument();
@@ -543,7 +545,7 @@ describe('WaitingRoom — touch-aware share control', () => {
   it('shows the copy icon on a touch device that lacks navigator.share (finding: icon must match behavior)', () => {
     stubMatchMedia(true);
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     expect(screen.getByRole('button', { name: /copier le lien/i })).toBeInTheDocument();
     expect(screen.getByTestId('icon-copy')).toBeInTheDocument();
@@ -554,7 +556,7 @@ describe('WaitingRoom — touch-aware share control', () => {
 describe('WaitingRoom — player row alignment', () => {
   it('places the pseudonym before the badge group inside each row', () => {
     render(
-      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} {...noopProps} />,
+      <WaitingRoom lobby={baseLobby} currentSessionId={ownerSessionId} currentPlayerId={ownerPlayerId} {...noopProps} />,
     );
     const ownerRow = screen.getAllByTestId('player-row')[0]!;
     const nameEl = within(ownerRow).getByText(ownerPseudonym);

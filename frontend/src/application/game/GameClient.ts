@@ -7,6 +7,7 @@ import type {
   LobbyId,
   LobbyLifecycleState,
   Player,
+  PlayerId,
   Position,
   Pseudonym,
   GameSession,
@@ -125,8 +126,10 @@ export interface LobbyStateEvent {
   readonly game: GameSession | null;
 }
 
+// ADR-0066 (e): identity is `playerId`; `sessionId` stays on the wire (expand phase) as the transport connection but consumers key membership on `playerId`.
 export interface PlayerJoinedEvent {
   readonly type: 'playerJoined';
+  readonly playerId: PlayerId;
   readonly sessionId: SessionId;
   readonly pseudonym: Pseudonym;
   readonly joinedAt: Instant;
@@ -134,11 +137,13 @@ export interface PlayerJoinedEvent {
 
 export interface PlayerLeftEvent {
   readonly type: 'playerLeft';
+  readonly playerId: PlayerId;
   readonly sessionId: SessionId;
 }
 
 export interface PlayerRenamedEvent {
   readonly type: 'playerRenamed';
+  readonly playerId: PlayerId;
   readonly sessionId: SessionId;
   readonly newPseudonym: Pseudonym;
 }
@@ -232,8 +237,8 @@ export interface CursorBumpedEvent {
 export interface WordLockedEvent {
   readonly type: 'wordLocked';
   readonly positions: readonly Position[];
-  // ADR-0086: session that locked the word(s) in this frame.
-  readonly lockedBy: SessionId;
+  // ADR-0086 / ADR-0066 (e): account-scoped player that locked the word(s) in this frame.
+  readonly lockedBy: PlayerId;
   readonly lockedAt: Instant;
 }
 

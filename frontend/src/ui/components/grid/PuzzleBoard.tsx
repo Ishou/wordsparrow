@@ -11,7 +11,7 @@ import {
 } from 'react';
 import { css, cx } from 'styled-system/css';
 import type { Cell as DomainCell, Position, Puzzle } from '@/domain';
-import type { SessionId } from '@/domain/game';
+import type { PlayerId } from '@/domain/game';
 import { Cell, DefCell, type CellState } from '@/design-system';
 import { playerColorVars } from '@/ui/lib/playerColor';
 import { type CellHighlight, type GridNavigation } from './useGridNavigation';
@@ -87,8 +87,8 @@ function LetterSlot({
   readonly col: number;
   readonly entry: string;
   readonly validated: boolean;
-  // ADR-0086: session that locked this cell (co-op); tints the solved fill. Absent in solo.
-  readonly lockedBy?: SessionId;
+  // ADR-0086 / ADR-0066 (e): account-scoped player that locked this cell (co-op); tints the solved fill. Absent in solo.
+  readonly lockedBy?: PlayerId;
   // A completed word whose server validation is slow to respond — discreet jade ring until the verdict lands (gated upstream).
   readonly validating?: boolean;
   // On touch the cell is read-only so no editing caret/selection appears; letters arrive from the on-screen keyboard.
@@ -165,7 +165,7 @@ export interface PuzzleBoardProps {
   // Solved/locked cells, keyed `row,col`. A new key in this set fires the solve beat.
   readonly validatedPositions: ReadonlySet<string>;
   // ADR-0086: per-cell locking session keyed `row,col`; tints solved co-op cells. Solo omits.
-  readonly lockedByAt?: ReadonlyMap<string, SessionId>;
+  readonly lockedByAt?: ReadonlyMap<string, PlayerId>;
   // Delay-gated upstream; solo uses the auto-validation hook, coop uses locally-completed-not-yet-locked.
   readonly validatingPositions?: ReadonlySet<string>;
   // Seed letters for the uncontrolled inputs, keyed `row,col`.

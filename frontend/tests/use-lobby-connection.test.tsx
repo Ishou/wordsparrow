@@ -12,6 +12,7 @@ import type {
   Letter,
   Lobby,
   LobbyId,
+  PlayerId,
   Pseudonym,
   SessionId,
 } from '@/domain/game';
@@ -22,12 +23,15 @@ import {
 
 const sessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const otherSessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
+// Anon fixtures: playerId equals sessionId (ADR-0066 (e)).
+const currentPlayerId = sessionId as unknown as PlayerId;
+const otherPlayerId = otherSessionId as unknown as PlayerId;
 const pseudonym = 'Hôte' as Pseudonym;
 const lobbyId = '7gQ2xK9p' as LobbyId;
 
 const baseLobby: Lobby = {
   ownerSessionId: sessionId,
-  players: [{ sessionId, pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
+  players: [{ playerId: currentPlayerId, sessionId, pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
   state: 'WAITING',
   gridConfig: { width: 7, height: 7 },
   game: null,
@@ -133,6 +137,7 @@ const makeArgs = (
   initialLobby: baseLobby,
   gameClient,
   getSession: () => ({ sessionId, pseudonym }),
+  currentPlayerId,
   setPersistedPseudonym: vi.fn(),
   lobbyJoinCodeStash: { read: () => null, clear: () => {} },
   showToast: vi.fn(),
@@ -178,14 +183,14 @@ describe('useLobbyConnection lifecycle', () => {
     const lobbyWithoutSelf: Lobby = {
       ...baseLobby,
       ownerSessionId: otherSessionId,
-      players: [{ sessionId: otherSessionId, pseudonym: 'Autre' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
+      players: [{ playerId: otherPlayerId, sessionId: otherSessionId, pseudonym: 'Autre' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
     };
     const { result } = renderHook(() =>
       useLobbyConnection(makeArgs(gameClient, { initialLobby: lobbyWithoutSelf })),
     );
     expect(result.current.joinConfirmed).toBe(false);
     act(() => {
-      gameClient.dispatch({ type: 'playerJoined', sessionId, pseudonym, joinedAt: '2026-05-02T15:30:05Z' as Instant });
+      gameClient.dispatch({ type: 'playerJoined', playerId: currentPlayerId, sessionId, pseudonym, joinedAt: '2026-05-02T15:30:05Z' as Instant });
     });
     expect(result.current.joinConfirmed).toBe(true);
   });
@@ -196,7 +201,7 @@ describe('useLobbyConnection view reduction', () => {
     const gameClient = makeFakeGameClient();
     const { result } = renderHook(() => useLobbyConnection(makeArgs(gameClient)));
     act(() => {
-      gameClient.dispatch({ type: 'playerJoined', sessionId: otherSessionId, pseudonym: 'Joueur' as Pseudonym, joinedAt: '2026-05-02T15:30:01Z' as Instant });
+      gameClient.dispatch({ type: 'playerJoined', playerId: otherPlayerId, sessionId: otherSessionId, pseudonym: 'Joueur' as Pseudonym, joinedAt: '2026-05-02T15:30:01Z' as Instant });
     });
     expect(result.current.view.lobby.players).toHaveLength(2);
     act(() => {
@@ -335,7 +340,7 @@ describe('useLobbyConnection error + connection seams', () => {
     const lobbyWithoutSelf: Lobby = {
       ...baseLobby,
       ownerSessionId: otherSessionId,
-      players: [{ sessionId: otherSessionId, pseudonym: 'Autre' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
+      players: [{ playerId: otherPlayerId, sessionId: otherSessionId, pseudonym: 'Autre' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
     };
     renderHook(() => useLobbyConnection(makeArgs(gameClient, { onJoinDenied, initialLobby: lobbyWithoutSelf })));
     act(() => {
@@ -516,7 +521,7 @@ describe('useLobbyConnection error + connection seams', () => {
     const announce = vi.fn();
     renderHook(() => useLobbyConnection(makeArgs(gameClient, { announce })));
     act(() => {
-      gameClient.dispatch({ type: 'playerJoined', sessionId: otherSessionId, pseudonym: 'Joueur' as Pseudonym, joinedAt: '2026-05-02T15:30:05Z' as Instant });
+      gameClient.dispatch({ type: 'playerJoined', playerId: otherPlayerId, sessionId: otherSessionId, pseudonym: 'Joueur' as Pseudonym, joinedAt: '2026-05-02T15:30:05Z' as Instant });
     });
     expect(announce).toHaveBeenCalledWith('Joueur a rejoint la partie');
   });

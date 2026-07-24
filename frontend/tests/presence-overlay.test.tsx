@@ -5,7 +5,7 @@ import type {
   PresenceUpdatedEvent,
   Unsubscribe,
 } from '@/application/game';
-import type { Player, Pseudonym, SessionId } from '@/domain/game';
+import type { Player, PlayerId, Pseudonym, SessionId } from '@/domain/game';
 import type { Cell, Puzzle } from '@/domain';
 import { Grid } from '@/ui/components/grid';
 
@@ -41,8 +41,8 @@ const SESSION_BOB = 'aaaa1111-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
 const SESSION_LOCAL = 'bbbb2222-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
 
 const players: Map<SessionId, Player> = new Map([
-  [SESSION_ALICE, { sessionId: SESSION_ALICE, pseudonym: 'Alice' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' }],
-  [SESSION_BOB, { sessionId: SESSION_BOB, pseudonym: 'Bob' as Pseudonym, joinedAt: '2026-05-02T15:30:01Z' }],
+  [SESSION_ALICE, { playerId: SESSION_ALICE as unknown as PlayerId, sessionId: SESSION_ALICE, pseudonym: 'Alice' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' }],
+  [SESSION_BOB, { playerId: SESSION_BOB as unknown as PlayerId, sessionId: SESSION_BOB, pseudonym: 'Bob' as Pseudonym, joinedAt: '2026-05-02T15:30:01Z' }],
 ]);
 
 interface FakeStream {
@@ -134,8 +134,8 @@ describe('Presence visuals — single peer cursor', () => {
   it('drops a presence frame whose sessionId matches currentSessionId (own cursor not painted as remote)', () => {
     const stream = makeFakeStream();
     const localPlayers: Map<SessionId, Player> = new Map([
-      [SESSION_LOCAL, { sessionId: SESSION_LOCAL, pseudonym: 'Me' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' }],
-      [SESSION_ALICE, { sessionId: SESSION_ALICE, pseudonym: 'Alice' as Pseudonym, joinedAt: '2026-05-02T15:30:01Z' }],
+      [SESSION_LOCAL, { playerId: SESSION_LOCAL as unknown as PlayerId, sessionId: SESSION_LOCAL, pseudonym: 'Me' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' }],
+      [SESSION_ALICE, { playerId: SESSION_ALICE as unknown as PlayerId, sessionId: SESSION_ALICE, pseudonym: 'Alice' as Pseudonym, joinedAt: '2026-05-02T15:30:01Z' }],
     ]);
     const { container } = render(
       <Grid

@@ -4,6 +4,7 @@ import type {
   GamePuzzle,
   Instant,
   Lobby,
+  PlayerId,
   Pseudonym,
   SessionId,
 } from '@/domain/game';
@@ -11,10 +12,13 @@ import { type LobbyView, deriveDurationMs, reduceLobby } from '@/ui/components/l
 
 const ownerSessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const joinerSessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
+// Anon fixtures: playerId equals sessionId (ADR-0066 (e)).
+const ownerPlayerId = ownerSessionId as unknown as PlayerId;
+const joinerPlayerId = joinerSessionId as unknown as PlayerId;
 
 const baseLobby: Lobby = {
   ownerSessionId,
-  players: [{ sessionId: ownerSessionId, pseudonym: 'Hôte' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
+  players: [{ playerId: ownerPlayerId, sessionId: ownerSessionId, pseudonym: 'Hôte' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
   state: 'WAITING',
   gridConfig: { width: 7, height: 7 },
   game: null,
@@ -40,12 +44,13 @@ describe('reduceLobby', () => {
     const sequence: GameEvent[] = [
       {
         type: 'playerJoined',
+        playerId: joinerPlayerId,
         sessionId: joinerSessionId,
         pseudonym: 'Joueur' as Pseudonym,
         joinedAt: '2026-05-02T15:30:01Z' as Instant,
       },
       { type: 'gameStarted', puzzle, startedAt: '2026-05-02T15:31:00Z' as Instant },
-      { type: 'wordLocked', positions: [{ row: 0, column: 0 }], lockedBy: joinerSessionId, lockedAt: '2026-05-02T15:31:05Z' as Instant },
+      { type: 'wordLocked', positions: [{ row: 0, column: 0 }], lockedBy: joinerPlayerId, lockedAt: '2026-05-02T15:31:05Z' as Instant },
       { type: 'gameSolved', durationMs: 42_000, finalEntries: [] },
     ];
 
@@ -53,7 +58,7 @@ describe('reduceLobby', () => {
 
     expect(result.lobby.players).toHaveLength(2);
     expect(result.lobby.state).toBe('COMPLETED');
-    expect(result.lobby.game?.lockedPositions).toEqual([{ row: 0, column: 0, lockedBy: joinerSessionId }]);
+    expect(result.lobby.game?.lockedPositions).toEqual([{ row: 0, column: 0, lockedBy: joinerPlayerId }]);
     expect(result.durationMs).toBe(42_000);
     expect(result.modalDismissed).toBe(false);
   });
@@ -61,7 +66,7 @@ describe('reduceLobby', () => {
   it('replaces the entire snapshot on lobbyState', () => {
     const result = reduceLobby(baseView, {
       type: 'lobbyState',
-      players: [{ sessionId: joinerSessionId, pseudonym: 'Seul' as Pseudonym, joinedAt: '2026-05-02T15:30:02Z' as Instant }],
+      players: [{ playerId: joinerPlayerId, sessionId: joinerSessionId, pseudonym: 'Seul' as Pseudonym, joinedAt: '2026-05-02T15:30:02Z' as Instant }],
       ownerSessionId: joinerSessionId,
       state: 'WAITING',
       gridConfig: { width: 9, height: 9 },
@@ -77,12 +82,14 @@ describe('reduceLobby', () => {
   it('dedupes a repeated playerJoined for an existing sessionId', () => {
     const joined = reduceLobby(baseView, {
       type: 'playerJoined',
+      playerId: joinerPlayerId,
       sessionId: joinerSessionId,
       pseudonym: 'Joueur' as Pseudonym,
       joinedAt: '2026-05-02T15:30:01Z' as Instant,
     });
     const again = reduceLobby(joined, {
       type: 'playerJoined',
+      playerId: joinerPlayerId,
       sessionId: joinerSessionId,
       pseudonym: 'Joueur' as Pseudonym,
       joinedAt: '2026-05-02T15:30:01Z' as Instant,
@@ -94,17 +101,19 @@ describe('reduceLobby', () => {
   it('removes a player on playerLeft', () => {
     const joined = reduceLobby(baseView, {
       type: 'playerJoined',
+      playerId: joinerPlayerId,
       sessionId: joinerSessionId,
       pseudonym: 'Joueur' as Pseudonym,
       joinedAt: '2026-05-02T15:30:01Z' as Instant,
     });
-    const left = reduceLobby(joined, { type: 'playerLeft', sessionId: joinerSessionId });
+    const left = reduceLobby(joined, { type: 'playerLeft', playerId: joinerPlayerId, sessionId: joinerSessionId });
     expect(left.lobby.players.map((p) => p.sessionId)).toEqual([ownerSessionId]);
   });
 
   it('applies a rename to the matching player only', () => {
     const renamed = reduceLobby(baseView, {
       type: 'playerRenamed',
+      playerId: ownerPlayerId,
       sessionId: ownerSessionId,
       newPseudonym: 'Nouveau' as Pseudonym,
     });
@@ -120,18 +129,18 @@ describe('reduceLobby', () => {
     const once = reduceLobby(started, {
       type: 'wordLocked',
       positions: [{ row: 0, column: 0 }, { row: 0, column: 1 }],
-      lockedBy: ownerSessionId,
+      lockedBy: ownerPlayerId,
       lockedAt: '2026-05-02T15:31:05Z' as Instant,
     });
     const twice = reduceLobby(once, {
       type: 'wordLocked',
       positions: [{ row: 0, column: 1 }],
-      lockedBy: ownerSessionId,
+      lockedBy: ownerPlayerId,
       lockedAt: '2026-05-02T15:31:06Z' as Instant,
     });
     expect(twice.lobby.game?.lockedPositions).toEqual([
-      { row: 0, column: 0, lockedBy: ownerSessionId },
-      { row: 0, column: 1, lockedBy: ownerSessionId },
+      { row: 0, column: 0, lockedBy: ownerPlayerId },
+      { row: 0, column: 1, lockedBy: ownerPlayerId },
     ]);
   });
 
@@ -145,19 +154,19 @@ describe('reduceLobby', () => {
     const first = reduceLobby(started, {
       type: 'wordLocked',
       positions: [{ row: 0, column: 0 }],
-      lockedBy: ownerSessionId,
+      lockedBy: ownerPlayerId,
       lockedAt: '2026-05-02T15:31:05Z' as Instant,
     });
     // Joiner later locks PUIT down; the shared (0,0) is already locked and must NOT be re-attributed.
     const second = reduceLobby(first, {
       type: 'wordLocked',
       positions: [{ row: 0, column: 0 }, { row: 1, column: 0 }],
-      lockedBy: joinerSessionId,
+      lockedBy: joinerPlayerId,
       lockedAt: '2026-05-02T15:31:06Z' as Instant,
     });
     expect(second.lobby.game?.lockedPositions).toEqual([
-      { row: 0, column: 0, lockedBy: ownerSessionId },
-      { row: 1, column: 0, lockedBy: joinerSessionId },
+      { row: 0, column: 0, lockedBy: ownerPlayerId },
+      { row: 1, column: 0, lockedBy: joinerPlayerId },
     ]);
   });
 

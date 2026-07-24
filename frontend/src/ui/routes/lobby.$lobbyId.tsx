@@ -3,7 +3,7 @@
 import { createRoute, useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LobbyClientError } from '@/application/game';
-import type { Lobby, LobbyId, Pseudonym } from '@/domain/game';
+import type { Lobby, LobbyId, PlayerId, Pseudonym } from '@/domain/game';
 import { createLoaderRetryPolicy } from '@/ui/lib/loaderRetryPolicy';
 import { LoaderRetry } from '@/ui/v2/LoaderRetry';
 import { useOptionalAuth } from '@/ui/components/auth';
@@ -116,6 +116,11 @@ function V2LobbyPage() {
     lobbyLoaderRetryPolicy.reset();
   }, []);
 
+  // ADR-0066 (e): account-scoped identity — the authed `userId`, else the anon `sessionId`. Keys roster "you"/score/colour; the WS transport still uses `sessionId`.
+  const currentPlayerId = (
+    auth?.state.status === 'authed' ? auth.state.whoami.userId : getSession().sessionId
+  ) as PlayerId;
+
   const {
     view,
     connectionState,
@@ -136,6 +141,7 @@ function V2LobbyPage() {
     initialLobby,
     gameClient,
     getSession,
+    currentPlayerId,
     setPersistedPseudonym,
     lobbyJoinCodeStash,
     showToast,
@@ -152,8 +158,8 @@ function V2LobbyPage() {
 
   // Guarantee the local player's seat in the roster so their own pseudonym never blanks on rejoin (see withLocalPlayer / ADR-0018 §5).
   const rosterPlayers = useMemo(
-    () => withLocalPlayer(lobby.players, sessionId, localPseudonym),
-    [lobby.players, sessionId, localPseudonym],
+    () => withLocalPlayer(lobby.players, currentPlayerId, sessionId, localPseudonym),
+    [lobby.players, currentPlayerId, sessionId, localPseudonym],
   );
 
   // Coop win cue on the live IN_PROGRESS→COMPLETED transition (the screen unmounts into Résultats).
@@ -219,6 +225,7 @@ function V2LobbyPage() {
       <SalonScreen
         lobby={{ ...lobby, players: rosterPlayers }}
         sessionId={sessionId}
+        currentPlayerId={currentPlayerId}
         connectionState={connectionState}
         pseudonymError={pseudonymError}
         isStarting={isStarting}
@@ -242,6 +249,7 @@ function V2LobbyPage() {
           startedAt={lobby.game.startedAt}
           isCompleted={false}
           sessionId={sessionId}
+          currentPlayerId={currentPlayerId}
           players={rosterPlayers}
           playersBySessionId={playersBySessionId}
           initialEntries={initialEntries}

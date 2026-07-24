@@ -11,6 +11,7 @@ import type {
   Lobby,
   LobbyId,
   Player,
+  PlayerId,
   PresenceEntry,
   Pseudonym,
   SessionId,
@@ -32,6 +33,8 @@ export interface LobbyConnectionArgs {
   readonly initialLobby: Lobby;
   readonly gameClient: GameClient;
   readonly getSession: () => { readonly sessionId: SessionId; readonly pseudonym: Pseudonym };
+  // ADR-0066 (e): account-scoped local identity (`auth.whoami.userId ?? sessionId`); membership / own-join / rename-confirm key on this, not `sessionId`.
+  readonly currentPlayerId: PlayerId;
   readonly setPersistedPseudonym?: (pseudonym: Pseudonym) => void;
   readonly lobbyJoinCodeStash: {
     readonly read: (lobbyId: LobbyId) => string | null;
@@ -58,6 +61,8 @@ export interface LobbyConnection {
   readonly isRotating: boolean;
   // Local session identity — renderers mark the local row / gate owner controls without re-reading `getSession`.
   readonly sessionId: SessionId;
+  // ADR-0066 (e): account-scoped local identity — renderers mark the "you" row by this.
+  readonly currentPlayerId: PlayerId;
   // Derived render-ready values (memoised): UI-shape puzzle, initial entries seed, sessionId→Player lookup.
   readonly gridPuzzle: Puzzle | null;
   readonly initialEntries: ReadonlyArray<{ row: number; column: number; letter: string }>;
@@ -109,6 +114,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     initialLobby,
     gameClient,
     getSession,
+    currentPlayerId,
     setPersistedPseudonym,
     lobbyJoinCodeStash,
     showToast,
@@ -153,9 +159,8 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   // wrong-code banner takes over. Already-joined sessions (reconnect
   // path: sessionId is already in the snapshot's player list) start
   // confirmed because the server's reconnect branch never fails.
-  const initialSessionId = getSession().sessionId;
   const [joinConfirmed, setJoinConfirmed] = useState<boolean>(() =>
-    initialLobby.players.some((p) => p.sessionId === initialSessionId),
+    initialLobby.players.some((p) => p.playerId === currentPlayerId),
   );
   // Mirrored as a ref so the long-lived subscribe callback can branch
   // on whether the user has been admitted into the lobby yet — without
@@ -201,7 +206,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       if (event.type === 'error' &&
         event.errorType === 'https://bliss.example/errors/invalid-pseudonym') {
         setPseudonymError(event.detail ?? event.title);
-      } else if (event.type === 'playerRenamed' && event.sessionId === sessionId) {
+      } else if (event.type === 'playerRenamed' && event.playerId === currentPlayerId) {
         setPseudonymError(null);
         // Persist server-confirmed value; rejected pseudonym must never reach cache.
         setPersistedPseudonymRef.current?.(event.newPseudonym);
@@ -245,7 +250,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       // (Reconnect path: sessionId already in the snapshot's player
       // list, handled at mount time via the initial-state computation
       // above.)
-      if (event.type === 'playerJoined' && event.sessionId === sessionId) {
+      if (event.type === 'playerJoined' && event.playerId === currentPlayerId) {
         setJoinConfirmed(true);
         lobbyJoinCodeStash.clear(lobbyId);
       }
@@ -325,7 +330,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       unsubscribeConnection();
       gameClient.disconnect();
     };
-  }, [gameClient, lobbyId, getSession, lobbyJoinCodeStash, showToast, announce]);
+  }, [gameClient, lobbyId, getSession, currentPlayerId, lobbyJoinCodeStash, showToast, announce]);
 
   // Terminal server verdict (lobby gone / seat lost): stop retrying and drop the now-wrong reconnection toast.
   useEffect(() => {
@@ -558,6 +563,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     isStarting,
     isRotating,
     sessionId,
+    currentPlayerId,
     gridPuzzle,
     initialEntries,
     playersBySessionId,

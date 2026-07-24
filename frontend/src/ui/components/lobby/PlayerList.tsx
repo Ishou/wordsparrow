@@ -1,5 +1,5 @@
 import { css } from 'styled-system/css';
-import type { Lobby, SessionId } from '@/domain/game';
+import type { Lobby, PlayerId, SessionId } from '@/domain/game';
 import { t } from '@/ui/i18n';
 import { playerColorVars, playerInitial } from '@/ui/lib/playerColor';
 
@@ -20,7 +20,8 @@ export const MAX_PLAYERS = 8;
 export interface PlayerListProps {
   readonly players: Lobby['players'];
   readonly ownerSessionId: SessionId;
-  readonly currentSessionId: SessionId;
+  // ADR-0066 (e): account-scoped local identity — the "you" row / colour / key derive from this; ownership + presence stay on `sessionId`.
+  readonly currentPlayerId: PlayerId;
   /**
    * `stacked` — vertical list with "Place libre" placeholder rows
    * (waiting-room layout). `inline` — horizontal pill row, no
@@ -156,14 +157,14 @@ const styles = {
 };
 
 export function PlayerList({
-  players, ownerSessionId, currentSessionId, variant,
+  players, ownerSessionId, currentPlayerId, variant,
   typingSessionIds, idleSessionIds, disconnectingSessionIds,
 }: PlayerListProps): React.ReactElement {
   if (variant === 'inline') {
     return (
       <ul className={styles.inlineList} aria-label={t('lobby.playerList.aria.list')}>
         {players.map((player) => {
-          const isYou = player.sessionId === currentSessionId;
+          const isYou = player.playerId === currentPlayerId;
           const isTyping = typingSessionIds?.has(player.sessionId) ?? false;
           const isIdle = idleSessionIds?.has(player.sessionId) ?? false;
           const isDisconnecting =
@@ -180,9 +181,9 @@ export function PlayerList({
             .join(' — ');
           return (
             <li
-              key={player.sessionId}
+              key={player.playerId}
               className={styles.inlineRow}
-              style={playerColorVars(player.sessionId)}
+              style={playerColorVars(player.playerId)}
               data-testid="player-row"
               data-session-id={player.sessionId}
               data-you={isYou ? 'true' : undefined}
@@ -214,15 +215,15 @@ export function PlayerList({
     <ul className={styles.stackedList} aria-label={t('lobby.playerList.aria.list')}>
       {players.map((player) => (
         <li
-          key={player.sessionId}
+          key={player.playerId}
           className={styles.stackedRow}
-          style={playerColorVars(player.sessionId)}
+          style={playerColorVars(player.playerId)}
           data-testid="player-row"
           data-session-id={player.sessionId}
         >
           <span className={styles.stackedPseudonym}>{player.pseudonym}</span>
           <span className={styles.badgeGroup}>
-            {player.sessionId === currentSessionId
+            {player.playerId === currentPlayerId
               ? <span className={styles.badge}>{t('lobby.playerList.badge.you')}</span> : null}
             {player.sessionId === ownerSessionId
               ? <span className={styles.ownerBadge}>{t('lobby.playerList.badge.owner')}</span> : null}

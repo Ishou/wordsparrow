@@ -15,6 +15,8 @@
 // callers cannot pass a `LobbyId` where a `SessionId` is required.
 export type LobbyId = string & { readonly __brand: 'LobbyId' };
 export type SessionId = string & { readonly __brand: 'SessionId' };
+// ADR-0066 (e): account-scoped live identity — the authed `userId`, or the anon `sessionId` when unauthenticated.
+export type PlayerId = string & { readonly __brand: 'PlayerId' };
 export type Pseudonym = string & { readonly __brand: 'Pseudonym' };
 export type Letter = string & { readonly __brand: 'Letter' };
 
@@ -39,11 +41,11 @@ export interface Position {
   readonly column: number;
 }
 
-// ADR-0086: locked cell plus the session that first locked it (first-writer-wins on crossings).
+// ADR-0086: locked cell plus the player that first locked it (first-writer-wins on crossings). ADR-0066 (e): `lockedBy` is account-scoped.
 export interface LockedCell {
   readonly row: number;
   readonly column: number;
-  readonly lockedBy: SessionId;
+  readonly lockedBy: PlayerId;
 }
 
 export interface GridConfig {
@@ -51,7 +53,9 @@ export interface GridConfig {
   readonly height: number;
 }
 
+// ADR-0066 (e): identity is `playerId` (account-scoped); `sessionId` is the transport connection.
 export interface Player {
+  readonly playerId: PlayerId;
   readonly sessionId: SessionId;
   readonly pseudonym: Pseudonym;
   readonly joinedAt: Instant;

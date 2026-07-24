@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
 import type { LobbyClient } from '@/application/game';
-import type { Lobby, LobbyId, Player, Pseudonym, SessionId } from '@/domain/game';
+import type { Lobby, LobbyId, Player, PlayerId, Pseudonym, SessionId } from '@/domain/game';
 import { useCreateOrResume } from '@/ui/components/lobby/useCreateOrResume';
 import { OwnedGameModal } from '@/ui/v2/multiplayer/OwnedGameModal';
 import { expectAxeClean } from '@/test/a11y';
@@ -18,9 +18,11 @@ const pseudonym = 'Joueur 1234' as Pseudonym;
 const ownedId = '7gQ2xK9p' as LobbyId;
 const freshId = '8hR3yL0q' as LobbyId;
 
-const self: Player = { sessionId, pseudonym, joinedAt: '2026-06-27T15:30:00Z' };
+const self: Player = { playerId: sessionId as unknown as PlayerId, sessionId, pseudonym, joinedAt: '2026-06-27T15:30:00Z' };
+const peerSessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
 const peer: Player = {
-  sessionId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId,
+  playerId: peerSessionId as unknown as PlayerId,
+  sessionId: peerSessionId,
   pseudonym: 'Amie' as Pseudonym,
   joinedAt: '2026-06-27T15:30:01Z',
 };
