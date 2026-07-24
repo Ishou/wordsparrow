@@ -211,6 +211,26 @@ describe('useLobbyConnection lifecycle', () => {
     });
     expect(result.current.joinConfirmed).toBe(true);
   });
+
+  it('ADR-0066 (e): flips joinConfirmed once currentPlayerId resolves post-mount to an already-seated account (authed deep-link race)', () => {
+    const gameClient = makeFakeGameClient();
+    const accountPlayerId = '11111111-1111-1111-1111-111111111111' as unknown as PlayerId;
+    // The loader snapshot already lists the account's seat (a prior WS join), but the first render — before AuthProvider's whoami() settles — still computes currentPlayerId as the anon sessionId, so the mount-time membership check misses it. The server's reconnect branch never re-emits playerJoined (LobbyUseCases.kt), so nothing else can flip this.
+    const lobbyWithAccountSeat: Lobby = {
+      ...baseLobby,
+      players: [{ playerId: accountPlayerId, sessionId, pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
+    };
+    const baseArgs = makeArgs(gameClient, { initialLobby: lobbyWithAccountSeat });
+    const { result, rerender } = renderHook(
+      ({ playerId }) => useLobbyConnection({ ...baseArgs, currentPlayerId: playerId }),
+      { initialProps: { playerId: currentPlayerId } },
+    );
+    expect(result.current.joinConfirmed).toBe(false);
+    act(() => {
+      rerender({ playerId: accountPlayerId });
+    });
+    expect(result.current.joinConfirmed).toBe(true);
+  });
 });
 
 describe('useLobbyConnection view reduction', () => {

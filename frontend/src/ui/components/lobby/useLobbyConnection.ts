@@ -157,11 +157,18 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   // joiner whose code the server is about to reject doesn't see the
   // lobby contents (player list with the owner) flash before the
   // wrong-code banner takes over. Already-joined sessions (reconnect
-  // path: sessionId is already in the snapshot's player list) start
+  // path: playerId is already in the snapshot's player list) start
   // confirmed because the server's reconnect branch never fails.
   const [joinConfirmed, setJoinConfirmed] = useState<boolean>(() =>
     initialLobby.players.some((p) => p.playerId === currentPlayerId),
   );
+  // currentPlayerId resolves async post-mount (AuthProvider's whoami()); re-check membership until it flips true so an already-joined authed deep-link doesn't strand on the placeholder.
+  useEffect(() => {
+    if (joinConfirmed) return;
+    if (view.lobby.players.some((p) => p.playerId === currentPlayerId)) {
+      setJoinConfirmed(true);
+    }
+  }, [joinConfirmed, view.lobby.players, currentPlayerId]);
   // Mirrored as a ref so the long-lived subscribe callback can branch
   // on whether the user has been admitted into the lobby yet — without
   // re-attaching the listener on every state change. Pre-join error
