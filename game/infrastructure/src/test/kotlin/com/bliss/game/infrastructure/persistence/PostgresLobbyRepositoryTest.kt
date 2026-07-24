@@ -682,7 +682,7 @@ class PostgresLobbyRepositoryTest {
 
             assertThat(result.map { it.id }).containsExactly(ownedButLeft.id)
             assertThat(result[0].ownerSessionId).isEqualTo(sessionA)
-            assertThat(result[0].players.keys).containsOnly(sessionB)
+            assertThat(result[0].players.keys).containsOnly(PlayerId(sessionB.value))
         }
 
     @Test
@@ -783,7 +783,7 @@ class PostgresLobbyRepositoryTest {
             assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
             val returned = (outcome as RelinquishOutcome.Relinquished).lobby
             assertThat(returned.ownerUserId).isNull()
-            assertThat(returned.players.keys).containsOnly(sessionB)
+            assertThat(returned.players.keys).containsOnly(PlayerId(sessionB.value))
             // Reload from Postgres proves the owner_user_id clear survived (upsert would have kept it).
             val reloaded = repo.findById(withOther.id)!!
             assertThat(reloaded.ownerUserId).isNull()
@@ -853,7 +853,7 @@ class PostgresLobbyRepositoryTest {
             assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
             val returned = (outcome as RelinquishOutcome.Relinquished).lobby
             assertThat(returned.ownerUserId).isNull()
-            assertThat(returned.players.keys).containsOnly(sessionB)
+            assertThat(returned.players.keys).containsOnly(PlayerId(sessionB.value))
             val reloaded = repo.findById(withOther.id)!!
             assertThat(reloaded.ownerUserId).isNull()
             assertThat(reloaded.lastActivityAt).isEqualTo(now)
@@ -1018,7 +1018,7 @@ class PostgresLobbyRepositoryTest {
             // Vacated to ownerless: owner_user_id cleared, owner_session_id points at the anon sentinel.
             assertThat(after!!.ownerUserId).isNull()
             assertThat(after.ownerSessionId).isEqualTo(SessionId.ANON)
-            assertThat(after.players.keys.toList()).containsOnly(sessionB, sessionC)
+            assertThat(after.players.keys.toList()).containsOnly(PlayerId(sessionB.value), PlayerId(sessionC.value))
             // After anonymisation, every entry's sessionId is the ANON sentinel.
             after.game!!.entries.values.forEach {
                 assertThat(it.sessionId).isEqualTo(SessionId.ANON)
@@ -1087,7 +1087,7 @@ class PostgresLobbyRepositoryTest {
             val after = repo.findById(withGuest.id)
             assertThat(after).isNotNull()
             assertThat(after!!.ownerSessionId).isEqualTo(sessionA) // unchanged
-            assertThat(after.players.keys.toList()).containsOnly(sessionA)
+            assertThat(after.players.keys.toList()).containsOnly(PlayerId(sessionA.value))
             val anonEntry = after.game!!.entries[Position(0, 1)]
             assertThat(anonEntry).isNotNull()
             assertThat(anonEntry!!.sessionId).isEqualTo(SessionId.ANON)
@@ -1359,7 +1359,7 @@ class PostgresLobbyRepositoryTest {
 
             val loaded = repo.findById(lobby.id)
             assertThat(loaded).isNotNull()
-            assertThat(loaded!!.players.keys).containsAtLeast(sessionA, sessionB, sessionC)
+            assertThat(loaded!!.players.keys).containsAtLeast(PlayerId(sessionA.value), PlayerId(sessionB.value), PlayerId(sessionC.value))
             assertThat(loaded.players).hasSize(3)
         }
     }
