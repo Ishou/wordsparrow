@@ -155,13 +155,14 @@ class JoinLobbyUseCase(
             rebindOwner: Boolean,
         ): Lobby {
             val seatPid = PlayerId.of(seatUserId, sessionId)
-            val alreadySeated = lobby.hasJoined(seatPid)
+            val existing = lobby.players[seatPid]
             // Capacity is gated only on a genuinely new seat; re-seating your own account is a net-zero no-op.
-            if (!alreadySeated && lobby.players.size >= Lobby.MAX_PLAYERS) return lobby
+            if (existing == null && lobby.players.size >= Lobby.MAX_PLAYERS) return lobby
             val now = clock.now()
             val nextPlayers =
-                if (alreadySeated) {
-                    lobby.players
+                if (existing != null) {
+                    // Second device of the same account: no new row, but point the seat's transport session at the joining device so it (not only the first device) can rename/leave (ADR-0066 (e)).
+                    lobby.players + (seatPid to existing.copy(sessionId = sessionId))
                 } else {
                     // An authed socket seats under its server-verified account name, never the client frame (ADR-0066 (b) 2026-07-14 amendment); anon joins keep the client pseudonym.
                     val player = Player(sessionId, verifiedPseudonym ?: pseudonym, now, userId = seatUserId)
@@ -180,8 +181,12 @@ class JoinLobbyUseCase(
                 when {
                     // Authed owner (re)join, possibly from a new device: rebind ownerSessionId even when the seat exists (ADR-0066 (b)); seat is idempotent by pid.
                     userId != null && userId == lobby.ownerUserId -> seat(lobby, seatUserId = userId, rebindOwner = true)
-                    // Reconnect / same-account second device: seat already present under pid. Code is intentionally NOT checked here (ADR-0027).
-                    lobby.hasJoined(pid) -> lobby.touched(clock.now())
+                    // Reconnect / same-account second device: seat already present under pid; re-point its transport session at the joining device so this device can rename/leave (ADR-0066 (e)). Code is intentionally NOT checked here (ADR-0027).
+                    lobby.hasJoined(pid) ->
+                        lobby.copy(
+                            players = lobby.players + (pid to lobby.players.getValue(pid).copy(sessionId = sessionId)),
+                            lastActivityAt = clock.now(),
+                        )
                     // Owner re-entry bypass (ADR-0039): auth by ownerSessionId match. Seat under the owner's account identity (ownerUserId) so an authed owner's cookieless reconnect maps to their existing seat, not a duplicate.
                     lobby.isOwner(sessionId) -> seat(lobby, seatUserId = lobby.ownerUserId, rebindOwner = false)
                     code != lobby.code.value -> {

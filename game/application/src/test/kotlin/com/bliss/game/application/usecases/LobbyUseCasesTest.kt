@@ -391,6 +391,28 @@ class LobbyUseCasesTest {
             assertThat(out.events).isEmpty()
         }
 
+    // ADR-0066 (e): the same account's second device re-points the seat's transport session, so THAT device can rename and leave.
+    @Test
+    fun `authed second device can rename and leave via its own session`() =
+        runTest {
+            val h = harness()
+            val created = h.create(sessionA, alice, userId = userA).value
+            val deviceA = validSession(30)
+            val deviceB = validSession(31)
+            h.joinWithUserId(created.id, deviceA, bob, code = created.code.value, userId = userB).requireSuccess()
+            h.joinWithUserId(created.id, deviceB, bob, code = null, userId = userB).requireSuccess()
+
+            val renamed = h.rename(created.id, deviceB, Pseudonym("Bobby")).requireSuccess()
+            assertThat(
+                renamed.value.players
+                    .getValue(PlayerId(userB.value))
+                    .pseudonym,
+            ).isEqualTo(Pseudonym("Bobby"))
+
+            val afterLeave = h.leave(created.id, deviceB).requireSuccess()
+            assertThat(afterLeave.value!!.players.keys).isEqualTo(setOf(PlayerId(userA.value)))
+        }
+
     @Test
     fun `JoinLobby anon caller with wrong code is still WrongCode (userId null regression guard)`() =
         runTest {
