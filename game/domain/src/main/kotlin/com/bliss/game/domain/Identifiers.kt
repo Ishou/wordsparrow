@@ -107,6 +107,25 @@ value class UserId(
     }
 }
 
+/** Stable per-account live-game identity (ADR-0066 (e)): [UserId] when authed, else the device [SessionId]. */
+@JvmInline
+value class PlayerId(
+    val value: String,
+) {
+    init {
+        require(USER_ID_REGEX.matches(value)) {
+            "PlayerId must be a UUID string, was '$value'"
+        }
+    }
+
+    companion object {
+        fun of(
+            userId: UserId?,
+            sessionId: SessionId,
+        ): PlayerId = PlayerId(userId?.value ?: sessionId.value)
+    }
+}
+
 @JvmInline
 value class Pseudonym(
     val value: String,

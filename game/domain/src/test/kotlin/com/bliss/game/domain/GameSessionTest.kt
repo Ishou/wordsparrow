@@ -90,7 +90,7 @@ class GameSessionTest {
 
     @Test
     fun `lockedPositions roundtrips when set`() {
-        val locks = mapOf(pPos to finder, aPos to finder)
+        val locks = mapOf(pPos to PlayerId(finder.value), aPos to PlayerId(finder.value))
         val s =
             GameSession(
                 puzzle = gameSession().puzzle,

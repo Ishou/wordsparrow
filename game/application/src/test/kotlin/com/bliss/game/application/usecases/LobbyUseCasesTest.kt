@@ -2,12 +2,15 @@ package com.bliss.game.application.usecases
 
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import assertk.assertions.matches
 import com.bliss.game.application.ports.LobbyEvent
 import com.bliss.game.application.usecases.Samples.aPos
@@ -25,6 +28,7 @@ import com.bliss.game.domain.Lobby
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Player
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -44,7 +48,7 @@ class LobbyUseCasesTest {
 
             assertThat(result.value.state).isEqualTo(LobbyLifecycleState.WAITING)
             assertThat(result.value.ownerSessionId).isEqualTo(sessionA)
-            assertThat(result.value.players.keys).isEqualTo(setOf(sessionA))
+            assertThat(result.value.players.keys).isEqualTo(setOf(PlayerId(sessionA.value)))
             assertThat(result.events).hasSize(1)
             assertThat(result.events[0]).isInstanceOf(LobbyEvent.PlayerJoined::class)
         }
@@ -161,7 +165,7 @@ class LobbyUseCasesTest {
 
             val out = h.join(lobby.id, sessionB, bob).requireSuccess()
 
-            assertThat(out.value.players.keys).isEqualTo(setOf(sessionA, sessionB))
+            assertThat(out.value.players.keys).isEqualTo(setOf(PlayerId(sessionA.value), PlayerId(sessionB.value)))
             assertThat(out.events).hasSize(1)
         }
 
@@ -174,7 +178,7 @@ class LobbyUseCasesTest {
             h.clock.advance(Duration.ofSeconds(15))
             val second = h.join(lobby.id, sessionB, bob).requireSuccess()
 
-            assertThat(second.value.players[sessionB]).isEqualTo(first.value.players[sessionB])
+            assertThat(second.value.seatBySession(sessionB)).isEqualTo(first.value.seatBySession(sessionB))
             assertThat(second.events).hasSize(0)
         }
 
@@ -232,7 +236,7 @@ class LobbyUseCasesTest {
             val h = harness()
             val lobby = h.create(sessionA, alice).value
             val out = h.joinWithCode(lobby.id, sessionB, bob, code = lobby.code.value).requireSuccess()
-            assertThat(out.value.players.keys).isEqualTo(setOf(sessionA, sessionB))
+            assertThat(out.value.players.keys).isEqualTo(setOf(PlayerId(sessionA.value), PlayerId(sessionB.value)))
         }
 
     // Reconnect bypass — the existing reconnect test (`JoinLobby is idempotent
@@ -250,7 +254,7 @@ class LobbyUseCasesTest {
             h.clock.advance(Duration.ofSeconds(15))
             // Reconnect with null code — must still succeed (idempotent path).
             val second = h.joinWithCode(lobby.id, sessionB, bob, code = null).requireSuccess()
-            assertThat(second.value.players[sessionB]).isNotNull()
+            assertThat(second.value.seatBySession(sessionB)).isNotNull()
             assertThat(second.events).hasSize(0)
         }
 
@@ -265,7 +269,7 @@ class LobbyUseCasesTest {
             // refactor that mistakenly applies the code check before the
             // reconnect branch.
             val out = h.joinWithCode(lobby.id, sessionB, bob, code = "WRONG2").requireSuccess()
-            assertThat(out.value.players[sessionB]).isNotNull()
+            assertThat(out.value.seatBySession(sessionB)).isNotNull()
             assertThat(out.events).hasSize(0)
         }
 
@@ -276,11 +280,11 @@ class LobbyUseCasesTest {
             // Authed owner: leaving keeps the (owned) lobby alive so the owner can re-enter; an anonymous solo owner would destroy it.
             val lobby = h.create(sessionA, alice, userA).value
             h.start(lobby.id, sessionA).requireSuccess()
-            h.leave(lobby.id, sessionA).requireSuccess()
+            h.leave(lobby.id, sessionA, userId = userA).requireSuccess()
             // Owner is now absent from players but still the owner.
             val out = h.joinWithCode(lobby.id, sessionA, alice, code = null).requireSuccess()
             assertThat(out.value.ownerSessionId).isEqualTo(sessionA)
-            assertThat(out.value.players[sessionA]).isNotNull()
+            assertThat(out.value.seatBySession(sessionA)).isNotNull()
             assertThat(out.events).hasSize(1)
             assertThat(out.events[0]).isInstanceOf(LobbyEvent.PlayerJoined::class)
         }
@@ -291,9 +295,9 @@ class LobbyUseCasesTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
             h.start(lobby.id, sessionA).requireSuccess()
-            h.leave(lobby.id, sessionA).requireSuccess()
+            h.leave(lobby.id, sessionA, userId = userA).requireSuccess()
             val out = h.joinWithCode(lobby.id, sessionA, alice, code = "WRONG2").requireSuccess()
-            assertThat(out.value.players[sessionA]).isNotNull()
+            assertThat(out.value.seatBySession(sessionA)).isNotNull()
         }
 
     @Test
@@ -310,7 +314,7 @@ class LobbyUseCasesTest {
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
-            h.leave(lobby.id, sessionA).requireSuccess()
+            h.leave(lobby.id, sessionA, userId = userA).requireSuccess()
             // Fill all 8 slots with non-owner sessions.
             repeat(8) { i ->
                 h.join(lobby.id, validSession(i), Pseudonym("P$i")).requireSuccess()
@@ -326,56 +330,55 @@ class LobbyUseCasesTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userId = userA).value
             // Owner's original seat is gone (leave-grace), but ownerUserId survives.
-            h.leave(lobby.id, sessionA).requireSuccess()
+            h.leave(lobby.id, sessionA, userId = userA).requireSuccess()
             val newDevice = validSession(20)
 
             val out = h.joinWithUserId(lobby.id, newDevice, alice, code = null, userId = userA).requireSuccess()
 
             assertThat(out.value.ownerSessionId).isEqualTo(newDevice)
-            assertThat(out.value.players[newDevice]?.userId).isEqualTo(userA)
+            assertThat(out.value.seatBySession(newDevice)?.userId).isEqualTo(userA)
             assertThat(out.events).hasSize(1)
             assertThat(out.events[0]).isInstanceOf(LobbyEvent.PlayerJoined::class)
             // The rebind makes the new device the owner, so owner-gated actions work verbatim.
             h.rotate(lobby.id, newDevice).requireSuccess()
         }
 
+    // ADR-0066 (e): a second device of an already-seated account maps to the same PlayerId, so cross-device rejoin is an idempotent no-op on the roster (no seat-move, no duplicate PlayerJoined).
     @Test
-    fun `JoinLobby authed member rejoins cross-device by userId without code, ownership unchanged`() =
+    fun `JoinLobby second device of same account is an idempotent no-op on the roster`() =
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userId = userA).value
-            // A seat carries userB under an old session (e.g. a prior seat-rebind).
-            val oldMemberSession = validSession(30)
+            val memberSession = validSession(30)
             h.repo.save(
                 lobby.copy(
-                    players = lobby.players + (oldMemberSession to Player(oldMemberSession, bob, h.clock.now(), userId = userB)),
+                    players = lobby.players + Player(memberSession, bob, h.clock.now(), userId = userB).let { it.playerId to it },
                 ),
             )
             val newDevice = validSession(31)
 
             val out = h.joinWithUserId(lobby.id, newDevice, bob, code = null, userId = userB).requireSuccess()
 
-            assertThat(out.value.players[newDevice]?.userId).isEqualTo(userB)
-            assertThat(out.value.players[oldMemberSession]).isNull()
-            assertThat(out.value.players).hasSize(2)
+            assertThat(out.value.players.keys).containsExactlyInAnyOrder(PlayerId(userA.value), PlayerId(userB.value))
+            assertThat(out.value.hasJoined(PlayerId.of(userB, newDevice))).isTrue()
             assertThat(out.value.ownerSessionId).isEqualTo(sessionA)
-            assertThat(out.events).hasSize(1)
+            assertThat(out.events).isEmpty()
         }
 
-    // ADR-0066 (b): rejoining your OWN stale seat on a full lobby is a net-zero swap, so it must be admitted, not rejected as LobbyFull.
+    // ADR-0066 (e): a second device of an already-seated account on a full lobby is an idempotent reconnect, not LobbyFull.
     @Test
-    fun `JoinLobby authed member rejoins a full lobby by replacing their own stale seat`() =
+    fun `JoinLobby second device of a seated account on a full lobby is admitted as a reconnect`() =
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userId = userA).value
-            val oldMemberSession = validSession(30)
-            // Fill to MAX_PLAYERS: owner + 6 anon + the caller's own stale userB seat under an old session.
-            val anon = (1..6).associate { i -> validSession(i) to Player(validSession(i), Pseudonym("P$i"), h.clock.now()) }
+            val memberSession = validSession(30)
+            // Fill to MAX_PLAYERS: owner + 6 anon + the userB member seat.
+            val anon = (1..6).associate { i -> Player(validSession(i), Pseudonym("P$i"), h.clock.now()).let { p -> p.playerId to p } }
             h.repo.save(
                 lobby.copy(
                     players =
                         lobby.players + anon +
-                            (oldMemberSession to Player(oldMemberSession, bob, h.clock.now(), userId = userB)),
+                            Player(memberSession, bob, h.clock.now(), userId = userB).let { it.playerId to it },
                 ),
             )
             val newDevice = validSession(31)
@@ -383,10 +386,53 @@ class LobbyUseCasesTest {
             val out = h.joinWithUserId(lobby.id, newDevice, bob, code = null, userId = userB).requireSuccess()
 
             assertThat(out.value.players).hasSize(Lobby.MAX_PLAYERS)
-            assertThat(out.value.players[oldMemberSession]).isNull()
-            assertThat(out.value.players[newDevice]?.userId).isEqualTo(userB)
+            assertThat(out.value.hasJoined(PlayerId.of(userB, newDevice))).isTrue()
             assertThat(out.value.ownerSessionId).isEqualTo(sessionA)
-            assertThat(out.events).hasSize(1)
+            assertThat(out.events).isEmpty()
+        }
+
+    // ADR-0066 (e): the same account's second device re-points the seat's transport session, so THAT device can rename and leave.
+    @Test
+    fun `authed second device can rename and leave via its own session`() =
+        runTest {
+            val h = harness()
+            val created = h.create(sessionA, alice, userId = userA).value
+            val deviceA = validSession(30)
+            val deviceB = validSession(31)
+            h.joinWithUserId(created.id, deviceA, bob, code = created.code.value, userId = userB).requireSuccess()
+            h.joinWithUserId(created.id, deviceB, bob, code = null, userId = userB).requireSuccess()
+
+            val renamed = h.rename(created.id, deviceB, Pseudonym("Bobby"), userId = userB).requireSuccess()
+            assertThat(
+                renamed.value.players
+                    .getValue(PlayerId(userB.value))
+                    .pseudonym,
+            ).isEqualTo(Pseudonym("Bobby"))
+
+            val afterLeave = h.leave(created.id, deviceB, userId = userB).requireSuccess()
+            assertThat(afterLeave.value!!.players.keys).isEqualTo(setOf(PlayerId(userA.value)))
+        }
+
+    // ADR-0066 (e): the first device of a two-device account must still resolve after a second device re-points the shared seat's sessionId.
+    @Test
+    fun `authed first device can still rename and leave after a second device joins`() =
+        runTest {
+            val h = harness()
+            val created = h.create(sessionA, alice, userId = userA).value
+            val deviceA = validSession(30)
+            val deviceB = validSession(31)
+            h.joinWithUserId(created.id, deviceA, bob, code = created.code.value, userId = userB).requireSuccess()
+            h.joinWithUserId(created.id, deviceB, bob, code = null, userId = userB).requireSuccess()
+
+            val renamed = h.rename(created.id, deviceA, Pseudonym("Bobby"), userId = userB).requireSuccess()
+            assertThat(
+                renamed.value.players
+                    .getValue(PlayerId(userB.value))
+                    .pseudonym,
+            ).isEqualTo(Pseudonym("Bobby"))
+
+            val afterLeave = h.leave(created.id, deviceA, userId = userB).requireSuccess()
+            assertThat(afterLeave.value!!.players.keys).isEqualTo(setOf(PlayerId(userA.value)))
         }
 
     @Test
@@ -427,7 +473,7 @@ class LobbyUseCasesTest {
                         verifiedPseudonym = Pseudonym("BobCompte"),
                     ).requireSuccess()
 
-            assertThat(out.value.players[sessionB]?.pseudonym).isEqualTo(Pseudonym("BobCompte"))
+            assertThat(out.value.seatBySession(sessionB)?.pseudonym).isEqualTo(Pseudonym("BobCompte"))
         }
 
     // Prod bug: owner re-entry after ADR-0018 §5 grace must not overwrite the account name with the stale guest name.
@@ -436,7 +482,7 @@ class LobbyUseCasesTest {
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userId = userA).value
-            h.leave(lobby.id, sessionA).requireSuccess()
+            h.leave(lobby.id, sessionA, userId = userA).requireSuccess()
 
             val out =
                 h
@@ -449,7 +495,7 @@ class LobbyUseCasesTest {
                         verifiedPseudonym = alice,
                     ).requireSuccess()
 
-            assertThat(out.value.players[sessionA]?.pseudonym).isEqualTo(alice)
+            assertThat(out.value.seatBySession(sessionA)?.pseudonym).isEqualTo(alice)
             assertThat(out.events[0]).isInstanceOf(LobbyEvent.PlayerJoined::class)
         }
 
@@ -470,7 +516,7 @@ class LobbyUseCasesTest {
                         verifiedPseudonym = null,
                     ).requireSuccess()
 
-            assertThat(out.value.players[sessionB]?.pseudonym).isEqualTo(bob)
+            assertThat(out.value.seatBySession(sessionB)?.pseudonym).isEqualTo(bob)
         }
 
     // ADR-0029 — owner-only rotation. Tests verify the owner gate, the
@@ -539,10 +585,10 @@ class LobbyUseCasesTest {
             h.join(lobby.id, sessionB, bob).requireSuccess()
             h.rotate(lobby.id, sessionA).requireSuccess()
             val state = h.repo.findById(lobby.id)!!
-            assertThat(state.players.keys).isEqualTo(setOf(sessionA, sessionB))
+            assertThat(state.players.keys).isEqualTo(setOf(PlayerId(sessionA.value), PlayerId(sessionB.value)))
             // sessionB is already a member; reconnect bypasses the code check.
             val reconnect = h.joinWithCode(lobby.id, sessionB, bob, code = null).requireSuccess()
-            assertThat(reconnect.value.players[sessionB]).isNotNull()
+            assertThat(reconnect.value.seatBySession(sessionB)).isNotNull()
             assertThat(reconnect.events).hasSize(0)
         }
 
@@ -561,7 +607,7 @@ class LobbyUseCasesTest {
                     .findById(lobby.id)!!
                     .code.value
             val admitted = h.joinWithCode(lobby.id, sessionB, bob, code = newCode).requireSuccess()
-            assertThat(admitted.value.players.keys).isEqualTo(setOf(sessionA, sessionB))
+            assertThat(admitted.value.players.keys).isEqualTo(setOf(PlayerId(sessionA.value), PlayerId(sessionB.value)))
         }
 
     @Test
@@ -570,7 +616,7 @@ class LobbyUseCasesTest {
             val h = harness()
             val lobby = h.create(sessionA, alice).value
             val out = h.rename(lobby.id, sessionA, Pseudonym("Alicia")).requireSuccess()
-            assertThat(out.value.players[sessionA]?.pseudonym).isEqualTo(Pseudonym("Alicia"))
+            assertThat(out.value.seatBySession(sessionA)?.pseudonym).isEqualTo(Pseudonym("Alicia"))
             assertThat(out.events).containsExactly(LobbyEvent.PlayerRenamed(sessionA, Pseudonym("Alicia")))
         }
 
@@ -717,7 +763,7 @@ class LobbyUseCasesTest {
             h.join(lobby.id, sessionB, bob).requireSuccess()
             val out = h.leave(lobby.id, sessionB).requireSuccess()
             val state = out.value ?: error("expected lobby to remain")
-            assertThat(state.players.keys).isEqualTo(setOf(sessionA))
+            assertThat(state.players.keys).isEqualTo(setOf(PlayerId(sessionA.value)))
             assertThat(state.ownerSessionId).isEqualTo(sessionA)
             assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionB))
         }
@@ -736,7 +782,7 @@ class LobbyUseCasesTest {
             val state = out.value ?: error("expected lobby to remain")
             // Owner is expected to return via My-games (ADR-0039); ownership stays put.
             assertThat(state.ownerSessionId).isEqualTo(sessionA)
-            assertThat(state.players.keys).isEqualTo(setOf(sessionB, sessionC))
+            assertThat(state.players.keys).isEqualTo(setOf(PlayerId(sessionB.value), PlayerId(sessionC.value)))
             assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
         }
 
@@ -773,7 +819,7 @@ class LobbyUseCasesTest {
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
-            val out = h.leave(lobby.id, sessionA).requireSuccess()
+            val out = h.leave(lobby.id, sessionA, userId = userA).requireSuccess()
 
             assertThat(out.value!!.players.keys).isEqualTo(emptySet())
             assertThat(out.value!!.ownerUserId).isEqualTo(userA)
@@ -829,7 +875,7 @@ class LobbyUseCasesTest {
         runTest {
             val h = harness()
             val lobby = h.create(sessionA, alice, userA).value
-            h.leave(lobby.id, sessionA).requireSuccess()
+            h.leave(lobby.id, sessionA, userId = userA).requireSuccess()
 
             val after = h.repo.findById(lobby.id)
             assertThat(after).isNotNull()
@@ -847,8 +893,8 @@ class LobbyUseCasesTest {
 
             val relinquished = out.value!!
             assertThat(relinquished.ownerUserId).isNull()
-            assertThat(relinquished.players.keys.contains(sessionA)).isEqualTo(false)
-            assertThat(relinquished.players.keys.contains(sessionB)).isEqualTo(true)
+            assertThat(relinquished.seatBySession(sessionA) != null).isEqualTo(false)
+            assertThat(relinquished.seatBySession(sessionB) != null).isEqualTo(true)
             assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
         }
 
@@ -911,12 +957,10 @@ class LobbyUseCasesTest {
 
             assertThat(out.value.ownerUserId).isNull()
             assertThat(
-                out.value.players.keys
-                    .contains(sessionA),
+                out.value.seatBySession(sessionA) != null,
             ).isEqualTo(false)
             assertThat(
-                out.value.players.keys
-                    .contains(sessionB),
+                out.value.seatBySession(sessionB) != null,
             ).isEqualTo(true)
             assertThat(h.repo.findById(lobby.id)).isNotNull()
         }
@@ -993,8 +1037,8 @@ class LobbyUseCasesTest {
             assertThat(out.value.relinquishedOwnership).isEqualTo(true)
             val state = h.repo.findById(lobby.id)!!
             assertThat(state.ownerUserId).isNull()
-            assertThat(state.players.keys.contains(sessionA)).isEqualTo(false)
-            assertThat(state.players.keys.contains(sessionB)).isEqualTo(true)
+            assertThat(state.seatBySession(sessionA) != null).isEqualTo(false)
+            assertThat(state.seatBySession(sessionB) != null).isEqualTo(true)
         }
 
     // Regression: an owner whose seat was dropped (ownership sticky, ADR-0066) can still delete/leave from a list -> relinquish, not 403.
@@ -1005,12 +1049,11 @@ class LobbyUseCasesTest {
             val lobby = h.create(sessionA, alice, userA).value
             h.join(lobby.id, sessionB, bob).requireSuccess()
             // Owner's seat drops (disconnect/leave) but ownership stays sticky -> owner-without-seat.
-            h.leave(lobby.id, sessionA).requireSuccess()
+            h.leave(lobby.id, sessionA, userId = userA).requireSuccess()
             assertThat(
                 h.repo
                     .findById(lobby.id)!!
-                    .players.keys
-                    .contains(sessionA),
+                    .seatBySession(sessionA) != null,
             ).isEqualTo(false)
             assertThat(h.repo.findById(lobby.id)!!.ownerUserId).isEqualTo(userA)
 
@@ -1019,7 +1062,7 @@ class LobbyUseCasesTest {
             assertThat(out.value.relinquishedOwnership).isEqualTo(true)
             val state = h.repo.findById(lobby.id)!!
             assertThat(state.ownerUserId).isNull()
-            assertThat(state.players.keys.contains(sessionB)).isEqualTo(true)
+            assertThat(state.seatBySession(sessionB) != null).isEqualTo(true)
         }
 
     // Non-owner among others -> only their seat is dropped; the lobby stays owned.
@@ -1037,8 +1080,8 @@ class LobbyUseCasesTest {
             assertThat(out.value.relinquishedOwnership).isEqualTo(false)
             val state = h.repo.findById(lobby.id)!!
             assertThat(state.ownerUserId).isEqualTo(userA)
-            assertThat(state.players.keys.contains(sessionB)).isEqualTo(false)
-            assertThat(state.players.keys.contains(sessionA)).isEqualTo(true)
+            assertThat(state.seatBySession(sessionB) != null).isEqualTo(false)
+            assertThat(state.seatBySession(sessionA) != null).isEqualTo(true)
         }
 
     @Test
@@ -1241,7 +1284,8 @@ internal class Harness(
         l: LobbyId,
         s: SessionId,
         p: Pseudonym,
-    ) = rename.invoke(l, s, p)
+        userId: UserId? = null,
+    ) = rename.invoke(l, s, PlayerId.of(userId, s), p)
 
     suspend fun setConfig(
         l: LobbyId,
@@ -1270,12 +1314,13 @@ internal class Harness(
         s: SessionId,
         p: Position,
         c: Letter?,
-    ) = update.invoke(l, s, p, c)
+    ) = update.invoke(l, s, PlayerId(s.value), p, c)
 
     suspend fun leave(
         l: LobbyId,
         s: SessionId,
-    ) = leave.invoke(l, s)
+        userId: UserId? = null,
+    ) = leave.invoke(l, s, PlayerId.of(userId, s))
 
     suspend fun rotate(
         l: LobbyId,

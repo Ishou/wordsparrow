@@ -38,12 +38,16 @@ internal object Fixtures {
             createdAt = now,
         )
 
+    /** Accepts legacy sessionId-valued locks and lifts each to the anon PlayerId (playerId == sessionId). */
     fun gameSession(
         entries: Map<Position, CellEntry> = emptyMap(),
         startedAt: Instant = now,
         completedAt: Instant? = null,
         lockedPositions: Map<Position, SessionId> = emptyMap(),
-    ): GameSession = GameSession(puzzle(), entries, startedAt, completedAt, lockedPositions)
+    ): GameSession = GameSession(puzzle(), entries, startedAt, completedAt, lockedPositions.mapValues { pid(it.value) })
+
+    /** PlayerId for an anon device session (playerId == sessionId). */
+    fun pid(sessionId: SessionId = sessionA): PlayerId = PlayerId(sessionId.value)
 
     fun entry(
         letter: Char,
@@ -51,6 +55,7 @@ internal object Fixtures {
         sessionId: SessionId = sessionA,
     ): CellEntry = CellEntry(sessionId, Letter(letter), writtenAt)
 
+    // Accepts legacy sessionId-keyed rosters; each seat is re-keyed on its derived playerId (ADR-0066 (e)).
     fun lobby(
         state: LobbyLifecycleState = LobbyLifecycleState.WAITING,
         players: Map<SessionId, Player> = mapOf(sessionA to player()),
@@ -63,7 +68,7 @@ internal object Fixtures {
         Lobby(
             id = LobbyId("7gQ2xK9p"),
             ownerSessionId = ownerSessionId,
-            players = players,
+            players = players.values.associateBy { it.playerId },
             state = state,
             gridConfig = gridConfig,
             game = game,

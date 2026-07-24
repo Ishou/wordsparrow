@@ -26,6 +26,7 @@ import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.LobbyTitle
 import com.bliss.game.domain.Player
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -68,7 +69,7 @@ class ListLobbiesForSessionTest {
         return Lobby(
             id = id,
             ownerSessionId = owner,
-            players = players,
+            players = players.values.associateBy { it.playerId },
             state = state,
             gridConfig = gridConfig,
             game = game,
@@ -332,7 +333,7 @@ class ListLobbiesForSessionTest {
         runTest {
             val repo = InMemoryLobbyRepository()
             val lobbyId = LobbyId.generate()
-            val players = mapOf(sessionA to Player(sessionA, alice, baseInstant))
+            val players = mapOf(Player(sessionA, alice, baseInstant).let { it.playerId to it })
             val game =
                 GameSession(
                     Samples.puzzle(),
@@ -341,7 +342,7 @@ class ListLobbiesForSessionTest {
                     ),
                     baseInstant,
                     null,
-                    lockedPositions = mapOf(pPos to sessionA),
+                    lockedPositions = mapOf(pPos to PlayerId(sessionA.value)),
                 )
             val withEntries =
                 Lobby(
@@ -369,7 +370,7 @@ class ListLobbiesForSessionTest {
         runTest {
             val repo = InMemoryLobbyRepository()
             val lobbyId = LobbyId.generate()
-            val players = mapOf(sessionA to Player(sessionA, alice, baseInstant))
+            val players = mapOf(Player(sessionA, alice, baseInstant).let { it.playerId to it })
             val strippedPuzzle =
                 Samples
                     .puzzle()

@@ -17,6 +17,7 @@ import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Player
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -81,7 +82,7 @@ class CreateLobbyUseCase(
             Lobby(
                 id = LobbyId.generate(),
                 ownerSessionId = ownerSessionId,
-                players = mapOf(ownerSessionId to owner),
+                players = mapOf(owner.playerId to owner),
                 state = LobbyLifecycleState.WAITING,
                 gridConfig = defaultGridConfig,
                 game = null,
@@ -144,29 +145,33 @@ class JoinLobbyUseCase(
     ): UseCaseOutcome<Lobby> {
         var emitted: LobbyEvent? = null
         var wrongCode = false
+        // Account-scoped seat key (ADR-0066 (e)): authed -> userId, anon -> sessionId. A second device of one account maps to the same key.
+        val pid = PlayerId.of(userId, sessionId)
 
-        // Capacity-guarded seat: no-op when full so the outer LobbyFull check fires; may rebind ownership to the caller.
+        // Idempotent upsert keyed on [pid]: a second device of the same account is a no-op, so no seat-move and no missing PlayerLeft. May rebind ownership to the caller.
         fun seat(
             lobby: Lobby,
             seatUserId: UserId?,
             rebindOwner: Boolean,
         ): Lobby {
-            // Moves the seat rather than duplicating it: an authed rejoin from a new device replaces any stale seat for the same userId (ADR-0066 (b)).
-            val withoutStaleSeat =
-                if (seatUserId != null) {
-                    lobby.players.filterValues { it.userId != seatUserId }
-                } else {
-                    lobby.players
-                }
-            // Gate capacity on the post-removal count so replacing your own stale seat is a net-zero swap, not a rejected join.
-            if (withoutStaleSeat.size >= Lobby.MAX_PLAYERS) return lobby
+            val seatPid = PlayerId.of(seatUserId, sessionId)
+            val existing = lobby.players[seatPid]
+            // Capacity is gated only on a genuinely new seat; re-seating your own account is a net-zero no-op.
+            if (existing == null && lobby.players.size >= Lobby.MAX_PLAYERS) return lobby
             val now = clock.now()
-            // An authed socket seats under its server-verified account name, never the client frame (ADR-0066 (b) 2026-07-14 amendment); anon joins keep the client pseudonym.
-            val player = Player(sessionId, verifiedPseudonym ?: pseudonym, now, userId = seatUserId)
-            emitted = LobbyEvent.PlayerJoined(player)
+            val nextPlayers =
+                if (existing != null) {
+                    // Second device of the same account: no new row, but point the seat's transport session at the joining device so it (not only the first device) can rename/leave (ADR-0066 (e)).
+                    lobby.players + (seatPid to existing.copy(sessionId = sessionId))
+                } else {
+                    // An authed socket seats under its server-verified account name, never the client frame (ADR-0066 (b) 2026-07-14 amendment); anon joins keep the client pseudonym.
+                    val player = Player(sessionId, verifiedPseudonym ?: pseudonym, now, userId = seatUserId)
+                    emitted = LobbyEvent.PlayerJoined(player)
+                    lobby.players + (seatPid to player)
+                }
             return lobby.copy(
                 ownerSessionId = if (rebindOwner) sessionId else lobby.ownerSessionId,
-                players = withoutStaleSeat + (sessionId to player),
+                players = nextPlayers,
                 lastActivityAt = now,
             )
         }
@@ -174,16 +179,16 @@ class JoinLobbyUseCase(
         val updated =
             repo.mutate(lobbyId) { lobby ->
                 when {
-                    // Reconnect path: bump lastActivityAt so an idle re-open keeps the lobby alive.
-                    // Code is intentionally NOT checked here — see ADR-0027.
-                    lobby.hasJoined(sessionId) -> lobby.touched(clock.now())
-                    // Owner re-entry bypass (ADR-0039): auth by ownerSessionId match, same posture as reconnect.
-                    lobby.isOwner(sessionId) -> seat(lobby, seatUserId = null, rebindOwner = false)
-                    // Authed owner rejoin (ADR-0066 (b)): rebind ownerSessionId to the returning device — same-principal exception to ADR-0055 §f.
+                    // Authed owner (re)join, possibly from a new device: rebind ownerSessionId even when the seat exists (ADR-0066 (b)); seat is idempotent by pid.
                     userId != null && userId == lobby.ownerUserId -> seat(lobby, seatUserId = userId, rebindOwner = true)
-                    // Authed member rejoin (ADR-0066 (b)): a seat already carries this verified userId.
-                    userId != null && lobby.players.values.any { it.userId == userId } ->
-                        seat(lobby, seatUserId = userId, rebindOwner = false)
+                    // Reconnect / same-account second device: seat already present under pid; re-point its transport session at the joining device so this device can rename/leave (ADR-0066 (e)). Code is intentionally NOT checked here (ADR-0027).
+                    lobby.hasJoined(pid) ->
+                        lobby.copy(
+                            players = lobby.players + (pid to lobby.players.getValue(pid).copy(sessionId = sessionId)),
+                            lastActivityAt = clock.now(),
+                        )
+                    // Owner re-entry bypass (ADR-0039): auth by ownerSessionId match. Seat under the owner's account identity (ownerUserId) so an authed owner's cookieless reconnect maps to their existing seat, not a duplicate.
+                    lobby.isOwner(sessionId) -> seat(lobby, seatUserId = lobby.ownerUserId, rebindOwner = false)
                     code != lobby.code.value -> {
                         wrongCode = true
                         lobby
@@ -193,7 +198,7 @@ class JoinLobbyUseCase(
                 }
             } ?: return failure(UseCaseError.LobbyNotFound)
         if (wrongCode) return failure(UseCaseError.WrongCode)
-        if (updated.isFull() && !updated.hasJoined(sessionId)) return failure(UseCaseError.LobbyFull)
+        if (updated.isFull() && !updated.hasJoined(pid)) return failure(UseCaseError.LobbyFull)
         if (emitted != null) {
             analyticsEventSink.record(AnalyticsEvent.LobbyJoined(updated.players.size), sessionId)
         }
@@ -210,17 +215,19 @@ class RenameSelfUseCase(
     suspend operator fun invoke(
         lobbyId: LobbyId,
         sessionId: SessionId,
+        playerId: PlayerId,
         newPseudonym: Pseudonym,
     ): UseCaseOutcome<Lobby> {
         val before = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
-        if (!before.hasJoined(sessionId)) return failure(UseCaseError.PlayerNotInLobby)
+        if (!before.hasJoined(playerId)) return failure(UseCaseError.PlayerNotInLobby)
         var renamed = false
         val updated =
             repo.mutate(lobbyId) { lobby ->
-                val existing = lobby.players[sessionId] ?: return@mutate lobby
+                // Resolve by playerId, not seatBySession(sessionId): the seat's sessionId field tracks only the most-recently-joined device (ADR-0066 (e)).
+                val existing = lobby.players[playerId] ?: return@mutate lobby
                 renamed = true
                 lobby.copy(
-                    players = lobby.players + (sessionId to existing.copy(pseudonym = newPseudonym)),
+                    players = lobby.players + (playerId to existing.copy(pseudonym = newPseudonym)),
                     lastActivityAt = clock.now(),
                 )
             } ?: return failure(UseCaseError.LobbyNotFound)
@@ -391,16 +398,18 @@ class LeaveLobbyUseCase(
     suspend operator fun invoke(
         lobbyId: LobbyId,
         sessionId: SessionId,
+        playerId: PlayerId,
     ): UseCaseOutcome<Lobby?> {
         val events = mutableListOf<LobbyEvent>(LobbyEvent.PlayerLeft(sessionId))
         var playerWasPresent = false
         var destroyed = false
         val updated =
             repo.mutate(lobbyId) { lobby ->
-                if (!lobby.hasJoined(sessionId)) return@mutate lobby
+                // Resolve by playerId, not seatBySession(sessionId): the seat's sessionId field tracks only the most-recently-joined device (ADR-0066 (e)).
+                if (!lobby.hasJoined(playerId)) return@mutate lobby
                 playerWasPresent = true
                 // Keep ownerSessionId unchanged; an owned lobby persists when emptied (owner returns via My-games).
-                val next = lobby.copy(players = lobby.players - sessionId, lastActivityAt = clock.now())
+                val next = lobby.copy(players = lobby.players - playerId, lastActivityAt = clock.now())
                 // ADR-0055/0098: the last player leaving an ownerless lobby leaves a ghost -- delete it now.
                 if (next.isDefunct()) {
                     destroyed = true
@@ -502,7 +511,7 @@ class LeaveMembershipUseCase(
             val seat =
                 current.players.values.firstOrNull { it.userId == userId }
                     ?: return failure(UseCaseError.NotPresentInLobby)
-            when (val outcome = leaveLobby(lobbyId, seat.sessionId)) {
+            when (val outcome = leaveLobby(lobbyId, seat.sessionId, seat.playerId)) {
                 is UseCaseOutcome.Success ->
                     success(MembershipLeaveResult(outcome.result.value, relinquishedOwnership = false), outcome.result.events)
                 is UseCaseOutcome.Failure -> outcome
@@ -535,7 +544,7 @@ class ClaimLobbyOwnershipUseCase(
         hostUnlimited: Boolean = false,
     ): UseCaseOutcome<Lobby> {
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
-        if (!current.hasJoined(sessionId)) return failure(UseCaseError.NotPresentInLobby)
+        if (!current.hasJoined(PlayerId.of(userId, sessionId))) return failure(UseCaseError.NotPresentInLobby)
         if (!current.isOwnerless()) return failure(UseCaseError.AlreadyOwned)
         if (!hostUnlimited && repo.findActiveByOwnerUser(userId) != null) return failure(UseCaseError.QuotaExceeded)
         return when (val outcome = repo.claimOwnership(lobbyId, sessionId, userId, clock.now())) {
@@ -570,6 +579,7 @@ class UpdateCellUseCase(
     suspend operator fun invoke(
         lobbyId: LobbyId,
         sessionId: SessionId,
+        playerId: PlayerId,
         position: Position,
         letter: Letter?,
     ): UseCaseOutcome<Lobby> {
@@ -580,7 +590,7 @@ class UpdateCellUseCase(
         val updated =
             repo.mutate(lobbyId) { lobby ->
                 if (lobby.state != LobbyLifecycleState.IN_PROGRESS) return@mutate lobby
-                if (!lobby.hasJoined(sessionId)) return@mutate lobby
+                if (!lobby.hasJoined(playerId)) return@mutate lobby
                 val session = lobby.game ?: return@mutate lobby
                 // Locked cells silently ignore writes — no event, no broadcast, no lastActivityAt
                 // bump (so peers' idle timers do not reset on attempts to overwrite a sage cell).
@@ -597,7 +607,7 @@ class UpdateCellUseCase(
             } ?: return failure(UseCaseError.LobbyNotFound)
         // writtenAt is null when the mutator short-circuited (player not in lobby, not IN_PROGRESS,
         // or position already locked). The locked-no-op case must surface as success-with-no-events.
-        val stamp = writtenAt ?: return passthroughOrFailure(updated, sessionId)
+        val stamp = writtenAt ?: return passthroughOrFailure(updated, playerId)
 
         val events = mutableListOf<LobbyEvent>(LobbyEvent.CellUpdated(sessionId, position, letter, stamp))
 
@@ -661,7 +671,7 @@ class UpdateCellUseCase(
                     }.toSet()
             if (stillCorrect.isEmpty()) return@mutate lobby
             actualLocks = stillCorrect
-            val locked = s.copy(lockedPositions = s.lockedPositions + stillCorrect.associateWith { sessionId })
+            val locked = s.copy(lockedPositions = s.lockedPositions + stillCorrect.associateWith { playerId })
             // Completion (ADR-0084): checked on locks, not the raw cell write — the winning lock tips the grid to solved.
             if (locked.isSolved() && s.completedAt == null) {
                 solved = Duration.between(s.startedAt, stamp).toMillis() to s.entries
@@ -675,7 +685,7 @@ class UpdateCellUseCase(
             }
         }
         if (actualLocks.isEmpty()) return success(updated, events).withSolved(solved)
-        events += LobbyEvent.WordLocked(actualLocks, sessionId, stamp)
+        events += LobbyEvent.WordLocked(actualLocks, playerId, stamp)
         val finalLobby = repo.findById(lobbyId) ?: updated
         val solvedResult = solved
         if (solvedResult != null) {
@@ -734,11 +744,11 @@ class UpdateCellUseCase(
 
     private fun passthroughOrFailure(
         lobby: Lobby,
-        sessionId: SessionId,
+        playerId: PlayerId,
     ): UseCaseOutcome<Lobby> =
         when {
             lobby.state != LobbyLifecycleState.IN_PROGRESS -> failure(UseCaseError.InvalidState)
-            !lobby.hasJoined(sessionId) -> failure(UseCaseError.PlayerNotInLobby)
+            !lobby.hasJoined(playerId) -> failure(UseCaseError.PlayerNotInLobby)
             // Otherwise the short-circuit was a locked-cell no-op: success with no events.
             else -> success(lobby, emptyList())
         }

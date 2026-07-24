@@ -40,6 +40,7 @@ import com.bliss.game.domain.Letter
 import com.bliss.game.domain.LetterCell
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -230,8 +231,8 @@ class LobbyWebSocketRouteTest {
                     receiveText()
                     // New device, no code — only the verified cookie identifies the owner.
                     sendText("""{"type":"joinLobby","sessionId":"$newDevice","pseudonym":"$pseudoA"}""")
-                    // Reaching a playerJoined (not an error) frame is the success signal.
-                    drainUntil("playerJoined")
+                    // ADR-0066 (e): the rejoin is idempotent (same account) so it emits no playerJoined; the joiner-snapshot is the success signal.
+                    drainUntil("lobbyState")
                 }
                 assertThat(repo.findById(lobbyId)?.ownerSessionId).isEqualTo(SessionId(newDevice))
             } finally {
@@ -287,14 +288,15 @@ class LobbyWebSocketRouteTest {
                     receiveText()
                     // Guest animal-name in the frame; the verified cookie resolves to "Alice".
                     sendText("""{"type":"joinLobby","sessionId":"$newDevice","pseudonym":"Renard 777"}""")
-                    drainUntil("playerJoined")
+                    // ADR-0066 (e): the owner's second device is idempotent (no playerJoined); the joiner-snapshot acks it.
+                    drainUntil("lobbyState")
                 }
+                // The account keeps its single seat under the verified "Alice" name; the guest frame is ignored and no duplicate seat is created.
+                val after = repo.findById(lobbyId)!!
                 assertThat(
-                    repo
-                        .findById(lobbyId)
-                        ?.players
-                        ?.get(SessionId(newDevice))
-                        ?.pseudonym,
+                    after.players.values
+                        .single()
+                        .pseudonym,
                 ).isEqualTo(Pseudonym("Alice"))
             } finally {
                 backgroundJob.cancel()
@@ -657,7 +659,7 @@ class LobbyWebSocketRouteTest {
             }
             val lobby = harness.repo.findById(lobbyId)
             assertThat(lobby).isNotNull()
-            assertThat(lobby!!.players.containsKey(SessionId(sessionB))).isFalse()
+            assertThat((lobby!!.seatBySession(SessionId(sessionB)) != null)).isFalse()
             assertThat(lobby.ownerUserId).isEqualTo(ownerUser)
             assertThat(lobby.isOwnerless()).isFalse()
         }
@@ -958,7 +960,7 @@ class LobbyWebSocketRouteTest {
                 // contain sessionB — otherwise a fresh joiner would still see it.
                 val lobby = harness.repo.findById(lobbyId)
                 assertThat(lobby).isNotNull()
-                assertThat(lobby!!.players.containsKey(SessionId(sessionB))).isFalse()
+                assertThat((lobby!!.seatBySession(SessionId(sessionB)) != null)).isFalse()
                 observer.cancel()
             }
         }
@@ -1254,7 +1256,7 @@ class LobbyWebSocketRouteTest {
             position: Position,
             letter: Letter,
         ) {
-            val out = updateCellUseCase(lobbyId, sessionId, position, letter)
+            val out = updateCellUseCase(lobbyId, sessionId, PlayerId(sessionId.value), position, letter)
             check(out is UseCaseOutcome.Success) { "updateCell failed: $out" }
         }
     }

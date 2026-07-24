@@ -256,10 +256,10 @@ class LobbiesRouteTest {
                         .LobbyId(lobby.id),
                 )!!
             val owner =
-                saved.players[
+                saved.seatBySession(
                     com.bliss.game.domain
                         .SessionId(ownerSessionId),
-                ]!!
+                )!!
             assertThat(owner.userId).isEqualTo(UserId("11111111-1111-1111-1111-111111111111"))
             assertThat(owner.pseudonym).isEqualTo(Pseudonym("Isho"))
         }
@@ -666,8 +666,8 @@ class LobbiesRouteTest {
             val saved = repo.findById(lobbyId)!!
             assertThat(saved.ownerUserId).isNull()
             assertThat(saved.isOwnerless()).isTrue()
-            assertThat(saved.players.containsKey(SessionId(ownerSessionId))).isFalse()
-            assertThat(saved.players.containsKey(SessionId(sessionB))).isTrue()
+            assertThat((saved.seatBySession(SessionId(ownerSessionId)) != null)).isFalse()
+            assertThat((saved.seatBySession(SessionId(sessionB)) != null)).isTrue()
         }
 
     // Non-owner among others -> only their seat is dropped; the lobby stays owned (ADR-0098 §2).
@@ -684,8 +684,8 @@ class LobbiesRouteTest {
             assertThat(response.status).isEqualTo(HttpStatusCode.NoContent)
             val saved = repo.findById(lobbyId)!!
             assertThat(saved.ownerUserId).isEqualTo(userA)
-            assertThat(saved.players.containsKey(SessionId(sessionB))).isFalse()
-            assertThat(saved.players.containsKey(SessionId(ownerSessionId))).isTrue()
+            assertThat((saved.seatBySession(SessionId(sessionB)) != null)).isFalse()
+            assertThat((saved.seatBySession(SessionId(ownerSessionId)) != null)).isTrue()
         }
 
     /** Ownerless lobby: owner userA relinquishes after userB (sessionB) joins, leaving userB present and claimable. */

@@ -93,7 +93,7 @@ class LobbyTest {
                 ownerSessionId = sessionA,
             )
         assertThat(l.ownerSessionId).isEqualTo(sessionA)
-        assertThat(l.hasJoined(sessionA)).isFalse()
+        assertThat(l.hasJoined(PlayerId(sessionA.value))).isFalse()
         assertThat(l.isOwner(sessionA)).isTrue()
     }
 
@@ -142,8 +142,8 @@ class LobbyTest {
     @Test
     fun `hasJoined is true for present session and false otherwise`() {
         val l = lobby()
-        assertThat(l.hasJoined(sessionA)).isTrue()
-        assertThat(l.hasJoined(sessionB)).isFalse()
+        assertThat(l.hasJoined(PlayerId(sessionA.value))).isTrue()
+        assertThat(l.hasJoined(PlayerId(sessionB.value))).isFalse()
     }
 
     @Test

@@ -14,6 +14,7 @@ import com.bliss.game.domain.Lobby
 import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
+import com.bliss.game.domain.Player
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -58,7 +59,7 @@ class InMemoryLobbyRepository : LobbyRepository {
         storeLock.withLock {
             store.values
                 .filter {
-                    (it.ownerSessionId == sessionId || it.players.containsKey(sessionId)) &&
+                    (it.ownerSessionId == sessionId || it.seatBySession(sessionId) != null) &&
                         it.state != LobbyLifecycleState.WAITING
                 }.sortedByDescending { it.lastActivityAt }
         }
@@ -113,7 +114,7 @@ class InMemoryLobbyRepository : LobbyRepository {
     override suspend fun findWaitingByOwnerUser(userId: UserId): Lobby? =
         storeLock.withLock {
             store.values.firstOrNull {
-                it.state == LobbyLifecycleState.WAITING && it.players[it.ownerSessionId]?.userId == userId
+                it.state == LobbyLifecycleState.WAITING && it.seatBySession(it.ownerSessionId)?.userId == userId
             }
         }
 
@@ -161,13 +162,13 @@ class InMemoryLobbyRepository : LobbyRepository {
         var anonymisedEntries = 0
         val targets =
             storeLock.withLock {
-                store.values.filter { it.players.containsKey(sessionId) }.map { it.id }
+                store.values.filter { it.seatBySession(sessionId) != null }.map { it.id }
             }
         for (id in targets) {
             lockFor(id).withLock {
                 val current = storeLock.withLock { store[id] } ?: return@withLock
-                if (!current.players.containsKey(sessionId)) return@withLock
-                val remaining = current.players - sessionId
+                val seat = current.seatBySession(sessionId) ?: return@withLock
+                val remaining = current.players - seat.playerId
                 if (current.isOwner(sessionId) && remaining.isEmpty()) {
                     storeLock.withLock {
                         store.remove(id)
@@ -226,10 +227,9 @@ class InMemoryLobbyRepository : LobbyRepository {
         val touched = mutableSetOf<LobbyId>()
         storeLock.withLock {
             store.entries.forEach { (id, lobby) ->
-                val seat = lobby.players[anonSessionId] ?: return@forEach
+                val seat = lobby.seatBySession(anonSessionId) ?: return@forEach
                 if (seat.userId != null) return@forEach
-                val updated = seat.copy(userId = userId, pseudonym = newPseudonym)
-                store[id] = lobby.copy(players = lobby.players + (anonSessionId to updated))
+                store[id] = lobby.rekeyedSeat(seat, seat.copy(userId = userId, pseudonym = newPseudonym))
                 touched += id
             }
         }
@@ -244,13 +244,8 @@ class InMemoryLobbyRepository : LobbyRepository {
         val touched = mutableSetOf<LobbyId>()
         storeLock.withLock {
             store.entries.forEach { (id, lobby) ->
-                val matches = lobby.players.values.any { it.userId == userId }
-                if (!matches) return@forEach
-                val newPlayers =
-                    lobby.players.mapValues { (_, p) ->
-                        if (p.userId == userId) p.copy(userId = null, pseudonym = anonPseudonym) else p
-                    }
-                store[id] = lobby.copy(players = newPlayers)
+                val old = lobby.players.values.firstOrNull { it.userId == userId } ?: return@forEach
+                store[id] = lobby.rekeyedSeat(old, old.copy(userId = null, pseudonym = anonPseudonym))
                 touched += id
             }
         }
@@ -265,12 +260,8 @@ class InMemoryLobbyRepository : LobbyRepository {
         val touched = mutableSetOf<LobbyId>()
         storeLock.withLock {
             store.entries.forEach { (id, lobby) ->
-                if (lobby.players.values.none { it.userId == userId }) return@forEach
-                val newPlayers =
-                    lobby.players.mapValues { (_, p) ->
-                        if (p.userId == userId) p.copy(userId = null, pseudonym = replacementPseudonym) else p
-                    }
-                store[id] = lobby.copy(players = newPlayers)
+                val old = lobby.players.values.firstOrNull { it.userId == userId } ?: return@forEach
+                store[id] = lobby.rekeyedSeat(old, old.copy(userId = null, pseudonym = replacementPseudonym))
                 touched += id
             }
         }
@@ -295,6 +286,19 @@ class InMemoryLobbyRepository : LobbyRepository {
             }
         }
         return touched
+    }
+
+    private fun Lobby.rekeyedSeat(
+        old: Player,
+        new: Player,
+    ): Lobby {
+        if (old.playerId == new.playerId) return copy(players = players + (new.playerId to new))
+        val nextPlayers = (players - old.playerId) + (new.playerId to new)
+        val nextGame =
+            game?.let { g ->
+                g.copy(lockedPositions = g.lockedPositions.mapValues { (_, pid) -> if (pid == old.playerId) new.playerId else pid })
+            }
+        return copy(players = nextPlayers, game = nextGame)
     }
 }
 

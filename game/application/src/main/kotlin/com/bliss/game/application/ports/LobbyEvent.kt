@@ -7,6 +7,7 @@ import com.bliss.game.domain.GridConfig
 import com.bliss.game.domain.Letter
 import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.Player
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -68,12 +69,12 @@ sealed interface LobbyEvent {
      * Server broadcast: every position in [positions] is now locked because its containing word
      * was just completed correctly. Emitted alongside the [CellUpdated] that closed the word; a
      * crossing fill that closes two words at once produces a single event with the union.
-     * [lockedBy] is the session whose write completed the word(s); all positions in one event
-     * share it (ADR-0086). Wire mapping: `wordLocked` AsyncAPI message.
+     * [lockedBy] is the account ([PlayerId]) whose write completed the word(s); all positions in one
+     * event share it (ADR-0086; account-scoped per ADR-0066 (e)). Wire mapping: `wordLocked` AsyncAPI message.
      */
     data class WordLocked(
         val positions: Set<Position>,
-        val lockedBy: SessionId,
+        val lockedBy: PlayerId,
         val lockedAt: Instant,
     ) : LobbyEvent
 

@@ -8,6 +8,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.bliss.game.application.ports.ClaimOutcome
 import com.bliss.game.application.ports.RelinquishOutcome
 import com.bliss.game.domain.GamePuzzle
@@ -18,6 +19,8 @@ import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Player
+import com.bliss.game.domain.PlayerId
+import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
 import com.bliss.game.domain.UserId
@@ -59,7 +62,7 @@ class InMemoryLobbyRepositoryTest {
             id = id,
             ownerSessionId = ownerSessionId,
             ownerUserId = ownerUserId,
-            players = mapOf(ownerSessionId to Player(ownerSessionId, alice, joinedAt, userId = ownerUserId)),
+            players = mapOf(Player(ownerSessionId, alice, joinedAt, userId = ownerUserId).let { it.playerId to it }),
             state = state,
             gridConfig = gridConfig,
             game = null,
@@ -153,12 +156,13 @@ class InMemoryLobbyRepositoryTest {
                     .map {
                         async(Dispatchers.Default) {
                             repo.mutate(id) { current ->
-                                val owner = current.players.getValue(current.ownerSessionId)
+                                val ownerPid = PlayerId(current.ownerSessionId.value)
+                                val owner = current.players.getValue(ownerPid)
                                 val advanced = owner.joinedAt.plusSeconds(1)
                                 current.copy(
                                     players =
                                         current.players +
-                                            (current.ownerSessionId to owner.copy(joinedAt = advanced)),
+                                            (ownerPid to owner.copy(joinedAt = advanced)),
                                 )
                             }
                         }
@@ -169,7 +173,7 @@ class InMemoryLobbyRepositoryTest {
                 repo
                     .findById(id)!!
                     .players
-                    .getValue(sessionA)
+                    .getValue(PlayerId(sessionA.value))
                     .joinedAt
             assertThat(finalJoinedAt).isEqualTo(baseInstant.plusSeconds(iterations.toLong()))
         }
@@ -364,7 +368,7 @@ class InMemoryLobbyRepositoryTest {
             id = id,
             ownerSessionId = ownerSessionId,
             ownerUserId = ownerUserId,
-            players = mapOf(ownerSessionId to Player(ownerSessionId, alice, baseInstant, userId = ownerUserId)),
+            players = mapOf(Player(ownerSessionId, alice, baseInstant, userId = ownerUserId).let { it.playerId to it }),
             state = LobbyLifecycleState.COMPLETED,
             gridConfig = gridConfig,
             game =
@@ -400,7 +404,7 @@ class InMemoryLobbyRepositoryTest {
             id = id,
             ownerSessionId = ownerSessionId,
             ownerUserId = ownerUserId,
-            players = mapOf(ownerSessionId to Player(ownerSessionId, alice, baseInstant, userId = ownerUserId)),
+            players = mapOf(Player(ownerSessionId, alice, baseInstant, userId = ownerUserId).let { it.playerId to it }),
             state = LobbyLifecycleState.IN_PROGRESS,
             gridConfig = gridConfig,
             game =
@@ -431,7 +435,7 @@ class InMemoryLobbyRepositoryTest {
 
             assertThat(touched).containsExactlyInAnyOrder(lobby1.id, lobby2.id)
             val updated = repo.findById(lobby1.id)!!
-            val seat = updated.players[sessionA]!!
+            val seat = updated.seatBySession(sessionA)!!
             assertThat(seat.userId).isEqualTo(userIdAlice)
             assertThat(seat.pseudonym).isEqualTo(newDisplayName)
         }
@@ -449,6 +453,25 @@ class InMemoryLobbyRepositoryTest {
             assertThat(touchedAgain).isEmpty()
         }
 
+    // ADR-0066 (e): signing in mid-game re-keys the roster seat sessionId->userId and re-attributes that session's locks to the new account playerId.
+    @Test
+    fun `rebindAnonSeats re-keys the roster and re-attributes locks to the account playerId`() =
+        runTest {
+            val repo = InMemoryLobbyRepository()
+            val anonPid = PlayerId(sessionA.value)
+            val base = inProgressLobbyAt(LobbyId.generate())
+            val lobby = base.copy(game = base.game!!.copy(lockedPositions = mapOf(Position(0, 0) to anonPid)))
+            repo.save(lobby)
+
+            repo.rebindAnonSeats(STUB_CONN, sessionA, userIdAlice, newDisplayName)
+
+            val updated = repo.findById(lobby.id)!!
+            val accountPid = PlayerId(userIdAlice.value)
+            assertThat(updated.players.keys).containsExactlyInAnyOrder(accountPid)
+            assertThat(updated.hasJoined(accountPid)).isTrue()
+            assertThat(updated.game!!.lockedPositions[Position(0, 0)]).isEqualTo(accountPid)
+        }
+
     @Test
     fun `unbindUserSeats clears userId and reverts pseudonym, returns touched ids`() =
         runTest {
@@ -461,7 +484,7 @@ class InMemoryLobbyRepositoryTest {
             val touched = repo.unbindUserSeats(STUB_CONN, userIdAlice, anonName)
 
             assertThat(touched).containsExactlyInAnyOrder(lobby.id)
-            val seat = repo.findById(lobby.id)!!.players[sessionA]!!
+            val seat = repo.findById(lobby.id)!!.seatBySession(sessionA)!!
             assertThat(seat.userId).isNull()
             assertThat(seat.pseudonym).isEqualTo(anonName)
         }
@@ -491,7 +514,7 @@ class InMemoryLobbyRepositoryTest {
             val touched = repo.anonymizeUserSeats(STUB_CONN, userIdAlice, replacementPseudonym)
 
             assertThat(touched).containsExactlyInAnyOrder(lobby.id)
-            val seat = repo.findById(lobby.id)!!.players[sessionA]!!
+            val seat = repo.findById(lobby.id)!!.seatBySession(sessionA)!!
             assertThat(seat.userId).isNull()
             assertThat(seat.pseudonym).isEqualTo(replacementPseudonym)
         }
@@ -522,7 +545,7 @@ class InMemoryLobbyRepositoryTest {
             val touched = repo.refreshUserPseudonym(STUB_CONN, userIdAlice, renamedPseudonym)
 
             assertThat(touched).containsExactlyInAnyOrder(lobby.id)
-            val seat = repo.findById(lobby.id)!!.players[sessionA]!!
+            val seat = repo.findById(lobby.id)!!.seatBySession(sessionA)!!
             assertThat(seat.userId).isEqualTo(userIdAlice)
             assertThat(seat.pseudonym).isEqualTo(renamedPseudonym)
         }
@@ -552,7 +575,13 @@ class InMemoryLobbyRepositoryTest {
             repo.save(lobby)
 
             // Leave-grace equivalent: LeaveLobbyUseCase drops the owner's seat, keeping the row.
-            val afterLeave = repo.mutate(lobby.id) { it.copy(players = it.players - sessionA) }
+            val afterLeave =
+                repo.mutate(lobby.id) {
+                    it.copy(
+                        players =
+                            it.players - (it.seatBySession(sessionA)?.playerId ?: PlayerId(sessionA.value)),
+                    )
+                }
 
             assertThat(afterLeave).isNotNull()
             assertThat(afterLeave!!.players).isEmpty()
@@ -567,7 +596,9 @@ class InMemoryLobbyRepositoryTest {
             val ownerOwned = completedLobbyAt(LobbyId.generate(), ownerUserId = userA, lastActivityAt = baseInstant)
             repo.save(ownerOwned)
             // Leave-grace equivalent: the owner's seat is dropped, keeping the row and ownerUserId.
-            repo.mutate(ownerOwned.id) { it.copy(players = it.players - sessionA) }
+            repo.mutate(
+                ownerOwned.id,
+            ) { it.copy(players = it.players - (it.seatBySession(sessionA)?.playerId ?: PlayerId(sessionA.value))) }
             val anonIdle = completedLobbyAt(LobbyId.generate(), lastActivityAt = baseInstant)
             repo.save(anonIdle)
 
@@ -590,8 +621,11 @@ class InMemoryLobbyRepositoryTest {
                     ownerUserId = userA,
                     players =
                         mapOf(
-                            sessionA to Player(sessionA, alice, baseInstant, userId = userA),
-                            sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = remainingUserId),
+                            Player(sessionA, alice, baseInstant, userId = userA).let { it.playerId to it },
+                            Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = remainingUserId).let {
+                                it.playerId to
+                                    it
+                            },
                         ),
                     state = LobbyLifecycleState.WAITING,
                     gridConfig = gridConfig,
@@ -607,7 +641,7 @@ class InMemoryLobbyRepositoryTest {
             val after = repo.findById(lobby.id)!!
             assertThat(after.ownerUserId).isNull()
             assertThat(after.ownerSessionId).isEqualTo(SessionId.ANON)
-            assertThat(after.players.keys).containsExactlyInAnyOrder(sessionB)
+            assertThat(after.players.keys).containsExactlyInAnyOrder(PlayerId(remainingUserId.value))
         }
 
     @Test
@@ -660,7 +694,7 @@ class InMemoryLobbyRepositoryTest {
             val base = inProgressLobbyAt(LobbyId.generate(), ownerUserId = userA)
             val withOther =
                 base.copy(
-                    players = base.players + (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                    players = base.players + Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10)).let { it.playerId to it },
                 )
             repo.save(withOther)
 
@@ -670,7 +704,7 @@ class InMemoryLobbyRepositoryTest {
             assertThat(outcome).isInstanceOf(RelinquishOutcome.Relinquished::class)
             val after = repo.findById(withOther.id)!!
             assertThat(after.ownerUserId).isNull()
-            assertThat(after.players.keys).containsExactlyInAnyOrder(sessionB)
+            assertThat(after.players.keys).containsExactlyInAnyOrder(PlayerId(sessionB.value))
             assertThat(repo.findActiveByOwnerUser(userA)).isNull()
         }
 
@@ -682,7 +716,7 @@ class InMemoryLobbyRepositoryTest {
             val base = inProgressLobbyAt(LobbyId.generate(), ownerUserId = userA)
             val withOther =
                 base.copy(
-                    players = base.players + (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                    players = base.players + Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10)).let { it.playerId to it },
                 )
             repo.save(withOther)
 
@@ -693,7 +727,7 @@ class InMemoryLobbyRepositoryTest {
             val after = repo.findById(withOther.id)!!
             assertThat(after.ownerUserId).isNull()
             // Former owner seat (sessionA) dropped; the co-player keeps their seat.
-            assertThat(after.players.keys).containsExactlyInAnyOrder(sessionB)
+            assertThat(after.players.keys).containsExactlyInAnyOrder(PlayerId(sessionB.value))
             assertThat(repo.findActiveByOwnerUser(userA)).isNull()
         }
 
@@ -746,7 +780,7 @@ class InMemoryLobbyRepositoryTest {
             val sessionB = SessionId("0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5")
             val ownerless =
                 inProgressLobbyAt(LobbyId.generate(), ownerSessionId = SessionId.ANON, ownerUserId = null)
-                    .copy(players = mapOf(sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))))
+                    .copy(players = mapOf(Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10)).let { it.playerId to it }))
             repo.save(ownerless)
 
             val result = repo.eraseSession(sessionB)
@@ -767,7 +801,12 @@ class InMemoryLobbyRepositoryTest {
                         it.copy(
                             players =
                                 mapOf(
-                                    sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = userB),
+                                    Player(
+                                        sessionB,
+                                        Pseudonym("Bob"),
+                                        baseInstant.plusSeconds(10),
+                                        userId = userB,
+                                    ).let { it.playerId to it },
                                 ),
                         )
                     }

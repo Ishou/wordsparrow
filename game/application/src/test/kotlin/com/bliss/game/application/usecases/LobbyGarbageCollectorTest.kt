@@ -185,7 +185,7 @@ class LobbyGarbageCollectorTest {
                     state = LobbyLifecycleState.COMPLETED,
                     gridConfig = GridConfig(5, 5),
                     title = null,
-                    players = linkedMapOf(sessionA to Player(sessionA, alice, now)),
+                    players = linkedMapOf(Player(sessionA, alice, now).let { it.playerId to it }),
                     game =
                         GameSession(
                             puzzle = Samples.puzzle(),
@@ -219,7 +219,7 @@ class LobbyGarbageCollectorTest {
                     state = LobbyLifecycleState.COMPLETED,
                     gridConfig = GridConfig(5, 5),
                     title = null,
-                    players = linkedMapOf(sessionA to authedSeat),
+                    players = linkedMapOf(authedSeat.playerId to authedSeat),
                     game =
                         GameSession(
                             puzzle = Samples.puzzle(),
@@ -252,7 +252,7 @@ class LobbyGarbageCollectorTest {
                     state = LobbyLifecycleState.COMPLETED,
                     gridConfig = GridConfig(5, 5),
                     title = null,
-                    players = linkedMapOf(sessionA to seat),
+                    players = linkedMapOf(seat.playerId to seat),
                     game =
                         GameSession(
                             puzzle = Samples.puzzle(),
@@ -298,7 +298,7 @@ class LobbyGarbageCollectorTest {
                     state = LobbyLifecycleState.COMPLETED,
                     gridConfig = GridConfig(5, 5),
                     title = null,
-                    players = linkedMapOf(sessionA to Player(sessionA, alice, now)),
+                    players = linkedMapOf(Player(sessionA, alice, now).let { it.playerId to it }),
                     game =
                         GameSession(
                             puzzle = Samples.puzzle(),
@@ -400,7 +400,7 @@ class LobbyGarbageCollectorTest {
             state = LobbyLifecycleState.IN_PROGRESS,
             gridConfig = GridConfig(5, 5),
             title = null,
-            players = linkedMapOf(sessionA to Player(sessionA, alice, lastActivityAt, userId = ownerUserId)),
+            players = linkedMapOf(Player(sessionA, alice, lastActivityAt, userId = ownerUserId).let { it.playerId to it }),
             game =
                 GameSession(
                     puzzle = Samples.puzzle(),

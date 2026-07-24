@@ -16,6 +16,7 @@ import com.bliss.game.domain.GridConfig
 import com.bliss.game.domain.Letter
 import com.bliss.game.domain.Lobby
 import com.bliss.game.domain.LobbyId
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -168,6 +169,7 @@ fun Route.lobbyWebSocketRoute(
                     backgroundScope = backgroundScope,
                     sessionManager = sessionManager,
                     useCases = useCases,
+                    repo = repo,
                     lobbyId = lobbyId,
                     sessionId = boundSessionId,
                     grace = reconnectGrace,
@@ -253,7 +255,8 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
                     return memberSessionId
                 }
             dispatch(lobbyId, sessionManager) {
-                useCases.renameSelf(lobbyId, SessionId(sid), pseudo)
+                // Account-scoped seat resolution (ADR-0066 (e)): authed -> verified userId, anon -> sessionId. Never from a client frame.
+                useCases.renameSelf(lobbyId, SessionId(sid), PlayerId.of(verifiedUserId, SessionId(sid)), pseudo)
             }
             memberSessionId
         }
@@ -300,6 +303,8 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
                 useCases.updateCell(
                     lobbyId,
                     SessionId(sid),
+                    // Account-scoped lock attribution (ADR-0066 (e)): authed -> verified userId, anon -> sessionId. Never from a client frame.
+                    PlayerId.of(verifiedUserId, SessionId(sid)),
                     Position(parsed.row, parsed.column),
                     letter,
                 )
@@ -380,7 +385,7 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
             val relinquished = useCases.relinquishOwnership(lobbyId, SessionId(sid))
             val outcome =
                 if (relinquished is UseCaseOutcome.Failure && relinquished.error == UseCaseError.NotOwner) {
-                    useCases.leaveLobby(lobbyId, SessionId(sid))
+                    useCases.leaveLobby(lobbyId, SessionId(sid), PlayerId.of(verifiedUserId, SessionId(sid)))
                 } else {
                     relinquished
                 }
@@ -432,6 +437,10 @@ private suspend fun DefaultWebSocketServerSession.dispatchJoin(
         // here?" — a multi-tab close must NOT broadcast `playerLeft`
         // when the player is still represented by another live socket.
         sessionManager.bindSession(lobbyId, session, sid.value)
+        // An idempotent reconnect / same-account second device (ADR-0066 (e)) broadcasts no event, so send this socket a fresh snapshot to converge it (e.g. an owner cross-device rejoin that rebound ownerSessionId).
+        if (outcome.result.events.isEmpty()) {
+            (outcome.result.value as? Lobby)?.let { send(encode(it.toLobbyStateFrame(sessionManager.getPresence(lobbyId)))) }
+        }
         sid.value
     } else {
         null
@@ -536,6 +545,7 @@ private fun scheduleReconnectGrace(
     backgroundScope: CoroutineScope,
     sessionManager: SessionManager,
     useCases: LobbyUseCases,
+    repo: LobbyRepository,
     lobbyId: LobbyId,
     sessionId: String,
     grace: Duration,
@@ -552,15 +562,17 @@ private fun scheduleReconnectGrace(
             return@launch
         }
         try {
-            val outcome = useCases.leaveLobby(lobbyId, SessionId(sessionId))
-            if (outcome is UseCaseOutcome.Success) {
-                for (event in outcome.result.events) {
-                    event.toFrameOrNull()?.let { sessionManager.broadcast(lobbyId, it) }
+            // Resolve by the seat's currently recorded session, not a blind PlayerId.of(verifiedUserId, sessionId): grace-by-playerId is Wave 4 (ADR-0066 (e) point 4), so a stale session (re-pointed to another device) must no-op, not evict a still-connected peer.
+            val seat = repo.findById(lobbyId)?.seatBySession(SessionId(sessionId))
+            if (seat != null) {
+                val outcome = useCases.leaveLobby(lobbyId, SessionId(sessionId), seat.playerId)
+                if (outcome is UseCaseOutcome.Success) {
+                    for (event in outcome.result.events) {
+                        event.toFrameOrNull()?.let { sessionManager.broadcast(lobbyId, it) }
+                    }
                 }
             }
-            // A Failure (e.g. PlayerNotInLobby — already removed by another path,
-            // or LobbyNotFound — already deleted) is the no-op outcome; nothing
-            // to broadcast.
+            // A missing seat (already removed, re-pointed to another device, or lobby gone) is the no-op outcome; nothing to broadcast.
         } catch (cause: Throwable) {
             log.warn(
                 "ws.reconnect_grace.leave_failed lobbyId={} sessionId={} cause={}",

@@ -6,6 +6,7 @@ import com.bliss.game.domain.Lobby
 import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
+import com.bliss.game.domain.Player
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
 import com.bliss.game.domain.UserId
@@ -32,7 +33,7 @@ class InMemoryLobbyRepository : LobbyRepository {
     override suspend fun findBySessionId(sessionId: SessionId): List<Lobby> =
         store.values
             .filter {
-                (it.ownerSessionId == sessionId || it.players.containsKey(sessionId)) &&
+                (it.ownerSessionId == sessionId || it.seatBySession(sessionId) != null) &&
                     it.state != LobbyLifecycleState.WAITING
             }.sortedByDescending { it.lastActivityAt }
 
@@ -83,7 +84,7 @@ class InMemoryLobbyRepository : LobbyRepository {
     // Owner seat's userId, not sessionId — the ADR-0083 quota is per signed-in user (see findWaitingByOwnerUser doc).
     override suspend fun findWaitingByOwnerUser(userId: UserId): Lobby? =
         store.values.firstOrNull {
-            it.state == LobbyLifecycleState.WAITING && it.players[it.ownerSessionId]?.userId == userId
+            it.state == LobbyLifecycleState.WAITING && it.seatBySession(it.ownerSessionId)?.userId == userId
         }
 
     // ADR-0098 §1: sticky active-game quota keyed on ownerUserId; non-terminal (not COMPLETED) counts.
@@ -126,12 +127,12 @@ class InMemoryLobbyRepository : LobbyRepository {
         var vacatedLobbies = 0
         var removedPlayerships = 0
         var anonymisedEntries = 0
-        val targets = store.values.filter { it.players.containsKey(sessionId) }.map { it.id }
+        val targets = store.values.filter { it.seatBySession(sessionId) != null }.map { it.id }
         for (id in targets) {
             lockFor(id).withLock {
                 val current = store[id] ?: return@withLock
-                if (!current.players.containsKey(sessionId)) return@withLock
-                val remaining = current.players - sessionId
+                val seat = current.seatBySession(sessionId) ?: return@withLock
+                val remaining = current.players - seat.playerId
                 // Erase empties a lobby nobody will own (sole owner or already-ownerless) -> delete outright (ADR-0055/0098).
                 if (remaining.isEmpty() && (current.isOwner(sessionId) || current.isOwnerless())) {
                     store.remove(id)
@@ -186,14 +187,15 @@ class InMemoryLobbyRepository : LobbyRepository {
         newPseudonym: Pseudonym,
     ): Set<LobbyId> {
         val touched = mutableSetOf<LobbyId>()
-        val targets = store.values.filter { it.players[anonSessionId]?.userId == null }.map { it.id }
+        val targets = store.values.filter { it.seatBySession(anonSessionId)?.userId == null }.map { it.id }
         for (id in targets) {
             lockFor(id).withLock {
                 val current = store[id] ?: return@withLock
-                val seat = current.players[anonSessionId] ?: return@withLock
+                val seat = current.seatBySession(anonSessionId) ?: return@withLock
                 if (seat.userId != null) return@withLock
+                // Mid-game sign-in (ADR-0066 (c)/(e)): re-key the seat sessionId->userId and re-attribute its locks to the new playerId.
                 val updated = seat.copy(userId = userId, pseudonym = newPseudonym)
-                store[id] = current.copy(players = current.players + (anonSessionId to updated))
+                store[id] = current.rekeyedSeat(seat, updated)
                 touched += id
             }
         }
@@ -210,13 +212,9 @@ class InMemoryLobbyRepository : LobbyRepository {
         for (id in targets) {
             lockFor(id).withLock {
                 val current = store[id] ?: return@withLock
-                val matches = current.players.values.filter { it.userId == userId }
-                if (matches.isEmpty()) return@withLock
-                val newPlayers =
-                    current.players.mapValues { (_, player) ->
-                        if (player.userId == userId) player.copy(userId = null, pseudonym = anonPseudonym) else player
-                    }
-                store[id] = current.copy(players = newPlayers)
+                // One account is one seat (ADR-0066 (e)); clearing userId re-keys it back to the device session.
+                val old = current.players.values.firstOrNull { it.userId == userId } ?: return@withLock
+                store[id] = current.rekeyedSeat(old, old.copy(userId = null, pseudonym = anonPseudonym))
                 touched += id
             }
         }
@@ -234,12 +232,8 @@ class InMemoryLobbyRepository : LobbyRepository {
         for (id in targets) {
             lockFor(id).withLock {
                 val current = store[id] ?: return@withLock
-                if (current.players.values.none { it.userId == userId }) return@withLock
-                val newPlayers =
-                    current.players.mapValues { (_, player) ->
-                        if (player.userId == userId) player.copy(userId = null, pseudonym = replacementPseudonym) else player
-                    }
-                store[id] = current.copy(players = newPlayers)
+                val old = current.players.values.firstOrNull { it.userId == userId } ?: return@withLock
+                store[id] = current.rekeyedSeat(old, old.copy(userId = null, pseudonym = replacementPseudonym))
                 touched += id
             }
         }
@@ -274,5 +268,19 @@ class InMemoryLobbyRepository : LobbyRepository {
             }
         }
         return touched
+    }
+
+    // Re-key a seat when its playerId changes (userId stamped/cleared): swap the roster key and re-attribute its locks.
+    private fun Lobby.rekeyedSeat(
+        old: Player,
+        new: Player,
+    ): Lobby {
+        if (old.playerId == new.playerId) return copy(players = players + (new.playerId to new))
+        val nextPlayers = (players - old.playerId) + (new.playerId to new)
+        val nextGame =
+            game?.let { g ->
+                g.copy(lockedPositions = g.lockedPositions.mapValues { (_, pid) -> if (pid == old.playerId) new.playerId else pid })
+            }
+        return copy(players = nextPlayers, game = nextGame)
     }
 }

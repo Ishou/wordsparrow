@@ -6,6 +6,7 @@ import com.bliss.game.domain.Lobby
 import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -91,7 +92,7 @@ interface LobbyRepository {
                     notOwner = true
                     lobby
                 } else {
-                    val next = lobby.relinquishOwner(now).copy(players = lobby.players - sessionId)
+                    val next = lobby.relinquishOwner(now).copy(players = lobby.players - PlayerId.of(lobby.ownerUserId, sessionId))
                     if (next.isDefunct()) {
                         defunct = next
                         null
@@ -129,7 +130,7 @@ interface LobbyRepository {
                     notOwner = true
                     lobby
                 } else {
-                    val next = lobby.relinquishOwner(now).copy(players = lobby.players - lobby.ownerSessionId)
+                    val next = lobby.relinquishOwner(now).copy(players = lobby.players - PlayerId.of(userId, lobby.ownerSessionId))
                     if (next.isDefunct()) {
                         defunct = next
                         null
@@ -160,7 +161,7 @@ interface LobbyRepository {
         val updated =
             mutate(id) { lobby ->
                 when {
-                    !lobby.hasJoined(sessionId) -> {
+                    !lobby.hasJoined(PlayerId.of(userId, sessionId)) -> {
                         lockError = ClaimOutcome.NotPresentInLobby
                         lobby
                     }
