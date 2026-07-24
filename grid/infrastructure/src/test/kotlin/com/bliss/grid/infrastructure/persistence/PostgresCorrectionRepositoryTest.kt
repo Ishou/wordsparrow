@@ -3,12 +3,14 @@ package com.bliss.grid.infrastructure.persistence
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.containsExactlyInAnyOrder
+import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
 import com.bliss.grid.application.correction.BackfillStatus
 import com.bliss.grid.application.correction.GuardedRecord
+import com.bliss.grid.application.correction.SeedReplacement
 import com.bliss.grid.domain.correction.ClueCorrection
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -336,6 +338,69 @@ class PostgresCorrectionRepositoryTest {
 
         repository.markExported(replace)
         assertThat(repository.exportableCorrections()).isEmpty()
+    }
+
+    @Test
+    fun `seedReplacements inserts a pending backfill that is pre-exported so the override flush skips it`() {
+        val result =
+            repository.seedReplacements(
+                listOf(SeedReplacement(wordText = "MENACEES", oldClueText = "Faites peur a", newClueText = "Effrayees")),
+                maintainer,
+            )
+
+        assertThat(result.inserted).isEqualTo(1)
+        // Pending so --process-corrections patches the grids...
+        assertThat(repository.backfillJobs().map { it.correction.oldClueText }).containsExactly("Faites peur a")
+        // ...but already exported so the offline override flush leaves it alone.
+        assertThat(repository.exportableCorrections()).isEmpty()
+    }
+
+    @Test
+    fun `seedReplacements is idempotent - a re-run of the same word and clue inserts nothing`() {
+        val row = SeedReplacement(wordText = "CLOS", oldClueText = "Fermer", newClueText = "Ferme")
+
+        val first = repository.seedReplacements(listOf(row), maintainer)
+        val second = repository.seedReplacements(listOf(row), maintainer)
+
+        assertThat(first.inserted).isEqualTo(1)
+        assertThat(second.inserted).isEqualTo(0)
+        assertThat(second.skippedExisting).isEqualTo(1)
+        assertThat(repository.backfillJobs()).hasSize(1)
+    }
+
+    @Test
+    fun `seedReplacements yields to a live maintainer correction on the same word and clue`() {
+        repository.record(
+            ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "Fermer", wordText = "clos", newClueText = "Deja ferme"),
+            maintainer,
+        )
+
+        val result =
+            repository.seedReplacements(
+                listOf(SeedReplacement(wordText = "CLOS", oldClueText = "Fermer", newClueText = "Ferme")),
+                maintainer,
+            )
+
+        assertThat(result.inserted).isEqualTo(0)
+        assertThat(result.skippedExisting).isEqualTo(1)
+    }
+
+    @Test
+    fun `seedReplacements re-seeds once a prior correction on the same word and clue was reverted`() {
+        val id =
+            repository.record(
+                ClueCorrection(ClueCorrection.Kind.REPLACE, oldClueText = "Fermer", wordText = "CLOS", newClueText = "Deja ferme"),
+                maintainer,
+            )
+        repository.deactivate(id)
+
+        val result =
+            repository.seedReplacements(
+                listOf(SeedReplacement(wordText = "CLOS", oldClueText = "Fermer", newClueText = "Ferme")),
+                maintainer,
+            )
+
+        assertThat(result.inserted).isEqualTo(1)
     }
 
     private fun forbid(oldClueText: String): ClueCorrection =
