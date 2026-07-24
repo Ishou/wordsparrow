@@ -806,7 +806,7 @@ const lobbyWsHandler = lobbyWs.addEventListener('connection', ({ client, params 
         client.send(
           JSON.stringify({
             type: 'playerRenamed',
-            sessionId: ownerSessionId,
+            playerId: ownerSessionId,
             newPseudonym: rn.newPseudonym,
           }),
         );
