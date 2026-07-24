@@ -225,6 +225,18 @@ processCorrections:
   resources:
     requests: {cpu: 500m, memory: 256Mi}
     limits: {cpu: "1", memory: 512Mi}
+# One-off bulk clue-correction seed (ADR-0108 amendment 2026-07-24); rendered by templates/job-seed-corrections.yaml. Off by default — enable for a specific migration (e.g. the ppas definition replacement) with the reviewed source CSV supplied as a ConfigMap; the process-corrections CronJob then backfills the grids.
+seedCorrections:
+  enabled: false
+  # Name of a maintainer-created ConfigMap holding the reviewed word,old_clue,new_clue CSV: kubectl create configmap <name> --from-file=seed.csv=./seed.csv
+  sourceConfigMap: ""
+  # Key within that ConfigMap to read the CSV from.
+  sourceKey: seed.csv
+  # 20 minutes: a batch insert of a few thousand rows is quick; the backfill is the separate process-corrections CronJob.
+  activeDeadlineSeconds: 1200
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
 # ADR-0097: corpus.objectStore fetches the clue corpus from private Hetzner Object Storage via an initContainer; off by default until the bucket is populated.
 corpus:
   objectStore:
