@@ -72,6 +72,21 @@ spec:
                 {{- if .Values.corpus.objectStore.enabled }}
                 - {name: CORPUS_DIR, value: /corpus}
                 {{- end }}
+                {{- if .Values.edgePurge.enabled }}
+                # ADR-0089 §5: a patched daily must purge its edge cache; without these the fix waits for the until-midnight TTL.
+                - name: CLOUDFLARE_ZONE_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.edgePurge.secretName }}
+                      key: zone-id
+                      optional: true
+                - name: CLOUDFLARE_PURGE_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.edgePurge.secretName }}
+                      key: token
+                      optional: true
+                {{- end }}
               {{- with .Values.processCorrections.resources }}
               resources: {{- toYaml . | nindent 16 }}
               {{- end }}
