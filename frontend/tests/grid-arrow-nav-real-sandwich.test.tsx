@@ -4,10 +4,7 @@ import { Grid } from '@/ui/components/grid';
 import { apiPuzzleToDomain } from '@/infrastructure/api/grid/mapper';
 import realDaily from './fixtures/daily-real-sandwich.json';
 
-// Real prod daily (fetched 2026-07-24). Row 0 is the `.X.X.` pattern the
-// bug report describes: right-down definition cells alternating with
-// letter cells, so every row-0 letter is down-only (no across word).
-//   0  ⤵ X ⤵ X ⤵ X ⤵ X ⤵ X ⤵ X ⤵ X ↓
+// Real prod daily whose top row is the reported `.X.X.` pattern: right-down def cells alternating with letters, so every row-0 letter is down-only.
 const PUZZLE = apiPuzzleToDomain(realDaily as never);
 
 const inputAt = (root: HTMLElement, row: number, col: number) =>
@@ -35,13 +32,10 @@ describe('real daily — .X.X. top row (down-only cells)', () => {
     expect(defAt(container, 0, 2)?.dataset.currentClue).toBe('true');
   });
 
-  // The reported break: HORIZONTAL focus, ArrowRight jumps over a def onto a
-  // DOWN-only cell. across word (5,0..5,4) [def (4,0) down-right]; (5,5) is a
-  // def; (5,6) is down-only [down word (1,6)..(6,6), def (0,6)].
+  // The reported break: horizontal focus on across (5,0..5,4), ArrowRight over def (5,5) onto down-only (5,6) [down word (1,6)..(6,6), def (0,6)].
   it('ArrowRight from a horizontal word onto a down-only cell focuses the down word', () => {
     const { container } = render(<Grid puzzle={PUZZLE} />);
-    // Click (5,4), a cell of the across word — default direction is 'across',
-    // so this establishes horizontal focus. Confirm via the across highlight.
+    // Click (5,4) in the across word — default direction 'across' gives horizontal focus (confirmed via the across highlight below).
     click(inputAt(container, 5, 4)!);
     expect(wrapAt(container, 5, 3)?.dataset.inWord).toBe('true');
     expect(defAt(container, 4, 0)?.dataset.currentClue).toBe('true');
