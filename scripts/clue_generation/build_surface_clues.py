@@ -339,8 +339,7 @@ def build_surface_rows(
         rows.append({
             "surface": surface,
             "lemma": cand_lemma,
-            # participe_passe is an internal routing pos only; ship the
-            # participle surface under the existing `verbe` schema value.
+            # participe_passe is an internal routing pos only; ships under the existing `verbe` schema value.
             "pos": "verbe" if cand_pos == "participe_passe" else cand_pos,
             "clue": clue,
             "source_clue": row["lemma_clue"],
