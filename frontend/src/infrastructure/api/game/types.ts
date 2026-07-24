@@ -339,6 +339,15 @@ export interface components {
          */
         SessionId: string;
         /**
+         * Format: uuid
+         * @description Stable per-account player identity: the authenticated `userId`, or the
+         *     per-device `sessionId` for an anonymous player. Keys lock/score
+         *     attribution (ADR-0066 amendment (e)); distinct from the transport
+         *     `sessionId`. Mirrors `PlayerId` in `game/api/asyncapi.yaml`; keep in sync.
+         * @example 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b
+         */
+        PlayerId: string;
+        /**
          * @description Player display name. Not unique within a lobby. Leading / trailing
          *     whitespace is rejected. Mirrors `Pseudonym` in
          *     `game/api/asyncapi.yaml`; keep in sync.
@@ -373,10 +382,12 @@ export interface components {
             height: number;
         };
         /**
-         * @description A player currently holding a slot in the lobby. Mirrors `Player` in
-         *     `game/api/asyncapi.yaml`; keep in sync.
+         * @description A player currently holding a slot in the lobby. Identity is `playerId`
+         *     (account-scoped); `sessionId` is the transport connection. Mirrors
+         *     `Player` in `game/api/asyncapi.yaml`; keep in sync.
          */
         Player: {
+            playerId: components["schemas"]["PlayerId"];
             sessionId: components["schemas"]["SessionId"];
             pseudonym: components["schemas"]["Pseudonym"];
             joinedAt: components["schemas"]["Instant"];
@@ -501,13 +512,13 @@ export interface components {
             /** @description Zero-indexed column, left to right. */
             column: number;
         };
-        /** @description A locked cell plus the session that first locked it (first-writer-wins on crossings). */
+        /** @description A locked cell plus the player that first locked it (first-writer-wins on crossings). */
         LockedCell: {
             /** @description Zero-indexed row, top to bottom. */
             row: number;
             /** @description Zero-indexed column, left to right. */
             column: number;
-            lockedBy: components["schemas"]["SessionId"];
+            lockedBy: components["schemas"]["PlayerId"];
         };
         /** @description A single clue listed in `GamePuzzle.clues`. */
         GameClue: {
@@ -551,7 +562,7 @@ export interface components {
             entries: components["schemas"]["CellEntry"][];
             /**
              * @description Cumulative cells locked by server-side word validation, each with
-             *     the per-cell `lockedBy` session that first locked it (first-writer-
+             *     the per-cell `lockedBy` player that first locked it (first-writer-
              *     wins on crossings, per ADR-0086). Order is row then column for
              *     diff-friendly snapshots. Empty list when no word has been locked.
              */

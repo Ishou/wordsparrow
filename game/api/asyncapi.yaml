@@ -175,6 +175,15 @@ components:
       format: uuid
       description: UUID v7 string per ADR-0003 §6. Generated client-side on first visit and persisted in `localStorage`.
       example: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b
+    PlayerId:
+      type: string
+      format: uuid
+      description: >-
+        Stable per-account player identity: the authenticated `userId`, or the
+        per-device `sessionId` for an anonymous player. Keys the roster and
+        lock/score attribution (ADR-0066 amendment (e)); distinct from the
+        transport `sessionId`, which stays per-device.
+      example: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b
     Pseudonym:
       type: string
       minLength: 1
@@ -241,9 +250,10 @@ components:
         direction: { $ref: '#/components/schemas/GameClueDirection', nullable: true, description: Direction the player is currently solving; `null` when no cell is focused. Lets peers tint the whole word, not just the cell. }
     Player:
       type: object
-      required: [sessionId, pseudonym, joinedAt]
-      description: A player currently holding a slot in the lobby.
+      required: [playerId, sessionId, pseudonym, joinedAt]
+      description: A player currently holding a slot in the lobby. Identity is `playerId` (account-scoped); `sessionId` is the transport connection.
       properties:
+        playerId:  { $ref: '#/components/schemas/PlayerId' }
         sessionId: { $ref: '#/components/schemas/SessionId' }
         pseudonym: { $ref: '#/components/schemas/Pseudonym' }
         joinedAt:  { $ref: '#/components/schemas/Instant' }
@@ -338,11 +348,11 @@ components:
     LockedCell:
       type: object
       required: [row, column, lockedBy]
-      description: A locked cell plus the session that first locked it (first-writer-wins on crossings).
+      description: A locked cell plus the player that first locked it (first-writer-wins on crossings).
       properties:
         row:      { type: integer, minimum: 0, description: Zero-indexed row, top to bottom. }
         column:   { type: integer, minimum: 0, description: Zero-indexed column, left to right. }
-        lockedBy: { $ref: '#/components/schemas/SessionId' }
+        lockedBy: { $ref: '#/components/schemas/PlayerId' }
     GameClue:
       type: object
       required: [id, direction, start, length, text]
@@ -386,7 +396,7 @@ components:
           items: { $ref: '#/components/schemas/LockedCell' }
           description: |
             Cumulative set of cells the server has locked, each with the
-            per-cell `lockedBy` session that first locked it (first-writer-
+            per-cell `lockedBy` player that first locked it (first-writer-
             wins on crossings, per ADR-0086). Order is row, then column
             (stable for diff-friendly snapshots). Empty list when no word
             has been validated yet.
@@ -530,7 +540,7 @@ components:
         game:           { $ref: '#/components/schemas/GameSession', nullable: true }
       example:
         type: lobbyState
-        players: [{ sessionId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, pseudonym: Joueur 1234, joinedAt: '2026-05-02T15:30:00Z' }]
+        players: [{ playerId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, sessionId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, pseudonym: Joueur 1234, joinedAt: '2026-05-02T15:30:00Z' }]
         ownerSessionId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b
         state: IN_PROGRESS
         gridConfig: { width: 7, height: 7 }
@@ -545,28 +555,33 @@ components:
           completedAt: null
     PlayerJoinedPayload:
       type: object
-      required: [type, sessionId, pseudonym, joinedAt]
+      required: [type, playerId, sessionId, pseudonym, joinedAt]
       properties:
         type:      { type: string, enum: [playerJoined] }
+        playerId:  { $ref: '#/components/schemas/PlayerId' }
         sessionId: { $ref: '#/components/schemas/SessionId' }
         pseudonym: { $ref: '#/components/schemas/Pseudonym' }
         joinedAt:  { $ref: '#/components/schemas/Instant' }
-      example: { type: playerJoined, sessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5, pseudonym: Bob, joinedAt: '2026-05-02T15:31:12Z' }
+      example: { type: playerJoined, playerId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, sessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5, pseudonym: Bob, joinedAt: '2026-05-02T15:31:12Z' }
     PlayerLeftPayload:
       type: object
-      required: [type, sessionId]
+      # Expand phase: playerId added; sessionId retained for the current consumers until Wave 5 migrates them (ADR-0066 amendment (e)).
+      required: [type, playerId, sessionId]
       properties:
         type:      { type: string, enum: [playerLeft] }
+        playerId:  { $ref: '#/components/schemas/PlayerId' }
         sessionId: { $ref: '#/components/schemas/SessionId' }
-      example: { type: playerLeft, sessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5 }
+      example: { type: playerLeft, playerId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, sessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5 }
     PlayerRenamedPayload:
       type: object
-      required: [type, sessionId, newPseudonym]
+      # Expand phase: playerId added; sessionId retained for the current consumers until Wave 5 migrates them (ADR-0066 amendment (e)).
+      required: [type, playerId, sessionId, newPseudonym]
       properties:
         type:         { type: string, enum: [playerRenamed] }
+        playerId:     { $ref: '#/components/schemas/PlayerId' }
         sessionId:    { $ref: '#/components/schemas/SessionId' }
         newPseudonym: { $ref: '#/components/schemas/Pseudonym' }
-      example: { type: playerRenamed, sessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5, newPseudonym: Alice }
+      example: { type: playerRenamed, playerId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, sessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5, newPseudonym: Alice }
     OwnershipChangedPayload:
       type: object
       required: [type, lobbyId, newOwnerSessionId, newOwnerUserId]
@@ -694,8 +709,9 @@ components:
         `lobbyState.game.lockedPositions` for late-joiners. Two words may
         lock simultaneously when the just-filled cell is a crossing — the
         server merges their positions into a single frame. `lockedBy` is
-        the session whose write completed the word(s) in this event; every
-        position in a single frame shares it (per ADR-0086).
+        the player whose write completed the word(s) in this event; every
+        position in a single frame shares it (per ADR-0086, account-scoped
+        per ADR-0066 amendment (e)).
       properties:
         type:      { type: string, enum: [wordLocked] }
         positions:
@@ -703,7 +719,7 @@ components:
           minItems: 1
           items: { $ref: '#/components/schemas/GamePosition' }
           description: One or more cells whose containing word was just validated correct. Order is row then column.
-        lockedBy:  { $ref: '#/components/schemas/SessionId' }
+        lockedBy:  { $ref: '#/components/schemas/PlayerId' }
         lockedAt:  { $ref: '#/components/schemas/Instant' }
       example:
         type: wordLocked
