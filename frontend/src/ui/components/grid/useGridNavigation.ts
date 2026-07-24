@@ -713,7 +713,15 @@ export function useGridNavigation(puzzle: Puzzle, options?: UseGridNavigationOpt
       let row = f.row + dr, col = f.col + dc;
       while (row >= 0 && row < puzzle.height && col >= 0 && col < puzzle.width) {
         // Skip validated (locked) letters too, so a run of solved cells doesn't trap the cursor — landing direct here keeps the jump in the arrow's direction.
-        if (lookup.cellAt(row, col)?.kind === 'letter' && !isCellValidatedRef.current?.(row, col)) return focusCell({ row, col });
+        if (lookup.cellAt(row, col)?.kind === 'letter' && !isCellValidatedRef.current?.(row, col)) {
+          // A block-sandwiched cell may hold a word on one axis only; if the active direction has none here, adopt the surviving one so the word highlights.
+          const dir = stateRef.current.direction;
+          if (!lookup.clueAt(row, col, dir)) {
+            const other = dir === 'across' ? 'down' : 'across';
+            if (lookup.clueAt(row, col, other)) setDirection(other);
+          }
+          return focusCell({ row, col });
+        }
         row += dr; col += dc;
       }
     },
