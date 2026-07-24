@@ -202,6 +202,9 @@ def main() -> None:
 
     gold: list[dict] = []
     for gold_csv in sorted(root.glob(GOLD_GLOB)):
+        # ppas gold holds participle text keyed by verb lemma: reaches the corpus only via surface inflation, never as a direct infinitive-surface clue.
+        if gold_csv.parent.name == "generation-gold-ppas":
+            continue
         gold.extend(normalize_gold(gold_csv, index))
 
     editorial = (

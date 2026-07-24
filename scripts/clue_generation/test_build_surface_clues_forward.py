@@ -35,9 +35,9 @@ def _corpus() -> dict[tuple[str, str], dict]:
             "validation_flag": "ok", "filter_score": "0.9",
         }
     return {
-        ("lier", "verbe"): entry("lier", "verbe", "Attacher"),
-        ("lie", "nom"): entry("lie", "nom", "Dépôt du vin"),
-        ("are", "nom"): entry("are", "nom", "Unité de surface"),
+        ("lier", "verbe"): [entry("lier", "verbe", "Attacher")],
+        ("lie", "nom"): [entry("lie", "nom", "Dépôt du vin")],
+        ("are", "nom"): [entry("are", "nom", "Unité de surface")],
     }
 
 
@@ -72,3 +72,34 @@ def test_pure_verb_surface_keeps_verb_lemma() -> None:
     rows = build_surface_rows("lia", corpus, index, freq)
     assert len(rows) == 1, rows
     assert rows[0]["lemma"] == "lier"
+
+
+def test_ppas_surface_uses_ppas_gold_not_verb_clue() -> None:
+    lex = _lexique()
+    if lex is None:
+        return
+    index = MorphologyIndex.load(lex)
+    freq = lemma_pos_freq(lex)
+    corpus = _corpus()
+    corpus[("lier", "participe_passe")] = [{
+        "lemma": "lier", "pos": "participe_passe", "lemma_clue": "Noué serré",
+        "validation_flag": "ok", "filter_score": "0.9",
+    }]
+    rows = build_surface_rows("liée", corpus, index, freq)
+    verb = [r for r in rows if r["lemma"] == "lier"]
+    assert verb, rows
+    # a ppas surface is clued from the participe_passe gold, never the finite verb clue
+    assert verb[0]["source_clue"] == "Noué serré", verb
+    assert verb[0]["pos"] == "verbe", verb  # shipped under the existing verbe schema
+
+
+def test_ppas_surface_without_ppas_gold_drops() -> None:
+    lex = _lexique()
+    if lex is None:
+        return
+    index = MorphologyIndex.load(lex)
+    freq = lemma_pos_freq(lex)
+    corpus = _corpus()  # only ("lier","verbe") -> "Attacher"; no participe_passe gold
+    rows = build_surface_rows("liée", corpus, index, freq)
+    # the finite verb clue is NOT inflated onto a participle surface
+    assert not [r for r in rows if r["lemma"] == "lier"], rows
