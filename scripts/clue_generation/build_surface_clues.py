@@ -84,6 +84,9 @@ _PERSON_TAGS = {"1sg", "2sg", "3sg", "1pl", "2pl", "3pl", "1isg", "2isg", "3isg"
 # Only 1st/2nd plural passé simple is dropped as archaic; singular and 3rd person read fine as crossword fill (maintainer call, 2026-07-10).
 _PASSE_SIMPLE_PERSON = {"1pl", "2pl"}
 
+# Statuses where a ppas def inflected cleanly — prefer such a gold def over a sibling that can't PP-inflect.
+_PPAS_CLEAN_STATUS = {"inflected", "identity", "verbatim"}
+
 
 def _verb_number(tags) -> str | None:
     """Map a grammalecte tag set to grammatical number, including the inversion persons PERSON_TOKENS omits."""
@@ -267,14 +270,18 @@ def build_surface_rows(
         pos_class = _classify(tags)
         if pos_class not in POS_PRECEDENCE:
             continue
-        key = (lemma, pos_class)
+        # ppas readings clue only from the participe_passe gold tier, never the finite verb clue (unverifiable agreement); no gold ⇒ no ppas clue.
+        eff_pos = ("participe_passe"
+                   if pos_class == "verbe" and "ppas" in {normalize_tag(t) for t in tags}
+                   else pos_class)
+        key = (lemma, eff_pos)
         if key in seen:
             continue
         if key not in corpus:
             continue
         seen.add(key)
-        f_ = freq.get(key, 0)
-        candidates.append((lemma, pos_class, tags, f_))
+        f_ = freq.get((lemma, pos_class), 0)
+        candidates.append((lemma, eff_pos, tags, f_))
 
     if not candidates:
         # Manner-adverb fallback: a `-ment` adverb has no clue of its
@@ -307,7 +314,7 @@ def build_surface_rows(
         norm_tags = ({normalize_tag(t) for t in cand_tags}
                      if surface != cand_lemma else None)
         # Last-first preserves the prior primary; fall back to an earlier clue when it doesn't fit the cell.
-        emitted = False
+        fitting: list[tuple[str, str, dict]] = []
         for row in reversed(corpus[(cand_lemma, cand_pos)]):
             source_clue = row["lemma_clue"]
             if surface == cand_lemma:
@@ -319,21 +326,27 @@ def build_surface_rows(
             # A plural noun answer led by a singular subject pronoun disagrees regardless of how the clue was produced (verbatim/inflected/head-pos-mismatch).
             if cand_pos == "nom" and _clue_subject_number_disagrees(clue, cand_tags):
                 status = "subject-number-mismatch"
-            status_counter[status] += 1
-            rows.append({
-                "surface": surface,
-                "lemma": cand_lemma,
-                "pos": cand_pos,
-                "clue": clue,
-                "source_clue": source_clue,
-                "inflection_status": status,
-                "filter_score": row.get("filter_score", ""),
-                "validation_flag": row.get("validation_flag", ""),
-            })
-            emitted = True
-            break
-        if not emitted:
+            fitting.append((clue, status, row))
+            # ppas scans siblings for a cleanly-inflected def so a verb+object gold def doesn't sink a lemma whose siblings agree; non-ppas keeps first-fitting.
+            if cand_pos != "participe_passe" or status in _PPAS_CLEAN_STATUS:
+                break
+        if not fitting:
             status_counter["too-long"] += 1
+            continue
+        clue, status, row = next(
+            (f for f in fitting if f[1] in _PPAS_CLEAN_STATUS), fitting[0])
+        status_counter[status] += 1
+        rows.append({
+            "surface": surface,
+            "lemma": cand_lemma,
+            # participe_passe is an internal routing pos only; ships under the existing `verbe` schema value.
+            "pos": "verbe" if cand_pos == "participe_passe" else cand_pos,
+            "clue": clue,
+            "source_clue": row["lemma_clue"],
+            "inflection_status": status,
+            "filter_score": row.get("filter_score", ""),
+            "validation_flag": row.get("validation_flag", ""),
+        })
     return rows
 
 
