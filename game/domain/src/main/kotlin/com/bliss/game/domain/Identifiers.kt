@@ -107,12 +107,7 @@ value class UserId(
     }
 }
 
-/**
- * Stable per-account live-game identity (ADR-0066 amendment (e)): the account's
- * [UserId] when authed, else the device [SessionId] for an anon player. Keys the
- * roster and lock/score attribution; distinct from the per-device transport
- * [SessionId]. Both a UUID [UserId] and a UUID v7 [SessionId] satisfy the guard.
- */
+/** Stable per-account live-game identity (ADR-0066 (e)): [UserId] when authed, else the device [SessionId]. */
 @JvmInline
 value class PlayerId(
     val value: String,
