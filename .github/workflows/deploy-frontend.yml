@@ -74,12 +74,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright chromium for prerender
-        # The seo:postbuild step (chained into build / build:preview)
-        # uses Playwright's chromium to serialize each indexable route to
-        # static HTML (see ADR-0053). No `--with-deps`: the ubuntu-latest
-        # runner already ships chromium's shared libs; `--with-deps` only
-        # added CJK/Cyrillic fonts, irrelevant to DOM→HTML serialization,
-        # and stalled the job on the apt mirror past the 10-min cap.
+        # Prerender (ADR-0053) only serializes DOM to HTML — fonts are irrelevant, and
+        # ubuntu-latest already ships chromium's shared libs, so --with-deps buys nothing.
         working-directory: frontend
         run: pnpm exec playwright install chromium
 
