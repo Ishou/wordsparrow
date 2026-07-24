@@ -21,6 +21,7 @@ import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Player
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -117,7 +118,7 @@ class WebSocketFrameMapperTest {
         val event =
             LobbyEvent.WordLocked(
                 positions = setOf(Position(2, 3), Position(0, 4), Position(0, 3), Position(1, 3)),
-                lockedBy = ownerId,
+                lockedBy = PlayerId(ownerId.value),
                 lockedAt = writtenAt2,
             )
         val frame = event.toFrameOrNull() as ServerToClientFrame.WordLocked
@@ -265,7 +266,7 @@ class WebSocketFrameMapperTest {
         Lobby(
             id = LobbyId.generate(),
             ownerSessionId = ownerId,
-            players = mapOf(ownerId to Player(ownerId, ownerPseudonym, joinedAt)),
+            players = mapOf(Player(ownerId, ownerPseudonym, joinedAt).let { it.playerId to it }),
             state = LobbyLifecycleState.IN_PROGRESS,
             gridConfig = GridConfig(7, 7),
             game =
@@ -274,7 +275,7 @@ class WebSocketFrameMapperTest {
                     entries = entries,
                     startedAt = startedAt,
                     completedAt = null,
-                    lockedPositions = lockedPositions,
+                    lockedPositions = lockedPositions.mapValues { PlayerId(it.value.value) },
                 ),
             lastActivityAt = startedAt,
             code = LobbyCode.generate(),

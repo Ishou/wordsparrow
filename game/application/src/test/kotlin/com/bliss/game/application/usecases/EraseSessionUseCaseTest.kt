@@ -17,6 +17,7 @@ import com.bliss.game.domain.LobbyCode
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.Player
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -84,7 +85,7 @@ class EraseSessionUseCaseTest {
             assertThat(after).isNotNull()
             assertThat(after!!.ownerUserId).isNull()
             assertThat(after.ownerSessionId).isEqualTo(SessionId.ANON)
-            assertThat(after.players.keys).containsOnly(other, third)
+            assertThat(after.players.keys).containsOnly(PlayerId(other.value), PlayerId(third.value))
             val sessionIds =
                 after.game!!
                     .entries.values
@@ -118,7 +119,7 @@ class EraseSessionUseCaseTest {
             val after = repo.findById(id)
             assertThat(after).isNotNull()
             assertThat(after!!.ownerSessionId).isEqualTo(other)
-            assertThat(after.players.keys).containsOnly(other)
+            assertThat(after.players.keys).containsOnly(PlayerId(other.value))
             assertThat(
                 after.game!!
                     .entries.values
@@ -159,7 +160,7 @@ class EraseSessionUseCaseTest {
         return Lobby(
             id = id,
             ownerSessionId = owner,
-            players = players,
+            players = players.values.associateBy { it.playerId },
             state = LobbyLifecycleState.WAITING,
             gridConfig = GridConfig(5, 5),
             game = null,
@@ -189,7 +190,7 @@ class EraseSessionUseCaseTest {
         return Lobby(
             id = id,
             ownerSessionId = owner,
-            players = players,
+            players = players.values.associateBy { it.playerId },
             state = LobbyLifecycleState.IN_PROGRESS,
             gridConfig = GridConfig(puzzle.width, puzzle.height),
             game =

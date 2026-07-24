@@ -266,7 +266,7 @@ class SessionsRouteTest {
         state: LobbyLifecycleState = LobbyLifecycleState.IN_PROGRESS,
         lastActivityAt: Instant = baseInstant,
     ): Lobby {
-        val players = mapOf(owner to Player(owner, Pseudonym("Alice"), baseInstant))
+        val players = mapOf(Player(owner, Pseudonym("Alice"), baseInstant).let { it.playerId to it })
         val game: GameSession? =
             when (state) {
                 LobbyLifecycleState.WAITING -> null

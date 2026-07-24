@@ -15,6 +15,7 @@ import com.bliss.game.domain.Letter
 import com.bliss.game.domain.Lobby
 import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
+import com.bliss.game.domain.PlayerId
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -61,7 +62,7 @@ class ReturnToSalonUseCaseTest {
 
             val out = h.returnToSalon(lobby.id, sessionA).requireSuccess()
 
-            assertThat(out.value.players.keys).isEqualTo(setOf(sessionA, sessionB))
+            assertThat(out.value.players.keys).isEqualTo(setOf(PlayerId(sessionA.value), PlayerId(sessionB.value)))
         }
 
     @Test

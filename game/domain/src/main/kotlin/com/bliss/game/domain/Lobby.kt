@@ -15,7 +15,10 @@ data class Player(
     val pseudonym: Pseudonym,
     val joinedAt: Instant,
     val userId: UserId? = null,
-)
+) {
+    // Account-scoped identity (ADR-0066 (e)): authed seats key on userId, anon on the device session; sessionId stays for transport correlation.
+    val playerId: PlayerId get() = PlayerId.of(userId, sessionId)
+}
 
 /**
  * A single placed letter in the canonical entries map. Conflicts are resolved
@@ -32,16 +35,16 @@ data class CellEntry(
  * Live game state embedded in a [Lobby] once the owner has clicked Start.
  * [entries] is the authoritative server-side cell map; [completedAt] is null
  * until the puzzle is solved. [lockedPositions] maps each cumulatively
- * locked cell to the session that first locked it (first-writer-wins on
- * crossings, ADR-0086) — server-enforced read-only and surfaced on the
- * lobbyState snapshot for late-joiners.
+ * locked cell to the [PlayerId] that first locked it (first-writer-wins on
+ * crossings, ADR-0086; account-scoped per ADR-0066 (e)) — server-enforced
+ * read-only and surfaced on the lobbyState snapshot for late-joiners.
  */
 data class GameSession(
     val puzzle: GamePuzzle,
     val entries: Map<Position, CellEntry>,
     val startedAt: Instant,
     val completedAt: Instant?,
-    val lockedPositions: Map<Position, SessionId> = emptyMap(),
+    val lockedPositions: Map<Position, PlayerId> = emptyMap(),
 ) {
     init {
         if (completedAt != null) {
@@ -85,7 +88,7 @@ data class GameSession(
 data class Lobby(
     val id: LobbyId,
     val ownerSessionId: SessionId,
-    val players: Map<SessionId, Player>,
+    val players: Map<PlayerId, Player>,
     val state: LobbyLifecycleState,
     val gridConfig: GridConfig,
     val game: GameSession?,
@@ -126,7 +129,8 @@ data class Lobby(
 
     // ADR-0098 §2: owner-gated actions go inert only once BOTH ownerless and unseated -- isOwnerless()
     // alone over-fires for an anonymous owner, whose ownerUserId is null from creation, not relinquish.
-    fun isCurrentOwner(sessionId: SessionId): Boolean = isOwner(sessionId) && (hasJoined(sessionId) || !isOwnerless())
+    fun isCurrentOwner(sessionId: SessionId): Boolean =
+        isOwner(sessionId) && (hasJoined(PlayerId.of(ownerUserId, sessionId)) || !isOwnerless())
 
     /** Explicit relinquish (ADR-0098 §2): drop ownership to ownerless, leaving seat/state/game intact. */
     fun relinquishOwner(now: Instant): Lobby = copy(ownerUserId = null, lastActivityAt = now)
@@ -140,7 +144,10 @@ data class Lobby(
 
     fun isFull(): Boolean = players.size >= MAX_PLAYERS
 
-    fun hasJoined(sessionId: SessionId): Boolean = players.containsKey(sessionId)
+    fun hasJoined(playerId: PlayerId): Boolean = players.containsKey(playerId)
+
+    /** Resolve a seat from a device [SessionId] (the transport key). Anon and single-device authed callers only carry their session. */
+    fun seatBySession(sessionId: SessionId): Player? = players.values.firstOrNull { it.sessionId == sessionId }
 
     /** Returns a copy with [lastActivityAt] advanced to [now]. */
     fun touched(now: Instant): Lobby = copy(lastActivityAt = now)

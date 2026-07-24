@@ -16,6 +16,7 @@ import com.bliss.game.domain.GridConfig
 import com.bliss.game.domain.Letter
 import com.bliss.game.domain.Lobby
 import com.bliss.game.domain.LobbyId
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -300,6 +301,8 @@ private suspend fun DefaultWebSocketServerSession.handleFrame(
                 useCases.updateCell(
                     lobbyId,
                     SessionId(sid),
+                    // Account-scoped lock attribution (ADR-0066 (e)): authed -> verified userId, anon -> sessionId. Never from a client frame.
+                    PlayerId.of(verifiedUserId, SessionId(sid)),
                     Position(parsed.row, parsed.column),
                     letter,
                 )
@@ -432,6 +435,10 @@ private suspend fun DefaultWebSocketServerSession.dispatchJoin(
         // here?" — a multi-tab close must NOT broadcast `playerLeft`
         // when the player is still represented by another live socket.
         sessionManager.bindSession(lobbyId, session, sid.value)
+        // An idempotent reconnect / same-account second device (ADR-0066 (e)) broadcasts no event, so send this socket a fresh snapshot to converge it (e.g. an owner cross-device rejoin that rebound ownerSessionId).
+        if (outcome.result.events.isEmpty()) {
+            (outcome.result.value as? Lobby)?.let { send(encode(it.toLobbyStateFrame(sessionManager.getPresence(lobbyId)))) }
+        }
         sid.value
     } else {
         null

@@ -19,6 +19,7 @@ import com.bliss.game.domain.GamePuzzle
 import com.bliss.game.domain.Letter
 import com.bliss.game.domain.LetterCell
 import com.bliss.game.domain.LobbyLifecycleState
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
@@ -85,7 +86,7 @@ class UpdateCellWordLockTest {
             assertThat(solved.events[0]).isInstanceOf(LobbyEvent.CellUpdated::class)
             val locked = solved.events[1] as LobbyEvent.WordLocked
             assertThat(locked.positions).containsExactlyInAnyOrder(across01, across02, cross03)
-            assertThat(locked.lockedBy).isEqualTo(sessionA)
+            assertThat(locked.lockedBy).isEqualTo(PlayerId(sessionA.value))
             assertThat(
                 solved.value.game
                     ?.lockedPositions
@@ -96,7 +97,7 @@ class UpdateCellWordLockTest {
                     ?.lockedPositions
                     ?.values
                     ?.toSet(),
-            ).isEqualTo(setOf(sessionA))
+            ).isEqualTo(setOf(PlayerId(sessionA.value)))
             assertThat(solved.events.filterIsInstance<LobbyEvent.WordRejected>()).isEmpty()
         }
 
@@ -352,14 +353,14 @@ class UpdateCellWordLockTest {
             assertThat(locked).hasSize(1)
             // B's frame carries only the new cells, attributed to B.
             assertThat(locked[0].positions).containsExactlyInAnyOrder(down13, down23)
-            assertThat(locked[0].lockedBy).isEqualTo(sessionB)
+            assertThat(locked[0].lockedBy).isEqualTo(PlayerId(sessionB.value))
 
             val locks = out.value.game?.lockedPositions
             // First-writer-wins: the shared cell keeps A; the new cells belong to B.
-            assertThat(locks?.get(cross03)).isEqualTo(sessionA)
-            assertThat(locks?.get(across01)).isEqualTo(sessionA)
-            assertThat(locks?.get(down13)).isEqualTo(sessionB)
-            assertThat(locks?.get(down23)).isEqualTo(sessionB)
+            assertThat(locks?.get(cross03)).isEqualTo(PlayerId(sessionA.value))
+            assertThat(locks?.get(across01)).isEqualTo(PlayerId(sessionA.value))
+            assertThat(locks?.get(down13)).isEqualTo(PlayerId(sessionB.value))
+            assertThat(locks?.get(down23)).isEqualTo(PlayerId(sessionB.value))
         }
 
     @Test

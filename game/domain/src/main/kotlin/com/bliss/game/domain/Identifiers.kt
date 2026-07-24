@@ -107,6 +107,30 @@ value class UserId(
     }
 }
 
+/**
+ * Stable per-account live-game identity (ADR-0066 amendment (e)): the account's
+ * [UserId] when authed, else the device [SessionId] for an anon player. Keys the
+ * roster and lock/score attribution; distinct from the per-device transport
+ * [SessionId]. Both a UUID [UserId] and a UUID v7 [SessionId] satisfy the guard.
+ */
+@JvmInline
+value class PlayerId(
+    val value: String,
+) {
+    init {
+        require(USER_ID_REGEX.matches(value)) {
+            "PlayerId must be a UUID string, was '$value'"
+        }
+    }
+
+    companion object {
+        fun of(
+            userId: UserId?,
+            sessionId: SessionId,
+        ): PlayerId = PlayerId(userId?.value ?: sessionId.value)
+    }
+}
+
 @JvmInline
 value class Pseudonym(
     val value: String,

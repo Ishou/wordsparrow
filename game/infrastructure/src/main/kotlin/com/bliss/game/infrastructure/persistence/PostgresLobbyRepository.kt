@@ -23,6 +23,7 @@ import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.LobbyTitle
 import com.bliss.game.domain.Player
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -310,7 +311,7 @@ class PostgresLobbyRepository(
                             conn.rollback()
                             return@withContext ClaimOutcome.LobbyNotFound
                         }
-                    if (!current.hasJoined(sessionId)) {
+                    if (!current.hasJoined(PlayerId.of(userId, sessionId))) {
                         conn.rollback()
                         return@withContext ClaimOutcome.NotPresentInLobby
                     }
@@ -795,11 +796,12 @@ class PostgresLobbyRepository(
         )
     }
 
+    // Keyed by playerId = coalesce(user_id, session_id): two device rows of one account collapse to one seat (ADR-0066 (e)).
     private fun loadPlayers(
         conn: Connection,
         id: LobbyId,
-    ): Map<SessionId, Player> {
-        val out = LinkedHashMap<SessionId, Player>()
+    ): Map<PlayerId, Player> {
+        val out = LinkedHashMap<PlayerId, Player>()
         conn
             .prepareStatement(
                 "SELECT session_id, pseudonym, joined_at, user_id FROM lobby_players " +
@@ -810,13 +812,14 @@ class PostgresLobbyRepository(
                     while (rs.next()) {
                         val sid = SessionId(rs.getObject("session_id", UUID::class.java).toString())
                         val rawUserId = rs.getObject("user_id", UUID::class.java)
-                        out[sid] =
+                        val player =
                             Player(
                                 sessionId = sid,
                                 pseudonym = Pseudonym(rs.getString("pseudonym")),
                                 joinedAt = rs.getTimestamp("joined_at").toInstant(),
                                 userId = rawUserId?.let { UserId(it.toString()) },
                             )
+                        out[player.playerId] = player
                     }
                 }
             }
@@ -1027,10 +1030,10 @@ private data class PositionPayload(
 private data class LockedCellPayload(
     val row: Int,
     val column: Int,
-    // legacy payloads pre-ADR-0086 have no owner; absent -> unknown (SessionId.ANON)
+    // legacy payloads pre-ADR-0086 have no owner; absent -> unknown (anon sentinel). A legacy sessionId-keyed value reads forward-compatibly as a PlayerId (ADR-0066 (e)).
     val lockedBy: String? = null,
 ) {
-    fun toDomain(): Pair<Position, SessionId> = Position(row, column) to (lockedBy?.let { SessionId(it) } ?: SessionId.ANON)
+    fun toDomain(): Pair<Position, PlayerId> = Position(row, column) to (lockedBy?.let { PlayerId(it) } ?: PlayerId(SessionId.ANON.value))
 }
 
 @Serializable

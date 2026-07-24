@@ -32,6 +32,7 @@ import com.bliss.game.domain.LobbyId
 import com.bliss.game.domain.LobbyLifecycleState
 import com.bliss.game.domain.LobbyTitle
 import com.bliss.game.domain.Player
+import com.bliss.game.domain.PlayerId
 import com.bliss.game.domain.Position
 import com.bliss.game.domain.Pseudonym
 import com.bliss.game.domain.SessionId
@@ -145,6 +146,28 @@ class PostgresLobbyRepositoryTest {
             assertThat(loadedGame.lockedPositions).isEqualTo(originalGame.lockedPositions)
         }
 
+    // ADR-0066 (e): an authed seat persists via lobby_players.user_id and reconstructs keyed on the account playerId; the account-scoped lockedBy round-trips through game_payload JSONB.
+    @Test
+    fun `authed player and account-scoped lock survive a round-trip`() =
+        runTest {
+            val ownerUserId = UserId("33333333-3333-4333-8333-333333333333")
+            val lobby = inProgressLobby(id = LobbyId.generate(), ownerUserId = ownerUserId)
+
+            repo.save(lobby)
+            val loaded = repo.findById(lobby.id)
+
+            assertThat(loaded).isNotNull()
+            val accountPlayerId = PlayerId(ownerUserId.value)
+            assertThat(loaded!!.players.keys).isEqualTo(setOf(accountPlayerId))
+            assertThat(
+                loaded.players.values
+                    .single()
+                    .userId,
+            ).isEqualTo(ownerUserId)
+            assertThat(loaded.hasJoined(accountPlayerId)).isTrue()
+            assertThat(loaded.game!!.lockedPositions[Position(0, 0)]).isEqualTo(accountPlayerId)
+        }
+
     // ADR-0086 back-compat: legacy game_payload has lockedPositions entries with no `lockedBy`; the reader must hydrate them (absent -> SessionId.ANON) instead of 400ing the my-lobbies read.
     @Test
     fun `findById tolerates a legacy game_payload whose lockedPositions omit lockedBy`() =
@@ -158,7 +181,7 @@ class PostgresLobbyRepositoryTest {
             assertThat(loaded).isNotNull()
             val game = loaded!!.game
             assertThat(game).isNotNull()
-            assertThat(game!!.lockedPositions).isEqualTo(mapOf(Position(0, 0) to SessionId.ANON))
+            assertThat(game!!.lockedPositions).isEqualTo(mapOf(Position(0, 0) to PlayerId(SessionId.ANON.value)))
         }
 
     @Test
@@ -171,7 +194,7 @@ class PostgresLobbyRepositoryTest {
             val result = repo.findByUserId(ownerUserId)
 
             assertThat(result.map { it.id }).containsExactly(id)
-            assertThat(result[0].game!!.lockedPositions).isEqualTo(mapOf(Position(0, 0) to SessionId.ANON))
+            assertThat(result[0].game!!.lockedPositions).isEqualTo(mapOf(Position(0, 0) to PlayerId(SessionId.ANON.value)))
         }
 
     @Test
@@ -191,7 +214,7 @@ class PostgresLobbyRepositoryTest {
             val original =
                 inProgressLobby(id = LobbyId.generate()).let { l ->
                     val secondPlayer = Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))
-                    l.copy(players = l.players + (sessionB to secondPlayer))
+                    l.copy(players = l.players + (secondPlayer.playerId to secondPlayer))
                 }
             repo.save(original)
 
@@ -200,7 +223,7 @@ class PostgresLobbyRepositoryTest {
             val firstEntry = originalGame.entries.entries.first()
             val trimmed =
                 original.copy(
-                    players = original.players - sessionB,
+                    players = original.players - (original.seatBySession(sessionB)?.playerId ?: PlayerId(sessionB.value)),
                     game = originalGame.copy(entries = mapOf(firstEntry.key to firstEntry.value)),
                 )
             repo.save(trimmed)
@@ -553,7 +576,9 @@ class PostgresLobbyRepositoryTest {
                     .copy(ownerUserId = ownerUserId, lastActivityAt = baseInstant.minusSeconds(3600))
             repo.save(ownerOwned)
             // Leave-grace equivalent: the owner's seat is dropped, keeping the row and owner_user_id.
-            repo.mutate(ownerOwned.id) { it.copy(players = it.players - sessionA) }
+            repo.mutate(
+                ownerOwned.id,
+            ) { it.copy(players = it.players - (it.seatBySession(sessionA)?.playerId ?: PlayerId(sessionA.value))) }
             val anonIdle =
                 completedLobby(id = LobbyId.generate(), owner = sessionB)
                     .copy(lastActivityAt = baseInstant.minusSeconds(3600))
@@ -608,7 +633,13 @@ class PostgresLobbyRepositoryTest {
             repo.save(lobby)
 
             // Leave-grace equivalent: LeaveLobbyUseCase drops the owner's seat, keeping the row.
-            val afterLeave = repo.mutate(lobby.id) { it.copy(players = it.players - sessionA) }
+            val afterLeave =
+                repo.mutate(lobby.id) {
+                    it.copy(
+                        players =
+                            it.players - (it.seatBySession(sessionA)?.playerId ?: PlayerId(sessionA.value)),
+                    )
+                }
 
             assertThat(afterLeave).isNotNull()
             assertThat(afterLeave!!.players).isEmpty()
@@ -631,7 +662,7 @@ class PostgresLobbyRepositoryTest {
                 Lobby(
                     id = LobbyId.generate(),
                     ownerSessionId = sessionA,
-                    players = mapOf(sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant)),
+                    players = mapOf(Player(sessionB, Pseudonym("Bob"), baseInstant).let { it.playerId to it }),
                     state = LobbyLifecycleState.IN_PROGRESS,
                     gridConfig = GridConfig(samplePuzzle().width, samplePuzzle().height),
                     game =
@@ -687,7 +718,7 @@ class PostgresLobbyRepositoryTest {
 
             val mutated =
                 repo.mutate(lobby.id) { current ->
-                    current.copy(players = current.players + (sessionB to newcomer))
+                    current.copy(players = current.players + (newcomer.playerId to newcomer))
                 }
 
             assertThat(mutated).isNotNull()
@@ -742,7 +773,7 @@ class PostgresLobbyRepositoryTest {
                 base.copy(
                     players =
                         base.players +
-                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                            Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10)).let { it.playerId to it },
                 )
             repo.save(withOther)
             val now = baseInstant.plusSeconds(120)
@@ -769,7 +800,7 @@ class PostgresLobbyRepositoryTest {
                 base.copy(
                     players =
                         base.players +
-                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                            Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10)).let { it.playerId to it },
                 )
             repo.save(withOther)
 
@@ -812,7 +843,7 @@ class PostgresLobbyRepositoryTest {
                 base.copy(
                     players =
                         base.players +
-                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                            Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10)).let { it.playerId to it },
                 )
             repo.save(withOther)
             val now = baseInstant.plusSeconds(120)
@@ -890,7 +921,7 @@ class PostgresLobbyRepositoryTest {
                 base.copy(
                     players =
                         mapOf(
-                            sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = userB),
+                            Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = userB).let { it.playerId to it },
                         ),
                 )
             repo.save(ownerless)
@@ -920,7 +951,7 @@ class PostgresLobbyRepositoryTest {
                 base.copy(
                     players =
                         base.players +
-                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = userB)),
+                            Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = userB).let { it.playerId to it },
                 )
             repo.save(withOther)
 
@@ -936,7 +967,7 @@ class PostgresLobbyRepositoryTest {
             val userB = UserId("22222222-2222-2222-2222-222222222222")
             val ownerless =
                 inProgressLobby(id = LobbyId.generate(), owner = SessionId.ANON, ownerUserId = null)
-                    .copy(players = mapOf(sessionA to Player(sessionA, Pseudonym("Alice"), baseInstant)))
+                    .copy(players = mapOf(Player(sessionA, Pseudonym("Alice"), baseInstant).let { it.playerId to it }))
             repo.save(ownerless)
 
             val outcome = repo.claimOwnership(ownerless.id, sessionB, userB, baseInstant.plusSeconds(200))
@@ -970,8 +1001,8 @@ class PostgresLobbyRepositoryTest {
                 base.copy(
                     players =
                         base.players +
-                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))) +
-                            (sessionC to Player(sessionC, Pseudonym("Carol"), baseInstant.plusSeconds(20))),
+                            Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10)).let { it.playerId to it } +
+                            Player(sessionC, Pseudonym("Carol"), baseInstant.plusSeconds(20)).let { it.playerId to it },
                 )
             repo.save(withOthers)
 
@@ -1005,7 +1036,10 @@ class PostgresLobbyRepositoryTest {
                 base.copy(
                     players =
                         base.players +
-                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = remainingUserId)),
+                            Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10), userId = remainingUserId).let {
+                                it.playerId to
+                                    it
+                            },
                 )
             repo.save(withOther)
 
@@ -1032,7 +1066,7 @@ class PostgresLobbyRepositoryTest {
                 base.copy(
                     players =
                         base.players +
-                            (sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))),
+                            Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10)).let { it.playerId to it },
                     game =
                         base.game!!.copy(
                             entries =
@@ -1067,7 +1101,7 @@ class PostgresLobbyRepositoryTest {
         runTest {
             val ownerless =
                 inProgressLobby(id = LobbyId.generate(), owner = SessionId.ANON, ownerUserId = null)
-                    .copy(players = mapOf(sessionB to Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10))))
+                    .copy(players = mapOf(Player(sessionB, Pseudonym("Bob"), baseInstant.plusSeconds(10)).let { it.playerId to it }))
             repo.save(ownerless)
 
             val result = repo.eraseSession(sessionB)
@@ -1109,7 +1143,7 @@ class PostgresLobbyRepositoryTest {
             val lobbyBOwner = Player(sessionA, Pseudonym("Alice"), baseInstant, userId = userId)
             val lobbyB =
                 waitingLobby(id = LobbyId.generate(), owner = sessionA).copy(
-                    players = mapOf(sessionA to lobbyBOwner),
+                    players = mapOf(lobbyBOwner.playerId to lobbyBOwner),
                 )
             // Lobby C: a different anon session. Should NOT be touched.
             val lobbyC = waitingLobby(id = LobbyId.generate(), owner = sessionB)
@@ -1121,13 +1155,13 @@ class PostgresLobbyRepositoryTest {
 
             assertThat(touched).isEqualTo(setOf(lobbyA.id))
             val afterA = repo.findById(lobbyA.id)!!
-            val seatA = afterA.players[sessionA]!!
+            val seatA = afterA.seatBySession(sessionA)!!
             assertThat(seatA.userId).isEqualTo(userId)
             assertThat(seatA.pseudonym).isEqualTo(Pseudonym("Isho"))
             // Already-authed seat is untouched: pseudonym + userId unchanged.
             val afterB = repo.findById(lobbyB.id)!!
-            assertThat(afterB.players[sessionA]!!.pseudonym).isEqualTo(Pseudonym("Alice"))
-            assertThat(afterB.players[sessionA]!!.userId).isEqualTo(userId)
+            assertThat(afterB.seatBySession(sessionA)!!.pseudonym).isEqualTo(Pseudonym("Alice"))
+            assertThat(afterB.seatBySession(sessionA)!!.userId).isEqualTo(userId)
         }
 
     @Test
@@ -1152,14 +1186,14 @@ class PostgresLobbyRepositoryTest {
             val authedSeat = Player(sessionA, Pseudonym("Isho"), baseInstant, userId = userId)
             val lobbyA =
                 waitingLobby(id = LobbyId.generate(), owner = sessionA).copy(
-                    players = mapOf(sessionA to authedSeat),
+                    players = mapOf(authedSeat.playerId to authedSeat),
                 )
             // Lobby B: anon seat with different userId. Should NOT be touched.
             val otherUserId = UserId("22222222-2222-2222-2222-222222222222")
             val otherSeat = Player(sessionB, Pseudonym("Bob"), baseInstant, userId = otherUserId)
             val lobbyB =
                 waitingLobby(id = LobbyId.generate(), owner = sessionB).copy(
-                    players = mapOf(sessionB to otherSeat),
+                    players = mapOf(otherSeat.playerId to otherSeat),
                 )
             // Lobby C: pure-anon seat (null userId). Should NOT be touched.
             val lobbyC = waitingLobby(id = LobbyId.generate(), owner = sessionC)
@@ -1171,13 +1205,13 @@ class PostgresLobbyRepositoryTest {
 
             assertThat(touched).isEqualTo(setOf(lobbyA.id))
             val afterA = repo.findById(lobbyA.id)!!
-            val seatA = afterA.players[sessionA]!!
+            val seatA = afterA.seatBySession(sessionA)!!
             assertThat(seatA.userId).isEqualTo(null)
             assertThat(seatA.pseudonym).isEqualTo(Pseudonym("Marmotte"))
             // Other user's seat is untouched.
             val afterB = repo.findById(lobbyB.id)!!
-            assertThat(afterB.players[sessionB]!!.userId).isEqualTo(otherUserId)
-            assertThat(afterB.players[sessionB]!!.pseudonym).isEqualTo(Pseudonym("Bob"))
+            assertThat(afterB.seatBySession(sessionB)!!.userId).isEqualTo(otherUserId)
+            assertThat(afterB.seatBySession(sessionB)!!.pseudonym).isEqualTo(Pseudonym("Bob"))
         }
 
     @Test
@@ -1187,7 +1221,7 @@ class PostgresLobbyRepositoryTest {
             val authedSeat = Player(sessionA, Pseudonym("Isho"), baseInstant, userId = userId)
             val lobby =
                 waitingLobby(id = LobbyId.generate(), owner = sessionA).copy(
-                    players = mapOf(sessionA to authedSeat),
+                    players = mapOf(authedSeat.playerId to authedSeat),
                 )
             repo.save(lobby)
 
@@ -1205,7 +1239,7 @@ class PostgresLobbyRepositoryTest {
             val authedSeat = Player(sessionA, Pseudonym("Alice"), baseInstant, userId = userId)
             val lobby =
                 waitingLobby(id = LobbyId.generate(), owner = sessionA).copy(
-                    players = mapOf(sessionA to authedSeat),
+                    players = mapOf(authedSeat.playerId to authedSeat),
                 )
             repo.save(lobby)
 
@@ -1213,7 +1247,7 @@ class PostgresLobbyRepositoryTest {
             val touched = withConn { conn -> repo.anonymizeUserSeats(conn, userId, replacement) }
 
             assertThat(touched).isEqualTo(setOf(lobby.id))
-            val seat = repo.findById(lobby.id)!!.players[sessionA]!!
+            val seat = repo.findById(lobby.id)!!.seatBySession(sessionA)!!
             assertThat(seat.userId).isNull()
             assertThat(seat.pseudonym).isEqualTo(replacement)
         }
@@ -1225,7 +1259,7 @@ class PostgresLobbyRepositoryTest {
             val authedSeat = Player(sessionA, Pseudonym("Alice"), baseInstant, userId = userId)
             val lobby =
                 waitingLobby(id = LobbyId.generate(), owner = sessionA).copy(
-                    players = mapOf(sessionA to authedSeat),
+                    players = mapOf(authedSeat.playerId to authedSeat),
                 )
             repo.save(lobby)
 
@@ -1244,7 +1278,7 @@ class PostgresLobbyRepositoryTest {
             val authedSeat = Player(sessionA, Pseudonym("Isho"), baseInstant, userId = userId)
             val lobby =
                 waitingLobby(id = LobbyId.generate(), owner = sessionA).copy(
-                    players = mapOf(sessionA to authedSeat),
+                    players = mapOf(authedSeat.playerId to authedSeat),
                 )
             repo.save(lobby)
 
@@ -1252,7 +1286,7 @@ class PostgresLobbyRepositoryTest {
             val touched = withConn { conn -> repo.refreshUserPseudonym(conn, userId, newPseudonym) }
 
             assertThat(touched).isEqualTo(setOf(lobby.id))
-            val seat = repo.findById(lobby.id)!!.players[sessionA]!!
+            val seat = repo.findById(lobby.id)!!.seatBySession(sessionA)!!
             assertThat(seat.userId).isEqualTo(userId)
             assertThat(seat.pseudonym).isEqualTo(newPseudonym)
         }
@@ -1264,7 +1298,7 @@ class PostgresLobbyRepositoryTest {
             val authedSeat = Player(sessionA, Pseudonym("Isho"), baseInstant, userId = userId)
             val lobby =
                 waitingLobby(id = LobbyId.generate(), owner = sessionA).copy(
-                    players = mapOf(sessionA to authedSeat),
+                    players = mapOf(authedSeat.playerId to authedSeat),
                 )
             repo.save(lobby)
 
@@ -1283,13 +1317,13 @@ class PostgresLobbyRepositoryTest {
             val authedSeat = Player(sessionA, Pseudonym("Isho"), baseInstant, userId = userId)
             val lobby =
                 waitingLobby(id = LobbyId.generate(), owner = sessionA).copy(
-                    players = mapOf(sessionA to authedSeat),
+                    players = mapOf(authedSeat.playerId to authedSeat),
                 )
             repo.save(lobby)
 
             val loaded = repo.findById(lobby.id)!!
 
-            assertThat(loaded.players[sessionA]!!.userId).isEqualTo(userId)
+            assertThat(loaded.seatBySession(sessionA)!!.userId).isEqualTo(userId)
         }
 
     @Test
@@ -1310,14 +1344,14 @@ class PostgresLobbyRepositoryTest {
                             // Tiny sleep widens the window in which a non-FOR-UPDATE
                             // implementation would lose an update.
                             Thread.sleep(50)
-                            current.copy(players = current.players + (sessionB to bob))
+                            current.copy(players = current.players + (bob.playerId to bob))
                         }
                     }
                 val b =
                     async(Dispatchers.IO) {
                         repo.mutate(lobby.id) { current ->
                             Thread.sleep(50)
-                            current.copy(players = current.players + (sessionC to carol))
+                            current.copy(players = current.players + (carol.playerId to carol))
                         }
                     }
                 awaitAll(a, b)
@@ -1343,7 +1377,7 @@ class PostgresLobbyRepositoryTest {
             id = id,
             ownerSessionId = owner,
             ownerUserId = ownerUserId,
-            players = mapOf(owner to ownerPlayer),
+            players = mapOf(ownerPlayer.playerId to ownerPlayer),
             state = LobbyLifecycleState.WAITING,
             gridConfig = GridConfig(10, 10),
             game = null,
@@ -1369,7 +1403,7 @@ class PostgresLobbyRepositoryTest {
             id = id,
             ownerSessionId = owner,
             ownerUserId = ownerUserId,
-            players = mapOf(owner to ownerPlayer),
+            players = mapOf(ownerPlayer.playerId to ownerPlayer),
             state = LobbyLifecycleState.IN_PROGRESS,
             gridConfig = GridConfig(puzzle.width, puzzle.height),
             game =
@@ -1378,7 +1412,7 @@ class PostgresLobbyRepositoryTest {
                     entries = entries,
                     startedAt = baseInstant,
                     completedAt = null,
-                    lockedPositions = mapOf(Position(0, 0) to owner),
+                    lockedPositions = mapOf(Position(0, 0) to ownerPlayer.playerId),
                 ),
             lastActivityAt = baseInstant.plusSeconds(60),
             code = LobbyCode.generate(),
