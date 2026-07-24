@@ -18,13 +18,16 @@ import com.bliss.grid.application.puzzle.distilledDailyBaseConstraints
 import com.bliss.grid.infrastructure.persistence.BlissDatabase
 import com.bliss.grid.infrastructure.persistence.CsvClueOverrideAppender
 import com.bliss.grid.infrastructure.persistence.CsvCorrectionSeedSource
+import com.bliss.grid.infrastructure.persistence.CsvGridClueSink
 import com.bliss.grid.infrastructure.persistence.CsvWordRepository
 import com.bliss.grid.infrastructure.persistence.PostgresBlocklistBackfill
 import com.bliss.grid.infrastructure.persistence.PostgresCorrectionRepository
 import com.bliss.grid.infrastructure.persistence.PostgresGridBackfill
+import com.bliss.grid.infrastructure.persistence.PostgresGridClueEnumerationQuery
 import com.bliss.grid.infrastructure.persistence.PostgresPuzzleRepository
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.nio.file.Files
 import java.nio.file.Path
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -56,6 +59,8 @@ fun main(args: Array<String>) {
             args.contains("--process-corrections") -> runProcessCorrections()
             args.contains("--export-corrections") -> runExportCorrections()
             args.any { it == SEED_FLAG || it.startsWith("$SEED_FLAG=") } -> runSeedCorrections(stringArg(args, SEED_FLAG))
+            args.any { it == EXPORT_GRID_CLUES_FLAG || it.startsWith("$EXPORT_GRID_CLUES_FLAG=") } ->
+                runExportGridClues(stringArg(args, EXPORT_GRID_CLUES_FLAG), stringArg(args, "--words"))
             else -> {
                 log.error("event=worker_unknown_arguments args=\"{}\"", args.joinToString(separator = " "))
                 printUsage()
@@ -74,14 +79,47 @@ private const val DEFAULT_OVERRIDES_CSV: String = "data/curated/clue_overrides_f
 
 private const val SEED_FLAG: String = "--seed-corrections"
 
+private const val EXPORT_GRID_CLUES_FLAG: String = "--export-grid-clues"
+
 // Service identity stamped on created_by for ops-run bulk seeds (ADR-0108 amendment); marks seeded rows apart from maintainer API corrections.
 private val SEED_JOB_ACTOR: UUID = UUID.fromString("5eed5eed-0000-0000-0000-000000000000")
 
 private fun printUsage() {
     log.info(
         "usage: grid-worker --ensure-dailies | --regenerate-dailies [--start-offset N] [--window-days N] " +
-            "| --process-corrections | --export-corrections | --seed-corrections <source.csv> | --help",
+            "| --process-corrections | --export-corrections | --seed-corrections <source.csv> " +
+            "| --export-grid-clues <out.csv> [--words <words.txt>] | --help",
     )
+}
+
+// Read-only: enumerates the distinct (word, clue) pairs currently on stored grids into a CSV, the input to the seed-source builder (ADR-0108 amendment 2026-07-24).
+private fun runExportGridClues(
+    outPath: String?,
+    wordsPath: String?,
+): Int {
+    if (outPath.isNullOrBlank()) {
+        log.error("event=export_grid_clues_missing_out")
+        printUsage()
+        return 1
+    }
+    val words =
+        wordsPath
+            ?.let { Files.readAllLines(Path.of(it)) }
+            ?.map(String::trim)
+            ?.filter(String::isNotBlank)
+            ?.toSet()
+            ?: emptySet()
+    val database = BlissDatabase(poolName = "grid-worker-hikari", maxPoolSize = 2, requireUrl = true)
+    database.start()
+    return try {
+        val dataSource = database.dataSource() ?: error("DATABASE_URL produced a null DataSource")
+        val rows = PostgresGridClueEnumerationQuery(dataSource).enumerate(words)
+        CsvGridClueSink(Path.of(outPath)).write(rows)
+        log.info("event=export_grid_clues_done word_filter={} rows={}", words.size, rows.size)
+        0
+    } finally {
+        database.stop()
+    }
 }
 
 // Bulk-seeds replace corrections from a pre-validated CSV; the existing --process-corrections sweep then patches the grids (ADR-0108 amendment 2026-07-24).
