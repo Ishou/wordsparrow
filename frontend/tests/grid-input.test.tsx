@@ -316,11 +316,16 @@ describe('Grid keyboard interactions', () => {
     expect(document.activeElement).toBe(start);
     fireEvent.keyDown(start, { key: 'ArrowDown' });
     expect(document.activeElement).toBe(inputAt(container, 2, 2));
-    const at22 = inputAt(container, 2, 2)!;
-    fireEvent.keyDown(at22, { key: 'ArrowRight' });
-    expect(document.activeElement).toBe(at22);
-    fireEvent.keyDown(at22, { key: 'ArrowRight' });
-    expect(document.activeElement).toBe(inputAt(container, 2, 3));
+    // Back to the across/down intersection (1,2) — direction still down —
+    // to exercise the reverse flip: ArrowRight flips to across (no move),
+    // then a second ArrowRight steps along the now-across direction.
+    fireEvent.keyDown(inputAt(container, 2, 2)!, { key: 'ArrowUp' });
+    const at12 = inputAt(container, 1, 2)!;
+    expect(document.activeElement).toBe(at12);
+    fireEvent.keyDown(at12, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(at12);
+    fireEvent.keyDown(at12, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(inputAt(container, 1, 3));
   });
 
   it('ArrowRight onto a block-sandwiched cell focuses its only (down) word', () => {
