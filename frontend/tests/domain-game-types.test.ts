@@ -4,6 +4,7 @@ import type {
   GamePuzzle,
   Lobby,
   LobbyId,
+  PlayerId,
   Pseudonym,
   SessionId,
 } from '@/domain/game';
@@ -19,6 +20,7 @@ describe('domain/game types', () => {
     const lobby: Lobby = {
       players: [
         {
+          playerId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as PlayerId,
           sessionId: '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId,
           pseudonym: 'Joueur 1234' as Pseudonym,
           joinedAt: '2026-05-02T15:30:00Z',
@@ -70,7 +72,7 @@ describe('application/game GameEvent union', () => {
         code: 'A2B3C4',
         game: null,
       },
-      { type: 'playerLeft', sessionId: 's' as SessionId },
+      { type: 'playerLeft', playerId: 's' as PlayerId, sessionId: 's' as SessionId },
       {
         type: 'cellUpdated',
         sessionId: 's' as SessionId,

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { GameEvent, Unsubscribe } from '@/application/game';
-import type { Instant, Player, Pseudonym, SessionId } from '@/domain/game';
+import type { Instant, Player, PlayerId, Pseudonym, SessionId } from '@/domain/game';
 import type { Puzzle } from '@/domain';
 import { AnnouncerProvider } from '@/ui/components/a11y/Announcer';
 import { LiveCoopScreen, type LiveCoopScreenProps } from '@/ui/v2/multiplayer/LiveCoopScreen';
@@ -10,6 +10,9 @@ import { expectAxeClean } from '@/test/a11y';
 
 const selfId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const peerId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
+// Anon: playerId equals sessionId (ADR-0066 (e)); score/tint tally by playerId.
+const selfPlayerId = selfId as unknown as PlayerId;
+const peerPlayerId = peerId as unknown as PlayerId;
 
 // 1×3 puzzle: a right-arrow definition at (0,0); the across word spans (0,1)..(0,2), entries server-blank.
 const puzzle: Puzzle = {
@@ -28,8 +31,8 @@ const puzzle: Puzzle = {
 };
 
 const players: ReadonlyArray<Player> = [
-  { sessionId: selfId, pseudonym: 'Moi' as Pseudonym, joinedAt: '2026-06-27T15:30:00Z' as Instant },
-  { sessionId: peerId, pseudonym: 'Amie' as Pseudonym, joinedAt: '2026-06-27T15:30:01Z' as Instant },
+  { playerId: selfPlayerId, sessionId: selfId, pseudonym: 'Moi' as Pseudonym, joinedAt: '2026-06-27T15:30:00Z' as Instant },
+  { playerId: peerPlayerId, sessionId: peerId, pseudonym: 'Amie' as Pseudonym, joinedAt: '2026-06-27T15:30:01Z' as Instant },
 ];
 const playersBySessionId = new Map(players.map((p) => [p.sessionId, p] as const));
 
@@ -56,6 +59,7 @@ function renderScreen(overrides: Partial<LiveCoopScreenProps> = {}) {
     startedAt: '2026-06-27T15:30:00Z',
     isCompleted: false,
     sessionId: selfId,
+    currentPlayerId: selfPlayerId,
     players,
     playersBySessionId,
     initialEntries: [],
@@ -116,8 +120,8 @@ describe('v2 LiveCoopScreen', () => {
     act(() => {
       rerenderScreen({
         lockedPositions: [
-          { row: 0, column: 1, lockedBy: selfId },
-          { row: 0, column: 2, lockedBy: selfId },
+          { row: 0, column: 1, lockedBy: selfPlayerId },
+          { row: 0, column: 2, lockedBy: selfPlayerId },
         ],
       });
     });
@@ -169,13 +173,13 @@ describe('v2 LiveCoopScreen', () => {
   });
 
   it('marks a server-locked cell as solved', () => {
-    renderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerId }] });
+    renderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerPlayerId }] });
     expect(letterInput(0, 1).readOnly).toBe(true);
     expect(letterInput(0, 2).readOnly).toBe(false);
   });
 
   it('tints an owned solved cell with the finder colour and leaves no-owner cells untinted (ADR-0086)', () => {
-    renderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerId }] });
+    renderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerPlayerId }] });
     // The finder's --player-color is wired onto the owned solved cell's wrapper.
     expect(cellWrap(0, 1).style.getPropertyValue('--player-color')).not.toBe('');
     expect(cellWrap(0, 1).querySelector('[data-cell-state="solved"]')).toBeTruthy();
@@ -196,14 +200,14 @@ describe('v2 LiveCoopScreen', () => {
     expect(cellWrap(0, 1).style.animationDelay).toBe('');
     // A new server lock celebrates the freshly-solved cell — the same beat solo gets.
     act(() => {
-      rerenderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerId }] });
+      rerenderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerPlayerId }] });
     });
     expect(cellWrap(0, 1).style.animationDelay).not.toBe('');
   });
 
   it('does not celebrate already-locked cells on initial hydration (rejoin)', () => {
     // A board mounted with a pre-locked cell (coop rejoin) must not flash the beat.
-    renderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerId }] });
+    renderScreen({ lockedPositions: [{ row: 0, column: 1, lockedBy: peerPlayerId }] });
     expect(cellWrap(0, 1).style.animationDelay).toBe('');
   });
 

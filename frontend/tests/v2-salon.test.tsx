@@ -9,7 +9,7 @@ import {
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthClient } from '@/application/auth';
-import type { Instant, Lobby, Pseudonym, SessionId } from '@/domain/game';
+import type { Instant, Lobby, PlayerId, Pseudonym, SessionId } from '@/domain/game';
 import { AuthProvider } from '@/ui/components/auth';
 import { SalonScreen, type SalonScreenProps } from '@/ui/v2/multiplayer/SalonScreen';
 import { expectAxeClean } from '@/test/a11y';
@@ -84,12 +84,15 @@ function renderInRouter(element: ReactElement) {
 
 const ownerId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const guestId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
+// Anon: playerId equals sessionId (ADR-0066 (e)).
+const ownerPlayerId = ownerId as unknown as PlayerId;
+const guestPlayerId = guestId as unknown as PlayerId;
 
 const baseLobby: Lobby = {
   ownerSessionId: ownerId,
   players: [
-    { sessionId: ownerId, pseudonym: 'Hôte' as Pseudonym, joinedAt: '2026-06-27T15:30:00Z' as Instant },
-    { sessionId: guestId, pseudonym: 'Amie' as Pseudonym, joinedAt: '2026-06-27T15:31:00Z' as Instant },
+    { playerId: ownerPlayerId, sessionId: ownerId, pseudonym: 'Hôte' as Pseudonym, joinedAt: '2026-06-27T15:30:00Z' as Instant },
+    { playerId: guestPlayerId, sessionId: guestId, pseudonym: 'Amie' as Pseudonym, joinedAt: '2026-06-27T15:31:00Z' as Instant },
   ],
   state: 'WAITING',
   gridConfig: { width: 9, height: 9 },
@@ -101,6 +104,7 @@ function renderSalon(overrides: Partial<SalonScreenProps> = {}) {
   const props: SalonScreenProps = {
     lobby: baseLobby,
     sessionId: ownerId,
+    currentPlayerId: ownerPlayerId,
     connectionState: 'connected',
     pseudonymError: null,
     isStarting: false,

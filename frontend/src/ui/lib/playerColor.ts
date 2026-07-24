@@ -14,7 +14,10 @@
 // black tone-on-tone the design uses to prevent the grid from looking
 // like a dashboard.
 
-import type { SessionId } from '@/domain/game';
+import type { PlayerId, SessionId } from '@/domain/game';
+
+// ADR-0066 (e): roster/board colour seeds off the account-scoped `playerId`; presence overlays still seed off the per-connection `sessionId`. Both are branded strings, hashed identically.
+type ColorSeed = SessionId | PlayerId;
 
 // FNV-1a 32-bit hash over the entire SessionId, mapped into 360 hues.
 //
@@ -31,7 +34,7 @@ import type { SessionId } from '@/domain/game';
 // in id length, no BigInt), pure, and deterministic across reloads.
 //
 // Falls back to 0 on an empty input — keeps the function total.
-export function sessionIdToHue(sessionId: SessionId): number {
+export function sessionIdToHue(sessionId: ColorSeed): number {
   const text = String(sessionId);
   if (text.length === 0) return 0;
   let hash = 0x811c9dc5;
@@ -65,7 +68,7 @@ const RECIPE = {
 // Returns a `Record<string, string>` because the CSSStyleDeclaration
 // typings reject custom properties that start with `--`; React passes
 // the bag through unchanged at the JSX call site.
-export function playerColorVars(sessionId: SessionId): Record<string, string> {
+export function playerColorVars(sessionId: ColorSeed): Record<string, string> {
   const hue = sessionIdToHue(sessionId);
   return {
     '--player-color': `hsl(${hue} ${RECIPE.color.s}% ${RECIPE.color.l}%)`,

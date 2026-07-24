@@ -6,18 +6,20 @@ import type {
   LobbyLifecycleState,
   LockedCell,
   Player,
+  PlayerId,
   Pseudonym,
   SessionId,
 } from '@/domain/game';
 
-// Rejoin snapshot may momentarily omit the local seat (ADR-0018 §5); synthesize it so the pseudonym never blanks.
+// Rejoin snapshot may momentarily omit the local seat (ADR-0018 §5); synthesize it so the pseudonym never blanks. ADR-0066 (e): dedupe on the account-scoped `playerId`.
 export function withLocalPlayer(
   players: readonly Player[],
+  playerId: PlayerId,
   sessionId: SessionId,
   pseudonym: Pseudonym,
 ): readonly Player[] {
-  if (players.some((p) => p.sessionId === sessionId)) return players;
-  return [...players, { sessionId, pseudonym, joinedAt: '' as Instant }];
+  if (players.some((p) => p.playerId === playerId)) return players;
+  return [...players, { playerId, sessionId, pseudonym, joinedAt: '' as Instant }];
 }
 
 // Internal lobby state — the route-local snapshot the reducer folds
@@ -74,13 +76,15 @@ export function reduceLobby(current: LobbyView, event: GameEvent): LobbyView {
       };
     }
     case 'playerJoined':
-      if (current.lobby.players.some((p) => p.sessionId === event.sessionId)) return current;
+      // ADR-0066 (e): idempotent upsert on `playerId` — a second device of the same account maps to the same key (no duplicate row).
+      if (current.lobby.players.some((p) => p.playerId === event.playerId)) return current;
       return {
         ...current,
         lobby: {
           ...current.lobby,
           players: [...current.lobby.players, {
-            sessionId: event.sessionId, pseudonym: event.pseudonym, joinedAt: event.joinedAt,
+            playerId: event.playerId, sessionId: event.sessionId,
+            pseudonym: event.pseudonym, joinedAt: event.joinedAt,
           }],
         },
       };
@@ -89,7 +93,7 @@ export function reduceLobby(current: LobbyView, event: GameEvent): LobbyView {
         ...current,
         lobby: {
           ...current.lobby,
-          players: current.lobby.players.filter((p) => p.sessionId !== event.sessionId),
+          players: current.lobby.players.filter((p) => p.playerId !== event.playerId),
         },
       };
     case 'playerRenamed':
@@ -98,7 +102,7 @@ export function reduceLobby(current: LobbyView, event: GameEvent): LobbyView {
         lobby: {
           ...current.lobby,
           players: current.lobby.players.map((p) =>
-            p.sessionId === event.sessionId ? { ...p, pseudonym: event.newPseudonym } : p,
+            p.playerId === event.playerId ? { ...p, pseudonym: event.newPseudonym } : p,
           ),
         },
       };

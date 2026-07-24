@@ -6,6 +6,7 @@ import type { ConnectionState } from '@/application/game';
 import {
   MAX_PSEUDONYM_LENGTH,
   type Lobby,
+  type PlayerId,
   type Pseudonym,
   type SessionId,
 } from '@/domain/game';
@@ -28,6 +29,8 @@ const MAX_PLAYERS = 8;
 export interface SalonScreenProps {
   readonly lobby: Lobby;
   readonly sessionId: SessionId;
+  // ADR-0066 (e): account-scoped local identity — roster "you" / avatar / self-connection key on this; ownership stays on `sessionId`.
+  readonly currentPlayerId: PlayerId;
   readonly connectionState: ConnectionState;
   readonly pseudonymError: string | null;
   readonly isStarting: boolean;
@@ -254,6 +257,7 @@ function connStateLabel(state: ConnectionState): { cls: string; label: string } 
 export function SalonScreen({
   lobby,
   sessionId,
+  currentPlayerId,
   connectionState,
   pseudonymError,
   isStarting,
@@ -267,7 +271,7 @@ export function SalonScreen({
   onClearPseudonymError,
 }: SalonScreenProps) {
   const isOwner = lobby.ownerSessionId === sessionId;
-  const me = lobby.players.find((p) => p.sessionId === sessionId);
+  const me = lobby.players.find((p) => p.playerId === currentPlayerId);
   // Same gate as shareOrCopyInviteUrl's actual behavior — icon + label always match what clicking does.
   const canShare = useCanNativeShare();
 
@@ -357,13 +361,14 @@ export function SalonScreen({
         <h2 className={cardTitle}>{t('lobby.waitingRoom.playersHeading', { current: lobby.players.length, max: MAX_PLAYERS })}</h2>
         <ul className={list}>
           {lobby.players.map((p) => {
-            const conn = connStateLabel(p.sessionId === sessionId ? connectionState : 'connected');
+            const isSelf = p.playerId === currentPlayerId;
+            const conn = connStateLabel(isSelf ? connectionState : 'connected');
             return (
-              <li key={p.sessionId} className={playerRow}>
-                <PlayerAvatar sessionId={p.sessionId} pseudonym={p.pseudonym} size={34} />
+              <li key={p.playerId} className={playerRow}>
+                <PlayerAvatar colorId={p.playerId} pseudonym={p.pseudonym} size={34} />
                 <span className={playerName}>
                   {p.pseudonym}
-                  {p.sessionId === sessionId ? t('v2.multiplayer.presence.youSuffix') : ''}
+                  {isSelf ? t('v2.multiplayer.presence.youSuffix') : ''}
                 </span>
                 {p.sessionId === lobby.ownerSessionId ? <span className={badge}>{t('v2.multiplayer.host.badge')}</span> : null}
                 <span

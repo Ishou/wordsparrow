@@ -1,5 +1,5 @@
 import { css, cx } from 'styled-system/css';
-import type { Player, SessionId } from '@/domain/game';
+import type { Player, PlayerId, SessionId } from '@/domain/game';
 import { t } from '@/ui/i18n';
 import { PlayerAvatar } from './PlayerAvatar';
 
@@ -56,11 +56,12 @@ const count = css({
 
 export interface PlayerStripProps {
   readonly players: ReadonlyArray<Player>;
-  readonly currentSessionId: SessionId;
+  // ADR-0066 (e): identity/score/"you"/colour key on `playerId`; presence sets stay per-`sessionId` (transport).
+  readonly currentPlayerId: PlayerId;
   readonly typingSessionIds: ReadonlySet<SessionId>;
   readonly idleSessionIds: ReadonlySet<SessionId>;
   readonly disconnectingSessionIds: ReadonlySet<SessionId>;
-  readonly scoresBySessionId?: ReadonlyMap<SessionId, number>;
+  readonly scoresByPlayerId?: ReadonlyMap<PlayerId, number>;
 }
 
 function statusFor(
@@ -77,24 +78,24 @@ function statusFor(
 
 export function PlayerStrip({
   players,
-  currentSessionId,
+  currentPlayerId,
   typingSessionIds,
   idleSessionIds,
   disconnectingSessionIds,
-  scoresBySessionId,
+  scoresByPlayerId,
 }: PlayerStripProps) {
   return (
     <ul className={strip} aria-label={t('v2.multiplayer.presence.aria.players')}>
       {players.map((p) => {
-        const isSelf = p.sessionId === currentSessionId;
+        const isSelf = p.playerId === currentPlayerId;
         // Self always reads "en ligne" — peer presence sets exclude the local session.
         const status = isSelf
           ? { cls: dotConnected, label: t('v2.multiplayer.presence.online') }
           : statusFor(p.sessionId, typingSessionIds, idleSessionIds, disconnectingSessionIds);
-        const score = scoresBySessionId?.get(p.sessionId) ?? 0;
+        const score = scoresByPlayerId?.get(p.playerId) ?? 0;
         return (
-          <li key={p.sessionId} className={chip}>
-            <PlayerAvatar sessionId={p.sessionId} pseudonym={p.pseudonym} size={24} />
+          <li key={p.playerId} className={chip}>
+            <PlayerAvatar colorId={p.playerId} pseudonym={p.pseudonym} size={24} />
             <span className={name}>
               {p.pseudonym}
               {isSelf ? t('v2.multiplayer.presence.youSuffix') : ''}

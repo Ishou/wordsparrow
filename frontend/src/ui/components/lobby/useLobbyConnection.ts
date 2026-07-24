@@ -11,6 +11,7 @@ import type {
   Lobby,
   LobbyId,
   Player,
+  PlayerId,
   PresenceEntry,
   Pseudonym,
   SessionId,
@@ -32,6 +33,8 @@ export interface LobbyConnectionArgs {
   readonly initialLobby: Lobby;
   readonly gameClient: GameClient;
   readonly getSession: () => { readonly sessionId: SessionId; readonly pseudonym: Pseudonym };
+  // ADR-0066 (e): account-scoped local identity (`auth.whoami.userId ?? sessionId`); membership / own-join / rename-confirm key on this, not `sessionId`.
+  readonly currentPlayerId: PlayerId;
   readonly setPersistedPseudonym?: (pseudonym: Pseudonym) => void;
   readonly lobbyJoinCodeStash: {
     readonly read: (lobbyId: LobbyId) => string | null;
@@ -58,6 +61,8 @@ export interface LobbyConnection {
   readonly isRotating: boolean;
   // Local session identity — renderers mark the local row / gate owner controls without re-reading `getSession`.
   readonly sessionId: SessionId;
+  // ADR-0066 (e): account-scoped local identity — renderers mark the "you" row by this.
+  readonly currentPlayerId: PlayerId;
   // Derived render-ready values (memoised): UI-shape puzzle, initial entries seed, sessionId→Player lookup.
   readonly gridPuzzle: Puzzle | null;
   readonly initialEntries: ReadonlyArray<{ row: number; column: number; letter: string }>;
@@ -109,6 +114,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     initialLobby,
     gameClient,
     getSession,
+    currentPlayerId,
     setPersistedPseudonym,
     lobbyJoinCodeStash,
     showToast,
@@ -151,12 +157,18 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   // joiner whose code the server is about to reject doesn't see the
   // lobby contents (player list with the owner) flash before the
   // wrong-code banner takes over. Already-joined sessions (reconnect
-  // path: sessionId is already in the snapshot's player list) start
+  // path: playerId is already in the snapshot's player list) start
   // confirmed because the server's reconnect branch never fails.
-  const initialSessionId = getSession().sessionId;
   const [joinConfirmed, setJoinConfirmed] = useState<boolean>(() =>
-    initialLobby.players.some((p) => p.sessionId === initialSessionId),
+    initialLobby.players.some((p) => p.playerId === currentPlayerId),
   );
+  // currentPlayerId resolves async post-mount (AuthProvider's whoami()); re-check membership until it flips true so an already-joined authed deep-link doesn't strand on the placeholder.
+  useEffect(() => {
+    if (joinConfirmed) return;
+    if (view.lobby.players.some((p) => p.playerId === currentPlayerId)) {
+      setJoinConfirmed(true);
+    }
+  }, [joinConfirmed, view.lobby.players, currentPlayerId]);
   // Mirrored as a ref so the long-lived subscribe callback can branch
   // on whether the user has been admitted into the lobby yet — without
   // re-attaching the listener on every state change. Pre-join error
@@ -164,6 +176,9 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   // different treatment than the same frame post-join.
   const joinConfirmedRef = useRef(joinConfirmed);
   joinConfirmedRef.current = joinConfirmed;
+  // Mirrored as a ref so the long-lived subscribe callback reads the latest identity without re-attaching. AuthProvider resolves `currentPlayerId` async (sessionId → userId post-whoami); keeping it out of the effect deps avoids a spurious WS teardown + false "Connexion perdue" toast on authed deep-link.
+  const currentPlayerIdRef = useRef(currentPlayerId);
+  currentPlayerIdRef.current = currentPlayerId;
   // True between "Démarrer la partie" click and the server-side
   // confirmation. WaitingRoom uses the flag to disable the button and
   // flip the label to "Démarrage…" so the WS round-trip (frame →
@@ -201,7 +216,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       if (event.type === 'error' &&
         event.errorType === 'https://bliss.example/errors/invalid-pseudonym') {
         setPseudonymError(event.detail ?? event.title);
-      } else if (event.type === 'playerRenamed' && event.sessionId === sessionId) {
+      } else if (event.type === 'playerRenamed' && event.playerId === currentPlayerIdRef.current) {
         setPseudonymError(null);
         // Persist server-confirmed value; rejected pseudonym must never reach cache.
         setPersistedPseudonymRef.current?.(event.newPseudonym);
@@ -245,7 +260,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       // (Reconnect path: sessionId already in the snapshot's player
       // list, handled at mount time via the initial-state computation
       // above.)
-      if (event.type === 'playerJoined' && event.sessionId === sessionId) {
+      if (event.type === 'playerJoined' && event.playerId === currentPlayerIdRef.current) {
         setJoinConfirmed(true);
         lobbyJoinCodeStash.clear(lobbyId);
       }
@@ -558,6 +573,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
     isStarting,
     isRotating,
     sessionId,
+    currentPlayerId,
     gridPuzzle,
     initialEntries,
     playersBySessionId,

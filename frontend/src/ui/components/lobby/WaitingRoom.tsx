@@ -2,7 +2,7 @@ import { type ShareInviteResult, useCanNativeShare } from '@/ui/lib/shareInvite'
 import { useEffect, useRef, useState } from 'react';
 import { Copy, ShareNetwork } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
-import { MAX_PSEUDONYM_LENGTH, type Lobby, type Pseudonym, type SessionId } from '@/domain/game';
+import { MAX_PSEUDONYM_LENGTH, type Lobby, type PlayerId, type Pseudonym, type SessionId } from '@/domain/game';
 import { EyeIcon, EyeOffIcon } from '@/ui/components/icons';
 import { Button, TextField, ToggleGroup } from '@/ui/components/primitives';
 import { PinInput } from '@/ui/components/primitives/PinInput';
@@ -40,6 +40,8 @@ type GridSize = (typeof GRID_SIZE_OPTIONS)[number]['value'];
 export interface WaitingRoomProps {
   readonly lobby: Lobby;
   readonly currentSessionId: SessionId;
+  // ADR-0066 (e): account-scoped local identity — the "you" seat keys on this; ownership stays on `sessionId`.
+  readonly currentPlayerId: PlayerId;
   readonly onRename: (newPseudonym: Pseudonym) => void;
   readonly onSetGridConfig: (width: number, height: number) => void;
   readonly onStart: () => void;
@@ -137,7 +139,7 @@ const styles = {
 const COPY_FEEDBACK_MS = 2000;
 
 export function WaitingRoom({
-  lobby, currentSessionId, onRename, onSetGridConfig, onStart, onCopyShareUrl,
+  lobby, currentSessionId, currentPlayerId, onRename, onSetGridConfig, onStart, onCopyShareUrl,
   pseudonymError, onClearPseudonymError, isStarting = false,
   onRotateCode, isRotating = false,
 }: WaitingRoomProps): React.ReactElement {
@@ -146,7 +148,7 @@ export function WaitingRoom({
   // friends or for testing): the owner can Start as soon as there is at
   // least one player, which is always true since the owner is a member.
   const canStart = isOwner && lobby.players.length >= 1 && !isStarting;
-  const me = lobby.players.find((p) => p.sessionId === currentSessionId);
+  const me = lobby.players.find((p) => p.playerId === currentPlayerId);
   // Same gate as shareOrCopyInviteUrl's actual behavior — icon + label always match what clicking does.
   const canShare = useCanNativeShare();
 
@@ -189,7 +191,7 @@ export function WaitingRoom({
         <PlayerList
           players={lobby.players}
           ownerSessionId={lobby.ownerSessionId}
-          currentSessionId={currentSessionId}
+          currentPlayerId={currentPlayerId}
           variant="stacked"
         />
       </div>

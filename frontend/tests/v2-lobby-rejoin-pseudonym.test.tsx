@@ -6,7 +6,7 @@ import type { ConnectionState, GameClient, GameEvent, LobbyClient } from '@/appl
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
 import type { AuthClient } from '@/application/auth/AuthClient';
 import { AuthProvider } from '@/ui/components/auth';
-import type { Instant, Lobby, LobbyId, Pseudonym, SessionId } from '@/domain/game';
+import type { Instant, Lobby, LobbyId, PlayerId, Pseudonym, SessionId } from '@/domain/game';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
 import { Route as LobbyRoute, lobbyLoaderRetryPolicy } from '@/ui/routes/lobby.$lobbyId';
@@ -14,11 +14,14 @@ import { Route as LobbyRoute, lobbyLoaderRetryPolicy } from '@/ui/routes/lobby.$
 const sessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const pseudonym = 'Renard 777' as Pseudonym;
 const lobbyId = '7gQ2xK9p' as LobbyId;
+// Anon: playerId equals sessionId (ADR-0066 (e)).
+const anonPlayerId = sessionId as unknown as PlayerId;
+const accountUserId = '11111111-1111-1111-1111-111111111111';
 
 const waitingLobby: Lobby & { readonly id: LobbyId } = {
   id: lobbyId,
   ownerSessionId: sessionId,
-  players: [{ sessionId, pseudonym, joinedAt: '2026-06-27T15:30:00Z' as Instant }],
+  players: [{ playerId: anonPlayerId, sessionId, pseudonym, joinedAt: '2026-06-27T15:30:00Z' as Instant }],
   state: 'WAITING',
   gridConfig: { width: 7, height: 7 },
   game: null,
@@ -65,7 +68,8 @@ const completedLobby: Lobby & { readonly id: LobbyId } = {
 const accountName = 'Colin Compte' as Pseudonym;
 const authedWaitingLobby: Lobby & { readonly id: LobbyId } = {
   ...waitingLobby,
-  players: [{ sessionId, pseudonym: accountName, joinedAt: '2026-06-27T15:30:00Z' as Instant }],
+  // Authed: identity is the account userId (ADR-0066 (e)), not the device sessionId.
+  players: [{ playerId: accountUserId as PlayerId, sessionId, pseudonym: accountName, joinedAt: '2026-06-27T15:30:00Z' as Instant }],
 };
 
 const stubPuzzleSolver: PuzzleSolver = {

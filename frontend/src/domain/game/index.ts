@@ -22,6 +22,7 @@ export type {
   LobbyId,
   LobbyLifecycleState,
   Player,
+  PlayerId,
   Position,
   PresenceEntry,
   Pseudonym,

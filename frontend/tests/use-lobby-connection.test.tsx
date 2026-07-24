@@ -12,6 +12,7 @@ import type {
   Letter,
   Lobby,
   LobbyId,
+  PlayerId,
   Pseudonym,
   SessionId,
 } from '@/domain/game';
@@ -22,12 +23,15 @@ import {
 
 const sessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const otherSessionId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
+// Anon fixtures: playerId equals sessionId (ADR-0066 (e)).
+const currentPlayerId = sessionId as unknown as PlayerId;
+const otherPlayerId = otherSessionId as unknown as PlayerId;
 const pseudonym = 'Hôte' as Pseudonym;
 const lobbyId = '7gQ2xK9p' as LobbyId;
 
 const baseLobby: Lobby = {
   ownerSessionId: sessionId,
-  players: [{ sessionId, pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
+  players: [{ playerId: currentPlayerId, sessionId, pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
   state: 'WAITING',
   gridConfig: { width: 7, height: 7 },
   game: null,
@@ -133,6 +137,7 @@ const makeArgs = (
   initialLobby: baseLobby,
   gameClient,
   getSession: () => ({ sessionId, pseudonym }),
+  currentPlayerId,
   setPersistedPseudonym: vi.fn(),
   lobbyJoinCodeStash: { read: () => null, clear: () => {} },
   showToast: vi.fn(),
@@ -153,6 +158,23 @@ describe('useLobbyConnection lifecycle', () => {
     unmount();
     expect(gameClient.disconnectCalls.count).toBe(1);
     expect(gameClient.subscriberCount()).toBe(0);
+  });
+
+  it('ADR-0066 (e): does not tear down the WS when auth resolves currentPlayerId post-mount (authed deep-link)', () => {
+    const gameClient = makeFakeGameClient();
+    // All seams stable across renders (as the real route provides them); only `currentPlayerId` flips — as it does when AuthProvider resolves whoami (anon sessionId → account userId) on an authed deep-link.
+    const baseArgs = makeArgs(gameClient);
+    const { rerender } = renderHook(
+      ({ playerId }) => useLobbyConnection({ ...baseArgs, currentPlayerId: playerId }),
+      { initialProps: { playerId: currentPlayerId } },
+    );
+    expect(gameClient.connectCalls).toHaveLength(1);
+    act(() => {
+      rerender({ playerId: '11111111-1111-1111-1111-111111111111' as unknown as PlayerId });
+    });
+    // The identity flip must not re-run the connect effect: no extra connect, no disconnect (which would fire a spurious "Connexion perdue" toast).
+    expect(gameClient.connectCalls).toHaveLength(1);
+    expect(gameClient.disconnectCalls.count).toBe(0);
   });
 
   it('passes the stashed join code into connect', () => {
@@ -178,14 +200,34 @@ describe('useLobbyConnection lifecycle', () => {
     const lobbyWithoutSelf: Lobby = {
       ...baseLobby,
       ownerSessionId: otherSessionId,
-      players: [{ sessionId: otherSessionId, pseudonym: 'Autre' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
+      players: [{ playerId: otherPlayerId, sessionId: otherSessionId, pseudonym: 'Autre' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
     };
     const { result } = renderHook(() =>
       useLobbyConnection(makeArgs(gameClient, { initialLobby: lobbyWithoutSelf })),
     );
     expect(result.current.joinConfirmed).toBe(false);
     act(() => {
-      gameClient.dispatch({ type: 'playerJoined', sessionId, pseudonym, joinedAt: '2026-05-02T15:30:05Z' as Instant });
+      gameClient.dispatch({ type: 'playerJoined', playerId: currentPlayerId, sessionId, pseudonym, joinedAt: '2026-05-02T15:30:05Z' as Instant });
+    });
+    expect(result.current.joinConfirmed).toBe(true);
+  });
+
+  it('ADR-0066 (e): flips joinConfirmed once currentPlayerId resolves post-mount to an already-seated account (authed deep-link race)', () => {
+    const gameClient = makeFakeGameClient();
+    const accountPlayerId = '11111111-1111-1111-1111-111111111111' as unknown as PlayerId;
+    // The loader snapshot already lists the account's seat (a prior WS join), but the first render — before AuthProvider's whoami() settles — still computes currentPlayerId as the anon sessionId, so the mount-time membership check misses it. The server's reconnect branch never re-emits playerJoined (LobbyUseCases.kt), so nothing else can flip this.
+    const lobbyWithAccountSeat: Lobby = {
+      ...baseLobby,
+      players: [{ playerId: accountPlayerId, sessionId, pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
+    };
+    const baseArgs = makeArgs(gameClient, { initialLobby: lobbyWithAccountSeat });
+    const { result, rerender } = renderHook(
+      ({ playerId }) => useLobbyConnection({ ...baseArgs, currentPlayerId: playerId }),
+      { initialProps: { playerId: currentPlayerId } },
+    );
+    expect(result.current.joinConfirmed).toBe(false);
+    act(() => {
+      rerender({ playerId: accountPlayerId });
     });
     expect(result.current.joinConfirmed).toBe(true);
   });
@@ -196,7 +238,7 @@ describe('useLobbyConnection view reduction', () => {
     const gameClient = makeFakeGameClient();
     const { result } = renderHook(() => useLobbyConnection(makeArgs(gameClient)));
     act(() => {
-      gameClient.dispatch({ type: 'playerJoined', sessionId: otherSessionId, pseudonym: 'Joueur' as Pseudonym, joinedAt: '2026-05-02T15:30:01Z' as Instant });
+      gameClient.dispatch({ type: 'playerJoined', playerId: otherPlayerId, sessionId: otherSessionId, pseudonym: 'Joueur' as Pseudonym, joinedAt: '2026-05-02T15:30:01Z' as Instant });
     });
     expect(result.current.view.lobby.players).toHaveLength(2);
     act(() => {
@@ -335,7 +377,7 @@ describe('useLobbyConnection error + connection seams', () => {
     const lobbyWithoutSelf: Lobby = {
       ...baseLobby,
       ownerSessionId: otherSessionId,
-      players: [{ sessionId: otherSessionId, pseudonym: 'Autre' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
+      players: [{ playerId: otherPlayerId, sessionId: otherSessionId, pseudonym: 'Autre' as Pseudonym, joinedAt: '2026-05-02T15:30:00Z' as Instant }],
     };
     renderHook(() => useLobbyConnection(makeArgs(gameClient, { onJoinDenied, initialLobby: lobbyWithoutSelf })));
     act(() => {
@@ -516,7 +558,7 @@ describe('useLobbyConnection error + connection seams', () => {
     const announce = vi.fn();
     renderHook(() => useLobbyConnection(makeArgs(gameClient, { announce })));
     act(() => {
-      gameClient.dispatch({ type: 'playerJoined', sessionId: otherSessionId, pseudonym: 'Joueur' as Pseudonym, joinedAt: '2026-05-02T15:30:05Z' as Instant });
+      gameClient.dispatch({ type: 'playerJoined', playerId: otherPlayerId, sessionId: otherSessionId, pseudonym: 'Joueur' as Pseudonym, joinedAt: '2026-05-02T15:30:05Z' as Instant });
     });
     expect(announce).toHaveBeenCalledWith('Joueur a rejoint la partie');
   });

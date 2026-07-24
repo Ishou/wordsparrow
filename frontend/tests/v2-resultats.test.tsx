@@ -1,15 +1,18 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { Instant, Player, Pseudonym, SessionId } from '@/domain/game';
+import type { Instant, Player, PlayerId, Pseudonym, SessionId } from '@/domain/game';
 import { ResultatsScreen, type ResultatsScreenProps } from '@/ui/v2/multiplayer/ResultatsScreen';
 import { expectAxeClean } from '@/test/a11y';
 
 const ownerId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b' as SessionId;
 const guestId = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6c' as SessionId;
+// Anon: playerId equals sessionId (ADR-0066 (e)); score/tint tally by playerId.
+const ownerPlayerId = ownerId as unknown as PlayerId;
+const guestPlayerId = guestId as unknown as PlayerId;
 
 const players: ReadonlyArray<Player> = [
-  { sessionId: ownerId, pseudonym: 'Léa' as Pseudonym, joinedAt: '2026-06-27T15:30:00Z' as Instant },
-  { sessionId: guestId, pseudonym: 'Amie' as Pseudonym, joinedAt: '2026-06-27T15:31:00Z' as Instant },
+  { playerId: ownerPlayerId, sessionId: ownerId, pseudonym: 'Léa' as Pseudonym, joinedAt: '2026-06-27T15:30:00Z' as Instant },
+  { playerId: guestPlayerId, sessionId: guestId, pseudonym: 'Amie' as Pseudonym, joinedAt: '2026-06-27T15:31:00Z' as Instant },
 ];
 
 function renderResultats(overrides: Partial<ResultatsScreenProps> = {}) {
@@ -83,9 +86,9 @@ describe('v2 ResultatsScreen', () => {
   it('shows each contributor validated-letter count', () => {
     renderResultats({
       lockedPositions: [
-        { row: 0, column: 0, lockedBy: ownerId },
-        { row: 0, column: 1, lockedBy: ownerId },
-        { row: 1, column: 0, lockedBy: guestId },
+        { row: 0, column: 0, lockedBy: ownerPlayerId },
+        { row: 0, column: 1, lockedBy: ownerPlayerId },
+        { row: 1, column: 0, lockedBy: guestPlayerId },
       ],
     });
     expect(screen.getByText('2 lettres')).toBeTruthy();
@@ -95,9 +98,9 @@ describe('v2 ResultatsScreen', () => {
   it('ranks players by validated-letter score descending', () => {
     renderResultats({
       lockedPositions: [
-        { row: 0, column: 0, lockedBy: guestId },
-        { row: 0, column: 1, lockedBy: guestId },
-        { row: 1, column: 0, lockedBy: ownerId },
+        { row: 0, column: 0, lockedBy: guestPlayerId },
+        { row: 0, column: 1, lockedBy: guestPlayerId },
+        { row: 1, column: 0, lockedBy: ownerPlayerId },
       ],
     });
     const names = screen.getAllByText(/^(Léa|Amie)$/).map((n) => n.textContent);

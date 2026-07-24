@@ -7,7 +7,7 @@ import type { AuthClient } from '@/application/auth/AuthClient';
 import { AuthProvider } from '@/ui/components/auth';
 import { LobbyClientError, type GameClient, type LobbyClient } from '@/application/game';
 import type { SoloEntriesStore } from '@/application/solo/SoloEntriesStore';
-import type { Lobby, LobbyId, Pseudonym, SessionId } from '@/domain/game';
+import type { Lobby, LobbyId, PlayerId, Pseudonym, SessionId } from '@/domain/game';
 import { Route as RootRoute } from '@/ui/routes/__root';
 import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
 import { Route as JoinRoute, joinLoaderRetryPolicy } from '@/ui/routes/join.$code';
@@ -20,7 +20,7 @@ const lobbyId = '7gQ2xK9p' as LobbyId;
 const lobby: Lobby & { readonly id: LobbyId } = {
   id: lobbyId,
   ownerSessionId: sessionId,
-  players: [{ sessionId, pseudonym, joinedAt: '2026-06-27T15:30:00Z' }],
+  players: [{ playerId: sessionId as unknown as PlayerId, sessionId, pseudonym, joinedAt: '2026-06-27T15:30:00Z' }],
   state: 'WAITING',
   gridConfig: { width: 7, height: 7 },
   game: null,
