@@ -160,6 +160,23 @@ describe('useLobbyConnection lifecycle', () => {
     expect(gameClient.subscriberCount()).toBe(0);
   });
 
+  it('ADR-0066 (e): does not tear down the WS when auth resolves currentPlayerId post-mount (authed deep-link)', () => {
+    const gameClient = makeFakeGameClient();
+    // All seams stable across renders (as the real route provides them); only `currentPlayerId` flips — as it does when AuthProvider resolves whoami (anon sessionId → account userId) on an authed deep-link.
+    const baseArgs = makeArgs(gameClient);
+    const { rerender } = renderHook(
+      ({ playerId }) => useLobbyConnection({ ...baseArgs, currentPlayerId: playerId }),
+      { initialProps: { playerId: currentPlayerId } },
+    );
+    expect(gameClient.connectCalls).toHaveLength(1);
+    act(() => {
+      rerender({ playerId: '11111111-1111-1111-1111-111111111111' as unknown as PlayerId });
+    });
+    // The identity flip must not re-run the connect effect: no extra connect, no disconnect (which would fire a spurious "Connexion perdue" toast).
+    expect(gameClient.connectCalls).toHaveLength(1);
+    expect(gameClient.disconnectCalls.count).toBe(0);
+  });
+
   it('passes the stashed join code into connect', () => {
     const gameClient = makeFakeGameClient();
     renderHook(() =>

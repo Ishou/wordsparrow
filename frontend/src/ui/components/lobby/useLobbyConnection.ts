@@ -169,6 +169,9 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
   // different treatment than the same frame post-join.
   const joinConfirmedRef = useRef(joinConfirmed);
   joinConfirmedRef.current = joinConfirmed;
+  // Mirrored as a ref so the long-lived subscribe callback reads the latest identity without re-attaching. AuthProvider resolves `currentPlayerId` async (sessionId → userId post-whoami); keeping it out of the effect deps avoids a spurious WS teardown + false "Connexion perdue" toast on authed deep-link.
+  const currentPlayerIdRef = useRef(currentPlayerId);
+  currentPlayerIdRef.current = currentPlayerId;
   // True between "Démarrer la partie" click and the server-side
   // confirmation. WaitingRoom uses the flag to disable the button and
   // flip the label to "Démarrage…" so the WS round-trip (frame →
@@ -206,7 +209,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       if (event.type === 'error' &&
         event.errorType === 'https://bliss.example/errors/invalid-pseudonym') {
         setPseudonymError(event.detail ?? event.title);
-      } else if (event.type === 'playerRenamed' && event.playerId === currentPlayerId) {
+      } else if (event.type === 'playerRenamed' && event.playerId === currentPlayerIdRef.current) {
         setPseudonymError(null);
         // Persist server-confirmed value; rejected pseudonym must never reach cache.
         setPersistedPseudonymRef.current?.(event.newPseudonym);
@@ -250,7 +253,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       // (Reconnect path: sessionId already in the snapshot's player
       // list, handled at mount time via the initial-state computation
       // above.)
-      if (event.type === 'playerJoined' && event.playerId === currentPlayerId) {
+      if (event.type === 'playerJoined' && event.playerId === currentPlayerIdRef.current) {
         setJoinConfirmed(true);
         lobbyJoinCodeStash.clear(lobbyId);
       }
@@ -330,7 +333,7 @@ export function useLobbyConnection(args: LobbyConnectionArgs): LobbyConnection {
       unsubscribeConnection();
       gameClient.disconnect();
     };
-  }, [gameClient, lobbyId, getSession, currentPlayerId, lobbyJoinCodeStash, showToast, announce]);
+  }, [gameClient, lobbyId, getSession, lobbyJoinCodeStash, showToast, announce]);
 
   // Terminal server verdict (lobby gone / seat lost): stop retrying and drop the now-wrong reconnection toast.
   useEffect(() => {
