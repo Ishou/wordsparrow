@@ -139,3 +139,50 @@ replacement. This needs a maintainer-gated read of the word's clue set, added as
 whose overlay already bypasses generation clue-selection. No new correction kind:
 the picker just supplies `newClueText`. The gate matters because an ungated
 clue→answer read would be a cheat oracle (ADR-0076).
+
+## Amendment (2026-07-24): bulk correction seeding
+
+A single maintainer correction fixes one clue via `POST /v1/corrections`. Some
+operations replace **many** clues at once: the past-participle definition
+replacement (~2,000 ppas answers get fresh agreeing gold definitions), and, at
+GA, any bulk clue-quality migration where regenerating grids would orphan saved
+progress (ADR-0081). Recording thousands of corrections through the API floods
+it with maintainer-auth calls and flushes thousands of dangling overrides.
+
+**Decision.** Add a `grid-worker --seed-corrections <source>` command that
+bulk-inserts `clue_corrections` rows (`kind=replace`) from a pre-validated source
+of `(word_text, old_clue_text, new_clue_text)` triples, then the existing
+`--process-corrections` sweep backfills every matching grid — reusing the durable,
+resumable, progress-preserving backfill (§4) and the process-corrections worker
+**unchanged**.
+
+- **In-cluster, ops-gated, not API.** The seed runs as a one-shot k8s Job
+  (mirroring the `--process-corrections` CronJob and the configure-in-cluster
+  rule), so the control surface is kubeconfig/ops access, not the
+  `admin:signalements` API capability. Rows carry `created_by` = the seed job's
+  service identity for audit.
+- **Skips the override flush.** Seeded rows are inserted with `exported_at = now()`;
+  `ExportCorrectionsUseCase` flushes only `exported_at IS NULL` rows
+  (`PostgresCorrectionRepository.exportableCorrections`), so the pre-stamp marks
+  them already-exported. Justified: a bulk seed's `new_clue` is *already* the
+  corpus gold, so an override row would be a dangling no-op.
+- **Idempotent.** The source is deduped on `(word_text, old_clue_text)`; a re-run
+  inserts nothing new (skip a key already active). The backfill is already
+  idempotent per grid (§4) — a patched grid drops out of the queue.
+- **Reversible.** A later correction supersedes; the ADR-0116 reverse path applies
+  unchanged.
+
+**Consequences.** A reusable bulk clue-correction backfill for GA — existing grids
+are fixed **in place**, preserving `puzzleId` and player progress, with no
+regeneration (contrast the deferred blocklist+regenerate path, §2). The seed shares
+the process-corrections worker (no new backfill code). New surface: one worker
+command + a one-shot Job; the seed writes `clue_corrections` directly, so the
+**source must be pre-validated** (the API's length/kind validation is bypassed).
+Scope stays clue-text `replace` only; word blocklisting + regeneration remain out
+(ADR-0110 / their own gating).
+
+**Threat model.** Same privileged mutation surface as the API corrections (writes
+`clue_corrections`, patches grids), but the seed is an in-cluster, ops-gated Job —
+never player-reachable — audited via `created_by` + the durable rows, and
+reversible. The API-validation bypass is bounded by requiring a pre-validated
+source and `kind=replace`-only (no destructive blocklist).
