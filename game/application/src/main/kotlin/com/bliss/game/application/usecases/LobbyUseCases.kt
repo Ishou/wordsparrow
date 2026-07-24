@@ -215,18 +215,19 @@ class RenameSelfUseCase(
     suspend operator fun invoke(
         lobbyId: LobbyId,
         sessionId: SessionId,
+        playerId: PlayerId,
         newPseudonym: Pseudonym,
     ): UseCaseOutcome<Lobby> {
         val before = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
-        if (before.seatBySession(sessionId) == null) return failure(UseCaseError.PlayerNotInLobby)
+        if (!before.hasJoined(playerId)) return failure(UseCaseError.PlayerNotInLobby)
         var renamed = false
         val updated =
             repo.mutate(lobbyId) { lobby ->
-                val existing = lobby.seatBySession(sessionId) ?: return@mutate lobby
+                // Resolve by playerId, not seatBySession(sessionId): the seat's sessionId field tracks only the most-recently-joined device (ADR-0066 (e)).
+                val existing = lobby.players[playerId] ?: return@mutate lobby
                 renamed = true
                 lobby.copy(
-                    // Pseudonym does not change the playerId, so the seat key is stable.
-                    players = lobby.players + (existing.playerId to existing.copy(pseudonym = newPseudonym)),
+                    players = lobby.players + (playerId to existing.copy(pseudonym = newPseudonym)),
                     lastActivityAt = clock.now(),
                 )
             } ?: return failure(UseCaseError.LobbyNotFound)
@@ -397,16 +398,18 @@ class LeaveLobbyUseCase(
     suspend operator fun invoke(
         lobbyId: LobbyId,
         sessionId: SessionId,
+        playerId: PlayerId,
     ): UseCaseOutcome<Lobby?> {
         val events = mutableListOf<LobbyEvent>(LobbyEvent.PlayerLeft(sessionId))
         var playerWasPresent = false
         var destroyed = false
         val updated =
             repo.mutate(lobbyId) { lobby ->
-                val seat = lobby.seatBySession(sessionId) ?: return@mutate lobby
+                // Resolve by playerId, not seatBySession(sessionId): the seat's sessionId field tracks only the most-recently-joined device (ADR-0066 (e)).
+                if (!lobby.hasJoined(playerId)) return@mutate lobby
                 playerWasPresent = true
                 // Keep ownerSessionId unchanged; an owned lobby persists when emptied (owner returns via My-games).
-                val next = lobby.copy(players = lobby.players - seat.playerId, lastActivityAt = clock.now())
+                val next = lobby.copy(players = lobby.players - playerId, lastActivityAt = clock.now())
                 // ADR-0055/0098: the last player leaving an ownerless lobby leaves a ghost -- delete it now.
                 if (next.isDefunct()) {
                     destroyed = true
@@ -508,7 +511,7 @@ class LeaveMembershipUseCase(
             val seat =
                 current.players.values.firstOrNull { it.userId == userId }
                     ?: return failure(UseCaseError.NotPresentInLobby)
-            when (val outcome = leaveLobby(lobbyId, seat.sessionId)) {
+            when (val outcome = leaveLobby(lobbyId, seat.sessionId, seat.playerId)) {
                 is UseCaseOutcome.Success ->
                     success(MembershipLeaveResult(outcome.result.value, relinquishedOwnership = false), outcome.result.events)
                 is UseCaseOutcome.Failure -> outcome
