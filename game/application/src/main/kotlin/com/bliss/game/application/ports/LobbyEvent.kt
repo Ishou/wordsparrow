@@ -25,10 +25,12 @@ sealed interface LobbyEvent {
 
     data class PlayerLeft(
         val sessionId: SessionId,
+        val playerId: PlayerId,
     ) : LobbyEvent
 
     data class PlayerRenamed(
         val sessionId: SessionId,
+        val playerId: PlayerId,
         val pseudonym: Pseudonym,
     ) : LobbyEvent
 

@@ -617,7 +617,7 @@ class LobbyUseCasesTest {
             val lobby = h.create(sessionA, alice).value
             val out = h.rename(lobby.id, sessionA, Pseudonym("Alicia")).requireSuccess()
             assertThat(out.value.seatBySession(sessionA)?.pseudonym).isEqualTo(Pseudonym("Alicia"))
-            assertThat(out.events).containsExactly(LobbyEvent.PlayerRenamed(sessionA, Pseudonym("Alicia")))
+            assertThat(out.events).containsExactly(LobbyEvent.PlayerRenamed(sessionA, PlayerId(sessionA.value), Pseudonym("Alicia")))
         }
 
     @Test
@@ -765,7 +765,7 @@ class LobbyUseCasesTest {
             val state = out.value ?: error("expected lobby to remain")
             assertThat(state.players.keys).isEqualTo(setOf(PlayerId(sessionA.value)))
             assertThat(state.ownerSessionId).isEqualTo(sessionA)
-            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionB))
+            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionB, PlayerId(sessionB.value)))
         }
 
     @Test
@@ -783,7 +783,7 @@ class LobbyUseCasesTest {
             // Owner is expected to return via My-games (ADR-0039); ownership stays put.
             assertThat(state.ownerSessionId).isEqualTo(sessionA)
             assertThat(state.players.keys).isEqualTo(setOf(PlayerId(sessionB.value), PlayerId(sessionC.value)))
-            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
+            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA, PlayerId(sessionA.value)))
         }
 
     // ADR-0055/0098: an anonymous owner is ownerless (ownerUserId null); the last player leaving destroys the ghost.
@@ -794,7 +794,7 @@ class LobbyUseCasesTest {
             val lobby = h.create(sessionA, alice).value
             val out = h.leave(lobby.id, sessionA).requireSuccess()
             assertThat(out.value).isNull()
-            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
+            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA, PlayerId(sessionA.value)))
             assertThat(h.repo.findById(lobby.id)).isNull()
         }
 
@@ -895,7 +895,7 @@ class LobbyUseCasesTest {
             assertThat(relinquished.ownerUserId).isNull()
             assertThat(relinquished.seatBySession(sessionA) != null).isEqualTo(false)
             assertThat(relinquished.seatBySession(sessionB) != null).isEqualTo(true)
-            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
+            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA, PlayerId(userA.value)))
         }
 
     // ADR-0055/0098: a sole owner relinquishing empties an ownerless lobby -> it is destroyed, not just ownerless.
@@ -906,7 +906,7 @@ class LobbyUseCasesTest {
             val lobby = h.create(sessionA, alice, userA).value
             val out = h.relinquish(lobby.id, sessionA).requireSuccess()
 
-            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA))
+            assertThat(out.events).containsExactly(LobbyEvent.PlayerLeft(sessionA, PlayerId(userA.value)))
             assertThat(h.repo.findById(lobby.id)).isNull()
         }
 

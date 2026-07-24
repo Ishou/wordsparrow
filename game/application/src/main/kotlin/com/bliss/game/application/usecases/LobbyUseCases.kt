@@ -234,7 +234,7 @@ class RenameSelfUseCase(
         // Player left between findById and mutate; mutator no-oped silently.
         if (!renamed) return failure(UseCaseError.PlayerNotInLobby)
         analyticsEventSink.record(AnalyticsEvent.PlayerRenamed, sessionId)
-        return success(updated, listOf(LobbyEvent.PlayerRenamed(sessionId, newPseudonym)))
+        return success(updated, listOf(LobbyEvent.PlayerRenamed(sessionId, playerId, newPseudonym)))
     }
 }
 
@@ -400,7 +400,7 @@ class LeaveLobbyUseCase(
         sessionId: SessionId,
         playerId: PlayerId,
     ): UseCaseOutcome<Lobby?> {
-        val events = mutableListOf<LobbyEvent>(LobbyEvent.PlayerLeft(sessionId))
+        val events = mutableListOf<LobbyEvent>(LobbyEvent.PlayerLeft(sessionId, playerId))
         var playerWasPresent = false
         var destroyed = false
         val updated =
@@ -447,7 +447,8 @@ class RelinquishOwnershipUseCase(
         val current = repo.findById(lobbyId) ?: return failure(UseCaseError.LobbyNotFound)
         if (!current.isCurrentOwner(sessionId)) return failure(UseCaseError.NotOwner)
         return when (val outcome = repo.relinquishOwnership(lobbyId, sessionId, clock.now())) {
-            is RelinquishOutcome.Relinquished -> success(outcome.lobby, listOf(LobbyEvent.PlayerLeft(sessionId)))
+            is RelinquishOutcome.Relinquished ->
+                success(outcome.lobby, listOf(LobbyEvent.PlayerLeft(sessionId, PlayerId.of(current.ownerUserId, sessionId))))
             RelinquishOutcome.NotOwner -> failure(UseCaseError.NotOwner)
             RelinquishOutcome.LobbyNotFound -> failure(UseCaseError.LobbyNotFound)
         }
@@ -473,7 +474,7 @@ class RelinquishOwnershipByUserUseCase(
         if (current.ownerUserId != userId) return failure(UseCaseError.NotOwner)
         return when (val outcome = repo.relinquishOwnershipByUser(lobbyId, userId, clock.now())) {
             is RelinquishOutcome.Relinquished ->
-                success(outcome.lobby, listOf(LobbyEvent.PlayerLeft(current.ownerSessionId)))
+                success(outcome.lobby, listOf(LobbyEvent.PlayerLeft(current.ownerSessionId, PlayerId.of(userId, current.ownerSessionId))))
             RelinquishOutcome.NotOwner -> failure(UseCaseError.NotOwner)
             RelinquishOutcome.LobbyNotFound -> failure(UseCaseError.LobbyNotFound)
         }

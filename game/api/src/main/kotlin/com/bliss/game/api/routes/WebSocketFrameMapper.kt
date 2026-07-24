@@ -57,14 +57,16 @@ internal fun LobbyEvent.toFrameOrNull(): ServerToClientFrame? =
     when (this) {
         is LobbyEvent.PlayerJoined ->
             ServerToClientFrame.PlayerJoined(
+                playerId = player.playerId.value,
                 sessionId = player.sessionId.value,
                 pseudonym = player.pseudonym.value,
                 joinedAt = player.joinedAt.toIsoString(),
             )
         is LobbyEvent.PlayerLeft ->
-            ServerToClientFrame.PlayerLeft(sessionId = sessionId.value)
+            ServerToClientFrame.PlayerLeft(playerId = playerId.value, sessionId = sessionId.value)
         is LobbyEvent.PlayerRenamed ->
             ServerToClientFrame.PlayerRenamed(
+                playerId = playerId.value,
                 sessionId = sessionId.value,
                 newPseudonym = pseudonym.value,
             )
@@ -218,6 +220,7 @@ internal fun protocolErrorFrame(
 
 private fun Player.toDto(): PlayerDto =
     PlayerDto(
+        playerId = playerId.value,
         sessionId = sessionId.value,
         pseudonym = pseudonym.value,
         joinedAt = joinedAt.toIsoString(),

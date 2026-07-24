@@ -120,6 +120,7 @@ sealed class ServerToClientFrame {
     @Serializable
     @SerialName("playerJoined")
     data class PlayerJoined(
+        val playerId: String,
         val sessionId: String,
         val pseudonym: String,
         val joinedAt: String,
@@ -128,12 +129,14 @@ sealed class ServerToClientFrame {
     @Serializable
     @SerialName("playerLeft")
     data class PlayerLeft(
+        val playerId: String,
         val sessionId: String,
     ) : ServerToClientFrame()
 
     @Serializable
     @SerialName("playerRenamed")
     data class PlayerRenamed(
+        val playerId: String,
         val sessionId: String,
         val newPseudonym: String,
     ) : ServerToClientFrame()

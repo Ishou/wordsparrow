@@ -43,7 +43,10 @@ class SessionManagerTest {
         withSessions(count = 3) { harness ->
             harness.manager.broadcast(
                 lobbyId,
-                ServerToClientFrame.PlayerLeft(sessionId = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b"),
+                ServerToClientFrame.PlayerLeft(
+                    playerId = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b",
+                    sessionId = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b",
+                ),
             )
             for (i in 0 until 3) {
                 val text = harness.awaitFrame(i)
@@ -106,7 +109,10 @@ class SessionManagerTest {
             // Must not throw — even though session[0]'s send raises.
             harness.manager.broadcast(
                 lobbyId,
-                ServerToClientFrame.PlayerLeft(sessionId = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b"),
+                ServerToClientFrame.PlayerLeft(
+                    playerId = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b",
+                    sessionId = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b",
+                ),
             )
         }
 
@@ -132,6 +138,46 @@ class SessionManagerTest {
             // Closing the last tab releases the slot.
             harness.manager.unregister(lobbyId, harness.sessions[1])
             assertThat(harness.manager.isSessionConnected(lobbyId, sid)).isFalse()
+        }
+
+    @Test
+    fun `isPlayerConnected holds while any device of the account is attached`() =
+        withSessions(count = 2) { harness ->
+            val userId = UserId("0190e3a4-7a2c-4c9e-8f1a-9b2d3e4f5a6b")
+            val sid = "0190e3b2-1c45-7d2e-9a3f-b0c1d2e3f4a5"
+            // Two devices of one account: both live sockets bind the same userId.
+            harness.manager.bindUserId(lobbyId, harness.sessions[0], userId)
+            harness.manager.bindUserId(lobbyId, harness.sessions[1], userId)
+            assertThat(harness.manager.isPlayerConnected(lobbyId, sid, userId)).isTrue()
+            harness.manager.unregister(lobbyId, harness.sessions[0])
+            assertThat(harness.manager.isPlayerConnected(lobbyId, sid, userId)).isTrue()
+            harness.manager.unregister(lobbyId, harness.sessions[1])
+            assertThat(harness.manager.isPlayerConnected(lobbyId, sid, userId)).isFalse()
+        }
+
+    @Test
+    fun `isPlayerConnected is scoped to the lobby not the whole account`() =
+        withSessions(count = 2) { harness ->
+            val userId = UserId("0190e3a4-7a2c-4c9e-8f1a-9b2d3e4f5a6b")
+            val sid = "0190e3b2-1c45-7d2e-9a3f-b0c1d2e3f4a5"
+            val otherLobby = LobbyId("aaaaaaaa")
+            // sessions[0] stays anon in this lobby; sessions[1] is the account, but only in another lobby.
+            harness.manager.unregister(lobbyId, harness.sessions[1])
+            harness.manager.register(otherLobby, harness.sessions[1])
+            harness.manager.bindUserId(otherLobby, harness.sessions[1], userId)
+            // The account has a live socket, but not in THIS lobby -> grace must still fire here.
+            assertThat(harness.manager.isPlayerConnected(lobbyId, sid, userId)).isFalse()
+            assertThat(harness.manager.isPlayerConnected(otherLobby, sid, userId)).isTrue()
+        }
+
+    @Test
+    fun `isPlayerConnected falls back to the sessionId check for an anonymous player`() =
+        withSessions(count = 1) { harness ->
+            val sid = "0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b"
+            harness.manager.bindSession(lobbyId, harness.sessions.single(), sid)
+            assertThat(harness.manager.isPlayerConnected(lobbyId, sid, userId = null)).isTrue()
+            harness.manager.unregister(lobbyId, harness.sessions.single())
+            assertThat(harness.manager.isPlayerConnected(lobbyId, sid, userId = null)).isFalse()
         }
 
     @Test
