@@ -74,8 +74,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright chromium for prerender
-        # Prerender (ADR-0053) only serializes DOM to HTML — fonts are irrelevant, and
-        # ubuntu-latest already ships chromium's shared libs, so --with-deps buys nothing.
+        # Prerender (ADR-0053) serializes DOM to HTML — fonts are irrelevant, and ubuntu-latest already ships chromium's shared libs.
         working-directory: frontend
         run: pnpm exec playwright install chromium
 
