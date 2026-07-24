@@ -413,9 +413,7 @@ class LobbyUseCasesTest {
             assertThat(afterLeave.value!!.players.keys).isEqualTo(setOf(PlayerId(userA.value)))
         }
 
-    // ADR-0066 (e) regression (cycle-2 carry-over): resolving by playerId, not seatBySession(sessionId),
-    // means the FIRST device of a two-device account still works after a second device joins and
-    // re-points the shared seat's transport sessionId to itself.
+    // ADR-0066 (e): the first device of a two-device account must still resolve after a second device re-points the shared seat's sessionId.
     @Test
     fun `authed first device can still rename and leave after a second device joins`() =
         runTest {
