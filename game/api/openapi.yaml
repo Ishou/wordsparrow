@@ -684,6 +684,16 @@ components:
         `game/api/asyncapi.yaml`; keep in sync.
       example: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b
 
+    PlayerId:
+      type: string
+      format: uuid
+      description: |
+        Stable per-account player identity: the authenticated `userId`, or the
+        per-device `sessionId` for an anonymous player. Keys lock/score
+        attribution (ADR-0066 amendment (e)); distinct from the transport
+        `sessionId`. Mirrors `PlayerId` in `game/api/asyncapi.yaml`; keep in sync.
+      example: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b
+
     Pseudonym:
       type: string
       minLength: 1
@@ -915,7 +925,7 @@ components:
     LockedCell:
       type: object
       required: [row, column, lockedBy]
-      description: A locked cell plus the session that first locked it (first-writer-wins on crossings).
+      description: A locked cell plus the player that first locked it (first-writer-wins on crossings).
       properties:
         row:
           type: integer
@@ -926,7 +936,7 @@ components:
           minimum: 0
           description: Zero-indexed column, left to right.
         lockedBy:
-          $ref: '#/components/schemas/SessionId'
+          $ref: '#/components/schemas/PlayerId'
 
     GameClue:
       type: object
@@ -991,7 +1001,7 @@ components:
             $ref: '#/components/schemas/LockedCell'
           description: |
             Cumulative cells locked by server-side word validation, each with
-            the per-cell `lockedBy` session that first locked it (first-writer-
+            the per-cell `lockedBy` player that first locked it (first-writer-
             wins on crossings, per ADR-0086). Order is row then column for
             diff-friendly snapshots. Empty list when no word has been locked.
         startedAt:
