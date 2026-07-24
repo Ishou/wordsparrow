@@ -565,19 +565,23 @@ components:
       example: { type: playerJoined, playerId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, sessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5, pseudonym: Bob, joinedAt: '2026-05-02T15:31:12Z' }
     PlayerLeftPayload:
       type: object
-      required: [type, playerId]
+      # Expand phase: playerId added; sessionId retained for the current consumers until Wave 5 migrates them (ADR-0066 amendment (e)).
+      required: [type, playerId, sessionId]
       properties:
         type:      { type: string, enum: [playerLeft] }
         playerId:  { $ref: '#/components/schemas/PlayerId' }
-      example: { type: playerLeft, playerId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b }
+        sessionId: { $ref: '#/components/schemas/SessionId' }
+      example: { type: playerLeft, playerId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, sessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5 }
     PlayerRenamedPayload:
       type: object
-      required: [type, playerId, newPseudonym]
+      # Expand phase: playerId added; sessionId retained for the current consumers until Wave 5 migrates them (ADR-0066 amendment (e)).
+      required: [type, playerId, sessionId, newPseudonym]
       properties:
         type:         { type: string, enum: [playerRenamed] }
         playerId:     { $ref: '#/components/schemas/PlayerId' }
+        sessionId:    { $ref: '#/components/schemas/SessionId' }
         newPseudonym: { $ref: '#/components/schemas/Pseudonym' }
-      example: { type: playerRenamed, playerId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, newPseudonym: Alice }
+      example: { type: playerRenamed, playerId: 0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b, sessionId: 0190e3b2-1c45-7d2e-9a3f-c0d1e2f3a4b5, newPseudonym: Alice }
     OwnershipChangedPayload:
       type: object
       required: [type, lobbyId, newOwnerSessionId, newOwnerUserId]
