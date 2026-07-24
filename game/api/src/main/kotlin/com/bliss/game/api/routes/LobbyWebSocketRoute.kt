@@ -77,7 +77,8 @@ internal val REMATCH_AUTO_START_DELAY: Duration = 10.seconds
  *     broadcast; [UseCaseOutcome.Failure] sends a single error frame to
  *     the originator only.
  *  5. On close (any reason), unregister and check whether ANY other socket
- *     for the same `sessionId` is still attached (multi-tab / quick reload).
+ *     for the same account is still attached (multi-tab / second device /
+ *     quick reload; ADR-0066 (e) grace-by-PlayerId).
  *     If yes — no broadcast: the slot is still held. If no — schedule the
  *     ADR-0018 §5 30s reconnect grace; once it elapses with the player still
  *     absent, dispatch [LobbyUseCases.leaveLobby] (which removes the player
@@ -172,6 +173,7 @@ fun Route.lobbyWebSocketRoute(
                     repo = repo,
                     lobbyId = lobbyId,
                     sessionId = boundSessionId,
+                    userId = verifiedUserId,
                     grace = reconnectGrace,
                 )
             }
@@ -529,18 +531,7 @@ private suspend fun DefaultWebSocketServerSession.sendInvalidPseudonym(detail: S
     )
 }
 
-/**
- * Schedules the ADR-0018 §5 reconnect-grace check. If, after [grace] elapses,
- * no socket in [lobbyId] is bound to [sessionId], the player is removed from
- * the lobby aggregate via [LobbyUseCases.leaveLobby] and the resulting events
- * (`playerLeft`, possibly `lobbyClosed`) are broadcast to the survivors. If a
- * reconnect lands inside the window the timer fires but observes a still-bound
- * sessionId and exits silently.
- *
- * Eager short-circuit: when another socket is already attached at unregister
- * time (the common multi-tab close case) we skip the launch entirely so the
- * grace coroutine doesn't even spin up.
- */
+/** ADR-0018 §5 grace: after [grace], leaveLobby + broadcast `playerLeft` unless a live socket still maps to the account (ADR-0066 (e) grace-by-PlayerId); short-circuits when a sibling socket is already attached. */
 private fun scheduleReconnectGrace(
     backgroundScope: CoroutineScope,
     sessionManager: SessionManager,
@@ -548,22 +539,31 @@ private fun scheduleReconnectGrace(
     repo: LobbyRepository,
     lobbyId: LobbyId,
     sessionId: String,
+    userId: UserId?,
     grace: Duration,
 ) {
-    if (sessionManager.isSessionConnected(lobbyId, sessionId)) {
-        // Another tab of the same browser is still attached — the slot
-        // is held; nothing to broadcast and nothing to schedule.
+    if (sessionManager.isPlayerConnected(lobbyId, sessionId, userId)) {
+        // Another device / tab of the same account is still attached — the
+        // seat is held; nothing to broadcast and nothing to schedule.
         return
     }
     backgroundScope.launch {
         if (grace > Duration.ZERO) delay(grace)
-        if (sessionManager.isSessionConnected(lobbyId, sessionId)) {
-            // Reconnected inside the window — slot is held by the new socket.
+        if (sessionManager.isPlayerConnected(lobbyId, sessionId, userId)) {
+            // Reconnected or a sibling device joined inside the window — seat is held.
             return@launch
         }
         try {
-            // Resolve by the seat's currently recorded session, not a blind PlayerId.of(verifiedUserId, sessionId): grace-by-playerId is Wave 4 (ADR-0066 (e) point 4), so a stale session (re-pointed to another device) must no-op, not evict a still-connected peer.
-            val seat = repo.findById(lobbyId)?.seatBySession(SessionId(sessionId))
+            // Resolve the seat by account when authed (robust to which device closed last), else by this socket's session.
+            val lobby = repo.findById(lobbyId)
+            val seat =
+                if (userId !=
+                    null
+                ) {
+                    lobby?.players?.get(PlayerId.of(userId, SessionId(sessionId)))
+                } else {
+                    lobby?.seatBySession(SessionId(sessionId))
+                }
             if (seat != null) {
                 val outcome = useCases.leaveLobby(lobbyId, SessionId(sessionId), seat.playerId)
                 if (outcome is UseCaseOutcome.Success) {
@@ -572,7 +572,7 @@ private fun scheduleReconnectGrace(
                     }
                 }
             }
-            // A missing seat (already removed, re-pointed to another device, or lobby gone) is the no-op outcome; nothing to broadcast.
+            // A missing seat (already removed or lobby gone) is the no-op outcome; nothing to broadcast.
         } catch (cause: Throwable) {
             log.warn(
                 "ws.reconnect_grace.leave_failed lobbyId={} sessionId={} cause={}",

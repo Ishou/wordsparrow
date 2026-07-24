@@ -30,6 +30,7 @@ data class LobbyResponseDto(
 
 @Serializable
 data class PlayerDto(
+    val playerId: String,
     val sessionId: String,
     val pseudonym: String,
     val joinedAt: String,

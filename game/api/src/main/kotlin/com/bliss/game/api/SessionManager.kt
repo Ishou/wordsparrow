@@ -212,6 +212,21 @@ class SessionManager(
             sessionIdToSessions[lobbyId]?.get(sessionId)?.isNotEmpty() == true
         }
 
+    /** True when a live socket in [lobbyId] still maps to the account (ADR-0066 (e)): any lobby socket bound to [userId] when authed, else the per-[sessionId] check. */
+    fun isPlayerConnected(
+        lobbyId: LobbyId,
+        sessionId: String,
+        userId: UserId?,
+    ): Boolean =
+        synchronized(lockFor(lobbyId)) {
+            if (userId != null) {
+                val lobbySockets = connections[lobbyId] ?: return@synchronized false
+                userIdToSessions[userId]?.any { it in lobbySockets } == true
+            } else {
+                sessionIdToSessions[lobbyId]?.get(sessionId)?.isNotEmpty() == true
+            }
+        }
+
     /**
      * Sends [frame] to every session currently registered for [lobbyId].
      * Per-session send failures are caught and logged so a single flaky

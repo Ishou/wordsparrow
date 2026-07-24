@@ -233,8 +233,9 @@ class LobbyWebSocketRouteTest {
                     sendText("""{"type":"joinLobby","sessionId":"$newDevice","pseudonym":"$pseudoA"}""")
                     // ADR-0066 (e): the rejoin is idempotent (same account) so it emits no playerJoined; the joiner-snapshot is the success signal.
                     drainUntil("lobbyState")
+                    // Assert before close: reconnectGrace = ZERO races a post-close assertion against the async leave-on-disconnect.
+                    assertThat(repo.findById(lobbyId)?.ownerSessionId).isEqualTo(SessionId(newDevice))
                 }
-                assertThat(repo.findById(lobbyId)?.ownerSessionId).isEqualTo(SessionId(newDevice))
             } finally {
                 backgroundJob.cancel()
             }
@@ -290,14 +291,14 @@ class LobbyWebSocketRouteTest {
                     sendText("""{"type":"joinLobby","sessionId":"$newDevice","pseudonym":"Renard 777"}""")
                     // ADR-0066 (e): the owner's second device is idempotent (no playerJoined); the joiner-snapshot acks it.
                     drainUntil("lobbyState")
+                    // Assert before close (reconnectGrace = ZERO race, see the test above); single seat keeps the verified "Alice" name, guest frame ignored.
+                    val after = repo.findById(lobbyId)!!
+                    assertThat(
+                        after.players.values
+                            .single()
+                            .pseudonym,
+                    ).isEqualTo(Pseudonym("Alice"))
                 }
-                // The account keeps its single seat under the verified "Alice" name; the guest frame is ignored and no duplicate seat is created.
-                val after = repo.findById(lobbyId)!!
-                assertThat(
-                    after.players.values
-                        .single()
-                        .pseudonym,
-                ).isEqualTo(Pseudonym("Alice"))
             } finally {
                 backgroundJob.cancel()
             }

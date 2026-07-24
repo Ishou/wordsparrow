@@ -62,7 +62,7 @@ fun Lobby.toResponseDto(presence: Map<String, PresencePosition> = emptyMap()): L
         code = code.value,
     )
 
-private fun Player.toDto() = PlayerDto(sessionId.value, pseudonym.value, ISO.format(joinedAt))
+private fun Player.toDto() = PlayerDto(playerId.value, sessionId.value, pseudonym.value, ISO.format(joinedAt))
 
 private fun GridConfig.toDto() = GridConfigDto(width, height)
 
