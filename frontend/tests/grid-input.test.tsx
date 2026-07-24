@@ -83,6 +83,49 @@ const SMART_PUZZLE: Puzzle = {
   ],
 };
 
+// Fixture for block-sandwiched cells that have a word in only one axis.
+// H-case: solving across-2 on row 1, ArrowRight jumps the block at (1,3)
+// onto (1,4), whose only word is down (down-1, def at (0,4)). The active
+// direction must flip to the surviving axis so the word highlights.
+//
+//   B    B    B    B    D↓     down-1: (1,4),(2,4)
+//   D→   X    X    B    X      across-2: (1,1),(1,2)
+//   B    B    B    B    X
+const B = (row: number, col: number): Cell => ({ kind: 'block', position: { row, col } });
+const H_SANDWICH_PUZZLE: Puzzle = {
+  id: 'h-sandwich', title: 'h', language: 'fr', width: 5, height: 3, hintsAllowed: 3, hintsRemaining: 3,
+  cells: [
+    B(0, 0), B(0, 1), B(0, 2), B(0, 3),
+    { kind: 'definition', position: { row: 0, col: 4 }, clues: [{ text: 'down-1', arrow: 'down' }] },
+    { kind: 'definition', position: { row: 1, col: 0 }, clues: [{ text: 'across-2', arrow: 'right' }] },
+    L(1, 1), L(1, 2), B(1, 3), L(1, 4),
+    B(2, 0), B(2, 1), B(2, 2), B(2, 3), L(2, 4),
+  ],
+};
+
+// V-case (top/middle/bottom analog): solving down-1 on column 1,
+// ArrowDown jumps the block at (3,1) onto (4,1), whose only word is
+// across (across-2, def at (4,0)).
+//
+//   B    D↓   B    B      down-1:   (1,1),(2,1)
+//   B    X    B    B
+//   B    X    B    B
+//   B    B    B    B
+//   D→   X    X    X      across-2: (4,1),(4,2),(4,3)
+const V_SANDWICH_PUZZLE: Puzzle = {
+  id: 'v-sandwich', title: 'v', language: 'fr', width: 4, height: 5, hintsAllowed: 3, hintsRemaining: 3,
+  cells: [
+    B(0, 0),
+    { kind: 'definition', position: { row: 0, col: 1 }, clues: [{ text: 'down-1', arrow: 'down' }] },
+    B(0, 2), B(0, 3),
+    B(1, 0), L(1, 1), B(1, 2), B(1, 3),
+    B(2, 0), L(2, 1), B(2, 2), B(2, 3),
+    B(3, 0), B(3, 1), B(3, 2), B(3, 3),
+    { kind: 'definition', position: { row: 4, col: 0 }, clues: [{ text: 'across-2', arrow: 'right' }] },
+    L(4, 1), L(4, 2), L(4, 3),
+  ],
+};
+
 const inputAt = (root: HTMLElement, row: number, col: number) =>
   root.querySelector<HTMLInputElement>(`[data-cell-kind="letter"][data-row="${row}"][data-col="${col}"]`);
 const wrapAt = (root: HTMLElement, row: number, col: number) =>
@@ -278,6 +321,30 @@ describe('Grid keyboard interactions', () => {
     expect(document.activeElement).toBe(at22);
     fireEvent.keyDown(at22, { key: 'ArrowRight' });
     expect(document.activeElement).toBe(inputAt(container, 2, 3));
+  });
+
+  it('ArrowRight onto a block-sandwiched cell focuses its only (down) word', () => {
+    const { container } = render(<Grid puzzle={H_SANDWICH_PUZZLE} />);
+    // Solve across-2 rightward, then jump the block onto the down-only cell.
+    click(inputAt(container, 1, 1)!);
+    fireEvent.keyDown(inputAt(container, 1, 1)!, { key: 'ArrowRight' });
+    fireEvent.keyDown(inputAt(container, 1, 2)!, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(inputAt(container, 1, 4));
+    // Direction must flip to down so the sole available word highlights.
+    expect(wrapAt(container, 2, 4)?.dataset.inWord).toBe('true');
+    expect(defAt(container, 0, 4)?.dataset.currentClue).toBe('true');
+  });
+
+  it('ArrowDown onto a block-sandwiched cell focuses its only (across) word', () => {
+    const { container } = render(<Grid puzzle={V_SANDWICH_PUZZLE} />);
+    // Solve down-1 downward, then jump the block onto the across-only cell.
+    click(inputAt(container, 1, 1)!);
+    fireEvent.keyDown(inputAt(container, 1, 1)!, { key: 'ArrowDown' });
+    fireEvent.keyDown(inputAt(container, 2, 1)!, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(inputAt(container, 4, 1));
+    expect(wrapAt(container, 4, 2)?.dataset.inWord).toBe('true');
+    expect(wrapAt(container, 4, 3)?.dataset.inWord).toBe('true');
+    expect(defAt(container, 4, 0)?.dataset.currentClue).toBe('true');
   });
 
   // Two related behaviors at multi-clue cells:
