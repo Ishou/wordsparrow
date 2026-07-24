@@ -194,15 +194,12 @@ def test_invariable_ppas_matches_either_number(
     assert res.text.startswith(expected_prefix)
 
 
-def test_invariable_target_matches_any_number(index: MorphologyIndex) -> None:
-    """`appartenu,appartenir,verbe,Faire partie de` — surface `appartenu` is
-    `{ppas, epi, inv}` (epicene invariable). `faire` splits ppas by gender ×
-    number. Pre-fix `wants_number={inv}` was a hard match against
-    `tag_numbers ∈ {sg, pl}` and we bailed."""
+def test_invariable_ppas_target_ships_verbatim(index: MorphologyIndex) -> None:
+    """An `epi inv` (invariable) ppas target has exactly one form; the clue ships verbatim rather than being inflated. The ppas gold heads are already participles/adjectives, and inflating an invariable target mangles adjective/infinitive/homograph heads."""
     res = inflect_clue("Faire partie de",
                        {"v3__t___zz", "ppas", "epi", "inv"}, index)
-    assert res.flag == ""
-    assert res.text.startswith("Fait ")
+    assert res.flag == "identity"
+    assert res.text == "Faire partie de"
 
 
 def test_epicene_target_matches_any_gender(index: MorphologyIndex) -> None:
@@ -1174,8 +1171,8 @@ def test_ppre_without_complement_still_agrees() -> None:
     assert res.text == "Personnes fuyantes", res.text
 
 
-def test_epicene_invariable_ppas_head_stays_masculine(index: MorphologyIndex) -> None:
-    """An epi/inv ppas target (menti/coexisté) has no gender; a ppas-form head that also has a feminine (`pris`/`prise`) must stay masculine, not drift to the feminine default."""
+def test_invariable_ppas_target_head_not_inflated(index: MorphologyIndex) -> None:
+    """An epi/inv ppas target must not inflate the head at all — a head with a feminine homograph (`pris`/`prise`) or a non-verb adjective ships verbatim, never drifting to the feminine or an invented ppas."""
     res = inflect_clue("Pris au piège", {"v3__t___zz", "ppas", "epi", "inv"}, index)
-    assert res.flag == ""
-    assert res.text.startswith("Pris "), res.text
+    assert res.flag == "identity"
+    assert res.text == "Pris au piège", res.text

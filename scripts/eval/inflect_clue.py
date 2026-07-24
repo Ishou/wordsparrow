@@ -460,9 +460,9 @@ def inflect_clue(
             and not (target & PERSON_TOKENS)):
         return InflectionResult(_capitalize_first(clue), "no-inflection-finite")
 
-    # Epicene-invariable ppas target (menti/coexisté): no gender to agree to, so pin it to masc-sg (the citation) — else the underspecified match drifts to feminine.
-    if target_pos == "verbe" and "ppas" in target and not (target & {"mas", "fem"}):
-        target = (target - {"epi", "inv"}) | {"mas", "sg"}
+    # Fully invariable (epi+inv) ppas target: one form, and the ppas gold heads are already participles/adjectives — ship verbatim; inflating an invariable target mangles adjective/infinitive/homograph heads (Fourbe->Fourbé, monde->mondé, pousser->poussé).
+    if target_pos == "verbe" and "ppas" in target and "epi" in target and "inv" in target:
+        return InflectionResult(_capitalize_first(clue), "identity")
 
     tokens = _TOKEN_RE.findall(clue)
     if not tokens:
