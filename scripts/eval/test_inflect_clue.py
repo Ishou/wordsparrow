@@ -86,8 +86,8 @@ def _build_index() -> MorphologyIndex:
 
     # `prendre`: invariable masc ppas `pris` (tagged `inv`, not `sg`/`pl`).
     _add(idx, "prendre", "prendre", "v3_itnq__a infi")
-    _add(idx, "prendre", "pris", "v3_itnq__a ppas mas inv")
     _add(idx, "prendre", "prise", "v3_itnq__a ppas fem sg")
+    _add(idx, "prendre", "pris", "v3_itnq__a ppas mas inv")
 
     # `monstrueux`: mas-inv adj; fem variants on separate rows.
     _add(idx, "monstrueux", "monstrueux", "adj mas inv")
@@ -1172,3 +1172,10 @@ def test_ppre_without_complement_still_agrees() -> None:
     idx = _ppre_index()
     res = inflect_clue("Personne fuyant", {"nom", "fem", "pl"}, idx)
     assert res.text == "Personnes fuyantes", res.text
+
+
+def test_epicene_invariable_ppas_head_stays_masculine(index: MorphologyIndex) -> None:
+    """An epi/inv ppas target (menti/coexisté) has no gender; a ppas-form head that also has a feminine (`pris`/`prise`) must stay masculine, not drift to the feminine default."""
+    res = inflect_clue("Pris au piège", {"v3__t___zz", "ppas", "epi", "inv"}, index)
+    assert res.flag == ""
+    assert res.text.startswith("Pris "), res.text
