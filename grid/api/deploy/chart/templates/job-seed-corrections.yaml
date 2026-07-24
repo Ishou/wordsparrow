@@ -1,0 +1,51 @@
+{{- if .Values.seedCorrections.enabled -}}
+{{/* One-off bulk clue-correction seed (ADR-0108 amendment 2026-07-24): runs `grid-worker --seed-corrections` over a maintainer-supplied, reviewed CSV mounted from a ConfigMap; the existing --process-corrections CronJob then backfills the grids. Ops-gated (in-cluster, not the API). No corpus fetch — seeding only inserts clue_corrections rows. */}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "wordsparrow-api.fullname" . }}-seed-corrections
+  labels: {{- include "wordsparrow-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: seed-corrections
+spec:
+  activeDeadlineSeconds: {{ .Values.seedCorrections.activeDeadlineSeconds }}
+  backoffLimit: 0
+  # Self-clean so a later one-off run can rematerialize under the same name.
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels: {{- include "wordsparrow-api.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: seed-corrections
+    spec:
+      serviceAccountName: {{ include "wordsparrow-api.serviceAccountName" . }}
+      restartPolicy: Never
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: worker
+          image: {{ include "wordsparrow-api.workerImage" . | quote }}
+          imagePullPolicy: {{ .Values.ensureDailies.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command: ["/app/bin/grid-worker"]
+          args: ["--seed-corrections", "/seed/{{ .Values.seedCorrections.sourceKey }}"]
+          env:
+            # CNPG-managed connection string (same key the api Deployment uses).
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wordsparrow-api.pgClusterName" . }}-app
+                  key: uri
+            {{- with .Values.ensureDailies.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.seedCorrections.resources }}
+          resources: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          # readOnlyRootFilesystem requires a writable /tmp (JVM PerfData etc).
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: seed-source, mountPath: /seed, readOnly: true}
+      volumes:
+        - {name: tmp, emptyDir: {}}
+        - name: seed-source
+          configMap:
+            name: {{ required "seedCorrections.sourceConfigMap is required when seedCorrections.enabled" .Values.seedCorrections.sourceConfigMap }}
+{{- end }}
