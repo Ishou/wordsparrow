@@ -175,6 +175,14 @@ internal class BitmaskCsp(
         return bestSid
     }
 
+    // Fill priority: nouns first, then adjectives, then everything else (verbs, conjugated forms, abbreviations...). Refined later.
+    private fun fillRank(word: Word): Int =
+        when (word.pos) {
+            "nom" -> 0
+            "adj" -> 1
+            else -> 2
+        }
+
     /**
      * Sampled-window LCV (least-constraining-value): score up to
      * [GenerationKnobs.LCV_SAMPLE_SIZE] random candidates by sum of
@@ -186,14 +194,17 @@ internal class BitmaskCsp(
         val slot = slots[sid]
         val candidates = lexicon.iterIndices(slot.domain).toMutableList()
         candidates.shuffle(random)
+        // Fill priority (nom > adj > other) as primary key; stable sort keeps the shuffle order within a rank.
+        candidates.sortBy { fillRank(lexicon.wordAt(slot.length, it)) }
         val sampleSize = minOf(GenerationKnobs.LCV_SAMPLE_SIZE, candidates.size)
         if (sampleSize <= 1) return ArrayDeque(candidates)
         val sample = candidates.subList(0, sampleSize)
         val tail = candidates.subList(sampleSize, candidates.size)
 
-        // Score the sample.
+        // Score the sample (POS rank primary, LCV within a rank).
         data class Scored(
             val wi: Int,
+            val rank: Int,
             val score: Long,
         )
         val scored = ArrayList<Scored>(sample.size)
@@ -223,9 +234,9 @@ internal class BitmaskCsp(
                 }
                 if (!ok) break
             }
-            if (ok) scored += Scored(wi, total)
+            if (ok) scored += Scored(wi, fillRank(word), total)
         }
-        scored.sortByDescending { it.score }
+        scored.sortWith(compareBy({ it.rank }, { -it.score }))
         val result = ArrayDeque<Int>(candidates.size)
         for (s in scored) result += s.wi
         for (wi in tail) result += wi

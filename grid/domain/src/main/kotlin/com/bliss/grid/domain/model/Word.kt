@@ -25,6 +25,8 @@ data class Word private constructor(
      */
     val lemma: String,
     val separators: List<Int> = emptyList(),
+    /** Corpus POS tag (nom/adj/verbe/...), "" when unknown — drives the BitmaskCsp fill priority. */
+    val pos: String = "",
 ) {
     init {
         require(text.isNotEmpty()) { "Word text must not be empty" }
@@ -55,6 +57,7 @@ data class Word private constructor(
             lemma: String? = null,
             theme: String? = null,
             separators: List<Int> = emptyList(),
+            pos: String = "",
         ): Word {
             val foldedText = text.uppercase()
             return Word(
@@ -62,6 +65,7 @@ data class Word private constructor(
                 listOf(WordClue(definition, theme)),
                 lemma?.uppercase() ?: foldedText,
                 separators,
+                pos,
             )
         }
 
@@ -70,10 +74,11 @@ data class Word private constructor(
             clues: List<WordClue>,
             lemma: String? = null,
             separators: List<Int> = emptyList(),
+            pos: String = "",
         ): Word {
             require(clues.isNotEmpty()) { "Word must carry at least one WordClue" }
             val foldedText = text.uppercase()
-            return Word(foldedText, clues, lemma?.uppercase() ?: foldedText, separators)
+            return Word(foldedText, clues, lemma?.uppercase() ?: foldedText, separators, pos)
         }
 
         /** Builds a Word from a raw hyphenated surface, folding hyphens into separators. */

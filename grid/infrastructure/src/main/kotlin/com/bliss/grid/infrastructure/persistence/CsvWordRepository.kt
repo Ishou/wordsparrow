@@ -405,12 +405,20 @@ class CsvWordRepository(
                 } else {
                     null
                 }
+            // POS drives the filler's fill priority (noun > adj > other); optional column, blank when absent.
+            val pos =
+                if (OPTIONAL_POS_HEADER in record.parser.headerNames) {
+                    record.get(OPTIONAL_POS_HEADER).trim()
+                } else {
+                    ""
+                }
             return Word(
                 text = letters,
                 definition = clue,
                 lemma = foldedLemma,
                 theme = theme,
                 separators = separators,
+                pos = pos,
             ) to frequency
             // Note: the Word(text, definition, lemma, theme) overload wraps
             // (definition, theme) into a single-clue list — the loader's
