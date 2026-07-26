@@ -172,8 +172,8 @@ tasks.withType<Test>().configureEach {
             .get()
             .asFile.absolutePath,
     )
-    // Single-shot generation in tests; production best-of-N (16) would run every route test 16x.
-    environment("PUZZLE_BEST_OF_N", "1")
+    // best-of-4 (prod is 16): strict POS fill occasionally misses a single-shot on the mock corpus's largest grids; 4 tries keep route tests reliable without the 16x cost.
+    environment("PUZZLE_BEST_OF_N", "4")
 }
 
 val stressTest by tasks.registering(Test::class) {

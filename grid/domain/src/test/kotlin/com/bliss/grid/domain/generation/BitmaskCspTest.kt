@@ -27,6 +27,54 @@ class BitmaskCspTest {
     }
 
     @Test
+    fun `orderValues fills by POS priority noun then adjective then other`() {
+        // POS rank is the primary value-ordering key, so nouns come first regardless of LCV.
+        val cells =
+            cellsFrom(
+                """
+                #.
+                ..
+                """,
+            )
+        // Every AA..ZZ combo so any letter fits; tag one noun and one adjective, rest verbe.
+        val words =
+            buildList {
+                for (a in 'A'..'Z') {
+                    for (b in 'A'..'Z') {
+                        val t = "$a$b"
+                        val pos =
+                            if (t == "AB") {
+                                "nom"
+                            } else if (t == "AC") {
+                                "adj"
+                            } else {
+                                "verbe"
+                            }
+                        add(Word(text = t, clues = listOf(WordClue("c")), pos = pos))
+                    }
+                }
+            }
+        val lex = Lexicon(ListWordRepository(words))
+        val build = SlotRegistry.build(cells, lex, minLen = 2)
+        require(build != null) { "layout should build" }
+        val csp =
+            BitmaskCsp(
+                slots = build.slots,
+                lexicon = lex,
+                acceptor = WordAcceptor(themeLimits = emptyMap(), cooldownPolicy = ClueCooldownPolicy.Inert),
+                clock = SystemClock,
+                random = Random(0),
+            )
+        assertThat(csp.initialArcConsistency()).isTrue()
+
+        val len = build.slots[0].length
+        val posInOrder = csp.orderValues(0).map { lex.wordAt(len, it).pos }
+        assertThat(posInOrder.first()).isEqualTo("nom")
+        // the adjective outranks every non-noun/adj (verbe) candidate
+        assertThat(posInOrder.indexOf("adj") < posInOrder.indexOf("verbe")).isTrue()
+    }
+
+    @Test
     fun `search finds a solution on a tiny grid with adequate corpus`() {
         // 2x2 layout with corner BLACK only:
         //   # .

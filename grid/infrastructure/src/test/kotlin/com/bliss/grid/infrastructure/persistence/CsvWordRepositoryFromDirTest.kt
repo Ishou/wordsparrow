@@ -1,6 +1,7 @@
 package com.bliss.grid.infrastructure.persistence
 
 import assertk.assertThat
+import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEmpty
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -27,6 +28,23 @@ class CsvWordRepositoryFromDirTest {
 
         assertThat(repo.findByLength(4)).isNotEmpty()
         assertThat(repo.findByLength(5)).isNotEmpty()
+        assertThat(repo.findByLength(4).single { it.text == "CHAT" }.pos).isEqualTo("")
+    }
+
+    @Test
+    fun `reads the optional pos column into Word for fill priority`(
+        @TempDir tmp: Path,
+    ) {
+        val words = Files.createDirectories(tmp.resolve("words"))
+        Files.writeString(
+            words.resolve("words-fr.csv"),
+            "word,language,length,frequency,difficulty,clue,source,source_license,pos,lemma\n" +
+                "chat,fr,4,1000,0.3,Félin domestique,bliss,CC0-1.0,nom,chat\n",
+        )
+
+        val repo = CsvWordRepository.frenchFromDir(tmp)
+
+        assertThat(repo.findByLength(4).single { it.text == "CHAT" }.pos).isEqualTo("nom")
     }
 
     @Test
