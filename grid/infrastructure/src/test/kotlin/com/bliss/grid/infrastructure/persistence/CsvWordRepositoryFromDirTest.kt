@@ -28,6 +28,7 @@ class CsvWordRepositoryFromDirTest {
 
         assertThat(repo.findByLength(4)).isNotEmpty()
         assertThat(repo.findByLength(5)).isNotEmpty()
+        assertThat(repo.findByLength(4).single { it.text == "CHAT" }.pos).isEqualTo("")
     }
 
     @Test
