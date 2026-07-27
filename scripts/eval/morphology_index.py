@@ -72,7 +72,7 @@ class MorphologyIndex:
         return self.by_form.get(surface.lower(), [])
 
     def inflect(self, lemma: str, target_tags: Iterable[str],
-                prefer_pos: str = "") -> str | None:
+                prefer_pos: str = "", require_pos: bool = False) -> str | None:
         """Look up an inflected form of `lemma` matching `target_tags`.
 
         `prefer_pos` ("nom" / "adj" / "verbe") prefers rows with the
@@ -83,6 +83,8 @@ class MorphologyIndex:
         `nom` tag — that's the common case (most nouns also carry `adj`
         because they have a 4-form paradigm; the `adj` tag in grammalecte
         marks paradigm shape, not POS).
+
+        `require_pos` hard-restricts to `prefer_pos` rows, no cross-POS fallback (animal → animaux, not animales) — see ADR-0107.
         """
         target = {t for t in target_tags if not _is_verb_paradigm_tag(t)}
         wants_gender = target & GENDER_TOKENS
@@ -136,6 +138,8 @@ class MorphologyIndex:
             else:
                 if fallback is None:
                     fallback = surface
+        if require_pos:
+            return primary
         return primary or fallback
 
     def pos_of_form(self, surface: str) -> str:
