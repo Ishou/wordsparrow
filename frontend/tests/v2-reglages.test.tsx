@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthClient } from '@/application/auth';
@@ -163,17 +163,24 @@ describe('v2 réglages screen', () => {
     );
   });
 
-  it('shows the Google sign-in link with a real returnTo href when anon', async () => {
+  it('opens the sign-in sheet in place for a guest, returning to this page', async () => {
+    window.history.pushState({}, '', '/reglages');
     renderReglages(stubAuth());
     await screen.findByRole('heading', { level: 1, name: 'Réglages' });
+    // The app bar's menu head shows the same guest copy, so scope to the page body.
+    const page = within(screen.getByRole('main'));
+    expect(page.getByText('Invité')).toBeTruthy();
+    expect(page.getByText('Sans compte')).toBeTruthy();
+
+    fireEvent.click(page.getByRole('button', { name: /Invité/ }));
+
     const signIn = await screen.findByRole('link', { name: 'Se connecter avec Google' });
     await waitFor(() =>
       expect(signIn.getAttribute('href')).toContain('https://auth.test/google?return='),
     );
+    expect(decodeURIComponent(signIn.getAttribute('href') ?? '')).toContain('/reglages');
     expect(signIn.getAttribute('aria-disabled')).toBeNull();
-    expect(screen.getByText('Invité')).toBeTruthy();
-    expect(screen.getByText('Sans compte')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Se déconnecter' })).toBeNull();
+    window.history.pushState({}, '', '/');
   });
 
   it('shows the display name and a logout button when authed', async () => {
@@ -192,7 +199,7 @@ describe('v2 réglages screen', () => {
 
   it('is axe-clean (ADR-0050)', async () => {
     const { container } = renderReglages(stubAuth());
-    await screen.findByRole('link', { name: 'Se connecter avec Google' });
+    await screen.findByRole('button', { name: /Invité/ });
     await expectAxeClean(container);
   });
 });

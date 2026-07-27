@@ -16,6 +16,8 @@ import { Route as IndexRoute } from '@/ui/routes/index';
 import { MenuRedirectRoute } from '@/ui/routes/redirects';
 import { expectAxeClean } from '@/test/a11y';
 
+const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
+
 // zag schedules dismiss/focus-trap listeners via rAF + setTimeout; drain both before firing close events.
 const flushDialog = async () => {
   await act(async () => {
@@ -95,6 +97,32 @@ describe('v2 menu sheet', () => {
     const grab = dialog.querySelector('span[aria-hidden="true"]');
     expect(grab).toBeTruthy();
     expect(grab?.className).toContain('d_block');
+  });
+
+  it('opens the sign-in sheet in place for a guest instead of leaving for /compte', async () => {
+    window.history.pushState({}, '', '/play?id=abc');
+    renderSheetWithTrigger();
+    fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
+    await screen.findByRole('dialog');
+
+    const account = screen.getByRole('button', { name: /Invité/ });
+    fireEvent.click(account);
+    await flushDialog();
+
+    const google = await screen.findByRole('link', { name: /Google/ });
+    await waitFor(() => expect(google.getAttribute('href')).toContain('return='));
+    expect(decodeURIComponent(google.getAttribute('href') ?? '')).toContain('/play?id=abc');
+    expect(screen.queryByRole('link', { name: /Invité/ })).toBeNull();
+    window.history.pushState({}, '', '/');
+  });
+
+  it('keeps the /compte link for a signed-in player', async () => {
+    renderSheetWithTrigger(undefined, stubAuthClient({ userId: USER_ID, displayName: 'Mésange 7' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
+    await screen.findByRole('dialog');
+
+    const account = await screen.findByRole('link', { name: /Mésange 7/ });
+    expect(account.getAttribute('href')).toBe('/compte');
   });
 
   it('offers Réglages and no retired legal row', async () => {
