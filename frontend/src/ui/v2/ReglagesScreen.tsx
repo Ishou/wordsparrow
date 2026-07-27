@@ -12,6 +12,7 @@ import { useInstallPrompt } from '@/ui/lib/useInstallPrompt';
 import { Skeleton } from '@/design-system';
 import { AppShell } from './AppShell';
 import { BackHeader } from './BackHeader';
+import { SignInSheet } from './SignInSheet';
 import { SegmentedControl } from './SegmentedControl';
 import { SettingsRow } from './SettingsRow';
 
@@ -204,6 +205,8 @@ function initialFor(displayName: string): string {
 
 function ProfileCard() {
   const { state } = useAuth();
+  const { authClient } = useRouteContext({ from: '__root__' });
+  const [signInOpen, setSignInOpen] = useState(false);
 
   // Skeleton while whoami resolves so the subtext never flips guest→name on first paint.
   if (state.status === 'loading') {
@@ -235,19 +238,30 @@ function ProfileCard() {
     );
   }
 
+  // A guest signs in from here rather than at /compte, so the sheet's returnTo is this page.
   return (
-    <Link to="/compte" className={cx(profile, profileLink)}>
-      <span className={avatar} aria-hidden="true">
-        <User size={24} weight="bold" />
-      </span>
-      <div>
-        <div className={profileName}>{t('v2.reglages.profile.guest')}</div>
-        <div className={profileMeta}>{t('v2.reglages.profile.noAccount')}</div>
-      </div>
-      <span className={chevron}>
-        <CaretRight size={18} weight="bold" aria-hidden="true" />
-      </span>
-    </Link>
+    <>
+      <button type="button" className={cx(profile, profileLink)} onClick={() => setSignInOpen(true)}>
+        <span className={avatar} aria-hidden="true">
+          <User size={24} weight="bold" />
+        </span>
+        <div>
+          <div className={profileName}>{t('v2.reglages.profile.guest')}</div>
+          <div className={profileMeta}>{t('v2.reglages.profile.noAccount')}</div>
+        </div>
+        <span className={chevron}>
+          <CaretRight size={18} weight="bold" aria-hidden="true" />
+        </span>
+      </button>
+      <SignInSheet
+        open={signInOpen}
+        authClient={authClient}
+        onClose={() => setSignInOpen(false)}
+        icon={User}
+        title={t('v2.signin.account.title')}
+        description={t('v2.signin.account.description')}
+      />
+    </>
   );
 }
 

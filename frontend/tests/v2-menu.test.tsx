@@ -8,11 +8,15 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
+import type { AuthClient, WhoAmIResult } from '@/application/auth';
+import { AuthProvider } from '@/ui/components/auth';
 import { MenuSheet } from '@/ui/v2/MenuSheet';
 import { Route as AppLayoutRoute } from '@/ui/routes/app-layout';
 import { Route as IndexRoute } from '@/ui/routes/index';
 import { MenuRedirectRoute } from '@/ui/routes/redirects';
 import { expectAxeClean } from '@/test/a11y';
+
+const USER_ID = '0190e3a4-7a2c-7c9e-8f1a-9b2d3e4f5a6b';
 
 // zag schedules dismiss/focus-trap listeners via rAF + setTimeout; drain both before firing close events.
 const flushDialog = async () => {
@@ -21,7 +25,21 @@ const flushDialog = async () => {
   });
 };
 
-function renderSheetWithTrigger(onCloseSpy?: () => void) {
+function stubAuthClient(whoami: WhoAmIResult | null = null): AuthClient {
+  return {
+    whoami: vi.fn().mockResolvedValue(whoami),
+    getMe: vi.fn(),
+    updateMe: vi.fn(),
+    deleteMe: vi.fn(),
+    logout: vi.fn().mockResolvedValue(undefined),
+    logoutAll: vi.fn().mockResolvedValue(undefined),
+    startEmailOtp: vi.fn(),
+    verifyEmailOtp: vi.fn(),
+    signInUrl: (provider, returnTo) => `https://auth.test/${provider}?return=${encodeURIComponent(returnTo)}`,
+  };
+}
+
+function renderSheetWithTrigger(onCloseSpy?: () => void, authClient: AuthClient = stubAuthClient()) {
   function Harness() {
     const [open, setOpen] = useState(false);
     return (
@@ -45,8 +63,13 @@ function renderSheetWithTrigger(onCloseSpy?: () => void) {
   const router = createRouter({
     routeTree: rootRoute.addChildren([route]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
+    context: { authClient },
   });
-  return render(<RouterProvider router={router} />);
+  return render(
+    <AuthProvider authClient={authClient} getPseudonym={() => 'Lapin 1'}>
+      <RouterProvider router={router} />
+    </AuthProvider>,
+  );
 }
 
 describe('v2 menu sheet', () => {
@@ -60,10 +83,9 @@ describe('v2 menu sheet', () => {
     expect(dialog).toBeTruthy();
     expect(screen.getByText('Invité')).toBeTruthy();
     expect(screen.getByText('🔥 série 6')).toBeTruthy();
-    expect(screen.getByText('Mon compte')).toBeTruthy();
     expect(screen.getByText('Réglages')).toBeTruthy();
-    expect(screen.getByRole('switch', { name: 'Mode sombre' })).toBeTruthy();
-    expect(screen.getByText('Aide')).toBeTruthy();
+    // Theme, sound and help rows live on /reglages; the sheet keeps only the account head and navigation.
+    expect(screen.queryByRole('switch', { name: 'Mode sombre' })).toBeNull();
     expect(screen.queryByText('Mentions & confidentialité')).toBeNull();
   });
 
@@ -77,15 +99,39 @@ describe('v2 menu sheet', () => {
     expect(grab?.className).toContain('d_block');
   });
 
-  it('navigates Réglages and keeps placeholders non-navigating', async () => {
+  it('opens the sign-in sheet in place for a guest instead of leaving for /compte', async () => {
+    window.history.pushState({}, '', '/play?id=abc');
+    renderSheetWithTrigger();
+    fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
+    await screen.findByRole('dialog');
+
+    const account = screen.getByRole('button', { name: /Invité/ });
+    fireEvent.click(account);
+    await flushDialog();
+
+    const google = await screen.findByRole('link', { name: /Google/ });
+    await waitFor(() => expect(google.getAttribute('href')).toContain('return='));
+    expect(decodeURIComponent(google.getAttribute('href') ?? '')).toContain('/play?id=abc');
+    expect(screen.queryByRole('link', { name: /Invité/ })).toBeNull();
+    window.history.pushState({}, '', '/');
+  });
+
+  it('keeps the /compte link for a signed-in player', async () => {
+    renderSheetWithTrigger(undefined, stubAuthClient({ userId: USER_ID, displayName: 'Mésange 7' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
+    await screen.findByRole('dialog');
+
+    const account = await screen.findByRole('link', { name: /Mésange 7/ });
+    expect(account.getAttribute('href')).toBe('/compte');
+  });
+
+  it('offers Réglages and no retired legal row', async () => {
     renderSheetWithTrigger();
     fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir le menu' }));
     await screen.findByRole('dialog');
 
     expect(screen.getByRole('button', { name: 'Réglages' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Mentions & confidentialité/ })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Mon compte' })).toBeNull();
-    expect(screen.getAllByText('Bientôt').length).toBeGreaterThanOrEqual(2);
   });
 
   it('closes on Escape (ADR-0050)', async () => {

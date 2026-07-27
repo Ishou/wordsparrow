@@ -8,6 +8,7 @@ import { t } from '@/ui/i18n';
 import { useAuth } from '@/ui/components/auth';
 import { useCapabilityGate } from '@/ui/v2/useCapabilityGate';
 import { useBackDismiss } from '@/ui/lib/useBackDismiss';
+import { SignInSheet } from './SignInSheet';
 
 // Desktop uses a lighter scrim — the menu is a small anchored dropdown, not a full takeover.
 const scrim = css({ position: 'fixed', inset: 0, zIndex: 1000, bg: 'rgba(15,33,28,0.45)', animation: 'wsFade 180ms ease-out', '&[data-state="closed"]': { animation: 'wsFadeOut 180ms ease-out forwards' }, lg: { bg: 'rgba(15,33,28,0.16)' } });
@@ -162,6 +163,25 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
       : authed
         ? t('v2.menu.subline.connected')
         : t('v2.menu.subline.noAccount');
+  const [signInOpen, setSignInOpen] = useState(false);
+  const openSignIn = () => {
+    onClose();
+    setSignInOpen(true);
+  };
+  const headContent = (
+    <>
+      <span className={headAvatar} aria-hidden="true">
+        {authed ? initial : <User size={22} weight="bold" />}
+      </span>
+      <div>
+        <div className={headName}>{displayName}</div>
+        <div className={headSub}>{subline}</div>
+      </div>
+      <span className={headChevron}>
+        <CaretRight size={18} weight="bold" aria-hidden="true" />
+      </span>
+    </>
+  );
   const handleLogout = async () => {
     if (!authClient) return;
     onClose();
@@ -175,6 +195,7 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
   };
 
   return (
+    <>
     <Dialog.Root open={open} onOpenChange={(d) => { if (!d.open) onClose(); }} modal closeOnInteractOutside closeOnEscape preventScroll>
       <Portal>
         <Dialog.Backdrop className={scrim} data-testid="menu-sheet-backdrop" />
@@ -191,18 +212,16 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
               <span aria-hidden="true" className={grab} />
             </div>
 
-            <Link to="/compte" className={cx(head, headLink)}>
-              <span className={headAvatar} aria-hidden="true">
-                {authed ? initial : <User size={22} weight="bold" />}
-              </span>
-              <div>
-                <div className={headName}>{displayName}</div>
-                <div className={headSub}>{subline}</div>
-              </div>
-              <span className={headChevron}>
-                <CaretRight size={18} weight="bold" aria-hidden="true" />
-              </span>
-            </Link>
+            {authed ? (
+              <Link to="/compte" className={cx(head, headLink)}>
+                {headContent}
+              </Link>
+            ) : (
+              // A guest signs in on the page they were playing, so the sheet's returnTo is that page and not /compte.
+              <button type="button" className={cx(head, headLink)} onClick={openSignIn}>
+                {headContent}
+              </button>
+            )}
 
             <span className={headDivider} aria-hidden="true" />
 
@@ -251,5 +270,14 @@ export function MenuSheet({ open, onClose, streak }: MenuSheetProps) {
         </Dialog.Positioner>
       </Portal>
     </Dialog.Root>
+    <SignInSheet
+      open={signInOpen}
+      authClient={authClient}
+      onClose={() => setSignInOpen(false)}
+      icon={User}
+      title={t('v2.signin.account.title')}
+      description={t('v2.signin.account.description')}
+    />
+    </>
   );
 }

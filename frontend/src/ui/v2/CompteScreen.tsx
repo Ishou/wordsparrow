@@ -245,8 +245,12 @@ function AuthedCompte() {
 function SignInPrompt() {
   const { authClient } = useRouteContext({ from: '__root__' });
   const [returnTo, setReturnTo] = useState('');
+  const [returnPath, setReturnPath] = useState('/compte');
   const [redirecting, setRedirecting] = useState(false);
-  useEffect(() => setReturnTo(window.location.href), []);
+  useEffect(() => {
+    setReturnTo(window.location.href);
+    setReturnPath(window.location.pathname + window.location.search);
+  }, []);
   const href = authClient && returnTo ? authClient.signInUrl('google', returnTo) : '#';
   const disabled = href === '#' || redirecting;
   return (
@@ -278,7 +282,7 @@ function SignInPrompt() {
           )}
         </a>
         {emailAuthEnabled ? (
-          <Link to="/connexion" search={{ returnTo: '/compte' }} className={emailAuthLink}>
+          <Link to="/connexion" search={{ returnTo: returnPath }} className={emailAuthLink}>
             {t('v2.compte.signIn.emailLink')}
           </Link>
         ) : null}
