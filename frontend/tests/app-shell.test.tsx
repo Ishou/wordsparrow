@@ -1,8 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import {
+  Link,
+  Outlet,
   RouterProvider,
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
 } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
@@ -91,6 +94,64 @@ describe('AppShell (flow)', () => {
     expect(main.className).not.toMatch(/(^|\s)ov-y_hidden(\s|$)/);
     const wrapper = screen.getByTestId('content').parentElement;
     expect(wrapper?.className).toMatch(/(^|\s)d_contents(\s|$)/);
+  });
+});
+
+describe('AppShell desktop Retour', () => {
+  function renderBackAt(initialEntries: string[]) {
+    const rootRoute = createRootRoute({
+      component: () => (
+        <AuthProvider authClient={stubAuthClient()} getPseudonym={() => 'Renard 423'}>
+          <Outlet />
+        </AuthProvider>
+      ),
+    });
+    const compte = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/compte',
+      component: () => <AppShell backTo="/reglages"><p>compte</p></AppShell>,
+    });
+    const reglages = createRoute({ getParentRoute: () => rootRoute, path: '/reglages', component: () => <h1>reglages</h1> });
+    const play = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/play',
+      component: () => <><h1>play</h1><Link to="/compte">au compte</Link></>,
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([compte, reglages, play]),
+      history: createMemoryHistory({ initialEntries }),
+    });
+    return render(<RouterProvider router={router} />);
+  }
+
+  it('falls back to backTo when the player arrived cold', async () => {
+    renderBackAt(['/compte']);
+    fireEvent.click(await screen.findByRole('link', { name: /Retour/ }));
+    expect(await screen.findByRole('heading', { name: 'reglages' })).toBeTruthy();
+  });
+
+  it('returns to the page the player came from', async () => {
+    renderBackAt(['/play']);
+    fireEvent.click(await screen.findByRole('link', { name: 'au compte' }));
+    await screen.findByText('compte');
+    fireEvent.click(screen.getByRole('link', { name: /Retour/ }));
+    expect(await screen.findByRole('heading', { name: 'play' })).toBeTruthy();
+  });
+
+  it('keeps backTo in href so Retour stays a real link (ADR-0050)', async () => {
+    renderBackAt(['/compte']);
+    expect((await screen.findByRole('link', { name: /Retour/ })).getAttribute('href')).toBe('/reglages');
+  });
+
+  // A shell with no back control must not drag in the router: LiveCoopScreen renders one with neither a router nor a provider.
+  it('renders without router context when there is no back control', () => {
+    expect(() =>
+      render(
+        <AppShell variant="overlay" desktopBar={null}>
+          <p>content</p>
+        </AppShell>,
+      ),
+    ).not.toThrow();
   });
 });
 

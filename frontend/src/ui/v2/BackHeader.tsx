@@ -1,7 +1,8 @@
-import { Link, type LinkProps } from '@tanstack/react-router';
+import { type LinkProps } from '@tanstack/react-router';
 import { CaretLeft } from '@phosphor-icons/react';
 import { css } from 'styled-system/css';
 import { Lockup } from '@/design-system';
+import { BackLink } from './BackLink';
 
 export interface BackHeaderProps {
   readonly to?: LinkProps['to'];
@@ -31,10 +32,10 @@ const spacer = css({ flex: 1, lg: { flex: '0 0 10px' } });
 export function BackHeader({ to = '/' }: BackHeaderProps = {}) {
   return (
     <div className={row}>
-      <Link to={to} className={back}>
+      <BackLink to={to} className={back}>
         <CaretLeft size={16} weight="bold" aria-hidden="true" />
         Retour
-      </Link>
+      </BackLink>
       <span className={spacer} />
       <Lockup orientation="horizontal" tone="jade" iconSize={24} textSize={17} gap={7} />
     </div>
