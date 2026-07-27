@@ -451,12 +451,7 @@ def _subject_pronoun_frame(
     target_pos: str,
     index: MorphologyIndex,
 ) -> "InflectionResult | None":
-    """`Il/Elle/On + finite verb` sentence clue cluing a NOUN answer: the leading
-    pronoun IS the answer, so a plural answer agrees the subject + verb
-    (`Il capte la lumière` → `Ils captent la lumière`), never an object noun.
-    Deterministic and exact-or-skip: returns None when it isn't this frame; a
-    verbatim result when the frame is present but can't be FULLY agreed (`On`,
-    coordinated verbs, être-predicate, defective verb) — never a partial agree."""
+    """Agree `Il/Elle/On + finite verb` with a plural NOUN answer, exact-or-verbatim (never a partial agree) — see ADR-0107."""
     if target_pos != "nom" or not tokens:
         return None
     if tokens[0].lower() not in _SUBJECT_PRONOUNS:
@@ -536,9 +531,7 @@ def inflect_clue(
     if not tokens:
         return InflectionResult(clue, "empty")
 
-    # Subject-pronoun sentence frame (`Il capte la lumière`): the pronoun is the
-    # answer, so agree subject + verb, not an object noun. Deterministic; skips
-    # (verbatim) when it can't fully agree rather than mis-inflating an object.
+    # Subject-pronoun frame takes precedence: the pronoun is the answer, not an object noun — see ADR-0107.
     frame = _subject_pronoun_frame(tokens, target, target_pos, index)
     if frame is not None:
         return frame
@@ -645,11 +638,7 @@ def inflect_clue(
     # how `unis → Associes ensemble` resolves: the full target fails (no
     # `associer` row carries both 1sg AND 2sg), then `{ipre, 2sg}` matches
     # `associes`, and we ship that.
-    # The head anchors POS: it was selected because it carries `target_pos`, so
-    # it inflects within that paradigm — never borrows the same lemma's other-POS
-    # forms (noun `animal` must not take the adjective feminine `animales`).
-    # `require_pos` keeps the exact-gender lookup from returning a cross-POS form
-    # so the gender-relaxation below can find the noun plural `animaux`.
+    # require_pos hard-filters cross-POS forms (animal → animaux, not animales) — see ADR-0107.
     inflected = None
     chosen_target = target
     for trial in _decompose_targets(target):

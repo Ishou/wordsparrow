@@ -84,12 +84,7 @@ class MorphologyIndex:
         because they have a 4-form paradigm; the `adj` tag in grammalecte
         marks paradigm shape, not POS).
 
-        `require_pos` HARD-restricts to `prefer_pos` rows (no cross-POS
-        fallback). A noun head cluing a feminine surface must pluralise within
-        its noun paradigm (`animal → animaux`), never borrow the same lemma's
-        adjective feminine (`animales`); returning None here lets the caller's
-        gender-relaxation find the right noun form instead of the soft
-        fallback preempting it.
+        `require_pos` hard-restricts to `prefer_pos` rows, no cross-POS fallback (animal → animaux, not animales) — see ADR-0107.
         """
         target = {t for t in target_tags if not _is_verb_paradigm_tag(t)}
         wants_gender = target & GENDER_TOKENS
