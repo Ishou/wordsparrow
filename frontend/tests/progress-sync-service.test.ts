@@ -730,3 +730,42 @@ describe('ProgressSyncService — merge-completion observable', () => {
     expect(service.getRevision()).toBe(0);
   });
 });
+
+describe('ProgressSyncService — concurrent pushes for one puzzle', () => {
+  // Two sync runs overlap in the wild: HomeScreen and GrillesArchiveScreen each fire
+  // pullAndMergeAll on mount, on top of reconcileOnAuth. Both read the same cached
+  // baseUpdatedAt, so the second push carries a base the first already superseded → 409.
+  it('serialises pushes so the second carries the base the first stamped', async () => {
+    const server = { updatedAt: T1 };
+    const pushes: Array<{ base?: string; conflicted: boolean }> = [];
+    const client: ProgressSyncClient = {
+      async pullAll() {
+        return [{ puzzleId: PUZZLE, payload: payload({}), updatedAt: server.updatedAt }];
+      },
+      async pull() {
+        return { puzzleId: PUZZLE, payload: payload({}), updatedAt: server.updatedAt };
+      },
+      async push(_puzzleId, _payloadArg, baseUpdatedAt) {
+        // Yield so an overlapping push interleaves here, as a real request would.
+        await Promise.resolve();
+        const conflicted = baseUpdatedAt !== server.updatedAt;
+        pushes.push({ base: baseUpdatedAt, conflicted });
+        if (conflicted) return { kind: 'conflict' };
+        server.updatedAt = `${server.updatedAt}+1`;
+        return { kind: 'ok', updatedAt: server.updatedAt };
+      },
+    };
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore({ [seedKey(SESSION, PUZZLE)]: payload({ hintsUsed: 3 }) }),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+
+    await Promise.all([service.pullAndMergeOne(PUZZLE), service.pullAndMergeOne(PUZZLE)]);
+
+    expect(pushes.filter((p) => p.conflicted)).toHaveLength(0);
+  });
+});

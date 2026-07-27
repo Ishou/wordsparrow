@@ -112,11 +112,25 @@ export function createProgressSyncService(
     }
   }
 
+  // Overlapping sync runs would each read the same cached base and the later push would carry one the server has already superseded, which it rejects with 409. Chaining per puzzle makes the second read the base the first stamped.
+  const inFlightPush = new Map<string, Promise<void>>();
+
+  function pushPuzzleSerialised(sessionId: string, puzzleId: string): Promise<void> {
+    const prior = inFlightPush.get(puzzleId) ?? Promise.resolve();
+    const next = prior.catch(() => {}).then(() => pushPuzzle(sessionId, puzzleId));
+    inFlightPush.set(puzzleId, next);
+    void next.catch(() => {}).then(() => {
+      // Only the tail clears the slot, so a push queued behind this one stays chained.
+      if (inFlightPush.get(puzzleId) === next) inFlightPush.delete(puzzleId);
+    });
+    return next;
+  }
+
   // Pushes sequentially with a gap between each so a big batch can't burst past the ingress rps cap.
   async function pushPaced(sessionId: string, puzzleIds: readonly string[]): Promise<void> {
     for (let i = 0; i < puzzleIds.length; i += 1) {
       if (i > 0 && pushPaceMs > 0) await delay(pushPaceMs);
-      await pushPuzzle(sessionId, puzzleIds[i]);
+      await pushPuzzleSerialised(sessionId, puzzleIds[i]);
     }
   }
 
@@ -174,7 +188,7 @@ export function createProgressSyncService(
       blobStore.replacePayload(sessionId, puzzleId, merged);
       notify();
       if (!payloadsEqual(merged, remotePayload)) {
-        await pushPuzzle(sessionId, puzzleId);
+        await pushPuzzleSerialised(sessionId, puzzleId);
       }
     },
 
@@ -195,7 +209,7 @@ export function createProgressSyncService(
       const handle = schedule(() => {
         timers.delete(puzzleId);
         // Offline-first: a transient network failure keeps the local edit and reconciles on the next load (as flushPending does). Swallow so it never becomes an unhandled rejection.
-        void pushPuzzle(getSessionId(), puzzleId).catch(() => {});
+        void pushPuzzleSerialised(getSessionId(), puzzleId).catch(() => {});
       }, debounceMs);
       timers.set(puzzleId, handle);
     },
