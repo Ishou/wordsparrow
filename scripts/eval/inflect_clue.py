@@ -430,6 +430,74 @@ def _relative_verb(
     return None
 
 
+_SUBJECT_PRONOUNS = {"il", "elle", "on", "ils", "elles"}
+
+
+def _finite_verb_analysis(
+    surface: str, index: MorphologyIndex,
+) -> tuple[str, frozenset[str]] | None:
+    """First finite-verb analysis of `surface` as (lemma, its finite moods), or
+    None. Skips noun/adj/ppas homograph rows — a ppas/infinitive is not finite."""
+    for lemma, tags in index.by_form.get(surface, []):
+        moods = frozenset(tags) & _FINITE_MOODS
+        if moods:
+            return lemma, moods
+    return None
+
+
+def _subject_pronoun_frame(
+    tokens: list[str],
+    target: frozenset[str],
+    target_pos: str,
+    index: MorphologyIndex,
+) -> "InflectionResult | None":
+    """`Il/Elle/On + finite verb` sentence clue cluing a NOUN answer: the leading
+    pronoun IS the answer, so a plural answer agrees the subject + verb
+    (`Il capte la lumière` → `Ils captent la lumière`), never an object noun.
+    Deterministic and exact-or-skip: returns None when it isn't this frame; a
+    verbatim result when the frame is present but can't be FULLY agreed (`On`,
+    coordinated verbs, être-predicate, defective verb) — never a partial agree."""
+    if target_pos != "nom" or not tokens:
+        return None
+    if tokens[0].lower() not in _SUBJECT_PRONOUNS:
+        return None
+    if "pl" not in target:  # only a plural answer needs agreement
+        return None
+    verbatim = InflectionResult(_capitalize_first(_detokenize(tokens)), "verbatim")
+    if tokens[0].lower() == "on":  # invariable 3sg — a plural answer can't agree it
+        return verbatim
+    vidx, verb_lemma, moods = -1, "", frozenset()
+    for i in range(1, len(tokens)):
+        if not _is_alpha_token(tokens[i]) or tokens[i][:1].isupper():
+            continue
+        fa = _finite_verb_analysis(tokens[i].lower(), index)
+        if fa is not None:
+            vidx, (verb_lemma, moods) = i, fa
+            break
+    if vidx < 0 or verb_lemma.lower() == "être":
+        return verbatim  # no verb to agree / predicate-adjective agreement not handled
+    # Coordinated second finite verb (right after et/ou/,) we don't agree → skip.
+    for j in range(vidx + 1, len(tokens)):
+        if tokens[j].lower() in ("et", "ou") or tokens[j] == ",":
+            k = j + 1
+            while k < len(tokens) and not _is_alpha_token(tokens[k]):
+                k += 1
+            if (k < len(tokens) and not tokens[k][:1].isupper()
+                    and _finite_verb_analysis(tokens[k].lower(), index) is not None):
+                return verbatim
+    mood = next((m for m in _MOOD_PREFERENCE if m in moods), None)
+    if mood is None:
+        return verbatim
+    verb_new = index.inflect(
+        verb_lemma, frozenset({mood, "3pl"}), prefer_pos="verbe", require_pos=True)
+    if not verb_new:
+        return verbatim
+    new_tokens = list(tokens)
+    new_tokens[0] = "Elles" if "fem" in target else "Ils"
+    new_tokens[vidx] = verb_new
+    return InflectionResult(_capitalize_first(_detokenize(new_tokens)), "")
+
+
 def inflect_clue(
     clue: str,
     surface_tags: set[str],
@@ -468,6 +536,13 @@ def inflect_clue(
     if not tokens:
         return InflectionResult(clue, "empty")
 
+    # Subject-pronoun sentence frame (`Il capte la lumière`): the pronoun is the
+    # answer, so agree subject + verb, not an object noun. Deterministic; skips
+    # (verbatim) when it can't fully agree rather than mis-inflating an object.
+    frame = _subject_pronoun_frame(tokens, target, target_pos, index)
+    if frame is not None:
+        return frame
+
     # Relative-clause frame takes precedence over the POS-matched ranker: a
     # `Qui + verbe` clue agrees the relative verb with the answer, not a token
     # matching the answer's own POS.
@@ -481,6 +556,8 @@ def inflect_clue(
         candidates: list[tuple[int, int, str]] = []  # (rank, position, lemma)
         for i, tok in enumerate(tokens):
             if not _is_alpha_token(tok):
+                continue
+            if i > 0 and tok[:1].isupper():  # capitalized mid-clue = proper noun, never a head
                 continue
             if tok.lower() in _FUNCTION_WORDS:
                 continue
@@ -568,17 +645,22 @@ def inflect_clue(
     # how `unis → Associes ensemble` resolves: the full target fails (no
     # `associer` row carries both 1sg AND 2sg), then `{ipre, 2sg}` matches
     # `associes`, and we ship that.
+    # The head anchors POS: it was selected because it carries `target_pos`, so
+    # it inflects within that paradigm — never borrows the same lemma's other-POS
+    # forms (noun `animal` must not take the adjective feminine `animales`).
+    # `require_pos` keeps the exact-gender lookup from returning a cross-POS form
+    # so the gender-relaxation below can find the noun plural `animaux`.
     inflected = None
     chosen_target = target
     for trial in _decompose_targets(target):
-        candidate = index.inflect(head_lemma, trial, prefer_pos=target_pos)
+        candidate = index.inflect(head_lemma, trial, prefer_pos=target_pos, require_pos=True)
         if candidate:
             inflected = candidate
             chosen_target = trial
             break
     if not inflected and target_pos in _RELAX_GENDER_FOR:
         for trial in _decompose_targets(target - GENDER_TOKENS):
-            candidate = index.inflect(head_lemma, trial, prefer_pos=target_pos)
+            candidate = index.inflect(head_lemma, trial, prefer_pos=target_pos, require_pos=True)
             if candidate:
                 inflected = candidate
                 chosen_target = trial

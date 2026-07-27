@@ -1176,3 +1176,160 @@ def test_invariable_ppas_target_head_not_inflated(index: MorphologyIndex) -> Non
     res = inflect_clue("Pris au piège", {"v3__t___zz", "ppas", "epi", "inv"}, index)
     assert res.flag == "identity"
     assert res.text == "Pris au piège", res.text
+
+
+# --- Noun-head must not borrow its own adjective paradigm --------------------
+
+
+def test_noun_head_keeps_intrinsic_gender_not_adjective_form() -> None:
+    """`Grand animal du zoo` cluing a fem-pl surface (`ourses`): `animal` is
+    BOTH a noun (pl `animaux`) and an adjective (fem-pl `animales`). A noun has
+    intrinsic gender and must pluralise within its noun paradigm (`animaux`),
+    never borrow the adjective's feminine `animales`; the pre-head `grand` then
+    agrees masc-pl (`grands`). Pre-fix the head lookup returned the cross-POS
+    `animales`, shipping the non-word `Grandes animales du zoo`."""
+    idx = MorphologyIndex()
+    _add(idx, "animal", "animal", "nom mas sg")
+    _add(idx, "animal", "animaux", "nom mas pl")
+    _add(idx, "animal", "animal", "adj mas sg")
+    _add(idx, "animal", "animale", "adj fem sg")
+    _add(idx, "animal", "animaux", "adj mas pl")
+    _add(idx, "animal", "animales", "adj fem pl")
+    _add(idx, "grand", "grand", "adj mas sg")
+    _add(idx, "grand", "grande", "adj fem sg")
+    _add(idx, "grand", "grands", "adj mas pl")
+    _add(idx, "grand", "grandes", "adj fem pl")
+    _add(idx, "zoo", "zoo", "nom mas sg")
+    _add(idx, "zoo", "zoos", "nom mas pl")
+    res = inflect_clue("Grand animal du zoo", {"nom", "fem", "pl"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Grands animaux du zoo", res
+
+
+# --- Proper-noun guard: a capitalized mid-clue token is never a head ---------
+
+
+def test_proper_noun_head_not_selected_ships_verbatim() -> None:
+    """`Natif de Rabat` cluing a fem-pl surface (`marocaines`): `natif` is
+    adj-only, so pre-guard the only nom token `Rabat` (a place) was picked as
+    head and lowercased/pluralised. A capitalized mid-clue token is a proper
+    noun and not a head candidate → no nom head → verbatim, majuscule intact."""
+    idx = MorphologyIndex()
+    _add(idx, "natif", "natif", "adj mas sg")
+    _add(idx, "natif", "natifs", "adj mas pl")
+    _add(idx, "rabat", "rabat", "nom mas sg")  # common noun 'rabat' (a flap)
+    _add(idx, "rabat", "rabats", "nom mas pl")
+    res = inflect_clue("Natif de Rabat", {"nom", "fem", "pl"}, idx)
+    assert res.text == "Natif de Rabat", res
+
+
+def test_proper_noun_unique_entity_head_kept_verbatim() -> None:
+    """`La Terre` cluing a plural surface: `Terre` (capitalized proper noun) is
+    excluded from head candidacy, so with no common-noun head the clue ships
+    verbatim — the baseline over-inflation `La terres` is avoided. The guard is
+    head-only: a demonym like `Grec` in `Ancien Grec` still agrees via the head
+    `Ancien`, so it is not frozen into a number disagreement."""
+    idx = MorphologyIndex()
+    _add(idx, "terre", "terre", "nom fem sg")
+    _add(idx, "terre", "terres", "nom fem pl")
+    res = inflect_clue("La Terre", {"nom", "mas", "pl"}, idx)
+    assert res.text == "La Terre", res
+
+
+# --- Subject-pronoun sentence frame: agree subject + verb, not the object ----
+
+
+def _subject_pronoun_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "capter", "capter", "v1__t___zz infi")
+    _add(idx, "capter", "capte", "v1__t___zz ipre spre 1sg 3sg")
+    _add(idx, "capter", "captent", "v1__t___zz ipre 3pl")
+    _add(idx, "lumière", "lumière", "nom fem sg")
+    _add(idx, "lumière", "lumières", "nom fem pl")
+    _add(idx, "faire", "faire", "v3__t___zz infi")
+    _add(idx, "faire", "fait", "v3__t___zz ipre 3sg")
+    _add(idx, "faire", "font", "v3__t___zz ipre 3pl")
+    _add(idx, "briller", "briller", "v1__i___zz infi")
+    _add(idx, "parquet", "parquet", "nom mas sg")
+    _add(idx, "avoir", "avoir", "v3__t___zz infi")
+    _add(idx, "avoir", "a", "v3__t___zz ipre 3sg")
+    _add(idx, "avoir", "ont", "v3__t___zz ipre 3pl")
+    _add(idx, "doigt", "doigt", "nom mas sg")
+    _add(idx, "doigt", "doigts", "nom mas pl")
+    return idx
+
+
+def test_subject_pronoun_frame_masc_plural_agrees_subject_and_verb() -> None:
+    """`Il capte la lumière` cluing a mas-pl surface (spectrographes): agree the
+    SUBJECT + VERB (Il→Ils, capte→captent), never the object → `Ils captent la
+    lumière`."""
+    idx = _subject_pronoun_index()
+    res = inflect_clue("Il capte la lumière", {"nom", "mas", "pl"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Ils captent la lumière", res
+
+
+def test_subject_pronoun_frame_fem_plural_with_infinitive_complement() -> None:
+    """`Elle fait briller le parquet` → fem-pl: `Elle→Elles`, `fait→font`; the
+    infinitive complement `briller` is NOT a coordinated finite verb, so it is
+    left as-is → `Elles font briller le parquet`."""
+    idx = _subject_pronoun_index()
+    res = inflect_clue("Elle fait briller le parquet", {"nom", "fem", "pl"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Elles font briller le parquet", res
+
+
+def test_subject_pronoun_frame_avoir() -> None:
+    """`Elle a cinq doigts` → fem-pl → `Elles ont cinq doigts` (avoir is not a
+    predicate copula; the object stays)."""
+    idx = _subject_pronoun_index()
+    res = inflect_clue("Elle a cinq doigts", {"nom", "fem", "pl"}, idx)
+    assert res.flag == "", res
+    assert res.text == "Elles ont cinq doigts", res
+
+
+def test_subject_pronoun_frame_skips_coordinated_verbs() -> None:
+    """Exact-or-skip: `Il tua son père et épousa sa mère` has a second finite
+    verb after `et` that we don't agree → keep verbatim, never under-agree."""
+    idx = MorphologyIndex()
+    _add(idx, "tuer", "tuer", "v1__t___zz infi")
+    _add(idx, "tuer", "tua", "v1__t___zz ipsi 3sg")
+    _add(idx, "épouser", "épouser", "v1__t___zz infi")
+    _add(idx, "épouser", "épousa", "v1__t___zz ipsi 3sg")
+    _add(idx, "père", "père", "nom mas sg")
+    _add(idx, "mère", "mère", "nom fem sg")
+    res = inflect_clue("Il tua son père et épousa sa mère", {"nom", "mas", "pl"}, idx)
+    assert res.text == "Il tua son père et épousa sa mère", res
+
+
+def test_subject_pronoun_frame_on_cannot_pluralise_skips() -> None:
+    """`On` is invariable 3sg; a plural answer can't agree it → verbatim (and
+    critically NOT a mis-pluralised object)."""
+    idx = MorphologyIndex()
+    _add(idx, "rouler", "rouler", "v1__i___zz infi")
+    _add(idx, "rouler", "roule", "v1__i___zz ipre 3sg")
+    _add(idx, "côté", "côté", "nom mas sg")
+    _add(idx, "côté", "côtés", "nom mas pl")
+    res = inflect_clue("On roule du bon côté", {"nom", "mas", "pl"}, idx)
+    assert res.text == "On roule du bon côté", res
+
+
+def test_subject_pronoun_frame_etre_predicate_skips() -> None:
+    """`Il est fort` — être takes a predicate adjective we don't agree here, so
+    the frame skips to verbatim rather than shipping `Ils sont fort`."""
+    idx = MorphologyIndex()
+    _add(idx, "être", "être", "v0e____zzz infi")
+    _add(idx, "être", "est", "v0e____zzz ipre 3sg")
+    _add(idx, "être", "sont", "v0e____zzz ipre 3pl")
+    _add(idx, "fort", "fort", "adj mas sg")
+    _add(idx, "fort", "forts", "adj mas pl")
+    res = inflect_clue("Il est fort", {"nom", "mas", "pl"}, idx)
+    assert res.text == "Il est fort", res
+
+
+def test_subject_pronoun_frame_singular_target_unchanged() -> None:
+    """A singular answer leaves the base clue untouched (frame only acts on
+    plural)."""
+    idx = _subject_pronoun_index()
+    res = inflect_clue("Il capte la lumière", {"nom", "mas", "sg"}, idx)
+    assert res.text == "Il capte la lumière", res
