@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { Link, type LinkProps } from '@tanstack/react-router';
+import { type LinkProps } from '@tanstack/react-router';
 import { CaretLeft } from '@phosphor-icons/react';
 import { css, cx } from 'styled-system/css';
+import { BackLink } from './BackLink';
 import { DesktopAppBar } from './DesktopAppBar';
 import { SkipLink } from './SkipLink';
 
@@ -123,10 +124,10 @@ export function AppShell({ children, variant = 'flow', topBar, bottomBar, navAct
         <main id="main-content" tabIndex={-1} className={cx(body, bottomBar == null && bodyBottomInset, headerFlush && bodyFlushTop, fillBody && bodyFill)}>
           <div className={fillBody ? innerFill : inner}>
             {backTo != null ? (
-              <Link to={backTo} className={deskBack}>
+              <BackLink to={backTo} className={deskBack}>
                 <CaretLeft size={16} weight="bold" aria-hidden="true" />
                 Retour
-              </Link>
+              </BackLink>
             ) : null}
             {children}
           </div>

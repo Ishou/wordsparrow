@@ -18,6 +18,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
       </a>
     ),
     useNavigate: () => vi.fn(),
+    useCanGoBack: () => false,
     useRouteContext: () => routeContext,
   };
 });
