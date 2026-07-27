@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthClient } from '@/application/auth';
@@ -85,7 +85,8 @@ describe('v2 réglages screen', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Réglages' })).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'À propos' })).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Aide' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Retour/ })).toBeTruthy();
+    // Two Retour controls render: the phone BackHeader and the desktop pill, each hidden at the other's breakpoint.
+    expect(screen.getAllByRole('link', { name: /Retour/ })).toHaveLength(2);
   });
 
   it('renders the theme control when a themeStore is wired and persists a change', async () => {
@@ -181,9 +182,11 @@ describe('v2 réglages screen', () => {
     });
     renderReglages(authClient);
     await screen.findByRole('heading', { level: 1, name: 'Réglages' });
-    expect(await screen.findByText('Mésange 7')).toBeTruthy();
-    expect(screen.getByText('Connecté')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Se déconnecter' })).toBeTruthy();
+    // The name also shows in the app bar's menu, so scope to the profile row.
+    const profile = await screen.findByRole('link', { name: /Mésange 7/ });
+    expect(profile.getAttribute('href')).toBe('/compte');
+    expect(within(profile).getByText('Voir mon compte')).toBeTruthy();
+    // Sign-out lives in the menu and on /compte, not on this screen.
     expect(screen.queryByRole('link', { name: 'Se connecter avec Google' })).toBeNull();
   });
 
