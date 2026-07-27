@@ -295,6 +295,28 @@ describe('ProgressSyncService — flushPending (unload)', () => {
 
     expect(pushes.filter((p) => p.conflicted)).toHaveLength(0);
   });
+
+  it('does not retry via client.pull on a conflicted keepalive push, so an unload can never wait on a non-keepalive request', async () => {
+    vi.useFakeTimers();
+    const client = fakeClient({ push: () => ({ kind: 'conflict' }) });
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore({
+        [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }),
+      }),
+      getSessionId: () => SESSION,
+      debounceMs: 1500,
+    });
+    service.setEnabled(true);
+    service.schedulePush(PUZZLE);
+    service.flushPending();
+    // Reaching this assertion without vitest flagging an unhandled rejection proves the conflict is swallowed.
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(client.pushes).toHaveLength(1);
+    expect(client.pulls).toHaveLength(0);
+    vi.useRealTimers();
+  });
 });
 
 describe('ProgressSyncService — 409 conflict re-pull/re-merge/re-push', () => {

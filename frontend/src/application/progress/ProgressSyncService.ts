@@ -100,6 +100,8 @@ export function createProgressSyncService(
         baseUpdatedAt.set(puzzleId, result.updatedAt);
         return;
       }
+      // A keepalive push fires during unload; client.pull() has no keepalive option of its own, so retrying it here risks the browser aborting it mid-teardown. Give up and let the next load reconcile instead.
+      if (opts?.keepalive) return;
       // Conflict: re-pull, re-merge with current local, retry.
       const remote = await client.pull(puzzleId);
       const remotePayload: SoloStorePayload = remote
