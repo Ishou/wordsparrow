@@ -184,6 +184,8 @@ describe('ProgressSyncService — flushPending (unload)', () => {
     expect(client.pushes).toHaveLength(0);
 
     service.flushPending();
+    // flushPending joins the serialised push queue (a microtask hop), unlike the old direct call.
+    await vi.advanceTimersByTimeAsync(0);
 
     expect(client.pushes).toHaveLength(2);
     expect(client.pushes.every((p) => p.keepalive === true)).toBe(true);
@@ -246,6 +248,73 @@ describe('ProgressSyncService — flushPending (unload)', () => {
     service.schedulePush(PUZZLE); // disabled → no timer scheduled anyway
     service.flushPending();
     expect(client.pushes).toHaveLength(0);
+    vi.useRealTimers();
+  });
+
+  it('does not race a pullAndMergeOne push in flight for the same puzzle', async () => {
+    const server = { updatedAt: T1 };
+    const pushes: Array<{ base?: string; conflicted: boolean }> = [];
+    const client: ProgressSyncClient = {
+      async pullAll() {
+        return [];
+      },
+      async pull() {
+        return {
+          puzzleId: PUZZLE,
+          payload: payload({}) as unknown as Record<string, unknown>,
+          updatedAt: server.updatedAt,
+        };
+      },
+      async push(_puzzleId, _payloadArg, baseUpdatedAt) {
+        // Yield so the other writer's push interleaves here, as a real request would.
+        await Promise.resolve();
+        const conflicted = baseUpdatedAt !== server.updatedAt;
+        pushes.push({ base: baseUpdatedAt, conflicted });
+        if (conflicted) return { kind: 'conflict' };
+        server.updatedAt = `${server.updatedAt}+1`;
+        return { kind: 'ok', updatedAt: server.updatedAt };
+      },
+    };
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore({ [seedKey(SESSION, PUZZLE)]: payload({ hintsUsed: 3 }) }),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+
+    // A navigation-triggered pullAndMergeOne overlaps a tab-hide flushPending for the same puzzle.
+    await Promise.all([
+      service.pullAndMergeOne(PUZZLE),
+      (async () => {
+        service.schedulePush(PUZZLE);
+        service.flushPending();
+      })(),
+    ]);
+
+    expect(pushes.filter((p) => p.conflicted)).toHaveLength(0);
+  });
+
+  it('does not retry via client.pull on a conflicted keepalive push, so an unload can never wait on a non-keepalive request', async () => {
+    vi.useFakeTimers();
+    const client = fakeClient({ push: () => ({ kind: 'conflict' }) });
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore({
+        [seedKey(SESSION, PUZZLE)]: payload({ entries: [{ r: 0, c: 0, l: 'A' }] }),
+      }),
+      getSessionId: () => SESSION,
+      debounceMs: 1500,
+    });
+    service.setEnabled(true);
+    service.schedulePush(PUZZLE);
+    service.flushPending();
+    // Reaching this assertion without vitest flagging an unhandled rejection proves the conflict is swallowed.
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(client.pushes).toHaveLength(1);
+    expect(client.pulls).toHaveLength(0);
     vi.useRealTimers();
   });
 });
@@ -728,5 +797,54 @@ describe('ProgressSyncService — merge-completion observable', () => {
 
     expect(fired).not.toHaveBeenCalled();
     expect(service.getRevision()).toBe(0);
+  });
+});
+
+describe('ProgressSyncService — concurrent pushes for one puzzle', () => {
+  // Two sync runs overlap in the wild: HomeScreen and GrillesArchiveScreen each fire
+  // pullAndMergeAll on mount, on top of reconcileOnAuth. Both read the same cached
+  // baseUpdatedAt, so the second push carries a base the first already superseded → 409.
+  it('serialises pushes so the second carries the base the first stamped', async () => {
+    const server = { updatedAt: T1 };
+    const pushes: Array<{ base?: string; conflicted: boolean }> = [];
+    const client: ProgressSyncClient = {
+      async pullAll() {
+        return [
+          {
+            puzzleId: PUZZLE,
+            payload: payload({}) as unknown as Record<string, unknown>,
+            updatedAt: server.updatedAt,
+          },
+        ];
+      },
+      async pull() {
+        return {
+          puzzleId: PUZZLE,
+          payload: payload({}) as unknown as Record<string, unknown>,
+          updatedAt: server.updatedAt,
+        };
+      },
+      async push(_puzzleId, _payloadArg, baseUpdatedAt) {
+        // Yield so an overlapping push interleaves here, as a real request would.
+        await Promise.resolve();
+        const conflicted = baseUpdatedAt !== server.updatedAt;
+        pushes.push({ base: baseUpdatedAt, conflicted });
+        if (conflicted) return { kind: 'conflict' };
+        server.updatedAt = `${server.updatedAt}+1`;
+        return { kind: 'ok', updatedAt: server.updatedAt };
+      },
+    };
+    const service = createProgressSyncService({
+      client,
+      blobStore: memBlobStore({ [seedKey(SESSION, PUZZLE)]: payload({ hintsUsed: 3 }) }),
+      getSessionId: () => SESSION,
+      debounceMs: 0,
+      pushPaceMs: 0,
+    });
+    service.setEnabled(true);
+
+    await Promise.all([service.pullAndMergeOne(PUZZLE), service.pullAndMergeOne(PUZZLE)]);
+
+    expect(pushes.filter((p) => p.conflicted)).toHaveLength(0);
   });
 });

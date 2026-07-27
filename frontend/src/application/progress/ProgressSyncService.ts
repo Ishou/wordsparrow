@@ -83,18 +83,25 @@ export function createProgressSyncService(
     for (const listener of listeners) listener();
   }
 
-  async function pushPuzzle(sessionId: string, puzzleId: string): Promise<void> {
+  async function pushPuzzle(
+    sessionId: string,
+    puzzleId: string,
+    opts?: { readonly keepalive?: boolean },
+  ): Promise<void> {
     let local = blobStore.loadPayload(sessionId, puzzleId);
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
       const result = await client.push(
         puzzleId,
         local as unknown as Record<string, unknown>,
         baseUpdatedAt.get(puzzleId),
+        opts,
       );
       if (result.kind === 'ok') {
         baseUpdatedAt.set(puzzleId, result.updatedAt);
         return;
       }
+      // A keepalive push fires during unload; client.pull() has no keepalive option of its own, so retrying it here risks the browser aborting it mid-teardown. Give up and let the next load reconcile instead.
+      if (opts?.keepalive) return;
       // Conflict: re-pull, re-merge with current local, retry.
       const remote = await client.pull(puzzleId);
       const remotePayload: SoloStorePayload = remote
@@ -112,11 +119,29 @@ export function createProgressSyncService(
     }
   }
 
+  // Overlapping sync runs would each read the same cached base and the later push would carry one the server has already superseded, which it rejects with 409. Chaining per puzzle makes the second read the base the first stamped.
+  const inFlightPush = new Map<string, Promise<void>>();
+
+  function pushPuzzleSerialised(
+    sessionId: string,
+    puzzleId: string,
+    opts?: { readonly keepalive?: boolean },
+  ): Promise<void> {
+    const prior = inFlightPush.get(puzzleId) ?? Promise.resolve();
+    const next = prior.catch(() => {}).then(() => pushPuzzle(sessionId, puzzleId, opts));
+    inFlightPush.set(puzzleId, next);
+    void next.catch(() => {}).then(() => {
+      // Only the tail clears the slot, so a push queued behind this one stays chained.
+      if (inFlightPush.get(puzzleId) === next) inFlightPush.delete(puzzleId);
+    });
+    return next;
+  }
+
   // Pushes sequentially with a gap between each so a big batch can't burst past the ingress rps cap.
   async function pushPaced(sessionId: string, puzzleIds: readonly string[]): Promise<void> {
     for (let i = 0; i < puzzleIds.length; i += 1) {
       if (i > 0 && pushPaceMs > 0) await delay(pushPaceMs);
-      await pushPuzzle(sessionId, puzzleIds[i]);
+      await pushPuzzleSerialised(sessionId, puzzleIds[i]);
     }
   }
 
@@ -174,7 +199,7 @@ export function createProgressSyncService(
       blobStore.replacePayload(sessionId, puzzleId, merged);
       notify();
       if (!payloadsEqual(merged, remotePayload)) {
-        await pushPuzzle(sessionId, puzzleId);
+        await pushPuzzleSerialised(sessionId, puzzleId);
       }
     },
 
@@ -195,7 +220,7 @@ export function createProgressSyncService(
       const handle = schedule(() => {
         timers.delete(puzzleId);
         // Offline-first: a transient network failure keeps the local edit and reconciles on the next load (as flushPending does). Swallow so it never becomes an unhandled rejection.
-        void pushPuzzle(getSessionId(), puzzleId).catch(() => {});
+        void pushPuzzleSerialised(getSessionId(), puzzleId).catch(() => {});
       }, debounceMs);
       timers.set(puzzleId, handle);
     },
@@ -205,16 +230,8 @@ export function createProgressSyncService(
       const sessionId = getSessionId();
       for (const [puzzleId, handle] of timers) {
         cancel(handle);
-        const local = blobStore.loadPayload(sessionId, puzzleId);
-        // Single-shot, keepalive, fire-and-forget: an unload can't await a retry loop; the next load re-pulls and reconciles.
-        void client
-          .push(puzzleId, local as unknown as Record<string, unknown>, baseUpdatedAt.get(puzzleId), {
-            keepalive: true,
-          })
-          .then((result) => {
-            if (result.kind === 'ok') baseUpdatedAt.set(puzzleId, result.updatedAt);
-          })
-          .catch(() => {});
+        // Keepalive, fire-and-forget, and routed through the same queue so it can't race an in-flight push for this puzzle.
+        void pushPuzzleSerialised(sessionId, puzzleId, { keepalive: true }).catch(() => {});
       }
       timers.clear();
     },
