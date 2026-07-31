@@ -17,8 +17,11 @@ from collections import defaultdict
 from pathlib import Path
 
 def fold(s: str) -> str:
-    return "".join(c for c in unicodedata.normalize("NFD", s)
-                   if unicodedata.category(c) != "Mn").upper()
+    accent_stripped = "".join(c for c in unicodedata.normalize("NFD", s)
+                               if unicodedata.category(c) != "Mn")
+    # Matches Word.lemma: foldToAscii() then HyphenSurface.split(...)?.first,
+    # which keeps only the A-Z letter run and drops interior hyphens entirely.
+    return "".join(c for c in accent_stripped.upper() if c.isalpha())
 
 def main() -> None:
     lexique = Path(sys.argv[1] if len(sys.argv) > 1
