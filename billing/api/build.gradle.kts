@@ -28,7 +28,7 @@ application {
 dependencies {
     // Flyway 12.8.1 (transitive via :billing:infrastructure) pulls jackson-bom 3.1.1; force jackson 3.x to 3.2.0 for the CVE-fixed databind.
     constraints {
-        implementation("tools.jackson.core:jackson-core:3.2.0")
+        implementation("tools.jackson.core:jackson-core:3.2.1")
         implementation("tools.jackson.core:jackson-databind:3.2.1")
     }
 
