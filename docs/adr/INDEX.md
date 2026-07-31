@@ -390,6 +390,9 @@ ADR-0117  grid/domain/src/main/kotlin/com/bliss/grid/domain/generation/**  Templ
 ADR-0118  grid/application/src/main/kotlin/com/bliss/grid/application/puzzle/PuzzleConstraints.kt  Day-of-week daily grid sizing: Sunday (Europe/Paris) is a big 22x15 showpiece, other days a compact 15x12, both distilled (ADR-0117). dailyGridSize(date) is the policy; size passed per date via GridGenerationPort.generate(width,height) over a bare base (no ADR-0095 dense knobs). Gated with GRID_DAILY_DISTILL so it deploys dark; dense path unchanged.
 ADR-0119  data/external/demonette/**               Démonette-2 (Démonext) raw dump: French derivational-morphology DB, CC BY-SA 4.0 (SA class, permitted per ADR-0058 matrix), gitignored — never shipped verbatim
 ADR-0119  scripts/demonette/**                     Ingest: normalize Démonette-2 CSVs into a filtered internal derivation graph (semantically-motivated direct relations whose derived form is corpus-present); foundation for family-aware grid dedup, morphological clue-leak detection, and derivational clue propagation (each its own ADR)
+ADR-0120  grid/infrastructure/src/main/kotlin/com/bliss/grid/infrastructure/persistence/CsvWordRepository.kt  Loads grammalecte-derived participle adj-lemma->verb-lemma edges (main resource, MPL-2.0) and completes the per-surface family key so WordAcceptor bridges the double-tagging case; narrower and independent of ADR-0119's still-deferred Démonette-2-based derivational fix
+ADR-0120  grid/infrastructure/src/main/resources/morphology/participle_family_edges.csv  Generated artifact (grammalecte lexique-derived); regenerate via scripts/grid_family/build_participle_family_edges.py on a grammalecte bump
+ADR-0120  scripts/grid_family/**                    Emits folded participle->verb family edges from the grammalecte lexique for the grid dedup bridge (ADR-0120)
 ```
 
 ## Adding entries
