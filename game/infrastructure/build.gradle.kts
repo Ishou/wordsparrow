@@ -43,7 +43,7 @@ dependencies {
     // Today these only back the V1 Flyway migration + MigrationTest; the Konsist
     // production-source ban in InfrastructureArchitectureTest keeps them out of
     // src/main/kotlin until the adapter lands.
-    implementation("org.postgresql:postgresql:42.7.11")
+    implementation("org.postgresql:postgresql:42.7.12")
     implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("org.flywaydb:flyway-core:12.8.1")
     implementation("org.flywaydb:flyway-database-postgresql:12.8.1")
