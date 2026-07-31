@@ -1,6 +1,7 @@
 package com.bliss.grid.infrastructure.persistence
 
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEmpty
 import org.junit.jupiter.api.Test
@@ -45,6 +46,26 @@ class CsvWordRepositoryFromDirTest {
         val repo = CsvWordRepository.frenchFromDir(tmp)
 
         assertThat(repo.findByLength(4).single { it.text == "CHAT" }.pos).isEqualTo("nom")
+    }
+
+    @Test
+    fun `bridges an inflected participle-adjective to its verb for family dedup`(
+        @TempDir tmp: Path,
+    ) {
+        // grammalecte tags émanée as adj (lemma émané→EMANE); the corpus keeps that one lemma,
+        // so grid dedup would miss that it is the same family as the verb émaner→EMANER. The
+        // loader must bridge it from the grammalecte-derived participle edges (main resource).
+        val words = Files.createDirectories(tmp.resolve("words"))
+        Files.writeString(
+            words.resolve("words-fr.csv"),
+            "word,language,length,frequency,difficulty,clue,source,source_license,pos,lemma\n" +
+                "émaner,fr,6,100,0.3,Provenir de,bliss,CC0-1.0,verbe,émaner\n" +
+                "émanée,fr,6,100,0.3,Qui provient,bliss,CC0-1.0,adj,émané\n",
+        )
+
+        val repo = CsvWordRepository.frenchFromDir(tmp)
+
+        assertThat(repo.surfaceLemmas().lemmasOf("EMANEE")).contains("EMANER")
     }
 
     @Test
