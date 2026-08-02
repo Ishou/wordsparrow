@@ -74,8 +74,10 @@ or the other. Read all of it.
 
   EXCEPTION 2 — ABBREVIATION AND SYMBOL MARKERS ARE LICENSED (§3.2, §3.8). A chemical symbol or
   a clipped form with an explicit marker is the standard definition, not a leak, even when it
-  shares letters with the answer: `aluminium` -> "Al, en chimie", `admin` -> "Chef du réseau,
-  en abrégé". The corpus already ships the mirror of these in `themed/chem.csv`.
+  shares letters with the answer: `aluminium` -> "En chimie, Al", `admin` -> "Chef du réseau,
+  en abrégé". Domain markers are ANTÉPOSÉ — `En X, Y` per §3.8's own worked examples. `Y en X`
+  is the postposed §3.1 *language*-marker shape, not domain; the position is what discriminates
+  the two (§3.8 "Pièges à éviter"), so don't swap them.
 
 NEVER USE LETTER-PLAY. Do not write clues that operate on the answer's spelling —
 `encontre` -> "Rencontre sans r", `laite` -> "Laitue sans u", `traitance` -> "Sous-traitance
