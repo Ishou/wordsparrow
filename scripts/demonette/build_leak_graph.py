@@ -1,7 +1,4 @@
-"""Build the corpus-scoped ≤2-hop derivational-leak graph from the Démonette dump (ADR-0121).
-
-Emits answer_lemma (in corpus) -> related_lemma (any Démonette node) within HOPS, dropping
-complexite in {accidentel, motiv-sem}. Private/gitignored artifact (CC BY-SA, ADR-0058)."""
+"""Builds the corpus-scoped ≤2-hop derivational-leak graph from the Démonette dump, emitting answer_lemma (in corpus) -> related_lemma (any Démonette node) within HOPS, dropping complexite in {accidentel, motiv-sem} (private/gitignored artifact, CC BY-SA, ADR-0058/ADR-0121)."""
 from __future__ import annotations
 
 import argparse

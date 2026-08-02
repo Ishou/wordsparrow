@@ -541,8 +541,7 @@ def filter_10_pleonasm(row: dict) -> FilterResult:
 
 
 def filter_11_derivational_leak(row: dict) -> FilterResult:
-    """Filtre 11 : reject si un token du clue est dérivationnellement lié au mot (Démonette
-    ≤2 sauts). No-op quand le graphe privé est absent (CI reste sur filter_9)."""
+    """Filtre 11 : reject si un token du clue est dérivationnellement lié au mot (Démonette ≤2 sauts, no-op quand le graphe privé est absent, CI reste sur filter_9)."""
     leak = derivational_leak_token(row["definition"], row["mot"])
     if leak is None:
         return FilterResult("accept")

@@ -1,8 +1,4 @@
-"""One-shot: report existing derivational leaks in the committed words-fr.csv (ADR-0121).
-
-Reads (word, clue, lemma) rows, runs is_derivational_leak, prints offenders. Report only —
-feeds correction/regeneration, never auto-applied. Requires the private leak graph +
-grammalecte lexique to be present."""
+"""One-shot: reads (word, clue, lemma) rows from words-fr.csv, runs is_derivational_leak, prints offenders (report only, never auto-applied; requires the private leak graph + grammalecte lexique) (ADR-0121)."""
 from __future__ import annotations
 
 import argparse
