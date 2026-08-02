@@ -4,13 +4,16 @@ qualified) clue sets — NOT the LoRA `raw_pos` output.
 
 The clue source of record is `data/curated/generation-gold-*/clues.csv`
 (hand/Claude-authored, gold-tier). This step converts those into the
-`(lemma, pos, lemma_clue, validation_flag, filter_score)` shape that
-`build_surface_clues.py` consumes, so gold clues get forward-inflated onto
-every surface of their paradigm. Gold is trusted, so every row ships
+`(lemma, pos, lemma_clue, validation_flag, filter_score, head_pos)` shape
+that `build_surface_clues.py` consumes, so gold clues get forward-inflated
+onto every surface of their paradigm. Gold is trusted, so every row ships
 `validation_flag=ok` and `filter_score=1.0`.
 
 Schema tolerance across the gold files:
 - `lemma,clue,pos,source`  (gold-2000 / tier2 / tier3) — the inflatable rows.
+  An optional `head_pos` column (`verbe`/`nom`/`adj`) is forwarded as-is when
+  present and valid; older gold files without it carry `head_pos=""`, same
+  as an invalid value.
 - `lemma,clue,source`      (compounds) — no POS, skipped (not inflatable here).
 - `surface,clue`           (manual)   — no POS, skipped.
 
@@ -28,8 +31,12 @@ REPO = Path(__file__).resolve().parents[2]
 
 CORPUS_FIELDS = [
     "lemma", "pos", "definition", "synonyms", "lemma_clue",
-    "attempts", "validation_flag", "rating", "filter_score",
+    "attempts", "validation_flag", "rating", "filter_score", "head_pos",
 ]
+
+# The only values `build_surface_clues.py` forwards to `inflect_clue`'s
+# `authored_head_pos` — anything else is an authoring error, not a hint.
+_VALID_HEAD_POS = {"verbe", "nom", "adj"}
 
 
 def gold_rows(gold_glob_root: Path):
@@ -42,10 +49,13 @@ def gold_rows(gold_glob_root: Path):
                 clue = (r.get("clue") or "").strip()
                 if not (lemma and pos and clue):
                     continue
+                head_pos = (r.get("head_pos") or "").strip()
+                if head_pos not in _VALID_HEAD_POS:
+                    head_pos = ""
                 yield {
                     "lemma": lemma, "pos": pos, "definition": "", "synonyms": "",
                     "lemma_clue": clue, "attempts": "1", "validation_flag": "ok",
-                    "rating": "", "filter_score": "1.0",
+                    "rating": "", "filter_score": "1.0", "head_pos": head_pos,
                 }
 
 

@@ -176,9 +176,10 @@ def _clue_subject_number_disagrees(text: str, surface_tags) -> bool:
 
 def classify_inflection(
     source_clue: str, surface_tags: set[str], index: MorphologyIndex,
+    authored_head_pos: str | None = None,
 ) -> tuple[str, str]:
     """Inflate the head, then flag finite-verb surfaces whose inflated head number disagrees with the surface's as `agreement-mismatch`."""
-    res = inflect_clue(source_clue, surface_tags, index)
+    res = inflect_clue(source_clue, surface_tags, index, authored_head_pos)
     status = res.flag or "inflected"
     if status in ("inflected", "identity") and (surface_tags & _PERSON_TAGS):
         surf_n = _verb_number(surface_tags)
@@ -192,12 +193,13 @@ def classify_inflection(
 
 def classify_surface_inflection(
     source_clue: str, surface_tags: set[str], index: MorphologyIndex,
+    authored_head_pos: str | None = None,
 ) -> tuple[str, str]:
     """`classify_inflection` plus the surface-tier passé-simple person drop: a
     1st/2nd-person passé-simple head reads as archaic (`considérai → "Tins
     compte de"`). The recover lane calls the raw `classify_inflection` and so
     deliberately opts out of this drop for its curated short-form homographs."""
-    text, status = classify_inflection(source_clue, surface_tags, index)
+    text, status = classify_inflection(source_clue, surface_tags, index, authored_head_pos)
     if (status in ("inflected", "identity") and "ipsi" in surface_tags
             and (surface_tags & _PASSE_SIMPLE_PERSON)):
         return text, "passe-simple-person"
@@ -320,7 +322,8 @@ def build_surface_rows(
             if surface == cand_lemma:
                 clue, status = source_clue, "verbatim"
             else:
-                clue, status = classify_surface_inflection(source_clue, norm_tags, index)
+                clue, status = classify_surface_inflection(
+                    source_clue, norm_tags, index, row.get("head_pos") or None)
             if not fits_single_cell(clue):
                 continue
             # A plural noun answer led by a singular subject pronoun disagrees regardless of how the clue was produced (verbatim/inflected/head-pos-mismatch).

@@ -196,3 +196,38 @@ def test_plural_noun_with_negated_il_sagit_is_kept() -> None:
     idx = _number_index()
     rows = build_surface_rows("œils", {("œil", "nom"): [_clue("œil", "nom", "Il ne s'agit pas de voir")]}, idx, {})
     assert rows[0]["inflection_status"] != "subject-number-mismatch", rows
+
+
+def _ambiguous_head_index() -> MorphologyIndex:
+    """`porte` is both a verb form (porter, ipre 3sg/3pl) and a noun (fem);
+    mirrors the `test_inflect_clue.py` fixture used for the same ambiguity."""
+    idx = MorphologyIndex()
+    _add(idx, "porter", "porter", "v1__t___zz infi")
+    _add(idx, "porter", "porte", "v1__t___zz ipre 3sg")
+    _add(idx, "porter", "portent", "v1__t___zz ipre 3pl")
+    _add(idx, "porte", "porte", "nom fem sg")
+    _add(idx, "porte", "portes", "nom fem pl")
+    _add(idx, "service", "service", "nom mas sg")
+    _add(idx, "service", "services", "nom mas pl")
+    return idx
+
+
+def test_corpus_row_head_pos_reaches_inflect_clue_and_agrees_the_verb() -> None:
+    """A gold row's `head_pos` column (wired via `build_gold_corpus.py`) must
+    reach `inflect_clue`'s `authored_head_pos` — settling the noun/verb
+    ambiguity that ADR-0107 otherwise resolves conservatively (see #1722)."""
+    idx = _ambiguous_head_index()
+    row = _clue("service", "nom", "Porte un service")
+    row["head_pos"] = "verbe"
+    rows = build_surface_rows("services", {("service", "nom"): [row]}, idx, {})
+    assert rows[0]["clue"] == "Portent un service", rows
+
+
+def test_corpus_row_without_head_pos_keeps_the_conservative_nominal_reading() -> None:
+    """No hint (the pre-existing gold shape) keeps the ambiguous head's
+    nominal reading — the same corpus row inflects differently once head_pos
+    is set (see the sibling test above)."""
+    idx = _ambiguous_head_index()
+    row = _clue("service", "nom", "Porte un service")
+    rows = build_surface_rows("services", {("service", "nom"): [row]}, idx, {})
+    assert rows[0]["clue"] == "Portes un service", rows
