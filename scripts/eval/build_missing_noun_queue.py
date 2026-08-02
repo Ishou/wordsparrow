@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""Rebuild the prioritised missing-noun queue for clue authoring.
-
-Two signals, deliberately used for different jobs:
-  - the grid-placement tally is a FILTER (a noun the solver never places is not
-    worth cluing) -- it is a poor ranking, since placement frequency tracks
-    letter-pattern convenience and surfaces crosswordese;
-  - grammalecte occurrence is the RANKING (real-world familiarity).
-
-Outputs one word per line, most valuable first.
-"""
+"""Queue nouns absent from the corpus: the placement tally filters, familiarity ranks."""
 import argparse
 import collections
 import csv

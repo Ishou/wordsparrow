@@ -17,14 +17,7 @@ import kotlin.random.Random
 
 private const val WARMUP_N = 5
 
-/**
- * A/B grid-generation bench against whatever corpus `$CORPUS_DIR` points at,
- * so two corpus variants can be compared on identical seeds. `$BENCH_LABEL`
- * names the output CSVs; feed the pairs to [BenchDiff].
- *
- * Usage: `CORPUS_DIR=/path/to/corpus BENCH_LABEL=variant \
- *         ./gradlew :grid:api:benchTest --tests '*CorpusVariantBenchTest*'`
- */
+/** Benches two corpus variants on identical seeds; `$CORPUS_DIR` picks the corpus, `$BENCH_LABEL` names the CSVs. */
 @Tag("bench")
 class CorpusVariantBenchTest {
     private val log = LoggerFactory.getLogger(CorpusVariantBenchTest::class.java)

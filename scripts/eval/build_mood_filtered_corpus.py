@@ -1,28 +1,5 @@
 #!/usr/bin/env python3
-"""Build a mood-filtered copy of the clue corpus for A/B grid-generation benching.
-
-Drops a surface when *every* grammalecte reading it has is an unwanted verb
-mood, so a form that doubles as anything else survives (`soit` keeps its adverb
-reading, `sache` its imperative, `vienne` the city).
-
-Two filters, independently toggleable:
-
-  --drop-subjunctive   every reading is `spre` or `simp` (subjonctif présent /
-                       imparfait) -> drop.
-  --drop-ps-nonthird   every reading is `ipsi` (passé simple) and none of them
-                       is 3rd person -> drop. Keeps `abandonna` / `abandonnèrent`,
-                       drops `abandonnai` / `abandonnas`.
-
-Surfaces are matched against grammalecte accent-sensitively (case-insensitive
-fallback only). Folding accents away would collide `murat` (gold: the marshal)
-with `murât` (murer, subj imparfait) and delete the wrong row.
-
-Usage:
-    python scripts/eval/build_mood_filtered_corpus.py \
-        --lexique ~/Downloads/grammalecte/lexique-grammalecte-fr-v7.7.txt \
-        --corpus-in  ~/IdeaProjects/wordsparrow-clue-data/grid/infrastructure/src/main/resources \
-        --corpus-out /tmp/variant --drop-subjunctive --drop-ps-nonthird
-"""
+"""Drop corpus surfaces whose every grammalecte reading is an unwanted verb mood."""
 
 import argparse
 import collections
@@ -33,9 +10,7 @@ from pathlib import Path
 
 SUBJ = {"spre", "simp"}
 THIRD = {"3sg", "3pl", "3pl!", "3isg"}
-# Every mood tag grammalecte emits. A reading carrying none of these is not a
-# finite verb form at all (noun, adjective, proper noun, ...) and always saves
-# the surface.
+# A reading carrying none of these is not a finite verb form, so it always saves the surface.
 MOODS = {"ipre", "iimp", "ipsi", "ifut", "cond", "impe", "spre", "simp", "infi", "ppas", "ppre"}
 
 

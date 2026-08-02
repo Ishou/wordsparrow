@@ -13,11 +13,7 @@ import java.nio.file.Path
 import kotlin.io.path.bufferedWriter
 import kotlin.random.Random
 
-/**
- * Tallies how often each word is actually placed across N generations, so a
- * candidate word list can be ranked by solver demand rather than corpus
- * frequency. Reads the corpus from `$CORPUS_DIR`; writes one CSV per size.
- */
+/** Counts placements per word so a candidate list can be ranked by solver demand, not corpus frequency. */
 @Tag("bench")
 class PlacementTallyTest {
     private val log = LoggerFactory.getLogger(PlacementTallyTest::class.java)
