@@ -552,3 +552,40 @@ Key calls (verified by spot-check both ways):
   46,478 clued rows) and preserves prior fixes (e.g. `restes→"Ne pars pas"`).
 
 `pytest scripts/eval/` 168/168.
+
+## ADR-0121: Démonette derivational-leak filter
+
+Added a morphological leak gate: reject a clue whose token is derivationally
+related (Démonette-2, ≤2 hops) to the answer lemma. **Augments** the string
+stem-leak (`_find_stem_leak` / `filter_9`) — the floor stays; this catches the
+prefix-masked and short-root cases it can't see. Wired into `pipeline_v2`
+(`filter_11_derivational_leak`) and `validate_clue` (`derivational-leak` flag).
+Offline mint-time gate only: the Démonette graph is private (SA, ADR-0058), so
+consumers no-op when the artifact is absent and public CI stays on the string
+floor.
+
+Leak graph (`scripts/demonette/build_leak_graph.py`, real dump + real corpus):
+**56,691 edges, 11,145/15,063 answers covered (74.0%)**; `complexite ∈
+{accidentel, motiv-sem}` excluded (suppletive pairs like `école`/`scolaire`
+share no letters — not spelling leaks, and including them over-rejects
+legitimate semantic clues).
+
+Acceptance vs the 6 prod `definition_revele` signalements (real audit, real
+grammalecte lexique):
+- **Caught:** `FILENT` ← "…en **fil**" (hop 1); `DELIMITERA` ← "…les
+  **limites**" (hop 2, lemmatised limites→limite).
+- **Correctly not flagged:** `NO`/`CA`/`ANS` (acronym/meta — out of scope,
+  separate follow-up); `RECAPITALISERA` (coverage gap — `recapitaliser` absent
+  from Démonette; the string floor misses it too).
+- The string stem-leak alone catches **0/6** — which is why all six shipped.
+
+Rejected alternatives (measured, in ADR-0121): generic prefix-stripping
+(≈50–60% FP on French's Latinate pseudo-prefixes — `répondre`≠`pondre`) and
+lemma-substring containment (reintroduces false-friend FPs `pardonner`⊃`donner`
+that Démonette's precision avoids).
+
+Full-corpus audit (`audit_derivational_leaks.py`): **687 existing derivational
+leaks (673 distinct answer-lemmas)** in the shipped `words-fr.csv`
+(`action`←"Fait d'**agir**", `amical`←"Digne d'un **ami**", `anglais`←"D'**Angleterre**").
+The filter closes the *hole*; scrubbing this backlog is a follow-up
+(audit → ADR-0108 corrections/regen), not done here.
