@@ -370,10 +370,7 @@ def validate_lemma_clue(
             head,
         )
 
-    # Derivational leak (Démonette ≤2 hops): a clue token whose lemma is a
-    # derivational relative of the answer. Augments the string stem-leak with
-    # the prefix-masked / short-root cases it can't see. No-op when the private
-    # graph is absent (ADR-0121).
+    # Derivational leak (Démonette ≤2 hops): augments the string stem-leak; no-op when the private graph is absent (ADR-0121).
     deriv_leak = _is_derivational_leak(clue, target_lemma, _derivational_graph(), index)
     if deriv_leak is not None:
         return ValidationResult(
