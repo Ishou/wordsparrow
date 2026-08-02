@@ -66,8 +66,10 @@ def main() -> None:
         print(f"[dry-run] would blank {stripped} derivational-leak clues in {args.corpus}")
         return
 
+    # lineterminator="\n": the committed corpus is LF; csv's default CRLF would
+    # rewrite every line and bury the real change in a whole-file diff.
     with args.corpus.open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fields)
+        writer = csv.DictWriter(f, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     print(f"blanked {stripped} derivational-leak clues in {args.corpus}")
