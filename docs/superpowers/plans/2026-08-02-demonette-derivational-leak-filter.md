@@ -200,10 +200,7 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'build_leak_graph'`.
 Create `scripts/demonette/build_leak_graph.py`:
 
 ```python
-"""Build the corpus-scoped ≤2-hop derivational-leak graph from the Démonette dump (ADR-0121).
-
-Emits answer_lemma (in corpus) -> related_lemma (any Démonette node) within HOPS, dropping
-complexite in {accidentel, motiv-sem}. Private/gitignored artifact (CC BY-SA, ADR-0058)."""
+"""Build the ≤2-hop Démonette leak graph, excluding accidentel/motiv-sem (ADR-0121)."""
 from __future__ import annotations
 
 import argparse
@@ -410,11 +407,7 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'demonette_leak'`.
 Create `scripts/eval/demonette_leak.py`:
 
 ```python
-"""Démonette derivational-leak check (ADR-0121).
-
-Offline mint-time gate: flags a clue whose token is derivationally related (≤2 hops) to the
-answer per the private Démonette leak graph. No-ops (returns None / empty) when the graph
-artifact is absent, so public CI stays on the string-stem floor."""
+"""Démonette derivational-leak check; no-ops when the private graph is absent (ADR-0121)."""
 from __future__ import annotations
 
 import csv
@@ -658,10 +651,7 @@ from demonette_leak import _get_graph as _derivational_graph
 In `validate_lemma_clue`, immediately **after** the existing `stem_leak` block (the `if stem_leak is not None:` that returns `"stem-leak"`, ~line 366), insert:
 
 ```python
-    # Derivational leak (Démonette ≤2 hops): a clue token whose lemma is a
-    # derivational relative of the answer. Augments the string stem-leak with
-    # the prefix-masked / short-root cases it can't see. No-op when the private
-    # graph is absent (ADR-0121).
+    # Démonette ≤2-hop derivational-leak check; no-op when the private graph is absent (ADR-0121).
     deriv_leak = _is_derivational_leak(clue, target_lemma, _derivational_graph(), index)
     if deriv_leak is not None:
         return ValidationResult(
@@ -751,11 +741,7 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'audit_derivational_lea
 Create `scripts/clue_generation/audit_derivational_leaks.py`:
 
 ```python
-"""One-shot: report existing derivational leaks in the committed words-fr.csv (ADR-0121).
-
-Reads (word, clue, lemma) rows, runs is_derivational_leak, prints offenders. Report only —
-feeds correction/regeneration, never auto-applied. Requires the private leak graph +
-grammalecte lexique to be present."""
+"""One-shot report of existing derivational leaks in words-fr.csv; requires the private leak graph (ADR-0121)."""
 from __future__ import annotations
 
 import argparse
