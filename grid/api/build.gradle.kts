@@ -163,7 +163,7 @@ tasks.test {
     }
 }
 
-// Corpus no longer on the classpath (ADR-0097); point test JVMs at the committed mock unless the caller names another corpus.
+// Corpus no longer on the classpath (ADR-0097); point test JVMs at the committed mock.
 val mockCorpusDir =
     layout.buildDirectory
         .dir("resources/test/mock-corpus")
@@ -171,9 +171,8 @@ val mockCorpusDir =
         .asFile.absolutePath
 
 tasks.withType<Test>().configureEach {
-    environment("CORPUS_DIR", providers.environmentVariable("CORPUS_DIR").getOrElse(mockCorpusDir))
-    environment("BENCH_LABEL", providers.environmentVariable("BENCH_LABEL").getOrElse("corpus"))
-    environment("BENCH_N", providers.environmentVariable("BENCH_N").getOrElse(""))
+    // Unconditional: only `benchTest` below may override CORPUS_DIR from the caller's shell.
+    environment("CORPUS_DIR", mockCorpusDir)
     // best-of-4 (prod is 16): strict POS fill occasionally misses a single-shot on the mock corpus's largest grids; 4 tries keep route tests reliable without the 16x cost.
     environment("PUZZLE_BEST_OF_N", "4")
 }
@@ -190,13 +189,17 @@ val stressTest by tasks.registering(Test::class) {
 }
 
 val benchTest by tasks.registering(Test::class) {
-    description = "Runs @Tag(\"bench\") tests against the committed mock corpus (ADR-0097; not production-scale)."
+    description =
+        "Runs @Tag(\"bench\") tests against whatever corpus CORPUS_DIR names, falling back to the committed mock (ADR-0097; not production-scale)."
     group = "verification"
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
     useJUnitPlatform {
         includeTags("bench")
     }
+    environment("CORPUS_DIR", providers.environmentVariable("CORPUS_DIR").getOrElse(mockCorpusDir))
+    environment("BENCH_LABEL", providers.environmentVariable("BENCH_LABEL").getOrElse("corpus"))
+    environment("BENCH_N", providers.environmentVariable("BENCH_N").getOrElse(""))
     shouldRunAfter(tasks.test)
 }
 
