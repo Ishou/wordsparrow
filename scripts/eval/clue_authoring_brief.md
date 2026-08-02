@@ -72,12 +72,15 @@ or the other. Read all of it.
   non-initial position, never to common-noun cognates. It does NOT rescue an exact
   self-reference: `souabe` -> "De Souabe" is still banned by §1.1.
 
-  EXCEPTION 2 — ABBREVIATION AND SYMBOL MARKERS ARE LICENSED (§3.2, §3.8). A chemical symbol or
-  a clipped form with an explicit marker is the standard definition, not a leak, even when it
-  shares letters with the answer: `aluminium` -> "En chimie, Al", `admin` -> "Chef du réseau,
-  en abrégé". Domain markers are ANTÉPOSÉ — `En X, Y` per §3.8's own worked examples. `Y en X`
-  is the postposed §3.1 *language*-marker shape, not domain; the position is what discriminates
-  the two (§3.8 "Pièges à éviter"), so don't swap them.
+  EXCEPTION 2 — ABBREVIATION AND SYMBOL MARKERS ARE LICENSED (§3.2, §1.1's sigle exception). The
+  answer is always the SHORT form — a symbol, sigle, or clipped word; the clue develops or
+  paraphrases it, never the reverse: `al` -> "Symbole de l'aluminium", `admin` -> "Chef du
+  réseau, en abrégé". Cluing a LONG word via its own abbreviation (`aluminium` -> "En chimie,
+  Al") is NOT licensed here — that reverses the direction every §3.2 pattern and every real
+  sigle/abbreviation example documents. If you add a domain marker, it is ANTÉPOSÉ — `En X, Y`
+  per §3.8's own worked examples. `Y en X` is the postposed §3.1 *language*-marker shape, not
+  domain; the position is what discriminates the two (§3.8 "Pièges à éviter"), so don't swap
+  them.
 
 NEVER USE LETTER-PLAY. Do not write clues that operate on the answer's spelling —
 `encontre` -> "Rencontre sans r", `laite` -> "Laitue sans u", `traitance` -> "Sous-traitance
