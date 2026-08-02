@@ -215,7 +215,7 @@ def _ambiguous_head_index() -> MorphologyIndex:
 def test_corpus_row_head_pos_reaches_inflect_clue_and_agrees_the_verb() -> None:
     """A gold row's `head_pos` column (wired via `build_gold_corpus.py`) must
     reach `inflect_clue`'s `authored_head_pos` — settling the noun/verb
-    ambiguity that ADR-0107 otherwise resolves conservatively (see #1722)."""
+    ambiguity that ADR-0107 otherwise resolves conservatively."""
     idx = _ambiguous_head_index()
     row = _clue("service", "nom", "Porte un service")
     row["head_pos"] = "verbe"
