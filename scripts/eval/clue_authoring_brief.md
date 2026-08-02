@@ -92,7 +92,7 @@ BANNED CLUE OPENINGS (§6.5): "Sert à …", "Permet de …", "Fait de …", "Ac
 "Ce qui est …", "Chose qui …". Use a concrete noun phrase or a 3rd-person verb instead.
 
 STEP 3 — OUTPUT FORMAT. CSV, UTF-8, header exactly:
-  word,clue,style
+  word,clue,style,head_pos
 3 rows per noun, 300 rows. `style` ∈ définition_directe, périphrase, métonymie, fonction_rôle,
 culturel, cryptique, technique. Quote fields containing a comma. `cryptique_morphologique` and
 `calembour` are not available.

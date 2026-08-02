@@ -432,17 +432,21 @@ def _relative_verb(
 
 def _implicit_relative_verb(
     tokens: list[str], target_pos: str, surface_tags: set[str],
-    index: MorphologyIndex,
+    index: MorphologyIndex, authored_head_pos: str | None = None,
 ) -> tuple[int, str, set[str], str] | None:
-    """Elided-`qui` reading of `_relative_verb` (ADR-0107): a bare 3rd-person-present verb head with no nominal/adjectival reading agrees with the answer's number, same as an explicit `Qui + verbe`."""
+    """Elided-`qui` reading of `_relative_verb` (ADR-0107): a bare 3rd-person-present verb head agrees with the answer's number like an explicit `Qui + verbe`; a nominal/adjectival reading blocks it unless `authored_head_pos` settles which the author meant."""
     if target_pos not in ("nom", "adj"):
+        return None
+    if authored_head_pos is not None and authored_head_pos != "verbe":
         return None
     for i, tok in enumerate(tokens):
         if not _is_alpha_token(tok):
             continue
         lo = tok.lower()
         pos_classes = index.pos_classes_of_form(lo)
-        if "verbe" not in pos_classes or "nom" in pos_classes or "adj" in pos_classes:
+        if "verbe" not in pos_classes:
+            return None
+        if authored_head_pos is None and ("nom" in pos_classes or "adj" in pos_classes):
             return None
         forms = index.lookup_form(lo)
         if not any("ipre" in tags and (tags & {"3sg", "3pl"}) for _lemma, tags in forms):
@@ -522,6 +526,7 @@ def inflect_clue(
     clue: str,
     surface_tags: set[str],
     index: MorphologyIndex,
+    authored_head_pos: str | None = None,
 ) -> InflectionResult:
     target_pos = classify_surface_pos(surface_tags)
     if target_pos not in _CONTENT_POS:
@@ -566,7 +571,9 @@ def inflect_clue(
     # matching the answer's own POS.
     rel = _relative_verb(tokens, target_pos, surface_tags, index)
     if rel is None:
-        rel = _implicit_relative_verb(tokens, target_pos, surface_tags, index)
+        rel = _implicit_relative_verb(
+            tokens, target_pos, surface_tags, index, authored_head_pos
+        )
     if rel is not None:
         head_idx, head_lemma, target, target_pos = rel
     else:
