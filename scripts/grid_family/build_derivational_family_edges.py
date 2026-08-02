@@ -1,17 +1,4 @@
-"""Emit folded derivational family-union edges from the Démonette ingest output.
-
-ADR-0119 roadmap item 1 (family-aware WordAcceptor dedup, derivational layer 2).
-Reads the corpus-restricted, accidentel-dropped relations table produced by
-`scripts/demonette/ingest.py`, keeps only `complexite=simple` direct relations
-(the clearest, most-regular derivations — conversions like saut/sauter, standard
-affixation like race/raciste), folds each lemma to grid-cell A-Z uppercase
-(matching Word.lemma), and emits one canonical edge per undirected pair.
-
-The grid loader applies these as DIRECTED edges (target added to source's dedup
-key), which blocks edge-adjacent pairs WITHOUT transitive spread — port/porter
-and porter/rapport are each blocked, but port+rapport are not. Run
-`scripts/demonette/ingest.py` first to produce the relations table.
-"""
+"""Emit folded simple-derivation family edges from the Démonette ingest output (ADR-0119 item 1)."""
 import csv, sys, unicodedata
 from pathlib import Path
 
