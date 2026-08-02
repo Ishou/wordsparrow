@@ -22,7 +22,7 @@ large chunks rather than noun by noun, and write the CSV before you begin verifi
 partial progress survives.
 
 STEP 1 — READ THE STYLE GUIDE FIRST:
-  /Users/isho/IdeaProjects/bliss/docs/clue-style-guide-v2.md
+  $WORKTREE/docs/clue-style-guide-v2.md
   - "## 1. Principes fondamentaux" (1.1 through 1.7)
   - "## 2. Caractéristiques structurelles" (2.1, 2.3, 2.4)
   - "## 3. Conventions implicites" (3.1, 3.3, 3.6, 3.8)
