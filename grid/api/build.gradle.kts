@@ -163,15 +163,17 @@ tasks.test {
     }
 }
 
-// Corpus no longer on the classpath (ADR-0097); point test JVMs at the committed mock.
+// Corpus no longer on the classpath (ADR-0097); point test JVMs at the committed mock unless the caller names another corpus.
+val mockCorpusDir =
+    layout.buildDirectory
+        .dir("resources/test/mock-corpus")
+        .get()
+        .asFile.absolutePath
+
 tasks.withType<Test>().configureEach {
-    environment(
-        "CORPUS_DIR",
-        layout.buildDirectory
-            .dir("resources/test/mock-corpus")
-            .get()
-            .asFile.absolutePath,
-    )
+    environment("CORPUS_DIR", providers.environmentVariable("CORPUS_DIR").getOrElse(mockCorpusDir))
+    environment("BENCH_LABEL", providers.environmentVariable("BENCH_LABEL").getOrElse("corpus"))
+    environment("BENCH_N", providers.environmentVariable("BENCH_N").getOrElse(""))
     // best-of-4 (prod is 16): strict POS fill occasionally misses a single-shot on the mock corpus's largest grids; 4 tries keep route tests reliable without the 16x cost.
     environment("PUZZLE_BEST_OF_N", "4")
 }
