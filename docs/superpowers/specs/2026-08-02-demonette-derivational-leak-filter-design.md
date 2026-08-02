@@ -60,6 +60,36 @@ answer lemmatised via the corpus `(surface→lemma)` column (grammalecte-derived
 Both in-scope derivational leaks are caught; every miss is an out-of-scope class or the
 documented 24 % coverage gap. These 6 rows become regression fixtures.
 
+`RECAPITALISERA → capitaux` is a **documented residual miss**: `recapitaliser` is absent from
+Démonette (productive `re-` form), and the string floor misses it too (`re-` prefix ⇒ LCP 0). It
+stays uncaught by this filter — backstopped by the LLM judge and player reports. See Alternatives.
+
+## Alternatives considered (rejected)
+
+Both were measured against the real corpus + Démonette dump; both reintroduce the false-friend
+false positives Démonette was adopted (ADR-0119) to avoid, and neither can distinguish a real
+root-containment from a coincidental one — which is exactly the discrimination only a derivation
+database provides.
+
+- **Generic prefix-stripping** (strip `re/pré/dé/in/…`, check residue is a valid word, then run
+  the leak check on the residue). Measured **≈50–60 % false-positive rate**: French's Latinate
+  stratum is full of pseudo-prefixed words whose residue is a real but unrelated word —
+  `répondre`≠`pondre`, `prétendre`≠`tendre`, `imposer`/`disposer`≠`poser`, `surface`≠`face`,
+  `précaution`≠`caution`. The "valid residue" gate does not help (the residue *is* a real word).
+  And it would not even close the target gap: `recapitaliser` is absent from Démonette, so there
+  is no edge to confirm the strip against.
+- **Lemma-aware substring containment** (lemmatise the clue token, flag if the lemma is a
+  substring of the answer, min length 6). It *does* catch `recapitaliser ⊃ capital` — but it
+  equally flags `pardonner ⊃ donner`, `comprendre ⊃ prendre`, `répondre ⊃ pondre` (opaque
+  false friends, **not** real leaks). It cannot separate these from the real case without a
+  derivation database, and the affix-decomposition tightening still leaks `répondre ⊃ pondre`
+  (`re-` productive + `pondre` a real verb). Rejected: it trades the one rare residual miss
+  (`recapitaliser`) for the false-friend FP class, discarding Démonette's core precision.
+
+The only *sound* way to close the `recapitaliser`-class gap is improving Démonette coverage
+(synthesizing `re-`/`dé-` entries whose base is a confirmed node) — a separate workstream, not a
+string heuristic.
+
 ## Architecture
 
 Five units, each independently testable:
