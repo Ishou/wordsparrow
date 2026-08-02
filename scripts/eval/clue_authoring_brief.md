@@ -40,16 +40,29 @@ STEP 2 — 3 DISTINCT CLUES PER NOUN (300 rows).
   - Gender/number agreement with the answer per §2.3. No pleonasms.
   - Do NOT use `calembour` — §1's note de conformité excludes it from automatic generation.
 
-RADICAL-LEAK RULE — read the scope carefully, it has been misread in both directions:
+RADICAL-LEAK RULE — every clause below exists because a wave got it wrong in one direction
+or the other. Read all of it.
 
-  A clue may not contain the answer, an inflected form of it, or a token sharing a 4-character
-  **initial radical** (common prefix) with it. `lauréat` may not be clued "Couronné de lauriers";
-  `gréseuse` may not be clued "De la nature du grès".
+  A clue may not contain the answer, an inflected form of it, a token sharing a 4-character
+  **initial radical** (common prefix) with it, **or a token of 4+ characters contained anywhere
+  inside it**. `lauréat` may not be clued "Couronné de lauriers"; `gréseuse` may not be clued
+  "De la nature du grès".
 
-  This is a PREFIX rule, not a substring rule. A shared French derivational SUFFIX is not a leak:
-  `-ment`, `-erie`, `-tion`, `-ance`, `-illon`, `-enne`, `-onne`, `-age`, `-eur` and friends are
-  shared by thousands of unrelated words. `cotillon` / "réveillon" and `tôlerie` / "carrosserie"
-  are FINE. Do not contort around them.
+  CONTAINMENT COUNTS, not just the prefix. These all shipped in wave 2 and are leaks:
+      adverbe        "Modifie le verbe"          ad-VERBE, 5 letters of 7
+      surlendemain   "Jour suivant le lendemain" sur-LENDEMAIN, 9 of 12
+      archevêque     "Supérieur de l’évêque"     arche-VÊQUE
+      emplacement    "Place réservée"            em-PLACE-ment
+  If the answer is a compound or a prefixed form, its head is not available as a clue word.
+
+  A shared French derivational SUFFIX is NOT a leak: `-ment`, `-erie`, `-tion`, `-ance`,
+  `-illon`, `-enne`, `-onne`, `-age`, `-eur` are shared by thousands of unrelated words.
+  `cotillon` / "réveillon" and `tôlerie` / "carrosserie" are FINE.
+
+  A COINCIDENTAL prefix shared with a common short word is NOT a leak either. `sanscrit` does
+  not block the preposition `sans`; `centralisme` does not block the numeral `cent`. The rule
+  exists to catch shared etymology, not shared spelling — if the two words are unrelated in
+  meaning, use the clue.
 
   EXCEPTION 1 — PROPER NOUNS ARE EXEMPT. For a demonym or a word derived from a place or person
   name, the proper noun IS the definition:
@@ -59,10 +72,21 @@ RADICAL-LEAK RULE — read the scope carefully, it has been misread in both dire
   non-initial position, never to common-noun cognates. It does NOT rescue an exact
   self-reference: `souabe` -> "De Souabe" is still banned by §1.1.
 
-  EXCEPTION 2 — `cryptique_morphologique` is licensed by §4.8 as the documented exception to
-  §1.1, and `validate_clue.py` honours the flag. Where a word's strongest clue is letter-play on
-  its own form (`encontre` -> "Rencontre sans r", `laite` -> "Laitue sans u"), use it — but only
-  with style=cryptique_morphologique, and at most once per noun.
+  EXCEPTION 2 — ABBREVIATION AND SYMBOL MARKERS ARE LICENSED (§3.2, §1.1's sigle exception). The
+  answer is always the SHORT form — a symbol, sigle, or clipped word; the clue develops or
+  paraphrases it, never the reverse: `al` -> "Symbole de l'aluminium", `admin` -> "Chef du
+  réseau, en abrégé". Cluing a LONG word via its own abbreviation (`aluminium` -> "En chimie,
+  Al") is NOT licensed here — that reverses the direction every §3.2 pattern and every real
+  sigle/abbreviation example documents. If you add a domain marker, it is ANTÉPOSÉ — `En X, Y`
+  per §3.8's own worked examples. `Y en X` is the postposed §3.1 *language*-marker shape, not
+  domain; the position is what discriminates the two (§3.8 "Pièges à éviter"), so don't swap
+  them.
+
+NEVER USE LETTER-PLAY. Do not write clues that operate on the answer's spelling —
+`encontre` -> "Rencontre sans r", `laite` -> "Laitue sans u", `traitance` -> "Sous-traitance
+sans sous". These are banned outright regardless of what §4.8 licenses: they hand the solver
+the answer's letters. The `cryptique_morphologique` style must not appear in your output at
+all. If a word's only strong clue is letter-play, write a plain definition instead.
 
 BANNED CLUE OPENINGS (§6.5): "Sert à …", "Permet de …", "Fait de …", "Action de …", "Qui est …",
 "Ce qui est …", "Chose qui …". Use a concrete noun phrase or a 3rd-person verb instead.
@@ -70,13 +94,16 @@ BANNED CLUE OPENINGS (§6.5): "Sert à …", "Permet de …", "Fait de …", "Ac
 STEP 3 — OUTPUT FORMAT. CSV, UTF-8, header exactly:
   word,clue,style
 3 rows per noun, 300 rows. `style` ∈ définition_directe, périphrase, métonymie, fonction_rôle,
-culturel, cryptique, cryptique_morphologique, technique. Quote fields containing a comma.
+culturel, cryptique, technique. Quote fields containing a comma. `cryptique_morphologique` and
+`calembour` are not available.
 
 STEP 4 — MECHANICAL SELF-CHECK. Write a throwaway script in /tmp (never in the worktree) that
-verifies: 300 rows + header; 3 per noun; all 100 nouns; ≤25 chars; no 4-char initial-radical leak
-(split tokens on apostrophes and hyphens first, or `d’Algérie` parses as one token and masks
-leaks; exempt the clue's first token from the proper-noun rule, since it is always capitalised);
-no banned opening; no straight apostrophe; no final period; initial capital. Fix every failure
+verifies: 300 rows + header; 3 per noun; all 100 nouns; ≤25 chars; no radical leak — test BOTH
+the 4-char initial radical AND containment of any 4+ char token inside the answer (split tokens
+on apostrophes and hyphens first, or `d’Algérie` parses as one token and masks leaks; exempt the
+clue's first token from the proper-noun rule, since it is always capitalised); no banned opening;
+no `cryptique_morphologique` rows; no straight apostrophe; no final period; initial capital.
+Fault-inject each defect once to confirm the checker actually fires, then fix every real failure
 and re-run until clean.
 
 Report: rows written, max clue length, violations found and fixed, and any noun you judged
