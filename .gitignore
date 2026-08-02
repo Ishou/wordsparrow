@@ -70,6 +70,8 @@ data/eval/synonym_clues_iter[6-7].csv
 data/eval/grid_gen_bench_*.csv
 data/eval/baseline_wave-*.csv
 data/eval/current_wave-*.csv
+data/eval/bench_*.csv
+data/eval/tally_*.csv
 grid/api/data/
 
 # Modal-lane corpus build artefacts (regeneratable from manifest + inputs).
