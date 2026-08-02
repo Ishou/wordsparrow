@@ -54,3 +54,8 @@ def test_blocked_matches_accented_abbreviation():
 def test_blocked_abbreviation_is_accent_and_case_insensitive():
     assert blocked("DEC")
     assert blocked("Suppl")
+
+
+def test_blocked_false_for_legitimate_clipped_word():
+    assert not blocked("frigo")
+    assert not blocked("prépa")
