@@ -139,6 +139,8 @@ def test_decompose_yields_full_target_first_then_2sg_then_ipre() -> None:
 
 @pytest.mark.parametrize("tags,expected", [
     # The screenshot bug. `unis` syncretic ipre {1sg, 2sg}; `associer` splits.
+    # No 3sg in the set, so person-preference picks 2sg → `Associes` (mirrors
+    # the surface's -s ending).
     ({"v2__t___zz", "ipre", "1sg", "2sg"}, "Associes ensemble"),
     # The other analysis of `unis`: mas-pl ppas — already worked pre-fix,
     # locked in to make sure decomposition didn't regress it.
@@ -1405,3 +1407,14 @@ def test_comma_coordinated_reflexive_verb_inflects():
     tags = {"v3__t___zz", "ipre", "3pl"}
     res = inflect_clue("Fuir, se cacher", tags, idx)
     assert res.text == "Fuient, se cachent", res.text
+
+
+def test_person_preference_prefers_3sg_over_1sg():
+    """A surface fused across 1sg+3sg (e.g. `brouillasse`) clues in the 3rd
+    person — `Rend confus`, not the 1st-person `Rends confus`."""
+    idx = MorphologyIndex()
+    _add(idx, "rendre", "rendre", "v3__t___zz infi")
+    _add(idx, "rendre", "rends", "v3__t___zz ipre 1sg")
+    _add(idx, "rendre", "rend", "v3__t___zz ipre 3sg")
+    res = inflect_clue("Rendre confus", {"v3__t___zz", "ipre", "1sg", "3sg"}, idx)
+    assert res.text == "Rend confus", res.text

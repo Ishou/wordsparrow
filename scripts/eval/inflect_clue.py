@@ -107,13 +107,13 @@ _MOOD_PREFERENCE = (
     "ipre", "ppas", "ifut", "iimp", "ipsi", "cond",
     "ppre", "spre", "simp", "impe", "infi",
 )
-# Person preference within a mood. For ambiguous syncretic forms like
-# `unis` (1sg+2sg ipre fused on one grammalecte row), 2sg is the more
-# natural mots-fléchés rendering ("Associes ensemble" reads as a direct
-# imperative-style instruction more often than "Associe ensemble").
-# 3sg also outranks 1sg because crosswords typically clue verb forms in
-# the 3rd person ("Va vite" → court).
-_PERSON_PREFERENCE = ("2sg", "3sg", "3pl", "2pl", "1pl", "1sg")
+# Person preference within a mood, for ambiguous syncretic forms. 3sg first:
+# crosswords clue verb forms in the 3rd person, and for -er verbs 3sg has no
+# trailing -s, avoiding the spurious 2sg -s ("Renonces" → "Renonce"). When
+# there is NO 3sg reading — a 2nd/3rd-group -s form like `unis` {1sg,2sg} —
+# 2sg wins so the clue head also carries the -s ("unis" → "Associes"),
+# mirroring the surface's ending; 1sg last.
+_PERSON_PREFERENCE = ("3sg", "2sg", "1sg", "3pl", "2pl", "1pl")
 
 
 # Determiners that mark a direct-object NP when they immediately follow
