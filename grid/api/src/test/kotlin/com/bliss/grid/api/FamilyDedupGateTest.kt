@@ -46,18 +46,28 @@ class FamilyDedupGateTest {
         fun familyOf(lemma: String): String = find(lemma)
     }
 
-    private fun oracleEdges(): List<Pair<String, String>> =
-        listOf("/morphology/participle_family_edges.csv", "/morphology/derivational_family_edges.csv")
-            .flatMap { path ->
-                javaClass.getResourceAsStream(path)!!.bufferedReader().useLines { lines ->
-                    lines
-                        .drop(1)
-                        .mapNotNull { line -> line.split(",").takeIf { it.size == 2 }?.let { it[0] to it[1] } }
-                        .toList()
-                }
-            }
+    private fun readEdges(stream: java.io.InputStream): List<Pair<String, String>> =
+        stream.bufferedReader().useLines { lines ->
+            lines
+                .drop(1)
+                .mapNotNull { line -> line.split(",").takeIf { it.size == 2 }?.let { it[0] to it[1] } }
+                .toList()
+        }
 
-    private fun oracle(): FamilyOracle = FamilyOracle(oracleEdges())
+    /**
+     * Participle edges (grammalecte-derived, ADR-0120) are a main resource, read from the
+     * classpath. Derivational edges (Démonette-2-derived, ADR-0119 item 1) are NOT a main
+     * resource (ADR-0058 forbids redistributing them) — read from the corpus dir the same way
+     * `CsvWordRepository.frenchFromDir` does. Missing file degrades to no derivational edges.
+     */
+    private fun oracleEdges(corpusDir: Path): List<Pair<String, String>> {
+        val participle = readEdges(javaClass.getResourceAsStream("/morphology/participle_family_edges.csv")!!)
+        val derivationalFile = corpusDir.resolve("morphology/derivational_family_edges.csv").toFile()
+        val derivational = if (derivationalFile.isFile) readEdges(derivationalFile.inputStream()) else emptyList()
+        return participle + derivational
+    }
+
+    private fun oracle(corpusDir: Path): FamilyOracle = FamilyOracle(oracleEdges(corpusDir))
 
     private companion object {
         const val MAX_WORD_LENGTH = 30
@@ -80,7 +90,7 @@ class FamilyDedupGateTest {
         val words = (2..MAX_WORD_LENGTH).flatMap { repo.findByLength(it) }
         val corpusLemmas = words.mapTo(HashSet()) { it.lemma }
         val relatedFor = HashMap<String, MutableSet<String>>()
-        oracleEdges().forEach { (a, b) -> relatedFor.getOrPut(a) { HashSet() } += b }
+        oracleEdges(Path.of(corpusDir)).forEach { (a, b) -> relatedFor.getOrPut(a) { HashSet() } += b }
 
         val severed = mutableListOf<String>()
         for (word in words) {
@@ -100,7 +110,7 @@ class FamilyDedupGateTest {
         val corpusDir = System.getenv("WORDSPARROW_REAL_CORPUS_DIR")
         assumeTrue(corpusDir != null) { "set WORDSPARROW_REAL_CORPUS_DIR to the clue-data corpus directory" }
         val repo = CsvWordRepository.frenchFromDir(Path.of(corpusDir))
-        val family = oracle()
+        val family = oracle(Path.of(corpusDir))
         val generator = GridGenerator(repo)
         val gridCount = System.getenv("FAMILY_GATE_GRIDS")?.toIntOrNull() ?: 20
 

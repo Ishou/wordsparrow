@@ -75,12 +75,19 @@ class CsvWordRepositoryFromDirTest {
         // saut/sauter is a Démonette `converts` (deverbal) relation; the corpus keeps saut as its
         // own noun lemma, so without the derivational edges the grid dedup misses that placing SAUT
         // and SAUTEE (lemma sauter) is a same-root repeat. The loader bridges it (ADR-0119 layer 2).
+        // The edges file is Démonette-2-derived (ADR-0058 forbids redistributing it), so it is not
+        // a main resource: it lives in the corpus dir alongside words-fr.csv, same as production.
         val words = Files.createDirectories(tmp.resolve("words"))
         Files.writeString(
             words.resolve("words-fr.csv"),
             "word,language,length,frequency,difficulty,clue,source,source_license,pos,lemma\n" +
                 "saut,fr,4,100,0.3,Bond en l'air,bliss,CC0-1.0,nom,saut\n" +
                 "sautée,fr,6,100,0.3,Revenue à la poêle,bliss,CC0-1.0,verbe,sauter\n",
+        )
+        val morphology = Files.createDirectories(tmp.resolve("morphology"))
+        Files.writeString(
+            morphology.resolve("derivational_family_edges.csv"),
+            "lemma_a,lemma_b\nSAUT,SAUTER\n",
         )
 
         val repo = CsvWordRepository.frenchFromDir(tmp)

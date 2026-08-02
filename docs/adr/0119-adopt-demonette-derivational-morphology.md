@@ -184,6 +184,11 @@ justifies adoption:
   output) and completes the `WordAcceptor` dedup key. **Direct** relations only
   (directed edges block edge-adjacent pairs — `saut`/`sauter`, `race`/`raciste` —
   without transitive spread across a full derivation family like `port`/`rapport`).
+  Per the ADR-0058 Redistribute-forbidden verdict, the edges file is not a main
+  resource and is not committed to this public repo: it loads through the same
+  private corpus-dir resolver as `words-fr.csv` (ADR-0097), published to the
+  private object storage bucket alongside the corpus. A missing file degrades
+  to no derivational bridging rather than failing the load.
 
 **Deferred (own ADRs):**
 - Morphological clue-leak detection (item 2), replacing the current
