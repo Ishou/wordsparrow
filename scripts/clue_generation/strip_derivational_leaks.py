@@ -1,11 +1,4 @@
-"""Strip existing derivational-leak clues from a corpus by blanking them to placeholder (ADR-0121).
-
-For every row whose clue is a derivational leak of the answer (Démonette ≤2 hops), sets
-`clue = word` — the renderer's "no clue available" convention — so a leaking clue is dropped
-rather than shown. Idempotent. This is the remediation half of the ADR-0121 audit: the filter
-closes the hole for new clues; this scrubs leaks already baked into the committed word list.
-
-Requires the private leak graph + grammalecte lexique to be present (mirrors the audit)."""
+"""Blank a corpus's derivational-leak clues to the "no clue" placeholder (clue = word); idempotent remediation half of the ADR-0121 audit, requires the private leak graph + grammalecte lexique (ADR-0121)."""
 from __future__ import annotations
 
 import argparse
