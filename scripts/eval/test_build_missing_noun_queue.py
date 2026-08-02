@@ -41,3 +41,21 @@ def test_blocked_false_for_unrelated_word():
 
 def test_blocked_is_accent_and_case_insensitive():
     assert blocked("NÉGRO")
+
+
+def test_blocked_matches_abbreviation():
+    assert blocked("suppl")
+
+
+def test_blocked_matches_accented_abbreviation():
+    assert blocked("déc")
+
+
+def test_blocked_abbreviation_is_accent_and_case_insensitive():
+    assert blocked("DEC")
+    assert blocked("Suppl")
+
+
+def test_blocked_false_for_legitimate_clipped_word():
+    assert not blocked("frigo")
+    assert not blocked("prépa")
