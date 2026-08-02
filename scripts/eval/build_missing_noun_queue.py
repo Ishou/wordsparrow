@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Queue nouns absent from the corpus: the placement tally filters, familiarity ranks."""
+"""Queue nouns absent from the corpus, ranked by real-world familiarity."""
 import argparse
 import collections
 import csv
@@ -51,10 +51,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--lexique", type=Path, required=True)
     ap.add_argument("--corpus", type=Path, required=True)
-    ap.add_argument("--tally", type=Path, action="append", required=True,
-                    help="placement-tally CSV (word,placements); repeatable. Sample size dominates: "
-                         "300 grids admit 3.9k nouns, 5000 admit 17.7k, so a thin tally silently "
-                         "discards usable words. Use >=5000 (45s).")
+    # Not a gate: placement tracks letter-crossability against today's corpus, not word value.
+    ap.add_argument("--tally", type=Path, action="append",
+                    help="optional placement-tally CSV (word,placements); reported as coverage only")
     ap.add_argument("--min-length", type=int, default=5)
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
@@ -98,18 +97,21 @@ def main():
         if is_noun and not dirty:
             candidates.append(surface)
 
-    placed = set()
-    for path in args.tally:
-        for r in csv.DictReader(path.open(encoding="utf-8")):
-            placed.add(r["word"])
-    usable = [w for w in candidates if fold(w).upper() in placed]
-    usable.sort(key=lambda w: -occ.get(w, 0))
-
-    args.out.write_text("\n".join(usable) + "\n", encoding="utf-8")
+    candidates.sort(key=lambda w: -occ.get(w, 0))
+    args.out.write_text("\n".join(candidates) + "\n", encoding="utf-8")
     print(f"missing nouns (len>={args.min_length}, cleaned): {len(candidates)}")
-    print(f"  of those placed by the generator: {len(usable)}")
+    if args.tally:
+        placed = set()
+        for path in args.tally:
+            for r in csv.DictReader(path.open(encoding="utf-8")):
+                placed.add(r["word"])
+        seen = sum(1 for w in candidates if fold(w).upper() in placed)
+        if candidates:
+            print(f"  placed at least once (coverage only, not a filter): {seen} ({100 * seen / len(candidates):.0f}%)")
+        else:
+            print(f"  placed at least once (coverage only, not a filter): {seen} (n/a, queue is empty)")
     print(f"  written to {args.out}")
-    print(f"  top 12: {', '.join(usable[:12])}")
+    print(f"  top 12: {', '.join(candidates[:12])}")
     return 0
 
 
