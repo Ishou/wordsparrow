@@ -86,5 +86,11 @@ def is_derivational_leak(clue: str, target_lemma: str, graph, index) -> str | No
 
 
 def derivational_leak_token(clue: str, target_lemma: str) -> str | None:
-    """Lazy wrapper for the gates: uses the module-singleton graph + index."""
-    return is_derivational_leak(clue, target_lemma, _get_graph(), _get_index())
+    """Lazy wrapper for the gates: uses the module-singleton graph + index.
+
+    Short-circuits on an absent/empty graph before building the index, so the
+    no-op path never pays for a MorphologyIndex load (ADR-0121 offline gate)."""
+    graph = _get_graph()
+    if not graph:
+        return None
+    return is_derivational_leak(clue, target_lemma, graph, _get_index())
