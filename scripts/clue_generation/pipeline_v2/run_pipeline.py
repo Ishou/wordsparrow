@@ -50,7 +50,7 @@ VALID_STYLES = {
     "technique",
 }
 
-# Pipeline §8.3 — filtres 1-10 dans l'ordre
+# Pipeline §8.3 — filtres 1-11 dans l'ordre
 PIPELINE_FILTERS = [
     ("filter_1_typographiques", F.filter_1_typographiques, False),
     ("filter_2_caracteres_interdits", F.filter_2_caracteres_interdits, False),

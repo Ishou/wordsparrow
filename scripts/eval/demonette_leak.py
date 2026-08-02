@@ -1,8 +1,4 @@
-"""Démonette derivational-leak check (ADR-0121).
-
-Offline mint-time gate: flags a clue whose token is derivationally related (≤2 hops) to the
-answer per the private Démonette leak graph. No-ops (returns None / empty) when the graph
-artifact is absent, so public CI stays on the string-stem floor."""
+"""Offline mint-time gate: flags a clue whose token is derivationally related (≤2 hops) to the answer per the private Démonette leak graph, no-oping (returns None / empty) when the graph artifact is absent so public CI stays on the string-stem floor (ADR-0121)."""
 from __future__ import annotations
 
 import csv
