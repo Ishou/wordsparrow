@@ -1418,3 +1418,21 @@ def test_person_preference_prefers_3sg_over_1sg():
     _add(idx, "rendre", "rend", "v3__t___zz ipre 3sg")
     res = inflect_clue("Rendre confus", {"v3__t___zz", "ipre", "1sg", "3sg"}, idx)
     assert res.text == "Rend confus", res.text
+
+
+def _relative_clause_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "homme", "homme", "nom mas sg")
+    _add(idx, "homme", "hommes", "nom mas pl")
+    _add(idx, "diriger", "diriger", "v1__t___zz infi")
+    _add(idx, "diriger", "dirige", "v1__t___zz ipre 3sg")
+    _add(idx, "diriger", "dirigent", "v1__t___zz ipre 3pl")
+    return idx
+
+
+def test_noun_head_relative_clause_verb_agrees_number():
+    """A `<noun> qui <verb>` clue on a plural answer must agree the relative
+    verb: `Homme qui dirige` -> `Hommes qui dirigent`, not `Hommes qui dirige`."""
+    idx = _relative_clause_index()
+    res = inflect_clue("Homme qui dirige", {"nom", "mas", "pl"}, idx)
+    assert res.text == "Hommes qui dirigent", res.text

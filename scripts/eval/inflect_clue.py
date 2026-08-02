@@ -42,6 +42,10 @@ _ELISION_INITIALS = set("aeiouéèêëàâîïôûùüÿœh")
 # Reflexive clitics that may sit between `pas` and the verb in `Ne pas se présenter` and must stay in front of it.
 _REFLEXIVE_CLITICS = {"se", "s"}
 
+# `ce qui` / `quoi qui` are invariably 3sg — never number-agree their verb.
+# (Oblique `de/à/… qui` is caught structurally by the `crossed_prep` flag.)
+_NON_ANTECEDENT_BEFORE_QUI = {"ce", "quoi"}
+
 # Pre-head adjectives in French — a small closed set that conventionally
 # precedes the noun (petit oiseau, vieille femme, bel arbre). When a clue
 # starts with one of these, the actual head is later in the token stream;
@@ -736,6 +740,7 @@ def inflect_clue(
     in_pp = False
     saw_coord = False
     after_comma = False
+    crossed_prep = False  # a preposition between head and `qui` → `qui` may attach elsewhere
     i = head_idx + 1
     while i < len(new_tokens):
         tok = new_tokens[i]
@@ -757,6 +762,7 @@ def inflect_clue(
             continue
         if lo in _AGREEMENT_PASSTHROUGH:
             in_pp = True
+            crossed_prep = True
             saw_coord = False
             after_comma = False
             i += 1
@@ -781,6 +787,30 @@ def inflect_clue(
         if lo in _REFLEXIVE_CLITICS and saw_coord:
             i += 1
             continue
+        # Relative clause `qui <verb>` directly modifying the head's NP: agree the
+        # verb with the answer's number, 3rd person (`Homme qui dirige` @pl →
+        # `qui dirigent`). Fire ONLY when no preposition was crossed — otherwise
+        # `qui` may attach to a prepositional-object noun (`Groupe de personnes
+        # qui chante`) or be `ce qui` / oblique `de qui`, where the answer's
+        # number is the wrong antecedent. Conservative: skips rather than guesses.
+        _prev = new_tokens[i - 1].lower() if i > 0 else ""
+        if (lo == "qui" and target_pos in ("nom", "adj")
+                and not crossed_prep and _prev not in _NON_ANTECEDENT_BEFORE_QUI):
+            j = i + 1
+            while j < len(new_tokens) and not _is_alpha_token(new_tokens[j]):
+                j += 1
+            if j < len(new_tokens):
+                vlo = new_tokens[j].lower()
+                if "verbe" in index.pos_classes_of_form(vlo):
+                    vlemma = index.lemma_of_form(vlo, prefer_pos="verbe")
+                    finite = {m for _l, tg in index.lookup_form(vlo) for m in (tg & _FINITE_MOODS)}
+                    vmood = next((m for m in _MOOD_PREFERENCE if m in finite), None)
+                    vnum = "3pl" if "pl" in target else "3sg"
+                    if vlemma and vmood:
+                        nf = index.inflect(vlemma, {vmood, vnum}, prefer_pos="verbe")
+                        if nf:
+                            new_tokens[j] = nf
+            break
         if lo in _FUNCTION_WORDS:
             break
         # Co-head: same POS as target, NP state, reached after a conjunction.
