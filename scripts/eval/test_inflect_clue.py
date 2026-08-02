@@ -99,6 +99,18 @@ def _build_index() -> MorphologyIndex:
     _add(idx, "faire", "fait", "v3__t___zz ppas mas sg")
     _add(idx, "faire", "faits", "v3__t___zz ppas mas pl")
 
+    # 3pl of `rendre` plus a nominal object: exercises the implicit-relative
+    # branch, where the verb head must beat the POS-matched object noun.
+    _add(idx, "rendre", "rendent", "v3__t___zz ipre 3pl")
+    _add(idx, "service", "service", "nom mas sg")
+    _add(idx, "service", "services", "nom mas pl")
+    _add(idx, "astre", "astre", "nom mas sg")
+    _add(idx, "astre", "astres", "nom mas pl")
+    # `porte` is both a noun and a verb form — the branch must stay off.
+    _add(idx, "porte", "porte", "nom fem sg")
+    _add(idx, "porte", "portes", "nom fem pl")
+    _add(idx, "porter", "porte", "v1__t___zz ipre 3sg")
+
     return idx
 
 
@@ -1333,3 +1345,22 @@ def test_subject_pronoun_frame_singular_target_unchanged() -> None:
     idx = _subject_pronoun_index()
     res = inflect_clue("Il capte la lumière", {"nom", "mas", "sg"}, idx)
     assert res.text == "Il capte la lumière", res
+
+def test_bare_third_person_verb_agrees_with_plural_answer(index):
+    result = inflect_clue("Rend un service", {"nom", "mas", "pl"}, index)
+    assert result.text == "Rendent un service"
+
+
+def test_bare_third_person_verb_unchanged_for_singular_answer(index):
+    result = inflect_clue("Rend un service", {"nom", "mas", "sg"}, index)
+    assert result.text == "Rend un service"
+
+
+def test_noun_headed_clue_still_inflects_the_noun(index):
+    result = inflect_clue("Astre du jour", {"nom", "mas", "pl"}, index)
+    assert result.text == "Astres du jour"
+
+
+def test_ambiguous_noun_verb_head_keeps_nominal_reading(index):
+    result = inflect_clue("Porte du jour", {"nom", "fem", "pl"}, index)
+    assert result.text == "Portes du jour"
