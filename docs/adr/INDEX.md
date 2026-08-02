@@ -397,6 +397,7 @@ ADR-0121  data/external/demonette/derived/demonette_leak.csv  Corpus-scoped ≤2
 ADR-0121  scripts/demonette/build_leak_graph.py    Builds the ≤2-hop leak graph from Démonette relations + the runtime corpus, excluding complexite in {accidentel, motiv-sem}
 ADR-0121  scripts/eval/demonette_leak.py           Leak-graph loader + is_derivational_leak(): flags a clue token derivationally related (≤2 hops) to the answer; no-ops when the private graph is absent
 ADR-0121  scripts/clue_generation/audit_derivational_leaks.py  One-shot audit reporting existing derivational leaks in the committed words-fr.csv
+ADR-0121  scripts/clue_generation/strip_derivational_leaks.py  Idempotent remediation: blanks a corpus's derivational-leak clues to the "no clue" placeholder (clue = word)
 ```
 
 ## Adding entries
