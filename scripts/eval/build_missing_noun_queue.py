@@ -22,6 +22,9 @@ BLOCKLIST_STEMS = [
     "pede", "tapette", "tantouze", "gouine", "travelo", "rital", "polak",
     "romanichel", "manouch", "catin", "boche",
 ]
+# Written abbreviations grammalecte tags as plain nouns; no tag or shape distinguishes them
+# from legitimate clipped words like `frigo` or `prépa`, so they are named explicitly.
+ABBREVIATIONS = {"suppl", "chap", "coll", "der", "fig", "nov", "oct", "sep", "avr", "déc", "min", "ppt"}
 
 
 def fold(s):
@@ -36,6 +39,8 @@ def grid_foldable(s):
 
 def blocked(word):
     f = fold(word).lower()
+    if word in ABBREVIATIONS:
+        return True
     return any(f == s or f.startswith(s) for s in BLOCKLIST_STEMS)
 
 
@@ -44,7 +49,9 @@ def main():
     ap.add_argument("--lexique", type=Path, required=True)
     ap.add_argument("--corpus", type=Path, required=True)
     ap.add_argument("--tally", type=Path, action="append", required=True,
-                    help="placement-tally CSV (word,placements); repeatable")
+                    help="placement-tally CSV (word,placements); repeatable. Sample size dominates: "
+                         "300 grids admit 3.9k nouns, 5000 admit 17.7k, so a thin tally silently "
+                         "discards usable words. Use >=5000 (45s).")
     ap.add_argument("--min-length", type=int, default=5)
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
