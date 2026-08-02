@@ -37,9 +37,12 @@ def grid_foldable(s):
     return a.isalpha() and a.isascii()
 
 
+_ABBREVIATIONS_FOLDED = {fold(a).lower() for a in ABBREVIATIONS}
+
+
 def blocked(word):
     f = fold(word).lower()
-    if word in ABBREVIATIONS:
+    if f in _ABBREVIATIONS_FOLDED:
         return True
     return any(f == s or f.startswith(s) for s in BLOCKLIST_STEMS)
 
