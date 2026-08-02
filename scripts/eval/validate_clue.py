@@ -20,6 +20,7 @@ Returns (flag, reason) where flag is one of:
   pos-mismatch     head is a lemma form but the POS class doesn't match the target
   pleonasm         head verb's lemma already encodes the trailing modifier
                    ("Associer ensemble", "Monter en haut", "Prévoir à l'avance")
+  derivational-leak clue token is a Démonette ≤2-hop derivational relative of the answer
 """
 
 from __future__ import annotations
@@ -30,6 +31,8 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
+from demonette_leak import is_derivational_leak as _is_derivational_leak
+from demonette_leak import _get_graph as _derivational_graph
 from morphology_index import MorphologyIndex
 
 
@@ -364,6 +367,18 @@ def validate_lemma_clue(
         return ValidationResult(
             "stem-leak",
             f"clue token '{stem_leak}' shares root with target lemma",
+            head,
+        )
+
+    # Derivational leak (Démonette ≤2 hops): a clue token whose lemma is a
+    # derivational relative of the answer. Augments the string stem-leak with
+    # the prefix-masked / short-root cases it can't see. No-op when the private
+    # graph is absent (ADR-0121).
+    deriv_leak = _is_derivational_leak(clue, target_lemma, _derivational_graph(), index)
+    if deriv_leak is not None:
+        return ValidationResult(
+            "derivational-leak",
+            f"clue token '{deriv_leak}' is a derivational relative of the target lemma",
             head,
         )
 
