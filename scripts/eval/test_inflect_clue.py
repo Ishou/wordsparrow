@@ -1436,3 +1436,31 @@ def test_noun_head_relative_clause_verb_agrees_number():
     idx = _relative_clause_index()
     res = inflect_clue("Homme qui dirige", {"nom", "mas", "pl"}, idx)
     assert res.text == "Hommes qui dirigent", res.text
+
+
+def test_relative_clause_same_number_compound_np_agrees():
+    """`<N1> de <N2> qui <verb>` @ plural where N1 and N2 are BOTH plural: the
+    relative agrees regardless of which noun it attaches to (same number)."""
+    idx = MorphologyIndex()
+    _add(idx, "groupe", "groupe", "nom mas sg")
+    _add(idx, "groupe", "groupes", "nom mas pl")
+    _add(idx, "personne", "personnes", "nom fem pl")
+    _add(idx, "chanter", "chanter", "v1__t___zz infi")
+    _add(idx, "chanter", "chante", "v1__t___zz ipre 3sg")
+    _add(idx, "chanter", "chantent", "v1__t___zz ipre 3pl")
+    res = inflect_clue("Groupe de personnes qui chante", {"nom", "mas", "pl"}, idx)
+    assert res.text == "Groupes de personnes qui chantent", res.text
+
+
+def test_relative_clause_conflicting_number_is_skipped():
+    """`Personne au cœur qui aide` — the crossed noun `cœur` (sg) differs from the
+    plural answer, so the antecedent is ambiguous; leave the verb (never guess)."""
+    idx = MorphologyIndex()
+    _add(idx, "personne", "personne", "nom fem sg")
+    _add(idx, "personne", "personnes", "nom fem pl")
+    _add(idx, "cœur", "cœur", "nom mas sg")
+    _add(idx, "aider", "aider", "v1__t___zz infi")
+    _add(idx, "aider", "aide", "v1__t___zz ipre 3sg")
+    _add(idx, "aider", "aident", "v1__t___zz ipre 3pl")
+    res = inflect_clue("Personne au cœur qui aide", {"nom", "fem", "pl"}, idx)
+    assert res.text == "Personnes au cœur qui aide", res.text  # relative left untouched

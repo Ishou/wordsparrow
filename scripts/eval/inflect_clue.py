@@ -42,9 +42,13 @@ _ELISION_INITIALS = set("aeiouéèêëàâîïôûùüÿœh")
 # Reflexive clitics that may sit between `pas` and the verb in `Ne pas se présenter` and must stay in front of it.
 _REFLEXIVE_CLITICS = {"se", "s"}
 
-# `ce qui` / `quoi qui` are invariably 3sg — never number-agree their verb.
-# (Oblique `de/à/… qui` is caught structurally by the `crossed_prep` flag.)
-_NON_ANTECEDENT_BEFORE_QUI = {"ce", "quoi"}
+# A `qui` immediately preceded by one of these is not a noun's subject relative:
+# `ce qui` is invariably 3sg; oblique `de/à/… qui` has `qui` as the prep's object.
+_NON_ANTECEDENT_BEFORE_QUI = {
+    "ce", "quoi",
+    "de", "d", "à", "par", "pour", "sur", "sous", "avec", "sans",
+    "chez", "contre", "vers", "dans", "en", "entre",
+}
 
 # Pre-head adjectives in French — a small closed set that conventionally
 # precedes the noun (petit oiseau, vieille femme, bel arbre). When a clue
@@ -740,7 +744,10 @@ def inflect_clue(
     in_pp = False
     saw_coord = False
     after_comma = False
-    crossed_prep = False  # a preposition between head and `qui` → `qui` may attach elsewhere
+    answer_num = "pl" if "pl" in target else "sg"
+    # A noun crossed before `qui` whose number differs from the answer makes the
+    # relative's antecedent ambiguous — a `qui`-verb agreement could then be wrong.
+    conflicting_number = False
     i = head_idx + 1
     while i < len(new_tokens):
         tok = new_tokens[i]
@@ -762,7 +769,6 @@ def inflect_clue(
             continue
         if lo in _AGREEMENT_PASSTHROUGH:
             in_pp = True
-            crossed_prep = True
             saw_coord = False
             after_comma = False
             i += 1
@@ -775,6 +781,9 @@ def inflect_clue(
                 new_target = _noun_agreement_from_form(lo, noun_lemma, index)
                 if new_target:
                     gn = new_target
+                    noun_num = "pl" if "pl" in new_target else ("sg" if "sg" in new_target else None)
+                    if noun_num is not None and noun_num != answer_num:
+                        conflicting_number = True
             in_pp = False
             i += 1
             continue
@@ -787,15 +796,15 @@ def inflect_clue(
         if lo in _REFLEXIVE_CLITICS and saw_coord:
             i += 1
             continue
-        # Relative clause `qui <verb>` directly modifying the head's NP: agree the
-        # verb with the answer's number, 3rd person (`Homme qui dirige` @pl →
-        # `qui dirigent`). Fire ONLY when no preposition was crossed — otherwise
-        # `qui` may attach to a prepositional-object noun (`Groupe de personnes
-        # qui chante`) or be `ce qui` / oblique `de qui`, where the answer's
-        # number is the wrong antecedent. Conservative: skips rather than guesses.
+        # Relative clause `qui <verb>`: agree the verb with the answer's number,
+        # 3rd person (`Homme qui dirige` @pl → `qui dirigent`). Fire only when the
+        # antecedent's number is unambiguous: every crossed noun shares the
+        # answer's number (`conflicting_number` is False), so whichever noun `qui`
+        # attaches to, the number is the same. Skip `ce qui` (invariably 3sg) and
+        # oblique `de/à qui` (the token before `qui` is a preposition/`ce`).
         _prev = new_tokens[i - 1].lower() if i > 0 else ""
         if (lo == "qui" and target_pos in ("nom", "adj")
-                and not crossed_prep and _prev not in _NON_ANTECEDENT_BEFORE_QUI):
+                and not conflicting_number and _prev not in _NON_ANTECEDENT_BEFORE_QUI):
             j = i + 1
             while j < len(new_tokens) and not _is_alpha_token(new_tokens[j]):
                 j += 1
