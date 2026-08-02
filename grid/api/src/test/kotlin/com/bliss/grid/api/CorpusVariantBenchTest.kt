@@ -68,8 +68,8 @@ class CorpusVariantBenchTest {
             val shapeHash = if (grid != null) GridShapeHash.of(grid) else "FAIL"
             rows +=
                 "$seed,$total,${m.skeletonMs},${m.slotPlanMs},${m.slotPlanBacktracks}," +
-                    "${m.fillMs},${m.fillBacktracks},${m.fillRepoCalls}," +
-                    "${m.fillFirstSlotDomainSize},$shapeHash,${m.succeeded}"
+                "${m.fillMs},${m.fillBacktracks},${m.fillRepoCalls}," +
+                "${m.fillFirstSlotDomainSize},$shapeHash,${m.succeeded}"
         }
 
         val outDir = Path.of("data/eval")
