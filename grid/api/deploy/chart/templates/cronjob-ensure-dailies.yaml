@@ -44,7 +44,8 @@ spec:
                 # MC_HOST_store keeps credentials out of this process's argv (unlike `mc alias set <user> <pass>`).
                 - >
                   export MC_HOST_store="https://${S3_ACCESS_KEY}:${S3_SECRET_KEY}@${S3_ENDPOINT#https://}" &&
-                  mc cp --recursive "store/{{ .Values.corpus.objectStore.bucket }}/words" /corpus/
+                  mc cp --recursive "store/{{ .Values.corpus.objectStore.bucket }}/words" /corpus/ &&
+                  { mc cp --recursive "store/{{ .Values.corpus.objectStore.bucket }}/morphology" /corpus/ || echo "no morphology/ prefix; grid derivational dedup stays off (ADR-0119)"; }
               env:
                 - {name: S3_ENDPOINT, value: {{ .Values.corpus.objectStore.endpoint | quote }}}
                 - name: S3_ACCESS_KEY
