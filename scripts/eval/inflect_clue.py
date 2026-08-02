@@ -434,12 +434,7 @@ def _implicit_relative_verb(
     tokens: list[str], target_pos: str, surface_tags: set[str],
     index: MorphologyIndex,
 ) -> tuple[int, str, set[str], str] | None:
-    """A nominal clue opening on a bare 3rd-person present verb is a relative
-    clause with `qui` elided (`activiste → "Défend une cause"`), so the verb
-    agrees with the answer's number exactly as in [_relative_verb]; without this
-    the POS-matched ranker takes the object noun instead (`*Défend une causes`).
-    Restricted to heads with no nominal reading — `Porte`, `Marche` and friends
-    are genuinely ambiguous and keep the ranker's noun-first behaviour."""
+    """Elided-`qui` reading of `_relative_verb` (ADR-0107): a bare 3rd-person-present verb head with no nominal/adjectival reading agrees with the answer's number, same as an explicit `Qui + verbe`."""
     if target_pos not in ("nom", "adj"):
         return None
     for i, tok in enumerate(tokens):
