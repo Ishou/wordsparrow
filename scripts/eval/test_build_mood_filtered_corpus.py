@@ -42,9 +42,7 @@ def test_passe_simple_nonthird_false_for_empty_readings():
 
 
 def test_murat_murat_circumflex_accent_sensitive_distinction():
-    # readings_for() matches "murat" exact-then-lowercase, never accent-folded, so the
-    # proper noun "murat" (Maréchal) and the verb form "murât" (subjonctif imparfait of
-    # "murer") never share a reading set — this pins that the filters treat them apart.
+    # readings_for() never accent-folds, so "murat" (npr) and "murât" (simp/3sg) stay distinct.
     murat_readings = [{"npr"}]
     murat_circumflex_readings = [{"simp", "3sg"}]
 
