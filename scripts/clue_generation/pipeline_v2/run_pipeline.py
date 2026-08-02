@@ -63,6 +63,7 @@ PIPELINE_FILTERS = [
     ("filter_8_judge_shadow", F.filter_8_judge_shadow, True),
     ("filter_9_stem_leak", F.filter_9_stem_leak, False),
     ("filter_10_pleonasm", F.filter_10_pleonasm, False),
+    ("filter_11_derivational_leak", F.filter_11_derivational_leak, False),
 ]
 
 
