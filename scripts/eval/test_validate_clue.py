@@ -276,3 +276,19 @@ def test_load_blocklist_reads_csv(tmp_path) -> None:
 def test_load_blocklist_missing_file_returns_empty(tmp_path) -> None:
     bl = load_blocklist(tmp_path / "does-not-exist.csv")
     assert bl == frozenset()
+
+
+# --- derivational-leak gate (Démonette ≤2 hops, ADR-0121) -------------------
+
+
+def test_derivational_leak_flag(monkeypatch):
+    import validate_clue
+    from morphology_index import MorphologyIndex
+    # force a graph where 'filer' relates to 'fil'; index resolves 'fil' -> 'fil'
+    monkeypatch.setattr(validate_clue, "_derivational_graph",
+                        lambda: {"filer": frozenset({"fil"})})
+    idx = MorphologyIndex()
+    idx.by_form["fil"] = [("fil", frozenset({"nom"}))]
+    idx.by_form["transforme"] = [("transformer", frozenset())]
+    res = validate_clue.validate_lemma_clue("Transforme en fil", "filer", "verbe", idx)
+    assert res.flag == "derivational-leak"

@@ -50,7 +50,7 @@ VALID_STYLES = {
     "technique",
 }
 
-# Pipeline §8.3 — filtres 1-10 dans l'ordre
+# Pipeline §8.3 — filtres 1-11 dans l'ordre
 PIPELINE_FILTERS = [
     ("filter_1_typographiques", F.filter_1_typographiques, False),
     ("filter_2_caracteres_interdits", F.filter_2_caracteres_interdits, False),
@@ -63,6 +63,7 @@ PIPELINE_FILTERS = [
     ("filter_8_judge_shadow", F.filter_8_judge_shadow, True),
     ("filter_9_stem_leak", F.filter_9_stem_leak, False),
     ("filter_10_pleonasm", F.filter_10_pleonasm, False),
+    ("filter_11_derivational_leak", F.filter_11_derivational_leak, False),
 ]
 
 

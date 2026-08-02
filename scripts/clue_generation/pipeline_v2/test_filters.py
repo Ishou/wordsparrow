@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import sys as _sys
+from pathlib import Path as _Path
+
 import pytest
 
 from . import filters as F
+
+# pipeline_v2 has __init__.py so pytest only exposes scripts/ on sys.path; add this dir too so import filters resolves for the monkeypatch.setattr calls below.
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
 
 
 def _row(mot: str, definition: str, **kw) -> dict:
@@ -106,3 +112,18 @@ def test_filter_8_shadow_still_rejects_invalid_enum():
         judge=_FakeJudge(),
     )
     assert out.action == "reject"
+
+
+def test_filter_11_derivational_leak_rejects(monkeypatch):
+    import filters
+    monkeypatch.setattr(filters, "derivational_leak_token", lambda clue, mot: "fil")
+    res = filters.filter_11_derivational_leak({"mot": "filer", "definition": "Transforment en fil"})
+    assert res.is_reject
+    assert "fil" in res.reason
+
+
+def test_filter_11_derivational_leak_accepts_when_no_leak(monkeypatch):
+    import filters
+    monkeypatch.setattr(filters, "derivational_leak_token", lambda clue, mot: None)
+    res = filters.filter_11_derivational_leak({"mot": "filer", "definition": "Marquera un objet"})
+    assert res.is_accept

@@ -6,6 +6,11 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[2] / "eval"))
+from demonette_leak import derivational_leak_token  # noqa: E402
+
 # Apostrophe typographique
 APO = "’"
 
@@ -532,4 +537,16 @@ def filter_10_pleonasm(row: dict) -> FilterResult:
     return FilterResult(
         "reject",
         f"pleonasm : patron fermé matché « {match} »",
+    )
+
+
+def filter_11_derivational_leak(row: dict) -> FilterResult:
+    """Filtre 11 : reject si un token du clue est dérivationnellement lié au mot (Démonette ≤2 sauts, no-op quand le graphe privé est absent, CI reste sur filter_9)."""
+    leak = derivational_leak_token(row["definition"], row["mot"])
+    if leak is None:
+        return FilterResult("accept")
+    return FilterResult(
+        "reject",
+        f"derivational-leak : token « {leak} » est dérivationnellement lié "
+        f"au mot « {row['mot']} »",
     )
