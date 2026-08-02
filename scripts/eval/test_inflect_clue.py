@@ -1385,3 +1385,23 @@ def test_authored_head_pos_is_optional(index):
     with_hint = inflect_clue("Rend un service", {"nom", "mas", "pl"}, index, "verbe")
     without = inflect_clue("Rend un service", {"nom", "mas", "pl"}, index)
     assert with_hint.text == without.text == "Rendent un service"
+
+
+def _reflexive_index() -> MorphologyIndex:
+    """Head verb + a comma-coordinated reflexive verb, 3pl forms."""
+    idx = MorphologyIndex()
+    _add(idx, "fuir", "fuir", "v3__t___zz infi")
+    _add(idx, "fuir", "fuient", "v3__t___zz ipre 3pl")
+    _add(idx, "cacher", "cacher", "v1__t___zz infi")
+    _add(idx, "cacher", "cachent", "v1__t___zz ipre 3pl")
+    return idx
+
+
+def test_comma_coordinated_reflexive_verb_inflects():
+    """`Fuir, se cacher` @ 3pl must inflect BOTH verbs, walking through the
+    reflexive clitic `se`: the coordinated `se cacher` was left as an
+    infinitive because `se` (a function word) broke the co-head walk."""
+    idx = _reflexive_index()
+    tags = {"v3__t___zz", "ipre", "3pl"}
+    res = inflect_clue("Fuir, se cacher", tags, idx)
+    assert res.text == "Fuient, se cachent", res.text

@@ -776,6 +776,11 @@ def inflect_clue(
         if lo in _DEGREE_TRANSPARENT:
             i += 1
             continue
+        # A reflexive clitic before a coordinated verb (`…, se retirer`) is crossed,
+        # keeping `saw_coord`, so the following verb still co-inflates (`se retire`).
+        if lo in _REFLEXIVE_CLITICS and saw_coord:
+            i += 1
+            continue
         if lo in _FUNCTION_WORDS:
             break
         # Co-head: same POS as target, NP state, reached after a conjunction.
