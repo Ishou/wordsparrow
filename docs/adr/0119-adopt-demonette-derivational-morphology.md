@@ -177,9 +177,15 @@ justifies adoption:
 - The binding licence verdict lives in the ADR-0058 matrix (single source of
   truth); this ADR is the policy and roadmap that points at it.
 
+**Shipped:**
+- The family-aware dedup (roadmap item 1). `CsvWordRepository` loads the folded
+  `simple`-derivation edges (`morphology/derivational_family_edges.csv`, built
+  by `scripts/grid_family/build_derivational_family_edges.py` from the ingest
+  output) and completes the `WordAcceptor` dedup key. **Direct** relations only
+  (directed edges block edge-adjacent pairs — `saut`/`sauter`, `race`/`raciste` —
+  without transitive spread across a full derivation family like `port`/`rapport`).
+
 **Deferred (own ADRs):**
-- The `WordAcceptor` family-aware dedup fix (roadmap item 1) — the immediate
-  follow-up, since it fixes a live defect.
 - Morphological clue-leak detection (item 2), replacing the current
   substring-luck check.
 - The derivational clue-propagation lane (item 3) and its judge/leak gates.

@@ -14,16 +14,16 @@ import java.nio.file.Path
 import kotlin.random.Random
 
 /**
- * Generation-level gate for the participle family-dedup invariant: no generated
- * grid may place two words grammalecte considers the same morphological family
- * (the ÉMANÉE + ÉMANER escape). The oracle (`participle_family_edges.csv`,
- * grammalecte-derived, folded to `Word.lemma` form) is INDEPENDENT of the
- * generator's own dedup key, so it catches the violation regardless of which
+ * Generation-level gate for the morphological family-dedup invariant: no generated
+ * grid may place two words the family edges consider the same family — grammalecte
+ * participles (ÉMANÉE + ÉMANER) and Démonette simple derivations (SAUT + SAUTEE).
+ * The oracle (the folded family-edge CSV resources under `morphology/`) is INDEPENDENT
+ * of the generator's own dedup key, so it catches the violation regardless of which
  * layer the key breaks in. Opt-in against the real corpus via
  * `WORDSPARROW_REAL_CORPUS_DIR` (the private clue-data corpus); skipped otherwise.
  */
 @Tag("bench")
-class ParticipleFamilyDedupGateTest {
+class FamilyDedupGateTest {
     /** Union-find over folded lemmas; unlisted lemmas are their own singleton family. */
     private class FamilyOracle(
         edges: List<Pair<String, String>>,
@@ -47,14 +47,14 @@ class ParticipleFamilyDedupGateTest {
     }
 
     private fun oracleEdges(): List<Pair<String, String>> =
-        javaClass
-            .getResourceAsStream("/morphology/participle_family_edges.csv")!!
-            .bufferedReader()
-            .useLines { lines ->
-                lines
-                    .drop(1)
-                    .mapNotNull { line -> line.split(",").takeIf { it.size == 2 }?.let { it[0] to it[1] } }
-                    .toList()
+        listOf("/morphology/participle_family_edges.csv", "/morphology/derivational_family_edges.csv")
+            .flatMap { path ->
+                javaClass.getResourceAsStream(path)!!.bufferedReader().useLines { lines ->
+                    lines
+                        .drop(1)
+                        .mapNotNull { line -> line.split(",").takeIf { it.size == 2 }?.let { it[0] to it[1] } }
+                        .toList()
+                }
             }
 
     private fun oracle(): FamilyOracle = FamilyOracle(oracleEdges())
@@ -66,29 +66,30 @@ class ParticipleFamilyDedupGateTest {
     /**
      * Deterministic gate: the generator's OWN dedup key (`surfaceLemmas` +
      * `Word.lemma`, exactly what `WordAcceptor` consumes) must bridge every
-     * grammalecte participle family present in the corpus. Necessary and
+     * family edge whose endpoints are both in the corpus. Necessary and
      * sufficient for "no generated grid places a family pair", and unlike the
-     * fleet gate below it can't false-pass on generation luck (the ÉMANÉE +
-     * ÉMANER manifestation is rare per grid). Fails today: ~1,000 participle-
-     * adjective surfaces carry only their adjective lemma, never the verb.
+     * fleet gate below it can't false-pass on generation luck (the manifestation
+     * is rare per grid). This is the primary guard for both edge sources.
      */
     @Test
-    fun `the generator dedup key bridges every grammalecte participle family in the corpus`() {
+    fun `the generator dedup key bridges every morphological family in the corpus`() {
         val corpusDir = System.getenv("WORDSPARROW_REAL_CORPUS_DIR")
         assumeTrue(corpusDir != null) { "set WORDSPARROW_REAL_CORPUS_DIR to the clue-data corpus directory" }
         val repo = CsvWordRepository.frenchFromDir(Path.of(corpusDir))
         val surfaceLemmas = repo.surfaceLemmas()
-        val verbFor = HashMap<String, MutableSet<String>>()
-        oracleEdges().forEach { (adjLemma, verbLemma) -> verbFor.getOrPut(adjLemma) { HashSet() } += verbLemma }
+        val words = (2..MAX_WORD_LENGTH).flatMap { repo.findByLength(it) }
+        val corpusLemmas = words.mapTo(HashSet()) { it.lemma }
+        val relatedFor = HashMap<String, MutableSet<String>>()
+        oracleEdges().forEach { (a, b) -> relatedFor.getOrPut(a) { HashSet() } += b }
 
         val severed = mutableListOf<String>()
-        for (length in 2..MAX_WORD_LENGTH) {
-            for (word in repo.findByLength(length)) {
-                val verbs = verbFor[word.lemma] ?: continue
-                val key = surfaceLemmas.lemmasOf(word.text) + word.lemma
-                val missing = verbs - key
-                if (missing.isNotEmpty()) severed += "${word.text}(${word.lemma})->${missing.joinToString()}"
-            }
+        for (word in words) {
+            // A family member absent from the corpus can never be placed, so no bridge is required for it.
+            val related = relatedFor[word.lemma]?.filter { it in corpusLemmas }.orEmpty()
+            if (related.isEmpty()) continue
+            val key = surfaceLemmas.lemmasOf(word.text) + word.lemma
+            val missing = related - key
+            if (missing.isNotEmpty()) severed += "${word.text}(${word.lemma})->${missing.joinToString()}"
         }
         System.err.println("[family-key] severed surfaces=${severed.size}; sample=${severed.take(8)}")
         assertThat(severed.size).isEqualTo(0)
