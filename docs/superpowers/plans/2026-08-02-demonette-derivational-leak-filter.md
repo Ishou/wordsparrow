@@ -479,8 +479,7 @@ def _token_lemmas(token: str, index) -> set[str]:
 
 
 def is_derivational_leak(clue: str, target_lemma: str, graph, index) -> str | None:
-    """Offending clue token if any of its lemmas is a ≤2-hop derivational relative of
-    target_lemma per `graph`; None otherwise (and when graph/related is empty)."""
+    """Offending clue token whose lemma is a ≤2-hop derivational relative of target_lemma; None if none/no graph."""
     related = graph.get(target_lemma.lower().strip()) if graph else None
     if not related:
         return None
@@ -563,8 +562,7 @@ Then add the filter next to `filter_9_stem_leak` (after `filter_10_pleonasm`):
 
 ```python
 def filter_11_derivational_leak(row: dict) -> FilterResult:
-    """Filtre 11 : reject si un token du clue est dérivationnellement lié au mot (Démonette
-    ≤2 sauts). No-op quand le graphe privé est absent (CI reste sur filter_9)."""
+    """Filtre 11 : reject un token dérivationnellement lié au mot (Démonette ≤2 sauts); no-op si le graphe est absent."""
     leak = derivational_leak_token(row["definition"], row["mot"])
     if leak is None:
         return FilterResult("accept")
