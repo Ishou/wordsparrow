@@ -393,6 +393,10 @@ ADR-0119  scripts/demonette/**                     Ingest: normalize Démonette-
 ADR-0120  grid/infrastructure/src/main/kotlin/com/bliss/grid/infrastructure/persistence/CsvWordRepository.kt  Loads grammalecte-derived participle adj-lemma->verb-lemma edges (main resource, MPL-2.0) and completes the per-surface family key so WordAcceptor bridges the double-tagging case; narrower and independent of ADR-0119's still-deferred Démonette-2-based derivational fix
 ADR-0120  grid/infrastructure/src/main/resources/morphology/participle_family_edges.csv  Generated artifact (grammalecte lexique-derived); regenerate via scripts/grid_family/build_participle_family_edges.py on a grammalecte bump
 ADR-0120  scripts/grid_family/**                    Emits folded participle->verb family edges from the grammalecte lexique for the grid dedup bridge (ADR-0120)
+ADR-0121  data/external/demonette/derived/demonette_leak.csv  Corpus-scoped ≤2-hop derivational-leak graph (answer_lemma→related_lemma,hop); private/gitignored SA artifact built from the Démonette dump; consumed by the clue leak gate
+ADR-0121  scripts/demonette/build_leak_graph.py    Builds the ≤2-hop leak graph from Démonette relations + the runtime corpus, excluding complexite in {accidentel, motiv-sem}
+ADR-0121  scripts/eval/demonette_leak.py           Leak-graph loader + is_derivational_leak(): flags a clue token derivationally related (≤2 hops) to the answer; no-ops when the private graph is absent
+ADR-0121  scripts/clue_generation/audit_derivational_leaks.py  One-shot audit reporting existing derivational leaks in the committed words-fr.csv
 ```
 
 ## Adding entries
