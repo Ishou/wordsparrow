@@ -110,6 +110,7 @@ def _build_index() -> MorphologyIndex:
     _add(idx, "porte", "porte", "nom fem sg")
     _add(idx, "porte", "portes", "nom fem pl")
     _add(idx, "porter", "porte", "v1__t___zz ipre 3sg")
+    _add(idx, "porter", "portent", "v1__t___zz ipre 3pl")
 
     return idx
 
@@ -1364,3 +1365,23 @@ def test_noun_headed_clue_still_inflects_the_noun(index):
 def test_ambiguous_noun_verb_head_keeps_nominal_reading(index):
     result = inflect_clue("Porte du jour", {"nom", "fem", "pl"}, index)
     assert result.text == "Portes du jour"
+
+
+def test_authored_head_pos_resolves_an_ambiguous_verb_head(index):
+    result = inflect_clue(
+        "Porte un service", {"nom", "mas", "pl"}, index, authored_head_pos="verbe"
+    )
+    assert result.text == "Portent un service"
+
+
+def test_authored_head_pos_nom_keeps_the_nominal_reading(index):
+    result = inflect_clue(
+        "Porte du jour", {"nom", "fem", "pl"}, index, authored_head_pos="nom"
+    )
+    assert result.text == "Portes du jour"
+
+
+def test_authored_head_pos_is_optional(index):
+    with_hint = inflect_clue("Rend un service", {"nom", "mas", "pl"}, index, "verbe")
+    without = inflect_clue("Rend un service", {"nom", "mas", "pl"}, index)
+    assert with_hint.text == without.text == "Rendent un service"
