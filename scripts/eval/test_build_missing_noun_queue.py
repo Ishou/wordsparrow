@@ -108,3 +108,14 @@ def test_queue_is_ranked_by_familiarity(tmp_path, monkeypatch):
     out = tmp_path / "out.txt"
     _run(monkeypatch, ["--lexique", str(lexique), "--corpus", str(corpus), "--out", str(out)])
     assert out.read_text(encoding="utf-8").split() == ["village", "wagon", "maison"]
+
+
+def test_tally_coverage_line_does_not_crash_on_an_empty_queue(tmp_path, monkeypatch, capsys):
+    lexique, _, tally = _write_fixtures(tmp_path)
+    corpus = tmp_path / "corpus_full.csv"
+    corpus.write_text("word,clue\nvillage,Définition\nwagon,Définition\nmaison,Définition\n", encoding="utf-8")
+    out = tmp_path / "out.txt"
+    _run(monkeypatch, ["--lexique", str(lexique), "--corpus", str(corpus),
+                       "--tally", str(tally), "--out", str(out)])
+    assert out.read_text(encoding="utf-8") == "\n"
+    assert "n/a, queue is empty" in capsys.readouterr().out

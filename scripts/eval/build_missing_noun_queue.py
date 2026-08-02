@@ -106,7 +106,10 @@ def main():
             for r in csv.DictReader(path.open(encoding="utf-8")):
                 placed.add(r["word"])
         seen = sum(1 for w in candidates if fold(w).upper() in placed)
-        print(f"  placed at least once (coverage only, not a filter): {seen} ({100 * seen / len(candidates):.0f}%)")
+        if candidates:
+            print(f"  placed at least once (coverage only, not a filter): {seen} ({100 * seen / len(candidates):.0f}%)")
+        else:
+            print(f"  placed at least once (coverage only, not a filter): {seen} (n/a, queue is empty)")
     print(f"  written to {args.out}")
     print(f"  top 12: {', '.join(candidates[:12])}")
     return 0
