@@ -97,6 +97,13 @@ STEP 3 — OUTPUT FORMAT. CSV, UTF-8, header exactly:
 culturel, cryptique, technique. Quote fields containing a comma. `cryptique_morphologique` and
 `calembour` are not available.
 
+`head_pos` is optional — leave it blank for the ~99% of clues where the opening head token has
+only one reading. Fill it only when the clue's head is genuinely ambiguous between a verb and a
+noun/adjective reading, using exactly one of `verbe`, `nom`, `adj` (matching the POS you intended
+for that head token). Worked example: `Porte le glaive` is headed by the verb `porter` — write
+`head_pos=verbe`; `Porte d'entrée` is headed by the noun `porte` — write `head_pos=nom`. Without
+the label, the inflater cannot tell these two apart and may pick the wrong reading.
+
 STEP 4 — MECHANICAL SELF-CHECK. Write a throwaway script in /tmp (never in the worktree) that
 verifies: 300 rows + header; 3 per noun; all 100 nouns; ≤25 chars; no radical leak — test BOTH
 the 4-char initial radical AND containment of any 4+ char token inside the answer (split tokens
