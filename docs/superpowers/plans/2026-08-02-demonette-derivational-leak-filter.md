@@ -527,20 +527,18 @@ Append to `scripts/clue_generation/pipeline_v2/test_filters.py`:
 
 ```python
 def test_filter_11_derivational_leak_rejects(monkeypatch):
-    import filters
-    monkeypatch.setattr(filters, "derivational_leak_token", lambda clue, mot: "fil")
-    res = filters.filter_11_derivational_leak({"mot": "filer", "definition": "Transforment en fil"})
+    monkeypatch.setattr(F, "derivational_leak_token", lambda clue, mot: "fil")
+    res = F.filter_11_derivational_leak({"mot": "filer", "definition": "Transforment en fil"})
     assert res.is_reject
     assert "fil" in res.reason
 
 def test_filter_11_derivational_leak_accepts_when_no_leak(monkeypatch):
-    import filters
-    monkeypatch.setattr(filters, "derivational_leak_token", lambda clue, mot: None)
-    res = filters.filter_11_derivational_leak({"mot": "filer", "definition": "Marquera un objet"})
+    monkeypatch.setattr(F, "derivational_leak_token", lambda clue, mot: None)
+    res = F.filter_11_derivational_leak({"mot": "filer", "definition": "Marquera un objet"})
     assert res.is_accept
 ```
 
-(If `test_filters.py` imports `filters` via a `sys.path` insert at the top, reuse it; the two tests above only need `import filters`.)
+(Uses the module's existing `from . import filters as F` import, matching every other test in the file.)
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -580,6 +578,8 @@ In `scripts/clue_generation/pipeline_v2/run_pipeline.py`, append to `PIPELINE_FI
 ```python
     ("filter_11_derivational_leak", F.filter_11_derivational_leak, False),
 ```
+
+Also update the stale filter-count comment immediately above `PIPELINE_FILTERS` (line 53) from `# Pipeline §8.3 — filtres 1-10 dans l'ordre` to `# Pipeline §8.3 — filtres 1-11 dans l'ordre`.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
