@@ -70,8 +70,7 @@ def _token_lemmas(token: str, index) -> set[str]:
 
 
 def is_derivational_leak(clue: str, target_lemma: str, graph, index) -> str | None:
-    """Offending clue token if any of its lemmas is a ≤2-hop derivational relative of
-    target_lemma per `graph`; None otherwise (and when graph/related is empty)."""
+    """Offending clue token if any of its lemmas is a ≤2-hop derivational relative of target_lemma per `graph`; None otherwise (and when graph/related is empty)."""
     related = graph.get(target_lemma.lower().strip()) if graph else None
     if not related:
         return None

@@ -9,8 +9,7 @@ import pytest
 
 from . import filters as F
 
-# pipeline_v2 has __init__.py, so pytest only puts `scripts/` on sys.path; add this
-# dir too so `import filters` (needed for monkeypatch.setattr below) resolves.
+# pipeline_v2 has __init__.py so pytest only exposes scripts/ on sys.path; add this dir too so import filters resolves for the monkeypatch.setattr calls below.
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 
 
