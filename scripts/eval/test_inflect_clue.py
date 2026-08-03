@@ -1407,6 +1407,34 @@ def test_comma_coordinated_reflexive_verb_inflects():
     assert res.text == "Fuient, se cachent", res.text
 
 
+def _reflexive_person_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "redescendre", "redescends", "v3__t___zz ipre 2sg")
+    _add(idx, "retirer", "retirer", "v1__t___zz infi")
+    _add(idx, "retirer", "retires", "v1__t___zz ipre 2sg")
+    _add(idx, "élever", "élever", "v1__t___zz infi")
+    _add(idx, "élever", "élèves", "v1__t___zz ipre 2sg")
+    return idx
+
+
+def test_coordinated_reflexive_clitic_agrees_person():
+    """A 2sg target must agree the clitic too: `se retirer` → `te retires`."""
+    idx = _reflexive_person_index()
+    res = inflect_clue("Redescends, se retirer", {"v3__t___zz", "ipre", "2sg"}, idx)
+    assert res.text == "Redescends, te retires", res.text
+
+
+def test_coordinated_reflexive_clitic_kept_for_third_person():
+    """3sg keeps `se` (`Redescend, se retire`)."""
+    idx = MorphologyIndex()
+    _add(idx, "redescendre", "redescendre", "v3__t___zz infi")
+    _add(idx, "redescendre", "redescend", "v3__t___zz ipre 3sg")
+    _add(idx, "retirer", "retirer", "v1__t___zz infi")
+    _add(idx, "retirer", "retire", "v1__t___zz ipre 3sg")
+    res = inflect_clue("Redescendre, se retirer", {"v3__t___zz", "ipre", "3sg"}, idx)
+    assert res.text == "Redescend, se retire", res.text
+
+
 def test_person_preference_prefers_3sg_over_1sg():
     """A surface fused across 1sg+3sg clues in the 3rd person, not the 1st."""
     idx = MorphologyIndex()

@@ -41,6 +41,9 @@ _NEG_RESTRUCTURE_MOODS = _FINITE_MOODS | {"ppre"}
 _ELISION_INITIALS = set("aeiouéèêëàâîïôûùüÿœh")
 # Reflexive clitics that may sit between `pas` and the verb in `Ne pas se présenter` and must stay in front of it.
 _REFLEXIVE_CLITICS = {"se", "s"}
+# Person-agreeing reflexive clitic for a co-inflated verb (3sg/3pl keep `se`); me/te elide to m'/t' before a vowel.
+_REFLEXIVE_PRONOUN = {"1sg": "me", "2sg": "te", "1pl": "nous", "2pl": "vous"}
+_VOWEL_START = tuple("aàâäeéèêëiîïoôöuùûüyh")
 
 # `qui` after one of these isn't a noun's subject relative (`ce qui` = invariably 3sg; oblique `de/à/… qui` = prep's object).
 _NON_ANTECEDENT_BEFORE_QUI = {
@@ -784,8 +787,17 @@ def inflect_clue(
         if lo in _DEGREE_TRANSPARENT:
             i += 1
             continue
-        # Cross a reflexive clitic before a coordinated verb (`…, se retirer`), keeping `saw_coord` so it still co-inflates.
+        # Cross a reflexive clitic before a coordinated verb (`…, se retirer`), keeping `saw_coord` so it co-inflates; agree the clitic's person too (2sg `te retires`).
         if lo in _REFLEXIVE_CLITICS and saw_coord:
+            person = next((p for p in _PERSON_PREFERENCE if p in target), None)
+            pron = _REFLEXIVE_PRONOUN.get(person)
+            if pron:
+                nxt = _next_alpha_token(new_tokens, i)
+                # `s'élever` already carries an apostrophe token: emit bare `t` so it reads `t'`, not `t''`.
+                apostrophe_follows = i + 1 < len(new_tokens) and new_tokens[i + 1] == "'"
+                if pron in ("me", "te") and nxt and nxt.startswith(_VOWEL_START):
+                    pron = pron[0] if apostrophe_follows else pron[0] + "'"
+                new_tokens[i] = pron
             i += 1
             continue
         # Relative clause `qui <verb>`: agree to 3rd person + the answer's number, only when the antecedent is unambiguous (no `conflicting_number`) and `qui` isn't oblique/`ce qui`.
