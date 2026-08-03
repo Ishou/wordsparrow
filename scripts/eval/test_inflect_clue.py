@@ -1424,6 +1424,13 @@ def test_coordinated_reflexive_clitic_agrees_person():
     assert res.text == "Redescends, te retires", res.text
 
 
+def test_coordinated_reflexive_clitic_elides_before_vowel():
+    """Unelided `se` before a vowel-initial verb becomes `t'` as two glued tokens: `se élever` → `t'élèves`, not `t' élèves`."""
+    idx = _reflexive_person_index()
+    res = inflect_clue("Redescends, se élever", {"v3__t___zz", "ipre", "2sg"}, idx)
+    assert res.text == "Redescends, t’élèves", res.text
+
+
 def test_coordinated_reflexive_clitic_kept_for_third_person():
     """3sg keeps `se` (`Redescend, se retire`)."""
     idx = MorphologyIndex()

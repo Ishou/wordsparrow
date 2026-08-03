@@ -796,8 +796,14 @@ def inflect_clue(
                 # `s'élever` already carries an apostrophe token: emit bare `t` so it reads `t'`, not `t''`.
                 apostrophe_follows = i + 1 < len(new_tokens) and new_tokens[i + 1] == "'"
                 if pron in ("me", "te") and nxt and nxt.startswith(_VOWEL_START):
-                    pron = pron[0] if apostrophe_follows else pron[0] + "'"
-                new_tokens[i] = pron
+                    if apostrophe_follows:
+                        new_tokens[i] = pron[0]
+                    else:
+                        # Separate apostrophe token, matching `_ne_pas_restructure`'s `["n", "’"]`, so `_detokenize` glues it.
+                        new_tokens[i:i + 1] = [pron[0], "’"]
+                        i += 1
+                else:
+                    new_tokens[i] = pron
             i += 1
             continue
         # Relative clause `qui <verb>`: agree to 3rd person + the answer's number, only when the antecedent is unambiguous (no `conflicting_number`) and `qui` isn't oblique/`ce qui`.
