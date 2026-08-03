@@ -41,6 +41,16 @@ _NEG_RESTRUCTURE_MOODS = _FINITE_MOODS | {"ppre"}
 _ELISION_INITIALS = set("aeiouéèêëàâîïôûùüÿœh")
 # Reflexive clitics that may sit between `pas` and the verb in `Ne pas se présenter` and must stay in front of it.
 _REFLEXIVE_CLITICS = {"se", "s"}
+# Person-agreeing reflexive clitic for a co-inflated verb (3sg/3pl keep `se`); me/te elide to m'/t' before a vowel.
+_REFLEXIVE_PRONOUN = {"1sg": "me", "2sg": "te", "1pl": "nous", "2pl": "vous"}
+_VOWEL_START = tuple("aàâäeéèêëiîïoôöuùûüyh")
+
+# `qui` after one of these isn't a noun's subject relative (`ce qui` = invariably 3sg; oblique `de/à/… qui` = prep's object).
+_NON_ANTECEDENT_BEFORE_QUI = {
+    "ce", "quoi",
+    "de", "d", "à", "par", "pour", "sur", "sous", "avec", "sans",
+    "chez", "contre", "vers", "dans", "en", "entre",
+}
 
 # Pre-head adjectives in French — a small closed set that conventionally
 # precedes the noun (petit oiseau, vieille femme, bel arbre). When a clue
@@ -107,13 +117,8 @@ _MOOD_PREFERENCE = (
     "ipre", "ppas", "ifut", "iimp", "ipsi", "cond",
     "ppre", "spre", "simp", "impe", "infi",
 )
-# Person preference within a mood. For ambiguous syncretic forms like
-# `unis` (1sg+2sg ipre fused on one grammalecte row), 2sg is the more
-# natural mots-fléchés rendering ("Associes ensemble" reads as a direct
-# imperative-style instruction more often than "Associe ensemble").
-# 3sg also outranks 1sg because crosswords typically clue verb forms in
-# the 3rd person ("Va vite" → court).
-_PERSON_PREFERENCE = ("2sg", "3sg", "3pl", "2pl", "1pl", "1sg")
+# Person preference for ambiguous syncretic forms: 3sg first (crosswords clue the 3rd person, no spurious -er -s), else 2sg, else 1sg.
+_PERSON_PREFERENCE = ("3sg", "2sg", "1sg", "3pl", "2pl", "1pl")
 
 
 # Determiners that mark a direct-object NP when they immediately follow
@@ -736,6 +741,9 @@ def inflect_clue(
     in_pp = False
     saw_coord = False
     after_comma = False
+    answer_num = "pl" if "pl" in target else "sg"
+    # True once a crossed noun's number conflicts with the answer's, making the `qui`-antecedent ambiguous.
+    conflicting_number = False
     i = head_idx + 1
     while i < len(new_tokens):
         tok = new_tokens[i]
@@ -769,6 +777,9 @@ def inflect_clue(
                 new_target = _noun_agreement_from_form(lo, noun_lemma, index)
                 if new_target:
                     gn = new_target
+                    noun_num = "pl" if "pl" in new_target else ("sg" if "sg" in new_target else None)
+                    if noun_num is not None and noun_num != answer_num:
+                        conflicting_number = True
             in_pp = False
             i += 1
             continue
@@ -776,6 +787,47 @@ def inflect_clue(
         if lo in _DEGREE_TRANSPARENT:
             i += 1
             continue
+        # Cross a reflexive clitic before a coordinated verb (`…, se retirer`), keeping `saw_coord` so it co-inflates; agree the clitic's person too (2sg `te retires`).
+        if lo in _REFLEXIVE_CLITICS and saw_coord:
+            person = next((p for p in _PERSON_PREFERENCE if p in target), None)
+            pron = _REFLEXIVE_PRONOUN.get(person)
+            if pron:
+                nxt = _next_alpha_token(new_tokens, i)
+                # `s'élever` already carries an apostrophe token: emit bare `t` so it reads `t'`, not `t''`.
+                apostrophe_follows = i + 1 < len(new_tokens) and new_tokens[i + 1] == "'"
+                if pron in ("me", "te") and nxt and nxt.startswith(_VOWEL_START):
+                    if apostrophe_follows:
+                        new_tokens[i] = pron[0]
+                    else:
+                        # Separate apostrophe token, matching `_ne_pas_restructure`'s `["n", "’"]`, so `_detokenize` glues it.
+                        new_tokens[i:i + 1] = [pron[0], "’"]
+                        i += 1
+                else:
+                    # `nous`/`vous` never elide: drop a stray pre-elided apostrophe from the source token.
+                    if apostrophe_follows:
+                        del new_tokens[i + 1]
+                    new_tokens[i] = pron
+            i += 1
+            continue
+        # Relative clause `qui <verb>`: agree to 3rd person + the answer's number, only when the antecedent is unambiguous (no `conflicting_number`) and `qui` isn't oblique/`ce qui`.
+        _prev = new_tokens[i - 1].lower() if i > 0 else ""
+        if (lo == "qui" and target_pos in ("nom", "adj")
+                and not conflicting_number and _prev not in _NON_ANTECEDENT_BEFORE_QUI):
+            j = i + 1
+            while j < len(new_tokens) and not _is_alpha_token(new_tokens[j]):
+                j += 1
+            if j < len(new_tokens):
+                vlo = new_tokens[j].lower()
+                if "verbe" in index.pos_classes_of_form(vlo):
+                    vlemma = index.lemma_of_form(vlo, prefer_pos="verbe")
+                    finite = {m for _l, tg in index.lookup_form(vlo) for m in (tg & _FINITE_MOODS)}
+                    vmood = next((m for m in _MOOD_PREFERENCE if m in finite), None)
+                    vnum = "3pl" if "pl" in target else "3sg"
+                    if vlemma and vmood:
+                        nf = index.inflect(vlemma, {vmood, vnum}, prefer_pos="verbe")
+                        if nf:
+                            new_tokens[j] = nf
+            break
         if lo in _FUNCTION_WORDS:
             break
         # Co-head: same POS as target, NP state, reached after a conjunction.
