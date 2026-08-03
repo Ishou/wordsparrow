@@ -42,8 +42,7 @@ _ELISION_INITIALS = set("aeiouéèêëàâîïôûùüÿœh")
 # Reflexive clitics that may sit between `pas` and the verb in `Ne pas se présenter` and must stay in front of it.
 _REFLEXIVE_CLITICS = {"se", "s"}
 
-# A `qui` immediately preceded by one of these is not a noun's subject relative:
-# `ce qui` is invariably 3sg; oblique `de/à/… qui` has `qui` as the prep's object.
+# `qui` after one of these isn't a noun's subject relative (`ce qui` = invariably 3sg; oblique `de/à/… qui` = prep's object).
 _NON_ANTECEDENT_BEFORE_QUI = {
     "ce", "quoi",
     "de", "d", "à", "par", "pour", "sur", "sous", "avec", "sans",
@@ -115,12 +114,7 @@ _MOOD_PREFERENCE = (
     "ipre", "ppas", "ifut", "iimp", "ipsi", "cond",
     "ppre", "spre", "simp", "impe", "infi",
 )
-# Person preference within a mood, for ambiguous syncretic forms. 3sg first:
-# crosswords clue verb forms in the 3rd person, and for -er verbs 3sg has no
-# trailing -s, avoiding the spurious 2sg -s ("Renonces" → "Renonce"). When
-# there is NO 3sg reading — a 2nd/3rd-group -s form like `unis` {1sg,2sg} —
-# 2sg wins so the clue head also carries the -s ("unis" → "Associes"),
-# mirroring the surface's ending; 1sg last.
+# Person preference for ambiguous syncretic forms: 3sg first (crosswords clue the 3rd person, no spurious -er -s), else 2sg, else 1sg.
 _PERSON_PREFERENCE = ("3sg", "2sg", "1sg", "3pl", "2pl", "1pl")
 
 
@@ -745,8 +739,7 @@ def inflect_clue(
     saw_coord = False
     after_comma = False
     answer_num = "pl" if "pl" in target else "sg"
-    # A noun crossed before `qui` whose number differs from the answer makes the
-    # relative's antecedent ambiguous — a `qui`-verb agreement could then be wrong.
+    # True once a crossed noun's number conflicts with the answer's, making the `qui`-antecedent ambiguous.
     conflicting_number = False
     i = head_idx + 1
     while i < len(new_tokens):
@@ -791,17 +784,11 @@ def inflect_clue(
         if lo in _DEGREE_TRANSPARENT:
             i += 1
             continue
-        # A reflexive clitic before a coordinated verb (`…, se retirer`) is crossed,
-        # keeping `saw_coord`, so the following verb still co-inflates (`se retire`).
+        # Cross a reflexive clitic before a coordinated verb (`…, se retirer`), keeping `saw_coord` so it still co-inflates.
         if lo in _REFLEXIVE_CLITICS and saw_coord:
             i += 1
             continue
-        # Relative clause `qui <verb>`: agree the verb with the answer's number,
-        # 3rd person (`Homme qui dirige` @pl → `qui dirigent`). Fire only when the
-        # antecedent's number is unambiguous: every crossed noun shares the
-        # answer's number (`conflicting_number` is False), so whichever noun `qui`
-        # attaches to, the number is the same. Skip `ce qui` (invariably 3sg) and
-        # oblique `de/à qui` (the token before `qui` is a preposition/`ce`).
+        # Relative clause `qui <verb>`: agree to 3rd person + the answer's number, only when the antecedent is unambiguous (no `conflicting_number`) and `qui` isn't oblique/`ce qui`.
         _prev = new_tokens[i - 1].lower() if i > 0 else ""
         if (lo == "qui" and target_pos in ("nom", "adj")
                 and not conflicting_number and _prev not in _NON_ANTECEDENT_BEFORE_QUI):
