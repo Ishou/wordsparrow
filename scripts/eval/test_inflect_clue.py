@@ -1400,9 +1400,7 @@ def _reflexive_index() -> MorphologyIndex:
 
 
 def test_comma_coordinated_reflexive_verb_inflects():
-    """`Fuir, se cacher` @ 3pl must inflect BOTH verbs, walking through the
-    reflexive clitic `se`: the coordinated `se cacher` was left as an
-    infinitive because `se` (a function word) broke the co-head walk."""
+    """`Fuir, se cacher` @ 3pl must inflect BOTH verbs through the reflexive clitic `se`."""
     idx = _reflexive_index()
     tags = {"v3__t___zz", "ipre", "3pl"}
     res = inflect_clue("Fuir, se cacher", tags, idx)
@@ -1410,8 +1408,7 @@ def test_comma_coordinated_reflexive_verb_inflects():
 
 
 def test_person_preference_prefers_3sg_over_1sg():
-    """A surface fused across 1sg+3sg (e.g. `brouillasse`) clues in the 3rd
-    person — `Rend confus`, not the 1st-person `Rends confus`."""
+    """A surface fused across 1sg+3sg clues in the 3rd person, not the 1st."""
     idx = MorphologyIndex()
     _add(idx, "rendre", "rendre", "v3__t___zz infi")
     _add(idx, "rendre", "rends", "v3__t___zz ipre 1sg")
@@ -1431,16 +1428,14 @@ def _relative_clause_index() -> MorphologyIndex:
 
 
 def test_noun_head_relative_clause_verb_agrees_number():
-    """A `<noun> qui <verb>` clue on a plural answer must agree the relative
-    verb: `Homme qui dirige` -> `Hommes qui dirigent`, not `Hommes qui dirige`."""
+    """`<noun> qui <verb>` on a plural answer must agree the relative verb's number."""
     idx = _relative_clause_index()
     res = inflect_clue("Homme qui dirige", {"nom", "mas", "pl"}, idx)
     assert res.text == "Hommes qui dirigent", res.text
 
 
 def test_relative_clause_same_number_compound_np_agrees():
-    """`<N1> de <N2> qui <verb>` @ plural where N1 and N2 are BOTH plural: the
-    relative agrees regardless of which noun it attaches to (same number)."""
+    """`<N1> de <N2> qui <verb>` agrees when both nouns share the answer's number."""
     idx = MorphologyIndex()
     _add(idx, "groupe", "groupe", "nom mas sg")
     _add(idx, "groupe", "groupes", "nom mas pl")
@@ -1453,8 +1448,7 @@ def test_relative_clause_same_number_compound_np_agrees():
 
 
 def test_relative_clause_conflicting_number_is_skipped():
-    """`Personne au cœur qui aide` — the crossed noun `cœur` (sg) differs from the
-    plural answer, so the antecedent is ambiguous; leave the verb (never guess)."""
+    """A crossed noun with a conflicting number makes the antecedent ambiguous; skip."""
     idx = MorphologyIndex()
     _add(idx, "personne", "personne", "nom fem sg")
     _add(idx, "personne", "personnes", "nom fem pl")
