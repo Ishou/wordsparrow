@@ -1442,6 +1442,17 @@ def test_coordinated_reflexive_clitic_kept_for_third_person():
     assert res.text == "Redescend, se retire", res.text
 
 
+def test_coordinated_reflexive_clitic_drops_stray_apostrophe_for_nous_vous():
+    """`nous`/`vous` never elide: a pre-elided source (`s'élever`) must drop the stray apostrophe, not strand it (`nous'élevons`)."""
+    idx = MorphologyIndex()
+    _add(idx, "redescendre", "redescendre", "v3__t___zz infi")
+    _add(idx, "redescendre", "redescendons", "v3__t___zz ipre 1pl")
+    _add(idx, "élever", "élever", "v1__t___zz infi")
+    _add(idx, "élever", "élevons", "v1__t___zz ipre 1pl")
+    res = inflect_clue("Redescendre, s'élever", {"v3__t___zz", "ipre", "1pl"}, idx)
+    assert res.text == "Redescendons, nous élevons", res.text
+
+
 def test_person_preference_prefers_3sg_over_1sg():
     """A surface fused across 1sg+3sg clues in the 3rd person, not the 1st."""
     idx = MorphologyIndex()

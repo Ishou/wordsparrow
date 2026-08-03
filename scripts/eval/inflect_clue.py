@@ -803,6 +803,9 @@ def inflect_clue(
                         new_tokens[i:i + 1] = [pron[0], "’"]
                         i += 1
                 else:
+                    # `nous`/`vous` never elide: drop a stray pre-elided apostrophe from the source token.
+                    if apostrophe_follows:
+                        del new_tokens[i + 1]
                     new_tokens[i] = pron
             i += 1
             continue
