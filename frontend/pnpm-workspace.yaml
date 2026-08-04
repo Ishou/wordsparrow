@@ -16,7 +16,7 @@ overrides:
   # qs pinned to the patched line; lives here (not package.json) because pnpm 11.7 stops reading the package.json pnpm field.
   qs: 6.15.2
   # undici/tmp are dev-only (jsdom/vitest/panda + lhci toolchain); patched lines close Set-Cookie/SOCKS5 (undici) and path-traversal (tmp) CVEs.
-  undici: 7.28.0
+  undici: 7.29.0
   tmp: 0.2.7
 
 # pnpm 11 fails install when a dependency in the graph runs an install
@@ -45,5 +45,7 @@ minimumReleaseAgeExclude:
     # Renovate security update: fast-uri@3.1.4
     fast-uri@3.1.4,
     # Renovate security update: postcss@8.5.25
-    postcss@8.5.25
+    postcss@8.5.25,
+    # Renovate security update: undici@7.29.0
+    undici@7.29.0
   ]
