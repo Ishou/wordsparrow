@@ -50,7 +50,7 @@ dependencies {
     //   tools.jackson.core (Jackson 3.x line, pulled in transitively): 3.1.1
     //     — GHSA-72hv-8253-57qq, GHSA-6v53-7c9g-w56r, GHSA-2m67-wjpj-xhg9.
     constraints {
-        implementation("io.netty:netty-codec-http:4.2.16.Final")
+        implementation("io.netty:netty-codec-http:4.2.17.Final")
         implementation("io.netty:netty-codec-http2:4.2.16.Final")
         implementation("io.netty:netty-codec-compression:4.2.16.Final")
         implementation("io.netty:netty-transport-native-epoll:4.2.15.Final")
