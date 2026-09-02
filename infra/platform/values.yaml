@@ -34,7 +34,7 @@ volumeGc:
     # alpine/k8s bundles a shell + kubectl; rancher/kubectl is distroless (no /bin/sh) so the reaper can't run.
     repository: alpine/k8s
     # renovate: datasource=docker depName=alpine/k8s
-    tag: "1.31.4"
+    tag: "1.37.0"
     digest: ""
     pullPolicy: IfNotPresent
   resources:
