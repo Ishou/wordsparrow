@@ -45,5 +45,7 @@ minimumReleaseAgeExclude:
     # Renovate security update: fast-uri@3.1.4
     fast-uri@3.1.4,
     # Renovate security update: postcss@8.5.25
-    postcss@8.5.25
+    postcss@8.5.25,
+    # Renovate security update: vitest@4.1.11
+    vitest@4.1.11
   ]
