@@ -8,6 +8,7 @@ import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from clue_metrics import MAX_CLUE_CHARS  # noqa: E402
 from inflect_clue import _TOKEN_RE, _is_alpha_token, inflect_clue  # noqa: E402
 from morphology_index import MorphologyIndex  # noqa: E402
 
@@ -16,7 +17,6 @@ SINGULAR_ONLY_DETERMINERS = {
     "du", "au", "le", "la", "un", "une", "ce", "cet", "cette",
     "son", "sa", "mon", "ma", "ton", "ta", "l", "d",
 }
-MAX_CLUE_CHARS = 25
 
 
 def fold(s):
@@ -96,15 +96,24 @@ def main():
     index = MorphologyIndex.load(args.lexique)
     occ = {}
     with args.lexique.open(encoding="utf-8") as fh:
+        seen_header = False
+        f_idx = t_idx = -1
         for line in fh:
             if line.startswith("#"):
                 continue
-            p = line.rstrip("\n").split("\t")
-            if len(p) >= 12:
-                try:
-                    occ[p[2]] = max(occ.get(p[2], 0), int(p[11]))
-                except ValueError:
-                    pass
+            cols = line.rstrip("\n").split("\t")
+            if not seen_header:
+                if cols[:1] == ["id"] and "Flexion" in cols and "Total occurrences" in cols:
+                    f_idx = cols.index("Flexion")
+                    t_idx = cols.index("Total occurrences")
+                    seen_header = True
+                continue
+            if len(cols) <= max(f_idx, t_idx):
+                continue
+            try:
+                occ[cols[f_idx]] = max(occ.get(cols[f_idx], 0), int(cols[t_idx]))
+            except ValueError:
+                pass
 
     existing = {(r["word"], r["clue"]) for r in csv.DictReader(args.corpus.open(encoding="utf-8"))}
     clues = collections.defaultdict(list)
