@@ -139,6 +139,8 @@ def test_decompose_yields_full_target_first_then_2sg_then_ipre() -> None:
 
 @pytest.mark.parametrize("tags,expected", [
     # The screenshot bug. `unis` syncretic ipre {1sg, 2sg}; `associer` splits.
+    # No 3sg in the set, so person-preference picks 2sg → `Associes` (mirrors
+    # the surface's -s ending).
     ({"v2__t___zz", "ipre", "1sg", "2sg"}, "Associes ensemble"),
     # The other analysis of `unis`: mas-pl ppas — already worked pre-fix,
     # locked in to make sure decomposition didn't regress it.
@@ -1385,3 +1387,181 @@ def test_authored_head_pos_is_optional(index):
     with_hint = inflect_clue("Rend un service", {"nom", "mas", "pl"}, index, "verbe")
     without = inflect_clue("Rend un service", {"nom", "mas", "pl"}, index)
     assert with_hint.text == without.text == "Rendent un service"
+
+
+def _reflexive_index() -> MorphologyIndex:
+    """Head verb + a comma-coordinated reflexive verb, 3pl forms."""
+    idx = MorphologyIndex()
+    _add(idx, "fuir", "fuir", "v3__t___zz infi")
+    _add(idx, "fuir", "fuient", "v3__t___zz ipre 3pl")
+    _add(idx, "cacher", "cacher", "v1__t___zz infi")
+    _add(idx, "cacher", "cachent", "v1__t___zz ipre 3pl")
+    return idx
+
+
+def test_comma_coordinated_reflexive_verb_inflects():
+    """`Fuir, se cacher` @ 3pl must inflect BOTH verbs through the reflexive clitic `se`."""
+    idx = _reflexive_index()
+    tags = {"v3__t___zz", "ipre", "3pl"}
+    res = inflect_clue("Fuir, se cacher", tags, idx)
+    assert res.text == "Fuient, se cachent", res.text
+
+
+def _reflexive_person_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "redescendre", "redescends", "v3__t___zz ipre 2sg")
+    _add(idx, "retirer", "retirer", "v1__t___zz infi")
+    _add(idx, "retirer", "retires", "v1__t___zz ipre 2sg")
+    _add(idx, "élever", "élever", "v1__t___zz infi")
+    _add(idx, "élever", "élèves", "v1__t___zz ipre 2sg")
+    return idx
+
+
+def test_coordinated_reflexive_clitic_agrees_person():
+    """A 2sg target must agree the clitic too: `se retirer` → `te retires`."""
+    idx = _reflexive_person_index()
+    res = inflect_clue("Redescends, se retirer", {"v3__t___zz", "ipre", "2sg"}, idx)
+    assert res.text == "Redescends, te retires", res.text
+
+
+def test_coordinated_reflexive_clitic_elides_before_vowel():
+    """Unelided `se` before a vowel-initial verb becomes `t'` as two glued tokens: `se élever` → `t'élèves`, not `t' élèves`."""
+    idx = _reflexive_person_index()
+    res = inflect_clue("Redescends, se élever", {"v3__t___zz", "ipre", "2sg"}, idx)
+    assert res.text == "Redescends, t’élèves", res.text
+
+
+def test_coordinated_reflexive_clitic_kept_for_third_person():
+    """3sg keeps `se` (`Redescend, se retire`)."""
+    idx = MorphologyIndex()
+    _add(idx, "redescendre", "redescendre", "v3__t___zz infi")
+    _add(idx, "redescendre", "redescend", "v3__t___zz ipre 3sg")
+    _add(idx, "retirer", "retirer", "v1__t___zz infi")
+    _add(idx, "retirer", "retire", "v1__t___zz ipre 3sg")
+    res = inflect_clue("Redescendre, se retirer", {"v3__t___zz", "ipre", "3sg"}, idx)
+    assert res.text == "Redescend, se retire", res.text
+
+
+def test_coordinated_reflexive_clitic_drops_stray_apostrophe_for_nous_vous():
+    """`nous`/`vous` never elide: a pre-elided source (`s'élever`) must drop the stray apostrophe, not strand it (`nous'élevons`)."""
+    idx = MorphologyIndex()
+    _add(idx, "redescendre", "redescendre", "v3__t___zz infi")
+    _add(idx, "redescendre", "redescendons", "v3__t___zz ipre 1pl")
+    _add(idx, "élever", "élever", "v1__t___zz infi")
+    _add(idx, "élever", "élevons", "v1__t___zz ipre 1pl")
+    res = inflect_clue("Redescendre, s'élever", {"v3__t___zz", "ipre", "1pl"}, idx)
+    assert res.text == "Redescendons, nous élevons", res.text
+
+
+def test_person_preference_prefers_3sg_over_1sg():
+    """A surface fused across 1sg+3sg clues in the 3rd person, not the 1st."""
+    idx = MorphologyIndex()
+    _add(idx, "rendre", "rendre", "v3__t___zz infi")
+    _add(idx, "rendre", "rends", "v3__t___zz ipre 1sg")
+    _add(idx, "rendre", "rend", "v3__t___zz ipre 3sg")
+    res = inflect_clue("Rendre confus", {"v3__t___zz", "ipre", "1sg", "3sg"}, idx)
+    assert res.text == "Rend confus", res.text
+
+
+def _relative_clause_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "homme", "homme", "nom mas sg")
+    _add(idx, "homme", "hommes", "nom mas pl")
+    _add(idx, "diriger", "diriger", "v1__t___zz infi")
+    _add(idx, "diriger", "dirige", "v1__t___zz ipre 3sg")
+    _add(idx, "diriger", "dirigent", "v1__t___zz ipre 3pl")
+    return idx
+
+
+def test_noun_head_relative_clause_verb_agrees_number():
+    """`<noun> qui <verb>` on a plural answer must agree the relative verb's number."""
+    idx = _relative_clause_index()
+    res = inflect_clue("Homme qui dirige", {"nom", "mas", "pl"}, idx)
+    assert res.text == "Hommes qui dirigent", res.text
+
+
+def test_relative_clause_same_number_compound_np_agrees():
+    """`<N1> de <N2> qui <verb>` agrees when both nouns share the answer's number."""
+    idx = MorphologyIndex()
+    _add(idx, "groupe", "groupe", "nom mas sg")
+    _add(idx, "groupe", "groupes", "nom mas pl")
+    _add(idx, "personne", "personnes", "nom fem pl")
+    _add(idx, "chanter", "chanter", "v1__t___zz infi")
+    _add(idx, "chanter", "chante", "v1__t___zz ipre 3sg")
+    _add(idx, "chanter", "chantent", "v1__t___zz ipre 3pl")
+    res = inflect_clue("Groupe de personnes qui chante", {"nom", "mas", "pl"}, idx)
+    assert res.text == "Groupes de personnes qui chantent", res.text
+
+
+def test_relative_clause_conflicting_number_is_skipped():
+    """A crossed noun with a conflicting number makes the antecedent ambiguous; skip."""
+    idx = MorphologyIndex()
+    _add(idx, "personne", "personne", "nom fem sg")
+    _add(idx, "personne", "personnes", "nom fem pl")
+    _add(idx, "cœur", "cœur", "nom mas sg")
+    _add(idx, "aider", "aider", "v1__t___zz infi")
+    _add(idx, "aider", "aide", "v1__t___zz ipre 3sg")
+    _add(idx, "aider", "aident", "v1__t___zz ipre 3pl")
+    res = inflect_clue("Personne au cœur qui aide", {"nom", "fem", "pl"}, idx)
+    assert res.text == "Personnes au cœur qui aide", res.text  # relative left untouched
+
+
+def _ppre_led_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    # `tirant` has no adjective reading, so the ranker can only reach the embedded complement adj `sombre` — the bug's setup.
+    _add(idx, "tirer", "tirant", "v1__i___zz ppre")
+    _add(idx, "sombre", "sombre", "adj epi sg")
+    _add(idx, "sombre", "sombres", "adj epi pl")
+    return idx
+
+
+def test_participle_led_clue_is_invariant_for_plural_adjective() -> None:
+    """A participe présent governing a complement is invariable; the embedded adj must not be pluralised."""
+    res = inflect_clue("Tirant sur le sombre", {"adj", "epi", "pl"}, _ppre_led_index())
+    assert res.text == "Tirant sur le sombre", res.text
+    assert res.flag == "ppre-invariant", res.flag
+
+
+def test_bare_adjectival_participle_still_agrees() -> None:
+    """A bare adjectif verbal with no complement is a real adjective and does agree."""
+    idx = MorphologyIndex()
+    _add(idx, "charmer", "charmant", "v1__t___zz ppre")
+    _add(idx, "charmant", "charmant", "adj mas sg")
+    _add(idx, "charmant", "charmants", "adj mas pl")
+    res = inflect_clue("Charmant", {"adj", "mas", "pl"}, idx)
+    assert res.text == "Charmants", res.text
+
+
+def test_coordinated_participial_adjectives_still_agree() -> None:
+    """`Perçant, strident` is a coordinated adjectif verbal pair, not a governed complement, so both members agree."""
+    idx = MorphologyIndex()
+    _add(idx, "percer", "perçant", "v1__t___zz ppre")
+    _add(idx, "perçant", "perçant", "adj mas sg")
+    _add(idx, "perçant", "perçants", "adj mas pl")
+    _add(idx, "strident", "strident", "adj mas sg")
+    _add(idx, "strident", "stridents", "adj mas pl")
+    res = inflect_clue("Perçant, strident", {"adj", "mas", "pl"}, idx)
+    assert res.text == "Perçants, stridents", res.text
+
+
+def test_participle_with_direct_object_freezes_even_when_adjectival() -> None:
+    """An adjectif verbal can never take a direct object, so `Marquant une assignation` is verbal and stays invariable despite `marquant` having an adjective reading."""
+    idx = MorphologyIndex()
+    _add(idx, "marquer", "marquant", "v1__t___zz ppre")
+    _add(idx, "marquant", "marquant", "adj mas sg")
+    _add(idx, "marquant", "marquants", "adj mas pl")
+    _add(idx, "assignation", "assignation", "nom fem sg")
+    res = inflect_clue("Marquant une assignation", {"adj", "mas", "pl"}, idx)
+    assert res.text == "Marquant une assignation", res.text
+    assert res.flag == "ppre-invariant", res.flag
+
+
+def test_participle_with_prepositional_complement_agrees_when_adjectival() -> None:
+    """`Éclatant de lumière` is an adjectif verbal with a cause complement and does agree; only a form with no adjective reading is certainly verbal."""
+    idx = MorphologyIndex()
+    _add(idx, "éclater", "éclatant", "v1__i___zz ppre")
+    _add(idx, "éclatant", "éclatant", "adj mas sg")
+    _add(idx, "éclatant", "éclatante", "adj fem sg")
+    _add(idx, "lumière", "lumière", "nom fem sg")
+    res = inflect_clue("Éclatant de lumière", {"adj", "fem", "sg"}, idx)
+    assert res.text == "Éclatante de lumière", res.text
