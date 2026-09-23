@@ -522,6 +522,31 @@ def _subject_pronoun_frame(
     return InflectionResult(_capitalize_first(_detokenize(new_tokens)), "")
 
 
+def _participle_led_invariant(
+    tokens: list[str], target_pos: str, index: "MorphologyIndex",
+) -> bool:
+    """True when a clue-leading participe présent is verbal, not an agreeing adjectif verbal: a direct object proves it, and so does the absence of any adjective reading."""
+    if target_pos != "adj":
+        return False
+    head_idx = next((i for i, t in enumerate(tokens) if _is_alpha_token(t)), None)
+    if head_idx is None:
+        return False
+    head = tokens[head_idx].lower()
+    if not any("ppre" in tags for _lemma, tags in index.lookup_form(head)):
+        return False
+    nxt = tokens[head_idx + 1] if head_idx + 1 < len(tokens) else None
+    # Nothing, punctuation or a coordinator after it leaves a bare adjectif verbal (`Charmant`, `Perçant, strident`), which agrees.
+    if nxt is None or not _is_alpha_token(nxt):
+        return False
+    following = nxt.lower()
+    if following in _COORD_WALKTHROUGH:
+        return False
+    if following in _DOBJ_DETERMINERS:
+        return True
+    # A prepositional complement fits both readings (`éclatant de lumière` agrees, `tirant sur le rouge` does not); only a form with no adjective reading is certainly verbal.
+    return "adj" not in index.pos_classes_of_form(head)
+
+
 def inflect_clue(
     clue: str,
     surface_tags: set[str],
@@ -560,6 +585,10 @@ def inflect_clue(
     tokens = _TOKEN_RE.findall(clue)
     if not tokens:
         return InflectionResult(clue, "empty")
+
+    # A participe présent governing a complement is invariable — freeze rather than let the ranker pluralize an embedded complement adjective (see _participle_led_invariant).
+    if _participle_led_invariant(tokens, target_pos, index):
+        return InflectionResult(_capitalize_first(clue), "ppre-invariant")
 
     # Subject-pronoun frame takes precedence: the pronoun is the answer, not an object noun — see ADR-0107.
     frame = _subject_pronoun_frame(tokens, target, target_pos, index)

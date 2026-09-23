@@ -1385,3 +1385,64 @@ def test_authored_head_pos_is_optional(index):
     with_hint = inflect_clue("Rend un service", {"nom", "mas", "pl"}, index, "verbe")
     without = inflect_clue("Rend un service", {"nom", "mas", "pl"}, index)
     assert with_hint.text == without.text == "Rendent un service"
+
+
+def _ppre_led_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    # `tirant` has no adjective reading, so the ranker can only reach the embedded complement adj `sombre` — the bug's setup.
+    _add(idx, "tirer", "tirant", "v1__i___zz ppre")
+    _add(idx, "sombre", "sombre", "adj epi sg")
+    _add(idx, "sombre", "sombres", "adj epi pl")
+    return idx
+
+
+def test_participle_led_clue_is_invariant_for_plural_adjective() -> None:
+    """A participe présent governing a complement is invariable; the embedded adj must not be pluralised."""
+    res = inflect_clue("Tirant sur le sombre", {"adj", "epi", "pl"}, _ppre_led_index())
+    assert res.text == "Tirant sur le sombre", res.text
+    assert res.flag == "ppre-invariant", res.flag
+
+
+def test_bare_adjectival_participle_still_agrees() -> None:
+    """A bare adjectif verbal with no complement is a real adjective and does agree."""
+    idx = MorphologyIndex()
+    _add(idx, "charmer", "charmant", "v1__t___zz ppre")
+    _add(idx, "charmant", "charmant", "adj mas sg")
+    _add(idx, "charmant", "charmants", "adj mas pl")
+    res = inflect_clue("Charmant", {"adj", "mas", "pl"}, idx)
+    assert res.text == "Charmants", res.text
+
+
+def test_coordinated_participial_adjectives_still_agree() -> None:
+    """`Perçant, strident` is a coordinated adjectif verbal pair, not a governed complement, so both members agree."""
+    idx = MorphologyIndex()
+    _add(idx, "percer", "perçant", "v1__t___zz ppre")
+    _add(idx, "perçant", "perçant", "adj mas sg")
+    _add(idx, "perçant", "perçants", "adj mas pl")
+    _add(idx, "strident", "strident", "adj mas sg")
+    _add(idx, "strident", "stridents", "adj mas pl")
+    res = inflect_clue("Perçant, strident", {"adj", "mas", "pl"}, idx)
+    assert res.text == "Perçants, stridents", res.text
+
+
+def test_participle_with_direct_object_freezes_even_when_adjectival() -> None:
+    """An adjectif verbal can never take a direct object, so `Marquant une assignation` is verbal and stays invariable despite `marquant` having an adjective reading."""
+    idx = MorphologyIndex()
+    _add(idx, "marquer", "marquant", "v1__t___zz ppre")
+    _add(idx, "marquant", "marquant", "adj mas sg")
+    _add(idx, "marquant", "marquants", "adj mas pl")
+    _add(idx, "assignation", "assignation", "nom fem sg")
+    res = inflect_clue("Marquant une assignation", {"adj", "mas", "pl"}, idx)
+    assert res.text == "Marquant une assignation", res.text
+    assert res.flag == "ppre-invariant", res.flag
+
+
+def test_participle_with_prepositional_complement_agrees_when_adjectival() -> None:
+    """`Éclatant de lumière` is an adjectif verbal with a cause complement and does agree; only a form with no adjective reading is certainly verbal."""
+    idx = MorphologyIndex()
+    _add(idx, "éclater", "éclatant", "v1__i___zz ppre")
+    _add(idx, "éclatant", "éclatant", "adj mas sg")
+    _add(idx, "éclatant", "éclatante", "adj fem sg")
+    _add(idx, "lumière", "lumière", "nom fem sg")
+    res = inflect_clue("Éclatant de lumière", {"adj", "fem", "sg"}, idx)
+    assert res.text == "Éclatante de lumière", res.text
