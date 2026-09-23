@@ -43,7 +43,7 @@ _ELISION_INITIALS = set("aeiouéèêëàâîïôûùüÿœh")
 _REFLEXIVE_CLITICS = {"se", "s"}
 # Person-agreeing reflexive clitic for a co-inflated verb (3sg/3pl keep `se`); me/te elide to m'/t' before a vowel.
 _REFLEXIVE_PRONOUN = {"1sg": "me", "2sg": "te", "1pl": "nous", "2pl": "vous"}
-_VOWEL_START = tuple("aàâäeéèêëiîïoôöuùûüyh")
+_VOWEL_START = tuple(_ELISION_INITIALS)
 
 # `qui` after one of these isn't a noun's subject relative (`ce qui` = invariably 3sg; oblique `de/à/… qui` = prep's object).
 _NON_ANTECEDENT_BEFORE_QUI = {
