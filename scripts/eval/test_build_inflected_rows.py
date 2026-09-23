@@ -121,10 +121,7 @@ def test_rejects_a_token_whose_replacement_has_a_different_lemma() -> None:
     assert reason == "lemma drift"
 
 
-# ---------------------------------------------------------------------------
 # main() — row assembly: dedup, the char cap, and frequency lookup.
-# ---------------------------------------------------------------------------
-
 def _write_fixtures(tmp_path: Path) -> tuple[Path, Path, Path]:
     lexique = tmp_path / "lex.txt"
     header = "id\tvariante\tFlexion\tLemme\tÉtiquettes\tc5\tc6\tc7\tc8\tc9\tc10\tTotal occurrences\n"
