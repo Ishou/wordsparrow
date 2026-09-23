@@ -1,6 +1,7 @@
-"""Tests for `build_inflected_rows.inflection_is_safe`, the independent re-verification of an inflected clue."""
+"""Tests for `build_inflected_rows.inflection_is_safe` and `main`'s row assembly."""
 from __future__ import annotations
 
+import csv
 import sys
 from pathlib import Path
 
@@ -106,3 +107,83 @@ def test_rejects_a_conjugated_compound_element() -> None:
     )
     assert not ok
     assert reason == "hyphenated compound element"
+
+
+def test_rejects_a_token_whose_replacement_has_a_different_lemma() -> None:
+    """A malformed inflection can swap in an unrelated word; when the changed token's own lemma differs from the original token's, the row is dropped rather than shipped."""
+    idx = _noun_index()
+    _add(idx, "mer", "mer", "nom fem sg")
+    res = InflectionResult("Du mer tonneau", "")
+    ok, reason = inflection_is_safe(
+        "Du même tonneau", res, {"nom", "mas", "pl"}, idx
+    )
+    assert not ok
+    assert reason == "lemma drift"
+
+
+# ---------------------------------------------------------------------------
+# main() — row assembly: dedup, the char cap, and frequency lookup.
+# ---------------------------------------------------------------------------
+
+def _write_fixtures(tmp_path: Path) -> tuple[Path, Path, Path]:
+    lexique = tmp_path / "lex.txt"
+    header = "id\tvariante\tFlexion\tLemme\tÉtiquettes\tc5\tc6\tc7\tc8\tc9\tc10\tTotal occurrences\n"
+    rows = "\n".join(
+        "\t".join(["1", "v", form, lemma, tags, "", "", "", "", "", "", str(freq)])
+        for form, lemma, tags, freq in (
+            ("astre", "astre", "nom mas sg", 900),
+            ("astres", "astre", "nom mas pl", 50),
+            ("service", "service", "nom mas sg", 700),
+            ("services", "service", "nom mas pl", 40),
+            ("porte", "porte", "nom fem sg", 600),
+            ("portes", "porte", "nom fem pl", 30),
+        )
+    )
+    lexique.write_text(header + rows + "\n", encoding="utf-8")
+
+    clues = tmp_path / "clues.csv"
+    clues.write_text(
+        "lemma,clue,pos,head_pos\n"
+        "astre,Astre,nom,\n"
+        "service,Service offert à la communauté,nom,\n"
+        "porte,Porte,nom,\n",
+        encoding="utf-8",
+    )
+
+    corpus = tmp_path / "corpus.csv"
+    corpus.write_text("word,clue\nastre,Astre\nportes,Portes\n", encoding="utf-8")
+    return lexique, clues, corpus
+
+
+def _run(monkeypatch, tmp_path: Path, lexique: Path, clues: Path, corpus: Path) -> set[tuple[str, str]]:
+    import build_inflected_rows as m
+
+    out = tmp_path / "out.csv"
+    monkeypatch.setattr(sys, "argv", [
+        "build_inflected_rows.py",
+        "--clues", str(clues), "--lexique", str(lexique),
+        "--corpus", str(corpus), "--out", str(out),
+    ])
+    m.main()
+    return {(r["word"], r["clue"]) for r in csv.DictReader(out.open(encoding="utf-8"))}
+
+
+def test_lemma_row_already_in_corpus_is_not_duplicated(tmp_path, monkeypatch) -> None:
+    lexique, clues, corpus = _write_fixtures(tmp_path)
+    rows = _run(monkeypatch, tmp_path, lexique, clues, corpus)
+    assert ("astre", "Astre") not in rows  # already shipped; dedup keeps the corpus authoritative
+    assert ("astres", "Astres") in rows  # inflected surface is new and under the char cap
+
+
+def test_inflected_row_over_the_char_cap_is_dropped(tmp_path, monkeypatch) -> None:
+    lexique, clues, corpus = _write_fixtures(tmp_path)
+    rows = _run(monkeypatch, tmp_path, lexique, clues, corpus)
+    assert ("service", "Service offert à la communauté") in rows  # lemma row ships regardless of length
+    assert not any(word == "services" for word, _clue in rows)  # inflected text exceeds MAX_CLUE_CHARS
+
+
+def test_inflected_row_already_in_corpus_is_dropped(tmp_path, monkeypatch) -> None:
+    lexique, clues, corpus = _write_fixtures(tmp_path)
+    rows = _run(monkeypatch, tmp_path, lexique, clues, corpus)
+    assert ("porte", "Porte") in rows  # lemma row is new
+    assert ("portes", "Portes") not in rows  # inflected row already shipped
