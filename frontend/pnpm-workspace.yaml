@@ -42,8 +42,8 @@ minimumReleaseAgeExclude:
   [
     # Renovate security update: tmp@0.2.7
     tmp@0.2.7,
-    # Renovate security update: fast-uri@3.1.4 || 3.1.8
-    fast-uri@3.1.4 || 3.1.8,
+    # Renovate security update: fast-uri@3.1.8
+    fast-uri@3.1.8,
     # Renovate security update: postcss@8.5.25
     postcss@8.5.25
   ]
