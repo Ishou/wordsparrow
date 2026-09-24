@@ -1,5 +1,7 @@
 package com.bliss.grid.application.correction
 
+import com.bliss.grid.domain.model.HyphenSurface
+import com.bliss.grid.domain.model.foldToGridText
 import org.slf4j.LoggerFactory
 import java.util.UUID
 
@@ -20,9 +22,10 @@ class SeedCorrectionsUseCase(
         rows: List<SeedReplacement>,
         createdBy: UUID,
     ): Summary {
-        val valid = rows.filter(::isValid)
+        // Grids store the folded A-Z surface; fold the seed word (hyphens included) to match it before validating.
+        val valid = rows.mapNotNull { row -> foldSeedWord(row.wordText)?.let { row.copy(wordText = it) } }.filter(::isValid)
         // The same (word, oldClue) can recur within one source; the store dedup only guards prior runs, so fold the batch first.
-        val deduped = valid.distinctBy { it.wordText.uppercase() to it.oldClueText }
+        val deduped = valid.distinctBy { it.wordText to it.oldClueText }
         val result = store.seedReplacements(deduped, createdBy)
         val summary =
             Summary(
@@ -41,10 +44,12 @@ class SeedCorrectionsUseCase(
         return summary
     }
 
-    // A seed row is meaningful only when all three fields are present and the clue actually changes.
+    // wordText is already a placeable grid surface by construction; only the remaining fields need checking.
     private fun isValid(row: SeedReplacement): Boolean =
-        row.wordText.isNotBlank() &&
-            row.oldClueText.isNotBlank() &&
+        row.oldClueText.isNotBlank() &&
             row.newClueText.isNotBlank() &&
             row.oldClueText != row.newClueText
+
+    // Folds to Word.text's letters-only surface; null when the source isn't A-Z-plus-interior-hyphen.
+    private fun foldSeedWord(text: String): String? = HyphenSurface.split(foldToGridText(text))?.first
 }

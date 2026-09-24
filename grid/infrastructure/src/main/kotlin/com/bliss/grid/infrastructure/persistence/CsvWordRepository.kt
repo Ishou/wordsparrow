@@ -4,12 +4,12 @@ import com.bliss.grid.domain.generation.SurfaceLemmas
 import com.bliss.grid.domain.generation.WordRepository
 import com.bliss.grid.domain.model.HyphenSurface
 import com.bliss.grid.domain.model.Word
+import com.bliss.grid.domain.model.foldToGridText
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.apache.commons.csv.CSVRecord
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
-import java.text.Normalizer
 
 /**
  * [WordRepository] reading the CSV corpus (ADR-0013 §8 — CSV as source of
@@ -129,7 +129,7 @@ class CsvWordRepository(
 
     override fun containsLemma(text: String): Boolean {
         if (text.isBlank()) return false
-        val folded = foldToAscii(text)
+        val folded = foldToGridText(text)
         if (folded.isEmpty() || folded.any { it !in 'A'..'Z' }) return false
         return folded in knownTokens
     }
@@ -420,7 +420,7 @@ class CsvWordRepository(
             if (clue.isBlank()) return null
             // Mots fléchés convention: grid cells are unaccented uppercase ASCII (Word's A-Z
             // invariant in domain). The clue keeps the original accented form for display.
-            val folded = foldToAscii(text)
+            val folded = foldToGridText(text)
             // Interior hyphens fold into separator offsets; other non-A-Z chars still drop the row.
             val (letters, separators) = HyphenSurface.split(folded) ?: return null
             // Lemma column is optional (legacy CSVs predate it). When present-and-foldable,
@@ -430,7 +430,7 @@ class CsvWordRepository(
             val foldedLemma =
                 rawLemma
                     ?.takeIf { it.isNotBlank() }
-                    ?.let(::foldToAscii)
+                    ?.let(::foldToGridText)
                     ?.let { HyphenSurface.split(it)?.first }
                     ?: letters
             // Theme: read explicit column value if present; otherwise null
@@ -465,21 +465,5 @@ class CsvWordRepository(
             // overlay-merge step (in fromClasspath) is what produces the
             // multi-clue case for words that exist in both main + overlay.
         }
-
-        private val DIACRITICS = "\\p{InCombiningDiacriticalMarks}+".toRegex()
-
-        /**
-         * Fold to grid-cell ASCII: NFD-normalize, strip combining marks, expand French
-         * ligatures (œ→oe, æ→ae — these don't decompose under NFD), uppercase.
-         * "Été" → "ETE", "cœur" → "COEUR", "et cætera" → "ET CAETERA".
-         */
-        private fun foldToAscii(text: String): String =
-            DIACRITICS
-                .replace(Normalizer.normalize(text, Normalizer.Form.NFD), "")
-                .replace("œ", "oe")
-                .replace("Œ", "OE")
-                .replace("æ", "ae")
-                .replace("Æ", "AE")
-                .uppercase()
     }
 }

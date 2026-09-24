@@ -2,6 +2,7 @@ package com.bliss.grid.application.correction
 
 import assertk.assertThat
 import assertk.assertions.containsExactlyInAnyOrder
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -89,5 +90,52 @@ class SeedCorrectionsUseCaseTest {
 
         assertThat(second).isEqualTo(SeedCorrectionsUseCase.Summary(submitted = 1, invalid = 0, inserted = 0, skippedExisting = 1))
         assertThat(store.seeded.size).isEqualTo(1)
+    }
+
+    @Test
+    fun `an accented source word is folded to the grid surface it must match`() {
+        val store = FakeSeedStore()
+        val rows = listOf(SeedReplacement("brunâtres", "Tirant sur le marrons", "Tirant sur le marron"))
+
+        val summary = SeedCorrectionsUseCase(store).execute(rows, actor)
+
+        assertThat(summary.invalid).isEqualTo(0)
+        assertThat(store.seeded.single().wordText).isEqualTo("BRUNATRES")
+    }
+
+    @Test
+    fun `folded variants of one word collapse to a single seeded row`() {
+        val store = FakeSeedStore()
+        val rows =
+            listOf(
+                SeedReplacement("cœur", "old", "new one"),
+                SeedReplacement("COEUR", "old", "new two"),
+            )
+
+        val summary = SeedCorrectionsUseCase(store).execute(rows, actor)
+
+        assertThat(summary).isEqualTo(SeedCorrectionsUseCase.Summary(submitted = 2, invalid = 0, inserted = 1, skippedExisting = 1))
+    }
+
+    @Test
+    fun `a hyphenated source word is folded to the letters-only grid surface it must match`() {
+        val store = FakeSeedStore()
+        val rows = listOf(SeedReplacement("arc-en-ciel", "Le bleu par temps calme", "Apres la pluie"))
+
+        val summary = SeedCorrectionsUseCase(store).execute(rows, actor)
+
+        assertThat(summary.invalid).isEqualTo(0)
+        assertThat(store.seeded.single().wordText).isEqualTo("ARCENCIEL")
+    }
+
+    @Test
+    fun `a word that cannot fold to a grid surface is counted invalid rather than seeded`() {
+        val store = FakeSeedStore()
+        val rows = listOf(SeedReplacement("mot3", "old", "new"))
+
+        val summary = SeedCorrectionsUseCase(store).execute(rows, actor)
+
+        assertThat(summary.invalid).isEqualTo(1)
+        assertThat(store.seeded).hasSize(0)
     }
 }

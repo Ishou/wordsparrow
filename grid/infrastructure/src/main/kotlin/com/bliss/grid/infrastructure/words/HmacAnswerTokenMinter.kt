@@ -1,8 +1,8 @@
 package com.bliss.grid.infrastructure.words
 
 import com.bliss.grid.application.words.AnswerTokenMinter
+import com.bliss.grid.domain.model.foldToGridText
 import java.security.MessageDigest
-import java.text.Normalizer
 import java.util.Base64
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -35,18 +35,9 @@ class HmacAnswerTokenMinter(
         }
 
     /** Fold to the canonical answer surface (A-Z), mirroring `Word.text` (ADR-0073 §1). */
-    private fun normalize(text: String): String =
-        DIACRITICS
-            .replace(Normalizer.normalize(text, Normalizer.Form.NFD), "")
-            .replace("œ", "oe")
-            .replace("Œ", "OE")
-            .replace("æ", "ae")
-            .replace("Æ", "AE")
-            .uppercase()
-            .filter { it in 'A'..'Z' }
+    private fun normalize(text: String): String = foldToGridText(text).filter { it in 'A'..'Z' }
 
     private companion object {
         const val HMAC_ALGORITHM = "HmacSHA256"
-        val DIACRITICS = "\\p{InCombiningDiacriticalMarks}+".toRegex()
     }
 }
