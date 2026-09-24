@@ -118,9 +118,20 @@ class SeedCorrectionsUseCaseTest {
     }
 
     @Test
+    fun `a hyphenated source word is folded to the letters-only grid surface it must match`() {
+        val store = FakeSeedStore()
+        val rows = listOf(SeedReplacement("arc-en-ciel", "Le bleu par temps calme", "Apres la pluie"))
+
+        val summary = SeedCorrectionsUseCase(store).execute(rows, actor)
+
+        assertThat(summary.invalid).isEqualTo(0)
+        assertThat(store.seeded.single().wordText).isEqualTo("ARCENCIEL")
+    }
+
+    @Test
     fun `a word that cannot fold to a grid surface is counted invalid rather than seeded`() {
         val store = FakeSeedStore()
-        val rows = listOf(SeedReplacement("mot-clé", "old", "new"))
+        val rows = listOf(SeedReplacement("mot3", "old", "new"))
 
         val summary = SeedCorrectionsUseCase(store).execute(rows, actor)
 
