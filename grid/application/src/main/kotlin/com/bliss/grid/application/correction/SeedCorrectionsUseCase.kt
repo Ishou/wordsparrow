@@ -22,8 +22,7 @@ class SeedCorrectionsUseCase(
         rows: List<SeedReplacement>,
         createdBy: UUID,
     ): Summary {
-        // Grids store the folded A-Z surface, so an accented source word ("brunâtres") would match no grid at all.
-        // A hyphenated surface ("mot-clé") is placed letters-only (Word.fromSurface), so fold it the same way.
+        // Grids store the folded A-Z surface; fold the seed word (hyphens included) to match it before validating.
         val valid = rows.mapNotNull { row -> foldSeedWord(row.wordText)?.let { row.copy(wordText = it) } }.filter(::isValid)
         // The same (word, oldClue) can recur within one source; the store dedup only guards prior runs, so fold the batch first.
         val deduped = valid.distinctBy { it.wordText to it.oldClueText }
@@ -45,14 +44,12 @@ class SeedCorrectionsUseCase(
         return summary
     }
 
-    // The word text is already a placeable grid surface by construction (see foldSeedWord); a seed row is
-    // meaningful only when the remaining fields are present and the clue actually changes.
+    // wordText is already a placeable grid surface by construction; only the remaining fields need checking.
     private fun isValid(row: SeedReplacement): Boolean =
         row.oldClueText.isNotBlank() &&
             row.newClueText.isNotBlank() &&
             row.oldClueText != row.newClueText
 
-    // Folds to the letters-only surface Word.text is stored and matched as (grid/domain Word.fromSurface),
-    // returning null when the source isn't an A-Z-plus-interior-hyphen surface at all.
+    // Folds to Word.text's letters-only surface; null when the source isn't A-Z-plus-interior-hyphen.
     private fun foldSeedWord(text: String): String? = HyphenSurface.split(foldToGridText(text))?.first
 }
