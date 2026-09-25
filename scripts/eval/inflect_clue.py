@@ -464,6 +464,45 @@ def _implicit_relative_verb(
     return None
 
 
+# Determiners that cannot govern a plural; pluralising a noun behind one strands `un cadets`.
+_SINGULAR_ONLY_DETERMINERS = {
+    "le", "la", "l", "un", "une", "du", "au",
+    "ce", "cet", "cette", "mon", "ma", "ton", "ta", "son", "sa", "leur",
+}
+_DETERMINER_PLURAL = {
+    "le": "les", "la": "les", "un": "des", "une": "des", "du": "des", "au": "aux",
+    "ce": "ces", "cet": "ces", "cette": "ces", "mon": "mes", "ma": "mes",
+    "ton": "tes", "ta": "tes", "son": "ses", "sa": "ses", "leur": "leurs",
+}
+
+
+def _match_case(source: str, replacement: str) -> str:
+    """Carry the source token's leading capitalisation onto its replacement."""
+    return replacement.capitalize() if source[:1].isupper() else replacement
+
+
+def _singular_determiner_before(tokens: list[str], head_idx: int) -> int | None:
+    """Index of a singular-only determiner immediately preceding the head, skipping the elision apostrophe."""
+    for j in range(head_idx - 1, -1, -1):
+        if not _is_alpha_token(tokens[j]):
+            if tokens[j] in ("'", "’"):
+                continue
+            return None
+        return j if tokens[j].lower() in _SINGULAR_ONLY_DETERMINERS else None
+    return None
+
+
+def _governs_own_np(tokens: list[str], det_idx: int) -> bool:
+    """True when the determiner opens the clue's own noun phrase rather than a preposition's complement."""
+    for j in range(det_idx - 1, -1, -1):
+        if not _is_alpha_token(tokens[j]):
+            if tokens[j] in ("'", "’"):
+                return False
+            continue
+        return False
+    return True
+
+
 _SUBJECT_PRONOUNS = {"il", "elle", "on", "ils", "elles"}
 
 
@@ -636,6 +675,12 @@ def inflect_clue(
         if candidates:
             _, head_idx, head_lemma = candidates[0]
 
+        # A plural target cannot inflect a head governed by a singular-only determiner. Skipping the candidate would promote a worse head, so refuse the whole inflation.
+        if head_idx >= 0 and "pl" in target:
+            det = _singular_determiner_before(tokens, head_idx)
+            if det is not None and not _governs_own_np(tokens, det):
+                return InflectionResult(_capitalize_first(clue), "singular-determiner-head")
+
         if head_idx < 0:
             # No head with matching POS — clue is structurally incompatible with
             # the surface morphology (e.g. surface is a verb but the clue head is
@@ -744,6 +789,14 @@ def inflect_clue(
     new_tokens = list(tokens)
     head_changed = inflected.lower() != tokens[head_idx].lower()
     new_tokens[head_idx] = inflected
+
+    # The head's own determiner has to follow it into the plural, else `Le sommet` yields `Le sommets`.
+    if "pl" in target and inflected.lower() != tokens[head_idx].lower():
+        det_idx = _singular_determiner_before(tokens, head_idx)
+        if det_idx is not None and _governs_own_np(tokens, det_idx):
+            plural_det = _DETERMINER_PLURAL.get(tokens[det_idx].lower())
+            if plural_det and "nom" not in index.pos_classes_of_form(tokens[det_idx].lower()):
+                new_tokens[det_idx] = _match_case(tokens[det_idx], plural_det)
 
     # Forward walk after the head. Two jobs in one loop:
     #
@@ -895,6 +948,12 @@ def inflect_clue(
                 nxt = _next_alpha_token(new_tokens, i)
                 if nxt is not None and nxt not in _COORD_WALKTHROUGH:
                     break
+            # An adjective behind a singular-only determiner belongs to that determiner's NP (`du réel`), so a plural target must leave it alone.
+            if "pl" in (gn & NUMBER_TOKENS):
+                det = _singular_determiner_before(new_tokens, i)
+                if det is not None and not _governs_own_np(new_tokens, det):
+                    i += 1
+                    continue
             new_form = _agree_adjective(lo, gn, index)
             if new_form and new_form.lower() != lo:
                 new_tokens[i] = new_form

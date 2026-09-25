@@ -1565,3 +1565,27 @@ def test_participle_with_prepositional_complement_agrees_when_adjectival() -> No
     _add(idx, "lumière", "lumière", "nom fem sg")
     res = inflect_clue("Éclatant de lumière", {"adj", "fem", "sg"}, idx)
     assert res.text == "Éclatante de lumière", res.text
+
+
+def _det_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "sommet", "sommet", "nom mas sg")
+    _add(idx, "sommet", "sommets", "nom mas pl")
+    _add(idx, "chef", "chef", "nom mas sg")
+    _add(idx, "cadet", "cadet", "nom mas sg")
+    _add(idx, "cadet", "cadets", "nom mas pl")
+    _add(idx, "royal", "royal", "adj mas sg")
+    _add(idx, "royal", "royaux", "adj mas pl")
+    return idx
+
+
+def test_clue_initial_determiner_agrees_with_the_pluralised_head() -> None:
+    """`Le sommet du chef` must pluralise its own determiner too, not strand `Le sommets`."""
+    res = inflect_clue("Le sommet du chef", {"nom", "mas", "pl"}, _det_index())
+    assert res.text == "Les sommets du chef", res.text
+
+
+def test_head_behind_a_prepositional_singular_determiner_is_not_pluralised() -> None:
+    """`un` cannot govern a plural, so `Bien d'un cadet royal` ships verbatim rather than becoming `Bien d'un cadets royaux`."""
+    res = inflect_clue("Bien d'un cadet royal", {"nom", "mas", "pl"}, _det_index())
+    assert res.text == "Bien d'un cadet royal", res.text
