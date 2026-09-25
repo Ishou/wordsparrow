@@ -1565,3 +1565,48 @@ def test_participle_with_prepositional_complement_agrees_when_adjectival() -> No
     _add(idx, "lumière", "lumière", "nom fem sg")
     res = inflect_clue("Éclatant de lumière", {"adj", "fem", "sg"}, idx)
     assert res.text == "Éclatante de lumière", res.text
+
+
+def _det_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "sommet", "sommet", "nom mas sg")
+    _add(idx, "sommet", "sommets", "nom mas pl")
+    _add(idx, "chef", "chef", "nom mas sg")
+    _add(idx, "cadet", "cadet", "nom mas sg")
+    _add(idx, "cadet", "cadets", "nom mas pl")
+    _add(idx, "royal", "royal", "adj mas sg")
+    _add(idx, "royal", "royaux", "adj mas pl")
+    return idx
+
+
+def test_clue_initial_determiner_agrees_with_the_pluralised_head() -> None:
+    """`Le sommet du chef` must pluralise its own determiner too, not strand `Le sommets`."""
+    res = inflect_clue("Le sommet du chef", {"nom", "mas", "pl"}, _det_index())
+    assert res.text == "Les sommets du chef", res.text
+
+
+def test_head_behind_a_prepositional_singular_determiner_is_not_pluralised() -> None:
+    """`un` cannot govern a plural, so `Bien d'un cadet royal` ships verbatim rather than becoming `Bien d'un cadets royaux`."""
+    res = inflect_clue("Bien d'un cadet royal", {"nom", "mas", "pl"}, _det_index())
+    assert res.text == "Bien d'un cadet royal", res.text
+
+
+def test_elided_clue_initial_determiner_agrees_with_the_pluralised_head() -> None:
+    """`l'` elides before a vowel but `les` doesn't, so pluralising the head must also drop the apostrophe: `L'exploit du siècle` -> `Les exploits du siècle`, not `Les'exploits du siècle`."""
+    idx = MorphologyIndex()
+    _add(idx, "exploit", "exploit", "nom mas sg")
+    _add(idx, "exploit", "exploits", "nom mas pl")
+    res = inflect_clue("L'exploit du siècle", {"nom", "mas", "pl"}, idx)
+    assert res.text == "Les exploits du siècle", res.text
+
+
+def test_adjective_behind_a_prepositional_singular_determiner_is_not_pluralised() -> None:
+    """`un` in `sous un même toit` is governed by the preposition `sous`, not the clue's own head — `même` must stay singular even though the head `Vies` is already plural."""
+    idx = MorphologyIndex()
+    _add(idx, "vie", "vie", "nom fem sg")
+    _add(idx, "vie", "vies", "nom fem pl")
+    _add(idx, "même", "même", "adj epi sg")
+    _add(idx, "même", "mêmes", "adj epi pl")
+    _add(idx, "toit", "toit", "nom mas sg")
+    res = inflect_clue("Vies sous un même toit", {"nom", "fem", "pl"}, idx)
+    assert res.text == "Vies sous un même toit", res.text
