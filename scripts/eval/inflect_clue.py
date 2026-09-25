@@ -1184,6 +1184,9 @@ _GLUE_BOTH_SIDES = {"'", "’", "-"}
 # Punctuation tokens that cling to the previous token only (no space before).
 _GLUE_BEFORE = {",", ".", "!", "?", ":", ";", ")", "]"}
 
+# Punctuation tokens that cling to the following token only (no space after).
+_GLUE_AFTER = {"(", "["}
+
 
 def _detokenize(tokens: list[str]) -> str:
     """Glue tokens back together with crossword-style spacing."""
@@ -1191,8 +1194,9 @@ def _detokenize(tokens: list[str]) -> str:
         return ""
     parts = [tokens[0]]
     for prev, tok in zip(tokens, tokens[1:]):
-        glue_left = tok in _GLUE_BOTH_SIDES or tok in _GLUE_BEFORE
-        glue_right = prev in _GLUE_BOTH_SIDES
+        # The tokeniser emits punctuation runs (`.)`), so glue is decided by the characters that actually touch.
+        glue_left = tok in _GLUE_BOTH_SIDES or tok[:1] in _GLUE_BEFORE
+        glue_right = prev in _GLUE_BOTH_SIDES or prev[-1:] in _GLUE_AFTER
         if glue_left or glue_right:
             parts.append(tok)
         else:
