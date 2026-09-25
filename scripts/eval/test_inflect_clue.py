@@ -22,6 +22,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 from inflect_clue import (  # noqa: E402
+    _TOKEN_RE,
+    _detokenize,
     _decompose_targets,
     _pp_action_definition,
     _relative_verb,
@@ -1610,3 +1612,20 @@ def test_adjective_behind_a_prepositional_singular_determiner_is_not_pluralised(
     _add(idx, "toit", "toit", "nom mas sg")
     res = inflect_clue("Vies sous un même toit", {"nom", "fem", "pl"}, idx)
     assert res.text == "Vies sous un même toit", res.text
+
+
+def _roundtrip(clue: str) -> str:
+    return _detokenize(_TOKEN_RE.findall(clue))
+
+
+def test_detokenize_round_trips_a_parenthesised_gloss() -> None:
+    """The tokeniser emits punctuation runs (`.)`), so glue must match on the run's edge characters, not the whole token."""
+    assert _roundtrip("Soudoyer (corrompre)") == "Soudoyer (corrompre)"
+    assert _roundtrip("Suites (abrév.)") == "Suites (abrév.)"
+    assert _roundtrip("Acte [familier]") == "Acte [familier]"
+
+
+def test_detokenize_round_trips_ordinary_punctuation() -> None:
+    """Existing spacing behaviour must be unchanged for the common cases."""
+    assert _roundtrip("Peina, se donna du mal") == "Peina, se donna du mal"
+    assert _roundtrip("Qu'il aille") == "Qu'il aille"
