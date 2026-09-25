@@ -470,7 +470,7 @@ _SINGULAR_ONLY_DETERMINERS = {
     "ce", "cet", "cette", "mon", "ma", "ton", "ta", "son", "sa", "leur",
 }
 _DETERMINER_PLURAL = {
-    "le": "les", "la": "les", "un": "des", "une": "des", "du": "des", "au": "aux",
+    "le": "les", "la": "les", "l": "les", "un": "des", "une": "des", "du": "des", "au": "aux",
     "ce": "ces", "cet": "ces", "cette": "ces", "mon": "mes", "ma": "mes",
     "ton": "tes", "ta": "tes", "son": "ses", "sa": "ses", "leur": "leurs",
 }
@@ -794,9 +794,14 @@ def inflect_clue(
     if "pl" in target and inflected.lower() != tokens[head_idx].lower():
         det_idx = _singular_determiner_before(tokens, head_idx)
         if det_idx is not None and _governs_own_np(tokens, det_idx):
-            plural_det = _DETERMINER_PLURAL.get(tokens[det_idx].lower())
-            if plural_det and "nom" not in index.pos_classes_of_form(tokens[det_idx].lower()):
+            det_lo = tokens[det_idx].lower()
+            plural_det = _DETERMINER_PLURAL.get(det_lo)
+            if plural_det and "nom" not in index.pos_classes_of_form(det_lo):
                 new_tokens[det_idx] = _match_case(tokens[det_idx], plural_det)
+                # "les" doesn't elide, so drop the apostrophe "l'" was glued to and shift head_idx past it.
+                if det_lo == "l" and det_idx + 1 < len(new_tokens) and new_tokens[det_idx + 1] in ("'", "’"):
+                    del new_tokens[det_idx + 1]
+                    head_idx -= 1
 
     # Forward walk after the head. Two jobs in one loop:
     #

@@ -1589,3 +1589,24 @@ def test_head_behind_a_prepositional_singular_determiner_is_not_pluralised() -> 
     """`un` cannot govern a plural, so `Bien d'un cadet royal` ships verbatim rather than becoming `Bien d'un cadets royaux`."""
     res = inflect_clue("Bien d'un cadet royal", {"nom", "mas", "pl"}, _det_index())
     assert res.text == "Bien d'un cadet royal", res.text
+
+
+def test_elided_clue_initial_determiner_agrees_with_the_pluralised_head() -> None:
+    """`l'` elides before a vowel but `les` doesn't, so pluralising the head must also drop the apostrophe: `L'exploit du siècle` -> `Les exploits du siècle`, not `Les'exploits du siècle`."""
+    idx = MorphologyIndex()
+    _add(idx, "exploit", "exploit", "nom mas sg")
+    _add(idx, "exploit", "exploits", "nom mas pl")
+    res = inflect_clue("L'exploit du siècle", {"nom", "mas", "pl"}, idx)
+    assert res.text == "Les exploits du siècle", res.text
+
+
+def test_adjective_behind_a_prepositional_singular_determiner_is_not_pluralised() -> None:
+    """`un` in `sous un même toit` is governed by the preposition `sous`, not the clue's own head — `même` must stay singular even though the head `Vies` is already plural."""
+    idx = MorphologyIndex()
+    _add(idx, "vie", "vie", "nom fem sg")
+    _add(idx, "vie", "vies", "nom fem pl")
+    _add(idx, "même", "même", "adj epi sg")
+    _add(idx, "même", "mêmes", "adj epi pl")
+    _add(idx, "toit", "toit", "nom mas sg")
+    res = inflect_clue("Vies sous un même toit", {"nom", "fem", "pl"}, idx)
+    assert res.text == "Vies sous un même toit", res.text
