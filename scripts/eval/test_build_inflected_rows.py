@@ -160,6 +160,8 @@ def _run(monkeypatch, tmp_path: Path, lexique: Path, clues: Path, corpus: Path) 
         "build_inflected_rows.py",
         "--clues", str(clues), "--lexique", str(lexique),
         "--corpus", str(corpus), "--out", str(out),
+        # these cover row assembly; the gate has its own tests and needs the private leak graph
+        "--no-vet",
     ])
     m.main()
     return {(r["word"], r["clue"]) for r in csv.DictReader(out.open(encoding="utf-8"))}
@@ -184,3 +186,38 @@ def test_inflected_row_already_in_corpus_is_dropped(tmp_path, monkeypatch) -> No
     rows = _run(monkeypatch, tmp_path, lexique, clues, corpus)
     assert ("porte", "Porte") in rows  # lemma row is new
     assert ("portes", "Portes") not in rows  # inflected row already shipped
+
+
+def test_vet_clue_rejects_a_stem_leak() -> None:
+    """An authored clue that hands over the answer's root must not become a corpus row."""
+    from build_inflected_rows import vet_clue
+    assert vet_clue("abyssin", "D’Abyssinie", "nom", "définition_directe") is not None
+
+
+def test_vet_clue_rejects_an_over_long_clue() -> None:
+    from build_inflected_rows import vet_clue
+    assert vet_clue("chat", "x" * 400, "nom", "définition_directe") is not None
+
+
+def test_vet_clue_accepts_a_clean_clue() -> None:
+    from build_inflected_rows import vet_clue
+    assert vet_clue("abricot", "Fruit orangé à noyau", "nom", "définition_directe") is None
+
+
+def test_main_refuses_to_emit_when_a_clue_fails_the_gate(tmp_path, monkeypatch, capsys) -> None:
+    """A rejected authored clue stops the run instead of disappearing from the output."""
+    import build_inflected_rows as m
+    lexique, clues, corpus = _write_fixtures(tmp_path)
+    leaking = tmp_path / "leaking.csv"
+    leaking.write_text("lemma,clue,pos,style\nchat,%s,nom,définition_directe\n" % ("x" * 400),
+                       encoding="utf-8")
+    out = tmp_path / "out.csv"
+    monkeypatch.setattr(m, "require_inputs", lambda: None)
+    monkeypatch.setattr(sys, "argv", [
+        "build_inflected_rows.py",
+        "--clues", str(leaking), "--lexique", str(lexique),
+        "--corpus", str(corpus), "--out", str(out),
+    ])
+    assert m.main() == 1
+    assert "rejected by the deterministic gate" in capsys.readouterr().err
+    assert not out.exists()
