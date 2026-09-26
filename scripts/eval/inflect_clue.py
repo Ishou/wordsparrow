@@ -518,6 +518,21 @@ def _finite_verb_analysis(
     return None
 
 
+def _has_coordinated_second_verb(
+    tokens: list[str], vidx: int, index: MorphologyIndex,
+) -> bool:
+    """True when a second finite verb follows `tokens[vidx]` right after et/ou/, — a coordinated verb we don't agree, so the caller must bail to verbatim rather than under-agree it."""
+    for j in range(vidx + 1, len(tokens)):
+        if tokens[j].lower() in ("et", "ou") or tokens[j] == ",":
+            k = j + 1
+            while k < len(tokens) and not _is_alpha_token(tokens[k]):
+                k += 1
+            if (k < len(tokens) and not tokens[k][:1].isupper()
+                    and _finite_verb_analysis(tokens[k].lower(), index) is not None):
+                return True
+    return False
+
+
 def _subject_pronoun_frame(
     tokens: list[str],
     target: frozenset[str],
@@ -544,15 +559,8 @@ def _subject_pronoun_frame(
             break
     if vidx < 0 or verb_lemma.lower() == "être":
         return verbatim  # no verb to agree / predicate-adjective agreement not handled
-    # Coordinated second finite verb (right after et/ou/,) we don't agree → skip.
-    for j in range(vidx + 1, len(tokens)):
-        if tokens[j].lower() in ("et", "ou") or tokens[j] == ",":
-            k = j + 1
-            while k < len(tokens) and not _is_alpha_token(tokens[k]):
-                k += 1
-            if (k < len(tokens) and not tokens[k][:1].isupper()
-                    and _finite_verb_analysis(tokens[k].lower(), index) is not None):
-                return verbatim
+    if _has_coordinated_second_verb(tokens, vidx, index):
+        return verbatim
     mood = next((m for m in _MOOD_PREFERENCE if m in moods), None)
     if mood is None:
         return verbatim
@@ -562,6 +570,39 @@ def _subject_pronoun_frame(
         return verbatim
     new_tokens = list(tokens)
     new_tokens[0] = "Elles" if "fem" in target else "Ils"
+    new_tokens[vidx] = verb_new
+    return InflectionResult(_capitalize_first(_detokenize(new_tokens)), "")
+
+
+def _reflexive_led_frame(
+    tokens: list[str],
+    target: frozenset[str],
+    target_pos: str,
+    index: MorphologyIndex,
+) -> "InflectionResult | None":
+    """Agree `Se + finite verb` with a plural NOUN answer; the clitic stays 3rd person, and the verb is never a noun to pluralise (`Se porte` is *carries*, not *door*)."""
+    if target_pos != "nom" or not tokens or "pl" not in target:
+        return None
+    if tokens[0].lower() not in _REFLEXIVE_CLITICS:
+        return None
+    verbatim = InflectionResult(_capitalize_first(_detokenize(tokens)), "verbatim")
+    vidx = next((i for i in range(1, len(tokens)) if _is_alpha_token(tokens[i])), -1)
+    if vidx < 0:
+        return verbatim
+    analysis = _finite_verb_analysis(tokens[vidx].lower(), index)
+    if analysis is None:
+        return verbatim
+    verb_lemma, moods = analysis
+    if _has_coordinated_second_verb(tokens, vidx, index):
+        return verbatim
+    mood = next((m for m in _MOOD_PREFERENCE if m in moods), None)
+    if mood is None:
+        return verbatim
+    verb_new = index.inflect(
+        verb_lemma, frozenset({mood, "3pl"}), prefer_pos="verbe", require_pos=True)
+    if not verb_new:
+        return verbatim
+    new_tokens = list(tokens)
     new_tokens[vidx] = verb_new
     return InflectionResult(_capitalize_first(_detokenize(new_tokens)), "")
 
@@ -633,6 +674,11 @@ def inflect_clue(
     # A participe présent governing a complement is invariable — freeze rather than let the ranker pluralize an embedded complement adjective (see _participle_led_invariant).
     if _participle_led_invariant(tokens, target_pos, index):
         return InflectionResult(_capitalize_first(clue), "ppre-invariant")
+
+    # A reflexive-led clue is a verb phrase; its verb must not be mistaken for a homograph noun head.
+    reflexive = _reflexive_led_frame(tokens, target, target_pos, index)
+    if reflexive is not None:
+        return reflexive
 
     # Subject-pronoun frame takes precedence: the pronoun is the answer, not an object noun — see ADR-0107.
     frame = _subject_pronoun_frame(tokens, target, target_pos, index)
