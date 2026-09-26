@@ -1629,3 +1629,26 @@ def test_detokenize_round_trips_ordinary_punctuation() -> None:
     """Existing spacing behaviour must be unchanged for the common cases."""
     assert _roundtrip("Peina, se donna du mal") == "Peina, se donna du mal"
     assert _roundtrip("Qu'il aille") == "Qu'il aille"
+
+
+def _reflexive_led_index() -> MorphologyIndex:
+    idx = MorphologyIndex()
+    _add(idx, "porter", "porte", "v1__t___zz ipre 3sg")
+    _add(idx, "porter", "portes", "v1__t___zz ipre 2sg")
+    _add(idx, "porter", "portent", "v1__t___zz ipre 3pl")
+    _add(idx, "porte", "porte", "nom fem sg")
+    _add(idx, "porte", "portes", "nom fem pl")
+    _add(idx, "détail", "détail", "nom mas sg")
+    return idx
+
+
+def test_reflexive_led_clue_agrees_its_verb_for_a_plural_noun() -> None:
+    """`Se porte sur un détail` is a verb phrase; `porte` must conjugate to 3pl, not pluralise as the noun `porte`."""
+    res = inflect_clue("Se porte sur un détail", {"nom", "fem", "pl"}, _reflexive_led_index())
+    assert res.text == "Se portent sur un détail", res.text
+
+
+def test_reflexive_led_clue_is_untouched_for_a_singular_answer() -> None:
+    """Only a plural answer needs the verb moved."""
+    res = inflect_clue("Se porte sur un détail", {"nom", "fem", "sg"}, _reflexive_led_index())
+    assert res.text == "Se porte sur un détail", res.text

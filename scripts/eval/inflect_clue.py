@@ -566,6 +566,37 @@ def _subject_pronoun_frame(
     return InflectionResult(_capitalize_first(_detokenize(new_tokens)), "")
 
 
+def _reflexive_led_frame(
+    tokens: list[str],
+    target: frozenset[str],
+    target_pos: str,
+    index: MorphologyIndex,
+) -> "InflectionResult | None":
+    """Agree `Se + finite verb` with a plural NOUN answer; the clitic stays 3rd person, and the verb is never a noun to pluralise (`Se porte` is *carries*, not *door*)."""
+    if target_pos != "nom" or not tokens or "pl" not in target:
+        return None
+    if tokens[0].lower() not in _REFLEXIVE_CLITICS:
+        return None
+    verbatim = InflectionResult(_capitalize_first(_detokenize(tokens)), "verbatim")
+    vidx = next((i for i in range(1, len(tokens)) if _is_alpha_token(tokens[i])), -1)
+    if vidx < 0:
+        return verbatim
+    analysis = _finite_verb_analysis(tokens[vidx].lower(), index)
+    if analysis is None:
+        return verbatim
+    verb_lemma, moods = analysis
+    mood = next((m for m in _MOOD_PREFERENCE if m in moods), None)
+    if mood is None:
+        return verbatim
+    verb_new = index.inflect(
+        verb_lemma, frozenset({mood, "3pl"}), prefer_pos="verbe", require_pos=True)
+    if not verb_new:
+        return verbatim
+    new_tokens = list(tokens)
+    new_tokens[vidx] = verb_new
+    return InflectionResult(_capitalize_first(_detokenize(new_tokens)), "")
+
+
 def _participle_led_invariant(
     tokens: list[str], target_pos: str, index: "MorphologyIndex",
 ) -> bool:
@@ -633,6 +664,11 @@ def inflect_clue(
     # A participe présent governing a complement is invariable — freeze rather than let the ranker pluralize an embedded complement adjective (see _participle_led_invariant).
     if _participle_led_invariant(tokens, target_pos, index):
         return InflectionResult(_capitalize_first(clue), "ppre-invariant")
+
+    # A reflexive-led clue is a verb phrase; its verb must not be mistaken for a homograph noun head.
+    reflexive = _reflexive_led_frame(tokens, target, target_pos, index)
+    if reflexive is not None:
+        return reflexive
 
     # Subject-pronoun frame takes precedence: the pronoun is the answer, not an object noun — see ADR-0107.
     frame = _subject_pronoun_frame(tokens, target, target_pos, index)
