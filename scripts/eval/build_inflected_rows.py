@@ -9,7 +9,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from clue_metrics import MAX_CLUE_CHARS  # noqa: E402
+from demonette_leak import require_inputs  # noqa: E402
 from inflect_clue import _TOKEN_RE, _is_alpha_token, inflect_clue  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "clue_generation" / "pipeline_v2"))
+import filters as _F  # noqa: E402
 from morphology_index import MorphologyIndex  # noqa: E402
 
 # `du`/`au`/`le`… cannot govern a plural, so a pluralised token behind one is ungrammatical.
@@ -44,6 +48,26 @@ def _is_unambiguous_finite_verb(form, index):
     if any({"nom", "adj"} & set(tags) for _lemma, tags in readings):
         return False
     return any({"ipre", "iimp", "ifut", "cond", "spre"} & set(tags) for _lemma, tags in readings)
+
+
+# The deterministic half of the pipeline_v2 gate (§8.3). filter_8 is the learned judge and is
+# excluded: it scores in shadow mode and cannot reject.
+_VETTING_FILTERS = (
+    "filter_1_typographiques", "filter_2_caracteres_interdits", "filter_3_longueur",
+    "filter_4_stereotypes_ia", "filter_5_auto_reference", "filter_6_langue_fr",
+    "filter_7_tautologie", "filter_9_stem_leak", "filter_10_pleonasm",
+    "filter_11_derivational_leak",
+)
+
+
+def vet_clue(lemma: str, clue: str, pos: str, style: str) -> str | None:
+    """Rejection reason from the generation lane's deterministic filters, or None when the clue passes."""
+    row = {"mot": lemma, "definition": clue, "pos": pos, "style": style, "lemma": lemma}
+    for name in _VETTING_FILTERS:
+        result = getattr(_F, name)(row)
+        if result.is_reject:
+            return f"{name}: {result.reason}"
+    return None
 
 
 def inflection_is_safe(clue, result, surface_tags, index):
@@ -91,7 +115,15 @@ def main():
     ap.add_argument("--corpus", type=Path, required=True, help="existing words-fr.csv, for dedup")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--source", default="bliss")
+    ap.add_argument("--drop-rejected", action="store_true",
+                    help="emit the surviving clues instead of failing when the gate rejects some")
+    ap.add_argument("--no-vet", action="store_true",
+                    help="skip the deterministic gate entirely (leaves authored clues unchecked)")
     args = ap.parse_args()
+
+    # A leak filter without its graph accepts everything, so demand it unless vetting is off.
+    if not args.no_vet:
+        require_inputs()
 
     index = MorphologyIndex.load(args.lexique)
     occ = {}
@@ -117,8 +149,24 @@ def main():
 
     existing = {(r["word"], r["clue"]) for r in csv.DictReader(args.corpus.open(encoding="utf-8"))}
     clues = collections.defaultdict(list)
+    rejected: list[tuple[str, str, str]] = []
     for r in csv.DictReader(args.clues.open(encoding="utf-8")):
-        clues[r["lemma"]].append((r["clue"], r.get("pos") or "nom", r.get("head_pos") or None))
+        lemma, clue = r["lemma"], r["clue"]
+        pos = r.get("pos") or "nom"
+        if not args.no_vet:
+            reason = vet_clue(lemma, clue, pos, r.get("style") or "")
+            if reason is not None:
+                rejected.append((lemma, clue, reason))
+                continue
+        clues[lemma].append((clue, pos, r.get("head_pos") or None))
+
+    if rejected:
+        print(f"{len(rejected)} authored clue(s) rejected by the deterministic gate:", file=sys.stderr)
+        for lemma, clue, reason in rejected:
+            print(f"  {lemma}\t{clue!r}\t{reason}", file=sys.stderr)
+        if not args.drop_rejected:
+            print("fix the source, or re-run with --drop-rejected to emit the rest", file=sys.stderr)
+            return 1
 
     rows, dropped = [], collections.Counter()
     for lemma, entries in clues.items():

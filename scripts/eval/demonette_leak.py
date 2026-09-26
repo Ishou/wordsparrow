@@ -43,6 +43,16 @@ def _required() -> bool:
     return os.environ.get("DEMONETTE_LEAK_REQUIRED") == "1"
 
 
+def require_inputs() -> None:
+    """Raise unless both artifacts are present; an in-process caller uses this instead of the env var so it sets no global state."""
+    missing = [str(p) for p in (_DEFAULT_GRAPH, _DEFAULT_LEXIQUE) if not p.exists()]
+    if missing:
+        raise RuntimeError(
+            "the Démonette leak check needs " + ", ".join(missing)
+            + "; build the graph with scripts/demonette/build_leak_graph.py "
+              "— accepting every clue unchecked is not a gate")
+
+
 def _get_graph() -> dict[str, frozenset[str]]:
     global _GRAPH, _GRAPH_TRIED
     if not _GRAPH_TRIED:
