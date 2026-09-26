@@ -1,6 +1,8 @@
 """Tests for the Démonette derivational-leak check."""
 from __future__ import annotations
 import csv, sys
+
+import pytest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from demonette_leak import load_leak_graph, is_derivational_leak  # noqa: E402
@@ -59,3 +61,35 @@ def test_load_leak_graph_roundtrip(tmp_path):
 
 def test_load_leak_graph_absent_returns_empty(tmp_path):
     assert load_leak_graph(tmp_path / "nope.csv") == {}
+
+
+def test_missing_graph_degrades_silently_by_default(tmp_path, monkeypatch):
+    """ADR-0121 keeps public CI on the string-stem floor, so an absent artifact must stay permissive."""
+    import demonette_leak as dl
+    monkeypatch.setattr(dl, "_DEFAULT_GRAPH", tmp_path / "absent.csv")
+    monkeypatch.setattr(dl, "_GRAPH", None)
+    monkeypatch.setattr(dl, "_GRAPH_TRIED", False)
+    monkeypatch.delenv("DEMONETTE_LEAK_REQUIRED", raising=False)
+    assert dl._get_graph() == {}
+
+
+def test_required_mode_refuses_to_run_without_the_graph(tmp_path, monkeypatch):
+    """A gate that accepts everything when its data is missing is not a gate: say so loudly."""
+    import demonette_leak as dl
+    monkeypatch.setattr(dl, "_DEFAULT_GRAPH", tmp_path / "absent.csv")
+    monkeypatch.setattr(dl, "_GRAPH", None)
+    monkeypatch.setattr(dl, "_GRAPH_TRIED", False)
+    monkeypatch.setenv("DEMONETTE_LEAK_REQUIRED", "1")
+    with pytest.raises(RuntimeError, match="leak graph"):
+        dl._get_graph()
+
+
+def test_required_mode_refuses_to_run_without_the_lexique(tmp_path, monkeypatch):
+    """Without the lexique the check degrades to raw-token matching, which silently weakens it."""
+    import demonette_leak as dl
+    monkeypatch.setattr(dl, "_DEFAULT_LEXIQUE", tmp_path / "absent.txt")
+    monkeypatch.setattr(dl, "_INDEX", None)
+    monkeypatch.setattr(dl, "_INDEX_TRIED", False)
+    monkeypatch.setenv("DEMONETTE_LEAK_REQUIRED", "1")
+    with pytest.raises(RuntimeError, match="lexique"):
+        dl._get_index()

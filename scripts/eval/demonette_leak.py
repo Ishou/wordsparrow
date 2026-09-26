@@ -38,11 +38,21 @@ def load_leak_graph(path: Path) -> dict[str, frozenset[str]]:
     return {k: frozenset(v) for k, v in acc.items()}
 
 
+def _required() -> bool:
+    """A lane that must not skip the leak check sets DEMONETTE_LEAK_REQUIRED=1; public CI leaves it unset."""
+    return os.environ.get("DEMONETTE_LEAK_REQUIRED") == "1"
+
+
 def _get_graph() -> dict[str, frozenset[str]]:
     global _GRAPH, _GRAPH_TRIED
     if not _GRAPH_TRIED:
         _GRAPH_TRIED = True
         _GRAPH = load_leak_graph(_DEFAULT_GRAPH)
+    if _required() and not _GRAPH:
+        raise RuntimeError(
+            f"DEMONETTE_LEAK_REQUIRED=1 but no leak graph at {_DEFAULT_GRAPH}; "
+            "build it with scripts/demonette/build_leak_graph.py or unset the variable "
+            "— accepting every clue unchecked is not a gate")
     return _GRAPH or {}
 
 
@@ -56,6 +66,10 @@ def _get_index():
             _INDEX = MorphologyIndex.load(_DEFAULT_LEXIQUE) if _DEFAULT_LEXIQUE.exists() else None
         except Exception:  # noqa: BLE001 — any load failure degrades to no lemmatisation
             _INDEX = None
+    if _required() and _INDEX is None:
+        raise RuntimeError(
+            f"DEMONETTE_LEAK_REQUIRED=1 but no grammalecte lexique at {_DEFAULT_LEXIQUE}; "
+            "without it the check falls back to raw-token matching and silently weakens")
     return _INDEX
 
 
