@@ -518,6 +518,21 @@ def _finite_verb_analysis(
     return None
 
 
+def _has_coordinated_second_verb(
+    tokens: list[str], vidx: int, index: MorphologyIndex,
+) -> bool:
+    """True when a second finite verb follows `tokens[vidx]` right after et/ou/, — a coordinated verb we don't agree, so the caller must bail to verbatim rather than under-agree it."""
+    for j in range(vidx + 1, len(tokens)):
+        if tokens[j].lower() in ("et", "ou") or tokens[j] == ",":
+            k = j + 1
+            while k < len(tokens) and not _is_alpha_token(tokens[k]):
+                k += 1
+            if (k < len(tokens) and not tokens[k][:1].isupper()
+                    and _finite_verb_analysis(tokens[k].lower(), index) is not None):
+                return True
+    return False
+
+
 def _subject_pronoun_frame(
     tokens: list[str],
     target: frozenset[str],
@@ -544,15 +559,8 @@ def _subject_pronoun_frame(
             break
     if vidx < 0 or verb_lemma.lower() == "être":
         return verbatim  # no verb to agree / predicate-adjective agreement not handled
-    # Coordinated second finite verb (right after et/ou/,) we don't agree → skip.
-    for j in range(vidx + 1, len(tokens)):
-        if tokens[j].lower() in ("et", "ou") or tokens[j] == ",":
-            k = j + 1
-            while k < len(tokens) and not _is_alpha_token(tokens[k]):
-                k += 1
-            if (k < len(tokens) and not tokens[k][:1].isupper()
-                    and _finite_verb_analysis(tokens[k].lower(), index) is not None):
-                return verbatim
+    if _has_coordinated_second_verb(tokens, vidx, index):
+        return verbatim
     mood = next((m for m in _MOOD_PREFERENCE if m in moods), None)
     if mood is None:
         return verbatim
@@ -585,6 +593,8 @@ def _reflexive_led_frame(
     if analysis is None:
         return verbatim
     verb_lemma, moods = analysis
+    if _has_coordinated_second_verb(tokens, vidx, index):
+        return verbatim
     mood = next((m for m in _MOOD_PREFERENCE if m in moods), None)
     if mood is None:
         return verbatim
