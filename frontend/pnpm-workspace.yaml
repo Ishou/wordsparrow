@@ -1,7 +1,7 @@
 overrides:
   # `handlebars` is dragged in transitively by an old plugin; pin to the
   # patched line that closed the regex-DoS / prototype pollution chain.
-  handlebars: ^4.7.9
+  handlebars: ^4.7.10
   # esbuild floor: Vite 8 needs a recent esbuild for the new oxc / rolldown
   # transformer chain to work cleanly.
   esbuild: ^0.28.1
@@ -49,5 +49,7 @@ minimumReleaseAgeExclude:
     # Renovate security update: vitest@4.1.11
     vitest@4.1.11,
     # Renovate security update: undici@7.29.0
-    undici@7.29.0
+    undici@7.29.0,
+    # Renovate security update: handlebars@4.7.10
+    handlebars@4.7.10
   ]
